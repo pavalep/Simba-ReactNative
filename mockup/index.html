@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cine / SIMBA Mobile — UI Mockups</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Override for index layout ──────────────────── */
+    body {
+      overflow: auto;
+      background: #050508;
+    }
+
+    .app-layout {
+      width: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      padding: 32px 24px;
+    }
+
+    /* Title */
+    .mockup-header {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .mockup-header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .mockup-header p {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      letter-spacing: 0.3px;
+    }
+
+    /* Nav */
+    .top-nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .nav-btn {
+      padding: 8px 22px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .nav-btn:hover {
+      background: var(--surface-raised);
+      color: var(--text-primary);
+    }
+    .nav-btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent-border);
+      color: var(--accent-light);
+    }
+
+    /* Phone frame */
+    .phone-frame {
+      position: relative;
+      width: 390px;
+      height: 844px;
+      border-radius: 44px;
+      overflow: hidden;
+      background: var(--bg-primary);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow:
+        0 20px 60px rgba(0,0,0,0.6),
+        0 0 0 1px rgba(255,255,255,0.04);
+      flex-shrink: 0;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 24px;
+      background: #000;
+      border-radius: 0 0 16px 16px;
+      z-index: 100;
+      pointer-events: none;
+    }
+    .phone-notch::after {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .phone-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* Screen label */
+    .screen-label {
+      font-size: 11px;
+      color: var(--text-hint);
+      letter-spacing: 1px;
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Info footer */
+    .mockup-footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-tertiary);
+      opacity: 0.6;
+      margin-top: 8px;
+      letter-spacing: 0.5px;
+      max-width: 500px;
+      line-height: 1.6;
+    }
+    .mockup-footer a {
+      color: var(--accent-light);
+      text-decoration: none;
+    }
+    .mockup-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Design tokens mini showcase */
+    .token-showcase {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .token-swatch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .token-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    .token-label {
+      font-size: 10px;
+      color: var(--text-hint);
+    }
+    .token-accent    { background: var(--accent); }
+    .token-accent-lt { background: var(--accent-light); }
+    .token-surface   { background: var(--card-glass-bg); border-color: var(--card-glass-border); }
+    .token-glass     { background: rgba(255,255,255,0.035); }
+    .token-bg        { background: var(--bg-primary); }
+
+    @media (max-width: 440px) {
+      .phone-frame {
+        width: 100%;
+        height: 90vw;
+        max-height: 700px;
+        border-radius: 24px;
+      }
+      .app-layout {
+        padding: 16px 12px;
+        gap: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Header -->
+    <div class="mockup-header">
+      <h1>SIMBA · Mobile Mockups</h1>
+      <p>Design system ported from the Avalonia desktop app</p>
+    </div>
+
+    <!-- Color tokens mini showcase -->
+    <div class="token-showcase">
+      <div class="token-swatch">
+        <div class="token-dot token-bg"></div>
+        <span class="token-label">#08080A</span>
+      </div>
+      <div class="token-swatch">
+        <div class="token-dot token-glass"></div>
+        <span class="token-label">Glass</span>
+      </div>
+      <div class="token-swatch">
+        <div class="token-dot token-accent"></div>
+        <span class="token-label">#B88C4A</span>
+      </div>
+      <div class="token-swatch">
+        <div class="token-dot token-accent-lt"></div>
+        <span class="token-label">#C9A96E</span>
+      </div>
+      <div class="token-swatch">
+        <div class="token-dot token-surface"></div>
+        <span class="token-label">Card</span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="top-nav">
+      <a class="nav-btn active" href="start.html" target="mockup-frame">Start</a>
+      <a class="nav-btn" href="player.html" target="mockup-frame">Player</a>
+      <a class="nav-btn" href="preferences.html" target="mockup-frame">Preferences</a>
+    </div>
+
+    <!-- Phone frame -->
+    <div class="phone-frame">
+      <div class="phone-notch"></div>
+      <iframe name="mockup-frame" src="start.html"></iframe>
+    </div>
+
+    <!-- Screen label -->
+    <div class="screen-label">START SCREEN</div>
+
+    <!-- Footer -->
+    <div class="mockup-footer">
+      Dark glass-morphism design · Bronze accent #B88C4A · Deep background #08080A
+    </div>
+  </div>
+
+  <script>
+    // Update active nav button and label when iframe changes
+    const navBtns = document.querySelectorAll('.nav-btn');
+    const label = document.querySelector('.screen-label');
+
+    navBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        navBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Update label
+        const name = btn.textContent.trim();
+        label.textContent = name.toUpperCase() + ' SCREEN';
+      });
+    });
+  </script>
+</body>
+</html>

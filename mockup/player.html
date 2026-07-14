@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Player Screen — Cine Mockup</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Video surface ─────────────────────────────── */
+    .video-surface {
+      position: absolute; inset: 0;
+      background: #060608;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .center-play-icon {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .center-play-icon.show { opacity: 1; }
+    .center-play-icon span {
+      font-size: 26px;
+      color: rgba(255,255,255,0.7);
+      margin-left: 3px;
+    }
+
+    /* ── Trial watermark ───────────────────────────── */
+    .trial-watermark {
+      position: absolute; inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .trial-watermark span {
+      font-size: 60px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.06);
+      letter-spacing: 12px;
+    }
+
+    /* ── Header Bar ────────────────────────────────── */
+    .player-header {
+      position: absolute; top: 0; left: 0; right: 0;
+      z-index: 20;
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-dim);
+      padding-top: var(--status-h);
+      height: calc(var(--header-h) + var(--status-h));
+    }
+    .header-edge {
+      position: absolute; top: var(--status-h); left: 0; right: 0;
+      height: 1px; background: var(--glass-edge);
+    }
+    .header-row {
+      display: flex; align-items: center;
+      height: var(--header-h);
+      padding: 0 12px;
+      gap: 8px;
+    }
+    .header-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--osd-fg);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .header-btn:hover { background: var(--surface-raised); }
+    .open-trigger {
+      display: flex; align-items: center; gap: 2px;
+      padding: 0 8px; height: 28px;
+      border: none; background: transparent;
+      color: var(--osd-fg); font-size: 13px; cursor: pointer;
+      border-radius: var(--radius-sm);
+    }
+    .open-trigger:hover { background: var(--surface-raised); }
+    .open-trigger .arrow { font-size: 10px; }
+    .header-title-area {
+      flex: 1; text-align: center;
+      padding: 0 12px;
+    }
+    .header-title {
+      font-size: 14px; font-weight: 500;
+      color: var(--osd-fg);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 200px; margin: 0 auto;
+    }
+    .header-right { display: flex; align-items: center; gap: 4px; }
+    .win-ctrls { display: flex; }
+    .win-btn {
+      width: 36px; height: 28px;
+      border: none; background: transparent;
+      color: var(--osd-fg); font-size: 12px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      border-radius: 2px;
+    }
+    .win-btn:hover { background: var(--surface-raised); }
+    .win-btn.close:hover { background: #c42b1c; }
+
+    /* ── Controls Box ──────────────────────────────── */
+    .controls-box {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      z-index: 15;
+      background: var(--glass-bg);
+      border-top: 1px solid var(--border-dim);
+      padding-bottom: 24px;
+    }
+    .controls-sheen {
+      position: absolute; inset: 0;
+      background: linear-gradient(0deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    /* Seek row */
+    .seek-row {
+      display: flex; align-items: center;
+      gap: 8px; padding: 12px 16px 6px;
+    }
+    .seek-area {
+      flex: 1; height: 16px;
+      position: relative; cursor: pointer;
+      display: flex; align-items: center;
+    }
+    .seek-track {
+      width: 100%; height: 4px;
+      border-radius: var(--radius-xs);
+      background: var(--seek-track);
+    }
+    .seek-fill {
+      position: absolute; left: 0; top: 50%;
+      height: 4px; margin-top: -2px;
+      border-radius: var(--radius-xs);
+      background: var(--seek-fill);
+      width: 35%;
+      box-shadow: 0 0 8px rgba(184,140,74,0.25);
+    }
+    .seek-thumb {
+      position: absolute; top: 50%;
+      left: 35%; margin: -7px 0 0 -7px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--seek-thumb);
+      border: 1.5px solid var(--seek-thumb-border);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .ch-marker {
+      position: absolute; top: 50%;
+      width: 3px; height: 12px; margin-top: -6px;
+      background: var(--osd-fg); opacity: 0.5;
+      border-radius: 1px;
+    }
+    .time-label {
+      font-size: 12px; font-weight: 500;
+      color: var(--osd-fg); min-width: 40px; text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    .time-sep {
+      width: 1px; height: 14px;
+      background: var(--divider); opacity: 0.3;
+    }
+
+    /* Transport row */
+    .transport-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 16px; padding: 4px 16px 8px;
+      flex-wrap: wrap;
+    }
+    .btn-group { display: flex; align-items: center; gap: 4px; }
+    .t-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%; border: none;
+      background: transparent; color: var(--osd-fg);
+      font-size: 16px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .t-btn:hover { background: var(--surface-raised); }
+    .play-btn {
+      width: 42px; height: 42px;
+      border-radius: 50%; border: none;
+      background: rgba(255,255,255,0.06); color: var(--osd-fg);
+      font-size: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .play-btn:hover { background: rgba(255,255,255,0.10); }
+    .play-btn span { margin-left: 2px; }
+    .menu-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%; border: none;
+      background: transparent; color: var(--osd-fg);
+      font-size: 14px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .menu-btn:hover { background: var(--surface-raised); }
+    .menu-btn.active { background: rgba(255,255,255,0.06); }
+    .sep {
+      width: 1px; height: 20px;
+      background: var(--divider);
+    }
+
+    /* ── OSD Notification ──────────────────────────── */
+    .osd-notif {
+      position: absolute; bottom: 140px; left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-overlay);
+      border: 1px solid var(--border-dim);
+      font-size: 11px; font-weight: 500; color: var(--osd-fg);
+    }
+
+    /* ── Now Playing Info ──────────────────────────── */
+    .now-playing {
+      position: absolute; bottom: 130px; right: 16px;
+      z-index: 10; text-align: right;
+      pointer-events: none;
+    }
+    .np-title {
+      font-size: 11px; font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .np-sub {
+      font-size: 9px; font-weight: 500;
+      color: var(--text-hint); margin-top: 2px;
+    }
+
+    /* Show/hide toggle (simulated via checkbox) */
+    #toggle-cb { display: none; }
+    #toggle-cb:checked ~ .controls-box,
+    #toggle-cb:checked ~ .player-header { display: none; }
+    #toggle-cb:checked ~ .video-surface .center-play-icon { opacity: 1; }
+    .toggle-label {
+      position: absolute; inset: 0; z-index: 2; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="screen active" id="player-screen">
+    <div class="screen-content">
+
+      <!-- Video surface (clickable to toggle controls) -->
+      <label for="toggle-cb" class="toggle-label"></label>
+      <input type="checkbox" id="toggle-cb" />
+
+      <div class="video-surface">
+        <div class="center-play-icon"><span>▶</span></div>
+      </div>
+
+      <!-- Trial watermark -->
+      <div class="trial-watermark"><span>TRIAL</span></div>
+
+      <!-- Header Bar -->
+      <div class="player-header">
+        <div class="header-edge"></div>
+        <div class="header-row">
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="header-btn">←</button>
+            <button class="open-trigger">Open <span class="arrow">▾</span></button>
+          </div>
+          <div class="header-title-area">
+            <div class="header-title">The Grand Budapest Hotel</div>
+          </div>
+          <div class="header-right">
+            <button class="header-btn" title="Picture-in-Picture">⊞</button>
+            <button class="header-btn" title="Main Menu">⋯</button>
+            <div class="win-ctrls">
+              <button class="win-btn" title="Minimize">─</button>
+              <button class="win-btn" title="Maximize">□</button>
+              <button class="win-btn close" title="Close">✕</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Box -->
+      <div class="controls-box">
+        <div class="controls-sheen"></div>
+
+        <!-- Seek row -->
+        <div class="seek-row">
+          <div class="seek-area">
+            <div class="seek-track"></div>
+            <div class="seek-fill"></div>
+            <div class="seek-thumb"></div>
+            <!-- Chapter markers -->
+            <div class="ch-marker" style="left:15%"></div>
+            <div class="ch-marker" style="left:30%"></div>
+            <div class="ch-marker" style="left:55%"></div>
+            <div class="ch-marker" style="left:72%"></div>
+            <div class="ch-marker" style="left:88%"></div>
+          </div>
+          <span class="time-label">21:47</span>
+          <div class="time-sep"></div>
+          <span class="time-label">1:02:14</span>
+        </div>
+
+        <!-- Transport row -->
+        <div class="transport-row">
+          <!-- Group 1: Transport -->
+          <div class="btn-group">
+            <button class="t-btn">⏮</button>
+            <button class="play-btn"><span>▶</span></button>
+            <button class="t-btn">⏭</button>
+          </div>
+          <div class="sep"></div>
+
+          <!-- Group 2: Volume + EQ -->
+          <div class="btn-group">
+            <button class="menu-btn">🔊</button>
+            <button class="menu-btn">⚙</button>
+          </div>
+          <div class="sep"></div>
+
+          <!-- Group 3: Shuffle + Loop + Playlist -->
+          <div class="btn-group">
+            <button class="menu-btn active">🔀</button>
+            <button class="menu-btn">🔁</button>
+            <button class="menu-btn">☰</button>
+          </div>
+          <div class="sep"></div>
+
+          <!-- Group 4: Chapters + CC + Audio + Fullscreen -->
+          <div class="btn-group">
+            <button class="menu-btn">🔖</button>
+            <button class="menu-btn" style="font-size:11px;font-weight:700">CC</button>
+            <button class="menu-btn">🎵</button>
+            <button class="menu-btn">⛶</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- OSD -->
+      <div class="osd-notif">Volume: 65%</div>
+
+      <!-- Now Playing -->
+      <div class="now-playing">
+        <div class="np-title">The Grand Budapest Hotel</div>
+        <div class="np-sub">1080p · H.264 · 5.1 AAC</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

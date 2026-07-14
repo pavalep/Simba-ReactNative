@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Preferences — Cine Mockup</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Preferences specific ──────────────────────── */
+    .pref-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px 10px;
+      border-bottom: 1px solid var(--divider);
+    }
+    .pref-header h1 {
+      font-size: 16px; font-weight: 500; color: var(--text-primary);
+    }
+    .pref-close {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: none; background: transparent;
+      color: var(--text-secondary); font-size: 16px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .pref-close:hover { background: var(--surface-raised); }
+
+    .pref-scroll {
+      height: calc(100% - 52px - 60px);
+      overflow-y: auto;
+      padding: 16px;
+    }
+    .pref-scroll::-webkit-scrollbar { width: 3px; }
+
+    /* Sections */
+    .section-header {
+      font-size: 10px; font-weight: 600; letter-spacing: 1.2px;
+      color: var(--text-tertiary);
+      margin-bottom: 10px; margin-top: 22px;
+    }
+    .section-header:first-child { margin-top: 0; }
+    .pref-card {
+      background: var(--popover-bg);
+      border: 1px solid var(--popover-border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      margin-bottom: 4px;
+    }
+
+    /* Setting row */
+    .setting {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 16px;
+    }
+    .setting-info { flex: 1; }
+    .setting-label {
+      font-size: 13px; font-weight: 500; color: var(--text-primary);
+    }
+    .setting-desc {
+      font-size: 11px; color: var(--text-tertiary); margin-top: 2px;
+    }
+
+    /* Toggle */
+    .toggle {
+      position: relative; flex-shrink: 0;
+      width: 44px; height: 24px;
+    }
+    .toggle input { display: none; }
+    .toggle-track {
+      width: 100%; height: 100%;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.12);
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .toggle input:checked + .toggle-track { background: var(--accent-dim); }
+    .toggle-thumb {
+      position: absolute; top: 2px; left: 2px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: var(--text-hint);
+      transition: all 0.2s;
+    }
+    .toggle input:checked ~ .toggle-thumb {
+      left: 22px;
+      background: var(--accent-light);
+    }
+
+    /* Divider */
+    .pref-divider {
+      height: 1px; background: var(--popover-border);
+      margin: 10px 0;
+    }
+
+    /* Feature row */
+    .feature-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 3px 0;
+    }
+    .feature-icon { font-size: 14px; width: 20px; text-align: center; }
+    .feature-info { flex: 1; }
+    .feature-name { font-size: 11px; color: var(--text-primary); }
+    .feature-status { font-size: 11px; color: var(--text-secondary); }
+
+    /* License row */
+    .license-row {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .license-tier { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+
+    /* Input group */
+    .input-group { margin-top: 8px; }
+    .input-label {
+      font-size: 11px; font-weight: 600; color: var(--text-tertiary);
+      margin-bottom: 4px;
+    }
+    .input-box {
+      padding: 8px; border-radius: var(--radius-xs);
+      background: var(--bg-primary);
+      border: 1px solid var(--popover-border);
+      font-size: 11px; color: var(--text-primary);
+    }
+    .input-hint {
+      font-size: 9px; color: var(--text-tertiary); margin-top: 4px;
+    }
+
+    /* Shortcuts */
+    .shortcut-row {
+      display: flex; padding: 6px 0; gap: 16px;
+    }
+    .shortcut-row + .shortcut-row { border-top: 1px solid rgba(255,255,255,0.03); }
+    .shortcut-key {
+      width: 120px; flex-shrink: 0;
+      font-size: 11px; font-weight: 600; color: var(--text-primary);
+    }
+    .shortcut-action {
+      font-size: 11px; color: var(--text-secondary);
+    }
+    .view-all {
+      display: block; text-align: center;
+      padding: 12px 0 4px;
+      font-size: 13px; color: var(--accent-light); font-weight: 500;
+      text-decoration: none; cursor: pointer;
+    }
+    .view-all:hover { text-decoration: underline; }
+
+    /* About */
+    .about-section {
+      text-align: center; padding: 12px 0;
+    }
+    .about-logo {
+      width: 48px; height: 48px; border-radius: 50%;
+      margin: 0 auto 8px;
+      background: var(--hover-subtle);
+      border: 1px solid var(--divider);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .about-logo span { font-size: 20px; color: var(--osd-fg); margin-left: 2px; }
+    .about-name { font-size: 16px; font-weight: 700; color: var(--osd-fg); }
+    .about-ver  { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .about-tech { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+
+    /* Footer */
+    .pref-footer {
+      height: 60px; padding: 0 16px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 16px;
+      border-top: 1px solid var(--popover-border);
+    }
+    .footer-btn {
+      padding: 10px 28px;
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .footer-btn.destructive {
+      background: transparent;
+      border: 1px solid var(--border-dim);
+      color: var(--text-secondary);
+    }
+    .footer-btn.destructive:hover {
+      border-color: var(--text-secondary);
+    }
+    .footer-btn.primary {
+      background: var(--glass-bg);
+      border: 1px solid var(--accent-border);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+    .footer-btn.primary:hover {
+      background: var(--accent-dim);
+    }
+
+    /* License */
+    .license-key {
+      font-size: 13px; color: var(--text-primary); font-weight: 500;
+    }
+    .license-sub {
+      font-size: 11px; color: var(--text-tertiary); margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="screen active" id="pref-screen">
+    <div class="screen-content">
+      <!-- Header -->
+      <div class="pref-header">
+        <h1>Preferences</h1>
+        <button class="pref-close">✕</button>
+      </div>
+
+      <!-- Scroll content -->
+      <div class="pref-scroll">
+
+        <!-- License & Features -->
+        <div class="section-header">LICENSE &amp; FEATURES</div>
+        <div class="pref-card">
+          <div class="license-row">
+            <div>
+              <div class="license-key">License Tier</div>
+              <div class="license-sub">Unlimited License</div>
+            </div>
+            <div class="license-tier">Pro</div>
+          </div>
+
+          <div class="pref-divider"></div>
+
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.8px;color:var(--text-tertiary);margin-bottom:6px">FEATURE STATUS</div>
+
+          <div class="feature-row">
+            <span class="feature-icon">✅</span>
+            <div class="feature-info"><div class="feature-name">Hardware Acceleration</div></div>
+            <span class="feature-status">✓ Active</span>
+          </div>
+          <div class="feature-row">
+            <span class="feature-icon">✅</span>
+            <div class="feature-info"><div class="feature-name">Audio Normalization</div></div>
+            <span class="feature-status">✓ Active</span>
+          </div>
+          <div class="feature-row">
+            <span class="feature-icon">✦</span>
+            <div class="feature-info"><div class="feature-name">Dialogue Boost</div></div>
+            <span class="feature-status">✦ Available</span>
+          </div>
+          <div class="feature-row">
+            <span class="feature-icon">✅</span>
+            <div class="feature-info"><div class="feature-name">Subtitles</div></div>
+            <span class="feature-status">✓ Active</span>
+          </div>
+        </div>
+
+        <!-- General -->
+        <div class="section-header">GENERAL</div>
+        <div class="pref-card">
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-label">Audio Normalization</div>
+              <div class="setting-desc">Dynamic range compression for consistent volume</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" checked />
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+
+          <div class="pref-divider"></div>
+
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-label">Dialogue Boost</div>
+              <div class="setting-desc">Enhance speech clarity using spectral compression</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" />
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Rendering -->
+        <div class="section-header">RENDERING</div>
+        <div class="pref-card">
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-label">Hardware Acceleration</div>
+              <div class="setting-desc">Use GPU for video decoding and rendering</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" checked />
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Subtitles -->
+        <div class="section-header">SUBTITLES</div>
+        <div class="pref-card">
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-label">Auto-load External Subtitles</div>
+              <div class="setting-desc">Scan for .srt / .ass in media directory</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" checked />
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+          </div>
+
+          <div class="pref-divider"></div>
+
+          <div class="input-group">
+            <div class="input-label">Preferred Languages</div>
+            <div class="input-box">eng, jpn, und</div>
+            <div class="input-hint">Comma-separated language codes. First match is auto-selected.</div>
+          </div>
+
+          <div class="pref-divider"></div>
+
+          <div class="input-group">
+            <div class="input-label">External Subtitle Directories</div>
+            <div class="input-box">./subs, ./subtitles</div>
+            <div class="input-hint">Relative to media file directory. Comma-separated.</div>
+          </div>
+        </div>
+
+        <!-- Keyboard Shortcuts -->
+        <div class="section-header">KEYBOARD SHORTCUTS</div>
+        <div class="pref-card">
+          <div class="shortcut-row">
+            <span class="shortcut-key">Space</span>
+            <span class="shortcut-action">Play / Pause</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">F / F11</span>
+            <span class="shortcut-action">Toggle Fullscreen</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">← / →</span>
+            <span class="shortcut-action">Seek ±5s</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">Ctrl+← / Ctrl+→</span>
+            <span class="shortcut-action">Prev/Next Chapter</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">Shift+← / Shift+→</span>
+            <span class="shortcut-action">Seek ±30s</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">↑ / ↓</span>
+            <span class="shortcut-action">Volume ±5%</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">M</span>
+            <span class="shortcut-action">Mute Toggle</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">C</span>
+            <span class="shortcut-action">Cycle Subtitles</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">Esc</span>
+            <span class="shortcut-action">Exit Fullscreen</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">Ctrl+O</span>
+            <span class="shortcut-action">Open File</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">Ctrl+P</span>
+            <span class="shortcut-action">Playlist</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-key">Ctrl+Shift+E</span>
+            <span class="shortcut-action">Equalizer</span>
+          </div>
+          <a class="view-all" href="#">View All Shortcuts (Ctrl+/)</a>
+        </div>
+
+        <!-- About -->
+        <div class="section-header">ABOUT</div>
+        <div class="pref-card">
+          <div class="about-section">
+            <div class="about-logo"><span>▶</span></div>
+            <div class="about-name">Cine Media Player</div>
+            <div class="about-ver">Version 1.0.0</div>
+            <div class="about-tech">Built with Avalonia UI &amp; libmpv</div>
+          </div>
+        </div>
+
+        <div style="height:16px"></div>
+      </div>
+
+      <!-- Footer -->
+      <div class="pref-footer">
+        <button class="footer-btn destructive">Reset to Defaults</button>
+        <button class="footer-btn primary">Close</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
