@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   PlayerScreenMockup  ·  Cine / SIMBA Mobile
+   PlayerScreenMockup  ·  Simba / SIMBA Mobile
    Mirror of Avalonia PlayerPage.axaml + ControlsBox + HeaderBar + SeekBar
    ═══════════════════════════════════════════════════════ */
 

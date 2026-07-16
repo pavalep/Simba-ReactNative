@@ -1,4 +1,4 @@
-# Cine / SIMBA Mobile — App Development Guide
+# Simba / SIMBA Mobile — App Development Guide
 
 > **Status tracker** for porting mockup designs into the React Native app.
 > ✅ = done | ⬜ = not started | 🔄 = in progress
@@ -221,7 +221,7 @@ Binds Redux player state + delegates to `mediaService`.
 | **Redux store for recent** | `sessionSlice` added to `rootReducer.ts` + whitelisted in `persistConfig.ts` | ✅ Done |
 | **Recent card behavior** | Tapping a recent card navigates to `PlayerScreen` with `{fileUri, fileTitle}` — auto-resumes position via `sessionSlice` + `seekTo()` | ✅ Wired |
 
-**Note:** A "rental list" (tracking borrowed media with due dates, lender info, return status) does **not** exist in either the desktop Cine app or the React Native mobile app. The **recent files** list is now live from Redux.
+**Note:** A "rental list" (tracking borrowed media with due dates, lender info, return status) does **not** exist in either the desktop Simba app or the React Native mobile app. The **recent files** list is now live from Redux.
 
 #### 8.5.3 Timestamp — How Much Played
 

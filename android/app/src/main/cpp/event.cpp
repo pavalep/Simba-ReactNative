@@ -163,11 +163,22 @@ void eventLoop() {
                 break;
             }
 
-            case MPV_EVENT_LOG_MESSAGE:
+            case MPV_EVENT_LOG_MESSAGE: {
+                auto *log = (mpv_event_log_message *)event->data;
+                __android_log_print(ANDROID_LOG_DEBUG, "mpv", "[%s] %s: %s",
+                                    log->prefix, log->level, log->text);
+                break;
+            }
             case MPV_EVENT_CLIENT_MESSAGE:
+                // Not used
+                break;
             case MPV_EVENT_VIDEO_RECONFIG:
+                LOGI("MPV_EVENT_VIDEO_RECONFIG");
+                callJavaEvent("videoReconfig", "{}");
+                break;
             case MPV_EVENT_AUDIO_RECONFIG:
-                // Can be forwarded if needed
+                LOGI("MPV_EVENT_AUDIO_RECONFIG");
+                callJavaEvent("audioReconfig", "{}");
                 break;
 
             default:

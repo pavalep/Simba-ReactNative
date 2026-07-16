@@ -72,13 +72,13 @@ class MpvRenderView(context: ThemedReactContext) : TextureView(context),
         if (nativePtr == 0L || surface == null) return
         if (!surface!!.isValid) return
         Log.d(TAG, "Attaching surface to mpv")
-        MPVLib.nativeSetSurface(nativePtr, surface)
+        MPVLib.nativeAttachSurface(nativePtr, surface)
     }
 
     private fun detachSurface() {
         if (nativePtr == 0L) return
         Log.d(TAG, "Detaching surface from mpv")
-        MPVLib.nativeSetSurface(nativePtr, null)
+        MPVLib.nativeAttachSurface(nativePtr, null)
     }
 
     /**

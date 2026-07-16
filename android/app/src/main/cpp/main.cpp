@@ -5,7 +5,9 @@
 #include <pthread.h>
 #include <string>
 #include <map>
-#include <client.h>  // mpv
+#include <cstring>
+#include <dlfcn.h>
+#include <client.h>   // mpv
 
 #define LOG_TAG "MpvJNI"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -18,20 +20,17 @@ mpv_handle *g_mpv = nullptr;
 static pthread_t g_eventThread = 0;
 volatile bool g_running = false;
 
-// Cached Java references (use FindClass in JNI_OnLoad to avoid leaks)
+// Cached Java references
 jclass g_cls_MPVLib = nullptr;
 jmethodID g_mid_onEvent = nullptr;
 jmethodID g_mid_onPropertyChanged = nullptr;
 jmethodID g_mid_onError = nullptr;
 
-// ── Forward declarations ────────────────────────────────────────────────────
+// ── Forward declarations ──────────────────────────────────────────────────
 
 void eventLoop();
-void dispatchEvent(const char *event, const char *jsonPayload);
-void dispatchPropertyChange(const char *name, const char *jsonValue);
-void dispatchError(int code, const char *message);
 
-// ── JNI_OnLoad ──────────────────────────────────────────────────────────────
+// ── JNI_OnLoad ────────────────────────────────────────────────────────────
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
     g_vm = vm;
@@ -39,7 +38,6 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
     if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK)
         return JNI_ERR;
 
-    // Cache MPVLib class and callback method IDs
     jclass temp = env->FindClass("com/simba/player/mpv/MPVLib");
     if (!temp) {
         LOGE("Failed to find MPVLib class");
@@ -72,11 +70,26 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
         return JNI_ERR;
     }
 
+    // Set JVM for FFmpeg and libmpv (which uses av_jni_get_java_vm)
+    void* avcodec_handle = dlopen("libavcodec.so", RTLD_NOW);
+    if (avcodec_handle) {
+        typedef int (*av_jni_set_java_vm_t)(void *vm, void *log_ctx);
+        av_jni_set_java_vm_t set_vm = (av_jni_set_java_vm_t)dlsym(avcodec_handle, "av_jni_set_java_vm");
+        if (set_vm) {
+            set_vm(vm, nullptr);
+            LOGI("av_jni_set_java_vm called successfully");
+        } else {
+            LOGE("dlsym failed for av_jni_set_java_vm: %s", dlerror());
+        }
+    } else {
+        LOGE("dlopen failed for libavcodec.so: %s", dlerror());
+    }
+
     LOGI("JNI_OnLoad complete");
     return JNI_VERSION_1_6;
 }
 
-// ── Helper: call static Java method from any thread ─────────────────────────
+// ── Helper: call static Java method from any thread ───────────────────────
 
 static void callStaticJavaVoid(JNIEnv *env, jmethodID mid, ...) {
     va_list args;
@@ -89,14 +102,13 @@ static JNIEnv *getEnv() {
     JNIEnv *env = nullptr;
     if (g_vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) == JNI_OK)
         return env;
-    // Attach current thread if needed
     JavaVMAttachArgs args = {JNI_VERSION_1_6, nullptr, nullptr};
     if (g_vm->AttachCurrentThread(&env, &args) == JNI_OK)
         return env;
     return nullptr;
 }
 
-// ── Lifecycle ───────────────────────────────────────────────────────────────
+// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass) {
@@ -111,10 +123,17 @@ Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass) {
         return 0;
     }
 
-    // Android-specific config
-    mpv_set_option_string(mpv, "vo", "gpu");       // Use GPU video out
-    mpv_set_option_string(mpv, "gpu-context", "android"); // Android surface
-    mpv_set_option_string(mpv, "hwdec", "mediacodec");     // Hardware decoding
+    // Use the gpu VO with wid (Android Surface) — the standard approach
+    // used by all working Android mpv implementations.
+    // mpv manages EGL/OpenGL internally; we just pass it the Surface.
+    // On Android, mpv auto-detects the gpu-context, so we don't set it explicitly.
+    mpv_set_option_string(mpv, "vo", "gpu");
+    mpv_set_option_string(mpv, "gpu-api", "opengl");
+
+    // Enable hardware decoding — works with wid because mpv has the Surface
+    // to pass to MediaCodec for zero-copy decode.
+    mpv_set_option_string(mpv, "hwdec", "mediacodec");
+
     mpv_set_option_string(mpv, "audio-device-auto", "yes");
     mpv_set_option_string(mpv, "keep-open", "yes");
     mpv_set_option_string(mpv, "pause", "no");
@@ -125,16 +144,17 @@ Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass) {
         return 0;
     }
 
+    mpv_request_log_messages(mpv, "v");
+
     g_mpv = mpv;
     g_running = true;
 
-    // Start event loop thread
     pthread_create(&g_eventThread, nullptr, [](void *) -> void * {
         eventLoop();
         return nullptr;
     }, nullptr);
 
-    LOGI("mpv instance created");
+    LOGI("mpv instance created (wid mode)");
     return reinterpret_cast<jlong>(mpv);
 }
 
@@ -144,7 +164,6 @@ Java_com_simba_player_mpv_MPVLib_nativeDestroy(JNIEnv *env, jclass) {
 
     g_running = false;
 
-    // Wake up mpv event loop so thread exits
     mpv_wakeup(g_mpv);
     if (g_eventThread) {
         pthread_join(g_eventThread, nullptr);
@@ -156,23 +175,54 @@ Java_com_simba_player_mpv_MPVLib_nativeDestroy(JNIEnv *env, jclass) {
     LOGI("mpv instance destroyed");
 }
 
+// Global reference to the surface so mpv's thread can use it
+static jobject g_surface = nullptr;
+
 extern "C" JNIEXPORT void JNICALL
-Java_com_simba_player_mpv_MPVLib_nativeSetSurface(
+Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
     JNIEnv *env, jclass, jlong nativePtr, jobject surface) {
     if (!nativePtr) return;
+
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
 
-    // Android GPU context was already set up in nativeCreate (vo=gpu,
-    // gpu-context=android). The Surface is passed via MPV_RENDER_PARAM_ANDROID_SURFACE
-    // when using the render API. For basic vo=gpu usage, set the
-    // "wid" option to the native window handle.
     if (surface) {
-        ANativeWindow *win = ANativeWindow_fromSurface(env, surface);
-        if (win) {
-            int64_t win_ptr = reinterpret_cast<int64_t>(win);
-            mpv_set_property(mpv, "wid", MPV_FORMAT_INT64, &win_ptr);
-            ANativeWindow_release(win);
+        if (g_surface) {
+            env->DeleteGlobalRef(g_surface);
+            g_surface = nullptr;
         }
+        g_surface = env->NewGlobalRef(surface);
+        if (!g_surface) {
+            LOGE("Failed to create GlobalRef for surface");
+            return;
+        }
+
+        // Convert android.view.Surface to int64_t and pass as wid.
+        // mpv's gpu VO will take ownership of the Surface, create an EGL context
+        // and ANativeWindow internally, and handle all rendering.
+        int64_t wid = reinterpret_cast<intptr_t>(g_surface);
+        int result = mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &wid);
+        if (result < 0)
+            LOGE("mpv_set_option(wid) returned error: %s", mpv_error_string(result));
+        else {
+            LOGI("Surface attached via wid");
+            JNIEnv* jniEnv = getEnv();
+            if (jniEnv && g_mid_onEvent) {
+                jstring jName = jniEnv->NewStringUTF("surfaceAttached");
+                jstring jPayload = jniEnv->NewStringUTF("{}");
+                callStaticJavaVoid(jniEnv, g_mid_onEvent, jName, jPayload);
+                jniEnv->DeleteLocalRef(jName);
+                jniEnv->DeleteLocalRef(jPayload);
+            }
+        }
+    } else {
+        // Detach — pass wid=0
+        int64_t wid = 0;
+        mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &wid);
+        if (g_surface) {
+            env->DeleteGlobalRef(g_surface);
+            g_surface = nullptr;
+        }
+        LOGI("Surface detached (wid=0)");
     }
 }
 
@@ -258,7 +308,6 @@ Java_com_simba_player_mpv_MPVLib_nativeScreenshot(
     JNIEnv *env, jclass, jlong nativePtr) {
     if (!nativePtr) return env->NewStringUTF("");
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    // Screenshot to a temp file
     const char *args[] = {"screenshot-to-file", "/tmp/mpv_screenshot.png", nullptr};
     mpv_command(mpv, args);
     return env->NewStringUTF("/tmp/mpv_screenshot.png");
@@ -328,7 +377,6 @@ Java_com_simba_player_mpv_MPVLib_nativeGetSpeed(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetLoopMode(
     JNIEnv *env, jclass, jlong nativePtr, jint mode) {
-    // mode: 0=none, 1=file, 2=playlist
     if (!nativePtr) return;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
     switch (mode) {
@@ -462,7 +510,7 @@ Java_com_simba_player_mpv_MPVLib_nativeSetAudioFilter(
     env->ReleaseStringUTFChars(filter, utf);
 }
 
-// ── State Queries ───────────────────────────────────────────────────────────
+// ── State Queries ────────────────────────────────────────────────────────────
 
 extern "C" JNIEXPORT jdouble JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeGetPosition(

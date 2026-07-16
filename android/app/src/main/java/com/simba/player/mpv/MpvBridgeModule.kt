@@ -51,6 +51,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
                 "endFile"           -> "onEndFile"
                 "playbackRestart"   -> "onPlaybackRestart"
                 "seek"              -> "onSeek"
+                "surfaceAttached"   -> "onSurfaceAttached"
                 else                -> event
             }
             try {
@@ -132,7 +133,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         MPVLib.nativeStepFrame(nativePtr, direction.toInt())
     }
 
-    @ReactMethod
+    @ReactMethod(isBlockingSynchronousMethod = true)
     fun screenshot(): String {
         ensurePtr()
         return MPVLib.nativeScreenshot(nativePtr)
@@ -153,53 +154,41 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         MPVLib.nativeLoadPlaylist(nativePtr, arr, startIndex.toInt())
     }
 
-    @ReactMethod
-    fun getFileInfo(): ReadableMap {
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun getFileInfo(): String {
         ensurePtr()
-        val title = try {
-            MPVLib.nativeGetProperty(nativePtr, "media-title")
-        } catch (_: Exception) { "" }
-        val path = try {
-            MPVLib.nativeGetProperty(nativePtr, "path")
-        } catch (_: Exception) { "" }
-        val duration = getDuration()
-        return Arguments.createMap().apply {
-            putString("path", path)
-            putString("title", title)
-            putDouble("duration", duration)
-        }
+        return JSONObject().apply {
+            put("path", try { MPVLib.nativeGetProperty(nativePtr, "path") } catch (_: Exception) { "" })
+            put("title", try { MPVLib.nativeGetProperty(nativePtr, "media-title") } catch (_: Exception) { "" })
+            put("duration", getDuration())
+        }.toString()
     }
 
-    @ReactMethod
-    fun getVideoParams(): ReadableMap {
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun getVideoParams(): String {
         ensurePtr()
         val w = try { MPVLib.nativeGetProperty(nativePtr, "width") } catch (_: Exception) { "0" }
         val h = try { MPVLib.nativeGetProperty(nativePtr, "height") } catch (_: Exception) { "0" }
         val fps = try { MPVLib.nativeGetProperty(nativePtr, "estimated-vf-fps") } catch (_: Exception) { "0" }
         val codec = try { MPVLib.nativeGetProperty(nativePtr, "video-codec") } catch (_: Exception) { "" }
-        return Arguments.createMap().apply {
-            putDouble("videoWidth", w.toDoubleOrNull() ?: 0.0)
-            putDouble("videoHeight", h.toDoubleOrNull() ?: 0.0)
-            putDouble("aspectRatio", if (h.toDoubleOrNull() ?: 0.0 > 0)
+        return JSONObject().apply {
+            put("videoWidth", w.toDoubleOrNull() ?: 0.0)
+            put("videoHeight", h.toDoubleOrNull() ?: 0.0)
+            put("aspectRatio", if (h.toDoubleOrNull() ?: 0.0 > 0)
                 (w.toDoubleOrNull() ?: 1.0) / (h.toDoubleOrNull() ?: 1.0) else 1.0)
-            putDouble("fps", fps.toDoubleOrNull() ?: 0.0)
-            putString("codec", codec.trim('"'))
-        }
+            put("fps", fps.toDoubleOrNull() ?: 0.0)
+            put("codec", codec.trim('"'))
+        }.toString()
     }
 
     // ── Tracks ─────────────────────────────────────────────────────────────
 
-    @ReactMethod
-    fun getTracks(): ReadableArray {
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun getTracks(): String {
         ensurePtr()
-        val json = try {
+        return try {
             MPVLib.nativeGetProperty(nativePtr, "track-list")
         } catch (_: Exception) { "[]" }
-        return try {
-            jsonStringToReactArray(json)
-        } catch (_: Exception) {
-            Arguments.createArray()
-        }
     }
 
     @ReactMethod
@@ -225,17 +214,12 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     // ── Chapters ───────────────────────────────────────────────────────────
 
-    @ReactMethod
-    fun getChapters(): ReadableArray {
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun getChapters(): String {
         ensurePtr()
-        val json = try {
+        return try {
             MPVLib.nativeGetProperty(nativePtr, "chapter-list")
         } catch (_: Exception) { "[]" }
-        return try {
-            jsonStringToReactArray(json)
-        } catch (_: Exception) {
-            Arguments.createArray()
-        }
     }
 
     @ReactMethod
@@ -248,18 +232,12 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    @ReactMethod
-    fun getCurrentChapter(): ReadableMap {
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun getCurrentChapter(): String {
         ensurePtr()
-        val json = try {
-            MPVLib.nativeGetProperty(nativePtr, "chapter-metadata")
-        } catch (_: Exception) { "null" }
-        if (json == "null" || json.isEmpty()) return Arguments.createMap()
         return try {
-            JsonUtil.jsonStringToReactMap(json)
-        } catch (_: Exception) {
-            Arguments.createMap()
-        }
+            MPVLib.nativeGetProperty(nativePtr, "chapter-metadata")
+        } catch (_: Exception) { "{}" }
     }
 
     // ── Volume / Audio ─────────────────────────────────────────────────────
@@ -270,7 +248,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         MPVLib.nativeSetVolume(nativePtr, volume)
     }
 
-    @ReactMethod
+    @ReactMethod(isBlockingSynchronousMethod = true)
     fun getVolume(): Double {
         ensurePtr()
         return MPVLib.nativeGetVolume(nativePtr)
@@ -282,23 +260,18 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         MPVLib.nativeSetMuted(nativePtr, muted)
     }
 
-    @ReactMethod
+    @ReactMethod(isBlockingSynchronousMethod = true)
     fun getMuted(): Boolean {
         ensurePtr()
         return MPVLib.nativeGetMuted(nativePtr)
     }
 
-    @ReactMethod
-    fun getAudioDevices(): ReadableArray {
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun getAudioDevices(): String {
         ensurePtr()
-        val json = try {
+        return try {
             MPVLib.nativeGetProperty(nativePtr, "audio-device-list")
         } catch (_: Exception) { "[]" }
-        return try {
-            jsonStringToReactArray(json)
-        } catch (_: Exception) {
-            Arguments.createArray()
-        }
     }
 
     @ReactMethod
@@ -315,7 +288,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         MPVLib.nativeSetSpeed(nativePtr, speed)
     }
 
-    @ReactMethod
+    @ReactMethod(isBlockingSynchronousMethod = true)
     fun getSpeed(): Double {
         ensurePtr()
         return MPVLib.nativeGetSpeed(nativePtr)
@@ -334,7 +307,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         MPVLib.nativeSetLoopMode(nativePtr, m)
     }
 
-    @ReactMethod
+    @ReactMethod(isBlockingSynchronousMethod = true)
     fun getLoopMode(): String {
         ensurePtr()
         return when (MPVLib.nativeGetLoopMode(nativePtr)) {
@@ -352,7 +325,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     // ── Properties ─────────────────────────────────────────────────────────
 
-    @ReactMethod
+    @ReactMethod(isBlockingSynchronousMethod = true)
     fun getProperty(name: String): String {
         ensurePtr()
         return MPVLib.nativeGetProperty(nativePtr, name)
@@ -392,21 +365,12 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     // ── Playlist ───────────────────────────────────────────────────────────
 
-    @ReactMethod
-    fun getPlaylist(): ReadableArray {
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun getPlaylist(): String {
         ensurePtr()
-        val json = try {
+        return try {
             MPVLib.nativeGetProperty(nativePtr, "playlist")
         } catch (_: Exception) { "[]" }
-        val arr = Arguments.createArray()
-        try {
-            val jArr = JSONArray(json)
-            for (i in 0 until jArr.length()) {
-                val entry = jArr.getJSONObject(i)
-                arr.pushString(entry.optString("filename", ""))
-            }
-        } catch (_: Exception) {}
-        return arr
     }
 
     @ReactMethod
@@ -467,7 +431,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
 
-    @ReactMethod
+    @ReactMethod(isBlockingSynchronousMethod = true)
     fun initPlayer(): Boolean {
         if (nativePtr != 0L) {
             Log.w(TAG, "Already initialized")
@@ -515,22 +479,6 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         if (nativePtr == 0L) {
             throw IllegalStateException("MpvPlayerModule not initialized. Call initPlayer() first.")
         }
-    }
-
-    private fun jsonStringToReactArray(json: String): ReadableArray {
-        val arr = Arguments.createArray()
-        val jArr = JSONArray(json)
-        for (i in 0 until jArr.length()) {
-            val item = jArr.get(i)
-            when (item) {
-                is JSONObject -> arr.pushMap(JsonUtil.jsonStringToReactMap(item.toString()))
-                is JSONArray -> arr.pushArray(jsonStringToReactArray(item.toString()))
-                is String -> arr.pushString(item)
-                is Number -> arr.pushDouble(item.toDouble())
-                is Boolean -> arr.pushBoolean(item)
-            }
-        }
-        return arr
     }
 }
 

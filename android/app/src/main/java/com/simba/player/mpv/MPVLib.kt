@@ -24,8 +24,8 @@ object MPVLib {
     /** Destroy mpv instance. */
     external fun nativeDestroy()
 
-    /** Attach an Android Surface for video output. */
-    external fun nativeSetSurface(nativePtr: Long, surface: Surface?)
+    /** Attach/detach an Android Surface for video output (wid API). */
+    external fun nativeAttachSurface(nativePtr: Long, surface: Surface?)
 
     // ── Playback Control ───────────────────────────────────────────────────
 

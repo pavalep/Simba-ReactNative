@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   PreferencesScreenMockup  ·  Cine / SIMBA Mobile
+   PreferencesScreenMockup  ·  Simba / SIMBA Mobile
    Mirror of Avalonia PreferencesDialog.axaml
    ═══════════════════════════════════════════════════════ */
 
@@ -226,7 +226,7 @@ export default function PreferencesScreenMockup() {
             <View style={styles.aboutLogo}>
               <Text style={styles.aboutLogoIcon}>▶</Text>
             </View>
-            <Text style={styles.aboutAppName}>Cine Media Player</Text>
+            <Text style={styles.aboutAppName}>Simba Media Player</Text>
             <Text style={styles.aboutVersion}>Version 1.0.0</Text>
             <Text style={styles.aboutBuilt}>Built with Avalonia UI &amp; libmpv</Text>
           </View>

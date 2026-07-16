@@ -238,7 +238,7 @@ export const PreferencesScreen: React.FC<Props> = ({navigation}) => {
               <AppText style={styles.aboutPlayIcon}>▶</AppText>
             </View>
             <AppText variant="body1" color={colors.osdForeground} style={styles.aboutName}>
-              Cine Media Player
+              Simba Media Player
             </AppText>
             <AppText variant="body2" color={colors.textSecondary} style={styles.aboutVer}>
               Version 1.0.0

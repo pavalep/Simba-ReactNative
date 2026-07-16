@@ -37,6 +37,8 @@ export interface ThemeTokens {
   glassBg: string;
   glassBorder: string;
   glassEdge: string;
+  logoCircleBg: string;
+  logoCircleBorder: string;
 
   // ── New: Card glass ──
   cardGlassBg: string;

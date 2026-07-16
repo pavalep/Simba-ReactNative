@@ -3,357 +3,1050 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Start Screen — Cine Mockup</title>
+  <title>Start Screen — Simba Mockup</title>
   <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
   <style>
-    /* ── Start screen specific ───────────────────── */
-    .start-scroll {
-      height: calc(100% - 36px);
-      overflow-y: auto;
-      overflow-x: hidden;
-      padding: 0 28px 80px;
-      position: relative;
-      z-index: 2;
+    /* ═══════════════════════════════════════════════════════
+       START SCREEN — "SIMBA NOIR" Premium Redesign
+       Inspired by: Rolls-Royce, luxury automotive dashboards,
+       private member clubs, high-end audio equipment
+       ═══════════════════════════════════════════════════════ */
+
+    /* ── Theme Variables (overrides for start screen) ──── */
+    :root {
+      --gold-primary: #C9A84C;
+      --gold-light: #E8D5A3;
+      --gold-dark: #A8873B;
+      --gold-glow: rgba(201,168,76,0.20);
+      --gold-subtle: rgba(201,168,76,0.08);
+
+      --bg-deep: #08080A;
+      --bg-charcoal: #0C0C0E;
+      --bg-surface: #111114;
+      --bg-elevated: #1A1A1E;
+
+      --glass-bg-premium: rgba(255,255,255,0.04);
+      --glass-border-premium: rgba(255,255,255,0.06);
+
+      --text-primary: #EDEDED;
+      --text-secondary: rgba(237,237,237,0.70);
+      --text-tertiary: rgba(237,237,237,0.40);
+      --text-hint: rgba(237,237,237,0.25);
+
+      --spacing-unit: 4px;
     }
 
-    /* Brand section */
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg-deep);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+
+    /* ── Screen Frame ────────────────────────────────── */
+    .screen-container {
+      position: relative;
+      width: 390px;
+      height: 844px;
+      margin: 0 auto;
+      overflow: hidden;
+      background: var(--bg-deep);
+      /* Subtle border glow */
+      box-shadow: 0 0 80px rgba(201,168,76,0.04);
+    }
+
+    /* ── Background layers ───────────────────────────── */
+    .bg-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .bg-base { background: var(--bg-deep); }
+
+    /* Warm ambient glow — like a fireplace in a private club */
+    .bg-ambient {
+      background:
+        radial-gradient(ellipse 90% 55% at 50% 30%, rgba(201,168,76,0.06), transparent 70%),
+        radial-gradient(ellipse 50% 40% at 75% 70%, rgba(201,168,76,0.03), transparent 60%),
+        radial-gradient(ellipse 40% 50% at 25% 80%, rgba(255,255,255,0.015), transparent 50%);
+    }
+
+    /* Dark vignette for depth */
+    .vignette {
+      background: radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(0,0,0,0.50) 100%);
+    }
+
+    /* Top sheen — subtle light from above */
+    .top-sheen {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+      height: 120px;
+      top: 0;
+    }
+
+    /* Starlight dots — inspired by Rolls-Royce Starlight Headliner */
+    .starlight {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.30);
+    }
+    .star-1 { top: 8%; left: 12%; width: 1.5px; height: 1.5px; opacity: 0.5; }
+    .star-2 { top: 5%; left: 45%; opacity: 0.3; }
+    .star-3 { top: 10%; left: 78%; width: 1.5px; height: 1.5px; opacity: 0.4; }
+    .star-4 { top: 15%; left: 30%; opacity: 0.6; }
+    .star-5 { top: 3%; left: 88%; opacity: 0.25; }
+    .star-6 { top: 18%; left: 55%; opacity: 0.35; }
+    .star-7 { top: 22%; left: 8%; opacity: 0.45; }
+    .star-8 { top: 12%; left: 65%; opacity: 0.3; }
+    .star-9 { top: 60%; left: 85%; opacity: 0.2; }
+    .star-10 { top: 75%; left: 10%; opacity: 0.25; }
+    .star-11 { top: 88%; left: 20%; opacity: 0.15; }
+    .star-12 { top: 92%; left: 70%; opacity: 0.2; }
+
+    /* ── Gold Orbs (decorative) ─────────────────────── */
+    .gold-orb {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(60px);
+    }
+    .gold-orb-1 {
+      top: -60px;
+      right: -80px;
+      width: 250px;
+      height: 250px;
+      background: radial-gradient(circle, rgba(201,168,76,0.10), transparent 70%);
+    }
+    .gold-orb-2 {
+      bottom: 120px;
+      left: -100px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(201,168,76,0.05), transparent 70%);
+    }
+
+    /* ── Content Wrapper ────────────────────────────── */
+    .content {
+      position: relative;
+      z-index: 2;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 0 28px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+    }
+    .content::-webkit-scrollbar { display: none; }
+
+    /* ── Status Bar ─────────────────────────────────── */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0 8px;
+      flex-shrink: 0;
+    }
+    .status-time {
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      color: var(--text-primary);
+    }
+    .status-icons {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .status-icons svg {
+      opacity: 0.6;
+    }
+
+    /* ── Brand Section ──────────────────────────────── */
     .brand-section {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding-top: 28px;
-      margin-bottom: 12px;
+      padding-top: 12px;
+      padding-bottom: 6px;
+      flex-shrink: 0;
     }
-    .logo-circle {
-      width: 56px;
-      height: 56px;
+
+    /* Premium crest — lion in gold-rimmed medallion */
+    .crest-container {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin-bottom: 14px;
+    }
+    .crest-ring {
+      position: absolute;
+      inset: 0;
       border-radius: 50%;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
+      border: 2px solid rgba(201,168,76,0.25);
+      box-shadow:
+        0 0 30px rgba(201,168,76,0.08),
+        inset 0 0 30px rgba(201,168,76,0.04);
+      animation: crestPulse 4s ease-in-out infinite;
+    }
+    .crest-ring-outer {
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 1px solid rgba(201,168,76,0.08);
+    }
+    .crest-inner {
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      background: rgba(201,168,76,0.04);
+      border: 1px solid rgba(201,168,76,0.10);
+    }
+    .crest-logo {
+      position: absolute;
+      inset: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 8px;
-      font-size: 30px;
     }
+    .crest-logo svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    @keyframes crestPulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    /* Wordmark */
     .wordmark {
-      font-size: 28px;
+      font-family: 'Playfair Display', 'Georgia', serif;
+      font-size: 34px;
       font-weight: 700;
-      letter-spacing: 6px;
+      letter-spacing: 10px;
       color: var(--text-primary);
-      text-shadow: 0 0 20px var(--accent-glow);
+      margin-bottom: 2px;
+      text-shadow: 0 0 40px rgba(201,168,76,0.06);
+    }
+
+    .tagline-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
       margin-bottom: 4px;
     }
-    .tagline {
+    .tagline-line {
+      width: 28px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(201,168,76,0.30), transparent);
+    }
+    .tagline-text {
+      font-family: 'Cormorant Garamond', 'Georgia', serif;
       font-size: 13px;
-      color: var(--text-hint);
-      letter-spacing: 0.3px;
+      font-style: italic;
+      letter-spacing: 1.2px;
+      color: var(--gold-light);
+      opacity: 0.7;
+      font-weight: 400;
     }
 
-    /* Action buttons */
-    .btn-row {
+    /* ── Decorative Divider ─────────────────────────── */
+    .divider {
       display: flex;
-      gap: 10px;
-      justify-content: center;
-      margin-bottom: 28px;
+      align-items: center;
+      gap: 12px;
+      margin: 6px 0 10px;
+      flex-shrink: 0;
     }
-    .action-btn {
+    .divider-line {
       flex: 1;
-      max-width: 180px;
-      height: 42px;
-      border-radius: var(--radius-md);
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(201,168,76,0.12), transparent);
+    }
+    .divider-diamond {
+      width: 5px;
+      height: 5px;
+      background: rgba(201,168,76,0.20);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════════════
+       ACTION AREA — "Command Center"
+       Creative arrangement with premium styling
+       ══════════════════════════════════════════════════ */
+    .action-area {
+      flex-shrink: 0;
+      padding: 2px 0 6px;
+    }
+
+    /* ── Primary CTA (full width, gold) ──────────── */
+    .btn-primary {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      border: 0.5px solid;
+      gap: 14px;
+      width: 100%;
+      height: 58px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.06));
+      border: 1px solid rgba(201,168,76,0.25);
       cursor: pointer;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s;
+      transition: all 0.3s ease;
       text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 12px;
     }
-    .btn-primary {
-      background: var(--glass-bg);
-      border-color: var(--accent-border);
-      color: var(--text-primary);
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent);
+      pointer-events: none;
+    }
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(201,168,76,0.15), transparent, rgba(201,168,76,0.08));
+      z-index: -1;
+      opacity: 0.5;
     }
     .btn-primary:hover {
-      background: var(--accent-dim);
-      border-color: var(--accent-light);
+      border-color: rgba(201,168,76,0.40);
+      background: linear-gradient(135deg, rgba(201,168,76,0.16), rgba(201,168,76,0.08));
+      transform: translateY(-1px);
     }
-    .btn-secondary {
-      background: transparent;
-      border-color: var(--glass-border);
-      color: var(--text-secondary);
+    .btn-primary:hover::after {
+      opacity: 0.8;
     }
-    .btn-secondary:hover {
-      background: var(--glass-bg);
-      border-color: var(--accent-border);
-    }
-    .btn-icon { font-size: 15px; }
-
-    /* Recent section */
-    .recent-section { margin-top: 8px; }
-    .recent-header {
+    .btn-icon-primary {
+      width: 22px;
+      height: 22px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: center;
+      opacity: 0.9;
+    }
+    .btn-icon-primary svg { width: 20px; height: 20px; }
+    .btn-label {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      color: var(--text-primary);
+    }
+    .btn-hint {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      color: rgba(237,237,237,0.25);
+      margin-left: 4px;
+    }
+
+    /* ── Secondary Actions Grid ──────────────────── */
+    .secondary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .btn-secondary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(201,168,76,0.15);
+      transform: translateY(-1px);
+    }
+    .btn-secondary-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(201,168,76,0.08);
+      border: 1px solid rgba(201,168,76,0.10);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .btn-secondary-icon svg {
+      width: 16px;
+      height: 16px;
+      opacity: 0.7;
+    }
+    .btn-secondary-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .btn-secondary-label {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+    .btn-secondary-sublabel {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      color: var(--text-tertiary);
+      white-space: nowrap;
+    }
+
+    /* ── Quick Filter Chips (creative stagger) ───── */
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      padding: 2px 0;
+      flex-shrink: 0;
+    }
+    .filter-chip {
+      padding: 7px 18px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      color: var(--text-tertiary);
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-decoration: none;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .filter-chip:hover {
+      color: var(--text-primary);
+      background: rgba(201,168,76,0.06);
+      border-color: rgba(201,168,76,0.15);
+    }
+    .filter-chip.active {
+      color: var(--gold-light);
+      background: rgba(201,168,76,0.08);
+      border-color: rgba(201,168,76,0.20);
+    }
+
+    /* ══════════════════════════════════════════════════
+       RECENT SECTION
+       ══════════════════════════════════════════════════ */
+    .recent-section {
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       margin-bottom: 14px;
       padding: 0 2px;
     }
-    .recent-title {
+    .section-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title {
       font-size: 10px;
       font-weight: 600;
-      letter-spacing: 1.5px;
+      letter-spacing: 1.8px;
+      color: var(--text-tertiary);
+    }
+    .section-count {
+      padding: 1px 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.04);
+      font-size: 9px;
+      font-weight: 500;
       color: var(--text-hint);
     }
-    .recent-count {
-      padding: 2px 10px;
-      border-radius: var(--radius-full);
-      background: var(--hover-subtle);
-      border: 0.5px solid var(--glass-border);
-      font-size: 9px;
-      color: var(--text-hint);
+    .section-action {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 12px;
+      font-style: italic;
+      letter-spacing: 0.3px;
+      color: rgba(201,168,76,0.35);
+      cursor: pointer;
+      transition: color 0.2s;
+      text-decoration: none;
+    }
+    .section-action:hover {
+      color: rgba(201,168,76,0.6);
     }
 
-    /* Card track (horizontal scrolling) */
+    /* ── Card Track ──────────────────────────────── */
     .card-track {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       overflow-x: auto;
       scroll-snap-type: x mandatory;
-      padding-bottom: 8px;
+      padding: 4px 0 16px;
+      scrollbar-width: none;
     }
-    .card-track::-webkit-scrollbar { height: 0; }
+    .card-track::-webkit-scrollbar { display: none; }
 
-    /* Recent card */
+    /* ── Recent Card ─────────────────────────────── */
     .recent-card {
-      flex: 0 0 160px;
+      flex: 0 0 172px;
       padding: 10px;
-      border-radius: var(--radius-lg);
-      background: var(--card-glass-bg);
-      border: 0.5px solid var(--card-glass-border);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.04);
       scroll-snap-align: start;
       cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
     .recent-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--accent-border);
+      border-color: rgba(201,168,76,0.15);
+      background: rgba(255,255,255,0.04);
+      transform: translateY(-3px);
+    }
+    .recent-card:hover .card-glow-hover {
+      opacity: 1;
+    }
+    .card-glow-hover {
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(201,168,76,0.04), transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.5s;
     }
 
-    .thumb-container {
-      width: 136px;
-      height: 85px;
-      border-radius: var(--radius-md);
+    /* Thumbnail */
+    .card-thumb {
+      width: 100%;
+      height: 92px;
+      border-radius: 12px;
       overflow: hidden;
       position: relative;
-      margin-bottom: 6px;
-      background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      border: 1px solid rgba(255,255,255,0.03);
     }
-    .thumb-dim {
+    .card-thumb-dim {
       position: absolute; inset: 0;
-      background: rgba(0,0,0,0.04);
+      background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.3) 100%);
     }
-    .thumb-icon {
+    .card-thumb-icon {
       position: absolute; inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
-      color: rgba(255,255,255,0.55);
-      text-shadow: 0 2px 8px rgba(0,0,0,0.4);
-      pointer-events: none;
     }
-
-    /* Badges on thumbnail */
-    .badge-ts {
+    .card-thumb-icon svg {
+      width: 26px;
+      height: 26px;
+      opacity: 0.30;
+    }
+    .card-badge {
       position: absolute;
-      bottom: 4px; left: 4px;
-      padding: 1px 4px;
-      border-radius: 3px;
-      background: rgba(10,10,12,0.67);
+      bottom: 6px; left: 6px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(8,8,10,0.70);
+      backdrop-filter: blur(4px);
       font-size: 9px;
-      color: rgba(255,255,255,0.8);
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      color: rgba(255,255,255,0.7);
       pointer-events: none;
+      border: 0.5px solid rgba(255,255,255,0.04);
     }
-    .continue-badge {
+    .card-continue {
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: rgba(20,20,22,0.8);
-      font-size: 10px;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      background: rgba(8,8,10,0.75);
+      backdrop-filter: blur(8px);
+      border: 0.5px solid rgba(201,168,76,0.15);
+      font-size: 9px;
       font-weight: 600;
-      color: #fff;
+      letter-spacing: 0.3px;
+      color: var(--gold-light);
       pointer-events: none;
     }
+    .card-continue svg { width: 10px; height: 10px; }
 
     /* Card text */
     .card-title {
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 600;
+      letter-spacing: 0.2px;
       color: var(--text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     .card-meta {
       display: flex;
       gap: 4px;
       flex-wrap: wrap;
     }
-    .meta-chip {
-      padding: 1px 4px;
-      border-radius: 3px;
+    .card-meta-chip {
+      padding: 2px 6px;
+      border-radius: 4px;
       font-size: 8.5px;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+      color: var(--text-tertiary);
+      background: rgba(255,255,255,0.04);
+      border: 0.5px solid rgba(255,255,255,0.03);
+    }
+    .card-meta-chip.gold {
+      color: rgba(201,168,76,0.6);
+      background: rgba(201,168,76,0.06);
+      border-color: rgba(201,168,76,0.08);
+    }
+    .card-meta-chip.dark {
+      background: rgba(0,0,0,0.15);
+    }
+
+    /* ══════════════════════════════════════════════════
+       KEYBOARD HINT
+       ══════════════════════════════════════════════════ */
+    .kbd-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 0 20px;
+      flex-shrink: 0;
+    }
+    .kbd-key {
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.04);
+      border: 0.5px solid rgba(255,255,255,0.05);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      color: var(--text-secondary);
+    }
+    .kbd-plus {
+      font-size: 10px;
       color: var(--text-hint);
     }
-    .chip-default { background: rgba(255,255,255,0.08); }
-    .chip-bronze  { background: rgba(201,169,110,0.10); }
-    .chip-teal    { background: rgba(110,201,169,0.10); }
-    .chip-dark    { background: rgba(16,16,18,0.08); }
+    .kbd-label {
+      font-size: 10px;
+      font-weight: 400;
+      letter-spacing: 0.5px;
+      color: var(--text-hint);
+    }
+
+    /* ══════════════════════════════════════════════════
+       RESPONSIVE
+       ══════════════════════════════════════════════════ */
+    @media (max-width: 440px) {
+      .screen-container {
+        width: 100%;
+        height: 100vh;
+        max-height: 844px;
+        box-shadow: none;
+      }
+    }
+
+    /* ── Empty state ────────────────────────────────── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 0;
+      gap: 8px;
+      opacity: 0.5;
+    }
+    .empty-state-icon {
+      width: 32px;
+      height: 32px;
+      opacity: 0.3;
+    }
+    .empty-state-text {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      color: var(--text-hint);
+      text-align: center;
+    }
   </style>
 </head>
 <body>
-  <div class="screen active" id="start-screen">
-    <div class="screen-content">
-      <!-- Background layers -->
-      <div class="bg-layer bg-base"></div>
-      <div class="bg-layer bg-warm"></div>
-      <div class="bg-layer bg-cool"></div>
-      <div class="bg-layer bg-left"></div>
-      <div class="bg-layer vignette"></div>
-      <div class="bg-layer top-sheen"></div>
-      <div class="glow-orb"></div>
 
-      <!-- Status bar -->
+  <!-- ══════════════════════════════════════════════
+       PHONE FRAME
+       ══════════════════════════════════════════════ -->
+  <div class="screen-container">
+
+    <!-- ══ BACKGROUND LAYERS ══ -->
+    <div class="bg-layer bg-base"></div>
+    <div class="bg-layer bg-ambient"></div>
+    <div class="bg-layer vignette"></div>
+    <div class="bg-layer top-sheen"></div>
+
+    <!-- Starlight dots — Rolls-Royce inspired -->
+    <div class="starlight">
+      <div class="star star-1"></div>
+      <div class="star star-2"></div>
+      <div class="star star-3"></div>
+      <div class="star star-4"></div>
+      <div class="star star-5"></div>
+      <div class="star star-6"></div>
+      <div class="star star-7"></div>
+      <div class="star star-8"></div>
+      <div class="star star-9"></div>
+      <div class="star star-10"></div>
+      <div class="star star-11"></div>
+      <div class="star star-12"></div>
+    </div>
+
+    <!-- Gold ambient orbs -->
+    <div class="gold-orb gold-orb-1"></div>
+    <div class="gold-orb gold-orb-2"></div>
+
+    <!-- ══ SCROLLABLE CONTENT ══ -->
+    <div class="content">
+
+      <!-- ── Status Bar ── -->
       <div class="status-bar">
-        <span class="caption" style="color:var(--text-secondary)">9:41</span>
-      </div>
-
-      <!-- Scrollable main content -->
-      <div class="start-scroll">
-        <!-- Brand -->
-        <div class="brand-section">
-          <div class="logo-circle">🦁</div>
-          <div class="wordmark">SIMBA</div>
-          <div class="tagline">Play anything.</div>
-        </div>
-
-        <!-- Buttons -->
-        <div class="btn-row">
-          <a class="action-btn btn-primary" href="#">
-            <span class="btn-icon">▶</span>
-            Open Media
-          </a>
-          <a class="action-btn btn-secondary" href="#">
-            <span class="btn-icon">📂</span>
-            Open Folder
-          </a>
-        </div>
-
-        <!-- Recent section -->
-        <div class="recent-section">
-          <div class="recent-header">
-            <span class="recent-title">RECENT</span>
-            <span class="recent-count">5</span>
-          </div>
-
-          <div class="card-track">
-            <!-- Card 1 -->
-            <div class="recent-card">
-              <div class="thumb-container">
-                <div class="thumb-dim"></div>
-                <div class="thumb-icon">▶</div>
-                <span class="badge-ts">2h ago</span>
-                <div class="continue-badge">▶ Continue</div>
-              </div>
-              <div class="card-title">The Grand Budapest Hotel</div>
-              <div class="card-meta">
-                <span class="meta-chip chip-default">Video</span>
-                <span class="meta-chip chip-bronze">.mkv</span>
-                <span class="meta-chip chip-dark">01:39</span>
-              </div>
-            </div>
-
-            <!-- Card 2 -->
-            <div class="recent-card">
-              <div class="thumb-container">
-                <div class="thumb-dim"></div>
-                <div class="thumb-icon">▶</div>
-                <span class="badge-ts">Yesterday</span>
-              </div>
-              <div class="card-title">Bohemian Rhapsody (Live Aid)</div>
-              <div class="card-meta">
-                <span class="meta-chip chip-default">Video</span>
-                <span class="meta-chip chip-bronze">.mp4</span>
-                <span class="meta-chip chip-dark">00:21</span>
-              </div>
-            </div>
-
-            <!-- Card 3 -->
-            <div class="recent-card">
-              <div class="thumb-container">
-                <div class="thumb-dim"></div>
-                <div class="thumb-icon">♫</div>
-                <span class="badge-ts">Yesterday</span>
-              </div>
-              <div class="card-title">Ambient Study Mix</div>
-              <div class="card-meta">
-                <span class="meta-chip chip-teal">Audio</span>
-                <span class="meta-chip chip-teal">.flac</span>
-                <span class="meta-chip chip-dark">2:14:30</span>
-              </div>
-            </div>
-
-            <!-- Card 4 -->
-            <div class="recent-card">
-              <div class="thumb-container">
-                <div class="thumb-dim"></div>
-                <div class="thumb-icon">♫</div>
-                <span class="badge-ts">3d ago</span>
-              </div>
-              <div class="card-title">Interstellar — Main Theme</div>
-              <div class="card-meta">
-                <span class="meta-chip chip-teal">Audio</span>
-                <span class="meta-chip chip-teal">.flac</span>
-                <span class="meta-chip chip-dark">10:23</span>
-              </div>
-            </div>
-
-            <!-- Card 5 -->
-            <div class="recent-card">
-              <div class="thumb-container">
-                <div class="thumb-dim"></div>
-                <div class="thumb-icon">▶</div>
-                <span class="badge-ts">5d ago</span>
-              </div>
-              <div class="card-title">Dune (2021)</div>
-              <div class="card-meta">
-                <span class="meta-chip chip-default">Video</span>
-                <span class="meta-chip chip-bronze">.mp4</span>
-                <span class="meta-chip chip-dark">02:35</span>
-              </div>
-            </div>
-          </div>
+        <span class="status-time">9:41</span>
+        <div class="status-icons">
+          <!-- Signal bars -->
+          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+            <rect x="0" y="8" width="3" height="4" rx="0.5" fill="white" opacity="0.6"/>
+            <rect x="4.5" y="5" width="3" height="7" rx="0.5" fill="white" opacity="0.6"/>
+            <rect x="9" y="3" width="3" height="9" rx="0.5" fill="white" opacity="0.6"/>
+            <rect x="13.5" y="0" width="3" height="12" rx="0.5" fill="white" opacity="0.4"/>
+          </svg>
+          <!-- WiFi -->
+          <svg width="14" height="12" viewBox="0 0 14 12" fill="none">
+            <path d="M7 9.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm0-2.5a4.5 4.5 0 0 0-3.2 1.35" stroke="white" stroke-width="0.8" opacity="0.6"/>
+            <path d="M7 5a7 7 0 0 0-5 2.1" stroke="white" stroke-width="0.8" opacity="0.4"/>
+          </svg>
+          <!-- Battery -->
+          <svg width="24" height="12" viewBox="0 0 24 12" fill="none">
+            <rect x="0.5" y="0.5" width="20" height="11" rx="2" stroke="white" stroke-opacity="0.4" stroke-width="0.8"/>
+            <rect x="2" y="2" width="17" height="8" rx="1.5" fill="white" fill-opacity="0.6"/>
+            <rect x="22" y="3.5" width="2" height="5" rx="1" fill="white" fill-opacity="0.3"/>
+          </svg>
         </div>
       </div>
 
-      <!-- Keyboard hint -->
+      <!-- ── Brand Section ── -->
+      <div class="brand-section">
+        <div class="crest-container">
+          <div class="crest-ring-outer"></div>
+          <div class="crest-ring"></div>
+          <div class="crest-inner"></div>
+          <div class="crest-logo">
+            <!-- Lion SVG crest -->
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Main mane -->
+              <circle cx="50" cy="48" r="28" fill="none" stroke="url(#goldGrad)" stroke-width="0.5" opacity="0.8"/>
+              <!-- Sunburst mane rays -->
+              <g opacity="0.15">
+                <line x1="50" y1="20" x2="50" y2="10" stroke="#C9A84C" stroke-width="1"/>
+                <line x1="50" y1="76" x2="50" y2="86" stroke="#C9A84C" stroke-width="1"/>
+                <line x1="22" y1="48" x2="12" y2="48" stroke="#C9A84C" stroke-width="1"/>
+                <line x1="78" y1="48" x2="88" y2="48" stroke="#C9A84C" stroke-width="1"/>
+                <line x1="30.5" y1="28.5" x2="24" y2="22" stroke="#C9A84C" stroke-width="0.8"/>
+                <line x1="69.5" y1="28.5" x2="76" y2="22" stroke="#C9A84C" stroke-width="0.8"/>
+                <line x1="30.5" y1="67.5" x2="24" y2="74" stroke="#C9A84C" stroke-width="0.8"/>
+                <line x1="69.5" y1="67.5" x2="76" y2="74" stroke="#C9A84C" stroke-width="0.8"/>
+                <line x1="28" y1="36" x2="18" y2="32" stroke="#C9A84C" stroke-width="0.8"/>
+                <line x1="72" y1="36" x2="82" y2="32" stroke="#C9A84C" stroke-width="0.8"/>
+                <line x1="28" y1="60" x2="18" y2="64" stroke="#C9A84C" stroke-width="0.8"/>
+                <line x1="72" y1="60" x2="82" y2="64" stroke="#C9A84C" stroke-width="0.8"/>
+              </g>
+              <!-- Lion face - stylized geometric -->
+              <g opacity="0.85">
+                <!-- Head base -->
+                <ellipse cx="50" cy="52" rx="18" ry="16" fill="rgba(201,168,76,0.12)" stroke="rgba(201,168,76,0.35)" stroke-width="0.8"/>
+                <!-- Eyes -->
+                <ellipse cx="43" cy="48" rx="2.5" ry="2" fill="rgba(201,168,76,0.6)"/>
+                <ellipse cx="57" cy="48" rx="2.5" ry="2" fill="rgba(201,168,76,0.6)"/>
+                <!-- Eye shine -->
+                <circle cx="43.5" cy="47.5" r="0.8" fill="white" opacity="0.3"/>
+                <circle cx="57.5" cy="47.5" r="0.8" fill="white" opacity="0.3"/>
+                <!-- Nose -->
+                <path d="M47 55 Q50 57 53 55" stroke="rgba(201,168,76,0.4)" stroke-width="1" fill="none"/>
+                <!-- Mouth -->
+                <path d="M50 56 L50 58 M47 58 Q50 60 53 58" stroke="rgba(201,168,76,0.25)" stroke-width="0.6" fill="none"/>
+                <!-- Whiskers -->
+                <line x1="36" y1="52" x2="28" y2="50" stroke="rgba(201,168,76,0.15)" stroke-width="0.5"/>
+                <line x1="36" y1="54" x2="28" y2="56" stroke="rgba(201,168,76,0.15)" stroke-width="0.5"/>
+                <line x1="64" y1="52" x2="72" y2="50" stroke="rgba(201,168,76,0.15)" stroke-width="0.5"/>
+                <line x1="64" y1="54" x2="72" y2="56" stroke="rgba(201,168,76,0.15)" stroke-width="0.5"/>
+                <!-- Ears -->
+                <ellipse cx="35" cy="38" rx="5" ry="4" fill="rgba(201,168,76,0.08)" stroke="rgba(201,168,76,0.2)" stroke-width="0.6"/>
+                <ellipse cx="65" cy="38" rx="5" ry="4" fill="rgba(201,168,76,0.08)" stroke="rgba(201,168,76,0.2)" stroke-width="0.6"/>
+              </g>
+              <!-- Crown/prince mark -->
+              <g opacity="0.12" transform="translate(38, 22)">
+                <path d="M0 10 L3 2 L7 8 L12 0 L17 8 L21 2 L24 10 Z" fill="#C9A84C"/>
+              </g>
+              <!-- Subtle gradient definitions -->
+              <defs>
+                <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.3"/>
+                  <stop offset="50%" stop-color="#E8D5A3" stop-opacity="0.5"/>
+                  <stop offset="100%" stop-color="#C9A84C" stop-opacity="0.3"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
+        <div class="wordmark">SIMBA</div>
+        <div class="tagline-row">
+          <div class="tagline-line"></div>
+          <span class="tagline-text">Play anything. Exquisitely.</span>
+          <div class="tagline-line"></div>
+        </div>
+      </div>
+
+      <!-- ── Decorative Divider ── -->
+      <div class="divider">
+        <div class="divider-line"></div>
+        <div class="divider-diamond"></div>
+        <div class="divider-line"></div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           ACTION AREA — "Command Center"
+           ══════════════════════════════════════════════ -->
+      <div class="action-area">
+
+        <!-- Primary CTA -->
+        <a class="btn-primary" href="#">
+          <div class="btn-icon-primary">
+            <svg viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="9" stroke="#C9A84C" stroke-width="0.8" opacity="0.5"/>
+              <path d="M8 6.5v7l5.5-3.5L8 6.5z" fill="#EDEDED"/>
+            </svg>
+          </div>
+          <span class="btn-label">Open Media</span>
+          <span class="btn-hint">↩</span>
+        </a>
+
+        <!-- Secondary actions -->
+        <div class="secondary-grid">
+          <a class="btn-secondary" href="#">
+            <div class="btn-secondary-icon">
+              <svg viewBox="0 0 16 16" fill="none">
+                <path d="M2 3.5h4l2 2h5.5v7H2V3.5z" stroke="#C9A84C" stroke-width="0.8" fill="rgba(201,168,76,0.06)"/>
+                <path d="M4.5 9.5h7M8 7.5v5" stroke="#C9A84C" stroke-width="0.7" opacity="0.5"/>
+              </svg>
+            </div>
+            <div class="btn-secondary-info">
+              <span class="btn-secondary-label">Open Folder</span>
+              <span class="btn-secondary-sublabel">Browse files</span>
+            </div>
+          </a>
+          <a class="btn-secondary" href="#">
+            <div class="btn-secondary-icon">
+              <svg viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6" stroke="#C9A84C" stroke-width="0.8" fill="rgba(201,168,76,0.06)"/>
+                <path d="M5 7.5v-2l5-1v2l-5 1z" stroke="#C9A84C" stroke-width="0.7" fill="rgba(201,168,76,0.2)"/>
+                <path d="M5 9v-1.5l5-1V8l-5 1z" stroke="#C9A84C" stroke-width="0.7" fill="rgba(201,168,76,0.15)"/>
+              </svg>
+            </div>
+            <div class="btn-secondary-info">
+              <span class="btn-secondary-label">Music</span>
+              <span class="btn-secondary-sublabel">Audio library</span>
+            </div>
+          </a>
+        </div>
+
+        <!-- Filter chips -->
+        <div class="filter-row">
+          <a class="filter-chip active" href="#">All</a>
+          <a class="filter-chip" href="#">Videos</a>
+          <a class="filter-chip" href="#">Audio</a>
+          <a class="filter-chip" href="#">Playlists</a>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           RECENT SECTION
+           ══════════════════════════════════════════════ -->
+      <div class="recent-section">
+        <div class="section-header">
+          <div class="section-header-left">
+            <span class="section-title">Recently Opened</span>
+            <span class="section-count">5</span>
+          </div>
+          <a class="section-action" href="#">View all</a>
+        </div>
+
+        <!-- Cards -->
+        <div class="card-track">
+          <!-- Card 1 -->
+          <div class="recent-card">
+            <div class="card-glow-hover"></div>
+            <div class="card-thumb">
+              <div class="card-thumb-dim"></div>
+              <div class="card-thumb-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="4" width="18" height="16" rx="2" stroke="#C9A84C" stroke-width="0.6" opacity="0.3" fill="rgba(201,168,76,0.03)"/>
+                  <circle cx="11" cy="14" r="3" stroke="#C9A84C" stroke-width="0.5" opacity="0.3"/>
+                  <path d="M14 9l-3 5" stroke="#C9A84C" stroke-width="0.5" opacity="0.25"/>
+                </svg>
+              </div>
+              <div class="card-badge">12:34</div>
+            </div>
+            <div class="card-title">Interstellar</div>
+            <div class="card-meta">
+              <span class="card-meta-chip gold">Movie</span>
+              <span class="card-meta-chip">4K</span>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="recent-card">
+            <div class="card-glow-hover"></div>
+            <div class="card-thumb">
+              <div class="card-thumb-dim"></div>
+              <div class="card-thumb-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#C9A84C" stroke-width="0.6" opacity="0.3" fill="rgba(201,168,76,0.03)"/>
+                  <path d="M9 9v6l6-3-6-3z" stroke="#C9A84C" stroke-width="0.5" opacity="0.3" fill="rgba(201,168,76,0.08)"/>
+                </svg>
+              </div>
+              <div class="card-badge">08:15</div>
+            </div>
+            <div class="card-title">Dune Part II</div>
+            <div class="card-meta">
+              <span class="card-meta-chip gold">Movie</span>
+              <span class="card-meta-chip">HDR</span>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="recent-card">
+            <div class="card-glow-hover"></div>
+            <div class="card-thumb">
+              <div class="card-thumb-dim"></div>
+              <div class="card-thumb-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#C9A84C" stroke-width="0.6" opacity="0.3" fill="rgba(201,168,76,0.03)"/>
+                  <path d="M9 9v6l6-3-6-3z" stroke="#C9A84C" stroke-width="0.5" opacity="0.3" fill="rgba(201,168,76,0.08)"/>
+                </svg>
+              </div>
+              <div class="card-badge">1:05:30</div>
+              <div class="card-continue">
+                <svg viewBox="0 0 10 10" fill="none">
+                  <path d="M2 1v8l6-4-6-4z" fill="#C9A84C"/>
+                </svg>
+                Continue
+              </div>
+            </div>
+            <div class="card-title">The Crown S06</div>
+            <div class="card-meta">
+              <span class="card-meta-chip gold">Series</span>
+              <span class="card-meta-chip dark">S6 E4</span>
+            </div>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="recent-card">
+            <div class="card-glow-hover"></div>
+            <div class="card-thumb">
+              <div class="card-thumb-dim"></div>
+              <div class="card-thumb-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#C9A84C" stroke-width="0.6" opacity="0.3" fill="rgba(201,168,76,0.03)"/>
+                  <path d="M8 8h8M8 12h6M8 16h4" stroke="#C9A84C" stroke-width="0.5" opacity="0.3"/>
+                </svg>
+              </div>
+              <div class="card-badge">03:22</div>
+            </div>
+            <div class="card-title">Miles Davis — Kind of Blue</div>
+            <div class="card-meta">
+              <span class="card-meta-chip gold">Music</span>
+              <span class="card-meta-chip">FLAC</span>
+            </div>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="recent-card">
+            <div class="card-glow-hover"></div>
+            <div class="card-thumb">
+              <div class="card-thumb-dim"></div>
+              <div class="card-thumb-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect x="3" y="4" width="18" height="16" rx="2" stroke="#C9A84C" stroke-width="0.6" opacity="0.3" fill="rgba(201,168,76,0.03)"/>
+                  <circle cx="11" cy="14" r="3" stroke="#C9A84C" stroke-width="0.5" opacity="0.3"/>
+                  <path d="M14 9l-3 5" stroke="#C9A84C" stroke-width="0.5" opacity="0.25"/>
+                </svg>
+              </div>
+              <div class="card-badge">2:15:40</div>
+            </div>
+            <div class="card-title">The Batman</div>
+            <div class="card-meta">
+              <span class="card-meta-chip gold">Movie</span>
+              <span class="card-meta-chip">4K HDR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════
+           KEYBOARD HINT
+           ══════════════════════════════════════════════ -->
       <div class="kbd-hint">
         <span class="kbd-key">Ctrl</span>
         <span class="kbd-plus">+</span>
         <span class="kbd-key">O</span>
-        <span class="kbd-label">to open</span>
+        <span class="kbd-label">to open media</span>
       </div>
+
     </div>
+    <!-- ══ END CONTENT ══ -->
+
   </div>
+  <!-- ══ END PHONE FRAME ══ -->
+
 </body>
 </html>

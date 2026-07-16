@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Dimensions,
   StatusBar,
+  BackHandler,
   requireNativeComponent,
   ViewStyle,
   Alert,
@@ -18,6 +19,7 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {MpvPlayer, MpvChapter, MpvTrack} from '../../native';
 import {RootStackScreenProps} from '../../navigation/types';
 import {pickSubtitleFile, isValidSubtitleFile, checkFileExists, validateMediaFile, FileValidation, pickMediaFile, getFileName} from '../../services/fileService';
+import RNFS from 'react-native-fs';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {savePlaybackPosition} from '../../store/slices/sessionSlice';
 import {
@@ -86,6 +88,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const [duration, setDuration] = useState(1);
   const [volume, setVolume] = useState(65);
   const [nativePtr, setNativePtr] = useState(0);
+  const [showVideoSurface, setShowVideoSurface] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<{
     title: string;
@@ -107,6 +110,41 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const fileUriRef = useRef<string | undefined>(fileUri);
   const titleRef = useRef(title);
   const resumeSeekDone = useRef(false);
+
+  // ── Cleanup and navigate back ──
+  const handleGoBack = useCallback(() => {
+    // Step 1: Remove the MpvRenderViewNative from the render tree immediately.
+    // Uses showVideoSurface (not nativePtr) to avoid changing the native pointer
+    // value — onSurfaceTextureDestroyed → detachSurface needs the valid pointer
+    // to safely detach the surface while MPV is still alive.
+    setShowVideoSurface(false);
+
+    // Step 2: Wait for React to flush the view removal, then navigate back.
+    // IMPORTANT: Do NOT call MpvPlayer.destroy() here — it races with
+    // onSurfaceTextureDestroyed (called by Android when the view is removed).
+    // If destroy() frees the mpv handle before onSurfaceTextureDestroyed fires,
+    // detachSurface() will crash trying to use the freed handle.
+    // The cleanup useEffect handles MpvPlayer.destroy() after the component
+    // unmounts, guaranteeing onSurfaceTextureDestroyed has completed first.
+    requestAnimationFrame(() => {
+      // Save playback position
+      const curUri = fileUriRef.current;
+      const curPos = positionRef.current;
+      const curDur = durationRef.current;
+      if (curUri) {
+        dispatch(
+          savePlaybackPosition({
+            fileUri: curUri,
+            title: titleRef.current,
+            position: curPos,
+            duration: curDur,
+          }),
+        );
+      }
+      navigation.navigate('MainTabs');
+    });
+  }, [dispatch, navigation]);
+
   const [subtitleTracks, setSubtitleTracks] = useState<MpvTrack[]>([]);
   const [activeSubtitle, setActiveSubtitle] = useState<number | null>(null);
   const [subtitleVisible, setSubtitleVisible] = useState(true);
@@ -152,10 +190,37 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
     let cancelled = false;
 
     (async () => {
+      console.log('[Player] Init started. fileUri:', fileUri);
+
+      // Resolve content:// URI to a cache file so mpv can read it
+      let playableUri = fileUri;
+      if (fileUri && fileUri.startsWith('content://')) {
+        const fileName = getFileName(fileUri) || `video_${Date.now()}.mp4`;
+        const destPath = `${RNFS.CachesDirectoryPath}/${fileName}`;
+        console.log('[Player] Copying content:// to cache:', destPath);
+        try {
+          await RNFS.copyFile(fileUri, destPath);
+          playableUri = destPath;
+          console.log('[Player] Copy done. playableUri:', playableUri);
+        } catch (copyErr: any) {
+          console.error('[Player] Copy failed:', copyErr);
+          setError({
+            title: 'File Access Error',
+            message: 'Could not copy the selected file to a readable location.',
+            detail: copyErr?.message,
+          });
+          return;
+        }
+      } else {
+        console.log('[Player] Not a content:// URI, using as-is:', fileUri);
+      }
+
       // Validate file before loading
-      if (fileUri) {
-        const validation = await validateMediaFile(fileUri);
+      if (playableUri) {
+        console.log('[Player] Validating file:', playableUri);
+        const validation = await validateMediaFile(playableUri);
         if (cancelled) return;
+        console.log('[Player] Validation result:', JSON.stringify(validation));
         if (!validation.valid) {
           setError({
             title: validation.title,
@@ -166,7 +231,9 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
         }
       }
 
+      console.log('[Player] Initializing mpv...');
       const ok = MpvPlayer.initPlayer();
+      console.log('[Player] initPlayer result:', ok);
       if (!ok) {
         setError({
           title: 'Player Initialization Failed',
@@ -178,34 +245,46 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
       const ptr = MpvPlayer.getNativePtr();
       setNativePtr(ptr);
+      console.log('[Player] Native ptr:', ptr);
 
-      if (fileUri) {
-        MpvPlayer.loadFile(fileUri);
-      }
-
+      // Mount the view first, which will attach the surface
       setIsReady(true);
+      console.log('[Player] Ready! Waiting for surface to attach...');
+
+      // Wait for surface to attach before loading file
+      const sub = MpvPlayer.onSurfaceAttached(() => {
+        console.log('[Player] Surface attached, loading file into mpv:', playableUri);
+        if (playableUri) {
+          MpvPlayer.loadFile(playableUri);
+        }
+        sub?.remove();
+      });
     })();
 
     return () => {
       cancelled = true;
 
-      // Save playback position before unmounting
-      const curUri = fileUriRef.current;
-      const curPos = positionRef.current;
-      const curDur = durationRef.current;
-      if (curUri && rememberPosition && curPos > 0) {
-        dispatch(
-          savePlaybackPosition({
-            fileUri: curUri,
-            title: titleRef.current,
-            position: curPos,
-            duration: curDur,
-          }),
-        );
-      }
+      try {
+        // Save playback position before unmounting
+        const curUri = fileUriRef.current;
+        const curPos = positionRef.current;
+        const curDur = durationRef.current;
+        if (curUri && rememberPosition && curPos > 0) {
+          dispatch(
+            savePlaybackPosition({
+              fileUri: curUri,
+              title: titleRef.current,
+              position: curPos,
+              duration: curDur,
+            }),
+          );
+        }
 
-      MpvPlayer.destroy();
-      MpvPlayer.removeAllListeners();
+        MpvPlayer.destroy();
+        MpvPlayer.removeAllListeners();
+      } catch (_e) {
+        // Ignore cleanup errors during navigation
+      }
     };
   }, [fileUri]);
 
@@ -229,6 +308,17 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
     return () => clearInterval(interval);
   }, [isPlaying, fileUri, rememberPosition, dispatch]);
+
+  // ── Android hardware back button ──
+  useEffect(() => {
+    const onBackPress = () => {
+      handleGoBack();
+      return true; // prevent default (close app)
+    };
+    BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () =>
+      BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+  }, [handleGoBack]);
 
   // ── Subscribe to mpv events ──
   useEffect(() => {
@@ -257,6 +347,16 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
       setPosition(0);
       resumeSeekDone.current = false;
 
+      // Save file to recent immediately (so it appears even if user backs out early)
+      dispatch(
+        savePlaybackPosition({
+          fileUri: fileUriRef.current ?? '',
+          title: titleRef.current,
+          position: 0,
+          duration: dur,
+        }),
+      );
+
       // Resume from saved position
       if (savedEntry && savedEntry.position > 0) {
         // Small delay to let mpv settle before seeking
@@ -267,8 +367,8 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
       }
 
       try {
-        setChapters(MpvPlayer.getChapters());
-        const tracks = MpvPlayer.getTracks();
+        setChapters(JSON.parse(MpvPlayer.getChapters()));
+        const tracks: MpvTrack[] = JSON.parse(MpvPlayer.getTracks());
         setSubtitleTracks(tracks.filter(t => t.type === 'sub'));
         setAudioTracks(tracks.filter(t => t.type === 'audio'));
         // Determine active audio track
@@ -293,7 +393,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
     const unsubTracks = MpvPlayer.on('onTracksChanged', () => {
       try {
-        const tracks = MpvPlayer.getTracks();
+        const tracks: MpvTrack[] = JSON.parse(MpvPlayer.getTracks());
         setSubtitleTracks(tracks.filter(t => t.type === 'sub'));
         setAudioTracks(tracks.filter(t => t.type === 'audio'));
       } catch {}
@@ -594,7 +694,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
           <TouchableOpacity
             style={[styles.errorBtn, styles.errorBtnSecondary]}
-            onPress={() => navigation.goBack()}
+            onPress={handleGoBack}
             activeOpacity={0.8}>
             <AppText
               variant="body2"
@@ -616,7 +716,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
         style={styles.videoSurface}
         activeOpacity={1}
         onPress={toggleControls}>
-        {nativePtr > 0 && (
+        {showVideoSurface && (
           <MpvRenderViewNative
             nativePtr={nativePtr}
             style={StyleSheet.absoluteFill}
@@ -643,7 +743,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
             <View style={styles.headerLeft}>
               <TouchableOpacity
                 style={styles.headerBtn}
-                onPress={() => navigation.goBack()}>
+                onPress={handleGoBack}>
                 <AppText style={styles.headerBtnIcon}>←</AppText>
               </TouchableOpacity>
               <TouchableOpacity style={styles.openBtn}>
@@ -1236,8 +1336,8 @@ const useStyles = makeStyles((colors) =>
       ...StyleSheet.absoluteFill,
     },
     videoInner: {
-      flex: 1,
-      backgroundColor: '#060608',
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'transparent',
       alignItems: 'center',
       justifyContent: 'center',
     },

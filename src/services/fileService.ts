@@ -1,4 +1,4 @@
-import {pick, types} from 'react-native-document-picker';
+import {pick, types} from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
 
 /** Subtitle file types for document picker */
@@ -145,7 +145,7 @@ export async function pickMediaFile(): Promise<PickedFile | null> {
     };
   } catch (err: any) {
     // User cancelled — not an error
-    if (err?.code === 'DOCUMENT_PICKER_CANCELED') return null;
+    if (err?.code === 'OPERATION_CANCELED') return null;
     throw err;
   }
 }
@@ -168,7 +168,7 @@ export async function pickSubtitleFile(): Promise<PickedFile | null> {
       size: result.size ?? null,
     };
   } catch (err: any) {
-    if (err?.code === 'DOCUMENT_PICKER_CANCELED') return null;
+    if (err?.code === 'OPERATION_CANCELED') return null;
     throw err;
   }
 }

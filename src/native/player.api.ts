@@ -299,6 +299,10 @@ export const MpvPlayer = {
   removeAllListeners(event?: MpvEventName): void {
     eventEmitter?.removeAllListeners(event as string);
   },
+
+  onSurfaceAttached(callback: () => void) {
+    return eventEmitter?.addListener('onSurfaceAttached', callback);
+  },
 };
 
 export default MpvPlayer;

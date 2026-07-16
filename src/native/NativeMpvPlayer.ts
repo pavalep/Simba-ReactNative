@@ -10,7 +10,7 @@ export interface MpvFileInfo {
   readonly title: string;
   readonly duration: Double;
   readonly fileSize?: Double;
-  readonly metadata?: Record<string, string>;
+  readonly metadata?: {readonly [key: string]: string};
 }
 
 export interface MpvTrack {
@@ -100,8 +100,8 @@ export interface Spec extends TurboModule {
   // ── File Loading ──
   readonly loadFile: (path: string) => void;
   readonly loadPlaylist: (paths: string[], startIndex?: Double) => void;
-  readonly getFileInfo: () => MpvFileInfo;
-  readonly getVideoParams: () => MpvVideoParams;
+  readonly getFileInfo: () => string; // Returns JSON string
+  readonly getVideoParams: () => string; // Returns JSON string
 
   // ── Tracks ──
   readonly getTracks: () => MpvTrack[];
@@ -119,7 +119,7 @@ export interface Spec extends TurboModule {
   readonly getVolume: () => Double;
   readonly setMuted: (muted: boolean) => void;
   readonly getMuted: () => boolean;
-  readonly getAudioDevices: () => MpvAudioDevice[];
+  readonly getAudioDevices: () => string; // Returns JSON string
   readonly setAudioDevice: (deviceName: string) => void;
 
   // ── Playback Speed ──
@@ -132,7 +132,7 @@ export interface Spec extends TurboModule {
   readonly setPlaylistLoop: (loop: boolean) => void;
 
   // ── Properties (generic get/set for any mpv property) ──
-  readonly getProperty: (name: string) => unknown;
+  readonly getProperty: (name: string) => string;
   readonly setProperty: (name: string, value: unknown) => void;
   readonly observeProperty: (name: string) => void;
   readonly unobserveProperty: (name: string) => void;
@@ -142,7 +142,7 @@ export interface Spec extends TurboModule {
   readonly setAudioFilter: (filter: string, enabled: boolean) => void;
 
   // ── Playlist ──
-  readonly getPlaylist: () => string[];
+  readonly getPlaylist: () => string; // Returns JSON string
   readonly playlistNext: () => void;
   readonly playlistPrev: () => void;
   readonly playlistRemove: (index: Double) => void;

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   Mockup Theme — Cine / SIMBA Mobile
+   Mockup Theme — Simba / SIMBA Mobile
    Design tokens extracted from the Avalonia desktop app
    ═══════════════════════════════════════════════════ */
 

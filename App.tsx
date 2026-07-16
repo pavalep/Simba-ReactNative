@@ -9,6 +9,8 @@ import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
 
 const AppContent: React.FC = () => {
+
+
   const {theme} = useThemeContext();
   return (
     <>
@@ -24,10 +26,14 @@ const AppContent: React.FC = () => {
   );
 };
 
+const onRehydrated = () => {
+  console.log('[redux-persist] Rehydration complete');
+};
+
 const App: React.FC = () => {
   return (
     <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
+      <PersistGate loading={null} persistor={persistor} onBeforeLift={onRehydrated}>
         <ThemeProvider>
           <AppContent />
         </ThemeProvider>

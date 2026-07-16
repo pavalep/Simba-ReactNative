@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="splash_background">#000000</color>
+
+    <!-- Dark mode accent palette -->
+    <color name="bronze_dark">#D4AF37</color>
+    <color name="bronze">#C9A96E</color>
+    <color name="bronze_light">#B8860B</color>
+    <color name="bronze_statusbar">#000000</color>
+    <color name="bronze_navbar">#1A1A1A</color>
+</resources>

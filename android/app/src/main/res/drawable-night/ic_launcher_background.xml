@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark mode: black background for app icon -->
+<color xmlns:android="http://schemas.android.com/apk/android"
+       android:color="#000000" />

@@ -38,6 +38,8 @@ export const lightTheme: ThemeTokens = {
   glassBg: 'rgba(255,255,255,0.70)',
   glassBorder: 'rgba(0,0,0,0.06)',
   glassEdge: 'rgba(0,0,0,0.04)',
+  logoCircleBg: 'rgba(212,175,55,0.32)',
+  logoCircleBorder: 'rgba(138,111,10,0.16)',
 
   // ── New: Card glass ──
   cardGlassBg: 'rgba(255,255,255,0.80)',
@@ -135,6 +137,8 @@ export const darkTheme: ThemeTokens = {
   glassBg: 'rgba(255,255,255,0.035)',
   glassBorder: 'rgba(255,255,255,0.05)',
   glassEdge: 'rgba(255,255,255,0.04)',
+  logoCircleBg: 'rgba(0,0,0,0.45)',
+  logoCircleBorder: 'rgba(255,255,255,0.10)',
 
   // ── New: Card glass ──
   cardGlassBg: 'rgba(255,255,255,0.04)',

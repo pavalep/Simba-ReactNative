@@ -6,4 +6,11 @@
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 
+    <!-- Splash screen theme — white bg with gold logo (light mode) -->
+    <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:statusBarColor">@color/bronze_statusbar</item>
+        <item name="android:navigationBarColor">@color/bronze_navbar</item>
+    </style>
+
 </resources>

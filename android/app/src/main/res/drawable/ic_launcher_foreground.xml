@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Foreground lion logo for adaptive icon (API 26+) -->
+<bitmap xmlns:android="http://schemas.android.com/apk/android"
+        android:src="@drawable-nodpi/ic_launcher_foreground"
+        android:gravity="center" />

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   StartScreenMockup  ·  Cine / SIMBA Mobile
+   StartScreenMockup  ·  Simba / SIMBA Mobile
    Mirror of Avalonia StartPage.axaml
    ═══════════════════════════════════════════════════════ */
 
