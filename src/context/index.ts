@@ -1,2 +1,4 @@
-export {ThemeProvider, useTheme, useThemeContext, useColors} from './ThemeContext';
-export type {ThemeTokens, ThemeContextType, NamedStyles} from './theme.types';
+// ─── Backward compat re-export ───────────────────────────
+export {ThemeProvider, useTheme, useThemeContext, useColors} from '../theme';
+export type {ThemeContextValue} from '../theme';
+export type {LegacyThemeTokens as ThemeTokens, NamedStyles} from '../theme/tokens';

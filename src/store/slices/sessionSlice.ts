@@ -6,6 +6,8 @@ export interface SessionEntry {
   position: number;
   duration: number;
   lastPlayedAt: string; // ISO date string
+  /** Absolute path to a cached thumbnail screenshot for this file, or empty. */
+  thumbnailPath: string;
 }
 
 interface SessionState {
@@ -30,17 +32,22 @@ const sessionSlice = createSlice({
         title: string;
         position: number;
         duration: number;
+        thumbnailPath?: string;
       }>,
     ) {
-      const {fileUri, title, position, duration} = action.payload;
+      const {fileUri, title, position, duration, thumbnailPath} = action.payload;
       const now = new Date().toISOString();
 
       // Remove existing entry for this URI
       const filtered = state.recentFiles.filter(f => f.fileUri !== fileUri);
 
+      // Preserve existing thumbnail if not explicitly provided
+      const existingEntry = state.recentFiles.find(f => f.fileUri === fileUri);
+      const resolvedThumbnail = thumbnailPath ?? existingEntry?.thumbnailPath ?? '';
+
       // Add to front
       state.recentFiles = [
-        {fileUri, title, position, duration, lastPlayedAt: now},
+        {fileUri, title, position, duration, lastPlayedAt: now, thumbnailPath: resolvedThumbnail},
         ...filtered,
       ].slice(0, MAX_RECENT_FILES);
     },

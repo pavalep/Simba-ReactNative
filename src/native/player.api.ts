@@ -115,11 +115,35 @@ export const MpvPlayer = {
   },
 
   getFileInfo(): MpvFileInfo {
-    return ensureModule().getFileInfo();
+    return JSON.parse(ensureModule().getFileInfo());
   },
 
   getVideoParams(): MpvVideoParams {
-    return ensureModule().getVideoParams();
+    return JSON.parse(ensureModule().getVideoParams());
+  },
+
+  grantPersistablePermission(uri: string): void {
+    try {
+      ensureModule().grantPersistablePermission(uri);
+    } catch {
+      // not critical — file may still work for this session
+    }
+  },
+
+  verifyContentUri(uri: string): boolean {
+    try {
+      return ensureModule().verifyContentUri(uri);
+    } catch {
+      return false;
+    }
+  },
+
+  captureThumbnail(uri: string): string {
+    try {
+      return ensureModule().captureThumbnail(uri);
+    } catch {
+      return '';
+    }
   },
 
   // ── Tracks ──
@@ -174,7 +198,7 @@ export const MpvPlayer = {
   },
 
   getAudioDevices(): MpvAudioDevice[] {
-    return ensureModule().getAudioDevices();
+    return JSON.parse(ensureModule().getAudioDevices());
   },
 
   setAudioDevice(deviceName: string): void {
@@ -183,6 +207,22 @@ export const MpvPlayer = {
 
   toggleMute(): void {
     ensureModule().setMuted(!ensureModule().isMuted());
+  },
+
+  resume(): void {
+    ensureModule().play();
+  },
+
+  setTrack(type: string, trackId: number | 'no'): void {
+    if (trackId === 'no') {
+      ensureModule().selectTrack(-1);
+    } else {
+      ensureModule().selectTrack(trackId);
+    }
+  },
+
+  loadExternalSubtitle(uri: string): void {
+    ensureModule().setProperty('sub-add', uri);
   },
 
   // ── Playback Speed ──
@@ -231,7 +271,7 @@ export const MpvPlayer = {
 
   // ── Playlist ──
   getPlaylist(): string[] {
-    return ensureModule().getPlaylist();
+    return JSON.parse(ensureModule().getPlaylist());
   },
 
   next(): void {

@@ -2,6 +2,7 @@ import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {RepeatMode} from '../../types';
 
 interface SettingsState {
+  themeMode: 'dark' | 'light' | 'system';
   repeatMode: RepeatMode;
   playbackSpeed: number;
   sleepTimerMinutes: number;
@@ -15,9 +16,16 @@ interface SettingsState {
   isAutoLoadSubtitlesEnabled: boolean;
   preferredLanguages: string;
   externalSubtitleDirectories: string;
+
+  // Linked folders (Phase 22)
+  videoFolders: string[];
+  audioFolders: string[];
+  lastScanTimestamp: number | null;
+  isScanning: boolean;
 }
 
 const initialState: SettingsState = {
+  themeMode: 'system',
   repeatMode: 'off',
   playbackSpeed: 1.0,
   sleepTimerMinutes: 0,
@@ -31,12 +39,21 @@ const initialState: SettingsState = {
   isAutoLoadSubtitlesEnabled: true,
   preferredLanguages: 'eng, jpn, und',
   externalSubtitleDirectories: './subs, ./subtitles',
+
+  // Linked folders defaults
+  videoFolders: [],
+  audioFolders: [],
+  lastScanTimestamp: null,
+  isScanning: false,
 };
 
 const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
+    setThemeMode(state, action: PayloadAction<'dark' | 'light' | 'system'>) {
+      state.themeMode = action.payload;
+    },
     setRepeatMode(state, action: PayloadAction<RepeatMode>) {
       state.repeatMode = action.payload;
     },
@@ -72,6 +89,30 @@ const settingsSlice = createSlice({
     setExternalSubtitleDirectories(state, action: PayloadAction<string>) {
       state.externalSubtitleDirectories = action.payload;
     },
+
+    // Linked folder management (Phase 22)
+    addVideoFolder(state, action: PayloadAction<string>) {
+      if (!state.videoFolders.includes(action.payload)) {
+        state.videoFolders.push(action.payload);
+      }
+    },
+    removeVideoFolder(state, action: PayloadAction<string>) {
+      state.videoFolders = state.videoFolders.filter(f => f !== action.payload);
+    },
+    addAudioFolder(state, action: PayloadAction<string>) {
+      if (!state.audioFolders.includes(action.payload)) {
+        state.audioFolders.push(action.payload);
+      }
+    },
+    removeAudioFolder(state, action: PayloadAction<string>) {
+      state.audioFolders = state.audioFolders.filter(f => f !== action.payload);
+    },
+    setScanning(state, action: PayloadAction<boolean>) {
+      state.isScanning = action.payload;
+    },
+    setLastScanTimestamp(state, action: PayloadAction<number>) {
+      state.lastScanTimestamp = action.payload;
+    },
     resetToDefaults() {
       return initialState;
     },
@@ -79,6 +120,7 @@ const settingsSlice = createSlice({
 });
 
 export const {
+  setThemeMode,
   setRepeatMode,
   setPlaybackSpeed,
   setSleepTimer,
@@ -91,6 +133,14 @@ export const {
   setAutoLoadSubtitles,
   setPreferredLanguages,
   setExternalSubtitleDirectories,
+
+  addVideoFolder,
+  removeVideoFolder,
+  addAudioFolder,
+  removeAudioFolder,
+  setScanning,
+  setLastScanTimestamp,
+
   resetToDefaults,
 } = settingsSlice.actions;
 export default settingsSlice.reducer;

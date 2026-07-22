@@ -37,7 +37,7 @@ object MPVLib {
     external fun nativeSeek(nativePtr: Long, position: Double)
     external fun nativeSeekRelative(nativePtr: Long, seconds: Double)
     external fun nativeStepFrame(nativePtr: Long, direction: Int)
-    external fun nativeScreenshot(nativePtr: Long): String
+    external fun nativeScreenshot(nativePtr: Long, outputPath: String): String
 
     // ── Volume ─────────────────────────────────────────────────────────────
 

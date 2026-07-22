@@ -7,6 +7,15 @@ export interface MediaFile {
   thumbnail?: string;
 }
 
+export interface MediaItem {
+  uri: string;
+  title: string;
+  duration: number;
+  type: 'video' | 'audio';
+  fileSize: number;
+  dateAdded: string;
+}
+
 export interface Playlist {
   id: string;
   title: string;

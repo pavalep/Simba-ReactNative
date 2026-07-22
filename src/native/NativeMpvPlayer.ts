@@ -102,6 +102,9 @@ export interface Spec extends TurboModule {
   readonly loadPlaylist: (paths: string[], startIndex?: Double) => void;
   readonly getFileInfo: () => string; // Returns JSON string
   readonly getVideoParams: () => string; // Returns JSON string
+  readonly grantPersistablePermission: (uri: string) => void;
+  readonly verifyContentUri: (uri: string) => boolean;
+  readonly captureThumbnail: (uri: string) => string;
 
   // ── Tracks ──
   readonly getTracks: () => MpvTrack[];

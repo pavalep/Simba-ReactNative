@@ -1,33 +1,76 @@
-import React from 'react';
-import {StatusBar} from 'react-native';
+import React, {useMemo, useEffect, useCallback} from 'react';
 import {Provider} from 'react-redux';
+import {Linking} from 'react-native';
 import {PersistGate} from 'redux-persist/integration/react';
 import {NavigationContainer} from '@react-navigation/native';
 import {store, persistor} from './src/store';
-import {ThemeProvider, useThemeContext} from './src/context/ThemeContext';
+import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
+import {ErrorBoundary} from './src/app/ErrorBoundary';
+import {SimbaStatusBar} from './src/components/StatusBar';
+
+/**
+ * Parse a shared content URI and navigate to the Player screen.
+ * Accepts both content:// URIs from Share Sheet and file:// URIs.
+ */
+function handleIncomingUri(uri: string) {
+  if (!uri || !navigationRef.isReady()) return;
+  // Only handle video/audio content URIs
+  if (!uri.startsWith('content://') && !uri.startsWith('file://')) return;
+
+  const fileName = uri.split('/').pop() ?? 'Shared File';
+  const displayName = decodeURIComponent(fileName.replace(/\.[^.]+$/, ''));
+
+  navigationRef.navigate('Player', {
+    fileUri: uri,
+    fileTitle: displayName,
+  });
+}
 
 const AppContent: React.FC = () => {
+  const {colors} = useTheme();
 
+  const fallbackColors = useMemo(
+    () => ({
+      background: colors.background.primary,
+      text: colors.text.primary,
+      textSecondary: colors.text.secondary,
+      accent: colors.accent.gold,
+      border: colors.border.emphasis,
+      accentDim: colors.accent.goldDim,
+    }),
+    [colors],
+  );
 
-  const {theme} = useThemeContext();
+  // ── Deep linking: handle incoming content:// URIs ──
+  const handleUrl = useCallback((event: {url: string}) => {
+    handleIncomingUri(event.url);
+  }, []);
+
+  useEffect(() => {
+    // Check for initial URL on cold start
+    Linking.getInitialURL().then(url => {
+      if (url) handleIncomingUri(url);
+    });
+
+    // Listen for incoming URLs while app is running
+    const subscription = Linking.addEventListener('url', handleUrl);
+    return () => subscription.remove();
+  }, [handleUrl]);
+
   return (
-    <>
-      <StatusBar
-        barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
-        translucent
-      />
+    <ErrorBoundary fallbackColors={fallbackColors}>
+      <SimbaStatusBar variant="home" />
       <NavigationContainer ref={navigationRef}>
         <RootNavigator />
       </NavigationContainer>
-    </>
+    </ErrorBoundary>
   );
 };
 
 const onRehydrated = () => {
-  console.log('[redux-persist] Rehydration complete');
+  // redux-persist rehydration complete
 };
 
 const App: React.FC = () => {

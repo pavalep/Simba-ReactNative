@@ -1,6 +1,8 @@
 package com.simba.player.mpv
 
+import android.content.Intent
 import android.util.Log
+import java.io.File
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.ReadableMap
@@ -136,7 +138,25 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     @ReactMethod(isBlockingSynchronousMethod = true)
     fun screenshot(): String {
         ensurePtr()
-        return MPVLib.nativeScreenshot(nativePtr)
+        val tempFile = File(reactApplicationContext.cacheDir, "screenshot_temp.png")
+        return MPVLib.nativeScreenshot(nativePtr, tempFile.absolutePath)
+    }
+
+    /**
+     * Capture a thumbnail screenshot for a given file URI and save it to the
+     * app's cache directory with a unique name derived from the URI hash.
+     * Returns the absolute path to the saved thumbnail file.
+     *
+     * The thumbnail persists in cache and is used by the recent-files list to
+     * show a preview of where the user left off.
+     */
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun captureThumbnail(uri: String): String {
+        ensurePtr()
+        val cacheDir = reactApplicationContext.cacheDir
+        val hash = uri.hashCode().toLong() and 0x7FFFFFFF
+        val thumbFile = File(cacheDir, "thumb_${hash}.png")
+        return MPVLib.nativeScreenshot(nativePtr, thumbFile.absolutePath)
     }
 
     // ── File Loading ───────────────────────────────────────────────────────
@@ -144,7 +164,85 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun loadFile(path: String) {
         ensurePtr()
-        MPVLib.nativeLoadFile(nativePtr, path)
+        val resolvedPath = resolveContentUri(path)
+        MPVLib.nativeLoadFile(nativePtr, resolvedPath)
+    }
+
+    /**
+     * Grant persistable URI permission for a content:// URI so it survives
+     * app restarts and device reboots.
+     *
+     * We only request READ permission because we never write to user files.
+     * Requesting WRITE when the picker only granted READ causes a
+     * SecurityException that silently fails the entire grant, leaving the
+     * URI inaccessible after restart.
+     */
+    @ReactMethod
+    fun grantPersistablePermission(uri: String) {
+        try {
+            val contentUri = android.net.Uri.parse(uri)
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            reactApplicationContext.contentResolver
+                .takePersistableUriPermission(contentUri, takeFlags)
+            Log.i(TAG, "Persistable read permission granted for: $uri")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Persistable permission DENIED for $uri: ${e.message}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not grant persistable permission for $uri: ${e.message}")
+        }
+    }
+
+    /**
+     * Verify that a content:// URI is still accessible (returns true/false).
+     * This is used by JS to check whether a recent-file entry with a content://
+     * URI is still valid — it tries to open the URI via ContentResolver and
+     * checks if it returns a valid file descriptor.
+     *
+     * Returns false if the file was deleted or the persistable permission was
+     * revoked (e.g. after app data clear or OS-level permission reset).
+     */
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun verifyContentUri(uri: String): Boolean {
+        if (!uri.startsWith("content://")) return true // non-content URIs assumed valid
+        return try {
+            val context = reactApplicationContext
+            val contentUri = android.net.Uri.parse(uri)
+            val parcelFd = context.contentResolver.openFileDescriptor(contentUri, "r")
+            if (parcelFd != null) {
+                parcelFd.close()
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "verifyContentUri FAILED for $uri: ${e.message}")
+            false
+        }
+    }
+
+    /**
+     * Resolve a content:// URI to an fd://N path so MPV can read it directly
+     * from the original file without copying to cache.
+     *
+     * Uses Android's ContentResolver to open the content URI, extracts the raw
+     * file descriptor, and returns "fd://<N>" for MPV's built-in fd:// protocol.
+     * MPV closes the fd automatically when playback ends.
+     */
+    private fun resolveContentUri(uri: String): String {
+        if (!uri.startsWith("content://")) return uri
+        try {
+            val context = reactApplicationContext
+            val contentUri = android.net.Uri.parse(uri)
+            val parcelFd = context.contentResolver.openFileDescriptor(contentUri, "r")
+                ?: return uri
+            val fd = parcelFd.detachFd()
+            val fdUri = "fd://$fd"
+            Log.i(TAG, "Resolved content:// URI to $fdUri")
+            return fdUri
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to resolve content:// URI: ${e.message}")
+            return uri
+        }
     }
 
     @ReactMethod

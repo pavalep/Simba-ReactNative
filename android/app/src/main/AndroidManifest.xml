@@ -22,6 +22,20 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
+        <!-- Accept shared video/audio files from other apps -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="video/*" />
+            <data android:mimeType="audio/*" />
+        </intent-filter>
+        <!-- Handle content:// URIs from file managers -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:scheme="content" android:mimeType="video/*" />
+            <data android:scheme="content" android:mimeType="audio/*" />
+        </intent-filter>
       </activity>
     </application>
 </manifest>

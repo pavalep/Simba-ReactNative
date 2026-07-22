@@ -240,12 +240,12 @@ const styles = StyleSheet.create({
 
   // ── Video surface ──
   videoSurface: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
   },
   videoBg: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#060608',
   },
   centerPlayIcon: {
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.glassEdge,
   },
   controlsSheen: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.glassSheenStart,
     opacity: 0.3,
   },
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
 
   // ── Trial watermark ──
   trialWatermark: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

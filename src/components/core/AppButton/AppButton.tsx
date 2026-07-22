@@ -1,73 +1,104 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   TouchableOpacity,
   Text,
   StyleSheet,
+  ActivityIndicator,
+  View,
   ViewStyle,
   TextStyle,
-  ActivityIndicator,
 } from 'react-native';
-import {useColors} from '../../../context/ThemeContext';
-import {radius} from '../../../constants/radius';
-import {typography} from '../../../constants/typography';
+import {useTheme} from '../../../theme';
+import {radius, spacing} from '../../../theme/tokens';
+
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
+type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface AppButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   loading?: boolean;
   disabled?: boolean;
+  fullWidth?: boolean;
+  icon?: React.ReactNode;
+  iconPosition?: 'left' | 'right';
   style?: ViewStyle;
   textStyle?: TextStyle;
 }
+
+const sizeConfig: Record<ButtonSize, {px: number; py: number; fs: number; minH: number}> = {
+  sm: {px: spacing.lg, py: spacing.sm, fs: 13, minH: 36},
+  md: {px: spacing.xl, py: spacing.md, fs: 15, minH: 44},
+  lg: {px: spacing.xxl, py: spacing.lg, fs: 17, minH: 52},
+};
 
 export const AppButton: React.FC<AppButtonProps> = ({
   title,
   onPress,
   variant = 'primary',
+  size: sizeKey = 'md',
   loading = false,
   disabled = false,
+  fullWidth = false,
+  icon,
+  iconPosition = 'left',
   style,
   textStyle,
 }) => {
-  const colors = useColors();
+  const {colors, isDark} = useTheme();
+  const sz = sizeConfig[sizeKey];
 
-  const getBackgroundColor = () => {
-    if (disabled) return colors.disabled;
+  const {bgColor, txtColor, bdColor} = useMemo(() => {
+    if (disabled) {
+      return {
+        bgColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+        txtColor: colors.text.tertiary,
+        bdColor: 'transparent',
+      };
+    }
     switch (variant) {
       case 'primary':
-        return colors.primary;
+        return {
+          bgColor: colors.accent.gold,
+          txtColor: '#0A0A0C',
+          bdColor: 'transparent',
+        };
       case 'secondary':
-        return colors.surfaceVariant;
+        return {
+          bgColor: colors.accent.goldDim,
+          txtColor: colors.accent.gold,
+          bdColor: 'transparent',
+        };
       case 'outline':
-        return colors.transparent;
-      default:
-        return colors.primary;
+        return {
+          bgColor: 'transparent',
+          txtColor: colors.accent.gold,
+          bdColor: colors.accent.gold,
+        };
+      case 'text':
+        return {
+          bgColor: 'transparent',
+          txtColor: colors.accent.gold,
+          bdColor: 'transparent',
+        };
     }
-  };
-
-  const getTextColor = () => {
-    if (disabled) return colors.textSecondary;
-    switch (variant) {
-      case 'primary':
-        return colors.textInverse;
-      case 'secondary':
-        return colors.text;
-      case 'outline':
-        return colors.primary;
-      default:
-        return colors.textInverse;
-    }
-  };
+  }, [disabled, isDark, colors, variant]);
 
   return (
     <TouchableOpacity
       style={[
         styles.base,
         {
-          backgroundColor: getBackgroundColor(),
-          borderColor: variant === 'outline' ? colors.primary : colors.transparent,
+          backgroundColor: bgColor,
+          borderColor: bdColor,
           borderWidth: variant === 'outline' ? 1 : 0,
+          paddingHorizontal: sz.px,
+          paddingVertical: sz.py,
+          minHeight: sz.minH,
+          alignSelf: fullWidth ? 'stretch' : undefined,
+          opacity: disabled ? 0.5 : 1,
         },
         style,
       ]}
@@ -75,11 +106,23 @@ export const AppButton: React.FC<AppButtonProps> = ({
       disabled={disabled || loading}
       activeOpacity={0.7}>
       {loading ? (
-        <ActivityIndicator color={getTextColor()} />
+        <ActivityIndicator color={txtColor} />
       ) : (
-        <Text style={[typography.button, {color: getTextColor()}, textStyle]}>
-          {title}
-        </Text>
+        <View style={[styles.inner, {flexDirection: iconPosition === 'right' ? 'row-reverse' : 'row'}]}>
+          {icon && <View style={styles.iconSlot}>{icon}</View>}
+          <Text
+            style={[
+              {
+                color: txtColor,
+                fontSize: sz.fs,
+                fontWeight: '600',
+              },
+              textStyle,
+            ]}
+            numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -87,11 +130,14 @@ export const AppButton: React.FC<AppButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
   },
+  inner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  iconSlot: {},
 });

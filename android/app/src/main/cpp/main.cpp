@@ -305,12 +305,14 @@ Java_com_simba_player_mpv_MPVLib_nativeStepFrame(
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeScreenshot(
-    JNIEnv *env, jclass, jlong nativePtr) {
+    JNIEnv *env, jclass, jlong nativePtr, jstring outputPath) {
     if (!nativePtr) return env->NewStringUTF("");
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    const char *args[] = {"screenshot-to-file", "/tmp/mpv_screenshot.png", nullptr};
+    const char *path = env->GetStringUTFChars(outputPath, nullptr);
+    const char *args[] = {"screenshot-to-file", path, nullptr};
     mpv_command(mpv, args);
-    return env->NewStringUTF("/tmp/mpv_screenshot.png");
+    env->ReleaseStringUTFChars(outputPath, path);
+    return outputPath;
 }
 
 // ── Volume ──────────────────────────────────────────────────────────────────

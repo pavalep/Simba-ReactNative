@@ -129,7 +129,7 @@ export const typography = {
     fontSize: 12,
     fontWeight: '500' as const,
     letterSpacing: 0.3,
-    fontVariant: ['tabular-nums'] as const,
+    fontVariant: ['tabular-nums'] as Array<'tabular-nums'>,
   },
 }
 
