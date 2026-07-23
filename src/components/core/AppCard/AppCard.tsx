@@ -20,6 +20,7 @@ export const AppCard: React.FC<AppCardProps> = ({
 
   return (
     <View
+      accessibilityRole="none"
       style={[
         {
           backgroundColor: colors.background.elevated,

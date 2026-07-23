@@ -2,7 +2,8 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {RootStackParamList} from './types';
 import {TabNavigator} from './TabNavigator';
-import {PlayerScreen} from '../screens/Player/PlayerScreen';
+import {VideoPlayerScreen} from '../screens/VideoPlayer/VideoPlayerScreen';
+import {AudioPlayerScreen} from '../screens/AudioPlayer/AudioPlayerScreen';
 import {PreferencesScreen} from '../screens/Preferences/PreferencesScreen';
 import {SettingsStack} from './SettingsStack';
 
@@ -15,11 +16,18 @@ export const RootNavigator: React.FC = () => (
       component={TabNavigator}
     />
     <Stack.Screen
-      name="Player"
-      component={PlayerScreen}
+      name="VideoPlayer"
+      component={VideoPlayerScreen}
       options={{
         orientation: 'landscape',
         animation: 'fade',
+      }}
+    />
+    <Stack.Screen
+      name="AudioPlayer"
+      component={AudioPlayerScreen}
+      options={{
+        animation: 'slide_from_bottom',
       }}
     />
     <Stack.Screen

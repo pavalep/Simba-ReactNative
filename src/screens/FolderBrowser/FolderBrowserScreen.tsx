@@ -12,6 +12,7 @@ import {useTheme} from '../../theme';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {AppText} from '../../components/core/AppText/AppText';
 import {FolderBrowserScreenProps} from '../../navigation/types';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 
 // ── Mock Data ──────────────────────────────────────────
 
@@ -112,7 +113,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   const handleFilePress = useCallback(
     (fileName: string) => {
       const fullPath = [...breadcrumbs, fileName].join('/');
-      navigation.navigate('Player', {
+      navigation.navigate('VideoPlayer', {
         fileUri: fullPath,
         fileTitle: fileName,
       });
@@ -288,18 +289,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         colors={[colors.background.primary, colors.background.primary]}
         style={StyleSheet.absoluteFill}
       />
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}>
-          <AppText variant="body1" color="accent">
-            {'\u2190'} Back
-          </AppText>
-        </TouchableOpacity>
-        <AppText variant="h2" color="primary" style={styles.title}>
-          Folder Browser
-        </AppText>
-      </View>
+      <InternalHeader title="Folder Browser" />
       {renderBreadcrumbs()}
       <FlatList
         style={{flex: 1}}

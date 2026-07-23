@@ -1,9 +1,9 @@
-# SIMBA Mobile: Comprehensive 30-Phase UI/UX Elevation & Technical Master Specification (v2)
+# SIMBA Mobile: Comprehensive 35-Phase UI/UX Elevation & Technical Master Specification (v2)
 
-> **Document Version:** 2.0.0  
+> **Document Version:** 2.1.0  
 > **Target Platform:** React Native (Android / iOS)  
 > **Core Focus:** Mobile Project (SIMBA Media Engine & Luxury UX)  
-> **Completion Milestone:** Elevating project architecture from ~3% to ~6% and beyond with strict zero dummy data rules, component-scoped modularity, and production-ready UX.
+> **Completion Milestone:** Elevating project architecture from ~3% to ~6% and beyond with strict zero dummy data rules, component-scoped modularity, production-ready UX, and native Android Picture-in-Picture.
 
 ---
 
@@ -34,8 +34,9 @@ This master document provides the definitive **2,200+ line design and architectu
 6. [VideoPlayer vs. AudioPlayer Architecture](#6-videoplayer-vs-audioplayer-architecture)
 7. [Playlist Architecture & Lifecycle Specification](#7-playlist-architecture--lifecycle-specification)
 8. [Intelligent Home & Recently Played Algorithm](#8-intelligent-home--recently-played-algorithm)
-9. [Detailed 30-Phase Elevation Roadmap](#9-detailed-30-phase-elevation-roadmap)
+9. [Detailed 35-Phase Elevation Roadmap](#9-detailed-35-phase-elevation-roadmap)
 10. [Verification & Quality Assurance Suite](#10-verification--quality-assurance-suite)
+11. [Android Picture-in-Picture Specification](#11-android-picture-in-picture-specification)
 
 ---
 
@@ -320,9 +321,9 @@ This ensures "Continue Watching" accurately surfaces unfinished movies, while "F
 
 ---
 
-## 9. DETAILED 30-PHASE ELEVATION ROADMAP
+## 9. DETAILED 35-PHASE ELEVATION ROADMAP
 
-Below is the complete 30-Phase Execution Plan covering all changes, updates, refactors, and verifications required to elevate SIMBA Mobile.
+Below is the complete 35-Phase Execution Plan covering all changes, updates, refactors, verifications, and PiP implementation required to elevate SIMBA Mobile.
 
 ```
 [Phase 1: Design Tokens] ➔ [Phase 2: Home Header] ➔ [Phase 3: Internal Header] ➔ [Phase 4: Empty States]
@@ -347,6 +348,12 @@ Below is the complete 30-Phase Execution Plan covering all changes, updates, ref
        │
        ▼
 [Phase 29: Test Suite Validation] ➔ [Phase 30: Final Production Audit & Sign-off]
+       │
+       ▼
+[Phase 31: PiP Manifest & Config] ➔ [Phase 32: PiP Redux State] ➔ [Phase 33: Player Lifecycle Integration]
+       │
+       ▼
+[Phase 34: PiP Overlay Controls] ➔ [Phase 35: PiP Entry Gesture & Transition Polish]
 ```
 
 ### Phase Details
@@ -564,6 +571,46 @@ Below is the complete 30-Phase Execution Plan covering all changes, updates, ref
 - **Checklist**:
   - [ ] Release APK/AAB builds successfully with optimal performance.
 
+#### PHASE 31 — PiP: Android Manifest & Activity Configuration
+- **Goal**: Configure AndroidManifest.xml and MainActivity for Picture-in-Picture support.
+- **Files**: `android/app/src/main/AndroidManifest.xml`, `android/app/src/main/java/com/simba/player/MainActivity.kt`
+- **Deliverables**: PiP-enabled activity with proper lifecycle callbacks.
+- **Checklist**:
+  - [ ] `supportsPictureInPicture="true"` declared on launcher activity in manifest.
+  - [ ] PiP aspect ratio & auto-enter params configured.
+
+#### PHASE 32 — PiP: Redux State Management
+- **Goal**: Create Redux slice for PiP state tracking across the app.
+- **Files**: `src/store/slices/pipSlice.ts`, `src/store/rootReducer.ts`
+- **Deliverables**: Typed PiP state slice with enter/exit actions and selectors.
+- **Checklist**:
+  - [ ] PiP Redux slice defined and registered in rootReducer.
+  - [ ] Selectors exported for component consumption.
+
+#### PHASE 33 — PiP: Player Engine & Lifecycle Integration
+- **Goal**: Wire native mpv player lifecycle to PiP enter/exit events.
+- **Files**: `src/screens/VideoPlayer/VideoPlayerScreen.tsx`, `src/hooks/usePipLifecycle.ts`
+- **Deliverables**: Seamless pause/resume and state preservation during PiP transitions.
+- **Checklist**:
+  - [ ] Hook to listen for PiP mode changes from native layer.
+  - [ ] Player pause on PiP enter, resume on PiP exit.
+
+#### PHASE 34 — PiP: Overlay Controls (RemoteAction)
+- **Goal**: Implement play/pause, close, and navigation controls on the PiP window.
+- **Files**: `android/app/src/main/java/com/simba/player/PipManager.kt`
+- **Deliverables**: Interactive PiP window with actionable RemoteAction buttons.
+- **Checklist**:
+  - [ ] Play/Pause overlay button functional.
+  - [ ] Close/Stop PiP button destroys player and resets state.
+
+#### PHASE 35 — PiP: Entry Gesture & Transition Polish
+- **Goal**: Add swipe-down gesture to enter PiP and smooth transition animation.
+- **Files**: `src/screens/VideoPlayer/VideoPlayerScreen.tsx`, `src/hooks/usePipEntry.ts`
+- **Deliverables**: Gesture-driven PiP entry with Android transition animation.
+- **Checklist**:
+  - [ ] Swipe-down gesture to enter PiP.
+  - [ ] PiP window tap restores full player screen.
+
 ---
 
 ## 10. VERIFICATION & QUALITY ASSURANCE SUITE
@@ -587,3 +634,129 @@ npm test
 - [ ] **Player Separation**: Audio files open in `AudioPlayerScreen`; Video files open in `VideoPlayerScreen`.
 - [ ] **Header System**: `HomeHeader` displays Lion logo with correct scaling; `InternalHeader` provides reliable back navigation.
 - [ ] **Playlists**: Verified CRUD operations, reordering, and M3U file generation.
+
+---
+
+## 11. ANDROID PICTURE-IN-PICTURE SPECIFICATION
+
+### 11.1 Overview
+
+Picture-in-Picture (PiP) replaces the previously removed MiniPlayer as the method for users to continue watching video content while navigating other parts of the app or multitasking on Android. PiP is a native Android feature (API 24+, enhanced in API 31+) and avoids the stale native player calls that plagued the React Native MiniPlayer approach.
+
+### 11.2 Requirements
+
+| ID | Requirement | Phase |
+|---|---|---|
+| PIP-01 | Main activity must declare `supportsPictureInPicture="true"` in the manifest | 31 |
+| PIP-02 | PiP aspect ratio defaults to 16:9, configurable via settings | 31 |
+| PIP-03 | Android 12+ devices use `setAutoEnterEnabled(true)` for seamless home-gesture PiP | 31 |
+| PIP-04 | Activity must propagate `onPictureInPictureModeChanged` to JS via event emitter | 31 |
+| PIP-05 | Redux state tracks `isInPipMode`, `pipedVideoUri`, `pipedPosition`, `pipedFileTitle` | 32 |
+| PIP-06 | PiP state resets when playback session is explicitly ended | 32 |
+| PIP-07 | Player pauses on PiP enter, resumes on PiP exit (with optional keep-playing setting) | 33 |
+| PIP-08 | PlayerScreen survives activity destroy/recreate in PiP mode | 33 |
+| PIP-09 | Native engine is not destroyed when user navigates away while PiP is active | 33 |
+| PIP-10 | PiP window displays Play/Pause RemoteAction toggling mpv playback | 34 |
+| PIP-11 | PiP window displays Close RemoteAction that destroys player and resets state | 34 |
+| PIP-12 | Next/Previous actions shown when playing from a playlist context | 34 |
+| PIP-13 | Swipe-down gesture on PlayerScreen triggers PiP entry | 35 |
+| PIP-14 | Home button / app background auto-enters PiP when video is playing | 35 |
+| PIP-15 | PiP window tap restores full PlayerScreen with position restored | 35 |
+| PIP-16 | `setSourceRectHint` provides smooth transition animation from fullscreen to PiP | 35 |
+
+### 11.3 Native Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    MainActivity.kt                       │
+│                                                         │
+│  onCreate()                                             │
+│    ├── setAutoEnterEnabled(true)         // API 31+     │
+│    └── registerPipReceiver()                            │
+│                                                         │
+│  onPictureInPictureModeChanged()                        │
+│    └── emit("onPipModeChanged", { isInPip })            │
+│                                                         │
+│  onUserLeaveHint()                                      │
+│    └── enterPictureInPictureMode(buildPipParams())      │
+│                                                         │
+│  onNewIntent() / onRestart()                            │
+│    └── restorePlayerFromPipState()                      │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                    PipManager.kt                         │
+│                                                         │
+│  buildPipParams(): PictureInPictureParams                │
+│    ├── setAspectRatio(new Rational(16, 9))              │
+│    ├── setActions([playPauseAction, closeAction])       │
+│    └── setSourceRectHint(sourceRect)                    │
+│                                                         │
+│  PlayPauseAction (RemoteAction)                         │
+│    └── PendingIntent → MainActivity →                  │
+│        DeviceEventEmitter → JS togglePause             │
+│                                                         │
+│  CloseAction (RemoteAction)                             │
+│    └── PendingIntent → MainActivity →                  │
+│        destroy native player → clear Redux state       │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 11.4 Lifecycle State Machine
+
+```
+                    ┌──────────┐
+                    │  PLAYING │ (fullscreen)
+                    └────┬─────┘
+                         │ swipe-down / home gesture
+                         ▼
+              ┌──────────────────┐
+              │ ENTERING PIP     │
+              │ (setSourceRectHint│
+              │  animation)      │
+              └────────┬─────────┘
+                       │
+                       ▼
+              ┌──────────────────┐
+         ┌────│   PIP MODE       │◄──── RemoteAction play/pause
+         │    │ (overlay window) │
+         │    └────────┬─────────┘
+         │             │
+         │             ├── tap PiP window ────► RESTORE FULLSCREEN
+         │             │
+         │             └── close button ────► DESTROY PLAYER
+         │
+         └── onPipModeChanged(false) ──► RESUME FULLSCREEN UI
+```
+
+### 11.5 PiP Redux State Shape
+
+```typescript
+// src/store/slices/pipSlice.ts
+interface PipState {
+  isInPipMode: boolean;
+  pipedVideoUri: string | null;
+  pipedPosition: number;
+  pipedFileTitle: string | null;
+}
+
+// Actions
+enterPip({ uri: string, position: number, title: string })
+exitPip()
+updatePipPosition(position: number)
+
+// Selectors
+selectIsInPipMode: (state) => state.pip.isInPipMode
+selectPipedVideoUri: (state) => state.pip.pipedVideoUri
+selectPipedPosition: (state) => state.pip.pipedPosition
+```
+
+### 11.6 Phase Mapping
+
+| Phase | Area | Native | JS/Redux | Gesture/UI |
+|---|---|---|---|---|
+| 31 | Manifest & Activity | ✅ | ❌ | ❌ |
+| 32 | State Management | ❌ | ✅ | ❌ |
+| 33 | Player Lifecycle | ✅ | ✅ | ❌ |
+| 34 | Overlay Controls | ✅ | ✅ | ❌ |
+| 35 | Entry & Polish | ✅ | ❌ | ✅ |

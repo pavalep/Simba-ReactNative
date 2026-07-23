@@ -16,6 +16,7 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
+import {HomeHeader} from '../../components/layout/HomeHeader/HomeHeader';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {HomeScreenProps} from '../../navigation/types';
@@ -24,13 +25,12 @@ import {MpvPlayer} from '../../native';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {removeRecentFile, SessionEntry} from '../../store/slices/sessionSlice';
 import {
-  pickVideoPlaceholder,
-  pickAudioPlaceholder,
-  getVideoTitle,
-  getAudioTitle,
-  VIDEO_PLACEHOLDERS,
-  AUDIO_PLACEHOLDERS,
-} from '../../constants/placeholders';
+  getWeightedResumptionList,
+  getRecentVideoEntries,
+  getRecentAudioEntries,
+  getRecentlyPlayed,
+} from '../../utils/intelligenceEngine';
+
 import {radius} from '../../theme/tokens';
 
 type Props = HomeScreenProps;
@@ -39,7 +39,7 @@ const HORIZONTAL_GAP = 12;
 const TILE_HEIGHT = 160;
 const TILE_WIDTH = 110;
 const THUMB_HEIGHT = 130;
-const PLACEHOLDER_ITEM_COUNT = 7;
+
 
 // ── Display item model ─────────────────────────────
 type DisplayItem = {
@@ -47,10 +47,8 @@ type DisplayItem = {
   key: string;
   /** Title shown on the card */
   title: string;
-  /** Image source — either a remote-style object or a local require() */
-  image: {uri: string} | number;
-  /** True if this is a synthetic placeholder (no real file behind it) */
-  isPlaceholder: boolean;
+  /** Image source */
+  image: {uri: string};
 };
 
 // ── Duration helpers ────────────────────────────────
@@ -73,30 +71,14 @@ function getGreeting(): string {
 
 /**
  * Resolve the best image source for a recent entry.
- * Prefers the captured thumbnail; otherwise returns a deterministic
- * placeholder for its media type.
  */
-function thumbnailFor(entry: SessionEntry): {uri: string} | number {
+function thumbnailFor(entry: SessionEntry): {uri: string} {
   if (entry.thumbnailPath) {
     return {
       uri: 'file://' + entry.thumbnailPath + '?t=' + encodeURIComponent(entry.lastPlayedAt),
     };
   }
-  const type = entry.mediaType ?? getMediaType(entry.fileUri);
-  return type === 'audio'
-    ? pickAudioPlaceholder(entry.fileUri)
-    : pickVideoPlaceholder(entry.fileUri);
-}
-
-/** Build a fixed list of placeholder items for an empty list. */
-function buildPlaceholderItems(kind: 'video' | 'audio'): DisplayItem[] {
-  const placeholders = kind === 'video' ? VIDEO_PLACEHOLDERS : AUDIO_PLACEHOLDERS;
-  return Array.from({length: PLACEHOLDER_ITEM_COUNT}, (_, i) => ({
-    key: `${kind}-placeholder-${i}`,
-    title: kind === 'video' ? getVideoTitle(i) : getAudioTitle(i),
-    image: placeholders[i % placeholders.length],
-    isPlaceholder: true,
-  }));
+  return {uri: ''};
 }
 
 /** Convert real recent entries to display items. */
@@ -105,7 +87,6 @@ function toDisplayItems(entries: SessionEntry[]): DisplayItem[] {
     key: entry.fileUri + ':' + i,
     title: entry.title,
     image: thumbnailFor(entry),
-    isPlaceholder: false,
   }));
 }
 
@@ -239,18 +220,6 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
       paddingTop: 6,
       paddingBottom: 4,
     },
-    placeholderBadge: {
-      position: 'absolute',
-      top: 6,
-      left: 6,
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: colors.accent.gold,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-
     // ── Continue Watching (single hero tile) ──
     continueTile: {
       borderRadius: radius.sm,
@@ -311,26 +280,30 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
   // Pull-to-refresh state
   const [refreshing, setRefreshing] = React.useState(false);
 
-  // ── Derive data from Redux ──
-  const continueItem: SessionEntry | undefined = recentFiles.find(
-    f => f.position > 0 && f.duration > 0,
+  // ── Derive data from Redux via intelligence engine ──
+  const weighted = useMemo(
+    () => getWeightedResumptionList(recentFiles),
+    [recentFiles],
   );
-  const realRecentVideos: SessionEntry[] = recentFiles
-    .filter(f => (f.mediaType ?? getMediaType(f.fileUri)) === 'video')
-    .slice(0, 8);
-  const realRecentAudio: SessionEntry[] = recentFiles
-    .filter(f => (f.mediaType ?? getMediaType(f.fileUri)) === 'audio')
-    .slice(0, 8);
+  const continueItem: SessionEntry | undefined = weighted.length > 0 ? weighted[0] : undefined;
 
-  // ── Build display items; fall back to placeholders when empty ──
-  const videoItems: DisplayItem[] =
-    realRecentVideos.length > 0
-      ? toDisplayItems(realRecentVideos)
-      : buildPlaceholderItems('video');
-  const audioItems: DisplayItem[] =
-    realRecentAudio.length > 0
-      ? toDisplayItems(realRecentAudio)
-      : buildPlaceholderItems('audio');
+  const recentVideos = useMemo(
+    () => getRecentVideoEntries(recentFiles, 8),
+    [recentFiles],
+  );
+  const recentAudio = useMemo(
+    () => getRecentAudioEntries(recentFiles, 8),
+    [recentFiles],
+  );
+  const recentlyPlayed = useMemo(
+    () => getRecentlyPlayed(recentFiles, 8),
+    [recentFiles],
+  );
+
+  // ── Build display items ──
+  const videoItems: DisplayItem[] = toDisplayItems(recentVideos);
+  const audioItems: DisplayItem[] = toDisplayItems(recentAudio);
+  const recentlyPlayedItems: DisplayItem[] = toDisplayItems(recentlyPlayed);
 
   // ── Validate files on mount — remove broken links ──
   useEffect(() => {
@@ -359,7 +332,7 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
     try {
       const file = await pickMediaFile();
       if (!file) return;
-      navigation.navigate('Player', {
+      navigation.navigate('VideoPlayer', {
         fileUri: file.uri,
         fileTitle: file.title,
       });
@@ -372,7 +345,7 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
     async (entry: SessionEntry) => {
       if (entry.fileUri.startsWith('content://')) {
         try { MpvPlayer.grantPersistablePermission(entry.fileUri); } catch {}
-        navigation.navigate('Player', {
+        navigation.navigate('VideoPlayer', {
           fileUri: entry.fileUri,
           fileTitle: entry.title,
         });
@@ -385,7 +358,7 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
         Alert.alert('File Not Found', 'This file has been moved or deleted.');
         return;
       }
-      navigation.navigate('Player', {
+      navigation.navigate('VideoPlayer', {
         fileUri: entry.fileUri,
         fileTitle: entry.title,
       });
@@ -411,39 +384,29 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
 
   // ── Render helpers ──
   const renderTile = useCallback(
-    ({item: dItem}: {item: DisplayItem}) => (
-      <TouchableOpacity
-        activeOpacity={0.75}
-        onPress={() => {
-          if (dItem.isPlaceholder) {
-            // Placeholder tiles open the file picker when tapped
-            handleOpenMedia();
-          }
-        }}
-        style={styles.tile}>
-        <View style={styles.thumb}>
-          <Image source={dItem.image} style={styles.thumbImg} />
-          {dItem.isPlaceholder && (
-            <View style={styles.placeholderBadge}>
-              <SvgIcon
-                name={dItem.key.startsWith('video') ? 'video' : 'music'}
-                size={14}
-                color="#0A0A0C"
-              />
-            </View>
-          )}
-        </View>
-        <View style={styles.tileTitleWrap}>
-          <AppText
-            variant="caption"
-            color={dItem.isPlaceholder ? 'tertiary' : 'primary'}
-            numberOfLines={2}>
-            {dItem.title}
-          </AppText>
-        </View>
-      </TouchableOpacity>
-    ),
-    [handleOpenMedia, styles],
+    ({item: dItem}: {item: DisplayItem}) => {
+      // Find matching session entry to pass to player
+      const entry = recentFiles.find(f => f.fileUri.startsWith(dItem.key.split(':')[0]));
+      return (
+        <TouchableOpacity
+          activeOpacity={0.75}
+          style={styles.tile}
+          onPress={() => entry && handlePlayRecent(entry)}>
+          <View style={styles.thumb}>
+            <Image source={dItem.image} style={styles.thumbImg} />
+          </View>
+          <View style={styles.tileTitleWrap}>
+            <AppText
+              variant="caption"
+              color="primary"
+              numberOfLines={2}>
+              {dItem.title}
+            </AppText>
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [styles, recentFiles, handlePlayRecent],
   );
 
   return (
@@ -480,16 +443,7 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
           }>
 
           {/* ── Header ── */}
-          <View style={styles.header}>
-            <SvgIcon name="lion" size={34} color={colors.accent.gold} />
-            <TouchableOpacity
-              onPress={() => (navigation.navigate as any)('Settings')}
-              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-              <View style={styles.headerAction}>
-                <SvgIcon name="settings" size={18} color={colors.text.secondary} />
-              </View>
-            </TouchableOpacity>
-          </View>
+          <HomeHeader />
 
           {/* ── Greeting ── */}
           <AppText variant="h1" color="primary" style={styles.greeting}>
@@ -585,7 +539,7 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
           {/* ── Recent Videos (horizontal) ── */}
           <View style={styles.sectionGap}>
             <SectionHeader
-              label={realRecentVideos.length > 0 ? 'Recent Videos' : 'Featured Videos'}
+              label={recentVideos.length > 0 ? 'Recent Videos' : 'Featured Videos'}
             />
             <FlatList
               horizontal
@@ -601,7 +555,7 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
           {/* ── Recent Audio (horizontal) ── */}
           <View style={styles.sectionGap}>
             <SectionHeader
-              label={realRecentAudio.length > 0 ? 'Recent Audio' : 'Featured Audio'}
+              label={recentAudio.length > 0 ? 'Recent Audio' : 'Featured Audio'}
             />
             <FlatList
               horizontal
@@ -613,6 +567,22 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
               renderItem={renderTile}
             />
           </View>
+
+          {/* ── Recently Played (horizontal) ── */}
+          {recentlyPlayed.length > 0 && (
+            <View style={styles.sectionGap}>
+              <SectionHeader label="Recently Played" />
+              <FlatList
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.horizontalList}
+                contentContainerStyle={styles.horizontalListContent}
+                data={recentlyPlayedItems}
+                keyExtractor={item => item.key}
+                renderItem={renderTile}
+              />
+            </View>
+          )}
         </Animated.ScrollView>
       </SafeAreaView>
     </Animated.View>

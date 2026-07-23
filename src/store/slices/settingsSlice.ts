@@ -1,6 +1,11 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {RepeatMode} from '../../types';
 
+interface MpvOption {
+  key: string;
+  value: string;
+}
+
 interface SettingsState {
   themeMode: 'dark' | 'light' | 'system';
   repeatMode: RepeatMode;
@@ -22,6 +27,9 @@ interface SettingsState {
   audioFolders: string[];
   lastScanTimestamp: number | null;
   isScanning: boolean;
+
+  // MPV advanced options (Phase 19)
+  mpvOptions: MpvOption[];
 }
 
 const initialState: SettingsState = {
@@ -45,6 +53,9 @@ const initialState: SettingsState = {
   audioFolders: [],
   lastScanTimestamp: null,
   isScanning: false,
+
+  // MPV advanced options defaults
+  mpvOptions: [],
 };
 
 const settingsSlice = createSlice({
@@ -113,6 +124,9 @@ const settingsSlice = createSlice({
     setLastScanTimestamp(state, action: PayloadAction<number>) {
       state.lastScanTimestamp = action.payload;
     },
+    setMpvOptions(state, action: PayloadAction<MpvOption[]>) {
+      state.mpvOptions = action.payload;
+    },
     resetToDefaults() {
       return initialState;
     },
@@ -140,6 +154,8 @@ export const {
   removeAudioFolder,
   setScanning,
   setLastScanTimestamp,
+
+  setMpvOptions,
 
   resetToDefaults,
 } = settingsSlice.actions;

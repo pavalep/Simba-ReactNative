@@ -8,9 +8,11 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
+import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import type {NowPlayingScreenProps} from '../../navigation/types';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 
 // ─── Constants ───────────────────────────────────────────────
 
@@ -21,7 +23,7 @@ type Props = NowPlayingScreenProps;
 
 // ─── Component ───────────────────────────────────────────────
 
-export const NowPlayingScreen: React.FC<Props> = ({navigation}) => {
+export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -65,6 +67,13 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation}) => {
     },
     [duration],
   );
+
+  const handleOpenFullPlayer = useCallback(() => {
+    (navigation.navigate as any)('AudioPlayer', {
+      fileUri: route.params?.fileUri,
+      fileTitle: route.params?.fileTitle,
+    });
+  }, [navigation, route.params]);
 
   const styles = useMemo(
     () =>
@@ -220,6 +229,13 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation}) => {
           borderRadius: 4,
           backgroundColor: colors.accent.gold,
         },
+        fullPlayerBtn: {
+          alignSelf: 'center',
+          paddingHorizontal: 24,
+          paddingVertical: 10,
+          borderRadius: radius.sm,
+          marginBottom: 16,
+        },
       }),
     [colors, insets.top],
   );
@@ -235,17 +251,7 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation}) => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <AppText style={styles.transportIcon}>{'←'}</AppText>
-        </TouchableOpacity>
-        <AppText variant="h3" color="primary" style={styles.headerTitle}>
-          Now Playing
-        </AppText>
-      </View>
+      <InternalHeader title="Now Playing" />
 
       {/* Content */}
       <View style={styles.scrollContent}>
@@ -300,13 +306,17 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation}) => {
         <View style={styles.transportRow}>
           <TouchableOpacity
             style={styles.transportBtn}
-            onPress={handlePrev}>
+            onPress={handlePrev}
+            accessibilityLabel="Previous track"
+            accessibilityRole="button">
             <AppText style={styles.transportIcon}>{'◀◀'}</AppText>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.playBtn}
-            onPress={handlePlayPause}>
+            onPress={handlePlayPause}
+            accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
+            accessibilityRole="button">
             <AppText style={styles.playIcon}>
               {isPlaying ? '⏸' : '▶'}
             </AppText>
@@ -314,10 +324,22 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation}) => {
 
           <TouchableOpacity
             style={styles.transportBtn}
-            onPress={handleNext}>
+            onPress={handleNext}
+            accessibilityLabel="Next track"
+            accessibilityRole="button">
             <AppText style={styles.transportIcon}>{'▶▶'}</AppText>
           </TouchableOpacity>
         </View>
+
+        {/* Full Player button */}
+        <TouchableOpacity
+          style={[styles.fullPlayerBtn, {backgroundColor: colors.accent.goldDim}]}
+          onPress={handleOpenFullPlayer}
+          activeOpacity={0.7}>
+          <AppText variant="body2" color="accent">
+            Open Full Player
+          </AppText>
+        </TouchableOpacity>
 
         {/* Volume indicator */}
         <View style={styles.volumeRow}>

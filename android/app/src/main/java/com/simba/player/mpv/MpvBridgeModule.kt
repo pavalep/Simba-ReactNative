@@ -564,6 +564,24 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         super.onCatalystInstanceDestroy()
     }
 
+    // ── Picture-in-Picture ─────────────────────────────────────────────────
+
+    /**
+     * Enter Android Picture-in-Picture mode for the current activity.
+     * Called from JS via MpvPlayerModule.enterPip().
+     */
+    @ReactMethod
+    fun enterPip() {
+        val activity = getCurrentActivity()
+        if (activity == null || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return
+        val pipParams = com.simba.player.PipManager.buildPipParams(activity)
+        try {
+            activity.enterPictureInPictureMode(pipParams)
+        } catch (_: IllegalStateException) {
+            // Activity not in foreground or PiP not supported
+        }
+    }
+
     // ── Native Pointer (for MpvRenderView) ─────────────────────────────────
 
     @ReactMethod(isBlockingSynchronousMethod = true)

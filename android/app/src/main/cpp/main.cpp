@@ -19,6 +19,7 @@ JavaVM *g_vm = nullptr;
 mpv_handle *g_mpv = nullptr;
 static pthread_t g_eventThread = 0;
 volatile bool g_running = false;
+volatile bool g_initialized = false;  // true after mpv_initialize()
 
 // Cached Java references
 jclass g_cls_MPVLib = nullptr;
@@ -117,44 +118,30 @@ Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass) {
         return reinterpret_cast<jlong>(g_mpv);
     }
 
+    g_initialized = false;
+
     mpv_handle *mpv = mpv_create();
     if (!mpv) {
         LOGE("mpv_create failed");
         return 0;
     }
 
-    // Use the gpu VO with wid (Android Surface) — the standard approach
-    // used by all working Android mpv implementations.
-    // mpv manages EGL/OpenGL internally; we just pass it the Surface.
-    // On Android, mpv auto-detects the gpu-context, so we don't set it explicitly.
+    // Set pre-init options (NOT wid — that requires the Surface and will be
+    // set in nativeAttachSurface before mpv_initialize).
     mpv_set_option_string(mpv, "vo", "gpu");
     mpv_set_option_string(mpv, "gpu-api", "opengl");
-
-    // Enable hardware decoding — works with wid because mpv has the Surface
-    // to pass to MediaCodec for zero-copy decode.
     mpv_set_option_string(mpv, "hwdec", "mediacodec");
-
     mpv_set_option_string(mpv, "audio-device-auto", "yes");
     mpv_set_option_string(mpv, "keep-open", "yes");
     mpv_set_option_string(mpv, "pause", "no");
 
-    if (mpv_initialize(mpv) < 0) {
-        LOGE("mpv_initialize failed");
-        mpv_destroy(mpv);
-        return 0;
-    }
-
-    mpv_request_log_messages(mpv, "v");
+    // NOTE: mpv_initialize() is deliberately NOT called here.
+    // It is deferred until nativeAttachSurface so that the "wid" option
+    // (which requires the Surface pointer) can be set first.
+    // mpv_set_option("wid") after mpv_initialize() is undefined behavior.
 
     g_mpv = mpv;
-    g_running = true;
-
-    pthread_create(&g_eventThread, nullptr, [](void *) -> void * {
-        eventLoop();
-        return nullptr;
-    }, nullptr);
-
-    LOGI("mpv instance created (wid mode)");
+    LOGI("mpv instance created (awaiting surface for init)");
     return reinterpret_cast<jlong>(mpv);
 }
 
@@ -163,6 +150,7 @@ Java_com_simba_player_mpv_MPVLib_nativeDestroy(JNIEnv *env, jclass) {
     if (!g_mpv) return;
 
     g_running = false;
+    g_initialized = false;
 
     mpv_wakeup(g_mpv);
     if (g_eventThread) {
@@ -186,6 +174,7 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
 
     if (surface) {
+        // ── Attach surface ──────────────────────────────────────────────
         if (g_surface) {
             env->DeleteGlobalRef(g_surface);
             g_surface = nullptr;
@@ -196,33 +185,62 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
             return;
         }
 
-        // Convert android.view.Surface to int64_t and pass as wid.
-        // mpv's gpu VO will take ownership of the Surface, create an EGL context
-        // and ANativeWindow internally, and handle all rendering.
-        int64_t wid = reinterpret_cast<intptr_t>(g_surface);
-        int result = mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &wid);
-        if (result < 0)
-            LOGE("mpv_set_option(wid) returned error: %s", mpv_error_string(result));
-        else {
-            LOGI("Surface attached via wid");
-            JNIEnv* jniEnv = getEnv();
-            if (jniEnv && g_mid_onEvent) {
-                jstring jName = jniEnv->NewStringUTF("surfaceAttached");
-                jstring jPayload = jniEnv->NewStringUTF("{}");
-                callStaticJavaVoid(jniEnv, g_mid_onEvent, jName, jPayload);
-                jniEnv->DeleteLocalRef(jName);
-                jniEnv->DeleteLocalRef(jPayload);
+        if (!g_initialized) {
+            // First attach — set wid, then initialize mpv and start
+            // the event thread.  Setting wid after init is UB in mpv.
+            int64_t wid = reinterpret_cast<intptr_t>(g_surface);
+            int result = mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &wid);
+            if (result < 0) {
+                LOGE("mpv_set_option(wid) failed: %s", mpv_error_string(result));
+                env->DeleteGlobalRef(g_surface);
+                g_surface = nullptr;
+                return;
             }
+
+            if (mpv_initialize(mpv) < 0) {
+                LOGE("mpv_initialize failed");
+                env->DeleteGlobalRef(g_surface);
+                g_surface = nullptr;
+                return;
+            }
+            mpv_request_log_messages(mpv, "v");
+            g_initialized = true;
+            g_running = true;
+            pthread_create(&g_eventThread, nullptr, [](void *) -> void * {
+                eventLoop();
+                return nullptr;
+            }, nullptr);
+
+            LOGI("Surface attached and mpv initialized");
+        } else {
+            // Re-attach — g_initialized already true. mpv's gpu VO
+            // has a reference to the Surface via ANativeWindow; let the
+            // existing wid continue to work (mpv will pick up the new
+            // surface through the TextureView lifecycle internally).
+            LOGI("Surface re-attached (mpv already initialized)");
+        }
+
+        // Emit surfaceAttached event
+        JNIEnv* jniEnv = getEnv();
+        if (jniEnv && g_mid_onEvent) {
+            jstring jName = jniEnv->NewStringUTF("surfaceAttached");
+            jstring jPayload = jniEnv->NewStringUTF("{}");
+            callStaticJavaVoid(jniEnv, g_mid_onEvent, jName, jPayload);
+            jniEnv->DeleteLocalRef(jName);
+            jniEnv->DeleteLocalRef(jPayload);
         }
     } else {
-        // Detach — pass wid=0
-        int64_t wid = 0;
-        mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &wid);
+        // ── Detach surface ─────────────────────────────────────────────
+        // IMPORTANT: Do NOT call mpv_set_option("wid", 0) here.
+        // The "wid" option is init-time only; calling it after
+        // mpv_initialize() causes a native crash (mpv_set_option +98).
+        // Just clean up the Java reference — mpv's gpu VO will handle
+        // the surface loss internally.
         if (g_surface) {
             env->DeleteGlobalRef(g_surface);
             g_surface = nullptr;
         }
-        LOGI("Surface detached (wid=0)");
+        LOGI("Surface detached (ref only, wid not modified)");
     }
 }
 

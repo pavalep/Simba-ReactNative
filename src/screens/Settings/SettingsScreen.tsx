@@ -1,20 +1,23 @@
-import React, {useMemo} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {Alert, ScrollView, StyleSheet, Switch, View} from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
+import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../theme';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {
   setHardwareAcceleration,
   setAudioNormalization,
   setDialogueBoost,
-  setAutoLoadSubtitles,
   setThemeMode,
+  setMpvOptions,
 } from '../../store/slices/settingsSlice';
 import {spacing} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
 import {SettingsRow} from '../../components/utility/SettingsRow/SettingsRow';
+import {MpvConfigEditor} from './components/MpvConfigEditor';
+import type {MpvOption} from './components/MpvConfigEditor';
 import {SettingsScreenProps} from '../../navigation/types';
 
 type Props = SettingsScreenProps;
@@ -25,8 +28,9 @@ const THEME_LABELS: Record<string, string> = {
   light: 'Light',
 };
 
-export const SettingsScreen: React.FC<Props> = ({navigation}) => {
+export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
   const {theme, colors} = useTheme();
+  const nav = useNavigation<any>();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
   const bottomChromeInset = insets.bottom + 104;
@@ -70,16 +74,24 @@ export const SettingsScreen: React.FC<Props> = ({navigation}) => {
   const dialogueBoost = useAppSelector(
     state => state.settings.isDialogueBoostEnabled,
   );
-  const autoLoadSubtitles = useAppSelector(
-    state => state.settings.isAutoLoadSubtitlesEnabled,
-  );
   const themeMode = useAppSelector(state => state.settings.themeMode);
-  const videoFolderCount = useAppSelector(
-    state => state.settings.videoFolders?.length ?? 0,
-  );
-  const audioFolderCount = useAppSelector(
-    state => state.settings.audioFolders?.length ?? 0,
-  );
+  const mpvOptions = useAppSelector(state => state.settings.mpvOptions) ?? [];
+
+  const [mpvEditorVisible, setMpvEditorVisible] = useState(false);
+
+  const handleLinkedFoldersPress = useCallback(() => {
+    Alert.alert('Linked Folders', 'Choose folder type to manage', [
+      {
+        text: 'Video Folders',
+        onPress: () => nav.navigate('LinkedFolders', {type: 'video'}),
+      },
+      {
+        text: 'Audio Folders',
+        onPress: () => nav.navigate('LinkedFolders', {type: 'audio'}),
+      },
+      {text: 'Cancel', style: 'cancel'},
+    ]);
+  }, [nav]);
 
   const handleThemePress = () => {
     Alert.alert('Select Theme', 'Choose your preferred appearance', [
@@ -154,6 +166,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation}) => {
                   ? colors.accent.gold
                   : colors.text.tertiary
               }
+              accessibilityLabel="Hardware Acceleration"
             />
           }
         />
@@ -172,6 +185,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation}) => {
                   ? colors.accent.gold
                   : colors.text.tertiary
               }
+              accessibilityLabel="Audio Normalization"
             />
           }
         />
@@ -190,68 +204,45 @@ export const SettingsScreen: React.FC<Props> = ({navigation}) => {
                   ? colors.accent.gold
                   : colors.text.tertiary
               }
+              accessibilityLabel="Dialogue Boost"
             />
           }
         />
 
-        {/* ── Library Section ── */}
-        <SectionHeader label="Library" />
+        {/* ── Advanced Section ── */}
+        <SectionHeader label="Advanced" />
         <SettingsRow
-          label="Auto-load Subtitles"
-          trailing={
-            <Switch
-              value={autoLoadSubtitles}
-              onValueChange={val => { dispatch(setAutoLoadSubtitles(val)); }}
-              trackColor={{
-                false: colors.border.subtle,
-                true: colors.accent.goldDim,
-              }}
-              thumbColor={
-                autoLoadSubtitles
-                  ? colors.accent.gold
-                  : colors.text.tertiary
-              }
-            />
-          }
+          label="MPV Options"
+          description={mpvOptions.length > 0 ? `${mpvOptions.length} option${mpvOptions.length !== 1 ? 's' : ''} set` : 'Default'}
+          onPress={() => setMpvEditorVisible(true)}
         />
         <SettingsRow
-          label="Preferred Languages"
-          onPress={() =>
-            Alert.alert(
-              'Coming Soon',
-              'Language selection will be available in a future update.',
-            )
-          }
-        />
-        <SettingsRow
-          label="Video Folders"
-          description={`${videoFolderCount} folder${videoFolderCount !== 1 ? 's' : ''} linked`}
-          onPress={() =>
-            navigation.navigate('LinkedFolders', {type: 'video'})
-          }
-        />
-        <SettingsRow
-          label="Audio Folders"
-          description={`${audioFolderCount} folder${audioFolderCount !== 1 ? 's' : ''} linked`}
-          onPress={() =>
-            navigation.navigate('LinkedFolders', {type: 'audio'})
-          }
+          label="Linked Folders"
+          description="Manage video & audio folders"
+          onPress={handleLinkedFoldersPress}
         />
 
         {/* ── Audio Section ── */}
         <SectionHeader label="Audio" />
         <SettingsRow
           label="Equalizer"
-          onPress={() => navigation.navigate('AudioSettings')}
+          onPress={() => nav.navigate('AudioSettings')}
         />
 
         {/* ── About Section ── */}
         <SectionHeader label="About" />
         <SettingsRow
           label="About"
-          onPress={() => navigation.navigate('About')}
+          onPress={() => nav.navigate('About')}
         />
       </ScrollView>
+
+      <MpvConfigEditor
+        visible={mpvEditorVisible}
+        onClose={() => setMpvEditorVisible(false)}
+        options={mpvOptions}
+        onSave={(options: MpvOption[]) => dispatch(setMpvOptions(options))}
+      />
     </SafeAreaView>
   );
 };

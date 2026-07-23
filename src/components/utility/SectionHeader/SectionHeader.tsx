@@ -23,7 +23,11 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
         {label}
       </AppText>
       {actionLabel && onAction && (
-        <TouchableOpacity onPress={onAction} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={onAction}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}>
           <AppText variant="caption" color="accent">
             {actionLabel}
           </AppText>

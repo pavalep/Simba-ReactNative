@@ -104,7 +104,10 @@ export const AppButton: React.FC<AppButtonProps> = ({
       ]}
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.7}>
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityState={{disabled: disabled || loading}}
+      accessibilityLabel={loading ? `${title}, loading` : title}>
       {loading ? (
         <ActivityIndicator color={txtColor} />
       ) : (

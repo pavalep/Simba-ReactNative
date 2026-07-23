@@ -1,4 +1,4 @@
-import React, {useMemo, useCallback} from 'react';
+import React, {useMemo, useCallback, useState} from 'react';
 import {
   View,
   ScrollView,
@@ -6,6 +6,10 @@ import {
   Alert,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -21,13 +25,17 @@ import {
   setLastScanTimestamp,
 } from '../../store/slices/settingsSlice';
 import {AppText} from '../../components/core/AppText/AppText';
+import {SvgIcon} from '../../components/utility/SvgIcon';
+import {ScanProgressBanner} from '../../components/feedback/ScanProgressBanner/ScanProgressBanner';
 import {LinkedFoldersScreenProps} from '../../navigation/types';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 
 type Props = LinkedFoldersScreenProps;
 
 export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
   const {type} = route.params;
-  const {colors} = useTheme();
+  const {theme, colors} = useTheme();
+  const isDark = theme === 'dark';
   const dispatch = useAppDispatch();
   const isVideo = type === 'video';
 
@@ -36,6 +44,10 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
   );
   const isScanning = useAppSelector(s => s.settings.isScanning);
   const lastScanTimestamp = useAppSelector(s => s.settings.lastScanTimestamp);
+
+  // ── Add-folder modal state ──
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [addInputValue, setAddInputValue] = useState('');
 
   const styles = useMemo(
     () =>
@@ -48,26 +60,11 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
           padding: spacing.lg,
           paddingBottom: spacing.xxxl * 2,
         },
-        header: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.md,
-          paddingBottom: spacing.sm,
-        },
-        backButton: {
-          marginRight: spacing.sm,
-          padding: spacing.xs,
-        },
-        backIcon: {
-          opacity: 0.65,
-        },
         card: {
           borderRadius: radius.md,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: colors.border.subtle,
           backgroundColor: colors.background.elevated,
-          marginBottom: spacing.lg,
           overflow: 'hidden',
         },
         folderRow: {
@@ -79,9 +76,22 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: colors.border.subtle,
         },
+        folderLeft: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flex: 1,
+          gap: 10,
+        },
+        folderIconWrap: {
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: isDark ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.08)',
+        },
         folderPath: {
           flex: 1,
-          marginRight: spacing.sm,
         },
         removeButton: {
           padding: spacing.xs,
@@ -96,64 +106,93 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
           paddingVertical: spacing.md,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border.subtle,
+          gap: 8,
         },
-        scanButton: {
-          borderRadius: radius.md,
-          borderWidth: 1,
-          borderColor: colors.accent.gold,
-          paddingVertical: spacing.sm,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: spacing.md,
-        },
-        scanButtonText: {
-          color: colors.accent.gold,
-          fontWeight: '600',
-        },
-        scanButtonDisabled: {
-          opacity: 0.5,
-        },
-        lastScan: {
-          alignItems: 'center',
-          marginBottom: spacing.lg,
-        },
+        // ── Empty state ──
         emptyContainer: {
           alignItems: 'center',
-          paddingVertical: spacing.xxl,
+          paddingVertical: spacing.xxl + spacing.lg,
+          gap: spacing.sm,
         },
-        emptyText: {
-          marginTop: spacing.sm,
+        emptyIcon: {
+          opacity: 0.3,
+        },
+        // ── Modal ──
+        modalOverlay: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+        },
+        modalContent: {
+          width: '85%',
+          borderRadius: radius.md,
+          backgroundColor: colors.background.elevated,
+          paddingVertical: spacing.lg,
+          paddingHorizontal: spacing.lg,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.border.subtle,
+        },
+        modalTitle: {
+          marginBottom: spacing.sm,
           textAlign: 'center',
         },
+        modalSubtitle: {
+          marginBottom: spacing.lg,
+          textAlign: 'center',
+        },
+        input: {
+          borderWidth: 1,
+          borderColor: colors.border.subtle,
+          borderRadius: radius.sm,
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.md,
+          color: colors.text.primary,
+          fontSize: 15,
+          backgroundColor: colors.background.floating,
+          marginBottom: spacing.md,
+        },
+        modalActions: {
+          flexDirection: 'row',
+          justifyContent: 'flex-end',
+          gap: spacing.sm,
+        },
+        modalButton: {
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.lg,
+          borderRadius: radius.sm,
+        },
+        modalButtonCancel: {
+          backgroundColor: colors.background.floating,
+        },
+        modalButtonConfirm: {
+          backgroundColor: colors.accent.gold,
+        },
+        modalButtonConfirmText: {
+          color: '#0A0A0C',
+          fontWeight: '600',
+        },
       }),
-    [colors],
+    [colors, isDark],
   );
 
   const handleAddFolder = useCallback(() => {
-    Alert.prompt(
-      `Add ${isVideo ? 'Video' : 'Audio'} Folder`,
-      'Enter the folder path:',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Add',
-          onPress: (text?: string) => {
-            const path = text?.trim();
-            if (path) {
-              if (isVideo) {
-                dispatch(addVideoFolder(path));
-              } else {
-                dispatch(addAudioFolder(path));
-              }
-            }
-          },
-        },
-      ],
-      'plain-text',
-      '',
-      'default',
-    );
-  }, [dispatch, isVideo]);
+    setAddInputValue('');
+    setAddModalVisible(true);
+  }, []);
+
+  const confirmAddFolder = useCallback(() => {
+    const path = addInputValue.trim();
+    if (path) {
+      if (isVideo) {
+        dispatch(addVideoFolder(path));
+      } else {
+        dispatch(addAudioFolder(path));
+      }
+    }
+    setAddModalVisible(false);
+    setAddInputValue('');
+  }, [addInputValue, dispatch, isVideo]);
 
   const handleRemoveFolder = useCallback(
     (folder: string) => {
@@ -188,26 +227,6 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
     }, 2000);
   }, [dispatch]);
 
-  const formatLastScan = (timestamp: number | null): string => {
-    if (timestamp === null) {
-      return 'Never';
-    }
-    const diff = Date.now() - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) {
-      return 'Just now';
-    }
-    if (minutes < 60) {
-      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-    }
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) {
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    }
-    const days = Math.floor(hours / 24);
-    return `${days} day${days > 1 ? 's' : ''} ago`;
-  };
-
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <LinearGradient
@@ -215,70 +234,79 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <AppText variant="h2" color="secondary" style={styles.backIcon}>
-            ←
-          </AppText>
-        </TouchableOpacity>
-        <AppText variant="h1" color="primary">
-          {isVideo ? 'Video' : 'Audio'} Folders
-        </AppText>
-      </View>
+      <InternalHeader title={isVideo ? 'Video Folders' : 'Audio Folders'} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
+        {/* Scan Status Banner */}
+        <ScanProgressBanner
+          isScanning={isScanning}
+          lastScanTimestamp={lastScanTimestamp}
+        />
+
         {/* Scan Button */}
         <TouchableOpacity
-          style={[styles.scanButton, isScanning && styles.scanButtonDisabled]}
+          style={[
+            styles.addButton,
+            {
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: colors.accent.gold,
+              marginBottom: spacing.lg,
+              paddingVertical: spacing.sm,
+              borderTopWidth: 1,
+              opacity: isScanning ? 0.5 : 1,
+            },
+          ]}
           activeOpacity={0.7}
           onPress={handleScan}
           disabled={isScanning}>
           {isScanning ? (
             <ActivityIndicator color={colors.accent.gold} size="small" />
           ) : (
-            <AppText
-              variant="body1"
-              color="accent"
-              style={styles.scanButtonText}>
+            <AppText variant="body1" color="accent" style={{fontWeight: '600'}}>
               Scan Folders
             </AppText>
           )}
         </TouchableOpacity>
 
-        {/* Last Scanned */}
-        <View style={styles.lastScan}>
-          <AppText variant="caption" color="tertiary">
-            Last scanned: {formatLastScan(lastScanTimestamp)}
-          </AppText>
-        </View>
-
         {/* Folder List */}
         <View style={styles.card}>
           {folders.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <AppText variant="body2" color="tertiary" style={styles.emptyText}>
+              <SvgIcon
+                name="folder"
+                size={40}
+                color={colors.text.tertiary}
+                style={styles.emptyIcon}
+              />
+              <AppText variant="body2" color="tertiary">
                 No {isVideo ? 'video' : 'audio'} folders linked yet.
               </AppText>
-              <AppText variant="caption" color="tertiary" style={styles.emptyText}>
+              <AppText variant="caption" color="tertiary">
                 Tap "Add Folder" below to get started.
               </AppText>
             </View>
           ) : (
             folders.map((folder, index) => (
               <View key={`${folder}-${index}`} style={styles.folderRow}>
-                <AppText
-                  variant="body2"
-                  color="primary"
-                  style={styles.folderPath}
-                  numberOfLines={1}>
-                  {folder}
-                </AppText>
+                <View style={styles.folderLeft}>
+                  <View style={styles.folderIconWrap}>
+                    <SvgIcon
+                      name="folder"
+                      size={16}
+                      color={colors.accent.gold}
+                    />
+                  </View>
+                  <AppText
+                    variant="body2"
+                    color="primary"
+                    style={styles.folderPath}
+                    numberOfLines={1}>
+                    {folder}
+                  </AppText>
+                </View>
                 <TouchableOpacity
                   style={styles.removeButton}
                   onPress={() => handleRemoveFolder(folder)}
@@ -305,6 +333,62 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* ── Add Folder Modal (cross-platform) ── */}
+      <Modal
+        visible={addModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddModalVisible(false)}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalContent}>
+            <AppText
+              variant="h3"
+              color="primary"
+              style={styles.modalTitle}>
+              Add {isVideo ? 'Video' : 'Audio'} Folder
+            </AppText>
+            <AppText
+              variant="caption"
+              color="tertiary"
+              style={styles.modalSubtitle}>
+              Enter the full folder path
+            </AppText>
+
+            <TextInput
+              style={styles.input}
+              placeholder="/storage/emulated/0/Movies"
+              placeholderTextColor={colors.text.tertiary}
+              value={addInputValue}
+              onChangeText={setAddInputValue}
+              autoFocus
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setAddModalVisible(false)}>
+                <AppText variant="body2" color="secondary">
+                  Cancel
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={confirmAddFolder}>
+                <AppText
+                  variant="body2"
+                  style={styles.modalButtonConfirmText}>
+                  Add
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };

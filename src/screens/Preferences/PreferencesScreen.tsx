@@ -23,6 +23,7 @@ import {
 import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
 import {SettingsRow} from '../../components/utility/SettingsRow/SettingsRow';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 
 type Props = PreferencesScreenProps;
 
@@ -125,6 +126,8 @@ export const PreferencesScreen: React.FC<Props> = ({navigation}) => {
         colors={[colors.background.primary, colors.background.elevated]}
         style={StyleSheet.absoluteFill}
       />
+
+      <InternalHeader title="Preferences" />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

@@ -13,6 +13,7 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {AboutScreenProps} from '../../navigation/types';
 import {svgPaths} from '../../constants/svgPaths';
 import {SimbaStatusBar} from '../../components/StatusBar';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 
 type Props = AboutScreenProps;
 
@@ -108,18 +109,7 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.root} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}>
-            <AppText variant="body1" color="accent">
-              {'←'} Back
-            </AppText>
-          </TouchableOpacity>
-          <AppText variant="h2" color="primary">
-            About
-          </AppText>
-        </View>
+        <InternalHeader title="About" />
         <View style={styles.content}>
           <Image
             source={

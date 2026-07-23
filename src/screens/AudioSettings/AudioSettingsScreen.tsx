@@ -16,6 +16,7 @@ import {SimbaStatusBar} from '../../components/StatusBar';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
 import {SettingsRow} from '../../components/utility/SettingsRow/SettingsRow';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 
 type Props = AudioSettingsScreenProps;
 
@@ -137,19 +138,7 @@ export const AudioSettingsScreen: React.FC<Props> = ({navigation}) => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}>
-          <AppText variant="body1" color="accent">
-            Back
-          </AppText>
-        </TouchableOpacity>
-        <AppText variant="h2" color="primary" style={styles.title}>
-          Audio Settings
-        </AppText>
-      </View>
+      <InternalHeader title="Audio Settings" />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

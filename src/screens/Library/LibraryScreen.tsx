@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useCallback} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -13,30 +13,20 @@ import {useTheme} from '../../theme';
 import {useAppSelector} from '../../store';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {AppText} from '../../components/core/AppText/AppText';
-import {EmptyState} from '../../components/utility/EmptyState/EmptyState';
-import {SvgIcon} from '../../components/utility/SvgIcon';
+import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
+import {ScanProgressBanner} from '../../components/feedback/ScanProgressBanner/ScanProgressBanner';
+import {SvgIcon, SvgIconName} from '../../components/utility/SvgIcon';
+import {radius} from '../../theme/tokens';
 import {LibraryScreenProps} from '../../navigation/types';
 
 type Props = LibraryScreenProps;
 type Segment = 'videos' | 'audio' | 'folders';
 
-const SEGMENTS: {key: Segment; label: string}[] = [
-  {key: 'videos', label: 'Videos'},
-  {key: 'audio', label: 'Audio'},
-  {key: 'folders', label: 'Folders'},
+const SEGMENTS: {key: Segment; label: string; icon: SvgIconName}[] = [
+  {key: 'videos', label: 'Videos', icon: 'video'},
+  {key: 'audio', label: 'Audio', icon: 'music'},
+  {key: 'folders', label: 'Folders', icon: 'folder'},
 ];
-
-const formatLastScan = (timestamp: number | null): string => {
-  if (timestamp === null) return 'Never';
-  const diff = Date.now() - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-};
 
 export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   const {theme, colors} = useTheme();
@@ -45,10 +35,10 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   const bottomChromeInset = insets.bottom + 104;
   const [activeSegment, setActiveSegment] = useState<Segment>('videos');
 
-  const videoFolders = useAppSelector(s => s.settings.videoFolders);
-  const audioFolders = useAppSelector(s => s.settings.audioFolders);
-  const isScanning = useAppSelector(s => s.settings.isScanning);
-  const lastScanTimestamp = useAppSelector(s => s.settings.lastScanTimestamp);
+  const videoFolders = useAppSelector(s => s.settings?.videoFolders ?? []);
+  const audioFolders = useAppSelector(s => s.settings?.audioFolders ?? []);
+  const isScanning = useAppSelector(s => s.settings?.isScanning ?? false);
+  const lastScanTimestamp = useAppSelector(s => s.settings?.lastScanTimestamp ?? null);
 
   const styles = useMemo(
     () =>
@@ -76,22 +66,6 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           paddingTop: Platform.OS === 'android' ? 16 : 4,
           paddingBottom: 12,
         },
-        headerAction: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 8,
-          minHeight: 38,
-          paddingHorizontal: 12,
-          borderRadius: 19,
-          borderWidth: StyleSheet.hairlineWidth,
-          backgroundColor: colors.background.floating,
-          borderColor: colors.border.subtle,
-        },
-        headerActionText: {
-          fontSize: 12,
-          fontWeight: '600',
-          letterSpacing: 0.3,
-        },
 
         // ── Segmented Control ──
         segmentedControl: {
@@ -113,6 +87,15 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         segmentLabel: {
           fontWeight: '500',
         },
+        segmentIcon: {
+          width: 16,
+          height: 16,
+          marginRight: 6,
+        },
+        segmentInner: {
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
 
         // ── Content ──
         scroll: {
@@ -124,20 +107,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           paddingBottom: bottomChromeInset,
         },
 
-        // ── Scan status ──
-        scanInfoRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 20,
-          paddingBottom: 8,
-          gap: 6,
-        },
-        scanDot: {
-          width: 6,
-          height: 6,
-          borderRadius: 3,
-        },
+        // ── Scanning state ──
         scanningContainer: {
           alignItems: 'center',
           paddingTop: 48,
@@ -146,24 +116,165 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         scanningText: {
           textAlign: 'center',
         },
-        linkedContainer: {
+
+        // ── Folder card grid ──
+        folderGrid: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 12,
+        },
+        folderCard: {
+          width: '100%',
+          paddingVertical: 16,
+          paddingHorizontal: 16,
+          borderRadius: radius.md,
+          borderWidth: StyleSheet.hairlineWidth,
+          backgroundColor: colors.background.elevated,
+          borderColor: colors.border.subtle,
+        },
+        folderCardRow: {
+          flexDirection: 'row',
           alignItems: 'center',
-          paddingTop: 16,
+          justifyContent: 'space-between',
+        },
+        folderCardLeft: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          flex: 1,
+          gap: 12,
+        },
+        folderIconWrap: {
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: isDark ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.08)',
+        },
+        folderLabel: {
+          flex: 1,
+        },
+        folderPath: {
+          fontSize: 12,
+          marginTop: 2,
+        },
+        // ── CTA button ──
+        ctaButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 14,
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: colors.accent.gold,
+          marginTop: 20,
+          gap: 8,
+        },
+        ctaIcon: {
+          width: 18,
+          height: 18,
+        },
+
+        // ── Folders tab ──
+        folderListCard: {
+          borderRadius: radius.md,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.border.subtle,
+          backgroundColor: colors.background.elevated,
+          marginBottom: 16,
+          overflow: 'hidden',
+        },
+        folderListHeader: {
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.border.subtle,
+        },
+        folderListItem: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.border.subtle,
+        },
+        folderListItemLast: {
+          borderBottomWidth: 0,
+        },
+        folderTypeTag: {
+          paddingHorizontal: 8,
+          paddingVertical: 2,
+          borderRadius: 4,
+          fontSize: 10,
+          fontWeight: '600',
+          overflow: 'hidden',
+        },
+        folderTypeVideo: {
+          backgroundColor: isDark ? 'rgba(212,175,55,0.15)' : 'rgba(212,175,55,0.1)',
+          color: colors.accent.gold,
+        },
+        folderTypeAudio: {
+          backgroundColor: isDark ? 'rgba(100,200,255,0.12)' : 'rgba(100,200,255,0.08)',
+          color: '#64C8FF',
         },
       }),
-    [bottomChromeInset, colors],
+    [bottomChromeInset, colors, isDark],
   );
 
-  const linkedFolderCount = (() => {
-    switch (activeSegment) {
-      case 'videos':
-        return videoFolders?.length ?? 0;
-      case 'audio':
-        return audioFolders?.length ?? 0;
-      case 'folders':
-        return (videoFolders?.length ?? 0) + (audioFolders?.length ?? 0);
-    }
-  })();
+  // ── Handlers ──
+
+  const navigateToSettings = useCallback(() => {
+    // Navigate to the Settings root stack
+    (navigation as any).navigate('Settings');
+  }, [navigation]);
+
+  const navigateToLinkedFolders = useCallback(
+    (type: 'video' | 'audio') => {
+      (navigation as any).navigate('Settings', {
+        screen: 'LinkedFolders',
+        params: {type},
+      });
+    },
+    [navigation],
+  );
+
+  const navigateToFolderBrowser = useCallback(
+    (folderPath: string, folderName: string) => {
+      (navigation as any).navigate('FolderBrowser', {initialPath: folderPath});
+    },
+    [navigation],
+  );
+
+  // ── Render helpers ──
+
+  const renderFolderCard = (folder: string, index: number, type: 'video' | 'audio') => (
+    <TouchableOpacity
+      key={`${type}-${index}`}
+      style={styles.folderCard}
+      activeOpacity={0.7}
+      onPress={() => navigateToFolderBrowser(folder, folder.split('/').pop() || folder)}>
+      <View style={styles.folderCardRow}>
+        <View style={styles.folderCardLeft}>
+          <View style={styles.folderIconWrap}>
+            <SvgIcon
+              name="folder"
+              size={18}
+              color={colors.accent.gold}
+            />
+          </View>
+          <View style={styles.folderLabel}>
+            <AppText variant="body2" color="primary" numberOfLines={1}>
+              {folder.split('/').pop() || folder}
+            </AppText>
+            <AppText variant="caption" color="tertiary" style={styles.folderPath} numberOfLines={1}>
+              {folder}
+            </AppText>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   const renderContent = () => {
     if (isScanning) {
@@ -180,54 +291,124 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
       );
     }
 
-    if (linkedFolderCount > 0) {
-      const label =
-        activeSegment === 'videos'
-          ? 'video'
-          : activeSegment === 'audio'
-            ? 'audio'
-            : '';
-      const pluralS = linkedFolderCount !== 1 ? 's' : '';
-      const folderType =
-        activeSegment === 'folders'
-          ? 'folder'
-          : `${label} folder`;
-      return (
-        <View style={styles.linkedContainer}>
-          <EmptyState
-            icon="folder"
-            title={`${linkedFolderCount} linked ${folderType}${pluralS}`}
-            subtitle="Browse from your linked folders or add more in Settings."
-          />
-        </View>
-      );
-    }
-
     switch (activeSegment) {
-      case 'videos':
+      case 'videos': {
+        if (videoFolders.length === 0) {
+          return (
+            <EmptyState
+              icon="video"
+              title="No videos yet"
+              description="Link video folders in Settings to populate your library."
+              actionLabel="Go to Settings"
+              onAction={navigateToSettings}
+            />
+          );
+        }
         return (
-          <EmptyState
-            icon="video"
-            title="No videos yet"
-            subtitle="Link folders in Settings to populate your library."
-          />
+          <View style={styles.folderGrid}>
+            {videoFolders.map((f, i) => renderFolderCard(f, i, 'video'))}
+            <TouchableOpacity
+              style={styles.ctaButton}
+              activeOpacity={0.7}
+              onPress={() => navigateToLinkedFolders('video')}>
+              <SvgIcon
+                name="folder"
+                size={18}
+                color={colors.accent.gold}
+                style={styles.ctaIcon}
+              />
+              <AppText variant="body2" color="accent">
+                + Add Video Folder
+              </AppText>
+            </TouchableOpacity>
+          </View>
         );
-      case 'audio':
+      }
+
+      case 'audio': {
+        if (audioFolders.length === 0) {
+          return (
+            <EmptyState
+              icon="music"
+              title="No audio files yet"
+              description="Link audio folders in Settings to populate your library."
+              actionLabel="Go to Settings"
+              onAction={navigateToSettings}
+            />
+          );
+        }
         return (
-          <EmptyState
-            icon="music"
-            title="No audio files yet"
-            subtitle="Link folders in Settings to populate your library."
-          />
+          <View style={styles.folderGrid}>
+            {audioFolders.map((f, i) => renderFolderCard(f, i, 'audio'))}
+            <TouchableOpacity
+              style={styles.ctaButton}
+              activeOpacity={0.7}
+              onPress={() => navigateToLinkedFolders('audio')}>
+              <SvgIcon
+                name="folder"
+                size={18}
+                color={colors.accent.gold}
+                style={styles.ctaIcon}
+              />
+              <AppText variant="body2" color="accent">
+                + Add Audio Folder
+              </AppText>
+            </TouchableOpacity>
+          </View>
         );
-      case 'folders':
+      }
+
+      case 'folders': {
+        const allFolders: {path: string; type: 'video' | 'audio'}[] = [
+          ...videoFolders.map(f => ({path: f, type: 'video' as const})),
+          ...audioFolders.map(f => ({path: f, type: 'audio' as const})),
+        ];
+        if (allFolders.length === 0) {
+          return (
+            <EmptyState
+              icon="folder"
+              title="No folders linked"
+              description="Link media folders in Settings to build your library."
+              actionLabel="Go to Settings"
+              onAction={navigateToSettings}
+            />
+          );
+        }
         return (
-          <EmptyState
-            icon="folder"
-            title="No folders yet"
-            subtitle="Link media folders in Settings to get started."
-          />
+          <View style={styles.folderListCard}>
+            <View style={styles.folderListHeader}>
+              <AppText variant="body2" color="secondary" style={{fontWeight: '600'}}>
+                All Linked Folders
+              </AppText>
+            </View>
+            {allFolders.map((f, i) => (
+              <TouchableOpacity
+                key={`${f.type}-${i}`}
+                style={[
+                  styles.folderListItem,
+                  i === allFolders.length - 1 && styles.folderListItemLast,
+                ]}
+                activeOpacity={0.7}
+                onPress={() => navigateToFolderBrowser(f.path, f.path.split('/').pop() || f.path)}>
+                <View style={styles.folderCardLeft}>
+                  <SvgIcon name="folder" size={18} color={colors.accent.gold} />
+                  <AppText variant="body2" color="primary" numberOfLines={1} style={{flex: 1}}>
+                    {f.path}
+                  </AppText>
+                </View>
+                <AppText
+                  variant="caption"
+                  style={[
+                    styles.folderTypeTag,
+                    f.type === 'video' ? styles.folderTypeVideo : styles.folderTypeAudio,
+                  ]}>
+                  {f.type === 'video' ? 'Video' : 'Audio'}
+                </AppText>
+              </TouchableOpacity>
+            ))}
+          </View>
         );
+      }
     }
   };
 
@@ -238,7 +419,9 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
       {/* ══ BACKGROUND ══ */}
       <LinearGradient
         colors={
-          [colors.background.primary, colors.background.primary]
+          isDark
+            ? [colors.background.primary, '#0D0D0F']
+            : [colors.background.primary, colors.background.elevated]
         }
         style={StyleSheet.absoluteFill}
       />
@@ -260,25 +443,6 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         </AppText>
       </View>
 
-      {/* ══ SCAN STATUS ══ */}
-      <View style={styles.scanInfoRow}>
-        <View
-          style={[
-            styles.scanDot,
-            {
-              backgroundColor: isScanning
-                ? colors.accent.gold
-                : colors.text.tertiary,
-            },
-          ]}
-        />
-        <AppText variant="caption" color="tertiary">
-          {isScanning
-            ? 'Scanning...'
-            : `Last scanned: ${formatLastScan(lastScanTimestamp)}`}
-        </AppText>
-      </View>
-
       {/* ══ SEGMENTED CONTROL ══ */}
       <View style={styles.segmentedControl}>
         {SEGMENTS.map(seg => {
@@ -289,12 +453,20 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
               style={[styles.segment, isActive && styles.segmentActive]}
               onPress={() => setActiveSegment(seg.key)}
               activeOpacity={0.7}>
-              <AppText
-                variant="body2"
-                color={isActive ? 'accent' : 'secondary'}
-                style={styles.segmentLabel}>
-                {seg.label}
-              </AppText>
+              <View style={styles.segmentInner}>
+                <SvgIcon
+                  name={seg.icon}
+                  size={16}
+                  color={isActive ? colors.accent.gold : colors.text.secondary}
+                  style={styles.segmentIcon}
+                />
+                <AppText
+                  variant="body2"
+                  color={isActive ? 'accent' : 'secondary'}
+                  style={styles.segmentLabel}>
+                  {seg.label}
+                </AppText>
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -305,8 +477,14 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        {renderContent()}
 
+        {/* Scan Status Banner */}
+        <ScanProgressBanner
+          isScanning={isScanning}
+          lastScanTimestamp={lastScanTimestamp}
+        />
+
+        {renderContent()}
       </ScrollView>
     </SafeAreaView>
   );

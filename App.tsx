@@ -9,6 +9,8 @@ import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {SimbaStatusBar} from './src/components/StatusBar';
+import {ToastProvider} from './src/components/feedback/Toast';
+import {lockToPortrait} from './src/utils/orientation';
 
 /**
  * Parse a shared content URI and navigate to the Player screen.
@@ -22,7 +24,7 @@ function handleIncomingUri(uri: string) {
   const fileName = uri.split('/').pop() ?? 'Shared File';
   const displayName = decodeURIComponent(fileName.replace(/\.[^.]+$/, ''));
 
-  navigationRef.navigate('Player', {
+  navigationRef.navigate('VideoPlayer', {
     fileUri: uri,
     fileTitle: displayName,
   });
@@ -46,6 +48,11 @@ const AppContent: React.FC = () => {
   // ── Deep linking: handle incoming content:// URIs ──
   const handleUrl = useCallback((event: {url: string}) => {
     handleIncomingUri(event.url);
+  }, []);
+
+  useEffect(() => {
+    // Lock to portrait globally (PlayerScreen toggles to landscape on demand)
+    lockToPortrait();
   }, []);
 
   useEffect(() => {

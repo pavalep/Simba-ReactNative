@@ -16,11 +16,12 @@ import {SimbaStatusBar} from '../../components/StatusBar';
 
 import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
-import {EmptyState} from '../../components/utility/EmptyState/EmptyState';
+import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {useAppSelector} from '../../store';
 import {SearchScreenProps} from '../../navigation/types';
 import {radius, spacing} from '../../theme/tokens';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 
 type Props = SearchScreenProps;
 
@@ -373,7 +374,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
 
   const handlePlayFile = useCallback(
     async (fileUri: string, fileTitle: string) => {
-      navigation.navigate('Player', {
+      navigation.navigate('VideoPlayer', {
         fileUri,
         fileTitle,
       });
@@ -424,6 +425,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
+        <InternalHeader title="Search" />
         {/* ── SearchBar ── */}
         <View
           style={[
@@ -454,7 +456,9 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
             <TouchableOpacity
               onPress={handleClearSearch}
               hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-              style={styles.clearButton}>
+              style={styles.clearButton}
+              accessibilityLabel="Clear search"
+              accessibilityRole="button">
               <AppText variant="body1" color="secondary">
                 ✕
               </AppText>
@@ -579,7 +583,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
             <EmptyState
               icon="music"
               title="No results found"
-              subtitle={`No media matches "${searchText}"`}
+              description={`No media matches "${searchText}"`}
             />
           </View>
         )}

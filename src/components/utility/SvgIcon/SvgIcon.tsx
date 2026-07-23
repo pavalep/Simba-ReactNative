@@ -21,6 +21,8 @@ const icons = {
 } as const;
 
 export type SvgIconName = keyof typeof icons;
+/** Alias matching the spec's IconName type */
+export type IconName = SvgIconName;
 
 export interface SvgIconProps {
   name: SvgIconName;

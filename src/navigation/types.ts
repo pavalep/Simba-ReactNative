@@ -4,7 +4,8 @@ import type {CompositeScreenProps, NavigatorScreenParams} from '@react-navigatio
 
 export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList>;
-  Player: {fileUri?: string; fileTitle?: string};
+  VideoPlayer: {fileUri?: string; fileTitle?: string};
+  AudioPlayer: {fileUri?: string; fileTitle?: string};
   Preferences: undefined;
   Settings: NavigatorScreenParams<SettingsTabParamList>;
 };
@@ -17,7 +18,7 @@ export type TabParamList = {
 export type HomeTabParamList = {
   Home: undefined;
   Search: undefined;
-  NowPlaying: undefined;
+  NowPlaying: {fileUri?: string; fileTitle?: string} | undefined;
 };
 
 export type LibraryTabParamList = {

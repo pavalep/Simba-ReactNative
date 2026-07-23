@@ -1,1 +1,2 @@
-export {SvgIcon, SvgIconName} from './SvgIcon';
+export {SvgIcon} from './SvgIcon';
+export type {SvgIconName, IconName} from './SvgIcon';
