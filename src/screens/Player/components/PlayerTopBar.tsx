@@ -10,6 +10,8 @@ export interface PlayerTopBarProps {
   title: string;
   onGoBack: () => void;
   topInset: number;
+  isLandscape: boolean;
+  onToggleRotate: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -18,6 +20,8 @@ export const PlayerTopBar: React.FC<PlayerTopBarProps> = ({
   title,
   onGoBack,
   topInset,
+  isLandscape,
+  onToggleRotate,
 }) => {
   const {colors} = useTheme();
 
@@ -83,6 +87,17 @@ export const PlayerTopBar: React.FC<PlayerTopBarProps> = ({
           alignItems: 'center',
           gap: 4,
         },
+        rotateBtn: {
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        rotateBtnIcon: {
+          fontSize: 18,
+          color: colors.text.secondary,
+        },
 
       }),
     [colors],
@@ -115,8 +130,14 @@ export const PlayerTopBar: React.FC<PlayerTopBarProps> = ({
           </AppText>
         </View>
 
-        {/* Right: spacer */}
-        <View style={styles.rightSection} />
+        {/* Right: expand toggle */}
+        <View style={styles.rightSection}>
+          <TouchableOpacity style={styles.rotateBtn} onPress={onToggleRotate}>
+            <AppText style={styles.rotateBtnIcon}>
+              {isLandscape ? '⤢' : '⛶'}
+            </AppText>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );

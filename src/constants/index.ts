@@ -1,1 +1,1 @@
-export {imagePaths} from './imagePaths';
+export {svgPaths} from './svgPaths';

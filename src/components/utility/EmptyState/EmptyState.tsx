@@ -1,12 +1,13 @@
 import React from 'react';
-import {View, Image, ImageSourcePropType, StyleSheet} from 'react-native';
+import {View, StyleSheet} from 'react-native';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {AppButton} from '../../core/AppButton/AppButton';
+import {SvgIcon, SvgIconName} from '../SvgIcon';
 
 interface EmptyStateProps {
-  icon?: ImageSourcePropType;
+  icon?: SvgIconName;
   title: string;
   subtitle?: string;
   actionLabel?: string;
@@ -20,14 +21,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   actionLabel,
   onAction,
 }) => {
-  const {spacing: s} = useTheme();
+  const {colors, spacing: s} = useTheme();
 
   return (
     <View style={styles.root}>
       {icon && (
-        <Image
-          source={icon}
-          style={[styles.icon, {tintColor: useTheme().colors.text.tertiary}]}
+        <SvgIcon
+          name={icon}
+          size={64}
+          color={colors.text.tertiary}
+          style={styles.icon}
         />
       )}
       <AppText variant="h3" color="secondary" style={{marginTop: s.md}}>
@@ -61,8 +64,6 @@ const styles = StyleSheet.create({
     padding: spacing.xxxl,
   },
   icon: {
-    width: 64,
-    height: 64,
     opacity: 0.4,
   },
 });

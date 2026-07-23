@@ -8,6 +8,8 @@ export interface SessionEntry {
   lastPlayedAt: string; // ISO date string
   /** Absolute path to a cached thumbnail screenshot for this file, or empty. */
   thumbnailPath: string;
+  /** Discriminates between video and audio files for grouped UI. */
+  mediaType?: 'video' | 'audio';
 }
 
 interface SessionState {
@@ -33,21 +35,23 @@ const sessionSlice = createSlice({
         position: number;
         duration: number;
         thumbnailPath?: string;
+        mediaType?: 'video' | 'audio';
       }>,
     ) {
-      const {fileUri, title, position, duration, thumbnailPath} = action.payload;
+      const {fileUri, title, position, duration, thumbnailPath, mediaType} = action.payload;
       const now = new Date().toISOString();
 
       // Remove existing entry for this URI
       const filtered = state.recentFiles.filter(f => f.fileUri !== fileUri);
 
-      // Preserve existing thumbnail if not explicitly provided
+      // Preserve existing thumbnail/mediaType if not explicitly provided
       const existingEntry = state.recentFiles.find(f => f.fileUri === fileUri);
       const resolvedThumbnail = thumbnailPath ?? existingEntry?.thumbnailPath ?? '';
+      const resolvedMediaType = mediaType ?? existingEntry?.mediaType ?? 'video';
 
       // Add to front
       state.recentFiles = [
-        {fileUri, title, position, duration, lastPlayedAt: now, thumbnailPath: resolvedThumbnail},
+        {fileUri, title, position, duration, lastPlayedAt: now, thumbnailPath: resolvedThumbnail, mediaType: resolvedMediaType},
         ...filtered,
       ].slice(0, MAX_RECENT_FILES);
     },

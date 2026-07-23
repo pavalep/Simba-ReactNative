@@ -3,7 +3,7 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  FlatList,
   SafeAreaView,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
@@ -216,6 +216,130 @@ export const PlayerEqualizerPanel: React.FC<PlayerEqualizerPanelProps> = ({
 
   const presetNames = Object.keys(EQ_PRESETS);
 
+  const renderHeader = () => (
+    <>
+      {/* Enable/Disable toggle */}
+      <TouchableOpacity style={styles.toggleRow} onPress={onToggle}>
+        <AppText variant="body2" color="primary">
+          Equalizer
+        </AppText>
+        <View
+          style={[
+            styles.toggleTrack,
+            eqEnabled && styles.toggleTrackOn,
+          ]}>
+          <View
+            style={[
+              styles.toggleThumb,
+              eqEnabled && styles.toggleThumbOn,
+            ]}
+          />
+        </View>
+      </TouchableOpacity>
+
+      {/* Presets */}
+      <FlatList
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.presetsRow}
+        data={presetNames}
+        keyExtractor={item => item}
+        renderItem={({item}) => {
+          const isActive =
+            eqGains.every(
+              (g, i) => g === (EQ_PRESETS[item]?.[i] ?? 0),
+            );
+          return (
+            <TouchableOpacity
+              style={[
+                styles.presetChip,
+                isActive && styles.presetChipActive,
+              ]}
+              onPress={() => onApplyPreset(item)}>
+              <AppText
+                variant="caption"
+                color={isActive ? 'accent' : 'secondary'}>
+                {item}
+              </AppText>
+            </TouchableOpacity>
+          );
+        }}
+      />
+
+      {/* ── EQ Visual Curve ── */}
+      {eqEnabled && (
+        <View
+          style={[
+            styles.curveContainer,
+            {backgroundColor: colors.background.primary},
+          ]}>
+          {/* 0dB reference line */}
+          <View
+            style={[
+              styles.curveRefLine,
+              {backgroundColor: colors.border.subtle},
+            ]}
+          />
+          <FlatList
+            horizontal
+            scrollEnabled={false}
+            contentContainerStyle={styles.curveBars}
+            data={eqGains}
+            keyExtractor={(_, idx) => String(idx)}
+            renderItem={({item: gain}) => (
+              <View style={styles.curveBarWrapper}>
+                <View
+                  style={[
+                    styles.curveBar,
+                    {
+                      height: mapGainToHeight(gain),
+                      backgroundColor: eqEnabled
+                        ? colors.accent.gold
+                        : colors.text.tertiary,
+                      opacity: eqEnabled ? 0.8 : 0.3,
+                      borderRadius: 2,
+                    },
+                  ]}
+                />
+              </View>
+            )}
+          />
+        </View>
+      )}
+    </>
+  );
+
+  const renderFooter = () => (
+    <TouchableOpacity style={styles.resetBtn} onPress={onReset}>
+      <AppText variant="body2" color="error">
+        Reset
+      </AppText>
+    </TouchableOpacity>
+  );
+
+  const renderBandSlider = ({item, index}: {item: {freq: number; label: string}; index: number}) => (
+    <View style={styles.bandRow}>
+      <View style={styles.bandLabelRow}>
+        <AppText variant="caption" color="secondary">
+          {item.label} Hz
+        </AppText>
+        <AppText variant="mono" color="accent">
+          {eqGains[index] != null ? eqGains[index] : 0} dB
+        </AppText>
+      </View>
+      <Slider
+        minimumValue={-12}
+        maximumValue={12}
+        step={1}
+        value={eqGains[index] ?? 0}
+        onValueChange={(val: number) => onBandChange(index, val)}
+        minimumTrackTintColor={colors.accent.gold}
+        maximumTrackTintColor={colors.border.subtle}
+        thumbTintColor={colors.accent.gold}
+      />
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.overlay}>
       <TouchableOpacity
@@ -241,123 +365,15 @@ export const PlayerEqualizerPanel: React.FC<PlayerEqualizerPanelProps> = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView
+        <FlatList
           style={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
-          {/* Enable/Disable toggle */}
-          <TouchableOpacity style={styles.toggleRow} onPress={onToggle}>
-            <AppText variant="body2" color="primary">
-              Equalizer
-            </AppText>
-            <View
-              style={[
-                styles.toggleTrack,
-                eqEnabled && styles.toggleTrackOn,
-              ]}>
-              <View
-                style={[
-                  styles.toggleThumb,
-                  eqEnabled && styles.toggleThumbOn,
-                ]}
-              />
-            </View>
-          </TouchableOpacity>
-
-          {/* Presets */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.presetsRow}>
-            {presetNames.map(name => {
-              const isActive =
-                eqGains.every(
-                  (g, i) => g === (EQ_PRESETS[name]?.[i] ?? 0),
-                );
-              return (
-                <TouchableOpacity
-                  key={name}
-                  style={[
-                    styles.presetChip,
-                    isActive && styles.presetChipActive,
-                  ]}
-                  onPress={() => onApplyPreset(name)}>
-                  <AppText
-                    variant="caption"
-                    color={isActive ? 'accent' : 'secondary'}>
-                    {name}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* ── EQ Visual Curve ── */}
-          {eqEnabled && (
-            <View
-              style={[
-                styles.curveContainer,
-                {backgroundColor: colors.background.primary},
-              ]}>
-              {/* 0dB reference line */}
-              <View
-                style={[
-                  styles.curveRefLine,
-                  {backgroundColor: colors.border.subtle},
-                ]}
-              />
-              <View style={styles.curveBars}>
-                {eqGains.map((gain, idx) => (
-                  <View key={idx} style={styles.curveBarWrapper}>
-                    <View
-                      style={[
-                        styles.curveBar,
-                        {
-                          height: mapGainToHeight(gain),
-                          backgroundColor: eqEnabled
-                            ? colors.accent.gold
-                            : colors.text.tertiary,
-                          opacity: eqEnabled ? 0.8 : 0.3,
-                          borderRadius: 2,
-                        },
-                      ]}
-                    />
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Band sliders */}
-          {EQ_BANDS.map((band, index) => (
-            <View key={band.freq} style={styles.bandRow}>
-              <View style={styles.bandLabelRow}>
-                <AppText variant="caption" color="secondary">
-                  {band.label} Hz
-                </AppText>
-                <AppText variant="mono" color="accent">
-                  {eqGains[index] != null ? eqGains[index] : 0} dB
-                </AppText>
-              </View>
-              <Slider
-                minimumValue={-12}
-                maximumValue={12}
-                step={1}
-                value={eqGains[index] ?? 0}
-                onValueChange={(val: number) => onBandChange(index, val)}
-                minimumTrackTintColor={colors.accent.gold}
-                maximumTrackTintColor={colors.border.subtle}
-                thumbTintColor={colors.accent.gold}
-              />
-            </View>
-          ))}
-
-          {/* Reset button */}
-          <TouchableOpacity style={styles.resetBtn} onPress={onReset}>
-            <AppText variant="body2" color="error">
-              Reset
-            </AppText>
-          </TouchableOpacity>
-        </ScrollView>
+          showsVerticalScrollIndicator={false}
+          data={EQ_BANDS}
+          keyExtractor={item => String(item.freq)}
+          renderItem={renderBandSlider}
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={renderFooter}
+        />
       </View>
     </SafeAreaView>
   );

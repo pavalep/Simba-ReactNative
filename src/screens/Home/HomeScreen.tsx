@@ -3,34 +3,55 @@ import {
   View,
   Image,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   RefreshControl,
   StyleSheet,
   Alert,
   Platform,
-  SafeAreaView,
   useWindowDimensions,
   Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
-import {EmptyState} from '../../components/utility/EmptyState/EmptyState';
+import {SvgIcon} from '../../components/utility/SvgIcon';
 import {HomeScreenProps} from '../../navigation/types';
-import {pickMediaFile, checkFileExists} from '../../services/fileService';
+import {pickMediaFile, checkFileExists, getMediaType} from '../../services/fileService';
 import {MpvPlayer} from '../../native';
-import {imagePaths} from '../../constants/imagePaths';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {removeRecentFile, SessionEntry} from '../../store/slices/sessionSlice';
-import {radius, spacing} from '../../theme/tokens';
+import {
+  pickVideoPlaceholder,
+  pickAudioPlaceholder,
+  getVideoTitle,
+  getAudioTitle,
+  VIDEO_PLACEHOLDERS,
+  AUDIO_PLACEHOLDERS,
+} from '../../constants/placeholders';
+import {radius} from '../../theme/tokens';
 
 type Props = HomeScreenProps;
 
-const GRID_COLUMNS = 2;
-const GRID_GAP = 12;
+const HORIZONTAL_GAP = 12;
+const TILE_HEIGHT = 160;
+const TILE_WIDTH = 110;
+const THUMB_HEIGHT = 130;
+const PLACEHOLDER_ITEM_COUNT = 7;
+
+// ── Display item model ─────────────────────────────
+type DisplayItem = {
+  /** Stable key */
+  key: string;
+  /** Title shown on the card */
+  title: string;
+  /** Image source — either a remote-style object or a local require() */
+  image: {uri: string} | number;
+  /** True if this is a synthetic placeholder (no real file behind it) */
+  isPlaceholder: boolean;
+};
 
 // ── Duration helpers ────────────────────────────────
 function formatRemaining(seconds: number): string {
@@ -42,14 +63,6 @@ function formatRemaining(seconds: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)} remaining`;
 }
 
-function formatDurationShort(seconds: number): string {
-  if (seconds <= 0) return '';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
-
 /** Build a dynamic greeting based on local time. */
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -58,9 +71,49 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
+/**
+ * Resolve the best image source for a recent entry.
+ * Prefers the captured thumbnail; otherwise returns a deterministic
+ * placeholder for its media type.
+ */
+function thumbnailFor(entry: SessionEntry): {uri: string} | number {
+  if (entry.thumbnailPath) {
+    return {
+      uri: 'file://' + entry.thumbnailPath + '?t=' + encodeURIComponent(entry.lastPlayedAt),
+    };
+  }
+  const type = entry.mediaType ?? getMediaType(entry.fileUri);
+  return type === 'audio'
+    ? pickAudioPlaceholder(entry.fileUri)
+    : pickVideoPlaceholder(entry.fileUri);
+}
+
+/** Build a fixed list of placeholder items for an empty list. */
+function buildPlaceholderItems(kind: 'video' | 'audio'): DisplayItem[] {
+  const placeholders = kind === 'video' ? VIDEO_PLACEHOLDERS : AUDIO_PLACEHOLDERS;
+  return Array.from({length: PLACEHOLDER_ITEM_COUNT}, (_, i) => ({
+    key: `${kind}-placeholder-${i}`,
+    title: kind === 'video' ? getVideoTitle(i) : getAudioTitle(i),
+    image: placeholders[i % placeholders.length],
+    isPlaceholder: true,
+  }));
+}
+
+/** Convert real recent entries to display items. */
+function toDisplayItems(entries: SessionEntry[]): DisplayItem[] {
+  return entries.map((entry, i) => ({
+    key: entry.fileUri + ':' + i,
+    title: entry.title,
+    image: thumbnailFor(entry),
+    isPlaceholder: false,
+  }));
+}
+
 // ── Main Component ─────────────────────────────────
 export const HomeScreen: React.FC<Props> = ({navigation}) => {
-  const {theme, colors, spacing: s} = useTheme();
+  const {theme, colors} = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomChromeInset = insets.bottom + 104;
 
   // ── Launch fade-in animation ──
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -78,7 +131,7 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
     scrollContent: {
       paddingHorizontal: 20,
       paddingTop: Platform.OS === 'android' ? 16 : 0,
-      paddingBottom: 32,
+      paddingBottom: bottomChromeInset,
     },
 
     // ── Ambient glow ──
@@ -99,16 +152,15 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
       marginTop: 4,
       marginBottom: 28,
     },
-    logo: {
-      width: 34,
-      height: 34,
-      resizeMode: 'contain',
-    },
-    searchIcon: {
-      width: 22,
-      height: 22,
-      resizeMode: 'contain',
-      opacity: 0.65,
+    headerAction: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: StyleSheet.hairlineWidth,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background.floating,
+      borderColor: colors.border.subtle,
     },
 
     // ── Greeting ──
@@ -131,7 +183,6 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
     folderIcon: {
       width: 20,
       height: 20,
-      resizeMode: 'contain',
       marginRight: 10,
     },
     ctaLabel: {
@@ -140,11 +191,67 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
       letterSpacing: 0.5,
     },
 
-    // ── Continue Watching ──
-    horizontalScrollContent: {
+    // ── Horizontal lists (Videos / Audio) ──
+    horizontalList: {
       paddingRight: 20,
-      gap: GRID_GAP,
     },
+    horizontalListContent: {
+      gap: HORIZONTAL_GAP,
+      paddingVertical: 4,
+    },
+    sectionGap: {
+      marginTop: 28,
+    },
+
+    // ── Tile ──
+    tile: {
+      width: TILE_WIDTH,
+      height: TILE_HEIGHT,
+      borderRadius: radius.sm,
+      borderWidth: 0.5,
+      overflow: 'hidden',
+      backgroundColor: colors.background.elevated,
+      borderColor: colors.border.subtle,
+    },
+    thumb: {
+      width: '100%',
+      height: THUMB_HEIGHT,
+      backgroundColor: colors.accent.goldDim,
+    },
+    thumbImg: {
+      width: '100%',
+      height: '100%',
+    },
+    progressTrack: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: 3,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    progressFill: {
+      height: '100%',
+    },
+    tileTitleWrap: {
+      flex: 1,
+      paddingHorizontal: 8,
+      paddingTop: 6,
+      paddingBottom: 4,
+    },
+    placeholderBadge: {
+      position: 'absolute',
+      top: 6,
+      left: 6,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.accent.gold,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    // ── Continue Watching (single hero tile) ──
     continueTile: {
       borderRadius: radius.sm,
       borderWidth: 0.5,
@@ -152,37 +259,28 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
     },
     continueThumb: {
       width: '100%',
-      height: 90,
-      justifyContent: 'center',
-      alignItems: 'center',
-      overflow: 'hidden',
+      height: 140,
+      backgroundColor: colors.accent.goldDim,
     },
     continueThumbImg: {
       width: '100%',
       height: '100%',
-      resizeMode: 'cover',
-    },
-    continueThumbPlaceholder: {
-      width: 28,
-      height: 28,
-      resizeMode: 'contain',
-      opacity: 0.45,
     },
     continueTitle: {
-      paddingHorizontal: 8,
-      paddingTop: 6,
-      paddingBottom: 4,
+      paddingHorizontal: 10,
+      paddingTop: 8,
+      paddingBottom: 6,
     },
-    progressTrack: {
-      height: 2,
-      marginHorizontal: 8,
-      marginBottom: 8,
-      borderRadius: 1,
+    continueProgressTrack: {
+      height: 3,
+      marginHorizontal: 10,
+      marginBottom: 10,
+      borderRadius: 1.5,
       overflow: 'hidden',
     },
-    progressFill: {
+    continueProgressFill: {
       height: '100%',
-      borderRadius: 1,
+      borderRadius: 1.5,
     },
     remaining: {
       fontSize: 12,
@@ -192,56 +290,22 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
       marginRight: 2,
     },
 
-    // ── Recent Grid ──
-    recentGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: GRID_GAP,
-    },
-    recentTile: {
-      borderRadius: radius.sm,
-      borderWidth: 0.5,
-      overflow: 'hidden',
-    },
-    recentThumb: {
-      width: '100%',
-      height: 100,
-      justifyContent: 'center',
+    // ── Empty list placeholder ──
+    emptyRow: {
+      paddingVertical: 24,
       alignItems: 'center',
-      overflow: 'hidden',
+      borderRadius: radius.sm,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border.subtle,
+      backgroundColor: colors.background.elevated,
     },
-    recentThumbImg: {
-      width: '100%',
-      height: '100%',
-      resizeMode: 'cover',
-    },
-    recentThumbPlaceholder: {
-      width: 28,
-      height: 28,
-      resizeMode: 'contain',
-      opacity: 0.45,
-    },
-    recentProgressTrack: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 3,
-    },
-    recentProgressFill: {
-      height: '100%',
-    },
-    recentTitle: {
-      paddingHorizontal: 8,
-      paddingVertical: 6,
-    },
-  }), [colors]);
+  }), [bottomChromeInset, colors]);
   const dispatch = useAppDispatch();
   const recentFiles = useAppSelector(state => state.session.recentFiles);
   const {width: screenWidth} = useWindowDimensions();
 
   const isDark = theme === 'dark';
-  const tileWidth = Math.floor((screenWidth - 20 * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS);
+  const heroWidth = screenWidth - 20 * 2;
   const greeting = useMemo(() => getGreeting(), []);
 
   // Pull-to-refresh state
@@ -251,7 +315,22 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
   const continueItem: SessionEntry | undefined = recentFiles.find(
     f => f.position > 0 && f.duration > 0,
   );
-  const recentItems = recentFiles.slice(0, 4);
+  const realRecentVideos: SessionEntry[] = recentFiles
+    .filter(f => (f.mediaType ?? getMediaType(f.fileUri)) === 'video')
+    .slice(0, 8);
+  const realRecentAudio: SessionEntry[] = recentFiles
+    .filter(f => (f.mediaType ?? getMediaType(f.fileUri)) === 'audio')
+    .slice(0, 8);
+
+  // ── Build display items; fall back to placeholders when empty ──
+  const videoItems: DisplayItem[] =
+    realRecentVideos.length > 0
+      ? toDisplayItems(realRecentVideos)
+      : buildPlaceholderItems('video');
+  const audioItems: DisplayItem[] =
+    realRecentAudio.length > 0
+      ? toDisplayItems(realRecentAudio)
+      : buildPlaceholderItems('audio');
 
   // ── Validate files on mount — remove broken links ──
   useEffect(() => {
@@ -284,7 +363,7 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
         fileUri: file.uri,
         fileTitle: file.title,
       });
-    } catch (_err) {
+    } catch {
       Alert.alert('Error', 'Failed to open file picker.');
     }
   }, [navigation]);
@@ -316,7 +395,6 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Re-validate recent files
     for (const entry of recentFiles) {
       if (entry.fileUri.startsWith('content://')) continue;
       const exists = await checkFileExists(entry.fileUri);
@@ -327,21 +405,55 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
     setRefreshing(false);
   }, [recentFiles, dispatch]);
 
-  const hasRecent = recentItems.length > 0;
-  const hasContinue = !!continueItem;
-  const isEmpty = !hasRecent && !hasContinue;
+  // We no longer short-circuit to an EmptyState screen — instead the
+  // placeholder lists keep the layout populated. The "Open Media" CTA
+  // is the primary action when the user has nothing to play.
 
-  // ── Empty State ──
-  if (isEmpty) {
-    return (
-      <Animated.View style={[styles.root, {opacity: fadeAnim}]}>
-        <SimbaStatusBar variant="home" />
-        <LinearGradient
-          colors={
-            isDark
-              ? [colors.background.primary, '#0B0F13']
-              : ['#F7F7F7', colors.background.primary]
+  // ── Render helpers ──
+  const renderTile = useCallback(
+    ({item: dItem}: {item: DisplayItem}) => (
+      <TouchableOpacity
+        activeOpacity={0.75}
+        onPress={() => {
+          if (dItem.isPlaceholder) {
+            // Placeholder tiles open the file picker when tapped
+            handleOpenMedia();
           }
+        }}
+        style={styles.tile}>
+        <View style={styles.thumb}>
+          <Image source={dItem.image} style={styles.thumbImg} />
+          {dItem.isPlaceholder && (
+            <View style={styles.placeholderBadge}>
+              <SvgIcon
+                name={dItem.key.startsWith('video') ? 'video' : 'music'}
+                size={14}
+                color="#0A0A0C"
+              />
+            </View>
+          )}
+        </View>
+        <View style={styles.tileTitleWrap}>
+          <AppText
+            variant="caption"
+            color={dItem.isPlaceholder ? 'tertiary' : 'primary'}
+            numberOfLines={2}>
+            {dItem.title}
+          </AppText>
+        </View>
+      </TouchableOpacity>
+    ),
+    [handleOpenMedia, styles],
+  );
+
+  return (
+    <Animated.View style={{flex: 1, opacity: fadeAnim}}>
+      <SafeAreaView style={styles.root} edges={['top']}>
+        <SimbaStatusBar variant="home" />
+
+        {/* ══ BACKGROUND ══ */}
+        <LinearGradient
+          colors={[colors.background.primary, colors.background.primary]}
           style={StyleSheet.absoluteFill}
         />
         <View
@@ -351,232 +463,158 @@ export const HomeScreen: React.FC<Props> = ({navigation}) => {
           ]}
           pointerEvents="none"
         />
-        <EmptyState
-          icon={imagePaths.uiFolderBlack}
-          title="Ready to play"
-          subtitle="Open a media file to get started"
-          actionLabel="Open Media"
-          onAction={handleOpenMedia}
-        />
-      </Animated.View>
-    );
-  }
 
-  return (
-    <Animated.View style={{flex: 1, opacity: fadeAnim}}>
-      <SafeAreaView style={styles.root}>
-        <SimbaStatusBar variant="home" />
-
-      {/* ══ BACKGROUND ══ */}
-      <LinearGradient
-        colors={[colors.background.primary, colors.background.primary]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View
-        style={[
-          styles.glowWarm,
-          {backgroundColor: colors.accent.gold, opacity: isDark ? 0.22 : 0.12},
-        ]}
-        pointerEvents="none"
-      />
-
-      {/* ══ MAIN CONTENT ══ */}
-      <Animated.ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.accent.gold}
-            colors={[colors.accent.gold]}
-            progressBackgroundColor={colors.background.elevated}
-          />
-        }>
-
-        {/* ── Header (not sticky) ── */}
-        <View style={styles.header}>
-          {/* Logo mark (left) */}
-          <Image source={imagePaths.uiLionGold} style={styles.logo} />
-          {/* Search icon button (right) */}
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Search')}
-            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-            <Image
-              source={imagePaths.uiBellGray}
-              style={[styles.searchIcon, {tintColor: colors.text.secondary}]}
+        {/* ══ MAIN CONTENT ══ */}
+        <Animated.ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+              progressBackgroundColor={colors.background.elevated}
             />
+          }>
+
+          {/* ── Header ── */}
+          <View style={styles.header}>
+            <SvgIcon name="lion" size={34} color={colors.accent.gold} />
+            <TouchableOpacity
+              onPress={() => (navigation.navigate as any)('Settings')}
+              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+              <View style={styles.headerAction}>
+                <SvgIcon name="settings" size={18} color={colors.text.secondary} />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Greeting ── */}
+          <AppText variant="h1" color="primary" style={styles.greeting}>
+            {greeting}
+          </AppText>
+          <AppText variant="body1" color="secondary" style={styles.subtitle}>
+            Play what moves you.
+          </AppText>
+
+          {/* ── OpenMediaCTA ── */}
+          <TouchableOpacity activeOpacity={0.85} onPress={handleOpenMedia}>
+            <LinearGradient
+              colors={[colors.accent.gold, '#B8922E']}
+              style={styles.cta}
+              start={{x: 0.5, y: 0}}
+              end={{x: 0.5, y: 1}}>
+              <SvgIcon
+                name="folder"
+                size={20}
+                color="#0A0A0C"
+                style={styles.folderIcon}
+              />
+              <AppText
+                variant="body1"
+                color={colors.text.secondary}
+                style={styles.ctaLabel}>
+                Open Media
+              </AppText>
+            </LinearGradient>
           </TouchableOpacity>
-        </View>
 
-        {/* ── GreetingSection ── */}
-        <AppText variant="h1" color="primary" style={styles.greeting}>
-          {greeting}
-        </AppText>
-        <AppText variant="body1" color="secondary" style={styles.subtitle}>
-          Play what moves you.
-        </AppText>
+          {/* ── Continue Watching (hero) ── */}
+          {continueItem && (
+            <View style={styles.sectionGap}>
+              <SectionHeader label="Continue Watching" />
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => handlePlayRecent(continueItem)}
+                style={[
+                  styles.continueTile,
+                  {
+                    width: heroWidth,
+                    backgroundColor: colors.background.elevated,
+                    borderColor: colors.border.subtle,
+                  },
+                ]}>
+                <View style={styles.continueThumb}>
+                  <Image
+                    source={thumbnailFor(continueItem)}
+                    style={styles.continueThumbImg}
+                  />
+                </View>
+                <AppText
+                  variant="body2"
+                  color="primary"
+                  numberOfLines={1}
+                  style={styles.continueTitle}>
+                  {continueItem.title}
+                </AppText>
+                <View
+                  style={[
+                    styles.continueProgressTrack,
+                    {backgroundColor: colors.border.subtle},
+                  ]}>
+                  <View
+                    style={[
+                      styles.continueProgressFill,
+                      {
+                        width: `${
+                          continueItem.duration > 0
+                            ? Math.round(
+                                (continueItem.position / continueItem.duration) * 100,
+                              )
+                            : 0
+                        }%`,
+                        backgroundColor: colors.accent.gold,
+                      },
+                    ]}
+                  />
+                </View>
+              </TouchableOpacity>
+              <AppText
+                variant="caption"
+                color="tertiary"
+                style={styles.remaining}>
+                {formatRemaining(
+                  (continueItem.duration ?? 0) - (continueItem.position ?? 0),
+                )}
+              </AppText>
+            </View>
+          )}
 
-        {/* ── OpenMediaCTA (full-width gold button) ── */}
-        <TouchableOpacity activeOpacity={0.85} onPress={handleOpenMedia}>
-          <LinearGradient
-            colors={[colors.accent.gold, '#B8922E']}
-            style={styles.cta}
-            start={{x: 0.5, y: 0}}
-            end={{x: 0.5, y: 1}}>
-            <Image
-              source={imagePaths.uiFolderBlack}
-              style={[styles.folderIcon, {tintColor: '#0A0A0C'}]}
+          {/* ── Recent Videos (horizontal) ── */}
+          <View style={styles.sectionGap}>
+            <SectionHeader
+              label={realRecentVideos.length > 0 ? 'Recent Videos' : 'Featured Videos'}
             />
-            <AppText
-              variant="body1"
-              color={colors.text.secondary}
-              style={styles.ctaLabel}>
-              Open Media
-            </AppText>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        {/* ── ContinueWatchingSection ── */}
-        {hasContinue && (
-          <View style={{marginTop: s.lg}}>
-            <SectionHeader label="Continue Watching" />
-
-            <ScrollView
+            <FlatList
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScrollContent}
-              snapToInterval={tileWidth + GRID_GAP}
-              decelerationRate="fast">
-              {recentFiles
-                .filter(f => f.position > 0 && f.duration > 0)
-                .slice(0, 4)
-                .map((entry, idx) => {
-                  const percent = entry.duration > 0
-                    ? Math.round((entry.position / entry.duration) * 100)
-                    : 0;
-                  return (
-                    <TouchableOpacity
-                      key={entry.fileUri + idx}
-                      activeOpacity={0.75}
-                      onPress={() => handlePlayRecent(entry)}
-                      style={[
-                        styles.continueTile,
-                        {
-                          width: tileWidth,
-                          backgroundColor: colors.background.elevated,
-                          borderColor: colors.border.subtle,
-                        },
-                      ]}>
-                      {/* Thumbnail */}
-                      <View style={[styles.continueThumb, {backgroundColor: colors.accent.goldDim}]}>
-                        {entry.thumbnailPath ? (
-                          <Image
-                            source={{uri: 'file://' + entry.thumbnailPath + '?t=' + encodeURIComponent(entry.lastPlayedAt)}}
-                            style={styles.continueThumbImg}
-                          />
-                        ) : (
-                          <Image
-                            source={imagePaths.uiMusicGray}
-                            style={styles.continueThumbPlaceholder}
-                          />
-                        )}
-                      </View>
-                      {/* Title */}
-                      <AppText
-                        variant="caption"
-                        color="primary"
-                        numberOfLines={1}
-                        style={styles.continueTitle}>
-                        {entry.title}
-                      </AppText>
-                      {/* Progress bar */}
-                      <View style={[styles.progressTrack, {backgroundColor: colors.border.subtle}]}>
-                        <View
-                          style={[
-                            styles.progressFill,
-                            {width: `${percent}%`, backgroundColor: colors.accent.gold},
-                          ]}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-            </ScrollView>
-
-            <AppText variant="caption" color="tertiary" style={styles.remaining}>
-              {formatRemaining(continueItem!.duration! - continueItem!.position!)}
-            </AppText>
+              style={styles.horizontalList}
+              contentContainerStyle={styles.horizontalListContent}
+              data={videoItems}
+              keyExtractor={item => item.key}
+              renderItem={renderTile}
+            />
           </View>
-        )}
 
-        {/* ── RecentSection ── */}
-        {hasRecent && (
-          <View style={{marginTop: s.xxl}}>
-            <SectionHeader label="Recently Opened" />
-
-            <View style={styles.recentGrid}>
-              {recentItems.map((entry, idx) => {
-                const percent = entry.duration > 0
-                  ? Math.round((entry.position / entry.duration) * 100)
-                  : 0;
-                return (
-                  <TouchableOpacity
-                    key={entry.fileUri + idx}
-                    activeOpacity={0.75}
-                    onPress={() => handlePlayRecent(entry)}
-                    style={[
-                      styles.recentTile,
-                      {
-                        width: tileWidth,
-                        backgroundColor: colors.background.elevated,
-                        borderColor: colors.border.subtle,
-                      },
-                    ]}>
-                    {/* Thumbnail */}
-                    <View style={[styles.recentThumb, {backgroundColor: colors.accent.goldDim}]}>
-                      {entry.thumbnailPath ? (
-                        <Image
-                          source={{uri: 'file://' + entry.thumbnailPath + '?t=' + encodeURIComponent(entry.lastPlayedAt)}}
-                          style={styles.recentThumbImg}
-                        />
-                      ) : (
-                        <Image
-                          source={imagePaths.uiMusicGray}
-                          style={styles.recentThumbPlaceholder}
-                        />
-                      )}
-                      {/* Progress bar overlay */}
-                      <View style={[styles.recentProgressTrack, {backgroundColor: 'rgba(0,0,0,0.3)'}]}>
-                        <View
-                          style={[
-                            styles.recentProgressFill,
-                            {width: `${percent}%`, backgroundColor: colors.accent.gold}
-                          ]}
-                        />
-                      </View>
-                    </View>
-                    {/* Title */}
-                    <AppText
-                      variant="caption"
-                      color="primary"
-                      numberOfLines={1}
-                      style={styles.recentTitle}>
-                      {entry.title}
-                    </AppText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          {/* ── Recent Audio (horizontal) ── */}
+          <View style={styles.sectionGap}>
+            <SectionHeader
+              label={realRecentAudio.length > 0 ? 'Recent Audio' : 'Featured Audio'}
+            />
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.horizontalList}
+              contentContainerStyle={styles.horizontalListContent}
+              data={audioItems}
+              keyExtractor={item => item.key}
+              renderItem={renderTile}
+            />
           </View>
-        )}
-
-        {/* ── BottomSpacer (xxxl) — pushes content above tab bar ── */}
-        <View style={{height: spacing.xxxl}} />
-      </Animated.ScrollView>
-    </SafeAreaView>
+        </Animated.ScrollView>
+      </SafeAreaView>
     </Animated.View>
   );
 };
-

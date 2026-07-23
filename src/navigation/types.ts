@@ -6,12 +6,12 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList>;
   Player: {fileUri?: string; fileTitle?: string};
   Preferences: undefined;
+  Settings: NavigatorScreenParams<SettingsTabParamList>;
 };
 
 export type TabParamList = {
   HomeTab: NavigatorScreenParams<HomeTabParamList>;
   LibraryTab: NavigatorScreenParams<LibraryTabParamList>;
-  SettingsTab: NavigatorScreenParams<SettingsTabParamList>;
 };
 
 export type HomeTabParamList = {
@@ -65,11 +65,17 @@ export type LibraryScreenProps = StackInTabProps<LibraryTabParamList, 'LibraryTa
 export type FolderBrowserScreenProps = StackInTabProps<LibraryTabParamList, 'LibraryTab', 'FolderBrowser'>;
 export type PlaylistDetailScreenProps = StackInTabProps<LibraryTabParamList, 'LibraryTab', 'PlaylistDetail'>;
 
-/** Composite props for Settings tab stack screens. */
-export type SettingsScreenProps = StackInTabProps<SettingsTabParamList, 'SettingsTab', 'Settings'>;
-export type AboutScreenProps = StackInTabProps<SettingsTabParamList, 'SettingsTab', 'About'>;
-export type AudioSettingsScreenProps = StackInTabProps<SettingsTabParamList, 'SettingsTab', 'AudioSettings'>;
-export type LinkedFoldersScreenProps = StackInTabProps<SettingsTabParamList, 'SettingsTab', 'LinkedFolders'>;
+// ── Helper for screens inside the Settings root stack navigator ──
+type SettingsStackScreenProps<T extends keyof SettingsTabParamList> = CompositeScreenProps<
+  NativeStackScreenProps<SettingsTabParamList, T>,
+  RootStackScreenProps<keyof RootStackParamList>
+>;
+
+/** Composite props for Settings stack screens (rendered in RootStack). */
+export type SettingsScreenProps = SettingsStackScreenProps<'Settings'>;
+export type AboutScreenProps = SettingsStackScreenProps<'About'>;
+export type AudioSettingsScreenProps = SettingsStackScreenProps<'AudioSettings'>;
+export type LinkedFoldersScreenProps = SettingsStackScreenProps<'LinkedFolders'>;
 
 /** Root stack screen props. */
 export type PreferencesScreenProps = RootStackScreenProps<'Preferences'>;

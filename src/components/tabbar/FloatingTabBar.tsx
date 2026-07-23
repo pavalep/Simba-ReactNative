@@ -9,16 +9,16 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {BottomTabBarProps} from '@react-navigation/bottom-tabs';
 import {useTheme} from '../../theme';
-import {AppText} from '../core/AppText/AppText';
-import {imagePaths} from '../../constants/imagePaths';
+import {SvgIcon, SvgIconName} from '../utility/SvgIcon';
 import {useHaptics} from '../../hooks/useHaptics';
 
-const TAB_BAR_HEIGHT = 68;
-const TAB_BAR_HORIZONTAL_MARGIN = 16;
+const TAB_BAR_HEIGHT = 64;
+const TAB_BAR_HORIZONTAL_MARGIN = 24;
 const BOTTOM_MARGIN = 12;
 const TAB_BORDER_RADIUS = 32;
-const ICON_SIZE = 24;
-const TAB_COUNT = 3;
+const ICON_SIZE = 26;
+const ICON_PILL_HEIGHT = 48;
+const ICON_PILL_HORIZONTAL_MARGIN = 8; // pill inset from tab edges
 
 export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
   state,
@@ -32,16 +32,22 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
 
   // Responsive bar width: cap at 480 on tablets
   const barWidth = Math.min(winW - TAB_BAR_HORIZONTAL_MARGIN * 2, 480);
-  const tabWidth = barWidth / TAB_COUNT;
+  const tabCount = Math.max(state.routes.length, 1);
+  const tabWidth = barWidth / tabCount;
+  const activeIndex = Math.max(state.index, 0);
+  const lastTabIndex = Math.max(tabCount - 1, 0);
+
+  // Pill width: tab width minus horizontal margin on each side
+  const pillWidth = tabWidth - ICON_PILL_HORIZONTAL_MARGIN * 2;
 
   // ── Animated values ────────────────────────────────
   const mountAnim = useRef(new Animated.Value(0)).current;
 
   const animValues = useRef<Animated.Value[]>(
-    state.routes.map(() => new Animated.Value(0)),
+    state.routes.map((_, index) => new Animated.Value(index === activeIndex ? 1 : 0)),
   ).current;
 
-  // ── Mount fade-in animation (300ms delay, 250ms) ──
+  // ── Mount fade-in animation ──
   useEffect(() => {
     Animated.timing(mountAnim, {
       toValue: 1,
@@ -52,47 +58,56 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
   }, [mountAnim]);
 
   // Spring-driven pill offset
-  const pillOffset = useRef(new Animated.Value(0)).current;
+  const pillOffset = useRef(new Animated.Value(activeIndex)).current;
 
   React.useEffect(() => {
     Animated.spring(pillOffset, {
-      toValue: state.index,
+      toValue: activeIndex,
       useNativeDriver: true,
       damping: 20,
       stiffness: 260,
       mass: 0.5,
     }).start();
-  }, [state.index, pillOffset]);
+  }, [activeIndex, pillOffset]);
 
   // Per-tab spring animations
   React.useEffect(() => {
     state.routes.forEach((_, i) => {
       Animated.spring(animValues[i], {
-        toValue: i === state.index ? 1 : 0,
+        toValue: i === activeIndex ? 1 : 0,
         useNativeDriver: true,
         damping: 18,
         stiffness: 200,
         mass: 0.6,
       }).start();
     });
-  }, [state.index, state.routes, animValues]);
+  }, [activeIndex, state.routes, animValues]);
 
   // ── Handlers ──────────────────────────────────────
-  const onTabPress = (routeName: string, isFocused: boolean) => {
+  const onTabPress = (routeKey: string, routeName: string, isFocused: boolean) => {
     const event = navigation.emit({
       type: 'tabPress',
-      target: routeName,
+      target: routeKey,
       canPreventDefault: true,
     });
     if (!isFocused && !event.defaultPrevented) {
       haptics.light();
-      navigation.navigate(routeName);
+      (navigation.navigate as (name: string) => void)(routeName);
     }
   };
 
-  const onTabLongPress = (routeName: string) => {
-    navigation.emit({type: 'tabLongPress', target: routeName});
+  const onTabLongPress = (routeKey: string) => {
+    navigation.emit({type: 'tabLongPress', target: routeKey});
   };
+
+  // Pill translateX for index N: N * tabWidth + ICON_PILL_HORIZONTAL_MARGIN
+  const pillTranslateX = pillOffset.interpolate({
+    inputRange: [0, lastTabIndex],
+    outputRange: [
+      ICON_PILL_HORIZONTAL_MARGIN,
+      tabWidth * lastTabIndex + ICON_PILL_HORIZONTAL_MARGIN,
+    ],
+  });
 
   // ── Render ─────────────────────────────────────────
   return (
@@ -118,84 +133,58 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
           style={[
             styles.pill,
             {
-              width: tabWidth - 16,
+              width: pillWidth,
               backgroundColor: colors.accent.goldDim,
               borderColor: colors.accent.goldGlow,
-              transform: [
-                {
-                  translateX: pillOffset.interpolate({
-                    inputRange: [0, TAB_COUNT - 1],
-                    outputRange: [8, tabWidth * (TAB_COUNT - 1) + 8],
-                  }),
-                },
-              ],
+              transform: [{translateX: pillTranslateX}],
             },
           ]}
         />
 
-        {/* Tabs */}
+        {/* Tabs (icon-only, no labels) */}
         {state.routes.map((route, index) => {
-          const isFocused = state.index === index;
+          const isFocused = activeIndex === index;
           const {options} = descriptors[route.key];
-          const label =
-            options.tabBarLabel !== undefined
-              ? String(options.tabBarLabel)
-              : options.title !== undefined
-              ? options.title
-              : route.name;
+          const a11yLabel = `${route.name} tab${isFocused ? ', selected' : ''}`;
 
           const iconScale = animValues[index].interpolate({
             inputRange: [0, 1],
-            outputRange: [1, 1.1],
+            outputRange: [1, 1.12],
           });
 
-          const iconBrightness = animValues[index].interpolate({
+          const iconOpacity = animValues[index].interpolate({
             inputRange: [0, 1],
-            outputRange: [0.35, 1],
+            outputRange: [0.45, 1],
           });
-
-          const a11yLabel = `${label} tab${isFocused ? ', selected' : ''}`;
 
           return (
             <TouchableOpacity
               key={route.key}
               activeOpacity={0.7}
-              onPress={() => onTabPress(route.name, isFocused)}
-              onLongPress={() => onTabLongPress(route.name)}
+              onPress={() => onTabPress(route.key, route.name, isFocused)}
+              onLongPress={() => onTabLongPress(route.key)}
               accessibilityRole="tab"
               accessibilityState={{selected: isFocused}}
               accessibilityLabel={a11yLabel}
               style={[styles.tab, {width: tabWidth}]}>
-              <Animated.Image
-                source={
-                  isFocused
-                    ? getIconForRoute(route.name, true)
-                    : getIconForRoute(route.name, false)
-                }
+              <Animated.View
                 style={[
                   styles.icon,
                   {
                     transform: [{scale: iconScale}],
-                    opacity: isFocused ? 1 : iconBrightness,
-                    tintColor: isFocused
-                      ? colors.accent.gold
-                      : colors.text.tertiary,
-                  },
-                ]}
-              />
-              <AppText
-                variant="caption"
-                color={isFocused ? colors.accent.gold : undefined}
-                style={[
-                  styles.label,
-                  {
-                    color: isFocused
-                      ? colors.accent.gold
-                      : colors.text.tertiary,
+                    opacity: iconOpacity,
                   },
                 ]}>
-                {label}
-              </AppText>
+                <SvgIcon
+                  name={getIconForRoute(route.name)}
+                  size={ICON_SIZE}
+                  color={
+                    isFocused
+                      ? colors.accent.gold
+                      : colors.text.tertiary
+                  }
+                />
+              </Animated.View>
             </TouchableOpacity>
           );
         })}
@@ -204,16 +193,14 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
   );
 };
 
-function getIconForRoute(routeName: string, focused: boolean) {
+function getIconForRoute(routeName: string): SvgIconName {
   switch (routeName) {
     case 'HomeTab':
-      return focused ? imagePaths.uiHomeGold : imagePaths.uiHomeGray;
+      return 'home';
     case 'LibraryTab':
-      return focused ? imagePaths.uiVideosGray : imagePaths.uiMusicGray;
-    case 'SettingsTab':
-      return imagePaths.uiSettingsGray;
+      return 'video';
     default:
-      return imagePaths.uiHomeGray;
+      return 'home';
   }
 }
 
@@ -232,16 +219,15 @@ const styles = StyleSheet.create({
     borderRadius: TAB_BORDER_RADIUS,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
-    justifyContent: 'space-evenly',
     overflow: 'hidden',
     position: 'relative',
   },
   pill: {
     position: 'absolute',
-    height: 48,
-    borderRadius: 24,
+    height: ICON_PILL_HEIGHT,
+    borderRadius: ICON_PILL_HEIGHT / 2,
     borderWidth: 1,
-    top: (TAB_BAR_HEIGHT - 48) / 2,
+    top: (TAB_BAR_HEIGHT - ICON_PILL_HEIGHT) / 2,
   },
   tab: {
     flex: 1,
@@ -253,13 +239,5 @@ const styles = StyleSheet.create({
   icon: {
     width: ICON_SIZE,
     height: ICON_SIZE,
-    resizeMode: 'contain',
-    marginBottom: 2,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-    marginTop: 2,
   },
 });

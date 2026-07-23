@@ -1,7 +1,6 @@
 import React, {useState, useMemo} from 'react';
 import {
   View,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -9,14 +8,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {useAppSelector} from '../../store';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {AppText} from '../../components/core/AppText/AppText';
 import {EmptyState} from '../../components/utility/EmptyState/EmptyState';
-import {imagePaths} from '../../constants/imagePaths';
+import {SvgIcon} from '../../components/utility/SvgIcon';
 import {LibraryScreenProps} from '../../navigation/types';
-import {spacing} from '../../theme/tokens';
 
 type Props = LibraryScreenProps;
 type Segment = 'videos' | 'audio' | 'folders';
@@ -42,6 +41,8 @@ const formatLastScan = (timestamp: number | null): string => {
 export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
+  const insets = useSafeAreaInsets();
+  const bottomChromeInset = insets.bottom + 104;
   const [activeSegment, setActiveSegment] = useState<Segment>('videos');
 
   const videoFolders = useAppSelector(s => s.settings.videoFolders);
@@ -75,9 +76,21 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           paddingTop: Platform.OS === 'android' ? 16 : 4,
           paddingBottom: 12,
         },
-        searchIcon: {
-          fontSize: 22,
-          opacity: 0.65,
+        headerAction: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          minHeight: 38,
+          paddingHorizontal: 12,
+          borderRadius: 19,
+          borderWidth: StyleSheet.hairlineWidth,
+          backgroundColor: colors.background.floating,
+          borderColor: colors.border.subtle,
+        },
+        headerActionText: {
+          fontSize: 12,
+          fontWeight: '600',
+          letterSpacing: 0.3,
         },
 
         // ── Segmented Control ──
@@ -108,29 +121,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         scrollContent: {
           paddingHorizontal: 20,
           paddingTop: 16,
-        },
-
-        // ── FAB ──
-        fab: {
-          position: 'absolute',
-          bottom: 24,
-          right: 20,
-          width: 52,
-          height: 52,
-          borderRadius: 26,
-          backgroundColor: colors.accent.gold,
-          alignItems: 'center',
-          justifyContent: 'center',
-          // shadow
-          shadowColor: colors.accent.gold,
-          shadowOffset: {width: 0, height: 4},
-          shadowOpacity: 0.35,
-          shadowRadius: 12,
-          elevation: 6,
-        },
-        fabIcon: {
-          lineHeight: 28,
-          fontWeight: '300',
+          paddingBottom: bottomChromeInset,
         },
 
         // ── Scan status ──
@@ -160,17 +151,17 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           paddingTop: 16,
         },
       }),
-    [colors],
+    [bottomChromeInset, colors],
   );
 
   const linkedFolderCount = (() => {
     switch (activeSegment) {
       case 'videos':
-        return videoFolders.length;
+        return videoFolders?.length ?? 0;
       case 'audio':
-        return audioFolders.length;
+        return audioFolders?.length ?? 0;
       case 'folders':
-        return videoFolders.length + audioFolders.length;
+        return (videoFolders?.length ?? 0) + (audioFolders?.length ?? 0);
     }
   })();
 
@@ -204,7 +195,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
       return (
         <View style={styles.linkedContainer}>
           <EmptyState
-            icon={imagePaths.uiFolderBlack}
+            icon="folder"
             title={`${linkedFolderCount} linked ${folderType}${pluralS}`}
             subtitle="Browse from your linked folders or add more in Settings."
           />
@@ -216,7 +207,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
       case 'videos':
         return (
           <EmptyState
-            icon={imagePaths.uiVideosGray}
+            icon="video"
             title="No videos yet"
             subtitle="Link folders in Settings to populate your library."
           />
@@ -224,7 +215,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
       case 'audio':
         return (
           <EmptyState
-            icon={imagePaths.uiMusicGray}
+            icon="music"
             title="No audio files yet"
             subtitle="Link folders in Settings to populate your library."
           />
@@ -232,7 +223,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
       case 'folders':
         return (
           <EmptyState
-            icon={imagePaths.uiFolderBlack}
+            icon="folder"
             title="No folders yet"
             subtitle="Link media folders in Settings to get started."
           />
@@ -241,7 +232,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   };
 
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={styles.root} edges={['top']}>
       <SimbaStatusBar variant="home" />
 
       {/* ══ BACKGROUND ══ */}
@@ -267,16 +258,6 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         <AppText variant="h1" color="primary">
           Library
         </AppText>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('FolderBrowser', {})}
-          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <AppText
-            variant="body1"
-            color="secondary"
-            style={styles.searchIcon}>
-            ⌕
-          </AppText>
-        </TouchableOpacity>
       </View>
 
       {/* ══ SCAN STATUS ══ */}
@@ -326,30 +307,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         showsVerticalScrollIndicator={false}>
         {renderContent()}
 
-        {/* ══ BottomSpacer — push above tab bar ══ */}
-        <View style={{height: spacing.xxxl}} />
       </ScrollView>
-
-      {/* ══ FAB ══ */}
-      <TouchableOpacity
-        style={styles.fab}
-        activeOpacity={0.8}
-        onPress={() =>
-          navigation.navigate('MainTabs', {
-            screen: 'SettingsTab',
-            params: {
-              screen: 'LinkedFolders',
-              params: {
-                type: activeSegment === 'audio' ? 'audio' : 'video',
-              },
-            },
-          } as any)
-        }>
-        <AppText variant="h2" color="#0A0A0C" style={styles.fabIcon}>
-          +
-        </AppText>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 };
-

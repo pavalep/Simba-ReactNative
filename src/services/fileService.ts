@@ -30,6 +30,26 @@ function getExtension(uri: string): string {
   return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
 }
 
+/** Audio-only file extensions */
+const AUDIO_EXTENSIONS = new Set([
+  'mp3', 'flac', 'wav', 'aac', 'ogg', 'wma', 'm4a', 'opus',
+]);
+
+/** Video file extensions */
+const VIDEO_EXTENSIONS = new Set([
+  'mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'm4v', 'mpg', 'mpeg',
+]);
+
+export type MediaType = 'video' | 'audio';
+
+/** Classify a media file URI as video or audio based on its extension. */
+export function getMediaType(uri: string): MediaType {
+  const ext = getExtension(uri);
+  if (VIDEO_EXTENSIONS.has(ext)) return 'video';
+  if (AUDIO_EXTENSIONS.has(ext)) return 'audio';
+  return 'video';
+}
+
 export interface FileValidation {
   valid: boolean;
   /** User-facing error title */

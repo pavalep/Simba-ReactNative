@@ -3,7 +3,7 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
+  FlatList,
   SafeAreaView,
 } from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -143,35 +143,38 @@ export const PlayerAudioPanel: React.FC<PlayerAudioPanelProps> = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView
-          style={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
-          {/* Disable audio option */}
-          <TouchableOpacity
-            style={styles.trackRow}
-            onPress={() => onSelectTrack(null)}>
-            <View
-              style={
-                activeAudioTrack === null
-                  ? styles.radioFilled
-                  : styles.radioOuter
-              }
-            />
-            <View style={styles.trackInfo}>
-              <AppText variant="body2" color="primary">
-                Disable audio
-              </AppText>
-            </View>
-          </TouchableOpacity>
+        <FlatList
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          data={audioTracks}
+          keyExtractor={(item: {id: number}) => String(item.id)}
+          ListHeaderComponent={
+            <>
+              {/* Disable audio option */}
+              <TouchableOpacity
+                style={styles.trackRow}
+                onPress={() => onSelectTrack(null)}>
+                <View
+                  style={
+                    activeAudioTrack === null
+                      ? styles.radioFilled
+                      : styles.radioOuter
+                  }
+                />
+                <View style={styles.trackInfo}>
+                  <AppText variant="body2" color="primary">
+                    Disable audio
+                  </AppText>
+                </View>
+              </TouchableOpacity>
 
-          <View style={styles.divider} />
-
-          {/* Track list */}
-          {audioTracks.map(track => {
+              <View style={styles.divider} />
+            </>
+          }
+          renderItem={({item: track}) => {
             const isSelected = track.id === activeAudioTrack;
             return (
               <TouchableOpacity
-                key={track.id}
                 style={styles.trackRow}
                 onPress={() => onSelectTrack(track.id)}>
                 <View
@@ -195,8 +198,8 @@ export const PlayerAudioPanel: React.FC<PlayerAudioPanelProps> = ({
                 </AppText>
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          }}
+        />
       </View>
     </SafeAreaView>
   );

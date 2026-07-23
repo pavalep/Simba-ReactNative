@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "getillustrations": {
+      "command": "npx",
+      "args": ["@getillustrations/mcp-server"],
+      "env": {
+        "MEILISEARCH_URL": "https://getillustrations.com/meili",
+        "MEILISEARCH_MASTER_KEY": "gi_free_f94a299439f2a8acdc633abbbae60a22050aaf5332fd5e0af59057dca3be6b78"
+      }
+    }
+  }
+}

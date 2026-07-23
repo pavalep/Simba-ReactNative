@@ -4,6 +4,7 @@ import {RootStackParamList} from './types';
 import {TabNavigator} from './TabNavigator';
 import {PlayerScreen} from '../screens/Player/PlayerScreen';
 import {PreferencesScreen} from '../screens/Preferences/PreferencesScreen';
+import {SettingsStack} from './SettingsStack';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -27,6 +28,13 @@ export const RootNavigator: React.FC = () => (
       options={{
         animation: 'slide_from_right',
         presentation: 'modal',
+      }}
+    />
+    <Stack.Screen
+      name="Settings"
+      component={SettingsStack}
+      options={{
+        animation: 'slide_from_right',
       }}
     />
   </Stack.Navigator>

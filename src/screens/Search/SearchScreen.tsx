@@ -17,7 +17,7 @@ import {SimbaStatusBar} from '../../components/StatusBar';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
 import {EmptyState} from '../../components/utility/EmptyState/EmptyState';
-import {imagePaths} from '../../constants/imagePaths';
+import {SvgIcon} from '../../components/utility/SvgIcon';
 import {useAppSelector} from '../../store';
 import {SearchScreenProps} from '../../navigation/types';
 import {radius, spacing} from '../../theme/tokens';
@@ -433,9 +433,12 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
               borderColor: colors.border.subtle,
             },
           ]}>
-          <Image
-            source={imagePaths.uiBellGray}
-            style={[styles.searchIcon, {tintColor: colors.text.secondary}]}
+          {/* Search icon (left of input) */}
+          <SvgIcon
+            name="bell"
+            size={20}
+            color={colors.text.secondary}
+            style={styles.searchIcon}
           />
           <TextInput
             style={[styles.searchInput, {color: colors.text.primary}]}
@@ -574,7 +577,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         {showResultsSection && !hasResults && (
           <View style={{marginTop: s.lg}}>
             <EmptyState
-              icon={imagePaths.uiMusicGray}
+              icon="music"
               title="No results found"
               subtitle={`No media matches "${searchText}"`}
             />
@@ -642,11 +645,13 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
                               style={styles.resultThumbImg}
                             />
                           ) : (
-                            <Image
-                              source={imagePaths.uiMusicGray}
-                              style={styles.resultThumbPlaceholder}
-                            />
-                          )}
+                          <SvgIcon
+                            name="music"
+                            size={28}
+                            color={colors.text.tertiary}
+                            style={styles.resultThumbPlaceholder}
+                          />
+                        )}
                           <View
                             style={[
                               styles.resultProgressTrack,
@@ -694,12 +699,11 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
                               borderColor: colors.border.subtle,
                             },
                           ]}>
-                          <Image
-                            source={imagePaths.uiFolderBlack}
-                            style={[
-                              styles.folderIcon,
-                              {tintColor: colors.text.secondary},
-                            ]}
+                          <SvgIcon
+                            name="folder"
+                            size={20}
+                            color={colors.text.secondary}
+                            style={styles.folderIcon}
                           />
                           <View style={styles.folderTextContainer}>
                             <AppText
@@ -743,8 +747,10 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
                             styles.resultThumb,
                             {backgroundColor: colors.accent.goldDim},
                           ]}>
-                          <Image
-                            source={imagePaths.uiMusicGray}
+                          <SvgIcon
+                            name="music"
+                            size={28}
+                            color={colors.text.tertiary}
                             style={styles.resultThumbPlaceholder}
                           />
                         </View>

@@ -168,7 +168,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
   duration,
   isPlaying,
   volume,
-  chapters,
+  chapters = [],
   currentTime,
   totalTime,
   onPlayPause,
@@ -305,46 +305,65 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     return null;
   }
 
-  return (
-    <View style={[styles.container, {paddingBottom: bottomInset + 8}]}>
-      {/* Sheen overlay */}
-      <View style={styles.sheenOverlay} pointerEvents="none" />
+  let chapterMarks: React.ReactNode = null;
+  try {
+    chapterMarks = Array.from(chapters ?? []).map((ch, i) => {
+      const pct = duration > 0 ? (ch.startTime / duration) * 100 : 0;
+      return (
+        <View
+          key={i}
+          style={[
+            styles.chapterMark,
+            {left: `${pct}%`, marginLeft: -1.5, top: 2},
+          ]}
+        />
+      );
+    });
+  } catch (mapErr) {
+    console.error('chapters.map error:', mapErr, chapters?.length, JSON.stringify(chapters?.slice(0, 2)));
+  }
 
-      {/* Seek bar */}
+  let testGroup = null;
+
+  try {
+    testGroup = (
+      <View>
+        <TransportBtn icon="⏮" onPress={onPrev} />
+        <PlayBtn icon={isPlaying ? '⏸' : '▶'} onPress={onPlayPause} />
+        <TransportBtn icon="⏭" onPress={onNext} />
+        <MenuBtn icon={volume === 0 ? '🔇' : '🔊'} onPress={onVolumeChange} />
+        <MenuBtn icon="⚙" active={eqEnabled} onPress={onToggleEqPanel} />
+        <MenuBtn icon="☰" active={playlistLength > 0} onPress={onTogglePlaylistPanel} />
+        <MenuBtn icon="🔀" active={shuffle} onPress={onToggleShuffle} />
+        <MenuBtn icon="🔁" active={loopMode === 'playlist'} onPress={onToggleLoop} />
+        <MenuBtn icon="📷" onPress={onScreenshot} />
+        <MenuBtn icon="CC" active={activeSubtitle !== null} onPress={onToggleSubtitles} />
+        <MenuBtn icon="🎵" active={activeAudioTrack !== null} onPress={onToggleAudioPanel} />
+        <TransportBtn icon="⛶" onPress={() => {}} />
+      </View>
+    );
+  } catch (groupErr) {
+    console.error('testGroup render error:', groupErr, (groupErr as Error)?.stack);
+  }
+
+  // ── Part A: seek bar structure (TouchableOpacity + seek track) ──
+  let seekBarEl: React.ReactNode = null;
+  let seekBarErr: string | null = null;
+  try {
+    seekBarEl = (
       <TouchableOpacity
         style={styles.seekRow}
         activeOpacity={1}
         onPress={handleSeekPress}>
         <View style={styles.seekTrack} pointerEvents="none">
-          {/* Background track */}
           <View style={styles.seekTrackBg} />
-
-          {/* Fill track */}
           <View
             style={[
               styles.seekTrackFill,
               {width: `${positionPct * 100}%`, top: 6},
             ]}
           />
-
-          {/* Chapter marks */}
-          {chapters.map((ch, i) => {
-            const pct =
-              duration > 0
-                ? (ch.startTime / duration) * 100
-                : 0;
-            return (
-              <View
-                key={i}
-                style={[
-                  styles.chapterMark,
-                  {left: `${pct}%`, marginLeft: -1.5, top: 2},
-                ]}
-              />
-            );
-          })}
-
-          {/* Thumb */}
+          {chapterMarks}
           <View
             style={[
               styles.seekThumb,
@@ -352,8 +371,19 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
             ]}
           />
         </View>
+      </TouchableOpacity>
+    );
+  } catch (errA) {
+    seekBarErr = (errA as Error)?.message;
+    console.error('seekBarEl error:', errA, (errA as Error)?.stack);
+  }
 
-        {/* Time labels */}
+  // ── Part B: time labels ──
+  let timeLabelsEl: React.ReactNode = null;
+  let timeLabelsErr: string | null = null;
+  try {
+    timeLabelsEl = (
+      <>
         <AppText
           variant="caption"
           color="primary"
@@ -367,74 +397,65 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
           style={styles.timeLabel}>
           {totalTime}
         </AppText>
-      </TouchableOpacity>
+      </>
+    );
+  } catch (errB) {
+    timeLabelsErr = (errB as Error)?.message;
+    console.error('timeLabelsEl error:', errB, (errB as Error)?.stack);
+  }
 
-      {/* Transport row */}
-      <View style={styles.transportRow}>
-        {/* Group 1: Previous / Play / Next */}
-        <View style={styles.btnGroup}>
-          <TransportBtn icon="⏮" onPress={onPrev} />
-          <PlayBtn
-            icon={isPlaying ? '⏸' : '▶'}
-            onPress={onPlayPause}
-          />
-          <TransportBtn icon="⏭" onPress={onNext} />
-        </View>
+  try {
+    return (
+      <View style={[styles.container, {paddingBottom: bottomInset + 8}]}>
+        {/* Sheen overlay */}
+        <View style={styles.sheenOverlay} pointerEvents="none" />
 
-        <View style={styles.separator} />
+        {/* Seek bar */}
+        <TouchableOpacity
+          style={styles.seekRow}
+          activeOpacity={1}
+          onPress={handleSeekPress}>
+          <View style={styles.seekTrack} pointerEvents="none">
+            <View style={styles.seekTrackBg} />
+            <View
+              style={[
+                styles.seekTrackFill,
+                {width: `${positionPct * 100}%`, top: 6},
+              ]}
+            />
+            {chapterMarks}
+            <View
+              style={[
+                styles.seekThumb,
+                {left: `${positionPct * 100}%`, top: 1},
+              ]}
+            />
+          </View>
+          <AppText
+            variant="caption"
+            color="primary"
+            style={styles.timeLabel}>
+            {currentTime}
+          </AppText>
+          <View style={styles.timeDivider} />
+          <AppText
+            variant="caption"
+            color="primary"
+            style={styles.timeLabel}>
+            {totalTime}
+          </AppText>
+        </TouchableOpacity>
 
-        {/* Group 2: Volume + Equalizer */}
-        <View style={styles.btnGroup}>
-          <MenuBtn
-            icon={volume === 0 ? '🔇' : '🔊'}
-            onPress={onVolumeChange}
-          />
-          <MenuBtn
-            icon="⚙"
-            active={eqEnabled}
-            onPress={onToggleEqPanel}
-          />
-        </View>
-
-        <View style={styles.separator} />
-
-        {/* Group 3: Playlist + Shuffle + Loop + Screenshot */}
-        <View style={styles.btnGroup}>
-          <MenuBtn
-            icon="☰"
-            active={playlistLength > 0}
-            onPress={onTogglePlaylistPanel}
-          />
-          <MenuBtn
-            icon="🔀"
-            active={shuffle}
-            onPress={onToggleShuffle}
-          />
-          <MenuBtn
-            icon="🔁"
-            active={loopMode === 'playlist'}
-            onPress={onToggleLoop}
-          />
-          <MenuBtn icon="📷" onPress={onScreenshot} />
-        </View>
-
-        <View style={styles.separator} />
-
-        {/* Group 4: Subtitles + Audio + Fullscreen */}
-        <View style={styles.btnGroup}>
-          <MenuBtn
-            icon="CC"
-            active={activeSubtitle !== null}
-            onPress={onToggleSubtitles}
-          />
-          <MenuBtn
-            icon="🎵"
-            active={activeAudioTrack !== null}
-            onPress={onToggleAudioPanel}
-          />
-          <TransportBtn icon="⛶" onPress={() => {}} />
-        </View>
+        {/* Transport row */}
+        {testGroup}
       </View>
-    </View>
-  );
+    );
+  } catch (e) {
+    console.error('PlayerControls render error:', e, 'seekBarErr:', seekBarErr, 'timeLabelsErr:', timeLabelsErr, (e as Error)?.stack, JSON.stringify({controlsVisible, position, duration, isPlaying, volume, chaptersLength: chapters?.length, currentTime, totalTime}));
+    return (
+      <View style={[styles.container, {paddingBottom: bottomInset + 8}]}>
+        <AppText style={{color: 'red', padding: 20}}>Render Error</AppText>
+      </View>
+    );
+  }
 };

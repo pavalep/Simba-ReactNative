@@ -1,6 +1,6 @@
 import React, {useMemo} from 'react';
 import {Alert, ScrollView, StyleSheet, Switch, View} from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
 import {useAppDispatch, useAppSelector} from '../../store';
@@ -26,8 +26,10 @@ const THEME_LABELS: Record<string, string> = {
 };
 
 export const SettingsScreen: React.FC<Props> = ({navigation}) => {
-  const {theme, colors, spacing: s} = useTheme();
+  const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
+  const insets = useSafeAreaInsets();
+  const bottomChromeInset = insets.bottom + 104;
   const dispatch = useAppDispatch();
   const styles = useMemo(
     () =>
@@ -53,10 +55,10 @@ export const SettingsScreen: React.FC<Props> = ({navigation}) => {
           flex: 1,
         },
         scrollContent: {
-          paddingBottom: spacing.xxxl,
+          paddingBottom: bottomChromeInset,
         },
       }),
-    [colors],
+    [bottomChromeInset, isDark],
   );
 
   const hardwareAcceleration = useAppSelector(
@@ -73,10 +75,10 @@ export const SettingsScreen: React.FC<Props> = ({navigation}) => {
   );
   const themeMode = useAppSelector(state => state.settings.themeMode);
   const videoFolderCount = useAppSelector(
-    state => state.settings.videoFolders.length,
+    state => state.settings.videoFolders?.length ?? 0,
   );
   const audioFolderCount = useAppSelector(
-    state => state.settings.audioFolders.length,
+    state => state.settings.audioFolders?.length ?? 0,
   );
 
   const handleThemePress = () => {
@@ -249,11 +251,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation}) => {
           label="About"
           onPress={() => navigation.navigate('About')}
         />
-
-        {/* Bottom spacer */}
-        <View style={{height: s.xxxl}} />
       </ScrollView>
     </SafeAreaView>
   );
 };
-

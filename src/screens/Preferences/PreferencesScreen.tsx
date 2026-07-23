@@ -90,9 +90,8 @@ export const PreferencesScreen: React.FC<Props> = ({navigation}) => {
   }, [dispatch]);
 
   const handleOpenSettings = useCallback(() => {
-    navigationRef.navigate('MainTabs', {
-      screen: 'SettingsTab',
-      params: {screen: 'Settings'},
+    navigationRef.navigate('Settings', {
+      screen: 'Settings',
     });
   }, []);
 
@@ -260,9 +259,8 @@ export const PreferencesScreen: React.FC<Props> = ({navigation}) => {
           <SettingsRow
             label="About"
             description="Version, licenses, and app information"
-            onPress={() => navigationRef.navigate('MainTabs', {
-              screen: 'SettingsTab',
-              params: {screen: 'About'},
+            onPress={() => navigationRef.navigate('Settings', {
+              screen: 'Settings',
             })}
             trailing={
               <AppText variant="caption" color="secondary">{'>'}</AppText>

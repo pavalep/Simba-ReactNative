@@ -11,7 +11,7 @@ import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
 import {AboutScreenProps} from '../../navigation/types';
-import {imagePaths} from '../../constants/imagePaths';
+import {svgPaths} from '../../constants/svgPaths';
 import {SimbaStatusBar} from '../../components/StatusBar';
 
 type Props = AboutScreenProps;
@@ -123,7 +123,7 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
         <View style={styles.content}>
           <Image
             source={
-              isDark ? imagePaths.appLogoDark : imagePaths.appLogoLight
+              isDark ? svgPaths.appLogoDark : svgPaths.appLogoLight
             }
             style={styles.logo}
           />

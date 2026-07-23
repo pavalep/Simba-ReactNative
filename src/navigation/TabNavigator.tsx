@@ -1,19 +1,22 @@
 import React from 'react';
-import {View} from 'react-native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {View, StyleSheet} from 'react-native';
+import {
+  BottomTabBarProps,
+  createBottomTabNavigator,
+} from '@react-navigation/bottom-tabs';
 import {TabParamList} from './types';
 import {HomeStack} from './HomeStack';
 import {LibraryStack} from './LibraryStack';
-import {SettingsStack} from './SettingsStack';
 import {FloatingTabBar} from '../components/tabbar/FloatingTabBar';
-import {MiniPlayer} from '../components/MiniPlayer/MiniPlayer';
 
 const Tab = createBottomTabNavigator<TabParamList>();
+const renderTabBar = (props: BottomTabBarProps) => <FloatingTabBar {...props} />;
 
 export const TabNavigator: React.FC = () => (
-  <View style={{flex: 1}}>
+  <View style={styles.root}>
     <Tab.Navigator
-      tabBar={props => <FloatingTabBar {...props} />}
+      initialRouteName="HomeTab"
+      tabBar={renderTabBar}
       screenOptions={{headerShown: false}}>
       <Tab.Screen
         name="HomeTab"
@@ -25,12 +28,12 @@ export const TabNavigator: React.FC = () => (
         component={LibraryStack}
         options={{tabBarLabel: 'Library'}}
       />
-      <Tab.Screen
-        name="SettingsTab"
-        component={SettingsStack}
-        options={{tabBarLabel: 'Settings'}}
-      />
     </Tab.Navigator>
-    <MiniPlayer />
   </View>
 );
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});

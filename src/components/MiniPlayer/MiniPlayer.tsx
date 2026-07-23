@@ -4,7 +4,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  Image,
   LayoutChangeEvent,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -13,8 +12,8 @@ import {AppText} from '../core/AppText/AppText';
 import {useAppSelector, useAppDispatch} from '../../store';
 import {setPlaybackState, setPosition} from '../../store/slices/playerSlice';
 import {MpvPlayer} from '../../native';
+import {SvgIcon} from '../utility/SvgIcon';
 import {navigationRef} from '../../navigation/navigationHelper';
-import {imagePaths} from '../../constants/imagePaths';
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -236,10 +235,11 @@ export const MiniPlayer: React.FC = () => {
         style={styles.touchableArea}>
         {/* Album art placeholder */}
         <View style={[styles.artwork, {backgroundColor: colors.accent.goldDim}]}>
-          <Image
-            source={imagePaths.uiMusicGray}
+          <SvgIcon
+            name="music"
+            size={28}
+            color={colors.text.tertiary}
             style={styles.artworkIcon}
-            resizeMode="contain"
           />
         </View>
 

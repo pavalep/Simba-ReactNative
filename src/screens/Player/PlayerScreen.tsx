@@ -4,7 +4,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   BackHandler,
-  Dimensions,
   Alert,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -15,12 +14,10 @@ import {RootStackScreenProps} from '../../navigation/types';
 import {useHaptics} from '../../hooks/useHaptics';
 import {
   pickSubtitleFile,
-  isValidSubtitleFile,
-  checkFileExists,
   validateMediaFile,
-  FileValidation,
   pickMediaFile,
   getFileName,
+  getMediaType,
 } from '../../services/fileService';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {savePlaybackPosition} from '../../store/slices/sessionSlice';
@@ -29,10 +26,10 @@ import {
   removeFromPlaylist,
   playFromPlaylist,
   nextTrack,
-  previousTrack,
   setLoopMode,
   toggleShuffle,
   clearPlaylist,
+  clearPlayer,
   PlaylistEntry,
 } from '../../store/slices/playerSlice';
 
@@ -148,19 +145,12 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const savedEntry = fileUri && rememberPosition
     ? sessionRecent.find(f => f.fileUri === fileUri)
     : undefined;
-  const positionPct = duration > 0 ? Math.min(position / duration, 1) : 0;
   const toggleControls = () => setControlsVisible(p => !p);
 
-  // ── Orientation ──
+  // ── Expanded mode (manual toggle, no auto-rotate) ──
   const [isLandscape, setIsLandscape] = useState(false);
-  useEffect(() => {
-    const update = () => {
-      const {width, height} = Dimensions.get('window');
-      setIsLandscape(width > height);
-    };
-    update();
-    const sub = Dimensions.addEventListener('change', update);
-    return () => sub.remove();
+  const handleToggleRotate = useCallback(() => {
+    setIsLandscape(p => !p);
   }, []);
 
   // ══════════════════════════════════════════════════════════
@@ -191,6 +181,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
             position: curPos,
             duration: curDur,
             thumbnailPath: thumbPath,
+            mediaType: getMediaType(curUri),
           }),
         );
       }
@@ -468,15 +459,16 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
               title: titleRef.current,
               position: curPos,
               duration: curDur,
+              mediaType: getMediaType(curUri),
             }),
           );
         }
         try { MpvPlayer.stop(); } catch {}
         MpvPlayer.destroy();
-        MpvPlayer.removeAllListeners();
+        dispatch(clearPlayer());
       } catch {}
     };
-  }, [fileUri]);
+  }, [dispatch, fileUri, rememberPosition]);
 
   // ── Periodic position save ──
   useEffect(() => {
@@ -491,6 +483,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
             title: titleRef.current,
             position: curPos,
             duration: durationRef.current,
+            mediaType: getMediaType(fileUri ?? ''),
           }),
         );
       }
@@ -530,7 +523,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
       setVolume(vol);
     });
 
-    const unsubFile = MpvPlayer.on('onFileLoaded', ({file}) => {
+    const unsubFile = MpvPlayer.on('onFileLoaded', () => {
       const dur = MpvPlayer.getDuration();
       setDuration(dur);
       setPosition(0);
@@ -542,6 +535,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
           title: titleRef.current,
           position: 0,
           duration: dur,
+          mediaType: getMediaType(fileUriRef.current ?? ''),
         }),
       );
 
@@ -553,7 +547,7 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
       }
 
       try {
-        setChapters(MpvPlayer.getChapters());
+        setChapters(Array.from(MpvPlayer.getChapters() ?? []));
         const tracks: MpvTrack[] = MpvPlayer.getTracks();
         setSubtitleTracks(tracks.filter(t => t.type === 'sub'));
         setAudioTracks(tracks.filter(t => t.type === 'audio'));
@@ -681,6 +675,8 @@ export const PlayerScreen: React.FC<Props> = ({navigation, route}) => {
           title={title}
           onGoBack={handleGoBack}
           topInset={insets.top}
+          isLandscape={isLandscape}
+          onToggleRotate={handleToggleRotate}
         />
       )}
 
