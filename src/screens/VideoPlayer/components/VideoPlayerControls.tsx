@@ -102,7 +102,7 @@ function PlayBtn({
           width: 42,
           height: 42,
           borderRadius: 21,
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: colors.border.subtle,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -143,7 +143,7 @@ function MenuBtn({
           justifyContent: 'center',
         },
         btnActive: {
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: colors.border.subtle,
         },
         icon: {
           fontSize: 14,

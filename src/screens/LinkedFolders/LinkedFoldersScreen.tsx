@@ -10,6 +10,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -44,6 +45,11 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
   );
   const isScanning = useAppSelector(s => s.settings.isScanning);
   const lastScanTimestamp = useAppSelector(s => s.settings.lastScanTimestamp);
+
+  // ── Edge case states ──
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // ── Add-folder modal state ──
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -99,6 +105,19 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
         removeText: {
           color: colors.semantic.error,
         },
+        centerContainer: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: spacing.lg,
+        },
+        retryButton: {
+          marginTop: spacing.md,
+          paddingVertical: 10,
+          paddingHorizontal: 24,
+          borderRadius: 10,
+          backgroundColor: colors.accent.goldDim,
+        },
         addButton: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -122,7 +141,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: colors.background.overlay,
         },
         modalContent: {
           width: '85%',
@@ -169,7 +188,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
           backgroundColor: colors.accent.gold,
         },
         modalButtonConfirmText: {
-          color: '#0A0A0C',
+          color: colors.text.inverse,
           fontWeight: '600',
         },
       }),
@@ -227,6 +246,23 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
     }, 2000);
   }, [dispatch]);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      // Simulate refresh — add real data-fetching logic here later
+      await new Promise<void>(resolve => setTimeout(resolve, 1000));
+    } catch {
+      setError('Failed to load folders.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setError(null);
+  }, []);
+
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <LinearGradient
@@ -236,103 +272,134 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
 
       <InternalHeader title={isVideo ? 'Video Folders' : 'Audio Folders'} />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Scan Status Banner */}
-        <ScanProgressBanner
-          isScanning={isScanning}
-          lastScanTimestamp={lastScanTimestamp}
-        />
-
-        {/* Scan Button */}
-        <TouchableOpacity
-          style={[
-            styles.addButton,
-            {
-              borderRadius: radius.md,
-              borderWidth: 1,
-              borderColor: colors.accent.gold,
-              marginBottom: spacing.lg,
-              paddingVertical: spacing.sm,
-              borderTopWidth: 1,
-              opacity: isScanning ? 0.5 : 1,
-            },
-          ]}
-          activeOpacity={0.7}
-          onPress={handleScan}
-          disabled={isScanning}>
-          {isScanning ? (
-            <ActivityIndicator color={colors.accent.gold} size="small" />
-          ) : (
-            <AppText variant="body1" color="accent" style={{fontWeight: '600'}}>
-              Scan Folders
-            </AppText>
-          )}
-        </TouchableOpacity>
-
-        {/* Folder List */}
-        <View style={styles.card}>
-          {folders.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <SvgIcon
-                name="folder"
-                size={40}
-                color={colors.text.tertiary}
-                style={styles.emptyIcon}
-              />
-              <AppText variant="body2" color="tertiary">
-                No {isVideo ? 'video' : 'audio'} folders linked yet.
-              </AppText>
-              <AppText variant="caption" color="tertiary">
-                Tap "Add Folder" below to get started.
-              </AppText>
-            </View>
-          ) : (
-            folders.map((folder, index) => (
-              <View key={`${folder}-${index}`} style={styles.folderRow}>
-                <View style={styles.folderLeft}>
-                  <View style={styles.folderIconWrap}>
-                    <SvgIcon
-                      name="folder"
-                      size={16}
-                      color={colors.accent.gold}
-                    />
-                  </View>
-                  <AppText
-                    variant="body2"
-                    color="primary"
-                    style={styles.folderPath}
-                    numberOfLines={1}>
-                    {folder}
-                  </AppText>
-                </View>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveFolder(folder)}
-                  hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                  <AppText
-                    variant="caption"
-                    color="error"
-                    style={styles.removeText}>
-                    Remove
-                  </AppText>
-                </TouchableOpacity>
-              </View>
-            ))
-          )}
-
-          {/* Add Folder Button */}
+      {isLoading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.accent.gold} />
+        </View>
+      ) : error ? (
+        <View style={styles.centerContainer}>
+          <AppText
+            variant="body1"
+            color="error"
+            style={{textAlign: 'center', marginBottom: spacing.sm}}>
+            {error}
+          </AppText>
           <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddFolder}
+            style={styles.retryButton}
+            onPress={handleRetry}
             activeOpacity={0.7}>
-            <AppText variant="body1" color="accent">
-              + Add Folder
+            <AppText variant="button" color="accent">
+              Retry
             </AppText>
           </TouchableOpacity>
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+            />
+          }>
+          {/* Scan Status Banner */}
+          <ScanProgressBanner
+            isScanning={isScanning}
+            lastScanTimestamp={lastScanTimestamp}
+          />
+
+          {/* Scan Button */}
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              {
+                borderRadius: radius.md,
+                borderWidth: 1,
+                borderColor: colors.accent.gold,
+                marginBottom: spacing.lg,
+                paddingVertical: spacing.sm,
+                borderTopWidth: 1,
+                opacity: isScanning ? 0.5 : 1,
+              },
+            ]}
+            activeOpacity={0.7}
+            onPress={handleScan}
+            disabled={isScanning}>
+            {isScanning ? (
+              <ActivityIndicator color={colors.accent.gold} size="small" />
+            ) : (
+              <AppText variant="body1" color="accent" style={{fontWeight: '600'}}>
+                Scan Folders
+              </AppText>
+            )}
+          </TouchableOpacity>
+
+          {/* Folder List */}
+          <View style={styles.card}>
+            {folders.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <SvgIcon
+                  name="folder"
+                  size={40}
+                  color={colors.text.tertiary}
+                  style={styles.emptyIcon}
+                />
+                <AppText variant="body2" color="tertiary">
+                  No {isVideo ? 'video' : 'audio'} folders linked yet.
+                </AppText>
+                <AppText variant="caption" color="tertiary">
+                  Tap "Add Folder" below to get started.
+                </AppText>
+              </View>
+            ) : (
+              folders.map((folder, index) => (
+                <View key={`${folder}-${index}`} style={styles.folderRow}>
+                  <View style={styles.folderLeft}>
+                    <View style={styles.folderIconWrap}>
+                      <SvgIcon
+                        name="folder"
+                        size={16}
+                        color={colors.accent.gold}
+                      />
+                    </View>
+                    <AppText
+                      variant="body2"
+                      color="primary"
+                      style={styles.folderPath}
+                      numberOfLines={1}>
+                      {folder}
+                    </AppText>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => handleRemoveFolder(folder)}
+                    hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                    <AppText
+                      variant="caption"
+                      color="error"
+                      style={styles.removeText}>
+                      Remove
+                    </AppText>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+
+            {/* Add Folder Button */}
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleAddFolder}
+              activeOpacity={0.7}>
+              <AppText variant="body1" color="accent">
+                + Add Folder
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      )}
 
       {/* ── Add Folder Modal (cross-platform) ── */}
       <Modal

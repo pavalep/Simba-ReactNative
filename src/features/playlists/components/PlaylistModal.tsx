@@ -92,7 +92,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: 'rgba(0,0,0,0.65)',
+          backgroundColor: colors.background.overlay,
         },
         container: {
           width: '85%',
@@ -199,7 +199,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           color: '#0A0A0C',
         },
         confirmBtnTextDanger: {
-          color: '#FFFFFF',
+          color: colors.text.primary,
         },
       }),
     [colors, error, isDark],

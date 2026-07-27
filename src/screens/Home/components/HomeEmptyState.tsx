@@ -1,0 +1,140 @@
+import React, {useEffect, useRef, useMemo} from 'react';
+import {View, TouchableOpacity, StyleSheet, Animated} from 'react-native';
+import {useTheme} from '../../../theme';
+import {radius, spacing} from '../../../theme/tokens';
+import {AppText} from '../../../components/core/AppText/AppText';
+import {SvgIcon} from '../../../components/utility/SvgIcon';
+import {useNavigation} from '@react-navigation/native';
+
+interface HomeEmptyStateProps {
+  onOpenMedia: () => void;
+  onBrowseLibrary?: () => void;
+}
+
+export const HomeEmptyState: React.FC<HomeEmptyStateProps> = ({
+  onOpenMedia,
+  onBrowseLibrary,
+}) => {
+  const {colors} = useTheme();
+  const navigation = useNavigation<any>();
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.6,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
+
+  const handleBrowseLibrary = () => {
+    if (onBrowseLibrary) {
+      onBrowseLibrary();
+    } else {
+      navigation.navigate('MainTabs', {screen: 'LibraryTab'});
+    }
+  };
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: spacing.xxxl,
+        },
+        logoWrapper: {
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: spacing.xl,
+        },
+        aura: {
+          position: 'absolute',
+          width: 140,
+          height: 140,
+          borderRadius: 70,
+          opacity: 0.45,
+        },
+        title: {
+          marginBottom: spacing.sm,
+        },
+        subtitle: {
+          textAlign: 'center',
+          marginBottom: spacing.xxl,
+        },
+        ctaPrimary: {
+          paddingHorizontal: spacing.xxxl,
+          paddingVertical: spacing.lg,
+          borderRadius: radius.md,
+          marginBottom: spacing.md,
+        },
+        ctaPrimaryText: {
+          color: colors.text.inverse,
+          fontWeight: '700',
+          fontSize: 16,
+          letterSpacing: 0.3,
+        },
+        ctaSecondary: {
+          paddingHorizontal: spacing.xxxl,
+          paddingVertical: spacing.lg,
+          borderRadius: radius.md,
+          borderWidth: 1,
+        },
+      }),
+    [colors],
+  );
+
+  return (
+    <View style={styles.container}>
+      {/* ── Animated lion logo with pulse glow ── */}
+      <Animated.View
+        style={[
+          styles.logoWrapper,
+          {opacity: pulseAnim},
+        ]}>
+        <View style={[styles.aura, {backgroundColor: colors.accent.goldGlow}]} />
+        <SvgIcon name="lion" size={80} color={colors.accent.gold} />
+      </Animated.View>
+
+      {/* ── Title ── */}
+      <AppText variant="h2" style={styles.title}>
+        Welcome to Simba
+      </AppText>
+
+      <AppText variant="body1" color="secondary" style={styles.subtitle}>
+        Your media, beautifully organized
+      </AppText>
+
+      {/* ── CTA: Open Media File ── */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={onOpenMedia}
+        style={[styles.ctaPrimary, {backgroundColor: colors.accent.gold}]}>
+        <AppText style={styles.ctaPrimaryText}>Open Media File</AppText>
+      </TouchableOpacity>
+
+      {/* ── CTA: Browse Library ── */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={handleBrowseLibrary}
+        style={[
+          styles.ctaSecondary,
+          {borderColor: colors.border.subtle},
+        ]}>
+        <AppText color="secondary">Browse Library</AppText>
+      </TouchableOpacity>
+    </View>
+  );
+};

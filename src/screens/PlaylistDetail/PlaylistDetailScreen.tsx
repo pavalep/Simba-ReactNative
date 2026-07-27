@@ -20,6 +20,12 @@ import {
   clearPlaylist,
   selectPlaylistById,
 } from '../../store/slices/playlistSlice';
+import {
+  addToQueue,
+  prependToQueue,
+  loadPlaylistToPlayer,
+  playlistItemsToEntries,
+} from '../../store/slices/playerSlice';
 import {AppText} from '../../components/core/AppText/AppText';
 import {PlaylistDetailScreenProps} from '../../navigation/types';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
@@ -58,6 +64,18 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       'Media picking flow would open here.',
     );
   }, []);
+
+  // ── Header: Play All ──
+  const handlePlayAll = useCallback(() => {
+    if (items.length > 0) {
+      const entries = playlistItemsToEntries(items);
+      dispatch(loadPlaylistToPlayer(entries));
+      navigation.navigate('VideoPlayer', {
+        fileUri: items[0].fileUri,
+        fileTitle: items[0].title,
+      });
+    }
+  }, [items, dispatch, navigation]);
 
   // ── Header: Options menu ──
   const handleMore = useCallback(() => {
@@ -193,12 +211,44 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
   const handleItemLongPress = useCallback(
     (item: PlaylistItem) => {
-      if (!isSelecting) {
-        setIsSelecting(true);
-        setSelectedIds(new Set([item.id]));
-      }
+      if (isSelecting) return;
+
+      Alert.alert(item.title, undefined, [
+        {
+          text: 'Play Next',
+          onPress: () => {
+            dispatch(
+              prependToQueue({
+                uri: item.fileUri,
+                title: item.title,
+                duration: item.duration,
+              }),
+            );
+          },
+        },
+        {
+          text: 'Add to Queue',
+          onPress: () => {
+            dispatch(
+              addToQueue({
+                uri: item.fileUri,
+                title: item.title,
+                duration: item.duration,
+              }),
+            );
+          },
+        },
+        {
+          text: 'Select',
+          onPress: () => {
+            setIsSelecting(true);
+            setSelectedIds(new Set([item.id]));
+          },
+        },
+        {text: 'Cancel', style: 'cancel'},
+      ]);
     },
-    [isSelecting],
+    [isSelecting, dispatch],
   );
 
   const handleMoveItem = useCallback(
@@ -282,7 +332,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           backgroundColor: colors.semantic.error,
         },
         deleteBtnText: {
-          color: '#FFFFFF',
+          color: colors.text.primary,
           fontWeight: '700',
           fontSize: 13,
         },
@@ -318,7 +368,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           borderColor: colors.accent.gold,
         },
         checkmark: {
-          color: '#0A0A0C',
+          color: colors.text.inverse,
           fontWeight: '700',
           fontSize: 14,
         },
@@ -554,6 +604,17 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             </>
           ) : (
             <>
+              {items.length > 0 && (
+                <TouchableOpacity
+                  style={styles.headerBtn}
+                  onPress={handlePlayAll}
+                  accessibilityLabel="Play all"
+                  accessibilityRole="button">
+                  <AppText variant="body1" color="accent">
+                    Play All
+                  </AppText>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={styles.headerBtn}
                 onPress={handleAdd}

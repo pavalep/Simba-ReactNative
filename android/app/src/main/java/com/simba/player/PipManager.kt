@@ -16,12 +16,10 @@ import com.facebook.react.ReactInstanceManager
 /**
  * Manages Android Picture-in-Picture (PiP) overlay actions and parameters.
  *
- * Provides:
- * - [buildPipParams]: Creates [android.app.PictureInPictureParams] with RemoteActions
- * - [ACTION_PLAY_PAUSE] / [ACTION_CLOSE] / [ACTION_NEXT] / [ACTION_PREV]: Action constants
- *   consumed by [PipActionReceiver] inside [MainActivity]
- *
- * PiP is available on API 24+. RemoteAction requires API 24+.
+ * v3 redesign:
+ * - 3 RemoteAction buttons max: [Play/Pause] [Expand] [Close]
+ * - Notification text with chapter title + progress percentage (Android 12+)
+ * - No NEXT/PREV actions (removed for simplicity)
  */
 @RequiresApi(Build.VERSION_CODES.N)
 object PipManager {
@@ -29,68 +27,57 @@ object PipManager {
     // ── Action Constants ───────────────────────────────────────────────────
 
     const val ACTION_PLAY_PAUSE = "com.simba.player.PIP_PLAY_PAUSE"
+    const val ACTION_EXPAND = "com.simba.player.PIP_EXPAND"
     const val ACTION_CLOSE = "com.simba.player.PIP_CLOSE"
-    const val ACTION_NEXT = "com.simba.player.PIP_NEXT"
-    const val ACTION_PREV = "com.simba.player.PIP_PREV"
 
     private const val REQ_PLAY_PAUSE = 1001
-    private const val REQ_CLOSE = 1002
-    private const val REQ_NEXT = 1003
-    private const val REQ_PREV = 1004
+    private const val REQ_EXPAND = 1002
+    private const val REQ_CLOSE = 1003
 
     // ── PiP Params Builder ─────────────────────────────────────────────────
 
     /**
-     * Build PictureInPictureParams with overlay actions.
+     * Build PictureInPictureParams with 3 overlay actions:
+     * [Pause/Resume] [Expand to Fullscreen] [Close].
      *
-     * @param context Application or Activity context for PendingIntents.
-     * @param aspectWidth  Numerator of the PiP window aspect ratio (default 16).
-     * @param aspectHeight Denominator of the PiP window aspect ratio (default 9).
-     * @param showNextPrev Whether to include next/previous track actions.
-     * @param sourceRectHint Optional bounds for smooth PiP entry animation.
+     * On Android 12+, also sets notification subtitle with chapter/progress info.
+     *
+     * @param context            Application or Activity context for PendingIntents.
+     * @param aspectWidth        Numerator of the PiP window aspect ratio (default 16).
+     * @param aspectHeight       Denominator of the PiP window aspect ratio (default 9).
+     * @param sourceRectHint     Optional bounds for smooth PiP entry animation.
+     * @param chapterTitle       Current chapter title for notification text (Android 12+).
+     * @param progressPercentage Percentage string like "45%" for notification text (Android 12+).
      */
     fun buildPipParams(
         context: Context,
         aspectWidth: Int = 16,
         aspectHeight: Int = 9,
-        showNextPrev: Boolean = false,
         sourceRectHint: android.graphics.Rect? = null,
+        chapterTitle: String? = null,
+        progressPercentage: String? = null,
     ): android.app.PictureInPictureParams {
         val actions = mutableListOf<RemoteAction>()
 
         // Play/Pause
         actions.add(buildRemoteAction(
             context = context,
-            iconResId = android.R.drawable.ic_media_play, // will be toggled by JS state
+            iconResId = android.R.drawable.ic_media_play,
             title = "Play/Pause",
             contentDescription = "Toggle playback",
             action = ACTION_PLAY_PAUSE,
             requestCode = REQ_PLAY_PAUSE,
         ))
 
-        // Previous
-        if (showNextPrev) {
-            actions.add(buildRemoteAction(
-                context = context,
-                iconResId = android.R.drawable.ic_media_previous,
-                title = "Previous",
-                contentDescription = "Previous track",
-                action = ACTION_PREV,
-                requestCode = REQ_PREV,
-            ))
-        }
-
-        // Next
-        if (showNextPrev) {
-            actions.add(buildRemoteAction(
-                context = context,
-                iconResId = android.R.drawable.ic_media_next,
-                title = "Next",
-                contentDescription = "Next track",
-                action = ACTION_NEXT,
-                requestCode = REQ_NEXT,
-            ))
-        }
+        // Expand to Fullscreen
+        actions.add(buildRemoteAction(
+            context = context,
+            iconResId = android.R.drawable.ic_menu_zoom,
+            title = "Expand",
+            contentDescription = "Expand to fullscreen",
+            action = ACTION_EXPAND,
+            requestCode = REQ_EXPAND,
+        ))
 
         // Close
         actions.add(buildRemoteAction(
@@ -106,8 +93,15 @@ object PipManager {
             .setAspectRatio(Rational(aspectWidth, aspectHeight))
             .setActions(actions)
 
+        // Source rect hint for smooth entry animation (Android 12+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && sourceRectHint != null) {
             builder.setSourceRectHint(sourceRectHint)
+        }
+
+        // Notification text (Android 12+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            chapterTitle?.let { builder.setTitle(it) }
+            progressPercentage?.let { builder.setSubtitle(it) }
         }
 
         return builder.build()
@@ -145,9 +139,8 @@ object PipManager {
     fun intentFilter(): IntentFilter {
         return IntentFilter().apply {
             addAction(ACTION_PLAY_PAUSE)
+            addAction(ACTION_EXPAND)
             addAction(ACTION_CLOSE)
-            addAction(ACTION_NEXT)
-            addAction(ACTION_PREV)
         }
     }
 }
@@ -159,6 +152,8 @@ object PipManager {
  * event layer via [DeviceEventManagerModule.RCTDeviceEventEmitter].
  *
  * Registered/unregistered in [MainActivity] lifecycle.
+ *
+ * v3: Handles 3 actions — play/pause, expand (restore fullscreen), close (end session).
  */
 class PipActionReceiver : BroadcastReceiver() {
 
@@ -167,14 +162,11 @@ class PipActionReceiver : BroadcastReceiver() {
             PipManager.ACTION_PLAY_PAUSE -> {
                 emitEvent(context, "onPipPlayPause", null)
             }
+            PipManager.ACTION_EXPAND -> {
+                emitEvent(context, "onPipExpand", null)
+            }
             PipManager.ACTION_CLOSE -> {
                 emitEvent(context, "onPipClose", null)
-            }
-            PipManager.ACTION_NEXT -> {
-                emitEvent(context, "onPipNext", null)
-            }
-            PipManager.ACTION_PREV -> {
-                emitEvent(context, "onPipPrev", null)
             }
         }
     }

@@ -4,7 +4,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  SafeAreaView,
   PanResponder,
   Animated,
 } from 'react-native';
@@ -28,7 +27,6 @@ export interface VideoPlayerPlaylistPanelProps {
   onRemoveFromPlaylist: (index: number) => void;
   onClearPlaylist: () => void;
   onAddToPlaylist: () => void;
-  onClose: () => void;
 }
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -49,64 +47,12 @@ export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> =
   onRemoveFromPlaylist,
   onClearPlaylist,
   onAddToPlaylist,
-  onClose,
 }) => {
   const {colors} = useTheme();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        overlay: {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          zIndex: 50,
-          justifyContent: 'flex-end',
-        },
-        panel: {
-          backgroundColor: colors.background.elevated,
-          borderTopLeftRadius: radius.lg,
-          borderTopRightRadius: radius.lg,
-          paddingBottom: spacing.xxl,
-          maxHeight: '70%',
-        },
-        handleRow: {
-          alignItems: 'center',
-          paddingTop: spacing.sm,
-          paddingBottom: spacing.xs,
-        },
-        handle: {
-          width: 16,
-          height: 4,
-          borderRadius: 2,
-          backgroundColor: colors.border.emphasis,
-        },
-        header: {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.md,
-        },
-        headerLeft: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing.sm,
-        },
-        clearBtn: {
-          paddingHorizontal: spacing.sm,
-          paddingVertical: spacing.xs,
-        },
-        closeBtn: {
-          width: 32,
-          height: 32,
-          borderRadius: 16,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
         scrollContent: {
           paddingHorizontal: spacing.lg,
         },
@@ -225,7 +171,7 @@ export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> =
           <TouchableOpacity
             onPress={handleRemovePress}
             style={{
-              backgroundColor: '#CF4444',
+              backgroundColor: colors.semantic.error,
               borderRadius: 6,
               paddingHorizontal: 16,
               paddingVertical: 8,
@@ -247,115 +193,82 @@ export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> =
   const isEmpty = playlist.length === 0;
 
   return (
-    <SafeAreaView style={styles.overlay}>
-      <TouchableOpacity
-        style={StyleSheet.absoluteFill}
-        activeOpacity={1}
-        onPress={onClose}
-      />
-      <View style={styles.panel}>
-        {/* Handle bar */}
-        <View style={styles.handleRow}>
-          <View style={styles.handle} />
-        </View>
+    <ScrollView
+      style={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      {/* Add to Playlist button */}
+      <TouchableOpacity style={styles.addBtn} onPress={onAddToPlaylist}>
+        <AppText
+          variant="body2"
+          color="accent"
+          style={styles.addBtnIcon}>
+          +
+        </AppText>
+        <AppText variant="body2" color="accent">
+          Add to Playlist
+        </AppText>
+      </TouchableOpacity>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <AppText variant="h3" color="primary">
-              Playlist
-            </AppText>
-            {!isEmpty && (
-              <AppText variant="caption" color="tertiary">
-                {playlist.length} item{playlist.length !== 1 ? 's' : ''}
-              </AppText>
-            )}
-          </View>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close panel" accessibilityRole="button">
-            <AppText variant="body1" color="secondary">
-              ✕
+      {isEmpty ? (
+        <View style={styles.emptyState}>
+          <AppText variant="body2" color="tertiary">
+            Playlist is empty
+          </AppText>
+        </View>
+      ) : (
+        <>
+          {/* Playlist entries */}
+          {playlist.map((entry, index) => {
+            const isCurrent = index === currentIndex;
+            return (
+              <SwipeableRow
+                key={`${entry.fileUri}-${index}`}
+                onRemove={() => onRemoveFromPlaylist(index)}>
+                <TouchableOpacity
+                  style={styles.entryRow}
+                  onPress={() => onPlayFromPlaylist(index)}>
+                  <AppText
+                    variant="caption"
+                    color="tertiary"
+                    style={styles.entryIndex}>
+                    {index + 1}
+                  </AppText>
+                  <View style={styles.entryInfo}>
+                    <AppText
+                      variant="body2"
+                      color={isCurrent ? 'accent' : 'primary'}
+                      numberOfLines={1}>
+                      {entry.title}
+                    </AppText>
+                  </View>
+                  <AppText
+                    variant="caption"
+                    color="secondary"
+                    style={styles.entryDuration}>
+                    {formatDuration(entry.duration)}
+                  </AppText>
+                  <TouchableOpacity
+                    style={styles.removeBtn}
+                    onPress={() => onRemoveFromPlaylist(index)}>
+                    <AppText variant="caption" color="secondary">
+                      ✕
+                    </AppText>
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              </SwipeableRow>
+            );
+          })}
+
+          {/* Clear all button */}
+          <TouchableOpacity
+            style={styles.clearAllBtn}
+            onPress={onClearPlaylist}>
+            <AppText variant="body2" color="error">
+              Clear All
             </AppText>
           </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          style={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
-          {/* Add to Playlist button */}
-          <TouchableOpacity style={styles.addBtn} onPress={onAddToPlaylist}>
-            <AppText
-              variant="body2"
-              color="accent"
-              style={styles.addBtnIcon}>
-              +
-            </AppText>
-            <AppText variant="body2" color="accent">
-              Add to Playlist
-            </AppText>
-          </TouchableOpacity>
-
-          {isEmpty ? (
-            <View style={styles.emptyState}>
-              <AppText variant="body2" color="tertiary">
-                Playlist is empty
-              </AppText>
-            </View>
-          ) : (
-            <>
-              {/* Playlist entries */}
-              {playlist.map((entry, index) => {
-                const isCurrent = index === currentIndex;
-                return (
-                  <SwipeableRow
-                    key={`${entry.fileUri}-${index}`}
-                    onRemove={() => onRemoveFromPlaylist(index)}>
-                    <TouchableOpacity
-                      style={styles.entryRow}
-                      onPress={() => onPlayFromPlaylist(index)}>
-                      <AppText
-                        variant="caption"
-                        color="tertiary"
-                        style={styles.entryIndex}>
-                        {index + 1}
-                      </AppText>
-                      <View style={styles.entryInfo}>
-                        <AppText
-                          variant="body2"
-                          color={isCurrent ? 'accent' : 'primary'}
-                          numberOfLines={1}>
-                          {entry.title}
-                        </AppText>
-                      </View>
-                      <AppText
-                        variant="caption"
-                        color="secondary"
-                        style={styles.entryDuration}>
-                        {formatDuration(entry.duration)}
-                      </AppText>
-                      <TouchableOpacity
-                        style={styles.removeBtn}
-                        onPress={() => onRemoveFromPlaylist(index)}>
-                        <AppText variant="caption" color="secondary">
-                          ✕
-                        </AppText>
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  </SwipeableRow>
-                );
-              })}
-
-              {/* Clear all button */}
-              <TouchableOpacity
-                style={styles.clearAllBtn}
-                onPress={onClearPlaylist}>
-                <AppText variant="body2" color="error">
-                  Clear All
-                </AppText>
-              </TouchableOpacity>
-            </>
-          )}
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+        </>
+      )}
+    </ScrollView>
   );
 };

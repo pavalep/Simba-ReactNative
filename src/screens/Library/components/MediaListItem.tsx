@@ -1,8 +1,11 @@
-import React from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useCallback, useState} from 'react';
+import {View, StyleSheet} from 'react-native';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
+import {AppCard} from '../../../components/core/AppCard/AppCard';
+import {MediaContextMenu} from './MediaContextMenu';
+import {SvgIconName} from '../../../components/utility/SvgIcon';
 
 interface MediaListItemProps {
   id: string;
@@ -14,6 +17,12 @@ interface MediaListItemProps {
   selectionMode?: boolean;
   onPress: (id: string) => void;
   onLongPress?: (id: string) => void;
+  /** Optional custom context menu actions — defaults to Play + Add to Playlist + Add to Queue + Info */
+  contextMenuActions?: Array<{
+    label: string;
+    icon: SvgIconName;
+    onPress: () => void;
+  }>;
 }
 
 const formatDuration = (ms: number): string => {
@@ -36,65 +45,107 @@ const MediaListItem: React.FC<MediaListItemProps> = React.memo(
     selectionMode,
     onPress,
     onLongPress,
+    contextMenuActions,
   }) => {
     const {colors} = useTheme();
+    const [menuVisible, setMenuVisible] = useState(false);
 
     const showSelectionIndicator = selectionMode && isSelected;
 
+    const handleLongPress = useCallback(() => {
+      if (onLongPress) {
+        onLongPress(id);
+      } else {
+        setMenuVisible(true);
+      }
+    }, [id, onLongPress]);
+
+    const defaultActions = contextMenuActions ?? [
+      {
+        label: 'Play',
+        icon: 'play' as const,
+        onPress: () => onPress(id),
+      },
+      {
+        label: 'Add to Playlist',
+        icon: 'listMusic' as const,
+        onPress: () => {},
+      },
+      {
+        label: 'Add to Queue',
+        icon: 'list' as const,
+        onPress: () => {},
+      },
+      {
+        label: 'Info',
+        icon: 'headphones' as const,
+        onPress: () => {},
+      },
+    ];
+
     return (
-      <TouchableOpacity
-        style={[styles.container, {backgroundColor: colors.background.primary}]}
-        activeOpacity={0.7}
-        onPress={() => onPress(id)}
-        onLongPress={onLongPress ? () => onLongPress(id) : undefined}
-        delayLongPress={400}>
-        {showSelectionIndicator ? (
-          <View
-            style={[
-              styles.selectionCircle,
-              {
-                backgroundColor: colors.accent.gold,
-                borderColor: colors.accent.gold,
-              },
-            ]}
-          />
-        ) : (
-          <View
-            style={[
-              styles.thumbnail,
-              {backgroundColor: colors.accent.goldDim},
-            ]}>
+      <>
+        <AppCard
+          elevated
+          active={showSelectionIndicator}
+          onPress={() => onPress(id)}
+          onLongPress={handleLongPress}
+          style={styles.container}>
+          {showSelectionIndicator ? (
+            <View
+              style={[
+                styles.selectionCircle,
+                {
+                  backgroundColor: colors.accent.gold,
+                  borderColor: colors.accent.gold,
+                },
+              ]}
+            />
+          ) : (
+            <View
+              style={[
+                styles.thumbnail,
+                {backgroundColor: colors.accent.goldDim},
+              ]}>
+              <AppText
+                variant="body2"
+                style={[styles.thumbnailText, {color: colors.text.primary}]}>
+                {title.charAt(0).toUpperCase()}
+              </AppText>
+            </View>
+          )}
+          <View style={styles.content}>
             <AppText
               variant="body2"
-              style={[styles.thumbnailText, {color: colors.text.primary}]}>
-              {title.charAt(0).toUpperCase()}
+              color="primary"
+              numberOfLines={1}>
+              {title}
+            </AppText>
+            {artist ? (
+              <AppText
+                variant="caption"
+                color="secondary"
+                numberOfLines={1}
+                style={{marginTop: spacing.xs}}>
+                {artist}
+              </AppText>
+            ) : null}
+          </View>
+          <View style={styles.right}>
+            <AppText variant="caption" color="secondary">
+              {formatDuration(duration)}
             </AppText>
           </View>
-        )}
-        <View style={styles.content}>
-          <AppText
-            variant="body2"
-            numberOfLines={1}
-            style={{color: colors.text.primary}}>
-            {title}
-          </AppText>
-          {artist ? (
-            <AppText
-              variant="caption"
-              numberOfLines={1}
-              style={{color: colors.text.secondary, marginTop: spacing.xs}}>
-              {artist}
-            </AppText>
-          ) : null}
-        </View>
-        <View style={styles.right}>
-          <AppText
-            variant="caption"
-            style={{color: colors.text.secondary}}>
-            {formatDuration(duration)}
-          </AppText>
-        </View>
-      </TouchableOpacity>
+        </AppCard>
+
+        <MediaContextMenu
+          visible={menuVisible}
+          onClose={() => setMenuVisible(false)}
+          title={title}
+          subtitle={artist}
+          actions={defaultActions}
+        />
+      </>
     );
   },
 );
@@ -107,6 +158,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: ITEM_HEIGHT,
     paddingHorizontal: spacing.md,
+    marginBottom: spacing.xs,
   },
   thumbnail: {
     width: THUMBNAIL_SIZE,

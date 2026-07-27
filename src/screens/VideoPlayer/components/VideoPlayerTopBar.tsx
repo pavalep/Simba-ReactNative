@@ -12,6 +12,7 @@ export interface VideoPlayerTopBarProps {
   topInset: number;
   isLandscape: boolean;
   onToggleRotate: () => void;
+  onMorePress?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -22,6 +23,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
   topInset,
   isLandscape,
   onToggleRotate,
+  onMorePress,
 }) => {
   const {colors} = useTheme();
 
@@ -130,8 +132,13 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           </AppText>
         </View>
 
-        {/* Right: expand toggle */}
+        {/* Right: More + expand toggle */}
         <View style={styles.rightSection}>
+          {onMorePress && (
+            <TouchableOpacity style={styles.rotateBtn} onPress={onMorePress} accessibilityLabel="More options" accessibilityRole="button">
+              <AppText style={styles.rotateBtnIcon}>{'⋮'}</AppText>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.rotateBtn} onPress={onToggleRotate} accessibilityLabel="Toggle rotation" accessibilityRole="button">
             <AppText style={styles.rotateBtnIcon}>
               {isLandscape ? '⤢' : '⛶'}

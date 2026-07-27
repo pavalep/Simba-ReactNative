@@ -61,7 +61,7 @@ export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = (
         },
         centerPlayIcon: {
           fontSize: 28,
-          color: 'rgba(255,255,255,0.7)',
+          color: colors.text.primary,
         },
       }),
     [colors],

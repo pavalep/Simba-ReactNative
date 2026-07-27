@@ -1,9 +1,12 @@
 import React, {useMemo, useState, useCallback} from 'react';
 import {
   View,
+  ScrollView,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -27,10 +30,17 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
 
+  // ── Edge case states ──
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
   // Local UI state (placeholder — will come from Redux later)
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
-  const [duration] = useState(243); // placeholder 4:03
+  const [duration, setDuration] = useState(0);
+  const fileUri = route.params?.fileUri;
+  const fileTitle = route.params?.fileTitle;
 
   const positionPct = duration > 0 ? Math.min(position / duration, 1) : 0;
 
@@ -67,6 +77,23 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
     },
     [duration],
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      // Simulate refresh — add real data-fetching logic here later
+      await new Promise<void>(resolve => setTimeout(resolve, 1000));
+    } catch {
+      setError('Failed to load now playing.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setError(null);
+  }, []);
 
   const handleOpenFullPlayer = useCallback(() => {
     (navigation.navigate as any)('AudioPlayer', {
@@ -236,9 +263,38 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
           borderRadius: radius.sm,
           marginBottom: 16,
         },
+        centerContainer: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: spacing.lg,
+        },
+        retryButton: {
+          marginTop: spacing.md,
+          paddingVertical: 10,
+          paddingHorizontal: 24,
+          borderRadius: 10,
+          backgroundColor: colors.accent.goldDim,
+        },
       }),
     [colors, insets.top],
   );
+
+  const handleEmptyState = useCallback(() => {
+    if (!fileUri) {
+      return (
+        <View style={[styles.scrollContent, {justifyContent: 'center', alignItems: 'center'}]}>
+          <AppText variant="h3" color="tertiary" style={{marginBottom: 8}}>
+            No Track Playing
+          </AppText>
+          <AppText variant="body2" color="tertiary" style={{textAlign: 'center', paddingHorizontal: 32}}>
+            Open a file from the player or search to start listening.
+          </AppText>
+        </View>
+      );
+    }
+    return null;
+  }, [fileUri]);
 
   return (
     <View style={styles.root}>
@@ -253,110 +309,144 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
 
       <InternalHeader title="Now Playing" />
 
-      {/* Content */}
-      <View style={styles.scrollContent}>
-        {/* Album art placeholder */}
-        <View style={styles.artContainer}>
-          <AppText style={styles.artPlaceholder}>{'♫'}</AppText>
+      {isLoading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.accent.gold} />
         </View>
-
-        {/* Title */}
-        <AppText variant="h2" color="primary" style={styles.title}>
-          Unknown Track
-        </AppText>
-
-        {/* Artist / file info */}
-        <AppText variant="body2" color="secondary" style={styles.artist}>
-          Unknown Artist
-        </AppText>
-
-        {/* Seek bar */}
-        <TouchableOpacity
-          style={styles.seekRow}
-          activeOpacity={1}
-          onPress={handleSeek}>
-          <View style={styles.seekTrack} pointerEvents="none">
-            <View style={styles.seekTrackBg} />
-            <View
-              style={[
-                styles.seekTrackFill,
-                {width: `${positionPct * 100}%`},
-              ]}
-            />
-            <View
-              style={[
-                styles.seekThumb,
-                {left: `${positionPct * 100}%`},
-              ]}
-            />
-          </View>
-        </TouchableOpacity>
-
-        {/* Time labels */}
-        <View style={styles.timeRow}>
-          <AppText variant="caption" color="secondary">
-            {currentTime}
+      ) : error ? (
+        <View style={styles.centerContainer}>
+          <AppText
+            variant="body1"
+            color="error"
+            style={{textAlign: 'center', marginBottom: spacing.sm}}>
+            {error}
           </AppText>
-          <AppText variant="caption" color="secondary">
-            {totalTime}
-          </AppText>
-        </View>
-
-        {/* Transport controls */}
-        <View style={styles.transportRow}>
           <TouchableOpacity
-            style={styles.transportBtn}
-            onPress={handlePrev}
-            accessibilityLabel="Previous track"
-            accessibilityRole="button">
-            <AppText style={styles.transportIcon}>{'◀◀'}</AppText>
+            style={styles.retryButton}
+            onPress={handleRetry}
+            activeOpacity={0.7}>
+            <AppText variant="button" color="accent">
+              Retry
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      ) : fileUri ? (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+            />
+          }>
+          {/* Album art placeholder */}
+          <View style={styles.artContainer}>
+            <AppText style={styles.artPlaceholder}>{'♫'}</AppText>
+          </View>
+
+          {/* Title */}
+          <AppText variant="h2" color="primary" style={styles.title}>
+            {fileTitle || 'Unknown Track'}
+          </AppText>
+
+          {/* Artist / file info */}
+          <AppText variant="body2" color="secondary" style={styles.artist}>
+            Unknown Artist
+          </AppText>
+
+          {/* Seek bar */}
+          <TouchableOpacity
+            style={styles.seekRow}
+            activeOpacity={1}
+            onPress={handleSeek}>
+            <View style={styles.seekTrack} pointerEvents="none">
+              <View style={styles.seekTrackBg} />
+              <View
+                style={[
+                  styles.seekTrackFill,
+                  {width: `${positionPct * 100}%`},
+                ]}
+              />
+              <View
+                style={[
+                  styles.seekThumb,
+                  {left: `${positionPct * 100}%`},
+                ]}
+              />
+            </View>
           </TouchableOpacity>
 
+          {/* Time labels */}
+          <View style={styles.timeRow}>
+            <AppText variant="caption" color="secondary">
+              {currentTime}
+            </AppText>
+            <AppText variant="caption" color="secondary">
+              {totalTime}
+            </AppText>
+          </View>
+
+          {/* Transport controls */}
+          <View style={styles.transportRow}>
+            <TouchableOpacity
+              style={styles.transportBtn}
+              onPress={handlePrev}
+              accessibilityLabel="Previous track"
+              accessibilityRole="button">
+              <AppText style={styles.transportIcon}>{'◀◀'}</AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.playBtn}
+              onPress={handlePlayPause}
+              accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
+              accessibilityRole="button">
+              <AppText style={styles.playIcon}>
+                {isPlaying ? '⏸' : '▶'}
+              </AppText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.transportBtn}
+              onPress={handleNext}
+              accessibilityLabel="Next track"
+              accessibilityRole="button">
+              <AppText style={styles.transportIcon}>{'▶▶'}</AppText>
+            </TouchableOpacity>
+          </View>
+
+          {/* Full Player button */}
           <TouchableOpacity
-            style={styles.playBtn}
-            onPress={handlePlayPause}
-            accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
-            accessibilityRole="button">
-            <AppText style={styles.playIcon}>
-              {isPlaying ? '⏸' : '▶'}
+            style={[styles.fullPlayerBtn, {backgroundColor: colors.accent.goldDim}]}
+            onPress={handleOpenFullPlayer}
+            activeOpacity={0.7}>
+            <AppText variant="body2" color="accent">
+              Open Full Player
             </AppText>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.transportBtn}
-            onPress={handleNext}
-            accessibilityLabel="Next track"
-            accessibilityRole="button">
-            <AppText style={styles.transportIcon}>{'▶▶'}</AppText>
-          </TouchableOpacity>
-        </View>
-
-        {/* Full Player button */}
-        <TouchableOpacity
-          style={[styles.fullPlayerBtn, {backgroundColor: colors.accent.goldDim}]}
-          onPress={handleOpenFullPlayer}
-          activeOpacity={0.7}>
-          <AppText variant="body2" color="accent">
-            Open Full Player
-          </AppText>
-        </TouchableOpacity>
-
-        {/* Volume indicator */}
-        <View style={styles.volumeRow}>
-          <AppText style={styles.volumeIcon}>{'🔈'}</AppText>
-          <View style={styles.volumeTrack}>
-            <View
-              style={[
-                styles.volumeFill,
-                {width: '70%'},
-              ]}
-            />
+          {/* Volume indicator */}
+          <View style={styles.volumeRow}>
+            <AppText style={styles.volumeIcon}>{'🔈'}</AppText>
+            <View style={styles.volumeTrack}>
+              <View
+                style={[
+                  styles.volumeFill,
+                  {width: '70%'},
+                ]}
+              />
+            </View>
+            <AppText variant="caption" color="secondary" style={styles.volumeLabel}>
+              70%
+            </AppText>
           </View>
-          <AppText variant="caption" color="secondary" style={styles.volumeLabel}>
-            70%
-          </AppText>
-        </View>
-      </View>
+        </ScrollView>
+      ) : (
+        handleEmptyState()
+      )}
     </View>
   );
 };

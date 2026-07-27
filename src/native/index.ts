@@ -28,7 +28,7 @@
  * The type contract remains identical — swap only the import path.
  */
 
-export {default as MpvPlayer, default} from './player.api';
+export {default as MpvPlayer, default, ScreenBrightness} from './player.api';
 
 export type {Spec as MpvPlayerNativeSpec} from './NativeMpvPlayer';
 

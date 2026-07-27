@@ -192,7 +192,7 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
         overlay: {
           flex: 1,
           justifyContent: 'flex-end',
-          backgroundColor: 'rgba(0,0,0,0.65)',
+          backgroundColor: colors.background.overlay,
         },
         container: {
           maxHeight: '85%',
@@ -511,7 +511,7 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
                   <TouchableOpacity
                     style={styles.editSaveBtn}
                     onPress={handleSaveEdit}>
-                    <AppText variant="body2" style={{color: '#0A0A0C', fontWeight: '600'}}>
+                    <AppText variant="body2" style={{color: colors.text.inverse, fontWeight: '600'}}>
                       Save
                     </AppText>
                   </TouchableOpacity>

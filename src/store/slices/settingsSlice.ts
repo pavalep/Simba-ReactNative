@@ -30,6 +30,9 @@ interface SettingsState {
 
   // MPV advanced options (Phase 19)
   mpvOptions: MpvOption[];
+
+  // App lifecycle
+  hasLaunched: boolean;
 }
 
 const initialState: SettingsState = {
@@ -56,6 +59,9 @@ const initialState: SettingsState = {
 
   // MPV advanced options defaults
   mpvOptions: [],
+
+  // App lifecycle defaults
+  hasLaunched: false,
 };
 
 const settingsSlice = createSlice({
@@ -127,6 +133,12 @@ const settingsSlice = createSlice({
     setMpvOptions(state, action: PayloadAction<MpvOption[]>) {
       state.mpvOptions = action.payload;
     },
+
+    // ── App lifecycle ──
+    markLaunched(state) {
+      state.hasLaunched = true;
+    },
+
     resetToDefaults() {
       return initialState;
     },
@@ -156,6 +168,8 @@ export const {
   setLastScanTimestamp,
 
   setMpvOptions,
+
+  markLaunched,
 
   resetToDefaults,
 } = settingsSlice.actions;

@@ -2,6 +2,7 @@ import React, {useCallback, useMemo, useState} from 'react';
 import {
   View,
   Image,
+  Text,
   TextInput,
   TouchableOpacity,
   ScrollView,
@@ -9,6 +10,8 @@ import {
   SafeAreaView,
   useWindowDimensions,
   Platform,
+  ActivityIndicator,
+
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
@@ -19,6 +22,7 @@ import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeade
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {useAppSelector} from '../../store';
+import {useSearch, SearchResultItem as SearchResultItemT} from '../../hooks/useSearch';
 import {SearchScreenProps} from '../../navigation/types';
 import {radius, spacing} from '../../theme/tokens';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
@@ -31,28 +35,6 @@ const GRID_GAP = 12;
 type FilterMode = 'all' | 'videos' | 'audio';
 type SortMode = 'relevance' | 'date' | 'name';
 
-/** Shape shared by all search result items for rendering in the grid. */
-interface SearchResultItem {
-  id: string;
-  title: string;
-  subtitle?: string;
-  /** Used for grouping sections */
-  group: 'recent' | 'videos' | 'audio';
-  fileUri?: string;
-  thumbnailPath?: string;
-  position?: number;
-  duration?: number;
-  lastPlayedAt?: string;
-  /** Score for relevance sorting */
-  relevanceScore: number;
-}
-
-/** Extract last segment of a URI/path for display */
-const displayNameFromPath = (path: string): string => {
-  const segments = path.replace(/\/$/, '').split('/');
-  return segments[segments.length - 1] || path;
-};
-
 export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const {theme, colors, spacing: s} = useTheme();
   const isDark = theme === 'dark';
@@ -63,10 +45,19 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const videoFolders = useAppSelector(state => state.settings.videoFolders);
   const audioFolders = useAppSelector(state => state.settings.audioFolders);
 
-  const [searchText, setSearchText] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterMode>('all');
   const [activeSort, setActiveSort] = useState<SortMode>('relevance');
+
+  // ── UseSearch hook ──
+  const {
+    searchText,
+    setSearchText,
+    debouncedQuery,
+    allResults,
+    isSearching,
+  } = useSearch(recentFiles, playlist, videoFolders, audioFolders);
 
   const tileWidth = Math.floor(
     (screenWidth - 20 * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS,
@@ -84,86 +75,126 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
     {key: 'name', label: 'Name'},
   ];
 
-  // ── Search across all sources ──
-  const allResults = useMemo((): SearchResultItem[] => {
-    const query = searchText.trim().toLowerCase();
-    if (!query) return [];
+  // ════════════════════════════════════════════════════════
+  //  22.4 — Gold Highlight: highlights matched keywords
+  // ════════════════════════════════════════════════════════
 
-    const items: SearchResultItem[] = [];
-
-    // 1. Recent files
-    recentFiles.forEach(entry => {
-      if (entry.title.toLowerCase().includes(query)) {
-        items.push({
-          id: `recent-${entry.fileUri}`,
-          title: entry.title,
-          group: 'recent',
-          fileUri: entry.fileUri,
-          thumbnailPath: entry.thumbnailPath,
-          position: entry.position,
-          duration: entry.duration,
-          lastPlayedAt: entry.lastPlayedAt,
-          relevanceScore: entry.title.toLowerCase().indexOf(query) === 0 ? 100 : 50,
-        });
+  /** Split text into highlighted/non-highlighted parts for the matched query. */
+  const renderHighlightedText = useCallback(
+    (text: string, style?: any) => {
+      const q = debouncedQuery;
+      if (!q || !text) {
+        return (
+          <AppText variant="body2" color="primary" numberOfLines={1} style={style}>
+            {text}
+          </AppText>
+        );
       }
-    });
 
-    // 2. Playlist entries
-    playlist.forEach(entry => {
-      if (entry.title.toLowerCase().includes(query)) {
-        const isAudio = entry.uri.match(/\.(mp3|flac|wav|aac|ogg|wma|m4a)$/i);
-        items.push({
-          id: `playlist-${entry.uri}`,
-          title: entry.title,
-          group: isAudio ? 'audio' : 'videos',
-          fileUri: entry.uri,
-          duration: entry.duration,
-          relevanceScore: entry.title.toLowerCase().indexOf(query) === 0 ? 90 : 45,
-        });
+      const lowerText = text.toLowerCase();
+      const lowerQuery = q.toLowerCase();
+      const parts: {t: string; hl: boolean}[] = [];
+      let lastIdx = 0;
+      let idx = lowerText.indexOf(lowerQuery, lastIdx);
+      while (idx !== -1) {
+        if (idx > lastIdx) {
+          parts.push({t: text.slice(lastIdx, idx), hl: false});
+        }
+        parts.push({t: text.slice(idx, idx + q.length), hl: true});
+        lastIdx = idx + q.length;
+        idx = lowerText.indexOf(lowerQuery, lastIdx);
       }
-    });
+      if (lastIdx < text.length) {
+        parts.push({t: text.slice(lastIdx), hl: false});
+      }
 
-    // 3. Linked folder paths
-    videoFolders.forEach(folder => {
-      const name = displayNameFromPath(folder);
-      if (name.toLowerCase().includes(query)) {
-        items.push({
-          id: `video-folder-${folder}`,
-          title: name,
-          subtitle: folder,
-          group: 'videos',
-          relevanceScore: 30,
-        });
+      if (parts.length === 0) {
+        return (
+          <AppText variant="body2" color="primary" numberOfLines={1} style={style}>
+            {text}
+          </AppText>
+        );
       }
-    });
-    audioFolders.forEach(folder => {
-      const name = displayNameFromPath(folder);
-      if (name.toLowerCase().includes(query)) {
-        items.push({
-          id: `audio-folder-${folder}`,
-          title: name,
-          subtitle: folder,
-          group: 'audio',
-          relevanceScore: 30,
-        });
-      }
-    });
 
-    return items;
-  }, [searchText, recentFiles, playlist, videoFolders, audioFolders]);
+      return (
+        <Text
+          numberOfLines={1}
+          style={[{color: colors.text.primary, fontSize: 14}, style]}>
+          {parts.map((part, i) => (
+            <Text
+              key={i}
+              style={
+                part.hl
+                  ? {color: colors.accent.gold, fontWeight: '600'}
+                  : {color: colors.text.primary}
+              }>
+              {part.t}
+            </Text>
+          ))}
+        </Text>
+      );
+    },
+    [debouncedQuery, colors],
+  );
+
+  /** Highlighted version of subtitle (tertiary color with gold for matches). */
+  const renderHighlightedSubtitle = useCallback(
+    (text?: string) => {
+      const q = debouncedQuery;
+      if (!q || !text) {
+        return text ? (
+          <AppText variant="caption" color="tertiary" numberOfLines={1}>
+            {text}
+          </AppText>
+        ) : null;
+      }
+
+      const lowerText = text.toLowerCase();
+      const lowerQuery = q.toLowerCase();
+      const parts: {t: string; hl: boolean}[] = [];
+      let lastIdx = 0;
+      let idx = lowerText.indexOf(lowerQuery, lastIdx);
+      while (idx !== -1) {
+        if (idx > lastIdx) parts.push({t: text.slice(lastIdx, idx), hl: false});
+        parts.push({t: text.slice(idx, idx + q.length), hl: true});
+        lastIdx = idx + q.length;
+        idx = lowerText.indexOf(lowerQuery, lastIdx);
+      }
+      if (lastIdx < text.length) parts.push({t: text.slice(lastIdx), hl: false});
+
+      return (
+        <Text
+          numberOfLines={1}
+          style={{color: colors.text.tertiary, fontSize: 12}}>
+          {parts.map((part, i) => (
+            <Text
+              key={i}
+              style={
+                part.hl
+                  ? {color: colors.accent.gold, fontWeight: '500'}
+                  : {color: colors.text.tertiary}
+              }>
+              {part.t}
+            </Text>
+          ))}
+        </Text>
+      );
+    },
+    [debouncedQuery, colors],
+  );
 
   // ── Filter & sort ──
-  const filteredResults = useMemo((): SearchResultItem[] => {
+  const filteredResults = useMemo((): SearchResultItemT[] => {
     let results = allResults;
 
-    // Apply filter
     if (activeFilter === 'videos') {
-      results = results.filter(r => r.group === 'videos' || r.group === 'recent');
+      results = results.filter(
+        r => r.group === 'videos' || r.group === 'recent',
+      );
     } else if (activeFilter === 'audio') {
       results = results.filter(r => r.group === 'audio');
     }
 
-    // Apply sort
     const sorted = [...results];
     switch (activeSort) {
       case 'relevance':
@@ -171,7 +202,6 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         break;
       case 'date':
         sorted.sort((a, b) => {
-          // Items without dates sort last
           const aTime = a.lastPlayedAt ? new Date(a.lastPlayedAt).getTime() : 0;
           const bTime = b.lastPlayedAt ? new Date(b.lastPlayedAt).getTime() : 0;
           return bTime - aTime;
@@ -187,20 +217,36 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
 
   // ── Group results for display ──
   const groupedResults = useMemo(() => {
-    const groups: {key: string; label: string; items: SearchResultItem[]}[] = [];
+    const groups: {key: string; label: string; items: SearchResultItemT[]}[] = [];
 
     const recent = filteredResults.filter(r => r.group === 'recent');
     const videos = filteredResults.filter(r => r.group === 'videos');
     const audio = filteredResults.filter(r => r.group === 'audio');
+    const artistsGroup = filteredResults.filter(r => r.group === 'artists');
+    const albumsGroup = filteredResults.filter(r => r.group === 'albums');
+    const playlistsGroup = filteredResults.filter(r => r.group === 'playlists');
+    const folders = filteredResults.filter(r => r.group === 'folders');
 
     if (recent.length > 0) {
       groups.push({key: 'recent', label: 'Recent', items: recent});
+    }
+    if (artistsGroup.length > 0) {
+      groups.push({key: 'artists', label: 'Artists', items: artistsGroup});
+    }
+    if (albumsGroup.length > 0) {
+      groups.push({key: 'albums', label: 'Albums', items: albumsGroup});
+    }
+    if (playlistsGroup.length > 0) {
+      groups.push({key: 'playlists', label: 'Playlists', items: playlistsGroup});
     }
     if (videos.length > 0) {
       groups.push({key: 'videos', label: 'Videos', items: videos});
     }
     if (audio.length > 0) {
       groups.push({key: 'audio', label: 'Audio', items: audio});
+    }
+    if (folders.length > 0) {
+      groups.push({key: 'folders', label: 'Folders', items: folders});
     }
 
     return groups;
@@ -337,7 +383,8 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
           paddingHorizontal: 8,
           paddingVertical: 6,
         },
-        folderResultRow: {
+        // ── List row styles ──
+        listResultRow: {
           flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 10,
@@ -346,14 +393,28 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
           borderWidth: 0.5,
           gap: 10,
         },
-        folderIcon: {
+        listIcon: {
           width: 24,
           height: 24,
           resizeMode: 'contain',
           opacity: 0.5,
         },
-        folderTextContainer: {
+        listTextContainer: {
           flex: 1,
+        },
+        centerContainer: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: spacing.lg,
+          minHeight: 200,
+        },
+        retryButton: {
+          marginTop: spacing.md,
+          paddingVertical: 10,
+          paddingHorizontal: 24,
+          borderRadius: 10,
+          backgroundColor: colors.accent.goldDim,
         },
       }),
     [s.md, colors],
@@ -362,11 +423,14 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   // ── Handlers ──
   const handleClearSearch = useCallback(() => {
     setSearchText('');
-  }, []);
+  }, [setSearchText]);
 
-  const handleChipTap = useCallback((term: string) => {
-    setSearchText(term);
-  }, []);
+  const handleChipTap = useCallback(
+    (term: string) => {
+      setSearchText(term);
+    },
+    [setSearchText],
+  );
 
   const handleClearRecent = useCallback(() => {
     setRecentSearches([]);
@@ -382,6 +446,10 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
     [navigation],
   );
 
+  const handleRetry = useCallback(() => {
+    setError(null);
+  }, []);
+
   const handleSubmitSearch = useCallback(() => {
     const trimmed = searchText.trim();
     if (!trimmed) return;
@@ -390,6 +458,163 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       return [trimmed, ...filtered].slice(0, 10);
     });
   }, [searchText]);
+
+  // ── Render item tile (with gold highlight) ──
+  const renderResultTile = useCallback(
+    (item: SearchResultItemT) => {
+      if (item.fileUri) {
+        const percent =
+          item.duration && item.duration > 0
+            ? Math.round(((item.position ?? 0) / item.duration) * 100)
+            : 0;
+        return (
+          <TouchableOpacity
+            key={item.id}
+            activeOpacity={0.75}
+            onPress={() => handlePlayFile(item.fileUri!, item.title)}
+            style={[
+              styles.resultTile,
+              {
+                width: tileWidth,
+                backgroundColor: colors.background.elevated,
+                borderColor: colors.border.subtle,
+              },
+            ]}>
+            <View
+              style={[
+                styles.resultThumb,
+                {backgroundColor: colors.accent.goldDim},
+              ]}>
+              {item.thumbnailPath ? (
+                <Image
+                  source={{
+                    uri:
+                      'file://' +
+                      item.thumbnailPath +
+                      '?t=' +
+                      encodeURIComponent(item.lastPlayedAt ?? ''),
+                  }}
+                  style={styles.resultThumbImg}
+                />
+              ) : (
+                <SvgIcon
+                  name="music"
+                  size={28}
+                  color={colors.text.tertiary}
+                  style={styles.resultThumbPlaceholder}
+                />
+              )}
+              <View
+                style={[
+                  styles.resultProgressTrack,
+                  {backgroundColor: colors.text.tertiary},
+                ]}>
+                <View
+                  style={[
+                    styles.resultProgressFill,
+                    {
+                      width: `${percent}%`,
+                      backgroundColor: colors.accent.gold,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+            <View style={styles.resultTitle}>
+              {renderHighlightedText(item.title, {fontSize: 12})}
+            </View>
+          </TouchableOpacity>
+        );
+      }
+
+      return (
+        <TouchableOpacity
+          key={item.id}
+          activeOpacity={0.75}
+          onPress={() => handlePlayFile(item.fileUri!, item.title)}
+          style={[
+            styles.resultTile,
+            {
+              width: tileWidth,
+              backgroundColor: colors.background.elevated,
+              borderColor: colors.border.subtle,
+            },
+          ]}>
+          <View
+            style={[
+              styles.resultThumb,
+              {backgroundColor: colors.accent.goldDim},
+            ]}>
+            <SvgIcon
+              name="music"
+              size={28}
+              color={colors.text.tertiary}
+              style={styles.resultThumbPlaceholder}
+            />
+          </View>
+          <View style={styles.resultTitle}>
+            {renderHighlightedText(item.title, {fontSize: 12})}
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [tileWidth, colors, styles, handlePlayFile, renderHighlightedText],
+  );
+
+  // ── Render list row (with gold highlight) ──
+  const renderListRow = useCallback(
+    (item: SearchResultItemT) => {
+      const onPress = () => {
+        if (item.navigateTo) {
+          const nt = item.navigateTo;
+          if (nt.route) {
+            (navigation.navigate as any)(nt.route, nt.params);
+          } else if (nt.screen) {
+            (navigation.navigate as any)(nt.screen, nt.params);
+          }
+        } else if (item.fileUri) {
+          handlePlayFile(item.fileUri, item.title);
+        }
+      };
+
+      let iconName: React.ComponentProps<typeof SvgIcon>['name'] = 'folder';
+      if (item.group === 'artists') iconName = 'headphones';
+      else if (item.group === 'albums') iconName = 'folder';
+      else if (item.group === 'playlists') iconName = 'listMusic';
+      else if (item.group === 'folders') iconName = 'folderFill';
+
+      return (
+        <TouchableOpacity
+          key={item.id}
+          activeOpacity={0.75}
+          onPress={onPress}
+          style={[
+            styles.listResultRow,
+            {
+              backgroundColor: colors.background.elevated,
+              borderColor: colors.border.subtle,
+            },
+          ]}>
+          <SvgIcon
+            name={iconName}
+            size={20}
+            color={colors.text.secondary}
+            style={styles.listIcon}
+          />
+          <View style={styles.listTextContainer}>
+            {renderHighlightedText(item.title)}
+            {renderHighlightedSubtitle(item.subtitle)}
+          </View>
+          <SvgIcon
+            name="chevronRight"
+            size={16}
+            color={colors.text.tertiary}
+          />
+        </TouchableOpacity>
+      );
+    },
+    [colors, styles, navigation, handlePlayFile, renderHighlightedText, renderHighlightedSubtitle],
+  );
 
   const hasResults = groupedResults.length > 0;
   const showRecentSection = searchText.length === 0;
@@ -403,8 +628,8 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       <LinearGradient
         colors={
           isDark
-            ? [colors.background.primary, '#0B0F13']
-            : ['#F7F7F7', colors.background.primary]
+            ? [colors.background.primary, colors.background.elevated]
+            : [colors.background.elevated, colors.background.primary]
         }
         style={StyleSheet.absoluteFill}
       />
@@ -426,6 +651,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
         <InternalHeader title="Search" />
+
         {/* ── SearchBar ── */}
         <View
           style={[
@@ -435,16 +661,15 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
               borderColor: colors.border.subtle,
             },
           ]}>
-          {/* Search icon (left of input) */}
           <SvgIcon
-            name="bell"
+            name="search"
             size={20}
             color={colors.text.secondary}
             style={styles.searchIcon}
           />
           <TextInput
             style={[styles.searchInput, {color: colors.text.primary}]}
-            placeholder="Search your media…"
+            placeholder="Search tracks, artists, albums, folders…"
             placeholderTextColor={colors.text.tertiary}
             autoFocus
             value={searchText}
@@ -459,9 +684,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
               style={styles.clearButton}
               accessibilityLabel="Clear search"
               accessibilityRole="button">
-              <AppText variant="body1" color="secondary">
-                ✕
-              </AppText>
+              <SvgIcon name="close" size={18} color={colors.text.secondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -499,8 +722,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
             ) : (
               <View style={styles.hintContainer}>
                 <AppText variant="body2" color="tertiary">
-                  Search for recently played media, playlist entries, or linked
-                  folders
+                  Search tracks, artists, albums, playlists, and linked folders
                 </AppText>
               </View>
             )}
@@ -510,7 +732,6 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         {/* ── Filters & Sort (shown when searching) ── */}
         {showResultsSection && (
           <View style={{marginTop: s.sm}}>
-            {/* Filter chips */}
             <View style={styles.filterRow}>
               <View style={styles.chipsContainer}>
                 {FILTERS.map(f => {
@@ -534,7 +755,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
                       ]}>
                       <AppText
                         variant="caption"
-                        color={isActive ? '#0A0A0C' : 'secondary'}
+                        color={isActive ? 'primary' : 'secondary'}
                         style={{fontWeight: isActive ? '600' : '400'}}>
                         {f.label}
                       </AppText>
@@ -544,7 +765,6 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
               </View>
             </View>
 
-            {/* Sort row */}
             <View style={styles.sortRow}>
               <AppText
                 variant="caption"
@@ -577,205 +797,71 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
           </View>
         )}
 
+        {/* ── Loading ── */}
+        {showResultsSection && isSearching && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.accent.gold} />
+          </View>
+        )}
+
+        {/* ── Error ── */}
+        {showResultsSection && error && !isSearching && (
+          <View style={styles.centerContainer}>
+            <AppText
+              variant="body1"
+              color="error"
+              style={{textAlign: 'center', marginBottom: spacing.sm}}>
+              {error}
+            </AppText>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={handleRetry}
+              activeOpacity={0.7}>
+              <AppText variant="button" color="accent">
+                Retry
+              </AppText>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── No Results ── */}
-        {showResultsSection && !hasResults && (
+        {showResultsSection && !isSearching && !error && !hasResults && (
           <View style={{marginTop: s.lg}}>
             <EmptyState
               icon="music"
               title="No results found"
-              description={`No media matches "${searchText}"`}
+              description={`No media matches "${debouncedQuery}"`}
             />
           </View>
         )}
 
         {/* ── Grouped Results ── */}
         {showResultsSection &&
+          !isSearching &&
+          !error &&
           hasResults &&
-          groupedResults.map(group => (
-            <View key={group.key} style={styles.sectionGap}>
-              <SectionHeader label={group.label} />
+          groupedResults.map(group => {
+            const isListGroup =
+              group.key === 'artists' ||
+              group.key === 'albums' ||
+              group.key === 'playlists' ||
+              group.key === 'folders';
+            return (
+              <View key={group.key} style={styles.sectionGap}>
+                <SectionHeader label={group.label} />
+                {isListGroup
+                  ? group.items.map(item => renderListRow(item))
+                  : (
+                  <View style={styles.resultsGrid}>
+                    {group.items.map(item => renderResultTile(item))}
+                  </View>
+                  )}
+              </View>
+            );
+          })}
 
-              {/* Total count */}
-              <AppText
-                variant="caption"
-                color="secondary"
-                style={styles.resultsCount}>
-                {group.items.length}{' '}
-                {group.items.length === 1 ? 'result' : 'results'}
-              </AppText>
-
-              {/* Grid for file results */}
-              {group.key === 'recent' && (
-                <View style={styles.resultsGrid}>
-                  {group.items.map(item => {
-                    const percent =
-                      item.duration && item.duration > 0
-                        ? Math.round(
-                            ((item.position ?? 0) / item.duration) * 100,
-                          )
-                        : 0;
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        activeOpacity={0.75}
-                        onPress={() =>
-                          item.fileUri &&
-                          handlePlayFile(item.fileUri, item.title)
-                        }
-                        style={[
-                          styles.resultTile,
-                          {
-                            width: tileWidth,
-                            backgroundColor: colors.background.elevated,
-                            borderColor: colors.border.subtle,
-                          },
-                        ]}>
-                        <View
-                          style={[
-                            styles.resultThumb,
-                            {backgroundColor: colors.accent.goldDim},
-                          ]}>
-                          {item.thumbnailPath ? (
-                            <Image
-                              source={{
-                                uri:
-                                  'file://' +
-                                  item.thumbnailPath +
-                                  '?t=' +
-                                  encodeURIComponent(
-                                    item.lastPlayedAt ?? '',
-                                  ),
-                              }}
-                              style={styles.resultThumbImg}
-                            />
-                          ) : (
-                          <SvgIcon
-                            name="music"
-                            size={28}
-                            color={colors.text.tertiary}
-                            style={styles.resultThumbPlaceholder}
-                          />
-                        )}
-                          <View
-                            style={[
-                              styles.resultProgressTrack,
-                              {backgroundColor: colors.text.tertiary},
-                            ]}>
-                            <View
-                              style={[
-                                styles.resultProgressFill,
-                                {
-                                  width: `${percent}%`,
-                                  backgroundColor: colors.accent.gold,
-                                },
-                              ]}
-                            />
-                          </View>
-                        </View>
-                        <AppText
-                          variant="caption"
-                          color="primary"
-                          numberOfLines={1}
-                          style={styles.resultTitle}>
-                          {item.title}
-                        </AppText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-
-              {/* Grid for videos (from playlist) */}
-              {(group.key === 'videos' || group.key === 'audio') && (
-                <View style={styles.resultsGrid}>
-                  {group.items.map(item => {
-                    // Folder items render as rows
-                    if (!item.fileUri) {
-                      return (
-                        <TouchableOpacity
-                          key={item.id}
-                          activeOpacity={0.75}
-                          style={[
-                            styles.folderResultRow,
-                            {
-                              width: '100%',
-                              backgroundColor: colors.background.elevated,
-                              borderColor: colors.border.subtle,
-                            },
-                          ]}>
-                          <SvgIcon
-                            name="folder"
-                            size={20}
-                            color={colors.text.secondary}
-                            style={styles.folderIcon}
-                          />
-                          <View style={styles.folderTextContainer}>
-                            <AppText
-                              variant="body2"
-                              color="primary"
-                              numberOfLines={1}>
-                              {item.title}
-                            </AppText>
-                            {item.subtitle && (
-                              <AppText
-                                variant="caption"
-                                color="tertiary"
-                                numberOfLines={1}>
-                                {item.subtitle}
-                              </AppText>
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    }
-
-                    // Playlist entries with media info
-                    return (
-                      <TouchableOpacity
-                        key={item.id}
-                        activeOpacity={0.75}
-                        onPress={() =>
-                          item.fileUri &&
-                          handlePlayFile(item.fileUri, item.title)
-                        }
-                        style={[
-                          styles.resultTile,
-                          {
-                            width: tileWidth,
-                            backgroundColor: colors.background.elevated,
-                            borderColor: colors.border.subtle,
-                          },
-                        ]}>
-                        <View
-                          style={[
-                            styles.resultThumb,
-                            {backgroundColor: colors.accent.goldDim},
-                          ]}>
-                          <SvgIcon
-                            name="music"
-                            size={28}
-                            color={colors.text.tertiary}
-                            style={styles.resultThumbPlaceholder}
-                          />
-                        </View>
-                        <AppText
-                          variant="caption"
-                          color="primary"
-                          numberOfLines={1}
-                          style={styles.resultTitle}>
-                          {item.title}
-                        </AppText>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-          ))}
-
-        {/* ── BottomSpacer (xxxl) ── */}
         <View style={{height: spacing.xxxl}} />
       </ScrollView>
     </SafeAreaView>
   );
-};
+}

@@ -3,9 +3,11 @@ import {Text, TextProps} from 'react-native';
 import {useTheme, type ThemeContextValue} from '../../../theme';
 
 export type AppTextVariant =
-  // New Atlas variants
+  // New v3 Atlas variants
+  | 'display'
   | 'h1' | 'h2' | 'h3'
-  | 'body1' | 'body2'
+  | 'body1' | 'body2' | 'bodySmall'
+  | 'button' | 'tab'
   | 'caption' | 'overline'
   | 'mono'
   // Legacy aliases (migrate away)
@@ -21,11 +23,15 @@ interface AppTextProps extends TextProps {
 }
 
 const variantMap: Record<AppTextVariant, keyof ThemeContextValue['typography']> = {
+  display: 'display',
   h1: 'h1',
   h2: 'h2',
   h3: 'h3',
   body1: 'body1',
   body2: 'body2',
+  bodySmall: 'bodySmall',
+  button: 'button',
+  tab: 'tab',
   caption: 'caption',
   overline: 'overline',
   mono: 'mono',

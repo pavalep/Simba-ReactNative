@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ring shape for the indeterminate loading spinner around the logo -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="ring"
+    android:useLevel="false"
+    android:innerRadiusRatio="3.2"
+    android:thicknessRatio="28">
+    <gradient
+        android:startColor="@android:color/transparent"
+        android:endColor="#C9A84C"
+        android:type="sweep"
+        android:useLevel="false" />
+</shape>

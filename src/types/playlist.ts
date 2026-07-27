@@ -11,6 +11,8 @@ export interface PlaylistItem {
   album?: string;
   thumbnailPath?: string;
   addedAt: string;
+  /** New in Phase 22: tracks whether item is audio or video for mixed playlist display */
+  mediaType?: 'audio' | 'video';
 }
 
 export interface Playlist {

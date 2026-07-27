@@ -13,6 +13,7 @@ export interface ColorTokens {
     elevated: string;
     floating: string;
     overlay: string;
+    glass: string;
   };
   border: {
     subtle: string;
@@ -22,6 +23,7 @@ export interface ColorTokens {
     primary: string;
     secondary: string;
     tertiary: string;
+    inverse: string;
   };
   accent: {
     gold: string;
@@ -41,6 +43,7 @@ export const darkColors: ColorTokens = {
     elevated: '#141416',
     floating: 'rgba(0,0,0,0.55)',
     overlay: 'rgba(10,10,12,0.85)',
+    glass: 'rgba(20,20,22,0.65)',
   },
   border: {
     subtle: 'rgba(255,255,255,0.06)',
@@ -50,6 +53,7 @@ export const darkColors: ColorTokens = {
     primary: '#EDEDED',
     secondary: 'rgba(237,237,237,0.55)',
     tertiary: 'rgba(237,237,237,0.30)',
+    inverse: '#0A0A0C',
   },
   accent: {
     gold: '#C9A84C',
@@ -69,6 +73,7 @@ export const lightColors: ColorTokens = {
     elevated: '#FFFFFF',
     floating: 'rgba(245,240,232,0.90)',
     overlay: 'rgba(245,240,232,0.88)',
+    glass: 'rgba(255,255,255,0.70)',
   },
   border: {
     subtle: 'rgba(0,0,0,0.06)',
@@ -78,6 +83,7 @@ export const lightColors: ColorTokens = {
     primary: '#1A1A1C',
     secondary: 'rgba(26,26,28,0.55)',
     tertiary: 'rgba(26,26,28,0.30)',
+    inverse: '#1A1A1C',
   },
   accent: {
     gold: '#B8922E',
@@ -94,24 +100,32 @@ export const lightColors: ColorTokens = {
 // ─── Typography Tokens ────────────────────────────────────
 
 export interface TypographyTokens {
+  display: TextStyle;
   h1: TextStyle;
   h2: TextStyle;
   h3: TextStyle;
   body1: TextStyle;
   body2: TextStyle;
+  bodySmall: TextStyle;
   caption: TextStyle;
   overline: TextStyle;
+  button: TextStyle;
+  tab: TextStyle;
   mono: TextStyle;
 }
 
 export const typography: TypographyTokens = {
+  display: {fontSize: 36, fontWeight: '800', lineHeight: 44},
   h1: {fontSize: 32, fontWeight: '700', lineHeight: 40},
   h2: {fontSize: 24, fontWeight: '700', lineHeight: 32},
   h3: {fontSize: 20, fontWeight: '600', lineHeight: 28},
   body1: {fontSize: 17, fontWeight: '400', lineHeight: 24},
   body2: {fontSize: 15, fontWeight: '400', lineHeight: 22},
+  bodySmall: {fontSize: 14, fontWeight: '400', lineHeight: 20},
   caption: {fontSize: 13, fontWeight: '400', lineHeight: 18},
   overline: {fontSize: 11, fontWeight: '500', lineHeight: 16, letterSpacing: 0.5},
+  button: {fontSize: 15, fontWeight: '600', lineHeight: 22, letterSpacing: 0.3},
+  tab: {fontSize: 13, fontWeight: '500', lineHeight: 18, letterSpacing: 0.2},
   mono: {fontSize: 14, fontWeight: '400', lineHeight: 20, fontFamily: 'monospace'},
 };
 
@@ -144,14 +158,16 @@ export interface RadiusTokens {
   sm: number;
   md: number;
   lg: number;
+  full: number;
   pill: number;
 }
 
 export const radius: RadiusTokens = {
   none: 0,
-  sm: 6,
+  sm: 8,
   md: 12,
   lg: 16,
+  full: 9999,
   pill: 9999,
 };
 

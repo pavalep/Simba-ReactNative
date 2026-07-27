@@ -223,7 +223,6 @@ export const MiniPlayer: React.FC = () => {
         {
           backgroundColor: colors.background.elevated,
           borderColor: colors.border.emphasis,
-          shadowColor: '#000',
           ...shadows.md,
           transform: [{translateY}],
           opacity: animOpacity,

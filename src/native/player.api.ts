@@ -345,4 +345,25 @@ export const MpvPlayer = {
   },
 };
 
+// ── Screen Brightness ──
+// Controls Android Window screen brightness via MpvBridgeModule.
+export const ScreenBrightness = {
+  setBrightness(value: number): void {
+    if (!NativeModules.MpvPlayerModule) return;
+    try {
+      NativeModules.MpvPlayerModule.setScreenBrightness(value);
+    } catch {
+      // not supported
+    }
+  },
+  getBrightness(): number {
+    if (!NativeModules.MpvPlayerModule) return 1.0;
+    try {
+      return NativeModules.MpvPlayerModule.getScreenBrightness();
+    } catch {
+      return 1.0;
+    }
+  },
+};
+
 export default MpvPlayer;

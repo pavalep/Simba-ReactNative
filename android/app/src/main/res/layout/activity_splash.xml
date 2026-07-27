@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash Screen Layout — Google Maps / Swiggy-style animated splash
+  Dark charcoal background with centered lion logo,
+  gold radial glow behind logo, and indeterminate loading ring.
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0A0C">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <!-- Logo area: glow + lion + ring stacked -->
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+            <!-- Gold radial glow behind the logo (animated alpha) -->
+            <ImageView
+                android:id="@+id/splash_glow"
+                android:layout_width="220dp"
+                android:layout_height="220dp"
+                android:layout_gravity="center"
+                android:src="@drawable/splash_glow_radial"
+                android:alpha="0.4" />
+
+            <!-- Lion logo — starts scaled down, animated in activity -->
+            <ImageView
+                android:id="@+id/splash_logo"
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_splash_logo"
+                android:scaleType="centerInside"
+                android:alpha="0"
+                android:scaleX="0.85"
+                android:scaleY="0.85" />
+
+            <!-- Indeterminate loading ring around the logo -->
+            <ImageView
+                android:id="@+id/splash_loading_ring"
+                android:layout_width="130dp"
+                android:layout_height="130dp"
+                android:layout_gravity="center"
+                android:src="@drawable/splash_loading_ring"
+                android:alpha="0" />
+        </FrameLayout>
+
+        <!-- App name subtitle — fades in after logo -->
+        <TextView
+            android:id="@+id/splash_subtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Simba Player"
+            android:textColor="#C9A84C"
+            android:textSize="14sp"
+            android:alpha="0"
+            android:letterSpacing="0.15"
+            android:layout_marginTop="24dp" />
+
+    </LinearLayout>
+
+</FrameLayout>

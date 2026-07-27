@@ -4,7 +4,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  SafeAreaView,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -44,7 +43,6 @@ export interface VideoPlayerEqualizerPanelProps {
   onToggle: () => void;
   onApplyPreset: (name: string) => void;
   onReset: () => void;
-  onClose: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -56,55 +54,12 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
   onToggle,
   onApplyPreset,
   onReset,
-  onClose,
 }) => {
   const {colors} = useTheme();
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        overlay: {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: colors.background.overlay,
-          zIndex: 50,
-          justifyContent: 'flex-end',
-        },
-        panel: {
-          backgroundColor: colors.background.elevated,
-          borderTopLeftRadius: radius.lg,
-          borderTopRightRadius: radius.lg,
-          paddingBottom: spacing.xxl,
-          maxHeight: '80%',
-        },
-        handleRow: {
-          alignItems: 'center',
-          paddingTop: spacing.sm,
-          paddingBottom: spacing.xs,
-        },
-        handle: {
-          width: 16,
-          height: 4,
-          borderRadius: 2,
-          backgroundColor: colors.border.emphasis,
-        },
-        header: {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingHorizontal: spacing.lg,
-          paddingVertical: spacing.md,
-        },
-        closeBtn: {
-          width: 32,
-          height: 32,
-          borderRadius: 16,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
         scrollContent: {
           paddingHorizontal: spacing.lg,
         },
@@ -341,40 +296,14 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
   );
 
   return (
-    <SafeAreaView style={styles.overlay}>
-      <TouchableOpacity
-        style={StyleSheet.absoluteFill}
-        activeOpacity={1}
-        onPress={onClose}
-      />
-      <View style={styles.panel}>
-        {/* Handle bar */}
-        <View style={styles.handleRow}>
-          <View style={styles.handle} />
-        </View>
-
-        {/* Header */}
-        <View style={styles.header}>
-          <AppText variant="h3" color="primary">
-            Equalizer
-          </AppText>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityLabel="Close panel" accessibilityRole="button">
-            <AppText variant="body1" color="secondary">
-              ✕
-            </AppText>
-          </TouchableOpacity>
-        </View>
-
-        <FlatList
-          style={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          data={EQ_BANDS}
-          keyExtractor={item => String(item.freq)}
-          renderItem={renderBandSlider}
-          ListHeaderComponent={renderHeader}
-          ListFooterComponent={renderFooter}
-        />
-      </View>
-    </SafeAreaView>
+    <FlatList
+      style={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      data={EQ_BANDS}
+      keyExtractor={item => String(item.freq)}
+      renderItem={renderBandSlider}
+      ListHeaderComponent={renderHeader}
+      ListFooterComponent={renderFooter}
+    />
   );
 };

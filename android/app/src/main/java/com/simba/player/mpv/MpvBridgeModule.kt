@@ -85,7 +85,24 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         }
     }
 
-    // ── Playback Control ───────────────────────────────────────────────────
+    // ── Screen Brightness ──
+
+    @ReactMethod
+    fun setScreenBrightness(brightness: Double) {
+        val activity = getCurrentActivity() ?: return
+        val layout = activity.window.attributes
+        layout.screenBrightness = brightness.toFloat().coerceIn(0.0f, 1.0f)
+        activity.window.attributes = layout
+    }
+
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun getScreenBrightness(): Double {
+        val activity = getCurrentActivity() ?: return 1.0
+        val b = activity.window.attributes.screenBrightness
+        return if (b < 0f) 1.0 else b.toDouble()
+    }
+
+    // ── Playback ──
 
     @ReactMethod
     fun play() {
@@ -568,18 +585,52 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     /**
      * Enter Android Picture-in-Picture mode for the current activity.
-     * Called from JS via MpvPlayerModule.enterPip().
+     * Called from JS after UI elements have been hidden.
+     *
+     * @param chapterTitle  Optional — current chapter title shown in PiP notification.
+     * @param progressPct   Optional — progress percentage string like "45 %".
      */
     @ReactMethod
-    fun enterPip() {
+    fun enterPip(chapterTitle: String? = null, progressPct: String? = null) {
         val activity = getCurrentActivity()
         if (activity == null || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return
-        val pipParams = com.simba.player.PipManager.buildPipParams(activity)
+        val pipParams = com.simba.player.PipManager.buildPipParams(
+            context = activity,
+            chapterTitle = chapterTitle,
+            progressPercentage = progressPct,
+        )
         try {
             activity.enterPictureInPictureMode(pipParams)
         } catch (_: IllegalStateException) {
             // Activity not in foreground or PiP not supported
         }
+    }
+
+    /**
+     * Exit PiP mode by bringing the activity to the front.
+     * Called from JS when user taps "Expand" in PiP RemoteActions.
+     */
+    @ReactMethod
+    fun exitPip() {
+        val activity = getCurrentActivity()
+        if (activity == null || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return
+        if (activity.isInPictureInPictureMode) {
+            activity.moveTaskToFront(true)
+        }
+    }
+
+    /**
+     * Exit PiP mode and finish the activity (close player session).
+     * Called from JS when user taps "Close" in PiP RemoteActions.
+     */
+    @ReactMethod
+    fun exitPipAndFinish() {
+        val activity = getCurrentActivity()
+        if (activity == null) return
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && activity.isInPictureInPictureMode) {
+            activity.moveTaskToFront(true)
+        }
+        activity.finishAndRemoveTask()
     }
 
     // ── Native Pointer (for MpvRenderView) ─────────────────────────────────

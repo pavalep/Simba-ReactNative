@@ -112,7 +112,7 @@ const ToastContent: React.FC<{
       <View style={styles.textContainer}>
         <AppText
           variant="body2"
-          style={styles.messageText}
+          color="primary"
           numberOfLines={2}>
           {message}
         </AppText>
@@ -123,7 +123,7 @@ const ToastContent: React.FC<{
         hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
         accessibilityLabel="Dismiss"
         accessibilityRole="button">
-        <AppText style={styles.closeIcon}>✕</AppText>
+        <AppText style={styles.closeIcon} color="primary">✕</AppText>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -205,17 +205,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     zIndex: 9999,
     elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
   textContainer: {
     flex: 1,
     marginRight: spacing.sm,
   },
   messageText: {
-    color: '#FFFFFF',
   },
   closeBtn: {
     width: 28,
@@ -225,7 +220,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeIcon: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },

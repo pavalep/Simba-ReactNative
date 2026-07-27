@@ -3,6 +3,7 @@ import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 import type {CompositeScreenProps, NavigatorScreenParams} from '@react-navigation/native';
 
 export type RootStackParamList = {
+  Splash: undefined;
   MainTabs: NavigatorScreenParams<TabParamList>;
   VideoPlayer: {fileUri?: string; fileTitle?: string};
   AudioPlayer: {fileUri?: string; fileTitle?: string};
@@ -25,6 +26,8 @@ export type LibraryTabParamList = {
   Library: undefined;
   FolderBrowser: {initialPath?: string};
   PlaylistDetail: {playlistId: string; playlistName: string};
+  ArtistDetail: {artistName: string};
+  AlbumDetail: {albumTitle: string; artistName: string};
 };
 
 export type SettingsTabParamList = {
@@ -65,6 +68,8 @@ export type NowPlayingScreenProps = StackInTabProps<HomeTabParamList, 'HomeTab',
 export type LibraryScreenProps = StackInTabProps<LibraryTabParamList, 'LibraryTab', 'Library'>;
 export type FolderBrowserScreenProps = StackInTabProps<LibraryTabParamList, 'LibraryTab', 'FolderBrowser'>;
 export type PlaylistDetailScreenProps = StackInTabProps<LibraryTabParamList, 'LibraryTab', 'PlaylistDetail'>;
+export type ArtistDetailScreenProps = StackInTabProps<LibraryTabParamList, 'LibraryTab', 'ArtistDetail'>;
+export type AlbumDetailScreenProps = StackInTabProps<LibraryTabParamList, 'LibraryTab', 'AlbumDetail'>;
 
 // ── Helper for screens inside the Settings root stack navigator ──
 type SettingsStackScreenProps<T extends keyof SettingsTabParamList> = CompositeScreenProps<

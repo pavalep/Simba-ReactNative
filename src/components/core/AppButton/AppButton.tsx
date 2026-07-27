@@ -1,7 +1,6 @@
 import React, {useMemo} from 'react';
 import {
   TouchableOpacity,
-  Text,
   StyleSheet,
   ActivityIndicator,
   View,
@@ -10,6 +9,7 @@ import {
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
+import {AppText} from '../AppText/AppText';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -62,7 +62,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
       case 'primary':
         return {
           bgColor: colors.accent.gold,
-          txtColor: '#0A0A0C',
+          txtColor: colors.text.primary,
           bdColor: 'transparent',
         };
       case 'secondary':
@@ -113,7 +113,8 @@ export const AppButton: React.FC<AppButtonProps> = ({
       ) : (
         <View style={[styles.inner, {flexDirection: iconPosition === 'right' ? 'row-reverse' : 'row'}]}>
           {icon && <View style={styles.iconSlot}>{icon}</View>}
-          <Text
+          <AppText
+            variant="button"
             style={[
               {
                 color: txtColor,
@@ -124,7 +125,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
             ]}
             numberOfLines={1}>
             {title}
-          </Text>
+          </AppText>
         </View>
       )}
     </TouchableOpacity>

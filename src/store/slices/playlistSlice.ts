@@ -67,6 +67,16 @@ const playlistSlice = createSlice({
         p => p.id === action.payload.playlistId,
       );
       if (pl) {
+        // Auto-upgrade playlist kind to MIXED if adding cross-type content
+        const itemMediaType = action.payload.item.mediaType;
+        if (
+          itemMediaType &&
+          pl.kind !== 'MIXED' &&
+          ((pl.kind === 'AUDIO_ONLY' && itemMediaType === 'video') ||
+            (pl.kind === 'VIDEO_ONLY' && itemMediaType === 'audio'))
+        ) {
+          pl.kind = 'MIXED';
+        }
         pl.items.push(action.payload.item);
         pl.updatedAt = new Date().toISOString();
       }

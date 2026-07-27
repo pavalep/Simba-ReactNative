@@ -1,18 +1,30 @@
-import React, {useState, useEffect, useCallback, useRef} from 'react';
+import React, {useState, useEffect, useCallback, useRef, useMemo} from 'react';
 import {
   View,
-  TouchableOpacity,
   StyleSheet,
-  Dimensions,
   BackHandler,
+  ScrollView,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
-import {spacing, radius} from '../../theme/tokens';
-import {AppText} from '../../components/core/AppText/AppText';
+import SeekBar from '../../components/player/SeekBar/SeekBar';
 import AudioVisualizer from '../../components/player/AudioVisualizer/AudioVisualizer';
 import LyricsQueuePanel from './components/LyricsQueuePanel';
+import {AlbumArtBackground} from './components/AlbumArtBackground';
+import {AudioPlayerHeader} from './components/AudioPlayerHeader';
+import {AudioPlayerError} from './components/AudioPlayerError';
+import {AudioAlbumArt} from './components/AudioAlbumArt';
+import {AudioTrackInfo} from './components/AudioTrackInfo';
+import {AudioTransportControls} from './components/AudioTransportControls';
+import {AudioVolumeControl} from './components/AudioVolumeControl';
+import {AudioActionButtons} from './components/AudioActionButtons';
+import {InfoSheet} from '../../components/player/NowPlayingInfo/InfoSheet';
+import type {Chapter} from '../../components/player/NowPlayingInfo/ChapterList';
+import {PlaylistPreviewSheet} from '../../components/player/PlaylistPreview/PlaylistPreviewSheet';
+import {QueueSheet} from '../../components/sheets/QueueSheet/QueueSheet';
+import {PlaylistSheet} from '../../components/sheets/PlaylistSheet';
 import {MpvPlayer} from '../../native';
 import {RootStackScreenProps} from '../../navigation/types';
 import {useHaptics} from '../../hooks/useHaptics';
@@ -22,19 +34,30 @@ import {
   addToPlaylist,
   removeFromPlaylist,
   playFromPlaylist,
+  removeFromQueue,
+  reorderQueue,
+  prependToQueue,
+  addToQueue,
   nextTrack,
   setLoopMode,
   toggleShuffle,
-  clearPlaylist,
+  setQueueSelection,
+  clearQueueSelection,
+  removeSelectedFromQueue,
+  moveSelectedToTop,
+  clearAll,
   PlaylistEntry,
 } from '../../store/slices/playerSlice';
 import {
   pickMediaFile,
   getFileName,
 } from '../../services/fileService';
+import {readTrackMetadata, EMPTY_METADATA, TrackMetadata} from '../../services/metadataService';
+import {loadLrc} from '../../services/lrcService';
+import type {LrcLine} from '../../utils/lrcParser';
+import {selectAllTracks} from '../../store/slices/mediaSlice';
+import type {ScannedTrack} from '../../store/slices/mediaSlice';
 
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
-const ART_SIZE = Math.min(SCREEN_WIDTH - 64, 280);
 
 type Props = RootStackScreenProps<'AudioPlayer'>;
 
@@ -56,18 +79,53 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const fileUri = route.params?.fileUri;
 
   // ── Core playback state ──
+  const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(1);
   const [volume, setVolume] = useState(65);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // ── Metadata & chapters state (Phase 4) ──
+  const [metadata, setMetadata] = useState<TrackMetadata>(EMPTY_METADATA);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [lyrics, setLyrics] = useState<LrcLine[]>([]);
+
+  // ── Modal state (Phase 4) ──
+  const [infoSheetVisible, setInfoSheetVisible] = useState(false);
+  const [playlistSheetVisible, setPlaylistSheetVisible] = useState(false);
+  const [userPlaylistSheetVisible, setUserPlaylistSheetVisible] = useState(false);
+  const [queueSheetVisible, setQueueSheetVisible] = useState(false);
+  const [queueMultiSelect, setQueueMultiSelect] = useState(false);
 
   // ── Playlist state ──
   const playlist = useAppSelector(state => state.player.playlist);
+  const queue = useAppSelector(state => state.player.queue);
+  const currentFile = useAppSelector(state => state.player.currentFile);
   const currentIndex = useAppSelector(state => state.player.currentIndex);
   const loopMode = useAppSelector(state => state.player.loopMode);
   const shuffle = useAppSelector(state => state.player.shuffle);
+  const playbackHistory = useAppSelector(state => state.player.playbackHistory);
+  const selectedQueueIndices = useAppSelector(state => state.player.selectedQueueIndices);
+  const allTracks = useAppSelector(selectAllTracks);
+
+  // ── Derive related tracks for InfoSheet (Phase 8) ──
+  const relatedTracks = useMemo(() => {
+    if (allTracks.length === 0) {
+      return [];
+    }
+    const {artist, album} = metadata;
+    if (!artist && !album) {
+      return [];
+    }
+    return allTracks.filter(
+      t =>
+        (artist && t.artist === artist) ||
+        (album && t.album === album),
+    );
+  }, [metadata, allTracks]);
 
   // ── Refs ──
   const isSeeking = useRef(false);
@@ -93,6 +151,7 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     (async () => {
       if (!fileUri) {
         setError('No file URI provided.');
+        setIsLoading(false);
         return;
       }
 
@@ -101,13 +160,18 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         if (cancelled) return;
         if (!ok) {
           setError('Failed to initialize audio player.');
+          setIsLoading(false);
           return;
         }
 
         MpvPlayer.loadFile(fileUri);
         setIsReady(true);
+        setIsLoading(false);
       } catch (e) {
-        if (!cancelled) setError('Player initialization failed.');
+        if (!cancelled) {
+          setError('Player initialization failed.');
+          setIsLoading(false);
+        }
       }
     })();
 
@@ -115,6 +179,64 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       cancelled = true;
     };
   }, [fileUri]);
+
+  // ── Load metadata, chapters, and lyrics when file loads (Phase 4) ──
+  useEffect(() => {
+    if (!isReady || !fileUri) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        // Load metadata from mpv
+        const meta = await readTrackMetadata(fileUri);
+        if (!cancelled) setMetadata(meta);
+
+        // Load chapters from mpv chapter-list property
+        try {
+          const chaptersJson = MpvPlayer.getProperty('chapter-list');
+          if (chaptersJson && !cancelled) {
+            const rawChapters: Array<{title?: string; time: number}> = JSON.parse(String(chaptersJson));
+            if (Array.isArray(rawChapters) && rawChapters.length > 0) {
+              const parsed: Chapter[] = rawChapters.map((ch, i, arr) => ({
+                title: ch.title || `Chapter ${i + 1}`,
+                startTime: ch.time,
+                endTime: i < arr.length - 1 ? arr[i + 1].time : durationRef.current,
+              }));
+              if (!cancelled) setChapters(parsed);
+            }
+          }
+        } catch {}
+
+        // Load LRC lyrics
+        try {
+          const lrcResult = await loadLrc(fileUri);
+          if (lrcResult && !cancelled) {
+            setLyrics(lrcResult.lines);
+          }
+        } catch {}
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isReady, fileUri]);
+
+  // ── Retry chapter loading after duration is known ──
+  useEffect(() => {
+    if (!isReady || duration <= 1 || chapters.length > 0) return;
+    // If we have chapters but no endTime for the last one, patch it
+    setChapters(prev => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      if (last.endTime === duration && last.endTime !== 0) return prev;
+      return prev.map((ch, i, arr) => ({
+        ...ch,
+        endTime: i < arr.length - 1 ? arr[i + 1].startTime : duration,
+      }));
+    });
+  }, [isReady, duration, chapters.length]);
 
   // ── Playback progress polling ──
   useEffect(() => {
@@ -148,6 +270,18 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   // ══════════════════════════════════════════════════════════
   // HANDLERS
   // ══════════════════════════════════════════════════════════
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      await new Promise<void>(resolve => setTimeout(resolve, 1000));
+    } catch {
+      setError('Failed to refresh player.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
 
   const handleGoBack = useCallback(() => {
     const curPos = positionRef.current;
@@ -259,203 +393,278 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     MpvPlayer.loadFile(entry.uri);
   }, [dispatch, playlist]);
 
-  const handleClearPlaylist = useCallback(() => {
-    dispatch(clearPlaylist());
+  // ── Queue management (Phase 4 / Phase 23) ──
+
+  const handleQueueMoveItem = useCallback((fromIndex: number, direction: 'up' | 'down') => {
+    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= queue.length) return;
+    dispatch(reorderQueue({fromIndex, toIndex}));
+  }, [dispatch, queue.length]);
+
+  const handleQueueRemoveItem = useCallback((index: number) => {
+    dispatch(removeFromQueue(index));
   }, [dispatch]);
+
+  // Play a queue item: find its playlist entry and switch playback
+  const handleQueueSelectItem = useCallback((fileUri: string) => {
+    const playlistIdx = playlist.findIndex(e => e.uri === fileUri);
+    if (playlistIdx >= 0 && playlistIdx !== currentIndex) {
+      const entry = playlist[playlistIdx];
+      if (entry) {
+        dispatch(playFromPlaylist(playlistIdx));
+        MpvPlayer.loadFile(entry.uri);
+      }
+    }
+    setQueueSheetVisible(false);
+  }, [dispatch, playlist, currentIndex]);
+
+  // Queue item tap: find by index and play
+  const handleSelectQueueItem = useCallback((idx: number) => {
+    const item = queue[idx];
+    if (!item) return;
+    handleQueueSelectItem(item.uri);
+  }, [queue, handleQueueSelectItem]);
+
+  // History item tap: play it (and optionally re-add to queue)
+  const handleSelectHistoryItem = useCallback((idx: number) => {
+    const item = playbackHistory[idx];
+    if (!item) return;
+    handleQueueSelectItem(item.uri);
+  }, [playbackHistory, handleQueueSelectItem]);
+
+  // "Play Next" from history: prepend to queue
+  const handlePlayNext = useCallback((entry: PlaylistEntry) => {
+    dispatch(prependToQueue(entry));
+  }, [dispatch]);
+
+  // "Add to Queue" from history: append to queue
+  const handleAddToQueue = useCallback((entry: PlaylistEntry) => {
+    dispatch(addToQueue(entry));
+  }, [dispatch]);
+
+  // ── Queue multi-select (Phase 23.4 — 23.5) ──
+  const handleEnterMultiSelect = useCallback(() => {
+    setQueueMultiSelect(true);
+  }, []);
+
+  const handleExitMultiSelect = useCallback(() => {
+    setQueueMultiSelect(false);
+    dispatch(clearQueueSelection());
+  }, [dispatch]);
+
+  const handleToggleSelection = useCallback((index: number) => {
+    const current = selectedQueueIndices;
+    const isSelected = current.includes(index);
+    if (isSelected) {
+      dispatch(setQueueSelection(current.filter(i => i !== index)));
+    } else {
+      dispatch(setQueueSelection([...current, index]));
+    }
+  }, [dispatch, selectedQueueIndices]);
+
+  const handleRemoveSelected = useCallback(() => {
+    dispatch(removeSelectedFromQueue());
+  }, [dispatch]);
+
+  const handleMoveSelectedToTop = useCallback(() => {
+    dispatch(moveSelectedToTop());
+  }, [dispatch]);
+
+  const handleClearAll = useCallback(() => {
+    dispatch(clearAll());
+  }, [dispatch]);
+
+  // ── InfoSheet callbacks (Phase 8) ──
+  const handleInfoAddToPlaylist = useCallback(() => {
+    setInfoSheetVisible(false);
+    // Small delay to let InfoSheet close before PlaylistSheet opens
+    setTimeout(() => setUserPlaylistSheetVisible(true), 350);
+  }, []);
+
+  const handlePlayRelatedTrack = useCallback(
+    (track: ScannedTrack) => {
+      setInfoSheetVisible(false);
+      MpvPlayer.loadFile(track.uri);
+      setChapters([]);
+      setIsPlaying(true);
+    },
+    [],
+  );
 
   // ══════════════════════════════════════════════════════════
   // RENDER
   // ══════════════════════════════════════════════════════════
 
-  const loopLabel = loopMode === 'none' ? 'None' : loopMode === 'file' ? 'One' : 'All';
-
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={[colors.background.primary, colors.background.elevated]}
-        style={StyleSheet.absoluteFill}
-      />
+      {/* Phase 4.6: Dual-layer album art background */}
+      <AlbumArtBackground albumArtUri={metadata.albumArtUri} />
 
-      {/* Header */}
-      <View style={[styles.header, {paddingTop: insets.top}]}>
-        <TouchableOpacity
-          style={[styles.headerBtn, {backgroundColor: colors.border.subtle}]}
-          onPress={handleGoBack}
-          activeOpacity={0.7}
-          accessibilityLabel="Go back"
-          accessibilityRole="button">
-          <AppText variant="body1" color="primary">{'←'}</AppText>
-        </TouchableOpacity>
-        <AppText variant="h3" color="primary" style={styles.headerTitle}>
-          Now Playing
-        </AppText>
-        <View style={{width: 36}} />
-      </View>
-
-      {/* Error state */}
-      {error && (
-        <View style={styles.errorContainer}>
-          <AppText variant="body1" color="error">{error}</AppText>
-          <TouchableOpacity
-            style={[styles.retryBtn, {backgroundColor: colors.accent.gold}]}
-            onPress={() => { setError(null); setIsReady(false); }}>
-            <AppText variant="body2" color="primary">Retry</AppText>
-          </TouchableOpacity>
+      {isLoading && !error && (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.accent.gold} />
         </View>
       )}
 
-      {!error && (
-        <>
-          {/* Album art */}
-          <View style={styles.artContainer}>
-            <View style={[styles.artPlaceholder, {backgroundColor: colors.border.subtle}]}>
-              <AppText style={[styles.artIcon, {color: colors.text.tertiary}]}>
-                {'♫'}
-              </AppText>
-            </View>
-          </View>
-
-          {/* Track info */}
-          <View style={styles.infoContainer}>
-            <AppText variant="h2" color="primary" style={styles.trackTitle} numberOfLines={1}>
-              {title}
-            </AppText>
-            <AppText variant="body2" color="secondary" numberOfLines={1}>
-              {getFileName(fileUri ?? '')}
-            </AppText>
-          </View>
-
-          {/* Audio visualizer */}
-          <AudioVisualizer isPlaying={isPlaying} />
-
-          {/* Seek bar */}
-          <View style={styles.seekContainer}>
-            <TouchableOpacity
-              style={styles.seekTrack}
-              activeOpacity={1}
-              onPress={({nativeEvent: {locationX}}: any) => {
-                const pct = locationX / SCREEN_WIDTH;
-                handleSeek(Math.max(0, Math.min(1, pct)));
-              }}>
-              <View style={[styles.seekBg, {backgroundColor: colors.border.subtle}]} />
-              <View
-                style={[
-                  styles.seekFill,
-                  {
-                    backgroundColor: colors.accent.gold,
-                    width: `${positionPct * 100}%`,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.seekThumb,
-                  {
-                    backgroundColor: colors.accent.gold,
-                    left: `${positionPct * 100}%`,
-                  },
-                ]}
-              />
-            </TouchableOpacity>
-            <View style={styles.timeRow}>
-              <AppText variant="caption" color="secondary">{formatTime(position)}</AppText>
-              <AppText variant="caption" color="secondary">{formatTime(duration)}</AppText>
-            </View>
-          </View>
-
-          {/* Transport controls */}
-          <View style={styles.transportRow}>
-            <TouchableOpacity
-              style={[styles.secondaryBtn, {backgroundColor: colors.border.subtle}]}
-              onPress={handleToggleShuffle}
-              activeOpacity={0.7}
-              accessibilityLabel="Toggle shuffle"
-              accessibilityRole="button">
-              <AppText
-                variant="body2"
-                color={shuffle ? 'accent' : 'secondary'}>
-                {'🔀'}
-              </AppText>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.skipBtn} onPress={handlePrev} activeOpacity={0.7}
-              accessibilityLabel="Previous track"
-              accessibilityRole="button">
-              <AppText variant="h2" color="primary">{'⏮'}</AppText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.playBtn, {backgroundColor: colors.accent.gold}]}
-              onPress={handlePlayPause}
-              activeOpacity={0.8}
-              accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
-              accessibilityRole="button">
-              <AppText variant="h1" color="primary">
-                {isPlaying ? '⏸' : '▶'}
-              </AppText>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.skipBtn} onPress={handleNext} activeOpacity={0.7}
-              accessibilityLabel="Next track"
-              accessibilityRole="button">
-              <AppText variant="h2" color="primary">{'⏭'}</AppText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.secondaryBtn, {backgroundColor: colors.border.subtle}]}
-              onPress={handleToggleLoop}
-              activeOpacity={0.7}>
-              <AppText
-                variant="caption"
-                color={loopMode !== 'none' ? 'accent' : 'secondary'}>
-                {loopLabel}
-              </AppText>
-            </TouchableOpacity>
-          </View>
-
-          {/* Volume control */}
-          <View style={styles.volumeRow}>
-            <TouchableOpacity
-              onPress={() => handleVolumeChange(-10)}
-              style={styles.volBtn}
-              activeOpacity={0.7}
-              accessibilityLabel="Volume down"
-              accessibilityRole="button">
-              <AppText variant="body2" color="secondary">{'−'}</AppText>
-            </TouchableOpacity>
-            <View style={styles.volTrack}>
-              <View
-                style={[
-                  styles.volFill,
-                  {backgroundColor: colors.accent.gold, width: `${volume}%`},
-                ]}
-              />
-            </View>
-            <AppText variant="caption" color="secondary" style={styles.volLabel}>
-              {volume}%
-            </AppText>
-            <TouchableOpacity
-              onPress={() => handleVolumeChange(10)}
-              style={styles.volBtn}
-              activeOpacity={0.7}
-              accessibilityLabel="Volume up"
-              accessibilityRole="button">
-              <AppText variant="body2" color="secondary">{'+'}</AppText>
-            </TouchableOpacity>
-          </View>
-
-          {/* Lyrics Queue Panel */}
-          <LyricsQueuePanel
-            lyrics={[]}
-            currentPosition={position}
-            isPlaying={isPlaying}
-            onSeekToLyric={handleSeekToLyric}
-            queue={playlist.map(e => ({uri: e.uri, title: e.title, duration: e.duration}))}
-            currentIndex={currentIndex}
-            onPlayFromQueue={handlePlayFromPlaylist}
+      {!isLoading && (
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent.gold}
+            colors={[colors.accent.gold]}
           />
-        </>
+        }>
+
+        {/* Header */}
+        <AudioPlayerHeader onGoBack={handleGoBack} insetsTop={insets.top} colors={colors} />
+
+        {/* Error state */}
+        {error && (
+          <AudioPlayerError message={error} onRetry={() => { setError(null); setIsReady(false); setIsLoading(true); }} colors={colors} />
+        )}
+
+        {!error && (
+          <>
+            {/* ═══ Album art (Phase 4.6) ═══ */}
+            <AudioAlbumArt albumArtUri={metadata.albumArtUri} colors={colors} />
+
+            {/* ═══ Track info with metadata (Phase 4.1) ═══ */}
+            <AudioTrackInfo title={title} artist={metadata.artist} album={metadata.album} fileUri={fileUri ?? ''} colors={colors} />
+
+            {/* ═══ Audio visualizer ═══ */}
+            <AudioVisualizer isPlaying={isPlaying} />
+
+            {/* ═══ SeekBar with chapters (Phase 4.8) ═══ */}
+            <View style={styles.seekContainer}>
+              <SeekBar
+                position={position}
+                duration={duration}
+                onSeek={handleSeek}
+                chapters={chapters.map(ch => ({startTime: ch.startTime, title: ch.title}))}
+              />
+            </View>
+
+            {/* ═══ Transport controls ═══ */}
+            <AudioTransportControls
+              isPlaying={isPlaying}
+              shuffle={shuffle}
+              loopMode={loopMode}
+              onPlayPause={handlePlayPause}
+              onPrev={handlePrev}
+              onNext={handleNext}
+              onToggleShuffle={handleToggleShuffle}
+              onToggleLoop={handleToggleLoop}
+              colors={colors}
+            />
+
+            {/* ═══ Volume control ═══ */}
+            <AudioVolumeControl volume={volume} onVolumeChange={handleVolumeChange} colors={colors} />
+
+            {/* ═══ Action buttons (Phase 4.3, 4.4, 4.5) ═══ */}
+            <AudioActionButtons
+              onInfo={() => setInfoSheetVisible(true)}
+              onQueue={() => setPlaylistSheetVisible(true)}
+              onManage={() => setQueueSheetVisible(true)}
+              onPlaylists={() => setUserPlaylistSheetVisible(true)}
+              colors={colors}
+            />
+
+            {/* ═══ Lyrics Queue Panel with real lyrics (Phase 4.7) ═══ */}
+            <LyricsQueuePanel
+              lyrics={lyrics}
+              currentPosition={position}
+              isPlaying={isPlaying}
+              onSeekToLyric={handleSeekToLyric}
+              queue={playlist.map(e => ({uri: e.uri, title: e.title, duration: e.duration}))}
+              currentIndex={currentIndex}
+              onPlayFromQueue={handlePlayFromPlaylist}
+            />
+          </>
+        )}
+      </ScrollView>
       )}
+
+      {/* ═══ Modals ═══ */}
+
+      {/* Phase 4.5 / Phase 8: Now Playing Info Sheet */}
+      <InfoSheet
+        visible={infoSheetVisible}
+        onClose={() => setInfoSheetVisible(false)}
+        metadata={metadata}
+        chapters={chapters}
+        currentTime={position}
+        onSeek={(time) => {
+          MpvPlayer.seekTo(time);
+          setPosition(time);
+        }}
+        relatedTracks={relatedTracks}
+        onAddToPlaylist={handleInfoAddToPlaylist}
+        onPlayRelatedTrack={handlePlayRelatedTrack}
+      />
+
+      {/* Phase 4.3: Playlist Preview Sheet */}
+      <PlaylistPreviewSheet
+        visible={playlistSheetVisible}
+        onClose={() => setPlaylistSheetVisible(false)}
+        queue={playlist.map((e, i) => ({
+          fileUri: e.uri,
+          title: e.title,
+          mediaType: 'audio' as const,
+        }))}
+        currentIndex={currentIndex}
+        onSelectItem={(idx: number) => {
+          if (idx >= 0 && idx !== currentIndex) {
+            const entry = playlist[idx];
+            if (entry) {
+              dispatch(playFromPlaylist(idx));
+              MpvPlayer.loadFile(entry.uri);
+            }
+          }
+          setPlaylistSheetVisible(false);
+        }}
+      />
+
+      {/* Phase 23: Queue Sheet (replaces legacy QueueManagementSheet) */}
+      <QueueSheet
+        visible={queueSheetVisible}
+        onClose={() => { setQueueSheetVisible(false); setQueueMultiSelect(false); dispatch(clearQueueSelection()); }}
+        currentTrack={currentFile}
+        queue={queue}
+        playbackHistory={playbackHistory}
+        selectedQueueIndices={selectedQueueIndices}
+        mode={queueMultiSelect ? 'multiSelect' : 'view'}
+        onSelectQueueItem={handleSelectQueueItem}
+        onSelectHistoryItem={handleSelectHistoryItem}
+        onMoveUp={(idx) => handleQueueMoveItem(idx, 'up')}
+        onMoveDown={(idx) => handleQueueMoveItem(idx, 'down')}
+        onRemoveItem={handleQueueRemoveItem}
+        onEnterMultiSelect={handleEnterMultiSelect}
+        onExitMultiSelect={handleExitMultiSelect}
+        onToggleSelection={handleToggleSelection}
+        onRemoveSelected={handleRemoveSelected}
+        onMoveSelectedToTop={handleMoveSelectedToTop}
+        onClearAll={handleClearAll}
+        onPlayNext={handlePlayNext}
+        onAddToQueue={handleAddToQueue}
+      />
+
+      {/* Phase 9: Playlist Sheet */}
+      <PlaylistSheet
+        visible={userPlaylistSheetVisible}
+        onClose={() => setUserPlaylistSheetVisible(false)}
+        currentItem={{
+          fileUri: fileUri || '',
+          title,
+          duration,
+          artist: metadata.artist,
+          album: metadata.album,
+        }}
+      />
     </View>
   );
 };
@@ -468,159 +677,19 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  // ── Header ──
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    height: 48,
-  },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    marginRight: 36,
-  },
-  // ── Error ──
-  errorContainer: {
+  centerContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
   },
-  retryBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: radius.sm,
+  scroll: {
+    flex: 1,
   },
-  // ── Album art ──
-  artContainer: {
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 16,
-  },
-  artPlaceholder: {
-    width: ART_SIZE,
-    height: ART_SIZE,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  artIcon: {
-    fontSize: 64,
-  },
-  // ── Info ──
-  infoContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    marginBottom: 32,
-  },
-  trackTitle: {
-    marginBottom: 4,
-    textAlign: 'center',
+  scrollContent: {
+    paddingBottom: 40,
   },
   // ── Seek ──
   seekContainer: {
-    paddingHorizontal: 16,
     marginBottom: 24,
-  },
-  seekTrack: {
-    height: 32,
-    justifyContent: 'center',
-  },
-  seekBg: {
-    height: 4,
-    borderRadius: 4,
-  },
-  seekFill: {
-    position: 'absolute',
-    left: 0,
-    top: 14,
-    height: 4,
-    borderRadius: 4,
-  },
-  seekThumb: {
-    position: 'absolute',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    top: 8,
-    marginLeft: -8,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  // ── Transport ──
-  transportRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 32,
-  },
-  playBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  skipBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // ── Volume ──
-  volumeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  volBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  volTrack: {
-    width: 120,
-    height: 4,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    overflow: 'hidden',
-  },
-  volFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  volLabel: {
-    minWidth: 40,
-    textAlign: 'center',
-  },
-  // ── Playlist info ──
-  playlistInfo: {
-    alignItems: 'center',
-    paddingBottom: 16,
   },
 });

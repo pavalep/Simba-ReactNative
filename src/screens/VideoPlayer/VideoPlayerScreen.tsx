@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useRef} from 'react';
+import React, {useState, useEffect, useCallback, useRef, useMemo} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -6,14 +6,13 @@ import {
   BackHandler,
   Alert,
   Platform,
+  Animated,
+  StatusBar,
 } from 'react-native';
-import {NativeModules} from 'react-native';
-
-const MpvPlayerModule = NativeModules.MpvPlayerModule;
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
-import {MpvPlayer, MpvChapter, MpvTrack} from '../../native';
+import {MpvPlayer, MpvChapter, MpvTrack, ScreenBrightness} from '../../native';
 import {RootStackScreenProps} from '../../navigation/types';
 import {useHaptics} from '../../hooks/useHaptics';
 import {usePipLifecycle} from '../../hooks/usePipLifecycle';
@@ -37,23 +36,40 @@ import {
   toggleShuffle,
   clearPlaylist,
   clearPlayer,
+  removeFromQueue,
+  reorderQueue,
+  prependToQueue,
+  addToQueue,
+  setQueueSelection,
+  clearQueueSelection,
+  removeSelectedFromQueue,
+  moveSelectedToTop,
+  clearAll,
   PlaylistEntry,
 } from '../../store/slices/playerSlice';
 
 // ── Extracted Components ──
 import {VideoPlayerVideoSurface} from './components/VideoPlayerVideoSurface';
 import {VideoPlayerTopBar} from './components/VideoPlayerTopBar';
-import {VideoPlayerControls} from './components/VideoPlayerControls';
-import VideoControlsOverlay from '../../components/player/VideoControlsOverlay/VideoControlsOverlay';
+import {PrimaryControls} from './components/PrimaryControls';
+import {SecondaryToolbar} from './components/SecondaryToolbar';
 import {VideoPlayerSubtitlePanel} from './components/VideoPlayerSubtitlePanel';
 import {VideoPlayerAudioPanel} from './components/VideoPlayerAudioPanel';
 import {VideoPlayerEqualizerPanel, EQ_BANDS, EQ_PRESETS} from './components/VideoPlayerEqualizerPanel';
 import {VideoPlayerPlaylistPanel} from './components/VideoPlayerPlaylistPanel';
 import {SimbaStatusBar} from '../../components/StatusBar';
-import {SlideUpPanel} from './components/SlideUpPanel';
 import {VideoPlayerLoadingOverlay} from './components/VideoPlayerLoadingOverlay';
 import VideoPlayerGestureLayer from './components/VideoPlayerGestureLayer';
-import TrackSelectorModal from '../../components/player/TrackSelector/TrackSelectorModal';
+import {SeekFeedbackOverlay} from './components/SeekFeedbackOverlay';
+import {VolumeBrightnessOverlay} from './components/VolumeBrightnessOverlay';
+import {BottomSheet} from '../../components/sheets/BottomSheet/BottomSheet';
+import {ChapterList} from '../../components/player/NowPlayingInfo/ChapterList';
+import {InfoSheet} from '../../components/player/NowPlayingInfo/InfoSheet';
+import {PlaylistSheet} from '../../components/sheets/PlaylistSheet';
+import {QueueSheet} from '../../components/sheets/QueueSheet/QueueSheet';
+import {readTrackMetadata} from '../../services/metadataService';
+import {selectAllTracks} from '../../store/slices/mediaSlice';
+import type {ScannedTrack} from '../../store/slices/mediaSlice';
 
 // ── Types ──
 type Props = RootStackScreenProps<'VideoPlayer'>;
@@ -67,17 +83,6 @@ function buildEqFilter(gains: number[]): string {
     .join(',');
 }
 
-function formatTime(seconds: number): string {
-  if (!seconds || !isFinite(seconds)) return '0:00';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) {
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  }
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
 // ── Screen ──
 export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
@@ -89,7 +94,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const fileUri = route.params?.fileUri;
 
   // ── Core playback state ──
-  const [controlsVisible, setControlsVisible] = useState(true);
+  const [secondaryVisible, setSecondaryVisible] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(1);
@@ -125,8 +130,40 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   // ── Playlist state ──
   const [playlistPanelOpen, setPlaylistPanelOpen] = useState(false);
 
-  // ── Track selector modal state ──
-  const [trackSelectorOpen, setTrackSelectorOpen] = useState(false);
+  // ── Chapters panel state ──
+  const [chaptersPanelOpen, setChaptersPanelOpen] = useState(false);
+
+  // ── Info Sheet state (Phase 8) ──
+  const [infoSheetVisible, setInfoSheetVisible] = useState(false);
+
+  // ── Playlist Sheet state (Phase 9) ──
+  const [playlistSheetVisible, setPlaylistSheetVisible] = useState(false);
+  const [currentTrackMetadata, setCurrentTrackMetadata] = useState<{
+    title: string;
+    artist: string;
+    album: string;
+    year: number;
+    genre: string;
+    trackNumber: number;
+    albumArtUri: string;
+    language: string;
+    raw: Record<string, string>;
+  } | null>(null);
+
+  // ── Queue Sheet state (Phase 23) ──
+  const [queueSheetVisible, setQueueSheetVisible] = useState(false);
+  const [queueMultiSelect, setQueueMultiSelect] = useState(false);
+
+  // ── PiP UI visibility (hides all overlays before PiP entry) ──
+  const [pipUiVisible, setPipUiVisible] = useState(true);
+
+  // ── Gesture overlay state (3.5 double-tap seek feedback + 3.6 volume/brightness) ──
+  const [seekSide, setSeekSide] = useState<'left' | 'right'>('left');
+  const [seekFeedbackVisible, setSeekFeedbackVisible] = useState(false);
+  const [volumeOverlayValue, setVolumeOverlayValue] = useState(volume);
+  const [volumeOverlayVisible, setVolumeOverlayVisible] = useState(false);
+  const [brightnessOverlayValue, setBrightnessOverlayValue] = useState(100);
+  const [brightnessOverlayVisible, setBrightnessOverlayVisible] = useState(false);
 
   // ── Refs ──
   const isSeeking = useRef(false);
@@ -136,6 +173,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const fileUriRef = useRef<string | undefined>(fileUri);
   const titleRef = useRef(title);
   const resumeSeekDone = useRef(false);
+  const overlayHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Redux ──
   const rememberPosition = useAppSelector(
@@ -143,9 +181,93 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   );
   const sessionRecent = useAppSelector(state => state.session.recentFiles);
   const playlist = useAppSelector(state => state.player.playlist);
+  const queue = useAppSelector(state => state.player.queue);
   const currentIndex = useAppSelector(state => state.player.currentIndex);
   const loopMode = useAppSelector(state => state.player.loopMode);
   const shuffle = useAppSelector(state => state.player.shuffle);
+  const playbackHistory = useAppSelector(state => state.player.playbackHistory);
+  const selectedQueueIndices = useAppSelector(state => state.player.selectedQueueIndices);
+  const allTracks = useAppSelector(selectAllTracks);
+
+  // ── Derive related tracks for InfoSheet (Phase 8) ──
+  const relatedTracks = useMemo(() => {
+    if (!currentTrackMetadata || allTracks.length === 0) {
+      return [];
+    }
+    const {artist, album} = currentTrackMetadata;
+    if (!artist && !album) {
+      return [];
+    }
+    return allTracks.filter(
+      t =>
+        (artist && t.artist === artist) ||
+        (album && t.album === album),
+    );
+  }, [currentTrackMetadata, allTracks]);
+
+  // ── Error screen styles (theme-aware) ──
+  const errorStyles = useMemo(() => ({
+    container: {
+      flex: 1 as const,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 32,
+      backgroundColor: colors.background.primary,
+    },
+    iconCircle: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.semantic.error + '26', // 15% opacity hex
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      marginBottom: 20,
+    },
+    icon: {
+      fontSize: 28,
+      fontWeight: '700' as const,
+      color: colors.semantic.error,
+    },
+    title: {
+      marginBottom: 8,
+      textAlign: 'center' as const,
+    },
+    message: {
+      marginBottom: 4,
+      textAlign: 'center' as const,
+      lineHeight: 20,
+    },
+    detail: {
+      textAlign: 'center' as const,
+      marginBottom: 28,
+      lineHeight: 18,
+    },
+    actions: {
+      flexDirection: 'column' as const,
+      gap: 10,
+      width: '100%' as const,
+      maxWidth: 240,
+    },
+    btn: {
+      paddingVertical: 12,
+      borderRadius: 10,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    btnPrimary: {
+      backgroundColor: colors.accent.gold,
+    },
+    btnPrimaryLabel: {
+      color: colors.text.primary,
+      fontSize: 15,
+      fontWeight: '600' as const,
+    },
+    btnSecondary: {
+      backgroundColor: colors.background.elevated,
+      borderWidth: 0.5,
+      borderColor: colors.border.subtle,
+    },
+  }), [colors]);
 
   // ── Sync refs ──
   useEffect(() => { positionRef.current = position; }, [position]);
@@ -153,39 +275,10 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   useEffect(() => { fileUriRef.current = fileUri; }, [fileUri]);
   useEffect(() => { titleRef.current = title; }, [title]);
 
-  // ── PiP lifecycle ──
-  usePipLifecycle(fileUri, title);
-
   // ── Orientation: default portrait, toggle to landscape ──
   useEffect(() => {
     lockToPortrait();
   }, []);
-
-  // ── PiP swipe-down gesture ──
-  const {pipPanResponder} = usePipEntry();
-
-  // ── Derived ──
-  const savedEntry = fileUri && rememberPosition
-    ? sessionRecent.find(f => f.fileUri === fileUri)
-    : undefined;
-  const toggleControls = () => setControlsVisible(p => !p);
-
-  // ── Expanded mode (manual toggle, no auto-rotate) ──
-  const [isLandscape, setIsLandscape] = useState(false);
-  const handleToggleRotate = useCallback(() => {
-    setIsLandscape(p => {
-      if (p) {
-        lockToPortrait();
-      } else {
-        lockToLandscape();
-      }
-      return !p;
-    });
-  }, []);
-
-  // ══════════════════════════════════════════════════════════
-  // HANDLERS
-  // ══════════════════════════════════════════════════════════
 
   // ── Back / Cleanup ──
   const handleGoBack = useCallback(() => {
@@ -219,6 +312,53 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       lockToPortrait();
     });
   }, [dispatch, navigation]);
+
+  // ── PiP lifecycle — enter→pause, exit→resume, close→destroy, expand→restore ──
+  const {isInPipMode, prepareAndEnterPip} = usePipLifecycle({
+    fileUri,
+    fileTitle: title,
+    chapters,
+    position,
+    duration,
+    onHideUi: useCallback(() => setPipUiVisible(false), []),
+    onShowUi: useCallback(() => setPipUiVisible(true), []),
+    onNavigateBack: useCallback(() => {
+      // Navigate back to main tabs on PiP close
+      handleGoBack();
+    }, [handleGoBack]),
+  });
+
+  // ── PiP swipe-down shrink animation ──
+  const {
+    pipScale,
+    pipTranslateX,
+    pipTranslateY,
+    triggerShrinkAndEnterPip,
+  } = usePipEntry({
+    onEnterPip: prepareAndEnterPip,
+    isInPipMode,
+  });
+
+  // ── Derived ──
+  const savedEntry = fileUri && rememberPosition
+    ? sessionRecent.find(f => f.fileUri === fileUri)
+    : undefined;
+
+  // ── Expanded mode (manual toggle, no auto-rotate) ──
+  const [isLandscape, setIsLandscape] = useState(false);
+  const handleToggleRotate = useCallback(() => {
+    setIsLandscape(p => {
+      const next = !p;
+      if (next) {
+        lockToLandscape();
+        StatusBar.setHidden(true, 'fade');
+      } else {
+        lockToPortrait();
+        StatusBar.setHidden(false, 'fade');
+      }
+      return next;
+    });
+  }, []);
 
   // ── Transport ──
   const handlePlayPause = useCallback(() => {
@@ -254,6 +394,13 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     setTimeout(() => { isSeeking.current = false; }, 200);
   }, []);
 
+  const handleChapterSeek = useCallback((time: number) => {
+    isSeeking.current = true;
+    MpvPlayer.seekTo(time);
+    setPosition(time);
+    setTimeout(() => { isSeeking.current = false; }, 200);
+  }, []);
+
   const handleVolumeChange = useCallback(() => {
     MpvPlayer.toggleMute?.();
   }, []);
@@ -263,35 +410,99 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     const target = Math.max(0, positionRef.current - 10);
     MpvPlayer.seekTo(target);
     setPosition(target);
+    // Show seek feedback overlay
+    setSeekSide('left');
+    setSeekFeedbackVisible(true);
+    if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
+    overlayHideTimer.current = setTimeout(() => setSeekFeedbackVisible(false), 1000);
   }, []);
 
   const handleDoubleTapRight = useCallback(() => {
     const target = Math.min(durationRef.current, positionRef.current + 10);
     MpvPlayer.seekTo(target);
     setPosition(target);
+    // Show seek feedback overlay
+    setSeekSide('right');
+    setSeekFeedbackVisible(true);
+    if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
+    overlayHideTimer.current = setTimeout(() => setSeekFeedbackVisible(false), 1000);
   }, []);
 
+  // ── Swipe-up gesture: open InfoSheet ──
   const handleSwipeUp = useCallback(() => {
-    MpvPlayer.toggleMute?.();
+    setInfoSheetVisible(true);
   }, []);
 
   const handleSwipeDown = useCallback(() => {
-    // On Android, swipe-down gesture enters PiP mode
+    // On Android, swipe-down gesture enters PiP mode with shrink animation
     if (Platform.OS === 'android') {
-      try {
-        MpvPlayerModule?.enterPip?.();
-        return;
-      } catch {
-        // fall through to default behavior
-      }
+      triggerShrinkAndEnterPip();
+      return;
     }
     MpvPlayer.toggleMute?.();
-  }, []);
+  }, [triggerShrinkAndEnterPip]);
 
   const handleScreenshot = useCallback(() => {
     try {
       MpvPlayer.captureThumbnail(fileUriRef.current ?? '');
     } catch {}
+  }, []);
+
+  // ── InfoSheet callbacks (Phase 8) ──
+  const handleInfo = useCallback(() => {
+    setInfoSheetVisible(true);
+  }, []);
+
+  const handleInfoAddToPlaylist = useCallback(() => {
+    setInfoSheetVisible(false);
+    // Small delay to let InfoSheet close before PlaylistSheet opens
+    setTimeout(() => setPlaylistSheetVisible(true), 350);
+  }, []);
+
+  const handleMorePress = useCallback(() => {
+    setPlaylistSheetVisible(true);
+  }, []);
+
+  const handlePlayRelatedTrack = useCallback(
+    (track: ScannedTrack) => {
+      setInfoSheetVisible(false);
+      MpvPlayer.loadFile(track.uri);
+      setChapters([]);
+      setIsPlaying(true);
+    },
+    [],
+  );
+
+  // ── Volume/Brightness gesture callbacks (3.6) ──
+  const handleVolumeSwipe = useCallback((delta: number) => {
+    setVolume(prev => {
+      const newVol = Math.max(0, Math.min(100, prev + delta));
+      MpvPlayer.setVolume(newVol);
+      setVolumeOverlayValue(newVol);
+      return newVol;
+    });
+    setVolumeOverlayVisible(true);
+    if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
+    overlayHideTimer.current = setTimeout(() => setVolumeOverlayVisible(false), 1500);
+  }, []);
+
+  const handleBrightnessSwipe = useCallback((delta: number) => {
+    setBrightnessOverlayValue(prev => {
+      const newVal = Math.max(0, Math.min(100, prev + delta));
+      ScreenBrightness.setBrightness(newVal / 100);
+      return newVal;
+    });
+    setBrightnessOverlayVisible(true);
+    if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
+    overlayHideTimer.current = setTimeout(() => setBrightnessOverlayVisible(false), 1500);
+  }, []);
+
+  const handleVolumeGestureEnd = useCallback(() => {
+    // Auto-hide timer already set in handleVolumeSwipe
+  }, []);
+
+  const handleBrightnessGestureEnd = useCallback(() => {
+    // Auto-hide timer already set in handleBrightnessSwipe
   }, []);
 
   // ── Shuffle / Loop ──
@@ -417,6 +628,87 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
   const handleClearPlaylist = useCallback(() => {
     dispatch(clearPlaylist());
+  }, [dispatch]);
+
+  // ── Queue management (Phase 23) ──
+
+  const handleQueueMoveItem = useCallback((fromIndex: number, direction: 'up' | 'down') => {
+    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+    if (toIndex < 0 || toIndex >= queue.length) return;
+    dispatch(reorderQueue({fromIndex, toIndex}));
+  }, [dispatch, queue.length]);
+
+  const handleQueueRemoveItem = useCallback((index: number) => {
+    dispatch(removeFromQueue(index));
+  }, [dispatch]);
+
+  // Play a queue item: find its playlist entry and switch playback
+  const handleQueueSelectItem = useCallback((fileUri: string) => {
+    const playlistIdx = playlist.findIndex(e => e.uri === fileUri);
+    if (playlistIdx >= 0 && playlistIdx !== currentIndex) {
+      const entry = playlist[playlistIdx];
+      if (entry) {
+        dispatch(playFromPlaylist(playlistIdx));
+        MpvPlayer.loadFile(entry.uri);
+      }
+    }
+    setQueueSheetVisible(false);
+  }, [dispatch, playlist, currentIndex]);
+
+  // Queue item tap: find by index and play
+  const handleSelectQueueItem = useCallback((idx: number) => {
+    const item = queue[idx];
+    if (!item) return;
+    handleQueueSelectItem(item.uri);
+  }, [queue, handleQueueSelectItem]);
+
+  // History item tap: play it
+  const handleSelectHistoryItem = useCallback((idx: number) => {
+    const item = playbackHistory[idx];
+    if (!item) return;
+    handleQueueSelectItem(item.uri);
+  }, [playbackHistory, handleQueueSelectItem]);
+
+  // "Play Next" from history: prepend to queue
+  const handlePlayNext = useCallback((entry: PlaylistEntry) => {
+    dispatch(prependToQueue(entry));
+  }, [dispatch]);
+
+  // "Add to Queue" from history: append to queue
+  const handleAddToQueue = useCallback((entry: PlaylistEntry) => {
+    dispatch(addToQueue(entry));
+  }, [dispatch]);
+
+  // ── Queue multi-select ──
+  const handleEnterMultiSelect = useCallback(() => {
+    setQueueMultiSelect(true);
+  }, []);
+
+  const handleExitMultiSelect = useCallback(() => {
+    setQueueMultiSelect(false);
+    dispatch(clearQueueSelection());
+  }, [dispatch]);
+
+  const handleToggleSelection = useCallback((index: number) => {
+    const current = selectedQueueIndices;
+    const isSelected = current.includes(index);
+    if (isSelected) {
+      dispatch(setQueueSelection(current.filter(i => i !== index)));
+    } else {
+      dispatch(setQueueSelection([...current, index]));
+    }
+  }, [dispatch, selectedQueueIndices]);
+
+  const handleRemoveSelected = useCallback(() => {
+    dispatch(removeSelectedFromQueue());
+  }, [dispatch]);
+
+  const handleMoveSelectedToTop = useCallback(() => {
+    dispatch(moveSelectedToTop());
+  }, [dispatch]);
+
+  const handleClearAll = useCallback(() => {
+    dispatch(clearAll());
   }, [dispatch]);
 
   // ── Error retry ──
@@ -595,6 +887,20 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         const activeAudio = audio.find(t => t.selected) || audio[0] || null;
         setActiveAudioTrack(activeAudio ? activeAudio.id : null);
       } catch {}
+
+      // ── Load metadata for InfoSheet ──
+      const currentUri = fileUriRef.current;
+      if (currentUri) {
+        readTrackMetadata(currentUri)
+          .then(meta => {
+            if (meta) {
+              setCurrentTrackMetadata(meta);
+            }
+          })
+          .catch(() => {
+            // Non-critical — InfoSheet will show a fallback
+          });
+      }
     });
 
     const unsubEnd = MpvPlayer.on('onEndReached', () => {
@@ -651,7 +957,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         </View>
         <AppText
           variant="h2"
-          color="#FFFFFF"
+          color="primary"
           style={errorStyles.title}>
           {error.title}
         </AppText>
@@ -694,90 +1000,150 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
       <SimbaStatusBar variant="player" />
 
-      {/* ── Video Surface ── */}
+      {/* ── Video Surface (with PiP shrink animation) ── */}
       <VideoPlayerGestureLayer
-        onSingleTap={toggleControls}
+        onSingleTap={() => setSecondaryVisible(p => !p)}
         onDoubleTapLeft={handleDoubleTapLeft}
         onDoubleTapRight={handleDoubleTapRight}
         onSwipeUp={handleSwipeUp}
-        onSwipeDown={handleSwipeDown}>
-        <VideoPlayerVideoSurface
-          nativePtr={nativePtr}
-          showVideoSurface={showVideoSurface}
-          isPlaying={isPlaying}
-          controlsVisible={controlsVisible}
-        />
+        onSwipeDown={handleSwipeDown}
+        onVolumeChange={handleVolumeSwipe}
+        onBrightnessChange={handleBrightnessSwipe}
+        onVolumeGestureEnd={handleVolumeGestureEnd}
+        onBrightnessGestureEnd={handleBrightnessGestureEnd}>
+        <Animated.View
+          pointerEvents="box-none"
+          style={[
+            {
+              transform: [
+                {scale: pipScale},
+                {translateX: pipTranslateX},
+                {translateY: pipTranslateY},
+              ],
+            },
+          ]}>
+          <VideoPlayerVideoSurface
+            nativePtr={nativePtr}
+            showVideoSurface={showVideoSurface}
+            isPlaying={isPlaying}
+            controlsVisible={secondaryVisible}
+          />
+        </Animated.View>
       </VideoPlayerGestureLayer>
 
-      {/* ── Top Bar (always visible so back + rotate are accessible) ── */}
-      {showVideoSurface && (
+      {/* ── Top Bar (hidden during PiP) ── */}
+      {showVideoSurface && pipUiVisible && (
         <VideoPlayerTopBar
           title={title}
           onGoBack={handleGoBack}
           topInset={insets.top}
           isLandscape={isLandscape}
           onToggleRotate={handleToggleRotate}
+          onMorePress={handleMorePress}
         />
       )}
 
-      {/* ── Controls (seek bar + transport) ── */}
-      {showVideoSurface && (
-        <VideoControlsOverlay
-          visible={controlsVisible}
-          onToggle={toggleControls}
-          bottomInset={insets.bottom}>
-          <VideoPlayerControls
-            controlsVisible
-            position={position}
-            duration={duration}
-            isPlaying={isPlaying}
-            volume={volume}
-            chapters={chapters}
-            currentTime={formatTime(position)}
-            totalTime={formatTime(duration)}
-            onPlayPause={handlePlayPause}
-            onPrev={handlePrev}
-            onNext={handleNext}
-            onSeek={handleSeek}
-            onVolumeChange={handleVolumeChange}
-            onScreenshot={handleScreenshot}
-            onToggleEqPanel={() => {
-              setEqPanelOpen(p => !p);
-              setAudioPanelOpen(false);
-              setSubtitlePanelOpen(false);
-              setPlaylistPanelOpen(false);
-            }}
-            onTogglePlaylistPanel={() => {
-              setPlaylistPanelOpen(p => !p);
-              setEqPanelOpen(false);
-              setAudioPanelOpen(false);
-              setSubtitlePanelOpen(false);
-            }}
-            onToggleShuffle={handleToggleShuffle}
-            onToggleLoop={handleToggleLoop}
-            onToggleSubtitles={() => {
-            setTrackSelectorOpen(true);
-            setEqPanelOpen(false);
-            setPlaylistPanelOpen(false);
-          }}
-          onToggleAudioPanel={() => {
-            setTrackSelectorOpen(true);
-            setEqPanelOpen(false);
-            setPlaylistPanelOpen(false);
-          }}
-            eqEnabled={eqEnabled}
-            shuffle={shuffle}
-            loopMode={loopMode}
-            playlistLength={playlist.length}
-            activeSubtitle={activeSubtitle}
-            activeAudioTrack={activeAudioTrack}
-            bottomInset={0}
-          />
-        </VideoControlsOverlay>
+      {/* ── Primary Controls — Always Visible outside PiP (seek bar + transport) ── */}
+      {showVideoSurface && pipUiVisible && (
+        <PrimaryControls
+          position={position}
+          duration={duration}
+          isPlaying={isPlaying}
+          chapters={chapters}
+          onPlayPause={handlePlayPause}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onSeek={handleSeek}
+          bottomInset={insets.bottom}
+        />
       )}
 
-      {/* ── Slide-Up Panels ── */}
-      <SlideUpPanel
+      {/* ── Secondary Toolbar — Collapsible (hidden during PiP) ── */}
+      {showVideoSurface && pipUiVisible && (
+        <SecondaryToolbar
+          visible={secondaryVisible}
+          enabled={true}
+          eqEnabled={eqEnabled}
+          shuffleActive={shuffle}
+          loopMode={loopMode}
+          playlistLength={playlist.length}
+          activeSubtitle={activeSubtitle}
+          activeAudioTrack={activeAudioTrack}
+          onToggleChapters={() => {
+            setChaptersPanelOpen(p => !p);
+            setAudioPanelOpen(false);
+            setSubtitlePanelOpen(false);
+            setEqPanelOpen(false);
+            setPlaylistPanelOpen(false);
+          }}
+          onToggleAudio={() => {
+            setAudioPanelOpen(p => !p);
+            setChaptersPanelOpen(false);
+            setSubtitlePanelOpen(false);
+            setEqPanelOpen(false);
+            setPlaylistPanelOpen(false);
+          }}
+          onToggleSubtitles={() => {
+            setSubtitlePanelOpen(p => !p);
+            setChaptersPanelOpen(false);
+            setAudioPanelOpen(false);
+            setEqPanelOpen(false);
+            setPlaylistPanelOpen(false);
+          }}
+          onToggleEq={() => {
+            setEqPanelOpen(p => !p);
+            setChaptersPanelOpen(false);
+            setAudioPanelOpen(false);
+            setSubtitlePanelOpen(false);
+            setPlaylistPanelOpen(false);
+          }}
+          onTogglePlaylist={() => {
+            setPlaylistPanelOpen(p => !p);
+            setChaptersPanelOpen(false);
+            setAudioPanelOpen(false);
+            setSubtitlePanelOpen(false);
+            setEqPanelOpen(false);
+          }}
+          onInfo={handleInfo}
+          onToggleShuffle={handleToggleShuffle}
+          onToggleLoop={handleToggleLoop}
+          onVolume={handleVolumeChange}
+          onScreenshot={handleScreenshot}
+          onToggleQueue={() => setQueueSheetVisible(true)}
+          onAutoHide={() => setSecondaryVisible(false)}
+          bottomInset={insets.bottom}
+        />
+      )}
+
+      {/* ── BottomSheet Panels ── */}
+      <BottomSheet
+        title="Chapters"
+        visible={chaptersPanelOpen}
+        onClose={() => setChaptersPanelOpen(false)}>
+        <ChapterList
+          chapters={chapters.map(ch => ({
+            title: ch.title,
+            startTime: ch.startTime as number,
+            endTime: ch.endTime as number,
+          }))}
+          currentTime={position}
+          onSeek={handleChapterSeek}
+        />
+      </BottomSheet>
+
+      <BottomSheet
+        title="Audio Tracks"
+        visible={audioPanelOpen}
+        onClose={() => setAudioPanelOpen(false)}>
+        <VideoPlayerAudioPanel
+          audioTracks={audioTracks}
+          activeAudioTrack={activeAudioTrack}
+          onSelectTrack={handleSelectAudioTrack}
+        />
+      </BottomSheet>
+
+      <BottomSheet
+        title="Subtitles"
         visible={subtitlePanelOpen}
         onClose={() => setSubtitlePanelOpen(false)}>
         <VideoPlayerSubtitlePanel
@@ -787,26 +1153,15 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
           onSelectTrack={handleSelectSubtitle}
           onToggleVisibility={handleToggleSubtitleVisibility}
           onLoadExternal={handleLoadExternalSubtitle}
-          onClose={() => setSubtitlePanelOpen(false)}
           subtitleFontSize={subtitleFontSize}
           onFontSizeChange={handleFontSizeChange}
           subtitleOpacity={subtitleOpacity}
           onOpacityChange={handleOpacityChange}
         />
-      </SlideUpPanel>
+      </BottomSheet>
 
-      <SlideUpPanel
-        visible={audioPanelOpen}
-        onClose={() => setAudioPanelOpen(false)}>
-        <VideoPlayerAudioPanel
-          audioTracks={audioTracks}
-          activeAudioTrack={activeAudioTrack}
-          onSelectTrack={handleSelectAudioTrack}
-          onClose={() => setAudioPanelOpen(false)}
-        />
-      </SlideUpPanel>
-
-      <SlideUpPanel
+      <BottomSheet
+        title="Equalizer"
         visible={eqPanelOpen}
         onClose={() => setEqPanelOpen(false)}>
         <VideoPlayerEqualizerPanel
@@ -816,11 +1171,11 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
           onToggle={handleToggleEq}
           onApplyPreset={handleApplyPreset}
           onReset={handleResetEq}
-          onClose={() => setEqPanelOpen(false)}
         />
-      </SlideUpPanel>
+      </BottomSheet>
 
-      <SlideUpPanel
+      <BottomSheet
+        title="Playlist"
         visible={playlistPanelOpen}
         onClose={() => setPlaylistPanelOpen(false)}>
         <VideoPlayerPlaylistPanel
@@ -834,21 +1189,98 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
           onRemoveFromPlaylist={handleRemoveFromPlaylist}
           onClearPlaylist={handleClearPlaylist}
           onAddToPlaylist={handleAddToPlaylist}
-          onClose={() => setPlaylistPanelOpen(false)}
         />
-      </SlideUpPanel>
+      </BottomSheet>
 
-      {/* ── Track Selector Modal ── */}
-      <TrackSelectorModal
-        visible={trackSelectorOpen}
-        onClose={() => setTrackSelectorOpen(false)}
-        subtitleTracks={subtitleTracks}
-        audioTracks={audioTracks}
-        activeSubtitle={activeSubtitle}
-        activeAudioTrack={activeAudioTrack}
-        onSelectSubtitle={handleSelectSubtitle}
-        onSelectAudio={handleSelectAudioTrack}
+      {/* ── Info Sheet (Phase 8) ── */}
+      <InfoSheet
+        visible={infoSheetVisible}
+        onClose={() => setInfoSheetVisible(false)}
+        metadata={currentTrackMetadata || {
+          title,
+          artist: '',
+          album: '',
+          year: 0,
+          genre: '',
+          trackNumber: 0,
+          albumArtUri: '',
+          language: '',
+          raw: {},
+        }}
+        chapters={chapters.map(ch => ({
+          title: ch.title,
+          startTime: ch.startTime as number,
+          endTime: ch.endTime as number,
+        }))}
+        currentTime={position}
+        onSeek={handleChapterSeek}
+        relatedTracks={relatedTracks}
+        onAddToPlaylist={handleInfoAddToPlaylist}
+        onPlayRelatedTrack={handlePlayRelatedTrack}
       />
+
+      {/* ── Seek feedback overlay (3.5) ── */}
+      {pipUiVisible && (
+        <SeekFeedbackOverlay
+          side={seekSide}
+          visible={seekFeedbackVisible}
+        />
+      )}
+
+      {/* ── Playlist Sheet (Phase 9) ── */}
+      <PlaylistSheet
+        visible={playlistSheetVisible}
+        onClose={() => setPlaylistSheetVisible(false)}
+        currentItem={{
+          fileUri: fileUri || '',
+          title,
+          duration,
+          artist: currentTrackMetadata?.artist,
+          album: currentTrackMetadata?.album,
+        }}
+      />
+
+      {/* ── Queue Sheet (Phase 23) ── */}
+      <QueueSheet
+        visible={queueSheetVisible}
+        onClose={() => { setQueueSheetVisible(false); setQueueMultiSelect(false); dispatch(clearQueueSelection()); }}
+        currentTrack={{uri: fileUri || '', title, duration}}
+        queue={queue}
+        playbackHistory={playbackHistory}
+        selectedQueueIndices={selectedQueueIndices}
+        mode={queueMultiSelect ? 'multiSelect' : 'view'}
+        onSelectQueueItem={handleSelectQueueItem}
+        onSelectHistoryItem={handleSelectHistoryItem}
+        onMoveUp={(idx) => handleQueueMoveItem(idx, 'up')}
+        onMoveDown={(idx) => handleQueueMoveItem(idx, 'down')}
+        onRemoveItem={handleQueueRemoveItem}
+        onEnterMultiSelect={handleEnterMultiSelect}
+        onExitMultiSelect={handleExitMultiSelect}
+        onToggleSelection={handleToggleSelection}
+        onRemoveSelected={handleRemoveSelected}
+        onMoveSelectedToTop={handleMoveSelectedToTop}
+        onClearAll={handleClearAll}
+        onPlayNext={handlePlayNext}
+        onAddToQueue={handleAddToQueue}
+      />
+
+      {/* ── Volume overlay (3.6) ── */}
+      {pipUiVisible && (
+        <VolumeBrightnessOverlay
+          type="volume"
+          value={volumeOverlayValue}
+          visible={volumeOverlayVisible}
+        />
+      )}
+
+      {/* ── Brightness overlay (3.6) ── */}
+      {pipUiVisible && (
+        <VolumeBrightnessOverlay
+          type="brightness"
+          value={brightnessOverlayValue}
+          visible={brightnessOverlayVisible}
+        />
+      )}
 
       {/* ── Loading overlay ── */}
       <VideoPlayerLoadingOverlay visible={!isReady && !error} message="Initializing player…" />
@@ -860,69 +1292,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#000',
   },
 });
 
-// ── Error screen styles ──
-const errorStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,59,48,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  icon: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#FF3B30',
-  },
-  title: {
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  message: {
-    marginBottom: 4,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  detail: {
-    textAlign: 'center',
-    marginBottom: 28,
-    lineHeight: 18,
-  },
-  actions: {
-    flexDirection: 'column',
-    gap: 10,
-    width: '100%',
-    maxWidth: 240,
-  },
-  btn: {
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnPrimary: {
-    backgroundColor: '#C9A84C',
-  },
-  btnPrimaryLabel: {
-    color: '#0A0A0C',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  btnSecondary: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-});
+

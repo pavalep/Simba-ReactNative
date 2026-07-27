@@ -28,15 +28,9 @@ class MainActivity : ReactActivity() {
     } else {
       registerReceiver(pipReceiver, PipManager.intentFilter())
     }
-    // Enable auto PiP on Android 12+ when user gestures to home
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-      setPictureInPictureParams(
-        PictureInPictureParams.Builder()
-          .setAspectRatio(Rational(16, 9))
-          .setAutoEnterEnabled(true)
-          .build()
-      )
-    }
+    // NOTE: Auto PiP removed intentionally. PiP entry is now explicit only —
+    // triggered by JS swipe-down gesture or programmatic enterPip() call.
+    // This prevents the full activity (including UI chrome) from rendering in PiP.
   }
 
   override fun onDestroy() {
@@ -50,16 +44,7 @@ class MainActivity : ReactActivity() {
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 
-  override fun onUserLeaveHint() {
-    super.onUserLeaveHint()
-    val pipParams = PipManager.buildPipParams(this)
-    try {
-      enterPictureInPictureMode(pipParams)
-    } catch (_: IllegalStateException) {
-      // Activity not in foreground or PiP not supported
-    }
-  }
-
+  // ── PiP mode change callback ──
   override fun onPictureInPictureModeChanged(
     isInPictureInPictureMode: Boolean,
     newConfig: Configuration,
@@ -77,12 +62,17 @@ class MainActivity : ReactActivity() {
     }
   }
 
+  // ── Back button exits PiP, does not exit app ──
+  override fun onBackPressed() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
+      // Back button while in PiP: bring activity to front (exits PiP)
+      moveTaskToFront(true)
+      return
+    }
+    super.onBackPressed()
+  }
+
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-      if (isInPictureInPictureMode) {
-        // Exiting PiP via tap — JS will handle restoration via onPipModeChanged event
-      }
-    }
   }
 }

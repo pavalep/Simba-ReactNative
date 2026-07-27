@@ -2,17 +2,32 @@ import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import type {RootState} from '..';
 
 export interface PipState {
+  /** Whether the app is currently in PiP mode */
   isInPipMode: boolean;
-  pipedVideoUri: string | null;
-  pipedPosition: number;
+
+  /** URI of the video surface isolated for PiP rendering */
+  surfaceUri: string | null;
+
+  /** Human-readable title shown in PiP notification */
   pipedFileTitle: string | null;
+
+  /** Current chapter title for PiP notification text */
+  chapterTitle: string | null;
+
+  /** Current chapter index (0-based) */
+  chapterIndex: number;
+
+  /** Progress percentage string like "45 %" for PiP notification */
+  progressPercentage: string;
 }
 
 const initialState: PipState = {
   isInPipMode: false,
-  pipedVideoUri: null,
-  pipedPosition: 0,
+  surfaceUri: null,
   pipedFileTitle: null,
+  chapterTitle: null,
+  chapterIndex: -1,
+  progressPercentage: '0 %',
 };
 
 const pipSlice = createSlice({
@@ -22,22 +37,35 @@ const pipSlice = createSlice({
     enterPip(
       state,
       action: PayloadAction<{
-        uri: string;
-        position: number;
-        title: string;
+        surfaceUri: string;
+        fileTitle: string;
+        chapterTitle: string | null;
+        chapterIndex: number;
+        progressPercentage: string;
       }>,
     ) {
       state.isInPipMode = true;
-      state.pipedVideoUri = action.payload.uri;
-      state.pipedPosition = action.payload.position;
-      state.pipedFileTitle = action.payload.title;
+      state.surfaceUri = action.payload.surfaceUri;
+      state.pipedFileTitle = action.payload.fileTitle;
+      state.chapterTitle = action.payload.chapterTitle;
+      state.chapterIndex = action.payload.chapterIndex;
+      state.progressPercentage = action.payload.progressPercentage;
     },
     exitPip(state) {
       state.isInPipMode = false;
-      // Keep uri/position/title for restoration — cleared on session end
+      // Keep surfaceUri/title/chapter info for restoration — cleared on session end
     },
-    updatePipPosition(state, action: PayloadAction<number>) {
-      state.pipedPosition = action.payload;
+    updatePipProgress(
+      state,
+      action: PayloadAction<{
+        chapterTitle: string | null;
+        chapterIndex: number;
+        progressPercentage: string;
+      }>,
+    ) {
+      state.chapterTitle = action.payload.chapterTitle;
+      state.chapterIndex = action.payload.chapterIndex;
+      state.progressPercentage = action.payload.progressPercentage;
     },
     resetPipState() {
       return initialState;
@@ -45,13 +73,15 @@ const pipSlice = createSlice({
   },
 });
 
-export const {enterPip, exitPip, updatePipPosition, resetPipState} =
+export const {enterPip, exitPip, updatePipProgress, resetPipState} =
   pipSlice.actions;
 
 // ── Selectors ──
 export const selectIsInPipMode = (state: RootState) => state.pip.isInPipMode;
-export const selectPipedVideoUri = (state: RootState) => state.pip.pipedVideoUri;
-export const selectPipedPosition = (state: RootState) => state.pip.pipedPosition;
+export const selectSurfaceUri = (state: RootState) => state.pip.surfaceUri;
 export const selectPipedFileTitle = (state: RootState) => state.pip.pipedFileTitle;
+export const selectPipChapterTitle = (state: RootState) => state.pip.chapterTitle;
+export const selectPipChapterIndex = (state: RootState) => state.pip.chapterIndex;
+export const selectPipProgressPercentage = (state: RootState) => state.pip.progressPercentage;
 
 export default pipSlice.reducer;

@@ -1,5 +1,5 @@
-import React from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {View, TouchableOpacity, StyleSheet, Animated} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -7,12 +7,61 @@ import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 
 interface HomeHeaderProps {
+  onSettingsPress?: () => void;
+  onSearchPress?: () => void;
   isScanning?: boolean;
 }
 
-export const HomeHeader: React.FC<HomeHeaderProps> = ({isScanning}) => {
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  if (hour >= 17 && hour < 22) return 'Good evening';
+  return 'Good night';
+}
+
+export const HomeHeader: React.FC<HomeHeaderProps> = ({
+  onSettingsPress,
+  onSearchPress,
+  isScanning,
+}) => {
   const {colors, spacing: s} = useTheme();
   const navigation = useNavigation<any>();
+  const scanAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!isScanning) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanAnim, {
+          toValue: 0.3,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isScanning, scanAnim]);
+
+  const handleSettingsPress = () => {
+    if (onSettingsPress) {
+      onSettingsPress();
+    } else {
+      navigation.navigate('Settings');
+    }
+  };
+
+  const handleSearchPress = () => {
+    if (onSearchPress) {
+      onSearchPress();
+    }
+  };
 
   return (
     <View
@@ -23,44 +72,53 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({isScanning}) => {
           borderBottomColor: colors.border.subtle,
         },
       ]}>
-      {/* Lion logo with ambient gold glow */}
-      <View style={styles.logoSection}>
-        <View
-          style={[
-            styles.aura,
-            {backgroundColor: colors.accent.goldGlow},
-          ]}
-        />
-        <SvgIcon name="lion" size={36} color={colors.accent.gold} />
+      {/* Left: Greeting + Subtitle */}
+      <View style={styles.greetingSection}>
+        <View style={styles.greetingRow}>
+          <AppText variant="h2" color="accent">
+            {getGreeting()}
+          </AppText>
+          {isScanning && (
+            <Animated.View
+              style={[
+                styles.scanningDot,
+                {
+                  backgroundColor: colors.accent.gold,
+                  opacity: scanAnim,
+                },
+              ]}
+            />
+          )}
+        </View>
+        <AppText variant="caption" color="secondary">
+          Your premium media player
+        </AppText>
       </View>
-
-      {/* Title */}
-      <AppText variant="h2" color="primary" style={{marginLeft: s.sm}}>
-        Simba Player
-      </AppText>
 
       {/* Spacer */}
       <View style={styles.spacer} />
 
+      {/* Search icon */}
+      {onSearchPress && (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handleSearchPress}
+          style={[styles.iconButton, {backgroundColor: colors.background.elevated}]}
+          accessibilityLabel="Search"
+          accessibilityRole="button">
+          <SvgIcon name="search" size={20} color={colors.text.secondary} />
+        </TouchableOpacity>
+      )}
+
       {/* Settings icon */}
       <TouchableOpacity
         activeOpacity={0.7}
-        onPress={() => navigation.navigate('Settings')}
+        onPress={handleSettingsPress}
         style={[styles.iconButton, {backgroundColor: colors.background.elevated}]}
         accessibilityLabel="Settings"
         accessibilityRole="button">
         <SvgIcon name="settings" size={22} color={colors.text.secondary} />
       </TouchableOpacity>
-
-      {/* Scan status indicator */}
-      {isScanning && (
-        <View
-          style={[
-            styles.scanBadge,
-            {backgroundColor: colors.accent.gold},
-          ]}
-        />
-      )}
     </View>
   );
 };
@@ -73,17 +131,18 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
   },
-  logoSection: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+  greetingSection: {
+    flexDirection: 'column',
   },
-  aura: {
-    position: 'absolute',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  scanningDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   spacer: {
     flex: 1,
@@ -94,13 +153,6 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  scanBadge: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    marginLeft: spacing.xs,
   },
 });

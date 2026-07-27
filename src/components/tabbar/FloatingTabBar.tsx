@@ -124,7 +124,6 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
             width: barWidth,
             backgroundColor: colors.background.floating,
             borderColor: colors.border.subtle,
-            shadowColor: '#000',
             ...shadows.md,
           },
         ]}>

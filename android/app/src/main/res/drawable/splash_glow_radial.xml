@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gold radial glow behind the lion logo during animated splash -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <gradient
+        android:type="radial"
+        android:gradientRadius="50%p"
+        android:startColor="#26C9A84C"
+        android:centerColor="#0DC9A84C"
+        android:endColor="@android:color/transparent" />
+</shape>

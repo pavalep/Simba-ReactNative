@@ -7,10 +7,17 @@ export interface PlaylistEntry {
   duration: number;
 }
 
+export interface QueueItem {
+  fileUri: string;
+  title: string;
+  mediaType: 'audio' | 'video';
+}
+
 interface PlayerState {
   currentFile: PlaylistEntry | null;
   playlist: PlaylistEntry[];
   queue: PlaylistEntry[];
+  playbackHistory: PlaylistEntry[];
   currentIndex: number;
   playbackState: PlaybackState;
   currentPosition: number;
@@ -24,12 +31,15 @@ interface PlayerState {
   sleepTimerEndTime: number | null;
   equalizerGains: number[];
   equalizerEnabled: boolean;
+  /** Multi-select indices for queue batch operations (Phase 23) */
+  selectedQueueIndices: number[];
 }
 
 const initialState: PlayerState = {
   currentFile: null,
   playlist: [],
   queue: [],
+  playbackHistory: [],
   currentIndex: -1,
   playbackState: 'idle',
   currentPosition: 0,
@@ -42,6 +52,7 @@ const initialState: PlayerState = {
   sleepTimerEndTime: null,
   equalizerGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   equalizerEnabled: false,
+  selectedQueueIndices: [],
 };
 
 const playerSlice = createSlice({
@@ -58,6 +69,16 @@ const playerSlice = createSlice({
     setPlaylist(state, action: PayloadAction<PlaylistEntry[]>) {
       state.playlist = action.payload;
       state.currentIndex = action.payload.length > 0 ? 0 : -1;
+    },
+
+    /** Load a user playlist into the player: sets items, starts playback from index 0, clears queue */
+    loadPlaylistToPlayer(state, action: PayloadAction<PlaylistEntry[]>) {
+      state.playlist = action.payload;
+      state.currentIndex = action.payload.length > 0 ? 0 : -1;
+      state.currentFile = action.payload.length > 0 ? action.payload[0] : null;
+      state.currentPosition = 0;
+      state.playbackState = action.payload.length > 0 ? 'playing' : 'idle';
+      state.queue = [];
     },
 
     /** Append one or more files to end of playlist */
@@ -137,6 +158,10 @@ const playerSlice = createSlice({
 
     nextTrack(state) {
       if (state.playlist.length === 0) return;
+      // Push current track to playback history before advancing
+      if (state.currentFile) {
+        state.playbackHistory.push(state.currentFile);
+      }
       if (state.currentIndex < state.playlist.length - 1) {
         state.currentIndex += 1;
       } else if (state.loopMode === 'playlist') {
@@ -151,6 +176,10 @@ const playerSlice = createSlice({
 
     previousTrack(state) {
       if (state.playlist.length === 0) return;
+      // Push current track to playback history before going back
+      if (state.currentFile) {
+        state.playbackHistory.push(state.currentFile);
+      }
       if (state.currentIndex > 0) {
         state.currentIndex -= 1;
       } else if (state.loopMode === 'playlist') {
@@ -175,6 +204,11 @@ const playerSlice = createSlice({
 
     addToQueue(state, action: PayloadAction<PlaylistEntry>) {
       state.queue.push(action.payload);
+    },
+
+    /** Insert at front of queue — "Play Next" */
+    prependToQueue(state, action: PayloadAction<PlaylistEntry>) {
+      state.queue.unshift(action.payload);
     },
 
     removeFromQueue(state, action: PayloadAction<number>) {
@@ -203,6 +237,57 @@ const playerSlice = createSlice({
         const j = Math.floor(Math.random() * (i + 1));
         [q[i], q[j]] = [q[j], q[i]];
       }
+    },
+
+    // ── Playback History (Phase 23.9) ──
+
+    addToPlaybackHistory(state, action: PayloadAction<PlaylistEntry>) {
+      state.playbackHistory.push(action.payload);
+    },
+
+    clearPlaybackHistory(state) {
+      state.playbackHistory = [];
+    },
+
+    // ── Queue Multi-Select & Batch Operations (Phase 23.4 — 23.5) ──
+
+    setQueueSelection(state, action: PayloadAction<number[]>) {
+      state.selectedQueueIndices = action.payload;
+    },
+
+    clearQueueSelection(state) {
+      state.selectedQueueIndices = [];
+    },
+
+    /** Batch remove all selected items from queue */
+    removeSelectedFromQueue(state) {
+      const sorted = [...state.selectedQueueIndices].sort((a, b) => b - a);
+      for (const idx of sorted) {
+        if (idx >= 0 && idx < state.queue.length) {
+          state.queue.splice(idx, 1);
+        }
+      }
+      state.selectedQueueIndices = [];
+    },
+
+    /** Batch move all selected items to top of queue, preserving original order */
+    moveSelectedToTop(state) {
+      const sorted = [...state.selectedQueueIndices].sort((a, b) => a - b);
+      const selected = sorted.map(idx => state.queue[idx]);
+      // Remove in reverse order to preserve indices
+      for (const idx of [...sorted].reverse()) {
+        state.queue.splice(idx, 1);
+      }
+      // Prepend selected items at the front
+      state.queue.unshift(...selected);
+      state.selectedQueueIndices = [];
+    },
+
+    /** Clear queue + playback history + selection */
+    clearAll(state) {
+      state.queue = [];
+      state.playbackHistory = [];
+      state.selectedQueueIndices = [];
     },
 
     setPlaybackSpeed(state, action: PayloadAction<number>) {
@@ -235,6 +320,7 @@ const playerSlice = createSlice({
       state.currentFile = null;
       state.playlist = [];
       state.queue = [];
+      state.playbackHistory = [];
       state.currentIndex = -1;
       state.playbackState = 'idle';
       state.currentPosition = 0;
@@ -243,6 +329,7 @@ const playerSlice = createSlice({
       state.sleepTimerEndTime = null;
       state.equalizerGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       state.equalizerEnabled = false;
+      state.selectedQueueIndices = [];
     },
   },
 });
@@ -250,6 +337,7 @@ const playerSlice = createSlice({
 export const {
   playFile,
   setPlaylist,
+  loadPlaylistToPlayer,
   addToPlaylist,
   removeFromPlaylist,
   reorderPlaylist,
@@ -264,6 +352,7 @@ export const {
   setLoopMode,
   toggleShuffle,
   addToQueue,
+  prependToQueue,
   removeFromQueue,
   reorderQueue,
   clearQueue,
@@ -274,5 +363,25 @@ export const {
   setSleepTimer,
   setEqualizerGains,
   toggleEqualizer,
+  addToPlaybackHistory,
+  clearPlaybackHistory,
+  setQueueSelection,
+  clearQueueSelection,
+  removeSelectedFromQueue,
+  moveSelectedToTop,
+  clearAll,
 } = playerSlice.actions;
+
+// ─── Utility: map persistent playlist items → player entries ──
+
+import type {PlaylistItem} from '../../types/playlist';
+
+export function playlistItemsToEntries(items: PlaylistItem[]): PlaylistEntry[] {
+  return items.map(item => ({
+    uri: item.fileUri,
+    title: item.title,
+    duration: item.duration,
+  }));
+}
+
 export default playerSlice.reducer;

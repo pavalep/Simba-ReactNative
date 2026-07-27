@@ -1,5 +1,5 @@
 import React, {useRef, useState, useCallback, useMemo} from 'react';
-import {View, PanResponder, Animated, StyleSheet, LayoutChangeEvent} from 'react-native';
+import {View, PanResponder, Animated, TouchableOpacity, StyleSheet, LayoutChangeEvent} from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
 import {useTheme} from '../../../theme';
 
@@ -147,6 +147,14 @@ const SeekBar: React.FC<SeekBarProps> = ({
           opacity: 0.5,
           borderRadius: 1,
         },
+        chapterMarkTouch: {
+          position: 'absolute',
+          width: 20,
+          height: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginLeft: -10,
+        },
         timeLabel: {
           minWidth: 40,
           textAlign: 'center',
@@ -203,17 +211,20 @@ const SeekBar: React.FC<SeekBarProps> = ({
           ]}
         />
 
-        {/* Chapter marks */}
+        {/* Chapter marks with tap-to-seek */}
         {chapters && chapters.length > 0 && chapters.map((ch, i) => {
           const pct = duration > 0 ? (ch.startTime / duration) * 100 : 0;
           return (
-            <View
+            <TouchableOpacity
               key={i}
+              activeOpacity={0.6}
+              onPress={() => onSeek(ch.startTime / durationSec)}
               style={[
-                styles.chapterMark,
-                {left: `${pct}%`, top: trackHeight / 2 - 6},
-              ]}
-            />
+                styles.chapterMarkTouch,
+                {left: `${pct}%`, top: trackHeight / 2 - 10},
+              ]}>
+              <View style={[styles.chapterMark, {height: trackHeight - 4}]} />
+            </TouchableOpacity>
           );
         })}
 

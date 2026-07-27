@@ -10,6 +10,11 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {LrcLine} from '../../../utils/lrcParser';
 
+// ─── Constants ────────────────────────────────────────────────
+
+/** Estimated line height for smooth scroll offset calculation */
+const ESTIMATED_LINE_HEIGHT = 34;
+
 // ─── Props ──────────────────────────────────────────────────
 
 export interface QueueEntry {
@@ -67,10 +72,11 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
   // ── Auto-scroll to active line ──
   useEffect(() => {
     if (activeIndex >= 0 && flatListRef.current) {
-      flatListRef.current.scrollToIndex({
-        index: Math.max(0, activeIndex - 2),
+      // Use scrollToOffset with estimated line height for smooth scrolling
+      const targetOffset = Math.max(0, (activeIndex - 2) * ESTIMATED_LINE_HEIGHT);
+      flatListRef.current.scrollToOffset({
+        offset: targetOffset,
         animated: true,
-        viewPosition: 0.3,
       });
     }
   }, [activeIndex]);
@@ -252,13 +258,6 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 16}}
-        onScrollToIndexFailed={(info) => {
-          // Fallback: scroll to offset
-          flatListRef.current?.scrollToOffset({
-            offset: info.averageItemLength * info.index,
-            animated: true,
-          });
-        }}
       />
 
       {/* Queue section */}
