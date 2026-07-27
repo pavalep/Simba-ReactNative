@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Dark mode splash background (dark-first) -->
+<!-- Light mode splash background (matches app theme) -->
 <color xmlns:android="http://schemas.android.com/apk/android"
-       android:color="#0A0A0C" />
+       android:color="#F5F0E8" />

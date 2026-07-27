@@ -42,7 +42,10 @@ class MpvRenderView(context: ThemedReactContext) : TextureView(context),
     }
 
     override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, width: Int, height: Int) {
-        // Resize handled internally by mpv
+        // Notify mpv of new surface size (fixes orientation change skew)
+        if (nativePtr != 0L) {
+            MPVLib.nativeSurfaceChanged(nativePtr, width, height)
+        }
     }
 
     override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {

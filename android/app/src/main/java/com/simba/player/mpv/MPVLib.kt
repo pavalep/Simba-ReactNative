@@ -27,6 +27,9 @@ object MPVLib {
     /** Attach/detach an Android Surface for video output (wid API). */
     external fun nativeAttachSurface(nativePtr: Long, surface: Surface?)
 
+    /** Notify mpv of surface size change (for orientation changes). */
+    external fun nativeSurfaceChanged(nativePtr: Long, width: Int, height: Int)
+
     // ── Playback Control ───────────────────────────────────────────────────
 
     external fun nativeLoadFile(nativePtr: Long, path: String)

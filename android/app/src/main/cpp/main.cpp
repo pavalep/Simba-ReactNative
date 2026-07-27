@@ -244,6 +244,20 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
     }
 }
 
+// ── Surface size change notification ─────────────────────────────────────────
+extern "C" JNIEXPORT void JNICALL
+Java_com_simba_player_mpv_MPVLib_nativeSurfaceChanged(
+    JNIEnv *env, jclass, jlong nativePtr, jint width, jint height) {
+    if (!nativePtr || !g_initialized) return;
+    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+
+    // Notify mpv of the new surface size via the "display-size" property
+    // This forces mpv's gpu VO to re-query the ANativeWindow dimensions
+    mpv_set_property_string(mpv, "display-size",
+        (std::to_string(width) + "x" + std::to_string(height)).c_str());
+    LOGI("Surface size changed: %dx%d", width, height);
+}
+
 // ── Playback Control ────────────────────────────────────────────────────────
 
 extern "C" JNIEXPORT void JNICALL
