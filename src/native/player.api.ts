@@ -11,6 +11,7 @@ import type {
   MpvEventName,
   MpvEvents,
 } from './NativeMpvPlayer';
+import {logger} from '../lib/logger';
 
 // Try to load the Turbo Module; fall back to legacy NativeModules bridge
 let NativeModule: Spec | null = null;
@@ -39,15 +40,6 @@ function ensureModule(): Spec {
     );
   }
   return NativeModule;
-}
-
-function noopModule(): Partial<Spec> {
-  if (Platform.OS === 'web') {
-    return {};
-  }
-  throw new Error(
-    'MpvPlayerModule not initialized. Did you forget to call initPlayer()?',
-  );
 }
 
 export const MpvPlayer = {
@@ -318,7 +310,7 @@ export const MpvPlayer = {
     handler: (payload: MpvEvents[E]) => void,
   ): () => void {
     if (!eventEmitter) {
-      console.warn(`[MpvPlayer] EventEmitter not available for "${event}"`);
+      logger.warn(`[MpvPlayer] EventEmitter not available for "${event}"`);
       return () => {};
     }
     const subscription = eventEmitter.addListener(event, handler);
@@ -330,7 +322,7 @@ export const MpvPlayer = {
     handler: (payload: MpvEvents[E]) => void,
   ): void {
     if (!eventEmitter) {
-      console.warn(`[MpvPlayer] EventEmitter not available for "${event}"`);
+      logger.warn(`[MpvPlayer] EventEmitter not available for "${event}"`);
       return;
     }
     (eventEmitter as any).once(event, handler);

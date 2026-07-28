@@ -4,8 +4,9 @@
 // Phase 15: Animated shimmer placeholder for loading states.
 
 import React, {useEffect, useRef} from 'react';
-import {View, Animated, StyleSheet, ViewStyle} from 'react-native';
+import {Animated, StyleSheet, ViewStyle} from 'react-native';
 import {useTheme} from '../../../theme';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 
 interface SkeletonLoaderProps {
   width?: number | string;
@@ -21,9 +22,12 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   style,
 }) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (reduceMotion) return;
+
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, {
@@ -40,12 +44,14 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     );
     loop.start();
     return () => loop.stop();
-  }, [shimmerAnim]);
+  }, [shimmerAnim, reduceMotion]);
 
-  const opacity = shimmerAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.6],
-  });
+  const opacity = reduceMotion
+    ? 0.4
+    : shimmerAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.3, 0.6],
+      });
 
   return (
     <Animated.View

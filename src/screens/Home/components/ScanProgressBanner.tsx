@@ -1,11 +1,12 @@
 import React, {useEffect, useRef} from 'react';
 import {View, Animated, StyleSheet} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
+import type {ColorTokens} from '../../../theme/tokens';
 
 interface ScanProgressBannerProps {
   isScanning: boolean;
   scanProgress: number; // 0-100 percentage
-  colors: any; // ColorTokens
+  colors: ColorTokens;
 }
 
 export const ScanProgressBanner: React.FC<ScanProgressBannerProps> = ({

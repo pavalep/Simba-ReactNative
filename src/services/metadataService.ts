@@ -223,6 +223,7 @@ function parseTrackFromPath(
         trackNumber: extractTrackNumber(name),
         albumArtUri: '',
         folderPath: segments.slice(0, -1).join('/'),
+        mediaType: 'audio',
       };
     }
 
@@ -235,6 +236,7 @@ function parseTrackFromPath(
       trackNumber: 0,
       albumArtUri: '',
       folderPath: segments.slice(0, -1).join('/'),
+      mediaType: 'audio',
     };
   }
 
@@ -250,6 +252,7 @@ function parseTrackFromPath(
       trackNumber: extractTrackNumber(name),
       albumArtUri: '',
       folderPath: segments.slice(0, -1).join('/'),
+      mediaType: 'audio',
     };
   }
 
@@ -265,6 +268,7 @@ function parseTrackFromPath(
       trackNumber: extractTrackNumber(name),
       albumArtUri: '',
       folderPath: segments.slice(0, -1).join('/'),
+      mediaType: 'audio',
     };
   }
 
@@ -278,6 +282,7 @@ function parseTrackFromPath(
     trackNumber: 0,
     albumArtUri: '',
     folderPath: '',
+    mediaType: 'audio',
   };
 }
 
@@ -329,6 +334,7 @@ export async function scanFolderForAudio(
           duration: 0, // populated on first play
           albumArtUri: parsed.albumArtUri,
           folderPath: parsed.folderPath || folderPath,
+          mediaType: 'audio',
         });
       }
     }

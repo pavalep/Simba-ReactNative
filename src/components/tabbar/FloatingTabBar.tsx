@@ -12,12 +12,12 @@ import {useTheme} from '../../theme';
 import {SvgIcon, SvgIconName} from '../utility/SvgIcon';
 import {useHaptics} from '../../hooks/useHaptics';
 
-const TAB_BAR_HEIGHT = 64;
-const TAB_BAR_HORIZONTAL_MARGIN = 24;
-const BOTTOM_MARGIN = 12;
-const TAB_BORDER_RADIUS = 32;
-const ICON_SIZE = 26;
-const ICON_PILL_HEIGHT = 48;
+const TAB_BAR_HEIGHT = 60;
+const TAB_BAR_HORIZONTAL_MARGIN = 28;
+const BOTTOM_MARGIN = 10;
+const TAB_BORDER_RADIUS = 30;
+const ICON_SIZE = 24;
+const ICON_PILL_HEIGHT = 44;
 const ICON_PILL_HORIZONTAL_MARGIN = 8; // pill inset from tab edges
 
 export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
@@ -25,7 +25,8 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
   descriptors,
   navigation,
 }) => {
-  const {colors, shadows} = useTheme();
+  const tokens = useTheme();
+  const {colors, shadows} = tokens;
   const insets = useSafeAreaInsets();
   const {width: winW} = useWindowDimensions();
   const haptics = useHaptics();
@@ -122,9 +123,17 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
           styles.bar,
           {
             width: barWidth,
-            backgroundColor: colors.background.floating,
-            borderColor: colors.border.subtle,
-            ...shadows.md,
+            backgroundColor: tokens.isDark 
+              ? 'rgba(30,30,35,0.95)' 
+              : 'rgba(255,255,255,1)',
+            borderColor: tokens.isDark
+              ? 'rgba(255,255,255,0.15)'
+              : 'rgba(0,0,0,0.12)',
+            shadowColor: '#000',
+            shadowOffset: {width: 0, height: 8},
+            shadowOpacity: 0.4,
+            shadowRadius: 16,
+            elevation: 12,
           },
         ]}>
         {/* Animated pill indicator */}
@@ -133,8 +142,12 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
             styles.pill,
             {
               width: pillWidth,
-              backgroundColor: colors.accent.goldDim,
-              borderColor: colors.accent.goldGlow,
+              backgroundColor: tokens.isDark
+                ? 'rgba(201,168,76,0.18)'
+                : 'rgba(184,146,46,0.08)',
+              borderColor: tokens.isDark
+                ? 'rgba(201,168,76,0.35)'
+                : 'rgba(184,146,46,0.15)',
               transform: [{translateX: pillTranslateX}],
             },
           ]}
@@ -153,7 +166,7 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
 
           const iconOpacity = animValues[index].interpolate({
             inputRange: [0, 1],
-            outputRange: [0.45, 1],
+            outputRange: [0.75, 1],
           });
 
           return (
@@ -179,8 +192,8 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
                   size={ICON_SIZE}
                   color={
                     isFocused
-                      ? colors.accent.gold
-                      : colors.text.tertiary
+                      ? (tokens.isDark ? '#FFFFFF' : '#3E2723')
+                      : (tokens.isDark ? 'rgba(255,255,255,0.6)' : 'rgba(62, 39, 35, 0.5)')
                   }
                 />
               </Animated.View>

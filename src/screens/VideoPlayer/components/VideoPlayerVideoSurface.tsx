@@ -1,14 +1,12 @@
 import React, {useMemo} from 'react';
 import {
   View,
-  TouchableOpacity,
   StyleSheet,
   requireNativeComponent,
 } from 'react-native';
 import type {ViewStyle} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
-import {spacing, radius} from '../../../theme/tokens';
 
 // ─── Native video surface component ─────────────────────────
 

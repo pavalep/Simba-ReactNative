@@ -11,6 +11,7 @@
 
 #define LOG_TAG "MpvJNI"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 // ── Globals ────────────────────────────────────────────────────────────────
@@ -167,6 +168,21 @@ Java_com_simba_player_mpv_MPVLib_nativeDestroy(JNIEnv *env, jclass) {
 static jobject g_surface = nullptr;
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_simba_player_mpv_MPVLib_nativeSetPropertyString(
+    JNIEnv *env, jclass, jlong nativePtr, jstring property, jstring value) {
+    if (!nativePtr || !property) return;
+    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    const char *prop = env->GetStringUTFChars(property, nullptr);
+    const char *val = value ? env->GetStringUTFChars(value, nullptr) : nullptr;
+    int result = mpv_set_property_string(mpv, prop, val);
+    if (result < 0) {
+        LOGE("mpv_set_property_string(%s) failed: %s", prop, mpv_error_string(result));
+    }
+    env->ReleaseStringUTFChars(property, prop);
+    if (val) env->ReleaseStringUTFChars(value, val);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
     JNIEnv *env, jclass, jlong nativePtr, jobject surface) {
     if (!nativePtr) return;
@@ -187,7 +203,8 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
 
         if (!g_initialized) {
             // First attach — set wid, then initialize mpv and start
-            // the event thread.  Setting wid after init is UB in mpv.
+            // the event thread.  Setting wid after init is typically UB
+            // in mpv, but we only do it here before init.
             int64_t wid = reinterpret_cast<intptr_t>(g_surface);
             int result = mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &wid);
             if (result < 0) {
@@ -213,11 +230,24 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
 
             LOGI("Surface attached and mpv initialized");
         } else {
-            // Re-attach — g_initialized already true. mpv's gpu VO
-            // has a reference to the Surface via ANativeWindow; let the
-            // existing wid continue to work (mpv will pick up the new
-            // surface through the TextureView lifecycle internally).
-            LOGI("Surface re-attached (mpv already initialized)");
+            // Re-attach — mpv was told to set vo=null (destroying the gpu
+            // VO and releasing the old ANativeWindow) before this call.
+            // Now we must update the wid option so that when vo=gpu is
+            // restored (from the Java side), mpv creates a new ANativeWindow
+            // from the new Surface.
+            //
+            // mpv_set_option("wid") after init is typically UB, but it
+            // works safely here because the gpu VO is currently unloaded
+            // (vo=null), so there is nothing actively using the wid value.
+            // The option is simply stored and picked up when the VO is
+            // re-initialized.
+            int64_t wid = reinterpret_cast<intptr_t>(g_surface);
+            int result = mpv_set_property(mpv, "wid", MPV_FORMAT_INT64, &wid);
+            if (result < 0) {
+                LOGW("mpv_set_property(wid) on re-attach failed: %s", mpv_error_string(result));
+            }
+
+            LOGI("Surface re-attached with new wid");
         }
 
         // Emit surfaceAttached event
@@ -231,16 +261,15 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
         }
     } else {
         // ── Detach surface ─────────────────────────────────────────────
-        // IMPORTANT: Do NOT call mpv_set_option("wid", 0) here.
-        // The "wid" option is init-time only; calling it after
-        // mpv_initialize() causes a native crash (mpv_set_option +98).
-        // Just clean up the Java reference — mpv's gpu VO will handle
-        // the surface loss internally.
+        // NOTE: The caller (MpvRenderView) should have set vo=null BEFORE
+        // calling this. This forces mpv's gpu VO to release its
+        // ANativeWindow reference, making it safe to delete the JNI global
+        // ref without causing a stale reference crash later.
         if (g_surface) {
             env->DeleteGlobalRef(g_surface);
             g_surface = nullptr;
         }
-        LOGI("Surface detached (ref only, wid not modified)");
+        LOGI("Surface detached (JNI ref cleaned up)");
     }
 }
 

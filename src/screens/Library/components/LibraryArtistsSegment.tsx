@@ -1,12 +1,13 @@
 import React from 'react';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {ArtistGrid} from './ArtistGrid';
+import type {ColorTokens} from '../../../theme/tokens';
 
 interface LibraryArtistsSegmentProps {
   audioFolders: string[];
   isMediaScanning: boolean;
   scannedTrackCount: number;
-  colors: any;
+  colors: ColorTokens;
   onNavigateToSettings: () => void;
   onScanAudioFolders: () => void;
   onArtistPress: (artistName: string) => void;

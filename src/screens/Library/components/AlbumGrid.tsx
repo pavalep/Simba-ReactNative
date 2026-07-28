@@ -8,6 +8,16 @@ import {AppCard} from '../../../components/core/AppCard/AppCard';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {spacing, radius} from '../../../theme/tokens';
 
+// ── Dummy data for empty library ──
+const DUMMY_ALBUMS = [
+  {title: 'Interstellar (Original Score)', artist: 'Hans Zimmer', year: 2014, trackCount: 24, totalDuration: 9390},
+  {title: 'Random Access Memories', artist: 'Daft Punk', year: 2013, trackCount: 13, totalDuration: 4440},
+  {title: 'Tenet (Original Score)', artist: 'Ludwig Göransson', year: 2020, trackCount: 17, totalDuration: 5220},
+  {title: 'Game of Thrones (Soundtrack)', artist: 'Ramin Djawadi', year: 2011, trackCount: 29, totalDuration: 7020},
+  {title: 'Star Wars: The Force Awakens', artist: 'John Williams', year: 2015, trackCount: 23, totalDuration: 4620},
+  {title: 'Spirited Away (Image Album)', artist: 'Joe Hisaishi', year: 2001, trackCount: 20, totalDuration: 3660},
+];
+
 interface AlbumGridProps {
   onAlbumPress: (albumTitle: string, artistName: string) => void;
 }
@@ -22,9 +32,8 @@ function formatTotalDuration(seconds: number): string {
 
 export const AlbumGrid: React.FC<AlbumGridProps> = ({onAlbumPress}) => {
   const {colors} = useTheme();
-  const albums = useAppSelector(selectAlbums);
-
-  if (albums.length === 0) return null;
+  const realAlbums = useAppSelector(selectAlbums);
+  const albums = realAlbums.length > 0 ? realAlbums : DUMMY_ALBUMS;
 
   return (
     <ScrollView showsVerticalScrollIndicator={false}>

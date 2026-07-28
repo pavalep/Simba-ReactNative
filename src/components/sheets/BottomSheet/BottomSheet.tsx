@@ -96,7 +96,7 @@ export function BottomSheet<T = any>({
     prevVisibleRef.current = visible;
   }, [visible, initialSnap, snapToIndex]);
 
-  // ── Android back button dismiss (6.7) ──
+  // ── Android back button dismiss + focus trap (28.5) ──
   useEffect(() => {
     if (!visible) return;
     const onBack = () => {
@@ -106,6 +106,17 @@ export function BottomSheet<T = any>({
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => sub.remove();
   }, [visible, closeSheet]);
+
+  // ── Focus trap: when the sheet opens, focus the first focusable element
+  //    (the close button) so screen readers start inside the sheet ──
+  const closeBtnRef = useRef<React.ElementRef<typeof TouchableOpacity>>(null);
+  useEffect(() => {
+    if (visible) {
+      // Small delay to let the Modal mount
+      const id: ReturnType<typeof setTimeout> = setTimeout(() => closeBtnRef.current?.focus(), 100);
+      return () => clearTimeout(id);
+    }
+  }, [visible]);
 
   // ── Handle dismiss from backdrop ──
   const handleBackdropPress = useCallback(() => {
@@ -181,6 +192,7 @@ export function BottomSheet<T = any>({
                   <View style={{flex: 1}}>{title}</View>
                 )}
                 <TouchableOpacity
+                  ref={closeBtnRef}
                   style={styles.closeBtn}
                   onPress={closeSheet}
                   accessibilityLabel="Close panel"
@@ -239,9 +251,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -4,19 +4,6 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import SeekBar from '../../../components/player/SeekBar/SeekBar';
 
-// ─── Helpers ────────────────────────────────────────────────
-
-function formatTime(seconds: number): string {
-  if (!seconds || !isFinite(seconds)) return '0:00';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) {
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  }
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
 // ─── Props ───────────────────────────────────────────────────
 
 export interface VideoPlayerControlsProps {
@@ -65,9 +52,9 @@ function TransportBtn({
     () =>
       StyleSheet.create({
         btn: {
-          width: 36,
-          height: 36,
-          borderRadius: 18,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -99,9 +86,9 @@ function PlayBtn({
     () =>
       StyleSheet.create({
         btn: {
-          width: 42,
-          height: 42,
-          borderRadius: 21,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
           backgroundColor: colors.border.subtle,
           alignItems: 'center',
           justifyContent: 'center',
@@ -136,9 +123,9 @@ function MenuBtn({
     () =>
       StyleSheet.create({
         btn: {
-          width: 36,
-          height: 36,
-          borderRadius: 18,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
           alignItems: 'center',
           justifyContent: 'center',
         },

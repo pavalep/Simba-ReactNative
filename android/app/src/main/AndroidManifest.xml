@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required for foreground media playback notification (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Required for foreground service media type (Android 14+) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <application
       android:name=".MainApplication"
@@ -49,5 +54,15 @@
           <data android:scheme="content" android:mimeType="audio/*" />
         </intent-filter>
       </activity>
+
+      <!-- ── Foreground media notification service ── -->
+      <service
+        android:name=".MediaNotificationService"
+        android:foregroundServiceType="mediaPlayback"
+        android:exported="false">
+        <intent-filter>
+          <action android:name="android.intent.action.MEDIA_BUTTON" />
+        </intent-filter>
+      </service>
     </application>
 </manifest>

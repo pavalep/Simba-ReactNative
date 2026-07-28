@@ -61,9 +61,9 @@ const sessionSlice = createSlice({
       // Remove existing entry for this URI
       const filtered = state.recentFiles.filter(f => f.fileUri !== fileUri);
 
-      // Preserve existing thumbnail/mediaType if not explicitly provided
+      // Preserve existing thumbnail/mediaType if not provided or capture failed
       const existingEntry = state.recentFiles.find(f => f.fileUri === fileUri);
-      const resolvedThumbnail = thumbnailPath ?? existingEntry?.thumbnailPath ?? '';
+      const resolvedThumbnail = thumbnailPath || existingEntry?.thumbnailPath || '';
       const resolvedMediaType = mediaType ?? existingEntry?.mediaType ?? 'video';
 
       // Add to front
@@ -140,7 +140,7 @@ export const selectFrequentlyPlayed = createSelector(
 export const selectRecentlyAdded = createSelector(
   [(state: RootState) => state.session.mediaLibrary],
   library =>
-    [...library]
+    [...(library ?? [])]
       .sort(
         (a, b) =>
           new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime(),
@@ -158,7 +158,7 @@ export const selectWeightedFeatured = createSelector(
     // Evening bonus (6PM–10PM)
     const timeOfDayBonus = (currentHour >= 18 && currentHour <= 22) ? 1.2 : 1.0;
 
-    const scored = recentFiles.map(entry => {
+    const scored = (recentFiles ?? []).map(entry => {
       const hoursSincePlayed =
         (now - new Date(entry.lastPlayedAt).getTime()) / (1000 * 60 * 60);
       const recencyScore = Math.max(0, 1 - hoursSincePlayed / 168); // decays over 1 week

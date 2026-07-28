@@ -1,14 +1,16 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   View,
-  ScrollView,
+  FlatList,
   RefreshControl,
   StyleSheet,
+  TouchableOpacity,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
 import {useAppSelector} from '../../store';
+import {CommonActions} from '@react-navigation/native';
 import {type HomeScreenProps} from '../../navigation/types';
 import {pickMediaFile, getMediaType} from '../../services/fileService';
 import {
@@ -24,23 +26,76 @@ import {useNetworkStatus} from '../../hooks/useNetworkStatus';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {HomeHeader} from '../../components/layout/HomeHeader/HomeHeader';
 import {FeaturedHeroBanner} from './components/FeaturedHeroBanner';
-import {ContinueWatchingHero} from './components/ContinueWatchingHero';
 import {HomeMediaShelf} from './components/HomeMediaShelf';
 import {QuickAccessShelf} from './components/QuickAccessShelf';
 import {HomeEmptyState} from './components/HomeEmptyState';
 import {HomeLoadingSkeleton} from './components/HomeLoadingSkeleton';
 import {HomeErrorState} from './components/HomeErrorState';
 import {NoNetworkBanner} from './components/NoNetworkBanner';
-import {ScanProgressBanner} from './components/ScanProgressBanner';
+import {selectTrackCount, selectScanProgress, selectScanHistory} from '../../store/slices/mediaSlice';
+import {SvgIcon} from '../../components/utility/SvgIcon';
+import {AppText} from '../../components/core/AppText/AppText';
+
+// ── Types ──
+
+type HomeSection = 
+  | { type: 'GREETING' }
+  | { type: 'HERO', data: SessionEntry | null }
+  | { type: 'SHELF', title: string, items: any[] }
+  | { type: 'PLAYLISTS', items: any[] };
 
 // ── Helpers ──
+
+/** Get time-based greeting string. */
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  if (hour >= 17 && hour < 22) return 'Good evening';
+  return 'Good night';
+}
 
 /** Check if a session entry qualifies as "in-progress" (has meaningful position). */
 function isInProgress(item: SessionEntry): boolean {
   return item.position > 30 && item.position < item.duration - 5;
 }
 
-// ── Screen ──
+// ── Dummy Data ─────────────────────────────────────────────────────────────
+
+// Using reliable placeholder images for UI styling that work in emulator
+const DUMMY_VIDEO_1 = 'https://picsum.photos/seed/simba1/800/450';
+const DUMMY_VIDEO_2 = 'https://picsum.photos/seed/simba2/800/450';
+const DUMMY_VIDEO_3 = 'https://picsum.photos/seed/simba3/800/450';
+const DUMMY_VIDEO_4 = 'https://picsum.photos/seed/simba4/800/450';
+const DUMMY_VIDEO_5 = 'https://picsum.photos/seed/simba5/800/450';
+const DUMMY_VIDEO_6 = 'https://picsum.photos/seed/simba6/800/450';
+
+const DUMMY_RECENT = [
+  { fileUri: 'dummy1', title: 'The Silent Horizon', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_1, position: 0, duration: 7200, lastPlayedAt: new Date().toISOString() },
+  { fileUri: 'dummy2', title: 'Neon Velocity', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_2, position: 1200, duration: 5400, lastPlayedAt: new Date().toISOString() },
+  { fileUri: 'dummy3', title: 'Golden Echoes', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_3, position: 0, duration: 3600, lastPlayedAt: new Date().toISOString() },
+  { fileUri: 'dummy4', title: 'Urban Legend', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_4, position: 450, duration: 4800, lastPlayedAt: new Date().toISOString() },
+  { fileUri: 'dummy5', title: 'Midnight Protocol', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_5, position: 0, duration: 6000, lastPlayedAt: new Date().toISOString() },
+  { fileUri: 'dummy6', title: 'Shadow Realm', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_6, position: 0, duration: 9000, lastPlayedAt: new Date().toISOString() },
+  { fileUri: 'dummy7', title: 'Crystal Skies', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_1, position: 0, duration: 4200, lastPlayedAt: new Date().toISOString() },
+  { fileUri: 'dummy8', title: 'Stellar Voyager', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_4, position: 0, duration: 5100, lastPlayedAt: new Date().toISOString() },
+  { fileUri: 'dummy9', title: 'Crimson Tide', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_2, position: 0, duration: 3300, lastPlayedAt: new Date().toISOString() },
+  { fileUri: 'dummy10', title: 'Ethereal Dreams', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_3, position: 0, duration: 2400, lastPlayedAt: new Date().toISOString() },
+];
+
+const DUMMY_FOLDERS = [
+  { fileUri: 'dummy_f1', title: 'Cinematic Collection', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_5, position: 0, duration: 0 },
+  { fileUri: 'dummy_f2', title: 'Personal Clips', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_6, position: 0, duration: 0 },
+  { fileUri: 'dummy_f3', title: 'Documentaries', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_1, position: 0, duration: 0 },
+];
+
+const DUMMY_PLAYLISTS = [
+  { id: 'dp1', name: 'Late Night Chill', trackCount: 12, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() },
+  { id: 'dp2', name: 'Epic Soundtracks', trackCount: 45, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() },
+  { id: 'dp3', name: 'Travel Essentials', trackCount: 28, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() },
+];
+
+// ── Screen ─────────────────────────────────────────────────────────────────
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   const {colors} = useTheme();
@@ -61,150 +116,125 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   const recentlyAdded = useAppSelector(selectRecentlyAdded);
   const weightedFeatured = useAppSelector(selectWeightedFeatured);
   const playlists = useAppSelector(selectAllPlaylists);
-  const isScanning = useAppSelector(state => state.session.isMediaScanning ?? false);
-  const scanProgress = useAppSelector(state => state.session.scanProgress ?? 0);
+  const isScanning = useAppSelector(s => s.media?.isScanning ?? false);
+  const scanHistory = useAppSelector(selectScanHistory);
+  const trackCount = useAppSelector(selectTrackCount);
 
-  // ── Compute home sections ──
-  const {continueWatching, recentlyPlayed} = useMemo(() => {
-    const cwFromWeighted = weightedFeatured.find(isInProgress) ?? null;
-
-    const fallbackSorted = [...recentFiles].sort(
-      (a, b) =>
-        new Date(b.lastPlayedAt).getTime() - new Date(a.lastPlayedAt).getTime(),
-    );
-    const fallbackCwIndex = fallbackSorted.findIndex(isInProgress);
-    const cw =
-      cwFromWeighted ??
-      (fallbackCwIndex >= 0 ? fallbackSorted[fallbackCwIndex] : null);
-
-    const remaining = fallbackSorted
-      .filter((_, i) => i !== (cw ? fallbackSorted.indexOf(cw) : -1))
-      .slice(0, 8);
-
-    return {continueWatching: cw, recentlyPlayed: remaining};
-  }, [recentFiles, weightedFeatured]);
-
-  // ── Quick Access: top 3 playlists ──
-  const quickAccessPlaylists = useMemo(() => {
-    return [...playlists]
-      .sort(
-        (a, b) =>
-          new Date(b.updatedAt ?? b.createdAt).getTime() -
-          new Date(a.updatedAt ?? a.createdAt).getTime(),
-      )
-      .slice(0, 3);
-  }, [playlists]);
-
-  const hasContent =
-    continueWatching !== null ||
-    recentlyPlayed.length > 0 ||
-    frequentlyPlayed.length > 0 ||
-    quickAccessPlaylists.length > 0 ||
-    recentlyAdded.length > 0;
-
-  // ── Pull-to-refresh ──
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    setHasError(false);
-    await new Promise<void>(resolve => setTimeout(resolve, 600));
-    setRefreshing(false);
-  }, []);
-
-  const onRetry = useCallback(() => {
-    setHasError(false);
-    setIsSettled(false);
-    setTimeout(() => setIsSettled(true), 300);
-  }, []);
-
-  // ── Navigation ──
+  // ── Navigation Handlers ──
   const handleOpenMedia = useCallback(async () => {
     try {
       const file = await pickMediaFile();
       if (!file) return;
       const mediaType = getMediaType(file.uri);
       const screen = mediaType === 'audio' ? 'AudioPlayer' : 'VideoPlayer';
-      (navigation.navigate as (name: string, params?: any) => void)(screen, {
+      navigation.dispatch(CommonActions.navigate({name: screen, params: {
         fileUri: file.uri,
         fileTitle: file.title || 'Untitled',
-      });
-    } catch {
-      // User cancelled or error
-    }
+      }}));
+    } catch {}
   }, [navigation]);
 
   const handleItemPress = useCallback(
-    (item: SessionEntry) => {
-      const screen =
-        item.mediaType === 'audio' ? 'AudioPlayer' : 'VideoPlayer';
-      (navigation.navigate as (name: string, params?: any) => void)(screen, {
+    (item: {mediaType?: string; fileUri: string; title: string}) => {
+      if (item.fileUri.startsWith('dummy')) return; // Ignore dummy clicks
+      const screen = item.mediaType === 'audio' ? 'AudioPlayer' : 'VideoPlayer';
+      navigation.dispatch(CommonActions.navigate({name: screen, params: {
         fileUri: item.fileUri,
         fileTitle: item.title,
-      });
-    },
-    [navigation],
-  );
-
-  const handleLibraryItemPress = useCallback(
-    (item: MediaLibraryEntry) => {
-      const screen =
-        item.mediaType === 'audio' ? 'AudioPlayer' : 'VideoPlayer';
-      (navigation.navigate as (name: string, params?: any) => void)(screen, {
-        fileUri: item.fileUri,
-        fileTitle: item.title,
-      });
+      }}));
     },
     [navigation],
   );
 
   const handlePlaylistPress = useCallback(
     (playlistId: string) => {
-      (navigation.navigate as (name: string, params?: any) => void)('MainTabs', {
+      navigation.dispatch(CommonActions.navigate({name: 'MainTabs', params: {
         screen: 'LibraryTab',
         params: {screen: 'PlaylistDetail', params: {playlistId}},
-      });
+      }}));
     },
     [navigation],
   );
 
-  const handleBrowseLibrary = useCallback(() => {
-    navigation.navigate('MainTabs', {screen: 'LibraryTab'});
-  }, [navigation]);
+  const handleSettingsPress = () => navigation.navigate('Settings', {screen: 'Settings', params: undefined});
+  const handleSearchPress = () => navigation.navigate('Search');
 
-  const handleSettingsPress = useCallback(() => {
-    navigation.navigate('Settings');
-  }, [navigation]);
+  // ── Compute Sections ──
+  const sections = useMemo((): HomeSection[] => {
+    const cw = weightedFeatured.find(isInProgress) ?? weightedFeatured[0] ?? null;
+    
+    const realSections: HomeSection[] = [
+      { type: 'GREETING' },
+      { type: 'HERO', data: cw },
+    ];
 
-  const handleSearchPress = useCallback(() => {
-    navigation.navigate('Search');
-  }, [navigation]);
+    // Recently Played: Always show to maintain professional look, padding with dummy data
+    const otherRecent = recentFiles.filter(item => item.fileUri !== cw?.fileUri);
+    
+    let shelfItems = [...otherRecent];
+    if (shelfItems.length < 10) {
+      // Pad with dummy data to reach exactly 10 items for a "professional" look
+      shelfItems = [...shelfItems, ...DUMMY_RECENT.slice(0, 10 - shelfItems.length)];
+    }
+    realSections.push({ type: 'SHELF', title: 'Recently Played', items: shelfItems.slice(0, 10) });
 
-  // ── Render ──
+    // Pinned Playlists: Show real ones or dummy fallback
+    const pinnedPlaylists = playlists.length > 0 
+      ? [...playlists].sort((a, b) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime()).slice(0, 3)
+      : DUMMY_PLAYLISTS;
+    
+    realSections.push({ type: 'PLAYLISTS', items: pinnedPlaylists });
 
-  // Error state
+    // Folders (Offline appropriate instead of "Trending/New")
+    realSections.push({ type: 'SHELF', title: 'Media Folders', items: DUMMY_FOLDERS });
+
+    return realSections;
+  }, [recentFiles, weightedFeatured, playlists]);
+
+  // ── Render Item ──
+  const renderSection = useCallback(({item}: {item: HomeSection}) => {
+    switch (item.type) {
+      case 'GREETING':
+        return (
+          <View style={styles.welcomeSection}>
+            <AppText variant="h2" color="primary" style={styles.greetingMain}>
+              {getGreeting()}, Paval
+            </AppText>
+          </View>
+        );
+      case 'HERO':
+        return item.data ? <FeaturedHeroBanner item={item.data} onPress={handleItemPress} /> : null;
+      case 'SHELF':
+        return <HomeMediaShelf title={item.title} items={item.items} onItemPress={handleItemPress} />;
+      case 'PLAYLISTS':
+        return <QuickAccessShelf title="Pinned Playlists" playlists={item.items} onPlaylistPress={handlePlaylistPress} />;
+      default:
+        return null;
+    }
+  }, [handleItemPress, handlePlaylistPress]);
+
+  // ── Pull-to-refresh ──
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await new Promise<void>(resolve => setTimeout(resolve, 600));
+    setRefreshing(false);
+  }, []);
+
+  // ── Main Render ──
+
   if (hasError) {
     return (
-      <View
-        style={[
-          styles.root,
-          {backgroundColor: colors.background.primary},
-          {paddingTop: insets.top},
-        ]}>
+      <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
         <SimbaStatusBar variant="home" />
         <HomeHeader isScanning={isScanning} onSettingsPress={handleSettingsPress} onSearchPress={handleSearchPress} />
-        <HomeErrorState onRetry={onRetry} colors={colors} />
+        <HomeErrorState onRetry={() => setHasError(false)} colors={colors} />
       </View>
     );
   }
 
-  // Skeleton loading (before settled and no content)
-  if (!isSettled && !hasContent) {
+  if (!isSettled && sections.length <= 2) {
     return (
-      <View
-        style={[
-          styles.root,
-          {backgroundColor: colors.background.primary},
-          {paddingTop: insets.top},
-        ]}>
+      <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
         <SimbaStatusBar variant="home" />
         <HomeHeader isScanning={isScanning} onSettingsPress={handleSettingsPress} onSearchPress={handleSearchPress} />
         <HomeLoadingSkeleton colors={colors} />
@@ -213,108 +243,61 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   }
 
   return (
-    <View
-      style={[
-        styles.root,
-        {backgroundColor: colors.background.primary},
-        {paddingTop: insets.top},
-      ]}>
+    <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
       <SimbaStatusBar variant="home" />
       <HomeHeader isScanning={isScanning} onSettingsPress={handleSettingsPress} onSearchPress={handleSearchPress} />
 
-      {/* ── Overlay banners (absolute positioned) ── */}
       <NoNetworkBanner isVisible={!isOnline} colors={colors} />
-      <ScanProgressBanner isScanning={isScanning} scanProgress={scanProgress} colors={colors} />
 
-      {hasContent ? (
-        <ScrollView
-          style={styles.scrollArea}
-          contentContainerStyle={[
-            styles.scrollContent,
-            {paddingBottom: insets.bottom + 100},
-          ]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.accent.gold}
-              colors={[colors.accent.gold]}
-            />
-          }>
-          {/* ── Featured Hero (top priority content) ── */}
-          <FeaturedHeroBanner item={continueWatching} onPress={handleItemPress} />
+      <FlatList
+        data={sections}
+        renderItem={renderSection}
+        keyExtractor={(item, index) => item.type + (item.type === 'SHELF' ? item.title : index.toString())}
+        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 100}]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.accent.gold}
+            colors={[colors.accent.gold]}
+          />
+        }
+      />
 
-          {/* ── Continue Watching Hero ── */}
-          {continueWatching && (
-            <ContinueWatchingHero
-              item={continueWatching}
-              onPress={handleItemPress}
-            />
-          )}
-
-          {/* ── Frequently Played Shelf ── */}
-          {frequentlyPlayed.length > 0 && (
-            <HomeMediaShelf
-              title="Frequently Played"
-              items={frequentlyPlayed}
-              onItemPress={handleItemPress}
-            />
-          )}
-
-          {/* ── Recently Played Shelf ── */}
-          {recentlyPlayed.length > 0 && (
-            <HomeMediaShelf
-              title="Recently Played"
-              items={recentlyPlayed}
-              onItemPress={handleItemPress}
-            />
-          )}
-
-          {/* ── Quick Access Playlists ── */}
-          {quickAccessPlaylists.length > 0 && (
-            <QuickAccessShelf
-              playlists={quickAccessPlaylists}
-              onPlaylistPress={handlePlaylistPress}
-            />
-          )}
-
-          {/* ── Recently Added Shelf ── */}
-          {recentlyAdded.length > 0 && (
-            <HomeMediaShelf
-              title="Recently Added"
-              items={recentlyAdded.map(e => ({
-                fileUri: e.fileUri,
-                title: e.title,
-                position: 0,
-                duration: e.duration,
-                lastPlayedAt: e.dateAdded,
-                thumbnailPath: '',
-                mediaType: e.mediaType,
-              }))}
-              onItemPress={handleLibraryItemPress as any}
-            />
-          )}
-        </ScrollView>
-      ) : (
-        /* ── Empty State ── */
-        <HomeEmptyState
-          onOpenMedia={handleOpenMedia}
-          onBrowseLibrary={handleBrowseLibrary}
-        />
-      )}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={handleOpenMedia}
+        style={[styles.fab, {backgroundColor: colors.accent.gold, bottom: insets.bottom + 100}]}>
+        <SvgIcon name="play" size={24} color="#000" />
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
+  root: { flex: 1 },
+  scrollContent: { paddingTop: spacing.md },
+  welcomeSection: {
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
   },
-  scrollArea: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: spacing.md,
+  greetingOverline: { letterSpacing: 1.5, marginBottom: 2 },
+  greetingMain: { fontWeight: '700', opacity: 0.9 },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.3,
+    shadowRadius: 4.5,
+    zIndex: 99,
   },
 });

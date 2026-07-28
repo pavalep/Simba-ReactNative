@@ -1,6 +1,11 @@
 import {pick, types} from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
+import {Platform} from 'react-native';
 import {MpvPlayer} from '../native/player.api';
+
+import type {ScannedTrack} from '../store/slices/mediaSlice';
+import {logger} from '../lib/logger';
+import {logError} from '../lib/errorLogger';
 
 /** Subtitle file types for document picker */
 const SUBTITLE_TYPES = [
@@ -94,9 +99,10 @@ export async function validateMediaFile(uri: string): Promise<FileValidation> {
   let stat: RNFS.StatResult;
   try {
     stat = await RNFS.stat(uri);
-  } catch (err: any) {
+  } catch (err: unknown) {
     // EACCES / EPERM / ENOENT — permission or not found
-    if (err?.code === 'EACCES' || err?.code === 'EPERM') {
+    const code = err && typeof err === 'object' && 'code' in err ? (err as {code?: string}).code : undefined;
+    if (code === 'EACCES' || code === 'EPERM') {
       return {
         valid: false,
         title: 'Permission Denied',
@@ -187,9 +193,10 @@ export async function pickMediaFile(): Promise<PickedFile | null> {
       type: result.type ?? null,
       size: result.size ?? null,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     // User cancelled — not an error
-    if (err?.code === 'OPERATION_CANCELED') return null;
+    const code = err && typeof err === 'object' && 'code' in err ? (err as {code?: string}).code : undefined;
+    if (code === 'OPERATION_CANCELED') return null;
     throw err;
   }
 }
@@ -211,8 +218,9 @@ export async function pickSubtitleFile(): Promise<PickedFile | null> {
       type: result.type ?? null,
       size: result.size ?? null,
     };
-  } catch (err: any) {
-    if (err?.code === 'OPERATION_CANCELED') return null;
+  } catch (err: unknown) {
+    const code = err && typeof err === 'object' && 'code' in err ? (err as {code?: string}).code : undefined;
+    if (code === 'OPERATION_CANCELED') return null;
     throw err;
   }
 }
@@ -360,4 +368,277 @@ export function parseNetworkError(url: string, error: Error): NetworkError {
     return {type: 'ssl', url, message: 'SSL connection failed. The stream may have an invalid certificate.'};
   }
   return {type: 'generic', url, message: error.message};
+}
+
+// ══════════════════════════════════════════════════════════
+// PHASE 25 — Media Scanner & Indexing Improvements
+// ══════════════════════════════════════════════════════════
+
+// ─── Types ──────────────────────────────────────────────────
+
+export interface FileEntry {
+  uri: string;
+  name: string;
+  /** File modification time (ms since epoch) */
+  mtimeMs: number;
+  /** File size in bytes */
+  size: number;
+  /** Whether this file is a directory */
+  isDirectory: boolean;
+}
+
+/** Callback invoked during scanning to report progress. Return true to cancel. */
+export type ScanProgressCallback = (progress: {
+  /** The folder path currently being scanned */
+  currentFolder: string;
+  /** Files discovered so far (cumulative) */
+  filesFound: number;
+  /** Total files across all folders (estimated after folder enumeration) */
+  totalFiles: number;
+  /** Percentage complete 0–100 */
+  percentComplete: number;
+}) => boolean;
+
+export interface IncrementalScanResult {
+  /** New/missing files that need metadata extraction */
+  files: FileEntry[];
+  /** Files that existed before and are unmodified (skipped) */
+  skippedCount: number;
+  /** Number of files with unsupported extensions (not indexed) */
+  unsupportedCount: number;
+  /** Number of errors encountered during enumeration */
+  errorsCount: number;
+  /** The scan timestamp (ms) */
+  scanTimestamp: number;
+}
+
+// ─── Audio / Video extension sets ─────────────────────
+
+const SCAN_AUDIO_EXTENSIONS = new Set([
+  '.mp3', '.flac', '.wav', '.aac', '.ogg', '.wma', '.m4a', '.opus',
+]);
+
+const SCAN_VIDEO_EXTENSIONS = new Set([
+  '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.mpg', '.mpeg',
+]);
+
+const SCAN_MEDIA_EXTENSIONS = new Set<string>();
+for (const e of SCAN_AUDIO_EXTENSIONS) SCAN_MEDIA_EXTENSIONS.add(e);
+for (const e of SCAN_VIDEO_EXTENSIONS) SCAN_MEDIA_EXTENSIONS.add(e);
+
+function isScanVideoExt(ext: string): boolean {
+  return SCAN_VIDEO_EXTENSIONS.has(ext);
+}
+
+// ─── Helpers ───────────────────────────────────────────
+
+/**
+ * Parse a file name (no extension) into a display title.
+ */
+function fileNameToTitle(fileName: string): string {
+  // Strip leading track number: "01 - Song" or "01. Song" or "01 Song"
+  const cleaned = fileName.replace(/^\d+\s*[-.)\s]\s*/, '').trim();
+  // Replace underscores with spaces
+  return cleaned.replace(/_/g, ' ').trim() || fileName;
+}
+
+/**
+ * Extract artist/album from folder hierarchy.
+ * Given path segments like ["Music", "Artist Name", "Album Name", "file.mp3"],
+ * returns {artist: "Artist Name", album: "Album Name"}.
+ */
+function extractFolderMetadata(filePath: string): {artist: string; album: string} {
+  const segments = filePath.replace(/^file:\/\//, '').split('/').filter(Boolean);
+  const parentDir = segments.length >= 2 ? segments[segments.length - 2] : '';
+  const grandParentDir = segments.length >= 3 ? segments[segments.length - 3] : '';
+  return {
+    artist: grandParentDir || parentDir || 'Unknown Artist',
+    album: parentDir || grandParentDir || 'Unknown Album',
+  };
+}
+
+// ─── Core scanner ──────────────────────────────────────
+
+/**
+ * Recursively enumerate files in a folder, filtering for supported media
+ * extensions. Returns a flat list of FileEntry objects.
+ *
+ * If `lastScanTimestamp` is provided, only returns files that are new or
+ * have been modified since that timestamp (incremental scanning).
+ */
+async function enumerateMediaFiles(
+  folderPath: string,
+  lastScanTimestamp: number | null,
+  onProgress?: ScanProgressCallback,
+  cancelRef?: {current: boolean},
+): Promise<{files: FileEntry[]; skippedCount: number; unsupportedCount: number; errorsCount: number}> {
+  const results: FileEntry[] = [];
+  let skippedCount = 0;
+  let unsupportedCount = 0;
+  let errorsCount = 0;
+
+  async function walk(dir: string) {
+    // Check cancellation
+    if (cancelRef?.current) return;
+
+    let items: RNFS.ReadDirItem[];
+    try {
+      items = await RNFS.readDir(dir);
+    } catch {
+      errorsCount++;
+      return;
+    }
+
+    // Report progress for this folder
+    if (onProgress) {
+      const cancelled = onProgress({
+        currentFolder: dir,
+        filesFound: results.length,
+        totalFiles: 0,
+        percentComplete: 0,
+      });
+      if (cancelled && cancelRef) cancelRef.current = true;
+    }
+
+    for (const item of items) {
+      if (cancelRef?.current) return;
+
+      if (item.isDirectory()) {
+        await walk(item.path);
+        continue;
+      }
+
+      if (!item.isFile()) continue;
+
+      const ext = item.name.slice(item.name.lastIndexOf('.')).toLowerCase();
+      if (!SCAN_MEDIA_EXTENSIONS.has(ext)) {
+        unsupportedCount++;
+        continue;
+      }
+
+      // Incremental: skip files not modified since last scan
+      if (lastScanTimestamp !== null && item.mtime !== undefined) {
+        const fileMtimeMs = item.mtime.getTime();
+        if (fileMtimeMs <= lastScanTimestamp) {
+          skippedCount++;
+          continue;
+        }
+      }
+
+      results.push({
+        uri: item.path,
+        name: item.name,
+        mtimeMs: item.mtime?.getTime() ?? 0,
+        size: item.size,
+        isDirectory: false,
+      });
+    }
+  }
+
+  await walk(folderPath);
+  return {files: results, skippedCount, unsupportedCount, errorsCount};
+}
+
+/**
+ * Scan multiple folders with unified progress reporting.
+ *
+ * @param folderPaths   - List of folder URIs to scan
+ * @param lastScanTimestamp - If provided, only scan files modified after this time (incremental)
+ * @param onProgress    - Optional callback receiving per-folder progress; return true to cancel
+ * @param cancelRef     - Mutable ref; set `.current = true` to cancel
+ *
+ * Returns an IncrementalScanResult with new/changed files and statistics.
+ */
+export async function scanFoldersIncremental(
+  folderPaths: string[],
+  lastScanTimestamp: number | null,
+  onProgress?: ScanProgressCallback,
+  cancelRef?: {current: boolean},
+): Promise<IncrementalScanResult> {
+  const allFiles: FileEntry[] = [];
+  let totalSkipped = 0;
+  let totalUnsupported = 0;
+  let totalErrors = 0;
+  let totalFiles = 0;
+
+  if (folderPaths.length === 0) {
+    return {
+      files: [],
+      skippedCount: 0,
+      unsupportedCount: 0,
+      errorsCount: 0,
+      scanTimestamp: Date.now(),
+    };
+  }
+
+  // Phase 1: Estimate total files by counting directories (lightweight)
+  // For progress estimation, we use folder enumeration steps
+  const totalFolders = folderPaths.length;
+
+  // Phase 2: Scan each folder
+  for (let i = 0; i < folderPaths.length; i++) {
+    if (cancelRef?.current) break;
+
+    const folder = folderPaths[i];
+    const result = await enumerateMediaFiles(folder, lastScanTimestamp, onProgress, cancelRef);
+
+    allFiles.push(...result.files);
+    totalSkipped += result.skippedCount;
+    totalUnsupported += result.unsupportedCount;
+    totalErrors += result.errorsCount;
+    totalFiles = allFiles.length;
+
+    // Report progress
+    if (onProgress) {
+      const pct = Math.round(((i + 1) / totalFolders) * 100);
+      const cancelled = onProgress({
+        currentFolder: folder,
+        filesFound: totalFiles,
+        totalFiles,
+        percentComplete: pct,
+      });
+      if (cancelled && cancelRef) cancelRef.current = true;
+    }
+  }
+
+  return {
+    files: allFiles,
+    skippedCount: totalSkipped,
+    unsupportedCount: totalUnsupported,
+    errorsCount: totalErrors,
+    scanTimestamp: Date.now(),
+  };
+}
+
+/**
+ * Convert a flat list of FileEntry results into ScannedTrack[] for the media store.
+ * Uses folder hierarchy to infer artist/album metadata.
+ */
+export function fileEntriesToTracks(files: FileEntry[]): ScannedTrack[] {
+  const map = new Map<string, ScannedTrack>();
+
+  for (const f of files) {
+    if (map.has(f.uri)) continue;
+
+    const ext = f.name.slice(f.name.lastIndexOf('.')).toLowerCase();
+    const mediaType = isScanVideoExt(ext) ? 'video' : 'audio';
+    const nameWithoutExt = f.name.slice(0, f.name.lastIndexOf('.')) || f.name;
+    const folderMeta = extractFolderMetadata(f.uri);
+
+    map.set(f.uri, {
+      uri: f.uri,
+      title: fileNameToTitle(nameWithoutExt),
+      artist: folderMeta.artist,
+      album: folderMeta.album,
+      year: 0,
+      genre: '',
+      trackNumber: 0,
+      duration: 0,
+      albumArtUri: '',
+      folderPath: f.uri.substring(0, f.uri.lastIndexOf('/')),
+      mediaType,
+    });
+  }
+
+  return Array.from(map.values());
 }

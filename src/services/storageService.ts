@@ -1,7 +1,6 @@
 export type ThemeMode = 'light' | 'dark' | 'system';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const storage: any = {};
+const storage: Record<string, never> = {};
 
 export {storage};
 

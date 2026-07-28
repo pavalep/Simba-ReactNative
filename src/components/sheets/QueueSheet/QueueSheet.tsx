@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useMemo} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {
   View,
   SectionList,
@@ -219,7 +219,9 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
             <TouchableOpacity
               style={styles.historyInfo}
               activeOpacity={0.7}
-              onPress={() => onSelectHistoryItem(rowIndex)}>
+              onPress={() => onSelectHistoryItem(rowIndex)}
+              accessibilityRole="button"
+              accessibilityLabel={`Play ${item.title || 'Untitled'}`}>
               <AppText variant="body2" numberOfLines={1}>
                 {item.title || 'Untitled'}
               </AppText>
@@ -233,7 +235,9 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
               <TouchableOpacity
                 activeOpacity={0.6}
                 onPress={() => onPlayNext(item)}
-                style={styles.historyActionBtn}>
+                style={styles.historyActionBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`Play "${item.title || 'Untitled'}" next`}>
                 <AppText
                   variant="caption"
                   style={{color: colors.accent.gold, fontWeight: '600'}}>
@@ -243,7 +247,9 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
               <TouchableOpacity
                 activeOpacity={0.6}
                 onPress={() => onAddToQueue(item)}
-                style={styles.historyActionBtn}>
+                style={styles.historyActionBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`Add "${item.title || 'Untitled'}" to queue`}>
                 <SvgIcon name="listMusic" size={16} color={colors.accent.gold} />
               </TouchableOpacity>
             </View>
@@ -315,7 +321,9 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={onRemoveSelected}
-                style={[styles.batchBtn, {backgroundColor: colors.semantic.error}]}>
+                style={[styles.batchBtn, {backgroundColor: colors.semantic.error}]}
+                accessibilityRole="button"
+                accessibilityLabel="Remove selected items">
                 <AppText variant="caption" style={{color: '#FFF', fontWeight: '600'}}>
                   Remove
                 </AppText>
@@ -323,7 +331,9 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={onMoveSelectedToTop}
-                style={[styles.batchBtn, {backgroundColor: colors.accent.goldDim}]}>
+                style={[styles.batchBtn, {backgroundColor: colors.accent.goldDim}]}
+                accessibilityRole="button"
+                accessibilityLabel="Move selected items to top">
                 <AppText variant="caption" style={{color: colors.accent.gold, fontWeight: '600'}}>
                   Move to Top
                 </AppText>
@@ -331,7 +341,9 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={onClearAll}
-                style={[styles.batchBtn, {backgroundColor: colors.background.primary}]}>
+                style={[styles.batchBtn, {backgroundColor: colors.background.primary}]}
+                accessibilityRole="button"
+                accessibilityLabel="Clear all queue items">
                 <AppText variant="caption" color="tertiary" style={{fontWeight: '600'}}>
                   Clear All
                 </AppText>
@@ -339,7 +351,9 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={onExitMultiSelect}
-                style={styles.batchBtn}>
+                style={styles.batchBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Done selecting">
                 <AppText variant="caption" color="secondary" style={{fontWeight: '600'}}>
                   Done
                 </AppText>
@@ -351,7 +365,11 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
             <AppText variant="caption" color="tertiary">
               Select items to batch operate
             </AppText>
-            <TouchableOpacity activeOpacity={0.7} onPress={onExitMultiSelect}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={onExitMultiSelect}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel selection">
               <AppText variant="caption" color="secondary" style={{fontWeight: '600'}}>
                 Cancel
               </AppText>
@@ -433,7 +451,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   historyActionBtn: {
-    padding: 6,
+    padding: 12,
   },
 
   // ── Bottom bars ──

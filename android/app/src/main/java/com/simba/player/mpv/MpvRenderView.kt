@@ -76,11 +76,19 @@ class MpvRenderView(context: ThemedReactContext) : TextureView(context),
         if (!surface!!.isValid) return
         Log.d(TAG, "Attaching surface to mpv")
         MPVLib.nativeAttachSurface(nativePtr, surface)
+        // Restore the gpu video output so mpv creates a new ANativeWindow
+        // from the fresh Surface. The native side already updated wid,
+        // so the VO re-init will pick up the new surface.
+        MPVLib.setPropertyString(nativePtr, "vo", "gpu")
     }
 
     private fun detachSurface() {
         if (nativePtr == 0L) return
         Log.d(TAG, "Detaching surface from mpv")
+        // Kill the gpu video output FIRST so mpv releases its ANativeWindow
+        // reference before we delete the JNI global ref to the Surface.
+        // If we delete the ref first, mpv still holds a stale pointer → crash.
+        MPVLib.setPropertyString(nativePtr, "vo", "null")
         MPVLib.nativeAttachSurface(nativePtr, null)
     }
 

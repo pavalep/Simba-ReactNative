@@ -8,7 +8,7 @@ import {
   nextTrack,
   previousTrack,
 } from '../store/slices/playerSlice';
-import {MediaFile, PlaybackState} from '../types';
+import {MediaFile} from '../types';
 
 export const usePlayer = () => {
   const dispatch = useAppDispatch();

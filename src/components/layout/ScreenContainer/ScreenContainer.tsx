@@ -1,10 +1,10 @@
 import React, {ReactNode} from 'react';
-import {View, ScrollView, StyleSheet, ViewStyle} from 'react-native';
+import {View, ScrollView, ViewStyle} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 
-interface ScreenContainerProps {
+export interface ScreenContainerProps {
   children: ReactNode;
   scrollable?: boolean;
   style?: ViewStyle;

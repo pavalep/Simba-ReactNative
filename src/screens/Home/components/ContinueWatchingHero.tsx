@@ -4,16 +4,18 @@ import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 
+interface ContinueWatchingItem {
+  title: string;
+  fileUri: string;
+  position: number;
+  duration: number;
+  mediaType?: string;
+  thumbnailPath?: string;
+}
+
 interface ContinueWatchingHeroProps {
-  item: {
-    title: string;
-    fileUri: string;
-    position: number;
-    duration: number;
-    mediaType: string;
-    thumbnailPath?: string;
-  };
-  onPress: (item: any) => void;
+  item: ContinueWatchingItem;
+  onPress: (item: ContinueWatchingItem) => void;
 }
 
 export const ContinueWatchingHero: React.FC<ContinueWatchingHeroProps> = ({

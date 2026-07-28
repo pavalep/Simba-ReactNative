@@ -62,11 +62,11 @@ class MainActivity : ReactActivity() {
     }
   }
 
-  // ── Back button exits PiP, does not exit app ──
+  // ── Back button while in PiP: exit PiP mode to return to app ──
   override fun onBackPressed() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
-      // Back button while in PiP: bring activity to front (exits PiP)
-      moveTaskToFront(true)
+      // Finish exits PiP mode and restores the activity to foreground
+      finish()
       return
     }
     super.onBackPressed()

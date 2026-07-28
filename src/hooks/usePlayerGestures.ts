@@ -4,7 +4,7 @@
 // Phase 13: Extracts gesture logic into a reusable hook
 // for both VideoPlayerGestureLayer and other surfaces.
 
-import {useRef, useCallback} from 'react';
+import {useRef, useCallback, useEffect} from 'react';
 import {Dimensions, PanResponder, GestureResponderEvent, PanResponderGestureState} from 'react-native';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -147,6 +147,15 @@ export function usePlayerGestures(callbacks: GestureCallbacks): PlayerGestureHan
       },
     }),
   ).current;
+
+  // Clean up pending tap timer on unmount to prevent stale closure callback
+  useEffect(() => {
+    return () => {
+      if (tapTimer.current) {
+        clearTimeout(tapTimer.current);
+      }
+    };
+  }, []);
 
   return {
     panHandlers: panResponder.panHandlers,

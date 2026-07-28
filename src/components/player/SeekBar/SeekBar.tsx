@@ -2,6 +2,7 @@ import React, {useRef, useState, useCallback, useMemo} from 'react';
 import {View, PanResponder, Animated, TouchableOpacity, StyleSheet, LayoutChangeEvent} from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
 import {useTheme} from '../../../theme';
+import {useDebounce} from '../../../hooks/useDebounce';
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -14,6 +15,12 @@ function fmt(seconds: number): string {
     return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+/** Format duration, showing "Live" for zero / unknown lengths (e.g. streams). */
+function fmtDuration(seconds: number): string {
+  if (!seconds || !isFinite(seconds) || seconds <= 0) return 'Live';
+  return fmt(seconds);
 }
 
 // ─── Props ──────────────────────────────────────────────────
@@ -34,13 +41,16 @@ export interface SeekBarProps {
 // ─── Component ──────────────────────────────────────────────
 
 const SeekBar: React.FC<SeekBarProps> = ({
-  position,
+  position: rawPosition,
   duration,
   onSeek,
   chapters,
   trackHeight = 16,
 }) => {
   const {colors} = useTheme();
+
+  // Debounce position updates to avoid excessive re-renders from 250ms polling
+  const position = useDebounce(rawPosition, 250);
 
   // Track layout
   const trackWidthRef = useRef(0);
@@ -159,26 +169,6 @@ const SeekBar: React.FC<SeekBarProps> = ({
           minWidth: 40,
           textAlign: 'center',
         },
-        previewBubble: {
-          backgroundColor: colors.background.elevated,
-          paddingHorizontal: 8,
-          paddingVertical: 3,
-          borderRadius: 6,
-          borderWidth: 0.5,
-          borderColor: colors.border.subtle,
-          alignSelf: 'flex-start',
-        },
-        previewBubbleWrapper: {
-          position: 'absolute',
-          alignItems: 'center',
-          width: 0,
-          overflow: 'visible',
-        },
-        previewText: {
-          fontSize: 11,
-          fontWeight: '600',
-          color: colors.accent.gold,
-        },
       }),
     [colors, trackHeight],
   );
@@ -199,6 +189,13 @@ const SeekBar: React.FC<SeekBarProps> = ({
         }}
         style={styles.trackContainer}
         onLayout={handleTrackLayout}
+        accessibilityRole="adjustable"
+        accessibilityLabel={`Playback seek bar, ${Math.round(displayFraction * 100)} percent`}
+        accessibilityValue={{
+          min: 0,
+          max: 100,
+          now: Math.round(displayFraction * 100),
+        }}
         {...panResponder.panHandlers}>
         {/* Background track */}
         <View style={styles.trackBg} />
@@ -237,28 +234,13 @@ const SeekBar: React.FC<SeekBarProps> = ({
             ]}
           />
         )}
-
-        {/* Preview bubble during scrubbing */}
-        {isScrubbing && (
-          <View
-            style={[
-              styles.previewBubbleWrapper,
-              {left: `${scrubFraction * 100}%`, bottom: trackHeight + 8},
-            ]}>
-            <View style={styles.previewBubble}>
-              <AppText style={styles.previewText}>
-                {fmt(scrubFraction * durationSec)}
-              </AppText>
-            </View>
-          </View>
-        )}
       </View>
 
       <AppText variant="caption" color="primary" style={styles.timeLabel}>
-        {fmt(duration)}
+        {fmtDuration(duration)}
       </AppText>
     </View>
   );
 };
 
-export default SeekBar;
+export default React.memo(SeekBar);

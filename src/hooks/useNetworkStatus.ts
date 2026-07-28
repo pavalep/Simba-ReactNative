@@ -21,24 +21,8 @@ export function useNetworkStatus(): NetworkStatus {
         if (!online) wasEverOffline.current = true;
       });
     } catch {
-      // Fallback to navigator.onLine
-      setIsOnline(navigator.onLine ?? true);
-
-      const handleOnline = () => {
-        setIsOnline(true);
-      };
-      const handleOffline = () => {
-        setIsOnline(false);
-        wasEverOffline.current = true;
-      };
-
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-      };
+      // React Native doesn't have navigator/window — assume online
+      setIsOnline(true);
     }
 
     return () => {

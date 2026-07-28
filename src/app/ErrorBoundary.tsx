@@ -6,6 +6,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import {AppText} from '../components/core/AppText/AppText';
+import {logger} from '../lib/logger';
+import {logError} from '../lib/errorLogger';
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -21,6 +23,8 @@ export interface FallbackColors {
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallbackColors: FallbackColors;
+  /** Called when user taps "Go Back" — navigates away from the errored screen */
+  onGoBack?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -104,6 +108,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               Try Again
             </AppText>
           </TouchableOpacity>
+
+          {/* Go Back button */}
+          {this.props.onGoBack && (
+            <TouchableOpacity
+              style={[styles.goBackButton, {borderColor: border}]}
+              onPress={this.props.onGoBack}
+              accessibilityRole="button"
+              accessibilityLabel="Go Back">
+              <AppText variant="body2" style={[{color: textSecondary}]}>
+                Go Back
+              </AppText>
+            </TouchableOpacity>
+          )}
 
           {/* Error details toggle */}
           {this.state.error && (
@@ -196,6 +213,15 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontWeight: '600',
+  },
+  goBackButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 160,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   detailsToggle: {
     paddingVertical: 8,

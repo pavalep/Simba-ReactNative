@@ -7,7 +7,6 @@ import {
   selectSearchIndex,
 } from '../store/slices/mediaSlice';
 import {selectAllPlaylists} from '../store/slices/playlistSlice';
-import type {SearchIndex} from '../store/slices/mediaSlice';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -112,7 +111,7 @@ export function useSearch(
       if (combined === null) {
         combined = new Set(hitSet);
       } else {
-        combined = new Set([...combined].filter(uri => hitSet.has(uri)));
+        combined = new Set([...(combined as Set<string>)].filter(uri => hitSet.has(uri)));
       }
     }
     return combined ?? new Set();

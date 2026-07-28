@@ -13,8 +13,11 @@ interface Props {
 }
 
 export const AudioTrackInfo: React.FC<Props> = ({title, artist, album, fileUri, colors}) => {
+  const a11yLabel = artist
+    ? `Now playing ${title} by ${artist}${album ? `, from ${album}` : ''}`
+    : `Now playing ${title}`;
   return (
-    <View style={styles.infoContainer}>
+    <View style={styles.infoContainer} accessibilityLabel={a11yLabel}>
       <AppText variant="h2" color="primary" style={styles.trackTitle} numberOfLines={1}>
         {title}
       </AppText>

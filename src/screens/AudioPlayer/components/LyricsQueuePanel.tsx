@@ -258,6 +258,14 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
         keyExtractor={keyExtractor}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{paddingBottom: 16}}
+        getItemLayout={(_data, index) => ({
+          length: ESTIMATED_LINE_HEIGHT,
+          offset: ESTIMATED_LINE_HEIGHT * index,
+          index,
+        })}
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       {/* Queue section */}

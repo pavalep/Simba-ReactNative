@@ -7,6 +7,7 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  type GestureResponderEvent,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -69,7 +70,7 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
   }, []);
 
   const handleSeek = useCallback(
-    (e: any) => {
+    (e: GestureResponderEvent) => {
       const x = e.nativeEvent.locationX;
       const trackWidth = SCREEN_WIDTH - 32;
       const pct = Math.max(0, Math.min(1, x / trackWidth));
@@ -324,7 +325,9 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.retryButton}
             onPress={handleRetry}
-            activeOpacity={0.7}>
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading">
             <AppText variant="button" color="accent">
               Retry
             </AppText>
@@ -348,7 +351,11 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
           </View>
 
           {/* Title */}
-          <AppText variant="h2" color="primary" style={styles.title}>
+          <AppText
+            variant="h2"
+            color="primary"
+            style={styles.title}
+            accessibilityLabel={`Now playing: ${fileTitle || 'Unknown Track'}`}>
             {fileTitle || 'Unknown Track'}
           </AppText>
 
@@ -361,7 +368,9 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
           <TouchableOpacity
             style={styles.seekRow}
             activeOpacity={1}
-            onPress={handleSeek}>
+            onPress={handleSeek}
+            accessibilityRole="adjustable"
+            accessibilityLabel={`Seek position, ${Math.round(positionPct * 100)} percent`}>
             <View style={styles.seekTrack} pointerEvents="none">
               <View style={styles.seekTrackBg} />
               <View
@@ -422,7 +431,9 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
           <TouchableOpacity
             style={[styles.fullPlayerBtn, {backgroundColor: colors.accent.goldDim}]}
             onPress={handleOpenFullPlayer}
-            activeOpacity={0.7}>
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Open full player">
             <AppText variant="body2" color="accent">
               Open Full Player
             </AppText>

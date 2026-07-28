@@ -1,5 +1,5 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
-import {MediaFile, PlaybackState} from '../../types';
+import {PlaybackState} from '../../types';
 
 export interface PlaylistEntry {
   uri: string;

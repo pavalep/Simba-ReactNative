@@ -11,7 +11,8 @@ import {
   useWindowDimensions,
   Platform,
   ActivityIndicator,
-
+  type StyleProp,
+  type TextStyle,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
@@ -81,7 +82,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
 
   /** Split text into highlighted/non-highlighted parts for the matched query. */
   const renderHighlightedText = useCallback(
-    (text: string, style?: any) => {
+    (text: string, style?: StyleProp<TextStyle>) => {
       const q = debouncedQuery;
       if (!q || !text) {
         return (

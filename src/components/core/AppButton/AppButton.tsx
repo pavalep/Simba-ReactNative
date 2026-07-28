@@ -24,6 +24,7 @@ interface AppButtonProps {
   fullWidth?: boolean;
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
+  hint?: string;
   style?: ViewStyle;
   textStyle?: TextStyle;
 }
@@ -107,7 +108,8 @@ export const AppButton: React.FC<AppButtonProps> = ({
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityState={{disabled: disabled || loading}}
-      accessibilityLabel={loading ? `${title}, loading` : title}>
+      accessibilityLabel={loading ? `${title}, loading` : title}
+      accessibilityHint={hint}>
       {loading ? (
         <ActivityIndicator color={txtColor} />
       ) : (

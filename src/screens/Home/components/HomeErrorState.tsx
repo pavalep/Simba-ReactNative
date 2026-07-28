@@ -2,11 +2,12 @@ import React from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
+import type {ColorTokens} from '../../../theme/tokens';
 
 interface HomeErrorStateProps {
   message?: string;
   onRetry: () => void;
-  colors: any; // ColorTokens
+  colors: ColorTokens;
 }
 
 export const HomeErrorState: React.FC<HomeErrorStateProps> = ({

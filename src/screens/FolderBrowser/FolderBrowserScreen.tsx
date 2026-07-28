@@ -1,13 +1,14 @@
-import React, {useState, useMemo, useCallback, useRef} from 'react';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {
   View,
   FlatList,
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  Animated,
+  ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import RNFS from 'react-native-fs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {SimbaStatusBar} from '../../components/StatusBar';
@@ -21,98 +22,48 @@ import {useToast} from '../../components/feedback/Toast/Toast';
 import {useAppDispatch, useAppSelector} from '../../store';
 import type {Playlist, PlaylistItem, PlaylistKind} from '../../types/playlist';
 
-// ── Mock Data ──────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────
 
-interface MockItem {
-  name: string;
-  type: 'folder' | 'file';
-  children?: MockItem[];
-}
+const MEDIA_EXTENSIONS = new Set([
+  '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.3gp',
+  '.mp3', '.flac', '.wav', '.aac', '.ogg', '.wma', '.m4a', '.opus',
+]);
 
-const MOCK_ROOT: MockItem[] = [
-  {
-    name: 'Movies',
-    type: 'folder',
-    children: [
-      {name: 'Inception (2010).mp4', type: 'file'},
-      {name: 'Interstellar (2014).mp4', type: 'file'},
-      {name: 'The Matrix (1999).mp4', type: 'file'},
-      {name: 'Blade Runner 2049.mp4', type: 'file'},
-    ],
-  },
-  {
-    name: 'TV Shows',
-    type: 'folder',
-    children: [
-      {
-        name: 'Breaking Bad',
-        type: 'folder',
-        children: [
-          {name: 'S01E01 - Pilot.mp4', type: 'file'},
-          {name: 'S01E02 - Cats in the Bag.mp4', type: 'file'},
-          {name: 'S01E03 - And the Bag in the River.mp4', type: 'file'},
-        ],
-      },
-      {
-        name: 'Stranger Things',
-        type: 'folder',
-        children: [
-          {name: 'S01E01 - The Vanishing of Will Byers.mp4', type: 'file'},
-          {name: 'S01E02 - The Weirdo on Maple Street.mp4', type: 'file'},
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Music',
-    type: 'folder',
-    children: [
-      {name: 'Live at the Hollywood Bowl.mp4', type: 'file'},
-      {name: 'Acoustic Sessions.mp4', type: 'file'},
-    ],
-  },
-  {
-    name: 'Documents',
-    type: 'folder',
-    children: [], // empty folder
-  },
-  {name: 'readme.txt', type: 'file'},
-];
-
-// ── Helpers ─────────────────────────────────────────────
-
-function getItemsAtPath(path: string[]): MockItem[] {
-  let current = MOCK_ROOT;
-  for (const segment of path) {
-    const found = current.find(
-      item => item.name === segment && item.type === 'folder',
-    );
-    if (found?.children) {
-      current = found.children;
-    } else {
-      return [];
-    }
-  }
-  return current;
-}
-
-function generateId(): string {
-  return `fbs_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+function isMediaFile(name: string): boolean {
+  const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
+  return MEDIA_EXTENSIONS.has(ext);
 }
 
 // ── Screen ──────────────────────────────────────────────
 
 type Props = FolderBrowserScreenProps;
 
+interface DirItem {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  size: number;
+}
+
 export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
 
-  const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
+  // Initialize breadcrumbs from initialPath param
+  const initialPath = route.params?.initialPath ?? '';
+  const initialCrumbs = useMemo(() => {
+    if (!initialPath) return [];
+    return initialPath.split('/').filter(Boolean);
+  }, [initialPath]);
+
+  const [breadcrumbs, setBreadcrumbs] = useState<string[]>(initialCrumbs);
+  const [items, setItems] = useState<DirItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // ── Multi-select state (10.4) ─────────────────────
+  // ── Multi-select state ─────────────────────
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectedFileNames, setSelectedFileNames] = useState<Set<string>>(
     new Set(),
@@ -121,18 +72,71 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const toast = useToast();
 
-  const items = useMemo(() => getItemsAtPath(breadcrumbs), [breadcrumbs]);
+  // ── Build full path from breadcrumbs ───────
+  const currentPath = useMemo(() => {
+    if (breadcrumbs.length === 0) return RNFS.ExternalStorageDirectoryPath || '/storage/emulated/0';
+    // If initialPath was absolute, reconstruct it
+    if (initialPath.startsWith('/')) {
+      return '/' + breadcrumbs.join('/');
+    }
+    return breadcrumbs.join('/');
+  }, [breadcrumbs, initialPath]);
 
-  const handleEnterFolder = useCallback((folderName: string) => {
+  // ── Read directory contents ────────────────
+  const readDirectory = useCallback(async (path: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const entries = await RNFS.readDir(path);
+      const filtered = entries
+        .filter(e => e.isDirectory() || isMediaFile(e.name))
+        .map(e => ({
+          name: e.name,
+          path: e.path,
+          isDirectory: e.isDirectory(),
+          size: Number(e.size),
+        }))
+        // Sort: folders first, then by name
+        .sort((a, b) => {
+          if (a.isDirectory !== b.isDirectory) {
+            return a.isDirectory ? -1 : 1;
+          }
+          return a.name.localeCompare(b.name);
+        });
+      setItems(filtered);
+    } catch (err: any) {
+      console.warn('FolderBrowser readDir error:', err);
+      setError(err.message || 'Unable to read directory');
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Effect: read directory when path changes ──
+  useEffect(() => {
+    readDirectory(currentPath);
+  }, [currentPath, readDirectory]);
+
+  // ── Handlers ────────────────────────────────
+
+  const handleEnterFolder = useCallback((folderPath: string) => {
+    // Extract folder name from the full path for breadcrumbs
+    const folderName = folderPath.split('/').pop() || folderPath;
     setBreadcrumbs(prev => [...prev, folderName]);
   }, []);
 
   const handleBreadcrumbPress = useCallback((index: number) => {
-    setBreadcrumbs(prev => prev.slice(0, index));
+    if (index < 0) {
+      // Going back to root: use initial root
+      setBreadcrumbs([]);
+    } else {
+      setBreadcrumbs(prev => prev.slice(0, index));
+    }
   }, []);
 
   const handleFilePress = useCallback(
-    (fileName: string) => {
+    (filePath: string, fileName: string) => {
       if (isSelecting) {
         setSelectedFileNames(prev => {
           const next = new Set(prev);
@@ -145,27 +149,25 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         });
         return;
       }
-      const fullPath = [...breadcrumbs, fileName].join('/');
       navigation.navigate('VideoPlayer', {
-        fileUri: fullPath,
+        fileUri: `file://${filePath}`,
         fileTitle: fileName,
       });
     },
-    [breadcrumbs, navigation, isSelecting],
+    [navigation, isSelecting],
   );
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Simulate network refresh
-    setTimeout(() => setRefreshing(false), 800);
-  }, []);
+    await readDirectory(currentPath);
+    setRefreshing(false);
+  }, [currentPath, readDirectory]);
 
-  // ── Multi-select handlers (10.4) ─────────────────────
+  // ── Multi-select handlers ─────────────────────
 
   const handleToggleSelect = useCallback(() => {
     setIsSelecting(prev => {
       if (prev) {
-        // Exit selection → clear selected items
         setSelectedFileNames(new Set());
       }
       return !prev;
@@ -210,21 +212,16 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
 
   const handleBatchAddConfirm = useCallback(
     (playlistId: string) => {
-      const selectedItems: PlaylistItem[] = [];
-      const allFiles = getItemsAtPath(breadcrumbs).filter(
-        i => i.type === 'file',
-      );
-      for (const file of allFiles) {
-        if (selectedFileNames.has(file.name)) {
-          selectedItems.push({
-            id: generateId(),
-            fileUri: [...breadcrumbs, file.name].join('/'),
-            title: file.name,
-            duration: 0,
-            addedAt: new Date().toISOString(),
-          });
-        }
-      }
+      const selectedItems: PlaylistItem[] = items
+        .filter(i => !i.isDirectory && selectedFileNames.has(i.name))
+        .map(file => ({
+          id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+          fileUri: `file://${file.path}`,
+          title: file.name,
+          duration: 0,
+          addedAt: new Date().toISOString(),
+        }));
+
       selectedItems.forEach(item => {
         dispatch(addItemToPlaylist({playlistId, item}));
       });
@@ -237,7 +234,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       setIsSelecting(false);
       setSelectedFileNames(new Set());
     },
-    [breadcrumbs, selectedFileNames, toast, playlistNameMap, dispatch],
+    [items, selectedFileNames, toast, playlistNameMap, dispatch],
   );
 
   const handleCreateNewFromBatch = useCallback(() => {
@@ -251,21 +248,16 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       const result = dispatch(createPlaylist({name, kind}));
       const playlistId = (result as {payload: Playlist}).payload.id;
 
-      const allFiles = getItemsAtPath(breadcrumbs).filter(
-        i => i.type === 'file',
-      );
-      const selectedItems: PlaylistItem[] = [];
-      for (const file of allFiles) {
-        if (selectedFileNames.has(file.name)) {
-          selectedItems.push({
-            id: generateId(),
-            fileUri: [...breadcrumbs, file.name].join('/'),
-            title: file.name,
-            duration: 0,
-            addedAt: new Date().toISOString(),
-          });
-        }
-      }
+      const selectedItems: PlaylistItem[] = items
+        .filter(i => !i.isDirectory && selectedFileNames.has(i.name))
+        .map(file => ({
+          id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+          fileUri: `file://${file.path}`,
+          title: file.name,
+          duration: 0,
+          addedAt: new Date().toISOString(),
+        }));
+
       selectedItems.forEach(item => {
         dispatch(addItemToPlaylist({playlistId, item}));
       });
@@ -276,7 +268,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       setIsSelecting(false);
       setSelectedFileNames(new Set());
     },
-    [breadcrumbs, selectedFileNames, toast, dispatch],
+    [items, selectedFileNames, toast, dispatch],
   );
 
   // ── Styles ────────────────────────────────────────────
@@ -285,21 +277,6 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
     () =>
       StyleSheet.create({
         root: {flex: 1},
-        header: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 20,
-          paddingTop: insets.top + 12,
-          paddingBottom: 12,
-        },
-        backButton: {
-          paddingRight: 16,
-          paddingVertical: 4,
-        },
-        title: {
-          fontSize: 28,
-          fontWeight: '700',
-        },
         breadcrumbRow: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -343,11 +320,25 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         emptyContainer: {
           alignItems: 'center',
         },
-        emptyText: {
+        emptyTitle: {
           marginTop: 12,
           textAlign: 'center',
         },
-        // ── Multi-select (10.4) ────────────────────────
+        emptySubtitle: {
+          marginTop: 6,
+          textAlign: 'center',
+        },
+        centerContent: {
+          flexGrow: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        errorText: {
+          marginTop: 12,
+          textAlign: 'center',
+          paddingHorizontal: 20,
+        },
+        // ── Multi-select ────────────────────────
         checkbox: {
           width: 24,
           height: 24,
@@ -396,8 +387,8 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   );
 
   const renderItem = useCallback(
-    ({item}: {item: MockItem}) => {
-      const isFolder = item.type === 'folder';
+    ({item}: {item: DirItem}) => {
+      const isFolder = item.isDirectory;
       const isChecked = !isFolder && selectedFileNames.has(item.name);
       return (
         <TouchableOpacity
@@ -405,9 +396,9 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
           activeOpacity={0.6}
           onPress={() => {
             if (isFolder) {
-              handleEnterFolder(item.name);
+              handleEnterFolder(item.path);
             } else {
-              handleFilePress(item.name);
+              handleFilePress(item.path, item.name);
             }
           }}
           onLongPress={() => {
@@ -448,7 +439,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
               variant="caption"
               color="tertiary"
               style={{marginLeft: 8}}>
-              {item.children?.length ?? 0} items
+              folder
             </AppText>
           )}
         </TouchableOpacity>
@@ -458,20 +449,27 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   );
 
   const renderBreadcrumbs = () => {
-    const segments = ['Home', ...breadcrumbs];
+    const segments = breadcrumbs.length === 0 ? ['Home'] : breadcrumbs;
     return (
       <View style={styles.breadcrumbRow}>
-        {segments.map((segment, index) => {
-          const isLast = index === segments.length - 1;
+        <TouchableOpacity
+          onPress={() => handleBreadcrumbPress(-1)}
+          activeOpacity={0.6}>
+          <AppText
+            variant="caption"
+            color={breadcrumbs.length === 0 ? 'accent' : 'secondary'}>
+            Home
+          </AppText>
+        </TouchableOpacity>
+        {breadcrumbs.map((segment, index) => {
+          const isLast = index === breadcrumbs.length - 1;
           return (
             <View key={`${segment}-${index}`} style={styles.breadcrumbItem}>
-              {index > 0 && (
-                <AppText variant="caption" style={styles.separator}>
-                  /
-                </AppText>
-              )}
+              <AppText variant="caption" style={styles.separator}>
+                /
+              </AppText>
               <TouchableOpacity
-                onPress={() => handleBreadcrumbPress(index - 1)}
+                onPress={() => handleBreadcrumbPress(index + 1)}
                 disabled={isLast}
                 activeOpacity={0.6}>
                 <AppText
@@ -487,16 +485,37 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
     );
   };
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <AppText variant="h3" color="tertiary">
-        This folder is empty
-      </AppText>
-      <AppText variant="body2" color="tertiary" style={styles.emptyText}>
-        No files or folders to show.
-      </AppText>
-    </View>
-  );
+  const renderEmptyState = () => {
+    if (loading) return null;
+    if (error) {
+      return (
+        <View style={styles.centerContent}>
+          <AppText variant="h3" color="tertiary" style={styles.errorText}>
+            {error}
+          </AppText>
+          <AppText
+            variant="body2"
+            color="tertiary"
+            style={styles.emptySubtitle}>
+            Pull down to retry
+          </AppText>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.emptyContainer}>
+        <AppText variant="h3" color="tertiary" style={styles.emptyTitle}>
+          This folder is empty
+        </AppText>
+        <AppText
+          variant="body2"
+          color="tertiary"
+          style={styles.emptySubtitle}>
+          No media files or subfolders found.
+        </AppText>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.root}>
@@ -514,35 +533,36 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         }}
       />
       {renderBreadcrumbs()}
-      <FlatList
-        style={{flex: 1}}
-        data={items}
-        keyExtractor={item => item.name}
-        renderItem={renderItem}
-        contentContainerStyle={
-          items.length === 0 ? styles.listEmptyContent : styles.listContent
-        }
-        ListEmptyComponent={renderEmptyState}
-        windowSize={5}
-        maxToRenderPerBatch={10}
-        removeClippedSubviews={true}
-        getItemLayout={(_data, index) => ({
-          length: 50,
-          offset: 50 * index,
-          index,
-        })}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.accent.gold}
-            colors={[colors.accent.gold]}
-            progressBackgroundColor={colors.background.primary}
-          />
-        }
-      />
+      {loading && items.length === 0 ? (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color={colors.accent.gold} />
+        </View>
+      ) : (
+        <FlatList
+          style={{flex: 1}}
+          data={items}
+          keyExtractor={item => item.path}
+          renderItem={renderItem}
+          contentContainerStyle={
+            items.length === 0 ? styles.listEmptyContent : styles.listContent
+          }
+          ListEmptyComponent={renderEmptyState}
+          windowSize={5}
+          maxToRenderPerBatch={20}
+          removeClippedSubviews={true}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+              progressBackgroundColor={colors.background.primary}
+            />
+          }
+        />
+      )}
 
-      {/* ── Floating batch action bar (10.4.4) ────────── */}
+      {/* ── Floating batch action bar ────────── */}
       {isSelecting && selectedFileNames.size > 0 && (
         <TouchableOpacity
           style={styles.batchBar}
@@ -557,7 +577,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         </TouchableOpacity>
       )}
 
-      {/* ── Playlist picker context menu (10.4.5) ────── */}
+      {/* ── Playlist picker context menu ────── */}
       <PlaylistContextMenu
         item={undefined}
         batchCount={selectedFileNames.size || undefined}

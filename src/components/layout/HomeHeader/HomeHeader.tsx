@@ -12,13 +12,6 @@ interface HomeHeaderProps {
   isScanning?: boolean;
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return 'Good morning';
-  if (hour >= 12 && hour < 17) return 'Good afternoon';
-  if (hour >= 17 && hour < 22) return 'Good evening';
-  return 'Good night';
-}
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
   onSettingsPress,
@@ -72,12 +65,20 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
           borderBottomColor: colors.border.subtle,
         },
       ]}>
-      {/* Left: Greeting + Subtitle */}
+      {/* Left: Logo + Greeting + Subtitle */}
       <View style={styles.greetingSection}>
         <View style={styles.greetingRow}>
-          <AppText variant="h2" color="accent">
-            {getGreeting()}
-          </AppText>
+          <View style={[styles.logoContainer, {backgroundColor: colors.accent.gold + '15'}]}>
+            <SvgIcon name="lion" size={36} color={colors.accent.gold} />
+          </View>
+          <View>
+            <AppText variant="h2" color="accent" style={styles.greetingText}>
+              SIMBA
+            </AppText>
+            <AppText variant="caption" color="secondary" style={styles.subtitleText}>
+              Play Anything.
+            </AppText>
+          </View>
           {isScanning && (
             <Animated.View
               style={[
@@ -90,9 +91,6 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
             />
           )}
         </View>
-        <AppText variant="caption" color="secondary">
-          Your premium media player
-        </AppText>
       </View>
 
       {/* Spacer */}
@@ -129,15 +127,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    borderBottomWidth: 1,
+    // Removed borderBottomWidth for a cleaner "hero" look
   },
   greetingSection: {
-    flexDirection: 'column',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
+  },
+  logoContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  greetingText: {
+    fontSize: 22,
+    lineHeight: 28,
+  },
+  subtitleText: {
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    opacity: 0.8,
   },
   scanningDot: {
     width: 8,

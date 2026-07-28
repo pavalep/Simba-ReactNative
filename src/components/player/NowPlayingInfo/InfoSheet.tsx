@@ -4,10 +4,11 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  ViewStyle,
+  TextStyle,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
-import {radius, spacing} from '../../../theme/tokens';
+import {radius, spacing, ColorTokens} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {BottomSheet} from '../../sheets/BottomSheet/BottomSheet';
@@ -133,7 +134,7 @@ export const InfoSheet: React.FC<InfoSheetProps> = ({
 interface RelatedTabProps {
   tracks: ScannedTrack[];
   onPlayTrack?: (track: ScannedTrack) => void;
-  colors: any;
+  colors: ColorTokens;
 }
 
 const RelatedTab: React.FC<RelatedTabProps> = ({tracks, onPlayTrack, colors}) => {
@@ -190,14 +191,14 @@ const RelatedTab: React.FC<RelatedTabProps> = ({tracks, onPlayTrack, colors}) =>
 
 // ── Styles ──
 
-const headerRow: any = {
+const headerRow: ViewStyle = {
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'space-between',
   flex: 1,
 };
 
-const addBtn: any = {
+const addBtn: ViewStyle = {
   flexDirection: 'row',
   alignItems: 'center',
   paddingHorizontal: spacing.sm,
@@ -206,7 +207,7 @@ const addBtn: any = {
   gap: 6,
 };
 
-const addBtnLabel: any = {
+const addBtnLabel: TextStyle = {
   fontSize: 12,
   fontWeight: '600',
 };
@@ -230,13 +231,13 @@ const styles = StyleSheet.create({
   },
 });
 
-const emptyWrap: any = {
+const emptyWrap: ViewStyle = {
   alignItems: 'center',
   paddingTop: 48,
   gap: 16,
 };
 
-const emptyIcon: any = {
+const emptyIcon: ViewStyle = {
   width: 64,
   height: 64,
   borderRadius: 32,
@@ -244,16 +245,16 @@ const emptyIcon: any = {
   justifyContent: 'center',
 };
 
-const emptyText: any = {
+const emptyText: TextStyle = {
   textAlign: 'center',
   paddingHorizontal: 32,
 };
 
-const relatedContainer: any = {
+const relatedContainer: ViewStyle = {
   paddingHorizontal: spacing.lg,
 };
 
-const relatedItem: any = {
+const relatedItem: ViewStyle = {
   flexDirection: 'row',
   alignItems: 'center',
   justifyContent: 'space-between',
@@ -261,14 +262,14 @@ const relatedItem: any = {
   borderBottomWidth: StyleSheet.hairlineWidth,
 };
 
-const relatedItemLeft: any = {
+const relatedItemLeft: ViewStyle = {
   flexDirection: 'row',
   alignItems: 'center',
   flex: 1,
   gap: 12,
 };
 
-const relatedNum: any = {
+const relatedNum: ViewStyle = {
   width: 28,
   height: 28,
   borderRadius: 14,
@@ -276,6 +277,6 @@ const relatedNum: any = {
   justifyContent: 'center',
 };
 
-const relatedItemInfo: any = {
+const relatedItemInfo: ViewStyle = {
   flex: 1,
 };

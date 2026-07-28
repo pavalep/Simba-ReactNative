@@ -8,7 +8,6 @@ import {BottomSheet} from '../../sheets/BottomSheet/BottomSheet';
 import {useAppSelector} from '../../../store';
 import {selectAllPlaylists} from '../../../store/slices/playlistSlice';
 import type {Playlist} from '../../../types/playlist';
-import type {PlaylistItem} from '../../../types/playlist';
 
 export interface PlaylistContextMenuProps {
   /** The media item to add to a playlist (single-item mode) */
@@ -28,6 +27,12 @@ export interface PlaylistContextMenuProps {
   /** Called when user wants to create a new playlist first */
   onCreateNew: () => void;
 }
+
+// ─── Constants ───────────────────────────────────────────
+
+const ITEM_HEIGHT = 60;
+
+// ─── Component ──────────────────────────────────────────
 
 export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
   item,

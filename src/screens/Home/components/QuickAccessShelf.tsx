@@ -1,5 +1,6 @@
 import React from 'react';
-import {View, ScrollView, StyleSheet} from 'react-native';
+import {View, ScrollView, StyleSheet, TouchableOpacity} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -7,16 +8,13 @@ import {AppCard} from '../../../components/core/AppCard/AppCard';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 
 interface QuickAccessShelfProps {
-  playlists: Array<{
-    id: string;
-    name: string;
-    items: any[];
-    [key: string]: any;
-  }>;
+  title?: string;
+  playlists: Array<{id: string; name: string; items?: unknown[]; trackCount?: number}>;
   onPlaylistPress: (playlistId: string) => void;
 }
 
 export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
+  title = 'Quick Access',
   playlists,
   onPlaylistPress,
 }) => {
@@ -28,8 +26,8 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <AppText variant="h2" color="accent">
-          Quick Access
+        <AppText variant="h3" color="primary" style={styles.headerTitle}>
+          {title}
         </AppText>
       </View>
 
@@ -39,30 +37,38 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}>
         {playlists.map(playlist => (
-          <AppCard
+          <TouchableOpacity
             key={playlist.id}
-            elevated
+            activeOpacity={0.85}
             onPress={() => onPlaylistPress(playlist.id)}
             style={styles.card}>
-            {/* ── Item count badge (top-right) ── */}
-            <View
-              style={[
-                styles.badge,
-                {backgroundColor: colors.accent.goldDim},
-              ]}>
-              <AppText variant="caption" color="accent">
-                {playlist.items.length} items
+            <LinearGradient
+              colors={[colors.background.elevated, 'rgba(212,175,55,0.05)']}
+              style={StyleSheet.absoluteFill}
+            />
+            
+            <View style={styles.cardContent}>
+              <View style={styles.topRow}>
+                <View style={[styles.iconBox, {backgroundColor: colors.accent.goldDim}]}>
+                  <SvgIcon name="listMusic" size={18} color={colors.accent.gold} />
+                </View>
+                <View style={[styles.badge, {backgroundColor: 'rgba(212,175,55,0.1)'}]}>
+                  <AppText variant="caption" color="accent" style={{fontSize: 10, fontWeight: '700'}}>
+                    {(playlist.items?.length ?? playlist.trackCount ?? 0)} ITEMS
+                  </AppText>
+                </View>
+              </View>
+
+              <AppText variant="h3" numberOfLines={1} style={styles.playlistName}>
+                {playlist.name}
               </AppText>
+              
+              <View style={styles.footer}>
+                <AppText variant="caption" color="tertiary">Jump back in</AppText>
+                <SvgIcon name="chevronRight" size={14} color={colors.text.tertiary} />
+              </View>
             </View>
-
-            {/* ── Icon ── */}
-            <SvgIcon name="listMusic" size={20} color={colors.accent.gold} />
-
-            {/* ── Playlist name ── */}
-            <AppText variant="h3" numberOfLines={1} style={styles.playlistName}>
-              {playlist.name}
-            </AppText>
-          </AppCard>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
@@ -71,35 +77,62 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xxl,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  headerTitle: {
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   scrollContent: {
     paddingHorizontal: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.md,
+    paddingBottom: 4,
   },
   card: {
     width: 160,
-    height: 100,
+    height: 110,
     borderRadius: radius.md,
+    overflow: 'hidden',
+    padding: 0,
+  },
+  cardContent: {
+    flex: 1,
     padding: spacing.md,
     justifyContent: 'space-between',
   },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  iconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   badge: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: radius.pill,
+    borderRadius: radius.xs,
   },
   playlistName: {
     marginTop: spacing.xs,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
 });

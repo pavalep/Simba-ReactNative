@@ -16,6 +16,7 @@ import {
   TextStyle,
 } from 'react-native';
 import {useTheme} from '../../../theme';
+import {ColorTokens} from '../../../theme/tokens';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {AppText} from '../AppText/AppText';
 
@@ -155,6 +156,7 @@ export const Dialog: React.FC<DialogProps> = ({
                   ]}
                   activeOpacity={0.7}
                   disabled={action.disabled}
+                  accessibilityHint={action.label}
                   onPress={() => {
                     if (action.variant === 'destructive') {
                       haptics.heavy();
@@ -185,7 +187,7 @@ export const Dialog: React.FC<DialogProps> = ({
 
 function getActionStyle(
   variant: 'default' | 'primary' | 'destructive',
-  colors: any,
+  colors: ColorTokens,
 ): TextStyle {
   switch (variant) {
     case 'primary':

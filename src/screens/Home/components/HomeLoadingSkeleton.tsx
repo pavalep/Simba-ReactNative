@@ -2,9 +2,10 @@ import React from 'react';
 import {View, ScrollView, StyleSheet} from 'react-native';
 import {SkeletonLoader} from '../../../components/core/Skeleton/SkeletonLoader';
 import {spacing} from '../../../theme/tokens';
+import type {ColorTokens} from '../../../theme/tokens';
 
 interface HomeLoadingSkeletonProps {
-  colors: any; // ColorTokens
+  colors: ColorTokens;
 }
 
 export const HomeLoadingSkeleton: React.FC<HomeLoadingSkeletonProps> = () => {

@@ -615,7 +615,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         val activity = getCurrentActivity()
         if (activity == null || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return
         if (activity.isInPictureInPictureMode) {
-            activity.moveTaskToFront(true)
+            activity.finish()
         }
     }
 
@@ -627,10 +627,113 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     fun exitPipAndFinish() {
         val activity = getCurrentActivity()
         if (activity == null) return
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N && activity.isInPictureInPictureMode) {
-            activity.moveTaskToFront(true)
-        }
         activity.finishAndRemoveTask()
+    }
+
+    // ── Media Notification Service ─────────────────────────────────────────
+
+    /**
+     * Start the foreground [MediaNotificationService] with current track details.
+     * The service posts a MediaStyle notification with play/pause/prev/next
+     * controls and persists until [stopNotification] is called.
+     */
+    @ReactMethod
+    fun startNotification(
+        title: String,
+        artist: String,
+        album: String,
+        fileUri: String,
+        artworkPath: String,
+        mediaType: String,
+        position: Double,
+        duration: Double,
+    ) {
+        val intent = Intent(reactApplicationContext, com.simba.player.MediaNotificationService::class.java).apply {
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_TITLE, title)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_ARTIST, artist)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_ALBUM, album)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_FILE_URI, fileUri)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_ARTWORK_PATH, artworkPath)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_MEDIA_TYPE, mediaType)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_POSITION, position.toLong())
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_DURATION, duration.toLong())
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_IS_PLAYING, true)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            reactApplicationContext.startForegroundService(intent)
+        } else {
+            reactApplicationContext.startService(intent)
+        }
+        Log.i(TAG, "MediaNotificationService started: $title")
+    }
+
+    /**
+     * Update the existing media notification with fresh playback state.
+     * Called periodically (every ~1s) while the service is running.
+     */
+    @ReactMethod
+    fun updateNotification(
+        title: String,
+        artist: String,
+        album: String,
+        fileUri: String,
+        artworkPath: String,
+        mediaType: String,
+        position: Double,
+        duration: Double,
+        isPlaying: Boolean,
+    ) {
+        val intent = Intent(reactApplicationContext, com.simba.player.MediaNotificationService::class.java).apply {
+            action = com.simba.player.MediaNotificationService.ACTION_UPDATE
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_TITLE, title)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_ARTIST, artist)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_ALBUM, album)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_FILE_URI, fileUri)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_ARTWORK_PATH, artworkPath)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_MEDIA_TYPE, mediaType)
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_POSITION, position.toLong())
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_DURATION, duration.toLong())
+            putExtra(com.simba.player.MediaNotificationService.EXTRA_IS_PLAYING, isPlaying)
+        }
+        reactApplicationContext.startService(intent)
+    }
+
+    /**
+     * Stop the foreground [MediaNotificationService] and remove the notification.
+     * Called when playback is explicitly ended (stop/destroy/reset).
+     */
+    @ReactMethod
+    fun stopNotification() {
+        val intent = Intent(reactApplicationContext, com.simba.player.MediaNotificationService::class.java).apply {
+            action = com.simba.player.MediaNotificationService.ACTION_STOP
+        }
+        reactApplicationContext.startService(intent)
+        Log.i(TAG, "MediaNotificationService stopped")
+    }
+
+    @ReactMethod(isBlockingSynchronousMethod = true)
+    fun isNotificationActive(): Boolean {
+        return com.simba.player.MediaNotificationService.isRunning()
+    }
+
+    /**
+     * Request the POST_NOTIFICATIONS permission on Android 13+.
+     * Calling this on lower APIs is a no-op (permission auto-granted).
+     *
+     * JS should call this before [startNotification] on Android 13+.
+     * The result is delivered via the standard
+     * `PermissionsAndroid.check/request` flow.
+     */
+    @ReactMethod
+    fun requestNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val activity = getCurrentActivity() ?: return
+            androidx.core.app.ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                9001 // arbitrary request code
+            )
+        }
     }
 
     // ── Native Pointer (for MpvRenderView) ─────────────────────────────────

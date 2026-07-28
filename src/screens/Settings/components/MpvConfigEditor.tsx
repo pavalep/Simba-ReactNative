@@ -13,7 +13,6 @@ import {
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
-import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
 
 // ─── Types ──────────────────────────────────────────────────
 

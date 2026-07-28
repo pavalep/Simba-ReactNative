@@ -7,7 +7,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Keyboard,
 } from 'react-native';
 import {BottomSheet} from '../BottomSheet/BottomSheet';
 import {AppText} from '../../core/AppText/AppText';
@@ -53,6 +52,10 @@ const KIND_LABELS: Record<PlaylistKind, string> = {
 };
 
 const KIND_OPTIONS: PlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED'];
+
+// ─── Constants ──────────────────────────────────────────────
+
+const ITEM_HEIGHT = 60;
 
 // ─── Component ──────────────────────────────────────────────
 
@@ -158,7 +161,9 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
             {borderBottomColor: colors.border.subtle},
           ]}
           onPress={() => handleTogglePlaylist(item)}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`${itemExistsIn(item) ? 'Remove from' : 'Add to'} playlist "${item.name}"`}>
           {/* Cover / icon */}
           <View
             style={[
@@ -238,7 +243,9 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
       <TouchableOpacity
         style={[styles.createRow, {borderTopColor: colors.border.subtle}]}
         onPress={() => setCreating(true)}
-        activeOpacity={0.7}>
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Create new playlist">
         <View
           style={[
             styles.addIconCircle,
@@ -319,7 +326,9 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
                       : colors.border.subtle,
                 },
               ]}
-              onPress={() => setNewKind(k)}>
+              onPress={() => setNewKind(k)}
+              accessibilityRole="button"
+              accessibilityLabel={`${KIND_LABELS[k]} playlist type${newKind === k ? ', selected' : ''}`}>
               <AppText
                 variant="caption"
                 color="primary"
@@ -344,7 +353,9 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
               },
             ]}
             onPress={handleCreatePlaylist}
-            disabled={!newName.trim()}>
+            disabled={!newName.trim()}
+            accessibilityRole="button"
+            accessibilityLabel={newName.trim() ? `Create playlist "${newName.trim()}"` : 'Create playlist'}>
             <AppText
               variant="body1"
               color="primary"
@@ -354,7 +365,9 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.cancelBtn]}
-            onPress={() => setCreating(false)}>
+            onPress={() => setCreating(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel creating playlist">
             <AppText variant="body1" color="secondary">
               Cancel
             </AppText>
@@ -382,6 +395,14 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
           ListEmptyComponent={EmptyList}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
+          getItemLayout={(_data, index) => ({
+            length: ITEM_HEIGHT,
+            offset: ITEM_HEIGHT * index,
+            index,
+          })}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews={true}
         />
       )}
     </BottomSheet>
@@ -447,9 +468,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   addIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',

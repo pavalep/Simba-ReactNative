@@ -1,12 +1,13 @@
 import React from 'react';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {AlbumGrid} from './AlbumGrid';
+import type {ColorTokens} from '../../../theme/tokens';
 
 interface LibraryAlbumsSegmentProps {
   audioFolders: string[];
   isMediaScanning: boolean;
   scannedTrackCount: number;
-  colors: any;
+  colors: ColorTokens;
   onNavigateToSettings: () => void;
   onScanAudioFolders: () => void;
   onAlbumPress: (albumTitle: string, artistName: string) => void;

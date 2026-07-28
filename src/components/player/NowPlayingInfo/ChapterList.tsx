@@ -25,6 +25,10 @@ interface ChapterListProps {
   onSeek: (time: number) => void;
 }
 
+// ─── Constants ───────────────────────────────────────────
+
+const ITEM_HEIGHT = 60;
+
 // ─── Helpers ────────────────────────────────────────────
 
 function formatTime(seconds: number): string {
@@ -66,6 +70,14 @@ export const ChapterList: React.FC<ChapterListProps> = ({
       keyExtractor={(_, i) => String(i)}
       contentContainerStyle={styles.list}
       showsVerticalScrollIndicator={false}
+      getItemLayout={(_data, index) => ({
+        length: ITEM_HEIGHT,
+        offset: ITEM_HEIGHT * index,
+        index,
+      })}
+      windowSize={5}
+      maxToRenderPerBatch={10}
+      removeClippedSubviews={true}
       renderItem={({item, index}) => {
         const isActive =
           currentTime >= item.startTime && currentTime < item.endTime;

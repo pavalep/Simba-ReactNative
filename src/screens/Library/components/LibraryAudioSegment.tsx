@@ -3,11 +3,11 @@ import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {radius} from '../../../theme/tokens';
+import {radius, ColorTokens} from '../../../theme/tokens';
 
 interface LibraryAudioSegmentProps {
   audioFolders: string[];
-  colors: any;
+  colors: ColorTokens;
   isDark: boolean;
   viewMode?: 'grid' | 'list';
   onNavigateToSettings: () => void;

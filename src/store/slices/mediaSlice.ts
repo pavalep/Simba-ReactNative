@@ -24,6 +24,8 @@ export interface ScannedTrack {
   albumArtUri: string;
   /** The parent folder path for grouping */
   folderPath: string;
+  /** Whether this is an 'audio' or 'video' file */
+  mediaType: 'audio' | 'video';
 }
 
 export interface ArtistEntry {
@@ -46,10 +48,45 @@ export interface AlbumEntry {
 /** Inverted search index: lowercase word → set of track URIs containing that word */
 export type SearchIndex = Record<string, Set<string>>;
 
+// ─── Scanner state types ──────────────────────────────
+
+export interface ScanProgress {
+  /** The folder currently being scanned, or null */
+  currentFolder: string | null;
+  /** Total files found so far (cumulative across folders) */
+  filesFound: number;
+  /** Estimated total files across all folders (0 if unknown) */
+  totalFiles: number;
+  /** Completion percentage 0–100 */
+  percentComplete: number;
+}
+
+export interface ScanHistory {
+  lastScanTime: number | null;
+  filesAdded: number;
+  filesRemoved: number;
+  errorsCount: number;
+  unsupportedCount: number;
+}
+
+export const EMPTY_SCAN_HISTORY: ScanHistory = {
+  lastScanTime: null,
+  filesAdded: 0,
+  filesRemoved: 0,
+  errorsCount: 0,
+  unsupportedCount: 0,
+};
+
 interface MediaState {
   /** All scanned audio tracks */
   tracks: ScannedTrack[];
   isScanning: boolean;
+  /** Whether a cancellation has been requested */
+  cancelRequested: boolean;
+  /** Live scan progress */
+  scanProgress: ScanProgress;
+  /** History of the most recent scan */
+  scanHistory: ScanHistory;
   /** Inverted search index for fast text search across tracks */
   searchIndex: SearchIndex;
 }
@@ -57,6 +94,9 @@ interface MediaState {
 const initialState: MediaState = {
   tracks: [],
   isScanning: false,
+  cancelRequested: false,
+  scanProgress: {currentFolder: null, filesFound: 0, totalFiles: 0, percentComplete: 0},
+  scanHistory: EMPTY_SCAN_HISTORY,
   searchIndex: {},
 };
 
@@ -98,6 +138,28 @@ const mediaSlice = createSlice({
   reducers: {
     setScanning(state, action: PayloadAction<boolean>) {
       state.isScanning = action.payload;
+      // Reset cancel flag when starting a new scan
+      if (action.payload) {
+        state.cancelRequested = false;
+        state.scanProgress = {currentFolder: null, filesFound: 0, totalFiles: 0, percentComplete: 0};
+      }
+    },
+    setScanProgress(state, action: PayloadAction<ScanProgress>) {
+      state.scanProgress = action.payload;
+    },
+    setScanHistory(state, action: PayloadAction<ScanHistory>) {
+      state.scanHistory = action.payload;
+    },
+    requestCancelScan(state) {
+      state.cancelRequested = true;
+    },
+    clearCancelScan(state) {
+      state.cancelRequested = false;
+    },
+    resetScanState(state) {
+      state.isScanning = false;
+      state.cancelRequested = false;
+      state.scanProgress = {currentFolder: null, filesFound: 0, totalFiles: 0, percentComplete: 0};
     },
     setTracks(state, action: PayloadAction<ScannedTrack[]>) {
       state.tracks = action.payload;
@@ -127,8 +189,19 @@ const mediaSlice = createSlice({
   },
 });
 
-export const {setScanning, setTracks, addTracks, removeTrack, clearTracks, rebuildSearchIndex} =
-  mediaSlice.actions;
+export const {
+  setScanning,
+  setScanProgress,
+  setScanHistory,
+  requestCancelScan,
+  clearCancelScan,
+  resetScanState,
+  setTracks,
+  addTracks,
+  removeTrack,
+  clearTracks,
+  rebuildSearchIndex,
+} = mediaSlice.actions;
 export default mediaSlice.reducer;
 
 // ─── Selectors ──────────────────────────────────────────────
@@ -148,6 +221,27 @@ export const selectIsMediaScanning = createSelector(
 export const selectSearchIndex = createSelector(
   [selectMediaState],
   s => s.searchIndex,
+);
+
+export const selectScanProgress = createSelector(
+  [selectMediaState],
+  s => s.scanProgress,
+);
+
+export const selectScanHistory = createSelector(
+  [selectMediaState],
+  s => s.scanHistory,
+);
+
+export const selectCancelRequested = createSelector(
+  [selectMediaState],
+  s => s.cancelRequested,
+);
+
+/** Total count of scanned tracks (safe for Home screen display, no race condition). */
+export const selectTrackCount = createSelector(
+  [selectAllTracks],
+  tracks => tracks.length,
 );
 
 /** Derive the artist catalog from all tracks. */

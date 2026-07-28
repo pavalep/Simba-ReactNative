@@ -68,10 +68,12 @@ const AppContent: React.FC = () => {
 
   return (
     <ErrorBoundary fallbackColors={fallbackColors}>
-      <SimbaStatusBar variant="home" />
-      <NavigationContainer ref={navigationRef}>
-        <RootNavigator />
-      </NavigationContainer>
+      <ToastProvider>
+        <SimbaStatusBar variant="home" />
+        <NavigationContainer ref={navigationRef}>
+          <RootNavigator />
+        </NavigationContainer>
+      </ToastProvider>
     </ErrorBoundary>
   );
 };

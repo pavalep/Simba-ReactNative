@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -14,7 +15,8 @@ import AudioVisualizer from '../../components/player/AudioVisualizer/AudioVisual
 import LyricsQueuePanel from './components/LyricsQueuePanel';
 import {AlbumArtBackground} from './components/AlbumArtBackground';
 import {AudioPlayerHeader} from './components/AudioPlayerHeader';
-import {AudioPlayerError} from './components/AudioPlayerError';
+import {PlayerErrorFallback} from '../../components/feedback/PlayerErrorFallback';
+import {logError} from '../../lib/errorLogger';
 import {AudioAlbumArt} from './components/AudioAlbumArt';
 import {AudioTrackInfo} from './components/AudioTrackInfo';
 import {AudioTransportControls} from './components/AudioTransportControls';
@@ -26,9 +28,11 @@ import {PlaylistPreviewSheet} from '../../components/player/PlaylistPreview/Play
 import {QueueSheet} from '../../components/sheets/QueueSheet/QueueSheet';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet';
 import {MpvPlayer} from '../../native';
+import {NotificationService} from '../../services/notificationService';
 import {RootStackScreenProps} from '../../navigation/types';
 import {useHaptics} from '../../hooks/useHaptics';
 import {useAppDispatch, useAppSelector} from '../../store';
+import {TransportProvider, useTransport} from '../../contexts/TransportContext';
 import {savePlaybackPosition} from '../../store/slices/sessionSlice';
 import {
   addToPlaylist,
@@ -51,6 +55,7 @@ import {
 import {
   pickMediaFile,
   getFileName,
+  validateMediaFile,
 } from '../../services/fileService';
 import {readTrackMetadata, EMPTY_METADATA, TrackMetadata} from '../../services/metadataService';
 import {loadLrc} from '../../services/lrcService';
@@ -60,13 +65,6 @@ import type {ScannedTrack} from '../../store/slices/mediaSlice';
 
 
 type Props = RootStackScreenProps<'AudioPlayer'>;
-
-function formatTime(seconds: number): string {
-  if (!seconds || !isFinite(seconds)) return '0:00';
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors, isDark} = useTheme();
@@ -78,14 +76,12 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const title = route.params?.fileTitle ?? 'Unknown Track';
   const fileUri = route.params?.fileUri;
 
-  // ── Core playback state ──
+  // ── Core playback state (isLoading/isReady/error managed here; transport state in TransportContext) ──
   const [isLoading, setIsLoading] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(1);
   const [volume, setVolume] = useState(65);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorIsPermission, setErrorIsPermission] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   // ── Metadata & chapters state (Phase 4) ──
@@ -99,6 +95,7 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const [userPlaylistSheetVisible, setUserPlaylistSheetVisible] = useState(false);
   const [queueSheetVisible, setQueueSheetVisible] = useState(false);
   const [queueMultiSelect, setQueueMultiSelect] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   // ── Playlist state ──
   const playlist = useAppSelector(state => state.player.playlist);
@@ -110,6 +107,7 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const playbackHistory = useAppSelector(state => state.player.playbackHistory);
   const selectedQueueIndices = useAppSelector(state => state.player.selectedQueueIndices);
   const allTracks = useAppSelector(selectAllTracks);
+  const duration = MpvPlayer.getDuration?.() ?? 1;
 
   // ── Derive related tracks for InfoSheet (Phase 8) ──
   const relatedTracks = useMemo(() => {
@@ -129,16 +127,10 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
   // ── Refs ──
   const isSeeking = useRef(false);
-  const positionRef = useRef(0);
-  const durationRef = useRef(0);
   const fileUriRef = useRef<string | undefined>(fileUri);
 
   // ── Sync refs ──
-  useEffect(() => { positionRef.current = position; }, [position]);
-  useEffect(() => { durationRef.current = duration; }, [duration]);
   useEffect(() => { fileUriRef.current = fileUri; }, [fileUri]);
-
-  const positionPct = duration > 0 ? Math.min(position / duration, 1) : 0;
 
   // ══════════════════════════════════════════════════════════
   // LIFECYCLE
@@ -152,7 +144,32 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       if (!fileUri) {
         setError('No file URI provided.');
         setIsLoading(false);
+        logError({code: 'ERR_NO_FILE', message: 'No file URI provided.', source: 'AudioPlayerScreen'});
         return;
+      }
+
+      // Validate the media file before attempting playback
+      try {
+        const validation = await validateMediaFile(fileUri);
+        if (cancelled) return;
+        if (!validation.valid) {
+          setError(validation.title);
+          setIsLoading(false);
+          logError({
+            code: 'ERR_FILE_INVALID',
+            message: validation.message,
+            detail: validation.detail || '',
+            source: 'AudioPlayerScreen',
+          });
+          // Track permission errors for Open Settings handler
+          if (validation.title === 'Permission Denied') {
+            setErrorIsPermission(true);
+          }
+          return;
+        }
+      } catch {
+        // Log but don't block playback on validation failure
+        logError({code: 'ERR_VALIDATE_FAIL', message: 'File validation threw unexpectedly', source: 'AudioPlayerScreen'});
       }
 
       try {
@@ -161,6 +178,7 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         if (!ok) {
           setError('Failed to initialize audio player.');
           setIsLoading(false);
+          logError({code: 'ERR_INIT_FAIL', message: 'Failed to initialize audio player.', source: 'AudioPlayerScreen'});
           return;
         }
 
@@ -171,6 +189,7 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         if (!cancelled) {
           setError('Player initialization failed.');
           setIsLoading(false);
+          logError({code: 'ERR_INIT_EXCEPTION', message: String(e), source: 'AudioPlayerScreen'});
         }
       }
     })();
@@ -192,16 +211,34 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         const meta = await readTrackMetadata(fileUri);
         if (!cancelled) setMetadata(meta);
 
+        // Start foreground notification with loaded metadata
+        NotificationService.start(
+          {
+            title: meta.title || title || 'Unknown Track',
+            artist: meta.artist || '',
+            album: meta.album || '',
+            fileUri,
+            artworkPath: meta.albumArtUri || '',
+            mediaType: 'audio',
+          },
+          {
+            position: MpvPlayer.getPosition?.() ?? 0,
+            duration: MpvPlayer.getDuration?.() ?? 1,
+            isPlaying: MpvPlayer.getPlaybackState() === 'playing',
+          },
+        );
+
         // Load chapters from mpv chapter-list property
         try {
           const chaptersJson = MpvPlayer.getProperty('chapter-list');
           if (chaptersJson && !cancelled) {
             const rawChapters: Array<{title?: string; time: number}> = JSON.parse(String(chaptersJson));
             if (Array.isArray(rawChapters) && rawChapters.length > 0) {
+              const dur = MpvPlayer.getDuration?.() ?? 1;
               const parsed: Chapter[] = rawChapters.map((ch, i, arr) => ({
                 title: ch.title || `Chapter ${i + 1}`,
                 startTime: ch.time,
-                endTime: i < arr.length - 1 ? arr[i + 1].time : durationRef.current,
+                endTime: i < arr.length - 1 ? arr[i + 1].time : dur,
               }));
               if (!cancelled) setChapters(parsed);
             }
@@ -215,7 +252,20 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
             setLyrics(lrcResult.lines);
           }
         } catch {}
-      } catch {}
+      } catch {
+        // Start notification with fallback title even if metadata fails
+        NotificationService.start(
+          {
+            title: title || 'Unknown Track',
+            artist: '',
+            album: '',
+            fileUri,
+            artworkPath: '',
+            mediaType: 'audio',
+          },
+          {position: 0, duration: MpvPlayer.getDuration?.() ?? 1, isPlaying: false},
+        );
+      }
     })();
 
     return () => {
@@ -238,24 +288,8 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     });
   }, [isReady, duration, chapters.length]);
 
-  // ── Playback progress polling ──
-  useEffect(() => {
-    if (!isReady) return;
-
-    const interval = setInterval(() => {
-      try {
-        const pos = MpvPlayer.getPosition();
-        const dur = MpvPlayer.getDuration();
-        const playing = MpvPlayer.getPlaybackState() === 'playing';
-
-        if (!isNaN(pos)) setPosition(pos);
-        if (!isNaN(dur)) setDuration(dur || 1);
-        setIsPlaying(playing);
-      } catch {}
-    }, 250);
-
-    return () => clearInterval(interval);
-  }, [isReady]);
+  // ── Notification update on transport state change ──
+  // (Polling is managed by TransportProvider)
 
   // ── Hardware back ──
   useEffect(() => {
@@ -284,9 +318,9 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   }, []);
 
   const handleGoBack = useCallback(() => {
-    const curPos = positionRef.current;
-    const curDur = durationRef.current;
     const curUri = fileUriRef.current;
+    const curPos = MpvPlayer.getPosition?.() ?? 0;
+    const curDur = MpvPlayer.getDuration?.() ?? 0;
 
     if (curUri) {
       dispatch(
@@ -302,18 +336,21 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     }
 
     try { MpvPlayer.stop(); } catch {}
+    NotificationService.stop();
 
     navigation.goBack();
   }, [dispatch, navigation, title]);
 
   const handlePlayPause = useCallback(() => {
-    if (isPlaying) {
-      MpvPlayer.pause();
-    } else {
-      MpvPlayer.resume();
-    }
+    try {
+      if (MpvPlayer.getPlaybackState() === 'playing') {
+        MpvPlayer.pause();
+      } else {
+        MpvPlayer.resume();
+      }
+    } catch {}
     haptics.medium();
-  }, [isPlaying, haptics]);
+  }, [haptics]);
 
   const handlePrev = useCallback(() => {
     MpvPlayer.seekTo(0);
@@ -326,15 +363,16 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       const entry = playlist[nextIdx];
       if (entry) MpvPlayer.loadFile(entry.uri);
     } else {
-      MpvPlayer.seekTo(duration);
+      const dur = MpvPlayer.getDuration?.() ?? 0;
+      MpvPlayer.seekTo(dur);
     }
-  }, [playlist, currentIndex, duration, dispatch]);
+  }, [playlist, currentIndex, dispatch]);
 
   const handleSeek = useCallback((pct: number) => {
     isSeeking.current = true;
-    const target = pct * durationRef.current;
+    const dur = MpvPlayer.getDuration?.() ?? 1;
+    const target = pct * dur;
     MpvPlayer.seekTo(target);
-    setPosition(target);
     setTimeout(() => { isSeeking.current = false; }, 200);
   }, []);
 
@@ -349,7 +387,6 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const handleSeekToLyric = useCallback((time: number) => {
     try {
       MpvPlayer.seekTo(time);
-      setPosition(time);
     } catch {}
   }, []);
 
@@ -491,183 +528,304 @@ export const AudioPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     [],
   );
 
+  // ── Notification action event subscriptions ──
+  useEffect(() => {
+    const unsubPlayPause = NotificationService.onPlayPause(() => {
+      handlePlayPause();
+    });
+    const unsubNext = NotificationService.onNext(() => {
+      handleNext();
+    });
+    const unsubPrev = NotificationService.onPrevious(() => {
+      handlePrev();
+    });
+    const unsubStop = NotificationService.onStop(() => {
+      handleGoBack();
+    });
+    const unsubSeek = NotificationService.onSeekTo((pos: number) => {
+      MpvPlayer.seekTo(pos);
+    });
+
+    return () => {
+      unsubPlayPause();
+      unsubNext();
+      unsubPrev();
+      unsubStop();
+      unsubSeek();
+    };
+  }, [handlePlayPause, handleNext, handlePrev, handleGoBack]);
+
   // ══════════════════════════════════════════════════════════
   // RENDER
   // ══════════════════════════════════════════════════════════
 
   return (
     <View style={styles.root}>
-      {/* Phase 4.6: Dual-layer album art background */}
-      <AlbumArtBackground albumArtUri={metadata.albumArtUri} />
+      <TransportProvider isReady={isReady} enabled={!error}>
 
-      {isLoading && !error && (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.accent.gold} />
-        </View>
-      )}
+        {/* Phase 4.6: Dual-layer album art background */}
+        <AlbumArtBackground albumArtUri={metadata.albumArtUri} />
 
-      {!isLoading && (
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.accent.gold}
-            colors={[colors.accent.gold]}
-          />
-        }>
-
-        {/* Header */}
-        <AudioPlayerHeader onGoBack={handleGoBack} insetsTop={insets.top} colors={colors} />
-
-        {/* Error state */}
-        {error && (
-          <AudioPlayerError message={error} onRetry={() => { setError(null); setIsReady(false); setIsLoading(true); }} colors={colors} />
+        {isLoading && !error && (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color={colors.accent.gold} />
+          </View>
         )}
 
-        {!error && (
-          <>
-            {/* ═══ Album art (Phase 4.6) ═══ */}
-            <AudioAlbumArt albumArtUri={metadata.albumArtUri} colors={colors} />
+        {!isLoading && (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+            />
+          }>
 
-            {/* ═══ Track info with metadata (Phase 4.1) ═══ */}
-            <AudioTrackInfo title={title} artist={metadata.artist} album={metadata.album} fileUri={fileUri ?? ''} colors={colors} />
+          {/* Header */}
+          <AudioPlayerHeader onGoBack={handleGoBack} insetsTop={insets.top} colors={colors} />
 
-            {/* ═══ Audio visualizer ═══ */}
-            <AudioVisualizer isPlaying={isPlaying} />
+          {/* Error state */}
+          {error && (
+            <PlayerErrorFallback
+              title="Playback Error"
+              message={error}
+              fileName={title}
+              onRetry={() => { setError(null); setErrorIsPermission(false); setIsReady(false); setIsLoading(true); }}
+              onGoBack={() => navigation.goBack()}
+              onOpenSettings={errorIsPermission ? () => Linking.openSettings() : undefined}
+            />
+          )}
 
-            {/* ═══ SeekBar with chapters (Phase 4.8) ═══ */}
-            <View style={styles.seekContainer}>
-              <SeekBar
-                position={position}
-                duration={duration}
-                onSeek={handleSeek}
-                chapters={chapters.map(ch => ({startTime: ch.startTime, title: ch.title}))}
-              />
-            </View>
-
-            {/* ═══ Transport controls ═══ */}
-            <AudioTransportControls
-              isPlaying={isPlaying}
+          {!error && (
+            <TransportDependentContent
+              // Static props
+              metadata={metadata}
+              title={title}
+              fileUri={fileUri ?? ''}
+              chapters={chapters}
+              lyrics={lyrics}
+              volume={volume}
               shuffle={shuffle}
-              loopMode={loopMode}
+              loopMode={loopMode === 'none' ? 'off' : loopMode === 'file' ? 'one' : 'all'}
+              playlist={playlist}
+              currentIndex={currentIndex}
+              colors={colors}
+              // Handlers
+              onGoBack={handleGoBack}
+              onSeek={handleSeek}
               onPlayPause={handlePlayPause}
               onPrev={handlePrev}
               onNext={handleNext}
               onToggleShuffle={handleToggleShuffle}
               onToggleLoop={handleToggleLoop}
-              colors={colors}
-            />
-
-            {/* ═══ Volume control ═══ */}
-            <AudioVolumeControl volume={volume} onVolumeChange={handleVolumeChange} colors={colors} />
-
-            {/* ═══ Action buttons (Phase 4.3, 4.4, 4.5) ═══ */}
-            <AudioActionButtons
-              onInfo={() => setInfoSheetVisible(true)}
-              onQueue={() => setPlaylistSheetVisible(true)}
-              onManage={() => setQueueSheetVisible(true)}
-              onPlaylists={() => setUserPlaylistSheetVisible(true)}
-              colors={colors}
-            />
-
-            {/* ═══ Lyrics Queue Panel with real lyrics (Phase 4.7) ═══ */}
-            <LyricsQueuePanel
-              lyrics={lyrics}
-              currentPosition={position}
-              isPlaying={isPlaying}
+              onVolumeChange={handleVolumeChange}
               onSeekToLyric={handleSeekToLyric}
-              queue={playlist.map(e => ({uri: e.uri, title: e.title, duration: e.duration}))}
-              currentIndex={currentIndex}
-              onPlayFromQueue={handlePlayFromPlaylist}
+              onPlayFromPlaylist={handlePlayFromPlaylist}
+              onOpenInfo={() => setInfoSheetVisible(true)}
+              onOpenPlaylist={() => setPlaylistSheetVisible(true)}
+              onOpenQueue={() => setQueueSheetVisible(true)}
+              onOpenUserPlaylists={() => setUserPlaylistSheetVisible(true)}
             />
-          </>
+          )}
+        </ScrollView>
         )}
-      </ScrollView>
-      )}
 
-      {/* ═══ Modals ═══ */}
+        {/* ═══ Modals ═══ */}
 
-      {/* Phase 4.5 / Phase 8: Now Playing Info Sheet */}
-      <InfoSheet
-        visible={infoSheetVisible}
-        onClose={() => setInfoSheetVisible(false)}
-        metadata={metadata}
-        chapters={chapters}
-        currentTime={position}
-        onSeek={(time) => {
-          MpvPlayer.seekTo(time);
-          setPosition(time);
-        }}
-        relatedTracks={relatedTracks}
-        onAddToPlaylist={handleInfoAddToPlaylist}
-        onPlayRelatedTrack={handlePlayRelatedTrack}
-      />
+        {/* Phase 4.5 / Phase 8: Now Playing Info Sheet */}
+        <InfoSheet
+          visible={infoSheetVisible}
+          onClose={() => setInfoSheetVisible(false)}
+          metadata={metadata}
+          chapters={chapters}
+          currentTime={0}
+          onSeek={(time) => {
+            MpvPlayer.seekTo(time);
+          }}
+          relatedTracks={relatedTracks}
+          onAddToPlaylist={handleInfoAddToPlaylist}
+          onPlayRelatedTrack={handlePlayRelatedTrack}
+        />
 
-      {/* Phase 4.3: Playlist Preview Sheet */}
-      <PlaylistPreviewSheet
-        visible={playlistSheetVisible}
-        onClose={() => setPlaylistSheetVisible(false)}
-        queue={playlist.map((e, i) => ({
-          fileUri: e.uri,
-          title: e.title,
-          mediaType: 'audio' as const,
-        }))}
-        currentIndex={currentIndex}
-        onSelectItem={(idx: number) => {
-          if (idx >= 0 && idx !== currentIndex) {
-            const entry = playlist[idx];
-            if (entry) {
-              dispatch(playFromPlaylist(idx));
-              MpvPlayer.loadFile(entry.uri);
+        {/* Phase 4.3: Playlist Preview Sheet */}
+        <PlaylistPreviewSheet
+          visible={playlistSheetVisible}
+          onClose={() => setPlaylistSheetVisible(false)}
+          queue={playlist.map((e, i) => ({
+            fileUri: e.uri,
+            title: e.title,
+            mediaType: 'audio' as const,
+          }))}
+          currentIndex={currentIndex}
+          onSelectItem={(idx: number) => {
+            if (idx >= 0 && idx !== currentIndex) {
+              const entry = playlist[idx];
+              if (entry) {
+                dispatch(playFromPlaylist(idx));
+                MpvPlayer.loadFile(entry.uri);
+              }
             }
-          }
-          setPlaylistSheetVisible(false);
-        }}
-      />
+            setPlaylistSheetVisible(false);
+          }}
+        />
 
-      {/* Phase 23: Queue Sheet (replaces legacy QueueManagementSheet) */}
-      <QueueSheet
-        visible={queueSheetVisible}
-        onClose={() => { setQueueSheetVisible(false); setQueueMultiSelect(false); dispatch(clearQueueSelection()); }}
-        currentTrack={currentFile}
-        queue={queue}
-        playbackHistory={playbackHistory}
-        selectedQueueIndices={selectedQueueIndices}
-        mode={queueMultiSelect ? 'multiSelect' : 'view'}
-        onSelectQueueItem={handleSelectQueueItem}
-        onSelectHistoryItem={handleSelectHistoryItem}
-        onMoveUp={(idx) => handleQueueMoveItem(idx, 'up')}
-        onMoveDown={(idx) => handleQueueMoveItem(idx, 'down')}
-        onRemoveItem={handleQueueRemoveItem}
-        onEnterMultiSelect={handleEnterMultiSelect}
-        onExitMultiSelect={handleExitMultiSelect}
-        onToggleSelection={handleToggleSelection}
-        onRemoveSelected={handleRemoveSelected}
-        onMoveSelectedToTop={handleMoveSelectedToTop}
-        onClearAll={handleClearAll}
-        onPlayNext={handlePlayNext}
-        onAddToQueue={handleAddToQueue}
-      />
+        {/* Phase 23: Queue Sheet (replaces legacy QueueManagementSheet) */}
+        <QueueSheet
+          visible={queueSheetVisible}
+          onClose={() => { setQueueSheetVisible(false); setQueueMultiSelect(false); dispatch(clearQueueSelection()); }}
+          currentTrack={currentFile}
+          queue={queue}
+          playbackHistory={playbackHistory}
+          selectedQueueIndices={selectedQueueIndices}
+          mode={queueMultiSelect ? 'multiSelect' : 'view'}
+          onSelectQueueItem={handleSelectQueueItem}
+          onSelectHistoryItem={handleSelectHistoryItem}
+          onMoveUp={(idx) => handleQueueMoveItem(idx, 'up')}
+          onMoveDown={(idx) => handleQueueMoveItem(idx, 'down')}
+          onRemoveItem={handleQueueRemoveItem}
+          onEnterMultiSelect={handleEnterMultiSelect}
+          onExitMultiSelect={handleExitMultiSelect}
+          onToggleSelection={handleToggleSelection}
+          onRemoveSelected={handleRemoveSelected}
+          onMoveSelectedToTop={handleMoveSelectedToTop}
+          onClearAll={handleClearAll}
+          onPlayNext={handlePlayNext}
+          onAddToQueue={handleAddToQueue}
+        />
 
-      {/* Phase 9: Playlist Sheet */}
-      <PlaylistSheet
-        visible={userPlaylistSheetVisible}
-        onClose={() => setUserPlaylistSheetVisible(false)}
-        currentItem={{
-          fileUri: fileUri || '',
-          title,
-          duration,
-          artist: metadata.artist,
-          album: metadata.album,
-        }}
-      />
+        {/* Phase 9: Playlist Sheet */}
+        <PlaylistSheet
+          visible={userPlaylistSheetVisible}
+          onClose={() => setUserPlaylistSheetVisible(false)}
+          currentItem={{
+            fileUri: fileUri || '',
+            title,
+            duration: 0,
+            artist: metadata.artist,
+            album: metadata.album,
+          }}
+        />
+      </TransportProvider>
     </View>
   );
 };
+
+// ══════════════════════════════════════════════════════════════
+// TRANSPORT-DEPENDENT CONTENT
+// ══════════════════════════════════════════════════════════════
+
+/** Renders transport-dependent children, reading position/duration/isPlaying from TransportContext.
+ *  This component re-renders on every position tick, but its parent (AudioPlayerScreen) does NOT,
+ *  isolating overlay/modal state updates from frequent transport updates. */
+interface TransportDependentContentProps {
+  metadata: TrackMetadata;
+  title: string;
+  fileUri: string;
+  chapters: Chapter[];
+  lyrics: LrcLine[];
+  volume: number;
+  shuffle: boolean;
+  loopMode: 'off' | 'all' | 'one';
+  playlist: PlaylistEntry[];
+  currentIndex: number;
+  colors: ReturnType<typeof useTheme>['colors'];
+  onGoBack: () => void;
+  onSeek: (pct: number) => void;
+  onPlayPause: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onToggleShuffle: () => void;
+  onToggleLoop: () => void;
+  onVolumeChange: (delta: number) => void;
+  onSeekToLyric: (time: number) => void;
+  onPlayFromPlaylist: (idx: number) => void;
+  onOpenInfo: () => void;
+  onOpenPlaylist: () => void;
+  onOpenQueue: () => void;
+  onOpenUserPlaylists: () => void;
+}
+
+const TransportDependentContent: React.FC<TransportDependentContentProps> = ({
+  metadata, title, fileUri, chapters, lyrics, volume,
+  shuffle, loopMode, playlist, currentIndex, colors,
+  onSeek, onPlayPause, onPrev, onNext, onToggleShuffle, onToggleLoop,
+  onVolumeChange, onSeekToLyric, onPlayFromPlaylist,
+  onOpenInfo, onOpenPlaylist, onOpenQueue, onOpenUserPlaylists,
+}) => {
+  const {position, duration, isPlaying} = useTransport();
+
+  // Stable reference for SeekBar chapters to avoid breaking React.memo on every render
+  const seekBarChapters = useMemo(
+    () => chapters.map(ch => ({startTime: ch.startTime, title: ch.title})),
+    [chapters],
+  );
+
+  return (
+    <>
+      {/* ═══ Album art (Phase 4.6) ═══ */}
+      <AudioAlbumArt albumArtUri={metadata.albumArtUri} colors={colors} />
+
+      {/* ═══ Track info with metadata (Phase 4.1) ═══ */}
+      <AudioTrackInfo title={title} artist={metadata.artist} album={metadata.album} fileUri={fileUri} colors={colors} />
+
+      {/* ═══ Audio visualizer ═══ */}
+      <AudioVisualizer isPlaying={isPlaying} />
+
+      {/* ═══ SeekBar with chapters (Phase 4.8) ═══ */}
+      <View style={seekContainerStyle}>
+        <SeekBar
+          position={position}
+          duration={duration}
+          onSeek={onSeek}
+          chapters={seekBarChapters}
+        />
+      </View>
+
+      {/* ═══ Transport controls ═══ */}
+      <AudioTransportControls
+        isPlaying={isPlaying}
+        shuffle={shuffle}
+        loopMode={loopMode}
+        onPlayPause={onPlayPause}
+        onPrev={onPrev}
+        onNext={onNext}
+        onToggleShuffle={onToggleShuffle}
+        onToggleLoop={onToggleLoop}
+        colors={colors}
+      />
+
+      {/* ═══ Volume control ═══ */}
+      <AudioVolumeControl volume={volume} onVolumeChange={onVolumeChange} colors={colors} />
+
+      {/* ═══ Action buttons (Phase 4.3, 4.4, 4.5) ═══ */}
+      <AudioActionButtons
+        onInfo={onOpenInfo}
+        onQueue={onOpenPlaylist}
+        onManage={onOpenQueue}
+        onPlaylists={onOpenUserPlaylists}
+        colors={colors}
+      />
+
+      {/* ═══ Lyrics Queue Panel with real lyrics (Phase 4.7) ═══ */}
+      <LyricsQueuePanel
+        lyrics={lyrics}
+        currentPosition={position}
+        isPlaying={isPlaying}
+        onSeekToLyric={onSeekToLyric}
+        queue={playlist.map(e => ({uri: e.uri, title: e.title, duration: e.duration}))}
+        currentIndex={currentIndex}
+        onPlayFromQueue={onPlayFromPlaylist}
+      />
+    </>
+  );
+};
+
+const seekContainerStyle = {marginBottom: 24};
 
 // ══════════════════════════════════════════════════════════════
 // STYLES

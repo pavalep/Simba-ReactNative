@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Animated,
   LayoutChangeEvent,
+  GestureResponderEvent,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
@@ -76,7 +77,7 @@ export const MiniPlayer: React.FC = () => {
   }, []);
 
   const handleSeekTap = useCallback(
-    (e: any) => {
+    (e: GestureResponderEvent) => {
       if (duration <= 0) return;
       const x = e.nativeEvent.locationX;
       const trackW = seekTrackRef.current.width;
@@ -231,7 +232,9 @@ export const MiniPlayer: React.FC = () => {
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handleTap}
-        style={styles.touchableArea}>
+        style={styles.touchableArea}
+        accessibilityRole="button"
+        accessibilityLabel={`Open player: ${title}${subtitle ? `, ${subtitle}` : ''}`}>
         {/* Album art placeholder */}
         <View style={[styles.artwork, {backgroundColor: colors.accent.goldDim}]}>
           <SvgIcon

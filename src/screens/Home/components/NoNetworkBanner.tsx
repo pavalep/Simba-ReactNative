@@ -1,10 +1,11 @@
 import React, {useEffect, useRef} from 'react';
 import {View, Animated, StyleSheet} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
+import type {ColorTokens} from '../../../theme/tokens';
 
 interface NoNetworkBannerProps {
   isVisible: boolean;
-  colors: any; // ColorTokens
+  colors: ColorTokens;
 }
 
 export const NoNetworkBanner: React.FC<NoNetworkBannerProps> = ({

@@ -9,25 +9,27 @@ class Logger {
   }
 
   debug(...args: any[]): void {
-    if (LOG_LEVELS.indexOf(this.level) <= 0) {
+    if (__DEV__ && LOG_LEVELS.indexOf(this.level) <= 0) {
       console.log('[DEBUG]', ...args);
     }
   }
 
   info(...args: any[]): void {
-    if (LOG_LEVELS.indexOf(this.level) <= 1) {
+    if (__DEV__ && LOG_LEVELS.indexOf(this.level) <= 1) {
       console.log('[INFO]', ...args);
     }
   }
 
   warn(...args: any[]): void {
-    if (LOG_LEVELS.indexOf(this.level) <= 2) {
+    if (__DEV__ && LOG_LEVELS.indexOf(this.level) <= 2) {
       console.warn('[WARN]', ...args);
     }
   }
 
   error(...args: any[]): void {
-    console.error('[ERROR]', ...args);
+    if (__DEV__) {
+      console.error('[ERROR]', ...args);
+    }
   }
 }
 

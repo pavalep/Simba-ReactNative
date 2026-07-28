@@ -76,8 +76,16 @@ object MPVLib {
 
     external fun nativeGetProperty(nativePtr: Long, name: String): String
     external fun nativeSetProperty(nativePtr: Long, name: String, valueJson: String?)
+    external fun nativeSetPropertyString(nativePtr: Long, property: String, value: String?)
     external fun nativeObserveProperty(nativePtr: Long, name: String)
     external fun nativeUnobserveProperty(nativePtr: Long, name: String)
+
+    // ── Convenience ────────────────────────────────────────────────────────
+
+    /** Set a string property on the mpv instance by native pointer. */
+    fun setPropertyString(nativePtr: Long, property: String, value: String?) {
+        nativeSetPropertyString(nativePtr, property, value)
+    }
 
     // ── Filters ────────────────────────────────────────────────────────────
 

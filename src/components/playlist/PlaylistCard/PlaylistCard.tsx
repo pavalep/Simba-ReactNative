@@ -1,5 +1,6 @@
 import React, {useMemo} from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import FastImage from 'react-native-fast-image';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
@@ -66,11 +67,19 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
                   {backgroundColor: colors.background.floating},
                   coverItems.length === 1 && styles.collageCellFull,
                 ]}>
-                <SvgIcon
-                  name={i % 2 === 0 ? 'music' : 'headphones'}
-                  size={14}
-                  color={colors.text.tertiary}
-                />
+                {item.thumbnailPath ? (
+                  <FastImage
+                    source={{uri: item.thumbnailPath}}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode={FastImage.resizeMode.cover}
+                  />
+                ) : (
+                  <SvgIcon
+                    name={i % 2 === 0 ? 'music' : 'headphones'}
+                    size={14}
+                    color={colors.text.tertiary}
+                  />
+                )}
               </View>
             ))}
           </View>
@@ -153,6 +162,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'transparent',
+    overflow: 'hidden',
   },
   collageCellFull: {
     width: '100%',

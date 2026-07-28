@@ -94,12 +94,14 @@ class SplashActivity : AppCompatActivity() {
         logoSet.playTogether(logoFade, logoScaleX, logoScaleY)
         logoSet.duration = 600L
 
-        // ── Combined sequence ──
+        // ── Glow pulse runs independently (it repeats infinitely) ──
+        glowPulse.startDelay = 300L
+        glowPulse.start()
+
+        // ── Combined sequence (excludes infinite glowPulse) ──
         val sequence = AnimatorSet()
         sequence.playSequentially(logoSet)
-        // Glow pulse starts with the logo entrance and runs in parallel
-        glowPulse.startDelay = 300L
-        sequence.playTogether(glowPulse, ringFade, subtitleFade)
+        sequence.playTogether(ringFade, subtitleFade)
 
         // ── Navigate to MainActivity after sequence completes ──
         sequence.addListener(object : Animator.AnimatorListener {
