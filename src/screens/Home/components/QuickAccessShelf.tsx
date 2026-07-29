@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: radius.xs,
+    borderRadius: radius.sm,
   },
   playlistName: {
     marginTop: spacing.xs,

@@ -5,6 +5,6 @@ import rootReducer from './rootReducer';
 export const persistConfig: PersistConfig<ReturnType<typeof rootReducer>> = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['settings', 'session', 'player', 'media'],
+  whitelist: ['settings', 'session', 'player', 'media', 'auth'],
   timeout: 0, // Disable rehydration timeout (default 5000ms can fail on slow emulators)
 };

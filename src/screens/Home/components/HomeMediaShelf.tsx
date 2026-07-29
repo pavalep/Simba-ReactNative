@@ -66,7 +66,6 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
       {/* ── Horizontal Shelf ── */}
       <ScrollView
         horizontal
-        className="shelf-scroll"
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.shelfContent}
         snapToInterval={CARD_WIDTH + spacing.md}
@@ -184,13 +183,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
   },
   placeholder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.5,
   },
   overlayGradient: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1,
   },
   bottomStrip: {

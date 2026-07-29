@@ -150,11 +150,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   glassOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     padding: 1,
   },
   glassBorder: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: radius.lg,
   },
   content: {
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: radius.xs,
+    borderRadius: radius.sm,
   },
   badgeText: {
     fontSize: 10,

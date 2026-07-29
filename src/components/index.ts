@@ -16,3 +16,7 @@ export {InternalHeader} from './layout/InternalHeader/InternalHeader';
 export {SectionHeader} from './utility/SectionHeader/SectionHeader';
 export {SettingsRow} from './utility/SettingsRow/SettingsRow';
 export {MediaTile} from './utility/MediaTile/MediaTile';
+
+// Auth
+export {GoogleSignInButton} from './core/GoogleSignInButton/GoogleSignInButton';
+export {Avatar} from './core/Avatar/Avatar';

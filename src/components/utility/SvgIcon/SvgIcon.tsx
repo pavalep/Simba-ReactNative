@@ -32,6 +32,7 @@ import FolderFillSvg from '../../../assets/svg/ic_folder.svg';
 import AlertCircleSvg from '../../../assets/svg/ic_alert_circle.svg';
 import BookmarkSvg from '../../../assets/svg/ic_bookmark.svg';
 import SpeedSvg from '../../../assets/svg/ic_speed.svg';
+import GoogleSvg from '../../../assets/svg/ic_google.svg';
 
 const icons = {
   home: HomeSvg,
@@ -66,6 +67,7 @@ const icons = {
   alertCircle: AlertCircleSvg,
   bookmark: BookmarkSvg,
   speed: SpeedSvg,
+  google: GoogleSvg,
 } as const;
 
 export type SvgIconName = keyof typeof icons;

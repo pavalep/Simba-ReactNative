@@ -8,21 +8,34 @@ import {SplashScreen} from '../screens/Splash/SplashScreen';
 import {VideoPlayerScreen} from '../screens/VideoPlayer/VideoPlayerScreen';
 import {AudioPlayerScreen} from '../screens/AudioPlayer/AudioPlayerScreen';
 import {PreferencesScreen} from '../screens/Preferences/PreferencesScreen';
+import {LoginScreen} from '../screens/Login/LoginScreen';
 import {ScreenErrorBoundary} from '../components/feedback/ScreenErrorBoundary';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
   const hasLaunched = useAppSelector(state => state.settings.hasLaunched);
+  const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
+
+  const initialRoute = !hasLaunched
+    ? 'Splash'
+    : !isAuthenticated
+    ? 'Login'
+    : 'MainTabs';
 
   return (
     <Stack.Navigator
-      initialRouteName={hasLaunched ? 'MainTabs' : 'Splash'}
+      initialRouteName={initialRoute}
       screenOptions={{
         headerShown: false,
         animation: 'fade',
       }}>
       <Stack.Screen name="Splash" component={SplashScreen} />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{gestureEnabled: false}}
+      />
       <Stack.Screen name="MainTabs" component={TabNavigator} />
       <Stack.Screen
         name="VideoPlayer"

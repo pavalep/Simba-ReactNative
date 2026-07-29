@@ -35,7 +35,7 @@ const TransportContext = createContext<TransportContextValue | null>(null);
 interface TransportProviderProps {
   children: ReactNode;
   /** Whether the player is ready (player initialized and file loaded) */
-  isReady: boolean;
+  isReady?: boolean;
   /** Polling interval in ms (default 250) */
   pollInterval?: number;
   /** Whether to enable mpv polling (default true) */
@@ -46,7 +46,7 @@ interface TransportProviderProps {
 
 export const TransportProvider: React.FC<TransportProviderProps> = ({
   children,
-  isReady,
+  isReady = true,
   pollInterval = 1000,
   enabled = true,
 }) => {
