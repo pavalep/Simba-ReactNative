@@ -22,8 +22,20 @@ export interface MediaLibraryEntry {
   dateAdded: string; // ISO date — first time file was opened
 }
 
+export interface BookmarkEntry {
+  id: string;
+  fileUri: string;
+  title: string;
+  position: number;
+  duration: number;
+  createdAt: string;
+  thumbnailPath?: string;
+  mediaType?: 'video' | 'audio';
+}
+
 interface SessionState {
   recentFiles: SessionEntry[];
+  bookmarks: BookmarkEntry[];
   /** Per-file play count, keyed by fileUri. */
   playCounts: Record<string, number>;
   /** Growing library of all files the user has ever opened. */
@@ -35,6 +47,7 @@ const MAX_MEDIA_LIBRARY = 200;
 
 const initialState: SessionState = {
   recentFiles: [],
+  bookmarks: [],
   playCounts: {},
   mediaLibrary: [],
 };
@@ -102,6 +115,18 @@ const sessionSlice = createSlice({
       state.recentFiles = [];
     },
 
+    addBookmark(state, action: PayloadAction<BookmarkEntry>) {
+      const bookmark = action.payload;
+      state.bookmarks = [
+        bookmark,
+        ...state.bookmarks.filter(item => item.id !== bookmark.id),
+      ];
+    },
+
+    removeBookmark(state, action: PayloadAction<string>) {
+      state.bookmarks = state.bookmarks.filter(item => item.id !== action.payload);
+    },
+
     /** (5.2) Directly increment a file's play count outside savePlaybackPosition. */
     incrementPlayCount(state, action: PayloadAction<string>) {
       state.playCounts[action.payload] = (state.playCounts[action.payload] || 0) + 1;
@@ -109,8 +134,18 @@ const sessionSlice = createSlice({
   },
 });
 
-export const {savePlaybackPosition, removeRecentFile, clearAllRecent, incrementPlayCount} =
+export const {
+  savePlaybackPosition,
+  removeRecentFile,
+  clearAllRecent,
+  addBookmark,
+  removeBookmark,
+  incrementPlayCount,
+} =
   sessionSlice.actions;
+
+export const selectBookmarks = (state: RootState): BookmarkEntry[] =>
+  state.session.bookmarks ?? [];
 
 /** Selector: get saved position for a specific URI */
 export function selectSessionEntry(

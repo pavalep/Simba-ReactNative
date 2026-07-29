@@ -22,6 +22,7 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label}) =
   const {colors} = useTheme();
   const [showLabel, setShowLabel] = useState(false);
   const labelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const iconMuted = 'rgba(237,237,237,0.65)';
 
   const handlePressIn = useCallback(() => {
     labelTimer.current = setTimeout(() => setShowLabel(true), 600);
@@ -38,9 +39,9 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label}) =
   const btnStyles = useMemo(
     () => ({
       container: {
-        width: 44,
-        height: 44,
-        borderRadius: 10,
+        width: 52,
+        height: 52,
+        borderRadius: 14,
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
         backgroundColor: active ? 'rgba(201,168,76,0.15)' : 'transparent',
@@ -48,12 +49,12 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label}) =
       labelTooltip: {
         position: 'absolute' as const,
         bottom: -22,
-        backgroundColor: colors.background.elevated,
+        backgroundColor: 'rgba(8, 8, 10, 0.90)',
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 4,
         borderWidth: 0.5,
-        borderColor: colors.border.subtle,
+        borderColor: 'rgba(255,255,255,0.10)',
         zIndex: 100,
       },
       labelText: {
@@ -77,7 +78,7 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label}) =
       <SvgIcon
         name={icon}
         size={20}
-        color={active ? colors.accent.gold : colors.text.secondary}
+        color={active ? colors.accent.gold : iconMuted}
       />
       {showLabel && (
         <View style={btnStyles.labelTooltip}>
@@ -109,6 +110,7 @@ export interface SecondaryToolbarProps {
   onToggleLoop: () => void;
   onInfo?: () => void;
   onVolume: () => void;
+  onSpeed: () => void;
   onScreenshot: () => void;
   onAutoHide: () => void;
   bottomInset: number;
@@ -135,11 +137,11 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
   onToggleLoop,
   onInfo,
   onVolume,
+  onSpeed,
   onScreenshot,
   onAutoHide,
   bottomInset,
 }) => {
-  const {colors} = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,14 +152,25 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
       StyleSheet.create({
         container: {
           position: 'absolute',
-          bottom: 0,
+          // Sit above the primary transport controls instead of competing for
+          // the same bottom hit area.
+          bottom: bottomInset + 92,
           left: 0,
           right: 0,
           zIndex: 14,
+          alignItems: 'center',
+        },
+        card: {
+          marginHorizontal: 12,
+          borderRadius: 18,
+          overflow: 'hidden',
+          borderWidth: 0.5,
+          borderColor: 'rgba(255,255,255,0.10)',
+          backgroundColor: 'rgba(8, 8, 10, 0.58)',
         },
         glassBg: {
           ...StyleSheet.absoluteFill,
-          backgroundColor: colors.background.floating,
+          backgroundColor: 'rgba(8, 8, 10, 0.58)',
         },
         toolbarContent: {
           paddingHorizontal: 16,
@@ -175,7 +188,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
           gap: 6,
         },
       }),
-    [colors],
+    [bottomInset],
   );
 
   // ── Animate visibility ──
@@ -219,8 +232,6 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
     resetAutoHide();
   }, [resetAutoHide]);
 
-  if (!visible) return null;
-
   return (
     <Animated.View
       style={[
@@ -231,73 +242,71 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
         },
       ]}
       pointerEvents={visible ? 'auto' : 'none'}>
-      {/* Glass background */}
-      <View style={styles.glassBg} pointerEvents="none" />
+      <View style={styles.card}>
+        <View style={styles.glassBg} pointerEvents="none" />
+        <View
+          style={styles.toolbarContent}
+          onStartShouldSetResponder={() => true}
+          onResponderRelease={handleInteraction}>
+          <View style={styles.btnRow}>
+            <ToolbarBtn
+              icon="list"
+              label="Chapters"
+              onPress={onToggleChapters}
+            />
+            <ToolbarBtn
+              icon="headphones"
+              active={activeAudioTrack !== null}
+              onPress={onToggleAudio}
+              label="Audio tracks"
+            />
+            <ToolbarBtn
+              icon="subtitles"
+              active={activeSubtitle !== null}
+              onPress={onToggleSubtitles}
+              label="Subtitles"
+            />
+            <ToolbarBtn
+              icon="sliders"
+              active={eqEnabled}
+              onPress={onToggleEq}
+              label="Equalizer"
+            />
+            <ToolbarBtn
+              icon="listMusic"
+              active={playlistLength > 0}
+              onPress={onTogglePlaylist}
+              label="Playlist"
+            />
+            <ToolbarBtn
+              icon="layoutList"
+              onPress={onToggleQueue}
+              label="Queue"
+            />
+            <ToolbarBtn
+              icon="music"
+              onPress={onInfo}
+              label="Details"
+            />
+          </View>
 
-      {/* Toolbar buttons */}
-      <View
-        style={styles.toolbarContent}
-        onStartShouldSetResponder={() => true}
-        onResponderRelease={handleInteraction}>
-        {/* Row 1: Feature controls */}
-        <View style={styles.btnRow}>
-          <ToolbarBtn
-            icon="list"
-            label="Chapters"
-            onPress={onToggleChapters}
-          />
-          <ToolbarBtn
-            icon="headphones"
-            active={activeAudioTrack !== null}
-            onPress={onToggleAudio}
-            label="Audio tracks"
-          />
-          <ToolbarBtn
-            icon="subtitles"
-            active={activeSubtitle !== null}
-            onPress={onToggleSubtitles}
-            label="Subtitles"
-          />
-          <ToolbarBtn
-            icon="sliders"
-            active={eqEnabled}
-            onPress={onToggleEq}
-            label="Equalizer"
-          />
-          <ToolbarBtn
-            icon="listMusic"
-            active={playlistLength > 0}
-            onPress={onTogglePlaylist}
-            label="Playlist"
-          />
-          <ToolbarBtn
-            icon="layoutList"
-            onPress={onToggleQueue}
-            label="Queue"
-          />
-          <ToolbarBtn
-            icon="music"
-            onPress={onInfo}
-            label="Details"
-          />
-        </View>
-
-        {/* Row 2: Utility controls */}
-        <View style={styles.btnRow}>
-          <ToolbarBtn
-            icon="shuffle"
-            active={shuffleActive}
-            onPress={onToggleShuffle}
-            label="Shuffle"
-          />
-          <ToolbarBtn
-            icon="repeat"
-            active={loopMode !== 'none'}
-            onPress={onToggleLoop}
-            label="Loop"
-          />
-          <ToolbarBtn icon="volume" onPress={onVolume} label="Volume" />
-          <ToolbarBtn icon="camera" onPress={onScreenshot} label="Screenshot" />
+          <View style={styles.btnRow}>
+            <ToolbarBtn
+              icon="shuffle"
+              active={shuffleActive}
+              onPress={onToggleShuffle}
+              label="Shuffle"
+            />
+            <ToolbarBtn
+              icon="repeat"
+              active={loopMode !== 'none'}
+              onPress={onToggleLoop}
+              label="Loop"
+            />
+            <ToolbarBtn icon="volume" onPress={onVolume} label="Volume" />
+            <ToolbarBtn icon="speed" onPress={onSpeed} label="Playback speed" />
+            <ToolbarBtn icon="camera" onPress={onScreenshot} label="Screenshot" />
+          </View>
         </View>
       </View>
     </Animated.View>

@@ -6,7 +6,6 @@ import {
   BackHandler,
   Alert,
   Platform,
-  Animated,
   StatusBar,
   Linking,
   useWindowDimensions,
@@ -30,7 +29,7 @@ import {
   getMediaType,
 } from '../../services/fileService';
 import {useAppDispatch, useAppSelector} from '../../store';
-import {savePlaybackPosition} from '../../store/slices/sessionSlice';
+import {savePlaybackPosition, addBookmark} from '../../store/slices/sessionSlice';
 import {
   addToPlaylist,
   removeFromPlaylist,
@@ -53,17 +52,18 @@ import {
 } from '../../store/slices/playerSlice';
 
 // ── Extracted Components ──
-import {VideoPlayerVideoSurface} from './components/VideoPlayerVideoSurface';
+import {VideoPlayerSurfaceLayer} from './components/VideoPlayerSurfaceLayer';
 import {VideoPlayerTopBar} from './components/VideoPlayerTopBar';
 import {PrimaryControls} from './components/PrimaryControls';
 import {SecondaryToolbar} from './components/SecondaryToolbar';
 import {VideoPlayerSubtitlePanel} from './components/VideoPlayerSubtitlePanel';
 import {VideoPlayerAudioPanel} from './components/VideoPlayerAudioPanel';
 import {VideoPlayerEqualizerPanel, EQ_BANDS, EQ_PRESETS} from './components/VideoPlayerEqualizerPanel';
+import {VideoPlayerVolumePanel} from './components/VideoPlayerVolumePanel';
+import {VideoPlayerSpeedPanel} from './components/VideoPlayerSpeedPanel';
 import {VideoPlayerPlaylistPanel} from './components/VideoPlayerPlaylistPanel';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {VideoPlayerLoadingOverlay} from './components/VideoPlayerLoadingOverlay';
-import VideoPlayerGestureLayer from './components/VideoPlayerGestureLayer';
 import {SeekFeedbackOverlay} from './components/SeekFeedbackOverlay';
 import {VolumeBrightnessOverlay} from './components/VolumeBrightnessOverlay';
 import {BottomSheet} from '../../components/sheets/BottomSheet/BottomSheet';
@@ -96,6 +96,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   // ── Route params ──
   const title = route.params?.fileTitle ?? 'Untitled';
   const fileUri = route.params?.fileUri;
+  const requestedStartPosition = route.params?.startPosition;
 
   // ── Core playback state ──
   const [secondaryVisible, setSecondaryVisible] = useState(true);
@@ -103,6 +104,9 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const [nativePtr, setNativePtr] = useState(0);
   const [showVideoSurface, setShowVideoSurface] = useState(true);
   const [isReady, setIsReady] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState<
+    'initializing' | 'loading' | 'seeking' | 'ready'
+  >('initializing');
   const [error, setError] = useState<{
     title: string;
     message: string;
@@ -118,11 +122,17 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const [subtitlePanelOpen, setSubtitlePanelOpen] = useState(false);
   const [subtitleFontSize, setSubtitleFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [subtitleOpacity, setSubtitleOpacity] = useState(1);
+  const [subtitlePosition, setSubtitlePosition] = useState(90);
 
   // ── Audio track state ──
   const [audioTracks, setAudioTracks] = useState<MpvTrack[]>([]);
   const [activeAudioTrack, setActiveAudioTrack] = useState<number | null>(null);
   const [audioPanelOpen, setAudioPanelOpen] = useState(false);
+  const [volumePanelOpen, setVolumePanelOpen] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [speedPanelOpen, setSpeedPanelOpen] = useState(false);
+  const [bookmarkSaved, setBookmarkSaved] = useState(false);
 
   // ── Equalizer state ──
   const [eqGains, setEqGains] = useState<number[]>([...FLAT]);
@@ -174,6 +184,10 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const titleRef = useRef(title);
   const trackMetaRef = useRef({artist: '', album: '', albumArtUri: ''});
   const resumeSeekDone = useRef(false);
+  const resumeTargetRef = useRef<number | null>(null);
+  const hasSeenFirstPositionRef = useRef(false);
+  const loadingPhaseRef = useRef(loadingPhase);
+  const loadingFallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overlayHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pushPositionRef = useRef<(pos: number) => void>((_: number) => {});
 
@@ -182,6 +196,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     state => state.settings.rememberPlaybackPosition,
   );
   const sessionRecent = useAppSelector(state => state.session.recentFiles);
+  const sessionRecentRef = useRef(sessionRecent);
   const playlist = useAppSelector(state => state.player.playlist);
   const queue = useAppSelector(state => state.player.queue);
   const currentIndex = useAppSelector(state => state.player.currentIndex);
@@ -276,6 +291,8 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   // ── Sync refs ──
   useEffect(() => { fileUriRef.current = fileUri; }, [fileUri]);
   useEffect(() => { titleRef.current = title; }, [title]);
+  useEffect(() => { sessionRecentRef.current = sessionRecent; }, [sessionRecent]);
+  useEffect(() => { loadingPhaseRef.current = loadingPhase; }, [loadingPhase]);
 
   // ── Auto-navigate back if no fileUri (e.g. restored nav state after restart) ──
   useEffect(() => {
@@ -359,6 +376,19 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     ? sessionRecent.find(f => f.fileUri === fileUri)
     : undefined;
 
+  const loadingMessage = useMemo(() => {
+    switch (loadingPhase) {
+      case 'initializing':
+        return 'Initializing player…';
+      case 'seeking':
+        return 'Resuming…';
+      case 'loading':
+        return 'Loading video…';
+      default:
+        return 'Loading…';
+    }
+  }, [loadingPhase]);
+
   // ── Expanded mode (view rotation, not device rotation) ──
   const [isLandscape, setIsLandscape] = useState(false);
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
@@ -369,6 +399,8 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       return next;
     });
   }, []);
+  const uiTopInset = isLandscape ? 0 : insets.top;
+  const uiBottomInset = isLandscape ? 0 : insets.bottom;
 
   // ── Transport ──
   const handlePlayPause = useCallback(() => {
@@ -379,6 +411,17 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     }
     haptics.medium();
   }, [haptics]);
+
+  // A single tap follows the convention used by major mobile players: reveal
+  // the chrome first; once it is visible, the same gesture toggles playback.
+  // This is easier to discover than requiring a tiny central button.
+  const handleSurfaceTap = useCallback(() => {
+    if (!secondaryVisible) {
+      setSecondaryVisible(true);
+      return;
+    }
+    handlePlayPause();
+  }, [handlePlayPause, secondaryVisible]);
 
   const handlePrev = useCallback(() => {
     MpvPlayer.seekTo(0);
@@ -410,8 +453,49 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   }, []);
 
   const handleVolumeChange = useCallback(() => {
-    MpvPlayer.toggleMute?.();
+    setVolumePanelOpen(true);
   }, []);
+
+  const handleToggleMute = useCallback(() => {
+    MpvPlayer.toggleMute?.();
+    setMuted(prev => !prev);
+  }, []);
+
+  const handleVolumeValueChange = useCallback((value: number) => {
+    const nextVolume = Math.round(Math.max(0, Math.min(100, value)));
+    MpvPlayer.setVolume(nextVolume);
+    if (nextVolume > 0 && muted) {
+      MpvPlayer.setMuted?.(false);
+      setMuted(false);
+    }
+    setVolume(nextVolume);
+  }, [muted]);
+
+  const handleSpeedSelect = useCallback((nextSpeed: number) => {
+    MpvPlayer.setSpeed(nextSpeed);
+    setSpeed(nextSpeed);
+    setSpeedPanelOpen(false);
+  }, []);
+
+  const handleAddBookmark = useCallback(() => {
+    const uri = fileUriRef.current;
+    if (!uri) return;
+    const position = MpvPlayer.getPosition?.() ?? 0;
+    const duration = MpvPlayer.getDuration?.() ?? 0;
+    if (position < 1) return;
+    const recent = sessionRecentRef.current.find(entry => entry.fileUri === uri);
+    dispatch(addBookmark({
+      id: `bookmark-${uri}-${Math.round(position)}`,
+      fileUri: uri,
+      title: titleRef.current,
+      position,
+      duration,
+      createdAt: new Date().toISOString(),
+      thumbnailPath: recent?.thumbnailPath,
+      mediaType: getMediaType(uri),
+    }));
+    setBookmarkSaved(true);
+  }, [dispatch]);
 
   // ── Gesture handlers ──
   const handleDoubleTapLeft = useCallback(() => {
@@ -530,6 +614,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     } else {
       MpvPlayer.setTrack('sub', trackId);
     }
+    setSubtitlePanelOpen(false);
   }, []);
 
   const handleToggleSubtitleVisibility = useCallback(() => {
@@ -548,10 +633,17 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
   const handleFontSizeChange = useCallback((size: 'small' | 'medium' | 'large') => {
     setSubtitleFontSize(size);
+    MpvPlayer.setProperty('sub-font-size', size === 'small' ? 22 : size === 'large' ? 38 : 30);
   }, []);
 
   const handleOpacityChange = useCallback((opacity: number) => {
     setSubtitleOpacity(opacity);
+    MpvPlayer.setProperty('sub-opacity', opacity);
+  }, []);
+
+  const handleSubtitlePositionChange = useCallback((position: number) => {
+    setSubtitlePosition(position);
+    MpvPlayer.setProperty('sub-pos', position);
   }, []);
 
   // ── Audio track ──
@@ -562,6 +654,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
     } else {
       MpvPlayer.setTrack('audio', trackId);
     }
+    setAudioPanelOpen(false);
   }, []);
 
   // ── Equalizer ──
@@ -719,7 +812,15 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   // ── Error retry ──
   const handleRetry = useCallback(() => {
     setError(null);
+    setErrorIsPermission(false);
     setIsReady(false);
+    setLoadingPhase('initializing');
+    resumeTargetRef.current = null;
+    hasSeenFirstPositionRef.current = false;
+    if (loadingFallbackTimer.current) {
+      clearTimeout(loadingFallbackTimer.current);
+      loadingFallbackTimer.current = null;
+    }
     // Re-init will be triggered by a brief state toggle
     setNativePtr(0);
     setTimeout(() => {
@@ -728,6 +829,15 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         const ptr = MpvPlayer.getNativePtr();
         setNativePtr(ptr);
         setIsReady(true);
+        setLoadingPhase('loading');
+        const playableUri = fileUriRef.current;
+        const sub = MpvPlayer.onSurfaceAttached(() => {
+          if (playableUri) {
+            setLoadingPhase('loading');
+            MpvPlayer.loadFile(playableUri);
+          }
+          sub?.remove();
+        });
       } else {
         setError({
           title: 'Retry Failed',
@@ -747,6 +857,13 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
     (async () => {
       const playableUri = fileUri;
+      setLoadingPhase('initializing');
+      resumeTargetRef.current = null;
+      hasSeenFirstPositionRef.current = false;
+      if (loadingFallbackTimer.current) {
+        clearTimeout(loadingFallbackTimer.current);
+        loadingFallbackTimer.current = null;
+      }
 
       if (playableUri) {
         const validation = await validateMediaFile(playableUri);
@@ -789,9 +906,11 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       const ptr = MpvPlayer.getNativePtr();
       setNativePtr(ptr);
       setIsReady(true);
+      setLoadingPhase('loading');
 
       const sub = MpvPlayer.onSurfaceAttached(() => {
         if (playableUri) {
+          setLoadingPhase('loading');
           MpvPlayer.loadFile(playableUri);
           
           // ── Phase 22: Capture thumbnail after load ──
@@ -819,13 +938,17 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
     return () => {
       cancelled = true;
+      if (loadingFallbackTimer.current) {
+        clearTimeout(loadingFallbackTimer.current);
+        loadingFallbackTimer.current = null;
+      }
       try {
         const curUri = fileUriRef.current;
         const curPos = MpvPlayer.getPosition?.() ?? 0;
         const curDur = MpvPlayer.getDuration?.() ?? 0;
         if (curUri && rememberPosition && curPos > 0) {
           // Find existing session entry to preserve thumbnail
-          const existing = sessionRecent.find(f => f.fileUri === curUri);
+          const existing = sessionRecentRef.current.find(f => f.fileUri === curUri);
           dispatch(
             savePlaybackPosition({
               fileUri: curUri,
@@ -843,7 +966,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         dispatch(clearPlayer());
       } catch {}
     };
-  }, [dispatch, fileUri, rememberPosition]);
+  }, [dispatch, fileUri, rememberPosition, requestedStartPosition]);
 
   // ── Periodic position save ──
   useEffect(() => {
@@ -853,7 +976,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       const curPos = MpvPlayer.getPosition?.() ?? 0;
       if (curPos > 0) {
         // Preserve thumbnail if exists
-        const existing = sessionRecent.find(f => f.fileUri === fileUri);
+        const existing = sessionRecentRef.current.find(f => f.fileUri === fileUri);
         dispatch(
           savePlaybackPosition({
             fileUri,
@@ -888,21 +1011,50 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       if (!isSeeking.current) {
         pushPositionRef.current(pos);
       }
+
+      if (loadingPhaseRef.current !== 'ready') {
+        if (!hasSeenFirstPositionRef.current && pos > 0) {
+          hasSeenFirstPositionRef.current = true;
+          if (resumeTargetRef.current == null) {
+            setLoadingPhase('ready');
+          }
+        }
+
+        const target = resumeTargetRef.current;
+        if (target != null && pos >= Math.max(0, target - 0.35)) {
+          resumeTargetRef.current = null;
+          resumeSeekDone.current = true;
+          setLoadingPhase('ready');
+          MpvPlayer.resume();
+        }
+      }
     });
 
     const unsubState = MpvPlayer.on(
       'onPlaybackStateChanged',
-      ({state}: {state: string}) => {
+      ({state: _state}: {state: string}) => {
         // TransportProvider's polling handles isPlaying state
       },
     );
 
     const unsubVol = MpvPlayer.on('onVolumeChanged', ({volume: vol}) => {
       setVolume(vol);
+      setMuted(MpvPlayer.isMuted?.() ?? vol <= 0);
+    });
+    const unsubSpeed = MpvPlayer.on('onSpeedChanged', ({speed: nextSpeed}) => {
+      setSpeed(nextSpeed);
     });
 
     const unsubFile = MpvPlayer.on('onFileLoaded', () => {
       resumeSeekDone.current = false;
+      resumeTargetRef.current = null;
+      hasSeenFirstPositionRef.current = false;
+      setLoadingPhase('loading');
+
+      if (loadingFallbackTimer.current) {
+        clearTimeout(loadingFallbackTimer.current);
+        loadingFallbackTimer.current = null;
+      }
 
       dispatch(
         savePlaybackPosition({
@@ -914,11 +1066,29 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         }),
       );
 
-      if (savedEntry && savedEntry.position > 0) {
+      const resumePosition = requestedStartPosition ?? savedEntry?.position ?? 0;
+      if (resumePosition > 0) {
+        setLoadingPhase('seeking');
+        MpvPlayer.pause();
         setTimeout(() => {
-          MpvPlayer.seekTo(savedEntry.position);
-          resumeSeekDone.current = true;
+          MpvPlayer.seekTo(resumePosition);
+          resumeTargetRef.current = resumePosition;
         }, 300);
+
+        loadingFallbackTimer.current = setTimeout(() => {
+          if (resumeTargetRef.current != null) {
+            resumeTargetRef.current = null;
+            resumeSeekDone.current = true;
+            setLoadingPhase('ready');
+            MpvPlayer.resume();
+          }
+        }, 2500);
+      } else {
+        loadingFallbackTimer.current = setTimeout(() => {
+          if (loadingPhaseRef.current !== 'ready') {
+            setLoadingPhase('ready');
+          }
+        }, 700);
       }
 
       try {
@@ -1024,6 +1194,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       unsubPos();
       unsubState();
       unsubVol();
+      unsubSpeed();
       unsubFile();
       unsubEnd();
       unsubError();
@@ -1034,25 +1205,12 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
       unsubNotifStop();
       unsubNotifSeek();
     };
-  }, [isReady, savedEntry, dispatch, handlePlayPause, handleNext, handlePrev, handleGoBack]);
+  }, [isReady, savedEntry, requestedStartPosition, dispatch, handlePlayPause, handleNext, handlePrev, handleGoBack]);
 
   // ── VideoTransportDependentContent: reads transport state to isolate frequent re-renders ──
   interface VideoTransportDependentContentProps {
-    pipScale: Animated.Value;
-    pipTranslateX: Animated.Value;
-    pipTranslateY: Animated.Value;
-    nativePtr: number;
     showVideoSurface: boolean;
     secondaryVisible: boolean;
-    onSingleTap: () => void;
-    onDoubleTapLeft: () => void;
-    onDoubleTapRight: () => void;
-    onSwipeUp: () => void;
-    onSwipeDown: () => void;
-    onVolumeChange: (delta: number) => void;
-    onBrightnessChange: (delta: number) => void;
-    onVolumeGestureEnd: () => void;
-    onBrightnessGestureEnd: () => void;
     chapters: MpvChapter[];
     onPlayPause: () => void;
     onPrev: () => void;
@@ -1112,11 +1270,7 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   }
 
   const VideoTransportDependentContent: React.FC<VideoTransportDependentContentProps> = ({
-    pipScale, pipTranslateX, pipTranslateY,
-    nativePtr, showVideoSurface, secondaryVisible,
-    onSingleTap, onDoubleTapLeft, onDoubleTapRight,
-    onSwipeUp, onSwipeDown,
-    onVolumeChange, onBrightnessChange, onVolumeGestureEnd, onBrightnessGestureEnd,
+    showVideoSurface, secondaryVisible,
     chapters, onPlayPause, onPrev, onNext, onSeek, bottomInset,
     chaptersPanelOpen, onCloseChapters, onChapterSeek,
     infoSheetVisible, onCloseInfo, infoMetadata, infoRelatedTracks,
@@ -1142,41 +1296,10 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
 
     return (
       <>
-        {/* ── Video Surface (with PiP shrink animation) ── */}
-        <VideoPlayerGestureLayer
-          onSingleTap={onSingleTap}
-          onDoubleTapLeft={onDoubleTapLeft}
-          onDoubleTapRight={onDoubleTapRight}
-          onSwipeUp={onSwipeUp}
-          onSwipeDown={onSwipeDown}
-          onVolumeChange={onVolumeChange}
-          onBrightnessChange={onBrightnessChange}
-          onVolumeGestureEnd={onVolumeGestureEnd}
-          onBrightnessGestureEnd={onBrightnessGestureEnd}>
-          <Animated.View
-            pointerEvents="box-none"
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                transform: [
-                  {scale: pipScale},
-                  {translateX: pipTranslateX},
-                  {translateY: pipTranslateY},
-                ],
-              },
-            ]}>
-            <VideoPlayerVideoSurface
-              nativePtr={nativePtr}
-              showVideoSurface={showVideoSurface}
-              isPlaying={isPlaying}
-              controlsVisible={secondaryVisible}
-            />
-          </Animated.View>
-        </VideoPlayerGestureLayer>
-
         {/* ── Primary Controls — Always Visible outside PiP (seek bar + transport) ── */}
         {showVideoSurface && pipUiVisible && (
           <PrimaryControls
+            visible={secondaryVisible}
             position={position}
             duration={duration}
             isPlaying={isPlaying}
@@ -1344,20 +1467,20 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
               ? {
                   width: screenHeight,
                   height: screenWidth,
+                  alignSelf: 'center',
                   transform: [{rotate: '90deg'}],
-                  marginLeft: (screenWidth - screenHeight) / 2,
-                  marginTop: (screenHeight - screenWidth) / 2,
+                  marginVertical: (screenHeight - screenWidth) / 2,
                 }
               : styles.rotationNeutral
           }>
-        <VideoTransportDependentContent
+        <VideoPlayerSurfaceLayer
           pipScale={pipScale}
           pipTranslateX={pipTranslateX}
           pipTranslateY={pipTranslateY}
           nativePtr={nativePtr}
           showVideoSurface={showVideoSurface}
-          secondaryVisible={secondaryVisible}
-          onSingleTap={() => setSecondaryVisible(p => !p)}
+          controlsVisible={secondaryVisible}
+          onSingleTap={handleSurfaceTap}
           onDoubleTapLeft={handleDoubleTapLeft}
           onDoubleTapRight={handleDoubleTapRight}
           onSwipeUp={handleSwipeUp}
@@ -1366,12 +1489,16 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
           onBrightnessChange={handleBrightnessSwipe}
           onVolumeGestureEnd={handleVolumeGestureEnd}
           onBrightnessGestureEnd={handleBrightnessGestureEnd}
+        />
+        <VideoTransportDependentContent
+          showVideoSurface={showVideoSurface}
+          secondaryVisible={secondaryVisible}
           chapters={chapters}
           onPlayPause={handlePlayPause}
           onPrev={handlePrev}
           onNext={handleNext}
           onSeek={handleSeek}
-          bottomInset={insets.bottom}
+          bottomInset={uiBottomInset}
           chaptersPanelOpen={chaptersPanelOpen}
           onCloseChapters={() => setChaptersPanelOpen(false)}
           onChapterSeek={handleChapterSeek}
@@ -1429,10 +1556,13 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
           <VideoPlayerTopBar
             title={title}
             onGoBack={handleGoBack}
-            topInset={insets.top}
+            topInset={uiTopInset}
             isLandscape={isLandscape}
             onToggleRotate={handleToggleRotate}
             onMorePress={handleMorePress}
+            visible={secondaryVisible}
+            onBookmark={handleAddBookmark}
+            bookmarkActive={bookmarkSaved}
           />
         )}
 
@@ -1486,16 +1616,18 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
             onToggleShuffle={handleToggleShuffle}
             onToggleLoop={handleToggleLoop}
             onVolume={handleVolumeChange}
+            onSpeed={() => setSpeedPanelOpen(true)}
             onScreenshot={handleScreenshot}
             onToggleQueue={() => setQueueSheetVisible(true)}
             onAutoHide={() => setSecondaryVisible(false)}
-            bottomInset={insets.bottom}
+            bottomInset={uiBottomInset}
           />
         )}
 
         {/* ── BottomSheet: Audio Tracks ── */}
         <BottomSheet
           title="Audio Tracks"
+          snapPoints={['55%', '85%']}
           visible={audioPanelOpen}
           onClose={() => setAudioPanelOpen(false)}>
           <VideoPlayerAudioPanel
@@ -1505,9 +1637,22 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
           />
         </BottomSheet>
 
+        <BottomSheet
+          title="Volume"
+          visible={volumePanelOpen}
+          onClose={() => setVolumePanelOpen(false)}>
+          <VideoPlayerVolumePanel
+            volume={volume}
+            muted={muted}
+            onVolumeChange={handleVolumeValueChange}
+            onToggleMute={handleToggleMute}
+          />
+        </BottomSheet>
+
         {/* ── BottomSheet: Subtitles ── */}
         <BottomSheet
           title="Subtitles"
+          snapPoints={['65%', '92%']}
           visible={subtitlePanelOpen}
           onClose={() => setSubtitlePanelOpen(false)}>
           <VideoPlayerSubtitlePanel
@@ -1521,7 +1666,16 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
             onFontSizeChange={handleFontSizeChange}
             subtitleOpacity={subtitleOpacity}
             onOpacityChange={handleOpacityChange}
+            subtitlePosition={subtitlePosition}
+            onPositionChange={handleSubtitlePositionChange}
           />
+        </BottomSheet>
+
+        <BottomSheet
+          title="Playback speed"
+          visible={speedPanelOpen}
+          onClose={() => setSpeedPanelOpen(false)}>
+          <VideoPlayerSpeedPanel speed={speed} onSelect={handleSpeedSelect} />
         </BottomSheet>
 
         {/* ── BottomSheet: Equalizer ── */}
@@ -1577,7 +1731,10 @@ export const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
         )}
 
         {/* ── Loading overlay ── */}
-        <VideoPlayerLoadingOverlay visible={!isReady && !error} message="Initializing player…" />
+        <VideoPlayerLoadingOverlay
+          visible={pipUiVisible && loadingPhase !== 'ready' && !error}
+          message={loadingMessage}
+        />
       </View>
       {/* ── End view-rotation wrapper ── */}
     </View>
@@ -1594,5 +1751,3 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
-

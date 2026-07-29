@@ -30,6 +30,8 @@ import LayoutGridSvg from '../../../assets/svg/ic_layout_grid.svg';
 import LayoutListSvg from '../../../assets/svg/ic_layout_list.svg';
 import FolderFillSvg from '../../../assets/svg/ic_folder.svg';
 import AlertCircleSvg from '../../../assets/svg/ic_alert_circle.svg';
+import BookmarkSvg from '../../../assets/svg/ic_bookmark.svg';
+import SpeedSvg from '../../../assets/svg/ic_speed.svg';
 
 const icons = {
   home: HomeSvg,
@@ -62,6 +64,8 @@ const icons = {
   layoutList: LayoutListSvg,
   folderFill: FolderFillSvg,
   alertCircle: AlertCircleSvg,
+  bookmark: BookmarkSvg,
+  speed: SpeedSvg,
 } as const;
 
 export type SvgIconName = keyof typeof icons;

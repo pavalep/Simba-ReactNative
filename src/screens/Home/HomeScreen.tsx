@@ -9,17 +9,13 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
-import {useAppSelector} from '../../store';
+import {useAppDispatch, useAppSelector} from '../../store';
 import {CommonActions} from '@react-navigation/native';
 import {type HomeScreenProps} from '../../navigation/types';
 import {pickMediaFile, getMediaType} from '../../services/fileService';
-import {
-  selectFrequentlyPlayed,
-  selectRecentlyAdded,
-  selectWeightedFeatured,
-} from '../../store/slices/sessionSlice';
+import {selectWeightedFeatured, selectBookmarks, removeBookmark} from '../../store/slices/sessionSlice';
 import {selectAllPlaylists} from '../../store/slices/playlistSlice';
-import type {MediaLibraryEntry, SessionEntry} from '../../store/slices/sessionSlice';
+import type {SessionEntry} from '../../store/slices/sessionSlice';
 import {useNetworkStatus} from '../../hooks/useNetworkStatus';
 
 // ── Components ──
@@ -28,13 +24,12 @@ import {HomeHeader} from '../../components/layout/HomeHeader/HomeHeader';
 import {FeaturedHeroBanner} from './components/FeaturedHeroBanner';
 import {HomeMediaShelf} from './components/HomeMediaShelf';
 import {QuickAccessShelf} from './components/QuickAccessShelf';
-import {HomeEmptyState} from './components/HomeEmptyState';
 import {HomeLoadingSkeleton} from './components/HomeLoadingSkeleton';
 import {HomeErrorState} from './components/HomeErrorState';
 import {NoNetworkBanner} from './components/NoNetworkBanner';
-import {selectTrackCount, selectScanProgress, selectScanHistory} from '../../store/slices/mediaSlice';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {AppText} from '../../components/core/AppText/AppText';
+import {HomeBookmarksList} from './components/HomeBookmarksList';
 
 // ── Types ──
 
@@ -42,7 +37,8 @@ type HomeSection =
   | { type: 'GREETING' }
   | { type: 'HERO', data: SessionEntry | null }
   | { type: 'SHELF', title: string, items: any[] }
-  | { type: 'PLAYLISTS', items: any[] };
+  | { type: 'PLAYLISTS', items: any[] }
+  | { type: 'BOOKMARKS', items: ReturnType<typeof selectBookmarks> };
 
 // ── Helpers ──
 
@@ -70,7 +66,7 @@ const DUMMY_VIDEO_4 = 'https://picsum.photos/seed/simba4/800/450';
 const DUMMY_VIDEO_5 = 'https://picsum.photos/seed/simba5/800/450';
 const DUMMY_VIDEO_6 = 'https://picsum.photos/seed/simba6/800/450';
 
-const DUMMY_RECENT = [
+const DUMMY_RECENT: SessionEntry[] = [
   { fileUri: 'dummy1', title: 'The Silent Horizon', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_1, position: 0, duration: 7200, lastPlayedAt: new Date().toISOString() },
   { fileUri: 'dummy2', title: 'Neon Velocity', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_2, position: 1200, duration: 5400, lastPlayedAt: new Date().toISOString() },
   { fileUri: 'dummy3', title: 'Golden Echoes', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_3, position: 0, duration: 3600, lastPlayedAt: new Date().toISOString() },
@@ -104,6 +100,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   const [isSettled, setIsSettled] = useState(false);
   const [hasError, setHasError] = useState(false);
   const {isOnline} = useNetworkStatus();
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     const t = setTimeout(() => setIsSettled(true), 300);
@@ -112,13 +109,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 
   // ── Data from Redux ──
   const recentFiles = useAppSelector(state => state.session.recentFiles);
-  const frequentlyPlayed = useAppSelector(selectFrequentlyPlayed);
-  const recentlyAdded = useAppSelector(selectRecentlyAdded);
+  const bookmarks = useAppSelector(selectBookmarks);
   const weightedFeatured = useAppSelector(selectWeightedFeatured);
   const playlists = useAppSelector(selectAllPlaylists);
   const isScanning = useAppSelector(s => s.media?.isScanning ?? false);
-  const scanHistory = useAppSelector(selectScanHistory);
-  const trackCount = useAppSelector(selectTrackCount);
 
   // ── Navigation Handlers ──
   const handleOpenMedia = useCallback(async () => {
@@ -135,12 +129,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   }, [navigation]);
 
   const handleItemPress = useCallback(
-    (item: {mediaType?: string; fileUri: string; title: string}) => {
+    (item: {
+      mediaType?: string;
+      fileUri: string;
+      title: string;
+      startPosition?: number;
+      position?: number;
+    }) => {
       if (item.fileUri.startsWith('dummy')) return; // Ignore dummy clicks
       const screen = item.mediaType === 'audio' ? 'AudioPlayer' : 'VideoPlayer';
       navigation.dispatch(CommonActions.navigate({name: screen, params: {
         fileUri: item.fileUri,
         fileTitle: item.title,
+        startPosition: item.startPosition ?? item.position,
       }}));
     },
     [navigation],
@@ -188,8 +189,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     // Folders (Offline appropriate instead of "Trending/New")
     realSections.push({ type: 'SHELF', title: 'Media Folders', items: DUMMY_FOLDERS });
 
+    // Bookmarks intentionally stay as the final Home section and are not
+    // folded into Recently Played; they are durable saved moments.
+    if (bookmarks.length > 0) {
+      realSections.push({ type: 'BOOKMARKS', items: bookmarks });
+    }
+
     return realSections;
-  }, [recentFiles, weightedFeatured, playlists]);
+  }, [recentFiles, weightedFeatured, playlists, bookmarks]);
 
   // ── Render Item ──
   const renderSection = useCallback(({item}: {item: HomeSection}) => {
@@ -208,10 +215,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         return <HomeMediaShelf title={item.title} items={item.items} onItemPress={handleItemPress} />;
       case 'PLAYLISTS':
         return <QuickAccessShelf title="Pinned Playlists" playlists={item.items} onPlaylistPress={handlePlaylistPress} />;
+      case 'BOOKMARKS':
+        return (
+          <HomeBookmarksList
+            items={item.items}
+            onPress={bookmark => handleItemPress({...bookmark, startPosition: bookmark.position})}
+            onRemove={id => dispatch(removeBookmark(id))}
+          />
+        );
       default:
         return null;
     }
-  }, [handleItemPress, handlePlaylistPress]);
+  }, [dispatch, handleItemPress, handlePlaylistPress]);
 
   // ── Pull-to-refresh ──
   const onRefresh = useCallback(async () => {

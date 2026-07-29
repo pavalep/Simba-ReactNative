@@ -45,6 +45,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
   fullWidth = false,
   icon,
   iconPosition = 'left',
+  hint,
   style,
   textStyle,
 }) => {

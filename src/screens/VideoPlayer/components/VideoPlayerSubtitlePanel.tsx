@@ -27,6 +27,8 @@ export interface VideoPlayerSubtitlePanelProps {
   onFontSizeChange: (size: 'small' | 'medium' | 'large') => void;
   subtitleOpacity: number;
   onOpacityChange: (opacity: number) => void;
+  subtitlePosition: number;
+  onPositionChange: (position: number) => void;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -42,6 +44,8 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
   onLoadExternal,
   onFontSizeChange,
   onOpacityChange,
+  subtitlePosition,
+  onPositionChange,
 }) => {
   const {colors} = useTheme();
 
@@ -55,6 +59,10 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
     onOpacityChange(newVal);
   }, [subtitleOpacity, onOpacityChange]);
 
+  const movePosition = useCallback((delta: number) => {
+    onPositionChange(Math.max(5, Math.min(95, subtitlePosition + delta)));
+  }, [onPositionChange, subtitlePosition]);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -64,7 +72,10 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
         trackRow: {
           flexDirection: 'row',
           alignItems: 'center',
+          minHeight: 60,
           paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.sm,
+          borderRadius: radius.md,
         },
         radioOuter: {
           width: 16,
@@ -97,6 +108,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
+          minHeight: 58,
           paddingVertical: spacing.sm,
         },
         toggleTrack: {
@@ -124,6 +136,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
+          minHeight: 56,
           paddingVertical: spacing.md,
           marginTop: spacing.sm,
           borderRadius: radius.sm,
@@ -167,6 +180,12 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
           minWidth: 32,
           textAlign: 'center',
         },
+        selectedRow: {
+          backgroundColor: colors.accent.goldDim,
+        },
+        emptyState: {
+          paddingVertical: spacing.lg,
+        },
       }),
     [colors],
   );
@@ -177,7 +196,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
       showsVerticalScrollIndicator={false}>
       {/* Disable subtitles option */}
       <TouchableOpacity
-        style={styles.trackRow}
+        style={[styles.trackRow, activeSubtitle === null && styles.selectedRow]}
         onPress={() => onSelectTrack(null)}>
         <View
           style={
@@ -201,7 +220,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
         return (
           <TouchableOpacity
             key={track.id}
-            style={styles.trackRow}
+            style={[styles.trackRow, isSelected && styles.selectedRow]}
             onPress={() => onSelectTrack(track.id)}>
             <View
               style={isSelected ? styles.radioFilled : styles.radioOuter}
@@ -216,15 +235,17 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
                 </AppText>
               ) : null}
             </View>
-            <AppText
-              variant="caption"
-              color="secondary"
-              style={styles.trackIdText}>
-              #{track.id}
-            </AppText>
+            {isSelected && <AppText variant="caption" color="accent">Selected</AppText>}
           </TouchableOpacity>
         );
       })}
+
+      {subtitleTracks.length === 0 && (
+        <View style={styles.emptyState}>
+          <AppText variant="body2" color="secondary">No embedded subtitle tracks</AppText>
+          <AppText variant="caption" color="tertiary">You can load an external subtitle file below.</AppText>
+        </View>
+      )}
 
       <View style={styles.divider} />
 
@@ -290,6 +311,22 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
               </TouchableOpacity>
             );
           })}
+        </View>
+      </View>
+
+      <View style={styles.styleRow}>
+        <View>
+          <AppText variant="body2" color="primary">Subtitle position</AppText>
+          <AppText variant="caption" color="secondary">Move captions up or down</AppText>
+        </View>
+        <View style={{flexDirection: 'row', alignItems: 'center', gap: spacing.sm}}>
+          <TouchableOpacity style={styles.opacityBtn} onPress={() => movePosition(-5)} accessibilityLabel="Move subtitles down">
+            <AppText variant="body2" color="secondary">−</AppText>
+          </TouchableOpacity>
+          <AppText variant="body2" color="primary" style={styles.opacityValue}>{subtitlePosition}%</AppText>
+          <TouchableOpacity style={styles.opacityBtn} onPress={() => movePosition(5)} accessibilityLabel="Move subtitles up">
+            <AppText variant="body2" color="secondary">+</AppText>
+          </TouchableOpacity>
         </View>
       </View>
 

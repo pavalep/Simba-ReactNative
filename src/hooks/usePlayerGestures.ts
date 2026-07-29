@@ -7,8 +7,6 @@
 import {useRef, useCallback, useEffect} from 'react';
 import {Dimensions, PanResponder, GestureResponderEvent, PanResponderGestureState} from 'react-native';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
 const EDGE_THRESHOLD = 0.15;
 const VERTICAL_SLOP = 8;
 const PX_PER_PERCENT = 3;
@@ -41,6 +39,8 @@ export interface PlayerGestureHandle {
  * Returns panHandlers to spread onto a View.
  */
 export function usePlayerGestures(callbacks: GestureCallbacks): PlayerGestureHandle {
+  const callbacksRef = useRef(callbacks);
+  callbacksRef.current = callbacks;
   const tapCount = useRef(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapX = useRef(0);
@@ -49,16 +49,20 @@ export function usePlayerGestures(callbacks: GestureCallbacks): PlayerGestureHan
   const startX = useRef(0);
 
   const handleSingleTap = useCallback(() => {
-    callbacks.onSingleTap?.();
-  }, [callbacks.onSingleTap]);
+    callbacksRef.current.onSingleTap?.();
+  }, []);
 
   const handleDoubleTap = useCallback((x: number) => {
-    if (x < SCREEN_WIDTH / 2) {
-      callbacks.onDoubleTapLeft?.();
+    // Read the current window width at gesture time. The old module-level
+    // width stayed portrait-sized after rotation, making the right half seek
+    // backward and making edge volume/brightness zones inaccurate.
+    const screenWidth = Dimensions.get('window').width;
+    if (x < screenWidth / 2) {
+      callbacksRef.current.onDoubleTapLeft?.();
     } else {
-      callbacks.onDoubleTapRight?.();
+      callbacksRef.current.onDoubleTapRight?.();
     }
-  }, [callbacks.onDoubleTapLeft, callbacks.onDoubleTapRight]);
+  }, []);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -69,13 +73,14 @@ export function usePlayerGestures(callbacks: GestureCallbacks): PlayerGestureHan
 
       onPanResponderGrant: (evt: GestureResponderEvent) => {
         const x = evt.nativeEvent.locationX;
+        const screenWidth = Dimensions.get('window').width;
         startX.current = x;
         gestureType.current = 'none';
         lastVerticalPos.current = evt.nativeEvent.pageY;
 
-        if (x < SCREEN_WIDTH * EDGE_THRESHOLD) {
+        if (x < screenWidth * EDGE_THRESHOLD) {
           gestureType.current = 'volume';
-        } else if (x > SCREEN_WIDTH * (1 - EDGE_THRESHOLD)) {
+        } else if (x > screenWidth * (1 - EDGE_THRESHOLD)) {
           gestureType.current = 'brightness';
         } else {
           gestureType.current = 'center';
@@ -97,20 +102,20 @@ export function usePlayerGestures(callbacks: GestureCallbacks): PlayerGestureHan
 
       onPanResponderMove: (
         evt: GestureResponderEvent,
-        gestureState: PanResponderGestureState,
+        _gestureState: PanResponderGestureState,
       ) => {
         if (gestureType.current === 'volume') {
           const deltaY = evt.nativeEvent.pageY - lastVerticalPos.current;
           if (Math.abs(deltaY) >= VERTICAL_SLOP) {
             const delta = -Math.round(deltaY / PX_PER_PERCENT);
-            callbacks.onVolumeChange?.(delta);
+            callbacksRef.current.onVolumeChange?.(delta);
             lastVerticalPos.current = evt.nativeEvent.pageY;
           }
         } else if (gestureType.current === 'brightness') {
           const deltaY = evt.nativeEvent.pageY - lastVerticalPos.current;
           if (Math.abs(deltaY) >= VERTICAL_SLOP) {
             const delta = -Math.round(deltaY / PX_PER_PERCENT);
-            callbacks.onBrightnessChange?.(delta);
+            callbacksRef.current.onBrightnessChange?.(delta);
             lastVerticalPos.current = evt.nativeEvent.pageY;
           }
         }
@@ -121,16 +126,16 @@ export function usePlayerGestures(callbacks: GestureCallbacks): PlayerGestureHan
         gestureState: PanResponderGestureState,
       ) => {
         if (gestureType.current === 'volume') {
-          callbacks.onVolumeGestureEnd?.();
+          callbacksRef.current.onVolumeGestureEnd?.();
         } else if (gestureType.current === 'brightness') {
-          callbacks.onBrightnessGestureEnd?.();
+          callbacksRef.current.onBrightnessGestureEnd?.();
         } else if (gestureType.current === 'center') {
           const {vy, dy} = gestureState;
           if (Math.abs(vy) > SWIPE_VELOCITY_THRESHOLD || Math.abs(dy) > SWIPE_DISTANCE_THRESHOLD) {
             if (dy < -SWIPE_DISTANCE_THRESHOLD) {
-              callbacks.onSwipeUp?.();
+              callbacksRef.current.onSwipeUp?.();
             } else if (dy > SWIPE_DISTANCE_THRESHOLD) {
-              callbacks.onSwipeDown?.();
+              callbacksRef.current.onSwipeDown?.();
             }
           }
         }
@@ -139,9 +144,9 @@ export function usePlayerGestures(callbacks: GestureCallbacks): PlayerGestureHan
 
       onPanResponderTerminate: () => {
         if (gestureType.current === 'volume') {
-          callbacks.onVolumeGestureEnd?.();
+          callbacksRef.current.onVolumeGestureEnd?.();
         } else if (gestureType.current === 'brightness') {
-          callbacks.onBrightnessGestureEnd?.();
+          callbacksRef.current.onBrightnessGestureEnd?.();
         }
         gestureType.current = 'none';
       },

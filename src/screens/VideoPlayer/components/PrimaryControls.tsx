@@ -1,5 +1,5 @@
-import React, {useMemo} from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useEffect, useMemo, useRef} from 'react';
+import {View, TouchableOpacity, StyleSheet, Animated} from 'react-native';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import SeekBar from '../../../components/player/SeekBar/SeekBar';
@@ -7,6 +7,7 @@ import SeekBar from '../../../components/player/SeekBar/SeekBar';
 // ─── Props ─────────────────────────────────────────────────
 
 export interface PrimaryControlsProps {
+  visible?: boolean;
   position: number;
   duration: number;
   isPlaying: boolean;
@@ -21,6 +22,7 @@ export interface PrimaryControlsProps {
 // ─── Component ──────────────────────────────────────────────
 
 export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
+  visible = true,
   position,
   duration,
   isPlaying,
@@ -32,6 +34,16 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
   bottomInset,
 }) => {
   const {colors} = useTheme();
+  const iconColor = '#EDEDED';
+  const opacity = useRef(new Animated.Value(1)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {toValue: visible ? 1 : 0, duration: 220, useNativeDriver: true}),
+      Animated.timing(translateY, {toValue: visible ? 0 : 18, duration: 220, useNativeDriver: true}),
+    ]).start();
+  }, [opacity, translateY, visible]);
 
   const styles = useMemo(
     () =>
@@ -43,6 +55,8 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           right: 0,
           zIndex: 15,
           paddingBottom: bottomInset + 8,
+          paddingTop: 8,
+          backgroundColor: 'rgba(8, 8, 10, 0.72)',
         },
         seekBarWrapper: {
           marginBottom: 2,
@@ -56,17 +70,17 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           paddingVertical: 4,
         },
         transportBtn: {
-          width: 44,
-          height: 44,
-          borderRadius: 22,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
           alignItems: 'center',
           justifyContent: 'center',
         },
         playBtn: {
-          width: 52,
-          height: 52,
-          borderRadius: 26,
-          backgroundColor: colors.border.subtle,
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          backgroundColor: colors.accent.gold,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -75,7 +89,9 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
   );
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <Animated.View
+      style={[styles.container, {opacity, transform: [{translateY}]}]}
+      pointerEvents={visible ? 'auto' : 'none'}>
       {/* Seek bar */}
       <View style={styles.seekBarWrapper}>
         <SeekBar
@@ -95,7 +111,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Previous track"
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <SvgIcon name="skipBack" size={22} color={colors.text.primary} />
+          <SvgIcon name="skipBack" size={22} color={iconColor} />
         </TouchableOpacity>
 
         {/* Play / Pause */}
@@ -108,7 +124,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           <SvgIcon
             name={isPlaying ? 'pause' : 'play'}
             size={24}
-            color={colors.text.primary}
+            color={colors.text.inverse}
           />
         </TouchableOpacity>
 
@@ -119,10 +135,10 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Next track"
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <SvgIcon name="skipForward" size={22} color={colors.text.primary} />
+          <SvgIcon name="skipForward" size={22} color={iconColor} />
         </TouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 };
 

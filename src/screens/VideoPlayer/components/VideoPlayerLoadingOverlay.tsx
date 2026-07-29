@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import {View, StyleSheet} from 'react-native';
+import {ActivityIndicator, View, StyleSheet} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 
@@ -29,6 +29,22 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
           justifyContent: 'center',
           zIndex: 50,
         },
+        content: {
+          minWidth: 220,
+          paddingHorizontal: 18,
+          paddingVertical: 16,
+          borderRadius: 14,
+          backgroundColor: colors.background.elevated,
+          borderWidth: 0.5,
+          borderColor: colors.border.subtle,
+          alignItems: 'center',
+        },
+        spinner: {
+          marginBottom: 10,
+        },
+        message: {
+          textAlign: 'center',
+        },
       }),
     [colors],
   );
@@ -39,9 +55,14 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
 
   return (
     <View style={styles.overlay}>
-      <AppText variant="body1" color="primary">
-        {message}
-      </AppText>
+      <View style={styles.content}>
+        <View style={styles.spinner}>
+          <ActivityIndicator size="large" color={colors.accent.gold} />
+        </View>
+        <AppText variant="body1" color="primary" style={styles.message}>
+          {message}
+        </AppText>
+      </View>
     </View>
   );
 };

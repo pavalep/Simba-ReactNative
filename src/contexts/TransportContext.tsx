@@ -47,7 +47,7 @@ interface TransportProviderProps {
 export const TransportProvider: React.FC<TransportProviderProps> = ({
   children,
   isReady,
-  pollInterval = 250,
+  pollInterval = 1000,
   enabled = true,
 }) => {
   const [position, setPosition] = useState(0);
@@ -57,27 +57,65 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   // Refs to avoid stale closures in the interval callback
   const isReadyRef = useRef(isReady);
   isReadyRef.current = isReady;
+  const hasPlaybackStateEventsRef = useRef(false);
+  const lastPositionRef = useRef(0);
+  const lastMoveAtRef = useRef(0);
+  const moveStreakRef = useRef(0);
+  const isPlayingRef = useRef(isPlaying);
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
-  // ── Polling loop ──
+  // Position and playback state are event-driven. Poll only duration as a
+  // low-frequency fallback; querying mpv across the JS bridge every 250 ms
+  // made controls and orientation transitions visibly stutter.
   useEffect(() => {
     if (!isReady || !enabled) return;
+
+    const unsubPosition = MpvPlayer.on('onPositionChanged', ({position: nextPosition}) => {
+      if (!isNaN(nextPosition)) setPosition(nextPosition);
+      if (!hasPlaybackStateEventsRef.current) {
+        const prev = lastPositionRef.current;
+        const now = Date.now();
+        const moved = nextPosition > prev + 0.12;
+        if (moved) {
+          moveStreakRef.current = now - lastMoveAtRef.current < 1200 ? moveStreakRef.current + 1 : 1;
+          lastMoveAtRef.current = now;
+          if (moveStreakRef.current >= 2 && !isPlayingRef.current) {
+            setIsPlaying(true);
+          }
+        }
+        lastPositionRef.current = nextPosition;
+      }
+    });
+    const unsubState = MpvPlayer.on('onPlaybackStateChanged', ({state}: {state: string}) => {
+      hasPlaybackStateEventsRef.current = true;
+      setIsPlaying(state === 'playing');
+    });
 
     const interval = setInterval(() => {
       if (!isReadyRef.current) return;
       try {
-        const pos = MpvPlayer.getPosition();
         const dur = MpvPlayer.getDuration();
-        const playing = MpvPlayer.getPlaybackState() === 'playing';
 
-        if (!isNaN(pos)) setPosition(pos);
         if (!isNaN(dur)) setDuration(dur || 1);
-        setIsPlaying(playing);
+        if (!hasPlaybackStateEventsRef.current) {
+          const now = Date.now();
+          if (isPlayingRef.current && now - lastMoveAtRef.current > 1500) {
+            moveStreakRef.current = 0;
+            setIsPlaying(false);
+          }
+        }
       } catch {
         // silently ignore if player was destroyed mid-poll
       }
     }, pollInterval);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      unsubPosition();
+      unsubState();
+    };
   }, [isReady, enabled, pollInterval]);
 
   // ── Actions ──

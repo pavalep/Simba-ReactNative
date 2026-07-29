@@ -49,16 +49,17 @@ const SeekBar: React.FC<SeekBarProps> = ({
 }) => {
   const {colors} = useTheme();
 
-  // Debounce position updates to avoid excessive re-renders from 250ms polling
-  const position = useDebounce(rawPosition, 250);
+  // Keep the thumb responsive without allowing a fast native event stream to
+  // make the rest of the screen feel busy.
+  const position = useDebounce(rawPosition, 80);
 
   // Track layout
   const trackWidthRef = useRef(0);
-  const trackXRef = useRef(0);
 
   // Scrubbing state
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubFraction, setScrubFraction] = useState(0);
+  const scrubFractionRef = useRef(0);
   const panAnim = useRef(new Animated.Value(0)).current;
 
   const durationSec = duration || 1;
@@ -76,6 +77,7 @@ const SeekBar: React.FC<SeekBarProps> = ({
           const x = evt.nativeEvent.locationX;
           const frac = Math.max(0, Math.min(1, x / Math.max(trackWidthRef.current, 1)));
           setScrubFraction(frac);
+          scrubFractionRef.current = frac;
           panAnim.setValue(frac);
           setIsScrubbing(true);
         },
@@ -84,19 +86,20 @@ const SeekBar: React.FC<SeekBarProps> = ({
           const x = evt.nativeEvent.locationX;
           const frac = Math.max(0, Math.min(1, x / Math.max(trackWidthRef.current, 1)));
           setScrubFraction(frac);
+          scrubFractionRef.current = frac;
           panAnim.setValue(frac);
         },
 
         onPanResponderRelease: () => {
           setIsScrubbing(false);
-          onSeek(scrubFraction);
+          onSeek(scrubFractionRef.current);
         },
 
         onPanResponderTerminate: () => {
           setIsScrubbing(false);
         },
       }),
-    [onSeek, scrubFraction, panAnim],
+    [onSeek, panAnim],
   );
 
   // ── Track layout callback ──

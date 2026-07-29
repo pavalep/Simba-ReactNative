@@ -41,7 +41,10 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
         trackRow: {
           flexDirection: 'row',
           alignItems: 'center',
+          minHeight: 60,
           paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.sm,
+          borderRadius: 14,
         },
         radioOuter: {
           width: 16,
@@ -65,6 +68,12 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
         trackIdText: {
           marginLeft: spacing.sm,
         },
+        selectedRow: {
+          backgroundColor: colors.accent.goldDim,
+        },
+        emptyState: {
+          paddingVertical: spacing.lg,
+        },
         divider: {
           height: 1,
           backgroundColor: colors.border.subtle,
@@ -84,7 +93,7 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
         <>
           {/* Disable audio option */}
           <TouchableOpacity
-            style={styles.trackRow}
+            style={[styles.trackRow, activeAudioTrack === null && styles.selectedRow]}
             onPress={() => onSelectTrack(null)}>
             <View
               style={
@@ -107,7 +116,7 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
         const isSelected = track.id === activeAudioTrack;
         return (
           <TouchableOpacity
-            style={styles.trackRow}
+            style={[styles.trackRow, isSelected && styles.selectedRow]}
             onPress={() => onSelectTrack(track.id)}>
             <View
               style={isSelected ? styles.radioFilled : styles.radioOuter}
@@ -122,15 +131,16 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
                 </AppText>
               ) : null}
             </View>
-            <AppText
-              variant="caption"
-              color="secondary"
-              style={styles.trackIdText}>
-              #{track.id}
-            </AppText>
+            {isSelected && <AppText variant="caption" color="accent">Selected</AppText>}
           </TouchableOpacity>
         );
       }}
+      ListEmptyComponent={
+        <View style={styles.emptyState}>
+          <AppText variant="body2" color="secondary">No alternate audio tracks</AppText>
+          <AppText variant="caption" color="tertiary">The default track is being used.</AppText>
+        </View>
+      }
     />
   );
 };

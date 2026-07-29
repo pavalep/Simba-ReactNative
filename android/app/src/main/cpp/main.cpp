@@ -132,6 +132,12 @@ Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass) {
     mpv_set_option_string(mpv, "vo", "gpu");
     mpv_set_option_string(mpv, "gpu-api", "opengl");
     mpv_set_option_string(mpv, "hwdec", "mediacodec");
+    // Let mpv preserve the source transfer function and range instead of
+    // applying a blanket SDR conversion. This keeps SDR/HDR content neutral
+    // on devices that expose the required display metadata.
+    mpv_set_option_string(mpv, "video-output-levels", "auto");
+    mpv_set_option_string(mpv, "target-colorspace-hint", "yes");
+    mpv_set_option_string(mpv, "correct-downscaling", "yes");
     mpv_set_option_string(mpv, "audio-device-auto", "yes");
     mpv_set_option_string(mpv, "keep-open", "yes");
     mpv_set_option_string(mpv, "pause", "no");

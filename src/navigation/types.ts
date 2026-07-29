@@ -5,7 +5,7 @@ import type {CompositeScreenProps, NavigatorScreenParams} from '@react-navigatio
 export type RootStackParamList = {
   Splash: undefined;
   MainTabs: NavigatorScreenParams<TabParamList>;
-  VideoPlayer: {fileUri?: string; fileTitle?: string};
+  VideoPlayer: {fileUri?: string; fileTitle?: string; startPosition?: number};
   AudioPlayer: {fileUri?: string; fileTitle?: string};
   Preferences: undefined;
   Settings: NavigatorScreenParams<SettingsTabParamList>;

@@ -29,7 +29,7 @@ export interface VideoPlayerVideoSurfaceProps {
 
 // ─── Component ───────────────────────────────────────────────
 
-export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = ({
+export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = React.memo(({
   nativePtr,
   showVideoSurface,
   isPlaying,
@@ -73,7 +73,7 @@ export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = (
           style={StyleSheet.absoluteFill}
         />
       )}
-      {!controlsVisible && (
+      {!controlsVisible && !isPlaying && (
         <View style={styles.centerPlayBtnOverlay}>
           <View style={styles.centerPlayBtn}>
             <AppText style={styles.centerPlayIcon}>{'▶'}</AppText>
@@ -82,4 +82,6 @@ export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = (
       )}
     </View>
   );
-};
+});
+
+VideoPlayerVideoSurface.displayName = 'VideoPlayerVideoSurface';
