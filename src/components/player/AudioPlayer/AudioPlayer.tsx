@@ -6,6 +6,7 @@ import {
   RefreshControl,
   Linking,
   StyleSheet,
+  Animated,
 } from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
 import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
@@ -37,7 +38,6 @@ import type {LrcLine} from '../../../utils/lrcParser';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 import type {ColorTokens} from '../../../theme/tokens';
-import {navigate} from '../../../navigation/navigationHelper';
 
 // ─── Hook Data Type ──────────────────────────────────────────
 
@@ -112,7 +112,7 @@ export interface AudioPlayerHookData {
   handlePlayFromPlaylist: (idx: number) => void;
   handleQueueMoveItem: (idx: number, dir: 'up' | 'down') => void;
   handleQueueRemoveItem: (idx: number) => void;
-  handleQueueSelectItem: (idx: number) => void;
+  handleQueueSelectItem: (fileUri: string) => void;
   handleSelectQueueItem: (idx: number) => void;
   handleSelectHistoryItem: (idx: number) => void;
   handlePlayNext: (entry: PlaylistEntry) => void;
@@ -167,9 +167,60 @@ const AudioTransportDependentContent: React.FC<{
     [h.chapters],
   );
 
+  // ── Track change cross-fade + scale pulse (26.7) ───────────
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const prevTrackKey = React.useRef<string | null>(h.fileUri);
+  const animRef = React.useRef<Animated.CompositeAnimation | null>(null);
+
+  React.useEffect(() => {
+    const currentKey = h.fileUri;
+    const prevKey = prevTrackKey.current;
+
+    if (prevKey !== null && currentKey !== prevKey) {
+      // Track changed — fade out old art, then fade in new art with scale pulse
+      animRef.current = Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 350,
+            useNativeDriver: true,
+          }),
+          Animated.sequence([
+            Animated.spring(scaleAnim, {
+              toValue: 1.03,
+              friction: 4,
+              tension: 80,
+              useNativeDriver: true,
+            }),
+            Animated.spring(scaleAnim, {
+              toValue: 1,
+              friction: 3,
+              tension: 200,
+              useNativeDriver: true,
+            }),
+          ]),
+        ]),
+      ]);
+      animRef.current.start();
+    }
+
+    prevTrackKey.current = currentKey;
+    return () => {
+      animRef.current?.stop();
+    };
+  }, [h.fileUri, fadeAnim, scaleAnim]);
+
   return (
     <>
-      <AudioAlbumArt albumArtUri={h.metadata.albumArtUri} />
+      <Animated.View style={{opacity: fadeAnim, transform: [{scale: scaleAnim}]}}>
+        <AudioAlbumArt albumArtUri={h.metadata.albumArtUri} />
+      </Animated.View>
       <AudioTrackInfo
         title={h.title}
         artist={h.metadata.artist}
@@ -266,15 +317,6 @@ const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
     setLyricsViewVisible(false);
   }, []);
 
-  const handleNavigateToSongInfo = React.useCallback(() => {
-    navigate('SongScreen', {
-      fileUri: h.fileUri || '',
-      title: h.title,
-      artist: h.metadata.artist,
-      album: h.metadata.album,
-    });
-  }, [h.fileUri, h.title, h.metadata.artist, h.metadata.album]);
-
   return (
     <View style={styles.root}>
       <AudioGradientBg albumArtUri={h.metadata.albumArtUri} />
@@ -344,7 +386,7 @@ const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
       <PlaylistPreviewSheet
         visible={h.playlistSheetVisible}
         onClose={() => h.setPlaylistSheetVisible(false)}
-        queue={h.playlist.map((e: PlaylistEntry, i: number) => ({
+        queue={h.playlist.map((e: PlaylistEntry, _i: number) => ({
           fileUri: e.uri,
           title: e.title,
           mediaType: 'audio' as const,
@@ -364,7 +406,7 @@ const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
       <QueueSheet
         visible={h.queueSheetVisible}
         onClose={() => { h.setQueueSheetVisible(false); h.setQueueMultiSelect(false); }}
-        currentTrack={h.currentFile ? {uri: h.currentFile, title: h.title, duration: duration} : undefined}
+        currentTrack={h.currentFile ? {uri: h.currentFile, title: h.title, duration: duration} : null}
         queue={h.queue}
         playbackHistory={h.playbackHistory}
         selectedQueueIndices={h.selectedQueueIndices}

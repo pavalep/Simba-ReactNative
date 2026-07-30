@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Easing,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import FastImage from 'react-native-fast-image';
@@ -36,14 +37,25 @@ export const MiniAudioPlayer: React.FC = () => {
     useMiniPlayer();
 
   // ── Slide animation ──────────────────────────────────
-  const slideAnim = useRef(new Animated.Value(isVisible ? 0 : 1)).current;
+  const slideAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: isVisible ? 0 : 1,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
+    if (isVisible) {
+      // Start from hidden position, then slide up
+      slideAnim.setValue(1);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 350,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    }
   }, [isVisible, slideAnim]);
 
   const translateY = slideAnim.interpolate({

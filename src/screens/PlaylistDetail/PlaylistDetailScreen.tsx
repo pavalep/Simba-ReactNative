@@ -51,7 +51,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
   // ── Redux data ──
   const playlist = useAppSelector(selectPlaylistById(playlistId));
-  const items = playlist?.items ?? [];
+  const items = useMemo(() => playlist?.items ?? [], [playlist]);
 
   // ── Local UI state ──
   const [isSelecting, setIsSelecting] = useState(false);
@@ -424,7 +424,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           marginLeft: spacing.xs,
         },
       }),
-    [colors, insets, isDark],
+    [colors, insets],
   );
 
   // ── Render item ──

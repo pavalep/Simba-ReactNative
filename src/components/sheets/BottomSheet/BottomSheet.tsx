@@ -133,12 +133,6 @@ export function BottomSheet<T = any>({
   // Bottom of sheet = screenHeight - snapOffset → with keyboard offset
   const keyboardAdjust =
     keyboardHeight > 0 ? keyboardHeight : 0;
-  const sheetBottom = animatedTranslateY.interpolate({
-    inputRange: [0, SCREEN_HEIGHT],
-    outputRange: [0, SCREEN_HEIGHT],
-    extrapolate: 'clamp',
-  });
-
   return (
     <Modal
       visible={visible}

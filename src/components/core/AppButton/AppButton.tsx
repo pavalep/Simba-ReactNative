@@ -1,15 +1,17 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useRef, useCallback} from 'react';
 import {
   TouchableOpacity,
   StyleSheet,
   View,
   ViewStyle,
   TextStyle,
+  Animated,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../AppText/AppText';
 import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
+import {useHaptics} from '../../../hooks/useHaptics';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -50,7 +52,18 @@ export const AppButton: React.FC<AppButtonProps> = ({
   textStyle,
 }) => {
   const {colors, isDark} = useTheme();
+  const {medium: hapticMedium} = useHaptics();
+  const scaleAnim = useRef(new Animated.Value(1)).current;
   const sz = sizeConfig[sizeKey];
+
+  const handlePressIn = useCallback(() => {
+    hapticMedium();
+    Animated.spring(scaleAnim, {toValue: 0.95, friction: 8, tension: 100, useNativeDriver: true}).start();
+  }, [scaleAnim, hapticMedium]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scaleAnim, {toValue: 1, friction: 3, tension: 200, useNativeDriver: true}).start();
+  }, [scaleAnim]);
 
   const {bgColor, txtColor, bdColor} = useMemo(() => {
     if (disabled) {
@@ -89,49 +102,53 @@ export const AppButton: React.FC<AppButtonProps> = ({
   }, [disabled, isDark, colors, variant]);
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.base,
-        {
-          backgroundColor: bgColor,
-          borderColor: bdColor,
-          borderWidth: variant === 'outline' ? 1 : 0,
-          paddingHorizontal: sz.px,
-          paddingVertical: sz.py,
-          minHeight: sz.minH,
-          alignSelf: fullWidth ? 'stretch' : undefined,
-          opacity: disabled ? 0.5 : 1,
-        },
-        style,
-      ]}
-      onPress={onPress}
-      disabled={disabled || loading}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityState={{disabled: disabled || loading}}
-      accessibilityLabel={loading ? `${title}, loading` : title}
-      accessibilityHint={hint}>
-      {loading ? (
-        <ActivityOrb size={16} color={txtColor} />
-      ) : (
-        <View style={[styles.inner, {flexDirection: iconPosition === 'right' ? 'row-reverse' : 'row'}]}>
-          {icon && <View style={styles.iconSlot}>{icon}</View>}
-          <AppText
-            variant="button"
-            style={[
-              {
-                color: txtColor,
-                fontSize: sz.fs,
-                fontWeight: '600',
-              },
-              textStyle,
-            ]}
-            numberOfLines={1}>
-            {title}
-          </AppText>
-        </View>
-      )}
-    </TouchableOpacity>
+    <Animated.View style={[{transform: [{scale: scaleAnim}]}]}>
+      <TouchableOpacity
+        style={[
+          styles.base,
+          {
+            backgroundColor: bgColor,
+            borderColor: bdColor,
+            borderWidth: variant === 'outline' ? 1 : 0,
+            paddingHorizontal: sz.px,
+            paddingVertical: sz.py,
+            minHeight: sz.minH,
+            alignSelf: fullWidth ? 'stretch' : undefined,
+            opacity: disabled ? 0.5 : 1,
+          },
+          style,
+        ]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled || loading}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityState={{disabled: disabled || loading}}
+        accessibilityLabel={loading ? `${title}, loading` : title}
+        accessibilityHint={hint}>
+        {loading ? (
+          <ActivityOrb size={16} color={txtColor} />
+        ) : (
+          <View style={[styles.inner, {flexDirection: iconPosition === 'right' ? 'row-reverse' : 'row'}]}>
+            {icon && <View style={styles.iconSlot}>{icon}</View>}
+            <AppText
+              variant="button"
+              style={[
+                {
+                  color: txtColor,
+                  fontSize: sz.fs,
+                  fontWeight: '600',
+                },
+                textStyle,
+              ]}
+              numberOfLines={1}>
+              {title}
+            </AppText>
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 

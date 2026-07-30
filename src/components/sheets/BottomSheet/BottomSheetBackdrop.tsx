@@ -4,7 +4,9 @@ import {
   TouchableWithoutFeedback,
   StyleSheet,
   Dimensions,
+  Platform,
 } from 'react-native';
+import {BlurView} from '@react-native-community/blur';
 import {useTheme} from '../../../theme';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -29,7 +31,7 @@ export const BottomSheetBackdrop: React.FC<BottomSheetBackdropProps> = ({
   // maxOpacity when sheet is at top (translateY = 0)
   const backdropOpacity = animatedTranslateY.interpolate({
     inputRange: [0, SCREEN_HEIGHT * 0.5],
-    outputRange: [0.7, 0],
+    outputRange: [1, 0],
     extrapolate: 'clamp',
   });
 
@@ -38,11 +40,32 @@ export const BottomSheetBackdrop: React.FC<BottomSheetBackdropProps> = ({
       style={[
         styles.backdrop,
         {
-          backgroundColor: colors.background.primary,
           opacity: backdropOpacity,
         },
-      ]}
-    />
+      ]}>
+      {Platform.OS === 'ios' ? (
+        <BlurView
+          blurType="dark"
+          blurAmount={10}
+          reducedTransparencyFallbackColor={colors.background.primary}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : (
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: colors.background.primary,
+              opacity: backdropOpacity.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 0.7],
+                extrapolate: 'clamp',
+              }),
+            },
+          ]}
+        />
+      )}
+    </Animated.View>
   );
 
   if (dismissable && onPress) {

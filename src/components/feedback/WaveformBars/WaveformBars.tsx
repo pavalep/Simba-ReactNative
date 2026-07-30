@@ -12,8 +12,7 @@ import {useAccessibility} from '../../../hooks/useAccessibility';
 
 // ─── Helpers ────────────────────────────────────────────────
 
-/** Generate random-ish base heights that look like an EQ */
-const BASE_HEIGHTS = [0.4, 0.7, 1.0, 0.6, 0.3];
+
 
 // ─── Props ───────────────────────────────────────────────────
 
@@ -52,15 +51,6 @@ export const WaveformBars: React.FC<WaveformBarsProps> = ({
   if (barAnims.current.length !== barCount) {
     barAnims.current = Array.from({length: barCount}, () => new Animated.Value(1));
   }
-
-  const heights = useMemo(
-    () =>
-      Array.from({length: barCount}, (_, i) => {
-        const base = BASE_HEIGHTS[i % BASE_HEIGHTS.length];
-        return base * height;
-      }),
-    [barCount, height],
-  );
 
   // ── Animation ──
   useEffect(() => {

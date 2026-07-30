@@ -10,7 +10,6 @@ import {
   Animated,
   TouchableOpacity,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -41,7 +40,7 @@ function formatDuration(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export const ArtistScreen: React.FC<Props> = ({navigation, route}) => {
+export const ArtistScreen: React.FC<Props> = ({_navigation, _route}) => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -59,10 +58,6 @@ export const ArtistScreen: React.FC<Props> = ({navigation, route}) => {
   } = useArtistScreen();
 
   // ── Stagger entrance for sections ──
-  const sectionKeys = useMemo(
-    () => ['topTracks', 'discography', 'bio', 'remainingTracks'],
-    [],
-  );
   const entrance = useAnimatedEntrance(4, {
     staggerDelay: 80,
     direction: 'up',

@@ -54,8 +54,6 @@ export function parseM3u(content: string): M3uParseResult {
 
           // Attempt to split "Artist - Title"
           const sepIdx = rawTitle.lastIndexOf(' - ');
-          const artist =
-            sepIdx > 0 ? rawTitle.substring(0, sepIdx).trim() : undefined;
           const title =
             sepIdx > 0
               ? rawTitle.substring(sepIdx + 3).trim()

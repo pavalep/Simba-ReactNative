@@ -1,43 +1,263 @@
-import React, {useMemo, useCallback, useState} from 'react';
+import React, {useMemo, useCallback, useRef, useState} from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
-  Alert,
   TouchableOpacity,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  RefreshControl,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
-import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {
-  addVideoFolder,
   removeVideoFolder,
-  addAudioFolder,
   removeAudioFolder,
   setScanning,
   setLastScanTimestamp,
 } from '../../store/slices/settingsSlice';
+import {selectAllTracks, selectTrackCount} from '../../store/slices/mediaSlice';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ScanProgressBanner} from '../../components/feedback/ScanProgressBanner/ScanProgressBanner';
-import {LinkedFoldersScreenProps} from '../../navigation/types';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
+import type {LinkedFoldersScreenProps} from '../../navigation/types';
+
+// ─── Constants ──────────────────────────────────────────────
+
+const SWIPE_THRESHOLD = -80;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+// ─── Helpers ────────────────────────────────────────────────
+
+function formatLastScan(timestamp: number | null): string {
+  if (timestamp === null) return 'Never scanned';
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function getFolderName(folderPath: string): string {
+  return folderPath.split('/').filter(Boolean).pop() || folderPath;
+}
+
+// ─── SwipeableFolderCard ────────────────────────────────────
+
+interface SwipeableFolderCardProps {
+  folderPath: string;
+  fileCount: number;
+  lastScanTimestamp: number | null;
+  onRemove: (folder: string) => void;
+  onRescan: (folder: string) => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+}
+
+const SwipeableFolderCard: React.FC<SwipeableFolderCardProps> = ({
+  folderPath,
+  fileCount,
+  lastScanTimestamp,
+  onRemove,
+  onRescan,
+  colors,
+}) => {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const [isOpen, setIsOpen] = useState(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+      onPanResponderMove: (_, gesture) => {
+        // Clamp: allow negative (swipe left) only, max 0
+        translateX.setValue(Math.min(0, gesture.dx));
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dx < SWIPE_THRESHOLD) {
+          // Snap open to reveal delete
+          Animated.spring(translateX, {
+            toValue: -80,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+          setIsOpen(true);
+        } else {
+          // Snap back
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 4,
+          }).start();
+          setIsOpen(false);
+        }
+      },
+    }),
+  ).current;
+
+  const handleDelete = useCallback(() => {
+    // Animate out and then remove
+    Animated.timing(translateX, {
+      toValue: -SCREEN_WIDTH,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      onRemove(folderPath);
+    });
+  }, [folderPath, onRemove, translateX]);
+
+  const folderName = getFolderName(folderPath);
+
+  return (
+    <View style={swipeStyles.wrapper}>
+      {/* Delete button behind the card */}
+      <TouchableOpacity
+        style={swipeStyles.deleteBackground}
+        onPress={handleDelete}
+        activeOpacity={0.8}>
+        <SvgIcon name="close" size={22} color="#FFFFFF" />
+        <AppText variant="caption" style={swipeStyles.deleteText}>
+          Remove
+        </AppText>
+      </TouchableOpacity>
+
+      {/* Foreground card */}
+      <Animated.View
+        style={[swipeStyles.card, {transform: [{translateX}]}]}
+        {...panResponder.panHandlers}>
+        <View style={swipeStyles.cardContent}>
+          {/* Left: icon + info */}
+          <View style={swipeStyles.leftSection}>
+            <View style={[swipeStyles.iconWrap, {backgroundColor: colors.accent.goldDim}]}>
+              <SvgIcon name="folder" size={20} color={colors.accent.gold} />
+            </View>
+            <View style={swipeStyles.infoBlock}>
+              <AppText variant="body2" color="primary" numberOfLines={1}>
+                {folderName}
+              </AppText>
+              <AppText variant="caption" color="tertiary" numberOfLines={1}>
+                {fileCount} file{fileCount !== 1 ? 's' : ''} · {formatLastScan(lastScanTimestamp)}
+              </AppText>
+            </View>
+          </View>
+
+          {/* Right: re-scan button */}
+          <TouchableOpacity
+            style={swipeStyles.rescanButton}
+            onPress={() => onRescan(folderPath)}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            activeOpacity={0.7}>
+            <SvgIcon name="repeat" size={18} color={colors.text.tertiary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Subtle bottom border */}
+        <View style={[swipeStyles.bottomBorder, {backgroundColor: colors.border.subtle}]} />
+      </Animated.View>
+
+      {/* Tap anywhere to close the swipe if open */}
+      {isOpen && (
+        <TouchableOpacity
+          style={swipeStyles.dismissOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: true,
+              bounciness: 4,
+            }).start();
+            setIsOpen(false);
+          }}
+        />
+      )}
+    </View>
+  );
+};
+
+const swipeStyles = StyleSheet.create({
+  wrapper: {
+    position: 'relative',
+  },
+  deleteBackground: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 80,
+    backgroundColor: '#EF5350',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+  },
+  deleteText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  card: {
+    backgroundColor: 'transparent',
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: 'transparent',
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  rescanButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
+  bottomBorder: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: spacing.lg + 40 + spacing.md, // indent under the text, not the icon
+  },
+  dismissOverlay: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 10,
+  },
+});
+
+// ─── Main Screen ────────────────────────────────────────────
 
 type Props = LinkedFoldersScreenProps;
 
-export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
+export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
   const {type} = route.params;
-  const {theme, colors} = useTheme();
-  const isDark = theme === 'dark';
+  const {colors} = useTheme();
+  const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
+  const nav = useNavigation<any>();
   const isVideo = type === 'video';
 
   const folders = useAppSelector(s =>
@@ -45,16 +265,62 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
   );
   const isScanning = useAppSelector(s => s.settings.isScanning);
   const lastScanTimestamp = useAppSelector(s => s.settings.lastScanTimestamp);
+  const allTracks = useAppSelector(selectAllTracks);
+  const totalTrackCount = useAppSelector(selectTrackCount);
 
-  // ── Edge case states ──
-  const [isLoading, setIsLoading] = useState(false);
+  // Edge case states
   const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
-  // ── Add-folder modal state ──
-  const [addModalVisible, setAddModalVisible] = useState(false);
-  const [addInputValue, setAddInputValue] = useState('');
+  // File count per folder: filter tracks whose URI starts with the folder path
+  const folderFileCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const folder of folders) {
+      counts[folder] = allTracks.filter(t => t.uri.startsWith(folder)).length;
+    }
+    return counts;
+  }, [folders, allTracks]);
 
+  const handleRemoveFolder = useCallback(
+    (folder: string) => {
+      if (isVideo) {
+        dispatch(removeVideoFolder(folder));
+      } else {
+        dispatch(removeAudioFolder(folder));
+      }
+    },
+    [dispatch, isVideo],
+  );
+
+  const handleRescanFolder = useCallback(
+    (_folder: string) => {
+      dispatch(setScanning(true));
+      // Simulate scan — in real implementation, this would call the scanner for one folder
+      setTimeout(() => {
+        dispatch(setScanning(false));
+        dispatch(setLastScanTimestamp(Date.now()));
+      }, 2000);
+    },
+    [dispatch],
+  );
+
+  const handleScanAll = useCallback(() => {
+    dispatch(setScanning(true));
+    // Simulate full scan
+    setTimeout(() => {
+      dispatch(setScanning(false));
+      dispatch(setLastScanTimestamp(Date.now()));
+    }, 3000);
+  }, [dispatch]);
+
+  const handleAddFolder = useCallback(() => {
+    nav.navigate('FolderLinkingWizard', {type});
+  }, [nav, type]);
+
+  const handleRetry = useCallback(() => {
+    setError(null);
+  }, []);
+
+  // ── Styles (memoized) ──
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -62,48 +328,17 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
           flex: 1,
           backgroundColor: colors.background.primary,
         },
+        absoluteFill: {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        },
         scrollContent: {
-          padding: spacing.lg,
-          paddingBottom: spacing.xxxl * 2,
-        },
-        card: {
-          borderRadius: radius.md,
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: colors.border.subtle,
-          backgroundColor: colors.background.elevated,
-          overflow: 'hidden',
-        },
-        folderRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: spacing.sm,
-          paddingHorizontal: spacing.md,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: colors.border.subtle,
-        },
-        folderLeft: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          flex: 1,
-          gap: 10,
-        },
-        folderIconWrap: {
-          width: 32,
-          height: 32,
-          borderRadius: 8,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: isDark ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.08)',
-        },
-        folderPath: {
-          flex: 1,
-        },
-        removeButton: {
-          padding: spacing.xs,
-        },
-        removeText: {
-          color: colors.semantic.error,
+          paddingTop: spacing.lg,
+          paddingHorizontal: spacing.lg,
+          paddingBottom: insets.bottom + spacing.xxxl + 60, // room for sticky button
         },
         centerContainer: {
           flex: 1,
@@ -118,344 +353,148 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
           borderRadius: 10,
           backgroundColor: colors.accent.goldDim,
         },
-        addButton: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingVertical: spacing.md,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: colors.border.subtle,
-          gap: 8,
-        },
         // ── Empty state ──
         emptyContainer: {
           alignItems: 'center',
-          paddingVertical: spacing.xxl + spacing.lg,
+          paddingVertical: spacing.xxxl + spacing.lg,
           gap: spacing.sm,
         },
         emptyIcon: {
           opacity: 0.3,
+          marginBottom: spacing.sm,
         },
-        // ── Modal ──
-        modalOverlay: {
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: colors.background.overlay,
-        },
-        modalContent: {
-          width: '85%',
-          borderRadius: radius.md,
+        // ── Folder cards container ──
+        cardList: {
           backgroundColor: colors.background.elevated,
-          paddingVertical: spacing.lg,
-          paddingHorizontal: spacing.lg,
+          borderRadius: radius.md,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: colors.border.subtle,
-        },
-        modalTitle: {
-          marginBottom: spacing.sm,
-          textAlign: 'center',
-        },
-        modalSubtitle: {
+          overflow: 'hidden',
           marginBottom: spacing.lg,
-          textAlign: 'center',
         },
-        input: {
-          borderWidth: 1,
-          borderColor: colors.border.subtle,
-          borderRadius: radius.sm,
-          paddingVertical: spacing.sm,
-          paddingHorizontal: spacing.md,
-          color: colors.text.primary,
-          fontSize: 15,
-          backgroundColor: colors.background.floating,
-          marginBottom: spacing.md,
+        // ── Sticky "Add Folder" button ──
+        addButtonContainer: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.md,
+          paddingBottom: insets.bottom + spacing.lg,
+          backgroundColor: colors.background.primary,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.border.subtle,
         },
-        modalActions: {
+        addButton: {
           flexDirection: 'row',
-          justifyContent: 'flex-end',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: spacing.md + 2,
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: colors.accent.gold,
+          backgroundColor: colors.accent.goldDim,
           gap: spacing.sm,
         },
-        modalButton: {
-          paddingVertical: spacing.sm,
-          paddingHorizontal: spacing.lg,
-          borderRadius: radius.sm,
-        },
-        modalButtonCancel: {
-          backgroundColor: colors.background.floating,
-        },
-        modalButtonConfirm: {
-          backgroundColor: colors.accent.gold,
-        },
-        modalButtonConfirmText: {
-          color: colors.text.inverse,
-          fontWeight: '600',
+        addButtonDisabled: {
+          opacity: 0.5,
         },
       }),
-    [colors, isDark],
+    [colors, insets],
   );
 
-  const handleAddFolder = useCallback(() => {
-    setAddInputValue('');
-    setAddModalVisible(true);
-  }, []);
-
-  const confirmAddFolder = useCallback(() => {
-    const path = addInputValue.trim();
-    if (path) {
-      if (isVideo) {
-        dispatch(addVideoFolder(path));
-      } else {
-        dispatch(addAudioFolder(path));
-      }
-    }
-    setAddModalVisible(false);
-    setAddInputValue('');
-  }, [addInputValue, dispatch, isVideo]);
-
-  const handleRemoveFolder = useCallback(
-    (folder: string) => {
-      Alert.alert(
-        'Remove Folder',
-        `Remove "${folder}" from linked folders?`,
-        [
-          {text: 'Cancel', style: 'cancel'},
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: () => {
-              if (isVideo) {
-                dispatch(removeVideoFolder(folder));
-              } else {
-                dispatch(removeAudioFolder(folder));
-              }
-            },
-          },
-        ],
-      );
-    },
-    [dispatch, isVideo],
-  );
-
-  const handleScan = useCallback(() => {
-    dispatch(setScanning(true));
-    // Simulate a scan with a timeout
-    setTimeout(() => {
-      dispatch(setScanning(false));
-      dispatch(setLastScanTimestamp(Date.now()));
-    }, 2000);
-  }, [dispatch]);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    setError(null);
-    try {
-      // Simulate refresh — add real data-fetching logic here later
-      await new Promise<void>(resolve => setTimeout(resolve, 1000));
-    } catch {
-      setError('Failed to load folders.');
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  const handleRetry = useCallback(() => {
-    setError(null);
-  }, []);
-
-  return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      <LinearGradient
-        colors={[colors.background.primary, colors.background.elevated]}
-        style={StyleSheet.absoluteFill}
-      />
-
-      <InternalHeader title={isVideo ? 'Video Folders' : 'Audio Folders'} />
-
-      {isLoading ? (
+  // ── Error state ──
+  if (error) {
+    return (
+      <SafeAreaView style={styles.root} edges={['top']}>
+        <LinearGradient colors={[colors.background.primary, colors.background.elevated]} style={styles.absoluteFill} />
+        <InternalHeader title={isVideo ? 'Video Folders' : 'Audio Folders'} />
         <View style={styles.centerContainer}>
-          <ActivityOrb size={48} />
-        </View>
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <AppText
-            variant="body1"
-            color="error"
-            style={{textAlign: 'center', marginBottom: spacing.sm}}>
+          <SvgIcon name="alertCircle" size={40} color={colors.semantic.error} style={{marginBottom: spacing.sm}} />
+          <AppText variant="body1" color="error" style={{textAlign: 'center', marginBottom: spacing.sm}}>
             {error}
           </AppText>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={handleRetry}
-            activeOpacity={0.7}>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRetry} activeOpacity={0.7}>
             <AppText variant="button" color="accent">
               Retry
             </AppText>
           </TouchableOpacity>
         </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.accent.gold}
-              colors={[colors.accent.gold]}
-            />
-          }>
-          {/* Scan Status Banner */}
-          <ScanProgressBanner
-            isScanning={isScanning}
-            lastScanTimestamp={lastScanTimestamp}
-          />
+      </SafeAreaView>
+    );
+  }
 
-          {/* Scan Button */}
-          <TouchableOpacity
-            style={[
-              styles.addButton,
-              {
-                borderRadius: radius.md,
-                borderWidth: 1,
-                borderColor: colors.accent.gold,
-                marginBottom: spacing.lg,
-                paddingVertical: spacing.sm,
-                borderTopWidth: 1,
-                opacity: isScanning ? 0.5 : 1,
-              },
-            ]}
-            activeOpacity={0.7}
-            onPress={handleScan}
-            disabled={isScanning}>
-            {isScanning ? (
-              <ActivityOrb size={20} color={colors.accent.gold} />
-            ) : (
-              <AppText variant="body1" color="accent" style={{fontWeight: '600'}}>
-                Scan Folders
+  return (
+    <SafeAreaView style={styles.root} edges={['top']}>
+      <LinearGradient colors={[colors.background.primary, colors.background.elevated]} style={styles.absoluteFill} />
+
+      <InternalHeader
+        title={isVideo ? 'Video Folders' : 'Audio Folders'}
+        rightAction={{
+          label: 'Scan All',
+          onPress: handleScanAll,
+        }}
+      />
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!error}>
+        {/* Global scan status */}
+        <ScanProgressBanner
+          isScanning={isScanning}
+          lastScanTimestamp={lastScanTimestamp}
+          trackCount={totalTrackCount}
+        />
+
+        {/* Folder list */}
+        {folders.length === 0 ? (
+          <View style={[styles.cardList, {padding: spacing.lg}]}>
+            <View style={styles.emptyContainer}>
+              <SvgIcon
+                name="folder"
+                size={48}
+                color={colors.text.tertiary}
+                style={styles.emptyIcon}
+              />
+              <AppText variant="body1" color="tertiary" style={{textAlign: 'center'}}>
+                No {isVideo ? 'video' : 'audio'} folders linked yet.
               </AppText>
-            )}
-          </TouchableOpacity>
-
-          {/* Folder List */}
-          <View style={styles.card}>
-            {folders.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <SvgIcon
-                  name="folder"
-                  size={40}
-                  color={colors.text.tertiary}
-                  style={styles.emptyIcon}
-                />
-                <AppText variant="body2" color="tertiary">
-                  No {isVideo ? 'video' : 'audio'} folders linked yet.
-                </AppText>
-                <AppText variant="caption" color="tertiary">
-                  Tap "Add Folder" below to get started.
-                </AppText>
-              </View>
-            ) : (
-              folders.map((folder, index) => (
-                <View key={`${folder}-${index}`} style={styles.folderRow}>
-                  <View style={styles.folderLeft}>
-                    <View style={styles.folderIconWrap}>
-                      <SvgIcon
-                        name="folder"
-                        size={16}
-                        color={colors.accent.gold}
-                      />
-                    </View>
-                    <AppText
-                      variant="body2"
-                      color="primary"
-                      style={styles.folderPath}
-                      numberOfLines={1}>
-                      {folder}
-                    </AppText>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => handleRemoveFolder(folder)}
-                    hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-                    <AppText
-                      variant="caption"
-                      color="error"
-                      style={styles.removeText}>
-                      Remove
-                    </AppText>
-                  </TouchableOpacity>
-                </View>
-              ))
-            )}
-
-            {/* Add Folder Button */}
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={handleAddFolder}
-              activeOpacity={0.7}>
-              <AppText variant="body1" color="accent">
-                + Add Folder
+              <AppText variant="caption" color="tertiary" style={{textAlign: 'center'}}>
+                Tap "Add Folder" below to link your first folder.
               </AppText>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      )}
-
-      {/* ── Add Folder Modal (cross-platform) ── */}
-      <Modal
-        visible={addModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setAddModalVisible(false)}>
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.modalContent}>
-            <AppText
-              variant="h3"
-              color="primary"
-              style={styles.modalTitle}>
-              Add {isVideo ? 'Video' : 'Audio'} Folder
-            </AppText>
-            <AppText
-              variant="caption"
-              color="tertiary"
-              style={styles.modalSubtitle}>
-              Enter the full folder path
-            </AppText>
-
-            <TextInput
-              style={styles.input}
-              placeholder="/storage/emulated/0/Movies"
-              placeholderTextColor={colors.text.tertiary}
-              value={addInputValue}
-              onChangeText={setAddInputValue}
-              autoFocus
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => setAddModalVisible(false)}>
-                <AppText variant="body2" color="secondary">
-                  Cancel
-                </AppText>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm]}
-                onPress={confirmAddFolder}>
-                <AppText
-                  variant="body2"
-                  style={styles.modalButtonConfirmText}>
-                  Add
-                </AppText>
-              </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        ) : (
+          <View style={styles.cardList}>
+            {folders.map((folder, index) => (
+              <SwipeableFolderCard
+                key={`${folder}-${index}`}
+                folderPath={folder}
+                fileCount={folderFileCounts[folder] ?? 0}
+                lastScanTimestamp={lastScanTimestamp}
+                onRemove={handleRemoveFolder}
+                onRescan={handleRescanFolder}
+                colors={colors}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Sticky "Add Folder" button */}
+      <View style={styles.addButtonContainer}>
+        <TouchableOpacity
+          style={[styles.addButton, isScanning && styles.addButtonDisabled]}
+          onPress={handleAddFolder}
+          activeOpacity={0.7}
+          disabled={isScanning}>
+          <SvgIcon name="folderFill" size={20} color={colors.accent.gold} />
+          <AppText variant="body1" color="accent" style={{fontWeight: '600'}}>
+            Add Folder
+          </AppText>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };

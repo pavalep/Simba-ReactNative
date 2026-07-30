@@ -1,11 +1,9 @@
 import {pick, types} from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
-import {Platform} from 'react-native';
+
 import {MpvPlayer} from '../native/player.api';
 
 import type {ScannedTrack} from '../store/slices/mediaSlice';
-import {logger} from '../lib/logger';
-import {logError} from '../lib/errorLogger';
 
 /** Subtitle file types for document picker */
 const SUBTITLE_TYPES = [

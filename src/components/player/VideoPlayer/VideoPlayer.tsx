@@ -4,6 +4,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Linking,
+  Animated,
+  Easing,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../core/AppText/AppText';
@@ -48,9 +50,11 @@ export interface VideoPlayerHookData {
   subtitleVisible: boolean;
   subtitlePanelOpen: boolean;
   setSubtitlePanelOpen: (v: boolean) => void;
-  subtitleFontSize: number;
+  subtitleFontSize: 'small' | 'medium' | 'large';
   subtitleOpacity: number;
   subtitlePosition: number;
+  subtitleTextColor: string;
+  subtitleBgOpacity: number;
   subtitleLabel: string;
   audioLabel: string;
 
@@ -173,7 +177,7 @@ export interface VideoPlayerHookData {
   handleSelectSubtitle: (idx: number) => void;
   handleToggleSubtitleVisibility: () => void;
   handleLoadExternalSubtitle: () => void;
-  handleFontSizeChange: (v: number) => void;
+  handleFontSizeChange: (size: 'small' | 'medium' | 'large') => void;
   handleOpacityChange: (v: number) => void;
   handleSubtitlePositionChange: (v: number) => void;
   handleTextColorChange: (color: string) => void;
@@ -189,7 +193,7 @@ export interface VideoPlayerHookData {
   handleClearPlaylist: () => void;
   handleQueueMoveItem: (idx: number, dir: 'up' | 'down') => void;
   handleQueueRemoveItem: (idx: number) => void;
-  handleQueueSelectItem: (idx: number) => void;
+  handleQueueSelectItem: (fileUri: string) => void;
   handleSelectQueueItem: (idx: number) => void;
   handleSelectHistoryItem: (idx: number) => void;
   handlePlayNext: (entry: PlaylistEntry) => void;
@@ -289,16 +293,38 @@ const VideoTransportDependentContent: React.FC<{
   position: number;
   duration: number;
   isPlaying: boolean;
-  pushPosition: (fn: (pos: number) => void) => void;
+  pushPosition: (pos: number) => void;
 }> = ({h, position, duration, isPlaying, pushPosition}) => {
   React.useEffect(() => {
     h.handlePushPositionRef(pushPosition);
-  }, [pushPosition, h.handlePushPositionRef]);
+  }, [pushPosition, h]);
+
+  // ── Primary controls fade + slide (26.8) ──────────────
+  const controlsOpacity = React.useRef(new Animated.Value(h.secondaryVisible ? 1 : 0)).current;
+  const controlsTranslateY = React.useRef(new Animated.Value(h.secondaryVisible ? 0 : 60)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(controlsOpacity, {
+        toValue: h.secondaryVisible ? 1 : 0,
+        duration: 300,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(controlsTranslateY, {
+        toValue: h.secondaryVisible ? 0 : 60,
+        duration: 300,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [h.secondaryVisible, controlsOpacity, controlsTranslateY]);
 
   return (
     <>
       {h.showVideoSurface && h.pipUiVisible && (
-        <h.PrimaryControls
+        <Animated.View style={{opacity: controlsOpacity, transform: [{translateY: controlsTranslateY}]}}>
+          <h.PrimaryControls
           visible={h.secondaryVisible}
           position={position}
           duration={duration}
@@ -310,6 +336,7 @@ const VideoTransportDependentContent: React.FC<{
           onSeek={h.handleSeek}
           bottomInset={h.uiBottomInset}
         />
+        </Animated.View>
       )}
 
       {h.pipUiVisible && <BufferingBar visible={h.isBuffering} />}
@@ -398,6 +425,34 @@ const VideoTransportDependentContent: React.FC<{
 const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
   const {position, duration, isPlaying, pushPosition} = useTransport();
 
+  // ── Top bar / toolbar fade + slide (26.8) ────────────
+  const overlayOpacity = React.useRef(new Animated.Value(h.secondaryVisible ? 1 : 0)).current;
+  const overlayTranslateYTop = React.useRef(new Animated.Value(h.secondaryVisible ? 0 : -60)).current;
+  const overlayTranslateYBottom = React.useRef(new Animated.Value(h.secondaryVisible ? 0 : 60)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: h.secondaryVisible ? 1 : 0,
+        duration: 300,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayTranslateYTop, {
+        toValue: h.secondaryVisible ? 0 : -60,
+        duration: 300,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayTranslateYBottom, {
+        toValue: h.secondaryVisible ? 0 : 60,
+        duration: 300,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [h.secondaryVisible, overlayOpacity, overlayTranslateYBottom, overlayTranslateYTop]);
+
   return (
     <View style={[styles.root, {backgroundColor: h.colors.background.primary}]}>
       <SimbaStatusBar variant="player" />
@@ -441,17 +496,19 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
         />
 
         {h.showVideoSurface && h.pipUiVisible && (
-          <h.VideoPlayerTopBar
-            title={h.title}
-            onGoBack={h.handleGoBack}
-            topInset={h.uiTopInset}
-            isLandscape={h.isLandscape}
-            onToggleRotate={h.handleToggleRotate}
-            onMorePress={h.handleMorePress}
-            visible={h.secondaryVisible}
-            onBookmark={h.handleOpenBookmarkSheet}
-            bookmarkActive={h.bookmarkCountForFile > 0}
-          />
+          <Animated.View style={{opacity: overlayOpacity, transform: [{translateY: overlayTranslateYTop}]}}>
+            <h.VideoPlayerTopBar
+              title={h.title}
+              onGoBack={h.handleGoBack}
+              topInset={h.uiTopInset}
+              isLandscape={h.isLandscape}
+              onToggleRotate={h.handleToggleRotate}
+              onMorePress={h.handleMorePress}
+              visible={h.secondaryVisible}
+              onBookmark={h.handleOpenBookmarkSheet}
+              bookmarkActive={h.bookmarkCountForFile > 0}
+            />
+          </Animated.View>
         )}
 
         <BookmarkSheet
@@ -469,34 +526,36 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
         />
 
         {h.showVideoSurface && h.pipUiVisible && (
-          <h.SecondaryToolbar
-            visible={h.secondaryVisible}
-            enabled={true}
-            eqEnabled={h.eqEnabled}
-            shuffleActive={h.shuffle}
-            loopMode={h.loopMode}
-            playlistLength={h.playlist.length}
-            activeSubtitle={h.activeSubtitle}
-            subtitleVisible={h.subtitleVisible}
-            activeAudioTrack={h.activeAudioTrack}
-            subtitleLabel={h.subtitleLabel}
-            audioLabel={h.audioLabel}
-            onToggleChapters={h.handleToggleChapters}
-            onToggleAudio={h.handleToggleAudio}
-            onToggleSubtitles={h.handleToggleSubtitles}
-            onToggleSubtitleVisibility={h.handleToggleSubtitleVisibility}
-            onToggleEq={h.handleToggleEqPanel}
-            onTogglePlaylist={h.handleTogglePlaylist}
-            onInfo={h.handleInfo}
-            onToggleShuffle={h.handleToggleShuffle}
-            onToggleLoop={h.handleToggleLoop}
-            onVolume={h.handleVolumeChange}
-            onSpeed={() => h.setSpeedPanelOpen(true)}
-            onScreenshot={h.handleScreenshot}
-            onToggleQueue={() => h.setQueueSheetVisible(true)}
-            onAutoHide={() => h.setSecondaryVisible(false)}
-            bottomInset={h.uiBottomInset}
-          />
+          <Animated.View style={{opacity: overlayOpacity, transform: [{translateY: overlayTranslateYBottom}]}}>
+            <h.SecondaryToolbar
+              visible={h.secondaryVisible}
+              enabled={true}
+              eqEnabled={h.eqEnabled}
+              shuffleActive={h.shuffle}
+              loopMode={h.loopMode}
+              playlistLength={h.playlist.length}
+              activeSubtitle={h.activeSubtitle}
+              subtitleVisible={h.subtitleVisible}
+              activeAudioTrack={h.activeAudioTrack}
+              subtitleLabel={h.subtitleLabel}
+              audioLabel={h.audioLabel}
+              onToggleChapters={h.handleToggleChapters}
+              onToggleAudio={h.handleToggleAudio}
+              onToggleSubtitles={h.handleToggleSubtitles}
+              onToggleSubtitleVisibility={h.handleToggleSubtitleVisibility}
+              onToggleEq={h.handleToggleEqPanel}
+              onTogglePlaylist={h.handleTogglePlaylist}
+              onInfo={h.handleInfo}
+              onToggleShuffle={h.handleToggleShuffle}
+              onToggleLoop={h.handleToggleLoop}
+              onVolume={h.handleVolumeChange}
+              onSpeed={() => h.setSpeedPanelOpen(true)}
+              onScreenshot={h.handleScreenshot}
+              onToggleQueue={() => h.setQueueSheetVisible(true)}
+              onAutoHide={() => h.setSecondaryVisible(false)}
+              bottomInset={h.uiBottomInset}
+            />
+          </Animated.View>
         )}
 
         <BottomSheet

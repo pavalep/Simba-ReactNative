@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-  Platform,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
@@ -310,11 +309,6 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
       const isActive = index === activeIndex;
 
       if (isActive) {
-        const bgOpacity = activeLinePulse.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0.06, 0.14],
-        });
-
         return (
           <TouchableOpacity
             onPress={() => onSeekToLyric?.(item.time)}
@@ -336,7 +330,8 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
         </TouchableOpacity>
       );
     },
-    [activeIndex, activeLinePulse, styles, onSeekToLyric, isPlaying],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeIndex, styles, onSeekToLyric, isPlaying],
   );
 
   // ── Key extractor ──

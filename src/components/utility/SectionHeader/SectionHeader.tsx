@@ -1,6 +1,5 @@
 import React from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
-import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 
@@ -15,8 +14,6 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   actionLabel,
   onAction,
 }) => {
-  const {colors} = useTheme();
-
   return (
     <View style={styles.root}>
       <AppText variant="overline" color="secondary" style={{letterSpacing: 0.5}}>

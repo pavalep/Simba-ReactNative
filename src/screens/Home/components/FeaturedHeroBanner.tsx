@@ -21,6 +21,10 @@ function formatTime(seconds: number): string {
 }
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
+const CIRCLE_SIZE = 72;
+const STROKE_WIDTH = 4;
+const CIRCLE_RADIUS = (CIRCLE_SIZE - STROKE_WIDTH) / 2;
+const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
 
 interface FeaturedItem {
   title: string;
@@ -46,8 +50,9 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
 
   const progress =
     item.duration > 0
-      ? Math.min(100, (item.position / item.duration) * 100)
+      ? Math.min(1, item.position / item.duration)
       : 0;
+  const progressOffset = CIRCLE_CIRCUMFERENCE * (1 - progress); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   return (
     <TouchableOpacity
@@ -93,34 +98,43 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
           </View>
           <View style={[styles.badge, {backgroundColor: 'rgba(255,255,255,0.2)', marginLeft: spacing.xs}]}>
             <AppText variant="caption" style={styles.badgeText}>
-              FEATURED
+              CONTINUE
             </AppText>
           </View>
         </View>
 
-        <AppText
-          variant="h1"
-          style={styles.title}
-          numberOfLines={2}>
-          {item.title}
-        </AppText>
+        <View style={styles.bottomRow}>
+          <View style={styles.textBlock}>
+            <AppText
+              variant="h1"
+              style={styles.title}
+              numberOfLines={2}>
+              {item.title}
+            </AppText>
 
-        <View style={styles.playRow}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => onPress(item)}
-            style={[styles.playButton, {backgroundColor: colors.accent.gold}]}>
-            <SvgIcon name="play" size={16} color="#000" />
-            <AppText variant="body2" style={styles.playText}>Resume Playback</AppText>
-          </TouchableOpacity>
-          
-          {item.duration > 0 && (
-            <View style={styles.timeIndicator}>
-              <AppText variant="caption" style={styles.timeText}>
-                {formatTime(item.position)} / {formatTime(item.duration)}
-              </AppText>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => onPress(item)}
+              style={[styles.playButton, {backgroundColor: colors.accent.gold}]}>
+              <SvgIcon name="play" size={16} color="#000" />
+              <AppText variant="body2" style={styles.playText}>Resume</AppText>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Circular Progress Ring ── */}
+          <View style={styles.progressRingContainer}>
+            <View style={[styles.progressRingBg, {borderColor: 'rgba(255,255,255,0.15)'}]}>
+              <SvgIcon name="play" size={24} color="#fff" />
             </View>
-          )}
+            <View style={[styles.progressRingTrack, {borderColor: colors.accent.gold}]} />
+            {item.duration > 0 && (
+              <View style={styles.progressTimeContainer}>
+                <AppText variant="caption" style={styles.progressTime}>
+                  {formatTime(item.position)} / {formatTime(item.duration)}
+                </AppText>
+              </View>
+            )}
+          </View>
         </View>
       </View>
 
@@ -130,7 +144,7 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
           style={[
             styles.progressFill,
             {
-              width: `${progress}%`,
+              width: `${progress * 100}%`,
               backgroundColor: colors.accent.gold,
             },
           ]}
@@ -179,6 +193,15 @@ const styles = StyleSheet.create({
     color: '#000',
     letterSpacing: 0.5,
   },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  textBlock: {
+    flex: 1,
+    marginRight: spacing.md,
+  },
   title: {
     color: '#fff',
     marginBottom: spacing.md,
@@ -186,35 +209,53 @@ const styles = StyleSheet.create({
     textShadowOffset: {width: 0, height: 2},
     textShadowRadius: 4,
   },
-  playRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
   playButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
     gap: 8,
   },
-  timeIndicator: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  timeText: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 11,
-    fontWeight: '600',
-  },
   playText: {
     color: '#000',
     fontWeight: '700',
+  },
+  progressRingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+  },
+  progressRingBg: {
+    width: CIRCLE_SIZE - STROKE_WIDTH,
+    height: CIRCLE_SIZE - STROKE_WIDTH,
+    borderRadius: (CIRCLE_SIZE - STROKE_WIDTH) / 2,
+    borderWidth: STROKE_WIDTH,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressRingTrack: {
+    position: 'absolute',
+    width: CIRCLE_SIZE,
+    height: CIRCLE_SIZE,
+    borderRadius: CIRCLE_SIZE / 2,
+    borderWidth: STROKE_WIDTH,
+    borderLeftColor: 'transparent',
+    borderTopColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+    transform: [{rotateZ: '-90deg'}],
+  },
+  progressTimeContainer: {
+    position: 'absolute',
+    bottom: -18,
+  },
+  progressTime: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 9,
+    fontWeight: '600',
   },
   progressTrack: {
     position: 'absolute',

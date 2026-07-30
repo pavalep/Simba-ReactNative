@@ -18,7 +18,7 @@ export const LinkedFoldersDialog: React.FC<LinkedFoldersDialogProps> = ({
   onNavigate,
   colors,
 }) => {
-  const {radius: r} = useTheme();
+  useTheme();
 
   return (
     <Dialog

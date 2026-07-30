@@ -1,10 +1,11 @@
-import React from 'react';
+import React, {useRef, useEffect} from 'react';
 import {
   View,
   StyleSheet,
   Animated,
   Dimensions,
   TouchableOpacity,
+  Easing,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -23,6 +24,43 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
   const insets = useSafeAreaInsets();
   const {pulseAnim, fadeAnim, isLoading, error, handleSignIn} =
     useLoginScreen();
+
+  // ── Stagger Entrance Animation ──
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoscale = useRef(new Animated.Value(0.8)).current;
+  const taglineOpacity = useRef(new Animated.Value(0)).current;
+  const taglineTranslateY = useRef(new Animated.Value(20)).current;
+  const buttonOpacity = useRef(new Animated.Value(0)).current;
+  const buttonScale = useRef(new Animated.Value(0.9)).current;
+
+  useEffect(() => {
+    const t1 = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(logoOpacity, {toValue: 1, duration: 500, useNativeDriver: true}),
+        Animated.spring(logoscale, {toValue: 1, friction: 6, tension: 60, useNativeDriver: true}),
+      ]).start();
+    }, 0);
+
+    const t2 = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(taglineOpacity, {toValue: 1, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true}),
+        Animated.timing(taglineTranslateY, {toValue: 0, duration: 400, easing: Easing.out(Easing.cubic), useNativeDriver: true}),
+      ]).start();
+    }, 200);
+
+    const t3 = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(buttonOpacity, {toValue: 1, duration: 400, useNativeDriver: true}),
+        Animated.spring(buttonScale, {toValue: 1, friction: 7, tension: 80, useNativeDriver: true}),
+      ]).start();
+    }, 400);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [logoOpacity, logoscale, taglineOpacity, taglineTranslateY, buttonOpacity, buttonScale]);
 
   const orbScale = pulseAnim.interpolate({
     inputRange: [0, 1],
@@ -57,18 +95,22 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
         style={[styles.content, {opacity: fadeAnim, paddingTop: insets.top}]}>
         {/* Logo area */}
         <View style={styles.logoArea}>
-          <AppText variant="display" color="primary" style={styles.logoText}>
-            SIMBA
-          </AppText>
-          <AppText
-            variant="body1"
-            style={[styles.tagline, {color: colors.text.secondary}]}>
-            Your media, your way
-          </AppText>
+          <Animated.View style={{opacity: logoOpacity, transform: [{scale: logoscale}]}}>
+            <AppText variant="display" color="primary" style={styles.logoText}>
+              SIMBA
+            </AppText>
+          </Animated.View>
+          <Animated.View style={{opacity: taglineOpacity, transform: [{translateY: taglineTranslateY}]}}>
+            <AppText
+              variant="body1"
+              style={[styles.tagline, {color: colors.text.secondary}]}>
+              Your media, your way
+            </AppText>
+          </Animated.View>
         </View>
 
         {/* Bottom section */}
-        <View style={[styles.bottomSection, {paddingBottom: insets.bottom + 24}]}>
+        <Animated.View style={[styles.bottomSection, {paddingBottom: insets.bottom + 24, opacity: buttonOpacity, transform: [{scale: buttonScale}]}]}>
           <GoogleSignInButton onPress={handleSignIn} loading={isLoading} />
 
           {error ? (
@@ -96,7 +138,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
               </AppText>
             </AppText>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </Animated.View>
     </View>
   );

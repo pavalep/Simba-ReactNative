@@ -144,7 +144,7 @@ const PodcastCard: React.FC<PodcastCardProps> = React.memo(
 // ─── Screen ────────────────────────────────────────────────────────────
 
 export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
-  navigation,
+  navigation: _navigation,
   route,
   onPodcastPress,
 }) => {
@@ -321,6 +321,10 @@ export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
             ItemSeparatorComponent={() => (
               <View style={styles.separator} />
             )}
+            getItemLayout={(_, index) => ({length: 76, offset: 76 * index, index})}
+            windowSize={5}
+            maxToRenderPerBatch={10}
+            removeClippedSubviews={true}
           />
         )}
       </View>

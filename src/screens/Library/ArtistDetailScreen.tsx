@@ -17,7 +17,6 @@ import AudioWaveform from '../../components/player/AudioWaveform/AudioWaveform';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {radius} from '../../theme/tokens';
 import type {RootStackScreenProps} from '../../navigation/types';
-import type {PlaylistEntry} from '../../store/slices/playerSlice';
 type ArtistDetailScreenProps = RootStackScreenProps<'ArtistDetail'>;
 
 type Props = ArtistDetailScreenProps;
@@ -174,7 +173,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           justifyContent: 'center',
         },
       }),
-    [colors, insets, isDark],
+    [insets],
   );
 
   return (

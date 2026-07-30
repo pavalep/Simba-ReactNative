@@ -39,6 +39,7 @@ export interface NotificationPlaybackState {
 
 // ── Native Module Reference ────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const MpvPlayerModule = NativeModules.MpvPlayerModule as {
   startNotification(
     title: string,

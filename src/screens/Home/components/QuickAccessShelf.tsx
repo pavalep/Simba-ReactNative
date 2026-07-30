@@ -4,7 +4,6 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
-import {AppCard} from '../../../components/core/AppCard/AppCard';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 
 interface QuickAccessShelfProps {

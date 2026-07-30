@@ -22,13 +22,14 @@ export const AudioAlbumArt: React.FC<AudioAlbumArtProps> = ({albumArtUri}) => {
   const fadeOpacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.92)).current;
   const prevUriRef = useRef<string | null | undefined>(undefined);
+  const animRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (albumArtUri && albumArtUri !== prevUriRef.current) {
       // Cross-fade + scale on track change
       fadeOpacity.setValue(0);
       scale.setValue(0.92);
-      Animated.parallel([
+      animRef.current = Animated.parallel([
         Animated.timing(fadeOpacity, {
           toValue: 1,
           duration: 600,
@@ -40,12 +41,16 @@ export const AudioAlbumArt: React.FC<AudioAlbumArtProps> = ({albumArtUri}) => {
           tension: 80,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]);
+      animRef.current.start();
     } else if (!albumArtUri) {
       fadeOpacity.setValue(1);
       scale.setValue(1);
     }
     prevUriRef.current = albumArtUri;
+    return () => {
+      animRef.current?.stop();
+    };
   }, [albumArtUri, fadeOpacity, scale]);
 
   if (albumArtUri) {

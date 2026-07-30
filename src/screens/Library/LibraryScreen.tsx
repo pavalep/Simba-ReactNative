@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useRef} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -7,6 +7,8 @@ import {
   Platform,
   Modal,
   FlatList,
+  Animated,
+  RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -16,7 +18,7 @@ import {ScanProgressBanner} from '../../components/feedback/ScanProgressBanner/S
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {spacing, radius} from '../../theme/tokens';
 import {LibraryScreenProps} from '../../navigation/types';
-import {LibraryVideosSegment} from './components/LibraryVideosSegment';
+import {LibraryFoldersSegment} from './components/LibraryFoldersSegment';
 import {LibraryAudioSegment} from './components/LibraryAudioSegment';
 import {LibraryArtistsSegment} from './components/LibraryArtistsSegment';
 import {LibraryAlbumsSegment} from './components/LibraryAlbumsSegment';
@@ -37,7 +39,7 @@ type Props = LibraryScreenProps;
 
 export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   const {
-    theme, colors, isDark, bottomChromeInset,
+    colors, isDark, bottomChromeInset,
     activeSegment, setActiveSegment,
     contentMode, setContentMode, showDropdown, setShowDropdown,
     viewMode, setViewMode,
@@ -47,17 +49,33 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
     playlistFilterType, setPlaylistFilterType,
     createModalVisible, setCreateModalVisible,
     videoFolders, audioFolders, lastScanTimestamp,
-    scannedTrackCount,
+    scannedTrackCount, scannedTracks,
     filteredPlaylists,
     selectedSortLabel, currentTitle,
     showSortControls, showFilterChips, showViewToggle,
     isScanning, scanProgress, scanHistory,
     cancelScan,
-    navigateToSettings, navigateToLinkedFolders, navigateToFolderBrowser,
+    isRefreshing, hasAnimated,
+    isAudioPlaying, currentAudioUri,
+    handleRefresh,
+    navigateToSettings, navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
     handleArtistPress, handleAlbumPress, handleScanAudioFolders,
     handleCreatePlaylist, handlePlayAllPlaylist, handleShufflePlaylist,
     handlePlaylistCardPress,
   } = useLibraryScreen(navigation);
+
+  // ── Stagger entrance animation ──
+  const entranceAnim = useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    if (hasAnimated) {
+      entranceAnim.setValue(0);
+      Animated.timing(entranceAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [hasAnimated, entranceAnim, activeSegment]);
 
   const styles = useMemo(
     () =>
@@ -233,7 +251,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           color: colors.text.inverse, fontWeight: '400',
         },
       }),
-    [bottomChromeInset, colors, isDark],
+    [bottomChromeInset, colors],
   );
 
   // ── Renders ──
@@ -279,21 +297,53 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         </View>
       )}
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.accent.gold}
+            colors={[colors.accent.gold]}
+          />
+        }>
         <ScanProgressBanner isScanning={isScanning} lastScanTimestamp={lastScanTimestamp} scanProgress={scanProgress} scanHistory={scanHistory} onCancel={cancelScan} trackCount={scannedTrackCount} />
 
-        {activeSegment === 'videos' && (
-          <LibraryVideosSegment videoFolders={videoFolders} colors={colors} isDark={isDark} viewMode={viewMode} onNavigateToSettings={navigateToSettings} onNavigateToFolderBrowser={navigateToFolderBrowser} onNavigateToLinkedFolders={navigateToLinkedFolders} />
-        )}
-        {activeSegment === 'audio' && (
-          <LibraryAudioSegment audioFolders={audioFolders} colors={colors} isDark={isDark} viewMode={viewMode} onNavigateToSettings={navigateToSettings} onNavigateToFolderBrowser={navigateToFolderBrowser} onNavigateToLinkedFolders={navigateToLinkedFolders} />
-        )}
-        {activeSegment === 'artists' && (
-          <LibraryArtistsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onArtistPress={handleArtistPress} />
-        )}
-        {activeSegment === 'albums' && (
-          <LibraryAlbumsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onAlbumPress={handleAlbumPress} />
-        )}
+        <Animated.View style={{opacity: entranceAnim}}>
+          {activeSegment === 'folders' && (
+            <LibraryFoldersSegment
+              videoFolders={videoFolders}
+              audioFolders={audioFolders}
+              scannedTracks={scannedTracks}
+              lastScanTimestamp={lastScanTimestamp}
+              colors={colors}
+              isDark={isDark}
+              onLinkFolder={handleLinkFolder}
+              onNavigateToFolderBrowser={navigateToFolderBrowser}
+            />
+          )}
+          {activeSegment === 'audio' && (
+            <LibraryAudioSegment
+              audioFolders={audioFolders}
+              colors={colors}
+              isDark={isDark}
+              viewMode={viewMode}
+              isAudioPlaying={isAudioPlaying}
+              currentAudioUri={currentAudioUri}
+              onNavigateToSettings={navigateToSettings}
+              onNavigateToFolderBrowser={navigateToFolderBrowser}
+              onNavigateToLinkedFolders={navigateToLinkedFolders}
+            />
+          )}
+          {activeSegment === 'artists' && (
+            <LibraryArtistsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onArtistPress={handleArtistPress} onViewAllArtists={() => navigation.navigate('AllAudioScreen', {sort: 'artist'})} />
+          )}
+          {activeSegment === 'albums' && (
+            <LibraryAlbumsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onAlbumPress={handleAlbumPress} onViewAllAlbums={() => navigation.navigate('AllAudioScreen', {})} />
+          )}
+        </Animated.View>
       </ScrollView>
     </>
   );
@@ -367,6 +417,10 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
                   </TouchableOpacity>
                 );
               }}
+              getItemLayout={(_, index) => ({length: 76, offset: 76 * index, index})}
+              windowSize={5}
+              maxToRenderPerBatch={10}
+              removeClippedSubviews={true}
             />
           </View>
         </TouchableOpacity>

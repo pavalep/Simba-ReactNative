@@ -1,5 +1,5 @@
 import {useState, useEffect, useCallback, useRef, useMemo} from 'react';
-import {BackHandler, Linking} from 'react-native';
+import {BackHandler} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {useAppDispatch, useAppSelector} from '../../../store';
@@ -53,7 +53,7 @@ export function useAudioPlayerScreen(
 
   // ── Route params ──
   const title = route.params?.fileTitle ?? 'Unknown Track';
-  const fileUri = route.params?.fileUri;
+  const fileUri = route.params?.fileUri ?? null;
 
   // ── Core playback state ──
   const [isLoading, setIsLoading] = useState(true);
@@ -83,7 +83,7 @@ export function useAudioPlayerScreen(
     bookmarkCountForFile: audioBookmarkCount,
     add: addAudioBookmark,
     remove: removeAudioBookmark,
-  } = useBookmarks(fileUri);
+  } = useBookmarks(fileUri ?? undefined);
 
   const handleOpenBookmarkSheet = useCallback(() => {
     setBookmarkSheetVisible(true);
@@ -605,7 +605,7 @@ export function useAudioPlayerScreen(
     // Redux
     playlist,
     queue,
-    currentFile,
+    currentFile: currentFile?.uri ?? null,
     currentIndex,
     loopMode,
     shuffle,

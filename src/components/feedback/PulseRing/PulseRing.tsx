@@ -5,7 +5,7 @@
 // ────────────────────────────────────────────────────────
 
 import React, {useRef, useMemo, useEffect} from 'react';
-import {View, Animated, Easing, StyleSheet} from 'react-native';
+import {Animated, Easing, StyleSheet} from 'react-native';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 
 // ─── Props ───────────────────────────────────────────────────

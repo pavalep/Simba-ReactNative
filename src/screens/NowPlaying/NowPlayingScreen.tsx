@@ -29,18 +29,18 @@ type Props = NowPlayingScreenProps;
 // ─── Component ───────────────────────────────────────────────
 
 export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
-  const {colors, isDark} = useTheme();
+  const {colors} = useTheme();
   const insets = useSafeAreaInsets();
 
   // ── Edge case states ──
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, _setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // Local UI state (placeholder — will come from Redux later)
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, _setDuration] = useState(0);
   const fileUri = route.params?.fileUri;
   const fileTitle = route.params?.fileTitle;
 
@@ -296,7 +296,7 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
       );
     }
     return null;
-  }, [fileUri]);
+  }, [fileUri, styles]);
 
   return (
     <View style={styles.root}>

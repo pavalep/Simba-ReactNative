@@ -95,6 +95,10 @@ export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
           data={allPlaylists}
           keyExtractor={p => p.id}
           renderItem={({item: playlist}) => renderItem({playlist})}
+          getItemLayout={(_, index) => ({length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index})}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews={true}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <SvgIcon name="listMusic" size={32} color={colors.text.tertiary} />

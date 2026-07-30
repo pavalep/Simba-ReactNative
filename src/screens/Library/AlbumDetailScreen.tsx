@@ -157,7 +157,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
           borderRadius: 140,
         },
       }),
-    [colors, insets, isDark],
+    [insets],
   );
 
   return (

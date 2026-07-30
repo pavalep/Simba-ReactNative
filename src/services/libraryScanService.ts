@@ -3,12 +3,7 @@ import {getLinkedFolders} from './storageService';
 
 type SortOption = 'name' | 'date' | 'size' | 'type';
 
-const MEDIA_EXTENSIONS = new Set([
-  '.mp4', '.mkv', '.avi', '.mov', '.webm',
-  '.mp3', '.flac', '.wav', '.aac', '.ogg',
-]);
-
-async function scanFolder(path: string): Promise<MediaItem[]> {
+async function scanFolder(_path: string): Promise<MediaItem[]> {
   // Real scanning would use native module to enumerate files.
   // For now, return empty — actual scan is handled by the
   // native media scanner service.

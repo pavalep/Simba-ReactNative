@@ -1,12 +1,12 @@
 import {MediaFile} from '../types';
 
 class MediaService {
-  async loadFile(uri: string): Promise<MediaFile | null> {
+  async loadFile(_uri: string): Promise<MediaFile | null> {
     // TODO: Load media file metadata
     return null;
   }
 
-  async scanDirectory(path: string): Promise<MediaFile[]> {
+  async scanDirectory(_path: string): Promise<MediaFile[]> {
     // TODO: Scan a directory for media files
     return [];
   }

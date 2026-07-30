@@ -21,7 +21,7 @@ export const InternalHeader: React.FC<InternalHeaderProps> = ({
   subtitle,
   rightAction,
 }) => {
-  const {colors, spacing: s} = useTheme();
+  const {colors} = useTheme();
   const navigation = useNavigation();
 
   return (

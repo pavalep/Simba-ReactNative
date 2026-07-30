@@ -2,21 +2,38 @@ import {useCallback, useMemo, useState} from 'react';
 import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {
-  setHardwareAcceleration,
-  setAudioNormalization,
-  setDialogueBoost,
-  setThemeMode,
-  setMpvOptions,
-} from '../../../store/slices/settingsSlice';
+
 import {spacing} from '../../../theme/tokens';
-import type {MpvOption} from '../components/MpvConfigEditor';
+
+import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 
 const THEME_LABELS: Record<string, string> = {
   system: 'System',
   dark: 'Dark',
   light: 'Light',
 };
+
+const SECTION_COUNT = 6; // ACCOUNT, APPEARANCE, LIBRARY, PLAYBACK, SUBTITLES, ABOUT
+
+/** Get app version from package info */
+function getAppVersion(): string {
+  try {
+    const pkg = require('../../../../package.json');
+    return pkg.version ?? '1.0.0';
+  } catch {
+    return '1.0.0';
+  }
+}
+
+/** Get build number from package info */
+function getBuildNumber(): string {
+  try {
+    const pkg = require('../../../../package.json');
+    return String(pkg.build ?? '1');
+  } catch {
+    return '1';
+  }
+}
 
 export function useSettingsScreen() {
   const {theme, colors} = useTheme();
@@ -25,20 +42,38 @@ export function useSettingsScreen() {
   const dispatch = useAppDispatch();
   const bottomChromeInset = insets.bottom + 104;
 
+  const entrance = useAnimatedEntrance(SECTION_COUNT, {staggerDelay: 80});
+
   // ── Redux State ──
-  const hardwareAcceleration = useAppSelector(state => state.settings.isHardwareAccelerationEnabled);
-  const audioNormalization = useAppSelector(state => state.settings.isAudioNormalizationEnabled);
-  const dialogueBoost = useAppSelector(state => state.settings.isDialogueBoostEnabled);
-  const themeMode = useAppSelector(state => state.settings.themeMode);
-  const mpvOptions = useAppSelector(state => state.settings.mpvOptions) ?? [];
+  const hardwareAcceleration = useAppSelector(s => s.settings.isHardwareAccelerationEnabled);
+  const audioNormalization = useAppSelector(s => s.settings.isAudioNormalizationEnabled);
+  const dialogueBoost = useAppSelector(s => s.settings.isDialogueBoostEnabled);
+  const themeMode = useAppSelector(s => s.settings.themeMode);
+  const mpvOptions = useAppSelector(s => s.settings.mpvOptions) ?? [];
+
+  // Subtitle (Phase 22)
+  const subtitleFontSize = useAppSelector(s => s.settings.subtitleFontSize);
+  const subtitleTextColor = useAppSelector(s => s.settings.subtitleTextColor);
+  const subtitleBackgroundOpacity = useAppSelector(s => s.settings.subtitleBackgroundOpacity);
+  const autoLoadSubtitles = useAppSelector(s => s.settings.isAutoLoadSubtitlesEnabled);
+  const preferredLanguages = useAppSelector(s => s.settings.preferredLanguages);
+
+  // Playback extras
+  const skipSilenceEnabled = useAppSelector(s => s.settings.skipSilenceEnabled);
+
+  // Library
+  const videoFolders = useAppSelector(s => s.settings.videoFolders) ?? [];
+  const audioFolders = useAppSelector(s => s.settings.audioFolders) ?? [];
+  const linkedFolderCount = videoFolders.length + audioFolders.length;
 
   // ── Local State ──
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, _setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [mpvEditorVisible, setMpvEditorVisible] = useState(false);
   const [linkedFoldersDialogVisible, setLinkedFoldersDialogVisible] = useState(false);
   const [themeDialogVisible, setThemeDialogVisible] = useState(false);
+  const [subtitleFontDialogVisible, setSubtitleFontDialogVisible] = useState(false);
 
   // ── Handlers ──
   const handleLinkedFoldersPress = useCallback(() => {
@@ -47,6 +82,10 @@ export function useSettingsScreen() {
 
   const handleThemePress = useCallback(() => {
     setThemeDialogVisible(true);
+  }, []);
+
+  const handleSubtitleFontPress = useCallback(() => {
+    setSubtitleFontDialogVisible(true);
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -60,6 +99,24 @@ export function useSettingsScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  // ── Derived ──
+  const appVersion = useMemo(() => getAppVersion(), []);
+  const buildNumber = useMemo(() => getBuildNumber(), []);
+
+  const subtitleFontLabel = useMemo(() => {
+    if (subtitleFontSize <= 14) return 'Small';
+    if (subtitleFontSize <= 18) return 'Medium';
+    if (subtitleFontSize <= 22) return 'Large';
+    return 'Extra Large';
+  }, [subtitleFontSize]);
+
+  const subtitleBgLabel = useMemo(() => {
+    if (subtitleBackgroundOpacity <= 0.2) return 'None';
+    if (subtitleBackgroundOpacity <= 0.5) return 'Light';
+    if (subtitleBackgroundOpacity <= 0.75) return 'Medium';
+    return 'Heavy';
+  }, [subtitleBackgroundOpacity]);
 
   // ── Styles ──
   const styles = useMemo(
@@ -96,6 +153,12 @@ export function useSettingsScreen() {
         borderRadius: 10,
         backgroundColor: colors.accent.goldDim,
       },
+      sectionDivider: {
+        height: 1,
+        backgroundColor: colors.border.subtle,
+        marginHorizontal: spacing.md,
+        marginVertical: spacing.md,
+      },
     }),
     [bottomChromeInset, isDark, colors],
   );
@@ -106,25 +169,49 @@ export function useSettingsScreen() {
     insets,
     isDark,
     styles,
+    entrance,
     isLoading,
     error,
     refreshing,
+    // Redux state
     hardwareAcceleration,
     audioNormalization,
     dialogueBoost,
     themeMode,
+    mpvOptions,
+    // Subtitle state
+    subtitleFontSize,
+    subtitleTextColor,
+    subtitleBackgroundOpacity,
+    autoLoadSubtitles,
+    preferredLanguages,
+    subtitleFontLabel,
+    subtitleBgLabel,
+    // Playback extras
+    skipSilenceEnabled,
+    // Library
+    videoFolders,
+    audioFolders,
+    linkedFolderCount,
+    // About
+    appVersion,
+    buildNumber,
+    // Misc
+    THEME_LABELS,
+    SECTION_COUNT,
+    dispatch,
+    setError,
     mpvEditorVisible,
     linkedFoldersDialogVisible,
     themeDialogVisible,
-    mpvOptions,
-    THEME_LABELS,
-    dispatch,
-    setError,
     setMpvEditorVisible,
     setLinkedFoldersDialogVisible,
     setThemeDialogVisible,
+    setSubtitleFontDialogVisible,
+    subtitleFontDialogVisible,
     handleLinkedFoldersPress,
     handleThemePress,
+    handleSubtitleFontPress,
     onRefresh,
   };
 }

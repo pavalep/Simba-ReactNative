@@ -1,5 +1,5 @@
 import React, {useCallback} from 'react';
-import {View, FlatList, RefreshControl, StyleSheet, TouchableOpacity} from 'react-native';
+import {View, FlatList, RefreshControl, StyleSheet, TouchableOpacity, Animated} from 'react-native';
 import {spacing} from '../../theme/tokens';
 import {type HomeScreenProps} from '../../navigation/types';
 import {useHomeScreen, type HomeSection} from './hooks/useHomeScreen';
@@ -20,6 +20,8 @@ import {HomeBookmarksList} from './components/HomeBookmarksList';
 import {MovieCategoriesShelf} from './components/MovieCategoriesShelf';
 import {PodcastCategoriesShelf} from './components/PodcastCategoriesShelf';
 import {MusicCategoriesShelf} from './components/MusicCategoriesShelf';
+import {GenreChipsShelf} from './components/GenreChipsShelf';
+import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
 
 // ── Screen ──
 
@@ -35,15 +37,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     sections,
     greeting,
     dispatch,
+    user,
+    bookmarkCount,
     handleOpenMedia,
     handleItemPress,
     handlePlaylistPress,
+    handleGenrePress,
     handleSeeAll,
     handleSettingsPress,
     handleSearchPress,
+    handleAvatarPress,
+    handleBookmarksPress,
     onRefresh,
     setHasError,
   } = useHomeScreen(navigation);
+
+  const entrance = useAnimatedEntrance(sections.length, {staggerDelay: 80});
 
   const handleMovieCategoryPress = useCallback(
     (categoryId: string) => {
@@ -80,16 +89,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 
   // ── Render Item ──
   const renderSection = useCallback(
-    ({item}: {item: HomeSection}) => {
-      switch (item.type) {
-        case 'GREETING':
-          return (
-            <View style={styles.welcomeSection}>
-              <AppText variant="h2" color="primary" style={styles.greetingMain}>
-                {greeting}, Paval
-              </AppText>
-            </View>
-          );
+    ({item, index}: {item: HomeSection; index: number}) => {
+      const animStyle = entrance.styles[index];
+      const sectionContent = (() => {
+        switch (item.type) {
+          case 'GREETING':
+            return (
+              <View style={styles.welcomeSection}>
+                <AppText variant="h2" color="primary" style={styles.greetingMain}>
+                  {greeting}, Paval
+                </AppText>
+              </View>
+            );
         case 'HERO':
           return item.data ? <FeaturedHeroBanner item={item.data} onPress={handleItemPress} /> : null;
         case 'SHELF':
@@ -101,6 +112,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
               onSeeAll={item.seeAllRoute ? () => handleSeeAll(item.seeAllRoute!) : undefined}
             />
           );
+        case 'GENRE':
+          return <GenreChipsShelf genres={item.genres} onGenrePress={handleGenrePress} />;
         case 'PLAYLISTS':
           return <QuickAccessShelf title="Pinned Playlists" playlists={item.items} onPlaylistPress={handlePlaylistPress} />;
         case 'MOVIES':
@@ -132,18 +145,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
               onRemove={id => dispatch(removeBookmark(id))}
             />
           );
-        default:
-          return null;
-      }
+          default:
+            return null;
+        }
+      })();
+      return animStyle ? (
+        <Animated.View style={animStyle}>{sectionContent}</Animated.View>
+      ) : (
+        sectionContent
+      );
     },
-    [dispatch, greeting, handleItemPress, handlePlaylistPress, handlePodcastCategoryPress, handlePodcastSeeAll, handleMusicCategoryPress, handleMusicSeeAll],
+    [dispatch, greeting, handleItemPress, handlePlaylistPress, handleGenrePress, handleMovieCategoryPress, handleMovieSeeAll, handleSeeAll, handlePodcastCategoryPress, handlePodcastSeeAll, handleMusicCategoryPress, handleMusicSeeAll, entrance.styles],
   );
 
   if (hasError) {
     return (
       <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
         <SimbaStatusBar variant="home" />
-        <HomeHeader isScanning={isScanning} onSettingsPress={handleSettingsPress} onSearchPress={handleSearchPress} />
+        <HomeHeader
+          isScanning={isScanning}
+          onSettingsPress={handleSettingsPress}
+          onSearchPress={handleSearchPress}
+          onAvatarPress={handleAvatarPress}
+          onBookmarksPress={handleBookmarksPress}
+          avatarUrl={user?.photo ?? null}
+          bookmarkCount={bookmarkCount}
+        />
         <HomeErrorState onRetry={() => setHasError(false)} colors={colors} />
       </View>
     );
@@ -153,7 +180,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     return (
       <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
         <SimbaStatusBar variant="home" />
-        <HomeHeader isScanning={isScanning} onSettingsPress={handleSettingsPress} onSearchPress={handleSearchPress} />
+        <HomeHeader
+          isScanning={isScanning}
+          onSettingsPress={handleSettingsPress}
+          onSearchPress={handleSearchPress}
+          onAvatarPress={handleAvatarPress}
+          onBookmarksPress={handleBookmarksPress}
+          avatarUrl={user?.photo ?? null}
+          bookmarkCount={bookmarkCount}
+        />
         <HomeLoadingSkeleton colors={colors} />
       </View>
     );
@@ -162,7 +197,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   return (
     <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
       <SimbaStatusBar variant="home" />
-      <HomeHeader isScanning={isScanning} onSettingsPress={handleSettingsPress} onSearchPress={handleSearchPress} />
+      <HomeHeader
+        isScanning={isScanning}
+        onSettingsPress={handleSettingsPress}
+        onSearchPress={handleSearchPress}
+        onAvatarPress={handleAvatarPress}
+        onBookmarksPress={handleBookmarksPress}
+        avatarUrl={user?.photo ?? null}
+        bookmarkCount={bookmarkCount}
+      />
 
       <NoNetworkBanner isVisible={!isOnline} colors={colors} />
 
@@ -180,6 +223,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
             colors={[colors.accent.gold]}
           />
         }
+        getItemLayout={(_, index) => ({length: 76, offset: 76 * index, index})}
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
 
       <TouchableOpacity

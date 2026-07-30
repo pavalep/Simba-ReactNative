@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useMemo} from 'react';
+import React, {useEffect, useRef, useMemo, useCallback} from 'react';
 import {
   Animated,
   StyleSheet,
@@ -66,6 +66,16 @@ export const VolumeBrightnessOverlay: React.FC<
           textShadowRadius: 3,
         },
         icon: {fontSize: 18, marginTop: 4},
+        iconContainer: {
+          width: 22,
+          height: 22,
+          marginTop: 4,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        iconOverlay: {
+          position: 'absolute',
+        },
       }),
     [colors],
   );
@@ -115,6 +125,14 @@ export const VolumeBrightnessOverlay: React.FC<
   const fillColor = isVolume ? colors.accent.gold : colors.text.primary;
   const label = isVolume ? `Vol ${Math.round(clamped)}%` : `Bright ${Math.round(clamped)}%`;
 
+  const getIconOverlayStyle = useCallback(
+    (opacity: Animated.Value) => ({
+      position: 'absolute' as const,
+      opacity,
+    }),
+    [],
+  );
+
   return (
     <Animated.View
       style={[
@@ -147,11 +165,11 @@ export const VolumeBrightnessOverlay: React.FC<
         {label}
       </AppText>
       {/* Icon — cross-fade between volume 🔊 and brightness ☀️ */}
-      <View style={{width: 22, height: 22, marginTop: 4, alignItems: 'center', justifyContent: 'center'}}>
-        <Animated.View style={{position: 'absolute', opacity: volumeIconOpacity}}>
+      <View style={styles.iconContainer}>
+        <Animated.View style={getIconOverlayStyle(volumeIconOpacity)}>
           <AppText style={styles.icon}>{'\uD83D\uDD0A'}</AppText>
         </Animated.View>
-        <Animated.View style={{position: 'absolute', opacity: brightnessIconOpacity}}>
+        <Animated.View style={getIconOverlayStyle(brightnessIconOpacity)}>
           <AppText style={styles.icon}>{'\u2600\uFE0F'}</AppText>
         </Animated.View>
       </View>

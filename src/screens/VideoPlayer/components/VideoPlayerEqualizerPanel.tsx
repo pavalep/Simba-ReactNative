@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useCallback} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -11,6 +11,8 @@ import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 
 // ─── Constants ───────────────────────────────────────────────
+
+const ITEM_HEIGHT = 52;
 
 export const EQ_BANDS = [
   {freq: 31, label: '31'},
@@ -169,6 +171,16 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
     [],
   );
 
+  const getCurveBarStyle = useCallback(
+    (gain: number) => ({
+      height: mapGainToHeight(gain),
+      backgroundColor: eqEnabled ? colors.accent.gold : colors.text.tertiary,
+      opacity: eqEnabled ? 0.8 : 0.3,
+      borderRadius: 2,
+    }),
+    [eqEnabled, colors, mapGainToHeight],
+  );
+
   const presetNames = Object.keys(EQ_PRESETS);
 
   const renderHeader = () => (
@@ -199,6 +211,9 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
         style={styles.presetsRow}
         data={presetNames}
         keyExtractor={item => item}
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
         renderItem={({item}) => {
           const isActive =
             eqGains.every(
@@ -241,19 +256,15 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
             contentContainerStyle={styles.curveBars}
             data={eqGains}
             keyExtractor={(_, idx) => String(idx)}
+            windowSize={5}
+            maxToRenderPerBatch={10}
+            removeClippedSubviews={true}
             renderItem={({item: gain}) => (
               <View style={styles.curveBarWrapper}>
                 <View
                   style={[
                     styles.curveBar,
-                    {
-                      height: mapGainToHeight(gain),
-                      backgroundColor: eqEnabled
-                        ? colors.accent.gold
-                        : colors.text.tertiary,
-                      opacity: eqEnabled ? 0.8 : 0.3,
-                      borderRadius: 2,
-                    },
+                    getCurveBarStyle(gain),
                   ]}
                 />
               </View>
@@ -304,6 +315,10 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
       renderItem={renderBandSlider}
       ListHeaderComponent={renderHeader}
       ListFooterComponent={renderFooter}
+      getItemLayout={(_, index) => ({length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index})}
+      windowSize={5}
+      maxToRenderPerBatch={10}
+      removeClippedSubviews={true}
     />
   );
 };

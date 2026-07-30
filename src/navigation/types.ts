@@ -53,6 +53,9 @@ export type SettingsTabParamList = {
   About: undefined;
   AudioSettings: undefined;
   LinkedFolders: {type: 'video' | 'audio'};
+  FolderLinkingWizard: {type?: 'video' | 'audio'};
+  Changelog: undefined;
+  Licenses: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =
@@ -105,6 +108,9 @@ export type SettingsScreenProps = SettingsStackScreenProps<'Settings'>;
 export type AboutScreenProps = SettingsStackScreenProps<'About'>;
 export type AudioSettingsScreenProps = SettingsStackScreenProps<'AudioSettings'>;
 export type LinkedFoldersScreenProps = SettingsStackScreenProps<'LinkedFolders'>;
+export type FolderLinkingWizardScreenProps = SettingsStackScreenProps<'FolderLinkingWizard'>;
+export type ChangelogScreenProps = SettingsStackScreenProps<'Changelog'>;
+export type LicensesScreenProps = SettingsStackScreenProps<'Licenses'>;
 
 /** Root stack screen props. */
 export type PreferencesScreenProps = RootStackScreenProps<'Preferences'>;

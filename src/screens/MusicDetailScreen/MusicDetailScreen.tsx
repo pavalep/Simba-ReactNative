@@ -3,11 +3,11 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  Image,
   StyleSheet,
   Alert,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import FastImage from 'react-native-fast-image';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
@@ -31,7 +31,7 @@ function fmtDur(s: number): string {
 export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {trackId, source} = route.params;
   const {track, isLoading, error} = useMusicDetailScreen(trackId, source);
-  const {colors, isDark} = useTheme();
+  const {colors} = useTheme();
 
   const handlePlay = useCallback(() => {
     if (!track) return;
@@ -201,7 +201,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
           textAlign: 'center',
         },
       }),
-    [colors, isDark],
+    [colors],
   );
 
   if (isLoading) {
@@ -248,10 +248,10 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
         {/* ── Cover Art ── */}
         <View style={styles.coverContainer}>
           {imageUrl ? (
-            <Image
+            <FastImage
               source={{uri: imageUrl}}
               style={styles.coverImage}
-              resizeMode="cover"
+              resizeMode={FastImage.resizeMode.cover}
             />
           ) : (
             <View style={styles.placeholderCover}>

@@ -5,17 +5,24 @@ const textContent = {
   titleVideo: 'Video Folders',
   titleAudio: 'Audio Folders',
 
-  removeFolderTitle: 'Remove Folder',
-  removeFolderMsg: 'Remove "{folder}" from linked folders?',
-  cancel: 'Cancel',
-  remove: 'Remove',
+  scanAll: 'Scan All',
+  scanAllDisabled: 'Scanning...',
+
+  emptyTitle: 'No {type} folders linked yet.',
+  emptyHint: 'Tap "Add Folder" below to link your first folder.',
+
+  addFolder: 'Add Folder',
+  removeFolder: 'Remove',
+
+  rescanLabel: 'Rescan',
+  filesCount: '{count} file{s}',
+
+  neverScanned: 'Never scanned',
+  scannedJustNow: 'Just now',
+  scannedAgo: '{value}{unit} ago',
 
   errorLoad: 'Failed to load folders.',
   retry: 'Retry',
-  scanFolders: 'Scan Folders',
-
-  emptyTitle: 'No {type} folders linked yet.',
-  emptyHint: 'Tap "Add Folder" below to get started.',
 } as const;
 
 export default textContent;

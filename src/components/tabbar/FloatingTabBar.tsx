@@ -22,11 +22,10 @@ const ICON_PILL_HORIZONTAL_MARGIN = 8; // pill inset from tab edges
 
 export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
   state,
-  descriptors,
+  descriptors: _descriptors,
   navigation,
 }) => {
   const tokens = useTheme();
-  const {colors, shadows} = tokens;
   const insets = useSafeAreaInsets();
   const {width: winW} = useWindowDimensions();
   const haptics = useHaptics();
@@ -156,7 +155,6 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
         {/* Tabs (icon-only, no labels) */}
         {state.routes.map((route, index) => {
           const isFocused = activeIndex === index;
-          const {options} = descriptors[route.key];
           const a11yLabel = `${route.name} tab${isFocused ? ', selected' : ''}`;
 
           const iconScale = animValues[index].interpolate({

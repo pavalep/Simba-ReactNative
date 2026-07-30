@@ -1,11 +1,10 @@
 import React from 'react';
-import {View, ScrollView, TouchableOpacity, StyleSheet, Image} from 'react-native';
+import {View, ScrollView, TouchableOpacity, StyleSheet} from 'react-native';
 import FastImage from 'react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
-import {AppCard} from '../../../components/core/AppCard/AppCard';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 
 // ── Helpers ──
@@ -97,6 +96,15 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
                     />
                   </View>
                 )}
+
+                {/* Media type badge */}
+                <View style={styles.typeBadge}>
+                  <SvgIcon
+                    name={item.mediaType === 'audio' ? 'music' : 'video'}
+                    size={12}
+                    color="#fff"
+                  />
+                </View>
 
                 {/* Premium Gradient Overlay */}
                 <LinearGradient
@@ -222,6 +230,18 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: {width: 0, height: 1},
     textShadowRadius: 4,
+  },
+  typeBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    zIndex: 5,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   progressBarTrack: {
     position: 'absolute',

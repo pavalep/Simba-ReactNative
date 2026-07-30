@@ -1,7 +1,7 @@
 // ─── Movie Detail Screen ─────────────────────────────────────────────────
 // Shows detailed info about an Internet Archive movie.
 
-import React, {useMemo} from 'react';
+import React from 'react';
 import {
   View,
   ScrollView,
@@ -50,7 +50,7 @@ const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {identifier, title: routeTitle} = route.params;
   const {item, isLoading, error, retry} = useMovieDetailScreen(identifier);
-  const {colors, spacing: s} = useTheme();
+  const {colors} = useTheme();
   const insets = useSafeAreaInsets();
 
   const heroHeight = SCREEN_WIDTH * (9 / 16);

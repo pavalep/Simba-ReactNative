@@ -76,7 +76,7 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
   playbackHistory,
   selectedQueueIndices,
   mode,
-  onSelectQueueItem,
+  _onSelectQueueItem,
   onSelectHistoryItem,
   onMoveUp,
   onMoveDown,
@@ -91,7 +91,7 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
   onAddToQueue,
 }) => {
   const {colors} = useTheme();
-  const insets = useSafeAreaInsets();
+  useSafeAreaInsets();
 
   // Local multi-select tracking: we toggle selectedQueueIndices in the parent via
   // onToggleSelection. This sheet displays the state.
@@ -157,9 +157,7 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
 
   const renderItem = useCallback(
     ({item, index, section}: {item: PlaylistEntry; index: number; section: QueueSection}) => {
-      const isCurrentSection = section.isCurrentSection ?? false;
-      const isCurrent = isCurrentSection;
-      const reorderable = section.reorderable;
+      
       const isSelected = section.key === 'up-next' && selectedQueueIndices.includes(index);
       const rowIndex = index;
 
@@ -205,7 +203,6 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
 
       // "Previously Played" section
       if (section.key === 'previously-played') {
-        const isInQueue = queue.some(q => q.uri === item.uri);
         return (
           <View
             style={[
@@ -264,7 +261,6 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
       selectedQueueIndices,
       queueItemCount,
       colors,
-      onSelectQueueItem,
       onToggleSelection,
       onEnterMultiSelect,
       onRemoveItem,
@@ -273,7 +269,6 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
       onSelectHistoryItem,
       onPlayNext,
       onAddToQueue,
-      queue,
     ],
   );
 
@@ -309,6 +304,9 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           stickySectionHeadersEnabled={false}
+          windowSize={5}
+          maxToRenderPerBatch={10}
+          removeClippedSubviews={true}
         />
 
         {/* ── Bottom Action Bar ── */}

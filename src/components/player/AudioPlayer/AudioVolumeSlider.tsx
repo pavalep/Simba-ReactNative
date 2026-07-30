@@ -10,6 +10,40 @@ import {
 import {AppText} from '../../core/AppText/AppText';
 import {useTheme} from '../../../theme';
 
+// ─── Static styles for VolumeIcon ───────────────────────────
+const iconStyles = StyleSheet.create({
+  volIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 32,
+    height: 24,
+  },
+  speakerBody: {
+    width: 10,
+    height: 14,
+    borderWidth: 2,
+    borderRadius: 2,
+    borderRightWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  speakerCone: {
+    width: 6,
+    height: 10,
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
+  },
+  waveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 2,
+    gap: 2,
+  },
+  waveBar: {
+    width: 3,
+    borderRadius: 1.5,
+  },
+});
+
 interface AudioVolumeSliderProps {
   volume: number;
   onVolumeChange: (delta: number) => void;
@@ -26,19 +60,19 @@ const VolumeIcon: React.FC<{level: number; color: string}> = ({level, color}) =>
     : 3;
 
   return (
-    <View style={styles.volIconRow}>
+    <View style={iconStyles.volIconRow}>
       {/* Speaker body */}
-      <View style={[styles.speakerBody, {borderColor: color}]} />
-      <View style={[styles.speakerCone, {backgroundColor: color}]} />
+      <View style={[iconStyles.speakerBody, {borderColor: color}]} />
+      <View style={[iconStyles.speakerCone, {backgroundColor: color}]} />
 
       {/* Sound wave bars */}
       {level > 0 && (
-        <View style={styles.waveRow}>
+        <View style={iconStyles.waveRow}>
           {Array.from({length: barCount}).map((_, i) => (
             <View
               key={i}
               style={[
-                styles.waveBar,
+                iconStyles.waveBar,
                 {
                   backgroundColor: i < activeBars ? color : 'transparent',
                   borderColor: color,
@@ -201,36 +235,7 @@ export const AudioVolumeSlider: React.FC<AudioVolumeSliderProps> = ({
           minWidth: 36,
           textAlign: 'right',
         },
-        volIconRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          width: 32,
-          height: 24,
-        },
-        speakerBody: {
-          width: 10,
-          height: 14,
-          borderWidth: 2,
-          borderRadius: 2,
-          borderRightWidth: 0,
-          backgroundColor: 'transparent',
-        },
-        speakerCone: {
-          width: 6,
-          height: 10,
-          borderTopRightRadius: 3,
-          borderBottomRightRadius: 3,
-        },
-        waveRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          marginLeft: 2,
-          gap: 2,
-        },
-        waveBar: {
-          width: 3,
-          borderRadius: 1.5,
-        },
+
       }),
     [colors],
   );

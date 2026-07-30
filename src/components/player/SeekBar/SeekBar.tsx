@@ -145,7 +145,7 @@ const SeekBar: React.FC<SeekBarProps> = ({
           }).start();
         },
       }),
-    [onSeek, panAnim],
+    [onSeek, panAnim, thumbScale],
   );
 
   // ── Track layout callback ──

@@ -252,6 +252,15 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
           borderColor: colors.accent.gold,
           borderWidth: 3,
         },
+        row: {
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        rowWithGap: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+        },
       }),
     [colors],
   );
@@ -293,7 +302,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
               style={isSelected ? styles.radioFilled : styles.radioOuter}
             />
             <View style={styles.trackInfo}>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <View style={styles.row}>
                 <AppText variant="body2" color="primary">
                   {track.title || `Track ${track.id}`}
                 </AppText>
@@ -393,7 +402,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
           <AppText variant="body2" color="primary">Subtitle position</AppText>
           <AppText variant="caption" color="secondary">Move captions up or down</AppText>
         </View>
-        <View style={{flexDirection: 'row', alignItems: 'center', gap: spacing.sm}}>
+        <View style={styles.rowWithGap}>
           <TouchableOpacity style={styles.opacityBtn} onPress={() => movePosition(-5)} accessibilityLabel="Move subtitles down">
             <AppText variant="body2" color="secondary">−</AppText>
           </TouchableOpacity>
@@ -409,7 +418,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
         <AppText variant="body2" color="primary">
           Opacity
         </AppText>
-        <View style={{flexDirection: 'row', alignItems: 'center', gap: spacing.sm}}>
+        <View style={styles.rowWithGap}>
           <TouchableOpacity style={styles.opacityBtn} onPress={handleOpacityDown}>
             <AppText variant="body2" color="secondary">
               -
@@ -461,7 +470,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
           <AppText variant="body2" color="primary">
             BG Opacity
           </AppText>
-          <View style={{flexDirection: 'row', alignItems: 'center', gap: spacing.sm}}>
+          <View style={styles.rowWithGap}>
             <TouchableOpacity style={styles.opacityBtn} onPress={handleBgOpacityDown}>
               <AppText variant="body2" color="secondary">-</AppText>
             </TouchableOpacity>

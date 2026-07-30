@@ -1,10 +1,14 @@
 /**
- * About screen — app info, legal links, and reset action.
+ * About screen — app info, legal links, contact, and reset action.
  */
 const textContent = {
   headerTitle: 'About',
   appName: 'Simba Player',
+  tagline: 'Your Personal Media Player',
   version: 'Version 1.0.0',
+  buildNumberLabel: 'Build',
+  changelog: 'Changelog',
+  contactFeedback: 'Contact / Feedback',
   resetAllSettings: 'Reset all settings',
   privacyPolicy: 'Privacy Policy',
   termsOfService: 'Terms of Service',

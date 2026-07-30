@@ -3,7 +3,7 @@
 // ────────────────────────────────────────────────────────
 
 import {useState, useEffect, useCallback, useMemo} from 'react';
-import {Share, Platform} from 'react-native';
+import {Share} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -99,7 +99,7 @@ export function useSongScreen() {
   );
 
   const handleJumpToBookmark = useCallback(
-    (position: number) => {
+    (_position: number) => {
       navigation.navigate('AudioPlayer', {
         fileUri,
         fileTitle: displayTitle,

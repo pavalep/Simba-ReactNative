@@ -8,9 +8,9 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  Image,
   StyleSheet,
 } from 'react-native';
+import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
@@ -100,10 +100,10 @@ const TrackCard: React.FC<TrackCardProps> = React.memo(({item, onPress}) => {
           {backgroundColor: colors.background.primary},
         ]}>
         {hasImage ? (
-          <Image
+          <FastImage
             source={{uri: item.imageUrl}}
             style={styles.artworkImage}
-            resizeMode="cover"
+            resizeMode={FastImage.resizeMode.cover}
           />
         ) : (
           <View style={styles.imagePlaceholder}>
@@ -297,6 +297,10 @@ export const MusicScreen: React.FC<
             columnWrapperStyle={styles.gridRow}
             contentContainerStyle={styles.gridContent}
             showsVerticalScrollIndicator={false}
+            getItemLayout={(_, index) => ({length: 76, offset: 76 * index, index})}
+            windowSize={5}
+            maxToRenderPerBatch={10}
+            removeClippedSubviews={true}
           />
         )}
       </View>

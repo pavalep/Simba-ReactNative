@@ -2,7 +2,7 @@
 // Non-tech-savvy UX: pre-built categories, no search bar.
 // Tap a category → see results grid → tap a movie → play.
 
-import React, {useCallback, useMemo} from 'react';
+import React, {useCallback} from 'react';
 import {
   View,
   ScrollView,
@@ -245,6 +245,10 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
             columnWrapperStyle={styles.gridRow}
             contentContainerStyle={styles.gridContent}
             showsVerticalScrollIndicator={false}
+            getItemLayout={(_, index) => ({length: 76, offset: 76 * index, index})}
+            windowSize={5}
+            maxToRenderPerBatch={10}
+            removeClippedSubviews={true}
           />
         )}
       </View>

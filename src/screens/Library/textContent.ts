@@ -8,6 +8,7 @@ const textContent = {
   segmentArtists: 'Artists',
   segmentAlbums: 'Albums',
   segmentPlaylists: 'Playlists',
+  segmentFolders: 'Folders',
 
   // ── Filter chips ──
   filterAll: 'All',
@@ -36,6 +37,10 @@ const textContent = {
   emptyArtists: 'No artists found.',
   emptyAlbums: 'No albums found.',
   emptyPlaylists: 'No playlists yet.',
+  emptyFoldersTitle: 'No folders linked yet',
+  emptyFoldersDesc: 'Link media folders to populate your library with audio and video files.',
+  folderScanned: 'Scanned',
+  linkFolder: 'Link Folder',
 
   // ── Header / labels ──
   headerMatching: 'Matching',

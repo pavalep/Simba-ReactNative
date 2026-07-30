@@ -6,7 +6,7 @@ import {AppText} from '../../core/AppText/AppText';
 
 interface SettingsRowProps {
   label: string;
-  description?: string;
+  description?: string | React.ReactNode;
   trailing?: React.ReactNode;
   onPress?: () => void;
 }

@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────
 
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
+import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';

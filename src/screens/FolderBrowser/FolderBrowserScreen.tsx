@@ -25,6 +25,7 @@ import type {Playlist, PlaylistItem, PlaylistKind} from '../../types/playlist';
 
 // ── Constants ──────────────────────────────────────────
 
+const ITEM_HEIGHT = 76;
 const MEDIA_EXTENSIONS = new Set([
   '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.3gp',
   '.mp3', '.flac', '.wav', '.aac', '.ogg', '.wma', '.m4a', '.opus',
@@ -450,7 +451,6 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   );
 
   const renderBreadcrumbs = () => {
-    const segments = breadcrumbs.length === 0 ? ['Home'] : breadcrumbs;
     return (
       <View style={styles.breadcrumbRow}>
         <TouchableOpacity
@@ -548,6 +548,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
             items.length === 0 ? styles.listEmptyContent : styles.listContent
           }
           ListEmptyComponent={renderEmptyState}
+          getItemLayout={(_, index) => ({length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index})}
           windowSize={5}
           maxToRenderPerBatch={20}
           removeClippedSubviews={true}

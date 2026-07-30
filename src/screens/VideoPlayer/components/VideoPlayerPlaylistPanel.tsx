@@ -38,6 +38,97 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// ─── SwipeableRow ────────────────────────────────────────────
+
+const SwipeableRow: React.FC<{
+  children: React.ReactNode;
+  onRemove: () => void;
+}> = ({children, onRemove}) => {
+  const {colors} = useTheme();
+  const translateX = useRef(new Animated.Value(0)).current;
+  const SWIPE_THRESHOLD = 80;
+
+  const swipeStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        overflowHidden: {
+          overflow: 'hidden',
+        },
+        swipeAction: {
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 100,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        removeBtn: {
+          backgroundColor: colors.semantic.error,
+          borderRadius: 6,
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+        },
+        removeLabel: {
+          fontWeight: '600',
+        },
+        animatedRow: {
+          transform: [{translateX}],
+        },
+      }),
+    [colors, translateX],
+  );
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture: PanResponderGestureState) =>
+        Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+      onPanResponderMove: (_, gesture: PanResponderGestureState) => {
+        translateX.setValue(Math.max(-120, Math.min(0, gesture.dx)));
+      },
+      onPanResponderRelease: (_, gesture: PanResponderGestureState) => {
+        if (gesture.dx < -SWIPE_THRESHOLD) {
+          Animated.spring(translateX, {
+            toValue: -100,
+            useNativeDriver: true,
+          }).start();
+        } else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    }),
+  ).current;
+
+  const handleRemovePress = useCallback(() => {
+    onRemove();
+    Animated.timing(translateX, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [onRemove, translateX]);
+
+  return (
+    <View style={swipeStyles.overflowHidden}>
+      <View style={swipeStyles.swipeAction}>
+        <TouchableOpacity
+          onPress={handleRemovePress}
+          style={swipeStyles.removeBtn}>
+          <AppText variant="body2" color="primary" style={swipeStyles.removeLabel}>
+            Remove
+          </AppText>
+        </TouchableOpacity>
+      </View>
+      <Animated.View style={swipeStyles.animatedRow} {...panResponder.panHandlers}>
+        {children}
+      </Animated.View>
+    </View>
+  );
+};
+
 // ─── Component ───────────────────────────────────────────────
 
 export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> = ({
@@ -114,81 +205,6 @@ export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> =
       }),
     [colors],
   );
-
-  // ─── SwipeableRow ────────────────────────────────────────────
-
-  const SwipeableRow: React.FC<{
-    children: React.ReactNode;
-    onRemove: () => void;
-  }> = ({children, onRemove}) => {
-    const translateX = useRef(new Animated.Value(0)).current;
-    const SWIPE_THRESHOLD = 80;
-
-    const panResponder = useRef(
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture: PanResponderGestureState) =>
-          Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
-        onPanResponderMove: (_, gesture: PanResponderGestureState) => {
-          translateX.setValue(Math.max(-120, Math.min(0, gesture.dx)));
-        },
-        onPanResponderRelease: (_, gesture: PanResponderGestureState) => {
-          if (gesture.dx < -SWIPE_THRESHOLD) {
-            Animated.spring(translateX, {
-              toValue: -100,
-              useNativeDriver: true,
-            }).start();
-          } else {
-            Animated.spring(translateX, {
-              toValue: 0,
-              useNativeDriver: true,
-            }).start();
-          }
-        },
-      }),
-    ).current;
-
-    const handleRemovePress = useCallback(() => {
-      onRemove();
-      Animated.timing(translateX, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    }, [onRemove, translateX]);
-
-    return (
-      <View style={{overflow: 'hidden'}}>
-        <View
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: 100,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-          <TouchableOpacity
-            onPress={handleRemovePress}
-            style={{
-              backgroundColor: colors.semantic.error,
-              borderRadius: 6,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-            }}>
-            <AppText variant="body2" color="primary" style={{fontWeight: '600'}}>
-              Remove
-            </AppText>
-          </TouchableOpacity>
-        </View>
-        <Animated.View
-          style={{transform: [{translateX}]}}
-          {...panResponder.panHandlers}>
-          {children}
-        </Animated.View>
-      </View>
-    );
-  };
 
   const isEmpty = playlist.length === 0;
 

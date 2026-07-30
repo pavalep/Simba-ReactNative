@@ -8,6 +8,8 @@ import {BookmarkItem} from './BookmarkItem';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
 import type {Bookmark} from '../../store/slices/bookmarkSlice';
 
+const ITEM_HEIGHT = 76;
+
 interface Props {
   bookmarks: Bookmark[];
   onPress: (item: Bookmark) => void;
@@ -84,6 +86,10 @@ export const BookmarkList: React.FC<Props> = ({
         )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        getItemLayout={(_, index) => ({length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index})}
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        removeClippedSubviews={true}
       />
     );
   }
@@ -120,6 +126,9 @@ export const BookmarkList: React.FC<Props> = ({
       )}
       contentContainerStyle={styles.list}
       showsVerticalScrollIndicator={false}
+      windowSize={5}
+      maxToRenderPerBatch={10}
+      removeClippedSubviews={true}
     />
   );
 };

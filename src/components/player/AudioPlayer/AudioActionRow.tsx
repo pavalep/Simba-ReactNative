@@ -27,8 +27,8 @@ interface AudioActionRowProps {
  */
 export const AudioActionRow: React.FC<AudioActionRowProps> = ({
   colors,
-  onBookmark,
-  bookmarkCount,
+  _onBookmark,
+  _bookmarkCount,
   onInfo,
   onQueue,
   onManage,

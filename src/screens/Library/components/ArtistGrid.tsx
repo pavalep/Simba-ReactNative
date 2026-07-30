@@ -5,8 +5,7 @@ import {useAppSelector} from '../../../store';
 import {selectArtists} from '../../../store/slices/mediaSlice';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppCard} from '../../../components/core/AppCard/AppCard';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {spacing, radius} from '../../../theme/tokens';
+import {radius} from '../../../theme/tokens';
 
 interface ArtistGridProps {
   onArtistPress: (artistName: string) => void;
@@ -25,17 +24,18 @@ export const ArtistGrid: React.FC<ArtistGridProps> = ({onArtistPress}) => {
             elevated
             onPress={() => onArtistPress(artist.name)}
             style={styles.card}>
-            {/* Artist avatar circle */}
+            {/* Artist avatar circle with initials */}
             <View
               style={[
                 styles.avatar,
                 {backgroundColor: colors.accent.goldDim},
               ]}>
-              <SvgIcon
-                name="headphones"
-                size={24}
-                color={colors.accent.gold}
-              />
+              <AppText
+                variant="body1"
+                color="accent"
+                style={styles.initials}>
+                {artist.name.charAt(0).toUpperCase()}
+              </AppText>
             </View>
             <View style={styles.info}>
               <AppText
@@ -85,5 +85,9 @@ const styles = StyleSheet.create({
   name: {
     fontWeight: '600',
     marginBottom: 2,
+  },
+  initials: {
+    fontWeight: '700',
+    fontSize: 18,
   },
 });

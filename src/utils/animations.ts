@@ -160,9 +160,8 @@ export function staggerEntrance(
   } = {},
 ): Animated.CompositeAnimation {
   return staggerAnimations(
-    values.map(v => {
+    values.map(_v => {
       const slideV = new Animated.Value(0);
-      const fadeV = v;
       slideV.setValue(slideFrom);
       const slideAnim = Animated.timing(slideV, {
         toValue: 0,

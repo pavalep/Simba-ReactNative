@@ -14,7 +14,7 @@ import type {LibraryScreenProps} from '../../../navigation/types';
 
 // ── Types ──
 
-export type Segment = 'videos' | 'audio' | 'artists' | 'albums';
+export type Segment = 'audio' | 'artists' | 'albums' | 'folders';
 export type ContentMode = 'library' | 'playlists';
 export type FilterType = 'ALL' | 'AUDIO_ONLY' | 'VIDEO_ONLY' | 'MIXED';
 export type SortOption = 'name' | 'dateAdded' | 'duration' | 'artist' | 'album';
@@ -22,7 +22,7 @@ export type SortOption = 'name' | 'dateAdded' | 'duration' | 'artist' | 'album';
 // ── Constants ──
 
 export const SEGMENTS: {key: Segment; label: string; icon: SvgIconName}[] = [
-  {key: 'videos', label: 'Videos', icon: 'video'},
+  {key: 'folders', label: 'Folders', icon: 'folder'},
   {key: 'audio', label: 'Audio', icon: 'music'},
   {key: 'artists', label: 'Artists', icon: 'headphones'},
   {key: 'albums', label: 'Albums', icon: 'list'},
@@ -55,7 +55,7 @@ export const PLAYLIST_FILTER_TYPES: {key: FilterType; label: string}[] = [
 ];
 
 /** Segments that support grid/list view toggle */
-const VIEW_TOGGLE_SEGMENTS: Segment[] = ['videos', 'audio'];
+const VIEW_TOGGLE_SEGMENTS: Segment[] = ['audio'];
 
 /** Segments that show sort controls */
 const SORT_SEGMENTS: Segment[] = [];
@@ -75,7 +75,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const dispatch = useAppDispatch();
 
   // ── Library State ──
-  const [activeSegment, setActiveSegment] = useState<Segment>('videos');
+  const [activeSegment, setActiveSegment] = useState<Segment>('folders');
   const [contentMode, setContentMode] = useState<ContentMode>('library');
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -89,6 +89,10 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const [playlistFilterType, setPlaylistFilterType] = useState<FilterType>('ALL');
   const [createModalVisible, setCreateModalVisible] = useState(false);
 
+  // ── Pull-to-refresh ──
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasAnimated, setHasAnimated] = useState(false);
+
   // ── Redux Selectors ──
   const videoFolders = useAppSelector(s => s.settings?.videoFolders ?? []);
   const audioFolders = useAppSelector(s => s.settings?.audioFolders ?? []);
@@ -96,6 +100,12 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const scannedTracks = useAppSelector(selectAllTracks);
   const scannedTrackCount = scannedTracks.length;
   const allPlaylists = useAppSelector(selectAllPlaylists);
+
+  // ── Player Selectors (for AudioWaveform) ──
+  const currentFile = useAppSelector(s => s.player.currentFile);
+  const playbackState = useAppSelector(s => s.player.playbackState);
+  const isAudioPlaying = playbackState === 'playing';
+  const currentAudioUri = currentFile?.uri ?? null;
 
   // ── Media Scanner ──
   const {startScan, cancelScan, isScanning, scanProgress, scanHistory} = useMediaScanner();
@@ -117,10 +127,33 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   }, [allPlaylists, playlistFilterType]);
 
   const selectedSortLabel = SORT_OPTIONS.find(o => o.key === sortBy)?.label ?? 'Name';
-  const currentTitle = CONTENT_MODE_OPTIONS.find(o => o.key === contentMode)?.label ?? 'Library';
+  const currentTitle = useMemo(() => {
+    if (contentMode === 'playlists') return 'Playlists';
+    return 'Library';
+  }, [contentMode]);
   const showSortControls = SORT_SEGMENTS.includes(activeSegment);
   const showFilterChips = FILTER_SEGMENTS.includes(activeSegment);
   const showViewToggle = VIEW_TOGGLE_SEGMENTS.includes(activeSegment);
+
+  // ── Stagger animation ──
+  useEffect(() => {
+    if (!hasAnimated) {
+      // Allow animation on next frame
+      requestAnimationFrame(() => setHasAnimated(true));
+    }
+  }, [hasAnimated]);
+
+  // ── Pull-to-refresh ──
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await startScan();
+    } catch {
+      // Scan errors handled by toast
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [startScan]);
 
   // ── Navigation Handlers ──
   const navigateToSettings = useCallback(() => {
@@ -140,6 +173,10 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
     },
     [navigation],
   );
+
+  const handleLinkFolder = useCallback(() => {
+    (navigation as any).navigate('FolderLinkingWizard');
+  }, [navigation]);
 
   const handleArtistPress = useCallback(
     (artistName: string) => {
@@ -217,13 +254,16 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
     playlistFilterType, setPlaylistFilterType,
     createModalVisible, setCreateModalVisible,
     videoFolders, audioFolders, lastScanTimestamp,
-    scannedTrackCount,
+    scannedTracks, scannedTrackCount,
     allPlaylists, filteredPlaylists,
     selectedSortLabel, currentTitle,
     showSortControls, showFilterChips, showViewToggle,
     isScanning, scanProgress, scanHistory,
     cancelScan,
-    navigateToSettings, navigateToLinkedFolders, navigateToFolderBrowser,
+    isRefreshing, hasAnimated,
+    isAudioPlaying, currentAudioUri,
+    handleRefresh,
+    navigateToSettings, navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
     handleArtistPress, handleAlbumPress, handleScanAudioFolders,
     handleCreatePlaylist, handlePlayAllPlaylist, handleShufflePlaylist,
     handlePlaylistCardPress,

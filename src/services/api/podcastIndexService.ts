@@ -1,6 +1,8 @@
 // ─── Podcast Index API Service ──────────────────────────────────────────
 // Docs: https://podcastindex-org.github.io/docs-api/
 
+/* eslint-disable no-bitwise */
+
 import {apiFetch} from './apiClient';
 import {API_CONFIG} from '../../constants/api';
 import type {PodcastResult, PodcastEpisodeResult} from '../../types/api';
@@ -24,7 +26,6 @@ function sha1(str: string): Promise<string> {
     return s;
   }
 
-  const blockSize = 16;
   const blocks: number[] = [];
   const strLen = str.length;
 

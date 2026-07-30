@@ -42,16 +42,6 @@ const variantMap: Record<AppTextVariant, keyof ThemeContextValue['typography']> 
   time: 'caption',
 };
 
-const tokenColorKeys: Record<TokenColorKey, keyof ThemeContextValue['colors'] | keyof ThemeContextValue['colors']['text']> = {
-  primary: 'text',
-  secondary: 'secondary',
-  tertiary: 'tertiary',
-  accent: 'accent',
-  error: 'semantic',
-  success: 'semantic',
-  warning: 'semantic',
-};
-
 export const AppText: React.FC<AppTextProps> = ({
   variant = 'body1',
   color,

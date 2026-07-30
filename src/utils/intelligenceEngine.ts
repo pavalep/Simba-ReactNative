@@ -77,8 +77,6 @@ export function getWeightedResumptionList(
   entries: SessionEntry[],
   count: number = 20,
 ): WeightedEntry[] {
-  const now = Date.now();
-
   const scored = entries
     .map(e => {
       const score = calculateScore(e);

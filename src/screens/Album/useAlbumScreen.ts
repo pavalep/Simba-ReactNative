@@ -8,7 +8,6 @@ import {useAppSelector, useAppDispatch} from '../../store';
 import {selectAlbumTracks} from '../../store/slices/mediaSlice';
 import {
   loadPlaylistToPlayer,
-  playFile,
   playFromPlaylist,
   type PlaylistEntry,
 } from '../../store/slices/playerSlice';

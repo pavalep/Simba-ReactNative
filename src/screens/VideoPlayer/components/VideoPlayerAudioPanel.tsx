@@ -9,6 +9,8 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 
+const ITEM_HEIGHT = 76;
+
 // ─── Props ───────────────────────────────────────────────────
 
 export interface VideoPlayerAudioPanelProps {
@@ -112,6 +114,14 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
           backgroundColor: colors.border.subtle,
           marginVertical: spacing.xs,
         },
+        row: {
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        flagStyle: {
+          marginRight: 6,
+          fontSize: 16,
+        },
       }),
     [colors],
   );
@@ -122,6 +132,10 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
       showsVerticalScrollIndicator={false}
       data={audioTracks}
       keyExtractor={(item: {id: number}) => String(item.id)}
+      getItemLayout={(_, index) => ({length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index})}
+      windowSize={5}
+      maxToRenderPerBatch={10}
+      removeClippedSubviews={true}
       ListHeaderComponent={
         <>
           {/* Disable audio option */}
@@ -156,9 +170,9 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
               style={isSelected ? styles.radioFilled : styles.radioOuter}
             />
             <View style={styles.trackInfo}>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <View style={styles.row}>
                 {flag ? (
-                  <AppText style={{marginRight: 6, fontSize: 16}}>
+                  <AppText style={styles.flagStyle}>
                     {flag}
                   </AppText>
                 ) : null}

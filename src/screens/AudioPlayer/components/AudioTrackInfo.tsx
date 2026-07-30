@@ -12,7 +12,7 @@ interface Props {
   colors: ColorTokens;
 }
 
-export const AudioTrackInfo: React.FC<Props> = ({title, artist, album, fileUri, colors}) => {
+export const AudioTrackInfo: React.FC<Props> = ({title, artist, album, fileUri, colors: _colors}) => {
   const a11yLabel = artist
     ? `Now playing ${title} by ${artist}${album ? `, from ${album}` : ''}`
     : `Now playing ${title}`;

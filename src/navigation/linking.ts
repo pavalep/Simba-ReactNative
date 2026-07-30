@@ -32,8 +32,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
           HomeTab: {
             screens: {
               Home: 'home',
-              Search: 'search',
-              NowPlaying: 'now-playing',
             },
           },
           LibraryTab: {
@@ -71,6 +69,12 @@ export const linking: LinkingOptions<RootStackParamList> = {
           About: 'settings/about',
           AudioSettings: 'settings/audio',
           LinkedFolders: 'settings/folders/:type',
+          FolderLinkingWizard: {
+            path: 'settings/folder-wizard/:type?',
+            parse: {type: decodeURIComponent},
+          },
+          Changelog: 'settings/changelog',
+          Licenses: 'settings/licenses',
         },
       },
       Bookmarks: 'bookmarks',
@@ -99,6 +103,37 @@ export const linking: LinkingOptions<RootStackParamList> = {
       AllVideosScreen: 'videos',
       AllAudioScreen: 'audio',
       AllPlaylistsScreen: 'playlists',
+      Search: 'search',
+      NowPlaying: {
+        path: 'now-playing',
+        parse: {
+          fileUri: decodeURIComponent,
+          fileTitle: decodeURIComponent,
+        },
+      },
+      MoviesScreen: 'movies',
+      MusicScreen: 'music',
+      PodcastsScreen: 'podcasts',
+      MusicDetail: {
+        path: 'music/:trackId/:source?',
+        parse: {
+          trackId: decodeURIComponent,
+          source: decodeURIComponent,
+        },
+      },
+      MovieDetail: {
+        path: 'movie/:identifier',
+        parse: {
+          identifier: decodeURIComponent,
+        },
+      },
+      PodcastDetail: {
+        path: 'podcast/:podcastId',
+        parse: {
+          podcastId: Number,
+          podcastTitle: decodeURIComponent,
+        },
+      },
     },
   },
 };

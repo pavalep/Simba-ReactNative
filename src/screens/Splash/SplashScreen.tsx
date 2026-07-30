@@ -116,6 +116,7 @@ export const SplashScreen: React.FC = () => {
     [colors],
   );
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     // ── Logo: fade-in + scale-up (0-600ms) ──
     Animated.parallel([
@@ -157,6 +158,7 @@ export const SplashScreen: React.FC = () => {
       clearTimeout(timer);
     };
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleScan = () => {
     dispatch(markLaunched());

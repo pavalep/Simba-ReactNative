@@ -11,8 +11,11 @@ const BAR_HEIGHT = 2;
 export const MiniProgressBar: React.FC<MiniProgressBarProps> = ({progress}) => {
   const {colors} = useTheme();
   const animWidth = useRef(new Animated.Value(0)).current;
+  const lastUpdateRef = useRef(0);
 
   useEffect(() => {
+    if (Date.now() - lastUpdateRef.current < 1000) return;
+    lastUpdateRef.current = Date.now();
     Animated.timing(animWidth, {
       toValue: progress,
       duration: 200,

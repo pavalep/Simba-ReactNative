@@ -16,7 +16,6 @@ import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {AppButton} from '../../../components/core/AppButton/AppButton';
 import AudioWaveform from '../../../components/player/AudioWaveform/AudioWaveform';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 

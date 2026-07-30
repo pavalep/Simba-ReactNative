@@ -65,11 +65,6 @@ export const PreferencesScreen: React.FC<Props> = ({navigation}) => {
   );
 
   const handleThemeChange = useCallback(() => {
-    const labels: Record<string, string> = {
-      dark: 'Dark',
-      light: 'Light',
-      system: 'System',
-    };
     Alert.alert('Appearance', 'Choose your preferred theme mode', [
       {
         text: 'Dark',

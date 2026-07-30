@@ -12,8 +12,8 @@ import {
   TouchableOpacity,
   Animated,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
@@ -34,7 +34,6 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const TOAST_HEIGHT = 52;
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 const ToastContent: React.FC<{
   visible: boolean;
@@ -43,7 +42,9 @@ const ToastContent: React.FC<{
   onDismiss: () => void;
 }> = ({visible, message, type, onDismiss}) => {
   const {colors} = useTheme();
-  const translateY = useRef(new Animated.Value(-TOAST_HEIGHT)).current;
+  const insets = useSafeAreaInsets();
+  const topInset = insets.top;
+  const translateY = useRef(new Animated.Value(-TOAST_HEIGHT - topInset)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -64,7 +65,7 @@ const ToastContent: React.FC<{
     } else {
       Animated.parallel([
         Animated.timing(translateY, {
-          toValue: -TOAST_HEIGHT,
+          toValue: -TOAST_HEIGHT - topInset,
           duration: 200,
           useNativeDriver: true,
         }),
@@ -75,13 +76,14 @@ const ToastContent: React.FC<{
         }),
       ]).start();
     }
-  }, [visible, translateY, opacity]);
+  }, [visible, translateY, opacity, topInset]);
 
   // Cleanup timer on unmount
   useEffect(() => {
+    const ref = timerRef;
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
+      if (ref.current) {
+        clearTimeout(ref.current);
       }
     };
   }, []);
@@ -103,6 +105,7 @@ const ToastContent: React.FC<{
         styles.container,
         {
           backgroundColor: bgColor,
+          top: topInset,
           transform: [{translateY}],
           opacity,
         },
@@ -195,7 +198,6 @@ export const useToast = (): ToastContextValue => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 0,
     left: spacing.lg,
     right: spacing.lg,
     height: TOAST_HEIGHT,

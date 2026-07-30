@@ -9,11 +9,12 @@ import {pickMediaFile, getMediaType} from '../../../services/fileService';
 import {
   selectWeightedFeatured,
   selectBookmarks,
-  removeBookmark,
 } from '../../../store/slices/sessionSlice';
 import {selectAllPlaylists} from '../../../store/slices/playlistSlice';
+import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import type {SessionEntry} from '../../../store/slices/sessionSlice';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+import {useAuth} from '../../../hooks/useAuth';
 
 // ── Types ──
 
@@ -21,6 +22,7 @@ export type HomeSection =
   | {type: 'GREETING'}
   | {type: 'HERO'; data: SessionEntry | null}
   | {type: 'SHELF'; title: string; items: any[]; seeAllRoute?: keyof RootStackParamList}
+  | {type: 'GENRE'; genres: {name: string; count: number}[]}
   | {type: 'PLAYLISTS'; items: any[]}
   | {type: 'BOOKMARKS'; items: ReturnType<typeof selectBookmarks>}
   | {type: 'MOVIES'}
@@ -51,6 +53,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const [hasError, setHasError] = useState(false);
   const {isOnline} = useNetworkStatus();
   const dispatch = useAppDispatch();
+  const {user, isAuthenticated} = useAuth();
 
   useEffect(() => {
     const t = setTimeout(() => setIsSettled(true), 300);
@@ -62,7 +65,23 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const bookmarks = useAppSelector(selectBookmarks);
   const weightedFeatured = useAppSelector(selectWeightedFeatured);
   const playlists = useAppSelector(selectAllPlaylists);
+  const allTracks = useAppSelector(selectAllTracks);
   const isScanning = useAppSelector(s => s.media?.isScanning ?? false);
+
+  // ── Derived Data ──
+  const genres = useMemo(() => {
+    const genreMap = new Map<string, number>();
+    allTracks.forEach(t => {
+      const g = t.genre?.trim();
+      if (g && g !== 'Unknown Genre' && g !== '') {
+        genreMap.set(g, (genreMap.get(g) ?? 0) + 1);
+      }
+    });
+    return Array.from(genreMap.entries())
+      .map(([name, count]) => ({name, count}))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+  }, [allTracks]);
 
   // ── Navigation Handlers ──
   const handleOpenMedia = useCallback(async () => {
@@ -90,8 +109,21 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     [navigation],
   );
 
-  const handleSettingsPress = () => navigation.navigate('Settings', {screen: 'Settings', params: undefined});
-  const handleSearchPress = () => navigation.navigate('Search');
+  const handleGenrePress = useCallback(
+    (genre: string) => {
+      navigation.navigate('GenreScreen', {genre});
+    },
+    [navigation],
+  );
+
+  const handleSettingsPress = useCallback(
+    () => navigation.navigate('Settings', {screen: 'Settings', params: undefined}),
+    [navigation],
+  );
+  const handleSearchPress = useCallback(
+    () => navigation.navigate('Search'),
+    [navigation],
+  );
 
   const handleSeeAll = useCallback(
     (routeName: keyof RootStackParamList) => {
@@ -99,6 +131,14 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     },
     [navigation],
   );
+
+  const handleAvatarPress = useCallback(() => {
+    navigation.navigate('Settings', {screen: 'Settings', params: undefined});
+  }, [navigation]);
+
+  const handleBookmarksPress = useCallback(() => {
+    navigation.navigate('Bookmarks');
+  }, [navigation]);
 
   // ── Compute Sections ──
   const sections = useMemo((): HomeSection[] => {
@@ -112,11 +152,18 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       {type: 'PREFILLED_MUSIC'},
     ];
 
-    const otherRecent = recentFiles.filter(item => item.fileUri !== cw?.fileUri);
-    realSections.push({type: 'SHELF', title: 'Recently Played', items: otherRecent.slice(0, 10)});
+    // Genre chips
+    if (genres.length > 0) {
+      realSections.push({type: 'GENRE', genres});
+    }
 
-    // "Recently Played" shelf offers "VIEW ALL → All Videos"
-    // (keeps seeAllRoute undefined so the button stays inactive for now)
+    const otherRecent = recentFiles.filter(item => item.fileUri !== cw?.fileUri);
+    realSections.push({
+      type: 'SHELF',
+      title: 'Recently Played',
+      items: otherRecent.slice(0, 10),
+      seeAllRoute: 'AllVideosScreen' as keyof RootStackParamList,
+    });
 
     const pinnedPlaylists = [...playlists]
       .sort((a, b) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())
@@ -129,7 +176,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     }
 
     return realSections;
-  }, [recentFiles, weightedFeatured, playlists, bookmarks]);
+  }, [recentFiles, weightedFeatured, playlists, bookmarks, genres]);
 
   // ── Pull-to-refresh ──
   const onRefresh = useCallback(async () => {
@@ -149,12 +196,18 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     sections,
     greeting: getGreeting(),
     dispatch,
+    user: isAuthenticated ? user : null,
+    bookmarkCount: bookmarks.length,
+    genres,
     handleOpenMedia,
     handleItemPress,
     handlePlaylistPress,
+    handleGenrePress,
     handleSeeAll,
     handleSettingsPress,
     handleSearchPress,
+    handleAvatarPress,
+    handleBookmarksPress,
     onRefresh,
     setHasError,
   };

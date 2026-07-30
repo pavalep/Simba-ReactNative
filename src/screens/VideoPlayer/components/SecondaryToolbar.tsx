@@ -257,6 +257,22 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
     resetAutoHide();
   }, [resetAutoHide]);
 
+  const getVisToggleStyle = useCallback(
+    () => ({
+      backgroundColor: subtitleVisible
+        ? 'rgba(201,168,76,0.25)'
+        : 'rgba(255,255,255,0.08)',
+    }),
+    [subtitleVisible],
+  );
+
+  const getVisToggleTextStyle = useCallback(
+    () => ({
+      color: subtitleVisible ? '#C9A84C' : 'rgba(237,237,237,0.65)',
+    }),
+    [subtitleVisible],
+  );
+
   return (
     <Animated.View
       style={[
@@ -296,7 +312,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.visToggle,
-                    {backgroundColor: subtitleVisible ? 'rgba(201,168,76,0.25)' : 'rgba(255,255,255,0.08)'},
+                    getVisToggleStyle(),
                   ]}
                   onPress={onToggleSubtitleVisibility}
                   activeOpacity={0.6}
@@ -305,7 +321,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
                   <Text
                     style={[
                       styles.visToggleText,
-                      {color: subtitleVisible ? '#C9A84C' : 'rgba(237,237,237,0.65)'},
+                      getVisToggleTextStyle(),
                     ]}>
                     {subtitleVisible ? 'ON' : 'OFF'}
                   </Text>

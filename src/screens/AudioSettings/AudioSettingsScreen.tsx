@@ -25,7 +25,7 @@ const REPLAY_GAIN_OPTIONS = ['Off', 'Track', 'Album'];
 const EQ_PRESETS = ['Flat', 'Rock', 'Pop', 'Jazz', 'Classical', 'Dance'];
 const AUDIO_DELAYS = ['0ms', '-100ms', '+100ms', '-250ms', '+250ms'];
 
-export const AudioSettingsScreen: React.FC<Props> = ({navigation}) => {
+export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
 

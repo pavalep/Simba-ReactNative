@@ -21,7 +21,7 @@ import type {RootStackScreenProps} from '../../navigation/types';
 
 type Props = RootStackScreenProps<'SongScreen'>;
 
-export const SongScreen: React.FC<Props> = ({navigation, route}) => {
+export const SongScreen: React.FC<Props> = ({navigation: _navigation, route: _route}) => {
   const {colors, isDark} = useTheme();
   const scrollY = useRef(new Animated.Value(0)).current;
   const h = useSongScreen();

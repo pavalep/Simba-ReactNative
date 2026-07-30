@@ -44,7 +44,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  const {colors, isDark} = useTheme();
+  const {colors} = useTheme();
 
   const [nameInput, setNameInput] = useState('');
   const [selectedKind, setSelectedKind] = useState<PlaylistKind>('MIXED');
@@ -169,6 +169,22 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           marginBottom: spacing.lg,
           textAlign: 'center',
         },
+        // Close button
+        closeBtn: {
+          position: 'absolute',
+          top: spacing.sm,
+          right: spacing.sm,
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1,
+        },
+        closeIcon: {
+          fontSize: 18,
+          fontWeight: '700' as const,
+        },
         // Actions
         actions: {
           flexDirection: 'row',
@@ -202,7 +218,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           color: colors.text.primary,
         },
       }),
-    [colors, error, isDark],
+    [colors, error],
   );
 
   // ── Render ──
@@ -224,6 +240,16 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           onPress={onCancel}
         />
         <View style={styles.container}>
+          {/* Close button (top-right) */}
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={onCancel}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            accessibilityLabel="Close"
+            accessibilityRole="button">
+            <AppText style={styles.closeIcon} color="tertiary">✕</AppText>
+          </TouchableOpacity>
+
           {/* Title */}
           <AppText variant="h3" color="primary" style={styles.title}>
             {mode === 'create'

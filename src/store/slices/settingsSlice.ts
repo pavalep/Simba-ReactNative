@@ -22,6 +22,14 @@ interface SettingsState {
   preferredLanguages: string;
   externalSubtitleDirectories: string;
 
+  // Subtitle appearance (Phase 22)
+  subtitleFontSize: number;
+  subtitleTextColor: string;
+  subtitleBackgroundOpacity: number;
+
+  // Playback extras (Phase 22)
+  skipSilenceEnabled: boolean;
+
   // Linked folders (Phase 22)
   videoFolders: string[];
   audioFolders: string[];
@@ -50,6 +58,14 @@ const initialState: SettingsState = {
   isAutoLoadSubtitlesEnabled: true,
   preferredLanguages: 'eng, jpn, und',
   externalSubtitleDirectories: './subs, ./subtitles',
+
+  // Subtitle appearance defaults
+  subtitleFontSize: 16,
+  subtitleTextColor: '#FFFFFF',
+  subtitleBackgroundOpacity: 0.5,
+
+  // Playback extras defaults
+  skipSilenceEnabled: false,
 
   // Linked folders defaults
   videoFolders: [],
@@ -107,6 +123,22 @@ const settingsSlice = createSlice({
       state.externalSubtitleDirectories = action.payload;
     },
 
+    // ── Subtitle Appearance (Phase 22) ──
+    setSubtitleFontSize(state, action: PayloadAction<number>) {
+      state.subtitleFontSize = action.payload;
+    },
+    setSubtitleTextColor(state, action: PayloadAction<string>) {
+      state.subtitleTextColor = action.payload;
+    },
+    setSubtitleBackgroundOpacity(state, action: PayloadAction<number>) {
+      state.subtitleBackgroundOpacity = action.payload;
+    },
+
+    // ── Playback Extras (Phase 22) ──
+    setSkipSilence(state, action: PayloadAction<boolean>) {
+      state.skipSilenceEnabled = action.payload;
+    },
+
     // Linked folder management (Phase 22)
     addVideoFolder(state, action: PayloadAction<string>) {
       if (!state.videoFolders.includes(action.payload)) {
@@ -159,6 +191,12 @@ export const {
   setAutoLoadSubtitles,
   setPreferredLanguages,
   setExternalSubtitleDirectories,
+
+  setSubtitleFontSize,
+  setSubtitleTextColor,
+  setSubtitleBackgroundOpacity,
+
+  setSkipSilence,
 
   addVideoFolder,
   removeVideoFolder,

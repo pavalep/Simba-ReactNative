@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────
 
 import React, {useMemo} from 'react';
-import {View, TouchableOpacity, StyleSheet, Platform} from 'react-native';
+import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -23,7 +23,7 @@ export const SongHero: React.FC<SongHeroProps> = ({
   title,
   artist,
   album,
-  albumArtUri,
+  albumArtUri: _albumArtUri,
   onArtistPress,
   onAlbumPress,
 }) => {
@@ -31,8 +31,6 @@ export const SongHero: React.FC<SongHeroProps> = ({
 
   // Initials letter for placeholder
   const initial = useMemo(() => title.charAt(0).toUpperCase(), [title]);
-
-  const hasAlbumArt = albumArtUri.length > 0;
 
   return (
     <LinearGradient
@@ -58,7 +56,7 @@ export const SongHero: React.FC<SongHeroProps> = ({
         style={[
           styles.artwork,
           {backgroundColor: colors.accent.goldDim},
-          !isDark && {shadowColor: '#000', shadowOpacity: 0.25, shadowOffset: {width: 0, height: 6}, shadowRadius: 16, elevation: 12},
+          !isDark && styles.artworkShadow,
         ]}>
         <AppText variant="h1" color="accent" style={styles.artInitial}>
           {initial}
@@ -121,5 +119,12 @@ const styles = StyleSheet.create({
   },
   albumRow: {
     marginTop: 2,
+  },
+  artworkShadow: {
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowOffset: {width: 0, height: 6},
+    shadowRadius: 16,
+    elevation: 12,
   },
 });

@@ -17,7 +17,6 @@ import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import AudioWaveform from '../../../components/player/AudioWaveform/AudioWaveform';
-import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 
 interface TrackItem {
   uri: string;
@@ -41,7 +40,7 @@ export const AlbumTrackList: React.FC<AlbumTrackListProps> = ({
   isPlaying,
   onPlayTrack,
   formatDuration,
-  disableAnimation = false,
+  _disableAnimation = false,
 }) => {
   const {colors} = useTheme();
   const [menuVisible, setMenuVisible] = useState(false);

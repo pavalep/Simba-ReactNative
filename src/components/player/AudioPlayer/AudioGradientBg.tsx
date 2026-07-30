@@ -21,18 +21,23 @@ export const AudioGradientBg: React.FC<AudioGradientBgProps> = ({albumArtUri}) =
   const {colors} = useTheme();
   const opacity = useRef(new Animated.Value(1)).current;
   const prevUriRef = useRef<string | null | undefined>(undefined);
+  const animRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
     if (albumArtUri && albumArtUri !== prevUriRef.current) {
       // Cross-fade transition on track change
       opacity.setValue(0);
-      Animated.timing(opacity, {
+      animRef.current = Animated.timing(opacity, {
         toValue: 1,
         duration: 600,
         useNativeDriver: true,
-      }).start();
+      });
+      animRef.current.start();
     }
     prevUriRef.current = albumArtUri;
+    return () => {
+      animRef.current?.stop();
+    };
   }, [albumArtUri, opacity]);
 
   if (!albumArtUri) {

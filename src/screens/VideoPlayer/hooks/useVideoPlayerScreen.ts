@@ -53,7 +53,7 @@ import {EQ_BANDS, EQ_PRESETS} from '../components/VideoPlayerEqualizerPanel';
 
 // ── Helpers ──
 
-const FLAT = EQ_PRESETS['Flat'];
+const FLAT = EQ_PRESETS.Flat;
 
 /** Build mpv audio filter string from 10 gain values */
 function buildEqFilter(gains: number[]): string {
@@ -75,7 +75,7 @@ export function useVideoPlayerScreen(
 
   // ── Route params ──
   const title = route.params?.fileTitle ?? 'Untitled';
-  const fileUri = route.params?.fileUri;
+  const fileUri = route.params?.fileUri ?? null;
   const requestedStartPosition = route.params?.startPosition;
 
   // ── Core playback state ──
@@ -121,7 +121,7 @@ export function useVideoPlayerScreen(
 
   // ── Refs (declared before useBookmarks due to value dependency) ──
   const isSeeking = useRef(false);
-  const fileUriRef = useRef<string | undefined>(fileUri);
+  const fileUriRef = useRef<string | null>(fileUri);
   const titleRef = useRef(title);
   const trackMetaRef = useRef({artist: '', album: '', albumArtUri: ''});
   const resumeSeekDone = useRef(false);
@@ -138,7 +138,6 @@ export function useVideoPlayerScreen(
     bookmarkCountForFile,
     add: addBookmarkEntry,
     remove: removeBookmarkEntry,
-    updateLabel: updateBookmarkLabelEntry,
   } = useBookmarks(fileUriForHook);
 
   // ── Equalizer state ──
@@ -381,7 +380,7 @@ export function useVideoPlayerScreen(
 
   // ── PiP lifecycle — enter→pause, exit→resume, close→destroy, expand→restore ──
   const {isInPipMode, prepareAndEnterPip} = usePipLifecycle({
-    fileUri,
+    fileUri: fileUri ?? undefined,
     fileTitle: title,
     chapters,
     position: playerCurrentPosition,
@@ -730,7 +729,6 @@ export function useVideoPlayerScreen(
         MpvPlayer.loadFile(entry.uri);
       }
     } catch {
-      // eslint-disable-next-line no-alert
       Alert.alert('Error', 'Failed to add file to playlist.');
     }
   }, [dispatch, playlist.length]);
@@ -762,8 +760,8 @@ export function useVideoPlayerScreen(
     dispatch(removeFromQueue(index));
   }, [dispatch]);
 
-  const handleQueueSelectItem = useCallback((fileUri: string) => {
-    const playlistIdx = playlist.findIndex(e => e.uri === fileUri);
+  const handleQueueSelectItem = useCallback((_fileUri: string) => {
+    const playlistIdx = playlist.findIndex(e => e.uri === _fileUri);
     if (playlistIdx >= 0 && playlistIdx !== currentIndex) {
       const entry = playlist[playlistIdx];
       if (entry) {
@@ -1347,6 +1345,9 @@ export function useVideoPlayerScreen(
     bookmarkSheetVisible,
     bookmarksForFile,
     bookmarkCountForFile,
+    isBuffering,
+    showReplay,
+    handleReplay,
 
     // Equalizer state
     eqGains,

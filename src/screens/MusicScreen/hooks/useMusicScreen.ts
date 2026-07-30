@@ -11,7 +11,7 @@ import {
   searchAudiusTracks,
   getAudiusTracksByGenre,
 } from '../../../services/api/audiusService';
-import type {JamendoTrackResult, AudiusTrackResult} from '../../../types/api';
+
 
 // ─── Display Item ────────────────────────────────────────────────────────
 

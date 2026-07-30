@@ -4,7 +4,7 @@ const storage: Record<string, never> = {};
 
 export {storage};
 
-export function setThemePreference(mode: ThemeMode): void {
+export function setThemePreference(_mode: ThemeMode): void {
   // TODO: Persist theme preference
 }
 
@@ -13,7 +13,7 @@ export function getThemePreference(): ThemeMode {
   return 'system';
 }
 
-export function setRecentSearches(searches: string[]): void {
+export function setRecentSearches(_searches: string[]): void {
   // TODO: Persist recent searches
 }
 
@@ -22,11 +22,11 @@ export function getRecentSearches(): string[] {
   return [];
 }
 
-export function setLinkedFolders(type: 'video' | 'audio', folders: string[]): void {
+export function setLinkedFolders(_type: 'video' | 'audio', _folders: string[]): void {
   // TODO: Persist linked folders
 }
 
-export function getLinkedFolders(type: 'video' | 'audio'): string[] {
+export function getLinkedFolders(_type: 'video' | 'audio'): string[] {
   // TODO: Return actual linked folders from storage
   return [];
 }

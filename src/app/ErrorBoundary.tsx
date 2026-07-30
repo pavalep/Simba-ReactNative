@@ -6,8 +6,6 @@ import {
   StyleSheet,
 } from 'react-native';
 import {AppText} from '../components/core/AppText/AppText';
-import {logger} from '../lib/logger';
-import {logError} from '../lib/errorLogger';
 
 // ─── Types ────────────────────────────────────────────────
 

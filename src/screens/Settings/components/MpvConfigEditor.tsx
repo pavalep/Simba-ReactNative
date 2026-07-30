@@ -80,7 +80,7 @@ const VALID_MPV_KEYS = new Set([
 
 const isKnownKey = (key: string): boolean => VALID_MPV_KEYS.has(key);
 
-const isValidValue = (_key: string, value: string): boolean => {
+const isValidValue = (_key: string, _value: string): boolean => {
   // Boolean flags: allow any non-whitespace value (yes/no/auto etc.) or empty
   // Numeric values: must be valid number if the key expects one
   return true; // Accept all syntactically; mpv will reject bad values at runtime

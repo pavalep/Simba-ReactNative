@@ -6,7 +6,7 @@ import {selectAlbums} from '../../../store/slices/mediaSlice';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppCard} from '../../../components/core/AppCard/AppCard';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {spacing, radius} from '../../../theme/tokens';
+import {radius} from '../../../theme/tokens';
 
 interface AlbumGridProps {
   onAlbumPress: (albumTitle: string, artistName: string) => void;

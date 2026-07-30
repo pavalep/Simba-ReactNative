@@ -3,7 +3,6 @@
 // error normalization, and __DEV__ mock fallback.
 
 import axios, {type AxiosInstance, type AxiosError, type AxiosRequestConfig} from 'axios';
-import {API_CONFIG} from '../../constants/api';
 import type {ApiConfig, ApiSearchOptions} from '../../types/api';
 
 // ─── Axios Instance ─────────────────────────────────────────────────────
@@ -144,7 +143,7 @@ export async function apiFetch<T>(opts: FetchOptions): Promise<T> {
     });
   }
   if (config.apiKey) {
-    mergedParams['api_key'] = config.apiKey;
+    mergedParams.api_key = config.apiKey;
   }
   if (Object.keys(mergedParams).length > 0) {
     axiosConfig.params = mergedParams;

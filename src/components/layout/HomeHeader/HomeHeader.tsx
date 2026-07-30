@@ -1,5 +1,6 @@
 import React, {useEffect, useRef} from 'react';
 import {View, TouchableOpacity, StyleSheet, Animated} from 'react-native';
+import FastImage from 'react-native-fast-image';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -9,16 +10,24 @@ import {SvgIcon} from '../../utility/SvgIcon';
 interface HomeHeaderProps {
   onSettingsPress?: () => void;
   onSearchPress?: () => void;
+  onAvatarPress?: () => void;
+  onBookmarksPress?: () => void;
   isScanning?: boolean;
+  avatarUrl?: string | null;
+  bookmarkCount?: number;
 }
 
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
   onSettingsPress,
   onSearchPress,
+  onAvatarPress,
+  onBookmarksPress,
   isScanning,
+  avatarUrl,
+  bookmarkCount = 0,
 }) => {
-  const {colors, spacing: s} = useTheme();
+  const {colors} = useTheme();
   const navigation = useNavigation<any>();
   const scanAnim = useRef(new Animated.Value(1)).current;
 
@@ -56,6 +65,22 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
     }
   };
 
+  const handleAvatarPress = () => {
+    if (onAvatarPress) {
+      onAvatarPress();
+    } else {
+      navigation.navigate('Settings');
+    }
+  };
+
+  const handleBookmarksPress = () => {
+    if (onBookmarksPress) {
+      onBookmarksPress();
+    } else {
+      navigation.navigate('BookmarksScreen');
+    }
+  };
+
   return (
     <View
       style={[
@@ -68,9 +93,20 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
       {/* Left: Logo + Greeting + Subtitle */}
       <View style={styles.greetingSection}>
         <View style={styles.greetingRow}>
-          <View style={[styles.logoContainer, {backgroundColor: colors.accent.gold + '15'}]}>
-            <SvgIcon name="lion" size={36} color={colors.accent.gold} />
-          </View>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleAvatarPress}
+            style={[styles.avatarContainer, {backgroundColor: colors.accent.gold + '15'}]}>
+            {avatarUrl ? (
+              <FastImage
+                source={{uri: avatarUrl}}
+                style={styles.avatarImage}
+                resizeMode={FastImage.resizeMode.cover}
+              />
+            ) : (
+              <SvgIcon name="lion" size={36} color={colors.accent.gold} />
+            )}
+          </TouchableOpacity>
           <View>
             <AppText variant="h2" color="accent" style={styles.greetingText}>
               SIMBA
@@ -95,6 +131,25 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
 
       {/* Spacer */}
       <View style={styles.spacer} />
+
+      {/* Bookmarks shortcut */}
+      {onBookmarksPress && (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handleBookmarksPress}
+          style={[styles.iconButton, {backgroundColor: colors.background.elevated}]}
+          accessibilityLabel="Bookmarks"
+          accessibilityRole="button">
+          <SvgIcon name="bookmark" size={18} color={colors.text.secondary} />
+          {bookmarkCount > 0 && (
+            <View style={[styles.badge, {backgroundColor: colors.accent.gold}]}>
+              <AppText variant="caption" style={styles.badgeText}>
+                {bookmarkCount > 99 ? '99+' : bookmarkCount}
+              </AppText>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
 
       {/* Search icon */}
       {onSearchPress && (
@@ -138,12 +193,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  logoContainer: {
+  avatarContainer: {
     width: 56,
     height: 56,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 56,
+    height: 56,
   },
   greetingText: {
     fontSize: 22,
@@ -170,5 +230,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.xs,
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#000',
+    fontSize: 10,
+    fontWeight: '800',
   },
 });

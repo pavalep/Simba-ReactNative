@@ -3,6 +3,10 @@ import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {ArtistGrid} from './ArtistGrid';
 import type {ColorTokens} from '../../../theme/tokens';
 
+import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import {AppText} from '../../../components/core/AppText/AppText';
+import {spacing} from '../../../theme/tokens';
+
 interface LibraryArtistsSegmentProps {
   audioFolders: string[];
   isMediaScanning: boolean;
@@ -11,15 +15,18 @@ interface LibraryArtistsSegmentProps {
   onNavigateToSettings: () => void;
   onScanAudioFolders: () => void;
   onArtistPress: (artistName: string) => void;
+  onViewAllArtists?: () => void;
 }
 
 export const LibraryArtistsSegment: React.FC<LibraryArtistsSegmentProps> = ({
   audioFolders,
   isMediaScanning,
   scannedTrackCount,
+  colors,
   onNavigateToSettings,
   onScanAudioFolders,
   onArtistPress,
+  onViewAllArtists,
 }) => {
   if (audioFolders.length === 0) {
     return (
@@ -45,5 +52,31 @@ export const LibraryArtistsSegment: React.FC<LibraryArtistsSegmentProps> = ({
     );
   }
 
-  return <ArtistGrid onArtistPress={onArtistPress} />;
+  return (
+    <>
+      <View style={[styles.headerRow, {borderBottomColor: colors.border.subtle}]}>
+        <AppText variant="h3" color="primary" style={{flex: 1}}>
+          All Artists
+        </AppText>
+        {onViewAllArtists && (
+          <TouchableOpacity onPress={onViewAllArtists} activeOpacity={0.7}>
+            <AppText variant="caption" color="accent">
+              See All
+            </AppText>
+          </TouchableOpacity>
+        )}
+      </View>
+      <ArtistGrid onArtistPress={onArtistPress} />
+    </>
+  );
 };
+
+const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+});

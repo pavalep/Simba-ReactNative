@@ -9,7 +9,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
@@ -30,14 +29,13 @@ interface ArtistDiscographyProps {
 }
 
 const CARD_WIDTH = 160;
-const CARD_HEIGHT = 190;
 const SCREEN_PADDING = 20;
 
 export const ArtistDiscography: React.FC<ArtistDiscographyProps> = ({
   albums,
   onAlbumPress,
 }) => {
-  const {colors, isDark} = useTheme();
+  const {colors} = useTheme();
 
   if (albums.length === 0) return null;
 
