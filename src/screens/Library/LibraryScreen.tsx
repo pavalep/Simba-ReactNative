@@ -30,9 +30,6 @@ import {
   SORT_OPTIONS,
   CONTENT_MODE_OPTIONS,
   PLAYLIST_FILTER_TYPES,
-  DUMMY_VIDEOS,
-  DUMMY_AUDIO,
-  DUMMY_FOLDERS,
   GRID_GAP,
 } from './hooks/useLibraryScreen';
 
@@ -286,16 +283,16 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         <ScanProgressBanner isScanning={isScanning} lastScanTimestamp={lastScanTimestamp} scanProgress={scanProgress} scanHistory={scanHistory} onCancel={cancelScan} trackCount={scannedTrackCount} />
 
         {activeSegment === 'videos' && (
-          <LibraryVideosSegment videoFolders={videoFolders.length > 0 ? videoFolders : DUMMY_VIDEOS.map(v => v.path)} colors={colors} isDark={isDark} viewMode={viewMode} onNavigateToSettings={navigateToSettings} onNavigateToFolderBrowser={navigateToFolderBrowser} onNavigateToLinkedFolders={navigateToLinkedFolders} />
+          <LibraryVideosSegment videoFolders={videoFolders} colors={colors} isDark={isDark} viewMode={viewMode} onNavigateToSettings={navigateToSettings} onNavigateToFolderBrowser={navigateToFolderBrowser} onNavigateToLinkedFolders={navigateToLinkedFolders} />
         )}
         {activeSegment === 'audio' && (
-          <LibraryAudioSegment audioFolders={audioFolders.length > 0 ? audioFolders : DUMMY_AUDIO.map(a => a.path)} colors={colors} isDark={isDark} viewMode={viewMode} onNavigateToSettings={navigateToSettings} onNavigateToFolderBrowser={navigateToFolderBrowser} onNavigateToLinkedFolders={navigateToLinkedFolders} />
+          <LibraryAudioSegment audioFolders={audioFolders} colors={colors} isDark={isDark} viewMode={viewMode} onNavigateToSettings={navigateToSettings} onNavigateToFolderBrowser={navigateToFolderBrowser} onNavigateToLinkedFolders={navigateToLinkedFolders} />
         )}
         {activeSegment === 'artists' && (
-          <LibraryArtistsSegment audioFolders={audioFolders.length > 0 ? audioFolders : DUMMY_FOLDERS.filter(f => f.name === 'Music').map(f => f.path)} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount || 45} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onArtistPress={handleArtistPress} />
+          <LibraryArtistsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onArtistPress={handleArtistPress} />
         )}
         {activeSegment === 'albums' && (
-          <LibraryAlbumsSegment audioFolders={audioFolders.length > 0 ? audioFolders : DUMMY_FOLDERS.filter(f => f.name === 'Music').map(f => f.path)} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount || 45} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onAlbumPress={handleAlbumPress} />
+          <LibraryAlbumsSegment audioFolders={audioFolders} isMediaScanning={isScanning} scannedTrackCount={scannedTrackCount} colors={colors} onNavigateToSettings={navigateToSettings} onScanAudioFolders={handleScanAudioFolders} onAlbumPress={handleAlbumPress} />
         )}
       </ScrollView>
     </>

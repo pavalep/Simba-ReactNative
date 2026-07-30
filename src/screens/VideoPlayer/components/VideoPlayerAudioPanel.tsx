@@ -16,10 +16,34 @@ export interface VideoPlayerAudioPanelProps {
     id: number;
     title?: string;
     lang?: string;
+    codec?: string;
     selected?: boolean;
   }>;
   activeAudioTrack: number | null;
   onSelectTrack: (trackId: number | null) => void;
+}
+
+/** Map language code → flag emoji for common languages */
+function langFlag(lang?: string): string {
+  if (!lang) return '';
+  const map: Record<string, string> = {
+    eng: '🇬🇧', en: '🇬🇧',
+    jpn: '🇯🇵', ja: '🇯🇵',
+    kor: '🇰🇷', ko: '🇰🇷',
+    chi: '🇨🇳', zh: '🇨🇳',
+    fre: '🇫🇷', fr: '🇫🇷',
+    ger: '🇩🇪', de: '🇩🇪',
+    spa: '🇪🇸', es: '🇪🇸',
+    por: '🇵🇹', pt: '🇵🇹',
+    rus: '🇷🇺', ru: '🇷🇺',
+    ara: '🇸🇦', ar: '🇸🇦',
+    hin: '🇮🇳', hi: '🇮🇳',
+    ita: '🇮🇹', it: '🇮🇹',
+    dut: '🇳🇱', nl: '🇳🇱',
+    pol: '🇵🇱', pl: '🇵🇱',
+    tur: '🇹🇷', tr: '🇹🇷',
+  };
+  return map[lang.toLowerCase()] ?? '';
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -70,6 +94,15 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
         },
         selectedRow: {
           backgroundColor: colors.accent.goldDim,
+          borderWidth: 1,
+          borderColor: colors.accent.gold,
+        },
+        codecBadge: {
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          borderRadius: 4,
+          backgroundColor: colors.border.subtle,
+          marginLeft: spacing.sm,
         },
         emptyState: {
           paddingVertical: spacing.lg,
@@ -114,6 +147,7 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
       }
       renderItem={({item: track}) => {
         const isSelected = track.id === activeAudioTrack;
+        const flag = langFlag(track.lang);
         return (
           <TouchableOpacity
             style={[styles.trackRow, isSelected && styles.selectedRow]}
@@ -122,12 +156,24 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
               style={isSelected ? styles.radioFilled : styles.radioOuter}
             />
             <View style={styles.trackInfo}>
-              <AppText variant="body2" color="primary">
-                {track.title || `Track ${track.id}`}
-              </AppText>
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                {flag ? (
+                  <AppText style={{marginRight: 6, fontSize: 16}}>
+                    {flag}
+                  </AppText>
+                ) : null}
+                <AppText variant="body2" color="primary">
+                  {track.title || `Track ${track.id}`}
+                </AppText>
+                {track.codec ? (
+                  <AppText variant="caption" color="tertiary" style={styles.codecBadge}>
+                    {track.codec.toUpperCase()}
+                  </AppText>
+                ) : null}
+              </View>
               {track.lang ? (
                 <AppText variant="caption" color="secondary">
-                  {track.lang}
+                  {flag ? `${track.lang}` : track.lang}
                 </AppText>
               ) : null}
             </View>

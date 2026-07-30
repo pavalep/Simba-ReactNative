@@ -8,31 +8,11 @@ const MEDIA_EXTENSIONS = new Set([
   '.mp3', '.flac', '.wav', '.aac', '.ogg',
 ]);
 
-function createMockItem(path: string, index: number): MediaItem {
-  const ext = path.slice(path.lastIndexOf('.')).toLowerCase();
-  const isVideo = ['.mp4', '.mkv', '.avi', '.mov', '.webm'].includes(ext);
-  return {
-    uri: `file:///mock/${path}/${index}`,
-    title: `Mock ${isVideo ? 'Video' : 'Audio'} ${index}`,
-    duration: Math.floor(Math.random() * 600) + 30,
-    type: isVideo ? 'video' : 'audio',
-    fileSize: Math.floor(Math.random() * 100_000_000) + 1_000_000,
-    dateAdded: new Date(
-      Date.now() - Math.floor(Math.random() * 30) * 86_400_000,
-    ).toISOString(),
-  };
-}
-
 async function scanFolder(path: string): Promise<MediaItem[]> {
-  const items: MediaItem[] = [];
-  let index = 0;
-  for (const ext of MEDIA_EXTENSIONS) {
-    for (let i = 0; i < 3; i++) {
-      items.push(createMockItem(`${path}/file${index}${ext}`, index));
-      index++;
-    }
-  }
-  return items;
+  // Real scanning would use native module to enumerate files.
+  // For now, return empty — actual scan is handled by the
+  // native media scanner service.
+  return [];
 }
 
 async function scanAllLinkedFolders(): Promise<MediaItem[]> {

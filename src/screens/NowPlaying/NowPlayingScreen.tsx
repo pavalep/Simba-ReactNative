@@ -5,17 +5,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  ActivityIndicator,
   RefreshControl,
   type GestureResponderEvent,
 } from 'react-native';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SimbaStatusBar} from '../../components/StatusBar';
-import type {NowPlayingScreenProps} from '../../navigation/types';
+import type {RootStackScreenProps} from '../../navigation/types';
+type NowPlayingScreenProps = RootStackScreenProps<'NowPlaying'>;
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 
 // ─── Constants ───────────────────────────────────────────────
@@ -312,7 +313,7 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.accent.gold} />
+          <ActivityOrb size={48} />
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>

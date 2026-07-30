@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
-  ActivityIndicator,
   Modal,
   TextInput,
   KeyboardAvoidingView,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {useAppDispatch, useAppSelector} from '../../store';
@@ -274,7 +274,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.accent.gold} />
+          <ActivityOrb size={48} />
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
@@ -329,7 +329,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route, navigation}) => {
             onPress={handleScan}
             disabled={isScanning}>
             {isScanning ? (
-              <ActivityIndicator color={colors.accent.gold} size="small" />
+              <ActivityOrb size={20} color={colors.accent.gold} />
             ) : (
               <AppText variant="body1" color="accent" style={{fontWeight: '600'}}>
                 Scan Folders

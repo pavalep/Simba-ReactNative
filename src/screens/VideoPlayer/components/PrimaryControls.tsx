@@ -15,6 +15,8 @@ export interface PrimaryControlsProps {
   onPlayPause: () => void;
   onPrev: () => void;
   onNext: () => void;
+  onRewind: () => void;
+  onForward: () => void;
   onSeek: (pct: number) => void;
   bottomInset: number;
 }
@@ -30,6 +32,8 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
   onPlayPause,
   onPrev,
   onNext,
+  onRewind,
+  onForward,
   onSeek,
   bottomInset,
 }) => {
@@ -37,6 +41,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
   const iconColor = '#EDEDED';
   const opacity = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
+  const playScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -44,6 +49,24 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
       Animated.timing(translateY, {toValue: visible ? 0 : 18, duration: 220, useNativeDriver: true}),
     ]).start();
   }, [opacity, translateY, visible]);
+
+  const handlePlayPressIn = React.useCallback(() => {
+    Animated.spring(playScale, {
+      toValue: 0.85,
+      useNativeDriver: true,
+      friction: 6,
+      tension: 120,
+    }).start();
+  }, [playScale]);
+
+  const handlePlayPressOut = React.useCallback(() => {
+    Animated.spring(playScale, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 4,
+      tension: 100,
+    }).start();
+  }, [playScale]);
 
   const styles = useMemo(
     () =>
@@ -114,18 +137,42 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           <SvgIcon name="skipBack" size={22} color={iconColor} />
         </TouchableOpacity>
 
-        {/* Play / Pause */}
+        {/* -10s rewind */}
         <TouchableOpacity
-          style={styles.playBtn}
-          onPress={onPlayPause}
+          style={styles.transportBtn}
+          onPress={onRewind}
           accessibilityRole="button"
-          accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
+          accessibilityLabel="Rewind 10 seconds"
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <SvgIcon
-            name={isPlaying ? 'pause' : 'play'}
-            size={24}
-            color={colors.text.inverse}
-          />
+          <SvgIcon name="skipBack" size={22} color={iconColor} />
+        </TouchableOpacity>
+
+        {/* Play / Pause */}
+        <Animated.View style={{transform: [{scale: playScale}]}}>
+          <TouchableOpacity
+            style={styles.playBtn}
+            onPress={onPlayPause}
+            onPressIn={handlePlayPressIn}
+            onPressOut={handlePlayPressOut}
+            accessibilityRole="button"
+            accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            <SvgIcon
+              name={isPlaying ? 'pause' : 'play'}
+              size={24}
+              color={colors.text.inverse}
+            />
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* +10s forward */}
+        <TouchableOpacity
+          style={styles.transportBtn}
+          onPress={onForward}
+          accessibilityRole="button"
+          accessibilityLabel="Forward 10 seconds"
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+          <SvgIcon name="skipForward" size={22} color={iconColor} />
         </TouchableOpacity>
 
         {/* Next */}

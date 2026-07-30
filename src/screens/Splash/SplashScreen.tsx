@@ -23,6 +23,7 @@ import {markLaunched} from '../../store/slices/settingsSlice';
 import type {RootStackParamList} from '../../navigation/types';
 import {SvgIcon} from '../../components/utility/SvgIcon/SvgIcon';
 import {useTheme} from '../../theme';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 
 const ANIMATION_DURATION = 1500;
 
@@ -36,9 +37,6 @@ export const SplashScreen: React.FC = () => {
   // Animated values
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoscale = useRef(new Animated.Value(0.85)).current;
-  const glowOpacity = useRef(new Animated.Value(0.4)).current;
-  const ringOpacity = useRef(new Animated.Value(0)).current;
-  const ringRotation = useRef(new Animated.Value(0)).current;
   const subtitleOpacity = useRef(new Animated.Value(0)).current;
   const promptOpacity = useRef(new Animated.Value(0)).current;
 
@@ -63,44 +61,11 @@ export const SplashScreen: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
         },
-        glow: {
-          position: 'absolute',
-          width: 220,
-          height: 220,
-          borderRadius: 110,
-          backgroundColor: colors.accent.goldDim,
-          opacity: 0.15,
-        },
         logoWrap: {
           width: 96,
           height: 96,
           alignItems: 'center',
           justifyContent: 'center',
-        },
-        ringWrap: {
-          position: 'absolute',
-          width: 130,
-          height: 130,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        ringTrack: {
-          width: 130,
-          height: 130,
-          borderRadius: 65,
-          borderWidth: 3,
-          borderColor: colors.accent.goldDim,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        ringFill: {
-          width: 130,
-          height: 130,
-          borderRadius: 65,
-          borderWidth: 3,
-          borderColor: 'transparent',
-          borderTopColor: colors.accent.gold,
-          position: 'absolute',
         },
         subtitle: {
           color: colors.accent.gold,
@@ -168,15 +133,6 @@ export const SplashScreen: React.FC = () => {
       }),
     ]).start();
 
-    // ── Ring: fade-in with delay (500-900ms) ──
-    Animated.timing(ringOpacity, {
-      toValue: 1,
-      duration: 400,
-      delay: 500,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-
     // ── Subtitle: fade-in with delay (900-1300ms) ──
     Animated.timing(subtitleOpacity, {
       toValue: 1,
@@ -186,42 +142,9 @@ export const SplashScreen: React.FC = () => {
       useNativeDriver: true,
     }).start();
 
-    // ── Rotation loop for loading ring ──
-    const rotationLoop = Animated.loop(
-      Animated.timing(ringRotation, {
-        toValue: 1,
-        duration: 1200,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    rotationLoop.start();
-
-    // ── Glow pulse loop ──
-    const glowLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowOpacity, {
-          toValue: 0.7,
-          duration: 600,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowOpacity, {
-          toValue: 0.4,
-          duration: 600,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    glowLoop.start();
-
     // ── Navigate after full animation ──
     const timer = setTimeout(() => {
       setShowPrompt(true);
-      // Stop loops on prompt
-      rotationLoop.stop();
-      glowLoop.stop();
       // Show prompt with fade-in
       Animated.timing(promptOpacity, {
         toValue: 1,
@@ -232,8 +155,6 @@ export const SplashScreen: React.FC = () => {
 
     return () => {
       clearTimeout(timer);
-      rotationLoop.stop();
-      glowLoop.stop();
     };
   }, []);
 
@@ -248,11 +169,6 @@ export const SplashScreen: React.FC = () => {
     navigation.reset({index: 0, routes: [{name: 'MainTabs'}]});
   };
 
-  const spin = ringRotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
   return (
     <View style={styles.container}>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
@@ -260,8 +176,8 @@ export const SplashScreen: React.FC = () => {
       <View style={styles.content}>
         {/* Logo stack */}
         <View style={styles.logoStack}>
-          {/* Gold glow */}
-          <Animated.View style={[styles.glow, {opacity: glowOpacity}]} />
+          {/* ActivityOrb behind the lion icon */}
+          <ActivityOrb size={220} />
           {/* Lion logo */}
           <Animated.View
             style={[
@@ -269,16 +185,6 @@ export const SplashScreen: React.FC = () => {
               {opacity: logoOpacity, transform: [{scale: logoscale}]},
             ]}>
             <SvgIcon name="lion" size={96} color={colors.accent.gold} />
-          </Animated.View>
-          {/* Loading ring */}
-          <Animated.View
-            style={[
-              styles.ringWrap,
-              {opacity: ringOpacity, transform: [{rotate: spin}]},
-            ]}>
-            <View style={styles.ringTrack}>
-              <View style={styles.ringFill} />
-            </View>
           </Animated.View>
         </View>
 

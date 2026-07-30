@@ -9,6 +9,7 @@ import {NotificationService} from '../../../services/notificationService';
 import {RootStackScreenProps} from '../../../navigation/types';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {savePlaybackPosition} from '../../../store/slices/sessionSlice';
+import {useBookmarks} from '../../../hooks/useBookmarks';
 import {
   addToPlaylist,
   removeFromPlaylist,
@@ -74,6 +75,55 @@ export function useAudioPlayerScreen(
   const [queueSheetVisible, setQueueSheetVisible] = useState(false);
   const [queueMultiSelect, setQueueMultiSelect] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // ── Bookmark state ──
+  const [bookmarkSheetVisible, setBookmarkSheetVisible] = useState(false);
+  const {
+    bookmarksForFile: audioBookmarksForFile,
+    bookmarkCountForFile: audioBookmarkCount,
+    add: addAudioBookmark,
+    remove: removeAudioBookmark,
+  } = useBookmarks(fileUri);
+
+  const handleOpenBookmarkSheet = useCallback(() => {
+    setBookmarkSheetVisible(true);
+  }, []);
+
+  const handleCloseBookmarkSheet = useCallback(() => {
+    setBookmarkSheetVisible(false);
+  }, []);
+
+  const handleBookmarkAdd = useCallback(
+    (label?: string) => {
+      const uri = fileUriRef.current;
+      if (!uri) return;
+      const position = MpvPlayer.getPosition?.() ?? 0;
+      const dur = MpvPlayer.getDuration?.() ?? 0;
+      if (position < 1) return;
+      addAudioBookmark({
+        fileUri: uri,
+        title,
+        position,
+        duration: dur,
+        label: label ?? '',
+        mediaType: 'audio',
+      });
+    },
+    [addAudioBookmark, title],
+  );
+
+  const handleBookmarkDelete = useCallback(
+    (id: string) => {
+      removeAudioBookmark(id);
+    },
+    [removeAudioBookmark],
+  );
+
+  const handleBookmarkJumpTo = useCallback((position: number) => {
+    try {
+      MpvPlayer.seekTo(position);
+    } catch {}
+  }, []);
 
   // ── Playlist state from Redux ──
   const playlist = useAppSelector(state => state.player.playlist);
@@ -547,6 +597,11 @@ export function useAudioPlayerScreen(
     isPlaying,
     relatedTracks,
 
+    // Bookmark state
+    bookmarkSheetVisible,
+    audioBookmarksForFile,
+    audioBookmarkCount,
+
     // Redux
     playlist,
     queue,
@@ -599,5 +654,12 @@ export function useAudioPlayerScreen(
     handleInfoAddToPlaylist,
     handlePlayRelatedTrack,
     handleRetry,
+
+    // Bookmark handlers
+    handleOpenBookmarkSheet,
+    handleCloseBookmarkSheet,
+    handleBookmarkAdd,
+    handleBookmarkDelete,
+    handleBookmarkJumpTo,
   };
 }

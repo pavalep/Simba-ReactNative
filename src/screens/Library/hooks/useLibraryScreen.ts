@@ -63,29 +63,6 @@ const SORT_SEGMENTS: Segment[] = [];
 /** Segments that show filter chips */
 const FILTER_SEGMENTS: Segment[] = [];
 
-// ── Dummy Data ──
-
-export const DUMMY_VIDEOS = [
-  {path: '/storage/emulated/0/Movies/Interstellar_4K.mp4', name: 'Interstellar_4K.mp4'},
-  {path: '/storage/emulated/0/Movies/Dark_Knight_Rises.mkv', name: 'Dark_Knight_Rises.mkv'},
-  {path: '/storage/emulated/0/Movies/Inception_Trailer.mp4', name: 'Inception_Trailer.mp4'},
-  {path: '/storage/emulated/0/Movies/Tenet_Final_Cut.mp4', name: 'Tenet_Final_Cut.mp4'},
-];
-
-export const DUMMY_AUDIO = [
-  {path: '/storage/emulated/0/Music/Hans_Zimmer_Cornfield_Chase.flac', name: 'Cornfield Chase.flac'},
-  {path: '/storage/emulated/0/Music/Ludwig_Goransson_Meeting_Kitty.mp3', name: 'Meeting Kitty.mp3'},
-  {path: '/storage/emulated/0/Music/Daft_Punk_Contact.wav', name: 'Contact.wav'},
-  {path: '/storage/emulated/0/Music/Interstellar_Main_Theme.m4a', name: 'Interstellar Theme.m4a'},
-];
-
-export const DUMMY_FOLDERS = [
-  {path: '/storage/emulated/0/Movies', name: 'Movies', count: 12},
-  {path: '/storage/emulated/0/Music', name: 'Music', count: 45},
-  {path: '/storage/emulated/0/Download', name: 'Download', count: 8},
-  {path: '/storage/emulated/0/DCIM/Camera', name: 'Camera', count: 24},
-];
-
 export const GRID_GAP = 8;
 
 // ── Hook ──
@@ -166,14 +143,14 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
 
   const handleArtistPress = useCallback(
     (artistName: string) => {
-      navigation.navigate('ArtistDetail', {artistName});
+      (navigation as any).navigate('ArtistScreen', {artistName});
     },
     [navigation],
   );
 
   const handleAlbumPress = useCallback(
     (albumTitle: string, artistName: string) => {
-      navigation.navigate('AlbumDetail', {albumTitle, artistName});
+      (navigation as any).navigate('AlbumScreen', {artistName, albumTitle});
     },
     [navigation],
   );

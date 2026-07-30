@@ -99,10 +99,14 @@ export interface SecondaryToolbarProps {
   loopMode: string;
   playlistLength: number;
   activeSubtitle: number | null;
+  subtitleVisible: boolean;
   activeAudioTrack: number | null;
+  subtitleLabel?: string;
+  audioLabel?: string;
   onToggleChapters: () => void;
   onToggleAudio: () => void;
   onToggleSubtitles: () => void;
+  onToggleSubtitleVisibility?: () => void;
   onToggleEq: () => void;
   onTogglePlaylist: () => void;
   onToggleQueue: () => void;
@@ -126,10 +130,14 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
   loopMode,
   playlistLength,
   activeSubtitle,
+  subtitleVisible,
   activeAudioTrack,
+  subtitleLabel,
+  audioLabel,
   onToggleChapters,
   onToggleAudio,
   onToggleSubtitles,
+  onToggleSubtitleVisibility,
   onToggleEq,
   onTogglePlaylist,
   onToggleQueue,
@@ -186,6 +194,23 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           gap: 6,
+        },
+        subtitleGroup: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+        },
+        visToggle: {
+          width: 32,
+          height: 24,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        visToggleText: {
+          fontSize: 9,
+          fontWeight: '700',
+          letterSpacing: 0.5,
         },
       }),
     [bottomInset],
@@ -258,14 +283,35 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
               icon="headphones"
               active={activeAudioTrack !== null}
               onPress={onToggleAudio}
-              label="Audio tracks"
+              label={audioLabel ? `Audio (${audioLabel})` : 'Audio tracks'}
             />
-            <ToolbarBtn
-              icon="subtitles"
-              active={activeSubtitle !== null}
-              onPress={onToggleSubtitles}
-              label="Subtitles"
-            />
+            <View style={styles.subtitleGroup}>
+              <ToolbarBtn
+                icon="subtitles"
+                active={activeSubtitle !== null}
+                onPress={onToggleSubtitles}
+                label={subtitleLabel ? `Subtitles (${subtitleLabel})` : 'Subtitles'}
+              />
+              {activeSubtitle !== null && onToggleSubtitleVisibility && (
+                <TouchableOpacity
+                  style={[
+                    styles.visToggle,
+                    {backgroundColor: subtitleVisible ? 'rgba(201,168,76,0.25)' : 'rgba(255,255,255,0.08)'},
+                  ]}
+                  onPress={onToggleSubtitleVisibility}
+                  activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle subtitle visibility">
+                  <Text
+                    style={[
+                      styles.visToggleText,
+                      {color: subtitleVisible ? '#C9A84C' : 'rgba(237,237,237,0.65)'},
+                    ]}>
+                    {subtitleVisible ? 'ON' : 'OFF'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <ToolbarBtn
               icon="sliders"
               active={eqEnabled}

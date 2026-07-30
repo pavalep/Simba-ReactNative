@@ -8,6 +8,7 @@ import {
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
+import {WaveformBars} from '../WaveformBars/WaveformBars';
 import type {ScanProgress, ScanHistory} from '../../../store/slices/mediaSlice';
 
 interface ScanProgressBannerProps {
@@ -178,11 +179,13 @@ export const ScanProgressBanner: React.FC<ScanProgressBannerProps> = ({
         {/* Header row: dot + label + cancel */}
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
-            <Animated.View
-              style={[
-                styles.dot,
-                {backgroundColor: colors.accent.gold, opacity: pulseAnim},
-              ]}
+            <WaveformBars
+              color={colors.accent.gold}
+              barCount={4}
+              barWidth={3}
+              height={16}
+              gap={2}
+              isPlaying={true}
             />
             <AppText variant="caption" color="accent" style={styles.label}>
               Scanning...

@@ -17,6 +17,9 @@ import {NoNetworkBanner} from './components/NoNetworkBanner';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {AppText} from '../../components/core/AppText/AppText';
 import {HomeBookmarksList} from './components/HomeBookmarksList';
+import {MovieCategoriesShelf} from './components/MovieCategoriesShelf';
+import {PodcastCategoriesShelf} from './components/PodcastCategoriesShelf';
+import {MusicCategoriesShelf} from './components/MusicCategoriesShelf';
 
 // ── Screen ──
 
@@ -35,11 +38,45 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     handleOpenMedia,
     handleItemPress,
     handlePlaylistPress,
+    handleSeeAll,
     handleSettingsPress,
     handleSearchPress,
     onRefresh,
     setHasError,
   } = useHomeScreen(navigation);
+
+  const handleMovieCategoryPress = useCallback(
+    (categoryId: string) => {
+      navigation.navigate('MoviesScreen', {categoryId});
+    },
+    [navigation],
+  );
+
+  const handleMovieSeeAll = useCallback(() => {
+    navigation.navigate('MoviesScreen', {});
+  }, [navigation]);
+
+  const handlePodcastCategoryPress = useCallback(
+    (categoryId: number) => {
+      navigation.navigate('PodcastsScreen', {categoryId});
+    },
+    [navigation],
+  );
+
+  const handlePodcastSeeAll = useCallback(() => {
+    navigation.navigate('PodcastsScreen', {});
+  }, [navigation]);
+
+  const handleMusicCategoryPress = useCallback(
+    (genre: string) => {
+      navigation.navigate('MusicScreen', {genre});
+    },
+    [navigation],
+  );
+
+  const handleMusicSeeAll = useCallback(() => {
+    navigation.navigate('MusicScreen', {});
+  }, [navigation]);
 
   // ── Render Item ──
   const renderSection = useCallback(
@@ -56,9 +93,37 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         case 'HERO':
           return item.data ? <FeaturedHeroBanner item={item.data} onPress={handleItemPress} /> : null;
         case 'SHELF':
-          return <HomeMediaShelf title={item.title} items={item.items} onItemPress={handleItemPress} />;
+          return (
+            <HomeMediaShelf
+              title={item.title}
+              items={item.items}
+              onItemPress={handleItemPress}
+              onSeeAll={item.seeAllRoute ? () => handleSeeAll(item.seeAllRoute!) : undefined}
+            />
+          );
         case 'PLAYLISTS':
           return <QuickAccessShelf title="Pinned Playlists" playlists={item.items} onPlaylistPress={handlePlaylistPress} />;
+        case 'MOVIES':
+          return (
+            <MovieCategoriesShelf
+              onCategoryPress={handleMovieCategoryPress}
+              onSeeAll={handleMovieSeeAll}
+            />
+          );
+        case 'PREFILLED_PODCASTS':
+          return (
+            <PodcastCategoriesShelf
+              onCategoryPress={handlePodcastCategoryPress}
+              onSeeAll={handlePodcastSeeAll}
+            />
+          );
+        case 'PREFILLED_MUSIC':
+          return (
+            <MusicCategoriesShelf
+              onCategoryPress={handleMusicCategoryPress}
+              onSeeAll={handleMusicSeeAll}
+            />
+          );
         case 'BOOKMARKS':
           return (
             <HomeBookmarksList
@@ -71,7 +136,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           return null;
       }
     },
-    [dispatch, greeting, handleItemPress, handlePlaylistPress],
+    [dispatch, greeting, handleItemPress, handlePlaylistPress, handlePodcastCategoryPress, handlePodcastSeeAll, handleMusicCategoryPress, handleMusicSeeAll],
   );
 
   if (hasError) {

@@ -10,6 +10,8 @@ interface Props {
   onQueue: () => void;
   onManage: () => void;
   onPlaylists: () => void;
+  onBookmark: () => void;
+  bookmarkCount?: number;
   colors: ColorTokens;
 }
 
@@ -18,6 +20,8 @@ export const AudioActionButtons: React.FC<Props> = ({
   onQueue,
   onManage,
   onPlaylists,
+  onBookmark,
+  bookmarkCount = 0,
   colors,
 }) => {
   const btnStyle = {
@@ -55,6 +59,18 @@ export const AudioActionButtons: React.FC<Props> = ({
         accessibilityRole="button">
         <SvgIcon name="sliders" size={20} color={colors.text.primary} />
         <AppText variant="caption" color="primary">Manage</AppText>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.actionBtn, btnStyle]}
+        onPress={onBookmark}
+        activeOpacity={0.7}
+        accessibilityLabel={bookmarkCount > 0 ? `${bookmarkCount} bookmarks` : 'Bookmark'}
+        accessibilityRole="button">
+        <SvgIcon name="bookmark" size={20} color={bookmarkCount > 0 ? colors.accent.gold : colors.text.primary} />
+        <AppText variant="caption" color="primary" style={{color: bookmarkCount > 0 ? colors.accent.gold : colors.text.primary}}>
+          {bookmarkCount > 0 ? `Bookmarks (${bookmarkCount})` : 'Bookmark'}
+        </AppText>
       </TouchableOpacity>
 
       <TouchableOpacity

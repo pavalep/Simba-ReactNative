@@ -13,9 +13,12 @@ import {useAppSelector} from '../../store';
 import {selectArtistDiscography} from '../../store/slices/mediaSlice';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import AudioWaveform from '../../components/player/AudioWaveform/AudioWaveform';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {radius} from '../../theme/tokens';
-import type {ArtistDetailScreenProps} from '../../navigation/types';
+import type {RootStackScreenProps} from '../../navigation/types';
+import type {PlaylistEntry} from '../../store/slices/playerSlice';
+type ArtistDetailScreenProps = RootStackScreenProps<'ArtistDetail'>;
 
 type Props = ArtistDetailScreenProps;
 
@@ -24,6 +27,8 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
+  const currentFile = useAppSelector(state => state.player.currentFile);
+  const playbackState = useAppSelector(state => state.player.playbackState);
   const tracks = useAppSelector(state =>
     selectArtistDiscography(state, artistName),
   );
@@ -319,12 +324,16 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           style={[styles.sectionTitle, {marginTop: 20}]}>
           All Tracks
         </AppText>
-        {allTracks.map((track, idx) => (
+        {allTracks.map((track, idx) => {
+          const isCurrentTrack = currentFile?.uri === track.uri;
+          const isTrackPlaying = isCurrentTrack && playbackState === 'playing';
+          return (
           <TouchableOpacity
             key={track.uri}
             style={[
               styles.trackItem,
               {borderBottomColor: colors.border.subtle},
+              isCurrentTrack && {backgroundColor: 'rgba(201,168,76,0.08)'},
               idx === allTracks.length - 1 && {borderBottomWidth: 0},
             ]}
             activeOpacity={0.7}
@@ -346,12 +355,17 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             <View
               style={[
                 styles.playIcon,
-                {backgroundColor: colors.accent.goldDim},
+                {backgroundColor: isCurrentTrack ? 'rgba(201,168,76,0.2)' : colors.accent.goldDim},
               ]}>
-              <SvgIcon name="play" size={14} color={colors.accent.gold} />
+              {isTrackPlaying ? (
+                <AudioWaveform isPlaying={true} color="#C9A84C" size={18} barWidth={2} barGap={2} />
+              ) : (
+                <SvgIcon name={isCurrentTrack ? 'volume' : 'play'} size={14} color={isCurrentTrack ? colors.accent.gold : colors.accent.gold} />
+              )}
             </View>
           </TouchableOpacity>
-        ))}
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );

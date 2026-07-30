@@ -1,7 +1,8 @@
 import React from 'react';
-import {TouchableOpacity, ActivityIndicator, View, StyleSheet} from 'react-native';
+import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import {AppText} from '../AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon/SvgIcon';
+import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
 
 export interface GoogleSignInButtonProps {
   onPress: () => void;
@@ -30,7 +31,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       accessibilityLabel="Sign in with Google"
       accessibilityState={{disabled: isDisabled}}>
       {loading ? (
-        <ActivityIndicator size="small" color="#5F6368" />
+        <ActivityOrb size={20} color="#5F6368" />
       ) : (
         <View style={styles.content}>
           <SvgIcon name="google" size={20} color="#4285F4" />

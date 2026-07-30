@@ -4,6 +4,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAppDispatch, useAppSelector} from '../../../store';
 import {CommonActions} from '@react-navigation/native';
 import {type HomeScreenProps} from '../../../navigation/types';
+import type {RootStackParamList} from '../../../navigation/types';
 import {pickMediaFile, getMediaType} from '../../../services/fileService';
 import {
   selectWeightedFeatured,
@@ -19,9 +20,12 @@ import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 export type HomeSection =
   | {type: 'GREETING'}
   | {type: 'HERO'; data: SessionEntry | null}
-  | {type: 'SHELF'; title: string; items: any[]}
+  | {type: 'SHELF'; title: string; items: any[]; seeAllRoute?: keyof RootStackParamList}
   | {type: 'PLAYLISTS'; items: any[]}
-  | {type: 'BOOKMARKS'; items: ReturnType<typeof selectBookmarks>};
+  | {type: 'BOOKMARKS'; items: ReturnType<typeof selectBookmarks>}
+  | {type: 'MOVIES'}
+  | {type: 'PREFILLED_PODCASTS'}
+  | {type: 'PREFILLED_MUSIC'};
 
 // ── Helpers ──
 
@@ -36,40 +40,6 @@ function getGreeting(): string {
 function isInProgress(item: SessionEntry): boolean {
   return item.position > 30 && item.position < item.duration - 5;
 }
-
-// ── Dummy Data ──
-
-const DUMMY_VIDEO_1 = 'https://picsum.photos/seed/simba1/800/450';
-const DUMMY_VIDEO_2 = 'https://picsum.photos/seed/simba2/800/450';
-const DUMMY_VIDEO_3 = 'https://picsum.photos/seed/simba3/800/450';
-const DUMMY_VIDEO_4 = 'https://picsum.photos/seed/simba4/800/450';
-const DUMMY_VIDEO_5 = 'https://picsum.photos/seed/simba5/800/450';
-const DUMMY_VIDEO_6 = 'https://picsum.photos/seed/simba6/800/450';
-
-const DUMMY_RECENT: SessionEntry[] = [
-  {fileUri: 'dummy1', title: 'The Silent Horizon', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_1, position: 0, duration: 7200, lastPlayedAt: new Date().toISOString()},
-  {fileUri: 'dummy2', title: 'Neon Velocity', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_2, position: 1200, duration: 5400, lastPlayedAt: new Date().toISOString()},
-  {fileUri: 'dummy3', title: 'Golden Echoes', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_3, position: 0, duration: 3600, lastPlayedAt: new Date().toISOString()},
-  {fileUri: 'dummy4', title: 'Urban Legend', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_4, position: 450, duration: 4800, lastPlayedAt: new Date().toISOString()},
-  {fileUri: 'dummy5', title: 'Midnight Protocol', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_5, position: 0, duration: 6000, lastPlayedAt: new Date().toISOString()},
-  {fileUri: 'dummy6', title: 'Shadow Realm', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_6, position: 0, duration: 9000, lastPlayedAt: new Date().toISOString()},
-  {fileUri: 'dummy7', title: 'Crystal Skies', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_1, position: 0, duration: 4200, lastPlayedAt: new Date().toISOString()},
-  {fileUri: 'dummy8', title: 'Stellar Voyager', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_4, position: 0, duration: 5100, lastPlayedAt: new Date().toISOString()},
-  {fileUri: 'dummy9', title: 'Crimson Tide', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_2, position: 0, duration: 3300, lastPlayedAt: new Date().toISOString()},
-  {fileUri: 'dummy10', title: 'Ethereal Dreams', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_3, position: 0, duration: 2400, lastPlayedAt: new Date().toISOString()},
-];
-
-const DUMMY_FOLDERS = [
-  {fileUri: 'dummy_f1', title: 'Cinematic Collection', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_5, position: 0, duration: 0},
-  {fileUri: 'dummy_f2', title: 'Personal Clips', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_6, position: 0, duration: 0},
-  {fileUri: 'dummy_f3', title: 'Documentaries', mediaType: 'video', thumbnailPath: DUMMY_VIDEO_1, position: 0, duration: 0},
-];
-
-const DUMMY_PLAYLISTS = [
-  {id: 'dp1', name: 'Late Night Chill', trackCount: 12, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString()},
-  {id: 'dp2', name: 'Epic Soundtracks', trackCount: 45, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString()},
-  {id: 'dp3', name: 'Travel Essentials', trackCount: 28, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString()},
-];
 
 // ── Hook ──
 
@@ -107,7 +77,6 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
 
   const handleItemPress = useCallback(
     (item: {mediaType?: string; fileUri: string; title: string; startPosition?: number; position?: number}) => {
-      if (item.fileUri.startsWith('dummy')) return;
       const screen = item.mediaType === 'audio' ? 'AudioPlayer' : 'VideoPlayer';
       navigation.dispatch(CommonActions.navigate({name: screen, params: {fileUri: item.fileUri, fileTitle: item.title, startPosition: item.startPosition ?? item.position}}));
     },
@@ -116,13 +85,20 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
 
   const handlePlaylistPress = useCallback(
     (playlistId: string) => {
-      navigation.dispatch(CommonActions.navigate({name: 'MainTabs', params: {screen: 'LibraryTab', params: {screen: 'PlaylistDetail', params: {playlistId}}}}));
+      navigation.dispatch(CommonActions.navigate({name: 'PlaylistDetail', params: {playlistId}}));
     },
     [navigation],
   );
 
   const handleSettingsPress = () => navigation.navigate('Settings', {screen: 'Settings', params: undefined});
   const handleSearchPress = () => navigation.navigate('Search');
+
+  const handleSeeAll = useCallback(
+    (routeName: keyof RootStackParamList) => {
+      navigation.navigate(routeName as any);
+    },
+    [navigation],
+  );
 
   // ── Compute Sections ──
   const sections = useMemo((): HomeSection[] => {
@@ -131,21 +107,22 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     const realSections: HomeSection[] = [
       {type: 'GREETING'},
       {type: 'HERO', data: cw},
+      {type: 'MOVIES'},
+      {type: 'PREFILLED_PODCASTS'},
+      {type: 'PREFILLED_MUSIC'},
     ];
 
     const otherRecent = recentFiles.filter(item => item.fileUri !== cw?.fileUri);
-    let shelfItems = [...otherRecent];
-    if (shelfItems.length < 10) {
-      shelfItems = [...shelfItems, ...DUMMY_RECENT.slice(0, 10 - shelfItems.length)];
-    }
-    realSections.push({type: 'SHELF', title: 'Recently Played', items: shelfItems.slice(0, 10)});
+    realSections.push({type: 'SHELF', title: 'Recently Played', items: otherRecent.slice(0, 10)});
 
-    const pinnedPlaylists = playlists.length > 0
-      ? [...playlists].sort((a, b) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime()).slice(0, 3)
-      : DUMMY_PLAYLISTS;
+    // "Recently Played" shelf offers "VIEW ALL → All Videos"
+    // (keeps seeAllRoute undefined so the button stays inactive for now)
+
+    const pinnedPlaylists = [...playlists]
+      .sort((a, b) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())
+      .slice(0, 3);
 
     realSections.push({type: 'PLAYLISTS', items: pinnedPlaylists});
-    realSections.push({type: 'SHELF', title: 'Media Folders', items: DUMMY_FOLDERS});
 
     if (bookmarks.length > 0) {
       realSections.push({type: 'BOOKMARKS', items: bookmarks});
@@ -175,6 +152,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     handleOpenMedia,
     handleItemPress,
     handlePlaylistPress,
+    handleSeeAll,
     handleSettingsPress,
     handleSearchPress,
     onRefresh,

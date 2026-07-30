@@ -224,12 +224,6 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
   if (lyrics.length === 0) {
     return (
       <View style={styles.container}>
-        <AppText
-          variant="caption"
-          color="secondary"
-          style={styles.sectionLabel}>
-          Lyrics
-        </AppText>
         <View style={styles.noLyrics}>
           <AppText variant="body2" color="secondary">
             No lyrics available
@@ -244,13 +238,6 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
 
   return (
     <View style={styles.container}>
-      <AppText
-        variant="caption"
-        color="secondary"
-        style={styles.sectionLabel}>
-        Lyrics
-      </AppText>
-
       <FlatList
         ref={flatListRef}
         data={lyrics}

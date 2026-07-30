@@ -10,13 +10,13 @@ import {
   SafeAreaView,
   useWindowDimensions,
   Platform,
-  ActivityIndicator,
   type StyleProp,
   type TextStyle,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
 import {SimbaStatusBar} from '../../components/StatusBar';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 
 import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
@@ -24,7 +24,8 @@ import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {useAppSelector} from '../../store';
 import {useSearch, SearchResultItem as SearchResultItemT} from '../../hooks/useSearch';
-import {SearchScreenProps} from '../../navigation/types';
+import type {RootStackScreenProps} from '../../navigation/types';
+type SearchScreenProps = RootStackScreenProps<'Search'>;
 import {radius, spacing} from '../../theme/tokens';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 
@@ -801,7 +802,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         {/* ── Loading ── */}
         {showResultsSection && isSearching && (
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={colors.accent.gold} />
+            <ActivityOrb size={48} />
           </View>
         )}
 

@@ -1,4 +1,4 @@
-import React, {useRef, useState, useCallback, useMemo} from 'react';
+import React, {useRef, useState, useCallback, useMemo, useEffect} from 'react';
 import {View, PanResponder, Animated, TouchableOpacity, StyleSheet, LayoutChangeEvent} from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
 import {useTheme} from '../../../theme';
@@ -61,10 +61,38 @@ const SeekBar: React.FC<SeekBarProps> = ({
   const [scrubFraction, setScrubFraction] = useState(0);
   const scrubFractionRef = useRef(0);
   const panAnim = useRef(new Animated.Value(0)).current;
+  const thumbScale = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(0)).current;
 
   const durationSec = duration || 1;
   const positionFrac = duration > 0 ? Math.min(position / duration, 1) : 0;
   const displayFraction = isScrubbing ? scrubFraction : positionFrac;
+
+  // ── Chapter marks pulse animation ──
+  useEffect(() => {
+    if (!chapters || chapters.length === 0) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [chapters, pulseAnim]);
+
+  const markOpacity = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 0.85],
+  });
 
   // ── PanResponder ──
   const panResponder = useMemo(
@@ -80,6 +108,12 @@ const SeekBar: React.FC<SeekBarProps> = ({
           scrubFractionRef.current = frac;
           panAnim.setValue(frac);
           setIsScrubbing(true);
+          Animated.spring(thumbScale, {
+            toValue: 1.7,
+            useNativeDriver: true,
+            friction: 6,
+            tension: 120,
+          }).start();
         },
 
         onPanResponderMove: (evt) => {
@@ -92,11 +126,23 @@ const SeekBar: React.FC<SeekBarProps> = ({
 
         onPanResponderRelease: () => {
           setIsScrubbing(false);
+          Animated.spring(thumbScale, {
+            toValue: 1,
+            useNativeDriver: true,
+            friction: 4,
+            tension: 100,
+          }).start();
           onSeek(scrubFractionRef.current);
         },
 
         onPanResponderTerminate: () => {
           setIsScrubbing(false);
+          Animated.spring(thumbScale, {
+            toValue: 1,
+            useNativeDriver: true,
+            friction: 4,
+            tension: 100,
+          }).start();
         },
       }),
     [onSeek, panAnim],
@@ -223,17 +269,23 @@ const SeekBar: React.FC<SeekBarProps> = ({
                 styles.chapterMarkTouch,
                 {left: `${pct}%`, top: trackHeight / 2 - 10},
               ]}>
-              <View style={[styles.chapterMark, {height: trackHeight - 4}]} />
+              <Animated.View
+                style={[
+                  styles.chapterMark,
+                  {height: trackHeight - 4, opacity: markOpacity},
+                ]}
+              />
             </TouchableOpacity>
           );
         })}
 
         {/* Thumb */}
         {displayFraction > 0 && (
-          <View
+          <Animated.View
             style={[
               styles.thumb,
               {left: `${displayFraction * 100}%`},
+              {transform: [{scale: thumbScale}]},
             ]}
           />
         )}

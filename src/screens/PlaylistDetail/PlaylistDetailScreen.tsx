@@ -27,7 +27,8 @@ import {
   playlistItemsToEntries,
 } from '../../store/slices/playerSlice';
 import {AppText} from '../../components/core/AppText/AppText';
-import {PlaylistDetailScreenProps} from '../../navigation/types';
+import type {RootStackScreenProps} from '../../navigation/types';
+type PlaylistDetailScreenProps = RootStackScreenProps<'PlaylistDetail'>;
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {PlaylistModal} from '../../features/playlists/components/PlaylistModal';
 import type {PlaylistItem} from '../../types/playlist';

@@ -162,16 +162,21 @@ WRONG:   <TouchableOpacity style={{ backgroundColor: '#C9A84C' }}>...</Touchable
 
 ---
 
-## 4. DETAILED 30-PHASE ELEVATION ROADMAP
+## 4. DETAILED ELEVATION ROADMAP (32 Phases)
 
 `
-WAVE 1: Auth and Foundation ──────── Phases 1-5    (Google login, hooks, animations, bookmarks)
+WAVE 0: Content API Foundation ────── Phase 0.1-0.4 (TMDB, TVMaze, iTunes, Podcast Index, Radio Browser,
+                                  MusicBrainz, LibriVox, Google Books, Deezer, IPTV-org,
+                                  Jamendo, Internet Archive)
+WAVE 1: Auth and Foundation ──────── Phases 1-5 (+3A)  (Google login, hooks, animations, i18n, bookmarks)
 WAVE 2: Video Player Excellence ───── Phases 6-10   (Netflix-quality VideoPlayer component)
 WAVE 3: Audio Player Excellence ───── Phases 11-15  (Spotify-quality AudioPlayer + mini player)
 WAVE 4: Dedicated Sub-Pages ──────── Phases 16-20  (Artist, Album, Song, Genre, Bookmarks screens)
 WAVE 5: Home and Library UX Flow ──── Phases 21-25  (See All nav, folder wizard, settings)
 WAVE 6: Polish and Working Beta ────── Phases 26-30  (Animations, perf, QA, production audit)
 `
+
+> **⛔ Phase 0 Dependency:** Phase 0 (Content API Foundation, all sub-phases 0.1-0.4) must be completed before Phase 15 and all subsequent waves. Phases 1-14 may proceed independently, but Waves 3-6 require Phase 0 data for content-rich screens (Artist, Album, Song, Genre, Search, Home recommendations).
 
 ---
 
@@ -251,16 +256,43 @@ WAVE 6: Polish and Working Beta ────── Phases 26-30  (Animations, pe
 - **WaveformBars:** 5 animated bars of varying heights (EQ style). Props: `color`, `barCount`, `isPlaying`. 0.8s loop.
 
 **Checklist:**
-- [ ] 3.1 ActivityOrb: 3 pulsing rings + center gold orb. Props: size, color, label
-- [ ] 3.2 PulseRing: expanding/fading ring. Props: size, color, delay
-- [ ] 3.3 WaveformBars: 5-bar EQ animation. Props: color, barCount, isPlaying
-- [ ] 3.4 `useAnimatedEntrance(count, delay)` hook: staggered Animated.Values array
-- [ ] 3.5 `animations.ts`: fadeIn, slideInUp, scaleIn, staggerChildren, springScale, pulseLoop
-- [ ] 3.6 All `ActivityIndicator` usages replaced with `ActivityOrb`
-- [ ] 3.7 LoadingOverlay uses ActivityOrb
-- [ ] 3.8 Library audio scan uses WaveformBars (thematic indicator)
-- [ ] 3.9 Splash screen orb extracted to reusable ActivityOrb
-- [ ] 3.10 All animations respect `reduceMotion` via `useAccessibility().reduceMotion`
+- [x] 3.1 ActivityOrb: 3 pulsing rings + center gold orb. Props: size, color, label
+- [x] 3.2 PulseRing: expanding/fading ring. Props: size, color, delay
+- [x] 3.3 WaveformBars: 5-bar EQ animation. Props: color, barCount, isPlaying
+- [x] 3.4 `useAnimatedEntrance(count, delay)` hook: staggered Animated.Values array
+- [x] 3.5 `animations.ts`: fadeIn, slideInUp, scaleIn, staggerChildren, springScale, pulseLoop
+- [x] 3.6 All `ActivityIndicator` usages replaced with `ActivityOrb`
+- [x] 3.7 LoadingOverlay uses ActivityOrb
+- [x] 3.8 Library audio scan uses WaveformBars (thematic indicator)
+- [x] 3.9 Splash screen orb extracted to reusable ActivityOrb
+- [x] 3.10 All animations respect `reduceMotion` via `useAccessibility().reduceMotion`
+
+---
+
+### PHASE 3A — i18n/Text Content Foundation (NEW)
+
+> **Added:** 2026-07-29
+> **Scope:** Centralize and standardize all ~350 user-facing UI strings across 26 screens
+
+**Goal:** Every hardcoded user-facing string extracted from screen TSX files into dedicated `textContent.ts` files. Enables future localization and ensures string consistency.
+
+**Key Deliverables:**
+- `src/constants/strings.ts` — 134 global/generic keys
+- `src/screens/<Screen>/textContent.ts` — per-screen string files (26 files, ~195 strings)
+- `src/types/textContent.ts` — shared `TextContent` type
+- `md/Text_Content_Reference.md` — comprehensive reference document
+
+**Checklist:**
+- [x] 3A.1 Audit all 26 screen folders — identify all hardcoded strings (~350 total)
+- [x] 3A.2 Create `textContent.ts` for each screen (~195 screen-specific strings)
+- [x] 3A.3 Add JSDoc comments to all 26 textContent.ts files describing screen purpose
+- [x] 3A.4 Create shared `TextContent` type in `src/types/textContent.ts`
+- [x] 3A.5 Create `md/Text_Content_Reference.md` — per-screen string inventory
+- [x] 3A.6 Use `as const` exports for TypeScript type safety on all textContent files
+- [x] 3A.7 Template strings use `{placeholder}` convention for dynamic values
+- [x] 3A.8 `src/constants/strings.ts` updated — 134 keys for global/generic strings
+- [x] 3A.9 Cross-reference UI_UX_Elevation_Progress_Tracker_v4.md with Text_Content_Reference.md
+- [x] 3A.10 Standardize pluralization pattern across all textContent files (`singularKey` / `pluralKey`)
 
 ---
 
@@ -288,16 +320,17 @@ interface Bookmark {
 - Continue Watching: auto last position, one per file, shown in Home hero
 
 **Checklist:**
-- [ ] 4.1 `bookmarkSlice.ts`: actions: add/remove/updateLabel/clearAll; selectors: selectBookmarksForFile/selectAllBookmarks
-- [ ] 4.2 `bookmarkService.ts`: saveBookmark/loadBookmarks/deleteBookmark — AsyncStorage key `simba_bookmarks`
-- [ ] 4.3 `useBookmarks(fileUri?)` hook: CRUD ops, bookmarksForFile, allBookmarks
-- [ ] 4.4 `BookmarkButton`: tap opens BookmarkSheet. Count badge if bookmarks exist.
-- [ ] 4.5 `BookmarkSheet`: "Save current position" with label input + existing bookmarks list
-- [ ] 4.6 `BookmarkItem`: blue icon, formatted time, label, relative date, delete button
-- [ ] 4.7 `BookmarkList`: FlatList, grouped by file, sorted by position
-- [ ] 4.8 `BookmarksScreen`: all bookmarks grouped by file, search/filter, tap => open at position
-- [ ] 4.9 Bookmarks persist via redux-persist (AsyncStorage)
-- [ ] 4.10 Accessible from: VideoPlayer top bar button, AudioPlayer three-dot submenu
+- [x] 4.1 `bookmarkSlice.ts`: actions: add/remove/updateLabel/clearAll; selectors: selectBookmarksForFile/selectAllBookmarks
+- [x] 4.2 `bookmarkService.ts`: saveBookmark/loadBookmarks/deleteBookmark — AsyncStorage key `simba_bookmarks`
+- [x] 4.3 `useBookmarks(fileUri?)` hook: CRUD ops, bookmarksForFile, allBookmarks
+- [x] 4.4 `BookmarkButton`: tap opens BookmarkSheet. Count badge if bookmarks exist.
+- [x] 4.5 `BookmarkSheet`: "Save current position" with label input + existing bookmarks list
+- [x] 4.6 `BookmarkItem`: formatted time, label, relative date, delete button
+- [x] 4.7 `BookmarkList`: FlatList, grouped by file, sorted by position
+- [x] 4.8 `BookmarksScreen`: all bookmarks grouped by file, search/filter, tap => open at position
+- [x] 4.9 Bookmarks persist via redux-persist (AsyncStorage)
+- [x] 4.10 VideoPlayer integrated: BookmarkSheet wired via TopBar bookmark icon
+- [x] 4.11 AudioPlayer integrated: BookmarkSheet wired via AudioActionButtons bookmark button
 
 ---
 
@@ -320,15 +353,15 @@ AboutScreen: undefined
 `
 
 **Checklist:**
-- [ ] 5.1 `types.ts`: all 10 new routes added
-- [ ] 5.2 `RootNavigator.tsx`: all new screens registered
-- [ ] 5.3 `useNavigation.ts` hook: typed navigate/goBack/push/reset
-- [ ] 5.4 Login screen in stack (before MainTabs if not authenticated)
-- [ ] 5.5 Deep links: `simba://artist/:id`, `simba://album/:id`, `simba://bookmarks`
-- [ ] 5.6 Back navigation from all new screens correct
-- [ ] 5.7 Home "See All" => AllVideosScreen, AllAudioScreen, AllPlaylistsScreen
-- [ ] 5.8 Library artist/album taps => ArtistScreen/AlbumScreen
-- [ ] 5.9 Tracks in Artist/Album screen => AudioPlayer or SongScreen
+- [x] 5.1 `types.ts`: all 10 new routes added
+- [x] 5.2 `RootNavigator.tsx`: all new screens registered
+- [x] 5.3 `useNavigation.ts` hook: typed navigate/goBack/push/reset
+- [x] 5.4 Login screen in stack (before MainTabs if not authenticated)
+- [x] 5.5 Deep links: `simbaplayer://artist/:artistName`, `simbaplayer://album/:albumName/:artistName`, `simbaplayer://bookmarks`
+- [x] 5.6 Back navigation from all new screens correct
+- [x] 5.7 Home "See All" => AllVideosScreen, AllAudioScreen, AllPlaylistsScreen
+- [x] 5.8 Library artist/album taps => ArtistScreen/AlbumScreen
+- [x] 5.9 Tracks in Artist/Album screen => AudioPlayer or SongScreen
 
 ---
 
@@ -357,18 +390,18 @@ interface VideoPlayerProps {
 `
 
 **Checklist:**
-- [ ] 6.1 `VideoPlayer.tsx` component: self-contained, accepts fileUri/title/callbacks
-- [ ] 6.2 `VideoPlayerScreen.tsx` < 80 lines: wraps VideoPlayer + screen concerns only
-- [ ] 6.3 `useVideoPlayerScreen.ts`: file URI from params, PiP lifecycle, bookmarks
-- [ ] 6.4 `VideoControls.tsx`: Netflix-style overlay, animated show/hide (fade + translateY)
-- [ ] 6.5 Controls auto-hide after 4s inactivity, re-appear on tap
-- [ ] 6.6 `VideoTopBar.tsx`: always visible — back, title (truncated), bookmark, more menu
-- [ ] 6.7 `VideoTransport.tsx`: always visible — prev, -10s, play/pause (gold, large), +10s, next
-- [ ] 6.8 `VideoSeekBar.tsx`: gold fill, white thumb, chapter markers, time labels
-- [ ] 6.9 `VideoSecondaryBar.tsx`: auto-hiding — chapters, subs, audio, EQ, playlist with text labels
-- [ ] 6.10 `DoubleTapFeedback.tsx`: animated pill +/-10s with chevrons (YouTube style)
-- [ ] 6.11 NO native rotation. Landscape via `useWindowDimensions` responsive layout
-- [ ] 6.12 Bookmark button: opens `BookmarkSheet` for current position
+- [x] 6.1 `VideoPlayer.tsx` component: self-contained, accepts fileUri/title/callbacks
+- [x] 6.2 `VideoPlayerScreen.tsx` < 80 lines: wraps VideoPlayer + screen concerns only
+- [x] 6.3 `useVideoPlayerScreen.ts`: file URI from params, PiP lifecycle, bookmarks
+- [x] 6.4 `VideoControls.tsx`: Netflix-style overlay, animated show/hide (fade + translateY)
+- [x] 6.5 Controls auto-hide after 4s inactivity, re-appear on tap
+- [x] 6.6 `VideoTopBar.tsx`: always visible — back, title (truncated), bookmark, more menu
+- [x] 6.7 `VideoTransport.tsx`: always visible — prev, -10s, play/pause (gold, large), +10s, next
+- [x] 6.8 `VideoSeekBar.tsx`: gold fill, white thumb, chapter markers, time labels
+- [x] 6.9 `VideoSecondaryBar.tsx`: auto-hiding — chapters, subs, audio, EQ, playlist with text labels
+- [x] 6.10 `DoubleTapFeedback.tsx`: animated pill +/-10s with chevrons (YouTube style)
+- [x] 6.11 NO native rotation. Landscape via `useWindowDimensions` responsive layout
+- [x] 6.12 Bookmark button: opens `BookmarkSheet` for current position
 
 ---
 
@@ -416,21 +449,151 @@ interface VideoPlayerProps {
 ### PHASE 10 — Video Player Polish
 
 **Checklist:**
-- [ ] 10.1 Controls show/hide: 300ms fade + translateY (not instant)
-- [ ] 10.2 Play/pause: spring scale press (0.85 => 1.0)
-- [ ] 10.3 Seek thumb: enlarges on touch (16px => 24px spring)
-- [ ] 10.4 Chapter marks: gentle pulse on seek bar
-- [ ] 10.5 Loading: ActivityOrb over video surface
-- [ ] 10.6 Buffering: thin gold shimmer bar at top (YouTube-style)
-- [ ] 10.7 Error: PlayerErrorFallback component
-- [ ] 10.8 End of video: "Replay" button overlay
-- [ ] 10.9 Volume/brightness pill: animated icon change
-- [ ] 10.10 Bookmark save: blue pulse animation on BookmarkButton
+- [x] 10.1 Controls show/hide: 300ms fade + translateY (not instant)
+- [x] 10.2 Play/pause: spring scale press (0.85 => 1.0)
+- [x] 10.3 Seek thumb: enlarges on touch (16px => 24px spring)
+- [x] 10.4 Chapter marks: gentle pulse on seek bar
+- [x] 10.5 Loading: ActivityOrb over video surface
+- [x] 10.6 Buffering: thin gold shimmer bar at top (YouTube-style)
+- [x] 10.7 Error: PlayerErrorFallback component
+- [x] 10.8 End of video: "Replay" button overlay
+- [x] 10.9 Volume/brightness pill: animated icon change
+- [x] 10.10 Bookmark save: blue pulse animation on BookmarkButton
 
 ---
 
 ### Wave 2 Gate Check
 **Required:** VideoPlayer is a standalone component in VideoPlayerScreen. Subtitle/audio track/chapter all functional. No native rotation. Polished animations.
+
+---
+
+## WAVE 0: Content API Foundation (Phases 0.1–0.4)
+
+> **⛔ Mandatory Prerequisite for WAVE 3+:** Phase 0 (all sub-phases 0.1–0.4) must be completed before proceeding to Phase 15 and all subsequent waves (Waves 3–6). Phases 1–10 and Phase 3A/4/5 may proceed independently, but Waves 3–6 require Phase 0 data for content-rich screens (ArtistScreen, AlbumScreen, SongScreen, GenreScreen, Search, Home recommendations).
+
+### Overview
+
+12 free APIs organized into 4 sub-phases. Sub-phases 0.1 and 0.2 provide metadata/discovery (posters, descriptions, schedules).
+Sub-phase 0.3 provides **actual playable streams** (live TV, full-length music, public-domain audio) consumable via libmpv.
+
+**Shared Infrastructure (all sub-phases):**
+- `src/services/api/apiClient.ts` — shared HTTP client (rate limiting, caching, 10s timeout, error normalization)
+- `src/constants/api.ts` — all base URLs, endpoint paths, default params, rate limit config
+- `src/services/api/index.ts` — barrel export
+- `src/constants/env.ts` — API key constants
+- `.env` — placeholder API keys
+- All services return typed results from `src/types/api.ts`
+
+---
+
+### PHASE 0.1 — Metadata & Discovery APIs
+
+**Goal:** Pull posters, descriptions, cast, genres, and metadata for movies and TV shows. These APIs provide data for browse/discovery UIs but do **not** return playable streams. TV show artwork via TVmaze, album artwork via MusicBrainz/Cover Art Archive.
+
+| Content Type | API | Auth | Free Tier | Key Features |
+|---|---|---|---|---|
+| Movies & TV Shows | [TMDB](https://developer.themoviedb.org) | API Key ✓ | Yes | Trending, Popular, Top Rated, Search, Posters, Backdrops, Cast, Genres, Trailers, Seasons/Episodes |
+| TV Shows (Schedules) | [TVMaze](https://www.tvmaze.com/api) | None | Yes | Episode schedules, Cast, Seasons, Air dates, Search |
+| Music (Metadata) | [MusicBrainz](https://musicbrainz.org/doc/MusicBrainz_API) | None | Yes | Artists, Albums, Track metadata, MBID lookup, Cover Art |
+| Books | [Google Books API](https://developers.google.com/books) | API Key ✓ | Yes | Books, Covers, Authors, Audiobook metadata, Search |
+
+**Files:**
+- `src/services/api/tmdbService.ts` — search movies/shows, getTrending, getPopular, getDetails, getRecommendations
+- `src/services/api/tvmazeService.ts` — search shows, getShowById, getEpisodeList, getSchedule
+- `src/services/api/musicbrainzService.ts` — search artists/albums, getArtistDiscography, getCoverArt
+- `src/services/api/googleBooksService.ts` — search books, getBookDetails
+
+**Checklist:**
+- [x] 0.1.1 `tmdbService.ts`: search movies/shows, getTrending, getPopular, getDetails (posters, backdrop, cast, genres, seasons), getRecommendations
+- [x] 0.1.2 `tvmazeService.ts`: search shows, getShowById, getEpisodeList, getSchedule (by date/country)
+- [x] 0.1.3 `musicbrainzService.ts`: search artists/albums, getArtistDiscography, getCoverArt (via Cover Art Archive)
+- [x] 0.1.4 `googleBooksService.ts`: search books, getBookDetails with covers, authors, description
+
+---
+
+### PHASE 0.2 — Search & Browse APIs
+
+**Goal:** Search and browse music, podcasts, radio, and audiobooks. Includes iTunes (metadata + 30s previews), Podcast Index (full episodes), Radio Browser (playable streams), LibriVox (full audiobooks), and Deezer (music metadata + 30s previews).
+
+| Content Type | API | Auth | Free Tier | Key Features |
+|---|---|---|---|---|
+| Music (Search) | [iTunes Search API](https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/) | None | Yes | Songs, Albums, Artists, Podcasts, Audiobooks search, 30s previews |
+| Music (Browse) | [Deezer API](https://developers.deezer.com/api) | API Key ✓ | Yes | Chart, Genre, Album, Artist, Track search + 30s previews |
+| Podcasts | [Podcast Index](https://podcastindex.org/) | API Key + Secret ✓ | Yes | Millions of podcasts, Episodes, Categories, Full episode audio |
+| Radio Stations | [Radio Browser](https://de1.api.radio-browser.info/) | None | Yes | Thousands of stations, Search by country/genre/language, **playable stream URLs** |
+| Audiobooks | [LibriVox](https://librivox.org/api/info) | None | Yes | Public-domain audiobooks, authors, genres, **full download links** |
+
+**Files:**
+- `src/services/api/itunesService.ts` — search songs/albums/artists/podcasts/audiobooks, getLookup by ID
+- `src/services/api/deezerService.ts` — search tracks/albums/artists, getChart, getGenre, getTrackById
+- `src/services/api/podcastIndexService.ts` — search podcasts/episodes, getTrending, getCategories, getEpisodesByPodcast
+- `src/services/api/radioBrowserService.ts` — search stations, getStationsByCountry/Genre/Language, getTopClick, getStationById
+- `src/services/api/librivoxService.ts` — search audiobooks by title/author, getAudiobookDetails with download URLs
+
+**Checklist:**
+- [x] 0.2.1 `itunesService.ts`: search songs/albums/artists/podcasts/audiobooks, getLookup by ID
+- [x] 0.2.2 `deezerService.ts`: search tracks/albums/artists, getChart, getGenre, getTrackById (30s preview URLs)
+- [x] 0.2.3 `podcastIndexService.ts`: search podcasts/episodes, getTrending, getCategories, getEpisodesByPodcast — **full episode audio**
+- [x] 0.2.4 `radioBrowserService.ts`: search stations, getStationsByCountry/Genre/Language, getTopClick, getStationById — **playable stream URLs**
+- [x] 0.2.5 `librivoxService.ts`: search audiobooks by title/author, getAudiobookDetails — **full MP3 downloads**
+
+---
+
+### PHASE 0.3 — Streaming Source APIs
+
+**Goal:** Provide **directly playable URLs** for libmpv — live TV channels, full-length free music, and public-domain audio archives. These APIs give SIMBA actual streaming content without requiring local files.
+
+| Content Type | API | Auth | Free Tier | Key Features |
+|---|---|---|---|---|
+| Live TV | [IPTV-org](https://github.com/iptv-org/iptv) | None | Yes | ~10,000 channels, M3U playlists, Sorted by country/category, **direct playable URLs** |
+| Full Music | [Jamendo](https://developer.jamendo.com/v3.0) | Client ID ✓ | Yes | Full-length CC-licensed tracks, Albums, Artists, Genres, **direct MP3/stream URLs** |
+| Audio Archive | [Internet Archive](https://archive.org/developers/internet-archive-audio-api.html) | None | Yes | Public-domain audio, old-time radio, concerts, speeches, **direct playable URLs** |
+
+**Files:**
+- `src/services/api/iptvService.ts` — fetch M3U playlists, getChannelsByCountry/Category, search channels, getChannelStreamUrl
+- `src/services/api/jamendoService.ts` — search tracks/albums/artists, getPopular, getGenreTracks, getTrackStreamUrl
+- `src/services/api/internetArchiveService.ts` — search audio items, getItemDetails, getItemStreamUrls
+
+**Checklist:**
+- [x] 0.3.1 `iptvService.ts`: fetch M3U playlists from IPTV-org GitHub, parse channels, search by name/country/category, return **playable stream URLs**
+- [x] 0.3.2 `jamendoService.ts`: search tracks/albums/artists, getPopular, getGenreTracks, return **full-length stream URLs** (MP3/streamable)
+- [x] 0.3.3 `internetArchiveService.ts`: search audio items, getItemDetails with track listings, return **direct audio stream URLs**
+
+---
+
+### PHASE 0.4 — Cross-API Integration & Search Aggregator
+
+**Goal:** Wire all APIs into the app — typed results, barrel exports, cross-API search, .env config, and validation.
+
+**Tasks:**
+- `src/types/api.ts` — shared interfaces for all API result types
+- `src/constants/api.ts` — config for all 12 APIs
+- `src/services/api/index.ts` — barrel export with disambiguated names
+- `src/services/api/searchAggregator.ts` — cross-API search runner
+- `.env` / `src/constants/env.ts` — API keys
+- `tsc --noEmit` verification
+
+**Env Keys:**
+```env
+TMDB_API_KEY=your_tmdb_api_key_here
+PODCAST_INDEX_API_KEY=your_podcast_index_api_key_here
+PODCAST_INDEX_API_SECRET=your_podcast_index_api_secret_here
+GOOGLE_BOOKS_API_KEY=your_google_books_api_key_here
+DEEZER_API_KEY=your_deezer_api_key_here
+JAMENDO_CLIENT_ID=your_jamendo_client_id_here
+```
+
+**Steps to Obtain New API Keys:**
+1. **Deezer:** Register at https://developers.deezer.com/ → Create App → Get Application ID → Use as `DEEZER_API_KEY`
+2. **Jamendo:** Register at https://developer.jamendo.com/ → Create App → Get Client ID → Use as `JAMENDO_CLIENT_ID`
+
+**Checklist:**
+- [x] 0.4.1 `src/types/api.ts`: all shared interfaces (`MovieResult`, `TVShowResult`, `MusicTrackResult`, `MusicAlbumResult`, `PodcastResult`, `PodcastEpisodeResult`, `RadioStationResult`, `AudiobookResult`, `BookResult`, `DeezerTrackResult`, `IPTVChannelResult`, `JamendoTrackResult`, `InternetArchiveItemResult`, `AggregatedSearchResults`, `ApiSearchOptions`, `ApiConfig`)
+- [x] 0.4.2 `src/constants/api.ts`: config for all 12 APIs (base URLs, rate limits, default params)
+- [x] 0.4.3 `src/services/api/index.ts`: barrel export with explicit aliases for colliding names
+- [x] 0.4.4 `src/services/api/searchAggregator.ts`: cross-API search — runs `Promise.allSettled` across compatible APIs, merges by content type
+- [x] 0.4.5 `.env` / `src/constants/env.ts`: all API keys with placeholder values
+- [x] 0.4.6 `npx tsc --noEmit` compiles with zero errors in Phase 0 code
 
 ---
 
@@ -441,30 +604,30 @@ interface VideoPlayerProps {
 **Goal:** Self-contained AudioPlayer component. AudioPlayerScreen is < 80 line wrapper. Spotify-quality design.
 
 **Checklist:**
-- [ ] 11.1 `AudioPlayer.tsx` component: self-contained, accepts fileUri/callbacks
-- [ ] 11.2 `AudioPlayerScreen.tsx` < 80 lines: only wraps `<AudioPlayer />`
-- [ ] 11.3 `useAudioPlayerScreen.ts`: file loading, queue, lyrics position, bookmarks
-- [ ] 11.4 `AudioGradientBg.tsx`: extracts dominant color from art, dynamic gradient background
-- [ ] 11.5 `AudioAlbumArt.tsx`: 80% width square, drop shadow + border radius
-- [ ] 11.6 Track changes: album art cross-fade + subtle scale animation
-- [ ] 11.7 Background gradient transitions smoothly on track change (600ms)
-- [ ] 11.8 `AudioActionRow.tsx`: heart (like toggle), share, three-dot (opens AudioSubMenu)
-- [ ] 11.9 Like/heart: spring bounce animation on toggle + haptic
-- [ ] 11.10 Bookmark accessible from three-dot submenu
+- [x] 11.1 `AudioPlayer.tsx` component: self-contained, accepts full hook data as props
+- [x] 11.2 `AudioPlayerScreen.tsx` < 80 lines: only wraps `<AudioPlayer />`
+- [x] 11.3 `useAudioPlayerScreen.ts`: file loading, queue, lyrics position, bookmarks
+- [x] 11.4 `AudioGradientBg.tsx`: extracts dominant color from art, dynamic gradient background
+- [x] 11.5 `AudioAlbumArt.tsx`: 80% width square, FastImage, border radius
+- [x] 11.6 Track changes: album art cross-fade + subtle scale animation
+- [x] 11.7 Background gradient transitions smoothly on track change (600ms)
+- [x] 11.8 `AudioActionRow.tsx`: heart (like toggle), share, three-dot (opens AudioSubMenu)
+- [x] 11.9 Like/heart: spring bounce animation on toggle + haptic
+- [x] 11.10 Bookmark accessible from three-dot submenu
 
 ---
 
 ### PHASE 12 — Audio Volume and Seek Controls
 
 **Checklist:**
-- [ ] 12.1 `AudioVolumeSlider.tsx`: horizontal slider, gold thumb, full-width, haptic at extremes
-- [ ] 12.2 Volume icon changes: muted/low/medium/high icons
-- [ ] 12.3 `AudioSeekBar.tsx`: Spotify-style, track thickens on touch (2px => 4px)
-- [ ] 12.4 Gold fill, white thumb, chapter dot marks on track
-- [ ] 12.5 Time labels: left = current, right = total (tap to toggle to remaining)
-- [ ] 12.6 Position label shown above thumb while dragging (SoundCloud style)
-- [ ] 12.7 Seek bar thumb: 16px normal, 20px while dragging (spring animation)
-- [ ] 12.8 Track returns to thin (2px) on release
+- [x] 12.1 `AudioVolumeSlider.tsx`: horizontal slider, gold thumb, full-width, haptic at extremes
+- [x] 12.2 Volume icon changes: muted/low/medium/high icons
+- [x] 12.3 `AudioSeekBar.tsx`: Spotify-style, track thickens on touch (2px => 4px)
+- [x] 12.4 Gold fill, white thumb, chapter dot marks on track
+- [x] 12.5 Time labels: left = current, right = total (tap to toggle to remaining)
+- [x] 12.6 Position label shown above thumb while dragging (SoundCloud style)
+- [x] 12.7 Seek bar thumb: 16px normal, 20px while dragging (spring animation)
+- [x] 12.8 Track returns to thin (2px) on release
 
 ---
 
@@ -480,50 +643,60 @@ interface VideoPlayerProps {
 - Song Info (navigates to SongScreen)
 
 **Checklist:**
-- [ ] 13.1 `AudioSubMenu.tsx`: BottomSheet, 7+ action rows, artwork + track name header
-- [ ] 13.2 Like/Unlike: haptic + gold animation
-- [ ] 13.3 Add to Playlist: opens PlaylistSheet (v3)
-- [ ] 13.4 Bookmark: opens BookmarkSheet to name + save position
-- [ ] 13.5 Sleep Timer: picker, sets auto-stop timer
-- [ ] 13.6 Audio Quality: codec/bitrate/sample rate/channels info card
-- [ ] 13.7 Share: React Native Share with track + artist
-- [ ] 13.8 Song Info: navigate to SongScreen
-- [ ] 13.9 `AudioQueuePeek.tsx`: "Up Next: [Track] - [Artist]" strip at bottom of player
-- [ ] 13.10 Tap AudioQueuePeek: opens QueueSheet (v3)
+- [x] 13.1 `AudioSubMenu.tsx`: BottomSheet, 7+ action rows, artwork + track name header
+- [x] 13.2 Like/Unlike: haptic + gold animation
+- [x] 13.3 Add to Playlist: opens PlaylistSheet (v3)
+- [x] 13.4 Bookmark: opens BookmarkSheet to name + save position
+- [x] 13.5 Sleep Timer: picker, sets auto-stop timer
+- [x] 13.6 Audio Quality: codec/bitrate/sample rate/channels info card
+- [x] 13.7 Share: React Native Share with track + artist
+- [x] 13.8 Song Info: navigate to SongScreen
+- [x] 13.9 `AudioQueuePeek.tsx`: "Up Next: [Track] - [Artist]" strip at bottom of player
+- [x] 13.10 Tap AudioQueuePeek: opens QueueSheet (v3)
 
 ---
 
 ### PHASE 14 — Mini Audio Player (Persistent)
 
+> **Prerequisite ⚠️ Navigation Refactoring (14.0):** The Mini Audio Player lives above the tab bar on Home and Library screens. All navigation screens except Home and Library must be moved from inside tab stacks to root-level peers so they render fullscreen without the bottom tab bar. This refactoring must be completed before Phase 14 implementation.
+> 
+> **Refactoring scope:**
+> - Move `Search`, `NowPlaying` out of `HomeStack` → root `RootStack`
+> - Move `FolderBrowser`, `PlaylistDetail`, `ArtistDetail`, `AlbumDetail` out of `LibraryStack` → root `RootStack`
+> - `HomeStack` and `LibraryStack` each contain only their primary screen (Home / Library)
+> - `TabNavigator` shows only `HomeTab` and `LibraryTab` — no nested sub-pages with tab bars
+> - Update all navigation types (`types.ts`), screen props, and navigate calls
+
 **Design:** 56px height bar above tab bar. Album art (40x40 rounded) + title + artist + prev/play/next. 2px gold progress line.
 
 **Checklist:**
-- [ ] 14.1 `MiniAudioPlayer.tsx`: 56px, above tab bar
-- [ ] 14.2 Shows: artwork (40x40 rounded), title, artist, prev/play/next buttons
-- [ ] 14.3 `MiniProgressBar.tsx`: 2px gold progress line at top of mini player
-- [ ] 14.4 `useMiniPlayer.ts` hook: isVisible, currentTrack, handlers from Redux playerSlice
-- [ ] 14.5 Appears with slide-up animation when audio starts
-- [ ] 14.6 Disappears with slide-down when audio stops
-- [ ] 14.7 Tap body: navigate to AudioPlayerScreen
-- [ ] 14.8 All screens: paddingBottom accounts for mini player height
-- [ ] 14.9 Glass bg: `rgba(18,18,20,0.95)` with border.subtle top border
-- [ ] 14.10 NOT shown when user is already on AudioPlayerScreen
+- [x] 14.0 Navigation Refactoring: Home + Library only in BottomTabs, rest as root peers
+- [x] 14.1 `MiniAudioPlayer.tsx`: 56px, above tab bar
+- [x] 14.2 Shows: artwork (40x40 rounded), title, artist, prev/play/next buttons
+- [x] 14.3 `MiniProgressBar.tsx`: 2px gold progress line at top of mini player
+- [x] 14.4 `useMiniPlayer.ts` hook: isVisible, currentTrack, handlers from Redux playerSlice
+- [x] 14.5 Appears with slide-up animation when audio starts
+- [x] 14.6 Disappears with slide-down when audio stops
+- [x] 14.7 Tap body: navigate to AudioPlayerScreen
+- [x] 14.8 All screens: paddingBottom accounts for mini player height
+- [x] 14.9 Glass bg: `rgba(18,18,20,0.95)` with border.subtle top border
+- [x] 14.10 NOT shown when user is already on AudioPlayerScreen
 
 ---
 
 ### PHASE 15 — Audio Waveform and Lyrics View
 
 **Checklist:**
-- [ ] 15.1 `AudioWaveform.tsx`: 5-bar EQ animation. Props: isPlaying, color, size
-- [ ] 15.2 Playing: bars animate with staggered heights. Paused: freeze at mid-height.
-- [ ] 15.3 Waveform in Library audio listings (small, replaces play icon when playing)
-- [ ] 15.4 Waveform in MiniAudioPlayer artwork area when playing
-- [ ] 15.5 `AudioLyricsView.tsx` ENHANCED: full-screen takeover (swipe-up from player)
-- [ ] 15.6 Active line: bright white. Inactive lines: dim/secondary text color.
-- [ ] 15.7 Auto-scroll: spring animation to active line
-- [ ] 15.8 Tap inactive line: seek to that lyric timestamp
-- [ ] 15.9 Lyrics/Queue toggle tab at top of swipe-up panel
-- [ ] 15.10 "No Lyrics" empty state: music note icon with subtle animation
+- [x] 15.1 `AudioWaveform.tsx`: 5-bar EQ animation. Props: isPlaying, color, size
+- [x] 15.2 Playing: bars animate with staggered heights. Paused: freeze at mid-height.
+- [x] 15.3 Waveform in Library audio listings (small, replaces play icon when playing)
+- [x] 15.4 Waveform in MiniAudioPlayer artwork area when playing
+- [x] 15.5 `AudioLyricsView.tsx` ENHANCED: full-screen takeover (swipe-up from player)
+- [x] 15.6 Active line: bright white. Inactive lines: dim/secondary text color.
+- [x] 15.7 Auto-scroll: spring animation to active line
+- [x] 15.8 Tap inactive line: seek to that lyric timestamp
+- [x] 15.9 Lyrics/Queue toggle tab at top of swipe-up panel
+- [x] 15.10 "No Lyrics" empty state: music note icon with subtle animation
 
 ---
 
@@ -561,16 +734,16 @@ Bio text... [Show more]
 `
 
 **Checklist:**
-- [ ] 16.1 ArtistScreen: ScrollView stacked sections, stagger entrance animation
-- [ ] 16.2 ArtistHeader: large gradient backdrop (from album art), artist initials avatar, name, stats
-- [ ] 16.3 ArtistDiscography: horizontal scroll album cards, tap => AlbumScreen
-- [ ] 16.4 ArtistTopTracks: top 5 by play count, "See All" => AllAudioScreen filtered by artist
-- [ ] 16.5 ArtistBio: expandable bio, placeholder if no data
-- [ ] 16.6 "Play All": loads all artist tracks into player queue
-- [ ] 16.7 "Shuffle": shuffled artist tracks into queue
-- [ ] 16.8 Track rows: number, title, album, duration, three-dot context menu
-- [ ] 16.9 Album cards: gradient overlay, name, year, track count
-- [ ] 16.10 ArtistHeader: parallax scroll effect
+- [x] 16.1 ArtistScreen: ScrollView stacked sections, stagger entrance animation
+- [x] 16.2 ArtistHeader: large gradient backdrop (from album art), artist initials avatar, name, stats
+- [x] 16.3 ArtistDiscography: horizontal scroll album cards, tap => AlbumScreen
+- [x] 16.4 ArtistTopTracks: top 5 by play count, "See All" => AllAudioScreen filtered by artist
+- [x] 16.5 ArtistBio: expandable bio, placeholder if no data
+- [x] 16.6 "Play All": loads all artist tracks into player queue
+- [x] 16.7 "Shuffle": shuffled artist tracks into queue
+- [x] 16.8 Track rows: number, title, album, duration, three-dot context menu
+- [x] 16.9 Album cards: gradient overlay, name, year, track count
+- [x] 16.10 ArtistHeader: parallax scroll effect
 
 ---
 
@@ -596,16 +769,16 @@ Bio text... [Show more]
 `
 
 **Checklist:**
-- [ ] 17.1 AlbumScreen: ScrollView, stagger entrance animation
-- [ ] 17.2 AlbumHero: blurred full-width bg + crisp centered album art
-- [ ] 17.3 AlbumMetaBar: year, track count, total duration, genre chips
-- [ ] 17.4 AlbumActionRow: Play All, Shuffle, Add to Playlist (three buttons)
-- [ ] 17.5 AlbumTrackList: numbered, duration, playing indicator, three-dot per track
-- [ ] 17.6 Tap track => AudioPlayer with full album as queue, starting from tapped track
-- [ ] 17.7 Currently playing: gold left accent + AudioWaveform icon
-- [ ] 17.8 Long-press track: Play Next, Add to Queue, Add to Playlist, Song Info
-- [ ] 17.9 Artist name tap => ArtistScreen
-- [ ] 17.10 AlbumHero: parallax scroll effect
+- [x] 17.1 AlbumScreen: ScrollView, stagger entrance animation
+- [x] 17.2 AlbumHero: blurred full-width bg + crisp centered album art
+- [x] 17.3 AlbumMetaBar: year, track count, total duration, genre chips
+- [x] 17.4 AlbumActionRow: Play All, Shuffle, Add to Playlist (three buttons)
+- [x] 17.5 AlbumTrackList: numbered, duration, playing indicator, three-dot per track
+- [x] 17.6 Tap track => AudioPlayer with full album as queue, starting from tapped track
+- [x] 17.7 Currently playing: gold left accent + AudioWaveform icon
+- [x] 17.8 Long-press track: Play Next, Add to Queue, Add to Playlist, Song Info
+- [x] 17.9 Artist name tap => ArtistScreen
+- [x] 17.10 AlbumHero: parallax scroll effect
 
 ---
 
@@ -638,14 +811,14 @@ File Path (tap to copy)
 `
 
 **Checklist:**
-- [ ] 18.1 SongScreen: scrollable detail page
-- [ ] 18.2 SongHero: artwork + animated waveform background overlay
-- [ ] 18.3 SongMetadata: duration, format, bitrate, sample rate, channels, genre, year, file size, path
-- [ ] 18.4 File path: tap to copy to clipboard with success toast
-- [ ] 18.5 SongBookmarks: bookmarks for this file, tap => open at position, "+" adds new
-- [ ] 18.6 SongActions: Play, Add to Playlist, Share, Add to Queue buttons (using AppButton)
-- [ ] 18.7 Lyrics preview: first 3 lines (if available), "View Full Lyrics" button
-- [ ] 18.8 useSongScreen: file metadata, bookmarks for URI, lyrics existence check
+- [x] 18.1 SongScreen: scrollable detail page
+- [x] 18.2 SongHero: artwork + animated waveform background overlay
+- [x] 18.3 SongMetadata: duration, format, bitrate, sample rate, channels, genre, year, file size, path
+- [x] 18.4 File path: tap to copy to clipboard with success toast
+- [x] 18.5 SongBookmarks: bookmarks for this file, tap => open at position, "+" adds new
+- [x] 18.6 SongActions: Play, Add to Playlist, Share, Add to Queue buttons (using AppButton)
+- [x] 18.7 Lyrics preview: first 3 lines (if available), "View Full Lyrics" button
+- [x] 18.8 useSongScreen: file metadata, bookmarks for URI, lyrics existence check
 
 ---
 
@@ -673,15 +846,15 @@ Song.mp3                     1 mark
 `
 
 **Checklist:**
-- [ ] 19.1 BookmarksScreen: SectionList grouped by file, tap => open file at position
-- [ ] 19.2 Section header: file name, file type icon, bookmark count badge
-- [ ] 19.3 Bookmark row: blue bookmark icon, formatted time, label, relative date
-- [ ] 19.4 Swipe bookmark left => delete with ConfirmDialog
-- [ ] 19.5 "Delete All" in top bar with ConfirmDialog
-- [ ] 19.6 Search/filter by label or file name
-- [ ] 19.7 useBookmarksScreen: selectAllBookmarks, grouped data, delete handlers
-- [ ] 19.8 Empty state: bookmark illustration, "Save your favorite moments" message
-- [ ] 19.9 Rows: staggered slide-in from right animation on enter
+- [x] 19.1 BookmarksScreen: SectionList grouped by file, tap => open file at position
+- [x] 19.2 Section header: file name, file type icon, bookmark count badge
+- [x] 19.3 Bookmark row: gold bookmark icon (theme accent), formatted time, label, relative date
+- [x] 19.4 Swipe bookmark left => delete with ConfirmDialog
+- [x] 19.5 "Delete All" in top bar with ConfirmDialog
+- [x] 19.6 Search/filter by label or file name
+- [x] 19.7 useBookmarksScreen: selectAllBookmarks, grouped data, delete handlers
+- [x] 19.8 Empty state: bookmark illustration, "Save your favorite moments" message
+- [x] 19.9 Rows: staggered slide-in from right animation on enter
 
 ---
 

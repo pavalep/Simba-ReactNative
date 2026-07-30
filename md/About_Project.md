@@ -1,5 +1,10 @@
 # Cine — React Native Mobile App
 
+> **⚠️ DEPRECATED**
+> This document analyzed the original Cine desktop app architecture to guide the mobile port.  
+> The project has since evolved into **SIMBA Player** — see [`UI_UX_Elevation_Specification_v4.md`](UI_UX_Elevation_Specification_v4.md) for the current spec.  
+> **Kept for historical reference only.**
+
 This document provides a comprehensive analysis of the **Cine desktop application** (built with Avalonia/.NET) and outlines everything that needs to be tackled when building the **React Native mobile version**.
 
 ---

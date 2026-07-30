@@ -4,6 +4,7 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -17,7 +18,7 @@ type Props = RootStackScreenProps<'Login'>;
 const {width} = Dimensions.get('window');
 const ORB_SIZE = width * 0.9;
 
-export const LoginScreen: React.FC<Props> = () => {
+export const LoginScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {pulseAnim, fadeAnim, isLoading, error, handleSignIn} =
@@ -76,6 +77,25 @@ export const LoginScreen: React.FC<Props> = () => {
               {error}
             </AppText>
           ) : null}
+
+          {/* Create account link */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Registration')}
+            activeOpacity={0.7}
+            disabled={isLoading}
+            hitSlop={{top: 12, bottom: 12, left: 24, right: 24}}>
+            <AppText
+              variant="bodySmall"
+              style={[styles.signUpLink, {color: colors.text.secondary}]}>
+              Don't have an account?{' '}
+              <AppText
+                variant="bodySmall"
+                color="accent"
+                style={styles.signUpAccent}>
+                Create One
+              </AppText>
+            </AppText>
+          </TouchableOpacity>
         </View>
       </Animated.View>
     </View>
@@ -119,5 +139,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     maxWidth: 260,
+  },
+  signUpLink: {
+    textAlign: 'center',
+  },
+  signUpAccent: {
+    fontWeight: '600',
   },
 });

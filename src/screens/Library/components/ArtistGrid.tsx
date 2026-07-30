@@ -8,24 +8,13 @@ import {AppCard} from '../../../components/core/AppCard/AppCard';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {spacing, radius} from '../../../theme/tokens';
 
-// ── Dummy data for empty library ──
-const DUMMY_ARTISTS = [
-  {name: 'Hans Zimmer', albumCount: 12, trackCount: 156},
-  {name: 'Ludwig Göransson', albumCount: 8, trackCount: 94},
-  {name: 'Daft Punk', albumCount: 4, trackCount: 52},
-  {name: 'Ramin Djawadi', albumCount: 10, trackCount: 128},
-  {name: 'John Williams', albumCount: 25, trackCount: 310},
-  {name: 'Joe Hisaishi', albumCount: 15, trackCount: 180},
-];
-
 interface ArtistGridProps {
   onArtistPress: (artistName: string) => void;
 }
 
 export const ArtistGrid: React.FC<ArtistGridProps> = ({onArtistPress}) => {
   const {colors} = useTheme();
-  const realArtists = useAppSelector(selectArtists);
-  const artists = realArtists.length > 0 ? realArtists : DUMMY_ARTISTS;
+  const artists = useAppSelector(selectArtists);
 
   return (
     <ScrollView showsVerticalScrollIndicator={false}>

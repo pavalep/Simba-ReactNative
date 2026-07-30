@@ -30,6 +30,11 @@ export const VolumeBrightnessOverlay: React.FC<
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const prevVisible = useRef(false);
 
+  // Icon morph: cross-fade between volume and brightness icons
+  const volumeIconOpacity = useRef(new Animated.Value(1)).current;
+  const brightnessIconOpacity = useRef(new Animated.Value(0)).current;
+  const prevTypeRef = useRef(type);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -79,6 +84,31 @@ export const VolumeBrightnessOverlay: React.FC<
     prevVisible.current = visible;
   }, [visible, opacityAnim]);
 
+  // Icon morph transition when type changes
+  useEffect(() => {
+    if (prevTypeRef.current !== type) {
+      const fadeOut = prevTypeRef.current === 'volume' ? volumeIconOpacity : brightnessIconOpacity;
+      const fadeIn = type === 'volume' ? volumeIconOpacity : brightnessIconOpacity;
+      Animated.parallel([
+        Animated.timing(fadeOut, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeIn, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      prevTypeRef.current = type;
+    } else {
+      // Initial state
+      volumeIconOpacity.setValue(type === 'volume' ? 1 : 0);
+      brightnessIconOpacity.setValue(type === 'brightness' ? 1 : 0);
+    }
+  }, [type, volumeIconOpacity, brightnessIconOpacity]);
+
   const clamped = Math.max(0, Math.min(100, value));
   const fillHeight = (clamped / 100) * BAR_HEIGHT;
   const isVolume = type === 'volume';
@@ -116,10 +146,15 @@ export const VolumeBrightnessOverlay: React.FC<
         ]}>
         {label}
       </AppText>
-      {/* Icon */}
-      <AppText style={styles.icon}>
-        {isVolume ? '\uD83D\uDD0A' : '\u2600\uFE0F'}
-      </AppText>
+      {/* Icon — cross-fade between volume 🔊 and brightness ☀️ */}
+      <View style={{width: 22, height: 22, marginTop: 4, alignItems: 'center', justifyContent: 'center'}}>
+        <Animated.View style={{position: 'absolute', opacity: volumeIconOpacity}}>
+          <AppText style={styles.icon}>{'\uD83D\uDD0A'}</AppText>
+        </Animated.View>
+        <Animated.View style={{position: 'absolute', opacity: brightnessIconOpacity}}>
+          <AppText style={styles.icon}>{'\u2600\uFE0F'}</AppText>
+        </Animated.View>
+      </View>
     </Animated.View>
   );
 };

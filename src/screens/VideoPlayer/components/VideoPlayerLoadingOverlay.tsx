@@ -1,7 +1,8 @@
 import React, {useMemo} from 'react';
-import {ActivityIndicator, View, StyleSheet} from 'react-native';
+import {View, StyleSheet} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
+import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 
 
 // ─── Props ───────────────────────────────────────────────────
@@ -57,7 +58,7 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
     <View style={styles.overlay}>
       <View style={styles.content}>
         <View style={styles.spinner}>
-          <ActivityIndicator size="large" color={colors.accent.gold} />
+          <ActivityOrb size={48} />
         </View>
         <AppText variant="body1" color="primary" style={styles.message}>
           {message}

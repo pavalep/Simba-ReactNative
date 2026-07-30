@@ -34,6 +34,7 @@ interface HomeMediaShelfProps {
   title: string;
   items: MediaItem[];
   onItemPress: (item: MediaItem) => void;
+  onSeeAll?: () => void;
   maxItems?: number;
 }
 
@@ -41,8 +42,9 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
   title,
   items,
   onItemPress,
+  onSeeAll,
   maxItems = 8,
-}) => {
+}: HomeMediaShelfProps) => {
   const {colors} = useTheme();
 
   if (items.length === 0) return null;
@@ -56,7 +58,7 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
         <AppText variant="h3" color="primary" style={styles.headerTitle}>
           {title}
         </AppText>
-        <TouchableOpacity activeOpacity={0.7} style={styles.seeAllBtn}>
+        <TouchableOpacity activeOpacity={0.7} style={styles.seeAllBtn} onPress={onSeeAll}>
           <AppText variant="overline" color="accent" style={styles.seeAllText}>
             VIEW ALL
           </AppText>

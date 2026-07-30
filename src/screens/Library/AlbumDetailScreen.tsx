@@ -15,7 +15,8 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {radius} from '../../theme/tokens';
-import type {AlbumDetailScreenProps} from '../../navigation/types';
+import type {RootStackScreenProps} from '../../navigation/types';
+type AlbumDetailScreenProps = RootStackScreenProps<'AlbumDetail'>;
 
 type Props = AlbumDetailScreenProps;
 

@@ -4,9 +4,9 @@ import {
   Switch,
   TouchableOpacity,
   View,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useNavigation} from '@react-navigation/native';
@@ -75,7 +75,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
 
       {isLoading ? (
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={colors.accent.gold} />
+          <ActivityOrb size={48} />
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>

@@ -11,6 +11,9 @@ import {spacing, radius} from '../../../theme/tokens';
 
 // ─── Props ───────────────────────────────────────────────────
 
+/** Subtitle format inferred from track metadata */
+type SubtitleFormat = 'SRT' | 'ASS' | 'VTT' | 'PGS' | 'SUB' | '';
+
 export interface VideoPlayerSubtitlePanelProps {
   subtitleTracks: Array<{
     id: number;
@@ -29,6 +32,22 @@ export interface VideoPlayerSubtitlePanelProps {
   onOpacityChange: (opacity: number) => void;
   subtitlePosition: number;
   onPositionChange: (position: number) => void;
+  subtitleTextColor?: string;
+  onTextColorChange?: (color: string) => void;
+  subtitleBgOpacity?: number;
+  onBgOpacityChange?: (opacity: number) => void;
+}
+
+/** Guess subtitle format from track title/name */
+function guessFormat(title?: string): SubtitleFormat {
+  if (!title) return '';
+  const t = title.toLowerCase();
+  if (t.includes('.srt') || t.includes('srt') || t.includes('subrip')) return 'SRT';
+  if (t.includes('.ass') || t.includes('ass') || t.includes('advanced')) return 'ASS';
+  if (t.includes('.vtt') || t.includes('vtt') || t.includes('webvtt')) return 'VTT';
+  if (t.includes('.pgs') || t.includes('pgs') || t.includes('hdmv')) return 'PGS';
+  if (t.includes('.sub') || t.includes('sub') || t.includes('microdvd')) return 'SUB';
+  return '';
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -46,8 +65,32 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
   onOpacityChange,
   subtitlePosition,
   onPositionChange,
+  subtitleTextColor = '#FFFFFF',
+  onTextColorChange,
+  subtitleBgOpacity = 0.5,
+  onBgOpacityChange,
 }) => {
   const {colors} = useTheme();
+
+  const PRESET_COLORS = useMemo(() => [
+    '#FFFFFF', // White (default)
+    '#FFE066', // Yellow
+    '#66D9FF', // Cyan
+    '#66FF99', // Green
+    '#FF66B2', // Pink
+  ], []);
+
+  const handleBgOpacityDown = useCallback(() => {
+    if (!onBgOpacityChange) return;
+    const newVal = Math.max(0.0, Math.round((subtitleBgOpacity - 0.1) * 10) / 10);
+    onBgOpacityChange(newVal);
+  }, [subtitleBgOpacity, onBgOpacityChange]);
+
+  const handleBgOpacityUp = useCallback(() => {
+    if (!onBgOpacityChange) return;
+    const newVal = Math.min(1.0, Math.round((subtitleBgOpacity + 0.1) * 10) / 10);
+    onBgOpacityChange(newVal);
+  }, [subtitleBgOpacity, onBgOpacityChange]);
 
   const handleOpacityDown = useCallback(() => {
     const newVal = Math.max(0.3, Math.round((subtitleOpacity - 0.1) * 10) / 10);
@@ -186,6 +229,29 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
         emptyState: {
           paddingVertical: spacing.lg,
         },
+        formatBadge: {
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          borderRadius: 4,
+          backgroundColor: colors.border.subtle,
+          marginLeft: spacing.sm,
+        },
+        colorRow: {
+          flexDirection: 'row',
+          gap: spacing.sm,
+          paddingVertical: spacing.xs,
+        },
+        colorSwatch: {
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          borderWidth: 2,
+          borderColor: colors.border.subtle,
+        },
+        colorSwatchActive: {
+          borderColor: colors.accent.gold,
+          borderWidth: 3,
+        },
       }),
     [colors],
   );
@@ -194,7 +260,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
     <ScrollView
       style={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
-      {/* Disable subtitles option */}
+      {/* Off option (always at top) */}
       <TouchableOpacity
         style={[styles.trackRow, activeSubtitle === null && styles.selectedRow]}
         onPress={() => onSelectTrack(null)}>
@@ -207,7 +273,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
         />
         <View style={styles.trackInfo}>
           <AppText variant="body2" color="primary">
-            Disable subtitles
+            Off
           </AppText>
         </View>
       </TouchableOpacity>
@@ -217,6 +283,7 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
       {/* Track list */}
       {subtitleTracks.map(track => {
         const isSelected = track.id === activeSubtitle;
+        const format = guessFormat(track.title);
         return (
           <TouchableOpacity
             key={track.id}
@@ -226,9 +293,16 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
               style={isSelected ? styles.radioFilled : styles.radioOuter}
             />
             <View style={styles.trackInfo}>
-              <AppText variant="body2" color="primary">
-                {track.title || `Track ${track.id}`}
-              </AppText>
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <AppText variant="body2" color="primary">
+                  {track.title || `Track ${track.id}`}
+                </AppText>
+                {format ? (
+                  <AppText variant="caption" color="tertiary" style={styles.formatBadge}>
+                    {format}
+                  </AppText>
+                ) : null}
+              </View>
               {track.lang ? (
                 <AppText variant="caption" color="secondary">
                   {track.lang}
@@ -354,6 +428,52 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Text color (5 presets) */}
+      {onTextColorChange && (
+        <View style={styles.styleRow}>
+          <AppText variant="body2" color="primary">
+            Text Color
+          </AppText>
+          <View style={styles.colorRow}>
+            {PRESET_COLORS.map(color => {
+              const isActive = subtitleTextColor === color;
+              return (
+                <TouchableOpacity
+                  key={color}
+                  onPress={() => onTextColorChange(color)}
+                  style={[
+                    styles.colorSwatch,
+                    {backgroundColor: color},
+                    isActive && styles.colorSwatchActive,
+                  ]}
+                  accessibilityLabel={`Text color ${color}`}
+                />
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* Background opacity */}
+      {onBgOpacityChange && (
+        <View style={styles.styleRow}>
+          <AppText variant="body2" color="primary">
+            BG Opacity
+          </AppText>
+          <View style={{flexDirection: 'row', alignItems: 'center', gap: spacing.sm}}>
+            <TouchableOpacity style={styles.opacityBtn} onPress={handleBgOpacityDown}>
+              <AppText variant="body2" color="secondary">-</AppText>
+            </TouchableOpacity>
+            <AppText variant="body2" color="primary" style={styles.opacityValue}>
+              {subtitleBgOpacity.toFixed(1)}
+            </AppText>
+            <TouchableOpacity style={styles.opacityBtn} onPress={handleBgOpacityUp}>
+              <AppText variant="body2" color="secondary">+</AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 };

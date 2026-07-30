@@ -22,8 +22,10 @@ import {
   getFileName,
   getMediaType,
 } from '../../../services/fileService';
+import {loadSubtitleSettings, saveSubtitleSettings} from '../../../services/subtitleSettingsService';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {savePlaybackPosition, addBookmark} from '../../../store/slices/sessionSlice';
+import {savePlaybackPosition} from '../../../store/slices/sessionSlice';
+import {useBookmarks} from '../../../hooks/useBookmarks';
 import {
   addToPlaylist,
   removeFromPlaylist,
@@ -101,6 +103,8 @@ export function useVideoPlayerScreen(
   const [subtitleFontSize, setSubtitleFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [subtitleOpacity, setSubtitleOpacity] = useState(1);
   const [subtitlePosition, setSubtitlePosition] = useState(90);
+  const [subtitleTextColor, setSubtitleTextColor] = useState<string>('#FFFFFF');
+  const [subtitleBgOpacity, setSubtitleBgOpacity] = useState(0.5);
 
   // ── Audio track state ──
   const [audioTracks, setAudioTracks] = useState<MpvTrack[]>([]);
@@ -111,6 +115,31 @@ export function useVideoPlayerScreen(
   const [speed, setSpeed] = useState(1);
   const [speedPanelOpen, setSpeedPanelOpen] = useState(false);
   const [bookmarkSaved, setBookmarkSaved] = useState(false);
+  const [bookmarkSheetVisible, setBookmarkSheetVisible] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [showReplay, setShowReplay] = useState(false);
+
+  // ── Refs (declared before useBookmarks due to value dependency) ──
+  const isSeeking = useRef(false);
+  const fileUriRef = useRef<string | undefined>(fileUri);
+  const titleRef = useRef(title);
+  const trackMetaRef = useRef({artist: '', album: '', albumArtUri: ''});
+  const resumeSeekDone = useRef(false);
+  const resumeTargetRef = useRef<number | null>(null);
+  const hasSeenFirstPositionRef = useRef(false);
+  const loadingPhaseRef = useRef(loadingPhase);
+  const loadingFallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const overlayHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pushPositionRef = useRef<(pos: number) => void>((_: number) => {});
+
+  const fileUriForHook = fileUriRef.current ?? '';
+  const {
+    bookmarksForFile,
+    bookmarkCountForFile,
+    add: addBookmarkEntry,
+    remove: removeBookmarkEntry,
+    updateLabel: updateBookmarkLabelEntry,
+  } = useBookmarks(fileUriForHook);
 
   // ── Equalizer state ──
   const [eqGains, setEqGains] = useState<number[]>([...FLAT]);
@@ -158,19 +187,6 @@ export function useVideoPlayerScreen(
   // ── Expanded mode (view rotation, not device rotation) ──
   const [isLandscape, setIsLandscape] = useState(false);
   const {width: screenWidth, height: screenHeight} = useWindowDimensions();
-
-  // ── Refs ──
-  const isSeeking = useRef(false);
-  const fileUriRef = useRef<string | undefined>(fileUri);
-  const titleRef = useRef(title);
-  const trackMetaRef = useRef({artist: '', album: '', albumArtUri: ''});
-  const resumeSeekDone = useRef(false);
-  const resumeTargetRef = useRef<number | null>(null);
-  const hasSeenFirstPositionRef = useRef(false);
-  const loadingPhaseRef = useRef(loadingPhase);
-  const loadingFallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const overlayHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pushPositionRef = useRef<(pos: number) => void>((_: number) => {});
 
   // ── Redux ──
   const rememberPosition = useAppSelector(
@@ -275,6 +291,18 @@ export function useVideoPlayerScreen(
   useEffect(() => { sessionRecentRef.current = sessionRecent; }, [sessionRecent]);
   useEffect(() => { loadingPhaseRef.current = loadingPhase; }, [loadingPhase]);
 
+  // ── Load persisted subtitle settings on mount ──
+  useEffect(() => {
+    (async () => {
+      const settings = await loadSubtitleSettings();
+      setSubtitleFontSize(settings.fontSize);
+      setSubtitleOpacity(settings.opacity);
+      setSubtitlePosition(settings.position);
+      setSubtitleTextColor(settings.textColor);
+      setSubtitleBgOpacity(settings.bgOpacity);
+    })();
+  }, []);
+
   // ── Derived ──
   const savedEntry = fileUri && rememberPosition
     ? sessionRecent.find(f => f.fileUri === fileUri)
@@ -307,6 +335,13 @@ export function useVideoPlayerScreen(
   }, [fileUri, navigation]);
 
   // ── Back / Cleanup ──
+  const handleReplay = useCallback(() => {
+    setShowReplay(false);
+    setError(null);
+    MpvPlayer.seekTo(0);
+    MpvPlayer.resume();
+  }, []);
+
   const handleGoBack = useCallback(() => {
     const curUri = fileUriRef.current;
     const curPos = MpvPlayer.getPosition?.() ?? 0;
@@ -440,25 +475,40 @@ export function useVideoPlayerScreen(
     setSpeedPanelOpen(false);
   }, []);
 
-  const handleAddBookmark = useCallback(() => {
-    const uri = fileUriRef.current;
-    if (!uri) return;
-    const position = MpvPlayer.getPosition?.() ?? 0;
-    const duration = MpvPlayer.getDuration?.() ?? 0;
-    if (position < 1) return;
-    const recent = sessionRecentRef.current.find(entry => entry.fileUri === uri);
-    dispatch(addBookmark({
-      id: `bookmark-${uri}-${Math.round(position)}`,
-      fileUri: uri,
-      title: titleRef.current,
-      position,
-      duration,
-      createdAt: new Date().toISOString(),
-      thumbnailPath: recent?.thumbnailPath,
-      mediaType: getMediaType(uri),
-    }));
-    setBookmarkSaved(true);
-  }, [dispatch]);
+  const handleAddBookmark = useCallback(
+    (label?: string) => {
+      const uri = fileUriRef.current;
+      if (!uri) return;
+      const position = MpvPlayer.getPosition?.() ?? 0;
+      const duration = MpvPlayer.getDuration?.() ?? 0;
+      if (position < 1) return;
+      addBookmarkEntry({
+        fileUri: uri,
+        title: titleRef.current,
+        position,
+        duration,
+        label: label ?? '',
+        mediaType: getMediaType(uri),
+      });
+      setBookmarkSaved(true);
+    },
+    [addBookmarkEntry],
+  );
+
+  const handleOpenBookmarkSheet = useCallback(() => {
+    setBookmarkSheetVisible(true);
+  }, []);
+
+  const handleCloseBookmarkSheet = useCallback(() => {
+    setBookmarkSheetVisible(false);
+  }, []);
+
+  const handleBookmarkJumpTo = useCallback(
+    (position: number) => {
+      MpvPlayer.seekTo(position);
+    },
+    [],
+  );
 
   // ── Gesture handlers ──
   const handleDoubleTapLeft = useCallback(() => {
@@ -592,16 +642,31 @@ export function useVideoPlayerScreen(
   const handleFontSizeChange = useCallback((size: 'small' | 'medium' | 'large') => {
     setSubtitleFontSize(size);
     MpvPlayer.setProperty('sub-font-size', size === 'small' ? 22 : size === 'large' ? 38 : 30);
+    saveSubtitleSettings({fontSize: size});
   }, []);
 
   const handleOpacityChange = useCallback((opacity: number) => {
     setSubtitleOpacity(opacity);
     MpvPlayer.setProperty('sub-opacity', opacity);
+    saveSubtitleSettings({opacity});
   }, []);
 
   const handleSubtitlePositionChange = useCallback((position: number) => {
     setSubtitlePosition(position);
     MpvPlayer.setProperty('sub-pos', position);
+    saveSubtitleSettings({position});
+  }, []);
+
+  // ── Subtitle style sheet ──
+  const handleTextColorChange = useCallback((color: string) => {
+    setSubtitleTextColor(color);
+    MpvPlayer.setProperty('sub-color', color);
+    saveSubtitleSettings({textColor: color});
+  }, []);
+
+  const handleBgOpacityChange = useCallback((opacity: number) => {
+    setSubtitleBgOpacity(opacity);
+    saveSubtitleSettings({bgOpacity: opacity});
   }, []);
 
   // ── Audio track ──
@@ -1163,7 +1228,11 @@ export function useVideoPlayerScreen(
     });
 
     const unsubEnd = MpvPlayer.on('onEndReached', () => {
-      // TransportProvider handles isPlaying state
+      setShowReplay(true);
+    });
+
+    const unsubBuffering = MpvPlayer.on('onBuffering', ({percent}) => {
+      setIsBuffering(percent > 0 && percent < 100);
     });
 
     const unsubError = MpvPlayer.on('onError', ({message: errMsg}) => {
@@ -1207,6 +1276,7 @@ export function useVideoPlayerScreen(
       unsubSpeed();
       unsubFile();
       unsubEnd();
+      unsubBuffering();
       unsubError();
       unsubTracks();
       unsubNotifPlayPause();
@@ -1218,6 +1288,19 @@ export function useVideoPlayerScreen(
   }, [isReady, savedEntry, requestedStartPosition, dispatch, handlePlayPause, handleNext, handlePrev, handleGoBack]);
 
   // ── Return ──
+  // ── Computed labels for toolbar ──
+  const subtitleLabel = useMemo(() => {
+    if (activeSubtitle === null) {return '';}
+    const track = subtitleTracks.find(t => Number(t.id) === activeSubtitle);
+    return track?.lang?.toUpperCase() || track?.title || '';
+  }, [activeSubtitle, subtitleTracks]);
+
+  const audioLabel = useMemo(() => {
+    if (activeAudioTrack === null) {return '';}
+    const track = audioTracks.find(t => Number(t.id) === activeAudioTrack);
+    return track?.lang?.toUpperCase() || track?.title || '';
+  }, [activeAudioTrack, audioTracks]);
+
   return {
     // Theme & layout
     colors,
@@ -1246,6 +1329,8 @@ export function useVideoPlayerScreen(
     subtitleFontSize,
     subtitleOpacity,
     subtitlePosition,
+    subtitleTextColor,
+    subtitleBgOpacity,
 
     // Audio track state
     audioTracks,
@@ -1259,6 +1344,9 @@ export function useVideoPlayerScreen(
     speedPanelOpen,
     setSpeedPanelOpen,
     bookmarkSaved,
+    bookmarkSheetVisible,
+    bookmarksForFile,
+    bookmarkCountForFile,
 
     // Equalizer state
     eqGains,
@@ -1349,6 +1437,10 @@ export function useVideoPlayerScreen(
     handleVolumeValueChange,
     handleSpeedSelect,
     handleAddBookmark,
+    handleOpenBookmarkSheet,
+    handleCloseBookmarkSheet,
+    handleBookmarkJumpTo,
+    handleRemoveBookmark: removeBookmarkEntry,
 
     // Gesture handlers
     handleDoubleTapLeft,
@@ -1380,9 +1472,15 @@ export function useVideoPlayerScreen(
     handleFontSizeChange,
     handleOpacityChange,
     handleSubtitlePositionChange,
+    handleTextColorChange,
+    handleBgOpacityChange,
 
     // Audio track handlers
     handleSelectAudioTrack,
+
+    // Toolbar labels
+    subtitleLabel,
+    audioLabel,
 
     // Equalizer handlers
     handleBandChange,

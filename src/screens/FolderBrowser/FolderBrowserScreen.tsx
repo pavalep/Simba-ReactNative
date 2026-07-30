@@ -5,15 +5,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import LinearGradient from 'react-native-linear-gradient';
 import RNFS from 'react-native-fs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {AppText} from '../../components/core/AppText/AppText';
-import {FolderBrowserScreenProps} from '../../navigation/types';
+import type {RootStackScreenProps} from '../../navigation/types';
+type FolderBrowserScreenProps = RootStackScreenProps<'FolderBrowser'>;
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {addItemToPlaylist, createPlaylist} from '../../store/slices/playlistSlice';
 import {PlaylistContextMenu} from '../../components/playlist/PlaylistContextMenu';
@@ -535,7 +536,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       {renderBreadcrumbs()}
       {loading && items.length === 0 ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={colors.accent.gold} />
+          <ActivityOrb size={48} />
         </View>
       ) : (
         <FlatList

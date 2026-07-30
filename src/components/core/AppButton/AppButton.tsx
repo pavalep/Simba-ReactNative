@@ -2,7 +2,6 @@ import React, {useMemo} from 'react';
 import {
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   View,
   ViewStyle,
   TextStyle,
@@ -10,6 +9,7 @@ import {
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../AppText/AppText';
+import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'text';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -112,7 +112,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
       accessibilityLabel={loading ? `${title}, loading` : title}
       accessibilityHint={hint}>
       {loading ? (
-        <ActivityIndicator color={txtColor} />
+        <ActivityOrb size={16} color={txtColor} />
       ) : (
         <View style={[styles.inner, {flexDirection: iconPosition === 'right' ? 'row-reverse' : 'row'}]}>
           {icon && <View style={styles.iconSlot}>{icon}</View>}

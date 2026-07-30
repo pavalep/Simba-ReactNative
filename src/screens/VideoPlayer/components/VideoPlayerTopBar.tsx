@@ -37,6 +37,8 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
   const iconMuted = 'rgba(237,237,237,0.65)';
   const opacity = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
+  const bookmarkPulse = useRef(new Animated.Value(1)).current;
+  const prevBookmarkActive = useRef(bookmarkActive);
 
   useEffect(() => {
     Animated.parallel([
@@ -44,6 +46,27 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
       Animated.timing(translateY, {toValue: visible ? 0 : -14, duration: 220, useNativeDriver: true}),
     ]).start();
   }, [opacity, translateY, visible]);
+
+  // Bookmark pulse animation when bookmark is saved
+  useEffect(() => {
+    if (bookmarkActive && !prevBookmarkActive.current) {
+      Animated.sequence([
+        Animated.spring(bookmarkPulse, {
+          toValue: 1.4,
+          useNativeDriver: true,
+          friction: 4,
+          tension: 160,
+        }),
+        Animated.spring(bookmarkPulse, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 4,
+          tension: 100,
+        }),
+      ]).start();
+    }
+    prevBookmarkActive.current = bookmarkActive;
+  }, [bookmarkActive, bookmarkPulse]);
 
   const styles = useMemo(
     () =>
@@ -139,17 +162,19 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
             </TouchableOpacity>
           )}
           {onBookmark && (
-            <TouchableOpacity
-              style={styles.rotateBtn}
-              onPress={onBookmark}
-              accessibilityLabel={bookmarkActive ? 'Bookmark saved' : 'Save bookmark'}
-              accessibilityRole="button">
-              <SvgIcon
-                name="bookmark"
-                size={22}
-                color={bookmarkActive ? colors.accent.gold : iconMuted}
-              />
-            </TouchableOpacity>
+            <Animated.View style={{transform: [{scale: bookmarkPulse}]}}>
+              <TouchableOpacity
+                style={styles.rotateBtn}
+                onPress={onBookmark}
+                accessibilityLabel={bookmarkActive ? 'Bookmark saved' : 'Save bookmark'}
+                accessibilityRole="button">
+                <SvgIcon
+                  name="bookmark"
+                  size={22}
+                  color={bookmarkActive ? colors.accent.gold : iconMuted}
+                />
+              </TouchableOpacity>
+            </Animated.View>
           )}
           <TouchableOpacity style={styles.rotateBtn} onPress={onToggleRotate} accessibilityLabel="Toggle rotation" accessibilityRole="button">
             <AppText style={styles.rotateBtnIcon}>
