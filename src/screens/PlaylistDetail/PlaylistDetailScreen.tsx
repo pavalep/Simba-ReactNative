@@ -37,6 +37,7 @@ import {
   generatePlaylistJson,
 } from '../../utils/m3uParser';
 import {spacing} from '../../theme/tokens';
+import {isVideoFile} from '../../utils/timeAgo';
 
 type Props = PlaylistDetailScreenProps;
 
@@ -59,22 +60,23 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const [modalMode, setModalMode] = useState<'rename' | 'delete' | null>(null);
 
   // ── Header: Add ──
+  // Open the folder browser in selection mode pre-targeting this playlist;
+  // picked files are added directly to it (FolderBrowserScreen batch flow).
   const handleAdd = useCallback(() => {
-    Alert.alert(
-      'Add to Playlist',
-      'Media picking flow would open here.',
-    );
-  }, []);
+    navigation.navigate('FolderBrowser', {
+      targetPlaylistId: playlistId,
+    });
+  }, [navigation, playlistId]);
 
   // ── Header: Play All ──
   const handlePlayAll = useCallback(() => {
     if (items.length > 0) {
       const entries = playlistItemsToEntries(items);
       dispatch(loadPlaylistToPlayer(entries));
-      navigation.navigate('VideoPlayer', {
-        fileUri: items[0].fileUri,
-        fileTitle: items[0].title,
-      });
+      navigation.navigate(
+        isVideoFile(items[0].fileUri) ? 'VideoPlayer' : 'AudioPlayer',
+        {fileUri: items[0].fileUri, fileTitle: items[0].title},
+      );
     }
   }, [items, dispatch, navigation]);
 
@@ -191,10 +193,10 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   // ── Item interactions ──
   const handlePlay = useCallback(
     (item: PlaylistItem) => {
-      navigation.navigate('VideoPlayer', {
-        fileUri: item.fileUri,
-        fileTitle: item.title,
-      });
+      navigation.navigate(
+        isVideoFile(item.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
+        {fileUri: item.fileUri, fileTitle: item.title},
+      );
     },
     [navigation],
   );

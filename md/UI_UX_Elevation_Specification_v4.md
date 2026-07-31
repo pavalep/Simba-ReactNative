@@ -162,7 +162,7 @@ WRONG:   <TouchableOpacity style={{ backgroundColor: '#C9A84C' }}>...</Touchable
 
 ---
 
-## 4. DETAILED ELEVATION ROADMAP (32 Phases)
+## 4. DETAILED ELEVATION ROADMAP (60 Phases)
 
 `
 WAVE 0: Content API Foundation ────── Phase 0.1-0.4 (TMDB, TVMaze, iTunes, Podcast Index, Radio Browser,
@@ -174,6 +174,13 @@ WAVE 3: Audio Player Excellence ───── Phases 11-15  (Spotify-quality A
 WAVE 4: Dedicated Sub-Pages ──────── Phases 16-20  (Artist, Album, Song, Genre, Bookmarks screens)
 WAVE 5: Home and Library UX Flow ──── Phases 21-25  (See All nav, folder wizard, settings)
 WAVE 6: Polish and Working Beta ────── Phases 26-30  (Animations, perf, QA, production audit)
+WAVE 7: Player Excellence Refinement ─ Phases 31-32  (Netflix-grade video, Spotify-grade audio)
+WAVE 8: Streaming First-Class Content ─ Phases 33-37  (Stream model, collections, podcasts, radio/TV, audiobooks)
+WAVE 9: Discovery and Metadata ──────── Phases 38-41  (TVMaze shows, MusicBrainz, unified search, genres/moods)
+WAVE 10: Profile, Auth and Settings ─── Phases 42-46  (Profile page, auth hardening, settings truth, equalizer)
+WAVE 11: Missing Standard Pages ─────── Phases 47-51  (History, queue, downloads, sleep/stats, help/legal)
+WAVE 12: Component System Hardening ─── Phases 52-55  (Dialog unification, core inputs, offline, theme compliance)
+WAVE 13: Linking, Flows and Release ─── Phases 56-60  (Share/deep links, nav audit, cross-source flows, beta gate)
 `
 
 > **⛔ Phase 0 Dependency:** Phase 0 (Content API Foundation, all sub-phases 0.1-0.4) must be completed before Phase 15 and all subsequent waves. Phases 1-14 may proceed independently, but Waves 3-6 require Phase 0 data for content-rich screens (Artist, Album, Song, Genre, Search, Home recommendations).
@@ -1069,6 +1076,493 @@ Song.mp3                     1 mark
 
 ### Wave 6 Gate Check
 **Required:** All animations implemented. No performance regressions. All bugs fixed. All 10 demo flows pass. APK builds cleanly.
+
+---
+
+## WAVE 7: Player Excellence Refinement (Phases 31-32)
+
+> **Quality bar:** The VideoPlayer must match the **feel, mood, and effortlessness of Netflix**; the AudioPlayer must match the **polish and delight of Spotify**. Every control must be intuitive and easy to understand for ALL users — simple, discoverable, no hidden-only interactions. Based on the 2026-07-31 player UX audit.
+
+### PHASE 31 — Video Player Netflix-Grade Refinement
+
+**Checklist:**
+- [ ] 31.1 Lock controls: padlock toggle in SecondaryToolbar — locked state ignores all touches/gestures except a persistent unlock chip (prevents accidental touches during viewing)
+- [ ] 31.2 Netflix-style resume: when a saved position exists, show "Resume from MM:SS / Start Over" choice overlay on load (instead of silent auto-seek)
+- [ ] 31.3 Auto-advance: end-of-video "Next in 5s" countdown card with thumbnail + Cancel when a next queue/playlist item exists
+- [ ] 31.4 Scrub preview polish: timestamp + chapter-title bubble follows finger while scrubbing; ActivityOrb buffering indicator on playback stalls
+- [ ] 31.5 Cinematic mood: fade-from-black on file load, dimmed ambient backdrop behind sheets, control fade transitions per §5.3 timings (200ms in / 150ms out)
+- [ ] 31.6 Friendly error state: in-player error card (message + Retry + Back) replaces raw Alert.alert; error boundary wraps player surface
+- [ ] 31.7 Accessibility: accessibilityState on all toggles (mute, loop, rotate, subtitles); accessibilityHint for double-tap seek and swipe gestures
+- [ ] 31.8 Performance: memoize derived values in useVideoPlayerScreen (1500+ lines); throttle position-driven re-renders; verify 60fps control show/hide on device
+- [ ] 31.9 Mixed-queue handoff (video side): when the next queue item is audio, replace-navigate to AudioPlayer seamlessly (no stack growth, playback continues)
+- [ ] 31.10 Gate: every control reachable in ≤ 2 taps; tsc --noEmit + eslint src/ exit 0; on-device smoothness pass
+
+---
+
+### PHASE 32 — Audio Player Spotify-Grade Refinement
+
+**Checklist:**
+- [ ] 32.1 MiniAudioPlayer touch targets: increase all buttons from 36×36 to ≥ 44×44 (WCAG 2.1 AA) with proportional layout adjustment
+- [ ] 32.2 Functional sleep timer: wire AudioSubMenu selection (15/30/45/60 min) to a real countdown that pauses playback at zero; show remaining-time badge; cancel option
+- [ ] 32.3 Audio playback speed control: 0.5×–2.0× selector in AudioSubMenu wired to MpvPlayer.setSpeed (persists per session)
+- [ ] 32.4 MiniAudioPlayer gestures: swipe-down to dismiss (stops playback + clears state); swipe left/right for next/previous track
+- [ ] 32.5 Accessibility: accessibilityState for shuffle/repeat/like toggles; screen-reader announcement on track change
+- [ ] 32.6 Spotify mood: dynamic gradient extracted from album art on every track change (600ms interpolation per §5.3), marquee scroll for overflowing titles, art cross-fade
+- [ ] 32.7 Instant-feel transitions: preload next track metadata + art; transport controls respond < 100ms perceived; no blank frames between tracks
+- [ ] 32.8 Lyrics performance: per-line memoization in LyricsQueuePanel — only the active line re-renders on position tick
+- [ ] 32.9 Mixed-queue handoff (audio side): when the next queue item is video, replace-navigate to VideoPlayer seamlessly
+- [ ] 32.10 Gate: Spotify-parity checklist verified on device (mini player, speed, sleep timer, gradient, gestures); tsc --noEmit + eslint src/ exit 0
+
+---
+
+### Wave 7 Gate Check
+**Required:** VideoPlayer feels Netflix-grade (lock, resume prompt, auto-advance, cinematic transitions). AudioPlayer feels Spotify-grade (functional sleep timer, speed control, 44dp mini player, dynamic gradient). Mixed queues hand off between players in both directions. All controls intuitive and discoverable for every user. Gates clean.
+
+---
+
+## WAVE 8: Streaming as First-Class Content (Phases 33-37)
+
+> **Mission guard:** Streaming items become full citizens of playlists, recents, bookmarks, and position tracking — identical UX to local files. **No dummy data anywhere** — every screen shows real API/library data or a designed empty state. Based on the 2026-07-31 full-app gap audit: only 2/9 API services wired (Jamendo, Audius; PodcastIndex partial), no add-to-playlist/bookmark for streams, podcast episodes cannot play.
+
+### PHASE 33 — Unified Streaming Media Model
+
+**Checklist:**
+- [ ] 33.1 `isRemoteUri()` util + `source` field ('local'|'jamendo'|'audius'|'podcast'|'radio'|'iptv'|'librivox'|'archive'|'tvmaze') on PlaylistItem, SessionEntry, Bookmark, and queue entries
+- [ ] 33.2 Player intake: skip `validateMediaFile()` for remote URIs — both players accept http(s) fileUri via a stream-aware load path
+- [ ] 33.3 Stream error handling: network timeout / CDN failure → friendly in-player error card with Retry (exponential backoff) — never raw Alert
+- [ ] 33.4 Stream buffering UX: BufferingBar + ActivityOrb on stalls in both players (wire mpv cache/buffering events)
+- [ ] 33.5 `savePlaybackPosition` verified and fixed for remote URLs — stream positions persist across app restarts
+- [ ] 33.6 Recents: streaming plays enter session recents with correct mediaType, source, and remote artwork
+- [ ] 33.7 Remote artwork cache service: disk LRU cache for API thumbnails/album art (no repeat fetches, offline-safe)
+- [ ] 33.8 Gate: play a Jamendo/Audius track, kill app, relaunch → appears in recents with art and resumes at position; tsc + eslint exit 0
+
+---
+
+### PHASE 34 — Streaming in User Collections
+
+**Checklist:**
+- [ ] 34.1 Add-to-playlist action on MusicDetail and track long-press in MusicScreen (streams saved with source + cached art)
+- [ ] 34.2 Bookmarking streaming items verified end-to-end in AudioPlayer (fileUri = URL; position restore works)
+- [ ] 34.3 PlaylistDetail renders remote items correctly: cached art, artist, duration; play routes to the correct player
+- [ ] 34.4 Playlist kind auto-upgrade (MIXED) works for stream+local mixes; queue built from a mixed playlist plays both
+- [ ] 34.5 Offline behavior: streaming items in collections show an offline badge and skip gracefully when no network
+- [ ] 34.6 BookmarksScreen and recents shelves render streaming entries identically to local (art, resume, long-press menu)
+- [ ] 34.7 Long-press context menu parity: identical actions (play, queue, playlist, bookmark, share) for local and stream items
+- [ ] 34.8 Gate: playlist with 2 local + 2 streaming items plays through fully (incl. handoff); collections survive restart
+
+---
+
+### PHASE 35 — Podcast Playback Completion
+
+**Checklist:**
+- [ ] 35.1 PodcastDetail episode list from PodcastIndex feed — real episodes with title, date, duration, art
+- [ ] 35.2 Episode playback: tap → AudioPlayer with enclosureUrl; episode metadata shown in player (audit: no play mechanism exists today)
+- [ ] 35.3 Per-episode resume position (savePlaybackPosition keyed by enclosure URL)
+- [ ] 35.4 Played/unplayed state + progress indicator on episode rows
+- [ ] 35.5 Follow/favorite podcasts (persisted) + Followed shelf on Home
+- [ ] 35.6 Episode actions: add to playlist, bookmark, queue next
+- [ ] 35.7 Podcast search + category browse polish: skeletons, empty, and error states
+- [ ] 35.8 Gate: follow a podcast, play an episode, kill app, resume from the episode list at the saved position
+
+---
+
+### PHASE 36 — Radio and Live TV (wire RadioBrowser + IPTV-org)
+
+**Checklist:**
+- [ ] 36.1 RadioScreen: top stations, by-country, by-genre browse + search (RadioBrowser service — currently dead code)
+- [ ] 36.2 Radio playback: AudioPlayer live mode — seek bar hidden, LIVE badge, station art/name
+- [ ] 36.3 Radio favorites persisted; favorites shelf; stations addable to playlists and recents
+- [ ] 36.4 LiveTVScreen: IPTV-org channels by category/country + search (service — currently dead code)
+- [ ] 36.5 Live TV playback: VideoPlayer live mode (no seek/scrub, LIVE badge, channel up/down switcher)
+- [ ] 36.6 Stream health: unreachable station/channel → friendly error + skip-to-next; no fake/placeholder channels
+- [ ] 36.7 Home shelves, routes, and deep links for Radio and Live TV; entry points from Home and Search
+- [ ] 36.8 Gate: radio station and IPTV channel play end-to-end; favorites survive restart; gates clean
+
+---
+
+### PHASE 37 — Audiobooks and Internet Archive (wire LibriVox + InternetArchive)
+
+**Checklist:**
+- [ ] 37.1 AudiobooksScreen: LibriVox search/browse by title, author, genre (service — currently dead code)
+- [ ] 37.2 Audiobook detail: chapter list with durations; play chapter → AudioPlayer
+- [ ] 37.3 Cross-chapter resume: continue exactly where left off; auto-advance to the next chapter
+- [ ] 37.4 ArchiveScreen: Internet Archive audio + video collections browse/search (service — currently dead code)
+- [ ] 37.5 Archive item detail + playback routed to the correct player by mediaType
+- [ ] 37.6 Audiobook/Archive items in collections: playlists, per-chapter bookmarks, recents
+- [ ] 37.7 Home discovery shelves for Audiobooks and Archive; routes + deep links registered
+- [ ] 37.8 Gate: finish a chapter → auto-advance; relaunch → resume mid-chapter; gates clean
+
+---
+
+### Wave 8 Gate Check
+**Required:** 7/9 API services have live consumer screens (Jamendo, Audius, PodcastIndex, RadioBrowser, IPTV-org, LibriVox, InternetArchive). Any streaming item can be played, bookmarked, playlisted, and appears in recents with persisted position. Zero dummy data.
+
+---
+
+## WAVE 9: Discovery and Metadata Completion (Phases 38-41)
+
+> Wire the last 2 dead API services (TVMaze, MusicBrainz), resurrect the dead `searchAggregator`, and make every content source discoverable through search and genre browse.
+
+### PHASE 38 — TV Shows Discovery (wire TVMaze)
+
+**Checklist:**
+- [ ] 38.1 ShowsScreen: search + popular browse via TVMaze (service — currently dead code)
+- [ ] 38.2 ShowDetail: poster, summary, seasons → episode list with air dates
+- [ ] 38.3 Today's schedule shelf (TVMaze schedule endpoint)
+- [ ] 38.4 Episode metadata enrichment: match local video files to TVMaze episodes by name (enrich MovieDetail/video tiles)
+- [ ] 38.5 Image fallbacks: themed placeholder when TVMaze art is missing — no broken images
+- [ ] 38.6 Shows in collections: bookmark shows; episode references addable where a playable source exists
+- [ ] 38.7 Routes + deep links + Home shelf for Shows
+- [ ] 38.8 Gate: search show → detail → episodes browse; local-file enrichment verified; gates clean
+
+---
+
+### PHASE 39 — Artist and Album Enrichment (wire MusicBrainz)
+
+**Checklist:**
+- [ ] 39.1 ArtistDetail enrichment: MusicBrainz discography (albums, years) merged with local + streaming artist content
+- [ ] 39.2 Cover Art Archive integration using the Phase 33 art cache
+- [ ] 39.3 AlbumDetail enrichment: release metadata + track listings matched to local files
+- [ ] 39.4 Artist page unified sections: Local | Streaming (Jamendo/Audius) | Discography
+- [ ] 39.5 "More from this artist" streaming section on Song and Album pages
+- [ ] 39.6 Graceful fallback when MusicBrainz has no match — local-only view, no empty holes
+- [ ] 39.7 Rate-limit compliance (MusicBrainz 1 req/s) via request queue in apiClient
+- [ ] 39.8 Gate: artist with local files shows enriched discography + streaming rows; gates clean
+
+---
+
+### PHASE 40 — Unified Search Completion
+
+**Checklist:**
+- [ ] 40.1 Wire `searchAggregator` (currently dead code) into SearchScreen: local library + all wired APIs
+- [ ] 40.2 Source filter chips: All / Local / Music / Podcasts / Radio / TV / Audiobooks / Archive
+- [ ] 40.3 Debounce + in-flight cancellation; per-source skeletons; partial results render as they arrive
+- [ ] 40.4 Search history persisted (recent queries, tap to re-run, clear)
+- [ ] 40.5 Every result row routes to the correct detail screen or player for its type
+- [ ] 40.6 Per-source empty and error states — one failed API never blanks the whole page
+- [ ] 40.7 Trending/suggestions row when the query is empty — from real API data, never hardcoded
+- [ ] 40.8 Gate: one query returns mixed local + streaming results, each tappable to a working destination
+
+---
+
+### PHASE 41 — Genre and Mood Browse
+
+**Checklist:**
+- [ ] 41.1 GenreScreen full browse: genres from local library + streaming genre catalogs (Jamendo/Audius/Radio)
+- [ ] 41.2 Genre detail: local + streaming rows per genre with working See All
+- [ ] 41.3 Mood collections (Focus, Chill, Energy, Sleep) built from real genre/tag queries — no hardcoded track lists
+- [ ] 41.4 Genre chips on MusicScreen and RadioScreen link into genre detail
+- [ ] 41.5 See All coverage audit: every Home/Music/Radio/Podcast shelf has a working See All destination
+- [ ] 41.6 Consistent shelf card design across all discovery surfaces (MediaTile variants)
+- [ ] 41.7 Deep links for genre/mood pages
+- [ ] 41.8 Gate: Home → genre → detail → play stream → appears in recents; gates clean
+
+---
+
+### Wave 9 Gate Check
+**Required:** 9/9 API services wired with live consumers — zero dead code in services/api. Unified search reaches every source. Genre/mood browse spans local + streaming.
+
+---
+
+## WAVE 10: Profile, Auth, and Settings Truth (Phases 42-46)
+
+> Every settings row must do something real. Based on the 2026-07-31 audit: 4 dead settings rows (empty onPress), all 9 AudioSettings controls unpersisted local state, no token refresh/session expiry handling, Registration screen is dead weight (app is Google-login-only, no guest mode), no profile page.
+
+### PHASE 42 — Basic Profile Page
+
+**Checklist:**
+- [ ] 42.1 ProfileScreen route + entry points (Settings AccountSection tap, Home header avatar)
+- [ ] 42.2 Profile header: Google avatar with initials fallback (replace the "?" placeholder), name, email
+- [ ] 42.3 Real user stats from store/session data: total watch/listen time, items played, bookmark and playlist counts — no fabricated numbers
+- [ ] 42.4 Recently played strip + shortcuts to History, Bookmarks, Playlists
+- [ ] 42.5 Appearance quick prefs on profile: theme mode toggle
+- [ ] 42.6 Sign out via ConfirmDialog (not raw alert)
+- [ ] 42.7 Account data section: clear local data (recents/bookmarks/playlists) behind a destructive confirm
+- [ ] 42.8 Gate: profile reachable in ≤ 2 taps; stats match actual store contents; gates clean
+
+---
+
+### PHASE 43 — Auth Hardening (Google-Only Mission)
+
+**Checklist:**
+- [ ] 43.1 Silent session restore: `GoogleSignin.signInSilently()` on cold start; route to Login only when it fails
+- [ ] 43.2 Session expiry handling: detect invalid/expired token on app foreground; re-auth prompt without data loss
+- [ ] 43.3 Sign-in error states: distinct messaging for offline / cancelled / Play-Services-missing, each with Retry
+- [ ] 43.4 Remove Registration screen, route, and the Login link to it entirely — dead weight in a Google-only app
+- [ ] 43.5 Revoke access flow: sign out + revokeAccess + optional local data wipe (destructive ConfirmDialog)
+- [ ] 43.6 Offline grace: a previously-authenticated user can use the local library offline; API features show offline state
+- [ ] 43.7 Auth states modeled explicitly in authSlice (authenticated / expired / offline / signed-out) with unit tests
+- [ ] 43.8 Gate: airplane-mode launch plays local media; token-expiry path verified; gates clean
+
+---
+
+### PHASE 44 — Settings Dead-UI Elimination
+
+**Checklist:**
+- [ ] 44.1 Subtitle Language row: real picker dialog wired to settingsSlice + applied via mpv `slang` (currently `onPress={() => {}}`)
+- [ ] 44.2 Subtitle Text Color row: color picker wired + applied to subtitle rendering (currently dead)
+- [ ] 44.3 Subtitle Background Opacity: slider dialog wired + applied (currently dead)
+- [ ] 44.4 Subtitle Font Size: implement the missing dialog (handler exists but opens nothing) + apply via mpv `sub-font-size`
+- [ ] 44.5 Accent Color: functional accent selection applied via theme, or converted to an explicit static branding row — no fake affordance
+- [ ] 44.6 All subtitle settings persisted and re-applied on player mount
+- [ ] 44.7 Every settings row shows a current-value subtitle reflecting real state
+- [ ] 44.8 Gate: zero empty onPress handlers in Settings; every row does something visible; gates clean
+
+---
+
+### PHASE 45 — Audio Settings Realization + Equalizer
+
+**Checklist:**
+- [ ] 45.1 Wire all AudioSettingsScreen controls to settingsSlice (audit: 9 controls in local state, lost on restart)
+- [ ] 45.2 Apply wired values to mpv: volume normalization, dialogue boost, ReplayGain, gapless, audio delay
+- [ ] 45.3 EqualizerScreen: band sliders + presets wired to the existing native equalizer support
+- [ ] 45.4 EQ preset selection replaces the Alert.alert placeholder; custom presets persist
+- [ ] 45.5 Audio device / sample-rate rows show real values from the native layer — or are removed; no fake options
+- [ ] 45.6 Replace all 5 Alert.alert placeholders in AudioSettings with real dialogs/screens
+- [ ] 45.7 Settings apply live during playback (change while playing → hear the difference)
+- [ ] 45.8 Gate: toggle each audio setting, restart app → all persisted; EQ audibly works; gates clean
+
+---
+
+### PHASE 46 — Preferences, Storage, and Library Settings
+
+**Checklist:**
+- [ ] 46.1 Persist Larger Controls + High-Contrast Subtitles to settingsSlice and apply app-wide (currently unpersisted local state)
+- [ ] 46.2 Theme selection dialog component replaces Alert.alert in PreferencesScreen
+- [ ] 46.3 App language row wired to the i18n locale switch (persisted)
+- [ ] 46.4 Storage management: cache size display (art cache, thumbnails) + Clear Cache action
+- [ ] 46.5 Library scan controls: Rescan Now, scan-on-launch toggle, progress surfaced via ScanProgressBanner
+- [ ] 46.6 Notification preferences row (playback notification behavior)
+- [ ] 46.7 Privacy section linking to the Privacy/Terms screens (built in Phase 51)
+- [ ] 46.8 Gate: preferences survive restart; cache clear frees space and the UI reflects it; gates clean
+
+---
+
+### Wave 10 Gate Check
+**Required:** Zero dead settings rows anywhere. Auth is solid: silent restore, expiry handled, Registration removed (Google-only, no guest). Profile page live with real stats.
+
+---
+
+## WAVE 11: Missing Standard Pages (Phases 47-51)
+
+> Audit 2026-07-31: History, Downloads, Notifications, full Queue page, Equalizer, Sleep Timer page, Stats, Help/FAQ, and Privacy/Terms are all missing. Build them with real data and designed empty states.
+
+### PHASE 47 — History Page
+
+**Checklist:**
+- [ ] 47.1 HistoryScreen: full playback history (video/audio/stream) from session data, newest first
+- [ ] 47.2 Tap resumes at saved position in the correct player; progress bar on each row
+- [ ] 47.3 Filters: All / Video / Audio / Streaming; search within history
+- [ ] 47.4 Per-item remove + Clear History (destructive confirm)
+- [ ] 47.5 Raise recents retention (20 → 200) with a virtualized list — no scroll jank
+- [ ] 47.6 Empty state, route, deep link; entry points from Home "Recently Played" See All and Library
+- [ ] 47.7 accessibilityLabels + ≥ 44dp row targets
+- [ ] 47.8 Gate: play 3 items → all in history with correct positions; clear works; gates clean
+
+---
+
+### PHASE 48 — Full Queue Page
+
+**Checklist:**
+- [ ] 48.1 QueueScreen: full-screen now-playing queue (route + deep link) — today only LyricsQueuePanel exists inside AudioPlayer
+- [ ] 48.2 Drag-to-reorder with haptic feedback; swipe-to-remove
+- [ ] 48.3 Now-playing row highlighted with WaveformBars; tapping any row jumps playback
+- [ ] 48.4 "Up Next" vs "Previously Played" sections
+- [ ] 48.5 Save Queue as Playlist action
+- [ ] 48.6 Entry points: queue buttons in both players + MiniAudioPlayer long-press
+- [ ] 48.7 Mixed queue rendering with media badges (video / audio / stream)
+- [ ] 48.8 Gate: reorder during playback without glitches; jump works across media types; gates clean
+
+---
+
+### PHASE 49 — Downloads and Offline
+
+**Checklist:**
+- [ ] 49.1 Download service: fetch + store streaming media (podcasts, audiobooks, archive, licensed music) with progress events
+- [ ] 49.2 DownloadButton core component (idle / progress / done states) on episode, track, and detail rows
+- [ ] 49.3 DownloadsScreen: list with size, progress, pause/resume/delete; storage usage bar
+- [ ] 49.4 Offline playback: downloaded copy used automatically when offline (fileUri remap)
+- [ ] 49.5 Downloaded badge shown in collections, recents, and search results
+- [ ] 49.6 Auto-delete policy setting (keep last N episodes)
+- [ ] 49.7 Route + deep link + Library entry point + empty state
+- [ ] 49.8 Gate: download an episode, enable airplane mode, play it from Downloads; gates clean
+
+---
+
+### PHASE 50 — Sleep Timer Everywhere + Stats
+
+**Checklist:**
+- [ ] 50.1 Promote the Phase 32 sleep timer into a global playback service usable from both players + custom minutes input
+- [ ] 50.2 End-of-track / end-of-chapter timer option (not just fixed minutes)
+- [ ] 50.3 Persistent countdown badge on both players and MiniAudioPlayer
+- [ ] 50.4 StatsScreen: listening/watching time by day/week, top artists/items, source breakdown — computed from real session history only
+- [ ] 50.5 Streaks and totals cards; designed empty state for new users
+- [ ] 50.6 Stats entry point from Profile
+- [ ] 50.7 Volume fade-out over the final 10s of the sleep timer
+- [ ] 50.8 Gate: timer pauses playback from both players; stats match recorded history; gates clean
+
+---
+
+### PHASE 51 — Help, Legal, and Notifications
+
+**Checklist:**
+- [ ] 51.1 HelpScreen: searchable FAQ sections (playback, streaming, collections, gestures)
+- [ ] 51.2 PrivacyPolicyScreen + TermsScreen (scrollable; linked from Settings, About, and Login)
+- [ ] 51.3 Media-style playback notification with transport controls verified; settings toggle for it
+- [ ] 51.4 Notification permission flow (Android 13+) requested contextually, never on launch
+- [ ] 51.5 About screen links (website, licenses, changelog) all functional — replace the Alert placeholder
+- [ ] 51.6 Contact/feedback action via share sheet or mailto
+- [ ] 51.7 Routes + deep links for all new pages
+- [ ] 51.8 Gate: every help/legal entry reachable; notification transport controls work from the lock screen; gates clean
+
+---
+
+### Wave 11 Gate Check
+**Required:** No missing standard pages. History, Queue, Downloads, Sleep/Stats, Help, and Legal all live with real data, empty states, routes, and deep links.
+
+---
+
+## WAVE 12: Component System Hardening (Phases 52-55)
+
+> Audit 2026-07-31: 12+ raw Alert.alert calls, no shared AppTextInput/SearchBar in core, NoNetworkBanner only on Home, hardcoded colors in 8 component files, 5 empty stub dirs. Enforce the design system everywhere.
+
+### PHASE 52 — Dialog Unification (Kill Alert.alert)
+
+**Checklist:**
+- [ ] 52.1 Replace Alert.alert in PlaylistDetailScreen (4×) with ConfirmDialog / PromptDialog / action sheet
+- [ ] 52.2 Replace Alert.alert in PreferencesScreen (2×) and AudioSettingsScreen (5×) — coordinated with Phases 45/46 dialogs
+- [ ] 52.3 Replace Alert.alert in useVideoPlayerScreen (L732), AboutScreen, MusicDetailScreen, MpvConfigEditor
+- [ ] 52.4 Destructive-action styling convention (red confirm) applied across all confirm dialogs
+- [ ] 52.5 ESLint `no-restricted-imports` rule bans `Alert` from react-native app-wide
+- [ ] 52.6 Toast used consistently for success feedback (add/remove/save actions)
+- [ ] 52.7 Dialog accessibility: focus handling + screen-reader announcements
+- [ ] 52.8 Gate: `Alert.alert` grep across src/ returns 0 matches; gates clean
+
+---
+
+### PHASE 53 — Core Inputs and Forms
+
+**Checklist:**
+- [ ] 53.1 AppTextInput core component: theme tokens, label/error/helper text, clear button, validation support
+- [ ] 53.2 Promote SearchBar to src/components/core with built-in debounce + cancel; export from the barrel
+- [ ] 53.3 Replace raw TextInput in MpvConfigEditor, PodcastsScreen, AllPlaylistsScreen, BookmarkSheet, PlaylistModal
+- [ ] 53.4 Shared keyboard-avoiding wrapper — remove the duplicated KeyboardAvoidingView logic
+- [ ] 53.5 Input validation patterns (required, max length) with consistent error display
+- [ ] 53.6 SearchBar reused on History, Downloads, and Help searchable lists
+- [ ] 53.7 Input accessibility: labels + error announcements
+- [ ] 53.8 Gate: zero raw TextInput outside src/components/core; gates clean
+
+---
+
+### PHASE 54 — Global Status and List Components
+
+**Checklist:**
+- [ ] 54.1 OfflineBanner rendered at app level — NoNetworkBanner is currently Home-only
+- [ ] 54.2 Every API-driven screen handles offline: disabled actions, cached content, auto-retry on reconnect
+- [ ] 54.3 Pull-to-refresh on all list screens (themed RefreshControl)
+- [ ] 54.4 Infinite scroll / pagination for API browse screens (Music, Radio, Live TV, Audiobooks, Archive, Shows)
+- [ ] 54.5 Global long-operation progress pattern (import/sync) beyond the existing scan banner
+- [ ] 54.6 Skeleton loading coverage audit across all new screens
+- [ ] 54.7 Standard retry/error card component reused everywhere
+- [ ] 54.8 Gate: airplane-mode navigation shows correct offline states on every screen; gates clean
+
+---
+
+### PHASE 55 — Theme Compliance and Cleanup Sweep
+
+**Checklist:**
+- [ ] 55.1 Remove hardcoded colors from the 8 flagged files (Avatar, BookmarkItem, AudioActionRow #FF2D55, AudioGradientBg, AudioSeekBar, AudioSubMenu, AudioLyricsView, FolderLinkingWizard) → theme tokens
+- [ ] 55.2 Add missing tokens (e.g. like/heart accent) instead of inline hex values
+- [ ] 55.3 Hardcoded spacing/fontSize sweep in components → spacing.* / typography.* tokens
+- [ ] 55.4 Delete empty stub dirs: ControlsBar, HeaderBar, SeekBar (components root), TrackSelector, preferences
+- [ ] 55.5 Raw `<Text>` / ActivityIndicator audit — replace with AppText / ActivityOrb per project rules
+- [ ] 55.6 Component barrel exports complete with consistent naming
+- [ ] 55.7 ESLint color-literal guard for src/components and src/screens
+- [ ] 55.8 Gate: color-literal grep clean outside src/theme; gates clean
+
+---
+
+### Wave 12 Gate Check
+**Required:** Design system fully enforced — zero raw alerts, raw inputs, or literal colors outside theme. Offline status handled globally.
+
+---
+
+## WAVE 13: Linking, UX Flows, and Release (Phases 56-60)
+
+> Close every dead end (share = "coming soon", VideoPlayer back-nav bug), unify cross-source flows, then run the beta release gate. **The no-dummy-data rule is verified as a release blocker.**
+
+### PHASE 56 — Share and Deep Link Completion
+
+**Checklist:**
+- [ ] 56.1 Share-link generation service: simbaplayer:// + https fallback for tracks, albums, artists, podcasts, playlists, stations
+- [ ] 56.2 Native share sheet integration; fix the MusicDetail "coming soon" share dead-end
+- [ ] 56.3 Incoming deep links verified for every registered route (params parsed, auth-gated)
+- [ ] 56.4 Share actions available in long-press menus, detail screens, and both players
+- [ ] 56.5 Playlist export/import as shareable file (m3u/json)
+- [ ] 56.6 Cold-start deep link: opens the target after auth restore without losing the link
+- [ ] 56.7 linking.ts coverage extended to all Wave 8-11 routes
+- [ ] 56.8 Gate: share a track from the player → open the link on-device → lands on the correct detail; gates clean
+
+---
+
+### PHASE 57 — Navigation Correctness and Empty-State Audit
+
+**Checklist:**
+- [ ] 57.1 Fix VideoPlayer back behavior: `goBack()` instead of `navigate('MainTabs')` (audit finding)
+- [ ] 57.2 Modal vs push consistency policy (Preferences is the modal outlier)
+- [ ] 57.3 Route audit: make every registered route reachable or remove it; register any orphan screens
+- [ ] 57.4 Android hardware back verified on every screen (players, sheets, dialogs, wizard)
+- [ ] 57.5 Empty states for remaining screens: Library segments, GenreScreen, Settings sub-lists
+- [ ] 57.6 Navigation state persistence across process death (react-navigation state restore)
+- [ ] 57.7 Screen transition animation consistency per §5
+- [ ] 57.8 Gate: full navigation crawl — no dead ends, no traps, every list has an empty state; gates clean
+
+---
+
+### PHASE 58 — Cross-Source UX Flows
+
+**Checklist:**
+- [ ] 58.1 Continue Watching/Listening shelf on Home mixing local + streaming with resume positions
+- [ ] 58.2 Resume prompt (31.2 pattern) unified for streams and local files in both players
+- [ ] 58.3 Mixed-queue handoff regression pass including streaming items (video ↔ audio ↔ stream)
+- [ ] 58.4 Long-press menu everywhere: identical action set and ordering on every tile/row in the app
+- [ ] 58.5 Play Next / Add to Queue actions from all content surfaces
+- [ ] 58.6 MiniAudioPlayer persists across all new screens without layout overlap
+- [ ] 58.7 Session continuity: relaunch → Home shows exactly where the user left off
+- [ ] 58.8 Gate: 10-step cross-source user journey scripted and passing on device
+
+---
+
+### PHASE 59 — Performance and Accessibility Final Sweep
+
+**Checklist:**
+- [ ] 59.1 Virtualization audit on every new list (History 200 items, IPTV thousands) — tuned FlatList/getItemLayout where needed
+- [ ] 59.2 Re-render audit on the top 10 screens; memoize hot paths
+- [ ] 59.3 Cold start ≤ 2.5s to interactive on a mid-range device
+- [ ] 59.4 Image/art loading: cache hits verified; zero flicker while scrolling shelves
+- [ ] 59.5 Accessibility sweep of all Wave 8-13 UI: labels, states, hints, ≥ 44dp targets
+- [ ] 59.6 TalkBack pass on 5 core journeys (login→play, search→stream, playlist, downloads, settings)
+- [ ] 59.7 Reduced-motion preference honored in all new animations
+- [ ] 59.8 Gate: perf numbers recorded in the tracker; accessibility checklist signed off
+
+---
+
+### PHASE 60 — Beta Release Gate
+
+**Checklist:**
+- [ ] 60.1 No-dummy-data verification sweep: grep + manual pass — every screen shows real data or a designed empty state
+- [ ] 60.2 Full-app manual QA script covering all Wave 8-13 surfaces, results recorded in the tracker
+- [ ] 60.3 tsc --noEmit, eslint src/, and the full jest suite all exit 0
+- [ ] 60.4 Android release build (minified) smoke test — no proguard/hermes crashes
+- [ ] 60.5 Crash reporting hooks in place via error boundaries
+- [ ] 60.6 Spec + tracker final sync: every 33-60 item statused with completion dates
+- [ ] 60.7 Version bump + changelog entry
+- [ ] 60.8 Gate: signed beta APK installs clean on device; end-to-end acceptance run passes
+
+---
+
+### Wave 13 Gate Check
+**Required:** Shippable beta — all 60 phases complete, zero dummy data, streaming fully integrated into playlists/recents/bookmarks with position tracking, every page linked and reachable, gates green.
 
 ---
 

@@ -1,0 +1,24 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 96, col 20, Warning - Inline style: { marginTop: 4 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 173, col 15, Warning - Inline style: {
+  backgroundColor: "folderType === opt.type ? colors.accent.gold : 'transparent'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 312, col 22, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 353, col 26, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 453, col 42, Warning - Inline style: { color: '#fff' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 460, col 20, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 470, col 20, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 512, col 18, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 548, col 43, Warning - Inline style: { color: '#fff', fontSize: 48 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 556, col 16, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 562, col 16, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 653, col 61, Warning - Inline style: { fontSize: 22 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 668, col 16, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 669, col 32, Warning - Inline style: { flexGrow: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 671, col 31, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 703, col 22, Warning - Inline style: {
+  color: 'canNext\n' +
+    "                  ? '#fff'\n" +
+    '                  : colors.text.tertiary'
+} (react-native/no-inline-styles)
+
+16 problems

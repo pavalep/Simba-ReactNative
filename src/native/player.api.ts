@@ -1,4 +1,4 @@
-import {NativeModules, Platform, NativeEventEmitter} from 'react-native';
+import {NativeModules, NativeEventEmitter} from 'react-native';
 import type {
   Spec,
   MpvFileInfo,
@@ -206,11 +206,8 @@ export const MpvPlayer = {
   },
 
   setTrack(type: string, trackId: number | 'no'): void {
-    if (trackId === 'no') {
-      ensureModule().selectTrack(-1);
-    } else {
-      ensureModule().selectTrack(trackId);
-    }
+    const id = trackId === 'no' ? -1 : trackId;
+    ensureModule().setTrack(type, id);
   },
 
   loadExternalSubtitle(uri: string): void {

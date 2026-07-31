@@ -10,6 +10,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
+import {SvgIcon} from '../../components/utility/SvgIcon/SvgIcon';
 import {GoogleSignInButton} from '../../components/core/GoogleSignInButton/GoogleSignInButton';
 import {useLoginScreen} from './hooks/useLoginScreen';
 import type {RootStackScreenProps} from '../../navigation/types';
@@ -17,13 +18,23 @@ import type {RootStackScreenProps} from '../../navigation/types';
 type Props = RootStackScreenProps<'Login'>;
 
 const {width} = Dimensions.get('window');
-const ORB_SIZE = width * 0.9;
+const ORB_SIZE = Math.min(width * 0.72, 320);
 
 export const LoginScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const {pulseAnim, fadeAnim, isLoading, error, handleSignIn} =
+  const {pulseAnim, fadeAnim, isLoading, error, handleSignIn, isAuthenticated} =
     useLoginScreen();
+
+  // ── Auto-navigate to Home once authenticated ──
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigation.replace('MainTabs', {
+        screen: 'HomeTab',
+        params: {screen: 'Home'},
+      });
+    }
+  }, [isAuthenticated, navigation]);
 
   // ── Stagger Entrance Animation ──
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -74,32 +85,36 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
 
   return (
     <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
-      {/* Animated background orb */}
-      <Animated.View
-        style={[
-          styles.orb,
-          {
-            width: ORB_SIZE,
-            height: ORB_SIZE,
-            borderRadius: ORB_SIZE / 2,
-            backgroundColor: colors.accent.gold,
-            opacity: orbOpacity,
-            transform: [{scale: orbScale}],
-          },
-        ]}
-        pointerEvents="none"
-      />
-
       {/* Content */}
       <Animated.View
         style={[styles.content, {opacity: fadeAnim, paddingTop: insets.top}]}>
         {/* Logo area */}
         <View style={styles.logoArea}>
-          <Animated.View style={{opacity: logoOpacity, transform: [{scale: logoscale}]}}>
-            <AppText variant="display" color="primary" style={styles.logoText}>
-              SIMBA
-            </AppText>
-          </Animated.View>
+          <View style={styles.logoStack}>
+            {/* Pulsing orb glow anchored behind the logo */}
+            <Animated.View
+              style={[
+                styles.orb,
+                {
+                  backgroundColor: colors.accent.gold,
+                  opacity: orbOpacity,
+                  transform: [{scale: orbScale}],
+                },
+              ]}
+              pointerEvents="none"
+            />
+            {/* Lion logo + wordmark centered in the orb */}
+            <Animated.View
+              style={[
+                styles.logoWrap,
+                {opacity: logoOpacity, transform: [{scale: logoscale}]},
+              ]}>
+              <SvgIcon name="lion" size={96} color={colors.accent.gold} />
+              <AppText variant="display" color="primary" style={styles.logoText}>
+                SIMBA
+              </AppText>
+            </Animated.View>
+          </View>
           <Animated.View style={{opacity: taglineOpacity, transform: [{translateY: taglineTranslateY}]}}>
             <AppText
               variant="body1"
@@ -152,8 +167,11 @@ const styles = StyleSheet.create({
   },
   orb: {
     position: 'absolute',
-    top: '15%',
-    alignSelf: 'center',
+    top: 0,
+    left: 0,
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    borderRadius: ORB_SIZE / 2,
   },
   content: {
     flex: 1,
@@ -165,8 +183,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  logoStack: {
+    width: ORB_SIZE,
+    height: ORB_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoWrap: {
+    alignItems: 'center',
+  },
   logoText: {
-    marginBottom: 8,
+    marginTop: 12,
     letterSpacing: 6,
   },
   tagline: {

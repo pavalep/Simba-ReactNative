@@ -19,6 +19,7 @@ import {useSearch} from '../../hooks/useSearch';
 import type {RootStackScreenProps} from '../../navigation/types';
 import {spacing} from '../../theme/tokens';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
+import {isVideoFile} from '../../utils/timeAgo';
 
 import {SearchBar} from './components/SearchBar';
 import {RecentSearches} from './components/RecentSearches';
@@ -150,8 +151,11 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const handleChipTap = useCallback((term: string) => setSearchText(term), [setSearchText]);
   const handleClearRecent = useCallback(() => setRecentSearches([]), []);
   const handlePlayFile = useCallback(
-    async (fileUri: string, fileTitle: string) => {
-      navigation.navigate('VideoPlayer', {fileUri, fileTitle});
+    (fileUri: string, fileTitle: string) => {
+      navigation.navigate(
+        isVideoFile(fileTitle) ? 'VideoPlayer' : 'AudioPlayer',
+        {fileUri, fileTitle},
+      );
     },
     [navigation],
   );

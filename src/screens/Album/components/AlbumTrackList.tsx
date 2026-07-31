@@ -40,7 +40,6 @@ export const AlbumTrackList: React.FC<AlbumTrackListProps> = ({
   isPlaying,
   onPlayTrack,
   formatDuration,
-  _disableAnimation = false,
 }) => {
   const {colors} = useTheme();
   const [menuVisible, setMenuVisible] = useState(false);

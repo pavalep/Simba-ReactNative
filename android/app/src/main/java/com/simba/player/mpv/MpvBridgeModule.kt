@@ -313,6 +313,20 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     }
 
     @ReactMethod
+    fun setTrack(type: String, trackId: Double) {
+        ensurePtr()
+        val prop = when (type) {
+            "video" -> "vid"
+            "audio" -> "aid"
+            "sub" -> "sid"
+            else -> return
+        }
+        val id = trackId.toInt()
+        val value = if (id < 0) "no" else id.toString()
+        MPVLib.setPropertyString(nativePtr, prop, value)
+    }
+
+    @ReactMethod
     fun cycleTrack(type: String) {
         ensurePtr()
         when (type) {

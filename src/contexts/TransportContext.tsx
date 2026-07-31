@@ -8,6 +8,8 @@ import React, {
   type ReactNode,
 } from 'react';
 import {MpvPlayer} from '../native';
+import {useAppDispatch, useAppSelector} from '../store';
+import {setPlaybackState, setSleepTimer} from '../store/slices/playerSlice';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -15,6 +17,10 @@ export interface TransportState {
   position: number;
   duration: number;
   isPlaying: boolean;
+  /** Milliseconds remaining on the active sleep timer (0 when none) */
+  sleepRemainingMs: number;
+  /** Whether a sleep timer is armed */
+  sleepTimerActive: boolean;
 }
 
 interface TransportContextValue extends TransportState {
@@ -53,10 +59,14 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const dispatch = useAppDispatch();
+  const sleepTimerEndTime = useAppSelector(state => state.player.sleepTimerEndTime);
 
   // Refs to avoid stale closures in the interval callback
   const isReadyRef = useRef(isReady);
   isReadyRef.current = isReady;
+  const sleepTimerEndTimeRef = useRef(sleepTimerEndTime);
+  sleepTimerEndTimeRef.current = sleepTimerEndTime;
   const hasPlaybackStateEventsRef = useRef(false);
   const lastPositionRef = useRef(0);
   const lastMoveAtRef = useRef(0);
@@ -65,6 +75,37 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   useEffect(() => {
     isPlayingRef.current = isPlaying;
   }, [isPlaying]);
+
+  // ── Sleep timer countdown ───────────────────────────────
+  // Ticks with the polling interval; pauses playback when the timer expires.
+  const [now, setNow] = useState(() => Date.now());
+  const sleepRemainingMs =
+    sleepTimerEndTime !== null ? Math.max(0, sleepTimerEndTime - now) : 0;
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (sleepTimerEndTime === null) return;
+
+    const interval = setInterval(() => {
+      const endTime = sleepTimerEndTimeRef.current;
+      if (endTime === null) {
+        setNow(Date.now());
+        return;
+      }
+      const remaining = endTime - Date.now();
+      setNow(Date.now());
+      if (remaining <= 0) {
+        // Timer expired — pause playback and disarm
+        try {
+          MpvPlayer.pause();
+        } catch {}
+        dispatch(setPlaybackState('paused'));
+        dispatch(setSleepTimer(null));
+      }
+    }, pollInterval);
+
+    return () => clearInterval(interval);
+  }, [sleepTimerEndTime, enabled, pollInterval, dispatch]);
 
   // Position and playback state are event-driven. Poll only duration as a
   // low-frequency fallback; querying mpv across the JS bridge every 250 ms
@@ -152,7 +193,18 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
 
   return (
     <TransportContext.Provider
-      value={{position, duration, isPlaying, seekTo, play, pause, togglePlayPause, pushPosition}}>
+      value={{
+        position,
+        duration,
+        isPlaying,
+        sleepRemainingMs,
+        sleepTimerActive: sleepTimerEndTime !== null,
+        seekTo,
+        play,
+        pause,
+        togglePlayPause,
+        pushPosition,
+      }}>
       {children}
     </TransportContext.Provider>
   );

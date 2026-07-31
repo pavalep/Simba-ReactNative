@@ -40,6 +40,88 @@ export interface LyricsQueuePanelProps {
   onPlayFromQueue?: (index: number) => void;
 }
 
+// ─── Memoized lyric line (32.8) ─────────────────────────────
+// Only the active line re-renders on position ticks; inactive rows
+// are skipped by React.memo shallow comparison.
+
+const LyricLineRow = React.memo<{
+  item: LrcLine;
+  isActive: boolean;
+  isPlaying: boolean;
+  onSeekToLyric?: (time: number) => void;
+}>(({item, isActive, isPlaying, onSeekToLyric}) => {
+  const {colors} = useTheme();
+  const glow = useRef(new Animated.Value(0)).current;
+
+  // Active-line glow loop runs only while this row is active
+  useEffect(() => {
+    if (isActive && isPlaying) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(glow, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: false,
+          }),
+          Animated.timing(glow, {
+            toValue: 0,
+            duration: 1200,
+            useNativeDriver: false,
+          }),
+        ]),
+      );
+      loop.start();
+      return () => loop.stop();
+    }
+    glow.setValue(0);
+  }, [isActive, isPlaying, glow]);
+
+  if (isActive) {
+    const bgColor = glow.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['rgba(201,168,76,0.05)', 'rgba(201,168,76,0.15)'],
+    });
+
+    return (
+      <TouchableOpacity
+        onPress={() => onSeekToLyric?.(item.time)}
+        activeOpacity={0.7}>
+        <Animated.View
+          style={[
+            {
+              paddingVertical: 6,
+              paddingHorizontal: 4,
+              borderRadius: 6,
+            },
+            {backgroundColor: bgColor},
+          ]}>
+          <AppText
+            style={{
+              fontSize: 16,
+              fontWeight: '700',
+              color: colors.accent.gold,
+            }}>
+            {item.text}
+          </AppText>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity
+      onPress={() => onSeekToLyric?.(item.time)}
+      activeOpacity={0.7}
+      style={{paddingVertical: 6, paddingHorizontal: 4}}>
+      <AppText
+        style={{fontSize: 15, lineHeight: 22, color: colors.text.secondary}}>
+        {item.text}
+      </AppText>
+    </TouchableOpacity>
+  );
+});
+LyricLineRow.displayName = 'LyricLineRow';
+
 // ─── Component ──────────────────────────────────────────────
 
 const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
@@ -53,7 +135,6 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
 }) => {
   const {colors} = useTheme();
   const flatListRef = useRef<FlatList<LrcLine>>(null);
-  const activeLineAnim = useRef(new Animated.Value(0)).current;
 
   // ── Find active lyric line ──
   const activeIndex = useMemo(() => {
@@ -81,28 +162,7 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
     }
   }, [activeIndex]);
 
-  // ── Animate active line glow ──
-  useEffect(() => {
-    if (isPlaying) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(activeLineAnim, {
-            toValue: 1,
-            duration: 1200,
-            useNativeDriver: false,
-          }),
-          Animated.timing(activeLineAnim, {
-            toValue: 0,
-            duration: 1200,
-            useNativeDriver: false,
-          }),
-        ]),
-      ).start();
-    } else {
-      activeLineAnim.setValue(0);
-    }
-    return () => activeLineAnim.stopAnimation();
-  }, [isPlaying, activeLineAnim]);
+  // ── Animate active line glow (moved into LyricLineRow, 32.8) ──
 
   // ── Styles ──
   const styles = useMemo(
@@ -179,39 +239,17 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
     [colors],
   );
 
-  // ── Render lyric item ──
+  // ── Render lyric item (memoized rows — 32.8) ──
   const renderLyricItem = useCallback(
-    ({item, index}: {item: LrcLine; index: number}) => {
-      const isActive = index === activeIndex;
-
-      if (isActive) {
-        const bgColor = activeLineAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: ['rgba(201,168,76,0.05)', 'rgba(201,168,76,0.15)'],
-        });
-
-        return (
-          <TouchableOpacity
-            onPress={() => onSeekToLyric?.(item.time)}
-            activeOpacity={0.7}>
-            <Animated.View
-              style={[styles.activeLyricRow, {backgroundColor: bgColor}]}>
-              <AppText style={styles.activeLyricText}>{item.text}</AppText>
-            </Animated.View>
-          </TouchableOpacity>
-        );
-      }
-
-      return (
-        <TouchableOpacity
-          onPress={() => onSeekToLyric?.(item.time)}
-          activeOpacity={0.7}
-          style={styles.lyricRow}>
-          <AppText style={styles.lyricText}>{item.text}</AppText>
-        </TouchableOpacity>
-      );
-    },
-    [activeIndex, activeLineAnim, styles, onSeekToLyric],
+    ({item, index}: {item: LrcLine; index: number}) => (
+      <LyricLineRow
+        item={item}
+        isActive={index === activeIndex}
+        isPlaying={isPlaying}
+        onSeekToLyric={onSeekToLyric}
+      />
+    ),
+    [activeIndex, isPlaying, onSeekToLyric],
   );
 
   // ── Key extractor ──

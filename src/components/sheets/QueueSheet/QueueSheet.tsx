@@ -76,7 +76,6 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
   playbackHistory,
   selectedQueueIndices,
   mode,
-  _onSelectQueueItem,
   onSelectHistoryItem,
   onMoveUp,
   onMoveDown,

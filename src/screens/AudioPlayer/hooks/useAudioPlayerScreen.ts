@@ -21,6 +21,8 @@ import {
   nextTrack,
   setLoopMode,
   toggleShuffle,
+  setPlaybackState,
+  playFile,
   setQueueSelection,
   clearQueueSelection,
   removeSelectedFromQueue,
@@ -135,7 +137,24 @@ export function useAudioPlayerScreen(
   const playbackHistory = useAppSelector(state => state.player.playbackHistory);
   const selectedQueueIndices = useAppSelector(state => state.player.selectedQueueIndices);
   const allTracks = useAppSelector(selectAllTracks);
+  const sessionRecent = useAppSelector(state => state.session.recentFiles);
+  const sessionRecentRef = useRef(sessionRecent);
   const duration = MpvPlayer.getDuration?.() ?? 1;
+
+  // ── Refs ──
+  const isSeeking = useRef(false);
+  const fileUriRef = useRef<string | undefined>(fileUri);
+  const playbackSpeedRef = useRef(1.0);
+
+  // ── Sync refs ──
+  useEffect(() => { fileUriRef.current = fileUri; }, [fileUri]);
+  useEffect(() => { sessionRecentRef.current = sessionRecent; }, [sessionRecent]);
+
+  // ── Playback speed (persisted in playerSlice) ──
+  const playbackSpeed = useAppSelector(state => state.player.playbackSpeed);
+  useEffect(() => {
+    playbackSpeedRef.current = playbackSpeed;
+  }, [playbackSpeed]);
 
   // ── Derive related tracks for InfoSheet ──
   const relatedTracks = useMemo(() => {
@@ -149,13 +168,6 @@ export function useAudioPlayerScreen(
     );
   }, [metadata, allTracks]);
 
-  // ── Refs ──
-  const isSeeking = useRef(false);
-  const fileUriRef = useRef<string | undefined>(fileUri);
-
-  // ── Sync refs ──
-  useEffect(() => { fileUriRef.current = fileUri; }, [fileUri]);
-
   // ══════════════════════════════════════════════════════════
   // LIFECYCLE
   // ══════════════════════════════════════════════════════════
@@ -163,6 +175,7 @@ export function useAudioPlayerScreen(
   // ── Init player on mount ──
   useEffect(() => {
     let cancelled = false;
+    let unsubLoaded: (() => void) | null = null;
 
     (async () => {
       if (!fileUri) {
@@ -204,8 +217,32 @@ export function useAudioPlayerScreen(
         }
 
         MpvPlayer.loadFile(fileUri);
+
+        // Re-apply the persisted playback speed (mpv resets to 1.0 on load)
+        try {
+          MpvPlayer.setSpeed(playbackSpeedRef.current);
+        } catch {}
+
+        // Restore the saved playback position once the file loads.
+        // Covers reopening from MiniAudioPlayer mid-track (resume, not restart).
+        let initialLoadDone = false;
+        unsubLoaded = MpvPlayer.on('onFileLoaded', () => {
+          if (cancelled || initialLoadDone) return;
+          initialLoadDone = true;
+          const saved = sessionRecentRef.current.find(f => f.fileUri === fileUri);
+          const resumePosition = saved?.position ?? 0;
+          if (resumePosition > 0) {
+            setTimeout(() => {
+              try { MpvPlayer.seekTo(resumePosition); } catch {}
+            }, 200);
+          }
+        });
+
         setIsReady(true);
         setIsLoading(false);
+
+        // Track the file in Redux so MiniAudioPlayer persists after back
+        dispatch(playFile({uri: fileUri, title, duration: 0}));
       } catch (e) {
         if (!cancelled) {
           setError('Player initialization failed.');
@@ -217,8 +254,9 @@ export function useAudioPlayerScreen(
 
     return () => {
       cancelled = true;
+      unsubLoaded?.();
     };
-  }, [fileUri]);
+  }, [fileUri, title, dispatch]);
 
   // ── Load metadata, chapters, and lyrics when file loads ──
   useEffect(() => {
@@ -348,7 +386,10 @@ export function useAudioPlayerScreen(
       );
     }
 
-    try { MpvPlayer.stop(); } catch {}
+    // Keep the file loaded so MiniAudioPlayer can control it after back;
+    // pause (not stop) so the mini player's state matches the native player.
+    try { MpvPlayer.pause(); } catch {}
+    dispatch(setPlaybackState('paused'));
     NotificationService.stop();
 
     navigation.goBack();
@@ -402,6 +443,14 @@ export function useAudioPlayerScreen(
       MpvPlayer.seekTo(time);
     } catch {}
   }, []);
+
+  // ── Apply playback speed live from the store (sleep/speed UI) ──
+  useEffect(() => {
+    if (!isReady) return;
+    try {
+      MpvPlayer.setSpeed(playbackSpeed);
+    } catch {}
+  }, [playbackSpeed, isReady]);
 
   // ── Shuffle / Loop ──
   const handleToggleShuffle = useCallback(() => {

@@ -6,6 +6,7 @@ import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import {selectAllPlaylists} from '../../../store/slices/playlistSlice';
 import {loadPlaylistToPlayer, playlistItemsToEntries} from '../../../store/slices/playerSlice';
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
+import {isVideoFile} from '../../../utils/timeAgo';
 import {useToast} from '../../../components/feedback/Toast';
 import {ViewMode} from '../components/ViewToggle';
 import type {PlaylistKind} from '../../../types/playlist';
@@ -211,7 +212,11 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
       if (pl && pl.items.length > 0) {
         const entries = playlistItemsToEntries(pl.items);
         dispatch(loadPlaylistToPlayer(entries));
-        (navigation as any).navigate('VideoPlayer');
+        const first = pl.items[0];
+        (navigation as any).navigate(
+          isVideoFile(first.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
+          {fileUri: first.fileUri, fileTitle: first.title},
+        );
       }
     },
     [allPlaylists, dispatch, navigation],
@@ -227,7 +232,11 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
           [entries[i], entries[j]] = [entries[j], entries[i]];
         }
         dispatch(loadPlaylistToPlayer(entries));
-        (navigation as any).navigate('VideoPlayer');
+        const first = pl.items[0];
+        (navigation as any).navigate(
+          isVideoFile(first.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
+          {fileUri: first.fileUri, fileTitle: first.title},
+        );
       }
     },
     [allPlaylists, dispatch, navigation],

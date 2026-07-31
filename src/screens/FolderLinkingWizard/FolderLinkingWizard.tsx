@@ -12,11 +12,24 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
-import {useAppDispatch} from '../../store';
+import {useAppDispatch, useAppSelector} from '../../store';
 import {
   addVideoFolder,
   addAudioFolder,
+  setLastScanTimestamp,
 } from '../../store/slices/settingsSlice';
+import {
+  setScanning,
+  setTracks,
+  addTracks,
+  setScanHistory,
+  selectAllTracks,
+  type ScanHistory,
+} from '../../store/slices/mediaSlice';
+import {
+  scanFoldersIncremental,
+  fileEntriesToTracks,
+} from '../../services/fileService';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
@@ -56,11 +69,13 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
   const [browsePath, setBrowsePath] = useState(RNFS.ExternalStorageDirectoryPath || RNFS.DocumentDirectoryPath);
   const [dirContents, setDirContents] = useState<DirEntry[]>([]);
   const [showBrowser, setShowBrowser] = useState(false);
-  const [_isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanComplete, setScanComplete] = useState(false);
   const [fileCount, setFileCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const existingTracks = useAppSelector(selectAllTracks);
+  /** Guards against re-running the scan when tracks/folders change mid-step */
+  const scanStartedRef = useRef(false);
 
   // ── Progress dots ──
   const renderProgressDots = () => (
@@ -359,40 +374,75 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
     </View>
   );
 
-  // ── Step 2: Scanning ──
+  // ── Step 2: Real folder scan ──
   useEffect(() => {
-    if (step !== 2) return;
+    if (step !== 2) {
+      scanStartedRef.current = false;
+      return;
+    }
+    if (scanStartedRef.current || !selectedPath) return;
+    scanStartedRef.current = true;
 
-    setIsScanning(true);
-    setScanProgress(0);
-    setScanComplete(false);
-
-    // Simulate progressive file discovery
     let cancelled = false;
-    const totalFiles = Math.floor(Math.random() * 150) + 30;
-    let found = 0;
+    const doScan = async () => {
+      setScanProgress(0);
+      setScanComplete(false);
+      setError(null);
+      dispatch(setScanning(true));
 
-    const interval = setInterval(() => {
-      if (cancelled) return;
-      found += Math.floor(Math.random() * 8) + 1;
-      if (found >= totalFiles) {
-        found = totalFiles;
-        setFileCount(found);
+      try {
+        const result = await scanFoldersIncremental(
+          [selectedPath],
+          null, // full scan — this folder has never been scanned
+          progress => {
+            if (cancelled) return true;
+            setFileCount(progress.filesFound);
+            setScanProgress(progress.percentComplete);
+            return cancelled;
+          },
+        );
+        if (cancelled) return;
+
+        // ── Persist scanned files into the media store ──
+        const scannedTracks = fileEntriesToTracks(result.files);
+        const existingUris = new Set(existingTracks.map(t => t.uri));
+        const newTracks = scannedTracks.filter(t => !existingUris.has(t.uri));
+
+        if (existingTracks.length === 0) {
+          dispatch(setTracks(newTracks));
+        } else if (newTracks.length > 0) {
+          dispatch(addTracks(newTracks));
+        }
+
+        const history: ScanHistory = {
+          lastScanTime: result.scanTimestamp,
+          filesAdded: newTracks.length,
+          filesRemoved: 0,
+          errorsCount: result.errorsCount,
+          unsupportedCount: result.unsupportedCount,
+        };
+        dispatch(setScanHistory(history));
+        dispatch(setLastScanTimestamp(result.scanTimestamp));
+
+        setFileCount(result.files.length);
         setScanProgress(100);
         setScanComplete(true);
-        setIsScanning(false);
-        clearInterval(interval);
-      } else {
-        setFileCount(found);
-        setScanProgress(Math.round((found / totalFiles) * 100));
+      } catch {
+        setError('Scan failed. Please try again.');
+        setScanComplete(false);
+      } finally {
+        dispatch(setScanning(false));
       }
-    }, 300);
+    };
+
+    doScan();
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      dispatch(setScanning(false));
     };
-  }, [step]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, selectedPath]);
 
   const renderScanning = () => (
     <View style={[styles.stepContent, styles.centerStep]}>
@@ -454,6 +504,15 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
           ]}
         />
       </View>
+
+      {error ? (
+        <AppText
+          variant="caption"
+          color="error"
+          style={{marginTop: spacing.md, textAlign: 'center'}}>
+          {error}
+        </AppText>
+      ) : null}
     </View>
   );
 
@@ -466,8 +525,11 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
     if (folderType === 'audio' || folderType === 'mixed') {
       dispatch(addAudioFolder(selectedPath));
     }
-    // Go back to LinkedFolders
-    nav.navigate('LinkedFolders', {type: folderType === 'mixed' ? 'video' : folderType});
+    // Jump straight to the Library tab so scanned media is immediately visible
+    nav.navigate('MainTabs', {
+      screen: 'LibraryTab',
+      params: {screen: 'Library'},
+    });
   }, [folderType, selectedPath, dispatch, nav]);
 
   const handleAddAnother = useCallback(() => {

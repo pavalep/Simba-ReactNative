@@ -111,6 +111,7 @@ export interface Spec extends TurboModule {
   readonly selectTrack: (trackId: Double) => void;
   readonly cycleTrack: (type: 'video' | 'audio' | 'sub') => void;
   readonly setTrackVisibility: (trackType: string, visible: boolean) => void;
+  readonly setTrack: (type: string, trackId: Double) => void;
 
   // ── Chapters ──
   readonly getChapters: () => MpvChapter[];

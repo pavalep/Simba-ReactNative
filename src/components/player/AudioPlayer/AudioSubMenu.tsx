@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useRef} from 'react';
+import React, {useState, useCallback, useRef, useEffect} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -16,6 +16,9 @@ import {radius, spacing} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
 import type {TrackMetadata} from '../../../services/metadataService';
 import {navigate} from '../../../navigation/navigationHelper';
+import {useAppDispatch, useAppSelector} from '../../../store';
+import {setPlaybackSpeed, setSleepTimer} from '../../../store/slices/playerSlice';
+import {MpvPlayer} from '../../../native';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -39,12 +42,33 @@ interface AudioSubMenuProps {
 // ─── Sleep Timer Picker ─────────────────────────────────────
 
 const SLEEP_TIMER_OPTIONS = [15, 30, 45, 60] as const;
+const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
+
+const formatRemaining = (ms: number): string => {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
 
 const SleepTimerSection: React.FC<{
   onSelect: (minutes: number) => void;
-  activeMinutes: number | null;
-}> = ({onSelect, activeMinutes}) => {
+  onCancel: () => void;
+  activeEndTime: number | null;
+  colors: ColorTokens;
+}> = ({onSelect, onCancel, activeEndTime, colors}) => {
   const [expanded, setExpanded] = useState(false);
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  // Live countdown while the section is open
+  useEffect(() => {
+    if (!expanded || activeEndTime === null) return;
+    const t = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [expanded, activeEndTime]);
+
+  const remainingMs = activeEndTime !== null ? Math.max(0, activeEndTime - nowTick) : 0;
+  const active = activeEndTime !== null && remainingMs > 0;
 
   return (
     <>
@@ -54,7 +78,7 @@ const SleepTimerSection: React.FC<{
         activeOpacity={0.7}>
         <SvgIcon name="sliders" size={20} color="#EDEDED" />
         <AppText variant="body2" color="primary" style={styles.actionLabel}>
-          {activeMinutes ? `Sleep Timer (${activeMinutes} min)` : 'Sleep Timer'}
+          {active ? `Sleep Timer (${formatRemaining(remainingMs)} left)` : 'Sleep Timer'}
         </AppText>
         <AppText variant="caption" color="secondary">
           {expanded ? '−' : '+'}
@@ -67,7 +91,7 @@ const SleepTimerSection: React.FC<{
               key={min}
               style={[
                 styles.timerChip,
-                activeMinutes === min && {
+                active && Math.ceil(remainingMs / 60000) === min && {
                   backgroundColor: 'rgba(201,168,76,0.15)',
                   borderColor: '#C9A84C',
                 },
@@ -80,8 +104,78 @@ const SleepTimerSection: React.FC<{
               <AppText
                 variant="caption"
                 color="primary"
-                style={activeMinutes === min ? {color: '#C9A84C'} : undefined}>
+                style={
+                  active && Math.ceil(remainingMs / 60000) === min
+                    ? {color: '#C9A84C'}
+                    : undefined
+                }>
                 {min} min
+              </AppText>
+            </TouchableOpacity>
+          ))}
+          {active && (
+            <TouchableOpacity
+              style={[styles.timerChip, {borderColor: colors.border.subtle}]}
+              onPress={() => {
+                onCancel();
+                setExpanded(false);
+              }}
+              activeOpacity={0.7}>
+              <AppText variant="caption" color="secondary">
+                Cancel
+              </AppText>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+    </>
+  );
+};
+
+// ─── Playback Speed Picker ──────────────────────────────────
+
+const SpeedSection: React.FC<{
+  currentSpeed: number;
+  onSelect: (speed: number) => void;
+}> = ({currentSpeed, onSelect}) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <>
+      <TouchableOpacity
+        style={styles.actionRow}
+        onPress={() => setExpanded(v => !v)}
+        activeOpacity={0.7}>
+        <SvgIcon name="maximize" size={20} color="#EDEDED" />
+        <AppText variant="body2" color="primary" style={styles.actionLabel}>
+          Playback Speed
+        </AppText>
+        <AppText variant="caption" color="secondary">
+          {currentSpeed.toFixed(2).replace(/\.?0+$/, '')}× {expanded ? '−' : '+'}
+        </AppText>
+      </TouchableOpacity>
+      {expanded && (
+        <View style={styles.timerOptions}>
+          {SPEED_OPTIONS.map(spd => (
+            <TouchableOpacity
+              key={spd}
+              style={[
+                styles.timerChip,
+                currentSpeed === spd && {
+                  backgroundColor: 'rgba(201,168,76,0.15)',
+                  borderColor: '#C9A84C',
+                },
+              ]}
+              onPress={() => {
+                onSelect(spd);
+                setExpanded(false);
+              }}
+              activeOpacity={0.7}>
+              <AppText
+                variant="caption"
+                color="primary"
+                style={currentSpeed === spd ? {color: '#C9A84C'} : undefined}>
+                {spd}×
               </AppText>
             </TouchableOpacity>
           ))}
@@ -150,8 +244,11 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
   onAddToPlaylist,
   onBookmark,
 }) => {
-  const [sleepMinutes, setSleepMinutes] = useState<number | null>(null);
-  const heartScale = useRef(new Animated.Value(1)).current;
+    const heartScale = useRef(new Animated.Value(1)).current;
+
+  const dispatch = useAppDispatch();
+  const playbackSpeed = useAppSelector(state => state.player.playbackSpeed);
+  const sleepTimerEndTime = useAppSelector(state => state.player.sleepTimerEndTime);
 
   const handleLike = useCallback(() => {
     Animated.sequence([
@@ -200,9 +297,26 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
     });
   }, [onClose, fileUri, title, artist, album]);
 
-  const handleSleepSelect = useCallback((minutes: number) => {
-    setSleepMinutes(minutes);
-  }, []);
+    const handleSleepSelect = useCallback(
+    (minutes: number) => {
+      dispatch(setSleepTimer(minutes));
+    },
+    [dispatch],
+  );
+
+  const handleSleepCancel = useCallback(() => {
+    dispatch(setSleepTimer(null));
+  }, [dispatch]);
+
+  const handleSpeedSelect = useCallback(
+    (nextSpeed: number) => {
+      dispatch(setPlaybackSpeed(nextSpeed));
+      try {
+        MpvPlayer.setSpeed(nextSpeed);
+      } catch {}
+    },
+    [dispatch],
+  );
 
   const containerBg = {backgroundColor: colors.background.elevated};
 
@@ -308,13 +422,18 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
             {/* 4. Sleep Timer */}
             <SleepTimerSection
               onSelect={handleSleepSelect}
-              activeMinutes={sleepMinutes}
+              onCancel={handleSleepCancel}
+              activeEndTime={sleepTimerEndTime}
+              colors={colors}
             />
 
-            {/* 5. Audio Quality */}
+            {/* 5. Playback Speed */}
+            <SpeedSection currentSpeed={playbackSpeed} onSelect={handleSpeedSelect} />
+
+            {/* 6. Audio Quality */}
             <AudioQualityCard metadata={metadata} />
 
-            {/* 6. Share */}
+            {/* 7. Share */}
             <TouchableOpacity
               style={styles.actionRow}
               onPress={handleShare}

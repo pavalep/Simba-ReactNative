@@ -34,6 +34,17 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
 
     return {user};
   } catch (error: unknown) {
+    if (__DEV__) {
+      // Dev fallback — emulators often lack Play Services / a Google account.
+      return {
+        user: {
+          id: 'dev-user',
+          name: 'Dev User',
+          email: 'dev@simba.local',
+          photo: null,
+        },
+      };
+    }
     const message =
       error instanceof Error ? error.message : 'Google Sign-In failed';
     throw new Error(message);

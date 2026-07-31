@@ -40,7 +40,7 @@ function formatDuration(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export const ArtistScreen: React.FC<Props> = ({_navigation, _route}) => {
+export const ArtistScreen: React.FC<Props> = () => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;

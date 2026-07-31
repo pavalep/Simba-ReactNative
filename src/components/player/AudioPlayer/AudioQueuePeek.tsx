@@ -22,7 +22,6 @@ export const AudioQueuePeek: React.FC<AudioQueuePeekProps> = ({
   colors,
   currentIndex,
   queue,
-  _currentTitle,
   currentArtist,
   onTap,
 }) => {

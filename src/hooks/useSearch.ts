@@ -294,7 +294,7 @@ export function useSearch(
 
     return items;
   }, [
-    query, tracks, searchIndex, indexHitUris, indexSubstringUris,
+    query, tracks, indexHitUris, indexSubstringUris,
     artists, albums, allPlaylists, recentFiles, playlist, videoFolders, audioFolders,
   ]);
 

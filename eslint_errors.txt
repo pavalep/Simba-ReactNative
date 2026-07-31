@@ -1,0 +1,279 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\app\ErrorBoundary.tsx: line 158, col 21, Warning - Inline style: { marginTop: 8 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkItem.tsx: line 127, col 20, Warning - Inline style: { color: '#FFFFFF', marginTop: 2, fontSize: 11 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkSheet.tsx: line 144, col 24, Warning - Inline style: { marginLeft: 4 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\AppButton\AppButton.tsx: line 109, col 11, Warning - Inline style: {
+  borderWidth: "variant === 'outline' ? 1 : 0",
+  alignSelf: "fullWidth ? 'stretch' : undefined",
+  opacity: 'disabled ? 0.5 : 1'
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\AppButton\AppButton.tsx: line 133, col 39, Warning - Inline style: { flexDirection: "iconPosition === 'right' ? 'row-reverse' : 'row'" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\AppButton\AppButton.tsx: line 138, col 17, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\Avatar\Avatar.tsx: line 35, col 16, Warning - Inline style: { overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.08)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\Avatar\Avatar.tsx: line 45, col 18, Warning - Inline style: { flex: 1, alignItems: 'center', justifyContent: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\Avatar\Avatar.tsx: line 51, col 20, Warning - Inline style: { fontWeight: '600', color: '#EDEDED' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\Avatar\Avatar.tsx: line 62, col 14, Warning - Inline style: {
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: 'rgba(255,255,255,0.06)'
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\Avatar\Avatar.tsx: line 72, col 18, Warning - Inline style: { fontWeight: '600', color: 'rgba(237,237,237,0.65)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\Dialog\Dialog.tsx: line 113, col 13, Warning - Inline style: { shadowOpacity: 0.4, shadowRadius: 24, elevation: 16 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\Dialog\Dialog.tsx: line 175, col 46, Warning - Inline style: { opacity: 0.4 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\EmptyState\EmptyState.tsx: line 57, col 16, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\ScanProgressBanner\ScanProgressBanner.tsx: line 238, col 39, Warning - Inline style: { opacity: 0.8 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\ScanProgressBanner\ScanProgressBanner.tsx: line 290, col 33, Warning - Inline style: { opacity: 0.6 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\layout\InternalHeader\InternalHeader.tsx: line 43, col 59, Warning - Inline style: { fontSize: 22 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioLyricsView\AudioLyricsView.tsx: line 333, col 33, Warning - 'react-hooks/exhaustive-deps' rule is disabled but never reported. (eslint-comments/no-unused-disable)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioLyricsView\AudioLyricsView.tsx: line 377, col 40, Warning - Inline style: { color: "activeTab === 'lyrics' ? '#FFFFFF' : colors.text.secondary" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioLyricsView\AudioLyricsView.tsx: line 387, col 40, Warning - Inline style: { color: "activeTab === 'queue' ? '#FFFFFF' : colors.text.secondary" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioLyricsView\AudioLyricsView.tsx: line 427, col 40, Warning - Inline style: { paddingVertical: 16, paddingBottom: 60 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioLyricsView\AudioLyricsView.tsx: line 453, col 40, Warning - Inline style: { paddingBottom: 60 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioActionRow.tsx: line 96, col 17, Warning - Inline style: { color: "liked ? '#FF2D55' : colors.text.primary" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioGradientBg.tsx: line 71, col 40, Warning - Inline style: { backgroundColor: 'transparent' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioGradientBg.tsx: line 72, col 40, Warning - Inline style: { backgroundColor: 'rgba(10,10,12,0.50)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioGradientBg.tsx: line 73, col 40, Warning - Inline style: { backgroundColor: 'rgba(10,10,12,0.78)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioGradientBg.tsx: line 74, col 40, Warning - Inline style: { backgroundColor: 'rgba(10,10,12,0.92)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioPlayer.tsx: line 269, col 20, Warning - Inline style: { marginBottom: 8, marginLeft: 20 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioSeekBar.tsx: line 282, col 15, Warning - Inline style: { marginLeft: -30 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioSeekBar.tsx: line 297, col 15, Warning - Inline style: { backgroundColor: '#FFFFFF' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioSeekBar.tsx: line 316, col 15, Warning - Inline style: { backgroundColor: '#FFFFFF' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioSubMenu.tsx: line 70, col 42, Warning - Inline style: { backgroundColor: 'rgba(201,168,76,0.15)', borderColor: '#C9A84C' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioSubMenu.tsx: line 83, col 48, Warning - Inline style: { color: '#C9A84C' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioSubMenu.tsx: line 258, col 21, Warning - Inline style: { color: "liked ? '#FF2D55' : '#EDEDED'" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioSubMenu.tsx: line 300, col 39, Warning - Inline style: { color: '#C9A84C' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioSubMenu.tsx: line 340, col 26, Warning - Inline style: { height: 24 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioVolumeSlider.tsx: line 76, col 17, Warning - Inline style: {
+  backgroundColor: "i < activeBars ? color : 'transparent'",
+  borderWidth: 'i >= activeBars ? 1 : 0'
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx: line 177, col 9, Warning - Inline style: { backgroundColor: 'rgba(18,18,20,0.96)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx: line 209, col 52, Warning - Inline style: { alignItems: 'center', justifyContent: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx: line 219, col 52, Warning - Inline style: {
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: 'rgba(0,0,0,0.35)'
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\NowPlayingInfo\ChapterList.tsx: line 90, col 15, Warning - Inline style: {
+  backgroundColor: 'isActive\n' +
+    '                  ? colors.accent.goldDim\n' +
+    "                  : 'transparent'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\NowPlayingInfo\InfoSheet.tsx: line 68, col 31, Warning - Inline style: {
+  backgroundColor: "isDark ? 'rgba(212,175,55,0.15)' : 'rgba(212,175,55,0.1)'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\NowPlayingInfo\InfoSheet.tsx: line 90, col 40, Warning - Inline style: { borderBottomWidth: 2 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\NowPlayingInfo\InfoSheet.tsx: line 144, col 34, Warning - Inline style: { backgroundColor: 'rgba(212,175,55,0.1)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\PlaylistPreview\PlaylistPreviewSheet.tsx: line 100, col 21, Warning - Inline style: {
+  backgroundColor: 'isCurrent\n' +
+    '                        ? colors.accent.goldDim\n' +
+    "                        : 'transparent'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\QueueManagement\QueueManagementSheet.tsx: line 156, col 25, Warning - Inline style: { opacity: 'canMoveUp ? 1 : 0.25' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\QueueManagement\QueueManagementSheet.tsx: line 166, col 25, Warning - Inline style: { opacity: 'canMoveDown ? 1 : 0.25' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx: line 463, col 15, Warning - Inline style: { alignSelf: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistCard\PlaylistCard.tsx: line 90, col 45, Warning - Inline style: { fontSize: 9, fontWeight: '700' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistCard\PlaylistCard.tsx: line 115, col 49, Warning - Inline style: { marginLeft: 4 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistCard\PlaylistCard.tsx: line 126, col 49, Warning - Inline style: { marginLeft: 4 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistContextMenu\PlaylistContextMenu.tsx: line 105, col 64, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistContextMenu\PlaylistContextMenu.tsx: line 119, col 29, Warning - Inline style: { fontSize: 18, lineHeight: 20 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistCreateModal\PlaylistCreateModal.tsx: line 137, col 26, Warning - Inline style: { marginRight: 6 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistCreateModal\PlaylistCreateModal.tsx: line 155, col 45, Warning - Inline style: { color: '#08080A', fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sections\AccountSection\AccountSection.tsx: line 21, col 18, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\BottomSheet\BottomSheet.tsx: line 186, col 32, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\PlaylistSheet\PlaylistSheet.tsx: line 198, col 26, Warning - Inline style: { fontSize: 10 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\PlaylistSheet\PlaylistSheet.tsx: line 211, col 31, Warning - Inline style: { fontSize: 16 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\PlaylistSheet\PlaylistSheet.tsx: line 254, col 27, Warning - Inline style: { fontSize: 18, lineHeight: 20 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\PlaylistSheet\PlaylistSheet.tsx: line 350, col 15, Warning - Inline style: { opacity: 'newName.trim() ? 1 : 0.5' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\PlaylistSheet\PlaylistSheet.tsx: line 362, col 22, Warning - Inline style: { color: '#08080A' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx: line 77, col 15, Warning - Inline style: { backgroundColor: "isSelected ? colors.accent.gold : 'transparent'" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx: line 109, col 24, Warning - Inline style: { fontSize: 9, fontWeight: '700' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx: line 128, col 41, Warning - Inline style: { opacity: 'canMoveUp ? 1 : 0.25' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx: line 135, col 41, Warning - Inline style: { opacity: 'canMoveDown ? 1 : 0.25' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 143, col 60, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 148, col 24, Warning - Inline style: { flexDirection: 'row', gap: 8 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 239, col 26, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 278, col 58, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 281, col 60, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 324, col 51, Warning - Inline style: { color: '#FFF', fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 334, col 51, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 344, col 68, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 354, col 69, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 370, col 67, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx: line 390, col 51, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\tabbar\FloatingTabBar.tsx: line 123, col 11, Warning - Inline style: {
+  backgroundColor: 'tokens.isDark \n' +
+    "              ? 'rgba(30,30,35,0.95)' \n" +
+    "              : 'rgba(255,255,255,1)'",
+  borderColor: 'tokens.isDark\n' +
+    "              ? 'rgba(255,255,255,0.15)'\n" +
+    "              : 'rgba(0,0,0,0.12)'",
+  shadowColor: '#000',
+  shadowOpacity: 0.4,
+  shadowRadius: 16,
+  elevation: 12
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\tabbar\FloatingTabBar.tsx: line 142, col 13, Warning - Inline style: {
+  backgroundColor: 'tokens.isDark\n' +
+    "                ? 'rgba(201,168,76,0.18)'\n" +
+    "                : 'rgba(184,146,46,0.08)'",
+  borderColor: 'tokens.isDark\n' +
+    "                ? 'rgba(201,168,76,0.35)'\n" +
+    "                : 'rgba(184,146,46,0.15)'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\utility\SectionHeader\SectionHeader.tsx: line 19, col 60, Warning - Inline style: { letterSpacing: 0.5 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\utility\SettingsRow\SettingsRow.tsx: line 29, col 62, Warning - Inline style: { marginTop: 2 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\AlbumScreen.tsx: line 82, col 13, Warning - Inline style: {
+  backgroundColor: "isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\components\AlbumHero.tsx: line 95, col 11, Warning - Inline style: { opacity: 'isDark ? 0.18 : 0.1' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\components\AlbumTrackList.tsx: line 107, col 15, Warning - Inline style: {
+  backgroundColor: 'isActive\n' +
+    "                  ? 'rgba(201,168,76,0.06)'\n" +
+    "                  : 'transparent'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllAudio\AllAudioScreen.tsx: line 124, col 54, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllPlaylists\AllPlaylistsScreen.tsx: line 150, col 54, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllVideos\AllVideosScreen.tsx: line 124, col 54, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\ArtistScreen.tsx: line 88, col 13, Warning - Inline style: {
+  backgroundColor: 'isActive\n' +
+    "                ? 'rgba(201,168,76,0.06)'\n" +
+    "                : 'transparent'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\components\ArtistHeader.tsx: line 95, col 11, Warning - Inline style: { opacity: 'isDark ? 0.2 : 0.1' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\components\ArtistTopTracks.tsx: line 103, col 15, Warning - Inline style: {
+  backgroundColor: 'isActive\n' +
+    "                  ? 'rgba(201,168,76,0.06)'\n" +
+    "                  : 'transparent'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AlbumArtBackground.tsx: line 51, col 40, Warning - Inline style: { backgroundColor: 'transparent' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AlbumArtBackground.tsx: line 55, col 13, Warning - Inline style: { backgroundColor: 'rgba(10,10,12,0.50)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AlbumArtBackground.tsx: line 61, col 13, Warning - Inline style: { backgroundColor: 'rgba(10,10,12,0.78)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AlbumArtBackground.tsx: line 67, col 13, Warning - Inline style: { backgroundColor: 'rgba(10,10,12,0.92)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioPlayerHeader.tsx: line 27, col 20, Warning - Inline style: { width: 36 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\LyricsQueuePanel.tsx: line 247, col 32, Warning - Inline style: { paddingBottom: 16 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\LyricsQueuePanel.tsx: line 272, col 40, Warning - Inline style: { marginBottom: 4 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts: line 486, col 46, Warning - 'fileUri' is already declared in the upper scope on line 58 column 9. (@typescript-eslint/no-shadow)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderBrowser\FolderBrowserScreen.tsx: line 447, col 20, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderBrowser\FolderBrowserScreen.tsx: line 455, col 22, Warning - Inline style: { marginLeft: 8 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderBrowser\FolderBrowserScreen.tsx: line 555, col 18, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 72, col 10, Error - 'isScanning' is assigned a value but never used. Allowed unused elements of array destructuring must match /^_/u. (@typescript-eslint/no-unused-vars)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 97, col 20, Warning - Inline style: { marginTop: 4 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 174, col 15, Warning - Inline style: {
+  backgroundColor: "folderType === opt.type ? colors.accent.gold : 'transparent'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 313, col 22, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 354, col 26, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 456, col 42, Warning - Inline style: { color: '#fff' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 463, col 20, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 473, col 20, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 515, col 18, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 551, col 43, Warning - Inline style: { color: '#fff', fontSize: 48 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 559, col 16, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 565, col 16, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 656, col 61, Warning - Inline style: { fontSize: 22 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 671, col 16, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 672, col 32, Warning - Inline style: { flexGrow: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 674, col 31, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx: line 706, col 22, Warning - Inline style: {
+  color: 'canNext\n' +
+    "                  ? '#fff'\n" +
+    '                  : colors.text.tertiary'
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\GenreScreen.tsx: line 59, col 54, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\ContinueWatchingHero.tsx: line 74, col 15, Warning - Inline style: { borderWidth: 3 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\FeaturedHeroBanner.tsx: line 76, col 48, Warning - Inline style: { alignItems: 'center', justifyContent: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\FeaturedHeroBanner.tsx: line 77, col 79, Warning - Inline style: { opacity: 0.2 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\FeaturedHeroBanner.tsx: line 88, col 43, Warning - Inline style: { backgroundColor: 'rgba(255,255,255,0.05)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\FeaturedHeroBanner.tsx: line 99, col 39, Warning - Inline style: { backgroundColor: 'rgba(255,255,255,0.2)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\FeaturedHeroBanner.tsx: line 126, col 50, Warning - Inline style: { borderColor: 'rgba(255,255,255,0.15)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\FeaturedHeroBanner.tsx: line 142, col 43, Warning - Inline style: { backgroundColor: 'rgba(255,255,255,0.2)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\GenreChipsShelf.tsx: line 52, col 48, Warning - Inline style: { backgroundColor: 'rgba(0,0,0,0.2)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\GenreChipsShelf.tsx: line 58, col 48, Warning - Inline style: { backgroundColor: 'rgba(255,255,255,0.15)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\HomeMediaShelf.tsx: line 117, col 58, Warning - Inline style: { backgroundColor: 'rgba(0,0,0,0.6)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\HomeMediaShelf.tsx: line 132, col 58, Warning - Inline style: { backgroundColor: 'rgba(255,255,255,0.15)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\QuickAccessShelf.tsx: line 54, col 45, Warning - Inline style: { backgroundColor: 'rgba(212,175,55,0.1)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\QuickAccessShelf.tsx: line 55, col 68, Warning - Inline style: { fontSize: 10, fontWeight: '700' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\AlbumDetailScreen.tsx: line 178, col 11, Warning - Inline style: { opacity: 'isDark ? 0.22 : 0.12' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\AlbumDetailScreen.tsx: line 254, col 22, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx: line 194, col 11, Warning - Inline style: { opacity: 'isDark ? 0.22 : 0.12' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx: line 300, col 26, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx: line 323, col 40, Warning - Inline style: { marginTop: 20 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx: line 335, col 33, Warning - Inline style: { backgroundColor: 'rgba(201,168,76,0.08)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx: line 336, col 47, Warning - Inline style: { borderBottomWidth: 0 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx: line 357, col 17, Warning - Inline style: {
+  backgroundColor: "isCurrentTrack ? 'rgba(201,168,76,0.2)' : colors.accent.goldDim"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\LibraryScreen.tsx: line 262, col 94, Warning - Inline style: { flexDirection: 'row', paddingHorizontal: 20 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\LibraryScreen.tsx: line 354, col 94, Warning - Inline style: { flexDirection: 'row' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\LibraryScreen.tsx: line 359, col 93, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\LibraryScreen.tsx: line 382, col 38, Warning - Inline style: { opacity: 'isDark ? 0.22 : 0.12' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryAlbumsSegment.tsx: line 58, col 54, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryArtistsSegment.tsx: line 58, col 54, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryFoldersSegment.tsx: line 196, col 23, Warning - Inline style: {
+  backgroundColor: "type === 'video'\n" +
+    "                            ? 'rgba(100,181,246,0.15)'\n" +
+    "                            : 'rgba(212,175,55,0.15)'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryFoldersSegment.tsx: line 206, col 30, Warning - Inline style: { fontSize: 10, fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\MediaContextMenu.tsx: line 79, col 31, Warning - Inline style: { backgroundColor: 'rgba(8,8,10,0.60)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\MediaGridItem.tsx: line 61, col 47, Warning - Inline style: { backgroundColor: 'rgba(0,0,0,0.75)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LinkedFolders\LinkedFoldersScreen.tsx: line 414, col 57, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LinkedFolders\LinkedFoldersScreen.tsx: line 460, col 64, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LinkedFolders\LinkedFoldersScreen.tsx: line 463, col 66, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LinkedFolders\LinkedFoldersScreen.tsx: line 493, col 58, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MovieDetailScreen\MovieDetailScreen.tsx: line 328, col 22, Warning - Inline style: { height: 80 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\MoviesScreen.tsx: line 53, col 11, Warning - Inline style: {
+  borderColor: 'isSelected\n' +
+    '              ? colors.accent.gold\n' +
+    "              : 'rgba(255,255,255,0.08)'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\MoviesScreen.tsx: line 71, col 13, Warning - Inline style: { color: "isSelected ? '#000' : colors.text.secondary" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\MoviesScreen.tsx: line 186, col 41, Warning - Inline style: { borderBottomColor: 'rgba(255,255,255,0.05)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\MusicScreen.tsx: line 68, col 13, Warning - Inline style: { color: "isSelected ? '#000' : colors.text.secondary" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\NowPlayingScreen.tsx: line 288, col 45, Warning - Inline style: { justifyContent: 'center', alignItems: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\NowPlayingScreen.tsx: line 289, col 57, Warning - Inline style: { marginBottom: 8 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\NowPlayingScreen.tsx: line 292, col 60, Warning - Inline style: { textAlign: 'center', paddingHorizontal: 32 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\NowPlayingScreen.tsx: line 323, col 20, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\NowPlayingScreen.tsx: line 450, col 19, Warning - Inline style: { width: '70%' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx: line 522, col 24, Warning - Inline style: { fontSize: 14, fontWeight: '700' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx: line 572, col 61, Warning - Inline style: { fontSize: 22 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx: line 646, col 32, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\PodcastsScreen.tsx: line 50, col 11, Warning - Inline style: {
+  borderColor: 'isSelected\n' +
+    '              ? colors.accent.gold\n' +
+    "              : 'rgba(255,255,255,0.08)'"
+} (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\PodcastsScreen.tsx: line 68, col 13, Warning - Inline style: { color: "isSelected ? '#000' : colors.text.secondary" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\PodcastsScreen.tsx: line 243, col 11, Warning - Inline style: { borderBottomColor: 'rgba(255,255,255,0.05)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\PodcastsScreen.tsx: line 321, col 37, Warning - Do not define components during render. React will see a new component type on every render and destroy the entire subtreeΓÇÖs DOM nodes and state (https://reactjs.org/docs/reconciliation.html#elements-of-different-types). Instead, move this component definition out of the parent component ΓÇ£PodcastsScreenΓÇ¥ and pass data as props. If you want to allow component creation in props, set allowAsProps option to true. (react/no-unstable-nested-components)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\SearchScreen.tsx: line 190, col 11, Warning - Inline style: { opacity: 'isDark ? 0.22 : 0.12' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\SearchScreen.tsx: line 241, col 22, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\FilterAndSortControls.tsx: line 63, col 26, Warning - Inline style: { fontWeight: "isActive ? '600' : '400'" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\FilterAndSortControls.tsx: line 94, col 24, Warning - Inline style: { fontWeight: "isActive ? '600' : '400'" } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\HighlightedText.tsx: line 56, col 40, Warning - Inline style: { fontSize: 12 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\HighlightedText.tsx: line 70, col 38, Warning - Inline style: { fontSize: 12 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\HighlightedText.tsx: line 76, col 19, Warning - Inline style: { fontWeight: '500' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\HighlightedText.tsx: line 89, col 15, Warning - Inline style: { fontSize: 14 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\HighlightedText.tsx: line 95, col 17, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\ResultTile.tsx: line 85, col 65, Warning - Inline style: { fontSize: 12 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\SettingsScreen.tsx: line 77, col 16, Warning - Inline style: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\SettingsScreen.tsx: line 99, col 20, Warning - Inline style: { textAlign: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\SettingsScreen.tsx: line 271, col 30, Warning - Inline style: { flexDirection: 'row', alignItems: 'center', gap: 6 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\SettingsScreen.tsx: line 273, col 28, Warning - Inline style: { width: 16, height: 16, borderRadius: 4, borderWidth: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\LinkedFoldersDialog.tsx: line 44, col 13, Warning - Inline style: { borderWidth: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx: line 395, col 28, Warning - Inline style: { alignItems: 'center' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx: line 407, col 45, Warning - Inline style: { borderWidth: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx: line 412, col 32, Warning - Inline style: { flex: 1 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx: line 436, col 32, Warning - Inline style: { fontSize: 12 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx: line 443, col 25, Warning - Inline style: { backgroundColor: 'rgba(239,83,80,0.15)' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx: line 449, col 32, Warning - Inline style: { fontSize: 12 } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx: line 461, col 64, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx: line 513, col 53, Warning - Inline style: { fontWeight: '600' } (react-native/no-inline-styles)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\ThemePickerDialog.tsx: line 38, col 17, Warning - Inline style: {
+  backgroundColor: 'isSelected\n' +
+    '                    ? colors.accent.gold\n' +
+    "                    : 'transparent'",
+  borderWidth: 1
+} (react-native/no-inline-styles)
+
+195 problems

@@ -25,7 +25,7 @@ export type RootStackParamList = {
   PodcastsScreen: {categoryId?: number} | undefined;
   Search: undefined;
   NowPlaying: {fileUri?: string; fileTitle?: string} | undefined;
-  FolderBrowser: {initialPath?: string};
+  FolderBrowser: {initialPath?: string; targetPlaylistId?: string};
   PlaylistDetail: {playlistId: string; playlistName: string};
   ArtistDetail: {artistName: string};
   AlbumDetail: {albumTitle: string; artistName: string};

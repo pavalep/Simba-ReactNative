@@ -80,8 +80,8 @@ export const FilterAndSortControls: React.FC<FilterAndSortControlsProps> = ({
           const isActive = activeSort === sort.key;
           return (
             <TouchableOpacity
-              key={s.key}
-              onPress={() => onSortChange(s.key)}
+              key={sort.key}
+              onPress={() => onSortChange(sort.key)}
               style={[
                 styles.sortOption,
                 isActive && {
@@ -92,7 +92,7 @@ export const FilterAndSortControls: React.FC<FilterAndSortControlsProps> = ({
                 variant="caption"
                 color={isActive ? 'accent' : 'secondary'}
                 style={{fontWeight: isActive ? '600' : '400'}}>
-                {s.label}
+                {sort.label}
               </AppText>
             </TouchableOpacity>
           );

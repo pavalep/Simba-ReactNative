@@ -80,6 +80,8 @@ export function useVideoPlayerScreen(
 
   // ── Core playback state ──
   const [secondaryVisible, setSecondaryVisible] = useState(true);
+  // ── Lock controls (31.1): locked state ignores touches/gestures ──
+const [controlsLocked, setControlsLocked] = useState(false);
   const [volume, setVolume] = useState(65);
   const [nativePtr, setNativePtr] = useState(0);
   const [showVideoSurface, setShowVideoSurface] = useState(true);
@@ -414,12 +416,27 @@ export function useVideoPlayerScreen(
   }, [haptics]);
 
   const handleSurfaceTap = useCallback(() => {
+    if (controlsLocked) {
+      // Locked: tapping the surface only reveals the top bar so the
+      // persistent unlock chip stays reachable — never play/pause.
+      setSecondaryVisible(v => !v);
+      return;
+    }
     if (!secondaryVisible) {
       setSecondaryVisible(true);
       return;
     }
     handlePlayPause();
-  }, [handlePlayPause, secondaryVisible]);
+  }, [controlsLocked, handlePlayPause, secondaryVisible]);
+
+  const handleToggleLock = useCallback(() => {
+    setControlsLocked(prev => {
+      const next = !prev;
+      // Always reveal the UI when toggling so the user sees the change.
+      setSecondaryVisible(true);
+      return next;
+    });
+  }, []);
 
   const handlePrev = useCallback(() => {
     MpvPlayer.seekTo(0);
@@ -428,13 +445,19 @@ export function useVideoPlayerScreen(
   const handleNext = useCallback(() => {
     if (playlist.length > 0 && currentIndex < playlist.length - 1) {
       const nextIdx = currentIndex + 1;
-      dispatch(nextTrack());
       const entry = playlist[nextIdx];
-      if (entry) MpvPlayer.loadFile(entry.uri);
+      if (!entry) return;
+      dispatch(nextTrack());
+      // 31.9 mixed-queue handoff: next item is audio → seamless player swap
+      if (getMediaType(entry.uri) === 'audio') {
+        navigation.replace('AudioPlayer', {fileUri: entry.uri, fileTitle: entry.title});
+        return;
+      }
+      MpvPlayer.loadFile(entry.uri);
     } else {
       MpvPlayer.seekTo(MpvPlayer.getDuration?.() ?? 0);
     }
-  }, [playlist, currentIndex, dispatch]);
+  }, [playlist, currentIndex, dispatch, navigation]);
 
   const handleSeek = useCallback((pct: number) => {
     isSeeking.current = true;
@@ -511,6 +534,7 @@ export function useVideoPlayerScreen(
 
   // ── Gesture handlers ──
   const handleDoubleTapLeft = useCallback(() => {
+    if (controlsLocked) return;
     const target = Math.max(0, (MpvPlayer.getPosition?.() ?? 0) - 10);
     MpvPlayer.seekTo(target);
     setSeekSide('left');
@@ -520,6 +544,7 @@ export function useVideoPlayerScreen(
   }, []);
 
   const handleDoubleTapRight = useCallback(() => {
+    if (controlsLocked) return;
     const target = Math.min(MpvPlayer.getDuration?.() ?? 1, (MpvPlayer.getPosition?.() ?? 0) + 10);
     MpvPlayer.seekTo(target);
     setSeekSide('right');
@@ -529,16 +554,18 @@ export function useVideoPlayerScreen(
   }, []);
 
   const handleSwipeUp = useCallback(() => {
+    if (controlsLocked) return;
     setInfoSheetVisible(true);
-  }, []);
+  }, [controlsLocked]);
 
   const handleSwipeDown = useCallback(() => {
+    if (controlsLocked) return;
     if (Platform.OS === 'android') {
       triggerShrinkAndEnterPip();
       return;
     }
     MpvPlayer.toggleMute?.();
-  }, [triggerShrinkAndEnterPip]);
+  }, [controlsLocked, triggerShrinkAndEnterPip]);
 
   const handleScreenshot = useCallback(() => {
     try {
@@ -571,6 +598,7 @@ export function useVideoPlayerScreen(
 
   // ── Volume/Brightness gesture callbacks (3.6) ──
   const handleVolumeSwipe = useCallback((delta: number) => {
+    if (controlsLocked) return;
     setVolume(prev => {
       const newVol = Math.max(0, Math.min(100, prev + delta));
       MpvPlayer.setVolume(newVol);
@@ -583,6 +611,7 @@ export function useVideoPlayerScreen(
   }, []);
 
   const handleBrightnessSwipe = useCallback((delta: number) => {
+    if (controlsLocked) return;
     setBrightnessOverlayValue(prev => {
       const newVal = Math.max(0, Math.min(100, prev + delta));
       ScreenBrightness.setBrightness(newVal / 100);
@@ -1226,6 +1255,15 @@ export function useVideoPlayerScreen(
     });
 
     const unsubEnd = MpvPlayer.on('onEndReached', () => {
+      // 31.9: at video end, hand off straight into the audio player when the
+      // next queue item is audio (playback continues without a replay stop).
+      const nextIdx = currentIndex + 1;
+      const nextEntry = playlist[nextIdx];
+      if (nextEntry && getMediaType(nextEntry.uri) === 'audio') {
+        dispatch(nextTrack());
+        navigation.replace('AudioPlayer', {fileUri: nextEntry.uri, fileTitle: nextEntry.title});
+        return;
+      }
       setShowReplay(true);
     });
 
@@ -1283,7 +1321,7 @@ export function useVideoPlayerScreen(
       unsubNotifStop();
       unsubNotifSeek();
     };
-  }, [isReady, savedEntry, requestedStartPosition, dispatch, handlePlayPause, handleNext, handlePrev, handleGoBack]);
+  }, [isReady, savedEntry, requestedStartPosition, dispatch, handlePlayPause, handleNext, handlePrev, handleGoBack, controlsLocked, playlist, currentIndex, navigation]);
 
   // ── Return ──
   // ── Computed labels for toolbar ──
@@ -1309,6 +1347,7 @@ export function useVideoPlayerScreen(
     // Core playback state
     secondaryVisible,
     setSecondaryVisible,
+    controlsLocked,
     volume,
     nativePtr,
     showVideoSurface,
@@ -1427,6 +1466,7 @@ export function useVideoPlayerScreen(
     // Transport / playback handlers
     handlePlayPause,
     handleSurfaceTap,
+    handleToggleLock,
     handlePrev,
     handleNext,
     handleSeek,

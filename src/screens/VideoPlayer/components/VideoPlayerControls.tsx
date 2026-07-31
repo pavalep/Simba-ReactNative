@@ -159,8 +159,6 @@ export const VideoPlayerControls: React.FC<VideoPlayerControlsProps> = ({
   isPlaying,
   volume,
   chapters = [],
-  _currentTime,
-  _totalTime,
   onPlayPause,
   onPrev,
   onNext,

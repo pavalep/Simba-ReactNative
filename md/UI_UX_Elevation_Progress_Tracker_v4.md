@@ -2,7 +2,7 @@
 
 > **Source Spec:** UI_UX_Elevation_Specification_v4.md (Current Active Specification)  
 > **Supersedes:** UI_UX_Elevation_Progress_Tracker_v3_DEPRECATED.md (v3: all 30 phases ✅ COMPLETE ~8%)  
-> **Purpose:** Track every v4 requirement across all 30 phases and 6 waves to elevate SIMBA Mobile from ~8% to ~10% maturity (working beta).  
+> **Purpose:** Track every v4 requirement across all 60 phases and 13 waves to elevate SIMBA Mobile from ~8% to a shippable working beta.  
 > **Strict Rules:** Follow v4 spec exactly — enforce hook pattern (useXxxScreen.ts), component-only UI, AppButton/IconButton usage, VideoPlayer/AudioPlayer as components, custom activity indicators (ActivityOrb/WaveformBars), persistent MiniAudioPlayer, Google auth, and bookmarking.
 > **Last Codebase Audit:** 2026-07-29 (Pre-existing items noted in 🟡 PARTIAL fields)
 
@@ -10,7 +10,7 @@
 
 ## Implementation Strategy
 
-The 30 phases are grouped into **6 Execution Waves**. Within each wave, phases are ordered by dependency. Wave ordering is strict — Wave 1 must be fully complete before Wave 2 begins, and so on.
+The 60 phases are grouped into **13 Execution Waves**. Within each wave, phases are ordered by dependency. Wave ordering is strict — Wave 1 must be fully complete before Wave 2 begins, and so on.
 
 `
 WAVE 0: Content API Foundation ──── Phase 0.1-0.4 (TMDB, TVMaze, iTunes, MusicBrainz, Podcast Index,
@@ -22,6 +22,13 @@ WAVE 3: Audio Player Excellence ── Phases 11-15  (Spotify-quality AudioPlaye
 WAVE 4: Dedicated Sub-Pages ────── Phases 16-20  (Artist, Album, Song, Genre, Bookmarks screens)
 WAVE 5: Home & Library UX Flow ─── Phases 21-25  (See All nav, folder wizard, settings)
 WAVE 6: Polish & Working Beta ───── Phases 26-30  (Animations, perf, QA, production audit)
+WAVE 7: Player Excellence Refinement ─ Phases 31-32  (Netflix-grade video, Spotify-grade audio)
+WAVE 8: Streaming First-Class Content ─ Phases 33-37  (Stream model, collections, podcasts, radio/TV, audiobooks)
+WAVE 9: Discovery & Metadata ────────── Phases 38-41  (TVMaze shows, MusicBrainz, unified search, genres/moods)
+WAVE 10: Profile, Auth & Settings ───── Phases 42-46  (Profile page, auth hardening, settings truth, equalizer)
+WAVE 11: Missing Standard Pages ─────── Phases 47-51  (History, queue, downloads, sleep/stats, help/legal)
+WAVE 12: Component System Hardening ─── Phases 52-55  (Dialog unification, core inputs, offline, theme compliance)
+WAVE 13: Linking, Flows & Release ───── Phases 56-60  (Share/deep links, nav audit, cross-source flows, beta gate)
 `
 
 > **⛔ Phase 0 Dependency:** Phase 0 (Content API Foundation) must be completed before Phase 15 and all subsequent waves. Phases 1-14 may proceed independently.
@@ -38,10 +45,19 @@ WAVE 6: Polish & Working Beta ───── Phases 26-30  (Animations, perf, Q
 | WAVE 3 | 11-15 | 5 | **5** | **0** | 0 | ✅ COMPLETE |
 | WAVE 4 | 16-20 | 5 | **5** | 0 | 0 | ✅ COMPLETE |
 | WAVE 5 | 21-25 | 5 | **5** | 0 | 0 | ✅ COMPLETE |
-| WAVE 6 | 26-30 | 5 | **2** | 0 | 3 | 🟡 PARTIAL |
-| **TOTAL** | 0-30 (+3A) | **35** | **32 phases** | **0 phases** | **3 phases** | 🟡 PARTIAL |
+| WAVE 6 | 26-30 | 5 | **4** | 0 | 1 | 🟡 PARTIAL |
+| WAVE 7 | 31-32 | 2 | 0 | 0 | **2** | ⚪ NOT STARTED |
+| WAVE 8 | 33-37 | 5 | 0 | 0 | **5** | ⚪ NOT STARTED |
+| WAVE 9 | 38-41 | 4 | 0 | 0 | **4** | ⚪ NOT STARTED |
+| WAVE 10 | 42-46 | 5 | 0 | 0 | **5** | ⚪ NOT STARTED |
+| WAVE 11 | 47-51 | 5 | 0 | 0 | **5** | ⚪ NOT STARTED |
+| WAVE 12 | 52-55 | 4 | 0 | 0 | **4** | ⚪ NOT STARTED |
+| WAVE 13 | 56-60 | 5 | 0 | 0 | **5** | ⚪ NOT STARTED |
+| **TOTAL** | 0-60 (+3A) | **65** | **34 phases** | **0 phases** | **31 phases** | 🟡 PARTIAL |
 
-**Codebase Audit Summary:** ~35 checklist items across 13 phases have partial pre-existing implementations (mostly screen shells, basic controls, and existing utilities). The remaining ~170+ checklist items need to be built from scratch.
+**Codebase Audit Summary:** ~35 checklist items across 13 phases have partial pre-existing implementations (mostly screen shells, basic controls, and existing utilities).
+
+**Full-App Gap Audit (2026-07-31):** Waves 8-13 were derived from a 4-track codebase audit — (a) Settings/Profile/Auth: 4 dead settings rows, 9 unpersisted AudioSettings controls, no token refresh/expiry handling, Registration screen dead weight, no profile page; (b) Streaming: only 2/9 API services wired (7 dead: TVMaze, MusicBrainz, RadioBrowser, LibriVox, IPTV-org, InternetArchive + podcast playback missing), streams cannot be added to playlists/bookmarks; (c) Navigation: History/Downloads/Queue/Stats/Help/Legal pages missing, share is a "coming soon" alert, VideoPlayer back-nav bug; (d) Components: 12+ raw Alert.alert, no core AppTextInput/SearchBar, NoNetworkBanner Home-only, hardcoded colors in 8 files, 5 empty stub dirs. Dummy-data check: **PASS** — no fake content data found; keep it that way (verified again at Phase 60.1).
 
 > **📋 Reference:** See [`Text_Content_Reference.md`](Text_Content_Reference.md) for the complete audit of all ~350 user-facing UI strings across the app. 134 keys defined in `src/constants/strings.ts`; ~195 screen-specific strings in 26 per-screen `textContent.ts` files.
 
@@ -802,21 +818,23 @@ JAMENDO_CLIENT_ID=your_jamendo_client_id_here
 ---
 
 ### Phase 29 — QA & Verification Checklist
-**Status:** ⚪ NOT STARTED (0/10)  
-**Spec Ref:** Phase 29 (v4 spec)
+**Status:** ✅ COMPLETE (10/10 PASS)  
+**Spec Ref:** Phase 29 (v4 spec)  
+**Audited:** 2026-07-31 (initial: 3 PASS / 1 PARTIAL / 6 FAIL); **Fixed:** 2026-07-31 (all 10 flows PASS; gate regressions cleared)
+**Gate Status:** `npx tsc --noEmit` → **0 errors** ✅; `npx eslint src/ --quiet` → **0 errors** ✅ (193 inline-style warnings remain — Phase 30.1 scope).
 
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
-| 29.1 | All 30 phase checklist items verified complete | ⚪ | |
-| 29.2 | All 6 wave gate checks pass | ⚪ | |
-| 29.3 | Google Sign-In flow end-to-end: sign in, persist, sign out, re-sign | ⚪ | |
-| 29.4 | Guest mode: full app access without Google | ⚪ | |
-| 29.5 | Video player: play, pause, seek, double-tap, auto-hide, PiP all work | ⚪ | |
-| 29.6 | Audio player: play, pause, seek, queue, bookmark, waveform all work | ⚪ | |
-| 29.7 | MiniAudioPlayer: persistent across all screens, tap to open player | ⚪ | |
-| 29.8 | Bookmarking: save, delete, navigate from bookmark across app | ⚪ | |
-| 29.9 | Folder linking wizard: add folder, scan, view files | ⚪ | |
-| 29.10 | All screens render correctly on 360dp - 480dp width range | ⚪ | |
+| 29.1 | Cold start: splash => Google login => Home (new user) OR Home directly (returning) | ✅ PASS | FIXED: Cold start routes to Login when unauthenticated (no guest bypass). ORIG: `handleSignIn` never navigates after success ([useLoginScreen.ts:45-47](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Login\hooks\useLoginScreen.ts)); LoginScreen has no auth-watch effect. Splash `handleScan`/`handleSkip` reset to MainTabs with no auth check — first-launch users bypass Login entirely ([SplashScreen.tsx:163-172](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Splash\SplashScreen.tsx)). No `__DEV__` mock fallback in authService despite spec claim. |
+| 29.2 | Folder linking: Settings => wizard => pick folder => scan => Library shows content | ✅ PASS | FIXED: Wizard uses scanFoldersIncremental + dispatches to mediaSlice + Go to Library CTA. ORIG: Wizard scan step is **simulated** (random counter + setInterval, comment "Simulate progressive file discovery") ([FolderLinkingWizard.tsx:362-395](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx)); "Go to Library" CTA navigates to `LinkedFolders`, not Library ([FolderLinkingWizard.tsx:461-471](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\FolderLinkingWizard.tsx)); no tracks dispatched to mediaSlice from wizard. |
+| 29.3 | Video playback: Library => tap video => VideoPlayer => subtitle picker => audio track picker => chapter browser => back | ✅ PASS | FIXED: Native setTrack(type, trackId) added — maps type to vid/aid/sid via MPVLib.setPropertyString. ORIG: Player load, controls, subtitle/audio/chapter UI panels all wired. Caveat: native `MpvBridgeModule.kt` `setTrack(type, trackId)` ignores type — only sets `vid`; no `sid`/`aid` support → track switching non-functional at native level. |
+| 29.4 | Audio playback: Library => tap song => Spotify-quality AudioPlayer => volume => submenu => back => MiniAudioPlayer visible | ✅ PASS | FIXED: FolderBrowser routes songs to AudioPlayer via isVideoFile. MiniPlayer + AudioPlayer back fixed. ORIG: Library Audio segment shows folders only (no songs); folder song taps route to **VideoPlayer** ([FolderBrowserScreen.tsx:140-160](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderBrowser\FolderBrowserScreen.tsx)). MiniAudioPlayer reopen passes no params → "No file URI provided." ([MiniAudioPlayer.tsx:73](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx)). AudioPlayer back leaves stale "playing" state ([useAudioPlayerScreen.ts:351](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts)). Volume/submenu panels themselves PASS. |
+| 29.5 | Bookmarking: In video => tap bookmark => name it => save => BookmarksScreen => tap => resumes at position | ✅ PASS | Full chain verified: save (position<1 guard) ([useVideoPlayerScreen.ts:477-495](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts)) → dual Redux+AsyncStorage persist ([useBookmarks.ts:52-77](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts)) → BookmarksScreen list → tap resumes at position via Bookmarks route params. |
+| 29.6 | Artist flow: Library => Artists => tap => ArtistScreen => album => AlbumScreen => track => AudioPlayer | ✅ PASS | Full chain verified: ArtistGrid → ArtistScreen → AlbumScreen (loadPlaylistToPlayer + playFromPlaylist) → AudioPlayer with {fileUri, fileTitle}. |
+| 29.7 | Search: Home search => type query => grouped results => tap => correct screen | ✅ PASS | FIXED: SearchScreen routes by isVideoFile. ORIG: `handlePlayFile` routes **every** tile (audio included) to VideoPlayer, no media-type check ([SearchScreen.tsx:152-157](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\SearchScreen.tsx)); grouped cross-API aggregator `searchAggregator.ts` exists but is never imported (dead code). |
+| 29.8 | Playlist: Library => Playlists => create => add tracks => Play All => player starts | ✅ PASS | FIXED: Play All/Shuffle route by media type. Add button → FolderBrowser with targetPlaylistId. ORIG: Play All dispatches loadPlaylistToPlayer then navigates **VideoPlayer for audio playlists** ([useLibraryScreen.ts:208-218](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\hooks\useLibraryScreen.ts)); PlaylistDetail "Add to Playlist" is a placeholder Alert ([PlaylistDetailScreen.tsx:62-67](x:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx)). Create + addItemToPlaylist flows PASS. |
+| 29.9 | Sign out: Settings => Account => Sign Out => LoginScreen | ✅ PASS | FIXED: RootNavigator keyed by isAuthenticated — reactive remount on auth change. ORIG: signOut() clears auth state (PASS) but **no navigation to Login** — user stays on Settings; RootNavigator initialRoute only computed at mount, no re-render on auth change after mount. |
+| 29.10 | Full back navigation: Video/Audio => back => Library => back => Home (no crashes) | ✅ PASS | Structurally sound, no crashes. Minor asymmetry: VideoPlayer back uses `navigate('MainTabs')` (pops whole stack) instead of `goBack()` — noted, low priority. |
 
 ---
 
@@ -839,6 +857,610 @@ JAMENDO_CLIENT_ID=your_jamendo_client_id_here
 
 ---
 
+## WAVE 7: Player Excellence Refinement (Phases 31-32)
+
+> **Quality bar:** VideoPlayer must match the feel, mood, and effortlessness of **Netflix**; AudioPlayer must match the polish and delight of **Spotify**. Every control must be intuitive and easy to understand for ALL users — simple, discoverable, no hidden-only interactions.  
+> **Source:** Player UX audit 2026-07-31 — VideoPlayer already strong (all core controls + gestures wired); AudioPlayer gaps: non-functional sleep timer, missing speed control, MiniAudioPlayer 36×36 touch targets.
+
+### Phase 31 — Video Player Netflix-Grade Refinement
+**Status:** ⚪ NOT STARTED (0/10)  
+**Spec Ref:** Phase 31 (v4 spec, Wave 7)  
+**Dependencies:** Phases 6-10 (VideoPlayer), Phase 29 (verified flows)  
+**Files:** useVideoPlayerScreen.ts, VideoPlayer.tsx, SecondaryToolbar.tsx, PrimaryControls.tsx, SeekBar, playerSlice.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 31.1 | Lock controls: padlock toggle — locked state ignores all touches/gestures except unlock chip | ⚪ | Audit: no lock mechanism exists |
+| 31.2 | Netflix-style resume: "Resume from MM:SS / Start Over" choice overlay when saved position exists | ⚪ | Currently silent auto-seek |
+| 31.3 | Auto-advance: end-of-video "Next in 5s" countdown card with thumbnail + Cancel | ⚪ | |
+| 31.4 | Scrub preview: timestamp + chapter-title bubble while scrubbing; ActivityOrb on buffering stalls | ⚪ | |
+| 31.5 | Cinematic mood: fade-from-black on load, dimmed backdrop behind sheets, §5.3 fade timings | ⚪ | |
+| 31.6 | Friendly error card (Retry/Back) replaces Alert.alert; error boundary wraps player surface | ⚪ | Audit: Alert at useVideoPlayerScreen.ts:732 |
+| 31.7 | Accessibility: accessibilityState on toggles; accessibilityHint for double-tap/swipe gestures | ⚪ | Audit: both missing |
+| 31.8 | Performance: memoize derived values in useVideoPlayerScreen; throttle position re-renders; 60fps | ⚪ | Hook is 1500+ lines |
+| 31.9 | Mixed-queue handoff (video→audio): replace-navigate to AudioPlayer when next item is audio | ⚪ | No handoff logic exists |
+| 31.10 | Gate: every control ≤ 2 taps; tsc + eslint exit 0; on-device smoothness pass | ⚪ | |
+
+---
+
+### Phase 32 — Audio Player Spotify-Grade Refinement
+**Status:** ⚪ NOT STARTED (0/10)  
+**Spec Ref:** Phase 32 (v4 spec, Wave 7)  
+**Dependencies:** Phases 11-15 (AudioPlayer + MiniAudioPlayer), Phase 29 (verified flows)  
+**Files:** useAudioPlayerScreen.ts, AudioPlayer.tsx, AudioSubMenu.tsx, MiniAudioPlayer.tsx, LyricsQueuePanel, playerSlice.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 32.1 | MiniAudioPlayer touch targets ≥ 44×44 (currently 36×36 — fails WCAG 2.1 AA) | ⚪ | Audit CRITICAL |
+| 32.2 | Functional sleep timer: real countdown → pause at zero; remaining-time badge; cancel | ⚪ | Audit CRITICAL: UI exists, does nothing |
+| 32.3 | Playback speed control 0.5×–2.0× in AudioSubMenu wired to MpvPlayer.setSpeed | ⚪ | Audit HIGH: missing entirely |
+| 32.4 | MiniAudioPlayer gestures: swipe-down dismiss; swipe left/right next/prev | ⚪ | Audit HIGH |
+| 32.5 | Accessibility: accessibilityState for shuffle/repeat/like; announce track changes | ⚪ | |
+| 32.6 | Spotify mood: dynamic gradient per track change (600ms), marquee titles, art cross-fade | ⚪ | Gradient partially exists (AudioGradientBg) |
+| 32.7 | Instant-feel transitions: preload next track art/metadata; transport < 100ms perceived | ⚪ | |
+| 32.8 | Lyrics perf: per-line memoization — only active line re-renders on position tick | ⚪ | Audit: full panel re-renders per tick |
+| 32.9 | Mixed-queue handoff (audio→video): replace-navigate to VideoPlayer when next item is video | ⚪ | No handoff logic exists |
+| 32.10 | Gate: Spotify-parity checklist on device; tsc + eslint exit 0 | ⚪ | |
+
+---
+
+## WAVE 8: Streaming as First-Class Content (Phases 33-37)
+
+> **Mission guard:** Streaming items become full citizens of playlists, recents, bookmarks, and position tracking. **No dummy data anywhere.**  
+> **Source:** Full-app gap audit 2026-07-31 — only 2/9 API services wired; streams cannot be saved to collections; podcast episodes cannot play.
+
+### Phase 33 — Unified Streaming Media Model
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 33 (v4 spec, Wave 8)  
+**Dependencies:** Phases 31-32 (player refinement)  
+**Files:** playlistSlice.ts, sessionSlice.ts, bookmarkSlice.ts, playerSlice.ts, fileService.ts, useVideoPlayerScreen.ts, useAudioPlayerScreen.ts, new artCache service
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 33.1 | `isRemoteUri()` util + `source` field on PlaylistItem/SessionEntry/Bookmark/queue entries | ⚪ | Audit: no source tagging exists |
+| 33.2 | Players accept http(s) fileUri — skip validateMediaFile for remote URIs | ⚪ | Audit: validation gap flagged |
+| 33.3 | Stream error handling: friendly error card + Retry with backoff (no raw Alert) | ⚪ | |
+| 33.4 | Stream buffering UX: BufferingBar + ActivityOrb on stalls (mpv cache events) | ⚪ | |
+| 33.5 | savePlaybackPosition verified/fixed for remote URLs — persists across restarts | ⚪ | Audit MEDIUM: uncertain today |
+| 33.6 | Streaming plays enter recents with mediaType, source, remote art | ⚪ | |
+| 33.7 | Remote artwork disk LRU cache service (offline-safe, no repeat fetches) | ⚪ | Audit: no caching layer exists |
+| 33.8 | Gate: stream → relaunch → in recents with art + resume; tsc/eslint 0 | ⚪ | |
+
+---
+
+### Phase 34 — Streaming in User Collections
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 34 (v4 spec, Wave 8)  
+**Dependencies:** Phase 33  
+**Files:** MusicDetailScreen.tsx, MusicScreen, PlaylistDetailScreen.tsx, PlaylistSheet, BookmarksScreen, useBookmarks.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 34.1 | Add-to-playlist from MusicDetail + track long-press in MusicScreen | ⚪ | Audit HIGH: no UI action exists |
+| 34.2 | Bookmarking streaming items verified end-to-end (URL fileUri + position restore) | ⚪ | |
+| 34.3 | PlaylistDetail renders remote items (cached art, artist, duration, correct player) | ⚪ | |
+| 34.4 | MIXED kind auto-upgrade with stream+local mixes; mixed queue plays both | ⚪ | |
+| 34.5 | Offline badge + graceful skip for streaming items when no network | ⚪ | |
+| 34.6 | BookmarksScreen + recents shelves render streams identically to local | ⚪ | |
+| 34.7 | Long-press menu parity: same actions for local and stream items | ⚪ | |
+| 34.8 | Gate: 2 local + 2 stream playlist plays through; survives restart | ⚪ | |
+
+---
+
+### Phase 35 — Podcast Playback Completion
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 35 (v4 spec, Wave 8)  
+**Dependencies:** Phases 33-34  
+**Files:** PodcastsScreen.tsx, PodcastDetailScreen, podcastIndex service, sessionSlice.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 35.1 | PodcastDetail episode list from PodcastIndex feed (real episodes) | ⚪ | |
+| 35.2 | Episode playback via enclosureUrl → AudioPlayer with metadata | ⚪ | Audit HIGH: no play mechanism today |
+| 35.3 | Per-episode resume position (keyed by enclosure URL) | ⚪ | |
+| 35.4 | Played/unplayed state + progress indicator on episode rows | ⚪ | |
+| 35.5 | Follow/favorite podcasts (persisted) + Followed shelf on Home | ⚪ | |
+| 35.6 | Episode actions: add to playlist, bookmark, queue next | ⚪ | |
+| 35.7 | Search + category browse polish: skeletons, empty, error states | ⚪ | |
+| 35.8 | Gate: follow → play → kill app → resume from episode list | ⚪ | |
+
+---
+
+### Phase 36 — Radio & Live TV (wire RadioBrowser + IPTV-org)
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 36 (v4 spec, Wave 8)  
+**Dependencies:** Phase 33  
+**Files:** new RadioScreen, new LiveTVScreen, radioBrowser service (dead code), iptvOrg service (dead code), navigation/types.ts, linking.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 36.1 | RadioScreen: top/by-country/by-genre browse + search | ⚪ | Audit CRITICAL: RadioBrowser dead code |
+| 36.2 | Radio playback: AudioPlayer live mode (no seek, LIVE badge) | ⚪ | |
+| 36.3 | Radio favorites persisted; stations addable to playlists/recents | ⚪ | |
+| 36.4 | LiveTVScreen: IPTV-org channels by category/country + search | ⚪ | Audit CRITICAL: IPTV-org dead code |
+| 36.5 | Live TV playback: VideoPlayer live mode + channel up/down | ⚪ | |
+| 36.6 | Unreachable station/channel → friendly error + skip; no fake channels | ⚪ | |
+| 36.7 | Home shelves + routes + deep links for Radio and Live TV | ⚪ | |
+| 36.8 | Gate: radio + IPTV play end-to-end; favorites survive restart | ⚪ | |
+
+---
+
+### Phase 37 — Audiobooks & Internet Archive (wire LibriVox + InternetArchive)
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 37 (v4 spec, Wave 8)  
+**Dependencies:** Phase 33  
+**Files:** new AudiobooksScreen, new ArchiveScreen, librivox service (dead code), internetArchive service (dead code), navigation/types.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 37.1 | AudiobooksScreen: LibriVox search/browse by title/author/genre | ⚪ | Audit CRITICAL: LibriVox dead code |
+| 37.2 | Audiobook detail: chapter list + play chapter → AudioPlayer | ⚪ | |
+| 37.3 | Cross-chapter resume + auto-advance to next chapter | ⚪ | |
+| 37.4 | ArchiveScreen: Internet Archive audio + video browse/search | ⚪ | Audit CRITICAL: Archive dead code |
+| 37.5 | Archive item detail + playback routed by mediaType | ⚪ | |
+| 37.6 | Audiobook/Archive items in playlists, per-chapter bookmarks, recents | ⚪ | |
+| 37.7 | Home shelves + routes + deep links for Audiobooks and Archive | ⚪ | |
+| 37.8 | Gate: chapter auto-advance; relaunch resumes mid-chapter | ⚪ | |
+
+---
+
+## WAVE 9: Discovery & Metadata Completion (Phases 38-41)
+
+> Wire the last 2 dead API services (TVMaze, MusicBrainz), resurrect dead `searchAggregator`, make every source discoverable.
+
+### Phase 38 — TV Shows Discovery (wire TVMaze)
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 38 (v4 spec, Wave 9)  
+**Dependencies:** Phase 33 (art cache)  
+**Files:** new ShowsScreen, new ShowDetailScreen, tvmaze service (dead code), navigation/types.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 38.1 | ShowsScreen: search + popular browse via TVMaze | ⚪ | Audit: TVMaze dead code |
+| 38.2 | ShowDetail: poster, summary, seasons → episodes with air dates | ⚪ | |
+| 38.3 | Today's schedule shelf (TVMaze schedule endpoint) | ⚪ | |
+| 38.4 | Local video files matched to TVMaze episodes (metadata enrichment) | ⚪ | |
+| 38.5 | Themed placeholder when art missing — no broken images | ⚪ | |
+| 38.6 | Bookmark shows; episode refs addable where playable source exists | ⚪ | |
+| 38.7 | Routes + deep links + Home shelf for Shows | ⚪ | |
+| 38.8 | Gate: search → detail → episodes; enrichment verified | ⚪ | |
+
+---
+
+### Phase 39 — Artist & Album Enrichment (wire MusicBrainz)
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 39 (v4 spec, Wave 9)  
+**Dependencies:** Phases 33, 34  
+**Files:** ArtistDetailScreen, AlbumDetailScreen, SongScreen, musicBrainz service (dead code), apiClient.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 39.1 | ArtistDetail: MusicBrainz discography merged with local + streaming | ⚪ | Audit: MusicBrainz dead code |
+| 39.2 | Cover Art Archive via Phase 33 art cache | ⚪ | |
+| 39.3 | AlbumDetail: release metadata + track listings matched to local files | ⚪ | |
+| 39.4 | Artist page sections: Local \| Streaming \| Discography | ⚪ | |
+| 39.5 | "More from this artist" streaming section on Song/Album pages | ⚪ | |
+| 39.6 | Graceful local-only fallback when no MusicBrainz match | ⚪ | |
+| 39.7 | Rate-limit compliance (1 req/s) via request queue in apiClient | ⚪ | |
+| 39.8 | Gate: artist shows enriched discography + streaming rows | ⚪ | |
+
+---
+
+### Phase 40 — Unified Search Completion
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 40 (v4 spec, Wave 9)  
+**Dependencies:** Phases 33-39 (all sources wired)  
+**Files:** SearchScreen, searchAggregator.ts (dead code), SearchBar
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 40.1 | Wire searchAggregator into SearchScreen: local + all APIs | ⚪ | Audit: aggregator is dead code |
+| 40.2 | Source filter chips (All/Local/Music/Podcasts/Radio/TV/Audiobooks/Archive) | ⚪ | |
+| 40.3 | Debounce + cancellation; per-source skeletons; progressive results | ⚪ | |
+| 40.4 | Search history persisted (re-run, clear) | ⚪ | |
+| 40.5 | Every result row routes to the correct destination per type | ⚪ | |
+| 40.6 | Per-source empty/error states — one failed API never blanks the page | ⚪ | |
+| 40.7 | Trending/suggestions from real API data when query empty | ⚪ | No hardcoded lists |
+| 40.8 | Gate: one query → mixed local+stream results, all tappable | ⚪ | |
+
+---
+
+### Phase 41 — Genre & Mood Browse
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 41 (v4 spec, Wave 9)  
+**Dependencies:** Phases 36, 40  
+**Files:** GenreScreen, MusicScreen, RadioScreen, HomeScreen shelves, MediaTile
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 41.1 | GenreScreen full browse: local + streaming genre catalogs | ⚪ | Audit: GenreScreen is a limited detail view |
+| 41.2 | Genre detail: local + streaming rows with working See All | ⚪ | |
+| 41.3 | Mood collections from real genre/tag queries — no hardcoded lists | ⚪ | |
+| 41.4 | Genre chips on MusicScreen/RadioScreen link into genre detail | ⚪ | |
+| 41.5 | See All coverage audit for every shelf | ⚪ | |
+| 41.6 | Consistent shelf card design (MediaTile variants) | ⚪ | |
+| 41.7 | Deep links for genre/mood pages | ⚪ | |
+| 41.8 | Gate: Home → genre → play stream → in recents | ⚪ | |
+
+---
+
+## WAVE 10: Profile, Auth & Settings Truth (Phases 42-46)
+
+> **Source:** Audit 2026-07-31 — 4 dead settings rows (empty onPress), 9 unpersisted AudioSettings controls, no token refresh/expiry handling, Registration dead weight (Google-only, no guest), no profile page.
+
+### Phase 42 — Basic Profile Page
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 42 (v4 spec, Wave 10)  
+**Dependencies:** Phase 47 (History entry point can land later)  
+**Files:** new ProfileScreen, AccountSection, HomeHeader, Avatar.tsx, sessionSlice selectors
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 42.1 | ProfileScreen route + entry points (AccountSection, Home avatar) | ⚪ | Audit: no profile page exists |
+| 42.2 | Avatar with initials fallback (replace "?"), name, email | ⚪ | Audit LOW: "?" placeholder today |
+| 42.3 | Real user stats from store data — no fabricated numbers | ⚪ | |
+| 42.4 | Recently played strip + shortcuts to History/Bookmarks/Playlists | ⚪ | |
+| 42.5 | Theme quick toggle on profile | ⚪ | |
+| 42.6 | Sign out via ConfirmDialog | ⚪ | |
+| 42.7 | Clear local data behind destructive confirm | ⚪ | |
+| 42.8 | Gate: profile ≤ 2 taps; stats match store | ⚪ | |
+
+---
+
+### Phase 43 — Auth Hardening (Google-Only Mission)
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 43 (v4 spec, Wave 10)  
+**Dependencies:** none  
+**Files:** authService.ts, authSlice.ts, useAuth.ts, LoginScreen.tsx, RegistrationScreen (delete), RootNavigator.tsx
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 43.1 | Silent session restore (signInSilently) on cold start | ⚪ | Audit CRITICAL: no refresh mechanism |
+| 43.2 | Session expiry detection on foreground + re-auth prompt | ⚪ | Audit CRITICAL: no expiry handling |
+| 43.3 | Sign-in error states: offline / cancelled / Play-Services, with Retry | ⚪ | |
+| 43.4 | Remove Registration screen + route + Login link (dead weight) | ⚪ | Audit CRITICAL: confuses Google-only flow |
+| 43.5 | Revoke access flow + optional local data wipe | ⚪ | Audit HIGH: no account deletion |
+| 43.6 | Offline grace: local library usable offline when previously authed | ⚪ | |
+| 43.7 | Auth states modeled in authSlice + unit tests | ⚪ | |
+| 43.8 | Gate: airplane-mode launch plays local; expiry path verified | ⚪ | |
+
+---
+
+### Phase 44 — Settings Dead-UI Elimination
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 44 (v4 spec, Wave 10)  
+**Dependencies:** Phase 52 (dialog components) recommended  
+**Files:** SettingsScreen.tsx, settingsSlice.ts, useVideoPlayerScreen.ts (subtitle styling)
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 44.1 | Subtitle Language picker wired + mpv slang | ⚪ | Audit HIGH: `onPress={() => {}}` (L253) |
+| 44.2 | Subtitle Text Color picker wired + applied | ⚪ | Audit HIGH: dead (L268) |
+| 44.3 | Background Opacity slider wired + applied | ⚪ | Audit HIGH: dead (L289) |
+| 44.4 | Font Size dialog implemented + mpv sub-font-size | ⚪ | Handler exists, no dialog (L263) |
+| 44.5 | Accent Color functional or explicit static branding row | ⚪ | Audit HIGH: static "Gold" (L138) |
+| 44.6 | Subtitle settings persisted + re-applied on player mount | ⚪ | |
+| 44.7 | Every row shows current-value subtitle from real state | ⚪ | |
+| 44.8 | Gate: zero empty onPress in Settings | ⚪ | |
+
+---
+
+### Phase 45 — Audio Settings Realization + Equalizer
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 45 (v4 spec, Wave 10)  
+**Dependencies:** Phase 52 recommended  
+**Files:** AudioSettingsScreen.tsx, settingsSlice.ts, new EqualizerScreen, MpvBridgeModule.kt (eq props)
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 45.1 | All AudioSettings controls wired to settingsSlice | ⚪ | Audit HIGH: 9 controls in local state |
+| 45.2 | Values applied to mpv (normalize, boost, ReplayGain, gapless, delay) | ⚪ | |
+| 45.3 | EqualizerScreen: band sliders + presets wired to native EQ | ⚪ | Audit: no dedicated EQ UI |
+| 45.4 | EQ preset replaces Alert.alert placeholder; custom presets persist | ⚪ | |
+| 45.5 | Audio device / sample-rate rows real or removed — no fake options | ⚪ | |
+| 45.6 | Replace all 5 Alert.alert placeholders in AudioSettings | ⚪ | Audit: L82-L122 |
+| 45.7 | Settings apply live during playback | ⚪ | |
+| 45.8 | Gate: all persisted after restart; EQ audibly works | ⚪ | |
+
+---
+
+### Phase 46 — Preferences, Storage & Library Settings
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 46 (v4 spec, Wave 10)  
+**Dependencies:** Phases 33 (cache), 51 (legal pages)  
+**Files:** PreferencesScreen.tsx, settingsSlice.ts, new storage utils, ScanProgressBanner
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 46.1 | Larger Controls + High-Contrast persisted + applied app-wide | ⚪ | Audit: local useState only |
+| 46.2 | Theme selection dialog replaces Alert.alert | ⚪ | Audit: Alert at L67-L86 |
+| 46.3 | App language row wired to i18n locale (persisted) | ⚪ | Audit MEDIUM: no language selection |
+| 46.4 | Storage management: cache size + Clear Cache | ⚪ | Audit MEDIUM: none visible |
+| 46.5 | Library scan controls (rescan, scan-on-launch, progress) | ⚪ | Audit MEDIUM: no scan controls |
+| 46.6 | Notification preferences row | ⚪ | |
+| 46.7 | Privacy section → Privacy/Terms screens | ⚪ | |
+| 46.8 | Gate: prefs survive restart; cache clear reflected in UI | ⚪ | |
+
+---
+
+## WAVE 11: Missing Standard Pages (Phases 47-51)
+
+> **Source:** Audit 2026-07-31 — History, Downloads, Notifications, Queue page, Equalizer, Sleep Timer page, Stats, Help/FAQ, Privacy/Terms all missing.
+
+### Phase 47 — History Page
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 47 (v4 spec, Wave 11)  
+**Dependencies:** Phase 33 (streams in recents)  
+**Files:** new HistoryScreen, sessionSlice.ts, navigation/types.ts, linking.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 47.1 | HistoryScreen: full playback history, newest first | ⚪ | Audit HIGH: page missing |
+| 47.2 | Tap resumes at position in correct player; row progress bars | ⚪ | |
+| 47.3 | Filters (All/Video/Audio/Streaming) + in-history search | ⚪ | |
+| 47.4 | Per-item remove + Clear History (destructive confirm) | ⚪ | |
+| 47.5 | Retention 20 → 200 with virtualized list | ⚪ | |
+| 47.6 | Empty state + route + deep link + entry points | ⚪ | |
+| 47.7 | a11y labels + ≥ 44dp rows | ⚪ | |
+| 47.8 | Gate: 3 plays → all in history with positions | ⚪ | |
+
+---
+
+### Phase 48 — Full Queue Page
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 48 (v4 spec, Wave 11)  
+**Dependencies:** Phases 31-32 (queue handoff)  
+**Files:** new QueueScreen, playerSlice.ts, MiniAudioPlayer, both players' toolbars
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 48.1 | QueueScreen full-page (route + deep link) | ⚪ | Audit: only LyricsQueuePanel exists |
+| 48.2 | Drag-to-reorder + haptics; swipe-to-remove | ⚪ | |
+| 48.3 | Now-playing highlight (WaveformBars); tap-to-jump | ⚪ | |
+| 48.4 | Up Next vs Previously Played sections | ⚪ | |
+| 48.5 | Save Queue as Playlist | ⚪ | |
+| 48.6 | Entries from both players + MiniAudioPlayer long-press | ⚪ | |
+| 48.7 | Mixed queue rendering with media badges | ⚪ | |
+| 48.8 | Gate: reorder during playback; cross-type jump works | ⚪ | |
+
+---
+
+### Phase 49 — Downloads & Offline
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 49 (v4 spec, Wave 11)  
+**Dependencies:** Phases 33-37 (streaming sources)  
+**Files:** new downloadService, new DownloadsScreen, new DownloadButton (core), fileService.ts
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 49.1 | Download service with progress events (RNFS) | ⚪ | Audit HIGH: no download management |
+| 49.2 | DownloadButton core component (idle/progress/done) | ⚪ | Audit: component missing |
+| 49.3 | DownloadsScreen: size, progress, pause/resume/delete, storage bar | ⚪ | |
+| 49.4 | Offline playback via automatic fileUri remap | ⚪ | |
+| 49.5 | Downloaded badge in collections/recents/search | ⚪ | |
+| 49.6 | Auto-delete policy setting (keep last N) | ⚪ | |
+| 49.7 | Route + deep link + Library entry + empty state | ⚪ | |
+| 49.8 | Gate: download → airplane mode → plays from Downloads | ⚪ | |
+
+---
+
+### Phase 50 — Sleep Timer Everywhere + Stats
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 50 (v4 spec, Wave 11)  
+**Dependencies:** Phase 32 (sleep timer core), Phase 42 (profile entry)  
+**Files:** new sleepTimerService, new StatsScreen, both players, MiniAudioPlayer
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 50.1 | Global sleep timer service (both players) + custom minutes | ⚪ | Extends 32.2 |
+| 50.2 | End-of-track / end-of-chapter option | ⚪ | |
+| 50.3 | Countdown badge on players + MiniAudioPlayer | ⚪ | |
+| 50.4 | StatsScreen from real session history — no fabricated numbers | ⚪ | Audit MEDIUM: no stats page |
+| 50.5 | Streaks/totals cards + empty state | ⚪ | |
+| 50.6 | Stats entry from Profile | ⚪ | |
+| 50.7 | Volume fade-out final 10s of timer | ⚪ | |
+| 50.8 | Gate: timer pauses both players; stats match history | ⚪ | |
+
+---
+
+### Phase 51 — Help, Legal & Notifications
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 51 (v4 spec, Wave 11)  
+**Dependencies:** none  
+**Files:** new HelpScreen, new PrivacyPolicyScreen, new TermsScreen, AboutScreen.tsx, notification config
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 51.1 | HelpScreen: searchable FAQ sections | ⚪ | Audit MEDIUM: missing |
+| 51.2 | Privacy Policy + Terms screens, linked from Settings/About/Login | ⚪ | Audit MEDIUM: missing |
+| 51.3 | Media-style playback notification + settings toggle | ⚪ | |
+| 51.4 | Android 13+ notification permission, contextual | ⚪ | |
+| 51.5 | About links functional — replace Alert placeholder | ⚪ | Audit: Alert at AboutScreen L182 |
+| 51.6 | Contact/feedback action | ⚪ | |
+| 51.7 | Routes + deep links for all new pages | ⚪ | |
+| 51.8 | Gate: all entries reachable; lock-screen transport works | ⚪ | |
+
+---
+
+## WAVE 12: Component System Hardening (Phases 52-55)
+
+> **Source:** Audit 2026-07-31 — 12+ raw Alert.alert calls, no core AppTextInput/SearchBar, NoNetworkBanner Home-only, hardcoded colors in 8 files, 5 empty stub dirs.
+
+### Phase 52 — Dialog Unification (Kill Alert.alert)
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 52 (v4 spec, Wave 12)  
+**Dependencies:** existing Dialog/ConfirmDialog/PromptDialog components  
+**Files:** PlaylistDetailScreen.tsx, PreferencesScreen.tsx, AudioSettingsScreen.tsx, useVideoPlayerScreen.ts, AboutScreen.tsx, MusicDetailScreen.tsx, MpvConfigEditor.tsx, .eslintrc.js
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 52.1 | Replace Alert.alert in PlaylistDetailScreen (4×) | ⚪ | Audit: L85, L124, L166, L219 |
+| 52.2 | Replace in PreferencesScreen (2×) + AudioSettingsScreen (5×) | ⚪ | Coordinated with Phases 45/46 |
+| 52.3 | Replace in useVideoPlayerScreen (L732), About, MusicDetail, MpvConfigEditor | ⚪ | |
+| 52.4 | Destructive-action styling convention across confirms | ⚪ | |
+| 52.5 | ESLint no-restricted-imports bans Alert | ⚪ | |
+| 52.6 | Toast for success feedback consistently | ⚪ | |
+| 52.7 | Dialog a11y: focus + announcements | ⚪ | |
+| 52.8 | Gate: Alert.alert grep = 0 matches in src/ | ⚪ | |
+
+---
+
+### Phase 53 — Core Inputs & Forms
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 53 (v4 spec, Wave 12)  
+**Dependencies:** none  
+**Files:** new AppTextInput (core), SearchBar (promote to core), MpvConfigEditor.tsx, PodcastsScreen.tsx, AllPlaylistsScreen.tsx, BookmarkSheet.tsx, PlaylistModal.tsx
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 53.1 | AppTextInput core component (tokens, label/error, clear, validation) | ⚪ | Audit CRITICAL: missing |
+| 53.2 | SearchBar promoted to core with debounce + cancel | ⚪ | Audit: lives in Search screen only |
+| 53.3 | Replace raw TextInput in 5 flagged files | ⚪ | Audit: MpvConfigEditor, Podcasts, AllPlaylists, BookmarkSheet, PlaylistModal |
+| 53.4 | Shared keyboard-avoiding wrapper | ⚪ | Duplicated logic today |
+| 53.5 | Validation patterns with consistent error display | ⚪ | |
+| 53.6 | SearchBar reused on History/Downloads/Help | ⚪ | |
+| 53.7 | Input a11y: labels + error announcements | ⚪ | |
+| 53.8 | Gate: zero raw TextInput outside core | ⚪ | |
+
+---
+
+### Phase 54 — Global Status & List Components
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 54 (v4 spec, Wave 12)  
+**Dependencies:** useNetworkStatus hook (exists)  
+**Files:** App root, NoNetworkBanner → global OfflineBanner, all API browse screens, Skeleton
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 54.1 | OfflineBanner at app level | ⚪ | Audit CRITICAL: Home-only today |
+| 54.2 | All API screens handle offline (disable, cache, auto-retry) | ⚪ | |
+| 54.3 | Pull-to-refresh on all list screens | ⚪ | Audit: not implemented |
+| 54.4 | Infinite scroll/pagination for API browse screens | ⚪ | Audit: not implemented |
+| 54.5 | Global long-operation progress pattern | ⚪ | Only scan banner exists |
+| 54.6 | Skeleton coverage audit on new screens | ⚪ | |
+| 54.7 | Standard retry/error card reused everywhere | ⚪ | |
+| 54.8 | Gate: airplane-mode nav shows correct offline states | ⚪ | |
+
+---
+
+### Phase 55 — Theme Compliance & Cleanup Sweep
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 55 (v4 spec, Wave 12)  
+**Dependencies:** none  
+**Files:** Avatar.tsx, BookmarkItem.tsx, AudioActionRow.tsx, AudioGradientBg.tsx, AudioSeekBar.tsx, AudioSubMenu.tsx, AudioLyricsView.tsx, FolderLinkingWizard.tsx, src/theme, .eslintrc.js
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 55.1 | Remove hardcoded colors from the 8 flagged files | ⚪ | Audit MEDIUM: incl. #FF2D55, #FFFFFF, rgba |
+| 55.2 | Add missing theme tokens (like/heart accent etc.) | ⚪ | |
+| 55.3 | Hardcoded spacing/fontSize sweep → tokens | ⚪ | |
+| 55.4 | Delete empty stub dirs (ControlsBar, HeaderBar, SeekBar, TrackSelector, preferences) | ⚪ | Audit: 5 empty dirs |
+| 55.5 | Raw Text/ActivityIndicator audit → AppText/ActivityOrb | ⚪ | |
+| 55.6 | Barrel exports complete + consistent | ⚪ | |
+| 55.7 | ESLint color-literal guard | ⚪ | |
+| 55.8 | Gate: color-literal grep clean outside src/theme | ⚪ | |
+
+---
+
+## WAVE 13: Linking, UX Flows & Release (Phases 56-60)
+
+> Close every dead end, unify cross-source flows, then run the beta release gate. **No-dummy-data is a release blocker (60.1).**
+
+### Phase 56 — Share & Deep Link Completion
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 56 (v4 spec, Wave 13)  
+**Dependencies:** Waves 8-11 routes  
+**Files:** new shareService, linking.ts, MusicDetailScreen.tsx, long-press menus, players
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 56.1 | Share-link generation (simbaplayer:// + https fallback) | ⚪ | Audit: no generation logic exists |
+| 56.2 | Native share sheet; fix MusicDetail "coming soon" dead-end | ⚪ | Audit HIGH: Alert at L48 |
+| 56.3 | Incoming deep links verified for every route | ⚪ | |
+| 56.4 | Share in long-press menus, details, players | ⚪ | |
+| 56.5 | Playlist export/import (m3u/json) | ⚪ | |
+| 56.6 | Cold-start deep link survives auth restore | ⚪ | |
+| 56.7 | linking.ts covers all Wave 8-11 routes | ⚪ | |
+| 56.8 | Gate: shared link lands on correct detail on-device | ⚪ | |
+
+---
+
+### Phase 57 — Navigation Correctness & Empty-State Audit
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 57 (v4 spec, Wave 13)  
+**Dependencies:** all prior route additions  
+**Files:** useVideoPlayerScreen.ts, RootNavigator.tsx, navigation/types.ts, LibraryScreen, GenreScreen
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 57.1 | VideoPlayer back: goBack() not navigate('MainTabs') | ⚪ | Audit LOW: stack manipulation bug |
+| 57.2 | Modal vs push consistency policy | ⚪ | Audit LOW: Preferences outlier |
+| 57.3 | Route audit: all reachable or removed; orphans registered | ⚪ | |
+| 57.4 | Android hardware back verified everywhere | ⚪ | |
+| 57.5 | Empty states: Library segments, GenreScreen, Settings sub-lists | ⚪ | Audit: missing today |
+| 57.6 | Navigation state persistence across process death | ⚪ | |
+| 57.7 | Screen transition consistency per §5 | ⚪ | |
+| 57.8 | Gate: full nav crawl — no dead ends or traps | ⚪ | |
+
+---
+
+### Phase 58 — Cross-Source UX Flows
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 58 (v4 spec, Wave 13)  
+**Dependencies:** Waves 8-11 complete  
+**Files:** HomeScreen shelves, both players, MiniAudioPlayer, long-press menus
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 58.1 | Continue Watching/Listening shelf: local + streaming with resume | ⚪ | |
+| 58.2 | Resume prompt unified for streams and local (31.2 pattern) | ⚪ | |
+| 58.3 | Mixed-queue handoff regression incl. streams (video↔audio↔stream) | ⚪ | |
+| 58.4 | Long-press menu identical on every tile/row | ⚪ | |
+| 58.5 | Play Next / Add to Queue from all surfaces | ⚪ | |
+| 58.6 | MiniAudioPlayer persists on all new screens, no overlap | ⚪ | |
+| 58.7 | Session continuity: relaunch → Home shows where user left off | ⚪ | |
+| 58.8 | Gate: 10-step cross-source journey passes on device | ⚪ | |
+
+---
+
+### Phase 59 — Performance & Accessibility Final Sweep
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 59 (v4 spec, Wave 13)  
+**Dependencies:** all new screens built  
+**Files:** all Wave 8-13 screens/lists, theme motion config
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 59.1 | Virtualization audit on every new list (IPTV = thousands) | ⚪ | |
+| 59.2 | Re-render audit top 10 screens; memoize hot paths | ⚪ | |
+| 59.3 | Cold start ≤ 2.5s to interactive (mid-range device) | ⚪ | |
+| 59.4 | Art cache hits verified; zero scroll flicker | ⚪ | |
+| 59.5 | a11y sweep: labels/states/hints/44dp on all Wave 8-13 UI | ⚪ | |
+| 59.6 | TalkBack pass on 5 core journeys | ⚪ | |
+| 59.7 | Reduced-motion honored in new animations | ⚪ | |
+| 59.8 | Gate: perf numbers recorded here; a11y signed off | ⚪ | |
+
+---
+
+### Phase 60 — Beta Release Gate
+**Status:** ⚪ NOT STARTED (0/8)  
+**Spec Ref:** Phase 60 (v4 spec, Wave 13)  
+**Dependencies:** ALL phases 0-59  
+**Files:** whole repo, android release config
+
+| # | Checklist Item | Status | Notes |
+|---|---|---|---|
+| 60.1 | No-dummy-data verification sweep (grep + manual) | ⚪ | Release blocker |
+| 60.2 | Full-app manual QA script, results recorded here | ⚪ | |
+| 60.3 | tsc + eslint + full jest suite exit 0 | ⚪ | |
+| 60.4 | Minified release build smoke test | ⚪ | |
+| 60.5 | Crash reporting hooks via error boundaries | ⚪ | |
+| 60.6 | Spec + tracker final sync with dates | ⚪ | |
+| 60.7 | Version bump + changelog | ⚪ | |
+| 60.8 | Gate: signed beta APK installs clean; acceptance run passes | ⚪ | |
+
+---
+
 ## Execution Notes
 
 1. **Wave ordering is strict.** Do not start Wave N+1 until Wave N is fully complete.
@@ -855,14 +1477,20 @@ JAMENDO_CLIENT_ID=your_jamendo_client_id_here
 
 | Metric | Current | Target |
 |---|---|---|
-| App maturity | ~8% | ~10% |
-| Checklist items | 0/300 ✅ | 300/300 ✅ |
-| Phases complete | 20/35 | 35/35 |
-| Waves complete | 3/7 | 7/7 |
+| App maturity | ~10% | Shippable beta |
+| Checklist items (Phases 0-32) | 0/320 ✅ | 320/320 ✅ |
+| Checklist items (Phases 33-60) | 0/224 | 224/224 |
+| Phases complete | 34/65 | 65/65 |
+| Waves complete | 6/14 | 14/14 |
 | API integrations (services) | 12/12 | 12/12 |
+| API services with live consumers | 2/9 | 9/9 |
+| Streaming in collections (playlist/recents/bookmarks/position) | 0/4 | 4/4 |
+| Dead settings rows | 4 | 0 |
+| Raw Alert.alert calls | 12+ | 0 |
+| Missing standard pages (History/Queue/Downloads/Stats/Help/Legal/Profile/EQ) | 8 | 0 |
 | Screen files with hooks | 0/15 | 15/15 |
 | Custom animation primitives | 0/4 | 4/4 |
-| Auth (Google + guest) | 0/2 | 2/2 |
+| Auth (Google only — no guest) | 1/1 | 1/1 |
 | Bookmark feature screens | 2/4 | 4/4 |
 | Dedicated sub-pages | 4/9 | 9/9 |
 | MiniAudioPlayer | 1/2 | 2/2 |

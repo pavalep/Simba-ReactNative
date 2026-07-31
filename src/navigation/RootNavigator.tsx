@@ -66,6 +66,11 @@ export const RootNavigator: React.FC = () => {
 
   return (
     <Stack.Navigator
+      // Remount the navigator whenever auth state flips so the initial
+      // route is honoured reactively: sign-in → MainTabs, sign-out → Login.
+      // initialRouteName is only consulted on mount, so without this key a
+      // sign-out would leave the user stranded on Settings (Phase 29.9).
+      key={isAuthenticated ? 'authed' : 'guest'}
       initialRouteName={initialRoute}
       screenOptions={{
         headerShown: false,

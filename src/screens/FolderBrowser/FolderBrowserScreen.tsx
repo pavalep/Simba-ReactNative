@@ -11,6 +11,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import RNFS from 'react-native-fs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
+import {isVideoFile} from '../../utils/timeAgo';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {AppText} from '../../components/core/AppText/AppText';
 import type {RootStackScreenProps} from '../../navigation/types';
@@ -54,6 +55,9 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
 
   // Initialize breadcrumbs from initialPath param
   const initialPath = route.params?.initialPath ?? '';
+  // When opened from PlaylistDetail "Add", pre-target a playlist so the
+  // batch action adds directly to it (no picker).
+  const targetPlaylistId = route.params?.targetPlaylistId;
   const initialCrumbs = useMemo(() => {
     if (!initialPath) return [];
     return initialPath.split('/').filter(Boolean);
@@ -120,6 +124,13 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
     readDirectory(currentPath);
   }, [currentPath, readDirectory]);
 
+  // ── Auto-enter selection mode when opened to add to a target playlist ──
+  useEffect(() => {
+    if (targetPlaylistId) {
+      setIsSelecting(true);
+    }
+  }, [targetPlaylistId]);
+
   // ── Handlers ────────────────────────────────
 
   const handleEnterFolder = useCallback((folderPath: string) => {
@@ -151,10 +162,13 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         });
         return;
       }
-      navigation.navigate('VideoPlayer', {
-        fileUri: `file://${filePath}`,
-        fileTitle: fileName,
-      });
+      navigation.navigate(
+        isVideoFile(fileName) ? 'VideoPlayer' : 'AudioPlayer',
+        {
+          fileUri: `file://${filePath}`,
+          fileTitle: fileName,
+        },
+      );
     },
     [navigation, isSelecting],
   );
@@ -200,10 +214,6 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
     [isSelecting, handleToggleFileSelection],
   );
 
-  const handleBatchAddToPlaylist = useCallback(() => {
-    setShowPlaylistPicker(true);
-  }, []);
-
   const playlistNameMap = useAppSelector(state => {
     const map: Record<string, string> = {};
     for (const pl of state.playlists.playlists) {
@@ -235,9 +245,22 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       );
       setIsSelecting(false);
       setSelectedFileNames(new Set());
+      // Targeted flow (opened from PlaylistDetail "Add"): return to it.
+      if (targetPlaylistId) {
+        navigation.goBack();
+      }
     },
-    [items, selectedFileNames, toast, playlistNameMap, dispatch],
+    [items, selectedFileNames, toast, playlistNameMap, dispatch, targetPlaylistId, navigation],
   );
+
+  const handleBatchAddToPlaylist = useCallback(() => {
+    if (targetPlaylistId) {
+      // Opened from a playlist's "Add" button — add directly to it.
+      handleBatchAddConfirm(targetPlaylistId);
+    } else {
+      setShowPlaylistPicker(true);
+    }
+  }, [targetPlaylistId, handleBatchAddConfirm]);
 
   const handleCreateNewFromBatch = useCallback(() => {
     setShowPlaylistPicker(false);
@@ -574,7 +597,9 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
             variant="body2"
             color="primary"
             style={styles.batchBarText}>
-            {`Add to Playlist (${selectedFileNames.size})`}
+            {targetPlaylistId
+              ? `Add to ${playlistNameMap[targetPlaylistId] ?? 'Playlist'} (${selectedFileNames.size})`
+              : `Add to Playlist (${selectedFileNames.size})`}
           </AppText>
         </TouchableOpacity>
       )}

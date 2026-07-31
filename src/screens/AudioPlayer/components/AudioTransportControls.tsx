@@ -35,7 +35,8 @@ export const AudioTransportControls: React.FC<Props> = ({
         onPress={onToggleShuffle}
         activeOpacity={0.7}
         accessibilityLabel="Toggle shuffle"
-        accessibilityRole="button">
+        accessibilityRole="button"
+        accessibilityState={{selected: shuffle}}>
         <SvgIcon
           name="shuffle"
           size={18}
@@ -79,7 +80,8 @@ export const AudioTransportControls: React.FC<Props> = ({
         onPress={onToggleLoop}
         activeOpacity={0.7}
         accessibilityLabel="Toggle loop mode"
-        accessibilityRole="button">
+        accessibilityRole="button"
+        accessibilityState={{selected: loopMode !== 'none'}}>
         <SvgIcon
           name="repeat"
           size={18}

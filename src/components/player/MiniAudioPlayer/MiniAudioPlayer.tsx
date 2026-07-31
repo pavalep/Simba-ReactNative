@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Animated,
   Easing,
+  PanResponder,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import FastImage from 'react-native-fast-image';
@@ -18,14 +19,25 @@ import {navigate} from '../../../navigation/navigationHelper';
 
 // ─── Constants ──────────────────────────────────────────────
 
-const MINI_PLAYER_HEIGHT = 56;
+const MINI_PLAYER_HEIGHT = 64;
 const ARTWORK_SIZE = 40;
-const CONTROL_BUTTON_SIZE = 36;
+// WCAG 2.1 AA minimum touch target: 44×44 (was 36×36 — audit 32.1)
+const CONTROL_BUTTON_SIZE = 44;
 
 // Tab bar constants must match FloatingTabBar
 const TAB_BAR_HEIGHT = 60;
 const TAB_BAR_BOTTOM_MARGIN = 10;
 const MINI_PLAYER_GAP = 4;
+
+// Swipe gesture thresholds (32.4)
+const SWIPE_DISTANCE = 60;
+
+const formatRemaining = (ms: number): string => {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
 
 // ─── Component ──────────────────────────────────────────────
 
@@ -33,7 +45,7 @@ export const MiniAudioPlayer: React.FC = () => {
   const {colors, spacing, radius, shadows} = useTheme();
   const insets = useSafeAreaInsets();
 
-  const {isVisible, isPlaying, currentTrack, progress, handlePlayPause, handleNext, handlePrevious} =
+  const {isVisible, isPlaying, currentTrack, progress, sleepRemainingMs, sleepTimerActive, handlePlayPause, handleNext, handlePrevious, handleDismiss} =
     useMiniPlayer();
 
   // ── Slide animation ──────────────────────────────────
@@ -70,8 +82,12 @@ export const MiniAudioPlayer: React.FC = () => {
 
   // ── Tap to open AudioPlayer ──────────────────────────
   const handleOpenPlayer = useCallback(() => {
-    navigate('AudioPlayer');
-  }, []);
+    if (!currentTrack) return;
+    navigate('AudioPlayer', {
+      fileUri: currentTrack.uri,
+      fileTitle: currentTrack.title,
+    });
+  }, [currentTrack]);
 
   // ── Stop propagation on control buttons ────────────
   const handlePrevPress = useCallback(() => {
@@ -81,6 +97,30 @@ export const MiniAudioPlayer: React.FC = () => {
   const handleNextPress = useCallback(() => {
     handleNext();
   }, [handleNext]);
+
+  // ── Swipe gestures: down = dismiss, left/right = next/prev (32.4) ──
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) =>
+          Math.abs(g.dy) > 12 || Math.abs(g.dx) > 12,
+        onPanResponderRelease: (_, g) => {
+          if (Math.abs(g.dy) > SWIPE_DISTANCE && Math.abs(g.dy) > Math.abs(g.dx)) {
+            handleDismiss();
+          } else if (
+            Math.abs(g.dx) > SWIPE_DISTANCE &&
+            Math.abs(g.dx) > Math.abs(g.dy)
+          ) {
+            if (g.dx < 0) {
+              handleNext();
+            } else {
+              handlePrevious();
+            }
+          }
+        },
+      }),
+    [handleDismiss, handleNext, handlePrevious],
+  );
 
   // ── Derived values ──────────────────────────────────
   const title = currentTrack?.title || '';
@@ -159,6 +199,16 @@ export const MiniAudioPlayer: React.FC = () => {
           borderRadius: CONTROL_BUTTON_SIZE / 2,
           backgroundColor: colors.accent.goldDim,
         },
+        sleepBadge: {
+          position: 'absolute',
+          top: 2,
+          right: spacing.sm,
+          paddingHorizontal: 8,
+          paddingVertical: 1,
+          borderRadius: 8,
+          backgroundColor: 'rgba(201,168,76,0.18)',
+          zIndex: 10,
+        },
       }),
     [colors, spacing, radius, bottomPosition],
   );
@@ -178,9 +228,19 @@ export const MiniAudioPlayer: React.FC = () => {
           transform: [{translateY}],
           opacity: animOpacity,
         },
-      ]}>
-      {/* Gold progress bar at the very top */}
+      ]}
+      {...panResponder.panHandlers}>
+        {/* Gold progress bar at the very top */}
       <MiniProgressBar progress={progress} />
+
+      {/* Sleep timer badge (32.2) */}
+      {sleepTimerActive && sleepRemainingMs > 0 && (
+        <View style={styles.sleepBadge}>
+          <AppText variant="caption" color="primary">
+            Sleep {formatRemaining(sleepRemainingMs)}
+          </AppText>
+        </View>
+      )}
 
       {/* Tappable area — opens the audio player */}
       <TouchableOpacity
@@ -241,23 +301,22 @@ export const MiniAudioPlayer: React.FC = () => {
           {/* Previous */}
           <TouchableOpacity
             onPress={handlePrevPress}
-            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
             style={styles.controlButton}
             accessibilityRole="button"
-            accessibilityLabel="Previous track">
-            <SvgIcon name="skipBack" size={18} color={colors.text.secondary} />
+            accessibilityLabel="Previous track"
+            accessibilityHint="Swipe right on the mini player for the same action">
+            <SvgIcon name="skipBack" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
 
           {/* Play/Pause */}
           <TouchableOpacity
             onPress={handlePlayPause}
-            hitSlop={{top: 8, bottom: 8, left: 6, right: 6}}
             style={styles.playButton}
             accessibilityRole="button"
             accessibilityLabel={isPlaying ? 'Pause' : 'Play'}>
             <SvgIcon
               name={isPlaying ? 'pause' : 'play'}
-              size={18}
+              size={20}
               color={colors.accent.gold}
             />
           </TouchableOpacity>
@@ -265,11 +324,11 @@ export const MiniAudioPlayer: React.FC = () => {
           {/* Next */}
           <TouchableOpacity
             onPress={handleNextPress}
-            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
             style={styles.controlButton}
             accessibilityRole="button"
-            accessibilityLabel="Next track">
-            <SvgIcon name="skipForward" size={18} color={colors.text.secondary} />
+            accessibilityLabel="Next track"
+            accessibilityHint="Swipe left on the mini player for the same action">
+            <SvgIcon name="skipForward" size={20} color={colors.text.secondary} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

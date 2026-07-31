@@ -23,6 +23,7 @@ import {markLaunched} from '../../store/slices/settingsSlice';
 import type {RootStackParamList} from '../../navigation/types';
 import {SvgIcon} from '../../components/utility/SvgIcon/SvgIcon';
 import {useTheme} from '../../theme';
+import {useAuth} from '../../hooks/useAuth';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 
 const ANIMATION_DURATION = 1500;
@@ -33,6 +34,7 @@ export const SplashScreen: React.FC = () => {
   const {colors} = useTheme();
   const dispatch = useAppDispatch();
   const navigation = useNavigation<NavigationProp>();
+  const {isAuthenticated} = useAuth();
 
   // Animated values
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -162,13 +164,19 @@ export const SplashScreen: React.FC = () => {
 
   const handleScan = () => {
     dispatch(markLaunched());
-    // Navigate to library tab so user can set up folders
-    navigation.reset({index: 0, routes: [{name: 'MainTabs'}]});
+    // First-time users must authenticate before entering the app
+    navigation.reset({
+      index: 0,
+      routes: [{name: isAuthenticated ? 'MainTabs' : 'Login'}],
+    });
   };
 
   const handleSkip = () => {
     dispatch(markLaunched());
-    navigation.reset({index: 0, routes: [{name: 'MainTabs'}]});
+    navigation.reset({
+      index: 0,
+      routes: [{name: isAuthenticated ? 'MainTabs' : 'Login'}],
+    });
   };
 
   return (
