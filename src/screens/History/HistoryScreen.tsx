@@ -10,6 +10,7 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -50,6 +51,12 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   const recentFiles = useAppSelector(state => state.session.recentFiles);
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [query, setQuery] = useState('');
+  // 54.3: pull-to-refresh — local store data, so just pulse the spinner
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    requestAnimationFrame(() => setRefreshing(false));
+  }, []);
 
   const filtered = useMemo(() => {
     let items = recentFiles;
@@ -130,7 +137,7 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`${item.title}, resume at ${formatDuration(item.position)}`}>
-          <View style={styles.rowIcon}>
+          <View style={[styles.rowIcon, {backgroundColor: colors.border.subtle}]}>
             <SvgIcon
               name={item.mediaType === 'audio' ? 'music' : 'video'}
               size={20}
@@ -263,6 +270,14 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
           renderItem={renderRow}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+            />
+          }
         />
       )}
 
@@ -323,7 +338,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   rowBody: {
     flex: 1,

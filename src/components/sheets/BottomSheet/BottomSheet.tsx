@@ -1,7 +1,6 @@
 import React, {useEffect, useRef, useCallback} from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   Modal,
   Animated,
@@ -15,6 +14,7 @@ import {radius, spacing} from '../../../theme/tokens';
 import {BottomSheetBackdrop} from './BottomSheetBackdrop';
 import {useBottomSheet, type UseBottomSheetOptions} from '../../../hooks/useBottomSheet';
 import {KeyboardAwareView} from '../../core/KeyboardAwareView/KeyboardAwareView';
+import {AppText} from '../../core/AppText/AppText';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -176,9 +176,9 @@ export function BottomSheet<T = any>({
             {title && (
               <View style={[styles.header, {borderBottomColor: colors.border.subtle}]}>
                 {typeof title === 'string' ? (
-                  <Text style={[styles.headerTitle, {color: colors.text.primary}]}>
+                  <AppText style={[styles.headerTitle, {color: colors.text.primary}]}>
                     {title}
-                  </Text>
+                  </AppText>
                 ) : (
                   <View style={{flex: 1}}>{title}</View>
                 )}
@@ -188,9 +188,9 @@ export function BottomSheet<T = any>({
                   onPress={closeSheet}
                   accessibilityLabel="Close panel"
                   accessibilityRole="button">
-                  <Text style={[styles.closeBtnText, {color: colors.text.secondary}]}>
+                  <AppText style={[styles.closeBtnText, {color: colors.text.secondary}]}>
                     ✕
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               </View>
             )}

@@ -88,14 +88,14 @@ export const SleepTimerSheet: React.FC<SleepTimerSheetProps> = ({
           backgroundColor: colors.background.elevated,
         },
         chipActive: {
-          backgroundColor: 'rgba(201,168,76,0.15)',
-          borderColor: '#C9A84C',
+          backgroundColor: colors.accent.goldDim,
+          borderColor: colors.accent.gold,
         },
         chipLabel: {
           fontWeight: '600',
         },
         chipLabelActive: {
-          color: '#C9A84C',
+          color: colors.accent.gold,
         },
         customRow: {
           flexDirection: 'row',

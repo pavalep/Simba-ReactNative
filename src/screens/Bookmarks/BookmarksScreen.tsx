@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
-import {spacing, radius} from '../../theme/tokens';
+import {spacing} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';

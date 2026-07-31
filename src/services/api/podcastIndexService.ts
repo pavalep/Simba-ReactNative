@@ -225,12 +225,15 @@ function mapEpisode(ep: RawEpisode): PodcastEpisodeResult {
 
 // ─── Exported functions ─────────────────────────────────────────────────
 
-export async function searchPodcasts(query: string): Promise<PodcastResult[]> {
+export async function searchPodcasts(
+  query: string,
+  max: number = 25,
+): Promise<PodcastResult[]> {
   const headers = await buildAuthHeaders();
   const response = await apiFetch<RawSearchResponse>({
     config: API_CONFIG.podcastIndex,
     path: '/search/byterm',
-    params: {q: query, max: 25},
+    params: {q: query, max},
     headers,
     cacheTtlMs: CACHE.search,
   });

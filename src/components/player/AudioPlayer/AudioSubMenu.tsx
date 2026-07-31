@@ -88,7 +88,7 @@ const SleepTimerSection: React.FC<{
         style={styles.actionRow}
         onPress={() => setExpanded(v => !v)}
         activeOpacity={0.7}>
-        <SvgIcon name="sliders" size={20} color="#EDEDED" />
+        <SvgIcon name="sliders" size={20} color={colors.text.primary} />
         <AppText variant="body2" color="primary" style={styles.actionLabel}>
           {activeMode !== 'time' || active ? activeLabel : 'Sleep Timer'}
         </AppText>
@@ -103,9 +103,10 @@ const SleepTimerSection: React.FC<{
               key={min}
               style={[
                 styles.timerChip,
+                {borderColor: colors.border.emphasis},
                 active && Math.ceil(remainingMs / 60000) === min && {
-                  backgroundColor: 'rgba(201,168,76,0.15)',
-                  borderColor: '#C9A84C',
+                  backgroundColor: colors.accent.goldDim,
+                  borderColor: colors.accent.gold,
                 },
               ]}
               onPress={() => {
@@ -119,7 +120,7 @@ const SleepTimerSection: React.FC<{
                 color="primary"
                 style={
                   active && Math.ceil(remainingMs / 60000) === min
-                    ? {color: '#C9A84C'}
+                    ? {color: colors.accent.gold}
                     : undefined
                 }>
                 {min} min
@@ -137,11 +138,11 @@ const SleepTimerSection: React.FC<{
               maxLength={3}
               accessibilityLabel="Custom sleep timer minutes"
               containerStyle={styles.customInputWrap}
-              inputContainerStyle={styles.customInput}
+              inputContainerStyle={[styles.customInput, {borderColor: colors.border.emphasis}]}
               inputStyle={styles.customInputText}
             />
             <TouchableOpacity
-              style={[styles.timerChip, !customValid && {opacity: 0.4}]}
+              style={[styles.timerChip, {borderColor: colors.border.emphasis}, !customValid && {opacity: 0.4}]}
               disabled={!customValid}
               onPress={() => {
                 onSelect(Number(customMin));
@@ -162,9 +163,10 @@ const SleepTimerSection: React.FC<{
                 key={mode}
                 style={[
                   styles.timerChip,
+                  {borderColor: colors.border.emphasis},
                   activeMode === mode && {
-                    backgroundColor: 'rgba(201,168,76,0.15)',
-                    borderColor: '#C9A84C',
+                    backgroundColor: colors.accent.goldDim,
+                    borderColor: colors.accent.gold,
                   },
                 ]}
                 onPress={() => {
@@ -176,7 +178,7 @@ const SleepTimerSection: React.FC<{
                   variant="caption"
                   color={activeMode === mode ? 'accent' : 'primary'}
                   style={
-                    activeMode === mode ? {color: '#C9A84C'} : undefined
+                    activeMode === mode ? {color: colors.accent.gold} : undefined
                   }>
                   {sleepTimerModeLabel(mode)}
                 </AppText>
@@ -220,7 +222,8 @@ const SleepTimerSection: React.FC<{
 const SpeedSection: React.FC<{
   currentSpeed: number;
   onSelect: (speed: number) => void;
-}> = ({currentSpeed, onSelect}) => {
+  colors: ColorTokens;
+}> = ({currentSpeed, onSelect, colors}) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -229,7 +232,7 @@ const SpeedSection: React.FC<{
         style={styles.actionRow}
         onPress={() => setExpanded(v => !v)}
         activeOpacity={0.7}>
-        <SvgIcon name="maximize" size={20} color="#EDEDED" />
+        <SvgIcon name="maximize" size={20} color={colors.text.primary} />
         <AppText variant="body2" color="primary" style={styles.actionLabel}>
           Playback Speed
         </AppText>
@@ -244,9 +247,10 @@ const SpeedSection: React.FC<{
               key={spd}
               style={[
                 styles.timerChip,
+                {borderColor: colors.border.emphasis},
                 currentSpeed === spd && {
-                  backgroundColor: 'rgba(201,168,76,0.15)',
-                  borderColor: '#C9A84C',
+                  backgroundColor: colors.accent.goldDim,
+                  borderColor: colors.accent.gold,
                 },
               ]}
               onPress={() => {
@@ -257,7 +261,7 @@ const SpeedSection: React.FC<{
               <AppText
                 variant="caption"
                 color="primary"
-                style={currentSpeed === spd ? {color: '#C9A84C'} : undefined}>
+                style={currentSpeed === spd ? {color: colors.accent.gold} : undefined}>
                 {spd}×
               </AppText>
             </TouchableOpacity>
@@ -272,7 +276,8 @@ const SpeedSection: React.FC<{
 
 const AudioQualityCard: React.FC<{
   metadata: TrackMetadata;
-}> = ({metadata}) => {
+  colors: ColorTokens;
+}> = ({metadata, colors}) => {
   const raw = metadata.raw || {};
 
   const qualityRows: {label: string; value: string}[] = [
@@ -285,7 +290,7 @@ const AudioQualityCard: React.FC<{
   const hasData = qualityRows.some(r => r.value !== '—');
 
   return (
-    <View style={styles.qualityCard}>
+    <View style={[styles.qualityCard, {backgroundColor: colors.background.highlightDim}]}>
       <AppText variant="caption" color="secondary" style={styles.qualityTitle}>
         Audio Quality
       </AppText>
@@ -417,7 +422,7 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
       transparent
       animationType="slide"
       onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, {backgroundColor: colors.background.floating}]}>
         <TouchableOpacity
           style={styles.overlayTouchArea}
           activeOpacity={1}
@@ -444,7 +449,7 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
             </View>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, {backgroundColor: colors.background.highlight}]} />
 
           {/* ── Action Rows ── */}
           <ScrollView
@@ -460,7 +465,7 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
                 <AppText
                   style={[
                     styles.heartIcon,
-                    {color: liked ? '#FF2D55' : '#EDEDED'},
+                    {color: liked ? colors.accent.love : colors.text.primary},
                   ]}>
                   {liked ? '♥' : '♡'}
                 </AppText>
@@ -478,7 +483,7 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
                 onAddToPlaylist();
               }}
               activeOpacity={0.7}>
-              <SvgIcon name="listMusic" size={20} color="#EDEDED" />
+              <SvgIcon name="listMusic" size={20} color={colors.text.primary} />
               <AppText variant="body2" color="primary" style={styles.actionLabel}>
                 Add to Playlist
               </AppText>
@@ -495,14 +500,14 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
               <SvgIcon
                 name="bookmark"
                 size={20}
-                color={bookmarkCount > 0 ? '#C9A84C' : '#EDEDED'}
+                color={bookmarkCount > 0 ? colors.accent.gold : colors.text.primary}
               />
               <AppText
                 variant="body2"
                 color="primary"
                 style={[
                   styles.actionLabel,
-                  bookmarkCount > 0 ? {color: '#C9A84C'} : undefined,
+                  bookmarkCount > 0 ? {color: colors.accent.gold} : undefined,
                 ]}>
                 {bookmarkCount > 0
                   ? `Bookmarks (${bookmarkCount})`
@@ -521,17 +526,17 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
             />
 
             {/* 5. Playback Speed */}
-            <SpeedSection currentSpeed={playbackSpeed} onSelect={handleSpeedSelect} />
+            <SpeedSection currentSpeed={playbackSpeed} onSelect={handleSpeedSelect} colors={colors} />
 
             {/* 6. Audio Quality */}
-            <AudioQualityCard metadata={metadata} />
+            <AudioQualityCard metadata={metadata} colors={colors} />
 
             {/* 7. Share */}
             <TouchableOpacity
               style={styles.actionRow}
               onPress={handleShare}
               activeOpacity={0.7}>
-              <SvgIcon name="maximize" size={20} color="#EDEDED" />
+              <SvgIcon name="maximize" size={20} color={colors.text.primary} />
               <AppText variant="body2" color="primary" style={styles.actionLabel}>
                 Share
               </AppText>
@@ -542,7 +547,7 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
               style={styles.actionRow}
               onPress={handleSongInfo}
               activeOpacity={0.7}>
-              <SvgIcon name="list" size={20} color="#EDEDED" />
+              <SvgIcon name="list" size={20} color={colors.text.primary} />
               <AppText variant="body2" color="primary" style={styles.actionLabel}>
                 Song Info
               </AppText>
@@ -563,7 +568,6 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   overlayTouchArea: {
     flex: 1,
@@ -591,7 +595,6 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.08)',
     marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
   },
@@ -626,7 +629,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
   },
   // 50.1: custom minutes row
   customRow: {
@@ -643,7 +645,6 @@ const styles = StyleSheet.create({
   customInput: {
     minHeight: 38,
     borderRadius: radius.pill,
-    borderColor: 'rgba(255,255,255,0.12)',
     paddingHorizontal: 14,
   },
   customInputText: {
@@ -663,7 +664,6 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     padding: 12,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   qualityTitle: {
     marginBottom: 8,

@@ -13,7 +13,6 @@ import {HomeMediaShelf} from './components/HomeMediaShelf';
 import {QuickAccessShelf} from './components/QuickAccessShelf';
 import {HomeLoadingSkeleton} from './components/HomeLoadingSkeleton';
 import {HomeErrorState} from './components/HomeErrorState';
-import {NoNetworkBanner} from './components/NoNetworkBanner';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {AppText} from '../../components/core/AppText/AppText';
 import {HomeBookmarksList} from './components/HomeBookmarksList';
@@ -32,7 +31,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     refreshing,
     isSettled,
     hasError,
-    isOnline,
     isScanning,
     sections,
     greeting,
@@ -207,8 +205,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         bookmarkCount={bookmarkCount}
       />
 
-      <NoNetworkBanner isVisible={!isOnline} colors={colors} />
-
       <FlatList
         data={sections}
         renderItem={renderSection}
@@ -232,8 +228,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={handleOpenMedia}
-        style={[styles.fab, {backgroundColor: colors.accent.gold, bottom: insets.bottom + 100}]}>
-        <SvgIcon name="play" size={24} color="#000" />
+        style={[
+          styles.fab,
+          {
+            backgroundColor: colors.accent.gold,
+            bottom: insets.bottom + 100,
+            // Shadow (colors.shadow — inline; static styles are color-free)
+            shadowColor: colors.shadow,
+            shadowOffset: {width: 0, height: 3},
+            shadowOpacity: 0.3,
+            shadowRadius: 4.5,
+          },
+        ]}>
+        <SvgIcon name="play" size={24} color={colors.text.inverse} />
       </TouchableOpacity>
     </View>
   );
@@ -257,10 +264,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.3,
-    shadowRadius: 4.5,
     zIndex: 99,
   },
 });

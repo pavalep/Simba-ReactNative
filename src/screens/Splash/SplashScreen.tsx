@@ -9,7 +9,6 @@
 import React, {useEffect, useRef, useState, useMemo} from 'react';
 import {
   View,
-  Text,
   Animated,
   Easing,
   StyleSheet,
@@ -25,6 +24,7 @@ import {SvgIcon} from '../../components/utility/SvgIcon/SvgIcon';
 import {useTheme} from '../../theme';
 import {useAuth} from '../../hooks/useAuth';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {AppText} from '../../components/core/AppText/AppText';
 
 const ANIMATION_DURATION = 1500;
 
@@ -206,23 +206,23 @@ export const SplashScreen: React.FC = () => {
         {/* Scan prompt (appears after animation) */}
         {showPrompt && (
           <Animated.View style={[styles.prompt, {opacity: promptOpacity}]}>
-            <Text style={styles.promptTitle}>Welcome to Simba Player</Text>
-            <Text style={styles.promptBody}>
+            <AppText style={styles.promptTitle}>Welcome to Simba Player</AppText>
+            <AppText style={styles.promptBody}>
               Scan your media library to discover videos and music. Or skip and
               browse later.
-            </Text>
+            </AppText>
             <TouchableOpacity
               style={styles.scanButton}
               onPress={handleScan}
               activeOpacity={0.8}>
               <SvgIcon name="folder" size={20} color={colors.text.inverse} />
-              <Text style={styles.scanButtonText}>Scan Media Library</Text>
+              <AppText style={styles.scanButtonText}>Scan Media Library</AppText>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSkip}
               activeOpacity={0.7}
               hitSlop={{top: 12, bottom: 12, left: 24, right: 24}}>
-              <Text style={styles.skipText}>Skip for now</Text>
+              <AppText style={styles.skipText}>Skip for now</AppText>
             </TouchableOpacity>
           </Animated.View>
         )}

@@ -93,7 +93,7 @@ export const AudioActionRow: React.FC<AudioActionRowProps> = ({
             <AppText
               style={[
                 styles.heartIcon,
-                {color: liked ? '#FF2D55' : colors.text.primary},
+                {color: liked ? colors.accent.love : colors.text.primary},
               ]}>
               {liked ? '♥' : '♡'}
             </AppText>

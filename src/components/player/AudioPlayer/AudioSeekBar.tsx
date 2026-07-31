@@ -215,14 +215,14 @@ export const AudioSeekBar: React.FC<AudioSeekBarProps> = ({
         width: THUMB_SIZE_NORMAL,
         height: THUMB_SIZE_NORMAL,
         borderRadius: THUMB_SIZE_NORMAL / 2,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: colors.text.bright,
         borderWidth: 2,
         borderColor: colors.accent.gold,
         top: (THUMB_SIZE_DRAG + 8) / 2 - THUMB_SIZE_NORMAL / 2,
         marginLeft: -THUMB_SIZE_NORMAL / 2,
         // Shadow
         elevation: 4,
-        shadowColor: '#000',
+        shadowColor: colors.shadow,
         shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.3,
         shadowRadius: 4,
@@ -295,12 +295,17 @@ export const AudioSeekBar: React.FC<AudioSeekBarProps> = ({
             style={[
               styles.thumbAbs,
               {
-                backgroundColor: '#FFFFFF',
+                backgroundColor: colors.text.bright,
                 borderColor: colors.accent.gold,
                 width: THUMB_SIZE_NORMAL,
                 height: THUMB_SIZE_NORMAL,
                 borderRadius: THUMB_SIZE_NORMAL / 2,
                 marginLeft: -THUMB_SIZE_NORMAL / 2,
+                // Shadow (colors.shadow — moved inline; static styles are color-free)
+                shadowColor: colors.shadow,
+                shadowOffset: {width: 0, height: 2},
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
               },
               {left: `${displayFraction * 100}%`},
               {transform: [{scale: thumbScale}]},
@@ -313,7 +318,7 @@ export const AudioSeekBar: React.FC<AudioSeekBarProps> = ({
           <View
             style={[
               styles.thumbZero,
-              {backgroundColor: '#FFFFFF', borderColor: colors.accent.gold},
+              {backgroundColor: colors.text.bright, borderColor: colors.accent.gold},
             ]}
           />
         )}
@@ -370,10 +375,6 @@ const styles = StyleSheet.create({
     top: (THUMB_SIZE_DRAG + 8) / 2 - THUMB_SIZE_NORMAL / 2,
     borderWidth: 2,
     elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
   },
   thumbZero: {
     position: 'absolute',

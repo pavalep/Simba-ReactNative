@@ -1,11 +1,13 @@
 // ────────────────────────────────────────────────────────
 // Simba Player — useAllVideosScreen Hook (Phase 20)
+// 54.3: pull-to-refresh triggers a media re-scan.
 // ────────────────────────────────────────────────────────
 
 import {useCallback, useMemo, useState} from 'react';
 import {useNavigation} from '@react-navigation/native';
 import {useAppSelector} from '../../store';
 import {selectAllTracks} from '../../store/slices/mediaSlice';
+import {useMediaScanner} from '../../hooks/useMediaScanner';
 import type {ScannedTrack} from '../../store/slices/mediaSlice';
 
 export type SortMode = 'title' | 'date';
@@ -21,6 +23,9 @@ export interface UseAllVideosScreenResult {
   toggleViewMode: () => void;
   filteredTracks: ScannedTrack[];
   handlePlayTrack: (uri: string, title: string) => void;
+  /** 54.3: pull-to-refresh state + handler */
+  refreshing: boolean;
+  handleRefresh: () => void;
 }
 
 export function useAllVideosScreen(): UseAllVideosScreenResult {
@@ -28,6 +33,8 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('title');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [refreshing, setRefreshing] = useState(false);
+  const {startScan} = useMediaScanner();
 
   const videoTracks = useAppSelector(state =>
     selectAllTracks(state).filter(t => t.mediaType === 'video'),
@@ -71,6 +78,13 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
     [navigation],
   );
 
+  // 54.3: pull-to-refresh — force a full re-scan of linked folders
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await startScan(true);
+    setRefreshing(false);
+  }, [startScan]);
+
   return {
     videoTracks,
     searchQuery,
@@ -81,5 +95,7 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
     toggleViewMode,
     filteredTracks,
     handlePlayTrack,
+    refreshing,
+    handleRefresh,
   };
 }

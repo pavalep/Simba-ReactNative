@@ -10,13 +10,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
 import {Avatar} from '../../components/core/Avatar/Avatar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {SettingsRow} from '../../components/utility/SettingsRow/SettingsRow';
 import {ConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../components/feedback/Toast/Toast';
@@ -192,7 +192,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
                 accessibilityRole="button"
                 accessibilityLabel="Sign in with Google">
                 {isLoading ? (
-                  <ActivityIndicator color={colors.text.inverse} size="small" />
+                  <ActivityOrb size={20} />
                 ) : (
                   <AppText
                     variant="bodySmall"

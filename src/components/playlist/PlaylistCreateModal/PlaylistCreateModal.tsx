@@ -150,7 +150,7 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
             style={[styles.createBtn, {backgroundColor: colors.accent.gold}]}
             activeOpacity={0.8}
             onPress={handleCreate}>
-            <AppText variant="body2" style={{color: '#08080A', fontWeight: '600'}}>
+            <AppText variant="body2" style={{color: colors.text.inverse, fontWeight: '600'}}>
               Create
             </AppText>
           </TouchableOpacity>

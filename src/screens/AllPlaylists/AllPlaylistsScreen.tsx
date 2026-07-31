@@ -189,7 +189,7 @@ export const AllPlaylistsScreen: React.FC = () => {
         transparent
         animationType="fade"
         onRequestClose={() => setCreateVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, {backgroundColor: colors.background.floating}]}>
           <View
             style={[
               styles.modalContent,
@@ -265,7 +265,7 @@ export const AllPlaylistsScreen: React.FC = () => {
         transparent
         animationType="fade"
         onRequestClose={() => setRenameVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, {backgroundColor: colors.background.floating}]}>
           <View
             style={[
               styles.modalContent,
@@ -367,7 +367,6 @@ const styles = StyleSheet.create({
   // ── Modal Styles ──
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,

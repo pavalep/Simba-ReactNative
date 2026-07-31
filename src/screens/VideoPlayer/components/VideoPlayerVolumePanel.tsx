@@ -1,7 +1,8 @@
 import React from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, TouchableOpacity, View} from 'react-native';
 import Slider from '@react-native-community/slider';
 import {useTheme} from '../../../theme';
+import {AppText} from '../../../components/core/AppText/AppText';
 
 interface Props {
   volume: number;
@@ -21,13 +22,13 @@ export const VideoPlayerVolumePanel: React.FC<Props> = React.memo(({
   return (
     <View style={styles.container}>
       <View style={styles.valueRow}>
-        <Text style={[styles.value, {color: colors.text.primary}]}>{muted ? 'Muted' : `${Math.round(volume)}%`}</Text>
+        <AppText style={[styles.value, {color: colors.text.primary}]}>{muted ? 'Muted' : `${Math.round(volume)}%`}</AppText>
         <TouchableOpacity
           style={[styles.muteButton, {borderColor: colors.border.subtle}]}
           onPress={onToggleMute}
           accessibilityRole="button"
           accessibilityLabel={muted ? 'Unmute' : 'Mute'}>
-          <Text style={[styles.muteLabel, {color: colors.text.primary}]}>{muted ? 'Unmute' : 'Mute'}</Text>
+          <AppText style={[styles.muteLabel, {color: colors.text.primary}]}>{muted ? 'Unmute' : 'Mute'}</AppText>
         </TouchableOpacity>
       </View>
       <Slider
@@ -41,7 +42,7 @@ export const VideoPlayerVolumePanel: React.FC<Props> = React.memo(({
         onValueChange={onVolumeChange}
         accessibilityLabel="Volume"
       />
-      <Text style={[styles.hint, {color: colors.text.secondary}]}>Drag to adjust volume</Text>
+      <AppText style={[styles.hint, {color: colors.text.secondary}]}>Drag to adjust volume</AppText>
     </View>
   );
 });

@@ -1,6 +1,5 @@
 import React from 'react';
-import {Text, type StyleProp, type TextStyle} from 'react-native';
-import {useTheme} from '../../../theme';
+import {type StyleProp, type TextStyle} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 
 interface HighlightedTextProps {
@@ -16,7 +15,6 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({
   variant = 'primary',
   style,
 }) => {
-  const {colors} = useTheme();
 
   if (!query || !text) {
     if (variant === 'subtitle') {
@@ -53,9 +51,9 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({
   if (parts.length === 0) {
     if (variant === 'subtitle') {
       return (
-        <Text numberOfLines={1} style={{color: colors.text.tertiary, fontSize: 12}}>
+        <AppText color="tertiary" numberOfLines={1} style={{fontSize: 12}}>
           {text}
-        </Text>
+        </AppText>
       );
     }
     return (
@@ -67,37 +65,33 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({
 
   if (variant === 'subtitle') {
     return (
-      <Text numberOfLines={1} style={{color: colors.text.tertiary, fontSize: 12}}>
+      <AppText color="tertiary" numberOfLines={1} style={{fontSize: 12}}>
         {parts.map((part, i) => (
-          <Text
+          <AppText
             key={i}
-            style={
-              part.hl
-                ? {color: colors.accent.gold, fontWeight: '500'}
-                : {color: colors.text.tertiary}
-            }>
+            color={part.hl ? 'accent' : 'tertiary'}
+            style={part.hl ? {fontWeight: '500'} : undefined}>
             {part.t}
-          </Text>
+          </AppText>
         ))}
-      </Text>
+      </AppText>
     );
   }
 
   return (
-    <Text
+    <AppText
+      variant="bodySmall"
+      color="primary"
       numberOfLines={1}
-      style={[{color: colors.text.primary, fontSize: 14}, style]}>
+      style={style}>
       {parts.map((part, i) => (
-        <Text
+        <AppText
           key={i}
-          style={
-            part.hl
-              ? {color: colors.accent.gold, fontWeight: '600'}
-              : {color: colors.text.primary}
-          }>
+          color={part.hl ? 'accent' : 'primary'}
+          style={part.hl ? {fontWeight: '600'} : undefined}>
           {part.t}
-        </Text>
+        </AppText>
       ))}
-    </Text>
+    </AppText>
   );
 };

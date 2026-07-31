@@ -1,5 +1,6 @@
 import React from 'react';
 import {View} from 'react-native';
+import {useTheme} from '../../../theme';
 import {AppText} from '../AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon/SvgIcon';
 
@@ -18,6 +19,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   name,
   size = 40,
 }) => {
+  const {colors} = useTheme();
   const initials = name
     ? name
         .split(' ')
@@ -37,7 +39,7 @@ export const Avatar: React.FC<AvatarProps> = ({
           height: size,
           borderRadius: size / 2,
           overflow: 'hidden',
-          backgroundColor: 'rgba(255,255,255,0.08)',
+          backgroundColor: colors.background.highlight,
         }}>
         {/* Inline <Image> would go here with FastImage for production.
             For now we render a fallback until image URL is available. */}
@@ -48,7 +50,7 @@ export const Avatar: React.FC<AvatarProps> = ({
             justifyContent: 'center',
           }}>
           <AppText
-            style={{fontSize, fontWeight: '600', color: '#EDEDED'}}>
+            style={{fontSize, fontWeight: '600', color: colors.text.primary}}>
             {initials}
           </AppText>
         </View>
@@ -65,15 +67,15 @@ export const Avatar: React.FC<AvatarProps> = ({
         borderRadius: size / 2,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(255,255,255,0.06)',
+        backgroundColor: colors.border.subtle,
       }}>
       {initials ? (
         <AppText
-          style={{fontSize, fontWeight: '600', color: 'rgba(237,237,237,0.65)'}}>
+          style={{fontSize, fontWeight: '600', color: colors.text.secondary}}>
           {initials}
         </AppText>
       ) : (
-        <SvgIcon name="music" size={size * 0.5} color="rgba(237,237,237,0.4)" />
+        <SvgIcon name="music" size={size * 0.5} color={colors.text.tertiary} />
       )}
     </View>
   );

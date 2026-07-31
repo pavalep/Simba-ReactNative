@@ -1,13 +1,13 @@
 import React, {useEffect, useRef, useCallback, useMemo, useState} from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   Animated,
   StyleSheet,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
+import {AppText} from '../../../components/core/AppText/AppText';
 
 // ─── Toolbar Btn Sub-component ──────────────────────────────
 
@@ -24,7 +24,7 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label, is
   const {colors} = useTheme();
   const [showLabel, setShowLabel] = useState(false);
   const labelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const iconMuted = 'rgba(237,237,237,0.65)';
+  const iconMuted = colors.text.secondary;
 
   const handlePressIn = useCallback(() => {
     labelTimer.current = setTimeout(() => setShowLabel(true), 600);
@@ -46,17 +46,17 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label, is
         borderRadius: 14,
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
-        backgroundColor: active ? 'rgba(201,168,76,0.15)' : 'transparent',
+        backgroundColor: active ? colors.accent.goldDim : 'transparent',
       },
       labelTooltip: {
         position: 'absolute' as const,
         bottom: -22,
-        backgroundColor: 'rgba(8, 8, 10, 0.90)',
+        backgroundColor: colors.background.scrimStrong,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 4,
         borderWidth: 0.5,
-        borderColor: 'rgba(255,255,255,0.10)',
+        borderColor: colors.border.emphasis,
         zIndex: 100,
       },
       labelText: {
@@ -86,7 +86,7 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label, is
       />
       {showLabel && (
         <View style={btnStyles.labelTooltip}>
-          <Text style={btnStyles.labelText}>{label}</Text>
+          <AppText style={btnStyles.labelText}>{label}</AppText>
         </View>
       )}
     </TouchableOpacity>
@@ -156,6 +156,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
   onAutoHide,
   bottomInset,
 }) => {
+  const {colors} = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -179,12 +180,12 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
           borderRadius: 18,
           overflow: 'hidden',
           borderWidth: 0.5,
-          borderColor: 'rgba(255,255,255,0.10)',
-          backgroundColor: 'rgba(8, 8, 10, 0.58)',
+          borderColor: colors.border.emphasis,
+          backgroundColor: colors.background.scrimStrong,
         },
         glassBg: {
           ...StyleSheet.absoluteFill,
-          backgroundColor: 'rgba(8, 8, 10, 0.58)',
+          backgroundColor: colors.background.scrimStrong,
         },
         toolbarContent: {
           paddingHorizontal: 16,
@@ -219,7 +220,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
           letterSpacing: 0.5,
         },
       }),
-    [bottomInset],
+    [bottomInset, colors],
   );
 
   // ── Animate visibility ──
@@ -266,17 +267,17 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
   const getVisToggleStyle = useCallback(
     () => ({
       backgroundColor: subtitleVisible
-        ? 'rgba(201,168,76,0.25)'
-        : 'rgba(255,255,255,0.08)',
+        ? colors.accent.goldGlow
+        : colors.background.highlight,
     }),
-    [subtitleVisible],
+    [subtitleVisible, colors],
   );
 
   const getVisToggleTextStyle = useCallback(
     () => ({
-      color: subtitleVisible ? '#C9A84C' : 'rgba(237,237,237,0.65)',
+      color: subtitleVisible ? colors.accent.gold : colors.text.secondary,
     }),
-    [subtitleVisible],
+    [subtitleVisible, colors],
   );
 
   return (
@@ -327,13 +328,13 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
                   accessibilityRole="button"
                   accessibilityLabel="Toggle subtitle visibility"
                   accessibilityState={{checked: subtitleVisible}}>
-                  <Text
+                  <AppText
                     style={[
                       styles.visToggleText,
                       getVisToggleTextStyle(),
                     ]}>
                     {subtitleVisible ? 'ON' : 'OFF'}
-                  </Text>
+                  </AppText>
                 </TouchableOpacity>
               )}
             </View>

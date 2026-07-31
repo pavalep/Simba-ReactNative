@@ -11,7 +11,8 @@ import RNFS from 'react-native-fs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../theme';
-import {spacing} from '../../theme/tokens';
+import {spacing, radius} from '../../theme/tokens';
+import type {ColorTokens} from '../../theme/tokens';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {
   addVideoFolder,
@@ -58,6 +59,7 @@ interface DirEntry {
 export const FolderLinkingWizard: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const nav = useNavigation<any>();
   const dispatch = useAppDispatch();
 
@@ -450,7 +452,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
         <>
           <View
             style={[styles.checkCircle, {backgroundColor: colors.semantic.success}]}>
-            <AppText variant="h2" style={{color: '#fff'}}>
+            <AppText variant="h2" style={{color: colors.text.bright}}>
               ✓
             </AppText>
           </View>
@@ -545,7 +547,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
     <View style={[styles.stepContent, styles.centerStep]}>
       <View
         style={[styles.checkCircleLarge, {backgroundColor: colors.semantic.success}]}>
-        <AppText variant="display" style={{color: '#fff', fontSize: 48}}>
+        <AppText variant="display" style={{color: colors.text.bright, fontSize: 48}}>
           ✓
         </AppText>
       </View>
@@ -702,7 +704,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
               variant="button"
               style={{
                 color: canNext
-                  ? '#fff'
+                  ? colors.text.bright
                   : colors.text.tertiary,
               }}>
               {step === 2 ? 'Continue' : 'Next'}
@@ -714,7 +716,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorTokens) => StyleSheet.create({
   root: {
     flex: 1,
   },
@@ -791,7 +793,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#fff',
+    backgroundColor: colors.text.bright,
   },
   // Folder picker
   pathCard: {
@@ -816,7 +818,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
+    borderBottomColor: colors.border.subtle,
   },
   dirList: {
     maxHeight: 200,

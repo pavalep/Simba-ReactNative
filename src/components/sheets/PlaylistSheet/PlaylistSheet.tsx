@@ -348,7 +348,7 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
             <AppText
               variant="body1"
               color="primary"
-              style={{color: '#08080A'}}>
+              style={{color: colors.text.inverse}}>
               Create
             </AppText>
           </TouchableOpacity>

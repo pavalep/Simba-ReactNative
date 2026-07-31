@@ -167,7 +167,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
         },
         container: {
           flex: 1,
-          backgroundColor: 'rgba(10,10,12,0.98)',
+          backgroundColor: colors.background.scrimOpaque,
           paddingTop: insets.top,
         },
         // ── Header ──
@@ -190,7 +190,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
           borderRadius: 16,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: 'rgba(255,255,255,0.08)',
+          backgroundColor: colors.background.highlight,
         },
         // ── Toggle Tabs (15.9) ──
         tabRow: {
@@ -205,7 +205,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
           borderRadius: 20,
         },
         tabBtnActive: {
-          backgroundColor: 'rgba(255,255,255,0.12)',
+          backgroundColor: colors.border.emphasis,
         },
         tabBtnInactive: {
           backgroundColor: 'transparent',
@@ -240,7 +240,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
         activeLyricText: {
           fontSize: 18,
           fontWeight: '700',
-          color: '#FFFFFF', // bright white (15.6)
+          color: colors.text.bright, // bright white over artwork (15.6)
         },
         // ── No lyrics empty state (15.10) ──
         noLyricsContainer: {
@@ -253,7 +253,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
           width: 64,
           height: 64,
           borderRadius: 32,
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: colors.border.subtle,
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: 16,
@@ -278,7 +278,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
           marginBottom: 4,
         },
         queueItemActive: {
-          backgroundColor: 'rgba(201,168,76,0.1)',
+          backgroundColor: colors.accent.goldDim,
         },
         queueIndex: {
           width: 28,
@@ -314,7 +314,14 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
             onPress={() => onSeekToLyric?.(item.time)}
             activeOpacity={0.7}>
             <Animated.View
-              style={[styles.activeLyricRow, {backgroundColor: `rgba(255,255,255,${isPlaying ? 0.08 : 0.04})`}]}>
+              style={[
+                styles.activeLyricRow,
+                {
+                  backgroundColor: isPlaying
+                    ? colors.background.highlight
+                    : colors.background.highlightDim,
+                },
+              ]}>
               <AppText style={styles.activeLyricText}>{item.text}</AppText>
             </Animated.View>
           </TouchableOpacity>
@@ -374,7 +381,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
             activeOpacity={0.7}>
             <AppText
               variant="body2"
-              style={[styles.tabLabel, {color: activeTab === 'lyrics' ? '#FFFFFF' : colors.text.secondary}]}>
+              style={[styles.tabLabel, {color: activeTab === 'lyrics' ? colors.text.bright : colors.text.secondary}]}>
               Lyrics
             </AppText>
           </TouchableOpacity>
@@ -384,7 +391,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
             activeOpacity={0.7}>
             <AppText
               variant="body2"
-              style={[styles.tabLabel, {color: activeTab === 'queue' ? '#FFFFFF' : colors.text.secondary}]}>
+              style={[styles.tabLabel, {color: activeTab === 'queue' ? colors.text.bright : colors.text.secondary}]}>
               Queue
             </AppText>
           </TouchableOpacity>

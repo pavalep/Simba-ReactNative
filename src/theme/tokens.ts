@@ -14,6 +14,14 @@ export interface ColorTokens {
     floating: string;
     overlay: string;
     glass: string;
+    /** 55.2: dark scrims layered over artwork/hero imagery */
+    scrim: string;
+    scrimMid: string;
+    scrimStrong: string;
+    scrimOpaque: string;
+    /** 55.2: translucent white fill for chips/highlights over media */
+    highlight: string;
+    highlightDim: string;
   };
   border: {
     subtle: string;
@@ -24,12 +32,18 @@ export interface ColorTokens {
     secondary: string;
     tertiary: string;
     inverse: string;
+    /** 55.2: pure white — on-image/on-artwork labels, thumbs */
+    bright: string;
   };
   accent: {
     gold: string;
     goldDim: string;
     goldGlow: string;
+    /** 55.2: like/heart accent (pink) */
+    love: string;
   };
+  /** 55.2: shadow color used with elevation/shadow styles */
+  shadow: string;
   semantic: {
     success: string;
     error: string;
@@ -44,6 +58,12 @@ export const darkColors: ColorTokens = {
     floating: 'rgba(0,0,0,0.55)',
     overlay: 'rgba(10,10,12,0.85)',
     glass: 'rgba(20,20,22,0.65)',
+    scrim: 'rgba(10,10,12,0.50)',
+    scrimMid: 'rgba(10,10,12,0.78)',
+    scrimStrong: 'rgba(10,10,12,0.92)',
+    scrimOpaque: 'rgba(10,10,12,0.98)',
+    highlight: 'rgba(255,255,255,0.08)',
+    highlightDim: 'rgba(255,255,255,0.04)',
   },
   border: {
     subtle: 'rgba(255,255,255,0.06)',
@@ -54,17 +74,20 @@ export const darkColors: ColorTokens = {
     secondary: 'rgba(237,237,237,0.55)',
     tertiary: 'rgba(237,237,237,0.30)',
     inverse: '#0A0A0C',
+    bright: '#FFFFFF',
   },
   accent: {
     gold: '#C9A84C',
     goldDim: 'rgba(201,168,76,0.15)',
     goldGlow: 'rgba(201,168,76,0.25)',
+    love: '#FF2D55',
   },
   semantic: {
     success: '#4CAF50',
     error: '#EF5350',
     warning: '#FFA726',
   },
+  shadow: '#000000',
 };
 
 export const lightColors: ColorTokens = {
@@ -74,6 +97,12 @@ export const lightColors: ColorTokens = {
     floating: 'rgba(245,240,232,0.90)',
     overlay: 'rgba(245,240,232,0.88)',
     glass: 'rgba(255,255,255,0.70)',
+    scrim: 'rgba(10,10,12,0.35)',
+    scrimMid: 'rgba(10,10,12,0.60)',
+    scrimStrong: 'rgba(10,10,12,0.78)',
+    scrimOpaque: 'rgba(10,10,12,0.90)',
+    highlight: 'rgba(0,0,0,0.05)',
+    highlightDim: 'rgba(0,0,0,0.03)',
   },
   border: {
     subtle: 'rgba(0,0,0,0.06)',
@@ -84,17 +113,20 @@ export const lightColors: ColorTokens = {
     secondary: 'rgba(26,26,28,0.55)',
     tertiary: 'rgba(26,26,28,0.30)',
     inverse: '#1A1A1C',
+    bright: '#FFFFFF',
   },
   accent: {
     gold: '#B8922E',
     goldDim: 'rgba(184,146,46,0.12)',
     goldGlow: 'rgba(184,146,46,0.20)',
+    love: '#E02447',
   },
   semantic: {
     success: '#4CAF50',
     error: '#EF5350',
     warning: '#FFA726',
   },
+  shadow: '#000000',
 };
 
 // ─── Typography Tokens ────────────────────────────────────

@@ -25,6 +25,14 @@ import {
 // incremental scanning, and auto-scan on app launch.
 // ══════════════════════════════════════════════════════════════
 
+/**
+ * 54.3: module-level guard so multiple mounted instances
+ * (Library tab, AllAudio, AllVideos…) can never start two
+ * concurrent scans — the store flag alone is not enough
+ * because every instance holds a stale closure.
+ */
+let scanInFlight = false;
+
 export function useMediaScanner() {
   const dispatch = useAppDispatch();
 
@@ -58,9 +66,10 @@ export function useMediaScanner() {
   // ── Start scan ──
   const startScan = useCallback(
     async (forceFullRescan: boolean = false) => {
-      if (isScanningRef.current) return;
+      if (isScanningRef.current || scanInFlight) return;
       if (videoFolders.length === 0 && audioFolders.length === 0) return;
 
+      scanInFlight = true;
       cancelRef.current = false;
       dispatch(setScanning(true));
 
@@ -128,6 +137,7 @@ export function useMediaScanner() {
       } catch {
         // Silently fail — user can retry
       } finally {
+        scanInFlight = false;
         dispatch(setScanning(false));
         dispatch(
           setScanProgress({

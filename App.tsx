@@ -1,6 +1,6 @@
 import React, {useMemo, useEffect, useCallback} from 'react';
 import {Provider} from 'react-redux';
-import {Linking} from 'react-native';
+import {Linking, View, StyleSheet} from 'react-native';
 import {PersistGate} from 'redux-persist/integration/react';
 import {NavigationContainer} from '@react-navigation/native';
 import {store, persistor} from './src/store';
@@ -10,6 +10,8 @@ import {navigationRef} from './src/navigation/navigationHelper';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {SimbaStatusBar} from './src/components/StatusBar';
 import {ToastProvider} from './src/components/feedback/Toast';
+import {OfflineBanner} from './src/components/status/OfflineBanner/OfflineBanner';
+import {GlobalOperationProgress} from './src/components/status/GlobalOperationProgress/GlobalOperationProgress';
 import {lockToPortrait} from './src/utils/orientation';
 import {useAuthSession} from './src/hooks/useAuthSession';
 
@@ -74,13 +76,25 @@ const AppContent: React.FC = () => {
     <ErrorBoundary fallbackColors={fallbackColors}>
       <ToastProvider>
         <SimbaStatusBar variant="home" />
-        <NavigationContainer ref={navigationRef}>
-          <RootNavigator />
-        </NavigationContainer>
+        <View style={styles.root}>
+          <NavigationContainer ref={navigationRef}>
+            <RootNavigator />
+          </NavigationContainer>
+          {/* 54.1: global offline banner overlays every screen */}
+          <OfflineBanner />
+          {/* 54.5: global long-operation progress (media scan) */}
+          <GlobalOperationProgress />
+        </View>
       </ToastProvider>
     </ErrorBoundary>
   );
 };
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+});
 
 const onRehydrated = () => {
   // redux-persist rehydration complete

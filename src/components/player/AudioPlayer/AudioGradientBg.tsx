@@ -69,9 +69,9 @@ export const AudioGradientBg: React.FC<AudioGradientBgProps> = ({albumArtUri}) =
       {/* ── Gradient overlay ── */}
       <View style={styles.gradientOverlay}>
         <View style={[styles.gradStop, {backgroundColor: 'transparent'}]} />
-        <View style={[styles.gradStop, {backgroundColor: 'rgba(10,10,12,0.50)'}]} />
-        <View style={[styles.gradStop, {backgroundColor: 'rgba(10,10,12,0.78)'}]} />
-        <View style={[styles.gradStop, {backgroundColor: 'rgba(10,10,12,0.92)'}]} />
+        <View style={[styles.gradStop, {backgroundColor: colors.background.scrim}]} />
+        <View style={[styles.gradStop, {backgroundColor: colors.background.scrimMid}]} />
+        <View style={[styles.gradStop, {backgroundColor: colors.background.scrimStrong}]} />
       </View>
     </View>
   );

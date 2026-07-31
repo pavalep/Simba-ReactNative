@@ -13,7 +13,6 @@ import {
 import {selectAllPlaylists} from '../../../store/slices/playlistSlice';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import type {SessionEntry} from '../../../store/slices/sessionSlice';
-import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import {useAuth} from '../../../hooks/useAuth';
 
 // ── Types ──
@@ -51,7 +50,6 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const [refreshing, setRefreshing] = useState(false);
   const [isSettled, setIsSettled] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const {isOnline} = useNetworkStatus();
   const dispatch = useAppDispatch();
   const {user, isAuthenticated} = useAuth();
 
@@ -192,7 +190,6 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     refreshing,
     isSettled,
     hasError,
-    isOnline,
     isScanning,
     sections,
     greeting: getGreeting(),

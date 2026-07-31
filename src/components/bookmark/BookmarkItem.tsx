@@ -121,10 +121,8 @@ export const BookmarkItem: React.FC<Props> = ({
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel={`Delete bookmark for ${item.title}`}>
-          <SvgIcon name="bookmark" size={20} color="#FFFFFF" />
-          <AppText
-            variant="caption"
-            style={{color: '#FFFFFF', marginTop: 2, fontSize: 11}}>
+          <SvgIcon name="bookmark" size={20} color={colors.text.bright} />
+          <AppText variant="overline" style={{color: colors.text.bright, marginTop: spacing.xs}}>
             Delete
           </AppText>
         </TouchableOpacity>

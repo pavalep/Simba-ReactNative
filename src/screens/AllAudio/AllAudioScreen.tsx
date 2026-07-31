@@ -7,6 +7,7 @@ import {
   View,
   TouchableOpacity,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Platform,
   Dimensions,
@@ -49,6 +50,8 @@ export const AllAudioScreen: React.FC = () => {
     toggleViewMode,
     filteredTracks,
     handlePlayTrack,
+    refreshing,
+    handleRefresh,
   } = useAllAudioScreen();
 
   const {styles: animStyles} = useAnimatedEntrance(
@@ -195,6 +198,14 @@ export const AllAudioScreen: React.FC = () => {
           windowSize={5}
           maxToRenderPerBatch={10}
           removeClippedSubviews={true}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+            />
+          }
         />
       ) : (
         <FlatList
@@ -207,6 +218,14 @@ export const AllAudioScreen: React.FC = () => {
           windowSize={5}
           maxToRenderPerBatch={10}
           removeClippedSubviews={true}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+            />
+          }
         />
       )}
     </SafeAreaView>

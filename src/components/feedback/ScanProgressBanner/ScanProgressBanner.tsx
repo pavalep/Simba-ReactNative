@@ -1,14 +1,11 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
-  Animated,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
-import {WaveformBars} from '../WaveformBars/WaveformBars';
 import type {ScanProgress, ScanHistory} from '../../../store/slices/mediaSlice';
 
 interface ScanProgressBannerProps {
@@ -47,64 +44,6 @@ function formatLastScan(timestamp: number | null): string {
   return `Scanned ${days} day${days !== 1 ? 's' : ''} ago`;
 }
 
-/**
- * Abbreviate a long folder path for display.
- */
-function abbreviateFolder(folderPath: string, maxLen: number = 30): string {
-  if (folderPath.length <= maxLen) return folderPath;
-  const segments = folderPath.replace(/^file:\/\//, '').split('/').filter(Boolean);
-  if (segments.length <= 2) return '.../' + segments.slice(-1);
-  return '.../' + segments.slice(-2).join('/');
-}
-
-/**
- * Animated progress bar component.
- */
-const ProgressBar: React.FC<{percent: number; color: string}> = ({percent, color}) => {
-  const widthAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(widthAnim, {
-      toValue: Math.min(percent, 100),
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  }, [percent, widthAnim]);
-
-  const interpolatedWidth = widthAnim.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-  });
-
-  return (
-    <View style={progressStyles.track}>
-      <Animated.View
-        style={[
-          progressStyles.fill,
-          {
-            width: interpolatedWidth,
-            backgroundColor: color,
-          },
-        ]}
-      />
-    </View>
-  );
-};
-
-const progressStyles = StyleSheet.create({
-  track: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-    width: '100%',
-  },
-  fill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-});
-
 // ─── Main Component ─────────────────────────────────────────
 
 /**
@@ -117,38 +56,11 @@ const progressStyles = StyleSheet.create({
 export const ScanProgressBanner: React.FC<ScanProgressBannerProps> = ({
   isScanning,
   lastScanTimestamp,
-  scanProgress,
   scanHistory,
-  onCancel,
   trackCount,
 }) => {
   const {colors} = useTheme();
-  const pulseAnim = useRef(new Animated.Value(1)).current;
   const [showSummary, setShowSummary] = useState(false);
-
-  // Pulse animation for scanning indicator
-  useEffect(() => {
-    if (isScanning) {
-      setShowSummary(false);
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 0.3,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-      loop.start();
-      return () => loop.stop();
-    }
-    pulseAnim.setValue(1);
-  }, [isScanning, pulseAnim]);
 
   // Show summary briefly when scan completes
   useEffect(() => {
@@ -160,61 +72,10 @@ export const ScanProgressBanner: React.FC<ScanProgressBannerProps> = ({
   }, [isScanning, scanHistory]);
 
   // ── Scanning view ──
+  // 54.5: while scanning, the global OperationProgress card takes over;
+  // this banner only shows the summary / idle states to avoid duplicates.
   if (isScanning) {
-    const pct = scanProgress?.percentComplete ?? 0;
-    const filesFound = scanProgress?.filesFound ?? 0;
-    const folder = scanProgress?.currentFolder
-      ? abbreviateFolder(scanProgress.currentFolder)
-      : null;
-
-    return (
-      <View
-        style={[
-          styles.root,
-          {
-            backgroundColor: colors.background.floating,
-            borderColor: colors.accent.goldDim,
-          },
-        ]}>
-        {/* Header row: dot + label + cancel */}
-        <View style={styles.headerRow}>
-          <View style={styles.headerLeft}>
-            <WaveformBars
-              color={colors.accent.gold}
-              barCount={4}
-              barWidth={3}
-              height={16}
-              gap={2}
-              isPlaying={true}
-            />
-            <AppText variant="caption" color="accent" style={styles.label}>
-              Scanning...
-            </AppText>
-          </View>
-          {onCancel && (
-            <TouchableOpacity onPress={onCancel} style={styles.cancelBtn} activeOpacity={0.7}>
-              <AppText variant="caption" color="tertiary">
-                Cancel
-              </AppText>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Folder and file count */}
-        <AppText variant="caption" color="tertiary" numberOfLines={1} style={styles.folderText}>
-          {folder ? `${folder}` : ''}
-          {filesFound > 0 ? `  ·  ${filesFound} file${filesFound !== 1 ? 's' : ''} found` : ''}
-        </AppText>
-
-        {/* Progress bar */}
-        <View style={styles.progressContainer}>
-          <ProgressBar percent={pct} color={colors.accent.gold} />
-          <AppText variant="caption" color="tertiary" style={styles.percentText}>
-            {pct}%
-          </AppText>
-        </View>
-      </View>
-    );
+    return null;
   }
 
   // ── Post-scan summary (shown briefly after scan completes) ──

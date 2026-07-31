@@ -8,6 +8,7 @@ import {
   ScrollView,
   FlatList,
   TouchableOpacity,
+  RefreshControl,
   StyleSheet,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -21,6 +22,8 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {ErrorState} from '../../components/feedback/ErrorState/ErrorState';
+import {SkeletonList} from '../../components/core/Skeleton/SkeletonList';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import type {PodcastResult} from '../../types/api';
 
@@ -53,19 +56,19 @@ const CategoryChip: React.FC<CategoryChipProps> = React.memo(
               : colors.background.elevated,
             borderColor: isSelected
               ? colors.accent.gold
-              : 'rgba(255,255,255,0.08)',
+              : colors.background.highlight,
           },
         ]}>
         <SvgIcon
           name={category.icon as any}
           size={14}
-          color={isSelected ? '#000' : colors.text.secondary}
+          color={isSelected ? colors.text.inverse : colors.text.secondary}
         />
         <AppText
           variant="button"
           style={[
             styles.chipText,
-            {color: isSelected ? '#000' : colors.text.secondary},
+            {color: isSelected ? colors.text.inverse : colors.text.secondary},
           ]}>
           {category.name}
         </AppText>
@@ -158,6 +161,12 @@ export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
     error,
     searchQuery,
     setSearchQuery,
+    isOnline,
+    refreshing,
+    handleRefresh,
+    retry,
+    loadMore,
+    hasMore,
   } = usePodcastsScreen(route.params?.categoryId);
 
   const handleCategoryPress = useCallback(
@@ -210,7 +219,7 @@ export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
       <View
         style={[
           styles.chipSection,
-          {borderBottomColor: 'rgba(255,255,255,0.05)'},
+          {borderBottomColor: colors.border.subtle},
         ]}>
         <ScrollView
           horizontal
@@ -229,38 +238,21 @@ export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
 
       {/* ── Content Area ── */}
       <View style={styles.contentArea}>
-        {isLoading && (
-          <View style={styles.centerState}>
-            <ActivityOrb />
-            <AppText
-              variant="body2"
-              color="tertiary"
-              style={styles.stateText}>
-              Loading podcasts...
-            </AppText>
-          </View>
+        {isLoading && currentResults.length === 0 && (
+          <SkeletonList count={6} hasImage lines={2} />
         )}
 
-        {error && (
-          <View style={styles.centerState}>
-            <SvgIcon
-              name="alertCircle"
-              size={40}
-              color={colors.semantic.error}
-            />
-            <AppText
-              variant="body2"
-              color="tertiary"
-              style={styles.stateText}>
-              {error}
-            </AppText>
-            <AppText
-              variant="caption"
-              color="tertiary"
-              style={styles.stateHint}>
-              Pull down or tap retry to try again.
-            </AppText>
-          </View>
+        {error && currentResults.length === 0 && (
+          <ErrorState
+            title={isOnline ? 'Couldn\'t load podcasts' : 'You\'re offline'}
+            message={
+              isOnline
+                ? error
+                : 'Connect to the internet, then retry to browse podcasts.'
+            }
+            onRetry={retry}
+            retryLabel="Retry"
+          />
         )}
 
         {isEmpty && !isLoading && (
@@ -295,6 +287,26 @@ export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
             windowSize={5}
             maxToRenderPerBatch={10}
             removeClippedSubviews={true}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={colors.accent.gold}
+                colors={[colors.accent.gold]}
+              />
+            }
+            onEndReached={hasMore ? loadMore : undefined}
+            onEndReachedThreshold={0.4}
+            ListFooterComponent={
+              hasMore && isLoading ? (
+                <View style={styles.footerLoading}>
+                  <ActivityOrb size={20} />
+                  <AppText variant="caption" color="tertiary">
+                    Loading more…
+                  </AppText>
+                </View>
+              ) : null
+            }
           />
         )}
       </View>
@@ -347,13 +359,15 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     textAlign: 'center',
   },
-  stateHint: {
-    marginTop: spacing.xs,
-    textAlign: 'center',
-    opacity: 0.7,
-  },
   listContent: {
     padding: spacing.md,
+  },
+  footerLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
   },
   separator: {
     height: spacing.sm,

@@ -199,13 +199,13 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           fontWeight: '600',
         },
         confirmBtnTextGold: {
-          color: '#0A0A0C',
+          color: colors.text.inverse,
         },
         confirmBtnTextDanger: {
           color: colors.text.primary,
         },
       }),
-    [colors, error],
+    [colors],
   );
 
   // ── Render ──
