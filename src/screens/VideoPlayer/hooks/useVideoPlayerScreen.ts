@@ -157,6 +157,13 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const dialogueBoost = useAppSelector(s => s.settings.isDialogueBoostEnabled);
   const [eqPanelOpen, setEqPanelOpen] = useState(false);
 
+  // 51.3: media notification is gated by the user preference
+  const notificationsEnabled = useAppSelector(s => s.settings.notificationsEnabled);
+  const notificationsEnabledRef = useRef(notificationsEnabled);
+  useEffect(() => {
+    notificationsEnabledRef.current = notificationsEnabled;
+  }, [notificationsEnabled]);
+
   // ── Playlist state ──
   const [playlistPanelOpen, setPlaylistPanelOpen] = useState(false);
 
@@ -1210,6 +1217,30 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     return () => clearInterval(interval);
   }, [fileUri, rememberPosition, dispatch]);
 
+  // ── 51.3: keep the media notification in sync with playback ──
+  useEffect(() => {
+    if (!isReady || !fileUri) return;
+    const interval = setInterval(() => {
+      if (!notificationsEnabledRef.current) return;
+      NotificationService.update(
+        {
+          title: titleRef.current ?? 'Untitled',
+          artist: trackMetaRef.current.artist,
+          album: trackMetaRef.current.album,
+          fileUri,
+          artworkPath: trackMetaRef.current.albumArtUri || fileUri,
+          mediaType: 'video',
+        },
+        {
+          position: MpvPlayer.getPosition?.() ?? 0,
+          duration: MpvPlayer.getDuration?.() ?? 1,
+          isPlaying: MpvPlayer.getPlaybackState() === 'playing',
+        },
+      );
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isReady, fileUri]);
+
   // ── Android back button ──
   useEffect(() => {
     const onBackPress = () => {
@@ -1339,39 +1370,45 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
               };
             }
             // Start foreground notification with available metadata
-            NotificationService.start(
-              {
-                title: titleRef.current ?? 'Untitled',
-                artist: trackMetaRef.current.artist,
-                album: trackMetaRef.current.album,
-                fileUri: currentUri,
-                artworkPath: trackMetaRef.current.albumArtUri || currentUri,
-                mediaType: 'video',
-              },
-              {
-                position: MpvPlayer.getPosition?.() ?? 0,
-                duration: MpvPlayer.getDuration?.() ?? 1,
-                isPlaying: MpvPlayer.getPlaybackState() === 'playing',
-              },
-            );
+            // 51.3: gated by the user preference
+            if (notificationsEnabledRef.current) {
+              NotificationService.start(
+                {
+                  title: titleRef.current ?? 'Untitled',
+                  artist: trackMetaRef.current.artist,
+                  album: trackMetaRef.current.album,
+                  fileUri: currentUri,
+                  artworkPath: trackMetaRef.current.albumArtUri || currentUri,
+                  mediaType: 'video',
+                },
+                {
+                  position: MpvPlayer.getPosition?.() ?? 0,
+                  duration: MpvPlayer.getDuration?.() ?? 1,
+                  isPlaying: MpvPlayer.getPlaybackState() === 'playing',
+                },
+              );
+            }
           })
           .catch(() => {
             // Start notification with fallback metadata anyway
-            NotificationService.start(
-              {
-                title: titleRef.current ?? 'Untitled',
-                artist: '',
-                album: '',
-                fileUri: currentUri,
-                artworkPath: '',
-                mediaType: 'video',
-              },
-              {
-                position: 0,
-                duration: MpvPlayer.getDuration?.() ?? 1,
-                isPlaying: false,
-              },
-            );
+            // 51.3: also gated by the user preference
+            if (notificationsEnabledRef.current) {
+              NotificationService.start(
+                {
+                  title: titleRef.current ?? 'Untitled',
+                  artist: '',
+                  album: '',
+                  fileUri: currentUri,
+                  artworkPath: '',
+                  mediaType: 'video',
+                },
+                {
+                  position: 0,
+                  duration: MpvPlayer.getDuration?.() ?? 1,
+                  isPlaying: false,
+                },
+              );
+            }
           });
       }
     });

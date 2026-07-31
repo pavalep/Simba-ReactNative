@@ -96,6 +96,9 @@ export const PreferencesScreen: React.FC<Props> = ({navigation: _navigation}) =>
       if (!next) {
         // Stop the active foreground notification immediately
         NotificationService.stop();
+      } else {
+        // 51.4: contextual permission request (Android 13+ POST_NOTIFICATIONS)
+        NotificationService.requestPermission();
       }
     },
     [dispatch],

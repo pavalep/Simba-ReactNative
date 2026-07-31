@@ -6,7 +6,7 @@ import {useAuth} from '../../../hooks/useAuth';
  * Login screen hook — manages animated background pulse and auth flow.
  */
 export function useLoginScreen() {
-  const {user, isAuthenticated, isLoading, error, signIn} = useAuth();
+  const {user, isAuthenticated, isLoading, error, errorKind, signIn} = useAuth();
 
   // Animated values for the background orb pulse
   const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -51,6 +51,7 @@ export function useLoginScreen() {
     fadeAnim,
     isLoading,
     error,
+    errorKind,
     handleSignIn,
     // Expose auth state so LoginScreen can react
     isAuthenticated,

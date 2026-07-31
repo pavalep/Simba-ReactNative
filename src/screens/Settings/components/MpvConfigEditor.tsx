@@ -4,15 +4,15 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   Modal,
-  Alert,
-  KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
+import {AppTextInput} from '../../../components/core/AppTextInput/AppTextInput';
+import {KeyboardAwareView} from '../../../components/core/KeyboardAwareView/KeyboardAwareView';
+import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -95,6 +95,7 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
   onSave,
 }) => {
   const {colors} = useTheme();
+  const {confirm, dialog} = useConfirmDialog();
 
   const [localOptions, setLocalOptions] = useState<MpvOption[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -154,29 +155,23 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
     setWarning(null);
   }, [editKey, editValue, editingIndex, localOptions]);
 
-  // ── Remove option ──
+  // ── Remove option (52.3: confirm dialog replaces Alert.alert) ──
   const handleRemove = useCallback(
-    (index: number) => {
-      Alert.alert(
-        'Remove Option',
-        `Remove "--${localOptions[index].key}"?`,
-        [
-          {text: 'Cancel', style: 'cancel'},
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: () => {
-              const updated = localOptions.filter((_, i) => i !== index);
-              setLocalOptions(updated);
-              if (editingIndex === index) {
-                setEditingIndex(null);
-              }
-            },
-          },
-        ],
-      );
+    async (index: number) => {
+      const ok = await confirm({
+        title: 'Remove Option',
+        message: `Remove "--${localOptions[index].key}"?`,
+        confirmLabel: 'Remove',
+        destructive: true,
+      });
+      if (!ok) return;
+      const updated = localOptions.filter((_, i) => i !== index);
+      setLocalOptions(updated);
+      if (editingIndex === index) {
+        setEditingIndex(null);
+      }
     },
-    [localOptions, editingIndex],
+    [confirm, localOptions, editingIndex],
   );
 
   // ── Save all ──
@@ -281,19 +276,7 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
           borderWidth: 1,
           borderColor: colors.accent.goldDim,
         },
-        editLabel: {
-          marginBottom: spacing.xs,
-        },
-        editInput: {
-          borderWidth: 1,
-          borderColor: colors.border.subtle,
-          borderRadius: radius.sm,
-          paddingVertical: spacing.sm,
-          paddingHorizontal: spacing.md,
-          color: colors.text.primary,
-          fontSize: 14,
-          fontFamily: 'monospace',
-          backgroundColor: colors.background.floating,
+        editInputWrap: {
           marginBottom: spacing.sm,
         },
         editRow: {
@@ -354,9 +337,9 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
       transparent
       animationType="slide"
       onRequestClose={onClose}>
-      <KeyboardAvoidingView
+      <KeyboardAwareView
         style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        keyboardVerticalOffset={0}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -464,32 +447,29 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
               </TouchableOpacity>
             )}
 
-            {/* Inline edit panel */}
+            {/* Inline edit panel (53.3: AppTextInput with blur validation) */}
             {editingIndex !== null && (
               <View style={styles.editPanel}>
-                <AppText variant="caption" color="secondary" style={styles.editLabel}>
-                  Option Key (without --)
-                </AppText>
-                <TextInput
-                  style={styles.editInput}
+                <AppTextInput
                   value={editKey}
                   onChangeText={setEditKey}
                   placeholder="e.g. hwdec"
-                  placeholderTextColor={colors.text.tertiary}
+                  label="Option Key (without --)"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  validate={v =>
+                    v.trim() ? undefined : 'Option key cannot be empty.'
+                  }
+                  containerStyle={styles.editInputWrap}
                 />
-                <AppText variant="caption" color="secondary" style={styles.editLabel}>
-                  Value (leave empty for boolean flags)
-                </AppText>
-                <TextInput
-                  style={styles.editInput}
+                <AppTextInput
                   value={editValue}
                   onChangeText={setEditValue}
                   placeholder="e.g. auto"
-                  placeholderTextColor={colors.text.tertiary}
+                  label="Value (leave empty for boolean flags)"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  containerStyle={styles.editInputWrap}
                 />
                 {warning && (
                   <AppText variant="caption" style={styles.warningText}>
@@ -533,7 +513,8 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareView>
+      {dialog}
     </Modal>
   );
 };

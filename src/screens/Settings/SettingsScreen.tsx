@@ -340,6 +340,11 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
               onPress={() => nav.navigate('Changelog')}
             />
             <SettingsRow
+              label="Help"
+              description="FAQ and troubleshooting"
+              onPress={() => nav.navigate('Help')}
+            />
+            <SettingsRow
               label="Licenses"
               onPress={() => nav.navigate('Licenses')}
             />

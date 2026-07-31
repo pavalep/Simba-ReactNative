@@ -12,13 +12,15 @@ import {
 import FastImage from 'react-native-fast-image';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {AppText} from '../../core/AppText/AppText';
+import {AppTextInput} from '../../core/AppTextInput/AppTextInput';
 import {radius, spacing} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
 import type {TrackMetadata} from '../../../services/metadataService';
 import {navigate} from '../../../navigation/navigationHelper';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {setPlaybackSpeed, setSleepTimer} from '../../../store/slices/playerSlice';
+import {setPlaybackSpeed, setSleepTimer, setSleepTimerMode} from '../../../store/slices/playerSlice';
 import {MpvPlayer} from '../../../native';
+import {sleepTimerModeLabel} from '../../../utils/sleepTimer';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -41,7 +43,7 @@ interface AudioSubMenuProps {
 
 // ─── Sleep Timer Picker ─────────────────────────────────────
 
-const SLEEP_TIMER_OPTIONS = [15, 30, 45, 60] as const;
+const SLEEP_TIMER_OPTIONS = [5, 15, 30, 45, 60] as const;
 const SPEED_OPTIONS = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0] as const;
 
 const formatRemaining = (ms: number): string => {
@@ -53,12 +55,15 @@ const formatRemaining = (ms: number): string => {
 
 const SleepTimerSection: React.FC<{
   onSelect: (minutes: number) => void;
+  onSelectMode: (mode: 'track' | 'chapter') => void;
   onCancel: () => void;
   activeEndTime: number | null;
+  activeMode: 'time' | 'track' | 'chapter';
   colors: ColorTokens;
-}> = ({onSelect, onCancel, activeEndTime, colors}) => {
+}> = ({onSelect, onSelectMode, onCancel, activeEndTime, activeMode, colors}) => {
   const [expanded, setExpanded] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const [customMin, setCustomMin] = useState('');
 
   // Live countdown while the section is open
   useEffect(() => {
@@ -69,6 +74,13 @@ const SleepTimerSection: React.FC<{
 
   const remainingMs = activeEndTime !== null ? Math.max(0, activeEndTime - nowTick) : 0;
   const active = activeEndTime !== null && remainingMs > 0;
+  const activeLabel = active
+    ? `Sleep Timer (${formatRemaining(remainingMs)} left)`
+    : sleepTimerModeLabel(activeMode);
+  const customValid = (() => {
+    const n = Number(customMin);
+    return Number.isFinite(n) && n > 0 && n <= 480;
+  })();
 
   return (
     <>
@@ -78,7 +90,7 @@ const SleepTimerSection: React.FC<{
         activeOpacity={0.7}>
         <SvgIcon name="sliders" size={20} color="#EDEDED" />
         <AppText variant="body2" color="primary" style={styles.actionLabel}>
-          {active ? `Sleep Timer (${formatRemaining(remainingMs)} left)` : 'Sleep Timer'}
+          {activeMode !== 'time' || active ? activeLabel : 'Sleep Timer'}
         </AppText>
         <AppText variant="caption" color="secondary">
           {expanded ? '−' : '+'}
@@ -98,6 +110,7 @@ const SleepTimerSection: React.FC<{
               ]}
               onPress={() => {
                 onSelect(min);
+                setCustomMin('');
                 setExpanded(false);
               }}
               activeOpacity={0.7}>
@@ -113,6 +126,76 @@ const SleepTimerSection: React.FC<{
               </AppText>
             </TouchableOpacity>
           ))}
+
+          {/* 50.1: custom minutes input (53.3 AppTextInput) */}
+          <View style={styles.customRow}>
+            <AppTextInput
+              value={customMin}
+              onChangeText={setCustomMin}
+              placeholder="Custom"
+              keyboardType="number-pad"
+              maxLength={3}
+              accessibilityLabel="Custom sleep timer minutes"
+              containerStyle={styles.customInputWrap}
+              inputContainerStyle={styles.customInput}
+              inputStyle={styles.customInputText}
+            />
+            <TouchableOpacity
+              style={[styles.timerChip, !customValid && {opacity: 0.4}]}
+              disabled={!customValid}
+              onPress={() => {
+                onSelect(Number(customMin));
+                setCustomMin('');
+                setExpanded(false);
+              }}
+              activeOpacity={0.7}>
+              <AppText variant="caption" color="accent">
+                Set
+              </AppText>
+            </TouchableOpacity>
+          </View>
+
+          {/* 50.2: end-of-track / end-of-chapter modes */}
+          <View style={styles.modeRow}>
+            {(['track', 'chapter'] as const).map(mode => (
+              <TouchableOpacity
+                key={mode}
+                style={[
+                  styles.timerChip,
+                  activeMode === mode && {
+                    backgroundColor: 'rgba(201,168,76,0.15)',
+                    borderColor: '#C9A84C',
+                  },
+                ]}
+                onPress={() => {
+                  onSelectMode(mode);
+                  setExpanded(false);
+                }}
+                activeOpacity={0.7}>
+                <AppText
+                  variant="caption"
+                  color={activeMode === mode ? 'accent' : 'primary'}
+                  style={
+                    activeMode === mode ? {color: '#C9A84C'} : undefined
+                  }>
+                  {sleepTimerModeLabel(mode)}
+                </AppText>
+              </TouchableOpacity>
+            ))}
+            {activeMode !== 'time' && (
+              <TouchableOpacity
+                style={[styles.timerChip, {borderColor: colors.border.subtle}]}
+                onPress={() => {
+                  onCancel();
+                  setExpanded(false);
+                }}
+                activeOpacity={0.7}>
+                <AppText variant="caption" color="secondary">
+                  Cancel
+                </AppText>
+              </TouchableOpacity>
+            )}
+          </View>
           {active && (
             <TouchableOpacity
               style={[styles.timerChip, {borderColor: colors.border.subtle}]}
@@ -249,6 +332,7 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
   const dispatch = useAppDispatch();
   const playbackSpeed = useAppSelector(state => state.player.playbackSpeed);
   const sleepTimerEndTime = useAppSelector(state => state.player.sleepTimerEndTime);
+  const sleepTimerMode = useAppSelector(state => state.player.sleepTimerMode);
 
   const handleLike = useCallback(() => {
     Animated.sequence([
@@ -307,6 +391,13 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
   const handleSleepCancel = useCallback(() => {
     dispatch(setSleepTimer(null));
   }, [dispatch]);
+
+  const handleSleepModeSelect = useCallback(
+    (mode: 'track' | 'chapter') => {
+      dispatch(setSleepTimerMode(mode));
+    },
+    [dispatch],
+  );
 
   const handleSpeedSelect = useCallback(
     (nextSpeed: number) => {
@@ -422,8 +513,10 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
             {/* 4. Sleep Timer */}
             <SleepTimerSection
               onSelect={handleSleepSelect}
+              onSelectMode={handleSleepModeSelect}
               onCancel={handleSleepCancel}
               activeEndTime={sleepTimerEndTime}
+              activeMode={sleepTimerMode}
               colors={colors}
             />
 
@@ -534,6 +627,35 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
+  },
+  // 50.1: custom minutes row
+  customRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 38,
+    paddingBottom: 12,
+    width: '100%',
+  },
+  customInputWrap: {
+    flex: 1,
+  },
+  customInput: {
+    minHeight: 38,
+    borderRadius: radius.pill,
+    borderColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 14,
+  },
+  customInputText: {
+    fontSize: 13,
+  },
+  // 50.2: end-of-track / end-of-chapter modes row
+  modeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingLeft: 38,
+    paddingBottom: 12,
   },
   // ── Audio Quality ──
   qualityCard: {

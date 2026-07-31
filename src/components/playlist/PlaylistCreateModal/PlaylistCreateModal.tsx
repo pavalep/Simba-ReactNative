@@ -1,13 +1,13 @@
 import React, {useState, useCallback, useMemo} from 'react';
 import {
   View,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
+import {AppTextInput} from '../../core/AppTextInput/AppTextInput';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {BottomSheet} from '../../sheets/BottomSheet/BottomSheet';
 import type {PlaylistKind} from '../../../types/playlist';
@@ -86,30 +86,28 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
       dismissable
       title="New Playlist">
       <View style={styles.container}>
-        {/* ── Name Input ── */}
-        <AppText variant="caption" color="secondary" style={styles.label}>
-          Name
-        </AppText>
-        <TextInput
-          style={[
-            styles.input,
-            {color: colors.text.primary, backgroundColor: colors.background.floating, borderColor: error ? colors.semantic.error : colors.border.subtle},
-          ]}
-          placeholder="My Playlist"
-          placeholderTextColor={colors.text.tertiary}
+        {/* ── Name Input (53.3: AppTextInput with blur validation) ── */}
+        <AppTextInput
           value={name}
           onChangeText={text => {
             setName(text);
             if (error) setError(null);
           }}
+          placeholder="My Playlist"
+          label="Name"
           maxLength={100}
           autoFocus
+          error={error}
+          validate={v => {
+            const trimmed = v.trim();
+            if (!trimmed) return 'Playlist name is required';
+            if (trimmed.length > 100)
+              return 'Playlist name must be 100 characters or fewer';
+            if (existingNames.has(trimmed.toLowerCase()))
+              return 'A playlist with this name already exists';
+            return undefined;
+          }}
         />
-        {error && (
-          <AppText variant="caption" style={{color: colors.semantic.error, marginTop: spacing.xs}}>
-            {error}
-          </AppText>
-        )}
 
         {/* ── Kind Selector ── */}
         <AppText variant="caption" color="secondary" style={[styles.label, {marginTop: spacing.lg}]}>
@@ -177,13 +175,6 @@ const styles = StyleSheet.create({
   label: {
     marginBottom: spacing.sm,
     fontWeight: '600',
-  },
-  input: {
-    height: 44,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    fontSize: 16,
   },
   kindRow: {
     flexDirection: 'row',

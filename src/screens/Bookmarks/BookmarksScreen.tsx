@@ -2,7 +2,6 @@ import React, {useCallback} from 'react';
 import {
   View,
   StyleSheet,
-  TextInput,
   Animated,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -10,6 +9,7 @@ import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {BookmarkList} from '../../components/bookmark/BookmarkList';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {useConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
@@ -104,24 +104,11 @@ export const BookmarksScreen: React.FC = () => {
             styles.searchContainer,
             headerStyles[1],
           ]}>
-          <View
-            style={[
-              styles.searchBar,
-              {
-                backgroundColor: colors.background.floating,
-                borderColor: colors.border.subtle,
-              },
-            ]}>
-            <SvgIcon name="search" size={18} color={colors.text.tertiary} />
-            <TextInput
-              style={[styles.searchInput, {color: colors.text.primary}]}
-              placeholder="Search bookmarks..."
-              placeholderTextColor={colors.text.tertiary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              accessibilityLabel="Search bookmarks"
-            />
-          </View>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search bookmarks..."
+          />
         </Animated.View>
       )}
 
@@ -170,20 +157,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    height: 42,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    height: 40,
   },
   emptyWrapper: {
     flex: 1,

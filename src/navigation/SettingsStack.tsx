@@ -8,8 +8,10 @@ import type {
   LinkedFoldersScreenProps,
   ChangelogScreenProps,
   LicensesScreenProps,
+  CreditsScreenProps,
   PrivacyScreenProps,
   TermsScreenProps,
+  HelpScreenProps,
 } from './types';
 import {SettingsTabParamList} from './types';
 import {SettingsScreen} from '../screens/Settings/SettingsScreen';
@@ -20,8 +22,10 @@ import {LinkedFoldersScreen} from '../screens/LinkedFolders/LinkedFoldersScreen'
 import {FolderLinkingWizard} from '../screens/FolderLinkingWizard/FolderLinkingWizard';
 import {ChangelogScreen} from '../screens/Changelog/ChangelogScreen';
 import {LicensesScreen} from '../screens/Licenses/LicensesScreen';
+import {CreditsScreen} from '../screens/Credits/CreditsScreen';
 import {PrivacyScreen} from '../screens/Privacy/PrivacyScreen';
 import {TermsScreen} from '../screens/Terms/TermsScreen';
+import {HelpScreen} from '../screens/Help/HelpScreen';
 import {ScreenErrorBoundary} from '../components/feedback/ScreenErrorBoundary';
 
 const Stack = createNativeStackNavigator<SettingsTabParamList>();
@@ -61,6 +65,11 @@ const LicensesRender = (props: LicensesScreenProps) => (
     <LicensesScreen {...props} />
   </ScreenErrorBoundary>
 );
+const CreditsRender = (props: CreditsScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <CreditsScreen {...props} />
+  </ScreenErrorBoundary>
+);
 const PrivacyRender = (props: PrivacyScreenProps) => (
   <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
     <PrivacyScreen {...props} />
@@ -69,6 +78,11 @@ const PrivacyRender = (props: PrivacyScreenProps) => (
 const TermsRender = (props: TermsScreenProps) => (
   <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
     <TermsScreen {...props} />
+  </ScreenErrorBoundary>
+);
+const HelpRender = (props: HelpScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <HelpScreen {...props} />
   </ScreenErrorBoundary>
 );
 
@@ -117,6 +131,11 @@ export const SettingsStack: React.FC = () => (
       options={{animation: 'slide_from_right'}}
     />
     <Stack.Screen
+      name="Credits"
+      component={CreditsRender}
+      options={{animation: 'slide_from_right'}}
+    />
+    <Stack.Screen
       name="Privacy"
       component={PrivacyRender}
       options={{animation: 'slide_from_right'}}
@@ -124,6 +143,11 @@ export const SettingsStack: React.FC = () => (
     <Stack.Screen
       name="Terms"
       component={TermsRender}
+      options={{animation: 'slide_from_right'}}
+    />
+    <Stack.Screen
+      name="Help"
+      component={HelpRender}
       options={{animation: 'slide_from_right'}}
     />
   </Stack.Navigator>

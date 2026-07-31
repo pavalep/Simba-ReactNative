@@ -133,7 +133,8 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   );
 
   const handleAvatarPress = useCallback(() => {
-    navigation.navigate('Settings', {screen: 'Settings', params: undefined});
+    // 42.1: avatar opens the Profile screen (stats, sign out, account)
+    navigation.navigate('Profile');
   }, [navigation]);
 
   const handleBookmarksPress = useCallback(() => {

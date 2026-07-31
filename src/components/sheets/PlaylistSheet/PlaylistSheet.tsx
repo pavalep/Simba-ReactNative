@@ -3,13 +3,12 @@ import {
   View,
   TouchableOpacity,
   FlatList,
-  TextInput,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import {BottomSheet} from '../BottomSheet/BottomSheet';
 import {AppText} from '../../core/AppText/AppText';
+import {AppTextInput} from '../../core/AppTextInput/AppTextInput';
+import {KeyboardAwareView} from '../../core/KeyboardAwareView/KeyboardAwareView';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {useAppDispatch, useAppSelector} from '../../../store';
@@ -279,26 +278,16 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
   // ── Create-mode form ──
   const CreateForm = useMemo(
     () => (
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.createForm}>
+      <KeyboardAwareView style={styles.createForm}>
         <AppText variant="h3" color="primary" style={{marginBottom: spacing.sm}}>
           New Playlist
         </AppText>
 
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.background.elevated,
-              color: colors.text.primary,
-              borderColor: colors.border.subtle,
-            },
-          ]}
-          placeholder="Playlist name"
-          placeholderTextColor={colors.text.tertiary}
+        {/* 53.3: AppTextInput for the playlist name field */}
+        <AppTextInput
           value={newName}
           onChangeText={setNewName}
+          placeholder="Playlist name"
           autoFocus
         />
 
@@ -373,7 +362,7 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
             </AppText>
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareView>
     ),
     [colors, newName, newKind, handleCreatePlaylist],
   );
@@ -488,13 +477,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.lg,
-  },
-  input: {
-    height: 44,
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    fontSize: 15,
   },
   kindRow: {
     flexDirection: 'row',

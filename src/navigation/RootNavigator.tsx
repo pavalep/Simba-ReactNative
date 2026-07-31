@@ -12,8 +12,10 @@ import {VideoPlayerScreen} from '../screens/VideoPlayer/VideoPlayerScreen';
 import {AudioPlayerScreen} from '../screens/AudioPlayer/AudioPlayerScreen';
 import {PreferencesScreen} from '../screens/Preferences/PreferencesScreen';
 import {LoginScreen} from '../screens/Login/LoginScreen';
-import {RegistrationScreen} from '../screens/Registration/RegistrationScreen';
 import {BookmarksScreen} from '../screens/Bookmarks/BookmarksScreen';
+import {ProfileScreen} from '../screens/Profile/ProfileScreen';
+import {HistoryScreen} from '../screens/History/HistoryScreen';
+import {StatsScreen} from '../screens/Stats/StatsScreen';
 import {AboutScreen} from '../screens/About/AboutScreen';
 import {ArtistScreen} from '../screens/Artist/ArtistScreen';
 import {AlbumScreen} from '../screens/Album/AlbumScreen';
@@ -82,11 +84,6 @@ export const RootNavigator: React.FC = () => {
         component={LoginScreen}
         options={{gestureEnabled: false}}
       />
-      <Stack.Screen
-        name="Registration"
-        component={RegistrationScreen}
-        options={{gestureEnabled: false}}
-      />
       <Stack.Screen name="MainTabs" component={MainTabsWithMiniPlayer} />
       <Stack.Screen
         name="VideoPlayer"
@@ -131,6 +128,9 @@ export const RootNavigator: React.FC = () => {
         }}
       />
       <Stack.Screen name="Bookmarks" component={BookmarksScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="History" component={HistoryScreen} />
+      <Stack.Screen name="Stats" component={StatsScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
       <Stack.Screen name="ArtistScreen" component={ArtistScreen} />
       <Stack.Screen name="AlbumScreen" component={AlbumScreen} />

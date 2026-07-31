@@ -18,6 +18,21 @@ interface VersionEntry {
 
 const CHANGELOG: VersionEntry[] = [
   {
+    version: '1.1.0',
+    date: 'July 2026',
+    changes: [
+      'Profile screen with real playback stats and recently played strip',
+      'Playback history with filters, search, and one-tap resume',
+      'Audio settings: sample rate, replay gain, gapless playback, audio delay',
+      '10-band equalizer with presets and dialogue boost',
+      'Accessibility: larger controls and high-contrast subtitles',
+      'Silent session restore and expiry detection for Google sign-in',
+      'Preferences: cache management, library rescan, privacy and terms pages',
+      'Subtitle language and style pickers wired to the video player',
+      'Credits screen and LGPL license notices',
+    ],
+  },
+  {
     version: '1.0.0',
     date: 'July 2026',
     changes: [

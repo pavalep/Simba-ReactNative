@@ -13,17 +13,28 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon/SvgIcon';
 import {GoogleSignInButton} from '../../components/core/GoogleSignInButton/GoogleSignInButton';
 import {useLoginScreen} from './hooks/useLoginScreen';
+import type {AuthErrorKind} from '../../store/slices/authSlice';
 import type {RootStackScreenProps} from '../../navigation/types';
+import {navigationRef} from '../../navigation/navigationHelper';
 
 type Props = RootStackScreenProps<'Login'>;
 
 const {width} = Dimensions.get('window');
 const ORB_SIZE = Math.min(width * 0.72, 320);
 
+/** 43.3: tailored copy per failure category — the button itself is the retry. */
+const ERROR_COPY: Record<AuthErrorKind, string> = {
+  cancelled: 'Sign-in was cancelled. Tap the button to try again.',
+  play_services: "Google Play Services aren't available. Update them, then try again.",
+  offline: "You're offline. Connect to the internet and try again.",
+  session_expired: 'Your session expired. Please sign in again.',
+  unknown: '', // falls back to the raw error message
+};
+
 export const LoginScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const {pulseAnim, fadeAnim, isLoading, error, handleSignIn, isAuthenticated} =
+  const {pulseAnim, fadeAnim, isLoading, error, errorKind, handleSignIn, isAuthenticated} =
     useLoginScreen();
 
   // ── Auto-navigate to Home once authenticated ──
@@ -129,30 +140,54 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
           <GoogleSignInButton onPress={handleSignIn} loading={isLoading} />
 
           {error ? (
-            <AppText
-              style={[styles.errorText, {color: colors.semantic.error}]}>
-              {error}
-            </AppText>
+            <View style={styles.errorWrap}>
+              <AppText
+                style={[styles.errorText, {color: colors.semantic.error}]}>
+                {errorKind && ERROR_COPY[errorKind]
+                  ? ERROR_COPY[errorKind]
+                  : error}
+              </AppText>
+              {errorKind !== 'cancelled' ? (
+                <TouchableOpacity
+                  onPress={handleSignIn}
+                  activeOpacity={0.7}
+                  disabled={isLoading}
+                  hitSlop={{top: 12, bottom: 12, left: 24, right: 24}}>
+                  <AppText
+                    variant="bodySmall"
+                    color="accent"
+                    style={styles.retryText}>
+                    Try Again
+                  </AppText>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ) : null}
 
-          {/* Create account link */}
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Registration')}
-            activeOpacity={0.7}
-            disabled={isLoading}
-            hitSlop={{top: 12, bottom: 12, left: 24, right: 24}}>
-            <AppText
-              variant="bodySmall"
-              style={[styles.signUpLink, {color: colors.text.secondary}]}>
-              Don't have an account?{' '}
-              <AppText
-                variant="bodySmall"
-                color="accent"
-                style={styles.signUpAccent}>
-                Create One
+          {/* 51.2: legal links — open the in-app Privacy / Terms screens */}
+          <View style={styles.legalRow}>
+            <TouchableOpacity
+              onPress={() => navigationRef.navigate('Settings', {screen: 'Privacy'})}
+              activeOpacity={0.7}
+              hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}
+              accessibilityRole="link"
+              accessibilityLabel="Privacy Policy">
+              <AppText variant="caption" color="tertiary" style={styles.legalLink}>
+                Privacy Policy
               </AppText>
-            </AppText>
-          </TouchableOpacity>
+            </TouchableOpacity>
+            <View style={styles.legalDot} />
+            <TouchableOpacity
+              onPress={() => navigationRef.navigate('Settings', {screen: 'Terms'})}
+              activeOpacity={0.7}
+              hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}
+              accessibilityRole="link"
+              accessibilityLabel="Terms of Service">
+              <AppText variant="caption" color="tertiary" style={styles.legalLink}>
+                Terms of Service
+              </AppText>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
       </Animated.View>
     </View>
@@ -209,10 +244,27 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     maxWidth: 260,
   },
-  signUpLink: {
-    textAlign: 'center',
+  errorWrap: {
+    alignItems: 'center',
+    gap: 6,
   },
-  signUpAccent: {
+  retryText: {
     fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  legalLink: {
+    textDecorationLine: 'underline',
+  },
+  legalDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#8E8E93',
   },
 });

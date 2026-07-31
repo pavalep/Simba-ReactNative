@@ -7,7 +7,6 @@ import {
   View,
   TouchableOpacity,
   FlatList,
-  TextInput,
   StyleSheet,
   Platform,
   Modal,
@@ -20,6 +19,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
 import {AppText} from '../../components/core/AppText/AppText';
 import {AppButton} from '../../components/core/AppButton/AppButton';
+import {AppTextInput} from '../../components/core/AppTextInput/AppTextInput';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {SimbaStatusBar} from '../../components/StatusBar';
@@ -199,20 +199,16 @@ export const AllPlaylistsScreen: React.FC = () => {
               New Playlist
             </AppText>
 
-            <TextInput
-              style={[
-                styles.modalInput,
-                {
-                  color: colors.text.primary,
-                  backgroundColor: colors.background.floating,
-                  borderColor: colors.border.subtle,
-                },
-              ]}
-              placeholder="Playlist name"
-              placeholderTextColor={colors.text.tertiary}
+            <AppTextInput
               value={createName}
               onChangeText={setCreateName}
+              placeholder="Playlist name"
               autoFocus
+              clearable
+              validate={v =>
+                v.trim() ? undefined : 'Enter a playlist name.'
+              }
+              containerStyle={styles.modalInput}
             />
 
             {/* Kind selector */}
@@ -279,20 +275,16 @@ export const AllPlaylistsScreen: React.FC = () => {
               Rename Playlist
             </AppText>
 
-            <TextInput
-              style={[
-                styles.modalInput,
-                {
-                  color: colors.text.primary,
-                  backgroundColor: colors.background.floating,
-                  borderColor: colors.border.subtle,
-                },
-              ]}
-              placeholder="New name"
-              placeholderTextColor={colors.text.tertiary}
+            <AppTextInput
               value={renameName}
               onChangeText={setRenameName}
+              placeholder="New name"
               autoFocus
+              clearable
+              validate={v =>
+                v.trim() ? undefined : 'Enter a playlist name.'
+              }
+              containerStyle={styles.modalInput}
             />
 
             <View style={styles.modalActions}>
@@ -387,11 +379,6 @@ const styles = StyleSheet.create({
     padding: spacing.xxl,
   },
   modalInput: {
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    height: 46,
-    fontSize: 16,
     marginBottom: spacing.md,
   },
   kindRow: {

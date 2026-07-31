@@ -33,6 +33,7 @@ import {PlaylistSheet} from '../../sheets/PlaylistSheet';
 import {BookmarkSheet} from '../../bookmark/BookmarkSheet';
 import {TransportProvider, useTransport} from '../../../contexts/TransportContext';
 import {MpvPlayer} from '../../../native';
+import {formatSleepRemaining, sleepTimerModeLabel} from '../../../utils/sleepTimer';
 import type {TrackMetadata} from '../../../services/metadataService';
 import type {LrcLine} from '../../../utils/lrcParser';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
@@ -141,7 +142,10 @@ export interface AudioPlayerHookData {
 
 export const AudioPlayer: React.FC<AudioPlayerHookData> = (h) => {
   return (
-    <TransportProvider isReady={false} enabled={true}>
+    <TransportProvider
+      isReady={false}
+      enabled={true}
+      chapters={h.chapters.map(c => ({startTime: c.startTime, endTime: c.endTime}))}>
       <AudioPlayerInner h={h} />
     </TransportProvider>
   );
@@ -303,7 +307,7 @@ const AudioTransportDependentContent: React.FC<{
 };
 
 const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
-  const {position, duration, isPlaying} = useTransport();
+  const {position, duration, isPlaying, sleepRemainingMs, sleepTimerActive, sleepTimerMode} = useTransport();
   const [submenuVisible, setSubmenuVisible] = React.useState(false);
   const [liked, setLiked] = React.useState(false);
   const [lyricsViewVisible, setLyricsViewVisible] = React.useState(false);
@@ -344,6 +348,18 @@ const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
             />
           }>
           <AudioPlayerHeader onGoBack={h.handleGoBack} insetsTop={h.insets.top} colors={h.colors} />
+
+          {/* 50.3: countdown badge when a sleep timer is armed */}
+          {sleepTimerActive && (
+            <View style={styles.sleepBadge}>
+              <SvgIcon name="sliders" size={12} color={h.colors.accent.gold} />
+              <AppText variant="caption" color="primary" style={styles.sleepBadgeText}>
+                {sleepTimerMode === 'time'
+                  ? `Sleep ${formatSleepRemaining(sleepRemainingMs)}`
+                  : sleepTimerModeLabel(sleepTimerMode)}
+              </AppText>
+            </View>
+          )}
 
           {h.error && (
             <PlayerErrorFallback
@@ -521,6 +537,21 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
+  },
+  sleepBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginLeft: 20,
+    marginBottom: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(201,168,76,0.12)',
+    gap: 6,
+  },
+  sleepBadgeText: {
+    fontSize: 12,
   },
 });
 

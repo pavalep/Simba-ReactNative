@@ -5,8 +5,9 @@
 // window.prompt(). Returns string | null.
 
 import React, {useEffect, useRef, useState, useCallback} from 'react';
-import {TextInput, StyleSheet} from 'react-native';
-import {useTheme} from '../../../theme';
+import {StyleSheet} from 'react-native';
+import type {TextInput} from 'react-native';
+import {AppTextInput} from '../AppTextInput/AppTextInput';
 import {Dialog, DialogAction} from './Dialog';
 
 interface PromptDialogProps {
@@ -32,7 +33,6 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const {colors, radius: r} = useTheme();
   const [value, setValue] = useState(initialValue);
   const inputRef = useRef<TextInput>(null);
 
@@ -60,27 +60,19 @@ export const PromptDialog: React.FC<PromptDialogProps> = ({
       title={title}
       message={message}
       actions={actions}>
-      <TextInput
-        ref={inputRef}
+      {/* 53.3: AppTextInput inside the prompt dialog */}
+      <AppTextInput
+        inputRef={inputRef}
         value={value}
         onChangeText={setValue}
         placeholder={placeholder}
-        placeholderTextColor={colors.text.tertiary}
-        style={[
-          styles.input,
-          {
-            color: colors.text.primary,
-            backgroundColor: colors.background.primary,
-            borderColor: colors.border.emphasis,
-            borderRadius: r.sm,
-          },
-        ]}
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="done"
         onSubmitEditing={() => {
           if (value.trim().length > 0) onSubmit(value);
         }}
+        containerStyle={styles.inputWrap}
       />
     </Dialog>
   );
@@ -141,12 +133,7 @@ export function usePromptDialog() {
 }
 
 const styles = StyleSheet.create({
-  input: {
-    borderWidth: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: 15,
-    lineHeight: 22,
+  inputWrap: {
     marginTop: 12,
     marginBottom: 4,
   },

@@ -120,6 +120,7 @@ export interface SecondaryToolbarProps {
   onVolume: () => void;
   onSpeed: () => void;
   onScreenshot: () => void;
+  onSleepTimer?: () => void;
   onAutoHide: () => void;
   bottomInset: number;
 }
@@ -151,6 +152,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
   onVolume,
   onSpeed,
   onScreenshot,
+  onSleepTimer,
   onAutoHide,
   bottomInset,
 }) => {
@@ -379,6 +381,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
             <ToolbarBtn icon="volume" onPress={onVolume} label="Volume" />
             <ToolbarBtn icon="speed" onPress={onSpeed} label="Playback speed" />
             <ToolbarBtn icon="camera" onPress={onScreenshot} label="Screenshot" />
+            {onSleepTimer && <ToolbarBtn icon="sliders" onPress={onSleepTimer} label="Sleep timer" />}
           </View>
         </View>
       </View>

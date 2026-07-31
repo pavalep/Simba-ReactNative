@@ -7,7 +7,6 @@ import {
   View,
   TouchableOpacity,
   FlatList,
-  TextInput,
   StyleSheet,
   Platform,
   Dimensions,
@@ -20,6 +19,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useAllAudioScreen} from './useAllAudioScreen';
@@ -145,20 +145,11 @@ export const AllAudioScreen: React.FC = () => {
       {/* ── Search Bar ── */}
       {audioTracks.length > 0 && (
         <View style={styles.searchContainer}>
-          <View
-            style={[
-              styles.searchBar,
-              {backgroundColor: colors.background.floating, borderColor: colors.border.subtle},
-            ]}>
-            <SvgIcon name="search" size={18} color={colors.text.tertiary} />
-            <TextInput
-              style={[styles.searchInput, {color: colors.text.primary}]}
-              placeholder="Search audio..."
-              placeholderTextColor={colors.text.tertiary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search audio..."
+          />
         </View>
       )}
 
@@ -242,20 +233,6 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    height: 42,
-    gap: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    height: 40,
   },
   sortLabel: {
     paddingHorizontal: spacing.lg,

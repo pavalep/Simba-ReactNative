@@ -6,10 +6,6 @@ import type {AuthUser, AuthErrorKind} from '../store/slices/authSlice';
  * 43.1: silent session restore · 43.3: classified errors · 43.5: revoke access
  */
 
-interface GoogleSignInResult {
-  user: AuthUser;
-}
-
 export interface AuthErrorInfo {
   kind: AuthErrorKind;
   message: string;
@@ -214,6 +210,3 @@ export async function isPlayServicesAvailable(): Promise<boolean> {
     return false;
   }
 }
-
-// Kept for type-compat with any lingering `{user}` destructuring.
-export type {GoogleSignInResult};

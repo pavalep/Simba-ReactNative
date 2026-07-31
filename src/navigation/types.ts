@@ -5,7 +5,6 @@ import type {CompositeScreenProps, NavigatorScreenParams} from '@react-navigatio
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
-  Registration: undefined;
   MainTabs: NavigatorScreenParams<TabParamList>;
   VideoPlayer: {fileUri?: string; fileTitle?: string; startPosition?: number};
   AudioPlayer: {fileUri?: string; fileTitle?: string};
@@ -13,6 +12,9 @@ export type RootStackParamList = {
   Settings: NavigatorScreenParams<SettingsTabParamList>;
   Bookmarks: undefined;
   About: undefined;
+  Profile: undefined;
+  History: undefined;
+  Stats: undefined;
   ArtistScreen: {artistName: string};
   AlbumScreen: {albumName: string; artistName: string};
   SongScreen: {fileUri: string; title?: string; artist?: string; album?: string};
@@ -57,8 +59,10 @@ export type SettingsTabParamList = {
   FolderLinkingWizard: {type?: 'video' | 'audio'};
   Changelog: undefined;
   Licenses: undefined;
+  Credits: undefined;
   Privacy: undefined;
   Terms: undefined;
+  Help: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =
@@ -115,8 +119,10 @@ export type LinkedFoldersScreenProps = SettingsStackScreenProps<'LinkedFolders'>
 export type FolderLinkingWizardScreenProps = SettingsStackScreenProps<'FolderLinkingWizard'>;
 export type ChangelogScreenProps = SettingsStackScreenProps<'Changelog'>;
 export type LicensesScreenProps = SettingsStackScreenProps<'Licenses'>;
+export type CreditsScreenProps = SettingsStackScreenProps<'Credits'>;
 export type PrivacyScreenProps = SettingsStackScreenProps<'Privacy'>;
 export type TermsScreenProps = SettingsStackScreenProps<'Terms'>;
+export type HelpScreenProps = SettingsStackScreenProps<'Help'>;
 
 /** Root stack screen props. */
 export type PreferencesScreenProps = RootStackScreenProps<'Preferences'>;

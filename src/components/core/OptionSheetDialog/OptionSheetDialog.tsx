@@ -15,6 +15,8 @@ interface OptionSheetDialogProps {
   message?: string;
   options: OptionSheetOption[];
   selectedValue: string | number | null;
+  /** 52.4: option values rendered with destructive (error) styling. */
+  destructiveValues?: Array<string | number>;
   onSelect: (value: string | number) => void;
   onClose: () => void;
   colors: ColorTokens;
@@ -30,6 +32,7 @@ export const OptionSheetDialog: React.FC<OptionSheetDialogProps> = ({
   message,
   options,
   selectedValue,
+  destructiveValues = [],
   onSelect,
   onClose,
   colors,
@@ -43,16 +46,21 @@ export const OptionSheetDialog: React.FC<OptionSheetDialogProps> = ({
       <View style={styles.row}>
         {options.map(opt => {
           const isSelected = selectedValue === opt.value;
+          const isDestructive = destructiveValues.includes(opt.value);
           return (
             <TouchableOpacity
               key={String(opt.value)}
               style={[
                 styles.chip,
                 {
-                  backgroundColor: isSelected
+                  backgroundColor: isDestructive
+                    ? colors.semantic.error + '1F'
+                    : isSelected
                     ? colors.accent.goldDim
                     : 'transparent',
-                  borderColor: isSelected
+                  borderColor: isDestructive
+                    ? colors.semantic.error + '4D'
+                    : isSelected
                     ? colors.accent.gold
                     : colors.border.emphasis,
                 },
@@ -67,7 +75,13 @@ export const OptionSheetDialog: React.FC<OptionSheetDialogProps> = ({
               }}>
               <AppText
                 variant="caption"
-                color={isSelected ? 'accent' : 'secondary'}>
+                color={
+                  isDestructive
+                    ? 'error'
+                    : isSelected
+                    ? 'accent'
+                    : 'secondary'
+                }>
                 {opt.label}
               </AppText>
             </TouchableOpacity>

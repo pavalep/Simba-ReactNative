@@ -1,13 +1,12 @@
 // ─── Music Browser Screen ──────────────────────────────────────────────
 // Browse free music from Jamendo and Audius APIs with genre category chips.
 
-import React, {useCallback, useRef, useState} from 'react';
+import React, {useCallback} from 'react';
 import {
   View,
   ScrollView,
   FlatList,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
 } from 'react-native';
 import FastImage from 'react-native-fast-image';
@@ -25,6 +24,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -151,9 +151,6 @@ export const MusicScreen: React.FC<
     setSearchQuery,
   } = useMusicScreen(route.params?.genre);
 
-  const [isFocused, setIsFocused] = useState(false);
-  const searchRef = useRef<TextInput>(null);
-
   const handleCategoryPress = useCallback(
     (genre: string) => {
       setSelectedCategory(genre);
@@ -186,45 +183,13 @@ export const MusicScreen: React.FC<
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Music" />
 
-      {/* ── Search Bar ── */}
+      {/* ── Search Bar (53.2: core SearchBar) ── */}
       <View style={styles.searchSection}>
-        <View
-          style={[
-            styles.searchBar,
-            {
-              backgroundColor: colors.background.elevated,
-              borderColor: isFocused
-                ? colors.accent.gold
-                : colors.border.subtle,
-            },
-          ]}>
-          <SvgIcon
-            name="search"
-            size={18}
-            color={isFocused ? colors.accent.gold : colors.text.tertiary}
-          />
-          <TextInput
-            ref={searchRef}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search tracks..."
-            placeholderTextColor={colors.text.tertiary}
-            style={[styles.searchInput, {color: colors.text.primary}]}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => {
-                setSearchQuery('');
-                searchRef.current?.blur();
-              }}
-              style={styles.clearButton}>
-              <SvgIcon name="close" size={16} color={colors.text.tertiary} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search tracks…"
+        />
       </View>
 
       {/* ── Genre Chips ── */}
@@ -318,23 +283,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radius.md,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    height: 44,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    marginLeft: spacing.sm,
-    paddingVertical: 0,
-  },
-  clearButton: {
-    padding: spacing.xs,
   },
   chipSection: {
     borderBottomWidth: 1,

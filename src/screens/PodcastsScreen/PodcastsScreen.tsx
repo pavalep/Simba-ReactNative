@@ -8,7 +8,6 @@ import {
   ScrollView,
   FlatList,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -22,6 +21,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import type {PodcastResult} from '../../types/api';
 
 // ─── Props ─────────────────────────────────────────────────────────────
@@ -197,43 +197,13 @@ export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Podcasts" />
 
-      {/* ── Search Bar ── */}
+      {/* ── Search Bar (53.3: core SearchBar) ── */}
       <View style={styles.searchSection}>
-        <View
-          style={[
-            styles.searchBar,
-            {
-              backgroundColor: colors.background.elevated,
-              borderColor: colors.border.subtle,
-            },
-          ]}>
-          <SvgIcon
-            name="search"
-            size={16}
-            color={colors.text.tertiary}
-          />
-          <TextInput
-            style={[styles.searchInput, {color: colors.text.primary}]}
-            placeholder="Search podcasts…"
-            placeholderTextColor={colors.text.tertiary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setSearchQuery('')}>
-              <SvgIcon
-                name="close"
-                size={16}
-                color={colors.text.tertiary}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search podcasts…"
+        />
       </View>
 
       {/* ── Category Chips ── */}
@@ -342,21 +312,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm - 2,
-    borderRadius: radius.full,
-    borderWidth: 1,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '400',
-    paddingVertical: spacing.xs,
   },
   chipSection: {
     paddingVertical: spacing.sm,

@@ -21,7 +21,7 @@ import {spacing} from '../../theme/tokens';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {isVideoFile} from '../../utils/timeAgo';
 
-import {SearchBar} from './components/SearchBar';
+import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {RecentSearches} from './components/RecentSearches';
 import {FilterAndSortControls} from './components/FilterAndSortControls';
 import {SearchResults} from './components/SearchResults';
@@ -202,10 +202,12 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         <InternalHeader title="Search" />
 
         <SearchBar
-          searchText={searchText}
+          value={searchText}
           onChangeText={setSearchText}
           onSubmitEditing={handleSubmitSearch}
           onClear={handleClearSearch}
+          autoFocus
+          style={{marginBottom: 16}}
         />
 
         {showRecentSection && (

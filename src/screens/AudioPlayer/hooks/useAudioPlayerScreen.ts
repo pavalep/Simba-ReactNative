@@ -147,6 +147,13 @@ export function useAudioPlayerScreen(
   const controlScale = largerControls ? 1.18 : 1;
   const duration = MpvPlayer.getDuration?.() ?? 1;
 
+  // 51.3: media notification is gated by the user preference
+  const notificationsEnabled = useAppSelector(state => state.settings.notificationsEnabled);
+  const notificationsEnabledRef = useRef(notificationsEnabled);
+  useEffect(() => {
+    notificationsEnabledRef.current = notificationsEnabled;
+  }, [notificationsEnabled]);
+
   // ── Refs ──
   const isSeeking = useRef(false);
   const fileUriRef = useRef<string | undefined>(fileUri);
@@ -278,21 +285,24 @@ export function useAudioPlayerScreen(
         const meta = await readTrackMetadata(fileUri);
         if (!cancelled) setMetadata(meta);
 
-        NotificationService.start(
-          {
-            title: meta.title || title || 'Unknown Track',
-            artist: meta.artist || '',
-            album: meta.album || '',
-            fileUri,
-            artworkPath: meta.albumArtUri || '',
-            mediaType: 'audio',
-          },
-          {
-            position: MpvPlayer.getPosition?.() ?? 0,
-            duration: MpvPlayer.getDuration?.() ?? 1,
-            isPlaying: MpvPlayer.getPlaybackState() === 'playing',
-          },
-        );
+        // 51.3: start only when the user has media notifications enabled
+        if (notificationsEnabledRef.current) {
+          NotificationService.start(
+            {
+              title: meta.title || title || 'Unknown Track',
+              artist: meta.artist || '',
+              album: meta.album || '',
+              fileUri,
+              artworkPath: meta.albumArtUri || '',
+              mediaType: 'audio',
+            },
+            {
+              position: MpvPlayer.getPosition?.() ?? 0,
+              duration: MpvPlayer.getDuration?.() ?? 1,
+              isPlaying: MpvPlayer.getPlaybackState() === 'playing',
+            },
+          );
+        }
 
         try {
           const chaptersJson = MpvPlayer.getProperty('chapter-list');
@@ -317,17 +327,20 @@ export function useAudioPlayerScreen(
           }
         } catch {}
       } catch {
-        NotificationService.start(
-          {
-            title: title || 'Unknown Track',
-            artist: '',
-            album: '',
-            fileUri,
-            artworkPath: '',
-            mediaType: 'audio',
-          },
-          {position: 0, duration: MpvPlayer.getDuration?.() ?? 1, isPlaying: false},
-        );
+        // 51.3: fallback metadata — also gated by the user preference
+        if (notificationsEnabledRef.current) {
+          NotificationService.start(
+            {
+              title: title || 'Unknown Track',
+              artist: '',
+              album: '',
+              fileUri,
+              artworkPath: '',
+              mediaType: 'audio',
+            },
+            {position: 0, duration: MpvPlayer.getDuration?.() ?? 1, isPlaying: false},
+          );
+        }
       }
     })();
 
@@ -335,6 +348,30 @@ export function useAudioPlayerScreen(
       cancelled = true;
     };
   }, [isReady, fileUri, title]);
+
+  // ── 51.3: keep the media notification in sync with playback ──
+  useEffect(() => {
+    if (!isReady || !fileUri) return;
+    const interval = setInterval(() => {
+      if (!notificationsEnabledRef.current) return;
+      NotificationService.update(
+        {
+          title: metadata.title || title || 'Unknown Track',
+          artist: metadata.artist || '',
+          album: metadata.album || '',
+          fileUri,
+          artworkPath: metadata.albumArtUri || '',
+          mediaType: 'audio',
+        },
+        {
+          position: MpvPlayer.getPosition?.() ?? 0,
+          duration: MpvPlayer.getDuration?.() ?? 1,
+          isPlaying: MpvPlayer.getPlaybackState() === 'playing',
+        },
+      );
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isReady, fileUri, metadata, title]);
 
   // ── Retry chapter loading after duration is known ──
   useEffect(() => {

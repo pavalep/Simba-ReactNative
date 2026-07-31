@@ -3,14 +3,13 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   Modal,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
+import {AppTextInput} from '../../../components/core/AppTextInput/AppTextInput';
+import {KeyboardAwareView} from '../../../components/core/KeyboardAwareView/KeyboardAwareView';
 import {PlaylistKind} from '../../../types/playlist';
 
 // ─── Modes ──────────────────────────────────────────────────
@@ -113,19 +112,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           textAlign: 'center',
         },
         // Name input (create/rename)
-        input: {
-          borderWidth: 1,
-          borderColor: error ? colors.semantic.error : colors.border.subtle,
-          borderRadius: radius.sm,
-          paddingVertical: spacing.sm,
-          paddingHorizontal: spacing.md,
-          color: colors.text.primary,
-          fontSize: 15,
-          backgroundColor: colors.background.floating,
-          marginBottom: spacing.sm,
-        },
-        errorText: {
-          color: colors.semantic.error,
+        inputWrap: {
           marginBottom: spacing.sm,
         },
         // Kind selector (create only)
@@ -231,9 +218,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onCancel}>
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAwareView style={styles.overlay}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -281,30 +266,31 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
             </>
           )}
 
-          {/* ── Name Input (create/rename) ── */}
+          {/* ── Name Input (create/rename) — 53.3 AppTextInput ── */}
           {!isDelete && (
-            <>
-              <TextInput
-                style={styles.input}
-                value={nameInput}
-                onChangeText={v => {
-                  setNameInput(v);
-                  setError(null);
-                }}
-                placeholder={
-                  isCreate ? 'My Playlist' : 'New playlist name'
+            <AppTextInput
+              value={nameInput}
+              onChangeText={v => {
+                setNameInput(v);
+                setError(null);
+              }}
+              placeholder={
+                isCreate ? 'My Playlist' : 'New playlist name'
+              }
+              label={isCreate ? 'Playlist Name' : 'New Name'}
+              autoFocus
+              autoCapitalize="sentences"
+              maxLength={100}
+              error={error}
+              validate={v => {
+                if (!v.trim()) return 'Playlist name cannot be empty.';
+                if (v.trim().length > 100) {
+                  return 'Playlist name is too long (max 100 characters).';
                 }
-                placeholderTextColor={colors.text.tertiary}
-                autoFocus
-                autoCapitalize="sentences"
-                maxLength={100}
-              />
-              {error && (
-                <AppText variant="caption" style={styles.errorText}>
-                  {error}
-                </AppText>
-              )}
-            </>
+                return undefined;
+              }}
+              containerStyle={styles.inputWrap}
+            />
           )}
 
           {/* ── Kind Selector (create only) ── */}
@@ -372,7 +358,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareView>
     </Modal>
   );
 };

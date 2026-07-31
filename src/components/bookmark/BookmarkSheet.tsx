@@ -1,15 +1,14 @@
 import React, {useState, useCallback} from 'react';
 import {
   View,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../core/AppText/AppText';
+import {AppTextInput} from '../core/AppTextInput/AppTextInput';
+import {KeyboardAwareView} from '../core/KeyboardAwareView/KeyboardAwareView';
 import {SvgIcon} from '../utility/SvgIcon';
 import {BookmarkItem} from './BookmarkItem';
 import {BottomSheet} from '../sheets/BottomSheet/BottomSheet';
@@ -90,9 +89,7 @@ export const BookmarkSheet: React.FC<Props> = ({
           </AppText>
         </View>
       }>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}>
+      <KeyboardAwareView style={styles.container}>
         {/* ── Save new bookmark ── */}
         <View
           style={[
@@ -109,19 +106,13 @@ export const BookmarkSheet: React.FC<Props> = ({
 
           {/* Input + Save button */}
           <View style={styles.saveRow}>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: colors.text.primary,
-                  backgroundColor: colors.background.floating,
-                  borderColor: colors.border.subtle,
-                },
-              ]}
-              placeholder="Label (optional)"
-              placeholderTextColor={colors.text.tertiary}
+            <AppTextInput
               value={label}
               onChangeText={setLabel}
+              placeholder="Label (optional)"
+              label="Label"
+              clearable
+              containerStyle={styles.inputWrap}
               accessibilityLabel="Bookmark label"
             />
             <TouchableOpacity
@@ -174,7 +165,7 @@ export const BookmarkSheet: React.FC<Props> = ({
             </View>
           )}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareView>
     </BottomSheet>
   );
 };
@@ -199,14 +190,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  input: {
+  inputWrap: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    fontSize: 15,
-    height: 42,
   },
   saveBtn: {
     flexDirection: 'row',

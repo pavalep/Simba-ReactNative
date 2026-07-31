@@ -68,6 +68,9 @@ const authSlice = createSlice({
       if (action.payload) {
         state.lastSignedInAt = Date.now();
         state.sessionExpiresAt = Date.now() + SESSION_TTL_MS;
+      } else {
+        state.lastSignedInAt = null;
+        state.sessionExpiresAt = null;
       }
     },
     setError(

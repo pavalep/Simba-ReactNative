@@ -4,7 +4,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  Alert,
   Share,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
@@ -38,6 +37,9 @@ import {
 } from '../../utils/m3uParser';
 import {spacing} from '../../theme/tokens';
 import {isVideoFile} from '../../utils/timeAgo';
+import {OptionSheetDialog} from '../../components/core/OptionSheetDialog/OptionSheetDialog';
+import {useConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
+import {useToast} from '../../components/feedback/Toast/Toast';
 
 type Props = PlaylistDetailScreenProps;
 
@@ -48,6 +50,8 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
+  const toast = useToast();
+  const {confirm, dialog} = useConfirmDialog();
   const {playlistId, playlistName} = route.params;
 
   // ── Redux data ──
@@ -58,6 +62,10 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalMode, setModalMode] = useState<'rename' | 'delete' | null>(null);
+  // 52.1: options menus replaced Alert.alert list pickers
+  const [playlistMenuVisible, setPlaylistMenuVisible] = useState(false);
+  const [itemMenuVisible, setItemMenuVisible] = useState(false);
+  const [menuItem, setMenuItem] = useState<PlaylistItem | null>(null);
 
   // ── Header: Add ──
   // Open the folder browser in selection mode pre-targeting this playlist;
@@ -80,72 +88,62 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     }
   }, [items, dispatch, navigation]);
 
-  // ── Header: Options menu ──
+  // ── Header: Options menu (52.1) ──
   const handleMore = useCallback(() => {
-    Alert.alert('Playlist Options', '', [
-      {
-        text: 'Rename Playlist',
-        onPress: () => setModalMode('rename'),
-      },
-      {
-        text: 'Export as M3U',
-        onPress: async () => {
-          try {
-            const m3u = generateM3u(items);
-            await Share.share({
-              message: m3u,
-              title: `${playlistName}.m3u`,
-            });
-          } catch {
-            // user cancelled share
-          }
-        },
-      },
-      {
-        text: 'Export as JSON',
-        onPress: async () => {
-          try {
-            const json = generatePlaylistJson(items);
-            await Share.share({
-              message: json,
-              title: `${playlistName}.json`,
-            });
-          } catch {
-            // user cancelled share
-          }
-        },
-      },
-      ...(items.length > 0
-        ? [
-            {
-              text: 'Clear All Items',
-              style: 'destructive' as const,
-              onPress: () => {
-                Alert.alert(
-                  'Clear Playlist',
-                  `Remove all ${items.length} items from "${playlistName}"?`,
-                  [
-                    {text: 'Cancel', style: 'cancel' as const},
-                    {
-                      text: 'Clear All',
-                      style: 'destructive' as const,
-                      onPress: () =>
-                        dispatch(clearPlaylist(playlistId)),
-                    },
-                  ],
-                );
-              },
-            },
-          ]
-        : []),
-      {
-        text: 'Delete Playlist',
-        style: 'destructive' as const,
-        onPress: () => setModalMode('delete'),
-      },
-      {text: 'Cancel', style: 'cancel' as const},
-    ]);
-  }, [items, playlistName, playlistId, dispatch]);
+    setPlaylistMenuVisible(true);
+  }, []);
+
+  const handleExport = useCallback(
+    async (kind: 'm3u' | 'json') => {
+      try {
+        const payload =
+          kind === 'm3u' ? generateM3u(items) : generatePlaylistJson(items);
+        await Share.share({
+          message: payload,
+          title: `${playlistName}.${kind === 'm3u' ? 'm3u' : 'json'}`,
+        });
+      } catch {
+        // user cancelled share
+      }
+    },
+    [items, playlistName],
+  );
+
+  const handleClearPlaylist = useCallback(async () => {
+    const ok = await confirm({
+      title: 'Clear Playlist',
+      message: `Remove all ${items.length} items from "${playlistName}"?`,
+      confirmLabel: 'Clear All',
+      destructive: true,
+    });
+    if (ok) {
+      dispatch(clearPlaylist(playlistId));
+      toast.show('Playlist cleared');
+    }
+  }, [confirm, dispatch, items.length, playlistName, playlistId, toast]);
+
+  const handlePlaylistMenuSelect = useCallback(
+    (value: string | number) => {
+      switch (value) {
+        case 'rename':
+          setModalMode('rename');
+          break;
+        case 'export-m3u':
+          handleExport('m3u');
+          break;
+        case 'export-json':
+          handleExport('json');
+          break;
+        case 'clear':
+          handleClearPlaylist();
+          break;
+        case 'delete':
+          setModalMode('delete');
+          break;
+      }
+    },
+    [handleExport, handleClearPlaylist],
+  );
 
   // ── Batch select ──
   const toggleSelection = useCallback((id: string) => {
@@ -160,30 +158,25 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     });
   }, []);
 
-  const handleBatchDelete = useCallback(() => {
+  const handleBatchDelete = useCallback(async () => {
     const count = selectedIds.size;
     if (count === 0) return;
-    Alert.alert(
-      'Remove Items',
-      `Remove ${count} selected item${count !== 1 ? 's' : ''}?`,
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => {
-            selectedIds.forEach(id => {
-              dispatch(
-                removeItemFromPlaylist({playlistId, itemId: id}),
-              );
-            });
-            setSelectedIds(new Set());
-            setIsSelecting(false);
-          },
-        },
-      ],
-    );
-  }, [selectedIds, dispatch, playlistId]);
+    const ok = await confirm({
+      title: 'Remove Items',
+      message: `Remove ${count} selected item${count !== 1 ? 's' : ''}?`,
+      confirmLabel: 'Remove',
+      destructive: true,
+    });
+    if (!ok) return;
+    selectedIds.forEach(id => {
+      dispatch(
+        removeItemFromPlaylist({playlistId, itemId: id}),
+      );
+    });
+    setSelectedIds(new Set());
+    setIsSelecting(false);
+    toast.show(`Removed ${count} item${count !== 1 ? 's' : ''}`);
+  }, [selectedIds, confirm, dispatch, playlistId, toast]);
 
   const exitBatchMode = useCallback(() => {
     setIsSelecting(false);
@@ -215,43 +208,44 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const handleItemLongPress = useCallback(
     (item: PlaylistItem) => {
       if (isSelecting) return;
-
-      Alert.alert(item.title, undefined, [
-        {
-          text: 'Play Next',
-          onPress: () => {
-            dispatch(
-              prependToQueue({
-                uri: item.fileUri,
-                title: item.title,
-                duration: item.duration,
-              }),
-            );
-          },
-        },
-        {
-          text: 'Add to Queue',
-          onPress: () => {
-            dispatch(
-              addToQueue({
-                uri: item.fileUri,
-                title: item.title,
-                duration: item.duration,
-              }),
-            );
-          },
-        },
-        {
-          text: 'Select',
-          onPress: () => {
-            setIsSelecting(true);
-            setSelectedIds(new Set([item.id]));
-          },
-        },
-        {text: 'Cancel', style: 'cancel'},
-      ]);
+      setMenuItem(item);
+      setItemMenuVisible(true);
     },
-    [isSelecting, dispatch],
+    [isSelecting],
+  );
+
+  const handleItemMenuSelect = useCallback(
+    (value: string | number) => {
+      if (!menuItem) return;
+      switch (value) {
+        case 'play-next':
+          dispatch(
+            prependToQueue({
+              uri: menuItem.fileUri,
+              title: menuItem.title,
+              duration: menuItem.duration,
+            }),
+          );
+          toast.show('Playing next');
+          break;
+        case 'add-queue':
+          dispatch(
+            addToQueue({
+              uri: menuItem.fileUri,
+              title: menuItem.title,
+              duration: menuItem.duration,
+            }),
+          );
+          toast.show('Added to queue');
+          break;
+        case 'select':
+          setIsSelecting(true);
+          setSelectedIds(new Set([menuItem.id]));
+          break;
+      }
+      setMenuItem(null);
+    },
+    [menuItem, dispatch, toast],
   );
 
   const handleMoveItem = useCallback(
@@ -681,6 +675,41 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
       />
+
+      {/* 52.1: options menus + confirms (replaced Alert.alert) */}
+      <OptionSheetDialog
+        visible={playlistMenuVisible}
+        title="Playlist Options"
+        options={[
+          {label: 'Rename Playlist', value: 'rename'},
+          {label: 'Export as M3U', value: 'export-m3u'},
+          {label: 'Export as JSON', value: 'export-json'},
+          ...(items.length > 0
+            ? [{label: 'Clear All Items', value: 'clear'}]
+            : []),
+          {label: 'Delete Playlist', value: 'delete'},
+        ]}
+        selectedValue={null}
+        destructiveValues={['delete']}
+        onSelect={handlePlaylistMenuSelect}
+        onClose={() => setPlaylistMenuVisible(false)}
+        colors={colors}
+      />
+      <OptionSheetDialog
+        visible={itemMenuVisible}
+        title={menuItem?.title ?? 'Track Options'}
+        options={[
+          {label: 'Play Next', value: 'play-next'},
+          {label: 'Add to Queue', value: 'add-queue'},
+          {label: 'Select', value: 'select'},
+        ]}
+        selectedValue={null}
+        onSelect={handleItemMenuSelect}
+        onClose={() => setItemMenuVisible(false)}
+        colors={colors}
+      />
+
+      {dialog}
     </View>
   );
 };

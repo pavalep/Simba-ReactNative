@@ -6,8 +6,6 @@ import {
   Modal,
   Animated,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   BackHandler,
   Dimensions,
 } from 'react-native';
@@ -16,6 +14,7 @@ import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {BottomSheetBackdrop} from './BottomSheetBackdrop';
 import {useBottomSheet, type UseBottomSheetOptions} from '../../../hooks/useBottomSheet';
+import {KeyboardAwareView} from '../../core/KeyboardAwareView/KeyboardAwareView';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -160,9 +159,7 @@ export function BottomSheet<T = any>({
               paddingBottom: insets.bottom + spacing.md + keyboardAdjust,
             },
           ]}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.inner}>
+          <KeyboardAwareView style={styles.inner}>
             {/* ── Drag Handle Bar (6.5) ── */}
             <View
               {...panResponder.panHandlers}
@@ -200,7 +197,7 @@ export function BottomSheet<T = any>({
 
             {/* ── Content ── */}
             <View style={styles.content}>{children}</View>
-          </KeyboardAvoidingView>
+          </KeyboardAwareView>
         </Animated.View>
       </View>
     </Modal>

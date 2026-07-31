@@ -26,7 +26,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       Splash: 'splash',
       Login: 'login',
-      Registration: 'registration',
+      Profile: 'profile',
+      History: 'history',
+            Stats: 'stats',
       MainTabs: {
         screens: {
           HomeTab: {
@@ -75,8 +77,10 @@ export const linking: LinkingOptions<RootStackParamList> = {
           },
           Changelog: 'settings/changelog',
           Licenses: 'settings/licenses',
+          Credits: 'settings/credits',
           Privacy: 'settings/privacy',
           Terms: 'settings/terms',
+          Help: 'settings/help',
         },
       },
       Bookmarks: 'bookmarks',

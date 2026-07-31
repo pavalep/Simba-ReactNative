@@ -11,14 +11,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
-  Platform,
-  KeyboardAvoidingView,
   TextStyle,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {ColorTokens} from '../../../theme/tokens';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {AppText} from '../AppText/AppText';
+import {KeyboardAwareView} from '../KeyboardAwareView/KeyboardAwareView';
 
 export interface DialogAction {
   label: string;
@@ -51,6 +50,8 @@ export const Dialog: React.FC<DialogProps> = ({
   const haptics = useHaptics();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.92)).current;
+  // 52.7: focus lands on the first action when the dialog opens
+  const firstActionRef = useRef<React.ElementRef<typeof TouchableOpacity> | null>(null);
 
   useEffect(() => {
     if (visible) {
@@ -84,10 +85,13 @@ export const Dialog: React.FC<DialogProps> = ({
       transparent
       animationType="none"
       statusBarTranslucent
-      onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      onRequestClose={onClose}
+      accessibilityViewIsModal
+      onShow={() => {
+        // 52.7: move screen-reader / key focus to the primary action
+        firstActionRef.current?.focus();
+      }}>
+      <KeyboardAwareView style={styles.overlay}>
         {/* Animated scrim */}
         <Animated.View
           style={[
@@ -121,7 +125,10 @@ export const Dialog: React.FC<DialogProps> = ({
               shadowRadius: 24,
               elevation: 16,
             },
-          ]}>
+          ]}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          importantForAccessibility="yes">
           {/* Title */}
           <AppText variant="h3" color="primary" style={styles.title}>
             {title}
@@ -147,6 +154,7 @@ export const Dialog: React.FC<DialogProps> = ({
               {actions.map((action, i) => (
                 <TouchableOpacity
                   key={i}
+                  ref={i === 0 ? firstActionRef : undefined}
                   style={[
                     styles.actionBtn,
                     action.variant !== 'default' && action.variant !== undefined
@@ -180,7 +188,7 @@ export const Dialog: React.FC<DialogProps> = ({
             </View>
           )}
         </Animated.View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareView>
     </Modal>
   );
 };

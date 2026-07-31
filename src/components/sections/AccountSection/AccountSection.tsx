@@ -3,7 +3,9 @@ import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../core/AppText/AppText';
 import {Avatar} from '../../core/Avatar/Avatar';
+import {SvgIcon} from '../../utility/SvgIcon';
 import {useAuth} from '../../../hooks/useAuth';
+import {navigate} from '../../../navigation/navigationHelper';
 
 /**
  * Account section shown in Settings.
@@ -11,7 +13,12 @@ import {useAuth} from '../../../hooks/useAuth';
  */
 export const AccountSection: React.FC = () => {
   const {colors} = useTheme();
-  const {user, isAuthenticated, isLoading, signIn, signOut} = useAuth();
+  const {user, isAuthenticated, isLoading, signIn} = useAuth();
+
+  const openProfile = () => {
+    // 42.1: account card opens the full Profile screen
+    navigate('Profile');
+  };
 
   if (isLoading) {
     return (
@@ -29,10 +36,10 @@ export const AccountSection: React.FC = () => {
     return (
       <TouchableOpacity
         style={[styles.card, {backgroundColor: colors.background.elevated}]}
-        onPress={signOut}
+        onPress={openProfile}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel="Sign out">
+        accessibilityLabel={`Profile for ${user.name}`}>
         <View style={styles.row}>
           <Avatar uri={user.photo} name={user.name} size={44} />
           <View style={styles.info}>
@@ -47,8 +54,8 @@ export const AccountSection: React.FC = () => {
           </View>
           <AppText
             variant="caption"
-            style={{color: colors.semantic.error}}>
-            Sign Out
+            style={{color: colors.accent.gold}}>
+            View Profile
           </AppText>
         </View>
       </TouchableOpacity>
@@ -69,11 +76,8 @@ export const AccountSection: React.FC = () => {
             styles.placeholderAvatar,
             {backgroundColor: colors.border.subtle},
           ]}>
-          <AppText
-            variant="body1"
-            style={{color: colors.text.secondary}}>
-            ?
-          </AppText>
+          {/* 42.2: icon fallback instead of the old "?" placeholder */}
+          <SvgIcon name="lion" size={22} color={colors.accent.gold} />
         </View>
         <View style={styles.info}>
           <AppText variant="body2" color="primary">

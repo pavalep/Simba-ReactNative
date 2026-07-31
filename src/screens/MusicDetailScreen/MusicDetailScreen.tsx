@@ -4,7 +4,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
+  Share,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import FastImage from 'react-native-fast-image';
@@ -45,8 +45,18 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
   }, [track, navigation]);
 
   const handleShare = useCallback(() => {
-    Alert.alert('Share', 'Share functionality coming soon.');
-  }, []);
+    if (!track) return;
+    const fileUri = 'audioUrl' in track ? track.audioUrl : track.streamUrl;
+    const shareTitle = 'name' in track ? track.name : track.title;
+    const artist = track.artistName ?? '';
+    // 52.3: real share sheet instead of a placeholder Alert
+    Share.share({
+      message: `${shareTitle}${artist ? ` — ${artist}` : ''}${fileUri ? `\n${fileUri}` : ''}`,
+      title: `${shareTitle} — Simba Player`,
+    }).catch(() => {
+      // user cancelled share
+    });
+  }, [track]);
 
   const imageUrl = track
     ? 'imageUrl' in track

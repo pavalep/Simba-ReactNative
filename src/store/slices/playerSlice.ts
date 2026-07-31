@@ -29,6 +29,8 @@ interface PlayerState {
   shuffle: boolean;
   playbackSpeed: number;
   sleepTimerEndTime: number | null;
+  /** 50.1: sleep timer expiry trigger — fixed time, end of track, or end of chapter */
+  sleepTimerMode: 'time' | 'track' | 'chapter';
   equalizerGains: number[];
   equalizerEnabled: boolean;
   /** Multi-select indices for queue batch operations (Phase 23) */
@@ -50,6 +52,7 @@ const initialState: PlayerState = {
   shuffle: false,
   playbackSpeed: 1.0,
   sleepTimerEndTime: null,
+  sleepTimerMode: 'time',
   equalizerGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   equalizerEnabled: false,
   selectedQueueIndices: [],
@@ -297,6 +300,15 @@ const playerSlice = createSlice({
     setSleepTimer(state, action: PayloadAction<number | null>) {
       state.sleepTimerEndTime =
         action.payload !== null ? Date.now() + action.payload * 1000 : null;
+      // Arming a countdown always uses time mode; cancelling disarms everything.
+      state.sleepTimerMode = 'time';
+    },
+
+    /** 50.2: arm the timer to fire at end of track / end of chapter */
+    setSleepTimerMode(state, action: PayloadAction<'time' | 'track' | 'chapter'>) {
+      state.sleepTimerMode = action.payload;
+      // Mode-based expiry replaces any countdown timer.
+      state.sleepTimerEndTime = null;
     },
 
     setEqualizerGains(state, action: PayloadAction<number[]>) {
@@ -327,6 +339,7 @@ const playerSlice = createSlice({
       state.duration = 0;
       state.playbackSpeed = 1.0;
       state.sleepTimerEndTime = null;
+      state.sleepTimerMode = 'time';
       state.equalizerGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       state.equalizerEnabled = false;
       state.selectedQueueIndices = [];
@@ -361,6 +374,7 @@ export const {
   clearPlayer,
   setPlaybackSpeed,
   setSleepTimer,
+  setSleepTimerMode,
   setEqualizerGains,
   toggleEqualizer,
   addToPlaybackHistory,

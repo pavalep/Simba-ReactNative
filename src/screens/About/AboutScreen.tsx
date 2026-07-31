@@ -1,4 +1,4 @@
-import React, {useMemo, useRef, useCallback, useEffect} from 'react';
+import React, {useMemo, useRef, useCallback, useEffect, useState} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -6,12 +6,18 @@ import {
   Image,
   Linking,
   Animated,
+  Share,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
+import {SvgIcon} from '../../components/utility/SvgIcon';
+import {ConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
+import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
+import {useAppDispatch} from '../../store';
+import {resetToDefaults} from '../../store/slices/settingsSlice';
 import {AboutScreenProps} from '../../navigation/types';
 import {svgPaths} from '../../constants/svgPaths';
 import {SimbaStatusBar} from '../../components/StatusBar';
@@ -22,51 +28,95 @@ type Props = AboutScreenProps;
 
 interface LinkItem {
   label: string;
-  action: 'navigate' | 'url' | 'contact';
+  description?: string;
+  action: 'navigate' | 'url' | 'contact' | 'share';
   route?: string;
   url?: string;
+  icon: 'listMusic' | 'list' | 'folder' | 'settings' | 'music' | 'video';
 }
+
+const PLAY_STORE_URL =
+  'https://play.google.com/store/apps/details?id=com.simbaplayer';
+const GITHUB_ISSUES_URL = 'https://github.com/diegopvlk/Cine/issues';
 
 const LINK_ITEMS: LinkItem[] = [
   {
     label: textContent.changelog,
     action: 'navigate',
     route: 'Changelog',
+    icon: 'listMusic',
+  },
+  {
+    label: textContent.credits,
+    description: 'Contributors and libraries used',
+    action: 'navigate',
+    route: 'Credits',
+    icon: 'list',
   },
   {
     label: textContent.openSourceLicenses,
     action: 'navigate',
     route: 'Licenses',
+    icon: 'folder',
   },
   {
     label: textContent.privacyPolicy,
-    action: 'url',
-    url: 'https://simbaplayer.app/privacy',
+    // 51.2: in-app Privacy screen instead of an external URL
+    action: 'navigate',
+    route: 'Privacy',
+    icon: 'settings',
   },
   {
     label: textContent.termsOfService,
-    action: 'url',
-    url: 'https://simbaplayer.app/terms',
+    // 51.2: in-app Terms screen instead of an external URL
+    action: 'navigate',
+    route: 'Terms',
+    icon: 'settings',
   },
   {
     label: textContent.rateOnPlayStore,
     action: 'url',
-    url: 'https://play.google.com/store/apps/details?id=com.simbaplayer',
+    url: PLAY_STORE_URL,
+    icon: 'music',
+  },
+  {
+    label: textContent.shareApp,
+    description: 'Send Simba Player to a friend',
+    action: 'share',
+    icon: 'music',
+  },
+  {
+    label: textContent.reportBug,
+    action: 'url',
+    url: GITHUB_ISSUES_URL,
+    icon: 'video',
   },
   {
     label: textContent.contactFeedback,
     action: 'contact',
     url: 'mailto:support@simbaplayer.app?subject=Simba%20Player%20Feedback',
+    icon: 'settings',
   },
 ];
+
+/** 25.2: tech stack shown in the "Built with" section. */
+const BUILT_WITH = ['React Native', 'TypeScript', 'MPV', 'Redux Toolkit'];
+
+const SHARE_MESSAGE = `Simba Player — your media, your way. Watch videos, listen to music, and build playlists with a gorgeous player. ${PLAY_STORE_URL}`;
 
 export const AboutScreen: React.FC<Props> = ({navigation}) => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
+  const [resetVisible, setResetVisible] = useState(false);
 
   // ── Animations ───────────────────────────────────────────
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
+  const entrance = useAnimatedEntrance(LINK_ITEMS.length, {
+    staggerDelay: 60,
+    direction: 'up',
+  });
 
   useEffect(() => {
     // Fade in entire screen
@@ -98,11 +148,11 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
         },
         logoSection: {
           alignItems: 'center',
-          marginTop: spacing.xxxl,
+          marginTop: spacing.xl,
         },
         logo: {
-          width: 80,
-          height: 80,
+          width: 72,
+          height: 72,
           resizeMode: 'contain',
         },
         appName: {
@@ -115,13 +165,32 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
         versionRow: {
           flexDirection: 'row',
           alignItems: 'center',
-          marginBottom: spacing.lg,
+          marginBottom: spacing.md,
         },
         divider: {
           width: '40%',
           height: StyleSheet.hairlineWidth,
           backgroundColor: colors.border.subtle,
-          marginVertical: spacing.xl,
+          marginVertical: spacing.md,
+        },
+        builtWithCard: {
+          width: '100%',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          gap: spacing.sm,
+          backgroundColor: colors.background.elevated,
+          borderRadius: radius.md,
+          padding: spacing.md,
+          marginBottom: spacing.md,
+        },
+        techChip: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          paddingHorizontal: spacing.sm,
+          paddingVertical: spacing.xs,
+          borderRadius: radius.sm,
         },
         linkItem: {
           flexDirection: 'row',
@@ -132,17 +201,17 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
           paddingHorizontal: spacing.lg,
           borderRadius: radius.md,
           marginBottom: spacing.xs,
+          minHeight: 52,
         },
-        linkItemPressed: {
-          backgroundColor: colors.background.elevated,
+        linkIcon: {
+          marginRight: spacing.sm,
         },
         linkLabel: {
           flex: 1,
         },
-        chevron: {
-          fontSize: 16,
-          color: colors.text.tertiary,
-          marginLeft: spacing.sm,
+        linkDescription: {
+          flex: 1,
+          marginTop: 2,
         },
         footer: {
           alignItems: 'center',
@@ -153,13 +222,12 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
           paddingVertical: spacing.md,
           paddingHorizontal: spacing.xxl,
         },
-        appVersion: {},
       }),
     [colors, insets.bottom],
   );
 
   const handleLinkPress = useCallback(
-    (item: LinkItem) => {
+    async (item: LinkItem) => {
       switch (item.action) {
         case 'navigate':
           if (item.route) {
@@ -172,22 +240,24 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
             Linking.openURL(item.url).catch(() => {});
           }
           break;
+        case 'share': {
+          // 25.7: native share sheet with app text + store URL
+          try {
+            await Share.share({message: SHARE_MESSAGE});
+          } catch {
+            // user cancelled — nothing to do
+          }
+          break;
+        }
       }
     },
     [navigation],
   );
 
-  const handleResetPress = useCallback(() => {
-    const {Alert} = require('react-native');
-    Alert.alert(
-      textContent.resetAlertTitle,
-      textContent.resetAlertMessage,
-      [
-        {text: textContent.cancel, style: 'cancel' as const},
-        {text: textContent.reset, style: 'destructive' as const, onPress: () => {}},
-      ],
-    );
-  }, []);
+  const handleConfirmReset = useCallback(() => {
+    setResetVisible(false);
+    dispatch(resetToDefaults());
+  }, [dispatch]);
 
   return (
     <View style={styles.root}>
@@ -198,15 +268,12 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
       />
       <SafeAreaView style={styles.root} edges={['top']}>
         <InternalHeader title={textContent.headerTitle} />
-        <Animated.View
-          style={[styles.content, {opacity: fadeAnim}]}>
+        <Animated.View style={[styles.content, {opacity: fadeAnim}]}>
           {/* Logo with bounce animation */}
           <Animated.View
             style={[styles.logoSection, {transform: [{scale: scaleAnim}]}]}>
             <Image
-              source={
-                isDark ? svgPaths.appLogoDark : svgPaths.appLogoLight
-              }
+              source={isDark ? svgPaths.appLogoDark : svgPaths.appLogoLight}
               style={styles.logo}
             />
           </Animated.View>
@@ -220,39 +287,87 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
           </AppText>
 
           <View style={styles.versionRow}>
-            <AppText variant="caption" color="secondary" style={styles.appVersion}>
+            <AppText variant="caption" color="secondary">
               {textContent.version}
             </AppText>
           </View>
 
+          {/* 25.2: Built with */}
+          <View style={styles.builtWithCard}>
+            <AppText
+              variant="caption"
+              color="tertiary"
+              style={{width: '100%', textAlign: 'center', marginBottom: 4}}>
+              Built with
+            </AppText>
+            {BUILT_WITH.map(tech => (
+              <View
+                key={tech}
+                style={[
+                  styles.techChip,
+                  {backgroundColor: colors.background.primary},
+                ]}>
+                <AppText variant="caption" color="accent">
+                  {tech}
+                </AppText>
+              </View>
+            ))}
+          </View>
+
           <View style={styles.divider} />
 
-          {/* Link items */}
-          {LINK_ITEMS.map(item => (
-            <TouchableOpacity
-              key={item.label}
-              activeOpacity={0.7}
-              onPress={() => handleLinkPress(item)}
-              style={styles.linkItem}>
-              <AppText variant="body1" color="primary" style={styles.linkLabel}>
-                {item.label}
-              </AppText>
-              <AppText style={styles.chevron}>→</AppText>
-            </TouchableOpacity>
+          {/* Link items (25.10 staggered entrance) */}
+          {LINK_ITEMS.map((item, idx) => (
+            <Animated.View key={item.label} style={[styles.linkItem, entrance.styles[idx]]}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => handleLinkPress(item)}
+                style={[StyleSheet.absoluteFill, {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg}]}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}>
+                <SvgIcon
+                  name={item.icon}
+                  size={18}
+                  color={colors.accent.gold}
+                  style={styles.linkIcon}
+                />
+                <AppText variant="body1" color="primary" style={styles.linkLabel}>
+                  {item.label}
+                </AppText>
+                <SvgIcon
+                  name="chevronRight"
+                  size={16}
+                  color={colors.text.tertiary}
+                />
+              </TouchableOpacity>
+            </Animated.View>
           ))}
         </Animated.View>
 
-        {/* Footer with reset button */}
+        {/* Footer with reset button (25.9: dialog, not raw Alert) */}
         <View style={styles.footer}>
           <TouchableOpacity
-            onPress={handleResetPress}
-            style={styles.resetButton}>
+            onPress={() => setResetVisible(true)}
+            style={styles.resetButton}
+            accessibilityRole="button"
+            accessibilityLabel={textContent.resetAllSettings}>
             <AppText variant="body1" color="error">
               {textContent.resetAllSettings}
             </AppText>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
+      <ConfirmDialog
+        visible={resetVisible}
+        title={textContent.resetAlertTitle}
+        message={textContent.resetAlertMessage}
+        confirmLabel={textContent.reset}
+        cancelLabel={textContent.cancel}
+        destructive
+        onConfirm={handleConfirmReset}
+        onCancel={() => setResetVisible(false)}
+      />
     </View>
   );
 };

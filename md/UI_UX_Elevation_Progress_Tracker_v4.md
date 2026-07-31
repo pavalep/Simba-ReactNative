@@ -1252,14 +1252,14 @@ JAMENDO_CLIENT_ID=your_jamendo_client_id_here
 
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
-| 50.1 | Global sleep timer service (both players) + custom minutes | ⚪ | Extends 32.2 |
-| 50.2 | End-of-track / end-of-chapter option | ⚪ | |
-| 50.3 | Countdown badge on players + MiniAudioPlayer | ⚪ | |
-| 50.4 | StatsScreen from real session history — no fabricated numbers | ⚪ | Audit MEDIUM: no stats page |
-| 50.5 | Streaks/totals cards + empty state | ⚪ | |
-| 50.6 | Stats entry from Profile | ⚪ | |
-| 50.7 | Volume fade-out final 10s of timer | ⚪ | |
-| 50.8 | Gate: timer pauses both players; stats match history | ⚪ | |
+| 50.1 | Global sleep timer service (both players) + custom minutes | ✅ | playerSlice sleepTimerEndTime+sleepTimerMode; TransportContext enforces for both players; SleepTimerSheet + AudioSubMenu custom minutes 1–480 |
+| 50.2 | End-of-track / end-of-chapter option | ✅ | sleepTimerMode 'track'/'chapter' with END_TOLERANCE_S=0.75; chapters via TransportProvider prop (sentinel-clamped for video) |
+| 50.3 | Countdown badge on players + MiniAudioPlayer | ✅ | Gold badges on VideoPlayer + AudioPlayer; MiniAudioPlayer badge already live from 32.2 |
+| 50.4 | StatsScreen from real session history — no fabricated numbers | ✅ | StatsScreen: ΣplayCounts, Σ(count×duration), mediaType counts, distinct days, top-5 by play count — all from sessionSlice |
+| 50.5 | Streaks/totals cards + empty state | ✅ | 6 stat cards (Plays/Time/Tracks/Videos/Days Active/Streak) + EmptyState with Browse Library action |
+| 50.6 | Stats entry from Profile | ✅ | SettingsRow "Stats" in Profile Shortcuts → root route 'Stats' + deep link 'stats' |
+| 50.7 | Volume fade-out final 10s of timer | ✅ | FADE_WINDOW_MS=10_000, base-volume captured at fade start, restored on cancel/disarm |
+| 50.8 | Gate: timer pauses both players; stats match history | ✅ | Expiry pauses + sets playbackState 'paused' via shared TransportContext; stats read live from session store. tsc 0 / eslint 0 |
 
 ---
 
@@ -1271,14 +1271,14 @@ JAMENDO_CLIENT_ID=your_jamendo_client_id_here
 
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
-| 51.1 | HelpScreen: searchable FAQ sections | ⚪ | Audit MEDIUM: missing |
-| 51.2 | Privacy Policy + Terms screens, linked from Settings/About/Login | ⚪ | Audit MEDIUM: missing |
-| 51.3 | Media-style playback notification + settings toggle | ⚪ | |
-| 51.4 | Android 13+ notification permission, contextual | ⚪ | |
-| 51.5 | About links functional — replace Alert placeholder | ⚪ | Audit: Alert at AboutScreen L182 |
-| 51.6 | Contact/feedback action | ⚪ | |
-| 51.7 | Routes + deep links for all new pages | ⚪ | |
-| 51.8 | Gate: all entries reachable; lock-screen transport works | ⚪ | |
+| 51.1 | HelpScreen: searchable FAQ sections | ✅ | HelpScreen.tsx: 6 sections, live search + empty state + contact card |
+| 51.2 | Privacy Policy + Terms screens, linked from Settings/About/Login | ✅ | In-app routes from About (navigate) + Login footer (navigationRef) |
+| 51.3 | Media-style playback notification + settings toggle | ✅ | start/update gated by notificationsEnabled in both players; 1s update tick |
+| 51.4 | Android 13+ notification permission, contextual | ✅ | requestPermission() on enable in Preferences |
+| 51.5 | About links functional — replace Alert placeholder | ✅ | ConfirmDialog reset → resetToDefaults (P25) |
+| 51.6 | Contact/feedback action | ✅ | mailto in About + Help contact card |
+| 51.7 | Routes + deep links for all new pages | ✅ | Help in SettingsTabParamList + settings/help deep link |
+| 51.8 | Gate: all entries reachable; lock-screen transport works | ✅ | tsc 0, eslint 0; play/pause/next/prev/stop/seek wired in both players |
 
 ---
 
@@ -1294,14 +1294,14 @@ JAMENDO_CLIENT_ID=your_jamendo_client_id_here
 
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
-| 52.1 | Replace Alert.alert in PlaylistDetailScreen (4×) | ⚪ | Audit: L85, L124, L166, L219 |
-| 52.2 | Replace in PreferencesScreen (2×) + AudioSettingsScreen (5×) | ⚪ | Coordinated with Phases 45/46 |
-| 52.3 | Replace in useVideoPlayerScreen (L732), About, MusicDetail, MpvConfigEditor | ⚪ | |
-| 52.4 | Destructive-action styling convention across confirms | ⚪ | |
-| 52.5 | ESLint no-restricted-imports bans Alert | ⚪ | |
-| 52.6 | Toast for success feedback consistently | ⚪ | |
-| 52.7 | Dialog a11y: focus + announcements | ⚪ | |
-| 52.8 | Gate: Alert.alert grep = 0 matches in src/ | ⚪ | |
+| 52.1 | Replace Alert.alert in PlaylistDetailScreen (4×) | ✅ | Options menus → OptionSheetDialog; Clear/batch-delete confirms → useConfirmDialog; toasts on success |
+| 52.2 | Replace in PreferencesScreen (2×) + AudioSettingsScreen (5×) | ✅ | Already clean — P44/45/46 shipped dialogs/sliders/pickers (grep verified) |
+| 52.3 | Replace in useVideoPlayerScreen (L732), About, MusicDetail, MpvConfigEditor | ✅ | useVideoPlayerScreen+About clean (P43/51); MusicDetail → real Share.share; MpvConfigEditor remove → confirm dialog |
+| 52.4 | Destructive-action styling convention across confirms | ✅ | ConfirmDialog destructive variant; OptionSheetDialog destructiveValues → error-tinted chips |
+| 52.5 | ESLint no-restricted-imports bans Alert | ✅ | .eslintrc.js bans `import {Alert}` from react-native with guidance message |
+| 52.6 | Toast for success feedback consistently | ✅ | Clear playlist / batch remove / play-next / add-to-queue toasts added |
+| 52.7 | Dialog a11y: focus + announcements | ✅ | Dialog: accessibilityViewIsModal, role alert, polite live region, first-action auto-focus on show |
+| 52.8 | Gate: Alert.alert grep = 0 matches in src/ | ✅ | 0 matches (only comments remain); eslint 0 errors; tsc 0 |
 
 ---
 

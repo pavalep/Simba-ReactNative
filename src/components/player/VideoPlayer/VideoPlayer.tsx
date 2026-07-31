@@ -14,6 +14,7 @@ import {SimbaStatusBar} from '../../StatusBar';
 import {BookmarkSheet} from '../../bookmark/BookmarkSheet';
 import {BottomSheet} from '../../sheets/BottomSheet/BottomSheet';
 import {ChapterBrowser} from '../ChapterBrowser/ChapterBrowser';
+import {SleepTimerSheet} from '../SleepTimerSheet/SleepTimerSheet';
 import {InfoSheet} from '../NowPlayingInfo/InfoSheet';
 import {PlaylistSheet} from '../../sheets/PlaylistSheet';
 import {QueueSheet} from '../../sheets/QueueSheet/QueueSheet';
@@ -22,6 +23,9 @@ import {ReplayButton} from '../ReplayButton/ReplayButton';
 import {VideoPlayerResumeOverlay} from '../../../screens/VideoPlayer/components/VideoPlayerResumeOverlay';
 import {VideoPlayerAutoAdvanceCard} from '../../../screens/VideoPlayer/components/VideoPlayerAutoAdvanceCard';
 import {MpvPlayer} from '../../../native';
+import {useAppDispatch, useAppSelector} from '../../../store';
+import {setSleepTimer, setSleepTimerMode} from '../../../store/slices/playerSlice';
+import {formatSleepRemaining, sleepTimerModeLabel} from '../../../utils/sleepTimer';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {MpvChapter} from '../../../native';
@@ -288,7 +292,11 @@ export const VideoPlayer: React.FC<VideoPlayerHookData> = (h) => {
   }
 
   return (
-    <TransportProvider>
+    <TransportProvider
+      chapters={h.chapters.map((ch, i, arr) => ({
+        startTime: ch.startTime,
+        endTime: i < arr.length - 1 ? arr[i + 1].startTime : Number.MAX_SAFE_INTEGER,
+      }))}>
       <VideoPlayerInner h={h} />
     </TransportProvider>
   );
@@ -436,7 +444,10 @@ const VideoTransportDependentContent: React.FC<{
 // ─── Main render ─────────────────────────────────────────────
 
 const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
-  const {position, duration, isPlaying, pushPosition} = useTransport();
+  const {position, duration, isPlaying, pushPosition, sleepRemainingMs, sleepTimerActive, sleepTimerMode} = useTransport();
+  const dispatch = useAppDispatch();
+  const sleepTimerEndTime = useAppSelector(state => state.player.sleepTimerEndTime);
+  const [sleepTimerSheetVisible, setSleepTimerSheetVisible] = React.useState(false);
 
   // ── 31.5: fade-from-black on every file load ──
   const blackFade = React.useRef(new Animated.Value(1)).current;
@@ -596,6 +607,17 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
               controlsLocked={h.controlsLocked}
               onToggleLock={h.handleToggleLock}
             />
+
+            {/* 50.3: countdown badge when a sleep timer is armed */}
+            {sleepTimerActive && !h.controlsLocked && (
+              <View style={[styles.sleepBadge, {top: h.uiTopInset + 52}]}>
+                <AppText variant="caption" color="primary" style={styles.sleepBadgeText}>
+                  {sleepTimerMode === 'time'
+                    ? `Sleep ${formatSleepRemaining(sleepRemainingMs)}`
+                    : sleepTimerModeLabel(sleepTimerMode)}
+                </AppText>
+              </View>
+            )}
           </Animated.View>
         )}
 
@@ -611,6 +633,16 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
           onSave={label => { h.handleAddBookmark(label); }}
           onDelete={h.handleRemoveBookmark}
           onJumpTo={h.handleBookmarkJumpTo}
+        />
+
+        <SleepTimerSheet
+          visible={sleepTimerSheetVisible}
+          onClose={() => setSleepTimerSheetVisible(false)}
+          activeMode={sleepTimerMode}
+          activeEndTime={sleepTimerEndTime}
+          onSelectMinutes={minutes => dispatch(setSleepTimer(minutes))}
+          onSelectMode={mode => dispatch(setSleepTimerMode(mode))}
+          onCancel={() => dispatch(setSleepTimer(null))}
         />
 
         {h.showVideoSurface && h.pipUiVisible && !h.controlsLocked && (
@@ -640,6 +672,7 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
               onSpeed={() => h.setSpeedPanelOpen(true)}
               onScreenshot={h.handleScreenshot}
               onToggleQueue={() => h.setQueueSheetVisible(true)}
+              onSleepTimer={() => setSleepTimerSheetVisible(true)}
               onAutoHide={() => h.setSecondaryVisible(false)}
               bottomInset={h.uiBottomInset}
             />
@@ -787,6 +820,19 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     zIndex: 25,
+  },
+  // 50.3: sleep timer countdown badge (top bar area)
+  sleepBadge: {
+    position: 'absolute',
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(201,168,76,0.85)',
+  },
+  sleepBadgeText: {
+    fontSize: 12,
+    color: '#000000',
   },
 });
 

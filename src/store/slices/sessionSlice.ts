@@ -42,7 +42,8 @@ interface SessionState {
   mediaLibrary: MediaLibraryEntry[];
 }
 
-const MAX_RECENT_FILES = 20;
+/** 47.5: history retention — 200 entries, virtualized in HistoryScreen */
+const MAX_RECENT_FILES = 200;
 const MAX_MEDIA_LIBRARY = 200;
 
 const initialState: SessionState = {

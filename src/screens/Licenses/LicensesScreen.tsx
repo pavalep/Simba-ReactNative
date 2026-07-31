@@ -25,6 +25,13 @@ interface LicenseEntry {
 
 const LICENSES: LicenseEntry[] = [
   {
+    library: 'mpv (video/audio playback engine)',
+    author: 'mpv.io developers',
+    license: 'LGPL-2.1+',
+    fullText:
+      'GNU LESSER GENERAL PUBLIC LICENSE, Version 2.1, February 1999\n\nCopyright (C) 1991, 1999 Free Software Foundation, Inc.\n51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA\n\nEveryone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.\n\nThis version of the GNU Lesser General Public License incorporates the terms and conditions of version 3 of the GNU General Public License, supplemented by the additional permissions described below. mpv can also be built under the GPL, or with parts under the GPL (see the mpv LICENSE file for details).\n\nTHE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.',
+  },
+  {
     library: 'react-native-mpv',
     author: 'MPV community',
     license: 'MIT License',
