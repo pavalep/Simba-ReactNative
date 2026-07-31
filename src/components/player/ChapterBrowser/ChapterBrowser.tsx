@@ -9,6 +9,7 @@ import {
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ export const ChapterBrowser: React.FC<ChapterBrowserProps> = ({
   onSeek,
 }) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const scrollRef = useRef<ScrollView>(null);
 
   // Find current chapter index
@@ -76,8 +78,9 @@ export const ChapterBrowser: React.FC<ChapterBrowserProps> = ({
     if (chapters.length === 0 || currentIndex < 0) return;
     const row = Math.floor(currentIndex / COLUMNS);
     const scrollY = row * (THUMB_HEIGHT + CARD_GAP + 48); // card height + gap + text area
-    scrollRef.current?.scrollTo({y: Math.max(0, scrollY - 16), animated: true});
-  }, [chapters.length, currentIndex]);
+    // 59.7: reduced motion — jump directly instead of scrolling
+    scrollRef.current?.scrollTo({y: Math.max(0, scrollY - 16), animated: !reduceMotion});
+  }, [chapters.length, currentIndex, reduceMotion]);
 
   const styles = useMemo(
     () =>
@@ -179,7 +182,10 @@ export const ChapterBrowser: React.FC<ChapterBrowserProps> = ({
                   key={globalIdx}
                   activeOpacity={0.7}
                   onPress={() => onSeek(ch.startTime)}
-                  style={[styles.card, isActive && styles.cardActive]}>
+                  style={[styles.card, isActive && styles.cardActive]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Seek to chapter ${ch.title}`}
+                  accessibilityState={{selected: isActive}}>
                   {/* Thumbnail area */}
                   <View style={styles.thumb}>
                     <AppText

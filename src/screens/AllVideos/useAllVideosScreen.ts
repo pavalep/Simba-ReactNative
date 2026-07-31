@@ -4,11 +4,18 @@
 // ────────────────────────────────────────────────────────
 
 import {useCallback, useMemo, useState} from 'react';
+import {createSelector} from '@reduxjs/toolkit';
 import {useNavigation} from '@react-navigation/native';
 import {useAppSelector} from '../../store';
 import {selectAllTracks} from '../../store/slices/mediaSlice';
 import {useMediaScanner} from '../../hooks/useMediaScanner';
 import type {ScannedTrack} from '../../store/slices/mediaSlice';
+
+// 59.2: stable selector — inline filters re-ran on EVERY store dispatch
+// (incl. mpv position ticks) and re-rendered the whole screen.
+const selectVideoTracks = createSelector([selectAllTracks], tracks =>
+  tracks.filter(t => t.mediaType === 'video'),
+);
 
 export type SortMode = 'title' | 'date';
 export type ViewMode = 'grid' | 'list';
@@ -36,9 +43,7 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
   const [refreshing, setRefreshing] = useState(false);
   const {startScan} = useMediaScanner();
 
-  const videoTracks = useAppSelector(state =>
-    selectAllTracks(state).filter(t => t.mediaType === 'video'),
-  );
+  const videoTracks = useAppSelector(selectVideoTracks);
 
   const toggleSort = useCallback(() => {
     setSortMode(s => (s === 'title' ? 'date' : 'title'));

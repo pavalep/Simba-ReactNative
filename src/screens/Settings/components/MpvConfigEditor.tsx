@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   Platform,
+  FlatList,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
@@ -381,17 +382,20 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
                 </AppText>
               </View>
             ) : (
-              localOptions.map((opt, idx) => (
-                <View
-                  key={`${opt.key}_${idx}`}
-                  style={[
-                    styles.optionRow,
-                    idx % 2 === 0 && styles.optionRowEven,
-                    editingIndex === idx && {
-                      borderWidth: 1,
-                      borderColor: colors.accent.gold,
-                    },
-                  ]}>
+              /* 59.1: virtualized option rows */
+              <FlatList
+                data={localOptions}
+                keyExtractor={(opt, idx) => `${opt.key}_${idx}`}
+                renderItem={({item: opt, index: idx}) => (
+                  <View
+                    style={[
+                      styles.optionRow,
+                      idx % 2 === 0 && styles.optionRowEven,
+                      editingIndex === idx && {
+                        borderWidth: 1,
+                        borderColor: colors.accent.gold,
+                      },
+                    ]}>
                   <View style={{flex: 1}}>
                     <AppText style={styles.optionKey} color="primary">
                       --{opt.key}
@@ -434,8 +438,11 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
                       </AppText>
                     </TouchableOpacity>
                   </View>
-                </View>
-              ))
+                  </View>
+                )}
+                scrollEnabled={false}
+                initialNumToRender={localOptions.length}
+              />
             )}
 
             {/* Add new option button */}

@@ -78,7 +78,8 @@ export const PlayerErrorFallback: React.FC<PlayerErrorFallbackProps> = ({
         <TouchableOpacity
           style={[styles.btn, {backgroundColor: colors.accent.gold}]}
           onPress={onRetry}
-          activeOpacity={0.8}>
+          activeOpacity={0.8}
+          accessibilityRole="button">
           <AppText
             variant="body2"
             style={[styles.btnLabel, {color: colors.text.primary}]}>
@@ -90,7 +91,8 @@ export const PlayerErrorFallback: React.FC<PlayerErrorFallbackProps> = ({
           <TouchableOpacity
             style={[styles.btn, styles.btnSecondary, {borderColor: colors.border.subtle}]}
             onPress={onGoBack}
-            activeOpacity={0.8}>
+            activeOpacity={0.8}
+            accessibilityRole="button">
             <AppText variant="body2" color="primary">
               {goBackLabel}
             </AppText>
@@ -101,7 +103,8 @@ export const PlayerErrorFallback: React.FC<PlayerErrorFallbackProps> = ({
           <TouchableOpacity
             style={[styles.btn, styles.btnSecondary, {borderColor: colors.accent.gold}]}
             onPress={onOpenSettings}
-            activeOpacity={0.8}>
+            activeOpacity={0.8}
+            accessibilityRole="button">
             <AppText variant="body2" color="primary">
               Open Settings
             </AppText>

@@ -3,7 +3,12 @@
 
 import {apiFetch} from './apiClient';
 import {API_CONFIG} from '../../constants/api';
-import type {ApiSearchOptions, MusicBrainzArtist, MusicBrainzRelease} from '../../types/api';
+import type {
+  ApiSearchOptions,
+  MusicBrainzArtist,
+  MusicBrainzRelease,
+  MusicBrainzReleaseGroupDetail,
+} from '../../types/api';
 
 // ─── Constants ──────────────────────────────────────────────────────────
 
@@ -48,6 +53,23 @@ interface ArtistLookupResponse {
   'release-groups': RawRelease[];
 }
 
+interface RawRecording {
+  id: string;
+  title: string;
+  length: number | null;
+}
+
+interface RawReleaseGroupDetail {
+  id: string;
+  title: string;
+  'first-release-date': string | null;
+  'primary-type': string | null;
+  recordings?: RawRecording[];
+  'cover-art-archive'?: {
+    front: boolean;
+  };
+}
+
 // ─── Mappers ────────────────────────────────────────────────────────────
 
 function toArtist(raw: RawArtist): MusicBrainzArtist {
@@ -68,8 +90,16 @@ function toRelease(raw: RawRelease): MusicBrainzRelease {
     date: raw['first-release-date'] ?? '',
     country: raw.country ?? '',
     status: raw.status ?? '',
-    coverArtUrl: null,
+    coverArtUrl:
+      raw['cover-art-archive']?.front === true
+        ? coverArtUrlFor(raw.id)
+        : null,
   };
+}
+
+/** CAA front-cover URL template for a release id (P39.2). */
+function coverArtUrlFor(releaseId: string): string {
+  return `https://coverartarchive.org/release/${releaseId}/front-250`;
 }
 
 // ─── Exported Functions ─────────────────────────────────────────────────
@@ -103,11 +133,47 @@ export async function getArtistDiscography(
   return (response['release-groups'] ?? []).map(toRelease);
 }
 
+/**
+ * Get the cover art URL for a release group (recordings + art flags, P39.3).
+ * The lookup already reports whether a front cover exists, so no extra
+ * HEAD request is needed — we construct the CAA url directly.
+ */
+export async function getReleaseGroupDetail(
+  releaseGroupId: string,
+): Promise<MusicBrainzReleaseGroupDetail | null> {
+  try {
+    const response = await apiFetch<RawReleaseGroupDetail>({
+      config: API_CONFIG.musicbrainz,
+      path: `/release-group/${releaseGroupId}`,
+      params: {inc: 'recordings', fmt: 'json'},
+      cacheTtlMs: DISCOGRAPHY_CACHE_TTL,
+      headers: {'User-Agent': USER_AGENT},
+    });
+    return {
+      id: response.id,
+      title: response.title,
+      date: response['first-release-date'] ?? '',
+      primaryType: response['primary-type'] ?? '',
+      coverArtUrl:
+        response['cover-art-archive']?.front === true
+          ? coverArtUrlFor(response.id)
+          : null,
+      recordings: (response.recordings ?? []).map(r => ({
+        id: r.id,
+        title: r.title,
+        length: r.length ?? 0,
+      })),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /** Get the cover art URL for a release. Returns null if no front cover exists (404). */
 export async function getCoverArt(
   releaseId: string,
 ): Promise<string | null> {
-  const url = `https://coverartarchive.org/release/${releaseId}/front-250`;
+  const url = coverArtUrlFor(releaseId);
 
   try {
     const response = await fetch(url, {method: 'HEAD'});

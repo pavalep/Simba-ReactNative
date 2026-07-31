@@ -1,9 +1,10 @@
 import React, {useRef, useCallback} from 'react';
-import {View, TouchableOpacity, StyleSheet, Animated, Share, Platform} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, Animated, Platform} from 'react-native';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {AppText} from '../../core/AppText/AppText';
 import {radius, spacing} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
+import {shareContent} from '../../../services/shareService';
 
 interface AudioActionRowProps {
   colors: ColorTokens;
@@ -16,6 +17,10 @@ interface AudioActionRowProps {
   onOpenSubMenu: () => void;
   liked: boolean;
   onLike: () => void;
+  // 56.4: real share payload (deep link + https fallback)
+  shareTitle?: string;
+  shareArtist?: string;
+  shareUri?: string;
 }
 
 /**
@@ -34,6 +39,9 @@ export const AudioActionRow: React.FC<AudioActionRowProps> = ({
   onOpenSubMenu,
   liked,
   onLike,
+  shareTitle,
+  shareArtist,
+  shareUri,
 }) => {
   const heartScale = useRef(new Animated.Value(1)).current;
 
@@ -69,10 +77,16 @@ export const AudioActionRow: React.FC<AudioActionRowProps> = ({
   }, [onLike, heartScale]);
 
   const handleShare = useCallback(async () => {
-    try {
-      await Share.share({message: 'Check out this track on SIMBA Player'});
-    } catch {}
-  }, []);
+    // 56.4: share a real deep link instead of a generic message
+    await shareContent({
+      route: 'AudioPlayer',
+      params: shareUri
+        ? {fileUri: shareUri, fileTitle: shareTitle ?? ''}
+        : undefined,
+      title: shareTitle ?? 'Audio',
+      subtitle: shareArtist,
+    });
+  }, [shareUri, shareTitle, shareArtist]);
 
   const btnStyle = {
     backgroundColor: colors.background.elevated,
@@ -106,7 +120,7 @@ export const AudioActionRow: React.FC<AudioActionRowProps> = ({
           activeOpacity={0.7}
           accessibilityLabel="Share"
           accessibilityRole="button">
-          <SvgIcon name="maximize" size={20} color={colors.text.primary} />
+          <SvgIcon name="share" size={20} color={colors.text.primary} />
         </TouchableOpacity>
 
         <TouchableOpacity

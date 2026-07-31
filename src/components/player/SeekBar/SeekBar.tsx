@@ -2,6 +2,7 @@ import React, {useRef, useState, useCallback, useMemo, useEffect} from 'react';
 import {View, PanResponder, Animated, TouchableOpacity, StyleSheet, LayoutChangeEvent} from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
 import {useTheme} from '../../../theme';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 import {useDebounce} from '../../../hooks/useDebounce';
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -48,6 +49,7 @@ const SeekBar: React.FC<SeekBarProps> = ({
   trackHeight = 16,
 }) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
 
   // Keep the thumb responsive without allowing a fast native event stream to
   // make the rest of the screen feel busy.
@@ -84,6 +86,11 @@ const SeekBar: React.FC<SeekBarProps> = ({
   // ── Chapter marks pulse animation ──
   useEffect(() => {
     if (!chapters || chapters.length === 0) return;
+    if (reduceMotion) {
+      // 59.7: reduced motion — static marks, no pulse loop
+      pulseAnim.setValue(0);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -100,7 +107,7 @@ const SeekBar: React.FC<SeekBarProps> = ({
     );
     loop.start();
     return () => loop.stop();
-  }, [chapters, pulseAnim]);
+  }, [chapters, pulseAnim, reduceMotion]);
 
   const markOpacity = pulseAnim.interpolate({
     inputRange: [0, 1],
@@ -285,6 +292,14 @@ const SeekBar: React.FC<SeekBarProps> = ({
           min: 0,
           max: 100,
           now: Math.round(displayFraction * 100),
+        }}
+        onAccessibilityAction={event => {
+          // 59.6: TalkBack swipe up/down steps the position by 5%
+          if (event.nativeEvent.actionName === 'increment') {
+            onSeek(Math.min(1, displayFraction + 0.05));
+          } else if (event.nativeEvent.actionName === 'decrement') {
+            onSeek(Math.max(0, displayFraction - 0.05));
+          }
         }}
         {...panResponder.panHandlers}>
         {/* Background track */}

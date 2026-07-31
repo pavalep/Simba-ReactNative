@@ -6,6 +6,7 @@ import {
   Animated,
   PanResponder,
 } from 'react-native';
+import FastImage from 'react-native-fast-image';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../core/AppText/AppText';
@@ -137,27 +138,38 @@ export const BookmarkItem: React.FC<Props> = ({
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={`Play ${item.title} at ${formatTime(item.position)}`}>
-            {/* Gold bookmark icon */}
-            <View
-              style={[
-                styles.iconContainer,
-                {backgroundColor: colors.background.elevated},
-              ]}>
-              <SvgIcon
-                name="bookmark"
-                size={22}
-                color={colors.accent.gold}
-              />
-            </View>
+            {/* Thumbnail art when available, else gold bookmark icon (P34.6) */}
+            {item.thumbnailPath ? (
+              <View style={[styles.iconContainer, styles.thumbWrap]}>
+                <FastImage
+                  source={{uri: item.thumbnailPath}}
+                  style={styles.thumbImage}
+                  resizeMode={FastImage.resizeMode.cover}
+                />
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.iconContainer,
+                  {backgroundColor: colors.background.elevated},
+                ]}>
+                <SvgIcon
+                  name="bookmark"
+                  size={22}
+                  color={colors.accent.gold}
+                />
+              </View>
+            )}
 
             {/* Info */}
             <View style={styles.info}>
               <AppText variant="body2" color="primary" numberOfLines={1}>
                 {item.title}
               </AppText>
-              <AppText variant="caption" color="secondary">
+              <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {formatTime(item.position)} · {formatRelativeDate(item.createdAt)}
                 {item.label ? ` · "${item.label}"` : ''}
+                {item.source ? ` · ${item.source}` : ''}
               </AppText>
             </View>
 
@@ -204,6 +216,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  thumbWrap: {
+    overflow: 'hidden',
+  },
+  thumbImage: {
+    width: 44,
+    height: 44,
   },
   info: {
     flex: 1,

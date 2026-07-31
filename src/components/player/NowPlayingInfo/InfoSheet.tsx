@@ -3,6 +3,7 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   StyleSheet,
   ViewStyle,
   TextStyle,
@@ -78,27 +79,35 @@ export const InfoSheet: React.FC<InfoSheetProps> = ({
           )}
         </View>
       }>
-      {/* ── Tab bar ── */}
+      {/* ── Tab bar (59.1: virtualized) ── */}
       <View style={[styles.tabBar, {borderBottomColor: colors.border.subtle}]}>
-        {tabs.map(tab => (
-          <TouchableOpacity
-            key={tab.key}
-            activeOpacity={0.7}
-            onPress={() => setActiveTab(tab.key)}
-            style={[
-              styles.tab,
-              activeTab === tab.key && {
-                borderBottomColor: colors.accent.gold,
-                borderBottomWidth: 2,
-              },
-            ]}>
-            <AppText
-              variant="body2"
-              color={activeTab === tab.key ? 'accent' : 'secondary'}>
-              {tab.label}
-            </AppText>
-          </TouchableOpacity>
-        ))}
+        <FlatList
+          horizontal
+          data={tabs}
+          keyExtractor={tab => tab.key}
+          renderItem={({item: tab}) => (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setActiveTab(tab.key)}
+              style={[
+                styles.tab,
+                activeTab === tab.key && {
+                  borderBottomColor: colors.accent.gold,
+                  borderBottomWidth: 2,
+                },
+              ]}>
+              <AppText
+                variant="body2"
+                color={activeTab === tab.key ? 'accent' : 'secondary'}>
+                {tab.label}
+              </AppText>
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.tabRail}
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={false}
+          initialNumToRender={tabs.length}
+        />
       </View>
 
       {/* ── Content ── */}
@@ -153,38 +162,44 @@ const RelatedTab: React.FC<RelatedTabProps> = ({tracks, onPlayTrack, colors}) =>
 
   return (
     <View style={relatedContainer}>
-      {tracks.map((track, idx) => (
-        <TouchableOpacity
-          key={`${track.uri}-${idx}`}
-          style={[
-            relatedItem,
-            {borderBottomColor: colors.border.subtle},
-          ]}
-          activeOpacity={0.7}
-          onPress={() => onPlayTrack?.(track)}
-          accessibilityLabel={`Play ${track.title}`}
-          accessibilityRole="button">
-          <View style={relatedItemLeft}>
-            <View style={[relatedNum, {backgroundColor: colors.background.elevated}]}>
-              <AppText variant="caption" color="tertiary">
-                {idx + 1}
-              </AppText>
+      {/* 59.1: virtualized row list inside the sheet's ScrollView */}
+      <FlatList
+        data={tracks}
+        keyExtractor={(track, idx) => `${track.uri}-${idx}`}
+        renderItem={({item: track, index: idx}) => (
+          <TouchableOpacity
+            style={[
+              relatedItem,
+              {borderBottomColor: colors.border.subtle},
+            ]}
+            activeOpacity={0.7}
+            onPress={() => onPlayTrack?.(track)}
+            accessibilityLabel={`Play ${track.title}`}
+            accessibilityRole="button">
+            <View style={relatedItemLeft}>
+              <View style={[relatedNum, {backgroundColor: colors.background.elevated}]}>
+                <AppText variant="caption" color="tertiary">
+                  {idx + 1}
+                </AppText>
+              </View>
+              <View style={relatedItemInfo}>
+                <AppText variant="body2" color="primary" numberOfLines={1}>
+                  {track.title || 'Unknown Track'}
+                </AppText>
+                <AppText variant="caption" color="tertiary" numberOfLines={1}>
+                  {track.artist || 'Unknown Artist'}
+                  {track.album ? `  ·  ${track.album}` : ''}
+                </AppText>
+              </View>
             </View>
-            <View style={relatedItemInfo}>
-              <AppText variant="body2" color="primary" numberOfLines={1}>
-                {track.title || 'Unknown Track'}
-              </AppText>
-              <AppText variant="caption" color="tertiary" numberOfLines={1}>
-                {track.artist || 'Unknown Artist'}
-                {track.album ? `  ·  ${track.album}` : ''}
-              </AppText>
-            </View>
-          </View>
-          {onPlayTrack && (
-            <SvgIcon name="play" size={16} color={colors.accent.gold} />
-          )}
-        </TouchableOpacity>
-      ))}
+            {onPlayTrack && (
+              <SvgIcon name="play" size={16} color={colors.accent.gold} />
+            )}
+          </TouchableOpacity>
+        )}
+        scrollEnabled={false}
+        initialNumToRender={tracks.length}
+      />
     </View>
   );
 };
@@ -214,10 +229,12 @@ const addBtnLabel: TextStyle = {
 
 const styles = StyleSheet.create({
   tabBar: {
-    flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
     marginBottom: spacing.md,
+  },
+  tabRail: {
+    flexDirection: 'row',
   },
   tab: {
     paddingVertical: spacing.sm,

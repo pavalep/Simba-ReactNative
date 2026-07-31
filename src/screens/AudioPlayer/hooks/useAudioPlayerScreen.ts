@@ -37,8 +37,10 @@ import {
   validateMediaFile,
   getMediaType,
 } from '../../../services/fileService';
+import {isRemoteUri, sourceFromUri} from '../../../utils/mediaUri';
 import {readTrackMetadata, EMPTY_METADATA, TrackMetadata} from '../../../services/metadataService';
 import {loadLrc} from '../../../services/lrcService';
+import {cacheArt} from '../../../services/artCacheService';
 import type {LrcLine} from '../../../utils/lrcParser';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
@@ -58,6 +60,21 @@ export function useAudioPlayerScreen(
   // ── Route params ──
   const title = route.params?.fileTitle ?? 'Unknown Track';
   const fileUri = route.params?.fileUri ?? null;
+  // P33.6: remote stream metadata — artwork URL to disk-cache, source label
+  const artworkUri = route.params?.artworkUri;
+  const routeSource = route.params?.source;
+  const sourceLabel = routeSource ?? sourceFromUri(fileUri);
+  // 58.2: explicit resume intent (e.g. Continue Listening on Home) — silent
+  // seek; implicit saved positions ask via the resume overlay instead.
+  const startPosition = route.params?.startPosition;
+
+  // ── P37.3: audiobook chapter list — drives EOF auto-advance ──
+  const chapterList = route.params?.chapterList;
+  const chapterIndexParam = route.params?.chapterIndex ?? 0;
+  // activeUri/activeTitle track the *currently loaded* file (route params
+  // only describe the first file; chapters advance beyond them).
+  const [activeUri, setActiveUri] = useState<string | null>(fileUri);
+  const [activeTitle, setActiveTitle] = useState<string>(title);
 
   // ── Core playback state ──
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +96,8 @@ export function useAudioPlayerScreen(
   const [queueSheetVisible, setQueueSheetVisible] = useState(false);
   const [queueMultiSelect, setQueueMultiSelect] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  // 58.2: saved-position resume choice (mirrors 31.2 video overlay)
+  const [resumePrompt, setResumePrompt] = useState<{position: number} | null>(null);
 
   // ── Bookmark state ──
   const [bookmarkSheetVisible, setBookmarkSheetVisible] = useState(false);
@@ -87,7 +106,7 @@ export function useAudioPlayerScreen(
     bookmarkCountForFile: audioBookmarkCount,
     add: addAudioBookmark,
     remove: removeAudioBookmark,
-  } = useBookmarks(fileUri ?? undefined);
+  } = useBookmarks(activeUri ?? undefined);
 
   const handleOpenBookmarkSheet = useCallback(() => {
     setBookmarkSheetVisible(true);
@@ -111,9 +130,12 @@ export function useAudioPlayerScreen(
         duration: dur,
         label: label ?? '',
         mediaType: 'audio',
+        // P34.2: keep art + origin so bookmarks restore the stream context
+        thumbnailPath: remoteArtPathRef.current || undefined,
+        source: sourceLabel,
       });
     },
-    [addAudioBookmark, title],
+    [addAudioBookmark, title, sourceLabel],
   );
 
   const handleBookmarkDelete = useCallback(
@@ -156,12 +178,33 @@ export function useAudioPlayerScreen(
 
   // ── Refs ──
   const isSeeking = useRef(false);
-  const fileUriRef = useRef<string | undefined>(fileUri);
+  const fileUriRef = useRef<string | null>(activeUri);
   const playbackSpeedRef = useRef(1.0);
+  // P37.3: fresh values for the EOF auto-advance listener without
+  // re-subscribing on every chapter / playlist change.
+  const activeTitleRef = useRef(activeTitle);
+  const chapterListRef = useRef(chapterList);
+  const chapterIndexRef = useRef(chapterIndexParam);
+  const playlistRef = useRef(playlist);
+  const currentIndexRef = useRef(currentIndex);
+  const loopModeRef = useRef(loopMode);
+
+  // P33.3: retry nonce re-runs the init effect (true reload); backoff counter
+  // for remote-stream auto-retries on mpv load errors
+  const [retryNonce, setRetryNonce] = useState(0);
+  const retryCountRef = useRef(0);
+
+  // P33.6: cached local path for remote artwork — feeds recents/bookmarks
+  const remoteArtPathRef = useRef('');
 
   // ── Sync refs ──
-  useEffect(() => { fileUriRef.current = fileUri; }, [fileUri]);
+  useEffect(() => { fileUriRef.current = activeUri; }, [activeUri]);
   useEffect(() => { sessionRecentRef.current = sessionRecent; }, [sessionRecent]);
+  useEffect(() => { activeTitleRef.current = activeTitle; }, [activeTitle]);
+  useEffect(() => { chapterListRef.current = chapterList; }, [chapterList]);
+  useEffect(() => { playlistRef.current = playlist; }, [playlist]);
+  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
+  useEffect(() => { loopModeRef.current = loopMode; }, [loopMode]);
 
   // ── Playback speed (persisted in playerSlice) ──
   const playbackSpeed = useAppSelector(state => state.player.playbackSpeed);
@@ -198,25 +241,28 @@ export function useAudioPlayerScreen(
         return;
       }
 
-      try {
-        const validation = await validateMediaFile(fileUri);
-        if (cancelled) return;
-        if (!validation.valid) {
-          setError(validation.title);
-          setIsLoading(false);
-          logError({
-            code: 'ERR_FILE_INVALID',
-            message: validation.message,
-            detail: validation.detail || '',
-            source: 'AudioPlayerScreen',
-          });
-          if (validation.title === 'Permission Denied') {
-            setErrorIsPermission(true);
+      // P33: remote streams skip local-file validation (network-loaded by mpv)
+      if (!isRemoteUri(fileUri)) {
+        try {
+          const validation = await validateMediaFile(fileUri);
+          if (cancelled) return;
+          if (!validation.valid) {
+            setError(validation.title);
+            setIsLoading(false);
+            logError({
+              code: 'ERR_FILE_INVALID',
+              message: validation.message,
+              detail: validation.detail || '',
+              source: 'AudioPlayerScreen',
+            });
+            if (validation.title === 'Permission Denied') {
+              setErrorIsPermission(true);
+            }
+            return;
           }
-          return;
+        } catch {
+          logError({code: 'ERR_VALIDATE_FAIL', message: 'File validation threw unexpectedly', source: 'AudioPlayerScreen'});
         }
-      } catch {
-        logError({code: 'ERR_VALIDATE_FAIL', message: 'File validation threw unexpectedly', source: 'AudioPlayerScreen'});
       }
 
       try {
@@ -245,12 +291,19 @@ export function useAudioPlayerScreen(
         unsubLoaded = MpvPlayer.on('onFileLoaded', () => {
           if (cancelled || initialLoadDone) return;
           initialLoadDone = true;
+          retryCountRef.current = 0; // P33.3: a successful load resets backoff
           const saved = sessionRecentRef.current.find(f => f.fileUri === fileUri);
           const resumePosition = saved?.position ?? 0;
-          if (resumePosition > 0) {
+          const explicitPosition = startPosition ?? 0;
+          if (explicitPosition > 0) {
+            // 58.2: explicit navigation intent (Continue Listening) — silent seek
             setTimeout(() => {
-              try { MpvPlayer.seekTo(resumePosition); } catch {}
+              try { MpvPlayer.seekTo(explicitPosition); } catch {}
             }, 200);
+          } else if (resumePosition > 0) {
+            // 58.2: implicit resume — ask the user instead of silent auto-seek
+            try { MpvPlayer.pause(); } catch {}
+            setResumePrompt({position: resumePosition});
           }
         });
 
@@ -258,7 +311,7 @@ export function useAudioPlayerScreen(
         setIsLoading(false);
 
         // Track the file in Redux so MiniAudioPlayer persists after back
-        dispatch(playFile({uri: fileUri, title, duration: 0}));
+        dispatch(playFile({uri: fileUri, title, duration: 0, source: sourceLabel}));
       } catch (e) {
         if (!cancelled) {
           setError('Player initialization failed.');
@@ -272,7 +325,48 @@ export function useAudioPlayerScreen(
       cancelled = true;
       unsubLoaded?.();
     };
-  }, [fileUri, title, dispatch]);
+  }, [fileUri, title, dispatch, retryNonce, sourceLabel, startPosition]);
+
+  // ── 58.2: Resume / Start Over choice on load (mirrors 31.2 video) ──
+  const handleResumeChoice = useCallback(
+    (shouldResume: boolean) => {
+      if (!resumePrompt) return;
+      const pos = resumePrompt.position;
+      setResumePrompt(null);
+      if (shouldResume && pos > 1) {
+        setTimeout(() => {
+          try { MpvPlayer.seekTo(pos); } catch {}
+        }, 50);
+      }
+      MpvPlayer.resume();
+    },
+    [resumePrompt],
+  );
+
+  // ── P33.6: remote artwork → disk LRU cache; local path powers player art
+  //     and the thumbnail saved to recents (works offline, no repeat fetches)
+  useEffect(() => {
+    if (!artworkUri) return;
+    // P34.3: local artwork (file:// path from art cache / playlist thumbnails)
+    // can be used directly — no download needed.
+    if (!isRemoteUri(artworkUri)) {
+      remoteArtPathRef.current = artworkUri;
+      setMetadata(prev =>
+        prev.albumArtUri ? prev : {...prev, albumArtUri: artworkUri},
+      );
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const cached = await cacheArt(artworkUri);
+      if (cancelled || !cached) return;
+      remoteArtPathRef.current = cached;
+      setMetadata(prev => (prev.albumArtUri ? prev : {...prev, albumArtUri: cached}));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [artworkUri]);
 
   // ── Load metadata, chapters, and lyrics when file loads ──
   useEffect(() => {
@@ -289,10 +383,10 @@ export function useAudioPlayerScreen(
         if (notificationsEnabledRef.current) {
           NotificationService.start(
             {
-              title: meta.title || title || 'Unknown Track',
+              title: meta.title || activeTitle || 'Unknown Track',
               artist: meta.artist || '',
               album: meta.album || '',
-              fileUri,
+              fileUri: activeUri ?? '',
               artworkPath: meta.albumArtUri || '',
               mediaType: 'audio',
             },
@@ -331,10 +425,10 @@ export function useAudioPlayerScreen(
         if (notificationsEnabledRef.current) {
           NotificationService.start(
             {
-              title: title || 'Unknown Track',
+              title: activeTitle || 'Unknown Track',
               artist: '',
               album: '',
-              fileUri,
+              fileUri: activeUri ?? '',
               artworkPath: '',
               mediaType: 'audio',
             },
@@ -347,19 +441,19 @@ export function useAudioPlayerScreen(
     return () => {
       cancelled = true;
     };
-  }, [isReady, fileUri, title]);
+  }, [isReady, fileUri, activeTitle, activeUri]);
 
   // ── 51.3: keep the media notification in sync with playback ──
   useEffect(() => {
-    if (!isReady || !fileUri) return;
+    if (!isReady || !activeUri) return;
     const interval = setInterval(() => {
       if (!notificationsEnabledRef.current) return;
       NotificationService.update(
         {
-          title: metadata.title || title || 'Unknown Track',
+          title: metadata.title || activeTitle || 'Unknown Track',
           artist: metadata.artist || '',
           album: metadata.album || '',
-          fileUri,
+          fileUri: activeUri,
           artworkPath: metadata.albumArtUri || '',
           mediaType: 'audio',
         },
@@ -371,7 +465,7 @@ export function useAudioPlayerScreen(
       );
     }, 1000);
     return () => clearInterval(interval);
-  }, [isReady, fileUri, metadata, title]);
+  }, [isReady, activeUri, metadata, activeTitle]);
 
   // ── Retry chapter loading after duration is known ──
   useEffect(() => {
@@ -423,11 +517,12 @@ export function useAudioPlayerScreen(
       dispatch(
         savePlaybackPosition({
           fileUri: curUri,
-          title,
+          title: activeTitleRef.current,
           position: curPos,
           duration: curDur,
-          thumbnailPath: '',
+          thumbnailPath: remoteArtPathRef.current || '',
           mediaType: 'audio',
+          source: sourceLabel,
         }),
       );
     }
@@ -439,7 +534,7 @@ export function useAudioPlayerScreen(
     NotificationService.stop();
 
     navigation.goBack();
-  }, [dispatch, navigation, title]);
+  }, [dispatch, navigation, sourceLabel]);
 
   const handlePlayPause = useCallback(() => {
     try {
@@ -453,18 +548,69 @@ export function useAudioPlayerScreen(
   }, [haptics]);
 
   const handlePrev = useCallback(() => {
+    // P37.3: with a chapter list, back = previous chapter (or restart)
+    const list = chapterListRef.current;
+    if (list && list.length > 0) {
+      const pos = MpvPlayer.getPosition?.() ?? 0;
+      if (pos > 5) {
+        MpvPlayer.seekTo(0);
+        return;
+      }
+      const idx = chapterIndexRef.current;
+      if (idx <= 0) {
+        MpvPlayer.seekTo(0);
+        return;
+      }
+      const prev = list[idx - 1];
+      chapterIndexRef.current = idx - 1;
+      setActiveUri(prev.uri);
+      setActiveTitle(prev.title);
+      dispatch(playFile({uri: prev.uri, title: prev.title, duration: prev.duration ?? 0, source: sourceLabel}));
+      MpvPlayer.loadFile(prev.uri);
+      return;
+    }
     MpvPlayer.seekTo(0);
-  }, []);
+  }, [dispatch, sourceLabel]);
+
+  // ── P37.3: load the next chapter when a chapter list is active ──
+  const playNextChapter = useCallback(() => {
+    const list = chapterListRef.current;
+    if (!list || list.length === 0) return false;
+    const nextIdx = chapterIndexRef.current + 1;
+    if (nextIdx >= list.length) return false; // end of the book
+    const next = list[nextIdx];
+    chapterIndexRef.current = nextIdx;
+    setActiveUri(next.uri);
+    setActiveTitle(next.title);
+    dispatch(playFile({uri: next.uri, title: next.title, duration: next.duration ?? 0, source: sourceLabel}));
+    // Cross-chapter resume: continue where this chapter was left off
+    const recent = sessionRecentRef.current.find(r => r.fileUri === next.uri);
+    MpvPlayer.loadFile(next.uri);
+    if (recent && recent.position > 0) {
+      const pos = recent.position;
+      setTimeout(() => {
+        try { MpvPlayer.seekTo(pos); } catch {}
+      }, 250);
+    }
+    return true;
+  }, [dispatch, sourceLabel]);
 
   const handleNext = useCallback(() => {
+    // P37.3: chapter list (audiobook) takes precedence over the playlist
+    if (playNextChapter()) return;
     if (playlist.length > 0 && currentIndex < playlist.length - 1) {
       const nextIdx = currentIndex + 1;
       const entry = playlist[nextIdx];
       if (!entry) return;
       dispatch(nextTrack());
-      // 32.9 mixed-queue handoff: next item is video → seamless player swap
-      if (getMediaType(entry.uri) === 'video') {
-        navigation.replace('VideoPlayer', {fileUri: entry.uri, fileTitle: entry.title});
+      // 32.9 mixed-queue handoff: next item is video → seamless player swap.
+      // P34.4: mediaType wins for extensionless remote URLs.
+      if ((entry.mediaType ?? getMediaType(entry.uri)) === 'video') {
+        navigation.replace('VideoPlayer', {
+          fileUri: entry.uri,
+          fileTitle: entry.title,
+          source: entry.source,
+        });
         return;
       }
       MpvPlayer.loadFile(entry.uri);
@@ -472,7 +618,7 @@ export function useAudioPlayerScreen(
       const dur = MpvPlayer.getDuration?.() ?? 0;
       MpvPlayer.seekTo(dur);
     }
-  }, [playlist, currentIndex, dispatch, navigation]);
+  }, [playlist, currentIndex, dispatch, navigation, playNextChapter]);
 
   const handleSeek = useCallback((pct: number) => {
     isSeeking.current = true;
@@ -667,7 +813,88 @@ export function useAudioPlayerScreen(
     setErrorIsPermission(false);
     setIsReady(false);
     setIsLoading(true);
+    // P33.3: bump the nonce so the init effect actually re-runs (real reload)
+    setRetryNonce(n => n + 1);
   }, []);
+
+  // ── P33.3: remote-stream error auto-retry with exponential backoff ──
+  useEffect(() => {
+    const unsubError = MpvPlayer.on('onError', ({message: errMsg}) => {
+      const uri = fileUriRef.current;
+      if (!uri || !isRemoteUri(uri)) return;
+
+      if (retryCountRef.current >= 3) {
+        retryCountRef.current = 0;
+        setError(errMsg || 'Stream playback failed.');
+        setIsLoading(false);
+        logError({
+          code: 'ERR_STREAM_FAIL',
+          message: errMsg || 'Stream playback failed.',
+          source: 'AudioPlayerScreen',
+        });
+        return;
+      }
+
+      const attempt = retryCountRef.current + 1;
+      retryCountRef.current = attempt;
+      // 1.5s, 3s, 6s — back off on repeated failures
+      const delay = 1500 * 2 ** (attempt - 1);
+      setTimeout(() => {
+        try {
+          MpvPlayer.loadFile(uri);
+        } catch {}
+      }, delay);
+    });
+
+    return () => {
+      unsubError();
+      retryCountRef.current = 0;
+    };
+  }, []);
+
+  // ── P37.3: auto-advance when the current file ends ──
+  useEffect(() => {
+    const unsubEnd = MpvPlayer.on('onEndReached', () => {
+      // 1. Loop-file mode replays the current track
+      if (loopModeRef.current === 'file') {
+        MpvPlayer.seekTo(0);
+        try { MpvPlayer.resume(); } catch {}
+        return;
+      }
+      // 2. Audiobook chapter list — advance to the next chapter
+      if (playNextChapter()) return;
+      // 3. Regular playlist — advance (video handoff mirrors handleNext)
+      const list = playlistRef.current;
+      const idx = currentIndexRef.current;
+      if (list.length > 0 && idx < list.length - 1) {
+        const entry = list[idx + 1];
+        if (!entry) return;
+        dispatch(nextTrack());
+        if ((entry.mediaType ?? getMediaType(entry.uri)) === 'video') {
+          navigation.replace('VideoPlayer', {
+            fileUri: entry.uri,
+            fileTitle: entry.title,
+            source: entry.source,
+          });
+          return;
+        }
+        MpvPlayer.loadFile(entry.uri);
+        return;
+      }
+      // 4. Playlist loop — wrap to the first track
+      if (loopModeRef.current === 'playlist' && list.length > 0) {
+        const first = list[0];
+        if (!first) return;
+        dispatch(nextTrack());
+        MpvPlayer.loadFile(first.uri);
+      }
+      // Otherwise the file simply ends (mpv stops) — expected.
+    });
+
+    return () => {
+      unsubEnd();
+    };
+  }, [dispatch, navigation, playNextChapter]);
 
   return {
     // Theme
@@ -677,8 +904,9 @@ export function useAudioPlayerScreen(
     dispatch,
 
     // Route
-    title,
-    fileUri,
+    title: activeTitle,
+    fileUri: activeUri,
+    sourceLabel,
 
     // State
     isLoading,
@@ -697,6 +925,8 @@ export function useAudioPlayerScreen(
     queueMultiSelect,
     isPlaying,
     relatedTracks,
+    // 58.2: saved-position resume choice
+    resumePrompt,
 
     // Bookmark state
     bookmarkSheetVisible,
@@ -758,6 +988,8 @@ export function useAudioPlayerScreen(
     handleInfoAddToPlaylist,
     handlePlayRelatedTrack,
     handleRetry,
+    // 58.2: resume overlay handlers
+    handleResumeChoice,
 
     // Bookmark handlers
     handleOpenBookmarkSheet,

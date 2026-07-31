@@ -5,6 +5,7 @@ import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {useNavigation} from '@react-navigation/native';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 
 interface HomeEmptyStateProps {
   onOpenMedia: () => void;
@@ -16,10 +17,16 @@ export const HomeEmptyState: React.FC<HomeEmptyStateProps> = ({
   onBrowseLibrary,
 }) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const navigation = useNavigation<any>();
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      // 59.7: reduced motion — static logo, no pulse loop
+      pulseAnim.setValue(1);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -36,7 +43,7 @@ export const HomeEmptyState: React.FC<HomeEmptyStateProps> = ({
     );
     loop.start();
     return () => loop.stop();
-  }, [pulseAnim]);
+  }, [pulseAnim, reduceMotion]);
 
   const handleBrowseLibrary = () => {
     if (onBrowseLibrary) {
@@ -121,6 +128,7 @@ export const HomeEmptyState: React.FC<HomeEmptyStateProps> = ({
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={onOpenMedia}
+        accessibilityRole="button"
         style={[styles.ctaPrimary, {backgroundColor: colors.accent.gold}]}>
         <AppText style={styles.ctaPrimaryText}>Open Media File</AppText>
       </TouchableOpacity>
@@ -129,6 +137,7 @@ export const HomeEmptyState: React.FC<HomeEmptyStateProps> = ({
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={handleBrowseLibrary}
+        accessibilityRole="button"
         style={[
           styles.ctaSecondary,
           {borderColor: colors.border.subtle},

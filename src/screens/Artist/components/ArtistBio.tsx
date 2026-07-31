@@ -51,7 +51,9 @@ export const ArtistBio: React.FC<ArtistBioProps> = ({bio}) => {
             <TouchableOpacity
               onPress={toggleExpanded}
               activeOpacity={0.7}
-              style={styles.toggleBtn}>
+              style={styles.toggleBtn}
+              accessibilityRole="button"
+              accessibilityLabel={expanded ? 'Show less' : 'Show more'}>
               <AppText variant="body2" color="accent">
                 {expanded ? 'Show less' : 'Show more'}
               </AppText>

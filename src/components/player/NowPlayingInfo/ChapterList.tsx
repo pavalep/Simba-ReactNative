@@ -93,7 +93,10 @@ export const ChapterList: React.FC<ChapterListProps> = ({
                   : 'transparent',
                 borderColor: colors.border.subtle,
               },
-            ]}>
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Seek to chapter ${item.title}`}
+            accessibilityState={{selected: isActive}}>
             {/* Thumbnail */}
             <View style={[styles.thumb, {backgroundColor: colors.background.elevated}]}>
               {item.thumbnail ? (

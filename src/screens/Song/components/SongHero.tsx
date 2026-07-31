@@ -69,7 +69,11 @@ export const SongHero: React.FC<SongHeroProps> = ({
       </AppText>
 
       {/* Artist link */}
-      <TouchableOpacity onPress={onArtistPress} activeOpacity={0.7}>
+      <TouchableOpacity
+        onPress={onArtistPress}
+        activeOpacity={0.7}
+        accessibilityRole="link"
+        accessibilityLabel={`View artist ${artist}`}>
         <AppText variant="body1" color="accent">
           {artist}
         </AppText>
@@ -77,7 +81,12 @@ export const SongHero: React.FC<SongHeroProps> = ({
 
       {/* Album link */}
       {album && onAlbumPress && (
-        <TouchableOpacity onPress={onAlbumPress} activeOpacity={0.7} style={styles.albumRow}>
+        <TouchableOpacity
+          onPress={onAlbumPress}
+          activeOpacity={0.7}
+          style={styles.albumRow}
+          accessibilityRole="link"
+          accessibilityLabel={`View album ${album}`}>
           <AppText variant="body2" color="tertiary">
             {album}
           </AppText>

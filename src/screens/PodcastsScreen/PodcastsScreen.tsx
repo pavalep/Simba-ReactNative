@@ -5,7 +5,6 @@
 import React, {useCallback, useMemo} from 'react';
 import {
   View,
-  ScrollView,
   FlatList,
   TouchableOpacity,
   RefreshControl,
@@ -25,6 +24,7 @@ import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {ErrorState} from '../../components/feedback/ErrorState/ErrorState';
 import {SkeletonList} from '../../components/core/Skeleton/SkeletonList';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
+import FastImage from 'react-native-fast-image';
 import type {PodcastResult} from '../../types/api';
 
 // ─── Props ─────────────────────────────────────────────────────────────
@@ -48,6 +48,8 @@ const CategoryChip: React.FC<CategoryChipProps> = React.memo(
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => onPress(category.id)}
+        accessibilityRole="button"
+        accessibilityState={{selected: isSelected}}
         style={[
           styles.chip,
           {
@@ -92,6 +94,7 @@ const PodcastCard: React.FC<PodcastCardProps> = React.memo(
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={() => onPress(item)}
+        accessibilityRole="button"
         style={[
           styles.podcastCard,
           {backgroundColor: colors.background.elevated},
@@ -102,7 +105,15 @@ const PodcastCard: React.FC<PodcastCardProps> = React.memo(
             styles.podcastImage,
             {backgroundColor: colors.border.subtle},
           ]}>
-          <SvgIcon name="music" size={24} color={colors.accent.goldDim} />
+          {item.image ? (
+            <FastImage
+              source={{uri: item.image}}
+              style={styles.podcastImage}
+              resizeMode={FastImage.resizeMode.cover}
+            />
+          ) : (
+            <SvgIcon name="music" size={24} color={colors.accent.goldDim} />
+          )}
         </View>
 
         {/* Info column */}
@@ -147,7 +158,7 @@ const PodcastCard: React.FC<PodcastCardProps> = React.memo(
 // ─── Screen ────────────────────────────────────────────────────────────
 
 export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
-  navigation: _navigation,
+  navigation,
   route,
   onPodcastPress,
 }) => {
@@ -181,9 +192,15 @@ export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
     (item: PodcastResult) => {
       if (onPodcastPress) {
         onPodcastPress(item);
+        return;
       }
+      // 35.1: default navigation when not embedded (Home passes its own)
+      navigation.navigate('PodcastDetail', {
+        podcastId: item.id,
+        podcastTitle: item.title,
+      });
     },
-    [onPodcastPress],
+    [onPodcastPress, navigation],
   );
 
   // Derive the current results key
@@ -221,19 +238,23 @@ export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
           styles.chipSection,
           {borderBottomColor: colors.border.subtle},
         ]}>
-        <ScrollView
+        <FlatList
           horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipScroll}>
-          {PODCAST_CATEGORIES.map(cat => (
+          data={PODCAST_CATEGORIES}
+          keyExtractor={cat => String(cat.id)}
+          renderItem={({item: cat}) => (
             <CategoryChip
-              key={cat.id}
               category={cat}
               isSelected={selectedCategory === cat.id}
               onPress={handleCategoryPress}
             />
-          ))}
-        </ScrollView>
+          )}
+          contentContainerStyle={styles.chipScroll}
+          showsHorizontalScrollIndicator={false}
+          initialNumToRender={PODCAST_CATEGORIES.length}
+          windowSize={5}
+          maxToRenderPerBatch={12}
+        />
       </View>
 
       {/* ── Content Area ── */}

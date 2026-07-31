@@ -1,5 +1,5 @@
 import React from 'react';
-import {StyleSheet, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, TouchableOpacity, View, FlatList} from 'react-native';
 import FastImage from 'react-native-fast-image';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -33,10 +33,13 @@ export const HomeBookmarksList: React.FC<Props> = ({items, onPress, onRemove}) =
         </View>
         <SvgIcon name="bookmark" size={22} color={colors.accent.gold} />
       </View>
-      <View style={styles.list}>
-        {items.map(item => (
+      {/* 59.1: virtualized bookmark rows */}
+      <FlatList
+        data={items}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.list}
+        renderItem={({item}) => (
           <TouchableOpacity
-            key={item.id}
             style={[styles.row, {borderBottomColor: colors.border.subtle}]}
             onPress={() => onPress(item)}
             accessibilityRole="button"
@@ -60,8 +63,10 @@ export const HomeBookmarksList: React.FC<Props> = ({items, onPress, onRemove}) =
               <SvgIcon name="close" size={18} color={colors.text.tertiary} />
             </TouchableOpacity>
           </TouchableOpacity>
-        ))}
-      </View>
+        )}
+        scrollEnabled={false}
+        initialNumToRender={items.length}
+      />
     </View>
   );
 };

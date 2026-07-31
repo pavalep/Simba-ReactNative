@@ -4,19 +4,14 @@
 // ────────────────────────────────────────────────────────
 
 import React, {useState, useCallback} from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  ActionSheetIOS,
-  Platform,
-  Modal,
-} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import AudioWaveform from '../../../components/player/AudioWaveform/AudioWaveform';
+import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
+import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
 
 interface TrackItem {
   uri: string;
@@ -34,7 +29,7 @@ interface AlbumTrackListProps {
   disableAnimation?: boolean;
 }
 
-export const AlbumTrackList: React.FC<AlbumTrackListProps> = ({
+export const AlbumTrackList: React.FC<AlbumTrackListProps> = React.memo(({
   tracks,
   isCurrentTrack,
   isPlaying,
@@ -42,30 +37,101 @@ export const AlbumTrackList: React.FC<AlbumTrackListProps> = ({
   formatDuration,
 }) => {
   const {colors} = useTheme();
+  const {playNext, addToQueue} = useQueueActions();
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuTrack, setMenuTrack] = useState<{
     index: number;
     title: string;
+    uri: string;
+    duration: number;
   } | null>(null);
 
   const handleThreeDot = useCallback(
-    (index: number, title: string) => {
-      if (Platform.OS === 'ios') {
-        ActionSheetIOS.showActionSheetWithOptions(
-          {
-            options: ['Cancel', 'Play', 'Add to Playlist', 'Go to Artist'],
-            cancelButtonIndex: 0,
-          },
-          btnIndex => {
-            if (btnIndex === 1) onPlayTrack(index);
-          },
-        );
-      } else {
-        setMenuTrack({index, title});
-        setMenuVisible(true);
-      }
+    (index: number, track: TrackItem) => {
+      setMenuTrack({
+        index,
+        title: track.title,
+        uri: track.uri,
+        duration: track.duration,
+      });
+      setMenuVisible(true);
     },
-    [onPlayTrack],
+    [],
+  );
+
+  // 59.2: stable renderItem — the inline renderItem was re-created on
+  // every parent render, forcing all visible rows to re-render.
+  const renderTrack = useCallback(
+    ({item: track, index: idx}: {item: TrackItem; index: number}) => {
+      const isActive = isCurrentTrack(track.uri);
+      const isTrackPlaying = isActive && isPlaying;
+
+      return (
+        <TouchableOpacity
+          key={track.uri}
+          style={[
+            styles.trackRow,
+            {
+              backgroundColor: isActive
+                ? colors.accent.goldFaint
+                : 'transparent',
+            },
+          ]}
+          activeOpacity={0.6}
+          onPress={() => onPlayTrack(idx)}
+          onLongPress={() => handleThreeDot(idx, track)}
+          delayLongPress={400}
+          accessibilityRole="button"
+          accessibilityLabel={`Play ${track.title}`}
+          accessibilityState={{selected: isActive}}>
+          {/* Number / Playing indicator */}
+          <View style={styles.trackNumCol}>
+            {isTrackPlaying ? (
+              <AudioWaveform
+                isPlaying={true}
+                color={colors.accent.gold}
+                size={16}
+                barWidth={2}
+                barGap={2}
+              />
+            ) : (
+              <AppText variant="caption" color="tertiary">
+                {track.trackNumber > 0 ? track.trackNumber : idx + 1}
+              </AppText>
+            )}
+          </View>
+
+          {/* Track title */}
+          <View style={styles.trackTitleCol}>
+            <AppText
+              variant="body2"
+              color={isActive ? 'accent' : 'primary'}
+              numberOfLines={1}>
+              {track.title}
+            </AppText>
+          </View>
+
+          {/* Duration */}
+          <View style={styles.trackDurationCol}>
+            <AppText variant="caption" color="tertiary">
+              {formatDuration(track.duration)}
+            </AppText>
+          </View>
+
+          {/* Three-dot menu */}
+          <TouchableOpacity
+            style={styles.threeDotBtn}
+            onPress={() => handleThreeDot(idx, track)}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            activeOpacity={0.5}
+            accessibilityRole="button"
+            accessibilityLabel={`More options for ${track.title}`}>
+            <SvgIcon name="sliders" size={14} color={colors.text.tertiary} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      );
+    },
+    [colors, isCurrentTrack, isPlaying, onPlayTrack, formatDuration, handleThreeDot],
   );
 
   if (tracks.length === 0) {
@@ -95,118 +161,57 @@ export const AlbumTrackList: React.FC<AlbumTrackListProps> = ({
       </View>
 
       {/* Track rows */}
-      {tracks.map((track, idx) => {
-        const isActive = isCurrentTrack(track.uri);
-        const isTrackPlaying = isActive && isPlaying;
+      <FlatList
+        data={tracks}
+        keyExtractor={track => track.uri}
+        renderItem={renderTrack}
+        scrollEnabled={false}
+        initialNumToRender={tracks.length}
+      />
 
-        return (
-          <TouchableOpacity
-            key={track.uri}
-            style={[
-              styles.trackRow,
-              {
-                backgroundColor: isActive
-                  ? colors.accent.goldFaint
-                  : 'transparent',
-              },
-            ]}
-            activeOpacity={0.6}
-            onPress={() => onPlayTrack(idx)}
-            onLongPress={() => handleThreeDot(idx, track.title)}
-            delayLongPress={400}>
-            {/* Number / Playing indicator */}
-            <View style={styles.trackNumCol}>
-              {isTrackPlaying ? (
-                <AudioWaveform
-                  isPlaying={true}
-                  color={colors.accent.gold}
-                  size={16}
-                  barWidth={2}
-                  barGap={2}
-                />
-              ) : (
-                <AppText variant="caption" color="tertiary">
-                  {track.trackNumber > 0 ? track.trackNumber : idx + 1}
-                </AppText>
-              )}
-            </View>
-
-            {/* Track title */}
-            <View style={styles.trackTitleCol}>
-              <AppText
-                variant="body2"
-                color={isActive ? 'accent' : 'primary'}
-                numberOfLines={1}>
-                {track.title}
-              </AppText>
-            </View>
-
-            {/* Duration */}
-            <View style={styles.trackDurationCol}>
-              <AppText variant="caption" color="tertiary">
-                {formatDuration(track.duration)}
-              </AppText>
-            </View>
-
-            {/* Three-dot menu */}
-            <TouchableOpacity
-              style={styles.threeDotBtn}
-              onPress={() => handleThreeDot(idx, track.title)}
-              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-              activeOpacity={0.5}>
-              <SvgIcon name="sliders" size={14} color={colors.text.tertiary} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        );
-      })}
-
-      {/* Android context menu modal */}
-      <Modal
+      {/* 58.4/58.5: one menu everywhere — Play Next / Add to Queue / Play Now */}
+      <MediaActionsSheet
         visible={menuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuVisible(false)}>
-        <TouchableOpacity
-          style={[styles.modalOverlay, {backgroundColor: colors.background.scrim}]}
-          activeOpacity={1}
-          onPress={() => setMenuVisible(false)}>
-          <View
-            style={[
-              styles.menuSheet,
-              {backgroundColor: colors.background.elevated},
-            ]}>
-            <AppText
-              variant="body2"
-              color="primary"
-              style={styles.menuTitle}
-              numberOfLines={1}>
-              {menuTrack?.title ?? ''}
-            </AppText>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                if (menuTrack) onPlayTrack(menuTrack.index);
-                setMenuVisible(false);
-              }}>
-              <SvgIcon name="play" size={18} color={colors.text.primary} />
-              <AppText variant="body2" color="primary" style={styles.menuItemLabel}>
-                Play
-              </AppText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => setMenuVisible(false)}>
-              <SvgIcon name="close" size={18} color={colors.text.tertiary} />
-              <AppText variant="body2" color="secondary" style={styles.menuItemLabel}>
-                Cancel
-              </AppText>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setMenuVisible(false)}
+        title={menuTrack?.title ?? ''}
+        actions={
+          menuTrack
+            ? [
+                {
+                  label: 'Play Next',
+                  icon: 'skipForward',
+                  onPress: () =>
+                    playNext({
+                      uri: menuTrack.uri,
+                      title: menuTrack.title,
+                      duration: menuTrack.duration,
+                      mediaType: 'audio',
+                    }),
+                },
+                {
+                  label: 'Add to Queue',
+                  icon: 'list',
+                  onPress: () =>
+                    addToQueue({
+                      uri: menuTrack.uri,
+                      title: menuTrack.title,
+                      duration: menuTrack.duration,
+                      mediaType: 'audio',
+                    }),
+                },
+                {
+                  label: 'Play Now',
+                  icon: 'play',
+                  onPress: () => onPlayTrack(menuTrack.index),
+                },
+              ]
+            : []
+        }
+      />
     </View>
   );
-};
+},
+);
 
 const styles = StyleSheet.create({
   container: {

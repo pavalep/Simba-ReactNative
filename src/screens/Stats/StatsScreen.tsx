@@ -5,7 +5,7 @@
 // ────────────────────────────────────────────────────────
 
 import React, {useMemo} from 'react';
-import {View, StyleSheet, ScrollView, TouchableOpacity} from 'react-native';
+import {View, StyleSheet, ScrollView, FlatList, TouchableOpacity} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
@@ -185,54 +185,60 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
                   styles.groupCard,
                   {backgroundColor: colors.background.elevated},
                 ]}>
-                {topMedia.map((entry, index) => (
-                  <TouchableOpacity
-                    key={entry.fileUri}
-                    style={[styles.topRow, {borderBottomColor: colors.border.subtle}]}
-                    onPress={() => {
-                      if (entry.mediaType === 'audio') {
-                        navigation.navigate('AudioPlayer', {
-                          fileUri: entry.fileUri,
-                          fileTitle: entry.title,
-                        });
-                      } else {
-                        navigation.navigate('VideoPlayer', {
-                          fileUri: entry.fileUri,
-                          fileTitle: entry.title,
-                        });
-                      }
-                    }}
-                    activeOpacity={0.7}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${entry.title}, played ${playCounts[entry.fileUri]} times`}>
-                    <View
-                      style={[
-                        styles.rankBadge,
-                        {backgroundColor: colors.accent.goldDim},
-                      ]}>
-                      <AppText variant="bodySmall" color="accent">
-                        {index + 1}
-                      </AppText>
-                    </View>
-                    <View style={styles.topBody}>
-                      <AppText
-                        variant="body2"
-                        color="primary"
-                        numberOfLines={1}>
-                        {entry.title}
-                      </AppText>
-                      <AppText variant="caption" color="tertiary">
-                        {playCounts[entry.fileUri]} plays ·{' '}
-                        {formatDuration(entry.duration)}
-                      </AppText>
-                    </View>
-                    <SvgIcon
-                      name={entry.mediaType === 'audio' ? 'music' : 'video'}
-                      size={16}
-                      color={colors.text.tertiary}
-                    />
-                  </TouchableOpacity>
-                ))}
+                {/* 59.1: virtualized top-media rows */}
+                <FlatList
+                  data={topMedia}
+                  keyExtractor={entry => entry.fileUri}
+                  renderItem={({item: entry, index}) => (
+                    <TouchableOpacity
+                      style={[styles.topRow, {borderBottomColor: colors.border.subtle}]}
+                      onPress={() => {
+                        if (entry.mediaType === 'audio') {
+                          navigation.navigate('AudioPlayer', {
+                            fileUri: entry.fileUri,
+                            fileTitle: entry.title,
+                          });
+                        } else {
+                          navigation.navigate('VideoPlayer', {
+                            fileUri: entry.fileUri,
+                            fileTitle: entry.title,
+                          });
+                        }
+                      }}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${entry.title}, played ${playCounts[entry.fileUri]} times`}>
+                      <View
+                        style={[
+                          styles.rankBadge,
+                          {backgroundColor: colors.accent.goldDim},
+                        ]}>
+                        <AppText variant="bodySmall" color="accent">
+                          {index + 1}
+                        </AppText>
+                      </View>
+                      <View style={styles.topBody}>
+                        <AppText
+                          variant="body2"
+                          color="primary"
+                          numberOfLines={1}>
+                          {entry.title}
+                        </AppText>
+                        <AppText variant="caption" color="tertiary">
+                          {playCounts[entry.fileUri]} plays ·{' '}
+                          {formatDuration(entry.duration)}
+                        </AppText>
+                      </View>
+                      <SvgIcon
+                        name={entry.mediaType === 'audio' ? 'music' : 'video'}
+                        size={16}
+                        color={colors.text.tertiary}
+                      />
+                    </TouchableOpacity>
+                  )}
+                  scrollEnabled={false}
+                  initialNumToRender={topMedia.length}
+                />
               </View>
             </View>
           )}

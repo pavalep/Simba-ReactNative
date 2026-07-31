@@ -33,6 +33,9 @@ import AlertCircleSvg from '../../../assets/svg/ic_alert_circle.svg';
 import BookmarkSvg from '../../../assets/svg/ic_bookmark.svg';
 import SpeedSvg from '../../../assets/svg/ic_speed.svg';
 import GoogleSvg from '../../../assets/svg/ic_google.svg';
+import ShareSvg from '../../../assets/svg/ic_share.svg';
+import DownloadSvg from '../../../assets/svg/ic_download.svg';
+import CheckSvg from '../../../assets/svg/ic_check.svg';
 
 const icons = {
   home: HomeSvg,
@@ -68,6 +71,9 @@ const icons = {
   bookmark: BookmarkSvg,
   speed: SpeedSvg,
   google: GoogleSvg,
+  share: ShareSvg,
+  download: DownloadSvg,
+  check: CheckSvg,
 } as const;
 
 export type SvgIconName = keyof typeof icons;

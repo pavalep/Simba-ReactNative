@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -97,38 +97,48 @@ export const LibraryVideosSegment: React.FC<LibraryVideosSegmentProps> = ({
 
   return (
     <View style={styles.folderGrid}>
-      {videoFolders.map((folder, index) => (
-        <TouchableOpacity
-          key={`video-${index}`}
-          style={styles.folderCard}
-          activeOpacity={0.7}
-          onPress={() => onNavigateToFolderBrowser(folder)}>
-          <View style={styles.folderCardRow}>
-            <View style={styles.folderCardLeft}>
-              <View style={styles.folderIconWrap}>
-                <SvgIcon name="folder" size={18} color={colors.accent.gold} />
-              </View>
-              <View style={styles.folderLabel}>
-                <AppText variant="body2" color="primary" numberOfLines={1}>
-                  {folder.split('/').pop() || folder}
-                </AppText>
-                <AppText variant="caption" color="tertiary" style={styles.folderPath} numberOfLines={1}>
-                  {folder}
-                </AppText>
+      {/* 59.1: virtualized instead of .map */}
+      <FlatList
+        data={videoFolders}
+        keyExtractor={(folder, index) => `video-${index}`}
+        renderItem={({item: folder}) => (
+          <TouchableOpacity
+            style={styles.folderCard}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            onPress={() => onNavigateToFolderBrowser(folder)}>
+            <View style={styles.folderCardRow}>
+              <View style={styles.folderCardLeft}>
+                <View style={styles.folderIconWrap}>
+                  <SvgIcon name="folder" size={18} color={colors.accent.gold} />
+                </View>
+                <View style={styles.folderLabel}>
+                  <AppText variant="body2" color="primary" numberOfLines={1}>
+                    {folder.split('/').pop() || folder}
+                  </AppText>
+                  <AppText variant="caption" color="tertiary" style={styles.folderPath} numberOfLines={1}>
+                    {folder}
+                  </AppText>
+                </View>
               </View>
             </View>
-          </View>
-        </TouchableOpacity>
-      ))}
-      <TouchableOpacity
-        style={styles.ctaButton}
-        activeOpacity={0.7}
-        onPress={() => onNavigateToLinkedFolders('video')}>
-        <SvgIcon name="folder" size={18} color={colors.accent.gold} style={styles.ctaIcon} />
-        <AppText variant="body2" color="accent">
-          + Add Video Folder
-        </AppText>
-      </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+        scrollEnabled={false}
+        initialNumToRender={videoFolders.length}
+        ListFooterComponent={
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            onPress={() => onNavigateToLinkedFolders('video')}>
+            <SvgIcon name="folder" size={18} color={colors.accent.gold} style={styles.ctaIcon} />
+            <AppText variant="body2" color="accent">
+              + Add Video Folder
+            </AppText>
+          </TouchableOpacity>
+        }
+      />
     </View>
   );
 };

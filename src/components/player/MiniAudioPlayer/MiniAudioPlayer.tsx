@@ -41,7 +41,15 @@ const formatRemaining = (ms: number): string => {
 
 // ─── Component ──────────────────────────────────────────────
 
-export const MiniAudioPlayer: React.FC = () => {
+interface MiniAudioPlayerProps {
+  /** 58.6: true (default) when floating above the tab bar (MainTabs);
+   *  false on root-stack screens that have no tab bar below. */
+  overTabBar?: boolean;
+}
+
+export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = ({
+  overTabBar = true,
+}) => {
   const {colors, spacing, radius, shadows} = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -127,8 +135,11 @@ export const MiniAudioPlayer: React.FC = () => {
   const subtitle = currentTrack?.title || ''; // no separate artist field in PlaylistEntry
 
   // ── Styles ───────────────────────────────────────────
-  const bottomPosition =
-    TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_MARGIN + insets.bottom + MINI_PLAYER_GAP;
+  // 58.6: over a tab bar the player floats above it; on root-stack
+  // screens (Search, Queue, Downloads, …) it rests on the bottom inset.
+  const bottomPosition = overTabBar
+    ? TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_MARGIN + insets.bottom + MINI_PLAYER_GAP
+    : insets.bottom + MINI_PLAYER_GAP;
 
   const styles = useMemo(
     () =>
@@ -242,13 +253,16 @@ export const MiniAudioPlayer: React.FC = () => {
         </View>
       )}
 
-      {/* Tappable area — opens the audio player */}
+      {/* Tappable area — opens the audio player; long-press opens the full queue (48.6) */}
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handleOpenPlayer}
+        onLongPress={() => navigate('Queue', {from: 'mini'})}
+        delayLongPress={450}
         style={styles.touchableArea}
         accessibilityRole="button"
-        accessibilityLabel={`Open audio player: ${title}`}>
+        accessibilityLabel={`Open audio player: ${title}`}
+        accessibilityHint="Long press to open the full queue">
         {/* Album artwork with waveform overlay when playing */}
         <View style={styles.artwork}>
           {currentTrack?.uri ? (

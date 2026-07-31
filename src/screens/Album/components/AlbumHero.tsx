@@ -135,7 +135,11 @@ export const AlbumHero: React.FC<AlbumHeroProps> = ({
         </AppText>
 
         {/* Artist name (tappable link) */}
-        <TouchableOpacity onPress={onArtistPress} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={onArtistPress}
+          activeOpacity={0.7}
+          accessibilityRole="link"
+          accessibilityLabel={`View artist ${artistName}`}>
           <AppText variant="body2" color="accent" style={styles.artistName}>
             {artistName}
           </AppText>

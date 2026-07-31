@@ -90,3 +90,55 @@ export async function getStationById(
   });
   return stations.length > 0 ? stations[0] : null;
 }
+
+// ─── Browse metadata (P36.1: by-genre / by-country / by-language) ───
+
+export interface RadioBrowseTag {
+  name: string;
+  stationCount: number;
+}
+
+/** Genre tags ordered by station count (radio-browser /json/genres). */
+export async function getGenres(
+  limit = 40,
+): Promise<RadioBrowseTag[]> {
+  const raw = await apiFetch<Array<{name: string; stationcount: number}>>({
+    config: API_CONFIG.radioBrowser,
+    path: '/json/genres',
+    cacheTtlMs: CACHE.top,
+  });
+  return raw
+    .filter(g => g.name)
+    .slice(0, limit)
+    .map(g => ({name: g.name, stationCount: g.stationcount ?? 0}));
+}
+
+/** Countries with the most stations (radio-browser /json/countries). */
+export async function getCountries(
+  limit = 30,
+): Promise<RadioBrowseTag[]> {
+  const raw = await apiFetch<Array<{name: string; stationcount: number}>>({
+    config: API_CONFIG.radioBrowser,
+    path: '/json/countries',
+    cacheTtlMs: CACHE.top,
+  });
+  return raw
+    .filter(c => c.name)
+    .slice(0, limit)
+    .map(c => ({name: c.name, stationCount: c.stationcount ?? 0}));
+}
+
+/** Languages with the most stations (radio-browser /json/languages). */
+export async function getLanguages(
+  limit = 30,
+): Promise<RadioBrowseTag[]> {
+  const raw = await apiFetch<Array<{name: string; stationcount: number}>>({
+    config: API_CONFIG.radioBrowser,
+    path: '/json/languages',
+    cacheTtlMs: CACHE.top,
+  });
+  return raw
+    .filter(l => l.name)
+    .slice(0, limit)
+    .map(l => ({name: l.name, stationCount: l.stationcount ?? 0}));
+}

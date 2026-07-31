@@ -6,19 +6,40 @@ export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   MainTabs: NavigatorScreenParams<TabParamList>;
-  VideoPlayer: {fileUri?: string; fileTitle?: string; startPosition?: number};
-  AudioPlayer: {fileUri?: string; fileTitle?: string};
-  Preferences: undefined;
+  /** P36.5: optional live channel list (IPTV) for channel up/down in the player */
+  VideoPlayer: {
+    fileUri?: string;
+    fileTitle?: string;
+    startPosition?: number;
+    source?: string;
+    liveChannels?: LiveChannelParam[];
+    liveChannelIndex?: number;
+  };
+  AudioPlayer: {
+    fileUri?: string;
+    fileTitle?: string;
+    artworkUri?: string;
+    source?: string;
+    /** 58.2: explicit resume intent (e.g. Continue Listening) — silent seek */
+    startPosition?: number;
+    /** P37.3: ordered chapter/track list — drives EOF auto-advance */
+    chapterList?: AudioChapterParam[];
+    chapterIndex?: number;
+  };
   Settings: NavigatorScreenParams<SettingsTabParamList>;
   Bookmarks: undefined;
-  About: undefined;
   Profile: undefined;
   History: undefined;
   Stats: undefined;
   ArtistScreen: {artistName: string};
   AlbumScreen: {albumName: string; artistName: string};
   SongScreen: {fileUri: string; title?: string; artist?: string; album?: string};
-  GenreScreen: {genre: string};
+  // P41.7: initialTab enables genre/mood deep links
+  // (simbaplayer://genre/<genre>?initialTab=moods)
+  GenreScreen: {
+    genre: string;
+    initialTab?: 'local' | 'streaming' | 'moods' | 'radio';
+  };
   AllVideosScreen: {filter?: string; sort?: string} | undefined;
   AllAudioScreen: {filter?: string; sort?: string} | undefined;
   AllPlaylistsScreen: undefined;
@@ -30,12 +51,48 @@ export type RootStackParamList = {
   FolderBrowser: {initialPath?: string; targetPlaylistId?: string};
   PlaylistDetail: {playlistId: string; playlistName: string};
   ArtistDetail: {artistName: string};
-  AlbumDetail: {albumTitle: string; artistName: string};
+  AlbumDetail: {
+    albumTitle: string;
+      artistName: string;
+      // P39.3: MusicBrainz release-group id for metadata enrichment
+      musicBrainzReleaseId?: string;
+    };
   PodcastDetail: {podcastId: number; podcastTitle?: string};
   MusicScreen: {genre?: string} | undefined;
   MusicDetail: {trackId: string; source: 'jamendo' | 'audius'};
   MovieDetail: {identifier: string; title?: string};
+  // ── P36: live radio + TV browse (wired RadioBrowser + IPTV-org) ──
+  RadioScreen: {initialTab?: string} | undefined;
+  LiveTVScreen: {categoryId?: string} | undefined;
+  // ── P37: audiobooks (LibriVox) + Internet Archive ──
+  AudiobooksScreen: {initialTab?: string; genre?: string} | undefined;
+  ArchiveScreen: {initialTab?: 'audio' | 'video'; query?: string} | undefined;
+  AudiobookDetail: {bookId: number; bookTitle?: string};
+  ArchiveItemDetail: {identifier: string; title?: string};
+  // ── P38: TV shows (TVMaze) ──
+  ShowsScreen: {initialTab?: string} | undefined;
+  ShowDetail: {showId: number; showName?: string};
+  // ── P48: full-page queue (from QueueSheet / MiniAudioPlayer / deep link) ──
+  // `from` records the screen that opened it so tap-to-jump can stay in the
+  // same player (audio↔audio) or switch players (cross-type jump, 48.8).
+  Queue: {from?: 'audio' | 'video' | 'mini'} | undefined;
+  // ── P49: downloads & offline ──
+  Downloads: undefined;
 };
+
+/** P37.3: a single chapter/track passed to AudioPlayer for auto-advance. */
+export interface AudioChapterParam {
+  uri: string;
+  title: string;
+  duration?: number;
+}
+/** P36.5: a single live channel passed to VideoPlayer for channel up/down. */
+export interface LiveChannelParam {
+  id: string;
+  name: string;
+  url: string;
+  logo?: string;
+}
 
 export type TabParamList = {
   HomeTab: NavigatorScreenParams<HomeTabParamList>;
@@ -103,6 +160,14 @@ export type AlbumDetailScreenProps = RootStackScreenProps<'AlbumDetail'>;
 export type PodcastDetailScreenProps = RootStackScreenProps<'PodcastDetail'>;
 export type MusicDetailScreenProps = RootStackScreenProps<'MusicDetail'>;
 export type MovieDetailScreenProps = RootStackScreenProps<'MovieDetail'>;
+export type AudiobooksScreenProps = RootStackScreenProps<'AudiobooksScreen'>;
+export type AudiobookDetailScreenProps = RootStackScreenProps<'AudiobookDetail'>;
+export type ArchiveScreenProps = RootStackScreenProps<'ArchiveScreen'>;
+export type ArchiveItemDetailScreenProps = RootStackScreenProps<'ArchiveItemDetail'>;
+export type ShowsScreenProps = RootStackScreenProps<'ShowsScreen'>;
+export type ShowDetailScreenProps = RootStackScreenProps<'ShowDetail'>;
+export type QueueScreenProps = RootStackScreenProps<'Queue'>;
+export type DownloadsScreenProps = RootStackScreenProps<'Downloads'>;
 
 // ── Helper for screens inside the Settings root stack navigator ──
 type SettingsStackScreenProps<T extends keyof SettingsTabParamList> = CompositeScreenProps<
@@ -123,9 +188,6 @@ export type CreditsScreenProps = SettingsStackScreenProps<'Credits'>;
 export type PrivacyScreenProps = SettingsStackScreenProps<'Privacy'>;
 export type TermsScreenProps = SettingsStackScreenProps<'Terms'>;
 export type HelpScreenProps = SettingsStackScreenProps<'Help'>;
-
-/** Root stack screen props. */
-export type PreferencesScreenProps = RootStackScreenProps<'Preferences'>;
 
 declare global {
   namespace ReactNavigation {

@@ -39,6 +39,10 @@ export interface PlaylistSheetProps {
     duration: number;
     artist?: string;
     album?: string;
+    /** P34: remote/streaming metadata so playlists keep art + source + media type */
+    thumbnailPath?: string;
+    source?: string;
+    mediaType?: 'audio' | 'video';
   };
 }
 
@@ -100,6 +104,9 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
         duration: currentItem.duration,
         artist: currentItem.artist,
         album: currentItem.album,
+        thumbnailPath: currentItem.thumbnailPath,
+        mediaType: currentItem.mediaType,
+        source: currentItem.source,
         addedAt: new Date().toISOString(),
       };
       dispatch(addItemToPlaylist({playlistId, item: newItem}));
@@ -298,10 +305,13 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
           style={{marginTop: spacing.sm, marginBottom: spacing.xs}}>
           Type:
         </AppText>
-        <View style={styles.kindRow}>
-          {KIND_OPTIONS.map(k => (
+        {/* 59.1: virtualized kind chips */}
+        <FlatList
+          horizontal
+          data={KIND_OPTIONS}
+          keyExtractor={k => k}
+          renderItem={({item: k}) => (
             <TouchableOpacity
-              key={k}
               style={[
                 styles.kindChip,
                 {
@@ -328,8 +338,12 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
                 {KIND_LABELS[k]}
               </AppText>
             </TouchableOpacity>
-          ))}
-        </View>
+          )}
+          contentContainerStyle={styles.kindRow}
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={false}
+          initialNumToRender={KIND_OPTIONS.length}
+        />
 
         {/* Action buttons */}
         <View style={styles.createActions}>

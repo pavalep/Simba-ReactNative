@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 import {AppText} from '../../core/AppText/AppText';
 import {useAppSelector, useAppDispatch} from '../../../store';
 import {setPlaybackState, setPosition} from '../../../store/slices/playerSlice';
@@ -38,6 +39,7 @@ function formatTime(seconds: number): string {
 
 export const MiniPlayer: React.FC = () => {
   const {colors, spacing, radius, shadows} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
 
@@ -52,12 +54,17 @@ export const MiniPlayer: React.FC = () => {
   const slideAnim = useRef(new Animated.Value(isActive ? 0 : 1)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      // 59.7: reduced motion — appear/disappear instantly, no slide
+      slideAnim.setValue(isActive ? 0 : 1);
+      return;
+    }
     Animated.timing(slideAnim, {
       toValue: isActive ? 0 : 1,
       duration: 250,
       useNativeDriver: true,
     }).start();
-  }, [isActive, slideAnim]);
+  }, [isActive, slideAnim, reduceMotion]);
 
   const translateY = slideAnim.interpolate({
     inputRange: [0, 1],

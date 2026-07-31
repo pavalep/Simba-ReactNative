@@ -32,6 +32,7 @@ export const HomeErrorState: React.FC<HomeErrorStateProps> = ({
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={onRetry}
+        accessibilityRole="button"
         style={[styles.retryButton, {backgroundColor: colors.accent.gold}]}>
         <AppText
           variant="button"

@@ -15,6 +15,7 @@ import type {
   InternetArchiveSubtitleFile,
   InternetArchiveAudioTrack,
   ApiSearchOptions,
+  ArchiveTrack,
 } from '../../types/api';
 
 // ─── Raw API response types ───────────────────────────────────────────
@@ -50,6 +51,7 @@ interface IAMetadataResponse {
     name: string;
     source: string;
     format: string;
+    title?: string;
     track?: string;
     length?: string;
   }[];
@@ -74,6 +76,60 @@ function mapItem(raw: IAResultRaw): InternetArchiveItemResult {
 }
 
 // ─── Public API functions ─────────────────────────────────────────────
+
+/** Standard cover-image URL for an item identifier. */
+export function archiveImageUrl(identifier: string): string {
+  return `https://archive.org/services/img/${identifier}`;
+}
+
+/** Extract the IA item identifier from a url_iarchive / details URL. */
+export function archiveIdentifierFromUrl(url: string): string {
+  if (!url) return '';
+  const trimmed = url.replace(/\/+$/, '');
+  const idx = trimmed.lastIndexOf('/');
+  return idx >= 0 ? trimmed.slice(idx + 1) : trimmed;
+}
+
+/** True when an IA file format is an audio container we can stream. */
+function isAudioFormat(format: string): boolean {
+  const f = format.toLowerCase();
+  return f.includes('mp3') || f.includes('ogg') || f.includes('flac');
+}
+
+/**
+ * Ordered audio track list for an item (P37 — powers both audiobook
+ * chapters from LibriVox items and archive audio item tracks).
+ */
+export async function getArchiveTracks(
+  identifier: string,
+): Promise<ArchiveTrack[]> {
+  const data = await apiFetch<IAMetadataResponse>({
+    config: API_CONFIG.internetArchive,
+    path: `/metadata/${identifier}`,
+    cacheTtlMs: 600_000,
+  });
+
+  const files = data.files ?? [];
+  return files
+    .filter(
+      f =>
+        f.source === 'original' &&
+        isAudioFormat(f.format) &&
+        !f.name.toLowerCase().includes('_sample'),
+    )
+    .map((f, i) => {
+      const trackNum = parseInt(f.track ?? '', 10);
+      return {
+        name: f.name,
+        title: f.title || f.name.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' '),
+        url: `https://archive.org/download/${identifier}/${f.name}`,
+        lengthSeconds: parseRuntime(f.length ?? ''),
+        format: f.format,
+        trackNumber: isNaN(trackNum) ? i + 1 : trackNum,
+      };
+    })
+    .sort((a, b) => a.trackNumber - b.trackNumber);
+}
 
 /** Search audio items on the Internet Archive. */
 export async function searchInternetArchiveAudio(

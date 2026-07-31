@@ -60,6 +60,7 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
     <TouchableOpacity
       activeOpacity={0.9}
       onPress={() => onPress(item)}
+      accessibilityRole="button"
       style={[
         styles.card,
         shadows.md,
@@ -121,6 +122,7 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => onPress(item)}
+              accessibilityRole="button"
               style={[styles.playButton, {backgroundColor: colors.accent.gold}]}>
               <SvgIcon name="play" size={16} color={colors.text.inverse} />
               <AppText variant="body2" style={styles.playText}>Resume</AppText>

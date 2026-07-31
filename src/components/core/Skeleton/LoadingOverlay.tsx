@@ -12,6 +12,7 @@ import {
   Easing,
 } from 'react-native';
 import {useTheme} from '../../../theme';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 import {AppText} from '../AppText/AppText';
 
 interface LoadingOverlayProps {
@@ -24,6 +25,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   message = 'Loading...',
 }) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const spinAnim = useRef(new Animated.Value(0)).current;
 
@@ -44,7 +46,8 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   }, [visible, fadeAnim]);
 
   useEffect(() => {
-    if (visible) {
+    if (visible && !reduceMotion) {
+      // 59.7: reduced motion — static spinner ring, no rotation loop
       const loop = Animated.loop(
         Animated.timing(spinAnim, {
           toValue: 1,
@@ -56,7 +59,8 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
       loop.start();
       return () => loop.stop();
     }
-  }, [visible, spinAnim]);
+    spinAnim.setValue(0);
+  }, [visible, spinAnim, reduceMotion]);
 
   const spin = spinAnim.interpolate({
     inputRange: [0, 1],

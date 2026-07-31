@@ -5,10 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  FlatList,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
+import {useAccessibility} from '../../hooks/useAccessibility';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
@@ -91,16 +93,22 @@ const LICENSES: LicenseEntry[] = [
 
 export const LicensesScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   useEffect(() => {
+    if (reduceMotion) {
+      // 59.7: reduced motion — render fully visible, skip fade
+      fadeAnim.setValue(1);
+      return;
+    }
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 400,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim]);
+  }, [fadeAnim, reduceMotion]);
 
   const styles = useMemo(
     () =>
@@ -176,50 +184,60 @@ export const LicensesScreen: React.FC<Props> = () => {
             style={{marginBottom: spacing.lg}}>
             This application uses the following open source libraries:
           </AppText>
-          {LICENSES.map((entry, index) => {
-            const isExpanded = expandedIndex === index;
-            return (
-              <View key={entry.library} style={styles.licenseCard}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    setExpandedIndex(isExpanded ? null : index)
-                  }
-                  style={styles.licenseHeader}>
-                  <View style={styles.headerLeft}>
-                    <AppText
-                      variant="body1"
-                      color="primary"
-                      style={styles.libraryName}>
-                      {entry.library}
+          {/* 59.1: virtualized license cards */}
+          <FlatList
+            data={LICENSES}
+            keyExtractor={entry => entry.library}
+            renderItem={({item: entry, index}) => {
+              const isExpanded = expandedIndex === index;
+              return (
+                <View style={styles.licenseCard}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      setExpandedIndex(isExpanded ? null : index)
+                    }
+                    style={styles.licenseHeader}
+                    accessibilityRole="button"
+                    accessibilityState={{expanded: isExpanded}}
+                    accessibilityLabel={`${entry.library} license`}>
+                    <View style={styles.headerLeft}>
+                      <AppText
+                        variant="body1"
+                        color="primary"
+                        style={styles.libraryName}>
+                        {entry.library}
+                      </AppText>
+                      <AppText variant="caption" color="tertiary">
+                        {entry.author}
+                      </AppText>
+                    </View>
+                    <View style={styles.licenseBadge}>
+                      <AppText variant="caption" color="accent">
+                        {entry.license}
+                      </AppText>
+                    </View>
+                    <AppText style={styles.arrowIcon}>
+                      {isExpanded ? '▼' : '▶'}
                     </AppText>
-                    <AppText variant="caption" color="tertiary">
-                      {entry.author}
-                    </AppText>
-                  </View>
-                  <View style={styles.licenseBadge}>
-                    <AppText variant="caption" color="accent">
-                      {entry.license}
-                    </AppText>
-                  </View>
-                  <AppText style={styles.arrowIcon}>
-                    {isExpanded ? '▼' : '▶'}
-                  </AppText>
-                </TouchableOpacity>
-                {isExpanded && (
-                  <View style={styles.fullTextContainer}>
-                    <View style={styles.divider} />
-                    <AppText
-                      variant="caption"
-                      color="tertiary"
-                      style={[styles.fullText, {marginTop: spacing.sm}]}>
-                      {entry.fullText}
-                    </AppText>
-                  </View>
-                )}
-              </View>
-            );
-          })}
+                  </TouchableOpacity>
+                  {isExpanded && (
+                    <View style={styles.fullTextContainer}>
+                      <View style={styles.divider} />
+                      <AppText
+                        variant="caption"
+                        color="tertiary"
+                        style={[styles.fullText, {marginTop: spacing.sm}]}>
+                        {entry.fullText}
+                      </AppText>
+                    </View>
+                  )}
+                </View>
+              );
+            }}
+            scrollEnabled={false}
+            initialNumToRender={LICENSES.length}
+          />
         </ScrollView>
       </Animated.View>
     </SafeAreaView>

@@ -17,6 +17,8 @@ export interface TransportState {
   position: number;
   duration: number;
   isPlaying: boolean;
+  /** P33.4: mpv cache fill in progress (stream stalls) */
+  isBuffering: boolean;
   /** Milliseconds remaining on the active countdown timer (0 when none) */
   sleepRemainingMs: number;
   /** Whether a sleep timer is armed (countdown or end-of-track/chapter) */
@@ -76,6 +78,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const dispatch = useAppDispatch();
   const sleepTimerEndTime = useAppSelector(state => state.player.sleepTimerEndTime);
   const sleepTimerMode = useAppSelector(state => state.player.sleepTimerMode);
@@ -230,6 +233,10 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       hasPlaybackStateEventsRef.current = true;
       setIsPlaying(state === 'playing');
     });
+    // P33.4: mpv reports cache fill percentage — buffering while 0 < percent < 100
+    const unsubBuffering = MpvPlayer.on('onBuffering', ({percent}: {percent: number}) => {
+      setIsBuffering(percent > 0 && percent < 100);
+    });
 
     const interval = setInterval(() => {
       if (!isReadyRef.current) return;
@@ -253,6 +260,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       clearInterval(interval);
       unsubPosition();
       unsubState();
+      unsubBuffering();
     };
   }, [isReady, enabled, pollInterval]);
 
@@ -294,6 +302,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         position,
         duration,
         isPlaying,
+        isBuffering,
         sleepRemainingMs,
         sleepTimerActive: sleepTimerEndTime !== null || sleepTimerMode !== 'time',
         sleepTimerMode,

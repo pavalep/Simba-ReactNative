@@ -13,6 +13,8 @@ export interface Bookmark {
   label: string;
   thumbnailPath?: string;
   mediaType?: 'video' | 'audio';
+  /** P34: origin label for remote/streaming bookmarks (host, e.g. "cdn.example.com") */
+  source?: string;
 }
 
 interface BookmarkState {

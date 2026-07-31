@@ -36,6 +36,7 @@ export const ContinueWatchingHero: React.FC<ContinueWatchingHeroProps> = ({
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => onPress(item)}
+      accessibilityRole="button"
       style={[
         styles.card,
         shadows.sm,

@@ -7,6 +7,9 @@ import pipReducer from './slices/pipSlice';
 import mediaReducer from './slices/mediaSlice';
 import authReducer from './slices/authSlice';
 import bookmarkReducer from './slices/bookmarkSlice';
+import followedPodcastsReducer from './slices/followedPodcastsSlice';
+import liveFavoritesReducer from './slices/liveFavoritesSlice';
+import downloadsReducer from './slices/downloadsSlice';
 
 const rootReducer = combineReducers({
   player: playerReducer,
@@ -17,6 +20,9 @@ const rootReducer = combineReducers({
   media: mediaReducer,
   auth: authReducer,
   bookmark: bookmarkReducer,
+  followedPodcasts: followedPodcastsReducer,
+  liveFavorites: liveFavoritesReducer,
+  downloads: downloadsReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

@@ -96,7 +96,9 @@ export const AllPlaylistsScreen: React.FC = () => {
         animStyles[index] || {},
       ]}
       activeOpacity={0.7}
-      onPress={() => handlePlaylistPress(item)}>
+      onPress={() => handlePlaylistPress(item)}
+      accessibilityRole="button"
+      accessibilityLabel={`Open playlist ${item.name}`}>
       <View style={[styles.iconBox, {backgroundColor: colors.accent.goldDim}]}>
         <SvgIcon name="listMusic" size={22} color={colors.accent.gold} />
       </View>
@@ -117,14 +119,18 @@ export const AllPlaylistsScreen: React.FC = () => {
         style={[styles.actionBtn, {backgroundColor: colors.border.subtle}]}
         onPress={() => handleStartRename(item.id, item.name)}
         activeOpacity={0.7}
-        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+        accessibilityRole="button"
+        accessibilityLabel={`Rename playlist ${item.name}`}>
         <SvgIcon name="sliders" size={14} color={colors.text.secondary} />
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.actionBtn, {backgroundColor: colors.semantic.error + '20'}]}
         onPress={() => handleDeleteConfirm(item.id)}
         activeOpacity={0.7}
-        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+        accessibilityRole="button"
+        accessibilityLabel={`Delete playlist ${item.name}`}>
         <SvgIcon name="close" size={14} color={colors.semantic.error} />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -144,7 +150,10 @@ export const AllPlaylistsScreen: React.FC = () => {
         <TouchableOpacity
           style={[styles.backBtn, {backgroundColor: colors.background.elevated}]}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}>
           <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
         </TouchableOpacity>
         <AppText variant="h2" color="primary" style={{flex: 1}}>
@@ -211,11 +220,13 @@ export const AllPlaylistsScreen: React.FC = () => {
               containerStyle={styles.modalInput}
             />
 
-            {/* Kind selector */}
-            <View style={styles.kindRow}>
-              {(['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED'] as PlaylistKind[]).map(k => (
+            {/* Kind selector (59.1: virtualized) */}
+            <FlatList
+              horizontal
+              data={['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED'] as PlaylistKind[]}
+              keyExtractor={k => k}
+              renderItem={({item: k}) => (
                 <TouchableOpacity
-                  key={k}
                   style={[
                     styles.kindChip,
                     {
@@ -227,15 +238,22 @@ export const AllPlaylistsScreen: React.FC = () => {
                     },
                   ]}
                   onPress={() => setCreateKind(k)}
-                  activeOpacity={0.7}>
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityState={{selected: createKind === k}}
+                  accessibilityLabel={`${k === 'AUDIO_ONLY' ? 'Audio' : k === 'VIDEO_ONLY' ? 'Video' : 'Mixed'} playlist type`}>
                   <AppText
                     variant="caption"
                     color={createKind === k ? 'onGold' : 'secondary'}>
                     {k === 'AUDIO_ONLY' ? 'Audio' : k === 'VIDEO_ONLY' ? 'Video' : 'Mixed'}
                   </AppText>
                 </TouchableOpacity>
-              ))}
-            </View>
+              )}
+              contentContainerStyle={styles.kindRow}
+              showsHorizontalScrollIndicator={false}
+              scrollEnabled={false}
+              initialNumToRender={3}
+            />
 
             <View style={styles.modalActions}>
               <AppButton

@@ -4,6 +4,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
+  FlatList,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
@@ -302,10 +303,13 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
                 style={styles.kindLabel}>
                 Playlist Type
               </AppText>
-              <View style={styles.kindOptions}>
-                {KIND_OPTIONS.map(kind => (
+              {/* 59.1: virtualized kind chips */}
+              <FlatList
+                horizontal
+                data={KIND_OPTIONS}
+                keyExtractor={kind => kind.key}
+                renderItem={({item: kind}) => (
                   <TouchableOpacity
-                    key={kind.key}
                     style={[
                       styles.kindChip,
                       selectedKind === kind.key
@@ -323,8 +327,12 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
                       {kind.label}
                     </AppText>
                   </TouchableOpacity>
-                ))}
-              </View>
+                )}
+                contentContainerStyle={styles.kindOptions}
+                showsHorizontalScrollIndicator={false}
+                scrollEnabled={false}
+                initialNumToRender={KIND_OPTIONS.length}
+              />
             </>
           )}
 

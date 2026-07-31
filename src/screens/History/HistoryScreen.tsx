@@ -22,6 +22,9 @@ import {useToast} from '../../components/feedback/Toast/Toast';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {removeRecentFile, clearAllRecent} from '../../store/slices/sessionSlice';
+import type {SessionEntry} from '../../store/slices/sessionSlice';
+import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/MediaActionsSheet';
+import {useQueueActions} from '../../components/sheets/MediaActionsSheet/useQueueActions';
 import {formatDuration} from '../../utils/timeAgo';
 import type {RootStackScreenProps} from '../../navigation/types';
 
@@ -51,6 +54,9 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   const recentFiles = useAppSelector(state => state.session.recentFiles);
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [query, setQuery] = useState('');
+  // 58.4/58.5: standard long-press menu (Play Next / Queue / Remove)
+  const [menuItem, setMenuItem] = useState<SessionEntry | null>(null);
+  const {playNext, addToQueue} = useQueueActions();
   // 54.3: pull-to-refresh — local store data, so just pulse the spinner
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = useCallback(() => {
@@ -77,8 +83,12 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   const handlePress = useCallback(
     (fileUri: string, mediaType?: 'video' | 'audio', title?: string, position?: number) => {
       if (mediaType === 'audio') {
-        // AudioPlayer restores position automatically from session state
-        navigation.navigate('AudioPlayer', {fileUri, fileTitle: title});
+        // 58.2: explicit tap intent — silent seek to the saved position
+        navigation.navigate('AudioPlayer', {
+          fileUri,
+          fileTitle: title,
+          startPosition: position,
+        });
       } else {
         navigation.navigate('VideoPlayer', {
           fileUri,
@@ -133,7 +143,7 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
           onPress={() =>
             handlePress(item.fileUri, item.mediaType, item.title, item.position)
           }
-          onLongPress={() => handleRemove(item.fileUri, item.title)}
+          onLongPress={() => setMenuItem(item)}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`${item.title}, resume at ${formatDuration(item.position)}`}>
@@ -218,12 +228,14 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
       />
 
       {/* Filters (47.3) */}
-      <View style={styles.filterRow}>
-        {FILTERS.map(f => {
+      <FlatList
+        data={FILTERS}
+        keyExtractor={f => f.key}
+        horizontal
+        renderItem={({item: f}) => {
           const active = filter === f.key;
           return (
             <TouchableOpacity
-              key={f.key}
               style={[
                 styles.filterChip,
                 {
@@ -247,8 +259,12 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
               </AppText>
             </TouchableOpacity>
           );
-        })}
-      </View>
+        }}
+        contentContainerStyle={styles.filterRow}
+        showsHorizontalScrollIndicator={false}
+        scrollEnabled={false}
+        initialNumToRender={FILTERS.length}
+      />
 
       {/* List (47.1/47.5) */}
       {filtered.length === 0 ? (
@@ -280,6 +296,52 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
           }
         />
       )}
+
+      {/* 58.4/58.5: standard long-press menu — Play Next / Queue / Remove */}
+      <MediaActionsSheet
+        visible={menuItem !== null}
+        onClose={() => setMenuItem(null)}
+        title={menuItem?.title ?? 'History Item'}
+        actions={
+          menuItem
+            ? [
+                {
+                  label: 'Play Next',
+                  icon: 'skipForward',
+                  onPress: () =>
+                    playNext({
+                      uri: menuItem.fileUri,
+                      title: menuItem.title,
+                      duration: menuItem.duration,
+                      source: menuItem.source,
+                      mediaType: menuItem.mediaType,
+                    }),
+                },
+                {
+                  label: 'Add to Queue',
+                  icon: 'list',
+                  onPress: () =>
+                    addToQueue({
+                      uri: menuItem.fileUri,
+                      title: menuItem.title,
+                      duration: menuItem.duration,
+                      source: menuItem.source,
+                      mediaType: menuItem.mediaType,
+                    }),
+                },
+                {
+                  label: 'Remove from History',
+                  icon: 'close',
+                  destructive: true,
+                  onPress: () => {
+                    setMenuItem(null);
+                    handleRemove(menuItem.fileUri, menuItem.title);
+                  },
+                },
+              ]
+            : []
+        }
+      />
 
       {dialog}
     </View>

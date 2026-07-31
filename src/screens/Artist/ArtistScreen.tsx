@@ -10,6 +10,7 @@ import {
   Animated,
   TouchableOpacity,
   StyleSheet,
+  FlatList,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -82,7 +83,6 @@ export const ArtistScreen: React.FC<Props> = () => {
 
       return (
         <TouchableOpacity
-          key={track.uri}
           style={[
             styles.remainingTrackRow,
             {
@@ -98,7 +98,10 @@ export const ArtistScreen: React.FC<Props> = () => {
               title: track.title,
               duration: track.duration,
             })
-          }>
+          }
+          accessibilityRole="button"
+          accessibilityLabel={`Play ${track.title}`}
+          accessibilityState={{selected: isActive}}>
           {/* Number or playing indicator */}
           <View style={styles.numCol}>
             {isTrackPlaying ? (
@@ -131,6 +134,14 @@ export const ArtistScreen: React.FC<Props> = () => {
       );
     },
     [isCurrentTrack, isPlaying, handlers, colors],
+  );
+
+  // 59.2: stable FlatList renderItem — the inline arrow wrapper was
+  // re-created on every render, forcing all rows to re-render.
+  const renderRemainingItem = useCallback(
+    ({item, index}: {item: typeof allTracks[number]; index: number}) =>
+      renderRemainingTrack(item, index),
+    [renderRemainingTrack],
   );
 
   // ── Styles ──
@@ -183,7 +194,10 @@ export const ArtistScreen: React.FC<Props> = () => {
         <TouchableOpacity
           style={dynamicStyles.backBtn}
           onPress={handlers.goBack}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}>
           <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
         </TouchableOpacity>
       </View>
@@ -277,9 +291,13 @@ export const ArtistScreen: React.FC<Props> = () => {
                 {allTracks.length} tracks
               </AppText>
             </View>
-            {remainingTracks.map((track, idx) =>
-              renderRemainingTrack(track, idx),
-            )}
+            <FlatList
+              data={remainingTracks}
+              keyExtractor={track => track.uri}
+              renderItem={renderRemainingItem}
+              scrollEnabled={false}
+              initialNumToRender={remainingTracks.length}
+            />
           </View>
         )}
 

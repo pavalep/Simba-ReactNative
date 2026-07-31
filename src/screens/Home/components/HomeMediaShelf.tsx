@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, ScrollView, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
 import FastImage from 'react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
@@ -57,7 +57,7 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
         <AppText variant="h3" color="primary" style={styles.headerTitle}>
           {title}
         </AppText>
-        <TouchableOpacity activeOpacity={0.7} style={styles.seeAllBtn} onPress={onSeeAll}>
+        <TouchableOpacity activeOpacity={0.7} style={styles.seeAllBtn} onPress={onSeeAll} accessibilityRole="button">
           <AppText variant="overline" color="accent" style={styles.seeAllText}>
             VIEW ALL
           </AppText>
@@ -65,20 +65,18 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
       </View>
 
       {/* ── Horizontal Shelf ── */}
-      <ScrollView
+      <FlatList
         horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.shelfContent}
-        snapToInterval={CARD_WIDTH + spacing.md}
-        decelerationRate="fast">
-        {displayItems.map(item => {
+        data={displayItems}
+        keyExtractor={item => item.fileUri}
+        renderItem={({item}) => {
           const progress = item.duration && item.position ? Math.min(100, (item.position / item.duration) * 100) : 0;
           
           return (
             <TouchableOpacity
-              key={item.fileUri}
               activeOpacity={0.85}
               onPress={() => onItemPress(item)}
+              accessibilityRole="button"
               style={[styles.card, {shadowColor: colors.shadow}]}>
               <View style={[styles.thumbnailContainer, {backgroundColor: colors.background.elevated}]}>
                 {item.thumbnailPath ? (
@@ -153,8 +151,15 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
               </View>
             </TouchableOpacity>
           );
-        })}
-      </ScrollView>
+        }}
+        contentContainerStyle={styles.shelfContent}
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={CARD_WIDTH + spacing.md}
+        decelerationRate="fast"
+        initialNumToRender={displayItems.length}
+        windowSize={5}
+        maxToRenderPerBatch={12}
+      />
     </View>
   );
 };

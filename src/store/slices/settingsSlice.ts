@@ -58,6 +58,8 @@ interface SettingsState {
   scanOnLaunch: boolean;
   notificationsEnabled: boolean;
   appLanguage: string;
+  /** 49.6: keep the last N completed downloads (0 = off). */
+  autoDeleteDownloads: number;
 }
 
 const initialState: SettingsState = {
@@ -111,6 +113,9 @@ const initialState: SettingsState = {
   scanOnLaunch: false,
   notificationsEnabled: true,
   appLanguage: 'system',
+
+  // Downloads defaults
+  autoDeleteDownloads: 0,
 };
 
 const settingsSlice = createSlice({
@@ -170,6 +175,11 @@ const settingsSlice = createSlice({
     // ── Playback Extras (Phase 22) ──
     setSkipSilence(state, action: PayloadAction<boolean>) {
       state.skipSilenceEnabled = action.payload;
+    },
+
+    // ── Downloads (Phase 49) ──
+    setAutoDeleteDownloads(state, action: PayloadAction<number>) {
+      state.autoDeleteDownloads = Math.max(0, Math.floor(action.payload));
     },
 
     // ── Audio Settings (Phase 45) ──
@@ -295,6 +305,8 @@ export const {
   setScanOnLaunch,
   setNotificationsEnabled,
   setAppLanguage,
+
+  setAutoDeleteDownloads,
 
   resetToDefaults,
 } = settingsSlice.actions;

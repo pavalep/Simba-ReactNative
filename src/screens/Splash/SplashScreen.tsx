@@ -23,6 +23,7 @@ import type {RootStackParamList} from '../../navigation/types';
 import {SvgIcon} from '../../components/utility/SvgIcon/SvgIcon';
 import {useTheme} from '../../theme';
 import {useAuth} from '../../hooks/useAuth';
+import {useAccessibility} from '../../hooks/useAccessibility';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {AppText} from '../../components/core/AppText/AppText';
 
@@ -35,6 +36,7 @@ export const SplashScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation<NavigationProp>();
   const {isAuthenticated} = useAuth();
+  const {reduceMotion} = useAccessibility();
 
   // Animated values
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -120,46 +122,58 @@ export const SplashScreen: React.FC = () => {
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    // ── Logo: fade-in + scale-up (0-600ms) ──
-    Animated.parallel([
-      Animated.timing(logoOpacity, {
-        toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(logoscale, {
-        toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-    ]).start();
+    if (reduceMotion) {
+      // 59.7: reduced motion — render everything fully visible, skip entrance
+      logoOpacity.setValue(1);
+      logoscale.setValue(1);
+      subtitleOpacity.setValue(1);
+    } else {
+      // ── Logo: fade-in + scale-up (0-600ms) ──
+      Animated.parallel([
+        Animated.timing(logoOpacity, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoscale, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
 
-    // ── Subtitle: fade-in with delay (900-1300ms) ──
-    Animated.timing(subtitleOpacity, {
-      toValue: 1,
-      duration: 400,
-      delay: 900,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
+      // ── Subtitle: fade-in with delay (900-1300ms) ──
+      Animated.timing(subtitleOpacity, {
+        toValue: 1,
+        duration: 400,
+        delay: 900,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    }
 
     // ── Navigate after full animation ──
     const timer = setTimeout(() => {
       setShowPrompt(true);
-      // Show prompt with fade-in
-      Animated.timing(promptOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }).start();
+      if (reduceMotion) {
+        // 59.7: reduced motion — prompt appears instantly
+        promptOpacity.setValue(1);
+      } else {
+        // Show prompt with fade-in
+        Animated.timing(promptOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }).start();
+      }
     }, ANIMATION_DURATION);
 
     return () => {
       clearTimeout(timer);
     };
-  }, []);
+  }, [reduceMotion]);
   /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleScan = () => {
@@ -214,14 +228,16 @@ export const SplashScreen: React.FC = () => {
             <TouchableOpacity
               style={styles.scanButton}
               onPress={handleScan}
-              activeOpacity={0.8}>
+              activeOpacity={0.8}
+              accessibilityRole="button">
               <SvgIcon name="folder" size={20} color={colors.text.inverse} />
               <AppText style={styles.scanButtonText}>Scan Media Library</AppText>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSkip}
               activeOpacity={0.7}
-              hitSlop={{top: 12, bottom: 12, left: 24, right: 24}}>
+              hitSlop={{top: 12, bottom: 12, left: 24, right: 24}}
+              accessibilityRole="button">
               <AppText style={styles.skipText}>Skip for now</AppText>
             </TouchableOpacity>
           </Animated.View>

@@ -6,7 +6,7 @@
 import React from 'react';
 import {
   View,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
@@ -45,18 +45,17 @@ export const ArtistDiscography: React.FC<ArtistDiscographyProps> = ({
         Discography
       </AppText>
 
-      <ScrollView
+      <FlatList
         horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        snapToInterval={CARD_WIDTH + spacing.md}
-        decelerationRate="fast">
-        {albums.map(album => (
+        data={albums}
+        keyExtractor={album => album.title}
+        renderItem={({item: album}) => (
           <TouchableOpacity
-            key={album.title}
             style={styles.card}
             activeOpacity={0.8}
-            onPress={() => onAlbumPress(album.title)}>
+            onPress={() => onAlbumPress(album.title)}
+            accessibilityRole="button"
+            accessibilityLabel={`Open album ${album.title}`}>
             {/* Album art placeholder with gradient overlay */}
             <View
               style={[
@@ -105,8 +104,15 @@ export const ArtistDiscography: React.FC<ArtistDiscographyProps> = ({
               </View>
             </View>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.scrollContent}
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={CARD_WIDTH + spacing.md}
+        decelerationRate="fast"
+        initialNumToRender={Math.min(albums.length, 24)}
+        windowSize={5}
+        maxToRenderPerBatch={12}
+      />
     </View>
   );
 };

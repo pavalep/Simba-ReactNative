@@ -171,6 +171,8 @@ export const AudioSeekBar: React.FC<AudioSeekBarProps> = ({
           key={i}
           activeOpacity={0.6}
           onPress={() => onSeek(ch.startTime / durationSec)}
+          accessibilityRole="button"
+          accessibilityLabel={`Seek to chapter ${ch.title || i + 1}`}
           style={[
             styles.chapterMarkTouch,
             {left: `${pct}%`},
@@ -246,6 +248,14 @@ export const AudioSeekBar: React.FC<AudioSeekBarProps> = ({
         accessibilityRole="adjustable"
         accessibilityLabel={`Playback seek bar, ${Math.round(displayFraction * 100)} percent`}
         accessibilityValue={{min: 0, max: 100, now: Math.round(displayFraction * 100)}}
+        onAccessibilityAction={event => {
+          // 59.6: TalkBack swipe up/down steps the position by 5%
+          if (event.nativeEvent.actionName === 'increment') {
+            onSeek(Math.min(1, displayFraction + 0.05));
+          } else if (event.nativeEvent.actionName === 'decrement') {
+            onSeek(Math.max(0, displayFraction - 0.05));
+          }
+        }}
         {...panResponder.panHandlers}>
         {/* Animated background track */}
         <Animated.View

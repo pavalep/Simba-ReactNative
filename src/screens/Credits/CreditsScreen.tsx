@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────
 
 import React, {useMemo} from 'react';
-import {View, ScrollView, StyleSheet, Animated} from 'react-native';
+import {View, ScrollView, StyleSheet, Animated, FlatList} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
@@ -148,48 +148,67 @@ export const CreditsScreen: React.FC<Props> = () => {
             <AppText variant="h3" color="accent" style={styles.sectionTitle}>
               Contributors
             </AppText>
-            {CONTRIBUTORS.map(name => (
-              <View key={name} style={styles.contributorChip}>
-                <View
-                  style={[
-                    styles.contributorDot,
-                    {backgroundColor: colors.accent.gold},
-                  ]}
-                />
-                <AppText variant="body2" color="secondary">
-                  {name}
-                </AppText>
-              </View>
-            ))}
+            {/* 59.1: virtualized contributor rows */}
+            <FlatList
+              data={CONTRIBUTORS}
+              keyExtractor={name => name}
+              renderItem={({item: name}) => (
+                <View style={styles.contributorChip}>
+                  <View
+                    style={[
+                      styles.contributorDot,
+                      {backgroundColor: colors.accent.gold},
+                    ]}
+                  />
+                  <AppText variant="body2" color="secondary">
+                    {name}
+                  </AppText>
+                </View>
+              )}
+              scrollEnabled={false}
+              initialNumToRender={CONTRIBUTORS.length}
+            />
           </View>
         </Animated.View>
 
-        {/* Libraries grouped by type (25.3) */}
-        {CREDIT_GROUPS.map((group, gi) => (
-          <Animated.View key={group.title} style={entrance.styles[gi + 1]}>
-            <View style={styles.sectionCard}>
-              <AppText variant="h3" color="accent" style={styles.sectionTitle}>
-                {group.title}
-              </AppText>
-              {group.items.map(item => (
-                <View key={item} style={styles.bulletItem}>
-                  <SvgIcon
-                    name="chevronRight"
-                    size={14}
-                    color={colors.accent.gold}
-                    style={styles.bulletIcon}
-                  />
-                  <AppText
-                    variant="body2"
-                    color="secondary"
-                    style={styles.bulletText}>
-                    {item}
-                  </AppText>
-                </View>
-              ))}
-            </View>
-          </Animated.View>
-        ))}
+        {/* Libraries grouped by type (25.3) — 59.1: virtualized */}
+        <FlatList
+          data={CREDIT_GROUPS}
+          keyExtractor={group => group.title}
+          renderItem={({item: group, index: gi}) => (
+            <Animated.View style={entrance.styles[gi + 1]}>
+              <View style={styles.sectionCard}>
+                <AppText variant="h3" color="accent" style={styles.sectionTitle}>
+                  {group.title}
+                </AppText>
+                <FlatList
+                  data={group.items}
+                  keyExtractor={item => item}
+                  renderItem={({item}) => (
+                    <View style={styles.bulletItem}>
+                      <SvgIcon
+                        name="chevronRight"
+                        size={14}
+                        color={colors.accent.gold}
+                        style={styles.bulletIcon}
+                      />
+                      <AppText
+                        variant="body2"
+                        color="secondary"
+                        style={styles.bulletText}>
+                        {item}
+                      </AppText>
+                    </View>
+                  )}
+                  scrollEnabled={false}
+                  initialNumToRender={group.items.length}
+                />
+              </View>
+            </Animated.View>
+          )}
+          scrollEnabled={false}
+          initialNumToRender={CREDIT_GROUPS.length}
+        />
 
         <Animated.View style={[entrance.styles[CREDIT_GROUPS.length]]}>
           <AppText

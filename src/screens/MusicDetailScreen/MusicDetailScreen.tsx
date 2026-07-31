@@ -1,10 +1,10 @@
-import React, {useMemo, useCallback} from 'react';
+import React, {useMemo, useCallback, useState} from 'react';
 import {
   View,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
-  Share,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import FastImage from 'react-native-fast-image';
@@ -17,7 +17,11 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {SimbaStatusBar} from '../../components/StatusBar';
 import type {MusicDetailScreenProps} from '../../navigation/types';
 import {useMusicDetailScreen} from './hooks/useMusicDetailScreen';
+import {useMoreFromArtist} from '../../hooks/useMoreFromArtist';
+import {StreamingRow} from '../../components/media/StreamingRow/StreamingRow';
 import type {JamendoTrackResult, AudiusTrackResult} from '../../types/api';
+import {shareContent} from '../../services/shareService';
+import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
 
 type Props = MusicDetailScreenProps;
 
@@ -32,31 +36,51 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {trackId, source} = route.params;
   const {track, isLoading, error} = useMusicDetailScreen(trackId, source);
   const {colors} = useTheme();
+  // P34.1: add-to-playlist sheet for streaming tracks
+  const [sheetVisible, setSheetVisible] = useState(false);
 
   const handlePlay = useCallback(() => {
     if (!track) return;
     const fileUri =
       'audioUrl' in track ? track.audioUrl : track.streamUrl;
     const fileTitle = 'name' in track ? track.name : track.title;
+    const artwork =
+      'imageUrl' in track
+        ? (track as JamendoTrackResult).imageUrl
+        : (track as AudiusTrackResult).artworkUrl;
     navigation.navigate('AudioPlayer', {
       fileUri,
       fileTitle,
+      artworkUri: artwork ?? undefined,
+      source,
     });
-  }, [track, navigation]);
+  }, [track, navigation, source]);
+
+  // P39.5: streaming rows play directly
+  const handleMorePlay = useCallback(
+    (t: JamendoTrackResult) => {
+      navigation.navigate('AudioPlayer', {
+        fileUri: t.audioUrl,
+        fileTitle: t.name,
+        artworkUri: t.imageUrl || undefined,
+        source: 'jamendo',
+      });
+    },
+    [navigation],
+  );
 
   const handleShare = useCallback(() => {
     if (!track) return;
-    const fileUri = 'audioUrl' in track ? track.audioUrl : track.streamUrl;
     const shareTitle = 'name' in track ? track.name : track.title;
     const artist = track.artistName ?? '';
-    // 52.3: real share sheet instead of a placeholder Alert
-    Share.share({
-      message: `${shareTitle}${artist ? ` — ${artist}` : ''}${fileUri ? `\n${fileUri}` : ''}`,
-      title: `${shareTitle} — Simba Player`,
-    }).catch(() => {
-      // user cancelled share
+    // 52.3/56.2: real share sheet with deep link + https fallback
+    shareContent({
+      route: 'MusicDetail',
+      params: {trackId, source},
+      title: shareTitle,
+      subtitle: artist || undefined,
     });
-  }, [track]);
+  }, [track, trackId, source]);
 
   const imageUrl = track
     ? 'imageUrl' in track
@@ -71,6 +95,8 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
     : '';
 
   const artistName = track?.artistName ?? '';
+  // P39.5: streaming "more from this artist" rows (after artistName is known)
+  const more = useMoreFromArtist(artistName, trackId, 5);
   const albumName =
     track && 'albumName' in track
       ? (track as JamendoTrackResult).albumName
@@ -194,6 +220,28 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
           color: colors.accent.gold,
           fontSize: 15,
           fontWeight: '600',
+        },
+        playlistButton: {
+          borderWidth: 1.5,
+          borderColor: colors.accent.gold,
+          paddingVertical: spacing.md,
+          borderRadius: radius.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'row',
+          gap: spacing.sm,
+        },
+        playlistButtonText: {
+          color: colors.accent.gold,
+          fontSize: 15,
+          fontWeight: '600',
+        },
+        streamSection: {
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.xxl,
+        },
+        streamTitle: {
+          marginBottom: spacing.sm,
         },
         loadingContainer: {
           flex: 1,
@@ -355,8 +403,63 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
             accessibilityRole="button">
             <AppText style={styles.shareButtonText}>Share</AppText>
           </TouchableOpacity>
+
+          {/* P34.1: add streaming track to a playlist */}
+          <TouchableOpacity
+            style={styles.playlistButton}
+            activeOpacity={0.8}
+            onPress={() => setSheetVisible(true)}
+            accessibilityLabel="Add track to playlist"
+            accessibilityRole="button">
+            <SvgIcon name="listMusic" size={20} color={colors.accent.gold} />
+            <AppText style={styles.playlistButtonText}>Add to Playlist</AppText>
+          </TouchableOpacity>
         </View>
+
+        {/* P39.5: more from this artist (streaming) */}
+        {more.tracks.length > 0 ? (
+          <View style={styles.streamSection}>
+            <AppText
+              variant="h2"
+              color="primary"
+              style={styles.streamTitle}>
+              More From {artistName}
+            </AppText>
+            <FlatList
+              data={more.tracks}
+              keyExtractor={item => String(item.id)}
+              renderItem={({item}) => (
+                <StreamingRow
+                  track={item}
+                  onPlay={handleMorePlay}
+                  showDownload
+                />
+              )}
+              scrollEnabled={false}
+              initialNumToRender={more.tracks.length}
+            />
+          </View>
+        ) : null}
       </ScrollView>
+
+      <PlaylistSheet
+        visible={sheetVisible}
+        onClose={() => setSheetVisible(false)}
+        currentItem={{
+          fileUri: track
+            ? 'audioUrl' in track
+              ? track.audioUrl
+              : track.streamUrl
+            : '',
+          title,
+          duration,
+          artist: artistName,
+          album: albumName,
+          thumbnailPath: imageUrl ?? undefined,
+          source,
+          mediaType: 'audio',
+        }}
+      />
     </View>
   );
 };

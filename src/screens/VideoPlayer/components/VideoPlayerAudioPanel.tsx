@@ -141,7 +141,10 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = React
           {/* Disable audio option */}
           <TouchableOpacity
             style={[styles.trackRow, activeAudioTrack === null && styles.selectedRow]}
-            onPress={() => onSelectTrack(null)}>
+            onPress={() => onSelectTrack(null)}
+            accessibilityRole="radio"
+            accessibilityLabel="Disable audio"
+            accessibilityState={{selected: activeAudioTrack === null}}>
             <View
               style={
                 activeAudioTrack === null
@@ -165,7 +168,10 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = React
         return (
           <TouchableOpacity
             style={[styles.trackRow, isSelected && styles.selectedRow]}
-            onPress={() => onSelectTrack(track.id)}>
+            onPress={() => onSelectTrack(track.id)}
+            accessibilityRole="radio"
+            accessibilityLabel={track.title || `Audio track ${track.id}`}
+            accessibilityState={{selected: isSelected}}>
             <View
               style={isSelected ? styles.radioFilled : styles.radioOuter}
             />

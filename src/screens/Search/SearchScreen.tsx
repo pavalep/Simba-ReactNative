@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   useWindowDimensions,
   Platform,
+  FlatList,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
@@ -25,6 +26,28 @@ import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {RecentSearches} from './components/RecentSearches';
 import {FilterAndSortControls} from './components/FilterAndSortControls';
 import {SearchResults} from './components/SearchResults';
+// ── P40: unified search (aggregator + source chips + history + trending) ──
+import {useAggregatedSearch} from './hooks/useAggregatedSearch';
+import {
+  SourceFilterChips,
+  type SearchSource,
+} from './components/SourceFilterChips';
+import {
+  RemoteResults,
+  type RemoteResultsHandlers,
+} from './components/RemoteResults';
+import {StreamingRow} from '../../components/media/StreamingRow/StreamingRow';
+import {
+  getRecentSearches,
+  saveRecentSearches,
+} from '../../services/recentSearchService';
+import type {
+  AudiobookResult,
+  AudiusTrackResult,
+  InternetArchiveItemResult,
+  IPTVChannelResult,
+  JamendoTrackResult,
+} from '../../types/api';
 
 type SearchScreenProps = RootStackScreenProps<'Search'>;
 type Props = SearchScreenProps;
@@ -49,6 +72,22 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterMode>('all');
   const [activeSort, setActiveSort] = useState<SortMode>('relevance');
+  // P40.2: source filter chips (All/Local/Music/Podcasts/Radio/TV/…)
+  const [activeSource, setActiveSource] = useState<SearchSource>('all');
+  const recentLoadedRef = useRef(false);
+
+  // P40.4: persisted search history (re-run, clear)
+  useEffect(() => {
+    getRecentSearches().then(list => {
+      recentLoadedRef.current = true;
+      setRecentSearches(list);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!recentLoadedRef.current) return;
+    saveRecentSearches(recentSearches);
+  }, [recentSearches]);
 
   const {
     searchText,
@@ -57,6 +96,13 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
     allResults,
     isSearching,
   } = useSearch(recentFiles, playlist, videoFolders, audioFolders);
+
+  // P40.1: remote sources via searchAggregator (debounced + cancelled)
+  const {
+    results: remoteResults,
+    isLoading: remoteLoading,
+    trending,
+  } = useAggregatedSearch(debouncedQuery);
 
   const tileWidth = Math.floor(
     (screenWidth - 20 * 2 - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS,
@@ -111,6 +157,46 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
     return groups;
   }, [filteredResults]);
 
+  // ── Source visibility (P40.2) ──
+  const hasLocalResults = groupedResults.length > 0;
+  const showLocalResults = activeSource === 'all' || activeSource === 'local';
+
+  const remoteVisibleCount = useMemo(() => {
+    if (activeSource === 'local') return 0;
+    if (activeSource === 'all') {
+      return (
+        remoteResults.jamendoTracks.length +
+        remoteResults.audiusTracks.length +
+        remoteResults.podcasts.length +
+        remoteResults.radioStations.length +
+        remoteResults.iptvChannels.length +
+        remoteResults.audiobooks.length +
+        remoteResults.internetArchiveItems.length
+      );
+    }
+    switch (activeSource) {
+      case 'music':
+        return (
+          remoteResults.jamendoTracks.length +
+          remoteResults.audiusTracks.length
+        );
+      case 'podcasts':
+        return remoteResults.podcasts.length;
+      case 'radio':
+        return remoteResults.radioStations.length;
+      case 'tv':
+        return remoteResults.iptvChannels.length;
+      case 'audiobooks':
+        return remoteResults.audiobooks.length;
+      case 'archive':
+        return remoteResults.internetArchiveItems.length;
+      default:
+        return 0;
+    }
+  }, [remoteResults, activeSource]);
+
+  const hasAnyResults = hasLocalResults || remoteVisibleCount > 0;
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -142,6 +228,14 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
           borderRadius: 10,
           backgroundColor: colors.accent.goldDim,
         },
+        trendingSection: {
+          paddingTop: spacing.lg,
+        },
+        trendingTitle: {
+          fontWeight: '700',
+          marginBottom: spacing.sm,
+          paddingHorizontal: spacing.md,
+        },
       }),
     [colors],
   );
@@ -169,7 +263,70 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
     });
   }, [searchText]);
 
-  const hasResults = groupedResults.length > 0;
+  // ── P40.5: remote rows route to their correct destination ──
+  const handlePlayTrack = useCallback(
+    (track: JamendoTrackResult) => {
+      navigation.navigate('AudioPlayer', {
+        fileUri: track.audioUrl,
+        fileTitle: track.name,
+        artworkUri: track.imageUrl || undefined,
+        source: 'jamendo',
+      });
+    },
+    [navigation],
+  );
+
+  const handlePlayAudius = useCallback(
+    (track: AudiusTrackResult) => {
+      navigation.navigate('AudioPlayer', {
+        fileUri: track.streamUrl,
+        fileTitle: track.title,
+        artworkUri: track.artworkUrl || undefined,
+        source: 'audius',
+      });
+    },
+    [navigation],
+  );
+
+  const handleOpenAudiobook = useCallback(
+    (book: AudiobookResult) => {
+      navigation.navigate('AudiobookDetail', {
+        bookId: book.id,
+        bookTitle: book.title,
+      });
+    },
+    [navigation],
+  );
+
+  const handleOpenArchive = useCallback(
+    (item: InternetArchiveItemResult) => {
+      navigation.navigate('ArchiveItemDetail', {
+        identifier: item.identifier,
+        title: item.title,
+      });
+    },
+    [navigation],
+  );
+
+  const handleOpenChannel = useCallback(
+    (channel: IPTVChannelResult) => {
+      navigation.navigate('VideoPlayer', {
+        fileUri: channel.url,
+        fileTitle: channel.name,
+        source: 'iptv',
+      });
+    },
+    [navigation],
+  );
+
+  const remoteHandlers: RemoteResultsHandlers = {
+    onPlayTrack: handlePlayTrack,
+    onPlayAudius: handlePlayAudius,
+    onOpenAudiobook: handleOpenAudiobook,
+    onOpenArchive: handleOpenArchive,
+    onOpenChannel: handleOpenChannel,
+  };
+
   const showRecentSection = searchText.length === 0;
   const showResultsSection = searchText.length > 0;
 
@@ -218,6 +375,33 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
           />
         )}
 
+        {/* P40.7: trending from real API data when the query is empty */}
+        {showRecentSection && trending.length > 0 && (
+          <View style={styles.trendingSection}>
+            <AppText variant="h3" color="primary" style={styles.trendingTitle}>
+              Trending Now
+            </AppText>
+            {/* 59.1: virtualized instead of .map */}
+            <FlatList
+              data={trending}
+              keyExtractor={t => String(t.id)}
+              renderItem={({item: t}) => (
+                <StreamingRow track={t} onPlay={handlePlayTrack} />
+              )}
+              scrollEnabled={false}
+              initialNumToRender={trending.length}
+            />
+          </View>
+        )}
+
+        {/* P40.2: source filter chips */}
+        {showResultsSection && (
+          <SourceFilterChips
+            active={activeSource}
+            onChange={setActiveSource}
+          />
+        )}
+
         {showResultsSection && (
           <FilterAndSortControls
             activeFilter={activeFilter}
@@ -246,7 +430,8 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
             <TouchableOpacity
               style={styles.retryButton}
               onPress={handleRetry}
-              activeOpacity={0.7}>
+              activeOpacity={0.7}
+              accessibilityRole="button">
               <AppText variant="button" color="accent">
                 Retry
               </AppText>
@@ -255,26 +440,44 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         )}
 
         {/* ── No Results ── */}
-        {showResultsSection && !isSearching && !error && !hasResults && (
-          <View style={{marginTop: s.lg}}>
-            <EmptyState
-              icon="music"
-              title="No results found"
-              description={`No media matches "${debouncedQuery}"`}
-            />
-          </View>
-        )}
+        {showResultsSection &&
+          !isSearching &&
+          !remoteLoading &&
+          !error &&
+          !hasAnyResults && (
+            <View style={{marginTop: s.lg}}>
+              <EmptyState
+                icon="music"
+                title="No results found"
+                description={`No media matches "${debouncedQuery}"`}
+              />
+            </View>
+          )}
 
-        {/* ── Grouped Results ── */}
-        {showResultsSection && !isSearching && !error && hasResults && (
-          <SearchResults
-            groups={groupedResults}
-            debouncedQuery={debouncedQuery}
-            tileWidth={tileWidth}
-            onPlayFile={handlePlayFile}
-            onNavigate={(route, params) =>
-              (navigation.navigate as any)(route, params)
-            }
+        {/* ── Local Grouped Results ── */}
+        {showResultsSection &&
+          !isSearching &&
+          !error &&
+          showLocalResults &&
+          hasLocalResults && (
+            <SearchResults
+              groups={groupedResults}
+              debouncedQuery={debouncedQuery}
+              tileWidth={tileWidth}
+              onPlayFile={handlePlayFile}
+              onNavigate={(route, params) =>
+                (navigation.navigate as any)(route, params)
+              }
+            />
+          )}
+
+        {/* ── P40.1/40.6: Remote Results (per-source sections) ── */}
+        {showResultsSection && activeSource !== 'local' && (
+          <RemoteResults
+            results={remoteResults}
+            isLoading={remoteLoading}
+            source={activeSource}
+            handlers={remoteHandlers}
           />
         )}
 

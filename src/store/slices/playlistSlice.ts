@@ -129,6 +129,22 @@ const playlistSlice = createSlice({
         pl.updatedAt = new Date().toISOString();
       }
     },
+
+    // 56.5: import an external playlist (m3u/json) as a new playlist
+    importPlaylist(
+      state,
+      action: PayloadAction<{name: string; items: PlaylistItem[]; kind: PlaylistKind}>,
+    ) {
+      const now = new Date().toISOString();
+      state.playlists.unshift({
+        id: generateId(),
+        name: action.payload.name,
+        kind: action.payload.kind,
+        items: action.payload.items,
+        createdAt: now,
+        updatedAt: now,
+      });
+    },
   },
 });
 
@@ -142,6 +158,7 @@ export const {
   removeItemFromPlaylist,
   reorderPlaylistItems,
   clearPlaylist,
+  importPlaylist,
 } = playlistSlice.actions;
 
 // ─── Selectors ──────────────────────────────────────────────

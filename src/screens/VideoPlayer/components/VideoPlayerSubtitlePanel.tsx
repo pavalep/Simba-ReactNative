@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  FlatList,
 } from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
@@ -285,39 +286,44 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
 
       <View style={styles.divider} />
 
-      {/* Track list */}
-      {subtitleTracks.map(track => {
-        const isSelected = track.id === activeSubtitle;
-        const format = guessFormat(track.title);
-        return (
-          <TouchableOpacity
-            key={track.id}
-            style={[styles.trackRow, isSelected && styles.selectedRow]}
-            onPress={() => onSelectTrack(track.id)}>
-            <View
-              style={isSelected ? styles.radioFilled : styles.radioOuter}
-            />
-            <View style={styles.trackInfo}>
-              <View style={styles.row}>
-                <AppText variant="body2" color="primary">
-                  {track.title || `Track ${track.id}`}
-                </AppText>
-                {format ? (
-                  <AppText variant="caption" color="tertiary" style={styles.formatBadge}>
-                    {format}
+      {/* 59.1: virtualized track list */}
+      <FlatList
+        data={subtitleTracks}
+        keyExtractor={track => String(track.id)}
+        renderItem={({item: track}) => {
+          const isSelected = track.id === activeSubtitle;
+          const format = guessFormat(track.title);
+          return (
+            <TouchableOpacity
+              style={[styles.trackRow, isSelected && styles.selectedRow]}
+              onPress={() => onSelectTrack(track.id)}>
+              <View
+                style={isSelected ? styles.radioFilled : styles.radioOuter}
+              />
+              <View style={styles.trackInfo}>
+                <View style={styles.row}>
+                  <AppText variant="body2" color="primary">
+                    {track.title || `Track ${track.id}`}
+                  </AppText>
+                  {format ? (
+                    <AppText variant="caption" color="tertiary" style={styles.formatBadge}>
+                      {format}
+                    </AppText>
+                  ) : null}
+                </View>
+                {track.lang ? (
+                  <AppText variant="caption" color="secondary">
+                    {track.lang}
                   </AppText>
                 ) : null}
               </View>
-              {track.lang ? (
-                <AppText variant="caption" color="secondary">
-                  {track.lang}
-                </AppText>
-              ) : null}
-            </View>
-            {isSelected && <AppText variant="caption" color="accent">Selected</AppText>}
-          </TouchableOpacity>
-        );
-      })}
+              {isSelected && <AppText variant="caption" color="accent">Selected</AppText>}
+            </TouchableOpacity>
+          );
+        }}
+        scrollEnabled={false}
+        initialNumToRender={subtitleTracks.length}
+      />
 
       {subtitleTracks.length === 0 && (
         <View style={styles.emptyState}>
@@ -373,13 +379,16 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
         <AppText variant="body2" color="primary">
           Font Size
         </AppText>
-        <View style={styles.sizeChips}>
-          {(['small', 'medium', 'large'] as const).map(size => {
+        {/* 59.1: virtualized size chips */}
+        <FlatList
+          horizontal
+          data={['small', 'medium', 'large'] as Array<'small' | 'medium' | 'large'>}
+          keyExtractor={size => size}
+          renderItem={({item: size}) => {
             const label = size === 'small' ? 'S' : size === 'medium' ? 'M' : 'L';
             const isActive = subtitleFontSize === size;
             return (
               <TouchableOpacity
-                key={size}
                 style={[styles.sizeChip, isActive && styles.sizeChipActive]}
                 onPress={() => onFontSizeChange(size)}>
                 <AppText
@@ -389,8 +398,11 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
                 </AppText>
               </TouchableOpacity>
             );
-          })}
-        </View>
+          }}
+          contentContainerStyle={styles.sizeChips}
+          scrollEnabled={false}
+          initialNumToRender={3}
+        />
       </View>
 
       <View style={styles.styleRow}>
@@ -440,12 +452,15 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
           <AppText variant="body2" color="primary">
             Text Color
           </AppText>
-          <View style={styles.colorRow}>
-            {PRESET_COLORS.map(color => {
+          {/* 59.1: virtualized color presets */}
+          <FlatList
+            horizontal
+            data={PRESET_COLORS}
+            keyExtractor={color => color}
+            renderItem={({item: color}) => {
               const isActive = subtitleTextColor === color;
               return (
                 <TouchableOpacity
-                  key={color}
                   onPress={() => onTextColorChange(color)}
                   style={[
                     styles.colorSwatch,
@@ -455,8 +470,11 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
                   accessibilityLabel={`Text color ${color}`}
                 />
               );
-            })}
-          </View>
+            }}
+            contentContainerStyle={styles.colorRow}
+            scrollEnabled={false}
+            initialNumToRender={PRESET_COLORS.length}
+          />
         </View>
       )}
 

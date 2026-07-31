@@ -30,6 +30,7 @@ export const ResultListRow: React.FC<ResultListRowProps> = ({
       key={item.id}
       activeOpacity={0.75}
       onPress={onPress}
+      accessibilityRole="button"
       style={[
         styles.listResultRow,
         {

@@ -13,11 +13,15 @@ import type {RootStackParamList} from './types';
  *   simbaplayer://album/Recovery/Eminem
  *   simbaplayer://song?uri=...
  *   simbaplayer://genre/Hip-Hop
+ *   simbaplayer://genre/Hip-Hop?initialTab=moods
+ *   simbaplayer://queue
  *   simbaplayer://bookmarks
- *   simbaplayer://about
  *   simbaplayer://videos
  *   simbaplayer://audio
  *   simbaplayer://playlists
+ *   simbaplayer://playlist/<id>
+ *   simbaplayer://library/artist/<name>
+ *   simbaplayer://settings/equalizer
  */
 export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['simbaplayer://', 'https://simbaplayer.app'],
@@ -39,10 +43,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
           LibraryTab: {
             screens: {
               Library: 'library',
-              FolderBrowser: 'folder/:initialPath?',
-              PlaylistDetail: 'playlist/:playlistId',
-              ArtistDetail: 'library/artist/:artistName',
-              AlbumDetail: 'library/album/:albumTitle/:artistName',
             },
           },
         },
@@ -64,10 +64,10 @@ export const linking: LinkingOptions<RootStackParamList> = {
           fileTitle: decodeURIComponent,
         },
       },
-      Preferences: 'preferences',
       Settings: {
         screens: {
           Settings: 'settings',
+          Equalizer: 'settings/equalizer',
           About: 'settings/about',
           AudioSettings: 'settings/audio',
           LinkedFolders: 'settings/folders/:type',
@@ -84,7 +84,31 @@ export const linking: LinkingOptions<RootStackParamList> = {
         },
       },
       Bookmarks: 'bookmarks',
-      About: 'about',
+      // 48.1: full-page queue deep link
+      Queue: 'queue',
+      // 49.7: downloads deep link
+      Downloads: 'downloads',
+      // 56.7: these root-stack screens were previously nested under LibraryTab,
+      // which made their deep links unreachable — they now live at root level.
+      FolderBrowser: {
+        path: 'folder/:initialPath?',
+        parse: {initialPath: decodeURIComponent},
+      },
+      PlaylistDetail: {
+        path: 'playlist/:playlistId',
+        parse: {playlistId: decodeURIComponent},
+      },
+      ArtistDetail: {
+        path: 'library/artist/:artistName',
+        parse: {artistName: decodeURIComponent},
+      },
+      AlbumDetail: {
+        path: 'library/album/:albumTitle/:artistName',
+        parse: {
+          albumTitle: decodeURIComponent,
+          artistName: decodeURIComponent,
+        },
+      },
       ArtistScreen: {
         path: 'artist/:artistName',
         parse: {artistName: decodeURIComponent},
@@ -104,7 +128,11 @@ export const linking: LinkingOptions<RootStackParamList> = {
       },
       GenreScreen: {
         path: 'genre/:genre',
-        parse: {genre: decodeURIComponent},
+        parse: {
+          genre: decodeURIComponent,
+          // P41.7: optional tab query param (local/streaming/moods/radio)
+          initialTab: decodeURIComponent,
+        },
       },
       AllVideosScreen: 'videos',
       AllAudioScreen: 'audio',
@@ -139,6 +167,42 @@ export const linking: LinkingOptions<RootStackParamList> = {
           podcastId: Number,
           podcastTitle: decodeURIComponent,
         },
+      },
+      RadioScreen: {
+        path: 'radio/:initialTab?',
+        parse: {initialTab: decodeURIComponent},
+      },
+      LiveTVScreen: {
+        path: 'tv/:categoryId?',
+        parse: {categoryId: decodeURIComponent},
+      },
+      AudiobooksScreen: {
+        path: 'audiobooks/:initialTab?',
+        parse: {
+          initialTab: decodeURIComponent,
+          genre: decodeURIComponent,
+        },
+      },
+      AudiobookDetail: {
+        path: 'audiobook/:bookId',
+        parse: {bookId: Number, bookTitle: decodeURIComponent},
+      },
+      ArchiveScreen: {
+        path: 'archive/:initialTab?',
+        parse: {initialTab: decodeURIComponent},
+      },
+      ArchiveItemDetail: {
+        path: 'archive-item/:identifier',
+        parse: {identifier: decodeURIComponent, title: decodeURIComponent},
+      },
+      // ── P38: TV shows (TVMaze) ──
+      ShowsScreen: {
+        path: 'shows/:initialTab?',
+        parse: {initialTab: decodeURIComponent},
+      },
+      ShowDetail: {
+        path: 'show/:showId',
+        parse: {showId: Number, showName: decodeURIComponent},
       },
     },
   },

@@ -17,7 +17,8 @@ export const AudioPlayerError: React.FC<Props> = ({message, onRetry, colors}) =>
       <TouchableOpacity
         style={[styles.retryBtn, {backgroundColor: colors.accent.gold}]}
         onPress={onRetry}
-        activeOpacity={0.7}>
+        activeOpacity={0.7}
+        accessibilityRole="button">
         <AppText variant="body2" color="primary">Retry</AppText>
       </TouchableOpacity>
     </View>

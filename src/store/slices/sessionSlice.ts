@@ -11,6 +11,8 @@ export interface SessionEntry {
   thumbnailPath: string;
   /** Discriminates between video and audio files for grouped UI. */
   mediaType?: 'video' | 'audio';
+  /** P33: origin label for remote/streaming entries (host, e.g. "cdn.example.com") */
+  source?: string;
 }
 
 /** Tracked media file in the user's library (populated as files are played). */
@@ -20,6 +22,8 @@ export interface MediaLibraryEntry {
   duration: number;
   mediaType: 'video' | 'audio';
   dateAdded: string; // ISO date — first time file was opened
+  /** P33: origin label for remote/streaming entries */
+  source?: string;
 }
 
 export interface BookmarkEntry {
@@ -31,6 +35,8 @@ export interface BookmarkEntry {
   createdAt: string;
   thumbnailPath?: string;
   mediaType?: 'video' | 'audio';
+  /** P33: origin label for remote/streaming bookmarks */
+  source?: string;
 }
 
 interface SessionState {
@@ -67,22 +73,24 @@ const sessionSlice = createSlice({
         duration: number;
         thumbnailPath?: string;
         mediaType?: 'video' | 'audio';
+        source?: string;
       }>,
     ) {
-      const {fileUri, title, position, duration, thumbnailPath, mediaType} = action.payload;
+      const {fileUri, title, position, duration, thumbnailPath, mediaType, source} = action.payload;
       const now = new Date().toISOString();
 
       // Remove existing entry for this URI
       const filtered = state.recentFiles.filter(f => f.fileUri !== fileUri);
 
-      // Preserve existing thumbnail/mediaType if not provided or capture failed
+      // Preserve existing thumbnail/mediaType/source if not provided or capture failed
       const existingEntry = state.recentFiles.find(f => f.fileUri === fileUri);
       const resolvedThumbnail = thumbnailPath || existingEntry?.thumbnailPath || '';
       const resolvedMediaType = mediaType ?? existingEntry?.mediaType ?? 'video';
+      const resolvedSource = source ?? existingEntry?.source;
 
       // Add to front
       state.recentFiles = [
-        {fileUri, title, position, duration, lastPlayedAt: now, thumbnailPath: resolvedThumbnail, mediaType: resolvedMediaType},
+        {fileUri, title, position, duration, lastPlayedAt: now, thumbnailPath: resolvedThumbnail, mediaType: resolvedMediaType, ...(resolvedSource ? {source: resolvedSource} : {})},
         ...filtered,
       ].slice(0, MAX_RECENT_FILES);
 
@@ -98,6 +106,7 @@ const sessionSlice = createSlice({
           duration,
           mediaType: resolvedMediaType,
           dateAdded: now,
+          ...(resolvedSource ? {source: resolvedSource} : {}),
         });
         if (state.mediaLibrary.length > MAX_MEDIA_LIBRARY) {
           state.mediaLibrary = state.mediaLibrary.slice(-MAX_MEDIA_LIBRARY);

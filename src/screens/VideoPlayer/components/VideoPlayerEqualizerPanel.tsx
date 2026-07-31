@@ -168,7 +168,12 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
   const renderHeader = () => (
     <>
       {/* Enable/Disable toggle */}
-      <TouchableOpacity style={styles.toggleRow} onPress={onToggle}>
+      <TouchableOpacity
+        style={styles.toggleRow}
+        onPress={onToggle}
+        accessibilityRole="switch"
+        accessibilityLabel="Equalizer"
+        accessibilityState={{checked: eqEnabled}}>
         <AppText variant="body2" color="primary">
           Equalizer
         </AppText>
@@ -207,7 +212,10 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
                 styles.presetChip,
                 isActive && styles.presetChipActive,
               ]}
-              onPress={() => onApplyPreset(item)}>
+              onPress={() => onApplyPreset(item)}
+              accessibilityRole="button"
+              accessibilityState={{selected: isActive}}
+              accessibilityLabel={`Apply ${item} preset`}>
               <AppText
                 variant="caption"
                 color={isActive ? 'accent' : 'secondary'}>
@@ -258,7 +266,11 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
   );
 
   const renderFooter = () => (
-    <TouchableOpacity style={styles.resetBtn} onPress={onReset}>
+    <TouchableOpacity
+      style={styles.resetBtn}
+      onPress={onReset}
+      accessibilityRole="button"
+      accessibilityLabel="Reset equalizer">
       <AppText variant="body2" color="error">
         Reset
       </AppText>
@@ -284,6 +296,7 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
         minimumTrackTintColor={colors.accent.gold}
         maximumTrackTintColor={colors.border.subtle}
         thumbTintColor={colors.accent.gold}
+        accessibilityLabel={`${item.label} Hz band`}
       />
     </View>
   );

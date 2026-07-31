@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, ScrollView, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
@@ -32,15 +32,15 @@ export const GenreChipsShelf: React.FC<GenreChipsShelfProps> = ({
         </AppText>
       </View>
 
-      <ScrollView
+      <FlatList
         horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
-        {genres.map(genre => (
+        data={genres}
+        keyExtractor={genre => genre.name}
+        renderItem={({item: genre}) => (
           <TouchableOpacity
-            key={genre.name}
             activeOpacity={0.8}
             onPress={() => onGenrePress(genre.name)}
+            accessibilityRole="button"
             style={[styles.chip, {borderColor: colors.border.subtle}]}>
             <LinearGradient
               colors={[colors.accent.goldDim, colors.accent.gold + '30']}
@@ -62,8 +62,13 @@ export const GenreChipsShelf: React.FC<GenreChipsShelfProps> = ({
               </View>
             </View>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.scrollContent}
+        showsHorizontalScrollIndicator={false}
+        initialNumToRender={Math.min(genres.length, 24)}
+        windowSize={5}
+        maxToRenderPerBatch={12}
+      />
     </View>
   );
 };

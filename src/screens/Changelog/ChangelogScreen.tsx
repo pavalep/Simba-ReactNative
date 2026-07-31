@@ -1,5 +1,5 @@
 import React, {useMemo, useRef, useEffect} from 'react';
-import {View, ScrollView, StyleSheet, Animated} from 'react-native';
+import {View, ScrollView, StyleSheet, Animated, FlatList} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
@@ -150,29 +150,42 @@ export const ChangelogScreen: React.FC<Props> = () => {
           style={styles.scroll}
           contentContainerStyle={{paddingBottom: spacing.xxxl}}
           showsVerticalScrollIndicator={false}>
-          {CHANGELOG.map(entry => (
-            <View key={entry.version} style={styles.versionCard}>
-              <View style={styles.versionHeader}>
-                <AppText variant="h3" color="accent" style={styles.versionLabel}>
-                  {entry.version}
-                </AppText>
-                <AppText variant="caption" color="tertiary">
-                  {entry.date}
-                </AppText>
-              </View>
-              {entry.changes.map((change, idx) => (
-                <View key={idx} style={styles.bulletItem}>
-                  <View style={styles.bullet} />
-                  <AppText
-                    variant="body2"
-                    color="secondary"
-                    style={styles.bulletText}>
-                    {change}
+          {/* 59.1: virtualized changelog cards */}
+          <FlatList
+            data={CHANGELOG}
+            keyExtractor={entry => entry.version}
+            renderItem={({item: entry}) => (
+              <View style={styles.versionCard}>
+                <View style={styles.versionHeader}>
+                  <AppText variant="h3" color="accent" style={styles.versionLabel}>
+                    {entry.version}
+                  </AppText>
+                  <AppText variant="caption" color="tertiary">
+                    {entry.date}
                   </AppText>
                 </View>
-              ))}
-            </View>
-          ))}
+                <FlatList
+                  data={entry.changes}
+                  keyExtractor={(change, idx) => String(idx)}
+                  renderItem={({item: change}) => (
+                    <View style={styles.bulletItem}>
+                      <View style={styles.bullet} />
+                      <AppText
+                        variant="body2"
+                        color="secondary"
+                        style={styles.bulletText}>
+                        {change}
+                      </AppText>
+                    </View>
+                  )}
+                  scrollEnabled={false}
+                  initialNumToRender={entry.changes.length}
+                />
+              </View>
+            )}
+            scrollEnabled={false}
+            initialNumToRender={CHANGELOG.length}
+          />
         </ScrollView>
       </Animated.View>
     </SafeAreaView>

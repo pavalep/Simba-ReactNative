@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────
 
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -71,7 +71,10 @@ export const SongBookmarks: React.FC<SongBookmarksProps> = ({
         <TouchableOpacity
           style={[styles.addBtn, {backgroundColor: colors.accent.gold}]}
           onPress={onOpenSheet}
-          activeOpacity={0.8}>
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Add bookmark"
+          hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
           <SvgIcon name="bookmark" size={16} color={colors.background.primary} />
         </TouchableOpacity>
       </View>
@@ -86,15 +89,20 @@ export const SongBookmarks: React.FC<SongBookmarksProps> = ({
         </View>
       ) : (
         <View style={[styles.listCard, {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle}]}>
-          {bookmarks.map((bm, idx) => (
-            <TouchableOpacity
-              key={bm.id}
-              style={[
-                styles.bookmarkRow,
-                idx < bookmarks.length - 1 && {borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.subtle},
-              ]}
-              onPress={() => onJumpTo(bm.position)}
-              activeOpacity={0.7}>
+          {/* 59.1: virtualized bookmark rows */}
+          <FlatList
+            data={bookmarks}
+            keyExtractor={bm => bm.id}
+            renderItem={({item: bm, index: idx}) => (
+              <TouchableOpacity
+                style={[
+                  styles.bookmarkRow,
+                  idx < bookmarks.length - 1 && {borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.subtle},
+                ]}
+                onPress={() => onJumpTo(bm.position)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Jump to bookmark ${bm.label || formatDuration(bm.position)}`}>
               <View style={styles.bookmarkLeft}>
                 <SvgIcon name="bookmark" size={14} color={colors.accent.gold} />
                 <View style={styles.bookmarkInfo}>
@@ -115,11 +123,16 @@ export const SongBookmarks: React.FC<SongBookmarksProps> = ({
               </View>
               <TouchableOpacity
                 onPress={() => onDelete(bm.id)}
-                hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete bookmark ${bm.label || formatDuration(bm.position)}`}>
                 <SvgIcon name="close" size={16} color={colors.text.tertiary} />
               </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            )}
+            scrollEnabled={false}
+            initialNumToRender={bookmarks.length}
+          />
         </View>
       )}
 

@@ -1,4 +1,4 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useEffect} from 'react';
 import {View, FlatList, RefreshControl, StyleSheet, TouchableOpacity, Animated} from 'react-native';
 import {spacing} from '../../theme/tokens';
 import {type HomeScreenProps} from '../../navigation/types';
@@ -18,9 +18,21 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {HomeBookmarksList} from './components/HomeBookmarksList';
 import {MovieCategoriesShelf} from './components/MovieCategoriesShelf';
 import {PodcastCategoriesShelf} from './components/PodcastCategoriesShelf';
+import {FollowedPodcastsShelf} from './components/FollowedPodcastsShelf';
 import {MusicCategoriesShelf} from './components/MusicCategoriesShelf';
 import {GenreChipsShelf} from './components/GenreChipsShelf';
+import {RadioCategoriesShelf} from './components/RadioCategoriesShelf';
+import {LiveTVCategoriesShelf} from './components/LiveTVCategoriesShelf';
+import {AudiobooksShelf} from './components/AudiobooksShelf';
+import {ArchiveShelf} from './components/ArchiveShelf';
+import {ShowsShelf} from './components/ShowsShelf';
+import type {
+  AudiobooksBrowseEntry,
+  ArchiveBrowseEntry,
+} from '../../constants/audiobookCategories';
+import type {ShowsBrowseEntry} from '../../constants/showCategories';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
+import {mark, logStartupSummary} from '../../utils/startupPerf';
 
 // ── Screen ──
 
@@ -52,6 +64,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 
   const entrance = useAnimatedEntrance(sections.length, {staggerDelay: 80});
 
+  // 59.3: cold-start milestone — initial screen mounted → log the summary
+  useEffect(() => {
+    mark('first-screen');
+    logStartupSummary();
+  }, []);
+
   const handleMovieCategoryPress = useCallback(
     (categoryId: string) => {
       navigation.navigate('MoviesScreen', {categoryId});
@@ -74,6 +92,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     navigation.navigate('PodcastsScreen', {});
   }, [navigation]);
 
+  // 35.5: followed podcast card → podcast detail
+  const handleFollowedPodcastPress = useCallback(
+    (item: {id: number; title: string}) => {
+      navigation.navigate('PodcastDetail', {
+        podcastId: item.id,
+        podcastTitle: item.title,
+      });
+    },
+    [navigation],
+  );
+
   const handleMusicCategoryPress = useCallback(
     (genre: string) => {
       navigation.navigate('MusicScreen', {genre});
@@ -83,6 +112,83 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 
   const handleMusicSeeAll = useCallback(() => {
     navigation.navigate('MusicScreen', {});
+  }, [navigation]);
+
+  // P36.7: live radio + live TV browse shelves
+  const handleRadioBrowsePress = useCallback(
+    (tab: string) => {
+      navigation.navigate('RadioScreen', {initialTab: tab});
+    },
+    [navigation],
+  );
+
+  const handleRadioSeeAll = useCallback(() => {
+    navigation.navigate('RadioScreen', {});
+  }, [navigation]);
+
+  const handleLiveTVCategoryPress = useCallback(
+    (categoryId: string) => {
+      navigation.navigate('LiveTVScreen', {categoryId});
+    },
+    [navigation],
+  );
+
+  const handleLiveTVSeeAll = useCallback(() => {
+    navigation.navigate('LiveTVScreen', {});
+  }, [navigation]);
+
+  // P37.7: audiobooks + Internet Archive browse shelves
+  const handleAudiobookBrowsePress = useCallback(
+    (entry: AudiobooksBrowseEntry) => {
+      navigation.navigate('AudiobooksScreen', {initialTab: entry.id});
+    },
+    [navigation],
+  );
+
+  const handleAudiobookGenrePress = useCallback(
+    (genre: string) => {
+      navigation.navigate('AudiobooksScreen', {initialTab: 'genres', genre});
+    },
+    [navigation],
+  );
+
+  const handleAudiobookSeeAll = useCallback(() => {
+    navigation.navigate('AudiobooksScreen', {});
+  }, [navigation]);
+
+  const handleArchiveBrowsePress = useCallback(
+    (entry: ArchiveBrowseEntry) => {
+      navigation.navigate('ArchiveScreen', {initialTab: entry.id});
+    },
+    [navigation],
+  );
+
+  const handleArchiveQuickSearch = useCallback(
+    (query: string) => {
+      navigation.navigate('ArchiveScreen', {query});
+    },
+    [navigation],
+  );
+
+  const handleArchiveSeeAll = useCallback(() => {
+    navigation.navigate('ArchiveScreen', {});
+  }, [navigation]);
+
+  // P38.7: TV shows (TVMaze) browse shelf
+  const handleShowsBrowsePress = useCallback(
+    (entry: ShowsBrowseEntry) => {
+      navigation.navigate('ShowsScreen', {initialTab: entry.id});
+    },
+    [navigation],
+  );
+
+  const handleShowsSeeAll = useCallback(() => {
+    navigation.navigate('ShowsScreen', {});
+  }, [navigation]);
+
+  // P41.5: See All coverage — pinned playlists link to the full list
+  const handlePlaylistsSeeAll = useCallback(() => {
+    navigation.navigate('AllPlaylistsScreen');
   }, [navigation]);
 
   // ── Render Item ──
@@ -113,7 +219,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         case 'GENRE':
           return <GenreChipsShelf genres={item.genres} onGenrePress={handleGenrePress} />;
         case 'PLAYLISTS':
-          return <QuickAccessShelf title="Pinned Playlists" playlists={item.items} onPlaylistPress={handlePlaylistPress} />;
+          return (
+            <QuickAccessShelf
+              title="Pinned Playlists"
+              playlists={item.items}
+              onPlaylistPress={handlePlaylistPress}
+              onSeeAll={handlePlaylistsSeeAll}
+            />
+          );
         case 'MOVIES':
           return (
             <MovieCategoriesShelf
@@ -128,11 +241,56 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
               onSeeAll={handlePodcastSeeAll}
             />
           );
+        case 'FOLLOWED_PODCASTS':
+          return (
+            <FollowedPodcastsShelf
+              items={item.items}
+              onPodcastPress={handleFollowedPodcastPress}
+              onSeeAll={handlePodcastSeeAll}
+            />
+          );
         case 'PREFILLED_MUSIC':
           return (
             <MusicCategoriesShelf
               onCategoryPress={handleMusicCategoryPress}
               onSeeAll={handleMusicSeeAll}
+            />
+          );
+        case 'RADIO':
+          return (
+            <RadioCategoriesShelf
+              onBrowsePress={handleRadioBrowsePress}
+              onSeeAll={handleRadioSeeAll}
+            />
+          );
+        case 'LIVE_TV':
+          return (
+            <LiveTVCategoriesShelf
+              onCategoryPress={handleLiveTVCategoryPress}
+              onSeeAll={handleLiveTVSeeAll}
+            />
+          );
+        case 'AUDIOBOOKS':
+          return (
+            <AudiobooksShelf
+              onBrowsePress={handleAudiobookBrowsePress}
+              onGenrePress={handleAudiobookGenrePress}
+              onSeeAll={handleAudiobookSeeAll}
+            />
+          );
+        case 'ARCHIVE':
+          return (
+            <ArchiveShelf
+              onBrowsePress={handleArchiveBrowsePress}
+              onQuickSearch={handleArchiveQuickSearch}
+              onSeeAll={handleArchiveSeeAll}
+            />
+          );
+        case 'SHOWS':
+          return (
+            <ShowsShelf
+              onBrowsePress={handleShowsBrowsePress}
+              onSeeAll={handleShowsSeeAll}
             />
           );
         case 'BOOKMARKS':
@@ -153,7 +311,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         sectionContent
       );
     },
-    [dispatch, greeting, handleItemPress, handlePlaylistPress, handleGenrePress, handleMovieCategoryPress, handleMovieSeeAll, handleSeeAll, handlePodcastCategoryPress, handlePodcastSeeAll, handleMusicCategoryPress, handleMusicSeeAll, entrance.styles],
+    [dispatch, greeting, handleItemPress, handlePlaylistPress, handleGenrePress, handleMovieCategoryPress, handleMovieSeeAll, handleSeeAll, handlePodcastCategoryPress, handlePodcastSeeAll, handleFollowedPodcastPress, handleMusicCategoryPress, handleMusicSeeAll, handleRadioBrowsePress, handleRadioSeeAll, handleLiveTVCategoryPress, handleLiveTVSeeAll, handleAudiobookBrowsePress, handleAudiobookGenrePress, handleAudiobookSeeAll, handleArchiveBrowsePress, handleArchiveQuickSearch, handleArchiveSeeAll, handleShowsBrowsePress, handleShowsSeeAll, handlePlaylistsSeeAll, entrance.styles],
   );
 
   if (hasError) {
@@ -228,6 +386,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={handleOpenMedia}
+        accessibilityRole="button"
+        accessibilityLabel="Play media file"
         style={[
           styles.fab,
           {

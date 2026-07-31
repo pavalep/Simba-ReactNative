@@ -13,6 +13,7 @@ import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {LrcLine} from '../../../utils/lrcParser';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 
 // ─── Constants ────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
   onPlayFromQueue,
 }) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList<LrcLine>>(null);
   const [activeTab, setActiveTab] = useState<TabType>('lyrics');
@@ -75,6 +77,11 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
   useEffect(() => {
     if (visible) {
       setHasAutoScrolled(false);
+      if (reduceMotion) {
+        // 59.7: reduced motion — render fully open, skip spring
+        entranceAnim.setValue(1);
+        return;
+      }
       Animated.spring(entranceAnim, {
         toValue: 1,
         friction: 9,
@@ -84,7 +91,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
     } else {
       entranceAnim.setValue(0);
     }
-  }, [visible, entranceAnim]);
+  }, [visible, entranceAnim, reduceMotion]);
 
   const overlayTranslateY = entranceAnim.interpolate({
     inputRange: [0, 1],
@@ -114,6 +121,11 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
   const activeLinePulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!visible) return;
+    if (reduceMotion) {
+      // 59.7: reduced motion — static highlight, no pulse loop
+      activeLinePulse.setValue(0);
+      return;
+    }
     if (isPlaying && activeIndex >= 0) {
       const loop = Animated.loop(
         Animated.sequence([
@@ -126,26 +138,24 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
     } else {
       activeLinePulse.setValue(0);
     }
-  }, [isPlaying, activeIndex, activeLinePulse, visible]);
+  }, [isPlaying, activeIndex, activeLinePulse, visible, reduceMotion]);
 
   // ── Spring animation auto-scroll (item 15.7) ──
   useEffect(() => {
     if (activeIndex >= 0 && flatListRef.current && visible) {
       const targetOffset = Math.max(0, (activeIndex - 3) * ESTIMATED_LINE_HEIGHT);
-      // First scroll: animated. Subsequent: spring via scrollToOffset
-      if (!hasAutoScrolled) {
-        flatListRef.current.scrollToOffset({offset: targetOffset, animated: true});
-        setHasAutoScrolled(true);
-      } else {
-        flatListRef.current.scrollToOffset({offset: targetOffset, animated: true});
-      }
+      // First scroll: animated. Subsequent: spring via scrollToOffset.
+      // 59.7: reduced motion — jump directly instead of scrolling.
+      flatListRef.current.scrollToOffset({offset: targetOffset, animated: !reduceMotion});
+      setHasAutoScrolled(true);
     }
-  }, [activeIndex, visible, hasAutoScrolled]);
+  }, [activeIndex, visible, hasAutoScrolled, reduceMotion]);
 
   // ── No lyrics animation ──
   const noteAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (lyrics.length === 0 && visible) {
+    if (lyrics.length === 0 && visible && !reduceMotion) {
+      // 59.7: reduced motion — static note, no bounce loop
       Animated.loop(
         Animated.sequence([
           Animated.timing(noteAnim, {toValue: 1, duration: 1200, easing: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t, useNativeDriver: true}),
@@ -156,7 +166,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
       noteAnim.setValue(0);
     }
     return () => noteAnim.stopAnimation();
-  }, [lyrics.length, visible, noteAnim]);
+  }, [lyrics.length, visible, noteAnim, reduceMotion]);
 
   // ── Styles ──
   const styles = useMemo(
@@ -313,7 +323,10 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
         return (
           <TouchableOpacity
             onPress={() => onSeekToLyric?.(item.time)}
-            activeOpacity={0.7}>
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Seek to ${item.text}`}
+            accessibilityState={{selected: true}}>
             <Animated.View
               style={[
                 styles.activeLyricRow,
@@ -333,7 +346,9 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
         <TouchableOpacity
           onPress={() => onSeekToLyric?.(item.time)}
           activeOpacity={0.7}
-          style={styles.lyricRow}>
+          style={styles.lyricRow}
+          accessibilityRole="button"
+          accessibilityLabel={`Seek to ${item.text}`}>
           <AppText style={styles.lyricText}>{item.text}</AppText>
         </TouchableOpacity>
       );
@@ -369,7 +384,9 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
             style={styles.closeBtn}
             onPress={onClose}
             activeOpacity={0.7}
-            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            accessibilityRole="button"
+            accessibilityLabel="Close lyrics">
             <SvgIcon name="chevronDown" size={18} color={colors.text.secondary} />
           </TouchableOpacity>
         </View>
@@ -379,7 +396,10 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === 'lyrics' ? styles.tabBtnActive : styles.tabBtnInactive]}
             onPress={() => setActiveTab('lyrics')}
-            activeOpacity={0.7}>
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{selected: activeTab === 'lyrics'}}
+            accessibilityLabel="Show lyrics">
             <AppText
               variant="body2"
               style={[styles.tabLabel, {color: activeTab === 'lyrics' ? colors.text.bright : colors.text.secondary}]}>
@@ -389,7 +409,10 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
           <TouchableOpacity
             style={[styles.tabBtn, activeTab === 'queue' ? styles.tabBtnActive : styles.tabBtnInactive]}
             onPress={() => setActiveTab('queue')}
-            activeOpacity={0.7}>
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{selected: activeTab === 'queue'}}
+            accessibilityLabel="Show queue">
             <AppText
               variant="body2"
               style={[styles.tabLabel, {color: activeTab === 'queue' ? colors.text.bright : colors.text.secondary}]}>
@@ -469,7 +492,10 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
                         isActive && styles.queueItemActive,
                       ]}
                       onPress={() => onPlayFromQueue?.(index)}
-                      activeOpacity={0.7}>
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Play ${item.title}`}
+                      accessibilityState={{selected: isActive}}>
                       <AppText
                         variant="caption"
                         color="secondary"

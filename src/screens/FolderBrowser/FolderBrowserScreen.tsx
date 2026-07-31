@@ -22,8 +22,22 @@ import {PlaylistContextMenu} from '../../components/playlist/PlaylistContextMenu
 import {PlaylistCreateModal} from '../../components/playlist/PlaylistCreateModal';
 import {useToast} from '../../components/feedback/Toast/Toast';
 import {logger} from '../../lib/logger';
-import {useAppDispatch, useAppSelector} from '../../store';
+import {useAppDispatch, useAppSelector, type RootState} from '../../store';
+import {createSelector} from '@reduxjs/toolkit';
 import type {Playlist, PlaylistItem, PlaylistKind} from '../../types/playlist';
+
+// 59.2: stable selector — the inline map rebuilt a fresh object on EVERY
+// store dispatch (incl. mpv position ticks) and re-rendered the browser.
+const selectPlaylistNameMap = createSelector(
+  (state: RootState) => state.playlists.playlists,
+  playlists => {
+    const map: Record<string, string> = {};
+    for (const pl of playlists) {
+      map[pl.id] = pl.name;
+    }
+    return map;
+  },
+);
 
 // ── Constants ──────────────────────────────────────────
 
@@ -215,13 +229,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
     [isSelecting, handleToggleFileSelection],
   );
 
-  const playlistNameMap = useAppSelector(state => {
-    const map: Record<string, string> = {};
-    for (const pl of state.playlists.playlists) {
-      map[pl.id] = pl.name;
-    }
-    return map;
-  });
+  const playlistNameMap = useAppSelector(selectPlaylistNameMap);
 
   const handleBatchAddConfirm = useCallback(
     (playlistId: string) => {
@@ -431,7 +439,10 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
             if (!isFolder) {
               handleFileLongPress(item.name);
             }
-          }}>
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={isFolder ? `Open folder ${item.name}` : `Select file ${item.name}`}
+          accessibilityState={{checked: isChecked}}>
           {/* Show checkbox in selection mode for files */}
           {isSelecting && !isFolder && (
             <View
@@ -479,13 +490,16 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       <View style={styles.breadcrumbRow}>
         <TouchableOpacity
           onPress={() => handleBreadcrumbPress(-1)}
-          activeOpacity={0.6}>
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel="Go to home folder">
           <AppText
             variant="caption"
             color={breadcrumbs.length === 0 ? 'accent' : 'secondary'}>
             Home
           </AppText>
         </TouchableOpacity>
+        {/* 59.1: flexWrap flow layout — .map kept (FlatList can't wrap) */}
         {breadcrumbs.map((segment, index) => {
           const isLast = index === breadcrumbs.length - 1;
           return (
@@ -496,7 +510,9 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
               <TouchableOpacity
                 onPress={() => handleBreadcrumbPress(index + 1)}
                 disabled={isLast}
-                activeOpacity={0.6}>
+                activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={`Go to folder ${segment}`}>
                 <AppText
                   variant="caption"
                   color={isLast ? 'accent' : 'secondary'}>
@@ -593,7 +609,8 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         <TouchableOpacity
           style={styles.batchBar}
           activeOpacity={0.8}
-          onPress={handleBatchAddToPlaylist}>
+          onPress={handleBatchAddToPlaylist}
+          accessibilityRole="button">
           <AppText
             variant="body2"
             color="primary"

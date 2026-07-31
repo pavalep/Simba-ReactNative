@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {radius} from '../../../theme/tokens';
@@ -38,6 +38,7 @@ export const FilterAndSortControls: React.FC<FilterAndSortControlsProps> = ({
     <View style={{marginTop: s.sm}}>
       <View style={styles.filterRow}>
         <View style={styles.chipsContainer}>
+          {/* 59.1: flexWrap flow layout — .map kept (FlatList can't wrap) */}
           {FILTERS.map(f => {
             const isActive = activeFilter === f.key;
             return (
@@ -56,7 +57,10 @@ export const FilterAndSortControls: React.FC<FilterAndSortControlsProps> = ({
                       ? colors.accent.gold
                       : colors.border.emphasis,
                   },
-                ]}>
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{selected: isActive}}
+                accessibilityLabel={`Filter by ${f.label.toLowerCase()}`}>
                 <AppText
                   variant="caption"
                   color={isActive ? 'primary' : 'secondary'}
@@ -76,27 +80,39 @@ export const FilterAndSortControls: React.FC<FilterAndSortControlsProps> = ({
           style={styles.sortLabel}>
           Sort:
         </AppText>
-        {SORTS.map(sort => {
-          const isActive = activeSort === sort.key;
-          return (
-            <TouchableOpacity
-              key={sort.key}
-              onPress={() => onSortChange(sort.key)}
-              style={[
-                styles.sortOption,
-                isActive && {
-                  backgroundColor: colors.accent.goldDim,
-                },
-              ]}>
-              <AppText
-                variant="caption"
-                color={isActive ? 'accent' : 'secondary'}
-                style={{fontWeight: isActive ? '600' : '400'}}>
-                {sort.label}
-              </AppText>
-            </TouchableOpacity>
-          );
-        })}
+        {/* 59.1: virtualized sort options */}
+        <FlatList
+          horizontal
+          data={SORTS}
+          keyExtractor={sort => sort.key}
+          renderItem={({item: sort}) => {
+            const isActive = activeSort === sort.key;
+            return (
+              <TouchableOpacity
+                onPress={() => onSortChange(sort.key)}
+                style={[
+                  styles.sortOption,
+                  isActive && {
+                    backgroundColor: colors.accent.goldDim,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{selected: isActive}}
+                accessibilityLabel={`Sort by ${sort.label.toLowerCase()}`}>
+                <AppText
+                  variant="caption"
+                  color={isActive ? 'accent' : 'secondary'}
+                  style={{fontWeight: isActive ? '600' : '400'}}>
+                  {sort.label}
+                </AppText>
+              </TouchableOpacity>
+            );
+          }}
+          contentContainerStyle={styles.sortOptions}
+          style={styles.sortFlatList}
+          scrollEnabled={false}
+          initialNumToRender={SORTS.length}
+        />
       </View>
     </View>
   );
@@ -135,5 +151,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radius.sm,
+  },
+  sortOptions: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  sortFlatList: {
+    flexGrow: 0,
   },
 });

@@ -1,6 +1,7 @@
 import React, {useEffect, useRef, useMemo} from 'react';
 import {View, Animated, StyleSheet, Easing} from 'react-native';
 import {useTheme} from '../../../theme';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   height = 60,
 }) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
 
   // Create animated values for each bar
   const animValues = useRef(
@@ -43,6 +45,14 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 
   // ── Animate each bar independently ──
   useEffect(() => {
+    if (reduceMotion) {
+      // 59.7: reduced motion — static bars at their peaks, no loop
+      animValues.forEach((anim, i) => {
+        const basePeak = BASE_PEAKS[i];
+        anim.setValue(BAR_MIN + basePeak * (BAR_MAX - BAR_MIN));
+      });
+      return;
+    }
     const animations = animValues.map((anim, i) => {
       const basePeak = BASE_PEAKS[i];
       const duration = 400 + Math.random() * 600;
@@ -76,7 +86,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 
     loop.start();
     return () => loop.stop();
-  }, [isPlaying, animValues]);
+  }, [isPlaying, animValues, reduceMotion]);
 
   // ── Styles ──
   const styles = useMemo(

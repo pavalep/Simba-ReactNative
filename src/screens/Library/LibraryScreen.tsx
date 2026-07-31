@@ -115,6 +115,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         segmentLabel: {fontWeight: '500', fontSize: 13},
         segmentIcon: {width: 14, height: 14, marginRight: 8},
         segmentInner: {flexDirection: 'row', alignItems: 'center'},
+        segmentRail: {flexDirection: 'row', paddingHorizontal: 20},
         controlBar: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -147,6 +148,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           borderColor: colors.accent.gold,
         },
         filterChipLabel: {fontWeight: '500'},
+        filterRail: {flexDirection: 'row', gap: spacing.xs},
         sortPickerScrim: {flex: 1, justifyContent: 'flex-end'},
         sortPickerPanel: {
           borderTopLeftRadius: radius.lg,
@@ -205,6 +207,16 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           alignItems: 'center',
           gap: spacing.sm,
         },
+        // 49.7: Downloads shortcut (Library entry point)
+        downloadsBtn: {
+          width: 40,
+          height: 40,
+          borderRadius: radius.full,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.border.subtle,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
         scroll: {flex: 1},
         scrollContent: {
           paddingHorizontal: 20,
@@ -229,6 +241,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           backgroundColor: colors.accent.goldDim,
           borderColor: colors.accent.gold,
         },
+        playlistFilterRail: {flexDirection: 'row', gap: spacing.sm},
         gridRow: {flexDirection: 'row', gap: GRID_GAP},
         gridCol: {flex: 1},
         fabOverlay: {
@@ -259,19 +272,26 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   const renderLibraryContent = () => (
     <>
       <View style={styles.segmentedControl}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row', paddingHorizontal: 20}}>
-          {SEGMENTS.map(seg => {
+        <FlatList
+          horizontal
+          data={SEGMENTS}
+          keyExtractor={seg => seg.key}
+          renderItem={({item: seg}) => {
             const isActive = activeSegment === seg.key;
             return (
-              <TouchableOpacity key={seg.key} style={[styles.segment, isActive && styles.segmentActive]} onPress={() => setActiveSegment(seg.key)} activeOpacity={0.7}>
+              <TouchableOpacity style={[styles.segment, isActive && styles.segmentActive]} onPress={() => setActiveSegment(seg.key)} activeOpacity={0.7}>
                 <View style={styles.segmentInner}>
                   <SvgIcon name={seg.icon} size={16} color={isActive ? colors.accent.gold : colors.text.secondary} style={styles.segmentIcon} />
                   <AppText variant="body2" color={isActive ? 'accent' : 'secondary'} style={styles.segmentLabel}>{seg.label}</AppText>
                 </View>
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          }}
+          contentContainerStyle={styles.segmentRail}
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={false}
+          initialNumToRender={SEGMENTS.length}
+        />
       </View>
 
       {(showSortControls || showFilterChips) && (
@@ -283,16 +303,24 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
             </TouchableOpacity>
           )}
           {showFilterChips && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-              {FILTER_CHIPS.map(chip => {
+            <FlatList
+              horizontal
+              data={FILTER_CHIPS}
+              keyExtractor={chip => chip.key}
+              renderItem={({item: chip}) => {
                 const isActive = filterType === chip.key;
                 return (
-                  <TouchableOpacity key={chip.key} style={[styles.filterChip, isActive && styles.filterChipActive]} onPress={() => setFilterType(chip.key)} activeOpacity={0.7}>
+                  <TouchableOpacity style={[styles.filterChip, isActive && styles.filterChipActive]} onPress={() => setFilterType(chip.key)} activeOpacity={0.7}>
                     <AppText variant="caption" color={isActive ? 'accent' : 'secondary'} style={styles.filterChipLabel}>{chip.label}</AppText>
                   </TouchableOpacity>
                 );
-              })}
-            </ScrollView>
+              }}
+              style={styles.filterRow}
+              contentContainerStyle={styles.filterRail}
+              showsHorizontalScrollIndicator={false}
+              scrollEnabled={false}
+              initialNumToRender={FILTER_CHIPS.length}
+            />
           )}
         </View>
       )}
@@ -349,16 +377,23 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   const renderPlaylistContent = () => (
     <>
       <View style={styles.playlistFilterRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{flexDirection: 'row', gap: spacing.sm}}>
-          {PLAYLIST_FILTER_TYPES.map(item => {
+        <FlatList
+          horizontal
+          data={PLAYLIST_FILTER_TYPES}
+          keyExtractor={item => item.key}
+          renderItem={({item}) => {
             const isActive = playlistFilterType === item.key;
             return (
-              <TouchableOpacity key={item.key} style={[styles.playlistFilterChip, isActive && styles.playlistFilterChipActive]} onPress={() => setPlaylistFilterType(item.key)} activeOpacity={0.7}>
+              <TouchableOpacity style={[styles.playlistFilterChip, isActive && styles.playlistFilterChipActive]} onPress={() => setPlaylistFilterType(item.key)} activeOpacity={0.7}>
                 <AppText variant="caption" color={isActive ? 'accent' : 'secondary'} style={{fontWeight: '600'}}>{item.label}</AppText>
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          }}
+          contentContainerStyle={styles.playlistFilterRail}
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={false}
+          initialNumToRender={PLAYLIST_FILTER_TYPES.length}
+        />
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -386,6 +421,16 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         </TouchableOpacity>
         <View style={styles.headerRight}>
           {contentMode === 'library' && showViewToggle && <ViewToggle value={viewMode} onChange={setViewMode} />}
+          {contentMode === 'library' && (
+            <TouchableOpacity
+              style={styles.downloadsBtn}
+              onPress={() => navigation.navigate('Downloads')}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Downloads">
+              <SvgIcon name="download" size={18} color={colors.text.primary} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -434,17 +479,23 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
               </TouchableOpacity>
             </View>
             <View style={[styles.dropdownDivider, {backgroundColor: colors.border.subtle}]} />
-            {CONTENT_MODE_OPTIONS.map(option => {
-              const isSelected = contentMode === option.key;
-              return (
-                <TouchableOpacity key={option.key} style={[styles.dropdownOption, {borderBottomColor: colors.border.subtle}]} onPress={() => { setContentMode(option.key); setShowDropdown(false); }} activeOpacity={0.7}>
-                  <AppText variant="body2" color={isSelected ? 'accent' : 'primary'}>{option.label}</AppText>
-                  <View style={[styles.sortRadio, {borderColor: isSelected ? colors.accent.gold : colors.border.subtle}]}>
-                    {isSelected && <View style={[styles.sortRadioInner, {backgroundColor: colors.accent.gold}]} />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            <FlatList
+              data={CONTENT_MODE_OPTIONS}
+              keyExtractor={option => option.key}
+              renderItem={({item: option}) => {
+                const isSelected = contentMode === option.key;
+                return (
+                  <TouchableOpacity style={[styles.dropdownOption, {borderBottomColor: colors.border.subtle}]} onPress={() => { setContentMode(option.key); setShowDropdown(false); }} activeOpacity={0.7}>
+                    <AppText variant="body2" color={isSelected ? 'accent' : 'primary'}>{option.label}</AppText>
+                    <View style={[styles.sortRadio, {borderColor: isSelected ? colors.accent.gold : colors.border.subtle}]}>
+                      {isSelected && <View style={[styles.sortRadioInner, {backgroundColor: colors.accent.gold}]} />}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+              scrollEnabled={false}
+              initialNumToRender={CONTENT_MODE_OPTIONS.length}
+            />
           </View>
         </TouchableOpacity>
       </Modal>

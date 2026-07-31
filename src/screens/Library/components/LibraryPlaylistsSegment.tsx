@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, StyleSheet} from 'react-native';
+import {StyleSheet, FlatList} from 'react-native';
 import {PlaylistCard} from '../../../components/playlist/PlaylistCard/PlaylistCard';
 import {Playlist} from '../../../types/playlist';
 import {ColorTokens} from '../../../theme/tokens';
@@ -12,7 +12,7 @@ interface LibraryPlaylistsSegmentProps {
   onShufflePlaylist: (playlistId: string) => void;
 }
 
-export const LibraryPlaylistsSegment: React.FC<LibraryPlaylistsSegmentProps> = ({
+export const LibraryPlaylistsSegment: React.FC<LibraryPlaylistsSegmentProps> = React.memo(({
   playlists,
   onPlaylistCardPress,
   onPlayAllPlaylist,
@@ -30,16 +30,22 @@ export const LibraryPlaylistsSegment: React.FC<LibraryPlaylistsSegmentProps> = (
   );
 
   return (
-    <View style={styles.playlistGrid}>
-      {playlists.map(pl => (
+    /* 59.1: virtualized playlist rows (linear column) */
+    <FlatList
+      data={playlists}
+      keyExtractor={pl => pl.id}
+      contentContainerStyle={styles.playlistGrid}
+      renderItem={({item: pl}) => (
         <PlaylistCard
-          key={pl.id}
           playlist={pl}
           onPress={onPlaylistCardPress}
           onPlayAll={onPlayAllPlaylist}
           onShuffleAll={onShufflePlaylist}
         />
-      ))}
-    </View>
+      )}
+      scrollEnabled={false}
+      initialNumToRender={playlists.length}
+    />
   );
-};
+},
+);

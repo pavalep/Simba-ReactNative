@@ -1,10 +1,11 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useCallback} from 'react';
 import {
   View,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
   Platform,
+  FlatList,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -15,11 +16,95 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import AudioWaveform from '../../components/player/AudioWaveform/AudioWaveform';
 import {SimbaStatusBar} from '../../components/StatusBar';
+import FastImage from 'react-native-fast-image';
 import {radius} from '../../theme/tokens';
+import {useCachedArt} from '../../hooks/useCachedArt';
+import {useMoreFromArtist} from '../../hooks/useMoreFromArtist';
+import {StreamingRow} from '../../components/media/StreamingRow/StreamingRow';
+import {useArtistEnrichment} from './hooks/useArtistEnrichment';
+import type {JamendoTrackResult} from '../../types/api';
 import type {RootStackScreenProps} from '../../navigation/types';
 type ArtistDetailScreenProps = RootStackScreenProps<'ArtistDetail'>;
+import {shareContent} from '../../services/shareService';
 
 type Props = ArtistDetailScreenProps;
+
+// ── P39: MusicBrainz discography row (CAA cover via art cache) ──
+
+const rowStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 8,
+    gap: 12,
+  },
+  art: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  info: {
+    flex: 1,
+  },
+  chevron: {
+    transform: [{rotate: '90deg'}],
+  },
+});
+
+const DiscographyRow: React.FC<{
+  title: string;
+  subtitle: string;
+  coverUrl: string | null;
+  onPress: () => void;
+}> = React.memo(({title, subtitle, coverUrl, onPress}) => {
+  const {colors} = useTheme();
+  const cached = useCachedArt(coverUrl);
+  return (
+    <TouchableOpacity
+      style={[
+        rowStyles.card,
+        {
+          backgroundColor: colors.background.elevated,
+          borderColor: colors.border.subtle,
+        },
+      ]}
+      activeOpacity={0.7}
+      onPress={onPress}
+      accessibilityRole="button">
+      {cached ? (
+        <FastImage
+          source={{uri: cached}}
+          style={rowStyles.art}
+          resizeMode={FastImage.resizeMode.cover}
+        />
+      ) : (
+        <View style={[rowStyles.art, {backgroundColor: colors.accent.goldDim}]}>
+          <SvgIcon name="listMusic" size={20} color={colors.accent.gold} />
+        </View>
+      )}
+      <View style={rowStyles.info}>
+        <AppText variant="body2" color="primary" numberOfLines={1}>
+          {title}
+        </AppText>
+        <AppText variant="caption" color="tertiary" numberOfLines={1}>
+          {subtitle}
+        </AppText>
+      </View>
+      <SvgIcon
+        name="chevronUp"
+        size={16}
+        color={colors.text.tertiary}
+        style={rowStyles.chevron}
+      />
+    </TouchableOpacity>
+  );
+});
 
 export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {artistName} = route.params;
@@ -31,6 +116,11 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const tracks = useAppSelector(state =>
     selectArtistDiscography(state, artistName),
   );
+
+  // P39.1/39.2: MusicBrainz artist + discography (CAA covers), silent fail
+  const enrichment = useArtistEnrichment(artistName);
+  // P39.4/39.5: streaming "more from this artist" rows
+  const more = useMoreFromArtist(artistName);
 
   // Derive discography (unique albums sorted by year desc)
   const discography = useMemo(() => {
@@ -67,6 +157,42 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     (navigation as any).navigate('AudioPlayer', {fileUri: uri, fileTitle: title});
   };
 
+  // P39.4: streaming rows play directly from the artist page
+  const handleStreamingPlay = useCallback(
+    (track: JamendoTrackResult) => {
+      navigation.navigate('AudioPlayer', {
+        fileUri: track.audioUrl,
+        fileTitle: track.name,
+        artworkUri: track.imageUrl || undefined,
+        source: 'jamendo',
+      });
+    },
+    [navigation],
+  );
+
+  // P39.1: short MusicBrainz profile line for the info card
+  const artistInfo = useMemo(() => {
+    if (!enrichment.artist) return '';
+    return (
+      [
+        enrichment.artist.country,
+        enrichment.artist.type,
+        enrichment.artist.disambiguation,
+      ]
+        .filter(Boolean)
+        .join(' · ') || 'Verified on MusicBrainz'
+    );
+  }, [enrichment.artist]);
+
+  // 56.4: share the artist via deep link + https fallback
+  const handleShare = useCallback(() => {
+    shareContent({
+      route: 'ArtistDetail',
+      params: {artistName},
+      title: artistName,
+    });
+  }, [artistName]);
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -85,6 +211,14 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           borderRadius: 18,
           alignItems: 'center',
           justifyContent: 'center',
+        },
+        shareBtn: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginLeft: 'auto',
         },
         scrollContent: {
           paddingHorizontal: 20,
@@ -125,6 +259,20 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         sectionTitle: {
           fontWeight: '600',
           marginBottom: 12,
+        },
+        sectionTitleSpaced: {
+          marginTop: 20,
+        },
+        infoBadgeRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 8,
+          marginTop: 6,
+        },
+        infoBadge: {
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: radius.pill,
         },
         albumCard: {
           flexDirection: 'row',
@@ -210,6 +358,14 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         <AppText variant="h2" color="primary">
           Artist
         </AppText>
+        <TouchableOpacity
+          style={[styles.shareBtn, {backgroundColor: colors.background.elevated}]}
+          onPress={handleShare}
+          activeOpacity={0.7}
+          accessibilityLabel="Share artist"
+          accessibilityRole="button">
+          <SvgIcon name="share" size={18} color={colors.text.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -250,7 +406,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           </View>
         </View>
 
-        {/* ── Bio placeholder ── */}
+        {/* ── Bio / MusicBrainz profile ── */}
         <View
           style={[
             styles.bioCard,
@@ -260,75 +416,156 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             },
           ]}>
           <AppText variant="body2" color="secondary">
-            Artist information is not yet available. Metadata will be enriched
-            as more files are scanned.
+            {enrichment.artist
+              ? artistInfo
+              : 'Artist information is not yet available. Metadata will be enriched as more files are scanned.'}
           </AppText>
+          {enrichment.artist ? (
+            <View style={styles.infoBadgeRow}>
+              <View
+                style={[styles.infoBadge, {backgroundColor: colors.accent.goldDim}]}>
+                <AppText variant="caption" style={{color: colors.accent.gold}}>
+                  MusicBrainz
+                </AppText>
+              </View>
+            </View>
+          ) : null}
         </View>
 
-        {/* ── Discography ── */}
-        <AppText variant="h3" color="primary" style={styles.sectionTitle}>
-          Discography
-        </AppText>
-        {discography.map(album => (
-          <TouchableOpacity
-            key={album.title}
-            style={[
-              styles.albumCard,
-              {
-                backgroundColor: colors.background.elevated,
-                borderColor: colors.border.subtle,
-              },
-            ]}
-            activeOpacity={0.7}
-            onPress={() =>
-              navigation.navigate('AlbumDetail', {
-                albumTitle: album.title,
-                artistName,
-              })
-            }>
-            <View
-              style={[
-                styles.albumArtSmall,
-                {backgroundColor: colors.accent.goldDim},
-              ]}>
-              <SvgIcon
-                name="listMusic"
-                size={20}
-                color={colors.accent.gold}
-              />
-            </View>
-            <View style={{flex: 1}}>
-              <AppText variant="body2" color="primary" numberOfLines={1}>
-                {album.title}
-              </AppText>
-              <AppText variant="caption" color="tertiary">
-                {album.year > 0 ? `${album.year} · ` : ''}
-                {album.trackCount}{' '}
-                {album.trackCount === 1 ? 'track' : 'tracks'}
-              </AppText>
-            </View>
-            <SvgIcon
-              name="chevronUp"
-              size={16}
-              color={colors.text.tertiary}
-              style={{transform: [{rotate: '90deg'}]}}
+        {/* ── Discography (MusicBrainz) ── */}
+        {enrichment.releases.length > 0 ? (
+          <>
+            <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+              Discography
+            </AppText>
+            {/* 59.1: virtualized instead of .map */}
+            <FlatList
+              data={enrichment.releases.slice(0, 30)}
+              keyExtractor={release => release.id}
+              renderItem={({item: release}) => (
+                <DiscographyRow
+                  title={release.title}
+                  subtitle={[
+                    release.date.slice(0, 4),
+                    release.country,
+                    release.status,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                  coverUrl={release.coverArtUrl}
+                  onPress={() =>
+                    navigation.navigate('AlbumDetail', {
+                      albumTitle: release.title,
+                      artistName,
+                      musicBrainzReleaseId: release.id,
+                    })
+                  }
+                />
+              )}
+              scrollEnabled={false}
+              initialNumToRender={30}
             />
-          </TouchableOpacity>
-        ))}
+          </>
+        ) : null}
+
+        {/* ── From Your Library ── */}
+        <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+          From Your Library
+        </AppText>
+        {/* 59.1: virtualized instead of .map */}
+        <FlatList
+          data={discography}
+          keyExtractor={album => album.title}
+          renderItem={({item: album}) => (
+            <TouchableOpacity
+              style={[
+                styles.albumCard,
+                {
+                  backgroundColor: colors.background.elevated,
+                  borderColor: colors.border.subtle,
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={() =>
+                navigation.navigate('AlbumDetail', {
+                  albumTitle: album.title,
+                  artistName,
+                })
+              }>
+              <View
+                style={[
+                  styles.albumArtSmall,
+                  {backgroundColor: colors.accent.goldDim},
+                ]}>
+                <SvgIcon
+                  name="listMusic"
+                  size={20}
+                  color={colors.accent.gold}
+                />
+              </View>
+              <View style={{flex: 1}}>
+                <AppText variant="body2" color="primary" numberOfLines={1}>
+                  {album.title}
+                </AppText>
+                <AppText variant="caption" color="tertiary">
+                  {album.year > 0 ? `${album.year} · ` : ''}
+                  {album.trackCount}{" "}
+                  {album.trackCount === 1 ? 'track' : 'tracks'}
+                </AppText>
+              </View>
+              <SvgIcon
+                name="chevronUp"
+                size={16}
+                color={colors.text.tertiary}
+                style={{transform: [{rotate: '90deg'}]}}
+              />
+            </TouchableOpacity>
+          )}
+          scrollEnabled={false}
+          initialNumToRender={discography.length}
+        />
+
+        {/* ── More from this artist (streaming) ── */}
+        {more.tracks.length > 0 ? (
+          <>
+            <AppText
+              variant="h3"
+              color="primary"
+              style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
+              More From {artistName}
+            </AppText>
+            {/* 59.1: virtualized instead of .map */}
+            <FlatList
+              data={more.tracks}
+              keyExtractor={track => String(track.id)}
+              renderItem={({item: track}) => (
+                <StreamingRow
+                  track={track}
+                  onPlay={handleStreamingPlay}
+                />
+              )}
+              scrollEnabled={false}
+              initialNumToRender={more.tracks.length}
+            />
+          </>
+        ) : null}
 
         {/* ── All tracks ── */}
         <AppText
           variant="h3"
           color="primary"
-          style={[styles.sectionTitle, {marginTop: 20}]}>
+          style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
           All Tracks
         </AppText>
-        {allTracks.map((track, idx) => {
+        {/* 59.1: virtualized instead of .map */}
+        <FlatList
+          data={allTracks}
+          keyExtractor={track => track.uri}
+          renderItem={({item: track, index: idx}) => {
           const isCurrentTrack = currentFile?.uri === track.uri;
           const isTrackPlaying = isCurrentTrack && playbackState === 'playing';
           return (
           <TouchableOpacity
-            key={track.uri}
             style={[
               styles.trackItem,
               {borderBottomColor: colors.border.subtle},
@@ -364,7 +601,10 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             </View>
           </TouchableOpacity>
           );
-        })}
+          }}
+          scrollEnabled={false}
+          initialNumToRender={allTracks.length}
+        />
       </ScrollView>
     </SafeAreaView>
   );

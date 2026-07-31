@@ -2,7 +2,7 @@
 // Simba Player — AllVideosScreen (Phase 20)
 // ────────────────────────────────────────────────────────
 
-import React from 'react';
+import React, {useCallback} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -59,53 +59,63 @@ export const AllVideosScreen: React.FC = () => {
     {staggerDelay: 50, direction: 'fade', duration: 300},
   );
 
-  const renderGridItem = ({item, index}: {item: typeof videoTracks[number]; index: number}) => (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle},
-        animStyles[index] || {},
-      ]}
-      activeOpacity={0.7}
-      onPress={() => handlePlayTrack(item.uri, item.title)}>
-      <View style={[styles.thumb, {backgroundColor: colors.accent.goldDim}]}>
-        <SvgIcon name="video" size={28} color={colors.accent.gold} />
-      </View>
-      <AppText variant="caption" color="primary" numberOfLines={2} style={styles.cardTitle}>
-        {item.title}
-      </AppText>
-      <AppText variant="caption" color="tertiary" numberOfLines={1} style={styles.cardArtist}>
-        {item.artist}
-      </AppText>
-    </TouchableOpacity>
-  );
-
-  const renderListItem = ({item, index}: {item: typeof videoTracks[number]; index: number}) => (
-    <TouchableOpacity
-      style={[
-        styles.listItem,
-        {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle},
-        animStyles[index] || {},
-      ]}
-      activeOpacity={0.7}
-      onPress={() => handlePlayTrack(item.uri, item.title)}>
-      <View style={[styles.listThumb, {backgroundColor: colors.accent.goldDim}]}>
-        <SvgIcon name="video" size={20} color={colors.accent.gold} />
-      </View>
-      <View style={styles.listInfo}>
-        <AppText variant="body2" color="primary" numberOfLines={1}>
+  // 59.2: stable renderItem — prevents cell re-renders on incidental
+  // screen re-renders (search typing, view toggle) while playback runs.
+  const renderGridItem = useCallback(
+    ({item, index}: {item: typeof videoTracks[number]; index: number}) => (
+      <TouchableOpacity
+        style={[
+          styles.card,
+          {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle},
+          animStyles[index] || {},
+        ]}
+        activeOpacity={0.7}
+        onPress={() => handlePlayTrack(item.uri, item.title)}>
+        <View style={[styles.thumb, {backgroundColor: colors.accent.goldDim}]}>
+          <SvgIcon name="video" size={28} color={colors.accent.gold} />
+        </View>
+        <AppText variant="caption" color="primary" numberOfLines={2} style={styles.cardTitle}>
           {item.title}
         </AppText>
-        <AppText variant="caption" color="tertiary" numberOfLines={1}>
-          {item.artist || 'Unknown'} · {formatDuration(item.duration)}
+        <AppText variant="caption" color="tertiary" numberOfLines={1} style={styles.cardArtist}>
+          {item.artist}
         </AppText>
-      </View>
-      <SvgIcon
-        name="chevronRight"
-        size={16}
-        color={colors.text.tertiary}
-      />
-    </TouchableOpacity>
+      </TouchableOpacity>
+    ),
+    [colors, animStyles, handlePlayTrack],
+  );
+
+  // 59.2: stable renderItem — prevents cell re-renders on incidental
+  // screen re-renders (search typing, view toggle) while playback runs.
+  const renderListItem = useCallback(
+    ({item, index}: {item: typeof videoTracks[number]; index: number}) => (
+      <TouchableOpacity
+        style={[
+          styles.listItem,
+          {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle},
+          animStyles[index] || {},
+        ]}
+        activeOpacity={0.7}
+        onPress={() => handlePlayTrack(item.uri, item.title)}>
+        <View style={[styles.listThumb, {backgroundColor: colors.accent.goldDim}]}>
+          <SvgIcon name="video" size={20} color={colors.accent.gold} />
+        </View>
+        <View style={styles.listInfo}>
+          <AppText variant="body2" color="primary" numberOfLines={1}>
+            {item.title}
+          </AppText>
+          <AppText variant="caption" color="tertiary" numberOfLines={1}>
+            {item.artist || 'Unknown'} · {formatDuration(item.duration)}
+          </AppText>
+        </View>
+        <SvgIcon
+          name="chevronRight"
+          size={16}
+          color={colors.text.tertiary}
+        />
+      </TouchableOpacity>
+    ),
+    [colors, animStyles, handlePlayTrack],
   );
 
   return (
@@ -121,6 +131,9 @@ export const AllVideosScreen: React.FC = () => {
         <TouchableOpacity
           style={[styles.headerBtn, {backgroundColor: colors.background.elevated}]}
           onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}
           activeOpacity={0.7}>
           <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
         </TouchableOpacity>
@@ -130,6 +143,9 @@ export const AllVideosScreen: React.FC = () => {
         <TouchableOpacity
           style={[styles.headerBtn, {backgroundColor: colors.background.elevated}]}
           onPress={toggleViewMode}
+          accessibilityRole="button"
+          accessibilityLabel={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}
           activeOpacity={0.7}>
           <SvgIcon
             name={viewMode === 'grid' ? 'layoutList' : 'layoutGrid'}
@@ -140,6 +156,9 @@ export const AllVideosScreen: React.FC = () => {
         <TouchableOpacity
           style={[styles.headerBtn, {backgroundColor: colors.background.elevated}]}
           onPress={toggleSort}
+          accessibilityRole="button"
+          accessibilityLabel="Change sort order"
+          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}
           activeOpacity={0.7}>
           <SvgIcon name="list" size={16} color={colors.text.secondary} />
         </TouchableOpacity>

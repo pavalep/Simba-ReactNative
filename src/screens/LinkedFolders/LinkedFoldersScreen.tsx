@@ -2,6 +2,7 @@ import React, {useMemo, useCallback, useRef, useState} from 'react';
 import {
   View,
   ScrollView,
+  FlatList,
   StyleSheet,
   TouchableOpacity,
   Animated,
@@ -25,6 +26,7 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ScanProgressBanner} from '../../components/feedback/ScanProgressBanner/ScanProgressBanner';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
+import {useAccessibility} from '../../hooks/useAccessibility';
 import type {LinkedFoldersScreenProps} from '../../navigation/types';
 
 // ─── Constants ──────────────────────────────────────────────
@@ -71,6 +73,30 @@ const SwipeableFolderCard: React.FC<SwipeableFolderCardProps> = ({
 }) => {
   const translateX = useRef(new Animated.Value(0)).current;
   const [isOpen, setIsOpen] = useState(false);
+  const {reduceMotion} = useAccessibility();
+  const reduceMotionRef = useRef(reduceMotion);
+  reduceMotionRef.current = reduceMotion;
+
+  // 59.7: reduced motion — snap with a short timing, no spring bounce
+  const snapTo = useCallback(
+    (toValue: number, open: boolean) => {
+      if (reduceMotionRef.current) {
+        Animated.timing(translateX, {
+          toValue,
+          duration: 150,
+          useNativeDriver: true,
+        }).start();
+      } else {
+        Animated.spring(translateX, {
+          toValue,
+          useNativeDriver: true,
+          bounciness: 4,
+        }).start();
+      }
+      setIsOpen(open);
+    },
+    [translateX],
+  );
 
   const panResponder = useRef(
     PanResponder.create({
@@ -83,20 +109,10 @@ const SwipeableFolderCard: React.FC<SwipeableFolderCardProps> = ({
       onPanResponderRelease: (_, gesture) => {
         if (gesture.dx < SWIPE_THRESHOLD) {
           // Snap open to reveal delete
-          Animated.spring(translateX, {
-            toValue: -80,
-            useNativeDriver: true,
-            bounciness: 4,
-          }).start();
-          setIsOpen(true);
+          snapTo(-80, true);
         } else {
           // Snap back
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            bounciness: 4,
-          }).start();
-          setIsOpen(false);
+          snapTo(0, false);
         }
       },
     }),
@@ -121,7 +137,9 @@ const SwipeableFolderCard: React.FC<SwipeableFolderCardProps> = ({
       <TouchableOpacity
         style={[swipeStyles.deleteBackground, {backgroundColor: colors.semantic.error}]}
         onPress={handleDelete}
-        activeOpacity={0.8}>
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={`Remove folder ${folderName}`}>
         <SvgIcon name="close" size={22} color={colors.text.bright} />
         <AppText variant="caption" style={[swipeStyles.deleteText, {color: colors.text.bright}]}>
           Remove
@@ -153,7 +171,9 @@ const SwipeableFolderCard: React.FC<SwipeableFolderCardProps> = ({
             style={swipeStyles.rescanButton}
             onPress={() => onRescan(folderPath)}
             hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-            activeOpacity={0.7}>
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Rescan folder ${folderName}`}>
             <SvgIcon name="repeat" size={18} color={colors.text.tertiary} />
           </TouchableOpacity>
         </View>
@@ -168,13 +188,10 @@ const SwipeableFolderCard: React.FC<SwipeableFolderCardProps> = ({
           style={swipeStyles.dismissOverlay}
           activeOpacity={1}
           onPress={() => {
-            Animated.spring(translateX, {
-              toValue: 0,
-              useNativeDriver: true,
-              bounciness: 4,
-            }).start();
-            setIsOpen(false);
+            snapTo(0, false);
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Close folder actions"
         />
       )}
     </View>
@@ -412,7 +429,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
           <AppText variant="body1" color="error" style={{textAlign: 'center', marginBottom: spacing.sm}}>
             {error}
           </AppText>
-          <TouchableOpacity style={styles.retryButton} onPress={handleRetry} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRetry} activeOpacity={0.7} accessibilityRole="button">
             <AppText variant="button" color="accent">
               Retry
             </AppText>
@@ -465,17 +482,23 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
           </View>
         ) : (
           <View style={styles.cardList}>
-            {folders.map((folder, index) => (
-              <SwipeableFolderCard
-                key={`${folder}-${index}`}
-                folderPath={folder}
-                fileCount={folderFileCounts[folder] ?? 0}
-                lastScanTimestamp={lastScanTimestamp}
-                onRemove={handleRemoveFolder}
-                onRescan={handleRescanFolder}
-                colors={colors}
-              />
-            ))}
+            {/* 59.1: virtualized folder cards */}
+            <FlatList
+              data={folders}
+              keyExtractor={(folder, index) => `${folder}-${index}`}
+              renderItem={({item: folder}) => (
+                <SwipeableFolderCard
+                  folderPath={folder}
+                  fileCount={folderFileCounts[folder] ?? 0}
+                  lastScanTimestamp={lastScanTimestamp}
+                  onRemove={handleRemoveFolder}
+                  onRescan={handleRescanFolder}
+                  colors={colors}
+                />
+              )}
+              scrollEnabled={false}
+              initialNumToRender={folders.length}
+            />
           </View>
         )}
       </ScrollView>
@@ -486,7 +509,8 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
           style={[styles.addButton, isScanning && styles.addButtonDisabled]}
           onPress={handleAddFolder}
           activeOpacity={0.7}
-          disabled={isScanning}>
+          disabled={isScanning}
+          accessibilityRole="button">
           <SvgIcon name="folderFill" size={20} color={colors.accent.gold} />
           <AppText variant="body1" color="accent" style={{fontWeight: '600'}}>
             Add Folder

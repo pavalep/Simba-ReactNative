@@ -6,6 +6,7 @@ import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 
 interface HomeHeaderProps {
   onSettingsPress?: () => void;
@@ -28,11 +29,17 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   bookmarkCount = 0,
 }) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const navigation = useNavigation<any>();
   const scanAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (!isScanning) return;
+    if (reduceMotion) {
+      // 59.7: reduced motion — static scan icon, no pulse loop
+      scanAnim.setValue(1);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(scanAnim, {
@@ -49,7 +56,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
     );
     loop.start();
     return () => loop.stop();
-  }, [isScanning, scanAnim]);
+  }, [isScanning, scanAnim, reduceMotion]);
 
   const handleSettingsPress = () => {
     if (onSettingsPress) {

@@ -1,6 +1,7 @@
 import React, {useEffect, useRef, useMemo} from 'react';
 import {View, Animated, StyleSheet, Easing} from 'react-native';
 import {useTheme} from '../../../theme';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ const AudioWaveform: React.FC<AudioWaveformProps> = ({
   barGap = 3,
 }) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const barColor = color ?? colors.accent.gold;
 
   // Create animated values for each bar
@@ -41,9 +43,10 @@ const AudioWaveform: React.FC<AudioWaveformProps> = ({
     Array.from({length: BAR_COUNT}, () => new Animated.Value(0.5)),
   ).current;
 
-  // Paused state: freeze each bar at a unique mid-range height
+  // Paused state: freeze each bar at a unique mid-range height.
+  // 59.7: also freeze when reduced motion is on (static, no dance loop).
   useEffect(() => {
-    if (!isPlaying) {
+    if (!isPlaying || reduceMotion) {
       animValues.forEach((anim, i) => {
         Animated.timing(anim, {
           toValue: 0.35 + BASE_PEAKS[i] * 0.25, // freeze between 0.35-0.60
@@ -54,11 +57,11 @@ const AudioWaveform: React.FC<AudioWaveformProps> = ({
       });
       return;
     }
-  }, [isPlaying, animValues]);
+  }, [isPlaying, animValues, reduceMotion]);
 
   // ── Animate bars when playing ──
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!isPlaying || reduceMotion) return;
 
     const staggerAnimations = animValues.map((anim, i) => {
       const basePeak = BASE_PEAKS[i];
@@ -89,7 +92,7 @@ const AudioWaveform: React.FC<AudioWaveformProps> = ({
 
     loop.start();
     return () => loop.stop();
-  }, [isPlaying, animValues]);
+  }, [isPlaying, animValues, reduceMotion]);
 
   // ── Styles ──
   const styles = useMemo(

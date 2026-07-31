@@ -12,6 +12,8 @@ import {
 } from '../../../store/slices/sessionSlice';
 import {selectAllPlaylists} from '../../../store/slices/playlistSlice';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
+import {selectFollowedPodcasts} from '../../../store/slices/followedPodcastsSlice';
+import type {FollowedPodcast} from '../../../store/slices/followedPodcastsSlice';
 import type {SessionEntry} from '../../../store/slices/sessionSlice';
 import {useAuth} from '../../../hooks/useAuth';
 
@@ -25,8 +27,17 @@ export type HomeSection =
   | {type: 'PLAYLISTS'; items: any[]}
   | {type: 'BOOKMARKS'; items: ReturnType<typeof selectBookmarks>}
   | {type: 'MOVIES'}
+  | {type: 'FOLLOWED_PODCASTS'; items: FollowedPodcast[]}
   | {type: 'PREFILLED_PODCASTS'}
-  | {type: 'PREFILLED_MUSIC'};
+  | {type: 'PREFILLED_MUSIC'}
+  // P36.7: live radio + TV browse shelves
+  | {type: 'RADIO'}
+  | {type: 'LIVE_TV'}
+  // P37.7: audiobooks (LibriVox) + Internet Archive browse shelves
+  | {type: 'AUDIOBOOKS'}
+  | {type: 'ARCHIVE'}
+  // P38.7: TV shows (TVMaze) browse shelf
+  | {type: 'SHOWS'};
 
 // ── Helpers ──
 
@@ -64,6 +75,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const weightedFeatured = useAppSelector(selectWeightedFeatured);
   const playlists = useAppSelector(selectAllPlaylists);
   const allTracks = useAppSelector(selectAllTracks);
+  const followedPodcasts = useAppSelector(selectFollowedPodcasts);
   const isScanning = useAppSelector(s => s.media?.isScanning ?? false);
 
   // ── Derived Data ──
@@ -149,7 +161,20 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       {type: 'MOVIES'},
       {type: 'PREFILLED_PODCASTS'},
       {type: 'PREFILLED_MUSIC'},
+      // P36.7: live radio + TV browse shelves
+      {type: 'RADIO'},
+      {type: 'LIVE_TV'},
+      // P37.7: audiobooks + Internet Archive browse shelves
+      {type: 'AUDIOBOOKS'},
+      {type: 'ARCHIVE'},
+      // P38.7: TV shows (TVMaze) browse shelf
+      {type: 'SHOWS'},
     ];
+
+    // 35.5: followed podcasts shelf (only when the user follows any)
+    if (followedPodcasts.length > 0) {
+      realSections.splice(3, 0, {type: 'FOLLOWED_PODCASTS', items: followedPodcasts});
+    }
 
     // Genre chips
     if (genres.length > 0) {
@@ -175,7 +200,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     }
 
     return realSections;
-  }, [recentFiles, weightedFeatured, playlists, bookmarks, genres]);
+  }, [recentFiles, weightedFeatured, playlists, bookmarks, genres, followedPodcasts]);
 
   // ── Pull-to-refresh ──
   const onRefresh = useCallback(async () => {

@@ -1,6 +1,7 @@
 import React, {useEffect, useRef} from 'react';
 import {Animated, StyleSheet, View} from 'react-native';
 import {useTheme} from '../../../theme';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
 
 interface BufferingBarProps {
@@ -16,6 +17,7 @@ const BUFFERING_BAR_HEIGHT = 3;
  */
 export const BufferingBar: React.FC<BufferingBarProps> = ({visible}) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
@@ -31,6 +33,11 @@ export const BufferingBar: React.FC<BufferingBarProps> = ({visible}) => {
   // ── Looping shimmer slide ──
   useEffect(() => {
     if (!visible) return;
+    if (reduceMotion) {
+      // 59.7: reduced motion — static shimmer bar, no slide loop
+      shimmerAnim.setValue(0);
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerAnim, {
@@ -47,7 +54,7 @@ export const BufferingBar: React.FC<BufferingBarProps> = ({visible}) => {
     );
     loop.start();
     return () => loop.stop();
-  }, [visible, shimmerAnim]);
+  }, [visible, shimmerAnim, reduceMotion]);
 
   const shimmerTranslate = shimmerAnim.interpolate({
     inputRange: [0, 1],
@@ -60,7 +67,7 @@ export const BufferingBar: React.FC<BufferingBarProps> = ({visible}) => {
       <Animated.View
         pointerEvents="none"
         accessibilityLiveRegion="polite"
-        accessibilityLabel={visible ? 'Video buffering' : undefined}
+        accessibilityLabel={visible ? 'Buffering' : undefined}
         style={[styles.overlay, {opacity: opacityAnim}]}>
         <ActivityOrb size={52} label="Buffering…" />
       </Animated.View>

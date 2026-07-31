@@ -23,6 +23,7 @@ import {ReplayButton} from '../ReplayButton/ReplayButton';
 import {VideoPlayerResumeOverlay} from '../../../screens/VideoPlayer/components/VideoPlayerResumeOverlay';
 import {VideoPlayerAutoAdvanceCard} from '../../../screens/VideoPlayer/components/VideoPlayerAutoAdvanceCard';
 import {MpvPlayer} from '../../../native';
+import {navigate} from '../../../navigation/navigationHelper';
 import {useAppDispatch, useAppSelector} from '../../../store';
 import {setSleepTimer, setSleepTimerMode} from '../../../store/slices/playerSlice';
 import {formatSleepRemaining, sleepTimerModeLabel} from '../../../utils/sleepTimer';
@@ -183,6 +184,7 @@ export interface VideoPlayerHookData {
   handleInfo: () => void;
   handleInfoAddToPlaylist: () => void;
   handleMorePress: () => void;
+  handleShare: () => void;
   handlePlayRelatedTrack: (track: ScannedTrack) => void;
   handleVolumeSwipe: (v: number) => void;
   handleBrightnessSwipe: (v: number) => void;
@@ -229,6 +231,11 @@ export interface VideoPlayerHookData {
   handleTogglePlaylist: () => void;
   handlePushPositionRef: (fn: (pos: number) => void) => void;
 
+  // P36.5: live playback (IPTV) — LIVE badge + channel up/down
+  isLive: boolean;
+  channelUp?: () => void;
+  channelDown?: () => void;
+
   // Panels / screens sub-components
   VideoPlayerSurfaceLayer: React.ComponentType<any>;
   VideoPlayerTopBar: React.ComponentType<any>;
@@ -269,20 +276,23 @@ export const VideoPlayer: React.FC<VideoPlayerHookData> = (h) => {
           <TouchableOpacity
             style={[h.errorStyles.btn, h.errorStyles.btnPrimary]}
             onPress={h.handleRetry}
-            activeOpacity={0.8}>
+            activeOpacity={0.8}
+            accessibilityRole="button">
             <AppText style={h.errorStyles.btnPrimaryLabel}>Retry</AppText>
           </TouchableOpacity>
           <TouchableOpacity
             style={[h.errorStyles.btn, h.errorStyles.btnSecondary]}
             onPress={h.handleGoBack}
-            activeOpacity={0.8}>
+            activeOpacity={0.8}
+            accessibilityRole="button">
             <AppText variant="body2" color="primary">Choose Different File</AppText>
           </TouchableOpacity>
           {h.errorIsPermission && (
             <TouchableOpacity
               style={[h.errorStyles.btn, h.errorStyles.btnSecondary, {borderColor: h.colors.accent.gold}]}
               onPress={() => Linking.openSettings()}
-              activeOpacity={0.8}>
+              activeOpacity={0.8}
+              accessibilityRole="button">
               <AppText variant="body2" color="primary">Open Settings</AppText>
             </TouchableOpacity>
           )}
@@ -436,6 +446,11 @@ const VideoTransportDependentContent: React.FC<{
         onClearAll={h.handleClearAll}
         onPlayNext={h.handlePlayNext}
         onAddToQueue={h.handleAddToQueue}
+        onOpenFullPage={() => {
+          h.handleCloseQueueSheet();
+          // 48.6: sheet → full-page queue, remembering the video context
+          navigate('Queue', {from: 'video'});
+        }}
       />
     </>
   );
@@ -601,11 +616,15 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
               isLandscape={h.isLandscape}
               onToggleRotate={h.handleToggleRotate}
               onMorePress={h.handleMorePress}
+              onShare={h.handleShare}
               visible={h.secondaryVisible}
               onBookmark={h.handleOpenBookmarkSheet}
               bookmarkActive={h.bookmarkCountForFile > 0}
               controlsLocked={h.controlsLocked}
               onToggleLock={h.handleToggleLock}
+              liveBadge={h.isLive}
+              channelUp={h.channelUp}
+              channelDown={h.channelDown}
             />
 
             {/* 50.3: countdown badge when a sleep timer is armed */}

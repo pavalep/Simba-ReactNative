@@ -4,20 +4,15 @@
 // ────────────────────────────────────────────────────────
 
 import React, {useState, useCallback} from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  ActionSheetIOS,
-  Platform,
-  Modal,
-} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import AudioWaveform from '../../../components/player/AudioWaveform/AudioWaveform';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
+import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
+import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
 
 interface TrackRowItem {
   uri: string;
@@ -52,25 +47,14 @@ export const ArtistTopTracks: React.FC<ArtistTopTracksProps> = ({
   remainingCount = 0,
 }) => {
   const {colors} = useTheme();
+  const {playNext, addToQueue} = useQueueActions();
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuTrack, setMenuTrack] = useState<TrackRowItem | null>(null);
 
   const handleMenu = useCallback((track: TrackRowItem) => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Cancel', 'Play', 'Add to Playlist', 'Go to Album'],
-          cancelButtonIndex: 0,
-        },
-        index => {
-          if (index === 1) onPlayTrack(track as PlaylistEntry);
-        },
-      );
-    } else {
-      setMenuTrack(track);
-      setMenuVisible(true);
-    }
-  }, [onPlayTrack]);
+    setMenuTrack(track);
+    setMenuVisible(true);
+  }, []);
 
   if (tracks.length === 0) return null;
 
@@ -82,7 +66,7 @@ export const ArtistTopTracks: React.FC<ArtistTopTracksProps> = ({
           Popular Tracks
         </AppText>
         {remainingCount > 0 && (
-          <TouchableOpacity onPress={onSeeAll} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onSeeAll} activeOpacity={0.7} accessibilityRole="button">
             <AppText variant="body2" color="accent">
               See All{remainingCount > 0 ? ` (${remainingCount}+)` : ''}
             </AppText>
@@ -91,13 +75,15 @@ export const ArtistTopTracks: React.FC<ArtistTopTracksProps> = ({
       </View>
 
       {/* Track rows */}
-      {tracks.map((track, idx) => {
-        const isActive = isCurrentTrack(track.uri);
-        const isTrackPlaying = isActive && isPlaying;
+      <FlatList
+        data={tracks}
+        keyExtractor={track => track.uri}
+        renderItem={({item: track, index: idx}) => {
+          const isActive = isCurrentTrack(track.uri);
+          const isTrackPlaying = isActive && isPlaying;
 
-        return (
+          return (
           <TouchableOpacity
-            key={track.uri}
             style={[
               styles.trackRow,
               {
@@ -109,7 +95,10 @@ export const ArtistTopTracks: React.FC<ArtistTopTracksProps> = ({
             activeOpacity={0.6}
             onPress={() => onPlayTrack(track as PlaylistEntry)}
             onLongPress={() => handleMenu(track)}
-            delayLongPress={400}>
+            delayLongPress={400}
+            accessibilityRole="button"
+            accessibilityLabel={`Play ${track.title}`}
+            accessibilityState={{selected: isActive}}>
             {/* Track number or playing indicator */}
             <View style={styles.numCol}>
               {isTrackPlaying ? (
@@ -145,53 +134,58 @@ export const ArtistTopTracks: React.FC<ArtistTopTracksProps> = ({
               style={styles.menuBtn}
               onPress={() => handleMenu(track)}
               hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-              activeOpacity={0.5}>
+              activeOpacity={0.5}
+              accessibilityRole="button"
+              accessibilityLabel={`More options for ${track.title}`}>
               <SvgIcon name="sliders" size={16} color={colors.text.tertiary} />
             </TouchableOpacity>
           </TouchableOpacity>
-        );
-      })}
+          );
+        }}
+        scrollEnabled={false}
+        initialNumToRender={tracks.length}
+      />
 
-      {/* Android context menu modal */}
-      <Modal
+      {/* 58.4/58.5: one menu everywhere — Play Next / Add to Queue / Play Now */}
+      <MediaActionsSheet
         visible={menuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuVisible(false)}>
-        <TouchableOpacity
-          style={[styles.modalOverlay, {backgroundColor: colors.background.scrim}]}
-          activeOpacity={1}
-          onPress={() => setMenuVisible(false)}>
-          <View
-            style={[
-              styles.menuSheet,
-              {backgroundColor: colors.background.elevated},
-            ]}>
-            <AppText variant="body2" color="primary" style={styles.menuTitle}>
-              {menuTrack?.title ?? ''}
-            </AppText>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                if (menuTrack) onPlayTrack(menuTrack as PlaylistEntry);
-                setMenuVisible(false);
-              }}>
-              <SvgIcon name="play" size={18} color={colors.text.primary} />
-              <AppText variant="body2" color="primary" style={styles.menuItemText}>
-                Play
-              </AppText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => setMenuVisible(false)}>
-              <SvgIcon name="close" size={18} color={colors.text.tertiary} />
-              <AppText variant="body2" color="secondary" style={styles.menuItemText}>
-                Cancel
-              </AppText>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setMenuVisible(false)}
+        title={menuTrack?.title ?? ''}
+        subtitle={menuTrack?.album}
+        actions={
+          menuTrack
+            ? [
+                {
+                  label: 'Play Next',
+                  icon: 'skipForward',
+                  onPress: () =>
+                    playNext({
+                      uri: menuTrack.uri,
+                      title: menuTrack.title,
+                      duration: menuTrack.duration,
+                      mediaType: 'audio',
+                    }),
+                },
+                {
+                  label: 'Add to Queue',
+                  icon: 'list',
+                  onPress: () =>
+                    addToQueue({
+                      uri: menuTrack.uri,
+                      title: menuTrack.title,
+                      duration: menuTrack.duration,
+                      mediaType: 'audio',
+                    }),
+                },
+                {
+                  label: 'Play Now',
+                  icon: 'play',
+                  onPress: () => onPlayTrack(menuTrack as PlaylistEntry),
+                },
+              ]
+            : []
+        }
+      />
     </View>
   );
 };

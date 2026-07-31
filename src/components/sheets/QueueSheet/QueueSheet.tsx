@@ -52,6 +52,8 @@ export interface QueueSheetProps {
   onPlayNext: (entry: PlaylistEntry) => void;
   /** "Add to Queue" — add a specific item to end of queue */
   onAddToQueue: (entry: PlaylistEntry) => void;
+  /** P48.6: open the full-page queue screen (called after the sheet closes) */
+  onOpenFullPage: () => void;
 }
 
 // ── Section type ──
@@ -88,6 +90,7 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
   onClearAll,
   onPlayNext,
   onAddToQueue,
+  onOpenFullPage,
 }) => {
   const {colors} = useTheme();
   useSafeAreaInsets();
@@ -377,6 +380,18 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
             <View style={[styles.bottomBar, {borderTopColor: colors.border.subtle}]}>
               <TouchableOpacity
                 activeOpacity={0.7}
+                onPress={onOpenFullPage}
+                style={[styles.fullPageBtn, {borderColor: colors.border.subtle}]}
+                accessibilityRole="button"
+                accessibilityLabel="Open full page queue"
+                accessibilityHint="Opens the queue as a full screen with drag to reorder">
+                <SvgIcon name="maximize" size={14} color={colors.text.secondary} />
+                <AppText variant="caption" color="secondary" style={styles.fullPageText}>
+                  Full Page
+                </AppText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
                 onPress={onClearAll}
                 style={[styles.clearBtn, {borderColor: colors.border.subtle}]}>
                 <AppText variant="caption" color="tertiary">
@@ -387,7 +402,7 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
                 activeOpacity={0.7}
                 onPress={onEnterMultiSelect}
                 style={[styles.selectBtn, {borderColor: colors.accent.gold}]}>
-                <AppText variant="caption" style={{color: colors.accent.gold, fontWeight: '600'}}>
+                <AppText variant="caption" style={[styles.selectText, {color: colors.accent.gold}]}>
                   Select
                 </AppText>
               </TouchableOpacity>
@@ -477,6 +492,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
+  },
+  fullPageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+  },
+  fullPageText: {
+    fontWeight: '600',
+  },
+  selectText: {
+    fontWeight: '600',
   },
   clearBtn: {
     paddingHorizontal: 16,

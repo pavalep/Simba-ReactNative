@@ -18,7 +18,7 @@ interface LibraryAlbumsSegmentProps {
   onViewAllAlbums?: () => void;
 }
 
-export const LibraryAlbumsSegment: React.FC<LibraryAlbumsSegmentProps> = ({
+export const LibraryAlbumsSegment: React.FC<LibraryAlbumsSegmentProps> = React.memo(({
   audioFolders,
   isMediaScanning,
   scannedTrackCount,
@@ -59,7 +59,7 @@ export const LibraryAlbumsSegment: React.FC<LibraryAlbumsSegmentProps> = ({
           All Albums
         </AppText>
         {onViewAllAlbums && (
-          <TouchableOpacity onPress={onViewAllAlbums} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onViewAllAlbums} activeOpacity={0.7} accessibilityRole="button">
             <AppText variant="caption" color="accent">
               See All
             </AppText>
@@ -69,7 +69,8 @@ export const LibraryAlbumsSegment: React.FC<LibraryAlbumsSegmentProps> = ({
       <AlbumGrid onAlbumPress={onAlbumPress} />
     </>
   );
-};
+},
+);
 
 const styles = StyleSheet.create({
   headerRow: {

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
+import {useAccessibility} from '../../hooks/useAccessibility';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon/SvgIcon';
 import {GoogleSignInButton} from '../../components/core/GoogleSignInButton/GoogleSignInButton';
@@ -36,6 +37,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
   const insets = useSafeAreaInsets();
   const {pulseAnim, fadeAnim, isLoading, error, errorKind, handleSignIn, isAuthenticated} =
     useLoginScreen();
+  const {reduceMotion} = useAccessibility();
 
   // ── Auto-navigate to Home once authenticated ──
   useEffect(() => {
@@ -56,6 +58,16 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
   const buttonScale = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      // 59.7: reduced motion — render everything fully visible, skip stagger
+      logoOpacity.setValue(1);
+      logoscale.setValue(1);
+      taglineOpacity.setValue(1);
+      taglineTranslateY.setValue(0);
+      buttonOpacity.setValue(1);
+      buttonScale.setValue(1);
+      return;
+    }
     const t1 = setTimeout(() => {
       Animated.parallel([
         Animated.timing(logoOpacity, {toValue: 1, duration: 500, useNativeDriver: true}),
@@ -82,7 +94,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
       clearTimeout(t2);
       clearTimeout(t3);
     };
-  }, [logoOpacity, logoscale, taglineOpacity, taglineTranslateY, buttonOpacity, buttonScale]);
+  }, [logoOpacity, logoscale, taglineOpacity, taglineTranslateY, buttonOpacity, buttonScale, reduceMotion]);
 
   const orbScale = pulseAnim.interpolate({
     inputRange: [0, 1],

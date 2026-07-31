@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, ScrollView, StyleSheet} from 'react-native';
+import {View, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {useAppSelector} from '../../../store';
 import {selectAlbums} from '../../../store/slices/mediaSlice';
@@ -25,62 +25,65 @@ export const AlbumGrid: React.FC<AlbumGridProps> = ({onAlbumPress}) => {
   const albums = useAppSelector(selectAlbums);
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={styles.grid}>
-        {albums.map(album => (
-          <AppCard
-            key={`${album.artist}|${album.title}`}
-            elevated
-            onPress={() => onAlbumPress(album.title, album.artist)}
-            style={styles.card}>
-            {/* Album art placeholder */}
-            <View
-              style={[
-                styles.art,
-                {backgroundColor: colors.accent.goldDim},
-              ]}>
-              <SvgIcon
-                name="listMusic"
-                size={24}
-                color={colors.accent.gold}
-              />
-            </View>
-            <View style={styles.info}>
-              <AppText
-                variant="body2"
-                color="primary"
-                numberOfLines={1}
-                style={styles.title}>
-                {album.title}
-              </AppText>
-              <AppText
-                variant="caption"
-                color="secondary"
-                numberOfLines={1}
-                style={styles.artist}>
-                {album.artist}
-              </AppText>
-              <View style={styles.metaRow}>
-                {album.year > 0 && (
-                  <AppText variant="caption" color="tertiary">
-                    {album.year}
-                  </AppText>
-                )}
+    /* 59.1: virtualized album rows (linear column) */
+    <FlatList
+      data={albums}
+      keyExtractor={album => `${album.artist}|${album.title}`}
+      contentContainerStyle={styles.grid}
+      renderItem={({item: album}) => (
+        <AppCard
+          elevated
+          onPress={() => onAlbumPress(album.title, album.artist)}
+          style={styles.card}>
+          {/* Album art placeholder */}
+          <View
+            style={[
+              styles.art,
+              {backgroundColor: colors.accent.goldDim},
+            ]}>
+            <SvgIcon
+              name="listMusic"
+              size={24}
+              color={colors.accent.gold}
+            />
+          </View>
+          <View style={styles.info}>
+            <AppText
+              variant="body2"
+              color="primary"
+              numberOfLines={1}
+              style={styles.title}>
+              {album.title}
+            </AppText>
+            <AppText
+              variant="caption"
+              color="secondary"
+              numberOfLines={1}
+              style={styles.artist}>
+              {album.artist}
+            </AppText>
+            <View style={styles.metaRow}>
+              {album.year > 0 && (
                 <AppText variant="caption" color="tertiary">
-                  {album.trackCount}{' '}
-                  {album.trackCount === 1 ? 'track' : 'tracks'}
+                  {album.year}
                 </AppText>
-                {album.totalDuration > 0 && (
-                  <AppText variant="caption" color="tertiary">
-                    {formatTotalDuration(album.totalDuration)}
-                  </AppText>
-                )}
-              </View>
+              )}
+              <AppText variant="caption" color="tertiary">
+                {album.trackCount}{' '}
+                {album.trackCount === 1 ? 'track' : 'tracks'}
+              </AppText>
+              {album.totalDuration > 0 && (
+                <AppText variant="caption" color="tertiary">
+                  {formatTotalDuration(album.totalDuration)}
+                </AppText>
+              )}
             </View>
-          </AppCard>
-        ))}
-      </View>
-    </ScrollView>
+          </View>
+        </AppCard>
+      )}
+      scrollEnabled={false}
+      initialNumToRender={albums.length}
+    />
   );
 };
 

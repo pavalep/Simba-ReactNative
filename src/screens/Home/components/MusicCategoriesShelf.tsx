@@ -3,7 +3,7 @@
 // Non-tech-savvy UX: tap a genre → opens MusicScreen with results.
 
 import React from 'react';
-import {View, ScrollView, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {MUSIC_CATEGORIES} from '../../../constants/musicCategories';
@@ -29,15 +29,18 @@ export const MusicCategoriesShelf: React.FC<MusicCategoriesShelfProps> = React.m
           actionLabel="See All"
           onAction={onSeeAll}
         />
-        <ScrollView
+        {/* 59.1: virtualized category rail */}
+        <FlatList
           horizontal
+          data={categories}
+          keyExtractor={cat => cat.id}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}>
-          {categories.map(cat => (
+          contentContainerStyle={styles.scroll}
+          renderItem={({item: cat}) => (
             <TouchableOpacity
-              key={cat.id}
               activeOpacity={0.8}
               onPress={() => onCategoryPress(cat.genre)}
+              accessibilityRole="button"
               style={[
                 styles.card,
                 {backgroundColor: colors.background.elevated},
@@ -60,8 +63,11 @@ export const MusicCategoriesShelf: React.FC<MusicCategoriesShelfProps> = React.m
                 {cat.name}
               </AppText>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+          )}
+          initialNumToRender={Math.min(categories.length, 24)}
+          windowSize={5}
+          maxToRenderPerBatch={12}
+        />
       </View>
     );
   },

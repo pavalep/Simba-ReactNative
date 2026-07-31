@@ -1,9 +1,11 @@
-import React from 'react';
+import React, {useCallback, useState} from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import FastImage from 'react-native-fast-image';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {HighlightedText} from './HighlightedText';
+import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
+import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
 import type {SearchResultItem} from '../../../hooks/useSearch';
 import {radius} from '../../../theme/tokens';
 
@@ -21,6 +23,14 @@ export const ResultTile: React.FC<ResultTileProps> = ({
   onPress,
 }) => {
   const {colors} = useTheme();
+  const {playNext, addToQueue} = useQueueActions();
+  // 58.4/58.5: long-press opens the standard Play Next / Add to Queue menu
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const handleLongPress = useCallback(() => {
+    if (!item.fileUri) return;
+    setMenuVisible(true);
+  }, [item.fileUri]);
 
   const percent =
     item.duration && item.duration > 0
@@ -28,63 +38,105 @@ export const ResultTile: React.FC<ResultTileProps> = ({
       : 0;
 
   return (
-    <TouchableOpacity
-      key={item.id}
-      activeOpacity={0.75}
-      onPress={onPress}
-      style={[
-        styles.resultTile,
-        {
-          width: tileWidth,
-          backgroundColor: colors.background.elevated,
-          borderColor: colors.border.subtle,
-        },
-      ]}>
-      <View
+    <>
+      <TouchableOpacity
+        key={item.id}
+        activeOpacity={0.75}
+        onPress={onPress}
+        onLongPress={handleLongPress}
+        delayLongPress={400}
+        accessibilityRole="button"
+        accessibilityLabel={`Play ${item.title || 'media'}`}
+        accessibilityHint="Long press for Play Next and Add to Queue"
         style={[
-          styles.resultThumb,
-          {backgroundColor: colors.accent.goldDim},
+          styles.resultTile,
+          {
+            width: tileWidth,
+            backgroundColor: colors.background.elevated,
+            borderColor: colors.border.subtle,
+          },
         ]}>
-        {item.thumbnailPath ? (
-          <FastImage
-            source={{
-              uri:
-                'file://' +
-                item.thumbnailPath +
-                '?t=' +
-                encodeURIComponent(item.lastPlayedAt ?? ''),
-            }}
-            style={styles.resultThumbImg}
-            resizeMode={FastImage.resizeMode.cover}
-          />
-        ) : (
-          <SvgIcon
-            name="music"
-            size={28}
-            color={colors.text.tertiary}
-            style={styles.resultThumbPlaceholder}
-          />
-        )}
         <View
           style={[
-            styles.resultProgressTrack,
-            {backgroundColor: colors.text.tertiary},
+            styles.resultThumb,
+            {backgroundColor: colors.accent.goldDim},
           ]}>
+          {item.thumbnailPath ? (
+            <FastImage
+              source={{
+                uri:
+                  'file://' +
+                  item.thumbnailPath +
+                  '?t=' +
+                  encodeURIComponent(item.lastPlayedAt ?? ''),
+              }}
+              style={styles.resultThumbImg}
+              resizeMode={FastImage.resizeMode.cover}
+            />
+          ) : (
+            <SvgIcon
+              name="music"
+              size={28}
+              color={colors.text.tertiary}
+              style={styles.resultThumbPlaceholder}
+            />
+          )}
           <View
             style={[
-              styles.resultProgressFill,
-              {
-                width: `${percent}%`,
-                backgroundColor: colors.accent.gold,
-              },
-            ]}
-          />
+              styles.resultProgressTrack,
+              {backgroundColor: colors.text.tertiary},
+            ]}>
+            <View
+              style={[
+                styles.resultProgressFill,
+                {
+                  width: `${percent}%`,
+                  backgroundColor: colors.accent.gold,
+                },
+              ]}
+            />
+          </View>
         </View>
-      </View>
-      <View style={styles.resultTitle}>
-        <HighlightedText text={item.title} query={query} style={{fontSize: 12}} />
-      </View>
-    </TouchableOpacity>
+        <View style={styles.resultTitle}>
+          <HighlightedText text={item.title} query={query} style={{fontSize: 12}} />
+        </View>
+      </TouchableOpacity>
+
+      {/* 58.4/58.5: one menu everywhere — Play Next / Add to Queue */}
+      <MediaActionsSheet
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        title={item.title}
+        actions={
+          item.fileUri
+            ? [
+                {
+                  label: 'Play Next',
+                  icon: 'skipForward',
+                  onPress: () =>
+                    playNext({
+                      uri: item.fileUri!,
+                      title: item.title,
+                      duration: item.duration ?? 0,
+                      mediaType: item.group === 'videos' ? 'video' : 'audio',
+                    }),
+                },
+                {
+                  label: 'Add to Queue',
+                  icon: 'list',
+                  onPress: () =>
+                    addToQueue({
+                      uri: item.fileUri!,
+                      title: item.title,
+                      duration: item.duration ?? 0,
+                      mediaType: item.group === 'videos' ? 'video' : 'audio',
+                    }),
+                },
+              ]
+            : []
+        }
+      />
+    </>
   );
 };
 

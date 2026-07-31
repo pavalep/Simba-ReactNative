@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, ScrollView, StyleSheet} from 'react-native';
+import {View, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {useAppSelector} from '../../../store';
 import {selectArtists} from '../../../store/slices/mediaSlice';
@@ -16,47 +16,50 @@ export const ArtistGrid: React.FC<ArtistGridProps> = ({onArtistPress}) => {
   const artists = useAppSelector(selectArtists);
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
-      <View style={styles.grid}>
-        {artists.map(artist => (
-          <AppCard
-            key={artist.name}
-            elevated
-            onPress={() => onArtistPress(artist.name)}
-            style={styles.card}>
-            {/* Artist avatar circle with initials */}
-            <View
-              style={[
-                styles.avatar,
-                {backgroundColor: colors.accent.goldDim},
-              ]}>
-              <AppText
-                variant="body1"
-                color="accent"
-                style={styles.initials}>
-                {artist.name.charAt(0).toUpperCase()}
-              </AppText>
-            </View>
-            <View style={styles.info}>
-              <AppText
-                variant="body2"
-                color="primary"
-                numberOfLines={1}
-                style={styles.name}>
-                {artist.name}
-              </AppText>
-              <AppText variant="caption" color="tertiary">
-                {artist.albumCount}{' '}
-                {artist.albumCount === 1 ? 'album' : 'albums'}
-                {' · '}
-                {artist.trackCount}{' '}
-                {artist.trackCount === 1 ? 'track' : 'tracks'}
-              </AppText>
-            </View>
-          </AppCard>
-        ))}
-      </View>
-    </ScrollView>
+    /* 59.1: virtualized artist rows (linear column) */
+    <FlatList
+      data={artists}
+      keyExtractor={artist => artist.name}
+      contentContainerStyle={styles.grid}
+      renderItem={({item: artist}) => (
+        <AppCard
+          elevated
+          onPress={() => onArtistPress(artist.name)}
+          style={styles.card}>
+          {/* Artist avatar circle with initials */}
+          <View
+            style={[
+              styles.avatar,
+              {backgroundColor: colors.accent.goldDim},
+            ]}>
+            <AppText
+              variant="body1"
+              color="accent"
+              style={styles.initials}>
+              {artist.name.charAt(0).toUpperCase()}
+            </AppText>
+          </View>
+          <View style={styles.info}>
+            <AppText
+              variant="body2"
+              color="primary"
+              numberOfLines={1}
+              style={styles.name}>
+              {artist.name}
+            </AppText>
+            <AppText variant="caption" color="tertiary">
+              {artist.albumCount}{' '}
+              {artist.albumCount === 1 ? 'album' : 'albums'}
+              {' · '}
+              {artist.trackCount}{' '}
+              {artist.trackCount === 1 ? 'track' : 'tracks'}
+            </AppText>
+          </View>
+        </AppCard>
+      )}
+      scrollEnabled={false}
+      initialNumToRender={artists.length}
+    />
   );
 };
 

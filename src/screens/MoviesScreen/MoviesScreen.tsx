@@ -5,7 +5,6 @@
 import React, {useCallback} from 'react';
 import {
   View,
-  ScrollView,
   FlatList,
   TouchableOpacity,
   StyleSheet,
@@ -48,6 +47,8 @@ const CategoryChip: React.FC<CategoryChipProps> = React.memo(
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => onPress(category.id)}
+        accessibilityRole="button"
+        accessibilityState={{selected: isSelected}}
         style={[
           styles.chip,
           {
@@ -91,6 +92,7 @@ const MovieCard: React.FC<MovieCardProps> = React.memo(({item, onPress}) => {
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => onPress(item)}
+      accessibilityRole="button"
       style={styles.movieCard}>
       {/* Thumbnail */}
       <View
@@ -196,19 +198,23 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
 
       {/* ── Category Chips ── */}
       <View style={[styles.chipSection, {borderBottomColor: colors.background.highlightDim}]}>
-        <ScrollView
+        <FlatList
           horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipScroll}>
-          {MOVIE_CATEGORIES.map(cat => (
+          data={MOVIE_CATEGORIES}
+          keyExtractor={cat => String(cat.id)}
+          renderItem={({item: cat}) => (
             <CategoryChip
-              key={cat.id}
               category={cat}
               isSelected={selectedCategory === cat.id}
               onPress={handleCategoryPress}
             />
-          ))}
-        </ScrollView>
+          )}
+          contentContainerStyle={styles.chipScroll}
+          showsHorizontalScrollIndicator={false}
+          initialNumToRender={MOVIE_CATEGORIES.length}
+          windowSize={5}
+          maxToRenderPerBatch={12}
+        />
         {/* Description */}
         {selectedCategory && (
           <AppText variant="caption" color="tertiary" style={styles.categoryDesc}>

@@ -12,6 +12,7 @@ import type {
   MpvEvents,
 } from './NativeMpvPlayer';
 import {logger} from '../lib/logger';
+import {getLocalPath} from '../services/downloadService';
 
 // Try to load the Turbo Module; fall back to legacy NativeModules bridge
 let NativeModule: Spec | null = null;
@@ -99,11 +100,16 @@ export const MpvPlayer = {
 
   // ── File Loading ──
   loadFile(path: string): void {
-    ensureModule().loadFile(path);
+    // 49.4: offline remap — prefer the downloaded copy when one exists.
+    ensureModule().loadFile(getLocalPath(path) ?? path);
   },
 
   loadPlaylist(paths: string[], startIndex?: number): void {
-    ensureModule().loadPlaylist(paths, startIndex ?? 0);
+    // 49.4: remap each entry so offline playlists play from disk.
+    ensureModule().loadPlaylist(
+      paths.map(p => getLocalPath(p) ?? p),
+      startIndex ?? 0,
+    );
   },
 
   getFileInfo(): MpvFileInfo {

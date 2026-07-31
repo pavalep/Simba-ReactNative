@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, ScrollView, StyleSheet, TouchableOpacity} from 'react-native';
+import {View, FlatList, StyleSheet, TouchableOpacity} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
@@ -10,12 +10,15 @@ interface QuickAccessShelfProps {
   title?: string;
   playlists: Array<{id: string; name: string; items?: unknown[]; trackCount?: number}>;
   onPlaylistPress: (playlistId: string) => void;
+  /** P41.5: See All coverage — every shelf links to its full catalog. */
+  onSeeAll?: () => void;
 }
 
 export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
   title = 'Quick Access',
   playlists,
   onPlaylistPress,
+  onSeeAll,
 }) => {
   const {colors} = useTheme();
 
@@ -28,18 +31,29 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
         <AppText variant="h3" color="primary" style={styles.headerTitle}>
           {title}
         </AppText>
+        {onSeeAll ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.seeAllBtn}
+            onPress={onSeeAll}
+            accessibilityRole="button">
+            <AppText variant="overline" color="accent" style={styles.seeAllText}>
+              VIEW ALL
+            </AppText>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* ── Horizontal scroll ── */}
-      <ScrollView
+      <FlatList
         horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
-        {playlists.map(playlist => (
+        data={playlists}
+        keyExtractor={playlist => playlist.id}
+        renderItem={({item: playlist}) => (
           <TouchableOpacity
-            key={playlist.id}
             activeOpacity={0.85}
             onPress={() => onPlaylistPress(playlist.id)}
+            accessibilityRole="button"
             style={styles.card}>
             <LinearGradient
               colors={[colors.background.elevated, colors.accent.goldFaint]}
@@ -68,8 +82,13 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
               </View>
             </View>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.scrollContent}
+        showsHorizontalScrollIndicator={false}
+        initialNumToRender={Math.min(playlists.length, 24)}
+        windowSize={5}
+        maxToRenderPerBatch={12}
+      />
     </View>
   );
 };
@@ -88,6 +107,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontWeight: '700',
     letterSpacing: -0.5,
+  },
+  seeAllBtn: {
+    paddingBottom: 2,
+  },
+  seeAllText: {
+    letterSpacing: 1,
+    fontWeight: '700',
   },
   scrollContent: {
     paddingHorizontal: spacing.md,

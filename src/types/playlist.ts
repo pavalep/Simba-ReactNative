@@ -13,6 +13,8 @@ export interface PlaylistItem {
   addedAt: string;
   /** New in Phase 22: tracks whether item is audio or video for mixed playlist display */
   mediaType?: 'audio' | 'video';
+  /** P33: origin label for remote/streaming items (host, e.g. "cdn.example.com") */
+  source?: string;
 }
 
 export interface Playlist {

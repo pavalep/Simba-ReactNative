@@ -18,7 +18,7 @@ interface LibraryArtistsSegmentProps {
   onViewAllArtists?: () => void;
 }
 
-export const LibraryArtistsSegment: React.FC<LibraryArtistsSegmentProps> = ({
+export const LibraryArtistsSegment: React.FC<LibraryArtistsSegmentProps> = React.memo(({
   audioFolders,
   isMediaScanning,
   scannedTrackCount,
@@ -59,7 +59,7 @@ export const LibraryArtistsSegment: React.FC<LibraryArtistsSegmentProps> = ({
           All Artists
         </AppText>
         {onViewAllArtists && (
-          <TouchableOpacity onPress={onViewAllArtists} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onViewAllArtists} activeOpacity={0.7} accessibilityRole="button">
             <AppText variant="caption" color="accent">
               See All
             </AppText>
@@ -69,7 +69,8 @@ export const LibraryArtistsSegment: React.FC<LibraryArtistsSegmentProps> = ({
       <ArtistGrid onArtistPress={onArtistPress} />
     </>
   );
-};
+},
+);
 
 const styles = StyleSheet.create({
   headerRow: {

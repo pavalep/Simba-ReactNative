@@ -143,3 +143,47 @@ export async function searchByAuthor(
   const books = normalizeBooks(data.books);
   return books.map(mapBook);
 }
+
+/**
+ * Search audiobooks by genre (P37.1 — LibriVox genre browse).
+ */
+export async function searchByGenre(
+  genre: string,
+  options?: ApiSearchOptions,
+): Promise<AudiobookResult[]> {
+  const limit = options?.limit ?? 20;
+  const data = await apiFetch<LibriVoxResponse>({
+    config: API_CONFIG.librivox,
+    path: '',
+    params: {
+      genre,
+      format: 'json',
+      limit,
+    },
+    cacheTtlMs: SEARCH_CACHE_TTL,
+  });
+
+  const books = normalizeBooks(data.books);
+  return books.map(mapBook);
+}
+
+/**
+ * Most recently added books (empty query returns the latest uploads).
+ */
+export async function getRecentAudiobooks(
+  options?: ApiSearchOptions,
+): Promise<AudiobookResult[]> {
+  const limit = options?.limit ?? 30;
+  const data = await apiFetch<LibriVoxResponse>({
+    config: API_CONFIG.librivox,
+    path: '',
+    params: {
+      format: 'json',
+      limit,
+    },
+    cacheTtlMs: SEARCH_CACHE_TTL,
+  });
+
+  const books = normalizeBooks(data.books);
+  return books.map(mapBook);
+}

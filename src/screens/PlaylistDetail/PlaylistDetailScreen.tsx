@@ -6,7 +6,10 @@ import {
   FlatList,
   Share,
 } from 'react-native';
+import RNFS from 'react-native-fs';
+import {pick, types, keepLocalCopy} from '@react-native-documents/picker';
 import LinearGradient from 'react-native-linear-gradient';
+import FastImage from 'react-native-fast-image';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -17,6 +20,7 @@ import {
   renamePlaylist,
   deletePlaylist,
   clearPlaylist,
+  importPlaylist,
   selectPlaylistById,
 } from '../../store/slices/playlistSlice';
 import {
@@ -31,20 +35,77 @@ type PlaylistDetailScreenProps = RootStackScreenProps<'PlaylistDetail'>;
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {PlaylistModal} from '../../features/playlists/components/PlaylistModal';
 import type {PlaylistItem} from '../../types/playlist';
+import type {PlaylistKind} from '../../types/playlist';
 import {
   generateM3u,
   generatePlaylistJson,
+  parseM3u,
 } from '../../utils/m3uParser';
 import {spacing} from '../../theme/tokens';
 import {isVideoFile} from '../../utils/timeAgo';
+import {getFileName} from '../../services/fileService';
+import {shareContent} from '../../services/shareService';
 import {OptionSheetDialog} from '../../components/core/OptionSheetDialog/OptionSheetDialog';
+import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../components/feedback/Toast/Toast';
+import {SvgIcon} from '../../components/utility/SvgIcon';
+import {isRemoteUri} from '../../utils/mediaUri';
+import {useNetworkStatus} from '../../hooks/useNetworkStatus';
 
 type Props = PlaylistDetailScreenProps;
 
 const THUMBNAIL_SIZE = 48;
 const ITEM_HEIGHT = 66;
+
+// ─── Import helpers (56.5) ─────────────────────────────────
+
+/** Derive a playlist kind from the media types of its items. */
+function deriveKind(items: PlaylistItem[]): PlaylistKind {
+  const hasVideo = items.some(i => i.mediaType === 'video');
+  const hasAudio = items.some(i => i.mediaType === 'audio');
+  return hasVideo && hasAudio
+    ? 'MIXED'
+    : hasVideo
+      ? 'VIDEO_ONLY'
+      : 'AUDIO_ONLY';
+}
+
+/** Parse the app's JSON playlist export into PlaylistItems (validated). */
+function parseImportedJson(content: string): PlaylistItem[] {
+  const parsed = JSON.parse(content) as unknown;
+  if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((raw, i): PlaylistItem[] => {
+    if (!raw || typeof raw !== 'object') return [];
+    const entry = raw as Record<string, unknown>;
+    if (typeof entry.fileUri !== 'string' || !entry.fileUri) return [];
+    return [
+      {
+        id: `imp_${Date.now()}_${i}`,
+        fileUri: entry.fileUri,
+        title:
+          typeof entry.title === 'string' && entry.title
+            ? entry.title
+            : getFileName(entry.fileUri).replace(/\.[^.]+$/, ''),
+        duration: typeof entry.duration === 'number' ? entry.duration : 0,
+        artist: typeof entry.artist === 'string' ? entry.artist : undefined,
+        album: typeof entry.album === 'string' ? entry.album : undefined,
+        thumbnailPath:
+          typeof entry.thumbnailPath === 'string' ? entry.thumbnailPath : undefined,
+        addedAt: new Date().toISOString(),
+        // P34.4: prefer the exported media type — extensionless remote URLs
+        // misclassify as video when guessed from the file name alone.
+        mediaType:
+          entry.mediaType === 'video' || entry.mediaType === 'audio'
+            ? entry.mediaType
+            : isVideoFile(entry.fileUri)
+              ? 'video'
+              : 'audio',
+        source: typeof entry.source === 'string' ? entry.source : undefined,
+      },
+    ];
+  });
+}
 
 export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors, isDark} = useTheme();
@@ -53,6 +114,8 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const toast = useToast();
   const {confirm, dialog} = useConfirmDialog();
   const {playlistId, playlistName} = route.params;
+  // P34.5: offline guard for remote/streaming playlist items
+  const {isOnline} = useNetworkStatus();
 
   // ── Redux data ──
   const playlist = useAppSelector(selectPlaylistById(playlistId));
@@ -78,15 +141,29 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
   // ── Header: Play All ──
   const handlePlayAll = useCallback(() => {
-    if (items.length > 0) {
-      const entries = playlistItemsToEntries(items);
-      dispatch(loadPlaylistToPlayer(entries));
-      navigation.navigate(
-        isVideoFile(items[0].fileUri) ? 'VideoPlayer' : 'AudioPlayer',
-        {fileUri: items[0].fileUri, fileTitle: items[0].title},
-      );
+    if (items.length === 0) return;
+    // P34.5: skip remote items while offline
+    const playable = items.filter(i => !(isRemoteUri(i.fileUri) && !isOnline));
+    if (playable.length === 0) {
+      toast.show('Offline — streams are unavailable');
+      return;
     }
-  }, [items, dispatch, navigation]);
+    const entries = playlistItemsToEntries(playable);
+    dispatch(loadPlaylistToPlayer(entries));
+    const first = playable[0];
+    // P34.4: mediaType wins over extension guessing for remote URLs
+    const isVideo = first.mediaType
+      ? first.mediaType === 'video'
+      : isVideoFile(first.fileUri);
+    navigation.navigate(isVideo ? 'VideoPlayer' : 'AudioPlayer', {
+      fileUri: first.fileUri,
+      fileTitle: first.title,
+      ...(first.source ? {source: first.source} : {}),
+      ...(!isVideo && first.thumbnailPath
+        ? {artworkUri: first.thumbnailPath}
+        : {}),
+    });
+  }, [items, dispatch, navigation, isOnline, toast]);
 
   // ── Header: Options menu (52.1) ──
   const handleMore = useCallback(() => {
@@ -109,6 +186,84 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     [items, playlistName],
   );
 
+  // 56.4: share the playlist as a deep link + https fallback
+  const handleSharePlaylist = useCallback(() => {
+    const name = playlist?.name ?? playlistName;
+    shareContent({
+      route: 'PlaylistDetail',
+      params: {playlistId},
+      title: name,
+      subtitle: `${items.length} item${items.length !== 1 ? 's' : ''}`,
+    });
+  }, [playlist, playlistName, playlistId, items.length]);
+
+  // 56.5: import an .m3u / .json playlist file as a new playlist
+  const handleImportPlaylist = useCallback(async () => {
+    try {
+      const [result] = await pick({
+        type: [types.allFiles],
+        allowMultiSelection: false,
+        mode: 'open',
+      });
+      if (!result) return;
+
+      // Copy to the app cache so RNFS can read it (content:// is unsupported)
+      const copies = await keepLocalCopy({
+        files: [{uri: result.uri, fileName: result.name ?? 'playlist.txt'}],
+        destination: 'cachesDirectory',
+      });
+      const localUri =
+        copies[0] && copies[0].status === 'success'
+          ? copies[0].localUri
+          : null;
+      if (!localUri) {
+        toast.show('Could not read the selected file');
+        return;
+      }
+
+      const content = await RNFS.readFile(localUri, 'utf8');
+      const ext = (result.name ?? '').split('.').pop()?.toLowerCase() ?? '';
+
+      let imported: PlaylistItem[] = [];
+      if (ext === 'm3u') {
+        const parsed = parseM3u(content);
+        imported = parsed.entries.map((e, i) => ({
+          id: `imp_${Date.now()}_${i}`,
+          fileUri: e.fileUri,
+          title:
+            e.title || getFileName(e.fileUri).replace(/\.[^.]+$/, ''),
+          duration: e.duration > 0 ? e.duration * 1000 : 0,
+          artist: e.artist,
+          addedAt: new Date().toISOString(),
+          mediaType: isVideoFile(e.fileUri) ? 'video' : 'audio',
+        }));
+      } else if (ext === 'json') {
+        imported = parseImportedJson(content);
+      } else {
+        toast.show('Choose a .m3u or .json file');
+        return;
+      }
+
+      if (imported.length === 0) {
+        toast.show('No playable items found in file');
+        return;
+      }
+
+      dispatch(
+        importPlaylist({
+          name: `${playlistName} (imported)`,
+          items: imported,
+          kind: deriveKind(imported),
+        }),
+      );
+      toast.show(
+        `Imported ${imported.length} item${imported.length !== 1 ? 's' : ''}`,
+      );
+    } catch {
+      toast.show('Import failed — invalid file');
+    }
+  }, [dispatch, playlistName, toast]);
+
   const handleClearPlaylist = useCallback(async () => {
     const ok = await confirm({
       title: 'Clear Playlist',
@@ -128,6 +283,12 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         case 'rename':
           setModalMode('rename');
           break;
+        case 'share':
+          handleSharePlaylist();
+          break;
+        case 'import':
+          handleImportPlaylist();
+          break;
         case 'export-m3u':
           handleExport('m3u');
           break;
@@ -142,7 +303,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           break;
       }
     },
-    [handleExport, handleClearPlaylist],
+    [handleExport, handleClearPlaylist, handleSharePlaylist, handleImportPlaylist],
   );
 
   // ── Batch select ──
@@ -186,12 +347,25 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   // ── Item interactions ──
   const handlePlay = useCallback(
     (item: PlaylistItem) => {
-      navigation.navigate(
-        isVideoFile(item.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
-        {fileUri: item.fileUri, fileTitle: item.title},
-      );
+      // P34.5: remote items need a network connection to stream
+      if (isRemoteUri(item.fileUri) && !isOnline) {
+        toast.show('Offline — this stream is unavailable');
+        return;
+      }
+      // P34.4: mediaType wins over extension guessing for remote URLs
+      const isVideo = item.mediaType
+        ? item.mediaType === 'video'
+        : isVideoFile(item.fileUri);
+      navigation.navigate(isVideo ? 'VideoPlayer' : 'AudioPlayer', {
+        fileUri: item.fileUri,
+        fileTitle: item.title,
+        ...(item.source ? {source: item.source} : {}),
+        ...(!isVideo && item.thumbnailPath
+          ? {artworkUri: item.thumbnailPath}
+          : {}),
+      });
     },
-    [navigation],
+    [navigation, isOnline, toast],
   );
 
   const handleItemPress = useCallback(
@@ -219,24 +393,55 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       if (!menuItem) return;
       switch (value) {
         case 'play-next':
+          if (isRemoteUri(menuItem.fileUri) && !isOnline) {
+            toast.show('Offline — stream unavailable');
+            break;
+          }
           dispatch(
             prependToQueue({
               uri: menuItem.fileUri,
               title: menuItem.title,
               duration: menuItem.duration,
+              // P34.7: keep source + media type so the queue routes correctly
+              source: menuItem.source,
+              mediaType: menuItem.mediaType,
             }),
           );
           toast.show('Playing next');
           break;
         case 'add-queue':
+          if (isRemoteUri(menuItem.fileUri) && !isOnline) {
+            toast.show('Offline — stream unavailable');
+            break;
+          }
           dispatch(
             addToQueue({
               uri: menuItem.fileUri,
               title: menuItem.title,
               duration: menuItem.duration,
+              source: menuItem.source,
+              mediaType: menuItem.mediaType,
             }),
           );
           toast.show('Added to queue');
+          break;
+        case 'share-item':
+          // 56.4: share a single playlist item as a deep link
+          shareContent({
+            route:
+              menuItem.mediaType === 'video' ||
+              (menuItem.mediaType !== 'audio' &&
+                isVideoFile(menuItem.fileUri))
+                ? 'VideoPlayer'
+                : 'AudioPlayer',
+            params: {
+              fileUri: menuItem.fileUri,
+              fileTitle: menuItem.title,
+              source: menuItem.source,
+            },
+            title: menuItem.title,
+            subtitle: menuItem.artist,
+          });
           break;
         case 'select':
           setIsSelecting(true);
@@ -245,7 +450,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       }
       setMenuItem(null);
     },
-    [menuItem, dispatch, toast],
+    [menuItem, dispatch, toast, isOnline],
   );
 
   const handleMoveItem = useCallback(
@@ -382,6 +587,24 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           fontWeight: '700',
           fontSize: 18,
         },
+        thumbnailImageWrap: {
+          overflow: 'hidden',
+          backgroundColor: colors.background.elevated,
+        },
+        thumbnailImage: {
+          width: THUMBNAIL_SIZE,
+          height: THUMBNAIL_SIZE,
+        },
+        offlineBadge: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+        },
+        offlineBadgeText: {
+          color: colors.semantic.warning,
+          fontSize: 10,
+          fontWeight: '600',
+        },
         itemInfo: {
           flex: 1,
           marginRight: spacing.sm,
@@ -454,16 +677,26 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             </TouchableOpacity>
           )}
 
-          {/* Thumbnail */}
-          <View
-            style={[
-              styles.thumbnail,
-              {backgroundColor: colors.accent.goldDim},
-            ]}>
-            <AppText style={styles.thumbnailText}>
-              {item.title.charAt(0).toUpperCase()}
-            </AppText>
-          </View>
+          {/* Thumbnail — real art when available (P34.3) */}
+          {item.thumbnailPath ? (
+            <View style={[styles.thumbnail, styles.thumbnailImageWrap]}>
+              <FastImage
+                source={{uri: item.thumbnailPath}}
+                style={styles.thumbnailImage}
+                resizeMode={FastImage.resizeMode.cover}
+              />
+            </View>
+          ) : (
+            <View
+              style={[
+                styles.thumbnail,
+                {backgroundColor: colors.accent.goldDim},
+              ]}>
+              <AppText style={styles.thumbnailText}>
+                {item.title.charAt(0).toUpperCase()}
+              </AppText>
+            </View>
+          )}
 
           {/* Info */}
           <View style={styles.itemInfo}>
@@ -478,6 +711,17 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
                 <AppText variant="caption" color="tertiary" numberOfLines={1}>
                   {item.artist}
                 </AppText>
+              )}
+              {/* P34.5: offline badge for remote items */}
+              {isRemoteUri(item.fileUri) && !isOnline && (
+                <View style={styles.offlineBadge}>
+                  <SvgIcon
+                    name="alertCircle"
+                    size={12}
+                    color={colors.semantic.warning}
+                  />
+                  <AppText style={styles.offlineBadgeText}>Offline</AppText>
+                </View>
               )}
             </View>
           </View>
@@ -539,6 +783,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       handleMoveItem,
       colors,
       formatDuration,
+      isOnline,
     ],
   );
 
@@ -682,6 +927,8 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         title="Playlist Options"
         options={[
           {label: 'Rename Playlist', value: 'rename'},
+          {label: 'Share Playlist', value: 'share'},
+          {label: 'Import Playlist', value: 'import'},
           {label: 'Export as M3U', value: 'export-m3u'},
           {label: 'Export as JSON', value: 'export-json'},
           ...(items.length > 0
@@ -695,18 +942,34 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         onClose={() => setPlaylistMenuVisible(false)}
         colors={colors}
       />
-      <OptionSheetDialog
+      {/* 58.4/58.5: item long-press → one bottom-sheet menu */}
+      <MediaActionsSheet
         visible={itemMenuVisible}
-        title={menuItem?.title ?? 'Track Options'}
-        options={[
-          {label: 'Play Next', value: 'play-next'},
-          {label: 'Add to Queue', value: 'add-queue'},
-          {label: 'Select', value: 'select'},
-        ]}
-        selectedValue={null}
-        onSelect={handleItemMenuSelect}
         onClose={() => setItemMenuVisible(false)}
-        colors={colors}
+        title={menuItem?.title ?? 'Track Options'}
+        subtitle={menuItem?.artist}
+        actions={[
+          {
+            label: 'Play Next',
+            icon: 'skipForward',
+            onPress: () => handleItemMenuSelect('play-next'),
+          },
+          {
+            label: 'Add to Queue',
+            icon: 'list',
+            onPress: () => handleItemMenuSelect('add-queue'),
+          },
+          {
+            label: 'Share',
+            icon: 'share',
+            onPress: () => handleItemMenuSelect('share-item'),
+          },
+          {
+            label: 'Select',
+            icon: 'check',
+            onPress: () => handleItemMenuSelect('select'),
+          },
+        ]}
       />
 
       {dialog}

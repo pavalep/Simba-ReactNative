@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -37,7 +37,7 @@ function formatLastScan(timestamp: number | null): string {
   return `${days}d ago`;
 }
 
-export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = ({
+export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = React.memo(({
   videoFolders,
   audioFolders,
   scannedTracks,
@@ -149,13 +149,17 @@ export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = ({
 
   return (
     <View style={styles.wrapper}>
-      {allFolders.map(({path, type}) => {
+      {/* 59.1: virtualized instead of .map */}
+      <FlatList
+        data={allFolders}
+        keyExtractor={({path}) => path}
+        renderItem={({item: {path, type}}) => {
         const fileCount = getFolderFileCount(path, scannedTracks);
         return (
           <TouchableOpacity
-            key={path}
             style={styles.folderCard}
             activeOpacity={0.7}
+            accessibilityRole="button"
             onPress={() => onNavigateToFolderBrowser(path)}>
             <View style={styles.folderRow}>
               <View style={styles.folderIconWrap}>
@@ -210,17 +214,23 @@ export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = ({
             </View>
           </TouchableOpacity>
         );
-      })}
-
-      <TouchableOpacity
-        style={styles.ctaButton}
-        activeOpacity={0.7}
-        onPress={onLinkFolder}>
-        <SvgIcon name="folder" size={18} color={colors.accent.gold} />
-        <AppText variant="body2" color="accent">
-          {textContent.linkFolder}
-        </AppText>
-      </TouchableOpacity>
+        }}
+        scrollEnabled={false}
+        initialNumToRender={allFolders.length}
+        ListFooterComponent={
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            onPress={onLinkFolder}>
+            <SvgIcon name="folder" size={18} color={colors.accent.gold} />
+            <AppText variant="body2" color="accent">
+              {textContent.linkFolder}
+            </AppText>
+          </TouchableOpacity>
+        }
+      />
     </View>
   );
-};
+},
+);

@@ -1,10 +1,11 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useCallback} from 'react';
 import {
   View,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
   Platform,
+  FlatList,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -14,9 +15,16 @@ import {selectAlbumTracks} from '../../store/slices/mediaSlice';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {SimbaStatusBar} from '../../components/StatusBar';
+import FastImage from 'react-native-fast-image';
 import {radius} from '../../theme/tokens';
+import {useCachedArt} from '../../hooks/useCachedArt';
+import {useMoreFromArtist} from '../../hooks/useMoreFromArtist';
+import {StreamingRow} from '../../components/media/StreamingRow/StreamingRow';
+import {useAlbumEnrichment} from './hooks/useAlbumEnrichment';
+import type {JamendoTrackResult} from '../../types/api';
 import type {RootStackScreenProps} from '../../navigation/types';
 type AlbumDetailScreenProps = RootStackScreenProps<'AlbumDetail'>;
+import {shareContent} from '../../services/shareService';
 
 type Props = AlbumDetailScreenProps;
 
@@ -36,7 +44,7 @@ function formatTotalDuration(seconds: number): string {
 }
 
 export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
-  const {albumTitle, artistName} = route.params;
+  const {albumTitle, artistName, musicBrainzReleaseId} = route.params;
   const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
@@ -55,6 +63,17 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
     [tracks],
   );
 
+  // P39.3: MusicBrainz release-group metadata + local-track matching
+  const enrichment = useAlbumEnrichment(
+    musicBrainzReleaseId,
+    albumTitle,
+    artistName,
+  );
+  // P39.5: streaming "more from this artist" rows
+  const more = useMoreFromArtist(artistName);
+  // P39.2: CAA cover resolved through the Phase 33 art cache
+  const cachedCover = useCachedArt(enrichment.releaseGroup?.coverArtUrl);
+
   const handlePlayAll = () => {
     if (sortedTracks.length > 0) {
       (navigation as any).navigate('AudioPlayer', {
@@ -67,6 +86,29 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const handlePlayTrack = (uri: string, title: string) => {
     (navigation as any).navigate('AudioPlayer', {fileUri: uri, fileTitle: title});
   };
+
+  // P39.5: streaming rows play directly
+  const handleStreamingPlay = useCallback(
+    (track: JamendoTrackResult) => {
+      navigation.navigate('AudioPlayer', {
+        fileUri: track.audioUrl,
+        fileTitle: track.name,
+        artworkUri: track.imageUrl || undefined,
+        source: 'jamendo',
+      });
+    },
+    [navigation],
+  );
+
+  // 56.4: share the album via deep link + https fallback
+  const handleShare = useCallback(() => {
+    shareContent({
+      route: 'AlbumDetail',
+      params: {albumTitle, artistName},
+      title: albumTitle,
+      subtitle: artistName,
+    });
+  }, [albumTitle, artistName]);
 
   const styles = useMemo(
     () =>
@@ -87,6 +129,14 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
           alignItems: 'center',
           justifyContent: 'center',
         },
+        shareBtn: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginLeft: 'auto',
+        },
         scrollContent: {
           paddingHorizontal: 20,
           paddingTop: 8,
@@ -104,6 +154,41 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: 8,
+          overflow: 'hidden',
+        },
+        artLargeImage: {
+          width: '100%',
+          height: '100%',
+          borderRadius: 12,
+        },
+        metaChips: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          gap: 8,
+          marginTop: 4,
+        },
+        metaChip: {
+          paddingHorizontal: 10,
+          paddingVertical: 4,
+          borderRadius: radius.pill,
+        },
+        matchBanner: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          paddingVertical: 8,
+          paddingHorizontal: 12,
+          borderRadius: radius.sm,
+          marginBottom: 16,
+        },
+        sectionTitle: {
+          fontWeight: '600',
+          marginBottom: 12,
+        },
+        sectionTitleSpaced: {
+          marginTop: 20,
         },
         albumName: {
           fontWeight: '700',
@@ -194,6 +279,14 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
         <AppText variant="h2" color="primary">
           Album
         </AppText>
+        <TouchableOpacity
+          style={[styles.shareBtn, {backgroundColor: colors.background.elevated}]}
+          onPress={handleShare}
+          activeOpacity={0.7}
+          accessibilityLabel="Share album"
+          accessibilityRole="button">
+          <SvgIcon name="share" size={18} color={colors.text.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -206,7 +299,15 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
               styles.artLarge,
               {backgroundColor: colors.accent.goldDim},
             ]}>
-            <SvgIcon name="listMusic" size={48} color={colors.accent.gold} />
+            {cachedCover ? (
+              <FastImage
+                source={{uri: cachedCover}}
+                style={styles.artLargeImage}
+                resizeMode={FastImage.resizeMode.cover}
+              />
+            ) : (
+              <SvgIcon name="listMusic" size={48} color={colors.accent.gold} />
+            )}
           </View>
           <AppText variant="h1" color="primary" style={styles.albumName}>
             {albumTitle}
@@ -237,7 +338,49 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
               </AppText>
             )}
           </View>
+
+          {/* P39.3: MusicBrainz release metadata chips */}
+          {enrichment.releaseGroup ? (
+            <View style={styles.metaChips}>
+              {enrichment.releaseGroup.date ? (
+                <View
+                  style={[styles.metaChip, {backgroundColor: colors.background.elevated}]}>
+                  <AppText variant="caption" color="secondary">
+                    {enrichment.releaseGroup.date.slice(0, 4)}
+                  </AppText>
+                </View>
+              ) : null}
+              {enrichment.releaseGroup.primaryType ? (
+                <View
+                  style={[styles.metaChip, {backgroundColor: colors.background.elevated}]}>
+                  <AppText variant="caption" color="secondary">
+                    {enrichment.releaseGroup.primaryType}
+                  </AppText>
+                </View>
+              ) : null}
+              <View
+                style={[styles.metaChip, {backgroundColor: colors.background.elevated}]}>
+                <AppText variant="caption" color="secondary">
+                  MusicBrainz
+                </AppText>
+              </View>
+            </View>
+          ) : null}
         </View>
+
+        {/* P39.3: local-library match count */}
+        {enrichment.releaseGroup &&
+        enrichment.releaseGroup.recordings.length > 0 ? (
+          <View
+            style={[styles.matchBanner, {backgroundColor: colors.accent.goldDim}]}>
+            <SvgIcon name="music" size={16} color={colors.accent.gold} />
+            <AppText variant="caption" style={{color: colors.accent.gold}}>
+              {enrichment.matchedCount} of{' '}
+              {enrichment.releaseGroup.recordings.length} tracks matched to
+              your library
+            </AppText>
+          </View>
+        ) : null}
 
         {/* ── Play All button ── */}
         {sortedTracks.length > 0 && (
@@ -257,35 +400,65 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
           </TouchableOpacity>
         )}
 
-        {/* ── Track listing ── */}
-        {sortedTracks.map((track, idx) => (
-          <TouchableOpacity
-            key={track.uri}
-            style={[
-              styles.trackItem,
-              {backgroundColor: colors.background.elevated},
-            ]}
-            activeOpacity={0.7}
-            onPress={() => handlePlayTrack(track.uri, track.title)}>
+        {/* P39.5: more from this artist (streaming) */}
+        {more.tracks.length > 0 ? (
+          <>
             <AppText
-              variant="caption"
-              color="tertiary"
-              style={styles.trackNum}>
-              {track.trackNumber > 0 ? track.trackNumber : idx + 1}
+              variant="h3"
+              color="primary"
+              style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
+              More From {artistName}
             </AppText>
-            <View style={styles.trackInfo}>
-              <AppText variant="body2" color="primary" numberOfLines={1}>
-                {track.title}
+            {/* 59.1: virtualized instead of .map */}
+            <FlatList
+              data={more.tracks}
+              keyExtractor={track => String(track.id)}
+              renderItem={({item: track}) => (
+                <StreamingRow
+                  track={track}
+                  onPlay={handleStreamingPlay}
+                />
+              )}
+              scrollEnabled={false}
+              initialNumToRender={more.tracks.length}
+            />
+          </>
+        ) : null}
+
+        {/* ── Track listing (59.1: virtualized instead of .map) ── */}
+        <FlatList
+          data={sortedTracks}
+          keyExtractor={track => track.uri}
+          renderItem={({item: track, index: idx}) => (
+            <TouchableOpacity
+              style={[
+                styles.trackItem,
+                {backgroundColor: colors.background.elevated},
+              ]}
+              activeOpacity={0.7}
+              onPress={() => handlePlayTrack(track.uri, track.title)}>
+              <AppText
+                variant="caption"
+                color="tertiary"
+                style={styles.trackNum}>
+                {track.trackNumber > 0 ? track.trackNumber : idx + 1}
               </AppText>
-            </View>
-            <AppText
-              variant="caption"
-              color="tertiary"
-              style={styles.trackDuration}>
-              {formatDuration(track.duration)}
-            </AppText>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.trackInfo}>
+                <AppText variant="body2" color="primary" numberOfLines={1}>
+                  {track.title}
+                </AppText>
+              </View>
+              <AppText
+                variant="caption"
+                color="tertiary"
+                style={styles.trackDuration}>
+                {formatDuration(track.duration)}
+              </AppText>
+            </TouchableOpacity>
+          )}
+          scrollEnabled={false}
+          initialNumToRender={sortedTracks.length}
+        />
       </ScrollView>
     </SafeAreaView>
   );

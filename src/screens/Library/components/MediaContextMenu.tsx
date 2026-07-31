@@ -115,6 +115,7 @@ export const MediaContextMenu: React.FC<MediaContextMenuProps> = ({
             <TouchableOpacity
               key={index}
               style={[styles.actionRow, {borderBottomColor: colors.border.subtle}]}
+              accessibilityRole="button"
               onPress={() => {
                 onClose();
                 action.onPress();

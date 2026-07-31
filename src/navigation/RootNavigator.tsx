@@ -10,13 +10,11 @@ import {SettingsStack} from './SettingsStack';
 import {SplashScreen} from '../screens/Splash/SplashScreen';
 import {VideoPlayerScreen} from '../screens/VideoPlayer/VideoPlayerScreen';
 import {AudioPlayerScreen} from '../screens/AudioPlayer/AudioPlayerScreen';
-import {PreferencesScreen} from '../screens/Preferences/PreferencesScreen';
 import {LoginScreen} from '../screens/Login/LoginScreen';
 import {BookmarksScreen} from '../screens/Bookmarks/BookmarksScreen';
 import {ProfileScreen} from '../screens/Profile/ProfileScreen';
 import {HistoryScreen} from '../screens/History/HistoryScreen';
 import {StatsScreen} from '../screens/Stats/StatsScreen';
-import {AboutScreen} from '../screens/About/AboutScreen';
 import {ArtistScreen} from '../screens/Artist/ArtistScreen';
 import {AlbumScreen} from '../screens/Album/AlbumScreen';
 import {SongScreen} from '../screens/Song/SongScreen';
@@ -37,23 +35,39 @@ import {PodcastDetailScreen} from '../screens/PodcastDetailScreen/PodcastDetailS
 import {MusicScreen} from '../screens/MusicScreen/MusicScreen';
 import {MusicDetailScreen} from '../screens/MusicDetailScreen/MusicDetailScreen';
 import {MovieDetailScreen} from '../screens/MovieDetailScreen/MovieDetailScreen';
+import {RadioScreen} from '../screens/RadioScreen/RadioScreen';
+import {LiveTVScreen} from '../screens/LiveTVScreen/LiveTVScreen';
+import {AudiobooksScreen} from '../screens/AudiobooksScreen/AudiobooksScreen';
+import {AudiobookDetailScreen} from '../screens/AudiobookDetailScreen/AudiobookDetailScreen';
+import {ArchiveScreen} from '../screens/ArchiveScreen/ArchiveScreen';
+import {ArchiveItemDetailScreen} from '../screens/ArchiveItemDetailScreen/ArchiveItemDetailScreen';
+import {ShowsScreen} from '../screens/ShowsScreen/ShowsScreen';
+import {ShowDetailScreen} from '../screens/ShowDetailScreen/ShowDetailScreen';
+import {QueueScreen} from '../screens/QueueScreen/QueueScreen';
+import {DownloadsScreen} from '../screens/DownloadsScreen/DownloadsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // ─── Wrapper: TabNavigator + MiniAudioPlayer overlay ──────
 const MainTabsWithMiniPlayer: React.FC = () => {
-  // Hide mini player when user is on AudioPlayer screen
-  const routeNames = useNavigationState(state =>
-    state?.routes?.map(r => r.name),
-  );
-  const isAudioPlayerActive = routeNames?.includes('AudioPlayer');
+  return <TabNavigator />;
+};
 
-  return (
-    <View style={styles.wrapper}>
-      <TabNavigator />
-      {!isAudioPlayerActive && <MiniAudioPlayer />}
-    </View>
-  );
+// ── 58.6: MiniAudioPlayer persists on every root-stack screen ──
+// Mounted once at navigator level (sibling of the stack) so Search,
+// Bookmarks, Queue, Downloads, ShowDetail, … all keep the mini player.
+// Hidden while a full-screen player (AudioPlayer/VideoPlayer) is open so
+// it never overlaps; bottom position adapts to tab bar presence.
+const RootMiniPlayerOverlay: React.FC = () => {
+  const navState = useNavigationState(state => state);
+  const routeNames = navState?.routes?.map(r => r.name) ?? [];
+  const isPlayerActive =
+    routeNames.includes('AudioPlayer') || routeNames.includes('VideoPlayer');
+  const currentRoute = navState?.routes?.[navState?.index ?? 0]?.name;
+  const overTabBar = currentRoute === 'MainTabs';
+
+  if (isPlayerActive) return null;
+  return <MiniAudioPlayer overTabBar={overTabBar} />;
 };
 
 export const RootNavigator: React.FC = () => {
@@ -67,17 +81,18 @@ export const RootNavigator: React.FC = () => {
     : 'MainTabs';
 
   return (
-    <Stack.Navigator
-      // Remount the navigator whenever auth state flips so the initial
-      // route is honoured reactively: sign-in → MainTabs, sign-out → Login.
-      // initialRouteName is only consulted on mount, so without this key a
-      // sign-out would leave the user stranded on Settings (Phase 29.9).
-      key={isAuthenticated ? 'authed' : 'guest'}
-      initialRouteName={initialRoute}
-      screenOptions={{
-        headerShown: false,
-        animation: 'fade',
-      }}>
+    <View style={styles.wrapper}>
+      <Stack.Navigator
+        // Remount the navigator whenever auth state flips so the initial
+        // route is honoured reactively: sign-in → MainTabs, sign-out → Login.
+        // initialRouteName is only consulted on mount, so without this key a
+        // sign-out would leave the user stranded on Settings (Phase 29.9).
+        key={isAuthenticated ? 'authed' : 'guest'}
+        initialRouteName={initialRoute}
+        screenOptions={{
+          headerShown: false,
+          animation: 'fade',
+        }}>
       <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen
         name="Login"
@@ -109,31 +124,43 @@ export const RootNavigator: React.FC = () => {
         )}
       </Stack.Screen>
       <Stack.Screen
-        name="Preferences"
-        options={{
-          animation: 'slide_from_right',
-          presentation: 'modal',
-        }}>
-        {props => (
-          <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
-            <PreferencesScreen {...props} />
-          </ScreenErrorBoundary>
-        )}
-      </Stack.Screen>
-      <Stack.Screen
         name="Settings"
         component={SettingsStack}
         options={{
           animation: 'slide_from_right',
         }}
       />
-      <Stack.Screen name="Bookmarks" component={BookmarksScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
-      <Stack.Screen name="History" component={HistoryScreen} />
-      <Stack.Screen name="Stats" component={StatsScreen} />
-      <Stack.Screen name="About" component={AboutScreen} />
-      <Stack.Screen name="ArtistScreen" component={ArtistScreen} />
-      <Stack.Screen name="AlbumScreen" component={AlbumScreen} />
+      {/* 57.7: detail pushes all slide_from_right; fade stays for root/auth/player */}
+      <Stack.Screen
+        name="Bookmarks"
+        component={BookmarksScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="History"
+        component={HistoryScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="Stats"
+        component={StatsScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="ArtistScreen"
+        component={ArtistScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="AlbumScreen"
+        component={AlbumScreen}
+        options={{animation: 'slide_from_right'}}
+      />
       <Stack.Screen
         name="SongScreen"
         options={{animation: 'slide_from_right'}}>
@@ -143,11 +170,31 @@ export const RootNavigator: React.FC = () => {
           </ScreenErrorBoundary>
         )}
       </Stack.Screen>
-      <Stack.Screen name="GenreScreen" component={GenreScreen} />
-      <Stack.Screen name="AllVideosScreen" component={AllVideosScreen} />
-      <Stack.Screen name="MoviesScreen" component={MoviesScreen} />
-      <Stack.Screen name="AllAudioScreen" component={AllAudioScreen} />
-      <Stack.Screen name="AllPlaylistsScreen" component={AllPlaylistsScreen} />
+      <Stack.Screen
+        name="GenreScreen"
+        component={GenreScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="AllVideosScreen"
+        component={AllVideosScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="MoviesScreen"
+        component={MoviesScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="AllAudioScreen"
+        component={AllAudioScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="AllPlaylistsScreen"
+        component={AllPlaylistsScreen}
+        options={{animation: 'slide_from_right'}}
+      />
       {/* ── Screens moved from tab stacks (Phase 14.0 navigation refactoring) ── */}
       <Stack.Screen
         name="Search"
@@ -204,7 +251,63 @@ export const RootNavigator: React.FC = () => {
         component={MovieDetailScreen}
         options={{animation: 'slide_from_right'}}
       />
-    </Stack.Navigator>
+      <Stack.Screen
+        name="RadioScreen"
+        component={RadioScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="LiveTVScreen"
+        component={LiveTVScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="AudiobooksScreen"
+        component={AudiobooksScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="AudiobookDetail"
+        component={AudiobookDetailScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="ArchiveScreen"
+        component={ArchiveScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="ArchiveItemDetail"
+        component={ArchiveItemDetailScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="ShowsScreen"
+        component={ShowsScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="ShowDetail"
+        component={ShowDetailScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      {/* ── P48: full-page queue (slide up like the sheet it replaces) ── */}
+      <Stack.Screen
+        name="Queue"
+        component={QueueScreen}
+        options={{animation: 'slide_from_bottom'}}
+      />
+      {/* ── P49: downloads & offline ── */}
+      <Stack.Screen
+        name="Downloads"
+        component={DownloadsScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      </Stack.Navigator>
+
+      {/* 58.6: mini player overlays every root-stack screen */}
+      <RootMiniPlayerOverlay />
+    </View>
   );
 };
 

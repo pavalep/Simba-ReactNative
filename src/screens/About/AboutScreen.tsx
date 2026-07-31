@@ -7,10 +7,12 @@ import {
   Linking,
   Animated,
   Share,
+  FlatList,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
+import {useAccessibility} from '../../hooks/useAccessibility';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
@@ -106,6 +108,7 @@ const SHARE_MESSAGE = `Simba Player — your media, your way. Watch videos, list
 
 export const AboutScreen: React.FC<Props> = ({navigation}) => {
   const {colors, isDark} = useTheme();
+  const {reduceMotion} = useAccessibility();
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const [resetVisible, setResetVisible] = useState(false);
@@ -119,6 +122,12 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
   });
 
   useEffect(() => {
+    if (reduceMotion) {
+      // 59.7: reduced motion — render fully visible, skip fade + bounce
+      fadeAnim.setValue(1);
+      scaleAnim.setValue(1);
+      return;
+    }
     // Fade in entire screen
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -133,7 +142,7 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
       tension: 80,
       useNativeDriver: true,
     }).start();
-  }, [fadeAnim, scaleAnim]);
+  }, [fadeAnim, scaleAnim, reduceMotion]);
 
   const styles = useMemo(
     () =>
@@ -316,32 +325,38 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
 
           <View style={styles.divider} />
 
-          {/* Link items (25.10 staggered entrance) */}
-          {LINK_ITEMS.map((item, idx) => (
-            <Animated.View key={item.label} style={[styles.linkItem, entrance.styles[idx]]}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => handleLinkPress(item)}
-                style={[StyleSheet.absoluteFill, {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg}]}
-                accessibilityRole="button"
-                accessibilityLabel={item.label}>
-                <SvgIcon
-                  name={item.icon}
-                  size={18}
-                  color={colors.accent.gold}
-                  style={styles.linkIcon}
-                />
-                <AppText variant="body1" color="primary" style={styles.linkLabel}>
-                  {item.label}
-                </AppText>
-                <SvgIcon
-                  name="chevronRight"
-                  size={16}
-                  color={colors.text.tertiary}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
+          {/* 59.1: virtualized link items (25.10 staggered entrance) */}
+          <FlatList
+            data={LINK_ITEMS}
+            keyExtractor={item => item.label}
+            renderItem={({item, index: idx}) => (
+              <Animated.View style={[styles.linkItem, entrance.styles[idx]]}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => handleLinkPress(item)}
+                  style={[StyleSheet.absoluteFill, {flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg}]}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.label}>
+                  <SvgIcon
+                    name={item.icon}
+                    size={18}
+                    color={colors.accent.gold}
+                    style={styles.linkIcon}
+                  />
+                  <AppText variant="body1" color="primary" style={styles.linkLabel}>
+                    {item.label}
+                  </AppText>
+                  <SvgIcon
+                    name="chevronRight"
+                    size={16}
+                    color={colors.text.tertiary}
+                  />
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+            scrollEnabled={false}
+            initialNumToRender={LINK_ITEMS.length}
+          />
         </Animated.View>
 
         {/* Footer with reset button (25.9: dialog, not raw Alert) */}

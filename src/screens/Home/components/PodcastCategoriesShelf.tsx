@@ -3,7 +3,7 @@
 // Non-tech-savvy UX: tap a category → opens PodcastsScreen with results.
 
 import React from 'react';
-import {View, ScrollView, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {PODCAST_CATEGORIES} from '../../../constants/podcastCategories';
@@ -29,15 +29,18 @@ export const PodcastCategoriesShelf: React.FC<PodcastCategoriesShelfProps> = Rea
           actionLabel="See All"
           onAction={onSeeAll}
         />
-        <ScrollView
+        {/* 59.1: virtualized category rail */}
+        <FlatList
           horizontal
+          data={categories}
+          keyExtractor={cat => String(cat.id)}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scroll}>
-          {categories.map(cat => (
+          contentContainerStyle={styles.scroll}
+          renderItem={({item: cat}) => (
             <TouchableOpacity
-              key={cat.id}
               activeOpacity={0.8}
               onPress={() => onCategoryPress(cat.id)}
+              accessibilityRole="button"
               style={[
                 styles.card,
                 {backgroundColor: colors.background.elevated},
@@ -60,8 +63,11 @@ export const PodcastCategoriesShelf: React.FC<PodcastCategoriesShelfProps> = Rea
                 {cat.name}
               </AppText>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+          )}
+          initialNumToRender={Math.min(categories.length, 24)}
+          windowSize={5}
+          maxToRenderPerBatch={12}
+        />
       </View>
     );
   },

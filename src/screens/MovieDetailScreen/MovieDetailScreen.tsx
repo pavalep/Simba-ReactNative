@@ -1,13 +1,14 @@
 // ─── Movie Detail Screen ─────────────────────────────────────────────────
 // Shows detailed info about an Internet Archive movie.
 
-import React from 'react';
+import React, {useCallback} from 'react';
 import {
   View,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  FlatList,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -20,6 +21,7 @@ import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon/SvgIcon';
 import {useMovieDetailScreen} from './hooks/useMovieDetailScreen';
+import {shareContent} from '../../services/shareService';
 
 type Props = RootStackScreenProps<'MovieDetail'>;
 
@@ -59,6 +61,15 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const year = item?.year ? extractYear(item.year) : '';
   const rating = item?.avgRating ?? 0;
 
+  // 56.4: share the movie via deep link + https fallback
+  const handleShare = useCallback(() => {
+    shareContent({
+      route: 'MovieDetail',
+      params: {identifier},
+      title: displayTitle || 'Movie',
+    });
+  }, [identifier, displayTitle]);
+
   // ── Loading State ──────────────────────────────────────────────────
 
   if (isLoading) {
@@ -91,6 +102,7 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={retry}
+            accessibilityRole="button"
             style={[
               styles.retryButton,
               {backgroundColor: colors.accent.gold},
@@ -111,7 +123,10 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
       <SimbaStatusBar variant="modal" />
 
       {/* Header */}
-      <InternalHeader title={displayTitle} />
+      <InternalHeader
+        title={displayTitle}
+        rightAction={{icon: 'share', onPress: handleShare}}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -226,13 +241,15 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
             <AppText variant="overline" color="secondary" style={styles.sectionLabel}>
               SUBTITLES
             </AppText>
-            <ScrollView
+            {/* 59.1: virtualized subtitle chips */}
+            <FlatList
               horizontal
+              data={item.subtitles}
+              keyExtractor={(sub, index) => `${sub.language}-${index}`}
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipsContainer}>
-              {item.subtitles.map((sub, index) => (
+              contentContainerStyle={styles.chipsContainer}
+              renderItem={({item: sub}) => (
                 <View
-                  key={index}
                   style={[
                     styles.chip,
                     {
@@ -250,8 +267,11 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
                     {sub.language}
                   </AppText>
                 </View>
-              ))}
-            </ScrollView>
+              )}
+              initialNumToRender={Math.min(item.subtitles.length, 24)}
+              windowSize={5}
+              maxToRenderPerBatch={12}
+            />
           </View>
         )}
 
@@ -261,31 +281,37 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
             <AppText variant="overline" color="secondary" style={styles.sectionLabel}>
               AUDIO TRACKS
             </AppText>
-            {item.audioTracks.map((track, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.audioTrackRow,
-                  {
-                    backgroundColor: colors.background.elevated,
-                    borderColor: colors.border.subtle,
-                  },
-                ]}>
-                <SvgIcon
-                  name="headphones"
-                  size={18}
-                  color={colors.text.secondary}
-                />
-                <View style={styles.audioTrackInfo}>
-                  <AppText variant="bodySmall" color="primary" numberOfLines={1}>
-                    {track.name}
-                  </AppText>
-                  <AppText variant="caption" color="tertiary">
-                    {track.format}
-                  </AppText>
+            {/* 59.1: virtualized audio tracks */}
+            <FlatList
+              data={item.audioTracks}
+              keyExtractor={(track, index) => `${track.name}-${index}`}
+              renderItem={({item: track}) => (
+                <View
+                  style={[
+                    styles.audioTrackRow,
+                    {
+                      backgroundColor: colors.background.elevated,
+                      borderColor: colors.border.subtle,
+                    },
+                  ]}>
+                  <SvgIcon
+                    name="headphones"
+                    size={18}
+                    color={colors.text.secondary}
+                  />
+                  <View style={styles.audioTrackInfo}>
+                    <AppText variant="bodySmall" color="primary" numberOfLines={1}>
+                      {track.name}
+                    </AppText>
+                    <AppText variant="caption" color="tertiary">
+                      {track.format}
+                    </AppText>
+                  </View>
                 </View>
-              </View>
-            ))}
+              )}
+              scrollEnabled={false}
+              initialNumToRender={item.audioTracks.length}
+            />
           </View>
         )}
 
@@ -295,37 +321,43 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
             <AppText variant="overline" color="secondary" style={styles.sectionLabel}>
               DOWNLOAD OPTIONS
             </AppText>
-            {item.downloadUrls.map((dl, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.downloadRow,
-                  {
-                    backgroundColor: colors.background.elevated,
-                    borderColor: colors.border.subtle,
-                  },
-                ]}>
-                <SvgIcon
-                  name="folder"
-                  size={18}
-                  color={colors.text.secondary}
-                />
-                <AppText
-                  variant="bodySmall"
-                  color="primary"
-                  style={styles.downloadFormat}>
-                  {dl.format}
-                </AppText>
-                <AppText
-                  variant="caption"
-                  color="tertiary"
-                  numberOfLines={1}
-                  style={styles.downloadUrl}
-                  ellipsizeMode="middle">
-                  {dl.url}
-                </AppText>
-              </View>
-            ))}
+            {/* 59.1: virtualized download options */}
+            <FlatList
+              data={item.downloadUrls}
+              keyExtractor={(dl, index) => `${dl.format}-${index}`}
+              renderItem={({item: dl}) => (
+                <View
+                  style={[
+                    styles.downloadRow,
+                    {
+                      backgroundColor: colors.background.elevated,
+                      borderColor: colors.border.subtle,
+                    },
+                  ]}>
+                  <SvgIcon
+                    name="folder"
+                    size={18}
+                    color={colors.text.secondary}
+                  />
+                  <AppText
+                    variant="bodySmall"
+                    color="primary"
+                    style={styles.downloadFormat}>
+                    {dl.format}
+                  </AppText>
+                  <AppText
+                    variant="caption"
+                    color="tertiary"
+                    numberOfLines={1}
+                    style={styles.downloadUrl}
+                    ellipsizeMode="middle">
+                    {dl.url}
+                  </AppText>
+                </View>
+              )}
+              scrollEnabled={false}
+              initialNumToRender={item.downloadUrls.length}
+            />
           </View>
         )}
 
@@ -344,6 +376,8 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
         ]}>
         <TouchableOpacity
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={`Play ${item.title}`}
           onPress={() => {
             navigation.navigate('VideoPlayer', {
               fileUri: item.streamingUrl,

@@ -3,6 +3,7 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
+  FlatList,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
@@ -113,12 +114,15 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
         <AppText variant="caption" color="secondary" style={[styles.label, {marginTop: spacing.lg}]}>
           Type
         </AppText>
-        <View style={styles.kindRow}>
-          {KIND_OPTIONS.map(k => {
+        {/* 59.1: virtualized kind chips */}
+        <FlatList
+          horizontal
+          data={KIND_OPTIONS}
+          keyExtractor={k => k}
+          renderItem={({item: k}) => {
             const isActive = kind === k;
             return (
               <TouchableOpacity
-                key={k}
                 style={[
                   styles.kindChip,
                   {
@@ -127,7 +131,10 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
                   },
                 ]}
                 activeOpacity={0.7}
-                onPress={() => setKind(k)}>
+                onPress={() => setKind(k)}
+                accessibilityRole="button"
+                accessibilityState={{selected: isActive}}
+                accessibilityLabel={`${KIND_LABELS[k]} playlist type`}>
                 <SvgIcon
                   name={k === 'AUDIO_ONLY' ? 'music' : k === 'VIDEO_ONLY' ? 'video' : 'listMusic'}
                   size={16}
@@ -141,15 +148,20 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
                 </AppText>
               </TouchableOpacity>
             );
-          })}
-        </View>
+          }}
+          contentContainerStyle={styles.kindRow}
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={false}
+          initialNumToRender={KIND_OPTIONS.length}
+        />
 
         {/* ── Actions ── */}
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.createBtn, {backgroundColor: colors.accent.gold}]}
             activeOpacity={0.8}
-            onPress={handleCreate}>
+            onPress={handleCreate}
+            accessibilityRole="button">
             <AppText variant="body2" style={{color: colors.text.inverse, fontWeight: '600'}}>
               Create
             </AppText>
@@ -157,7 +169,8 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
           <TouchableOpacity
             style={[styles.cancelBtn, {borderColor: colors.border.subtle}]}
             activeOpacity={0.7}
-            onPress={handleClose}>
+            onPress={handleClose}
+            accessibilityRole="button">
             <AppText variant="body2" color="secondary">
               Cancel
             </AppText>

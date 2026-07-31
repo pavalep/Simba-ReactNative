@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, StyleSheet} from 'react-native';
+import {View, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
 import {ResultTile} from './ResultTile';
@@ -31,20 +31,26 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const {spacing: s} = useTheme();
 
   return (
-    <>
-      {groups.map(group => {
+    /* 59.1: virtualized result groups */
+    <FlatList
+      data={groups}
+      keyExtractor={group => group.key}
+      renderItem={({item: group}) => {
         const isListGroup =
           group.key === 'artists' ||
           group.key === 'albums' ||
           group.key === 'playlists' ||
           group.key === 'folders';
         return (
-          <View key={group.key} style={{marginTop: s.md}}>
+          <View style={{marginTop: s.md}}>
             <SectionHeader label={group.label} />
-            {isListGroup
-              ? group.items.map((item: any) => (
+            {isListGroup ? (
+              /* 59.1: virtualized list rows */
+              <FlatList
+                data={group.items}
+                keyExtractor={item => item.id}
+                renderItem={({item}) => (
                   <ResultListRow
-                    key={item.id}
                     item={item}
                     query={debouncedQuery}
                     onPress={() => {
@@ -58,8 +64,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                       }
                     }}
                   />
-                ))
-              : (
+                )}
+                scrollEnabled={false}
+                initialNumToRender={group.items.length}
+              />
+            ) : (
+              /* 59.1: flexWrap grid — .map kept (FlatList can't wrap) */
               <View style={styles.resultsGrid}>
                 {group.items.map((item: any) => (
                   <ResultTile
@@ -71,11 +81,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                   />
                 ))}
               </View>
-              )}
+            )}
           </View>
         );
-      })}
-    </>
+      }}
+      scrollEnabled={false}
+      initialNumToRender={groups.length}
+    />
   );
 };
 

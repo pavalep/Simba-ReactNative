@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
-  Share,
+  FlatList,
   Platform,
   Animated,
 } from 'react-native';
@@ -21,6 +21,7 @@ import {useAppDispatch, useAppSelector} from '../../../store';
 import {setPlaybackSpeed, setSleepTimer, setSleepTimerMode} from '../../../store/slices/playerSlice';
 import {MpvPlayer} from '../../../native';
 import {sleepTimerModeLabel} from '../../../utils/sleepTimer';
+import {shareContent} from '../../../services/shareService';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -295,16 +296,21 @@ const AudioQualityCard: React.FC<{
         Audio Quality
       </AppText>
       {hasData ? (
-        qualityRows.map(row => (
-          <View key={row.label} style={styles.qualityRow}>
-            <AppText variant="caption" color="tertiary" style={styles.qualityLabel}>
-              {row.label}
-            </AppText>
-            <AppText variant="caption" color="primary" style={styles.qualityValue}>
-              {row.value}
-            </AppText>
-          </View>
-        ))
+        /* 59.1: virtualized static info rows */
+        <FlatList
+          data={qualityRows}
+          keyExtractor={row => row.label}
+          renderItem={({item: row}) => (
+            <View style={styles.qualityRow}>
+              <AppText variant="caption" color="tertiary" style={styles.qualityLabel}>
+                {row.label}
+              </AppText>
+              <AppText variant="caption" color="primary" style={styles.qualityValue}>
+                {row.value}
+              </AppText>
+            </View>
+          )}
+        />
       ) : (
         <AppText variant="caption" color="tertiary" style={styles.qualityNoData}>
           No detailed metadata available
@@ -369,12 +375,14 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
   }, [onLike, heartScale]);
 
   const handleShare = useCallback(async () => {
-    try {
-      await Share.share({
-        message: `Check out "${title}" by ${artist} on SIMBA Player`,
-      });
-    } catch {}
-  }, [title, artist]);
+    // 56.4: real deep link (simbaplayer:// + https fallback)
+    await shareContent({
+      route: 'AudioPlayer',
+      params: fileUri ? {fileUri, fileTitle: title} : undefined,
+      title,
+      subtitle: artist,
+    });
+  }, [fileUri, title, artist]);
 
   const handleSongInfo = useCallback(() => {
     onClose();
@@ -536,7 +544,7 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
               style={styles.actionRow}
               onPress={handleShare}
               activeOpacity={0.7}>
-              <SvgIcon name="maximize" size={20} color={colors.text.primary} />
+              <SvgIcon name="share" size={20} color={colors.text.primary} />
               <AppText variant="body2" color="primary" style={styles.actionLabel}>
                 Share
               </AppText>

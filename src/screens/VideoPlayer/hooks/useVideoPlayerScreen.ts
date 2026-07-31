@@ -57,6 +57,8 @@ import {
   PlaylistEntry,
 } from '../../../store/slices/playerSlice';
 import {readTrackMetadata} from '../../../services/metadataService';
+import {shareContent} from '../../../services/shareService';
+import {isRemoteUri, sourceFromUri} from '../../../utils/mediaUri';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 import {EQ_PRESETS, buildAfFilter} from '../../../services/audioSettingsService';
@@ -81,6 +83,28 @@ export function useVideoPlayerScreen(
   const title = route.params?.fileTitle ?? 'Untitled';
   const fileUri = route.params?.fileUri ?? null;
   const requestedStartPosition = route.params?.startPosition;
+  const routeSource = route.params?.source;
+  // P36.5: live channel list (IPTV) — enables channel up/down
+  const liveChannels = route.params?.liveChannels;
+  const liveChannelIndex = route.params?.liveChannelIndex ?? 0;
+
+  // P36.5: switch to the previous/next live channel (replaces the player)
+  const handleChannelSwitch = useCallback(
+    (dir: 1 | -1) => {
+      if (!liveChannels || liveChannels.length === 0) return;
+      const nextIndex =
+        (liveChannelIndex + dir + liveChannels.length) % liveChannels.length;
+      const next = liveChannels[nextIndex];
+      navigation.replace('VideoPlayer', {
+        fileUri: next.url,
+        fileTitle: next.name,
+        source: 'iptv',
+        liveChannels,
+        liveChannelIndex: nextIndex,
+      });
+    },
+    [liveChannels, liveChannelIndex, navigation],
+  );
 
   // ── Core playback state ──
   const [secondaryVisible, setSecondaryVisible] = useState(true);
@@ -135,6 +159,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const isSeeking = useRef(false);
   const fileUriRef = useRef<string | null>(fileUri);
   const titleRef = useRef(title);
+  const routeSourceRef = useRef<string | undefined>(routeSource);
   const trackMetaRef = useRef({artist: '', album: '', albumArtUri: ''});
   const resumeSeekDone = useRef(false);
   const resumeTargetRef = useRef<number | null>(null);
@@ -377,7 +402,12 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   useEffect(() => {
     if (!fileUri) {
       const t = setTimeout(() => {
-        (navigation.navigate as unknown as (name: string) => void)('MainTabs');
+        // 57.1: prefer going back to the originating screen; MainTabs only as cold-start fallback
+        if (navigation.canGoBack()) {
+          navigation.goBack();
+        } else {
+          (navigation.navigate as unknown as (name: string) => void)('MainTabs');
+        }
       }, 100);
       return () => clearTimeout(t);
     }
@@ -421,10 +451,16 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
             duration: curDur,
             thumbnailPath: thumbPath,
             mediaType: getMediaType(curUri),
+            source: routeSourceRef.current ?? sourceFromUri(curUri),
           }),
         );
       }
-      (navigation.navigate as unknown as (name: string) => void)('MainTabs');
+      // 57.1: return to the originating screen instead of dumping the stack at MainTabs
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      } else {
+        (navigation.navigate as unknown as (name: string) => void)('MainTabs');
+      }
     });
   }, [dispatch, navigation]);
 
@@ -496,9 +532,14 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       const entry = playlist[nextIdx];
       if (!entry) return;
       dispatch(nextTrack());
-      // 31.9 mixed-queue handoff: next item is audio → seamless player swap
-      if (getMediaType(entry.uri) === 'audio') {
-        navigation.replace('AudioPlayer', {fileUri: entry.uri, fileTitle: entry.title});
+      // 31.9 mixed-queue handoff: next item is audio → seamless player swap.
+      // P34.4: mediaType wins for extensionless remote URLs.
+      if ((entry.mediaType ?? getMediaType(entry.uri)) === 'audio') {
+        navigation.replace('AudioPlayer', {
+          fileUri: entry.uri,
+          fileTitle: entry.title,
+          source: entry.source,
+        });
         return;
       }
       MpvPlayer.loadFile(entry.uri);
@@ -618,6 +659,8 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
         duration,
         label: label ?? '',
         mediaType: getMediaType(uri),
+        // P34.2: keep the origin so bookmarks restore the stream context
+        source: routeSourceRef.current,
       });
       setBookmarkSaved(true);
     },
@@ -692,6 +735,16 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
 
   const handleMorePress = useCallback(() => {
     setPlaylistSheetVisible(true);
+  }, []);
+
+  // ── Share (56.4): deep link + https fallback for the current video ──
+  const handleShare = useCallback(() => {
+    const uri = fileUriRef.current;
+    shareContent({
+      route: 'VideoPlayer',
+      params: uri ? {fileUri: uri, fileTitle: titleRef.current ?? ''} : undefined,
+      title: titleRef.current ?? 'Video',
+    });
   }, []);
 
   const handlePlayRelatedTrack = useCallback(
@@ -1076,6 +1129,8 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   // ── Init player on mount ──
   useEffect(() => {
     let cancelled = false;
+    // P33: snapshot the route source so the cleanup dispatch stays stable
+    const routeSourceSnapshot = routeSourceRef.current;
 
     (async () => {
       const playableUri = fileUri;
@@ -1088,25 +1143,27 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       }
 
       if (playableUri) {
-        const validation = await validateMediaFile(playableUri);
-        if (cancelled) return;
-        if (!validation.valid) {
-          const errDetail = validation.detail || '';
-          setError({
-            title: validation.title,
-            message: validation.message,
-            detail: errDetail,
-          });
-          logError({
-            code: 'ERR_FILE_INVALID',
-            message: validation.message,
-            detail: errDetail,
-            source: 'VideoPlayerScreen',
-          });
-          if (validation.title === 'Permission Denied') {
-            setErrorIsPermission(true);
+        if (!isRemoteUri(playableUri)) {
+          const validation = await validateMediaFile(playableUri);
+          if (cancelled) return;
+          if (!validation.valid) {
+            const errDetail = validation.detail || '';
+            setError({
+              title: validation.title,
+              message: validation.message,
+              detail: errDetail,
+            });
+            logError({
+              code: 'ERR_FILE_INVALID',
+              message: validation.message,
+              detail: errDetail,
+              source: 'VideoPlayerScreen',
+            });
+            if (validation.title === 'Permission Denied') {
+              setErrorIsPermission(true);
+            }
+            return;
           }
-          return;
         }
       }
 
@@ -1152,6 +1209,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
                   duration: MpvPlayer.getDuration() || 0,
                   thumbnailPath: 'file://' + thumb,
                   mediaType: getMediaType(playableUri),
+                  source: routeSourceRef.current ?? sourceFromUri(playableUri),
                 }));
               }
             } catch (e) {
@@ -1183,6 +1241,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
               duration: curDur,
               thumbnailPath: existing?.thumbnailPath,
               mediaType: getMediaType(curUri),
+              source: routeSourceSnapshot ?? sourceFromUri(curUri),
             }),
           );
         }
@@ -1210,6 +1269,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
             duration: MpvPlayer.getDuration?.() ?? 0,
             thumbnailPath: existing?.thumbnailPath,
             mediaType: getMediaType(fileUri ?? ''),
+            source: routeSourceRef.current ?? sourceFromUri(fileUri ?? ''),
           }),
         );
       }
@@ -1312,6 +1372,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
           position: 0,
           duration: MpvPlayer.getDuration(),
           mediaType: getMediaType(fileUriRef.current ?? ''),
+          source: routeSourceRef.current ?? sourceFromUri(fileUriRef.current ?? ''),
         }),
       );
 
@@ -1419,9 +1480,17 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       // next queue item is audio (playback continues without a replay stop).
       const nextIdx = currentIndex + 1;
       const nextEntry = playlist[nextIdx];
-      if (nextEntry && getMediaType(nextEntry.uri) === 'audio') {
+      // P34.4: mediaType wins for extensionless remote URLs
+      if (
+        nextEntry &&
+        (nextEntry.mediaType ?? getMediaType(nextEntry.uri)) === 'audio'
+      ) {
         dispatch(nextTrack());
-        navigation.replace('AudioPlayer', {fileUri: nextEntry.uri, fileTitle: nextEntry.title});
+        navigation.replace('AudioPlayer', {
+          fileUri: nextEntry.uri,
+          fileTitle: nextEntry.title,
+          source: nextEntry.source,
+        });
         return;
       }
       if (nextEntry) {
@@ -1508,6 +1577,11 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     insets,
     title,
     fileUri,
+
+    // P36.5: live playback (IPTV) — LIVE badge + channel up/down
+    isLive: isReady && playerDuration <= 0,
+    channelUp: liveChannels ? () => handleChannelSwitch(1) : undefined,
+    channelDown: liveChannels ? () => handleChannelSwitch(-1) : undefined,
 
     // Core playback state
     secondaryVisible,
@@ -1665,6 +1739,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     handleInfo,
     handleInfoAddToPlaylist,
     handleMorePress,
+    handleShare,
     handlePlayRelatedTrack,
 
     // Volume/Brightness gesture handlers

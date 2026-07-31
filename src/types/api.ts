@@ -23,6 +23,11 @@ export interface TVMazeShow {
   genres: string[];
   status: string;
   premiered: string;
+  // ── P38: optional fields surfaced by /shows + /shows/:id ──
+  rating?: {average: number | null} | null;
+  runtime?: number | null;
+  network?: {name: string} | null;
+  type?: string;
 }
 
 export interface TVMazeEpisode {
@@ -53,6 +58,23 @@ export interface MusicBrainzRelease {
   country: string;
   status: string;
   coverArtUrl: string | null;
+}
+
+// ─── P39: release-group detail (recordings) ─────────────────────────────
+
+export interface MusicBrainzRecording {
+  id: string;
+  title: string;
+  length: number;
+}
+
+export interface MusicBrainzReleaseGroupDetail {
+  id: string;
+  title: string;
+  date: string;
+  primaryType: string;
+  coverArtUrl: string | null;
+  recordings: MusicBrainzRecording[];
 }
 
 // ─── Podcast Index ──────────────────────────────────────────────────────
@@ -180,6 +202,16 @@ export interface InternetArchiveItemResult {
   imageUrl: string;
   streamingUrl: string;
   downloadUrls: {format: string; url: string}[];
+}
+
+/** P37: a single streamable audio file inside an archive item (chapter/track). */
+export interface ArchiveTrack {
+  name: string;
+  title: string;
+  url: string;
+  lengthSeconds: number;
+  format: string;
+  trackNumber: number;
 }
 
 // ─── Internet Archive Video (Movies) ─────────────────────────────────────

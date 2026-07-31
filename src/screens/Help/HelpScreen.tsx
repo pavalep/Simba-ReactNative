@@ -1,5 +1,5 @@
 import React, {useMemo, useRef, useEffect, useState} from 'react';
-import {View, ScrollView, StyleSheet, Animated, TouchableOpacity, Linking} from 'react-native';
+import {View, ScrollView, StyleSheet, Animated, TouchableOpacity, Linking, FlatList} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
@@ -309,56 +309,69 @@ export const HelpScreen: React.FC<Props> = () => {
               </AppText>
             </View>
           ) : (
-            filtered.map(section => (
-              <View key={section.title} style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <SvgIcon
-                    name={section.icon}
-                    size={16}
-                    color={colors.accent.gold}
-                  />
-                  <AppText variant="h3" color="accent" style={styles.sectionTitle}>
-                    {section.title}
-                  </AppText>
-                </View>
-                {section.items.map(item => {
-                  const key = `${section.title}::${item.q}`;
-                  const open = openItems.has(key);
-                  return (
-                    <View key={key} style={styles.faqCard}>
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        onPress={() => toggleItem(key)}
-                        style={styles.faqQuestion}
-                        accessibilityRole="button"
-                        accessibilityLabel={item.q}
-                        accessibilityState={{expanded: open}}>
-                        <AppText
-                          variant="body1"
-                          color="primary"
-                          style={styles.faqQuestionText}>
-                          {item.q}
-                        </AppText>
-                        <SvgIcon
-                          name="chevronRight"
-                          size={16}
-                          color={colors.text.tertiary}
-                          style={open ? {transform: [{rotate: '90deg'}]} : undefined}
-                        />
-                      </TouchableOpacity>
-                      {open ? (
-                        <View style={styles.faqAnswer}>
-                          <View style={styles.faqAnswerDivider} />
-                          <AppText variant="body2" color="secondary">
-                            {item.a}
-                          </AppText>
+            /* 59.1: virtualized FAQ sections */
+            <FlatList
+              data={filtered}
+              keyExtractor={section => section.title}
+              renderItem={({item: section}) => (
+                <View style={styles.section}>
+                  <View style={styles.sectionHeader}>
+                    <SvgIcon
+                      name={section.icon}
+                      size={16}
+                      color={colors.accent.gold}
+                    />
+                    <AppText variant="h3" color="accent" style={styles.sectionTitle}>
+                      {section.title}
+                    </AppText>
+                  </View>
+                  {/* 59.1: virtualized FAQ cards */}
+                  <FlatList
+                    data={section.items}
+                    keyExtractor={item => `${section.title}::${item.q}`}
+                    renderItem={({item}) => {
+                      const open = openItems.has(`${section.title}::${item.q}`);
+                      return (
+                        <View style={styles.faqCard}>
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => toggleItem(`${section.title}::${item.q}`)}
+                            style={styles.faqQuestion}
+                            accessibilityRole="button"
+                            accessibilityLabel={item.q}
+                            accessibilityState={{expanded: open}}>
+                            <AppText
+                              variant="body1"
+                              color="primary"
+                              style={styles.faqQuestionText}>
+                              {item.q}
+                            </AppText>
+                            <SvgIcon
+                              name="chevronRight"
+                              size={16}
+                              color={colors.text.tertiary}
+                              style={open ? {transform: [{rotate: '90deg'}]} : undefined}
+                            />
+                          </TouchableOpacity>
+                          {open ? (
+                            <View style={styles.faqAnswer}>
+                              <View style={styles.faqAnswerDivider} />
+                              <AppText variant="body2" color="secondary">
+                                {item.a}
+                              </AppText>
+                            </View>
+                          ) : null}
                         </View>
-                      ) : null}
-                    </View>
-                  );
-                })}
-              </View>
-            ))
+                      );
+                    }}
+                    scrollEnabled={false}
+                    initialNumToRender={section.items.length}
+                  />
+                </View>
+              )}
+              scrollEnabled={false}
+              initialNumToRender={filtered.length}
+            />
           )}
 
           {/* Contact card (51.6: real mailto action) */}

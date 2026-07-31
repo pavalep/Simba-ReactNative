@@ -18,6 +18,7 @@ const CACHE = {
   SEARCH: 600_000,     // 10 min
   SCHEDULE: 1_800_000, // 30 min
   DETAILS: 3_600_000,  // 1 hour
+  BROWSE: 3_600_000,   // 1 hour
 } as const;
 
 // ─── Exported Functions ────────────────────────────────────────────────
@@ -35,6 +36,19 @@ export async function searchShows(query: string): Promise<TVMazeShow[]> {
     cacheTtlMs: CACHE.SEARCH,
   });
   return data.map(r => r.show);
+}
+
+/**
+ * P38: browse popular shows — TVmaze /shows?page=N returns 250 per page.
+ * Cache: 1 hour.
+ */
+export async function getPopularShows(page: number): Promise<TVMazeShow[]> {
+  return apiFetch<TVMazeShow[]>({
+    config: API_CONFIG.tvmaze,
+    path: '/shows',
+    params: {page},
+    cacheTtlMs: CACHE.BROWSE,
+  });
 }
 
 /**

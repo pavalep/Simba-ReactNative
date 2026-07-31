@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  FlatList,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -205,7 +206,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
           )}
         </View>
 
-        {/* ── Stats grid (42.3) ── */}
+        {/* ── Stats grid (42.3) — flexWrap flow, .map kept ── */}
         <View style={styles.statsGrid}>
           {stats.map(stat => (
             <View
@@ -230,10 +231,14 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
             <AppText variant="h3" color="primary" style={styles.sectionTitle}>
               Recently Played
             </AppText>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {recentStrip.map(entry => (
+            {/* 59.1: virtualized recent strip */}
+            <FlatList
+              horizontal
+              data={recentStrip}
+              keyExtractor={entry => entry.fileUri}
+              showsHorizontalScrollIndicator={false}
+              renderItem={({item: entry}) => (
                 <TouchableOpacity
-                  key={entry.fileUri}
                   style={[
                     styles.recentChip,
                     {backgroundColor: colors.background.elevated},
@@ -261,8 +266,11 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
                     {entry.title}
                   </AppText>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+              )}
+              initialNumToRender={Math.min(recentStrip.length, 24)}
+              windowSize={5}
+              maxToRenderPerBatch={12}
+            />
           </View>
         )}
 

@@ -4,12 +4,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  FlatList,
   PanResponder,
   Animated,
 } from 'react-native';
 import type {PanResponderGestureState} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
+import {useAccessibility} from '../../../hooks/useAccessibility';
 import {spacing, radius} from '../../../theme/tokens';
 
 // ─── Props ───────────────────────────────────────────────────
@@ -45,6 +47,9 @@ const SwipeableRow: React.FC<{
   onRemove: () => void;
 }> = ({children, onRemove}) => {
   const {colors} = useTheme();
+  const {reduceMotion} = useAccessibility();
+  const reduceMotionRef = useRef(reduceMotion);
+  reduceMotionRef.current = reduceMotion;
   const translateX = useRef(new Animated.Value(0)).current;
   const SWIPE_THRESHOLD = 80;
 
@@ -87,6 +92,15 @@ const SwipeableRow: React.FC<{
         translateX.setValue(Math.max(-120, Math.min(0, gesture.dx)));
       },
       onPanResponderRelease: (_, gesture: PanResponderGestureState) => {
+        // 59.7: reduced motion — snap with a short timing, no spring bounce
+        if (reduceMotionRef.current) {
+          Animated.timing(translateX, {
+            toValue: gesture.dx < -SWIPE_THRESHOLD ? -100 : 0,
+            duration: 150,
+            useNativeDriver: true,
+          }).start();
+          return;
+        }
         if (gesture.dx < -SWIPE_THRESHOLD) {
           Animated.spring(translateX, {
             toValue: -100,
@@ -116,7 +130,9 @@ const SwipeableRow: React.FC<{
       <View style={swipeStyles.swipeAction}>
         <TouchableOpacity
           onPress={handleRemovePress}
-          style={swipeStyles.removeBtn}>
+          style={swipeStyles.removeBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Remove from playlist">
           <AppText variant="body2" color="primary" style={swipeStyles.removeLabel}>
             Remove
           </AppText>
@@ -213,7 +229,10 @@ export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> =
       style={styles.scrollContent}
       showsVerticalScrollIndicator={false}>
       {/* Add to Playlist button */}
-      <TouchableOpacity style={styles.addBtn} onPress={onAddToPlaylist}>
+      <TouchableOpacity
+        style={styles.addBtn}
+        onPress={onAddToPlaylist}
+        accessibilityRole="button">
         <AppText
           variant="body2"
           color="accent"
@@ -233,52 +252,64 @@ export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> =
         </View>
       ) : (
         <>
-          {/* Playlist entries */}
-          {playlist.map((entry, index) => {
-            const isCurrent = index === currentIndex;
-            return (
-              <SwipeableRow
-                key={`${entry.fileUri}-${index}`}
-                onRemove={() => onRemoveFromPlaylist(index)}>
-                <TouchableOpacity
-                  style={styles.entryRow}
-                  onPress={() => onPlayFromPlaylist(index)}>
-                  <AppText
-                    variant="caption"
-                    color="tertiary"
-                    style={styles.entryIndex}>
-                    {index + 1}
-                  </AppText>
-                  <View style={styles.entryInfo}>
-                    <AppText
-                      variant="body2"
-                      color={isCurrent ? 'accent' : 'primary'}
-                      numberOfLines={1}>
-                      {entry.title}
-                    </AppText>
-                  </View>
-                  <AppText
-                    variant="caption"
-                    color="secondary"
-                    style={styles.entryDuration}>
-                    {formatDuration(entry.duration)}
-                  </AppText>
+          {/* 59.1: virtualized playlist entries */}
+          <FlatList
+            data={playlist}
+            keyExtractor={(entry, index) => `${entry.fileUri}-${index}`}
+            renderItem={({item: entry, index}) => {
+              const isCurrent = index === currentIndex;
+              return (
+                <SwipeableRow onRemove={() => onRemoveFromPlaylist(index)}>
                   <TouchableOpacity
-                    style={styles.removeBtn}
-                    onPress={() => onRemoveFromPlaylist(index)}>
-                    <AppText variant="caption" color="secondary">
-                      ✕
+                    style={styles.entryRow}
+                    onPress={() => onPlayFromPlaylist(index)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Play ${entry.title}`}
+                    accessibilityState={{selected: isCurrent}}>
+                    <AppText
+                      variant="caption"
+                      color="tertiary"
+                      style={styles.entryIndex}>
+                      {index + 1}
                     </AppText>
+                    <View style={styles.entryInfo}>
+                      <AppText
+                        variant="body2"
+                        color={isCurrent ? 'accent' : 'primary'}
+                        numberOfLines={1}>
+                        {entry.title}
+                      </AppText>
+                    </View>
+                    <AppText
+                      variant="caption"
+                      color="secondary"
+                      style={styles.entryDuration}>
+                      {formatDuration(entry.duration)}
+                    </AppText>
+                    <TouchableOpacity
+                      style={styles.removeBtn}
+                      onPress={() => onRemoveFromPlaylist(index)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${entry.title} from playlist`}
+                      hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                      <AppText variant="caption" color="secondary">
+                        ✕
+                      </AppText>
+                    </TouchableOpacity>
                   </TouchableOpacity>
-                </TouchableOpacity>
-              </SwipeableRow>
-            );
-          })}
+                </SwipeableRow>
+              );
+            }}
+            scrollEnabled={false}
+            initialNumToRender={playlist.length}
+          />
 
           {/* Clear all button */}
           <TouchableOpacity
             style={styles.clearAllBtn}
-            onPress={onClearPlaylist}>
+            onPress={onClearPlaylist}
+            accessibilityRole="button"
+            accessibilityLabel="Clear playlist">
             <AppText variant="body2" color="error">
               Clear All
             </AppText>

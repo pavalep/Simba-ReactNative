@@ -3,6 +3,7 @@ import {
   View,
   TouchableOpacity,
   StyleSheet,
+  FlatList,
 } from 'react-native';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
@@ -153,16 +154,20 @@ export const BookmarkSheet: React.FC<Props> = ({
               </AppText>
             </View>
           ) : (
-            <View>
-              {bookmarks.map(item => (
+            /* 59.1: virtualized bookmark rows */
+            <FlatList
+              data={bookmarks}
+              keyExtractor={item => item.id}
+              renderItem={({item}) => (
                 <BookmarkItem
-                  key={item.id}
                   item={item}
                   onPress={handleJumpTo}
                   onDelete={handleDelete}
                 />
-              ))}
-            </View>
+              )}
+              scrollEnabled={false}
+              initialNumToRender={bookmarks.length}
+            />
           )}
         </View>
       </KeyboardAwareView>

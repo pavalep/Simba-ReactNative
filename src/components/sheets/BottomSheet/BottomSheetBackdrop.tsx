@@ -70,7 +70,10 @@ export const BottomSheetBackdrop: React.FC<BottomSheetBackdropProps> = ({
 
   if (dismissable && onPress) {
     return (
-      <TouchableWithoutFeedback onPress={onPress}>
+      <TouchableWithoutFeedback
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel="Close panel">
         {backdrop}
       </TouchableWithoutFeedback>
     );

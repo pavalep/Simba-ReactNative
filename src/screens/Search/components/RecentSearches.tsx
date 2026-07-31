@@ -36,6 +36,8 @@ export const RecentSearches: React.FC<RecentSearchesProps> = ({
               key={term + idx}
               activeOpacity={0.7}
               onPress={() => onChipTap(term)}
+              accessibilityRole="button"
+              accessibilityLabel={`Search ${term}`}
               style={[
                 styles.chip,
                 {

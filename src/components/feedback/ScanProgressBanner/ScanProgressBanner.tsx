@@ -87,6 +87,9 @@ export const ScanProgressBanner: React.FC<ScanProgressBannerProps> = ({
 
     return (
       <View
+        accessible
+        accessibilityLabel={`Scan complete${hasData ? `: ${scanHistory.filesAdded} added, ${scanHistory.errorsCount} errors, ${scanHistory.unsupportedCount} unsupported` : ''}`}
+        accessibilityLiveRegion="polite"
         style={[
           styles.root,
           {

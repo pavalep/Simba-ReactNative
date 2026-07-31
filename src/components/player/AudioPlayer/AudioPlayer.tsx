@@ -11,6 +11,7 @@ import {
 import {AppText} from '../../core/AppText/AppText';
 import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
 import {PlayerErrorFallback} from '../../feedback/PlayerErrorFallback';
+import {BufferingBar} from '../BufferingBar/BufferingBar';
 import AudioVisualizer from '../../player/AudioVisualizer/AudioVisualizer';
 import AudioLyricsView from '../../player/AudioLyricsView/AudioLyricsView';
 import {SvgIcon} from '../../utility/SvgIcon';
@@ -27,12 +28,14 @@ import {AudioSeekBar} from './AudioSeekBar';
 import {AudioVolumeSlider} from './AudioVolumeSlider';
 import {InfoSheet} from '../NowPlayingInfo/InfoSheet';
 import type {Chapter} from '../NowPlayingInfo/ChapterList';
+import {AudioResumeOverlay} from '../../../screens/AudioPlayer/components/AudioResumeOverlay';
 import {PlaylistPreviewSheet} from '../PlaylistPreview/PlaylistPreviewSheet';
 import {QueueSheet} from '../../sheets/QueueSheet/QueueSheet';
 import {PlaylistSheet} from '../../sheets/PlaylistSheet';
 import {BookmarkSheet} from '../../bookmark/BookmarkSheet';
 import {TransportProvider, useTransport} from '../../../contexts/TransportContext';
 import {MpvPlayer} from '../../../native';
+import {navigate} from '../../../navigation/navigationHelper';
 import {formatSleepRemaining, sleepTimerModeLabel} from '../../../utils/sleepTimer';
 import type {TrackMetadata} from '../../../services/metadataService';
 import type {LrcLine} from '../../../utils/lrcParser';
@@ -51,6 +54,8 @@ export interface AudioPlayerHookData {
   // Route
   title: string;
   fileUri: string | null;
+  /** P33: origin label for remote/streaming files (host, e.g. "cdn.example.com") */
+  sourceLabel?: string;
 
   // State
   isLoading: boolean;
@@ -136,6 +141,10 @@ export interface AudioPlayerHookData {
   handleBookmarkAdd: (label?: string) => void;
   handleBookmarkDelete: (id: string) => void;
   handleBookmarkJumpTo: (pos: number) => void;
+
+  // 58.2: saved-position resume choice (mirrors 31.2 video overlay)
+  resumePrompt: {position: number} | null;
+  handleResumeChoice: (shouldResume: boolean) => void;
 }
 
 // ─── AudioPlayer Component ───────────────────────────────────
@@ -235,6 +244,25 @@ const AudioTransportDependentContent: React.FC<{
         colors={h.colors}
       />
       <AudioVisualizer isPlaying={isPlaying} />
+      {/* P36.2: LIVE badge for streams with unknown duration (radio) */}
+      {duration <= 0 && (
+        <View style={styles.liveBadgeRow}>
+          <View
+            style={[
+              styles.liveBadge,
+              {
+                backgroundColor: colors.accent.goldDim,
+                borderColor: colors.accent.gold,
+              },
+            ]}>
+            <AppText
+              variant="caption"
+              style={[styles.liveBadgeText, {color: colors.accent.gold}]}>
+              LIVE
+            </AppText>
+          </View>
+        </View>
+      )}
       <View style={seekContainerStyle}>
         <AudioSeekBar
           position={position}
@@ -267,6 +295,9 @@ const AudioTransportDependentContent: React.FC<{
         onOpenSubMenu={onOpenSubMenu}
         liked={liked}
         onLike={onLike}
+        shareTitle={h.title}
+        shareArtist={h.metadata.artist}
+        shareUri={h.fileUri ?? ''}
       />
       <View>
         <View style={lyricsHeaderStyle}>
@@ -280,7 +311,9 @@ const AudioTransportDependentContent: React.FC<{
             onPress={onOpenLyricsView}
             style={[expandBtnStyle, {backgroundColor: h.colors.border.subtle}]}
             activeOpacity={0.7}
-            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+            accessibilityRole="button"
+            accessibilityLabel="Open lyrics view">
             <SvgIcon name="maximize" size={14} color={colors.text.tertiary} />
           </TouchableOpacity>
         </View>
@@ -307,7 +340,7 @@ const AudioTransportDependentContent: React.FC<{
 };
 
 const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
-  const {position, duration, isPlaying, sleepRemainingMs, sleepTimerActive, sleepTimerMode} = useTransport();
+  const {position, duration, isPlaying, isBuffering, sleepRemainingMs, sleepTimerActive, sleepTimerMode} = useTransport();
   const [submenuVisible, setSubmenuVisible] = React.useState(false);
   const [liked, setLiked] = React.useState(false);
   const [lyricsViewVisible, setLyricsViewVisible] = React.useState(false);
@@ -332,6 +365,18 @@ const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
         <View style={styles.centerContainer}>
           <ActivityOrb size={48} />
         </View>
+      )}
+
+      {/* P33.4: stream stall indicator (orb + shimmer bar), shared with video */}
+      <BufferingBar visible={isBuffering && h.isReady && !h.error} />
+
+      {/* 58.2: Resume / Start Over choice on load (mirrors 31.2 video) */}
+      {h.resumePrompt && (
+        <AudioResumeOverlay
+          position={h.resumePrompt.position}
+          onResume={() => h.handleResumeChoice(true)}
+          onStartOver={() => h.handleResumeChoice(false)}
+        />
       )}
 
       {!h.isLoading && (
@@ -443,6 +488,11 @@ const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
         onClearAll={h.handleClearAll}
         onPlayNext={h.handlePlayNext}
         onAddToQueue={h.handleAddToQueue}
+        onOpenFullPage={() => {
+          h.setQueueSheetVisible(false);
+          // 48.6: sheet → full-page queue, remembering the audio context
+          navigate('Queue', {from: 'audio'});
+        }}
       />
 
       <PlaylistSheet
@@ -454,6 +504,10 @@ const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
           duration: 0,
           artist: h.metadata.artist,
           album: h.metadata.album,
+          // P34.1/34.4: keep art + origin + type so mixed playlists route correctly
+          thumbnailPath: h.metadata.albumArtUri || undefined,
+          source: h.sourceLabel,
+          mediaType: 'audio',
         }}
       />
 
@@ -550,6 +604,21 @@ const styles = StyleSheet.create({
   },
   sleepBadgeText: {
     fontSize: 12,
+  },
+  liveBadgeRow: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  liveBadge: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  liveBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
 });
 

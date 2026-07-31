@@ -30,6 +30,8 @@ export const LinkedFoldersDialog: React.FC<LinkedFoldersDialogProps> = ({
         <TouchableOpacity
           style={[styles.btn, {backgroundColor: colors.accent.gold}]}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Manage video folders"
           onPress={() => {
             onClose();
             onNavigate('video');
@@ -48,6 +50,8 @@ export const LinkedFoldersDialog: React.FC<LinkedFoldersDialogProps> = ({
             },
           ]}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Manage audio folders"
           onPress={() => {
             onClose();
             onNavigate('audio');

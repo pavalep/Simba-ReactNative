@@ -17,7 +17,11 @@ export const AudioTrackInfo: React.FC<Props> = ({title, artist, album, fileUri, 
     ? `Now playing ${title} by ${artist}${album ? `, from ${album}` : ''}`
     : `Now playing ${title}`;
   return (
-    <View style={styles.infoContainer} accessibilityLabel={a11yLabel}>
+    <View
+      style={styles.infoContainer}
+      accessible
+      accessibilityLabel={a11yLabel}
+      accessibilityLiveRegion="polite">
       <AppText variant="h2" color="primary" style={styles.trackTitle} numberOfLines={1}>
         {title}
       </AppText>

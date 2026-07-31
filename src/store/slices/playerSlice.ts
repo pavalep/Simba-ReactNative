@@ -5,6 +5,10 @@ export interface PlaylistEntry {
   uri: string;
   title: string;
   duration: number;
+  /** P33: origin label for remote/streaming entries (host, e.g. "cdn.example.com") */
+  source?: string;
+  /** P34: explicit media type so remote URLs (no extension) route to the right player */
+  mediaType?: 'audio' | 'video';
 }
 
 export interface QueueItem {
@@ -242,6 +246,21 @@ const playerSlice = createSlice({
       }
     },
 
+    /** P48.3: jump to a queue item — promote it into the playlist right after
+     *  the current track, then make it current. The queue stays display-only
+     *  otherwise (nextTrack never consumes it). */
+    playFromQueue(state, action: PayloadAction<number>) {
+      const idx = action.payload;
+      if (idx < 0 || idx >= state.queue.length) return;
+      const [item] = state.queue.splice(idx, 1);
+      const insertAt = state.currentIndex + 1;
+      state.playlist.splice(insertAt, 0, item);
+      state.currentIndex = insertAt;
+      state.currentFile = item;
+      state.currentPosition = 0;
+      state.playbackState = 'playing';
+    },
+
     // ── Playback History (Phase 23.9) ──
 
     addToPlaybackHistory(state, action: PayloadAction<PlaylistEntry>) {
@@ -370,6 +389,7 @@ export const {
   reorderQueue,
   clearQueue,
   shuffleQueue,
+  playFromQueue,
   clearPlaylist,
   clearPlayer,
   setPlaybackSpeed,
@@ -395,6 +415,8 @@ export function playlistItemsToEntries(items: PlaylistItem[]): PlaylistEntry[] {
     uri: item.fileUri,
     title: item.title,
     duration: item.duration,
+    source: item.source,
+    mediaType: item.mediaType,
   }));
 }
 

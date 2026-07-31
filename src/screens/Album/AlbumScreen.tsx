@@ -78,7 +78,10 @@ export const AlbumScreen: React.FC<Props> = () => {
             {backgroundColor: colors.background.highlight},
           ]}
           onPress={handlers.goBack}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}>
           <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
         </TouchableOpacity>
       </View>

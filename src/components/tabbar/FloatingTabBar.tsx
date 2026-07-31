@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Animated,
   useWindowDimensions,
+  FlatList,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {BottomTabBarProps} from '@react-navigation/bottom-tabs';
@@ -150,52 +151,59 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
           ]}
         />
 
-        {/* Tabs (icon-only, no labels) */}
-        {state.routes.map((route, index) => {
-          const isFocused = activeIndex === index;
-          const a11yLabel = `${route.name} tab${isFocused ? ', selected' : ''}`;
+        {/* 59.1: virtualized tabs (icon-only, no labels) */}
+        <FlatList
+          horizontal
+          data={state.routes}
+          keyExtractor={route => route.key}
+          renderItem={({item: route, index}) => {
+            const isFocused = activeIndex === index;
+            const a11yLabel = `${route.name} tab${isFocused ? ', selected' : ''}`;
 
-          const iconScale = animValues[index].interpolate({
-            inputRange: [0, 1],
-            outputRange: [1, 1.12],
-          });
+            const iconScale = animValues[index].interpolate({
+              inputRange: [0, 1],
+              outputRange: [1, 1.12],
+            });
 
-          const iconOpacity = animValues[index].interpolate({
-            inputRange: [0, 1],
-            outputRange: [0.75, 1],
-          });
+            const iconOpacity = animValues[index].interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.75, 1],
+            });
 
-          return (
-            <TouchableOpacity
-              key={route.key}
-              activeOpacity={0.7}
-              onPress={() => onTabPress(route.key, route.name, isFocused)}
-              onLongPress={() => onTabLongPress(route.key)}
-              accessibilityRole="tab"
-              accessibilityState={{selected: isFocused}}
-              accessibilityLabel={a11yLabel}
-              style={[styles.tab, {width: tabWidth}]}>
-              <Animated.View
-                style={[
-                  styles.icon,
-                  {
-                    transform: [{scale: iconScale}],
-                    opacity: iconOpacity,
-                  },
-                ]}>
-                <SvgIcon
-                  name={getIconForRoute(route.name)}
-                  size={ICON_SIZE}
-                  color={
-                    isFocused
-                      ? (tokens.isDark ? tokens.colors.text.bright : tokens.colors.text.inverse)
-                      : (tokens.isDark ? tokens.colors.text.secondary : tokens.colors.text.tertiary)
-                  }
-                />
-              </Animated.View>
-            </TouchableOpacity>
-          );
-        })}
+            return (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => onTabPress(route.key, route.name, isFocused)}
+                onLongPress={() => onTabLongPress(route.key)}
+                accessibilityRole="tab"
+                accessibilityState={{selected: isFocused}}
+                accessibilityLabel={a11yLabel}
+                style={[styles.tab, {width: tabWidth}]}>
+                <Animated.View
+                  style={[
+                    styles.icon,
+                    {
+                      transform: [{scale: iconScale}],
+                      opacity: iconOpacity,
+                    },
+                  ]}>
+                  <SvgIcon
+                    name={getIconForRoute(route.name)}
+                    size={ICON_SIZE}
+                    color={
+                      isFocused
+                        ? (tokens.isDark ? tokens.colors.text.bright : tokens.colors.text.inverse)
+                        : (tokens.isDark ? tokens.colors.text.secondary : tokens.colors.text.tertiary)
+                    }
+                  />
+                </Animated.View>
+              </TouchableOpacity>
+            );
+          }}
+          contentContainerStyle={styles.tabContent}
+          scrollEnabled={false}
+          initialNumToRender={state.routes.length}
+        />
       </View>
     </Animated.View>
   );
@@ -247,5 +255,8 @@ const styles = StyleSheet.create({
   icon: {
     width: ICON_SIZE,
     height: ICON_SIZE,
+  },
+  tabContent: {
+    flexGrow: 1,
   },
 });

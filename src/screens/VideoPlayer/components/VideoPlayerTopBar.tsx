@@ -3,6 +3,7 @@ import {View, TouchableOpacity, StyleSheet, Animated} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
+import {radius, spacing} from '../../../theme/tokens';
 
 
 // ─── Props ───────────────────────────────────────────────────
@@ -17,9 +18,15 @@ export interface VideoPlayerTopBarProps {
   visible?: boolean;
   onBookmark?: () => void;
   bookmarkActive?: boolean;
+  // 56.4: native share sheet with deep link
+  onShare?: () => void;
   // 31.1 lock controls
   controlsLocked?: boolean;
   onToggleLock?: () => void;
+  // P36.5: live playback (IPTV) — LIVE badge + channel up/down
+  liveBadge?: boolean;
+  channelUp?: () => void;
+  channelDown?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -34,8 +41,12 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
   visible = true,
   onBookmark,
   bookmarkActive = false,
+  onShare,
   controlsLocked = false,
   onToggleLock,
+  liveBadge = false,
+  channelUp,
+  channelDown,
 }) => {
   const {colors} = useTheme();
   const iconColor = colors.text.primary;
@@ -111,6 +122,9 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
         centerSection: {
           flex: 1,
           alignItems: 'center',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: 6,
         },
         title: {
           maxWidth: 200,
@@ -134,7 +148,25 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
         lockBtnActive: {
           backgroundColor: colors.accent.goldWash,
         },
-
+        liveBadge: {
+          backgroundColor: colors.accent.goldDim,
+          borderRadius: radius.pill,
+          paddingHorizontal: spacing.sm,
+          paddingVertical: 2,
+        },
+        liveBadgeText: {
+          color: colors.accent.gold,
+          fontSize: 10,
+          fontWeight: '800',
+          letterSpacing: 1,
+        },
+        channelBtn: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
       }),
     [colors, iconColor, iconMuted],
   );
@@ -149,15 +181,40 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           <TouchableOpacity style={styles.backBtn} onPress={onGoBack} accessibilityLabel="Go back" accessibilityRole="button">
             <AppText style={styles.backBtnIcon}>{'←'}</AppText>
           </TouchableOpacity>
+          {!controlsLocked && channelDown && (
+            <TouchableOpacity
+              style={styles.channelBtn}
+              onPress={channelDown}
+              accessibilityLabel="Previous channel"
+              accessibilityRole="button">
+              <SvgIcon name="chevronDown" size={20} color={iconMuted} />
+            </TouchableOpacity>
+          )}
+          {!controlsLocked && channelUp && (
+            <TouchableOpacity
+              style={styles.channelBtn}
+              onPress={channelUp}
+              accessibilityLabel="Next channel"
+              accessibilityRole="button">
+              <SvgIcon name="chevronUp" size={20} color={iconMuted} />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Center: Title */}
+        {/* Center: Title + LIVE badge */}
         <View style={styles.centerSection}>
+          {liveBadge ? (
+            <View style={styles.liveBadge}>
+              <AppText style={styles.liveBadgeText}>LIVE</AppText>
+            </View>
+          ) : null}
           <AppText
             variant="body2"
             color="primary"
             numberOfLines={1}
-            style={styles.title}>
+            style={styles.title}
+            accessibilityLabel={`Now playing ${title}`}
+            accessibilityLiveRegion="polite">
             {title}
           </AppText>
         </View>
@@ -195,6 +252,15 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
                 />
               </TouchableOpacity>
             </Animated.View>
+          )}
+          {!controlsLocked && onShare && (
+            <TouchableOpacity
+              style={styles.rotateBtn}
+              onPress={onShare}
+              accessibilityLabel="Share video"
+              accessibilityRole="button">
+              <SvgIcon name="share" size={20} color={iconMuted} />
+            </TouchableOpacity>
           )}
           {!controlsLocked && (
             <TouchableOpacity

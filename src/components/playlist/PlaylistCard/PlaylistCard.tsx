@@ -50,7 +50,9 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
     <TouchableOpacity
       style={[styles.card, {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle}]}
       activeOpacity={0.7}
-      onPress={() => onPress(playlist.id)}>
+      onPress={() => onPress(playlist.id)}
+      accessibilityRole="button"
+      accessibilityLabel={`Open playlist ${playlist.name}`}>
       {/* ── Cover Collage ── */}
       <View style={styles.coverArea}>
         {coverItems.length === 0 ? (
@@ -110,7 +112,9 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
             <TouchableOpacity
               style={[styles.actionBtn, {borderColor: colors.border.subtle}]}
               activeOpacity={0.7}
-              onPress={() => onPlayAll(playlist.id)}>
+              onPress={() => onPlayAll(playlist.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Play all in ${playlist.name}`}>
               <SvgIcon name="play" size={14} color={colors.accent.gold} />
               <AppText variant="caption" style={{color: colors.accent.gold, marginLeft: 4}}>
                 Play All
@@ -121,7 +125,9 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
             <TouchableOpacity
               style={[styles.actionBtn, {borderColor: colors.border.subtle}]}
               activeOpacity={0.7}
-              onPress={() => onShuffleAll(playlist.id)}>
+              onPress={() => onShuffleAll(playlist.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Shuffle ${playlist.name}`}>
               <SvgIcon name="shuffle" size={14} color={colors.accent.gold} />
               <AppText variant="caption" style={{color: colors.accent.gold, marginLeft: 4}}>
                 Shuffle

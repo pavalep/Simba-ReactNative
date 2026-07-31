@@ -9,7 +9,7 @@ import {
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {LrcLine} from '../../../utils/lrcParser';
-
+import {useAccessibility} from '../../../hooks/useAccessibility';
 // ─── Constants ────────────────────────────────────────────────
 
 /** Estimated line height for smooth scroll offset calculation */
@@ -48,13 +48,19 @@ const LyricLineRow = React.memo<{
   item: LrcLine;
   isActive: boolean;
   isPlaying: boolean;
+  reduceMotion: boolean;
   onSeekToLyric?: (time: number) => void;
-}>(({item, isActive, isPlaying, onSeekToLyric}) => {
+}>(({item, isActive, isPlaying, reduceMotion, onSeekToLyric}) => {
   const {colors} = useTheme();
   const glow = useRef(new Animated.Value(0)).current;
 
   // Active-line glow loop runs only while this row is active
   useEffect(() => {
+    if (reduceMotion) {
+      // 59.7: reduced motion — static highlight, no glow loop
+      glow.setValue(0);
+      return;
+    }
     if (isActive && isPlaying) {
       const loop = Animated.loop(
         Animated.sequence([
@@ -74,7 +80,7 @@ const LyricLineRow = React.memo<{
       return () => loop.stop();
     }
     glow.setValue(0);
-  }, [isActive, isPlaying, glow]);
+  }, [isActive, isPlaying, glow, reduceMotion]);
 
   if (isActive) {
     const bgColor = glow.interpolate({
@@ -85,7 +91,10 @@ const LyricLineRow = React.memo<{
     return (
       <TouchableOpacity
         onPress={() => onSeekToLyric?.(item.time)}
-        activeOpacity={0.7}>
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`Seek to ${item.text}`}
+        accessibilityState={{selected: true}}>
         <Animated.View
           style={[
             {
@@ -112,7 +121,9 @@ const LyricLineRow = React.memo<{
     <TouchableOpacity
       onPress={() => onSeekToLyric?.(item.time)}
       activeOpacity={0.7}
-      style={{paddingVertical: 6, paddingHorizontal: 4}}>
+      style={{paddingVertical: 6, paddingHorizontal: 4}}
+      accessibilityRole="button"
+      accessibilityLabel={`Seek to ${item.text}`}>
       <AppText
         style={{fontSize: 15, lineHeight: 22, color: colors.text.secondary}}>
         {item.text}
@@ -135,6 +146,7 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
 }) => {
   const {colors} = useTheme();
   const flatListRef = useRef<FlatList<LrcLine>>(null);
+  const {reduceMotion} = useAccessibility();
 
   // ── Find active lyric line ──
   const activeIndex = useMemo(() => {
@@ -153,14 +165,15 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
   // ── Auto-scroll to active line ──
   useEffect(() => {
     if (activeIndex >= 0 && flatListRef.current) {
-      // Use scrollToOffset with estimated line height for smooth scrolling
+      // Use scrollToOffset with estimated line height for smooth scrolling.
+      // 59.7: reduced motion — jump directly instead of scrolling.
       const targetOffset = Math.max(0, (activeIndex - 2) * ESTIMATED_LINE_HEIGHT);
       flatListRef.current.scrollToOffset({
         offset: targetOffset,
-        animated: true,
+        animated: !reduceMotion,
       });
     }
-  }, [activeIndex]);
+  }, [activeIndex, reduceMotion]);
 
   // ── Animate active line glow (moved into LyricLineRow, 32.8) ──
 
@@ -246,16 +259,27 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
         item={item}
         isActive={index === activeIndex}
         isPlaying={isPlaying}
+        reduceMotion={reduceMotion}
         onSeekToLyric={onSeekToLyric}
       />
     ),
-    [activeIndex, isPlaying, onSeekToLyric],
+    [activeIndex, isPlaying, reduceMotion, onSeekToLyric],
   );
 
   // ── Key extractor ──
   const keyExtractor = useCallback(
     (item: LrcLine, index: number) => `${item.time}-${index}`,
     [],
+  );
+
+  // 59.1: upcoming queue with original indices preserved (needed by
+  // onPlayFromQueue and the row numbering) so virtualization can't lose them.
+  const upcomingQueue = useMemo(
+    () =>
+      queue
+        .map((entry, i) => ({entry, i}))
+        .filter(({i}) => i > currentIndex),
+    [queue, currentIndex],
   );
 
   // ── If no lyrics, show placeholder ──
@@ -310,14 +334,17 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
           style={[styles.sectionLabel, {marginBottom: 4}]}>
           Up Next
         </AppText>
-        {queue.map((entry, i) => {
-          if (i <= currentIndex) return null;
-          return (
+        {/* 59.1: virtualized row list (original queue indices via item.i) */}
+        <FlatList
+          data={upcomingQueue}
+          keyExtractor={({entry, i}) => `queue-${i}-${entry.uri}`}
+          renderItem={({item: {entry, i}}) => (
             <TouchableOpacity
-              key={`queue-${i}-${entry.uri}`}
               style={styles.queueItemRow}
               onPress={() => onPlayFromQueue?.(i)}
-              activeOpacity={0.7}>
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Play ${entry.title}`}>
               <AppText
                 variant="caption"
                 color="secondary"
@@ -332,8 +359,10 @@ const LyricsQueuePanel: React.FC<LyricsQueuePanelProps> = ({
                 {entry.title}
               </AppText>
             </TouchableOpacity>
-          );
-        })}
+          )}
+          scrollEnabled={false}
+          initialNumToRender={upcomingQueue.length}
+        />
       </View>
     );
   }

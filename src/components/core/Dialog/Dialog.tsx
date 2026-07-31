@@ -6,12 +6,12 @@
 
 import React, {useEffect, useRef} from 'react';
 import {
-  View,
   Modal,
   TouchableOpacity,
   StyleSheet,
   Animated,
   TextStyle,
+  FlatList,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {ColorTokens} from '../../../theme/tokens';
@@ -144,16 +144,14 @@ export const Dialog: React.FC<DialogProps> = ({
           {/* Custom children */}
           {children}
 
-          {/* Action buttons */}
+          {/* Action buttons (59.1: virtualized) */}
           {actions && actions.length > 0 && (
-            <View
-              style={[
-                styles.actions,
-                actions.length === 2 && styles.actionsDouble,
-              ]}>
-              {actions.map((action, i) => (
+            <FlatList
+              horizontal
+              data={actions}
+              keyExtractor={(action, i) => `${action.label}-${i}`}
+              renderItem={({item: action, index: i}) => (
                 <TouchableOpacity
-                  key={i}
                   ref={i === 0 ? firstActionRef : undefined}
                   style={[
                     styles.actionBtn,
@@ -184,8 +182,16 @@ export const Dialog: React.FC<DialogProps> = ({
                     {action.label}
                   </AppText>
                 </TouchableOpacity>
-              ))}
-            </View>
+              )}
+              contentContainerStyle={[
+                styles.actions,
+                actions.length === 2 && styles.actionsDouble,
+                styles.actionsStretch,
+              ]}
+              showsHorizontalScrollIndicator={false}
+              scrollEnabled={false}
+              initialNumToRender={actions.length}
+            />
           )}
         </Animated.View>
       </KeyboardAwareView>
@@ -244,6 +250,9 @@ const styles = StyleSheet.create({
   },
   actionsDouble: {
     justifyContent: 'space-between',
+  },
+  actionsStretch: {
+    flexGrow: 1,
   },
   actionBtn: {
     paddingVertical: 12,

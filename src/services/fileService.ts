@@ -3,6 +3,8 @@ import RNFS from 'react-native-fs';
 
 import {MpvPlayer} from '../native/player.api';
 
+import {isRemoteUri} from '../utils/mediaUri';
+
 import type {ScannedTrack} from '../store/slices/mediaSlice';
 
 /** Subtitle file types for document picker */
@@ -75,6 +77,12 @@ export async function validateMediaFile(uri: string): Promise<FileValidation> {
       title: 'No File Selected',
       message: 'The file URI is empty. Please select a valid media file.',
     };
+  }
+
+  // 1b. Remote URIs (http/https) — skip local file checks entirely; the
+  //     player handles network loading. (P33 streaming model)
+  if (isRemoteUri(uri)) {
+    return {valid: true, title: '', message: ''};
   }
 
   // 2. For content:// URIs — skip RNFS.stat (it may not work with all

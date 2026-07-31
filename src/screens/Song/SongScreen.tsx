@@ -52,7 +52,10 @@ export const SongScreen: React.FC<Props> = ({navigation: _navigation, route: _ro
         <TouchableOpacity
           style={[sty.backBtn, {backgroundColor: colors.background.elevated}]}
           onPress={h.goBack}
-          activeOpacity={0.7}>
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}>
           <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
         </TouchableOpacity>
         <AppText variant="h2" color="primary">
@@ -132,7 +135,11 @@ export const SongScreen: React.FC<Props> = ({navigation: _navigation, route: _ro
               <AppText variant="body2" color="tertiary" numberOfLines={3} style={sty.lyricsPreview}>
                 {h.lyricsPreview}
               </AppText>
-              <TouchableOpacity onPress={h.handleViewFullLyrics} activeOpacity={0.7} style={sty.lyricsLink}>
+              <TouchableOpacity
+                onPress={h.handleViewFullLyrics}
+                activeOpacity={0.7}
+                style={sty.lyricsLink}
+                accessibilityRole="button">
                 <AppText variant="body2" color="accent">
                   View Full Lyrics →
                 </AppText>

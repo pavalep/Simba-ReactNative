@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────
 
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {spacing, radius} from '../../../theme/tokens';
@@ -53,28 +53,36 @@ export const SongMetadata: React.FC<SongMetadataProps> = ({
       </AppText>
 
       <View style={[styles.card, {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle}]}>
-        {rows.map((row, idx) => (
-          <View
-            key={row.label}
-            style={[
-              styles.row,
-              idx < rows.length - 1 && {borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.subtle},
-            ]}>
-            <AppText variant="body2" color="tertiary" style={styles.label}>
-              {row.label}
-            </AppText>
-            <AppText variant="body2" color="primary" style={styles.value}>
-              {row.value}
-            </AppText>
-          </View>
-        ))}
+        {/* 59.1: virtualized metadata rows */}
+        <FlatList
+          data={rows}
+          keyExtractor={row => row.label}
+          renderItem={({item: row, index: idx}) => (
+            <View
+              style={[
+                styles.row,
+                idx < rows.length - 1 && {borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.subtle},
+              ]}>
+              <AppText variant="body2" color="tertiary" style={styles.label}>
+                {row.label}
+              </AppText>
+              <AppText variant="body2" color="primary" style={styles.value}>
+                {row.value}
+              </AppText>
+            </View>
+          )}
+          scrollEnabled={false}
+          initialNumToRender={rows.length}
+        />
       </View>
 
       {/* File path — tap to copy */}
       <TouchableOpacity
         style={[styles.pathCard, {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle}]}
         onPress={onCopyPath}
-        activeOpacity={0.7}>
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Copy file path">
         <AppText variant="caption" color="tertiary" style={styles.pathLabel}>
           File Path
         </AppText>

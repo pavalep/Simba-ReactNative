@@ -39,12 +39,16 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
           fileUri: item.fileUri,
           fileTitle: item.title,
           startPosition: item.position,
+          // P34.6: restore the stream context (origin + cached art)
+          ...(item.source ? {source: item.source} : {}),
+          ...(item.thumbnailPath ? {artworkUri: item.thumbnailPath} : {}),
         });
       } else {
         navigation.navigate('VideoPlayer', {
           fileUri: item.fileUri,
           fileTitle: item.title,
           startPosition: item.position,
+          ...(item.source ? {source: item.source} : {}),
         });
       }
     },

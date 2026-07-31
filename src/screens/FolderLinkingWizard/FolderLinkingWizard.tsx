@@ -81,9 +81,12 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
 
   // ── Progress dots ──
   const renderProgressDots = () => (
-    <View style={styles.progressRow}>
-      {STEPS.map((label, i) => (
-        <View key={label} style={styles.dotWrapper}>
+    <FlatList
+      horizontal
+      data={STEPS}
+      keyExtractor={label => label}
+      renderItem={({item: label, index: i}) => (
+        <View style={styles.dotWrapper}>
           <View
             style={[
               styles.dot,
@@ -102,8 +105,11 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
             {label}
           </AppText>
         </View>
-      ))}
-    </View>
+      )}
+      contentContainerStyle={styles.progressRow}
+      scrollEnabled={false}
+      initialNumToRender={STEPS.length}
+    />
   );
 
   // ── Step fade transition ──
@@ -135,58 +141,63 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
       <AppText variant="body2" color="tertiary" style={styles.stepSubtitle}>
         Select the type of files you want to link
       </AppText>
-      {FOLDER_TYPE_OPTIONS.map(opt => (
-        <TouchableOpacity
-          key={opt.type}
-          style={[
-            styles.typeCard,
-            {
-              backgroundColor: colors.background.elevated,
-              borderColor:
-                folderType === opt.type
-                  ? colors.accent.gold
-                  : colors.border.subtle,
-            },
-          ]}
-          onPress={() => setFolderType(opt.type)}
-          activeOpacity={0.7}
-          accessibilityRole="radio"
-          accessibilityState={{selected: folderType === opt.type}}>
-          <SvgIcon
-            name={opt.icon}
-            size={28}
-            color={
-              folderType === opt.type
-                ? colors.accent.gold
-                : colors.text.secondary
-            }
-          />
-          <View style={styles.typeTextCol}>
-            <AppText variant="body2" color="primary">
-              {opt.label}
-            </AppText>
-            <AppText variant="caption" color="tertiary">
-              {opt.desc}
-            </AppText>
-          </View>
-          <View
+      <FlatList
+        data={FOLDER_TYPE_OPTIONS}
+        keyExtractor={opt => opt.type}
+        renderItem={({item: opt}) => (
+          <TouchableOpacity
             style={[
-              styles.radio,
+              styles.typeCard,
               {
+                backgroundColor: colors.background.elevated,
                 borderColor:
                   folderType === opt.type
                     ? colors.accent.gold
                     : colors.border.subtle,
-                backgroundColor:
-                  folderType === opt.type ? colors.accent.gold : 'transparent',
               },
-            ]}>
-            {folderType === opt.type && (
-              <View style={styles.radioInner} />
-            )}
-          </View>
-        </TouchableOpacity>
-      ))}
+            ]}
+            onPress={() => setFolderType(opt.type)}
+            activeOpacity={0.7}
+            accessibilityRole="radio"
+            accessibilityState={{selected: folderType === opt.type}}>
+            <SvgIcon
+              name={opt.icon}
+              size={28}
+              color={
+                folderType === opt.type
+                  ? colors.accent.gold
+                  : colors.text.secondary
+              }
+            />
+            <View style={styles.typeTextCol}>
+              <AppText variant="body2" color="primary">
+                {opt.label}
+              </AppText>
+              <AppText variant="caption" color="tertiary">
+                {opt.desc}
+              </AppText>
+            </View>
+            <View
+              style={[
+                styles.radio,
+                {
+                  borderColor:
+                    folderType === opt.type
+                      ? colors.accent.gold
+                      : colors.border.subtle,
+                  backgroundColor:
+                    folderType === opt.type ? colors.accent.gold : 'transparent',
+                },
+              ]}>
+              {folderType === opt.type && (
+                <View style={styles.radioInner} />
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+        scrollEnabled={false}
+        initialNumToRender={FOLDER_TYPE_OPTIONS.length}
+      />
     </View>
   );
 
@@ -743,6 +754,7 @@ const createStyles = (colors: ColorTokens) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    flexGrow: 1,
   },
   dotWrapper: {
     alignItems: 'center',

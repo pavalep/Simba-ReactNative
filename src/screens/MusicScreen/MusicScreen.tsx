@@ -1,10 +1,9 @@
 // ─── Music Browser Screen ──────────────────────────────────────────────
 // Browse free music from Jamendo and Audius APIs with genre category chips.
 
-import React, {useCallback} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   View,
-  ScrollView,
   FlatList,
   TouchableOpacity,
   StyleSheet,
@@ -25,6 +24,16 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
+import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
+import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/MediaActionsSheet';
+import {useQueueActions} from '../../components/sheets/MediaActionsSheet/useQueueActions';
+import {getJamendoTrackById} from '../../services/api/jamendoService';
+import {getAudiusTrackById} from '../../services/api/audiusService';
+import type {PlaylistSheetProps} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
+import {startDownload} from '../../services/downloadService';
+import {useAppSelector} from '../../store';
+import {selectDownloadedUriSet} from '../../store/slices/downloadsSlice';
+import {useToast} from '../../components/feedback/Toast/Toast';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -40,7 +49,7 @@ function fmtDur(s: number): string {
 interface GenreChipProps {
   category: (typeof MUSIC_CATEGORIES)[number];
   isSelected: boolean;
-  onPress: (genre: string) => void;
+  onPress: () => void;
 }
 
 const GenreChip: React.FC<GenreChipProps> = React.memo(
@@ -49,7 +58,9 @@ const GenreChip: React.FC<GenreChipProps> = React.memo(
     return (
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={() => onPress(category.genre)}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityState={{selected: isSelected}}
         style={[
           styles.chip,
           {
@@ -79,63 +90,68 @@ const GenreChip: React.FC<GenreChipProps> = React.memo(
 interface TrackCardProps {
   item: MusicTrackDisplayItem;
   onPress: (item: MusicTrackDisplayItem) => void;
+  onLongPress: (item: MusicTrackDisplayItem) => void;
 }
 
-const TrackCard: React.FC<TrackCardProps> = React.memo(({item, onPress}) => {
-  const {colors} = useTheme();
-  const hasImage = item.imageUrl.length > 0;
+const TrackCard: React.FC<TrackCardProps> = React.memo(
+  ({item, onPress, onLongPress}) => {
+    const {colors} = useTheme();
+    const hasImage = item.imageUrl.length > 0;
 
-  return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => onPress(item)}
-      style={[
-        styles.trackCard,
-        {backgroundColor: colors.background.elevated},
-      ]}>
-      {/* Square image area */}
-      <View
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => onPress(item)}
+        onLongPress={() => onLongPress(item)}
+        accessibilityRole="button"
         style={[
-          styles.imageWrap,
-          {backgroundColor: colors.background.primary},
+          styles.trackCard,
+          {backgroundColor: colors.background.elevated},
         ]}>
-        {hasImage ? (
-          <FastImage
-            source={{uri: item.imageUrl}}
-            style={styles.artworkImage}
-            resizeMode={FastImage.resizeMode.cover}
-          />
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <SvgIcon name="music" size={28} color={colors.accent.goldDim} />
-          </View>
-        )}
-        {/* Duration badge */}
+        {/* Square image area */}
         <View
-          style={[styles.durationBadge, {backgroundColor: colors.background.scrimMid}]}>
+          style={[
+            styles.imageWrap,
+            {backgroundColor: colors.background.primary},
+          ]}>
+          {hasImage ? (
+            <FastImage
+              source={{uri: item.imageUrl}}
+              style={styles.artworkImage}
+              resizeMode={FastImage.resizeMode.cover}
+            />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <SvgIcon name="music" size={28} color={colors.accent.goldDim} />
+            </View>
+          )}
+          {/* Duration badge */}
+          <View
+            style={[styles.durationBadge, {backgroundColor: colors.background.scrimMid}]}>
+            <AppText
+              variant="caption"
+              style={[styles.durationText, {color: colors.text.bright}]}>
+              {fmtDur(item.duration)}
+            </AppText>
+          </View>
+        </View>
+
+        {/* Info */}
+        <View style={styles.trackInfo}>
           <AppText
-            variant="caption"
-            style={[styles.durationText, {color: colors.text.bright}]}>
-            {fmtDur(item.duration)}
+            variant="bodySmall"
+            numberOfLines={1}
+            style={styles.trackTitle}>
+            {item.title}
+          </AppText>
+          <AppText variant="caption" color="secondary" numberOfLines={1}>
+            {item.artistName}
           </AppText>
         </View>
-      </View>
-
-      {/* Info */}
-      <View style={styles.trackInfo}>
-        <AppText
-          variant="bodySmall"
-          numberOfLines={1}
-          style={styles.trackTitle}>
-          {item.title}
-        </AppText>
-        <AppText variant="caption" color="secondary" numberOfLines={1}>
-          {item.artistName}
-        </AppText>
-      </View>
-    </TouchableOpacity>
-  );
-});
+      </TouchableOpacity>
+    );
+  },
+);
 
 // ─── Screen ─────────────────────────────────────────────────────────────
 
@@ -146,7 +162,6 @@ export const MusicScreen: React.FC<
   const insets = useSafeAreaInsets();
   const {
     selectedCategory,
-    setSelectedCategory,
     results,
     isLoading,
     error,
@@ -154,15 +169,13 @@ export const MusicScreen: React.FC<
     setSearchQuery,
   } = useMusicScreen(route.params?.genre);
 
-  const handleCategoryPress = useCallback(
+  // P41.4: genre chips open the full genre detail page
+  // (local library + streaming catalog + moods + radio)
+  const handleChipPress = useCallback(
     (genre: string) => {
-      setSelectedCategory(genre);
-      // Clear search when selecting a category
-      if (searchQuery.trim()) {
-        setSearchQuery('');
-      }
+      navigation.navigate('GenreScreen', {genre});
     },
-    [setSelectedCategory, searchQuery, setSearchQuery],
+    [navigation],
   );
 
   const handleTrackPress = useCallback(
@@ -174,6 +187,109 @@ export const MusicScreen: React.FC<
     },
     [navigation],
   );
+
+  // P34.1/34.7: long-press → standard actions menu; grid items carry no
+  // audio URL, so the full track is resolved before the menu opens.
+  const [sheetItem, setSheetItem] = useState<
+    PlaylistSheetProps['currentItem'] | null
+  >(null);
+  const [menuState, setMenuState] = useState<{
+    item: MusicTrackDisplayItem;
+    uri: string;
+    title: string;
+    duration: number;
+    source: 'jamendo' | 'audius';
+  } | null>(null);
+  const {playNext, addToQueue} = useQueueActions();
+  const toast = useToast();
+  const downloadedUris = useAppSelector(selectDownloadedUriSet);
+
+  const resolveFull = useCallback(async (item: MusicTrackDisplayItem) => {
+    const full =
+      item.source === 'jamendo'
+        ? await getJamendoTrackById(Number(item.id))
+        : await getAudiusTrackById(String(item.id));
+    if (!full) return null;
+    return {
+      fileUri: 'audioUrl' in full ? full.audioUrl : full.streamUrl,
+      title: 'name' in full ? full.name : full.title,
+      duration: full.duration,
+      artist: full.artistName,
+      album: 'albumName' in full ? full.albumName : undefined,
+      thumbnailPath: 'imageUrl' in full ? full.imageUrl : full.artworkUrl,
+    };
+  }, []);
+
+  const handleTrackLongPress = useCallback(
+    async (item: MusicTrackDisplayItem) => {
+      try {
+        const full = await resolveFull(item);
+        if (!full) return;
+        setMenuState({
+          item,
+          uri: full.fileUri,
+          title: full.title,
+          duration: full.duration,
+          source: item.source,
+        });
+      } catch {
+        // Long-press is a convenience gesture — resolve silently.
+      }
+    },
+    [resolveFull],
+  );
+
+  const handleMenuPlayNext = useCallback(() => {
+    if (!menuState) return;
+    playNext({
+      uri: menuState.uri,
+      title: menuState.title,
+      duration: menuState.duration,
+      source: menuState.source,
+      mediaType: 'audio',
+    });
+  }, [menuState, playNext]);
+
+  const handleMenuAddToQueue = useCallback(() => {
+    if (!menuState) return;
+    addToQueue({
+      uri: menuState.uri,
+      title: menuState.title,
+      duration: menuState.duration,
+      source: menuState.source,
+      mediaType: 'audio',
+    });
+  }, [menuState, addToQueue]);
+
+  const handleMenuSaveToPlaylist = useCallback(async () => {
+    if (!menuState) return;
+    try {
+      const full = await resolveFull(menuState.item);
+      if (!full) return;
+      setSheetItem({
+        fileUri: full.fileUri,
+        title: full.title,
+        duration: full.duration,
+        artist: full.artist,
+        album: full.album,
+        thumbnailPath: full.thumbnailPath,
+        source: menuState.source,
+        mediaType: 'audio',
+      });
+    } catch {}
+  }, [menuState, resolveFull]);
+
+  const handleMenuDownload = useCallback(() => {
+    if (!menuState) return;
+    startDownload({
+      uri: menuState.uri,
+      title: menuState.title,
+      mediaType: 'audio',
+      source: menuState.source,
+    }).catch(() => toast.show('Download failed'));
+  }, [menuState, toast]);
+
+  const menuIsDownloaded = menuState ? downloadedUris.has(menuState.uri) : false;
 
   const isEmpty = results.length === 0 && !isLoading && !error;
 
@@ -201,19 +317,23 @@ export const MusicScreen: React.FC<
           styles.chipSection,
           {borderBottomColor: colors.border.subtle},
         ]}>
-        <ScrollView
+        <FlatList
           horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipScroll}>
-          {MUSIC_CATEGORIES.map(cat => (
+          data={MUSIC_CATEGORIES}
+          keyExtractor={cat => cat.id}
+          renderItem={({item: cat}) => (
             <GenreChip
-              key={cat.id}
               category={cat}
               isSelected={selectedCategory === cat.genre}
-              onPress={handleCategoryPress}
+              onPress={() => handleChipPress(cat.genre)}
             />
-          ))}
-        </ScrollView>
+          )}
+          contentContainerStyle={styles.chipScroll}
+          showsHorizontalScrollIndicator={false}
+          initialNumToRender={MUSIC_CATEGORIES.length}
+          windowSize={5}
+          maxToRenderPerBatch={12}
+        />
       </View>
 
       {/* ── Content Area ── */}
@@ -258,7 +378,11 @@ export const MusicScreen: React.FC<
           <FlatList
             data={results}
             renderItem={({item}) => (
-              <TrackCard item={item} onPress={handleTrackPress} />
+              <TrackCard
+                item={item}
+                onPress={handleTrackPress}
+                onLongPress={handleTrackLongPress}
+              />
             )}
             keyExtractor={item => `${item.source}-${item.id}`}
             numColumns={2}
@@ -272,6 +396,45 @@ export const MusicScreen: React.FC<
           />
         )}
       </View>
+
+      {/* P34.1: add streaming track to a playlist (long-press menu) */}
+      <PlaylistSheet
+        visible={sheetItem !== null}
+        onClose={() => setSheetItem(null)}
+        currentItem={
+          sheetItem ?? {fileUri: '', title: '', duration: 0}
+        }
+      />
+
+      {/* 58.4/58.5: standard long-press menu — Play Next / Queue / Playlist / Download */}
+      <MediaActionsSheet
+        visible={menuState !== null}
+        onClose={() => setMenuState(null)}
+        title={menuState?.title ?? 'Track Options'}
+        subtitle={menuState?.item.artistName}
+        actions={[
+          {
+            label: 'Play Next',
+            icon: 'skipForward',
+            onPress: handleMenuPlayNext,
+          },
+          {
+            label: 'Add to Queue',
+            icon: 'list',
+            onPress: handleMenuAddToQueue,
+          },
+          {
+            label: 'Save to Playlist',
+            icon: 'listMusic',
+            onPress: handleMenuSaveToPlaylist,
+          },
+          {
+            label: menuIsDownloaded ? 'Downloaded' : 'Download',
+            icon: 'download',
+            onPress: menuIsDownloaded ? () => {} : handleMenuDownload,
+          },
+        ]}
+      />
     </View>
   );
 };

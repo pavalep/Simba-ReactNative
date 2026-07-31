@@ -60,7 +60,9 @@ export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
         onPress={() => {
           onAddToPlaylist(playlist.id);
           onClose();
-        }}>
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`Add to ${playlist.name}`}>
         <View style={[styles.iconWrap, {backgroundColor: colors.accent.goldDim}]}>
           <SvgIcon name="listMusic" size={16} color={colors.accent.gold} />
         </View>
@@ -114,7 +116,8 @@ export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
         <TouchableOpacity
           style={[styles.createRow, {borderTopColor: colors.border.subtle}]}
           activeOpacity={0.7}
-          onPress={handleCreateNew}>
+          onPress={handleCreateNew}
+          accessibilityRole="button">
           <View style={[styles.createIconWrap, {backgroundColor: colors.accent.goldDim}]}>
             <AppText style={{color: colors.accent.gold, fontSize: 18, lineHeight: 20}}>+</AppText>
           </View>

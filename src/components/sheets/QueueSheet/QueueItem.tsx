@@ -70,7 +70,10 @@ export const QueueItem: React.FC<QueueItemProps> = ({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => onSelect(index)}
-          style={styles.checkboxTouch}>
+          style={styles.checkboxTouch}
+          accessibilityRole="checkbox"
+          accessibilityLabel={`Select ${item.title || 'track'}`}
+          accessibilityState={{checked: isSelected}}>
           <View
             style={[
               styles.checkbox,
@@ -92,7 +95,10 @@ export const QueueItem: React.FC<QueueItemProps> = ({
         activeOpacity={0.7}
         onPress={() => onSelect(index)}
         onLongPress={() => onLongPress(index)}
-        delayLongPress={400}>
+        delayLongPress={400}
+        accessibilityRole="button"
+        accessibilityLabel={`Play ${item.title || 'track'}`}
+        accessibilityState={{selected: isCurrent}}>
         <View style={styles.titleRow}>
           <AppText
             variant="body2"
@@ -125,14 +131,18 @@ export const QueueItem: React.FC<QueueItemProps> = ({
               disabled={!canMoveUp}
               activeOpacity={0.6}
               onPress={() => onMoveUp(index)}
-              style={[styles.actionBtn, {opacity: canMoveUp ? 1 : 0.25}]}>
+              style={[styles.actionBtn, {opacity: canMoveUp ? 1 : 0.25}]}
+              accessibilityRole="button"
+              accessibilityLabel={`Move ${item.title || 'track'} up`}>
               <SvgIcon name="chevronUp" size={16} color={colors.text.primary} />
             </TouchableOpacity>
             <TouchableOpacity
               disabled={!canMoveDown}
               activeOpacity={0.6}
               onPress={() => onMoveDown(index)}
-              style={[styles.actionBtn, {opacity: canMoveDown ? 1 : 0.25}]}>
+              style={[styles.actionBtn, {opacity: canMoveDown ? 1 : 0.25}]}
+              accessibilityRole="button"
+              accessibilityLabel={`Move ${item.title || 'track'} down`}>
               <SvgIcon name="chevronDown" size={16} color={colors.text.primary} />
             </TouchableOpacity>
           </>
@@ -141,7 +151,10 @@ export const QueueItem: React.FC<QueueItemProps> = ({
           <TouchableOpacity
             activeOpacity={0.6}
             onPress={() => onRemove(index)}
-            style={styles.actionBtn}>
+            style={styles.actionBtn}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove ${item.title || 'track'} from queue`}
+            hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
             <SvgIcon name="close" size={14} color={colors.semantic.error} />
           </TouchableOpacity>
         )}

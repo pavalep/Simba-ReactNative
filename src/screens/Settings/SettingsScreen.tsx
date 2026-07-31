@@ -267,6 +267,12 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
               description={preferredLanguages || 'Default'}
               onPress={handleSubtitleLanguagePress}
             />
+            {/* 57.3: AudioSettings/Equalizer were registered but unreachable */}
+            <SettingsRow
+              label="Audio Settings"
+              description="Equalizer and audio tuning"
+              onPress={() => nav.navigate('AudioSettings')}
+            />
           </Animated.View>
           <View style={styles.sectionDivider} />
 
@@ -334,6 +340,15 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
             <SettingsRow
               label="Version"
               description={`${appVersion} (${buildNumber})`}
+            />
+            {/* 57.3: About/Credits were registered but unreachable */}
+            <SettingsRow
+              label="About Simba"
+              onPress={() => nav.navigate('About')}
+            />
+            <SettingsRow
+              label="Credits"
+              onPress={() => nav.navigate('Credits')}
             />
             <SettingsRow
               label="Changelog"
