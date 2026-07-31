@@ -102,7 +102,7 @@ export const ArtistTopTracks: React.FC<ArtistTopTracksProps> = ({
               styles.trackRow,
               {
                 backgroundColor: isActive
-                  ? 'rgba(201,168,76,0.06)'
+                  ? colors.accent.goldFaint
                   : 'transparent',
               },
             ]}
@@ -113,7 +113,7 @@ export const ArtistTopTracks: React.FC<ArtistTopTracksProps> = ({
             {/* Track number or playing indicator */}
             <View style={styles.numCol}>
               {isTrackPlaying ? (
-                <AudioWaveform isPlaying={true} color="#C9A84C" size={16} barWidth={2} barGap={2} />
+                <AudioWaveform isPlaying={true} color={colors.accent.gold} size={16} barWidth={2} barGap={2} />
               ) : (
                 <AppText variant="caption" color="tertiary" style={styles.numText}>
                   {idx + 1}
@@ -159,7 +159,7 @@ export const ArtistTopTracks: React.FC<ArtistTopTracksProps> = ({
         animationType="fade"
         onRequestClose={() => setMenuVisible(false)}>
         <TouchableOpacity
-          style={styles.modalOverlay}
+          style={[styles.modalOverlay, {backgroundColor: colors.background.scrim}]}
           activeOpacity={1}
           onPress={() => setMenuVisible(false)}>
           <View
@@ -246,7 +246,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   menuSheet: {

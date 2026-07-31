@@ -17,5 +17,30 @@ module.exports = {
         ],
       },
     ],
+    // 55.7: raw color literals are banned — use design tokens from src/theme/tokens.ts
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector:
+          "Property[key.name=/^(color|backgroundColor|borderColor|borderTopColor|borderBottomColor|borderLeftColor|borderRightColor|shadowColor|textShadowColor|tintColor|overlayColor)$/] > Literal[value=/^#(?:[0-9A-Fa-f]{3}){1,2}$|^rgba?\\(/]",
+        message:
+          'Raw color literals are banned — use design tokens (colors.text.primary, colors.accent.gold, …) from src/theme/tokens.ts.',
+      },
+      {
+        selector:
+          "JSXAttribute[name.name=/^(color|backgroundColor|borderColor|tintColor|overlayColor)$/] > Literal[value=/^#(?:[0-9A-Fa-f]{3}){1,2}$|^rgba?\\(/]",
+        message:
+          'Raw color literals are banned — use design tokens (colors.text.primary, colors.accent.gold, …) from src/theme/tokens.ts.',
+      },
+    ],
   },
+  overrides: [
+    {
+      // 55.7: token definitions + user-facing color presets are the only allowed literal homes
+      files: ['src/theme/**/*.ts', 'src/constants/**/*.ts'],
+      rules: {
+        'no-restricted-syntax': 'off',
+      },
+    },
+  ],
 };

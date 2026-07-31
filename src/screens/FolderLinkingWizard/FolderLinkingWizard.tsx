@@ -11,7 +11,7 @@ import RNFS from 'react-native-fs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../theme';
-import {spacing, radius} from '../../theme/tokens';
+import {spacing} from '../../theme/tokens';
 import type {ColorTokens} from '../../theme/tokens';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {
@@ -97,7 +97,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
             variant="caption"
             style={{
               color: i <= step ? colors.text.primary : colors.text.tertiary,
-              marginTop: 4,
+              marginTop: spacing.xs,
             }}>
             {label}
           </AppText>

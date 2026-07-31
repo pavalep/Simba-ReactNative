@@ -70,7 +70,7 @@ export const ArtistDiscography: React.FC<ArtistDiscographyProps> = ({
               />
               {/* Gradient overlay at bottom */}
               <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.7)']}
+                colors={['transparent', colors.background.scrimMid]}
                 style={styles.artOverlay}
                 pointerEvents="none"
               />

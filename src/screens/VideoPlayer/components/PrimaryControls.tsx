@@ -41,7 +41,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
   controlScale = 1,
 }) => {
   const {colors} = useTheme();
-  const iconColor = '#EDEDED';
+  const iconColor = colors.text.primary;
   const opacity = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const playScale = useRef(new Animated.Value(1)).current;
@@ -82,7 +82,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           zIndex: 15,
           paddingBottom: bottomInset + 8,
           paddingTop: 8,
-          backgroundColor: 'rgba(8, 8, 10, 0.72)',
+          backgroundColor: colors.background.scrimMid,
         },
         seekBarWrapper: {
           marginBottom: 2,

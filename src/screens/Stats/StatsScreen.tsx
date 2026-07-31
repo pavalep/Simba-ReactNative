@@ -188,7 +188,7 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
                 {topMedia.map((entry, index) => (
                   <TouchableOpacity
                     key={entry.fileUri}
-                    style={styles.topRow}
+                    style={[styles.topRow, {borderBottomColor: colors.border.subtle}]}
                     onPress={() => {
                       if (entry.mediaType === 'audio') {
                         navigation.navigate('AudioPlayer', {
@@ -303,7 +303,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   rankBadge: {
     width: 28,

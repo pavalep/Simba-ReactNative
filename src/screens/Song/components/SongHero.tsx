@@ -37,7 +37,7 @@ export const SongHero: React.FC<SongHeroProps> = ({
       colors={
         isDark
           ? [colors.accent.goldDim, colors.background.primary]
-          : ['#f5e6d0', colors.background.primary]
+          : [colors.background.warm, colors.background.primary]
       }
       style={styles.root}>
       {/* Animated waveform background */}
@@ -56,7 +56,7 @@ export const SongHero: React.FC<SongHeroProps> = ({
         style={[
           styles.artwork,
           {backgroundColor: colors.accent.goldDim},
-          !isDark && styles.artworkShadow,
+          !isDark && [styles.artworkShadow, {shadowColor: colors.shadow}],
         ]}>
         <AppText variant="h1" color="accent" style={styles.artInitial}>
           {initial}
@@ -121,7 +121,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   artworkShadow: {
-    shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowOffset: {width: 0, height: 6},
     shadowRadius: 16,

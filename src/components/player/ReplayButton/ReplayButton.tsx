@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
 import {useTheme} from '../../../theme';
+import type {ColorTokens} from '../../../theme/tokens';
 
 interface ReplayButtonProps {
   visible: boolean;
@@ -21,6 +22,7 @@ export const ReplayButton: React.FC<ReplayButtonProps> = ({
   onReplay,
 }) => {
   const {colors} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   if (!visible) return null;
 
@@ -39,37 +41,38 @@ export const ReplayButton: React.FC<ReplayButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    zIndex: 50,
-  },
-  replayBtn: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  replayIcon: {
-    fontSize: 32,
-    color: '#000',
-    fontWeight: '700',
-  },
-  replayLabel: {
-    fontSize: 11,
-    color: '#000',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-});
+const createStyles = (colors: ColorTokens) =>
+  StyleSheet.create({
+    overlay: {
+      ...StyleSheet.absoluteFill,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background.scrim,
+      zIndex: 50,
+    },
+    replayBtn: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: colors.shadow,
+      shadowOffset: {width: 0, height: 4},
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    replayIcon: {
+      fontSize: 32,
+      color: colors.text.inverse,
+      fontWeight: '700',
+    },
+    replayLabel: {
+      fontSize: 11,
+      color: colors.text.inverse,
+      fontWeight: '600',
+      marginTop: 2,
+    },
+  });
 
 export default ReplayButton;

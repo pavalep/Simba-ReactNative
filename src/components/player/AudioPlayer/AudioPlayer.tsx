@@ -278,7 +278,7 @@ const AudioTransportDependentContent: React.FC<{
           </AppText>
           <TouchableOpacity
             onPress={onOpenLyricsView}
-            style={expandBtnStyle}
+            style={[expandBtnStyle, {backgroundColor: h.colors.border.subtle}]}
             activeOpacity={0.7}
             hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
             <SvgIcon name="maximize" size={14} color={colors.text.tertiary} />
@@ -351,7 +351,7 @@ const AudioPlayerInner: React.FC<InnerProps> = ({h}) => {
 
           {/* 50.3: countdown badge when a sleep timer is armed */}
           {sleepTimerActive && (
-            <View style={styles.sleepBadge}>
+            <View style={[styles.sleepBadge, {backgroundColor: h.colors.accent.goldSoft}]}>
               <SvgIcon name="sliders" size={12} color={h.colors.accent.gold} />
               <AppText variant="caption" color="primary" style={styles.sleepBadgeText}>
                 {sleepTimerMode === 'time'
@@ -517,7 +517,6 @@ const expandBtnStyle = {
   width: 28,
   height: 28,
   borderRadius: 14,
-  backgroundColor: 'rgba(255,255,255,0.06)',
   alignItems: 'center' as const,
   justifyContent: 'center' as const,
   marginBottom: 8,
@@ -547,7 +546,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: 'rgba(201,168,76,0.12)',
     gap: 6,
   },
   sleepBadgeText: {

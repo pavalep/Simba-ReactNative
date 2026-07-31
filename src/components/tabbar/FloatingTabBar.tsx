@@ -122,13 +122,11 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
           styles.bar,
           {
             width: barWidth,
-            backgroundColor: tokens.isDark 
-              ? 'rgba(30,30,35,0.95)' 
-              : 'rgba(255,255,255,1)',
-            borderColor: tokens.isDark
-              ? 'rgba(255,255,255,0.15)'
-              : 'rgba(0,0,0,0.12)',
-            shadowColor: '#000',
+            backgroundColor: tokens.isDark
+              ? tokens.colors.background.surfaceDark
+              : tokens.colors.background.elevated,
+            borderColor: tokens.colors.background.highlightStrong,
+            shadowColor: tokens.colors.shadow,
             shadowOffset: {width: 0, height: 8},
             shadowOpacity: 0.4,
             shadowRadius: 16,
@@ -142,11 +140,11 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
             {
               width: pillWidth,
               backgroundColor: tokens.isDark
-                ? 'rgba(201,168,76,0.18)'
-                : 'rgba(184,146,46,0.08)',
+                ? tokens.colors.accent.goldWash
+                : tokens.colors.accent.goldSoft,
               borderColor: tokens.isDark
-                ? 'rgba(201,168,76,0.35)'
-                : 'rgba(184,146,46,0.15)',
+                ? tokens.colors.accent.goldGlow
+                : tokens.colors.accent.goldDim,
               transform: [{translateX: pillTranslateX}],
             },
           ]}
@@ -190,8 +188,8 @@ export const FloatingTabBar: React.FC<BottomTabBarProps> = ({
                   size={ICON_SIZE}
                   color={
                     isFocused
-                      ? (tokens.isDark ? '#FFFFFF' : '#3E2723')
-                      : (tokens.isDark ? 'rgba(255,255,255,0.6)' : 'rgba(62, 39, 35, 0.5)')
+                      ? (tokens.isDark ? tokens.colors.text.bright : tokens.colors.text.inverse)
+                      : (tokens.isDark ? tokens.colors.text.secondary : tokens.colors.text.tertiary)
                   }
                 />
               </Animated.View>

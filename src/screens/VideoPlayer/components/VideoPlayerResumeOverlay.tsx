@@ -53,7 +53,7 @@ export const VideoPlayerResumeOverlay: React.FC<VideoPlayerResumeOverlayProps> =
         },
         scrim: {
           ...StyleSheet.absoluteFill,
-          backgroundColor: 'rgba(8, 8, 10, 0.45)',
+          backgroundColor: colors.background.scrimDim,
         },
         card: {
           marginHorizontal: 16,
@@ -62,7 +62,7 @@ export const VideoPlayerResumeOverlay: React.FC<VideoPlayerResumeOverlayProps> =
           borderRadius: 16,
           borderWidth: 0.5,
           borderColor: colors.border.subtle,
-          backgroundColor: 'rgba(18, 18, 22, 0.92)',
+          backgroundColor: colors.background.surfaceDark,
         },
         title: {
           marginBottom: 4,
@@ -83,7 +83,7 @@ export const VideoPlayerResumeOverlay: React.FC<VideoPlayerResumeOverlayProps> =
           justifyContent: 'center',
         },
         resumeLabel: {
-          color: '#14120B',
+          color: colors.text.inverse,
           fontWeight: '700',
         },
         startOverBtn: {
@@ -92,7 +92,7 @@ export const VideoPlayerResumeOverlay: React.FC<VideoPlayerResumeOverlayProps> =
           borderRadius: 12,
           borderWidth: 1,
           borderColor: colors.border.subtle,
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: colors.border.subtle,
           alignItems: 'center',
           justifyContent: 'center',
         },

@@ -8,6 +8,7 @@ import {View, StyleSheet} from 'react-native';
 import {AppButton} from '../../../components/core/AppButton/AppButton';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
+import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import type {PlaylistSheetProps} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 
@@ -30,6 +31,8 @@ export const SongActions: React.FC<SongActionsProps> = ({
   onClosePlaylistSheet,
   playlistSheetItem,
 }) => {
+  const {colors} = useTheme();
+
   return (
     <View style={styles.container}>
       {/* Primary: Play */}
@@ -38,7 +41,7 @@ export const SongActions: React.FC<SongActionsProps> = ({
         variant="primary"
         onPress={onPlay}
         fullWidth
-        icon={<SvgIcon name="play" size={18} color="#000" />}
+        icon={<SvgIcon name="play" size={18} color={colors.text.inverse} />}
       />
 
       {/* Secondary actions row */}
@@ -47,21 +50,21 @@ export const SongActions: React.FC<SongActionsProps> = ({
           title="Add to Playlist"
           variant="secondary"
           onPress={onAddToPlaylist}
-          icon={<SvgIcon name="list" size={16} color="#C9A84C" />}
+          icon={<SvgIcon name="list" size={16} color={colors.accent.gold} />}
           style={styles.secondaryBtn}
         />
         <AppButton
           title="Share"
           variant="secondary"
           onPress={onShare}
-          icon={<SvgIcon name="bookmark" size={16} color="#C9A84C" />}
+          icon={<SvgIcon name="bookmark" size={16} color={colors.accent.gold} />}
           style={styles.secondaryBtn}
         />
         <AppButton
           title="Add to Queue"
           variant="secondary"
           onPress={onAddToQueue}
-          icon={<SvgIcon name="listMusic" size={16} color="#C9A84C" />}
+          icon={<SvgIcon name="listMusic" size={16} color={colors.accent.gold} />}
           style={styles.secondaryBtn}
         />
       </View>

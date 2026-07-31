@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useMemo} from 'react';
 import {View, Animated, StyleSheet, Easing} from 'react-native';
+import {useTheme} from '../../../theme';
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -13,7 +14,7 @@ const BASE_PEAKS = [0.45, 0.85, 0.55, 0.95, 0.40];
 export interface AudioWaveformProps {
   /** Whether audio is actively playing */
   isPlaying: boolean;
-  /** Bar color (default: theme gold #C9A84C) */
+  /** Bar color (defaults to theme gold) */
   color?: string;
   /** Overall size in points (controls bar height range, default: 24) */
   size?: number;
@@ -27,11 +28,14 @@ export interface AudioWaveformProps {
 
 const AudioWaveform: React.FC<AudioWaveformProps> = ({
   isPlaying,
-  color = '#C9A84C',
+  color,
   size = 24,
   barWidth = 3,
   barGap = 3,
 }) => {
+  const {colors} = useTheme();
+  const barColor = color ?? colors.accent.gold;
+
   // Create animated values for each bar
   const animValues = useRef(
     Array.from({length: BAR_COUNT}, () => new Animated.Value(0.5)),
@@ -107,10 +111,10 @@ const AudioWaveform: React.FC<AudioWaveformProps> = ({
         bar: {
           width: barWidth,
           borderRadius: barWidth / 2,
-          backgroundColor: color,
+          backgroundColor: barColor,
         },
       }),
-    [size, barGap, barWidth, color],
+    [size, barGap, barWidth, barColor],
   );
 
   return (

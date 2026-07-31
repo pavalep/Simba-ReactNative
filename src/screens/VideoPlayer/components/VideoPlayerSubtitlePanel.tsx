@@ -8,6 +8,7 @@ import {
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {SUBTITLE_COLOR_PRESETS, DEFAULT_SUBTITLE_COLOR} from '../../../constants/subtitleColors';
 
 // ─── Props ───────────────────────────────────────────────────
 
@@ -65,20 +66,15 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
   onOpacityChange,
   subtitlePosition,
   onPositionChange,
-  subtitleTextColor = '#FFFFFF',
+  subtitleTextColor = DEFAULT_SUBTITLE_COLOR,
   onTextColorChange,
   subtitleBgOpacity = 0.5,
   onBgOpacityChange,
 }) => {
   const {colors} = useTheme();
 
-  const PRESET_COLORS = useMemo(() => [
-    '#FFFFFF', // White (default)
-    '#FFE066', // Yellow
-    '#66D9FF', // Cyan
-    '#66FF99', // Green
-    '#FF66B2', // Pink
-  ], []);
+  // 55.8: palette is DATA (mpv sub-color values), shared via constants
+  const PRESET_COLORS = useMemo(() => SUBTITLE_COLOR_PRESETS.map(p => p.hex), []);
 
   const handleBgOpacityDown = useCallback(() => {
     if (!onBgOpacityChange) return;

@@ -6,6 +6,7 @@
 
 import React, {useRef, useMemo, useEffect} from 'react';
 import {Animated, Easing, StyleSheet} from 'react-native';
+import {useTheme} from '../../../theme';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 
 // ─── Props ───────────────────────────────────────────────────
@@ -13,7 +14,7 @@ import {useAccessibility} from '../../../hooks/useAccessibility';
 export interface PulseRingProps {
   /** Ring diameter in px (default 80) */
   size?: number;
-  /** Ring color (default uses gold) */
+  /** Ring color (defaults to theme gold) */
   color?: string;
   /** Delay before animation starts in ms (default 0) */
   delay?: number;
@@ -25,11 +26,14 @@ export interface PulseRingProps {
 
 export const PulseRing: React.FC<PulseRingProps> = ({
   size = 80,
-  color = '#C9A84C',
+  color,
   delay = 0,
   borderWidth = 2,
 }) => {
   const {reduceMotion} = useAccessibility();
+  const {colors} = useTheme();
+  const ringColor = color ?? colors.accent.gold;
+
 
   const scale = useRef(new Animated.Value(1)).current;
   const opacity = useRef(new Animated.Value(0.3)).current;
@@ -86,11 +90,11 @@ export const PulseRing: React.FC<PulseRingProps> = ({
           height: size,
           borderRadius: size / 2,
           borderWidth,
-          borderColor: color,
+          borderColor: ringColor,
           position: 'absolute',
         },
       }),
-    [size, borderWidth, color],
+    [size, borderWidth, ringColor],
   );
 
   return (

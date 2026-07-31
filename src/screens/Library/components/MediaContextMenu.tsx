@@ -76,7 +76,7 @@ export const MediaContextMenu: React.FC<MediaContextMenuProps> = ({
     <Modal transparent visible={visible} onRequestClose={onClose} animationType="none">
       {/* Scrim */}
       <Animated.View
-        style={[styles.scrim, {backgroundColor: 'rgba(8,8,10,0.60)', opacity: fadeAnim}]}>
+        style={[styles.scrim, {backgroundColor: colors.background.scrim, opacity: fadeAnim}]}>
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
           activeOpacity={1}

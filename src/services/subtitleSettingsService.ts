@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {DEFAULT_SUBTITLE_COLOR} from '../constants/subtitleColors';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ const DEFAULTS: SubtitleSettings = {
   fontSize: 'medium',
   opacity: 1,
   position: 90,
-  textColor: '#FFFFFF',
+  textColor: DEFAULT_SUBTITLE_COLOR,
   bgOpacity: 0.5,
 };
 

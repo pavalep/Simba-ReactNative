@@ -8,7 +8,6 @@ import {radius, ColorTokens} from '../../../theme/tokens';
 interface LibraryVideosSegmentProps {
   videoFolders: string[];
   colors: ColorTokens;
-  isDark: boolean;
   viewMode?: 'grid' | 'list';
   onNavigateToSettings: () => void;
   onNavigateToFolderBrowser: (folderPath: string) => void;
@@ -18,7 +17,6 @@ interface LibraryVideosSegmentProps {
 export const LibraryVideosSegment: React.FC<LibraryVideosSegmentProps> = ({
   videoFolders,
   colors,
-  isDark,
   onNavigateToSettings,
   onNavigateToFolderBrowser,
   onNavigateToLinkedFolders,
@@ -57,7 +55,7 @@ export const LibraryVideosSegment: React.FC<LibraryVideosSegmentProps> = ({
           borderRadius: 10,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: isDark ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.08)',
+          backgroundColor: colors.accent.goldSoft,
         },
         folderLabel: {
           flex: 1,
@@ -82,7 +80,7 @@ export const LibraryVideosSegment: React.FC<LibraryVideosSegmentProps> = ({
           height: 18,
         },
       }),
-    [colors, isDark],
+    [colors],
   );
 
   if (videoFolders.length === 0) {

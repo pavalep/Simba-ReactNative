@@ -324,7 +324,7 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
           alignItems: 'center',
         },
         saveBtnText: {
-          color: '#0A0A0C',
+          color: colors.text.inverse,
           fontWeight: '600',
         },
       }),
@@ -423,7 +423,7 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
                     <TouchableOpacity
                       style={[
                         styles.actionBtn,
-                        {backgroundColor: 'rgba(239,83,80,0.15)'},
+                        {backgroundColor: colors.semantic.errorDim},
                       ]}
                       onPress={() => handleRemove(idx)}
                       accessibilityLabel="Remove option"

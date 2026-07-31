@@ -206,7 +206,7 @@ export const MiniAudioPlayer: React.FC = () => {
           paddingHorizontal: 8,
           paddingVertical: 1,
           borderRadius: 8,
-          backgroundColor: 'rgba(201,168,76,0.18)',
+          backgroundColor: colors.accent.goldWash,
           zIndex: 10,
         },
       }),
@@ -221,7 +221,7 @@ export const MiniAudioPlayer: React.FC = () => {
       style={[
         styles.container,
         {
-          backgroundColor: 'rgba(18,18,20,0.96)',
+          backgroundColor: colors.background.surfaceDark,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: colors.border.subtle,
           ...shadows.md,
@@ -272,8 +272,8 @@ export const MiniAudioPlayer: React.FC = () => {
             </View>
           )}
           {isPlaying && (
-            <View style={[StyleSheet.absoluteFill, {alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.35)'}]}>
-              <AudioWaveform isPlaying={true} color="#C9A84C" size={20} barWidth={2} barGap={2} />
+            <View style={[StyleSheet.absoluteFill, {alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background.scrim}]}>
+              <AudioWaveform isPlaying={true} color={colors.accent.gold} size={20} barWidth={2} barGap={2} />
             </View>
           )}
         </View>

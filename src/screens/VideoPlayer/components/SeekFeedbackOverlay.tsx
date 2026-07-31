@@ -63,6 +63,7 @@ export const SeekFeedbackOverlay: React.FC<SeekFeedbackOverlayProps> = ({
         {
           opacity: opacityAnim,
           transform: [{scale: scaleAnim}],
+          backgroundColor: colors.background.scrimDeep,
         },
       ]}
       pointerEvents="none">
@@ -85,7 +86,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '40%',
     zIndex: 100,
-    backgroundColor: 'rgba(0,0,0,0.65)',
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 12,

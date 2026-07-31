@@ -134,7 +134,12 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
           {/* Gradient overlay */}
           <View style={styles.heroOverlay}>
-            <View style={styles.heroOverlayGradient} />
+            <View
+              style={[
+                styles.heroOverlayGradient,
+                {backgroundColor: colors.background.scrim},
+              ]}
+            />
             <View style={styles.heroTextContainer}>
               <AppText
                 variant="h2"
@@ -414,7 +419,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.55)',
   },
   heroTextContainer: {
     paddingHorizontal: spacing.lg,

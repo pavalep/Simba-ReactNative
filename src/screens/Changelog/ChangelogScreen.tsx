@@ -76,7 +76,7 @@ const CHANGELOG: VersionEntry[] = [
 ];
 
 export const ChangelogScreen: React.FC<Props> = () => {
-  const {colors, isDark} = useTheme();
+  const {colors} = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export const ChangelogScreen: React.FC<Props> = () => {
           paddingTop: spacing.md,
         },
         versionCard: {
-          backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+          backgroundColor: colors.background.highlightDim,
           borderRadius: radius.md,
           padding: spacing.lg,
           marginBottom: spacing.md,
@@ -135,7 +135,7 @@ export const ChangelogScreen: React.FC<Props> = () => {
           flex: 1,
         },
       }),
-    [colors, isDark],
+    [colors],
   );
 
   return (

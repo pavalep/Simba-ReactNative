@@ -620,13 +620,13 @@ const styles = StyleSheet.create({
   timerOptions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
     paddingLeft: 38,
-    paddingBottom: 12,
+    paddingBottom: spacing.md,
   },
   timerChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: radius.pill,
     borderWidth: 1,
   },
@@ -634,9 +634,9 @@ const styles = StyleSheet.create({
   customRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     paddingLeft: 38,
-    paddingBottom: 12,
+    paddingBottom: spacing.md,
     width: '100%',
   },
   customInputWrap: {
@@ -654,19 +654,19 @@ const styles = StyleSheet.create({
   modeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: spacing.sm,
     paddingLeft: 38,
-    paddingBottom: 12,
+    paddingBottom: spacing.md,
   },
   // ── Audio Quality ──
   qualityCard: {
     marginLeft: 38,
-    marginVertical: 8,
-    padding: 12,
+    marginVertical: spacing.sm,
+    padding: spacing.md,
     borderRadius: radius.sm,
   },
   qualityTitle: {
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     fontWeight: '600',
   },
   qualityRow: {

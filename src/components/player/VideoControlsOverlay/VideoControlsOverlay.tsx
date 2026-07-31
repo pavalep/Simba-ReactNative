@@ -1,5 +1,6 @@
 import React, {useEffect, useRef, useCallback} from 'react';
 import {View, Animated, StyleSheet} from 'react-native';
+import {useTheme} from '../../../theme';
 
 interface VideoControlsOverlayProps {
   /** Whether controls are currently visible */
@@ -34,6 +35,7 @@ const VideoControlsOverlay: React.FC<VideoControlsOverlayProps> = ({
   bottomInset = 0,
   children,
 }) => {
+  const {colors} = useTheme();
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,7 +78,9 @@ const VideoControlsOverlay: React.FC<VideoControlsOverlayProps> = ({
       ]}>
       {/* Frosted glass background */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <View style={styles.glassBg} />
+        <View
+          style={[styles.glassBg, {backgroundColor: colors.background.scrimDeep}]}
+        />
       </View>
 
       {/* Controls content — interaction resets auto-hide */}
@@ -99,7 +103,6 @@ const styles = StyleSheet.create({
   },
   glassBg: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
   },
 });
 

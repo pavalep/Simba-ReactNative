@@ -65,7 +65,7 @@ const GenreChip: React.FC<GenreChipProps> = React.memo(
           variant="button"
           style={[
             styles.chipText,
-            {color: isSelected ? '#000' : colors.text.secondary},
+            {color: isSelected ? colors.text.inverse : colors.text.secondary},
           ]}>
           {category.name}
         </AppText>
@@ -111,8 +111,11 @@ const TrackCard: React.FC<TrackCardProps> = React.memo(({item, onPress}) => {
           </View>
         )}
         {/* Duration badge */}
-        <View style={styles.durationBadge}>
-          <AppText variant="caption" style={styles.durationText}>
+        <View
+          style={[styles.durationBadge, {backgroundColor: colors.background.scrimMid}]}>
+          <AppText
+            variant="caption"
+            style={[styles.durationText, {color: colors.text.bright}]}>
             {fmtDur(item.duration)}
           </AppText>
         </View>
@@ -347,14 +350,12 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   durationBadge: {
-    backgroundColor: 'rgba(0,0,0,0.75)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radius.sm - 2,
   },
   durationText: {
     fontSize: 10,
-    color: '#fff',
     fontWeight: '600',
   },
   trackInfo: {

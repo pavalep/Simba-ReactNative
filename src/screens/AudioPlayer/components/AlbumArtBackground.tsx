@@ -52,19 +52,19 @@ export const AlbumArtBackground: React.FC<AlbumArtBackgroundProps> = ({
         <View
           style={[
             styles.gradStop,
-            {backgroundColor: 'rgba(10,10,12,0.50)'},
+            {backgroundColor: colors.background.scrim},
           ]}
         />
         <View
           style={[
             styles.gradStop,
-            {backgroundColor: 'rgba(10,10,12,0.78)'},
+            {backgroundColor: colors.background.scrimMid},
           ]}
         />
         <View
           style={[
             styles.gradStop,
-            {backgroundColor: 'rgba(10,10,12,0.92)'},
+            {backgroundColor: colors.background.scrimStrong},
           ]}
         />
       </View>

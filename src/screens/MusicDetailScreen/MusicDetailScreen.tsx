@@ -126,12 +126,12 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
           paddingBottom: spacing.lg,
         },
         overlayTitle: {
-          color: '#FFFFFF',
+          color: colors.text.bright,
           fontSize: 22,
           fontWeight: '700',
         },
         overlayArtist: {
-          color: 'rgba(255,255,255,0.7)',
+          color: colors.text.onMediaMuted,
           fontSize: 15,
           marginTop: spacing.xs,
         },
@@ -273,7 +273,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
             </View>
           )}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.75)']}
+            colors={['transparent', colors.background.scrimMid]}
             locations={[0.3, 1]}
             style={styles.gradientOverlay}
             pointerEvents="none">

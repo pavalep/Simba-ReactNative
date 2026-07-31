@@ -243,9 +243,9 @@ const SeekBar: React.FC<SeekBarProps> = ({
           paddingHorizontal: 10,
           paddingVertical: 5,
           borderRadius: 10,
-          backgroundColor: 'rgba(10, 10, 14, 0.92)',
+          backgroundColor: colors.background.scrimStrong,
           borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.14)',
+          borderColor: colors.border.emphasis,
         },
         scrubBubbleTime: {
           fontWeight: '700',

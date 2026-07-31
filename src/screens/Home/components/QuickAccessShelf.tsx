@@ -42,7 +42,7 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
             onPress={() => onPlaylistPress(playlist.id)}
             style={styles.card}>
             <LinearGradient
-              colors={[colors.background.elevated, 'rgba(212,175,55,0.05)']}
+              colors={[colors.background.elevated, colors.accent.goldFaint]}
               style={StyleSheet.absoluteFill}
             />
             
@@ -51,7 +51,7 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
                 <View style={[styles.iconBox, {backgroundColor: colors.accent.goldDim}]}>
                   <SvgIcon name="listMusic" size={18} color={colors.accent.gold} />
                 </View>
-                <View style={[styles.badge, {backgroundColor: 'rgba(212,175,55,0.1)'}]}>
+                <View style={[styles.badge, {backgroundColor: colors.accent.goldSoft}]}>
                   <AppText variant="caption" color="accent" style={{fontSize: 10, fontWeight: '700'}}>
                     {(playlist.items?.length ?? playlist.trackCount ?? 0)} ITEMS
                   </AppText>

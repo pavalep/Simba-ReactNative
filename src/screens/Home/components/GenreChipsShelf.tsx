@@ -41,7 +41,7 @@ export const GenreChipsShelf: React.FC<GenreChipsShelfProps> = ({
             key={genre.name}
             activeOpacity={0.8}
             onPress={() => onGenrePress(genre.name)}
-            style={styles.chip}>
+            style={[styles.chip, {borderColor: colors.border.subtle}]}>
             <LinearGradient
               colors={[colors.accent.goldDim, colors.accent.gold + '30']}
               start={{x: 0, y: 0}}
@@ -49,14 +49,14 @@ export const GenreChipsShelf: React.FC<GenreChipsShelfProps> = ({
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.chipContent}>
-              <View style={[styles.iconCircle, {backgroundColor: 'rgba(0,0,0,0.2)'}]}>
+              <View style={[styles.iconCircle, {backgroundColor: colors.background.scrimSoft}]}>
                 <SvgIcon name="music" size={16} color={colors.accent.gold} />
               </View>
-              <AppText variant="body2" style={styles.chipText}>
+              <AppText variant="body2" style={[styles.chipText, {color: colors.text.bright}]}>
                 {genre.name}
               </AppText>
-              <View style={[styles.countBadge, {backgroundColor: 'rgba(255,255,255,0.15)'}]}>
-                <AppText variant="caption" style={styles.countText}>
+              <View style={[styles.countBadge, {backgroundColor: colors.background.highlightStrong}]}>
+                <AppText variant="caption" style={[styles.countText, {color: colors.text.onMediaSoft}]}>
                   {genre.count}
                 </AppText>
               </View>
@@ -93,7 +93,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
   chipContent: {
     flexDirection: 'row',
@@ -110,7 +109,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipText: {
-    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 13,
   },
@@ -120,7 +118,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   countText: {
-    color: 'rgba(255,255,255,0.8)',
     fontSize: 11,
     fontWeight: '700',
   },

@@ -19,9 +19,20 @@ export interface ColorTokens {
     scrimMid: string;
     scrimStrong: string;
     scrimOpaque: string;
+    /** 55.2b: media-layer scrims — hero gradients, overlay scrims */
+    scrimFaint: string;
+    scrimSoft: string;
+    scrimDim: string;
+    scrimDeep: string;
+    /** 55.2b: near-black surface for video overlay cards (always dark) */
+    surfaceDark: string;
+    /** 55.2b: warm parchment start for light-mode hero gradients */
+    warm: string;
     /** 55.2: translucent white fill for chips/highlights over media */
     highlight: string;
     highlightDim: string;
+    /** 55.2b: stronger white fill — media chips, progress tracks over artwork */
+    highlightStrong: string;
   };
   border: {
     subtle: string;
@@ -34,6 +45,9 @@ export interface ColorTokens {
     inverse: string;
     /** 55.2: pure white — on-image/on-artwork labels, thumbs */
     bright: string;
+    /** 55.2b: white-on-media text at 80%/70% (hero cards, overlays) */
+    onMediaSoft: string;
+    onMediaMuted: string;
   };
   accent: {
     gold: string;
@@ -41,6 +55,12 @@ export interface ColorTokens {
     goldGlow: string;
     /** 55.2: like/heart accent (pink) */
     love: string;
+    /** 55.2b: gold fills — faint/soft/wash steps of goldDim */
+    goldFaint: string;
+    goldSoft: string;
+    goldWash: string;
+    /** 55.2b: sky blue — video-type indicators */
+    sky: string;
   };
   /** 55.2: shadow color used with elevation/shadow styles */
   shadow: string;
@@ -48,6 +68,8 @@ export interface ColorTokens {
     success: string;
     error: string;
     warning: string;
+    /** 55.2b: translucent error fill (remove buttons, badges) */
+    errorDim: string;
   };
 }
 
@@ -62,8 +84,15 @@ export const darkColors: ColorTokens = {
     scrimMid: 'rgba(10,10,12,0.78)',
     scrimStrong: 'rgba(10,10,12,0.92)',
     scrimOpaque: 'rgba(10,10,12,0.98)',
+    scrimFaint: 'rgba(0,0,0,0.10)',
+    scrimSoft: 'rgba(0,0,0,0.20)',
+    scrimDim: 'rgba(0,0,0,0.45)',
+    scrimDeep: 'rgba(0,0,0,0.65)',
+    surfaceDark: 'rgba(18,18,22,0.92)',
+    warm: 'rgba(240,235,225,0.95)',
     highlight: 'rgba(255,255,255,0.08)',
     highlightDim: 'rgba(255,255,255,0.04)',
+    highlightStrong: 'rgba(255,255,255,0.15)',
   },
   border: {
     subtle: 'rgba(255,255,255,0.06)',
@@ -75,17 +104,24 @@ export const darkColors: ColorTokens = {
     tertiary: 'rgba(237,237,237,0.30)',
     inverse: '#0A0A0C',
     bright: '#FFFFFF',
+    onMediaSoft: 'rgba(255,255,255,0.80)',
+    onMediaMuted: 'rgba(255,255,255,0.70)',
   },
   accent: {
     gold: '#C9A84C',
     goldDim: 'rgba(201,168,76,0.15)',
     goldGlow: 'rgba(201,168,76,0.25)',
     love: '#FF2D55',
+    goldFaint: 'rgba(201,168,76,0.06)',
+    goldSoft: 'rgba(201,168,76,0.10)',
+    goldWash: 'rgba(201,168,76,0.18)',
+    sky: 'rgba(100,181,246,0.15)',
   },
   semantic: {
     success: '#4CAF50',
     error: '#EF5350',
     warning: '#FFA726',
+    errorDim: 'rgba(239,83,80,0.15)',
   },
   shadow: '#000000',
 };
@@ -101,8 +137,15 @@ export const lightColors: ColorTokens = {
     scrimMid: 'rgba(10,10,12,0.60)',
     scrimStrong: 'rgba(10,10,12,0.78)',
     scrimOpaque: 'rgba(10,10,12,0.90)',
+    scrimFaint: 'rgba(0,0,0,0.08)',
+    scrimSoft: 'rgba(0,0,0,0.15)',
+    scrimDim: 'rgba(0,0,0,0.40)',
+    scrimDeep: 'rgba(0,0,0,0.60)',
+    surfaceDark: 'rgba(18,18,22,0.92)',
+    warm: 'rgba(240,235,225,0.95)',
     highlight: 'rgba(0,0,0,0.05)',
     highlightDim: 'rgba(0,0,0,0.03)',
+    highlightStrong: 'rgba(0,0,0,0.12)',
   },
   border: {
     subtle: 'rgba(0,0,0,0.06)',
@@ -114,17 +157,24 @@ export const lightColors: ColorTokens = {
     tertiary: 'rgba(26,26,28,0.30)',
     inverse: '#1A1A1C',
     bright: '#FFFFFF',
+    onMediaSoft: 'rgba(255,255,255,0.80)',
+    onMediaMuted: 'rgba(255,255,255,0.70)',
   },
   accent: {
     gold: '#B8922E',
     goldDim: 'rgba(184,146,46,0.12)',
     goldGlow: 'rgba(184,146,46,0.20)',
     love: '#E02447',
+    goldFaint: 'rgba(184,146,46,0.06)',
+    goldSoft: 'rgba(184,146,46,0.08)',
+    goldWash: 'rgba(184,146,46,0.12)',
+    sky: 'rgba(66,133,244,0.12)',
   },
   semantic: {
     success: '#4CAF50',
     error: '#EF5350',
     warning: '#FFA726',
+    errorDim: 'rgba(211,47,47,0.12)',
   },
   shadow: '#000000',
 };

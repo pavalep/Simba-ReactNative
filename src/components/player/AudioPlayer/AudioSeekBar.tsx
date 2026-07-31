@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
 import {useTheme} from '../../../theme';
+import {spacing} from '../../../theme/tokens';
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -344,8 +345,8 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 6,
     position: 'relative',
   },
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
     minWidth: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
+    paddingVertical: spacing.xs,
   },
   trackBgAbs: {
     position: 'absolute',
@@ -409,8 +410,8 @@ const styles = StyleSheet.create({
     width: 60,
   },
   positionLabelBg: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: 8,
     borderWidth: 0.5,
   },

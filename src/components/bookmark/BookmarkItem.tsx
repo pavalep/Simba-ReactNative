@@ -208,6 +208,6 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
     marginHorizontal: spacing.md,
-    gap: 4,
+    gap: spacing.xs,
   },
 });

@@ -119,11 +119,11 @@ const SwipeableFolderCard: React.FC<SwipeableFolderCardProps> = ({
     <View style={swipeStyles.wrapper}>
       {/* Delete button behind the card */}
       <TouchableOpacity
-        style={swipeStyles.deleteBackground}
+        style={[swipeStyles.deleteBackground, {backgroundColor: colors.semantic.error}]}
         onPress={handleDelete}
         activeOpacity={0.8}>
-        <SvgIcon name="close" size={22} color="#FFFFFF" />
-        <AppText variant="caption" style={swipeStyles.deleteText}>
+        <SvgIcon name="close" size={22} color={colors.text.bright} />
+        <AppText variant="caption" style={[swipeStyles.deleteText, {color: colors.text.bright}]}>
           Remove
         </AppText>
       </TouchableOpacity>
@@ -191,7 +191,6 @@ const swipeStyles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 80,
-    backgroundColor: '#EF5350',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 4,
@@ -199,7 +198,6 @@ const swipeStyles = StyleSheet.create({
     borderBottomLeftRadius: 0,
   },
   deleteText: {
-    color: '#FFFFFF',
     fontWeight: '600',
   },
   card: {

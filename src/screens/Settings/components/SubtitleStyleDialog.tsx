@@ -2,6 +2,7 @@ import React from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {Dialog} from '../../../components/core/Dialog/Dialog';
+import {SUBTITLE_COLOR_PRESETS} from '../../../constants/subtitleColors';
 import type {ColorTokens} from '../../../theme/tokens';
 
 interface SubtitleStyleDialogProps {
@@ -23,13 +24,8 @@ const FONT_SIZES: Array<{px: number; label: string}> = [
   {px: 32, label: 'XL'},
 ];
 
-const TEXT_COLORS: Array<{hex: string; label: string}> = [
-  {hex: '#FFFFFF', label: 'White'},
-  {hex: '#FFE066', label: 'Yellow'},
-  {hex: '#66D9FF', label: 'Cyan'},
-  {hex: '#66FF99', label: 'Green'},
-  {hex: '#FF66B2', label: 'Pink'},
-];
+// 55.8: subtitle color palette is DATA (mpv sub-color values), shared via constants
+const TEXT_COLORS: Array<{hex: string; label: string}> = SUBTITLE_COLOR_PRESETS;
 
 const BG_OPACITIES: Array<{value: number; label: string}> = [
   {value: 0, label: 'None'},

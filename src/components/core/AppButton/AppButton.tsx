@@ -51,7 +51,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
   style,
   textStyle,
 }) => {
-  const {colors, isDark} = useTheme();
+  const {colors} = useTheme();
   const {medium: hapticMedium} = useHaptics();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const sz = sizeConfig[sizeKey];
@@ -68,7 +68,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
   const {bgColor, txtColor, bdColor} = useMemo(() => {
     if (disabled) {
       return {
-        bgColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+        bgColor: colors.border.subtle,
         txtColor: colors.text.tertiary,
         bdColor: 'transparent',
       };
@@ -99,7 +99,7 @@ export const AppButton: React.FC<AppButtonProps> = ({
           bdColor: 'transparent',
         };
     }
-  }, [disabled, isDark, colors, variant]);
+  }, [disabled, colors, variant]);
 
   return (
     <Animated.View style={[{transform: [{scale: scaleAnim}]}]}>

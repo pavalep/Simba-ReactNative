@@ -25,7 +25,7 @@ type Props = RootStackScreenProps<'AlbumScreen'>;
 const HERO_HEIGHT = 400;
 
 export const AlbumScreen: React.FC<Props> = () => {
-  const {colors, isDark} = useTheme();
+  const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -66,11 +66,7 @@ export const AlbumScreen: React.FC<Props> = () => {
 
       {/* Background gradient */}
       <LinearGradient
-        colors={
-          isDark
-            ? [colors.background.primary, colors.background.elevated]
-            : [colors.background.primary, colors.background.elevated]
-        }
+        colors={[colors.background.primary, colors.background.elevated]}
         style={StyleSheet.absoluteFill}
       />
 
@@ -79,7 +75,7 @@ export const AlbumScreen: React.FC<Props> = () => {
         <TouchableOpacity
           style={[
             styles.backBtn,
-            {backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'},
+            {backgroundColor: colors.background.highlight},
           ]}
           onPress={handlers.goBack}
           activeOpacity={0.7}>

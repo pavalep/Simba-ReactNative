@@ -65,7 +65,7 @@ export const InfoSheet: React.FC<InfoSheetProps> = ({
           <AppText variant="h3">Now Playing</AppText>
           {onAddToPlaylist && (
             <TouchableOpacity
-              style={[addBtn, {backgroundColor: isDark ? 'rgba(212,175,55,0.15)' : 'rgba(212,175,55,0.1)'}]}
+              style={[addBtn, {backgroundColor: isDark ? colors.accent.goldDim : colors.accent.goldSoft}]}
               onPress={onAddToPlaylist}
               activeOpacity={0.7}
               accessibilityLabel="Add to playlist"
@@ -141,7 +141,7 @@ const RelatedTab: React.FC<RelatedTabProps> = ({tracks, onPlayTrack, colors}) =>
   if (tracks.length === 0) {
     return (
       <View style={emptyWrap}>
-        <View style={[emptyIcon, {backgroundColor: 'rgba(212,175,55,0.1)'}]}>
+        <View style={[emptyIcon, {backgroundColor: colors.accent.goldSoft}]}>
           <SvgIcon name="music" size={32} color={colors.text.tertiary} />
         </View>
         <AppText variant="body2" color="tertiary" style={emptyText}>

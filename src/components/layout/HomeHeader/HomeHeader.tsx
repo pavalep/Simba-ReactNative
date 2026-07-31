@@ -143,7 +143,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
           <SvgIcon name="bookmark" size={18} color={colors.text.secondary} />
           {bookmarkCount > 0 && (
             <View style={[styles.badge, {backgroundColor: colors.accent.gold}]}>
-              <AppText variant="caption" style={styles.badgeText}>
+              <AppText variant="caption" style={[styles.badgeText, {color: colors.text.inverse}]}>
                 {bookmarkCount > 99 ? '99+' : bookmarkCount}
               </AppText>
             </View>
@@ -244,7 +244,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {
-    color: '#000',
     fontSize: 10,
     fontWeight: '800',
   },

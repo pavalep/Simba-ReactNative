@@ -176,7 +176,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
                 Privacy Policy
               </AppText>
             </TouchableOpacity>
-            <View style={styles.legalDot} />
+            <View style={[styles.legalDot, {backgroundColor: colors.text.tertiary}]} />
             <TouchableOpacity
               onPress={() => navigationRef.navigate('Settings', {screen: 'Terms'})}
               activeOpacity={0.7}
@@ -265,6 +265,5 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#8E8E93',
   },
 });

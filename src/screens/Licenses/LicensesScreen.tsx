@@ -90,7 +90,7 @@ const LICENSES: LicenseEntry[] = [
 ];
 
 export const LicensesScreen: React.FC<Props> = () => {
-  const {colors, isDark} = useTheme();
+  const {colors} = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
@@ -114,7 +114,7 @@ export const LicensesScreen: React.FC<Props> = () => {
           paddingTop: spacing.md,
         },
         licenseCard: {
-          backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+          backgroundColor: colors.background.highlightDim,
           borderRadius: radius.md,
           marginBottom: spacing.sm,
           overflow: 'hidden',
@@ -132,9 +132,7 @@ export const LicensesScreen: React.FC<Props> = () => {
           marginBottom: 2,
         },
         licenseBadge: {
-          backgroundColor: isDark
-            ? 'rgba(201,168,76,0.12)'
-            : 'rgba(184,146,46,0.12)',
+          backgroundColor: colors.accent.goldSoft,
           borderRadius: radius.sm,
           paddingHorizontal: spacing.sm,
           paddingVertical: spacing.xs,
@@ -157,7 +155,7 @@ export const LicensesScreen: React.FC<Props> = () => {
           marginHorizontal: spacing.lg,
         },
       }),
-    [colors, isDark],
+    [colors],
   );
 
   return (

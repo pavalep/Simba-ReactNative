@@ -319,7 +319,6 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
               scannedTracks={scannedTracks}
               lastScanTimestamp={lastScanTimestamp}
               colors={colors}
-              isDark={isDark}
               onLinkFolder={handleLinkFolder}
               onNavigateToFolderBrowser={navigateToFolderBrowser}
             />
@@ -328,7 +327,6 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
             <LibraryAudioSegment
               audioFolders={audioFolders}
               colors={colors}
-              isDark={isDark}
               viewMode={viewMode}
               isAudioPlaying={isAudioPlaying}
               currentAudioUri={currentAudioUri}

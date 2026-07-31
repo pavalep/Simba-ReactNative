@@ -2,7 +2,7 @@ import React, {useRef, useCallback} from 'react';
 import {View, TouchableOpacity, StyleSheet, Animated, Share, Platform} from 'react-native';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {AppText} from '../../core/AppText/AppText';
-import {radius} from '../../../theme/tokens';
+import {radius, spacing} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
 
 interface AudioActionRowProps {
@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
   primaryActionRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 20,
-    marginBottom: 8,
+    gap: spacing.xl,
+    marginBottom: spacing.sm,
   },
   iconBtn: {
     width: 44,
@@ -197,15 +197,15 @@ const styles = StyleSheet.create({
   secondaryActionRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 16,
-    marginBottom: 16,
-    paddingHorizontal: 32,
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xxxl,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 10,
     borderRadius: radius.md,
     borderWidth: 0.5,

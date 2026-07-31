@@ -9,7 +9,6 @@ import {radius, ColorTokens} from '../../../theme/tokens';
 interface LibraryAudioSegmentProps {
   audioFolders: string[];
   colors: ColorTokens;
-  isDark: boolean;
   viewMode?: 'grid' | 'list';
   isAudioPlaying?: boolean;
   currentAudioUri?: string | null;
@@ -21,7 +20,6 @@ interface LibraryAudioSegmentProps {
 export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = ({
   audioFolders,
   colors,
-  isDark,
   isAudioPlaying = false,
   onNavigateToSettings,
   onNavigateToFolderBrowser,
@@ -40,7 +38,7 @@ export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = ({
           paddingVertical: 10,
           paddingHorizontal: 14,
           borderRadius: radius.md,
-          backgroundColor: isDark ? 'rgba(212,175,55,0.10)' : 'rgba(212,175,55,0.06)',
+          backgroundColor: colors.accent.goldSoft,
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: colors.accent.gold,
         },
@@ -81,7 +79,7 @@ export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = ({
           borderRadius: 10,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: isDark ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.08)',
+          backgroundColor: colors.accent.goldSoft,
         },
         folderLabel: {
           flex: 1,
@@ -105,7 +103,7 @@ export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = ({
           height: 18,
         },
       }),
-    [colors, isDark],
+    [colors],
   );
 
   if (audioFolders.length === 0) {

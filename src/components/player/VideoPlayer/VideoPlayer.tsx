@@ -553,7 +553,7 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
         {h.pipUiVisible && (
           <Animated.View
             pointerEvents="none"
-            style={[styles.blackFade, {opacity: blackFade}]}
+            style={[styles.blackFade, {backgroundColor: h.colors.shadow, opacity: blackFade}]}
           />
         )}
 
@@ -561,7 +561,7 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
         {h.pipUiVisible && (
           <Animated.View
             pointerEvents="none"
-            style={[styles.sheetDim, {opacity: sheetDim}]}
+            style={[styles.sheetDim, {backgroundColor: h.colors.background.scrimDim, opacity: sheetDim}]}
           />
         )}
 
@@ -610,8 +610,8 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
 
             {/* 50.3: countdown badge when a sleep timer is armed */}
             {sleepTimerActive && !h.controlsLocked && (
-              <View style={[styles.sleepBadge, {top: h.uiTopInset + 52}]}>
-                <AppText variant="caption" color="primary" style={styles.sleepBadgeText}>
+              <View style={[styles.sleepBadge, {backgroundColor: h.colors.accent.gold, top: h.uiTopInset + 52}]}>
+                <AppText variant="caption" color="primary" style={[styles.sleepBadgeText, {color: h.colors.text.inverse}]}>
                   {sleepTimerMode === 'time'
                     ? `Sleep ${formatSleepRemaining(sleepRemainingMs)}`
                     : sleepTimerModeLabel(sleepTimerMode)}
@@ -813,12 +813,10 @@ const styles = StyleSheet.create({
   },
   blackFade: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#000000',
     zIndex: 22,
   },
   sheetDim: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     zIndex: 25,
   },
   // 50.3: sleep timer countdown badge (top bar area)
@@ -828,11 +826,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: 'rgba(201,168,76,0.85)',
   },
   sleepBadgeText: {
     fontSize: 12,
-    color: '#000000',
   },
 });
 

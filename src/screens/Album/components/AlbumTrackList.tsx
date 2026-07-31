@@ -106,7 +106,7 @@ export const AlbumTrackList: React.FC<AlbumTrackListProps> = ({
               styles.trackRow,
               {
                 backgroundColor: isActive
-                  ? 'rgba(201,168,76,0.06)'
+                  ? colors.accent.goldFaint
                   : 'transparent',
               },
             ]}
@@ -119,7 +119,7 @@ export const AlbumTrackList: React.FC<AlbumTrackListProps> = ({
               {isTrackPlaying ? (
                 <AudioWaveform
                   isPlaying={true}
-                  color="#C9A84C"
+                  color={colors.accent.gold}
                   size={16}
                   barWidth={2}
                   barGap={2}
@@ -167,7 +167,7 @@ export const AlbumTrackList: React.FC<AlbumTrackListProps> = ({
         animationType="fade"
         onRequestClose={() => setMenuVisible(false)}>
         <TouchableOpacity
-          style={styles.modalOverlay}
+          style={[styles.modalOverlay, {backgroundColor: colors.background.scrim}]}
           activeOpacity={1}
           onPress={() => setMenuVisible(false)}>
           <View
@@ -268,7 +268,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   menuSheet: {

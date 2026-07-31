@@ -332,7 +332,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             style={[
               styles.trackItem,
               {borderBottomColor: colors.border.subtle},
-              isCurrentTrack && {backgroundColor: 'rgba(201,168,76,0.08)'},
+              isCurrentTrack && {backgroundColor: colors.accent.goldSoft},
               idx === allTracks.length - 1 && {borderBottomWidth: 0},
             ]}
             activeOpacity={0.7}
@@ -354,10 +354,10 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             <View
               style={[
                 styles.playIcon,
-                {backgroundColor: isCurrentTrack ? 'rgba(201,168,76,0.2)' : colors.accent.goldDim},
+                {backgroundColor: isCurrentTrack ? colors.accent.goldWash : colors.accent.goldDim},
               ]}>
               {isTrackPlaying ? (
-                <AudioWaveform isPlaying={true} color="#C9A84C" size={18} barWidth={2} barGap={2} />
+                <AudioWaveform isPlaying={true} color={colors.accent.gold} size={18} barWidth={2} barGap={2} />
               ) : (
                 <SvgIcon name={isCurrentTrack ? 'volume' : 'play'} size={14} color={isCurrentTrack ? colors.accent.gold : colors.accent.gold} />
               )}

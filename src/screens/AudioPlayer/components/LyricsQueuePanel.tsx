@@ -79,7 +79,7 @@ const LyricLineRow = React.memo<{
   if (isActive) {
     const bgColor = glow.interpolate({
       inputRange: [0, 1],
-      outputRange: ['rgba(201,168,76,0.05)', 'rgba(201,168,76,0.15)'],
+      outputRange: [colors.accent.goldFaint, colors.accent.goldDim],
     });
 
     return (

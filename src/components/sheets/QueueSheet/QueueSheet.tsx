@@ -321,7 +321,7 @@ export const QueueSheet: React.FC<QueueSheetProps> = ({
                 style={[styles.batchBtn, {backgroundColor: colors.semantic.error}]}
                 accessibilityRole="button"
                 accessibilityLabel="Remove selected items">
-                <AppText variant="caption" style={{color: '#FFF', fontWeight: '600'}}>
+                <AppText variant="caption" style={{color: colors.text.bright, fontWeight: '600'}}>
                   Remove
                 </AppText>
               </TouchableOpacity>

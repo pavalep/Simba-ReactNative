@@ -76,7 +76,7 @@ const CONTRIBUTORS = [
 ];
 
 export const CreditsScreen: React.FC<Props> = () => {
-  const {colors, isDark} = useTheme();
+  const {colors} = useTheme();
   const entrance = useAnimatedEntrance(CREDIT_GROUPS.length + 1, {
     staggerDelay: 80,
     direction: 'up',
@@ -94,9 +94,7 @@ export const CreditsScreen: React.FC<Props> = () => {
           paddingTop: spacing.md,
         },
         sectionCard: {
-          backgroundColor: isDark
-            ? 'rgba(255,255,255,0.04)'
-            : 'rgba(0,0,0,0.03)',
+          backgroundColor: colors.background.highlightDim,
           borderRadius: radius.md,
           padding: spacing.lg,
           marginBottom: spacing.md,
@@ -130,7 +128,7 @@ export const CreditsScreen: React.FC<Props> = () => {
           marginRight: spacing.sm,
         },
       }),
-    [isDark],
+    [colors],
   );
 
   return (

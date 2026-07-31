@@ -76,7 +76,7 @@ export const AlbumHero: React.FC<AlbumHeroProps> = ({
 
   const backdropColors = isDark
     ? [colors.accent.goldDim, colors.background.primary, colors.background.elevated]
-    : ['rgba(240,235,225,0.9)', colors.background.primary, colors.background.elevated];
+    : [colors.background.warm, colors.background.primary, colors.background.elevated];
 
   return (
     <Animated.View style={[styles.container, {height: totalHeight}, bgTransform]}>
@@ -111,7 +111,10 @@ export const AlbumHero: React.FC<AlbumHeroProps> = ({
         <Animated.View
           style={[
             styles.artContainer,
-            {backgroundColor: colors.accent.goldDim},
+            {
+              backgroundColor: colors.accent.goldDim,
+              shadowColor: colors.shadow,
+            },
             {transform: [{scale: artScale}]},
           ]}>
           <AppText
@@ -168,7 +171,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
     elevation: 8,
-    shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 8,

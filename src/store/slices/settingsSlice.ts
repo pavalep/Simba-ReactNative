@@ -1,5 +1,6 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {RepeatMode} from '../../types';
+import {DEFAULT_SUBTITLE_COLOR} from '../../constants/subtitleColors';
 
 interface MpvOption {
   key: string;
@@ -77,7 +78,7 @@ const initialState: SettingsState = {
 
   // Subtitle appearance defaults
   subtitleFontSize: 16,
-  subtitleTextColor: '#FFFFFF',
+  subtitleTextColor: DEFAULT_SUBTITLE_COLOR,
   subtitleBackgroundOpacity: 0.5,
 
   // Playback extras defaults

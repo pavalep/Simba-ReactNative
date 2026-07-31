@@ -51,7 +51,7 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
   const displayItems = items.slice(0, maxItems);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {backgroundColor: colors.background.highlightDim}]}>
       {/* ── Section header ── */}
       <View style={styles.header}>
         <AppText variant="h3" color="primary" style={styles.headerTitle}>
@@ -79,7 +79,7 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
               key={item.fileUri}
               activeOpacity={0.85}
               onPress={() => onItemPress(item)}
-              style={styles.card}>
+              style={[styles.card, {shadowColor: colors.shadow}]}>
               <View style={[styles.thumbnailContainer, {backgroundColor: colors.background.elevated}]}>
                 {item.thumbnailPath ? (
                   <FastImage
@@ -98,29 +98,46 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
                 )}
 
                 {/* Media type badge */}
-                <View style={styles.typeBadge}>
+                <View style={[styles.typeBadge, {backgroundColor: colors.background.scrim}]}>
                   <SvgIcon
                     name={item.mediaType === 'audio' ? 'music' : 'video'}
                     size={12}
-                    color="#fff"
+                    color={colors.text.bright}
                   />
                 </View>
 
                 {/* Premium Gradient Overlay */}
                 <LinearGradient
-                  colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.5)']}
+                  colors={['transparent', colors.background.scrimSoft, colors.background.scrim]}
                   style={styles.overlayGradient}
                 />
 
                 {/* Bottom Semi-Transparent Strip */}
                 <View style={styles.bottomStrip}>
-                  <View style={[StyleSheet.absoluteFill, {backgroundColor: 'rgba(0,0,0,0.6)'}]} />
+                  <View style={[StyleSheet.absoluteFill, {backgroundColor: colors.background.scrim}]} />
                   <View style={styles.overlayContent}>
-                    <AppText variant="bodySmall" numberOfLines={1} style={styles.cardTitleOverlay}>
+                    <AppText
+                      variant="bodySmall"
+                      numberOfLines={1}
+                      style={[
+                        styles.cardTitleOverlay,
+                        {
+                          color: colors.text.bright,
+                          textShadowColor: colors.background.scrimMid,
+                        },
+                      ]}>
                       {item.title}
                     </AppText>
                     {item.duration ? (
-                      <AppText variant="caption" style={styles.cardTimeOverlay}>
+                      <AppText
+                        variant="caption"
+                        style={[
+                          styles.cardTimeOverlay,
+                          {
+                            color: colors.text.onMediaSoft,
+                            textShadowColor: colors.background.scrim,
+                          },
+                        ]}>
                         {formatTime(item.position || 0)} / {formatTime(item.duration)}
                       </AppText>
                     ) : null}
@@ -129,7 +146,7 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
 
                 {/* Progress bar if in progress */}
                 {progress > 0 && (
-                  <View style={[styles.progressBarTrack, {backgroundColor: 'rgba(255,255,255,0.15)'}]}>
+                  <View style={[styles.progressBarTrack, {backgroundColor: colors.background.highlightStrong}]}>
                     <View style={[styles.progressBarFill, {width: `${progress}%`, backgroundColor: colors.accent.gold}]} />
                   </View>
                 )}
@@ -149,7 +166,6 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.xxl,
     paddingVertical: spacing.md,
-    backgroundColor: 'rgba(0,0,0,0.02)',
     borderRadius: radius.lg,
     marginHorizontal: spacing.sm,
   },
@@ -179,7 +195,6 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     marginRight: spacing.md,
     elevation: 4,
-    shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -190,7 +205,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#1a1a1a',
   },
   placeholder: {
     ...StyleSheet.absoluteFill,
@@ -214,20 +228,16 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs + 4,
   },
   cardTitleOverlay: {
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
     lineHeight: 15,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: {width: -1, height: 1},
     textShadowRadius: 10,
     marginBottom: 2,
   },
   cardTimeOverlay: {
-    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 10,
     fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: {width: 0, height: 1},
     textShadowRadius: 4,
   },
@@ -236,7 +246,6 @@ const styles = StyleSheet.create({
     top: 6,
     right: 6,
     zIndex: 5,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     width: 22,
     height: 22,
     borderRadius: 11,

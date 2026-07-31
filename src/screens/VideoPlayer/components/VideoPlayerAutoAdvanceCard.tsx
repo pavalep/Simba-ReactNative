@@ -57,7 +57,7 @@ export const VideoPlayerAutoAdvanceCard: React.FC<VideoPlayerAutoAdvanceCardProp
           borderRadius: 14,
           borderWidth: 0.5,
           borderColor: colors.border.subtle,
-          backgroundColor: 'rgba(18, 18, 22, 0.92)',
+          backgroundColor: colors.background.surfaceDark,
         },
         upNext: {
           marginBottom: 2,
@@ -81,7 +81,7 @@ export const VideoPlayerAutoAdvanceCard: React.FC<VideoPlayerAutoAdvanceCardProp
           gap: 6,
         },
         nextLabel: {
-          color: '#14120B',
+          color: colors.text.inverse,
           fontWeight: '700',
         },
         cancelBtn: {
@@ -90,7 +90,7 @@ export const VideoPlayerAutoAdvanceCard: React.FC<VideoPlayerAutoAdvanceCardProp
           borderRadius: 10,
           borderWidth: 1,
           borderColor: colors.border.subtle,
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          backgroundColor: colors.border.subtle,
           alignItems: 'center',
           justifyContent: 'center',
         },

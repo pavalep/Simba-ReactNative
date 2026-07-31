@@ -38,8 +38,8 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
   onToggleLock,
 }) => {
   const {colors} = useTheme();
-  const iconColor = '#EDEDED';
-  const iconMuted = 'rgba(237,237,237,0.65)';
+  const iconColor = colors.text.primary;
+  const iconMuted = colors.text.secondary;
   const opacity = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const bookmarkPulse = useRef(new Animated.Value(1)).current;
@@ -81,7 +81,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           top: 0,
           left: 0,
           right: 0,
-          backgroundColor: 'rgba(8, 8, 10, 0.72)',
+          backgroundColor: colors.background.scrimMid,
           borderBottomWidth: 1,
           borderBottomColor: colors.border.subtle,
           zIndex: 20,
@@ -132,11 +132,11 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           color: iconMuted,
         },
         lockBtnActive: {
-          backgroundColor: 'rgba(201,168,76,0.18)',
+          backgroundColor: colors.accent.goldWash,
         },
 
       }),
-    [colors],
+    [colors, iconColor, iconMuted],
   );
 
   return (

@@ -56,19 +56,19 @@ const CategoryChip: React.FC<CategoryChipProps> = React.memo(
               : colors.background.elevated,
             borderColor: isSelected
               ? colors.accent.gold
-              : 'rgba(255,255,255,0.08)',
+              : colors.background.highlight,
           },
         ]}>
         <SvgIcon
           name={category.icon as any}
           size={14}
-          color={isSelected ? '#000' : colors.text.secondary}
+          color={isSelected ? colors.text.inverse : colors.text.secondary}
         />
         <AppText
           variant="button"
           style={[
             styles.chipText,
-            {color: isSelected ? '#000' : colors.text.secondary},
+            {color: isSelected ? colors.text.inverse : colors.text.secondary},
           ]}>
           {category.name}
         </AppText>
@@ -103,16 +103,28 @@ const MovieCard: React.FC<MovieCardProps> = React.memo(({item, onPress}) => {
         </View>
         {/* Duration badge */}
         {item.duration > 0 && (
-          <View style={styles.durationBadge}>
-            <AppText variant="caption" style={styles.durationText}>
+          <View
+            style={[
+              styles.durationBadge,
+              {backgroundColor: colors.background.scrimMid},
+            ]}>
+            <AppText
+              variant="caption"
+              style={[styles.durationText, {color: colors.text.bright}]}>
               {formatDuration(item.duration)}
             </AppText>
           </View>
         )}
         {/* Rating badge */}
         {item.avgRating > 0 && (
-          <View style={styles.ratingBadge}>
-            <AppText variant="caption" style={styles.ratingText}>
+          <View
+            style={[
+              styles.ratingBadge,
+              {backgroundColor: colors.background.scrimMid},
+            ]}>
+            <AppText
+              variant="caption"
+              style={[styles.ratingText, {color: colors.accent.gold}]}>
               ★ {item.avgRating.toFixed(1)}
             </AppText>
           </View>
@@ -183,7 +195,7 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
       <InternalHeader title="Movies" />
 
       {/* ── Category Chips ── */}
-      <View style={[styles.chipSection, {borderBottomColor: 'rgba(255,255,255,0.05)'}]}>
+      <View style={[styles.chipSection, {borderBottomColor: colors.background.highlightDim}]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -330,28 +342,24 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   durationBadge: {
-    backgroundColor: 'rgba(0,0,0,0.75)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radius.sm - 2,
   },
   durationText: {
     fontSize: 10,
-    color: '#fff',
     fontWeight: '600',
   },
   ratingBadge: {
     position: 'absolute',
     top: spacing.xs,
     left: spacing.xs,
-    backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: radius.sm - 2,
   },
   ratingText: {
     fontSize: 10,
-    color: '#FFD700',
     fontWeight: '700',
   },
   movieInfo: {

@@ -33,6 +33,25 @@ const ProgressBar: React.FC<{percent: number; color: string}> = ({
   percent,
   color,
 }) => {
+  const {colors} = useTheme();
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        track: {
+          flex: 1,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: colors.background.highlight,
+          overflow: 'hidden',
+        },
+        fill: {
+          height: '100%',
+          borderRadius: 2,
+        },
+      }),
+    [colors],
+  );
+
   const widthAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -177,17 +196,6 @@ const createStyles = (colors: ColorTokens) => StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     marginLeft: 28 + spacing.sm,
-  },
-  track: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.background.highlight,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    borderRadius: 2,
   },
   percentText: {
     width: 32,

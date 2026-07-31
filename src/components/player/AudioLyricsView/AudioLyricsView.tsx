@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
+import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {LrcLine} from '../../../utils/lrcParser';
@@ -176,7 +177,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           height: HEADER_HEIGHT,
-          paddingHorizontal: 16,
+          paddingHorizontal: spacing.lg,
           borderBottomWidth: StyleSheet.hairlineWidth,
           borderBottomColor: colors.border.subtle,
         },
@@ -195,13 +196,13 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
         // ── Toggle Tabs (15.9) ──
         tabRow: {
           flexDirection: 'row',
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-          gap: 8,
+          paddingHorizontal: spacing.xl,
+          paddingVertical: spacing.md,
+          gap: spacing.sm,
         },
         tabBtn: {
-          paddingHorizontal: 20,
-          paddingVertical: 8,
+          paddingHorizontal: spacing.xl,
+          paddingVertical: spacing.sm,
           borderRadius: 20,
         },
         tabBtnActive: {
@@ -220,16 +221,16 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
         },
         lyricsList: {
           flex: 1,
-          paddingHorizontal: 24,
+          paddingHorizontal: spacing.xxl,
         },
         lyricRow: {
-          paddingVertical: 8,
-          paddingHorizontal: 8,
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.sm,
           borderRadius: 8,
         },
         activeLyricRow: {
-          paddingVertical: 8,
-          paddingHorizontal: 8,
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.sm,
           borderRadius: 8,
         },
         lyricText: {
@@ -256,7 +257,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
           backgroundColor: colors.border.subtle,
           alignItems: 'center',
           justifyContent: 'center',
-          marginBottom: 16,
+          marginBottom: spacing.lg,
         },
         noLyricsText: {
           fontSize: 15,

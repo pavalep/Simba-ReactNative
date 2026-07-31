@@ -1,8 +1,9 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {View, TouchableOpacity, StyleSheet, Dimensions} from 'react-native';
 import FastImage from 'react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
+import type {ColorTokens} from '../../../theme/tokens';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -45,6 +46,7 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
   onPress,
 }) => {
   const {colors, shadows} = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   if (!item) return null;
 
@@ -80,12 +82,16 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
 
       {/* ── Overlays ── */}
       <LinearGradient
-        colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.95)']}
+        colors={[
+          colors.background.scrimFaint,
+          colors.background.scrimDim,
+          colors.background.scrimOpaque,
+        ]}
         style={StyleSheet.absoluteFill}
       />
 
       <View style={styles.glassOverlay}>
-        <View style={[styles.glassBorder, {backgroundColor: 'rgba(255,255,255,0.05)'}]} />
+        <View style={[styles.glassBorder, {backgroundColor: colors.background.highlightDim}]} />
       </View>
 
       {/* ── Content ── */}
@@ -96,7 +102,7 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
               {item.mediaType === 'audio' ? 'AUDIO' : 'VIDEO'}
             </AppText>
           </View>
-          <View style={[styles.badge, {backgroundColor: 'rgba(255,255,255,0.2)', marginLeft: spacing.xs}]}>
+          <View style={[styles.badge, {backgroundColor: colors.background.highlightStrong, marginLeft: spacing.xs}]}>
             <AppText variant="caption" style={styles.badgeText}>
               CONTINUE
             </AppText>
@@ -116,15 +122,15 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
               activeOpacity={0.8}
               onPress={() => onPress(item)}
               style={[styles.playButton, {backgroundColor: colors.accent.gold}]}>
-              <SvgIcon name="play" size={16} color="#000" />
+              <SvgIcon name="play" size={16} color={colors.text.inverse} />
               <AppText variant="body2" style={styles.playText}>Resume</AppText>
             </TouchableOpacity>
           </View>
 
           {/* ── Circular Progress Ring ── */}
           <View style={styles.progressRingContainer}>
-            <View style={[styles.progressRingBg, {borderColor: 'rgba(255,255,255,0.15)'}]}>
-              <SvgIcon name="play" size={24} color="#fff" />
+            <View style={[styles.progressRingBg, {borderColor: colors.background.highlightStrong}]}>
+              <SvgIcon name="play" size={24} color={colors.text.bright} />
             </View>
             <View style={[styles.progressRingTrack, {borderColor: colors.accent.gold}]} />
             {item.duration > 0 && (
@@ -139,7 +145,7 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
       </View>
 
       {/* ── Progress bar at bottom ── */}
-      <View style={[styles.progressTrack, {backgroundColor: 'rgba(255,255,255,0.2)'}]}>
+      <View style={[styles.progressTrack, {backgroundColor: colors.background.highlightStrong}]}>
         <View
           style={[
             styles.progressFill,
@@ -154,7 +160,8 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorTokens) =>
+  StyleSheet.create({
   card: {
     width: SCREEN_WIDTH - spacing.md * 2,
     alignSelf: 'center',
@@ -190,7 +197,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#000',
+    color: colors.text.inverse,
     letterSpacing: 0.5,
   },
   bottomRow: {
@@ -203,9 +210,9 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   title: {
-    color: '#fff',
+    color: colors.text.bright,
     marginBottom: spacing.md,
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: colors.background.scrim,
     textShadowOffset: {width: 0, height: 2},
     textShadowRadius: 4,
   },
@@ -219,7 +226,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   playText: {
-    color: '#000',
+    color: colors.text.inverse,
     fontWeight: '700',
   },
   progressRingContainer: {
@@ -253,7 +260,7 @@ const styles = StyleSheet.create({
     bottom: -18,
   },
   progressTime: {
-    color: 'rgba(255,255,255,0.7)',
+    color: colors.text.onMediaMuted,
     fontSize: 9,
     fontWeight: '600',
   },
@@ -267,4 +274,4 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
   },
-});
+  });

@@ -49,7 +49,7 @@ const MediaGridItem: React.FC<MediaGridItemProps> = React.memo(
             {aspectRatio, backgroundColor: colors.accent.goldDim},
           ]}>
           {/* Media type icon */}
-          <View style={styles.typeIconWrap}>
+          <View style={[styles.typeIconWrap, {backgroundColor: colors.background.scrim}]}>
             <SvgIcon
               name={mediaType === 'video' ? 'video' : 'music'}
               size={14}
@@ -58,7 +58,7 @@ const MediaGridItem: React.FC<MediaGridItemProps> = React.memo(
           </View>
 
           {/* Duration badge */}
-          <View style={[styles.durationBadge, {backgroundColor: 'rgba(0,0,0,0.75)'}]}>
+          <View style={[styles.durationBadge, {backgroundColor: colors.background.scrimMid}]}>
             <AppText variant="caption" color="primary">
               {formatDuration(duration)}
             </AppText>
@@ -106,7 +106,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'center',
     alignItems: 'center',
   },

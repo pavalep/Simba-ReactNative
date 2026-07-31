@@ -23,6 +23,7 @@ import {
   getMediaType,
 } from '../../../services/fileService';
 import {loadSubtitleSettings, saveSubtitleSettings} from '../../../services/subtitleSettingsService';
+import {DEFAULT_SUBTITLE_COLOR} from '../../../constants/subtitleColors';
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {useAppDispatch, useAppSelector} from '../../../store';
 import {savePlaybackPosition} from '../../../store/slices/sessionSlice';
@@ -114,7 +115,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const [subtitleFontSize, setSubtitleFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [subtitleOpacity, setSubtitleOpacity] = useState(1);
   const [subtitlePosition, setSubtitlePosition] = useState(90);
-  const [subtitleTextColor, setSubtitleTextColor] = useState<string>('#FFFFFF');
+  const [subtitleTextColor, setSubtitleTextColor] = useState<string>(DEFAULT_SUBTITLE_COLOR);
   const [subtitleBgOpacity, setSubtitleBgOpacity] = useState(0.5);
 
   // ── Audio track state ──
@@ -990,7 +991,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
             MpvPlayer.setProperty('slang', subtitleSliceRef.current.languages);
             MpvPlayer.setProperty('sub-bg-opacity', subtitleSliceRef.current.bgOpacity);
             if (highContrastRef.current) {
-              MpvPlayer.setProperty('sub-color', '#FFFFFF');
+              MpvPlayer.setProperty('sub-color', DEFAULT_SUBTITLE_COLOR);
               MpvPlayer.setProperty('sub-bg-opacity', 0.9);
             }
             MpvPlayer.loadFile(playableUri);
@@ -1135,7 +1136,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
           MpvPlayer.setProperty('slang', subtitleSliceRef.current.languages);
           MpvPlayer.setProperty('sub-bg-opacity', subtitleSliceRef.current.bgOpacity);
           if (highContrastRef.current) {
-            MpvPlayer.setProperty('sub-color', '#FFFFFF');
+            MpvPlayer.setProperty('sub-color', DEFAULT_SUBTITLE_COLOR);
             MpvPlayer.setProperty('sub-bg-opacity', 0.9);
           }
           MpvPlayer.loadFile(playableUri);

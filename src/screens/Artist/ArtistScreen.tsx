@@ -87,7 +87,7 @@ export const ArtistScreen: React.FC<Props> = () => {
             styles.remainingTrackRow,
             {
               backgroundColor: isActive
-                ? 'rgba(201,168,76,0.06)'
+                ? colors.accent.goldFaint
                 : 'transparent',
             },
           ]}
@@ -102,7 +102,7 @@ export const ArtistScreen: React.FC<Props> = () => {
           {/* Number or playing indicator */}
           <View style={styles.numCol}>
             {isTrackPlaying ? (
-              <AudioWaveform isPlaying={true} color="#C9A84C" size={16} barWidth={2} barGap={2} />
+              <AudioWaveform isPlaying={true} color={colors.accent.gold} size={16} barWidth={2} barGap={2} />
             ) : (
               <AppText variant="caption" color="tertiary">
                 {idx + 6}
@@ -130,7 +130,7 @@ export const ArtistScreen: React.FC<Props> = () => {
         </TouchableOpacity>
       );
     },
-    [isCurrentTrack, isPlaying, handlers],
+    [isCurrentTrack, isPlaying, handlers, colors],
   );
 
   // ── Styles ──

@@ -59,7 +59,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
             styles.retryButton,
             {backgroundColor: colors.accent.gold},
           ]}>
-          <AppText variant="button" style={styles.retryText}>
+          <AppText variant="button" style={[styles.retryText, {color: colors.text.inverse}]}>
             {retryLabel}
           </AppText>
         </TouchableOpacity>
@@ -91,7 +91,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   retryText: {
-    color: '#08080A',
     fontWeight: '600',
   },
 });

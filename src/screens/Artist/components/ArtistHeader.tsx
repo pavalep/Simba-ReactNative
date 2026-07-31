@@ -73,8 +73,8 @@ export const ArtistHeader: React.FC<ArtistHeaderProps> = ({
   const backdropColors = useMemo(
     () =>
       isDark
-        ? ['rgba(20,20,22,0.95)', colors.background.primary, colors.background.elevated]
-        : ['rgba(240,235,225,0.95)', colors.background.primary, colors.background.elevated],
+        ? [colors.background.scrimOpaque, colors.background.primary, colors.background.elevated]
+        : [colors.background.warm, colors.background.primary, colors.background.elevated],
     [isDark, colors],
   );
 

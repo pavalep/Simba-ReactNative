@@ -13,7 +13,6 @@ interface LibraryFoldersSegmentProps {
   scannedTracks: ScannedTrack[];
   lastScanTimestamp: number | null;
   colors: ColorTokens;
-  isDark: boolean;
   onLinkFolder: () => void;
   onNavigateToFolderBrowser: (folderPath: string) => void;
 }
@@ -44,7 +43,6 @@ export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = ({
   scannedTracks,
   lastScanTimestamp,
   colors,
-  isDark,
   onLinkFolder,
   onNavigateToFolderBrowser,
 }) => {
@@ -73,7 +71,7 @@ export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = ({
           borderRadius: 10,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: isDark ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.08)',
+          backgroundColor: colors.accent.goldSoft,
         },
         folderInfo: {
           flex: 1,
@@ -124,7 +122,7 @@ export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = ({
           fontWeight: '600',
         },
       }),
-    [colors, isDark],
+    [colors],
   );
 
   const allFolders = React.useMemo(() => {
@@ -196,8 +194,8 @@ export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = ({
                       {
                         backgroundColor:
                           type === 'video'
-                            ? 'rgba(100,181,246,0.15)'
-                            : 'rgba(212,175,55,0.15)',
+                            ? colors.accent.sky
+                            : colors.accent.goldDim,
                       },
                     ]}>
                     <AppText
