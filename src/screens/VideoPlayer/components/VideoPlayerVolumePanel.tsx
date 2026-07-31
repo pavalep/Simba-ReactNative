@@ -10,7 +10,7 @@ interface Props {
   onToggleMute: () => void;
 }
 
-export const VideoPlayerVolumePanel: React.FC<Props> = ({
+export const VideoPlayerVolumePanel: React.FC<Props> = React.memo(({
   volume,
   muted,
   onVolumeChange,
@@ -44,7 +44,7 @@ export const VideoPlayerVolumePanel: React.FC<Props> = ({
       <Text style={[styles.hint, {color: colors.text.secondary}]}>Drag to adjust volume</Text>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {paddingHorizontal: 20, paddingBottom: 16},

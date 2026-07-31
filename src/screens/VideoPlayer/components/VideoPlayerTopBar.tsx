@@ -17,6 +17,9 @@ export interface VideoPlayerTopBarProps {
   visible?: boolean;
   onBookmark?: () => void;
   bookmarkActive?: boolean;
+  // 31.1 lock controls
+  controlsLocked?: boolean;
+  onToggleLock?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -31,6 +34,8 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
   visible = true,
   onBookmark,
   bookmarkActive = false,
+  controlsLocked = false,
+  onToggleLock,
 }) => {
   const {colors} = useTheme();
   const iconColor = '#EDEDED';
@@ -126,6 +131,9 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           fontSize: 18,
           color: iconMuted,
         },
+        lockBtnActive: {
+          backgroundColor: 'rgba(201,168,76,0.18)',
+        },
 
       }),
     [colors],
@@ -154,14 +162,26 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           </AppText>
         </View>
 
-        {/* Right: More + expand toggle */}
+        {/* Right: lock chip (31.1) + More + expand toggle */}
         <View style={styles.rightSection}>
-          {onMorePress && (
+          {onToggleLock && (
+            <TouchableOpacity
+              style={[styles.rotateBtn, controlsLocked && styles.lockBtnActive]}
+              onPress={onToggleLock}
+              accessibilityLabel={controlsLocked ? 'Unlock controls' : 'Lock controls'}
+              accessibilityRole="button"
+              accessibilityState={{selected: controlsLocked}}>
+              <AppText style={styles.rotateBtnIcon}>
+                {controlsLocked ? '\u{1F513}' : '\u{1F512}'}
+              </AppText>
+            </TouchableOpacity>
+          )}
+          {!controlsLocked && onMorePress && (
             <TouchableOpacity style={styles.rotateBtn} onPress={onMorePress} accessibilityLabel="More options" accessibilityRole="button">
               <AppText style={styles.rotateBtnIcon}>{'⋮'}</AppText>
             </TouchableOpacity>
           )}
-          {onBookmark && (
+          {!controlsLocked && onBookmark && (
             <Animated.View style={{transform: [{scale: bookmarkPulse}]}}>
               <TouchableOpacity
                 style={styles.rotateBtn}
@@ -176,11 +196,18 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
               </TouchableOpacity>
             </Animated.View>
           )}
-          <TouchableOpacity style={styles.rotateBtn} onPress={onToggleRotate} accessibilityLabel="Toggle rotation" accessibilityRole="button">
-            <AppText style={styles.rotateBtnIcon}>
-              {isLandscape ? '⤢' : '⛶'}
-            </AppText>
-          </TouchableOpacity>
+          {!controlsLocked && (
+            <TouchableOpacity
+              style={styles.rotateBtn}
+              onPress={onToggleRotate}
+              accessibilityLabel="Toggle rotation"
+              accessibilityRole="button"
+              accessibilityState={{selected: isLandscape}}>
+              <AppText style={styles.rotateBtnIcon}>
+                {isLandscape ? '⤢' : '⛶'}
+              </AppText>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Animated.View>

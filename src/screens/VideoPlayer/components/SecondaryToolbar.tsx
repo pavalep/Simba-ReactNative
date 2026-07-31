@@ -16,9 +16,11 @@ interface ToolbarBtnProps {
   active?: boolean;
   onPress?: () => void;
   label: string;
+  /** 31.7: announce toggle state to screen readers (checked/unchecked) */
+  isToggle?: boolean;
 }
 
-const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label}) => {
+const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label, isToggle}) => {
   const {colors} = useTheme();
   const [showLabel, setShowLabel] = useState(false);
   const labelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -74,6 +76,8 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label}) =
       onPressOut={handlePressOut}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={isToggle ? {checked: !!active} : undefined}
+      accessibilityHint={isToggle ? `Toggle ${label.toLowerCase()}` : undefined}
       activeOpacity={0.6}>
       <SvgIcon
         name={icon}
@@ -300,6 +304,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
               active={activeAudioTrack !== null}
               onPress={onToggleAudio}
               label={audioLabel ? `Audio (${audioLabel})` : 'Audio tracks'}
+              isToggle
             />
             <View style={styles.subtitleGroup}>
               <ToolbarBtn
@@ -307,6 +312,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
                 active={activeSubtitle !== null}
                 onPress={onToggleSubtitles}
                 label={subtitleLabel ? `Subtitles (${subtitleLabel})` : 'Subtitles'}
+                isToggle
               />
               {activeSubtitle !== null && onToggleSubtitleVisibility && (
                 <TouchableOpacity
@@ -317,7 +323,8 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
                   onPress={onToggleSubtitleVisibility}
                   activeOpacity={0.6}
                   accessibilityRole="button"
-                  accessibilityLabel="Toggle subtitle visibility">
+                  accessibilityLabel="Toggle subtitle visibility"
+                  accessibilityState={{checked: subtitleVisible}}>
                   <Text
                     style={[
                       styles.visToggleText,
@@ -333,12 +340,14 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
               active={eqEnabled}
               onPress={onToggleEq}
               label="Equalizer"
+              isToggle
             />
             <ToolbarBtn
               icon="listMusic"
               active={playlistLength > 0}
               onPress={onTogglePlaylist}
               label="Playlist"
+              isToggle
             />
             <ToolbarBtn
               icon="layoutList"
@@ -358,12 +367,14 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
               active={shuffleActive}
               onPress={onToggleShuffle}
               label="Shuffle"
+              isToggle
             />
             <ToolbarBtn
               icon="repeat"
               active={loopMode !== 'none'}
               onPress={onToggleLoop}
               label="Loop"
+              isToggle
             />
             <ToolbarBtn icon="volume" onPress={onVolume} label="Volume" />
             <ToolbarBtn icon="speed" onPress={onSpeed} label="Playback speed" />

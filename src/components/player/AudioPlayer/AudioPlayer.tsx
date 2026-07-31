@@ -58,6 +58,8 @@ export interface AudioPlayerHookData {
   errorIsPermission: boolean;
   refreshing: boolean;
   volume: number;
+  /** 46.1: accessibility scale for control sizes (1 = default, >1 = larger) */
+  controlScale?: number;
   metadata: TrackMetadata;
   chapters: Chapter[];
   lyrics: LrcLine[];
@@ -247,6 +249,7 @@ const AudioTransportDependentContent: React.FC<{
         onToggleShuffle={h.handleToggleShuffle}
         onToggleLoop={h.handleToggleLoop}
         colors={h.colors}
+        controlScale={h.controlScale ?? 1}
       />
       <AudioVolumeSlider volume={h.volume} onVolumeChange={h.handleVolumeChange} />
       <AudioActionRow

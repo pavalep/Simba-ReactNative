@@ -6,6 +6,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import {AppText} from '../components/core/AppText/AppText';
+import {logger} from '../lib/logger';
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -51,7 +52,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({errorInfo});
-    console.error('[ErrorBoundary]', error, errorInfo);
+    logger.error('[ErrorBoundary]', error, errorInfo);
   }
 
   handleRetry = () => {

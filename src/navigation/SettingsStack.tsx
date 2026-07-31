@@ -3,19 +3,25 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import type {
   AboutScreenProps,
   AudioSettingsScreenProps,
+  EqualizerScreenProps,
   FolderLinkingWizardScreenProps,
   LinkedFoldersScreenProps,
   ChangelogScreenProps,
   LicensesScreenProps,
+  PrivacyScreenProps,
+  TermsScreenProps,
 } from './types';
 import {SettingsTabParamList} from './types';
 import {SettingsScreen} from '../screens/Settings/SettingsScreen';
 import {AboutScreen} from '../screens/About/AboutScreen';
 import {AudioSettingsScreen} from '../screens/AudioSettings/AudioSettingsScreen';
+import {EqualizerScreen} from '../screens/Equalizer/EqualizerScreen';
 import {LinkedFoldersScreen} from '../screens/LinkedFolders/LinkedFoldersScreen';
 import {FolderLinkingWizard} from '../screens/FolderLinkingWizard/FolderLinkingWizard';
 import {ChangelogScreen} from '../screens/Changelog/ChangelogScreen';
 import {LicensesScreen} from '../screens/Licenses/LicensesScreen';
+import {PrivacyScreen} from '../screens/Privacy/PrivacyScreen';
+import {TermsScreen} from '../screens/Terms/TermsScreen';
 import {ScreenErrorBoundary} from '../components/feedback/ScreenErrorBoundary';
 
 const Stack = createNativeStackNavigator<SettingsTabParamList>();
@@ -28,6 +34,11 @@ const AboutRender = (props: AboutScreenProps) => (
 const AudioSettingsRender = (props: AudioSettingsScreenProps) => (
   <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
     <AudioSettingsScreen {...props} />
+  </ScreenErrorBoundary>
+);
+const EqualizerRender = (props: EqualizerScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <EqualizerScreen {...props} />
   </ScreenErrorBoundary>
 );
 const LinkedFoldersRender = (props: LinkedFoldersScreenProps) => (
@@ -48,6 +59,16 @@ const ChangelogRender = (props: ChangelogScreenProps) => (
 const LicensesRender = (props: LicensesScreenProps) => (
   <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
     <LicensesScreen {...props} />
+  </ScreenErrorBoundary>
+);
+const PrivacyRender = (props: PrivacyScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <PrivacyScreen {...props} />
+  </ScreenErrorBoundary>
+);
+const TermsRender = (props: TermsScreenProps) => (
+  <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
+    <TermsScreen {...props} />
   </ScreenErrorBoundary>
 );
 
@@ -71,6 +92,11 @@ export const SettingsStack: React.FC = () => (
       options={{animation: 'slide_from_right'}}
     />
     <Stack.Screen
+      name="Equalizer"
+      component={EqualizerRender}
+      options={{animation: 'slide_from_right'}}
+    />
+    <Stack.Screen
       name="LinkedFolders"
       component={LinkedFoldersRender}
       options={{animation: 'slide_from_right'}}
@@ -88,6 +114,16 @@ export const SettingsStack: React.FC = () => (
     <Stack.Screen
       name="Licenses"
       component={LicensesRender}
+      options={{animation: 'slide_from_right'}}
+    />
+    <Stack.Screen
+      name="Privacy"
+      component={PrivacyRender}
+      options={{animation: 'slide_from_right'}}
+    />
+    <Stack.Screen
+      name="Terms"
+      component={TermsRender}
       options={{animation: 'slide_from_right'}}
     />
   </Stack.Navigator>

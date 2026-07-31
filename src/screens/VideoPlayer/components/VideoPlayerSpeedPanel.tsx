@@ -10,7 +10,7 @@ interface Props {
   onSelect: (speed: number) => void;
 }
 
-export const VideoPlayerSpeedPanel: React.FC<Props> = ({speed, onSelect}) => {
+export const VideoPlayerSpeedPanel: React.FC<Props> = React.memo(({speed, onSelect}) => {
   const {colors} = useTheme();
 
   return (
@@ -42,7 +42,7 @@ export const VideoPlayerSpeedPanel: React.FC<Props> = ({speed, onSelect}) => {
       </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {paddingHorizontal: 20, paddingBottom: 20},

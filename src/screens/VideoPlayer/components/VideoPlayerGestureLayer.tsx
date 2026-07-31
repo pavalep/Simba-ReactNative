@@ -22,7 +22,10 @@ const VideoPlayerGestureLayer: React.FC<Props> = (props) => {
   return (
     <View
       style={StyleSheet.absoluteFill}
-      {...panHandlers}>
+      {...panHandlers}
+      accessible
+      accessibilityLabel="Video playback area"
+      accessibilityHint="Double-tap the left or right side to seek 10 seconds. Swipe up for details. Swipe down to enter picture-in-picture.">
       {children}
     </View>
   );

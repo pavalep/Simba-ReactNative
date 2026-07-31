@@ -6,6 +6,7 @@ import {useAppDispatch, useAppSelector} from '../../../store';
 import {logError} from '../../../lib/errorLogger';
 import {MpvPlayer} from '../../../native';
 import {NotificationService} from '../../../services/notificationService';
+import {applyAudioSettingsToMpv} from '../../../services/audioSettingsService';
 import {RootStackScreenProps} from '../../../navigation/types';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {savePlaybackPosition} from '../../../store/slices/sessionSlice';
@@ -34,6 +35,7 @@ import {
   pickMediaFile,
   getFileName,
   validateMediaFile,
+  getMediaType,
 } from '../../../services/fileService';
 import {readTrackMetadata, EMPTY_METADATA, TrackMetadata} from '../../../services/metadataService';
 import {loadLrc} from '../../../services/lrcService';
@@ -139,6 +141,10 @@ export function useAudioPlayerScreen(
   const allTracks = useAppSelector(selectAllTracks);
   const sessionRecent = useAppSelector(state => state.session.recentFiles);
   const sessionRecentRef = useRef(sessionRecent);
+
+  // 46.1: accessibility — larger controls scale
+  const largerControls = useAppSelector(state => state.settings.largerControls);
+  const controlScale = largerControls ? 1.18 : 1;
   const duration = MpvPlayer.getDuration?.() ?? 1;
 
   // ── Refs ──
@@ -217,6 +223,9 @@ export function useAudioPlayerScreen(
         }
 
         MpvPlayer.loadFile(fileUri);
+
+        // Phase 45: push persisted audio settings (EQ, replaygain, gapless, …)
+        applyAudioSettingsToMpv();
 
         // Re-apply the persisted playback speed (mpv resets to 1.0 on load)
         try {
@@ -413,14 +422,20 @@ export function useAudioPlayerScreen(
   const handleNext = useCallback(() => {
     if (playlist.length > 0 && currentIndex < playlist.length - 1) {
       const nextIdx = currentIndex + 1;
-      dispatch(nextTrack());
       const entry = playlist[nextIdx];
-      if (entry) MpvPlayer.loadFile(entry.uri);
+      if (!entry) return;
+      dispatch(nextTrack());
+      // 32.9 mixed-queue handoff: next item is video → seamless player swap
+      if (getMediaType(entry.uri) === 'video') {
+        navigation.replace('VideoPlayer', {fileUri: entry.uri, fileTitle: entry.title});
+        return;
+      }
+      MpvPlayer.loadFile(entry.uri);
     } else {
       const dur = MpvPlayer.getDuration?.() ?? 0;
       MpvPlayer.seekTo(dur);
     }
-  }, [playlist, currentIndex, dispatch]);
+  }, [playlist, currentIndex, dispatch, navigation]);
 
   const handleSeek = useCallback((pct: number) => {
     isSeeking.current = true;
@@ -672,6 +687,9 @@ export function useAudioPlayerScreen(
     setIsLoading,
     setRefreshing,
     setIsPlaying,
+
+    // 46.1: accessibility
+    controlScale,
 
     // Handlers
     onRefresh,

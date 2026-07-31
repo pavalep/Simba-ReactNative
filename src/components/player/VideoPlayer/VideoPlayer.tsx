@@ -19,6 +19,8 @@ import {PlaylistSheet} from '../../sheets/PlaylistSheet';
 import {QueueSheet} from '../../sheets/QueueSheet/QueueSheet';
 import {BufferingBar} from '../BufferingBar/BufferingBar';
 import {ReplayButton} from '../ReplayButton/ReplayButton';
+import {VideoPlayerResumeOverlay} from '../../../screens/VideoPlayer/components/VideoPlayerResumeOverlay';
+import {VideoPlayerAutoAdvanceCard} from '../../../screens/VideoPlayer/components/VideoPlayerAutoAdvanceCard';
 import {MpvPlayer} from '../../../native';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
@@ -34,6 +36,14 @@ export interface VideoPlayerHookData {
   // Core playback state
   secondaryVisible: boolean;
   setSecondaryVisible: (v: boolean) => void;
+  controlsLocked: boolean;
+  handleToggleLock: () => void;
+  resumePrompt: {position: number} | null;
+  autoAdvance: {uri: string; title: string} | null;
+  autoAdvanceCountdown: number;
+  handleResumeChoice: (shouldResume: boolean) => void;
+  handleAutoAdvanceNow: () => void;
+  handleCancelAutoAdvance: () => void;
   volume: number;
   nativePtr: number;
   showVideoSurface: boolean;
@@ -120,6 +130,8 @@ export interface VideoPlayerHookData {
   screenHeight: number;
   uiTopInset: number;
   uiBottomInset: number;
+  /** 46.1: accessibility scale for control sizes (1 = default, >1 = larger) */
+  controlScale?: number;
 
   // Redux
   playlist: any[];
@@ -299,7 +311,7 @@ const VideoTransportDependentContent: React.FC<{
     h.handlePushPositionRef(pushPosition);
   }, [pushPosition, h]);
 
-  // ── Primary controls fade + slide (26.8) ──────────────
+  // ── Primary controls fade + slide (26.8 / §5.3: 200ms in, 150ms out) ──
   const controlsOpacity = React.useRef(new Animated.Value(h.secondaryVisible ? 1 : 0)).current;
   const controlsTranslateY = React.useRef(new Animated.Value(h.secondaryVisible ? 0 : 60)).current;
 
@@ -307,13 +319,13 @@ const VideoTransportDependentContent: React.FC<{
     Animated.parallel([
       Animated.timing(controlsOpacity, {
         toValue: h.secondaryVisible ? 1 : 0,
-        duration: 300,
+        duration: h.secondaryVisible ? 200 : 150,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }),
       Animated.timing(controlsTranslateY, {
         toValue: h.secondaryVisible ? 0 : 60,
-        duration: 300,
+        duration: h.secondaryVisible ? 200 : 150,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }),
@@ -322,7 +334,7 @@ const VideoTransportDependentContent: React.FC<{
 
   return (
     <>
-      {h.showVideoSurface && h.pipUiVisible && (
+      {h.showVideoSurface && h.pipUiVisible && !h.controlsLocked && (
         <Animated.View style={{opacity: controlsOpacity, transform: [{translateY: controlsTranslateY}]}}>
           <h.PrimaryControls
           visible={h.secondaryVisible}
@@ -335,6 +347,7 @@ const VideoTransportDependentContent: React.FC<{
           onNext={h.handleNext}
           onSeek={h.handleSeek}
           bottomInset={h.uiBottomInset}
+          controlScale={h.controlScale ?? 1}
         />
         </Animated.View>
       )}
@@ -425,7 +438,45 @@ const VideoTransportDependentContent: React.FC<{
 const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
   const {position, duration, isPlaying, pushPosition} = useTransport();
 
-  // ── Top bar / toolbar fade + slide (26.8) ────────────
+  // ── 31.5: fade-from-black on every file load ──
+  const blackFade = React.useRef(new Animated.Value(1)).current;
+  React.useEffect(() => {
+    if (h.loadingPhase !== 'ready') {
+      blackFade.setValue(1);
+    } else {
+      Animated.timing(blackFade, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.bezier(0.4, 0, 0.2, 1),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [h.loadingPhase, blackFade]);
+
+  // ── 31.5: dimmed ambient backdrop behind sheets ──
+  const sheetOpen =
+    h.chaptersPanelOpen ||
+    h.audioPanelOpen ||
+    h.subtitlePanelOpen ||
+    h.eqPanelOpen ||
+    h.playlistPanelOpen ||
+    h.speedPanelOpen ||
+    h.volumePanelOpen ||
+    h.infoSheetVisible ||
+    h.playlistSheetVisible ||
+    h.queueSheetVisible ||
+    h.bookmarkSheetVisible;
+  const sheetDim = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    Animated.timing(sheetDim, {
+      toValue: sheetOpen ? 1 : 0,
+      duration: sheetOpen ? 200 : 150,
+      easing: Easing.bezier(0.4, 0, 0.2, 1),
+      useNativeDriver: true,
+    }).start();
+  }, [sheetOpen, sheetDim]);
+
+  // ── Top bar / toolbar fade + slide (26.8 / §5.3: 200ms in, 150ms out) ──
   const overlayOpacity = React.useRef(new Animated.Value(h.secondaryVisible ? 1 : 0)).current;
   const overlayTranslateYTop = React.useRef(new Animated.Value(h.secondaryVisible ? 0 : -60)).current;
   const overlayTranslateYBottom = React.useRef(new Animated.Value(h.secondaryVisible ? 0 : 60)).current;
@@ -434,19 +485,19 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
     Animated.parallel([
       Animated.timing(overlayOpacity, {
         toValue: h.secondaryVisible ? 1 : 0,
-        duration: 300,
+        duration: h.secondaryVisible ? 200 : 150,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }),
       Animated.timing(overlayTranslateYTop, {
         toValue: h.secondaryVisible ? 0 : -60,
-        duration: 300,
+        duration: h.secondaryVisible ? 200 : 150,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }),
       Animated.timing(overlayTranslateYBottom, {
         toValue: h.secondaryVisible ? 0 : 60,
-        duration: 300,
+        duration: h.secondaryVisible ? 200 : 150,
         easing: Easing.bezier(0.4, 0, 0.2, 1),
         useNativeDriver: true,
       }),
@@ -487,6 +538,41 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
           onBrightnessGestureEnd={h.handleBrightnessGestureEnd}
         />
 
+        {/* 31.5: cinematic fade-from-black on load (above surface, below overlays) */}
+        {h.pipUiVisible && (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.blackFade, {opacity: blackFade}]}
+          />
+        )}
+
+        {/* 31.5: dimmed ambient backdrop when any sheet is open */}
+        {h.pipUiVisible && (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.sheetDim, {opacity: sheetDim}]}
+          />
+        )}
+
+        {/* 31.2: Resume / Start Over choice on load */}
+        {h.pipUiVisible && h.resumePrompt && (
+          <VideoPlayerResumeOverlay
+            position={h.resumePrompt.position}
+            onResume={() => h.handleResumeChoice(true)}
+            onStartOver={() => h.handleResumeChoice(false)}
+          />
+        )}
+
+        {/* 31.3: Up Next in 5s auto-advance card */}
+        {h.pipUiVisible && h.autoAdvance && (
+          <VideoPlayerAutoAdvanceCard
+            title={h.autoAdvance.title}
+            countdown={h.autoAdvanceCountdown}
+            onNext={h.handleAutoAdvanceNow}
+            onCancel={h.handleCancelAutoAdvance}
+          />
+        )}
+
         <VideoTransportDependentContent
           h={h}
           position={position}
@@ -507,6 +593,8 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
               visible={h.secondaryVisible}
               onBookmark={h.handleOpenBookmarkSheet}
               bookmarkActive={h.bookmarkCountForFile > 0}
+              controlsLocked={h.controlsLocked}
+              onToggleLock={h.handleToggleLock}
             />
           </Animated.View>
         )}
@@ -525,7 +613,7 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
           onJumpTo={h.handleBookmarkJumpTo}
         />
 
-        {h.showVideoSurface && h.pipUiVisible && (
+        {h.showVideoSurface && h.pipUiVisible && !h.controlsLocked && (
           <Animated.View style={{opacity: overlayOpacity, transform: [{translateY: overlayTranslateYBottom}]}}>
             <h.SecondaryToolbar
               visible={h.secondaryVisible}
@@ -689,6 +777,16 @@ const styles = StyleSheet.create({
   },
   rotationNeutral: {
     flex: 1,
+  },
+  blackFade: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000000',
+    zIndex: 22,
+  },
+  sheetDim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    zIndex: 25,
   },
 });
 

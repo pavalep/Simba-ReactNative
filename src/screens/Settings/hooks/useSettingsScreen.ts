@@ -73,7 +73,9 @@ export function useSettingsScreen() {
   const [mpvEditorVisible, setMpvEditorVisible] = useState(false);
   const [linkedFoldersDialogVisible, setLinkedFoldersDialogVisible] = useState(false);
   const [themeDialogVisible, setThemeDialogVisible] = useState(false);
-  const [subtitleFontDialogVisible, setSubtitleFontDialogVisible] = useState(false);
+  // Phase 44: subtitle language + style dialogs (was single font-size dialog)
+  const [subtitleLanguageDialogVisible, setSubtitleLanguageDialogVisible] = useState(false);
+  const [subtitleStyleDialogVisible, setSubtitleStyleDialogVisible] = useState(false);
 
   // ── Handlers ──
   const handleLinkedFoldersPress = useCallback(() => {
@@ -85,7 +87,19 @@ export function useSettingsScreen() {
   }, []);
 
   const handleSubtitleFontPress = useCallback(() => {
-    setSubtitleFontDialogVisible(true);
+    setSubtitleStyleDialogVisible(true);
+  }, []);
+
+  const handleSubtitleLanguagePress = useCallback(() => {
+    setSubtitleLanguageDialogVisible(true);
+  }, []);
+
+  const handleSubtitleColorPress = useCallback(() => {
+    setSubtitleStyleDialogVisible(true);
+  }, []);
+
+  const handleSubtitleBgPress = useCallback(() => {
+    setSubtitleStyleDialogVisible(true);
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -207,11 +221,16 @@ export function useSettingsScreen() {
     setMpvEditorVisible,
     setLinkedFoldersDialogVisible,
     setThemeDialogVisible,
-    setSubtitleFontDialogVisible,
-    subtitleFontDialogVisible,
+    subtitleLanguageDialogVisible,
+    setSubtitleLanguageDialogVisible,
+    subtitleStyleDialogVisible,
+    setSubtitleStyleDialogVisible,
     handleLinkedFoldersPress,
     handleThemePress,
     handleSubtitleFontPress,
+    handleSubtitleLanguagePress,
+    handleSubtitleColorPress,
+    handleSubtitleBgPress,
     onRefresh,
   };
 }

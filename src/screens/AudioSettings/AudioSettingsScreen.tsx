@@ -1,11 +1,11 @@
-import React, {useCallback, useState, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
-  Alert,
   Switch,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
@@ -16,29 +16,96 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
 import {SettingsRow} from '../../components/utility/SettingsRow/SettingsRow';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
+import {OptionSheetDialog, OptionSheetOption} from '../../components/core/OptionSheetDialog/OptionSheetDialog';
+import {useAppDispatch, useAppSelector} from '../../store';
+import {
+  setSampleRate,
+  setReplayGain,
+  setGaplessPlayback,
+  setAudioDelay,
+  setEqEnabled,
+  setAudioNormalization,
+  setDialogueBoost,
+} from '../../store/slices/settingsSlice';
+import {applyAudioSettingsToMpv} from '../../services/audioSettingsService';
 
 type Props = AudioSettingsScreenProps;
 
-const AUDIO_DEVICES = ['Auto', 'Speaker', 'Headphones', 'Bluetooth'];
-const SAMPLE_RATES = ['44.1kHz', '48kHz', '96kHz', '192kHz'];
-const REPLAY_GAIN_OPTIONS = ['Off', 'Track', 'Album'];
-const EQ_PRESETS = ['Flat', 'Rock', 'Pop', 'Jazz', 'Classical', 'Dance'];
-const AUDIO_DELAYS = ['0ms', '-100ms', '+100ms', '-250ms', '+250ms'];
+const SAMPLE_RATE_OPTIONS: OptionSheetOption[] = [
+  {label: 'Auto', value: 0},
+  {label: '44.1 kHz', value: 44100},
+  {label: '48 kHz', value: 48000},
+  {label: '96 kHz', value: 96000},
+];
 
-export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) => {
+const REPLAY_GAIN_OPTIONS: OptionSheetOption[] = [
+  {label: 'Off', value: 'no'},
+  {label: 'Track', value: 'track'},
+  {label: 'Album', value: 'album'},
+];
+
+const AUDIO_DELAY_OPTIONS: OptionSheetOption[] = [
+  {label: '0 ms', value: 0},
+  {label: '−100 ms', value: -0.1},
+  {label: '+100 ms', value: 0.1},
+  {label: '−250 ms', value: -0.25},
+  {label: '+250 ms', value: 0.25},
+];
+
+type PickerKind = 'sampleRate' | 'replayGain' | 'audioDelay' | null;
+
+export const AudioSettingsScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  const dispatch = useAppDispatch();
+  const nav = useNavigation<any>();
 
-  // Local UI state for toggles and selectors
-  const [audioDevice, setAudioDevice] = useState('Auto');
-  const [sampleRate, setSampleRate] = useState('48kHz');
-  const [normalizeVolume, setNormalizeVolume] = useState(false);
-  const [dialogueBoost, setDialogueBoost] = useState(false);
-  const [replayGain, setReplayGain] = useState('Off');
-  const [enableEQ, setEnableEQ] = useState(false);
-  const [eqPreset, setEqPreset] = useState('Flat');
-  const [gaplessPlayback, setGaplessPlayback] = useState(false);
-  const [audioDelay, setAudioDelay] = useState('0ms');
+  // ── Slice state (Phase 45: all controls live in settingsSlice) ──
+  const sampleRate = useAppSelector(s => s.settings.sampleRate);
+  const replayGain = useAppSelector(s => s.settings.replayGain);
+  const gaplessPlayback = useAppSelector(s => s.settings.gaplessPlayback);
+  const audioDelay = useAppSelector(s => s.settings.audioDelay);
+  const eqEnabled = useAppSelector(s => s.settings.eqEnabled);
+  const eqPreset = useAppSelector(s => s.settings.eqPreset);
+  const normalizeVolume = useAppSelector(s => s.settings.isAudioNormalizationEnabled);
+  const dialogueBoost = useAppSelector(s => s.settings.isDialogueBoostEnabled);
+
+  const [picker, setPicker] = useState<PickerKind>(null);
+
+  // ── Push persisted audio settings to mpv whenever the screen opens ──
+  useEffect(() => {
+    applyAudioSettingsToMpv();
+  }, []);
+
+  const toggleAndApply = useCallback(
+    (next: boolean, createAction: (val: boolean) => {type: string; payload: boolean}) => {
+      dispatch(createAction(next));
+      setTimeout(applyAudioSettingsToMpv, 0);
+    },
+    [dispatch],
+  );
+
+  const selectAndApply = useCallback(
+    (value: string | number) => {
+      if (picker === 'sampleRate') {
+        dispatch(setSampleRate(Number(value)));
+      } else if (picker === 'replayGain') {
+        dispatch(setReplayGain(value as 'no' | 'track' | 'album'));
+      } else if (picker === 'audioDelay') {
+        dispatch(setAudioDelay(Number(value)));
+      }
+      setPicker(null);
+      setTimeout(applyAudioSettingsToMpv, 0);
+    },
+    [dispatch, picker],
+  );
+
+  const sampleRateLabel =
+    SAMPLE_RATE_OPTIONS.find(o => o.value === sampleRate)?.label ?? 'Auto';
+  const replayGainLabel =
+    REPLAY_GAIN_OPTIONS.find(o => o.value === replayGain)?.label ?? 'Off';
+  const audioDelayLabel =
+    AUDIO_DELAY_OPTIONS.find(o => o.value === audioDelay)?.label ?? '0 ms';
 
   const styles = useMemo(
     () =>
@@ -59,74 +126,9 @@ export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) 
           marginBottom: spacing.lg,
           overflow: 'hidden',
         },
-        header: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: spacing.lg,
-          paddingTop: spacing.md,
-          paddingBottom: spacing.sm,
-        },
-        backButton: {
-          paddingRight: spacing.lg,
-          paddingVertical: spacing.xs,
-        },
-        title: {
-          fontSize: 28,
-          fontWeight: '700',
-        },
       }),
     [colors, insets.bottom],
   );
-
-  const handleAudioDevicePress = useCallback(() => {
-    Alert.alert('Audio Device', 'Select audio output device', [
-      ...AUDIO_DEVICES.map(device => ({
-        text: device,
-        onPress: () => setAudioDevice(device),
-      })),
-      {text: 'Cancel', style: 'cancel' as const},
-    ]);
-  }, []);
-
-  const handleSampleRatePress = useCallback(() => {
-    Alert.alert('Sample Rate', 'Select audio sample rate', [
-      ...SAMPLE_RATES.map(rate => ({
-        text: rate,
-        onPress: () => setSampleRate(rate),
-      })),
-      {text: 'Cancel', style: 'cancel' as const},
-    ]);
-  }, []);
-
-  const handleReplayGainPress = useCallback(() => {
-    Alert.alert('ReplayGain', 'Select ReplayGain mode', [
-      ...REPLAY_GAIN_OPTIONS.map(option => ({
-        text: option,
-        onPress: () => setReplayGain(option),
-      })),
-      {text: 'Cancel', style: 'cancel' as const},
-    ]);
-  }, []);
-
-  const handleEQPresetPress = useCallback(() => {
-    Alert.alert('EQ Preset', 'Select equalizer preset', [
-      ...EQ_PRESETS.map(preset => ({
-        text: preset,
-        onPress: () => setEqPreset(preset),
-      })),
-      {text: 'Cancel', style: 'cancel' as const},
-    ]);
-  }, []);
-
-  const handleAudioDelayPress = useCallback(() => {
-    Alert.alert('Audio Delay', 'Select audio delay', [
-      ...AUDIO_DELAYS.map(delay => ({
-        text: delay,
-        onPress: () => setAudioDelay(delay),
-      })),
-      {text: 'Cancel', style: 'cancel' as const},
-    ]);
-  }, []);
 
   return (
     <SafeAreaView style={styles.root}>
@@ -146,22 +148,12 @@ export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) 
         <SectionHeader label="Output" />
         <View style={styles.card}>
           <SettingsRow
-            label="Audio Device"
-            description="Select audio output device"
-            onPress={handleAudioDevicePress}
-            trailing={
-              <AppText variant="caption" color="secondary">
-                {audioDevice}
-              </AppText>
-            }
-          />
-          <SettingsRow
             label="Sample Rate"
-            description="Select audio sample rate"
-            onPress={handleSampleRatePress}
+            description="Resampling rate; Auto matches the source"
+            onPress={() => setPicker('sampleRate')}
             trailing={
               <AppText variant="caption" color="secondary">
-                {sampleRate}
+                {sampleRateLabel}
               </AppText>
             }
           />
@@ -172,11 +164,13 @@ export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) 
         <View style={styles.card}>
           <SettingsRow
             label="Normalize Volume"
-            description="Automatically normalize audio volume"
+            description="Cap peaks for consistent loudness"
             trailing={
               <Switch
                 value={normalizeVolume}
-                onValueChange={setNormalizeVolume}
+                onValueChange={val =>
+                  toggleAndApply(val, setAudioNormalization)
+                }
                 trackColor={{
                   false: colors.border.subtle,
                   true: colors.accent.goldDim,
@@ -193,7 +187,9 @@ export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) 
             trailing={
               <Switch
                 value={dialogueBoost}
-                onValueChange={setDialogueBoost}
+                onValueChange={val =>
+                  toggleAndApply(val, setDialogueBoost)
+                }
                 trackColor={{
                   false: colors.border.subtle,
                   true: colors.accent.goldDim,
@@ -206,11 +202,11 @@ export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) 
           />
           <SettingsRow
             label="ReplayGain"
-            description="Select ReplayGain mode"
-            onPress={handleReplayGainPress}
+            description="Loudness normalization from track/album tags"
+            onPress={() => setPicker('replayGain')}
             trailing={
               <AppText variant="caption" color="secondary">
-                {replayGain}
+                {replayGainLabel}
               </AppText>
             }
           />
@@ -224,25 +220,25 @@ export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) 
             description="Toggle equalizer"
             trailing={
               <Switch
-                value={enableEQ}
-                onValueChange={setEnableEQ}
+                value={eqEnabled}
+                onValueChange={val =>
+                  toggleAndApply(val, setEqEnabled)
+                }
                 trackColor={{
                   false: colors.border.subtle,
                   true: colors.accent.goldDim,
                 }}
-                thumbColor={
-                  enableEQ ? colors.accent.gold : colors.text.tertiary
-                }
+                thumbColor={eqEnabled ? colors.accent.gold : colors.text.tertiary}
               />
             }
           />
           <SettingsRow
             label="Preset"
-            description="Select EQ preset"
-            onPress={handleEQPresetPress}
+            description="Open the 10-band equalizer"
+            onPress={() => nav.navigate('Equalizer')}
             trailing={
-              <AppText variant="caption" color="secondary">
-                {eqPreset}
+              <AppText variant="caption" color="accent">
+                {eqPreset} ›
               </AppText>
             }
           />
@@ -257,7 +253,9 @@ export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) 
             trailing={
               <Switch
                 value={gaplessPlayback}
-                onValueChange={setGaplessPlayback}
+                onValueChange={val =>
+                  toggleAndApply(val, setGaplessPlayback)
+                }
                 trackColor={{
                   false: colors.border.subtle,
                   true: colors.accent.goldDim,
@@ -271,15 +269,43 @@ export const AudioSettingsScreen: React.FC<Props> = ({navigation: _navigation}) 
           <SettingsRow
             label="Audio Delay"
             description="Adjust audio synchronization delay"
-            onPress={handleAudioDelayPress}
+            onPress={() => setPicker('audioDelay')}
             trailing={
               <AppText variant="caption" color="secondary">
-                {audioDelay}
+                {audioDelayLabel}
               </AppText>
             }
           />
         </View>
       </ScrollView>
+
+      <OptionSheetDialog
+        visible={picker === 'sampleRate'}
+        title="Sample Rate"
+        options={SAMPLE_RATE_OPTIONS}
+        selectedValue={sampleRate}
+        onSelect={selectAndApply}
+        onClose={() => setPicker(null)}
+        colors={colors}
+      />
+      <OptionSheetDialog
+        visible={picker === 'replayGain'}
+        title="ReplayGain"
+        options={REPLAY_GAIN_OPTIONS}
+        selectedValue={replayGain}
+        onSelect={selectAndApply}
+        onClose={() => setPicker(null)}
+        colors={colors}
+      />
+      <OptionSheetDialog
+        visible={picker === 'audioDelay'}
+        title="Audio Delay"
+        options={AUDIO_DELAY_OPTIONS}
+        selectedValue={audioDelay}
+        onSelect={selectAndApply}
+        onClose={() => setPicker(null)}
+        colors={colors}
+      />
     </SafeAreaView>
   );
 };

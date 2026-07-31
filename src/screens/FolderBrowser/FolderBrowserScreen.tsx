@@ -21,6 +21,7 @@ import {addItemToPlaylist, createPlaylist} from '../../store/slices/playlistSlic
 import {PlaylistContextMenu} from '../../components/playlist/PlaylistContextMenu';
 import {PlaylistCreateModal} from '../../components/playlist/PlaylistCreateModal';
 import {useToast} from '../../components/feedback/Toast/Toast';
+import {logger} from '../../lib/logger';
 import {useAppDispatch, useAppSelector} from '../../store';
 import type {Playlist, PlaylistItem, PlaylistKind} from '../../types/playlist';
 
@@ -111,7 +112,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         });
       setItems(filtered);
     } catch (err: any) {
-      console.warn('FolderBrowser readDir error:', err);
+      logger.warn('FolderBrowser readDir error:', err);
       setError(err.message || 'Unable to read directory');
       setItems([]);
     } finally {

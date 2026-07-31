@@ -131,7 +131,7 @@ const SwipeableRow: React.FC<{
 
 // ─── Component ───────────────────────────────────────────────
 
-export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> = ({
+export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> = React.memo(({
   playlist,
   currentIndex,
   onPlayFromPlaylist,
@@ -287,4 +287,4 @@ export const VideoPlayerPlaylistPanel: React.FC<VideoPlayerPlaylistPanelProps> =
       )}
     </ScrollView>
   );
-};
+});

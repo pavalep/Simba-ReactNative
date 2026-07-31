@@ -68,6 +68,19 @@ const SeekBar: React.FC<SeekBarProps> = ({
   const positionFrac = duration > 0 ? Math.min(position / duration, 1) : 0;
   const displayFraction = isScrubbing ? scrubFraction : positionFrac;
 
+  // ── Scrub preview bubble (31.4): live time + active chapter while dragging ──
+  const scrubTime = scrubFraction * durationSec;
+  const activeChapterTitle = useMemo(() => {
+    if (!chapters || chapters.length === 0) return null;
+    let current: string | null = null;
+    for (const ch of chapters) {
+      if (ch.startTime <= scrubTime && ch.title) {
+        current = ch.title;
+      }
+    }
+    return current;
+  }, [chapters, scrubTime]);
+
   // ── Chapter marks pulse animation ──
   useEffect(() => {
     if (!chapters || chapters.length === 0) return;
@@ -214,6 +227,34 @@ const SeekBar: React.FC<SeekBarProps> = ({
           justifyContent: 'center',
           marginLeft: -10,
         },
+        scrubBubbleWrap: {
+          position: 'absolute',
+          bottom: trackHeight + 10,
+          width: 0,
+          alignItems: 'center',
+          zIndex: 6,
+        },
+        scrubBubble: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          minWidth: 56,
+          maxWidth: 168,
+          paddingHorizontal: 10,
+          paddingVertical: 5,
+          borderRadius: 10,
+          backgroundColor: 'rgba(10, 10, 14, 0.92)',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.14)',
+        },
+        scrubBubbleTime: {
+          fontWeight: '700',
+          fontVariant: ['tabular-nums'],
+        },
+        scrubBubbleChapter: {
+          flexShrink: 1,
+          opacity: 0.85,
+        },
         timeLabel: {
           minWidth: 40,
           textAlign: 'center',
@@ -278,6 +319,31 @@ const SeekBar: React.FC<SeekBarProps> = ({
             </TouchableOpacity>
           );
         })}
+
+        {/* Scrub preview bubble (31.4): floats above the thumb while dragging */}
+        {isScrubbing && (
+          <View
+            pointerEvents="none"
+            style={[
+              styles.scrubBubbleWrap,
+              {left: `${Math.max(6, Math.min(94, displayFraction * 100))}%`},
+            ]}>
+            <View style={styles.scrubBubble}>
+              <AppText variant="caption" color="accent" style={styles.scrubBubbleTime}>
+                {fmt(scrubFraction * durationSec)}
+              </AppText>
+              {activeChapterTitle && (
+                <AppText
+                  variant="caption"
+                  color="primary"
+                  numberOfLines={1}
+                  style={styles.scrubBubbleChapter}>
+                  {activeChapterTitle}
+                </AppText>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Thumb */}
         {displayFraction > 0 && (

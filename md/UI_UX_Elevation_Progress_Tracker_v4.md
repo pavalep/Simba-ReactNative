@@ -45,15 +45,15 @@ WAVE 13: Linking, Flows & Release ───── Phases 56-60  (Share/deep link
 | WAVE 3 | 11-15 | 5 | **5** | **0** | 0 | ✅ COMPLETE |
 | WAVE 4 | 16-20 | 5 | **5** | 0 | 0 | ✅ COMPLETE |
 | WAVE 5 | 21-25 | 5 | **5** | 0 | 0 | ✅ COMPLETE |
-| WAVE 6 | 26-30 | 5 | **4** | 0 | 1 | 🟡 PARTIAL |
-| WAVE 7 | 31-32 | 2 | 0 | 0 | **2** | ⚪ NOT STARTED |
+| WAVE 6 | 26-30 | 5 | **4** | 1 | 0 | 🟡 PARTIAL |
+| WAVE 7 | 31-32 | 2 | 0 | **2** | 0 | 🟡 PARTIAL |
 | WAVE 8 | 33-37 | 5 | 0 | 0 | **5** | ⚪ NOT STARTED |
 | WAVE 9 | 38-41 | 4 | 0 | 0 | **4** | ⚪ NOT STARTED |
 | WAVE 10 | 42-46 | 5 | 0 | 0 | **5** | ⚪ NOT STARTED |
 | WAVE 11 | 47-51 | 5 | 0 | 0 | **5** | ⚪ NOT STARTED |
 | WAVE 12 | 52-55 | 4 | 0 | 0 | **4** | ⚪ NOT STARTED |
 | WAVE 13 | 56-60 | 5 | 0 | 0 | **5** | ⚪ NOT STARTED |
-| **TOTAL** | 0-60 (+3A) | **65** | **34 phases** | **0 phases** | **31 phases** | 🟡 PARTIAL |
+| **TOTAL** | 0-60 (+3A) | **65** | **34 phases** | **3 phases** | **28 phases** | 🟡 PARTIAL |
 
 **Codebase Audit Summary:** ~35 checklist items across 13 phases have partial pre-existing implementations (mostly screen shells, basic controls, and existing utilities).
 
@@ -839,21 +839,21 @@ JAMENDO_CLIENT_ID=your_jamendo_client_id_here
 ---
 
 ### Phase 30 — Production Audit & Cleanup
-**Status:** ⚪ NOT STARTED (0/10)  
+**Status:** 🟡 PARTIAL (3/10 — code checks run; device/remaining checks open)  
 **Spec Ref:** Phase 30 (v4 spec)
 
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
-| 30.1 | No inline styles in any component file | ⚪ | |
-| 30.2 | No React key warnings in any screen | ⚪ | |
-| 30.3 | No unused imports in any file | ⚪ | |
-| 30.4 | All colors use theme tokens (no hex strings outside theme/) | ⚪ | |
+| 30.1 | No inline styles in any component file | 🔶 | 13 warnings remain (eslint react-native/no-inline-styles) — mostly AudioPlayer components |
+| 30.2 | No React key warnings in any screen | ⚪ | Needs on-device run |
+| 30.3 | No unused imports in any file | ✅ | eslint 0 errors on tsc + eslint run 2026-07-31 |
+| 30.4 | All colors use theme tokens (no hex strings outside theme/) | ⚪ | Audit: hardcoded colors in 8 files |
 | 30.5 | All spacing uses spacing tokens (4pt grid) | ⚪ | |
 | 30.6 | All text uses typography tokens (variant props) | ⚪ | |
-| 30.7 | No console.log in production code | ⚪ | |
+| 30.7 | No console.log in production code | 🔶 | apiClient.ts:24 `[API]` debug log; other logs go through lib/logger.ts |
 | 30.8 | All files follow naming convention: PascalCase for components, camelCase for hooks/services | ⚪ | |
-| 30.9 | No dead code (commented-out blocks, unused functions) | ⚪ | |
-| 30.10 | Bundle size check: ensure no bloated dependencies | ⚪ | |
+| 30.9 | No dead code (commented-out blocks, unused functions) | ⚪ | Audit: searchAggregator.ts dead code known |
+| 30.10 | Bundle size check: ensure no bloated dependencies | ⚪ | Needs release build inspection |
 
 ---
 
@@ -863,44 +863,44 @@ JAMENDO_CLIENT_ID=your_jamendo_client_id_here
 > **Source:** Player UX audit 2026-07-31 — VideoPlayer already strong (all core controls + gestures wired); AudioPlayer gaps: non-functional sleep timer, missing speed control, MiniAudioPlayer 36×36 touch targets.
 
 ### Phase 31 — Video Player Netflix-Grade Refinement
-**Status:** ⚪ NOT STARTED (0/10)  
+**Status:** 🟡 PARTIAL (9/10 — lock, error, a11y, resume, auto-advance, scrub preview, mood, perf, handoff done)  
 **Spec Ref:** Phase 31 (v4 spec, Wave 7)  
 **Dependencies:** Phases 6-10 (VideoPlayer), Phase 29 (verified flows)  
-**Files:** useVideoPlayerScreen.ts, VideoPlayer.tsx, SecondaryToolbar.tsx, PrimaryControls.tsx, SeekBar, playerSlice.ts
+**Files:** useVideoPlayerScreen.ts, VideoPlayer.tsx, VideoPlayerTopBar.tsx, SecondaryToolbar.tsx, VideoPlayerGestureLayer.tsx
 
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
-| 31.1 | Lock controls: padlock toggle — locked state ignores all touches/gestures except unlock chip | ⚪ | Audit: no lock mechanism exists |
-| 31.2 | Netflix-style resume: "Resume from MM:SS / Start Over" choice overlay when saved position exists | ⚪ | Currently silent auto-seek |
-| 31.3 | Auto-advance: end-of-video "Next in 5s" countdown card with thumbnail + Cancel | ⚪ | |
-| 31.4 | Scrub preview: timestamp + chapter-title bubble while scrubbing; ActivityOrb on buffering stalls | ⚪ | |
-| 31.5 | Cinematic mood: fade-from-black on load, dimmed backdrop behind sheets, §5.3 fade timings | ⚪ | |
-| 31.6 | Friendly error card (Retry/Back) replaces Alert.alert; error boundary wraps player surface | ⚪ | Audit: Alert at useVideoPlayerScreen.ts:732 |
-| 31.7 | Accessibility: accessibilityState on toggles; accessibilityHint for double-tap/swipe gestures | ⚪ | Audit: both missing |
-| 31.8 | Performance: memoize derived values in useVideoPlayerScreen; throttle position re-renders; 60fps | ⚪ | Hook is 1500+ lines |
-| 31.9 | Mixed-queue handoff (video→audio): replace-navigate to AudioPlayer when next item is audio | ⚪ | No handoff logic exists |
-| 31.10 | Gate: every control ≤ 2 taps; tsc + eslint exit 0; on-device smoothness pass | ⚪ | |
+| 31.1 | Lock controls: padlock toggle — locked state ignores all touches/gestures except unlock chip | ✅ | FIXED: padlock chip in TopBar (lock placed top-right for Netflix-style reachability); locked state blocks play/pause, double-tap seek, swipes, volume/brightness gestures; surface tap only reveals top bar |
+| 31.2 | Netflix-style resume: "Resume from MM:SS / Start Over" choice overlay when saved position exists | ✅ | FIXED: VideoPlayerResumeOverlay (scrim + card, zIndex 40); explicit route startPosition still silent-seeks; implicit saved position pauses + asks; Resume seeks + plays, Start Over plays from 0 |
+| 31.3 | Auto-advance: end-of-video "Next in 5s" countdown card with thumbnail + Cancel | ✅ | FIXED: VideoPlayerAutoAdvanceCard (top-right, zIndex 30, live-region polite); 5→0s interval then handleNext (inherits mixed-queue handoff); ✕ Cancel → replay; only when queue has a next video |
+| 31.4 | Scrub preview: timestamp + chapter-title bubble while scrubbing; ActivityOrb on buffering stalls | ✅ | FIXED: SeekBar scrub bubble (live time + active chapter title, clamped on-screen); BufferingBar upgraded to centered ActivityOrb + "Buffering…" label over video, shimmer bar kept below seek bar |
+| 31.5 | Cinematic mood: fade-from-black on load, dimmed backdrop behind sheets, §5.3 fade timings | ✅ | FIXED: blackFade overlay (400ms out on ready); sheetDim rgba(0,0,0,0.45) behind all 11 sheets/panels; all control fade/slide timings 200ms in / 150ms out |
+| 31.6 | Friendly error card (Retry/Back) replaces Alert.alert; error boundary wraps player surface | ✅ | FIXED: in-player error card already present (VideoPlayer.tsx); raw Alert at useVideoPlayerScreen → non-blocking Toast; route already wrapped in ScreenErrorBoundary |
+| 31.7 | Accessibility: accessibilityState on toggles; accessibilityHint for double-tap/swipe gestures | ✅ | FIXED: accessibilityState on audio/subtitles/EQ/playlist/shuffle/loop toggles + subtitle-visibility + rotate; gesture hint on surface layer |
+| 31.8 | Performance: memoize derived values in useVideoPlayerScreen; throttle position re-renders; 60fps | ✅ | FIXED: relatedTracks/errorStyles/labels already useMemo'd; all 6 heavy panels (Audio/Subtitle/EQ/Volume/Speed/Playlist) wrapped in React.memo — skip re-render on position ticks; SeekBar already memo'd |
+| 31.9 | Mixed-queue handoff (video→audio): replace-navigate to AudioPlayer when next item is audio | ✅ | FIXED: handleNext + onEndReached check getMediaType(next.uri) → navigation.replace('AudioPlayer') — no stack growth |
+| 31.10 | Gate: every control ≤ 2 taps; tsc + eslint exit 0; on-device smoothness pass | 🔶 | tsc + eslint exit 0 (2026-07-31); on-device pass pending |
 
 ---
 
 ### Phase 32 — Audio Player Spotify-Grade Refinement
-**Status:** ⚪ NOT STARTED (0/10)  
+**Status:** 🟡 PARTIAL (7/10 — mini player, sleep timer, speed, gestures, a11y, lyrics, handoff done)  
 **Spec Ref:** Phase 32 (v4 spec, Wave 7)  
 **Dependencies:** Phases 11-15 (AudioPlayer + MiniAudioPlayer), Phase 29 (verified flows)  
-**Files:** useAudioPlayerScreen.ts, AudioPlayer.tsx, AudioSubMenu.tsx, MiniAudioPlayer.tsx, LyricsQueuePanel, playerSlice.ts
+**Files:** useAudioPlayerScreen.ts, AudioPlayer.tsx, AudioSubMenu.tsx, MiniAudioPlayer.tsx, LyricsQueuePanel, TransportContext.tsx
 
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
-| 32.1 | MiniAudioPlayer touch targets ≥ 44×44 (currently 36×36 — fails WCAG 2.1 AA) | ⚪ | Audit CRITICAL |
-| 32.2 | Functional sleep timer: real countdown → pause at zero; remaining-time badge; cancel | ⚪ | Audit CRITICAL: UI exists, does nothing |
-| 32.3 | Playback speed control 0.5×–2.0× in AudioSubMenu wired to MpvPlayer.setSpeed | ⚪ | Audit HIGH: missing entirely |
-| 32.4 | MiniAudioPlayer gestures: swipe-down dismiss; swipe left/right next/prev | ⚪ | Audit HIGH |
-| 32.5 | Accessibility: accessibilityState for shuffle/repeat/like; announce track changes | ⚪ | |
+| 32.1 | MiniAudioPlayer touch targets ≥ 44×44 (currently 36×36 — fails WCAG 2.1 AA) | ✅ | FIXED: all buttons ≥ 44×44 with proportional layout |
+| 32.2 | Functional sleep timer: real countdown → pause at zero; remaining-time badge; cancel | ✅ | FIXED: sleepTimerEndTime in playerSlice + global 1s countdown in TransportContext → pause + state reset; badge on MiniAudioPlayer; cancel in AudioSubMenu |
+| 32.3 | Playback speed control 0.5×–2.0× in AudioSubMenu wired to MpvPlayer.setSpeed | ✅ | FIXED: selector wired to setSpeed; persists per session (applied on file load) |
+| 32.4 | MiniAudioPlayer gestures: swipe-down dismiss; swipe left/right next/prev | ✅ | FIXED: PanResponder — down dismisses (stops + clears), left/right next/prev |
+| 32.5 | Accessibility: accessibilityState for shuffle/repeat/like; announce track changes | ✅ | FIXED: accessibilityState + labels on transport toggles |
 | 32.6 | Spotify mood: dynamic gradient per track change (600ms), marquee titles, art cross-fade | ⚪ | Gradient partially exists (AudioGradientBg) |
 | 32.7 | Instant-feel transitions: preload next track art/metadata; transport < 100ms perceived | ⚪ | |
-| 32.8 | Lyrics perf: per-line memoization — only active line re-renders on position tick | ⚪ | Audit: full panel re-renders per tick |
-| 32.9 | Mixed-queue handoff (audio→video): replace-navigate to VideoPlayer when next item is video | ⚪ | No handoff logic exists |
-| 32.10 | Gate: Spotify-parity checklist on device; tsc + eslint exit 0 | ⚪ | |
+| 32.8 | Lyrics perf: per-line memoization — only active line re-renders on position tick | ✅ | FIXED: LyricLineRow React.memo — only active line re-renders |
+| 32.9 | Mixed-queue handoff (audio→video): replace-navigate to VideoPlayer when next item is video | ✅ | FIXED: handleNext checks getMediaType(next.uri) → navigation.replace('VideoPlayer') — no stack growth |
+| 32.10 | Gate: Spotify-parity checklist on device; tsc + eslint exit 0 | 🔶 | tsc + eslint exit 0 (2026-07-31); device checklist pending |
 
 ---
 
@@ -1478,9 +1478,9 @@ JAMENDO_CLIENT_ID=your_jamendo_client_id_here
 | Metric | Current | Target |
 |---|---|---|
 | App maturity | ~10% | Shippable beta |
-| Checklist items (Phases 0-32) | 0/320 ✅ | 320/320 ✅ |
+| Checklist items (Phases 0-32) | 16/320 ✅ | 320/320 ✅ |
 | Checklist items (Phases 33-60) | 0/224 | 224/224 |
-| Phases complete | 34/65 | 65/65 |
+| Phases complete | 34 done + 3 partial (30, 31, 32)/65 | 65/65 |
 | Waves complete | 6/14 | 14/14 |
 | API integrations (services) | 12/12 | 12/12 |
 | API services with live consumers | 2/9 | 9/9 |

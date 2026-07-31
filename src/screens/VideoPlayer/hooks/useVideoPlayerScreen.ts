@@ -3,13 +3,13 @@ import {
   BackHandler,
   Platform,
   StatusBar,
-  Alert,
   useWindowDimensions,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {MpvPlayer, MpvChapter, MpvTrack, ScreenBrightness} from '../../../native';
 import {logError} from '../../../lib/errorLogger';
+import {logger} from '../../../lib/logger';
 import {NotificationService} from '../../../services/notificationService';
 import type {RootStackScreenProps} from '../../../navigation/types';
 import {useHaptics} from '../../../hooks/useHaptics';
@@ -23,8 +23,17 @@ import {
   getMediaType,
 } from '../../../services/fileService';
 import {loadSubtitleSettings, saveSubtitleSettings} from '../../../services/subtitleSettingsService';
+import {useToast} from '../../../components/feedback/Toast/Toast';
 import {useAppDispatch, useAppSelector} from '../../../store';
 import {savePlaybackPosition} from '../../../store/slices/sessionSlice';
+import {
+  setSubtitleFontSize as setSliceSubtitleFontSize,
+  setSubtitleTextColor as setSliceSubtitleTextColor,
+  setSubtitleBackgroundOpacity as setSliceSubtitleBgOpacity,
+  setEqGains,
+  setEqEnabled,
+  setEqPreset,
+} from '../../../store/slices/settingsSlice';
 import {useBookmarks} from '../../../hooks/useBookmarks';
 import {
   addToPlaylist,
@@ -49,18 +58,11 @@ import {
 import {readTrackMetadata} from '../../../services/metadataService';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
-import {EQ_BANDS, EQ_PRESETS} from '../components/VideoPlayerEqualizerPanel';
+import {EQ_PRESETS, buildAfFilter} from '../../../services/audioSettingsService';
 
 // ── Helpers ──
 
 const FLAT = EQ_PRESETS.Flat;
-
-/** Build mpv audio filter string from 10 gain values */
-function buildEqFilter(gains: number[]): string {
-  return gains
-    .map((gain, i) => `equalizer=f=${EQ_BANDS[i].freq}:t=h:w=1.0:g=${gain}`)
-    .join(',');
-}
 
 // ── Hook ──
 
@@ -71,6 +73,7 @@ export function useVideoPlayerScreen(
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const haptics = useHaptics();
+  const toast = useToast();
   const dispatch = useAppDispatch();
 
   // ── Route params ──
@@ -82,6 +85,12 @@ export function useVideoPlayerScreen(
   const [secondaryVisible, setSecondaryVisible] = useState(true);
   // ── Lock controls (31.1): locked state ignores touches/gestures ──
 const [controlsLocked, setControlsLocked] = useState(false);
+  // ── Resume prompt (31.2) + auto-advance card (31.3) ──
+const [resumePrompt, setResumePrompt] = useState<{position: number} | null>(null);
+const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | null>(null);
+  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState(5);
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoAdvanceCountdownRef = useRef(5);
   const [volume, setVolume] = useState(65);
   const [nativePtr, setNativePtr] = useState(0);
   const [showVideoSurface, setShowVideoSurface] = useState(true);
@@ -142,9 +151,10 @@ const [controlsLocked, setControlsLocked] = useState(false);
     remove: removeBookmarkEntry,
   } = useBookmarks(fileUriForHook);
 
-  // ── Equalizer state ──
-  const [eqGains, setEqGains] = useState<number[]>([...FLAT]);
-  const [eqEnabled, setEqEnabled] = useState(false);
+  // ── Equalizer state (Phase 45: settings slice is the source of truth) ──
+  const eqGains = useAppSelector(s => s.settings.eqGains);
+  const eqEnabled = useAppSelector(s => s.settings.eqEnabled);
+  const dialogueBoost = useAppSelector(s => s.settings.isDialogueBoostEnabled);
   const [eqPanelOpen, setEqPanelOpen] = useState(false);
 
   // ── Playlist state ──
@@ -205,6 +215,35 @@ const [controlsLocked, setControlsLocked] = useState(false);
   const allTracks = useAppSelector(selectAllTracks);
   const playerCurrentPosition = useAppSelector(state => state.player.currentPosition);
   const playerDuration = useAppSelector(state => state.player.duration);
+
+  // 44.6: settings slice is the source of truth for subtitle style; ref mirrors it for load-time mpv props
+  const sliceSubtitleFontSize = useAppSelector(state => state.settings.subtitleFontSize);
+  const sliceSubtitleTextColor = useAppSelector(state => state.settings.subtitleTextColor);
+  const sliceSubtitleBgOpacity = useAppSelector(state => state.settings.subtitleBackgroundOpacity);
+  const preferredLanguages = useAppSelector(state => state.settings.preferredLanguages);
+  const subtitleSliceRef = useRef({
+    fontSize: sliceSubtitleFontSize,
+    textColor: sliceSubtitleTextColor,
+    bgOpacity: sliceSubtitleBgOpacity,
+    languages: preferredLanguages,
+  });
+  useEffect(() => {
+    subtitleSliceRef.current = {
+      fontSize: sliceSubtitleFontSize,
+      textColor: sliceSubtitleTextColor,
+      bgOpacity: sliceSubtitleBgOpacity,
+      languages: preferredLanguages,
+    };
+  }, [sliceSubtitleFontSize, sliceSubtitleTextColor, sliceSubtitleBgOpacity, preferredLanguages]);
+
+  // 46.1: accessibility — larger controls scale + high-contrast subtitle override
+  const largerControls = useAppSelector(s => s.settings.largerControls);
+  const controlScale = largerControls ? 1.18 : 1;
+  const highContrastSubtitles = useAppSelector(s => s.settings.highContrastSubtitles);
+  const highContrastRef = useRef(highContrastSubtitles);
+  useEffect(() => {
+    highContrastRef.current = highContrastSubtitles;
+  }, [highContrastSubtitles]);
 
   // ── Derive related tracks for InfoSheet (Phase 8) ──
   const relatedTracks = useMemo(() => {
@@ -292,15 +331,16 @@ const [controlsLocked, setControlsLocked] = useState(false);
   useEffect(() => { sessionRecentRef.current = sessionRecent; }, [sessionRecent]);
   useEffect(() => { loadingPhaseRef.current = loadingPhase; }, [loadingPhase]);
 
-  // ── Load persisted subtitle settings on mount ──
+  // ── Load persisted subtitle settings on mount (slice is source of truth; service is fallback) ──
   useEffect(() => {
     (async () => {
       const settings = await loadSubtitleSettings();
-      setSubtitleFontSize(settings.fontSize);
+      const slice = subtitleSliceRef.current;
+      setSubtitleFontSize(slice.fontSize < 20 ? 'small' : slice.fontSize > 30 ? 'large' : 'medium');
       setSubtitleOpacity(settings.opacity);
       setSubtitlePosition(settings.position);
-      setSubtitleTextColor(settings.textColor);
-      setSubtitleBgOpacity(settings.bgOpacity);
+      setSubtitleTextColor(slice.textColor || settings.textColor);
+      setSubtitleBgOpacity(slice.bgOpacity);
     })();
   }, []);
 
@@ -459,6 +499,65 @@ const [controlsLocked, setControlsLocked] = useState(false);
     }
   }, [playlist, currentIndex, dispatch, navigation]);
 
+  // ── 31.2: Resume / Start Over choice on load ──
+  const handleResumeChoice = useCallback(
+    (shouldResume: boolean) => {
+      if (!resumePrompt) return;
+      const pos = resumePrompt.position;
+      setResumePrompt(null);
+      if (shouldResume && pos > 1) {
+        resumeTargetRef.current = pos;
+        MpvPlayer.seekTo(pos);
+      }
+      MpvPlayer.resume();
+    },
+    [resumePrompt],
+  );
+
+  // ── 31.3: "Up Next in 5s" auto-advance countdown ──
+  const startAutoAdvance = useCallback(
+    (entry: PlaylistEntry) => {
+      if (autoAdvanceTimerRef.current) {
+        clearInterval(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+      autoAdvanceCountdownRef.current = 5;
+      setAutoAdvanceCountdown(5);
+      setAutoAdvance({uri: entry.uri, title: entry.title});
+      autoAdvanceTimerRef.current = setInterval(() => {
+        autoAdvanceCountdownRef.current -= 1;
+        setAutoAdvanceCountdown(autoAdvanceCountdownRef.current);
+        if (autoAdvanceCountdownRef.current <= 0) {
+          if (autoAdvanceTimerRef.current) {
+            clearInterval(autoAdvanceTimerRef.current);
+            autoAdvanceTimerRef.current = null;
+          }
+          setAutoAdvance(null);
+          handleNext();
+        }
+      }, 1000);
+    },
+    [handleNext],
+  );
+
+  const handleAutoAdvanceNow = useCallback(() => {
+    if (autoAdvanceTimerRef.current) {
+      clearInterval(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvance(null);
+    handleNext();
+  }, [handleNext]);
+
+  const handleCancelAutoAdvance = useCallback(() => {
+    if (autoAdvanceTimerRef.current) {
+      clearInterval(autoAdvanceTimerRef.current);
+      autoAdvanceTimerRef.current = null;
+    }
+    setAutoAdvance(null);
+    setShowReplay(true);
+  }, []);
+
   const handleSeek = useCallback((pct: number) => {
     isSeeking.current = true;
     const target = pct * (MpvPlayer.getDuration?.() ?? 1);
@@ -541,7 +640,7 @@ const [controlsLocked, setControlsLocked] = useState(false);
     setSeekFeedbackVisible(true);
     if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
     overlayHideTimer.current = setTimeout(() => setSeekFeedbackVisible(false), 1000);
-  }, []);
+  }, [controlsLocked]);
 
   const handleDoubleTapRight = useCallback(() => {
     if (controlsLocked) return;
@@ -551,7 +650,7 @@ const [controlsLocked, setControlsLocked] = useState(false);
     setSeekFeedbackVisible(true);
     if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
     overlayHideTimer.current = setTimeout(() => setSeekFeedbackVisible(false), 1000);
-  }, []);
+  }, [controlsLocked]);
 
   const handleSwipeUp = useCallback(() => {
     if (controlsLocked) return;
@@ -608,7 +707,7 @@ const [controlsLocked, setControlsLocked] = useState(false);
     setVolumeOverlayVisible(true);
     if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
     overlayHideTimer.current = setTimeout(() => setVolumeOverlayVisible(false), 1500);
-  }, []);
+  }, [controlsLocked]);
 
   const handleBrightnessSwipe = useCallback((delta: number) => {
     if (controlsLocked) return;
@@ -620,7 +719,7 @@ const [controlsLocked, setControlsLocked] = useState(false);
     setBrightnessOverlayVisible(true);
     if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
     overlayHideTimer.current = setTimeout(() => setBrightnessOverlayVisible(false), 1500);
-  }, []);
+  }, [controlsLocked]);
 
   const handleVolumeGestureEnd = useCallback(() => {
     // Auto-hide timer already set in handleVolumeSwipe
@@ -669,9 +768,11 @@ const [controlsLocked, setControlsLocked] = useState(false);
 
   const handleFontSizeChange = useCallback((size: 'small' | 'medium' | 'large') => {
     setSubtitleFontSize(size);
-    MpvPlayer.setProperty('sub-font-size', size === 'small' ? 22 : size === 'large' ? 38 : 30);
+    const px = size === 'small' ? 22 : size === 'large' ? 38 : 30;
+    MpvPlayer.setProperty('sub-font-size', px);
+    dispatch(setSliceSubtitleFontSize(px));
     saveSubtitleSettings({fontSize: size});
-  }, []);
+  }, [dispatch]);
 
   const handleOpacityChange = useCallback((opacity: number) => {
     setSubtitleOpacity(opacity);
@@ -689,13 +790,16 @@ const [controlsLocked, setControlsLocked] = useState(false);
   const handleTextColorChange = useCallback((color: string) => {
     setSubtitleTextColor(color);
     MpvPlayer.setProperty('sub-color', color);
+    dispatch(setSliceSubtitleTextColor(color));
     saveSubtitleSettings({textColor: color});
-  }, []);
+  }, [dispatch]);
 
   const handleBgOpacityChange = useCallback((opacity: number) => {
     setSubtitleBgOpacity(opacity);
+    MpvPlayer.setProperty('sub-bg-opacity', opacity);
+    dispatch(setSliceSubtitleBgOpacity(opacity));
     saveSubtitleSettings({bgOpacity: opacity});
-  }, []);
+  }, [dispatch]);
 
   // ── Audio track ──
   const handleSelectAudioTrack = useCallback((trackId: number | null) => {
@@ -710,38 +814,36 @@ const [controlsLocked, setControlsLocked] = useState(false);
 
   // ── Equalizer ──
   const handleBandChange = useCallback((index: number, value: number) => {
-    setEqGains(prev => {
-      const next = [...prev];
-      next[index] = value;
-      if (eqEnabled) {
-        MpvPlayer.setProperty('af', buildEqFilter(next));
-      }
-      return next;
-    });
-  }, [eqEnabled]);
+    const next = [...eqGains];
+    next[index] = value;
+    dispatch(setEqGains(next));
+    if (eqEnabled) {
+      MpvPlayer.setProperty('af', buildAfFilter(next, dialogueBoost));
+    }
+  }, [eqGains, eqEnabled, dialogueBoost, dispatch]);
 
   const handleApplyPreset = useCallback((name: string) => {
     const preset = EQ_PRESETS[name];
     if (!preset) return;
-    setEqGains([...preset]);
+    dispatch(setEqPreset(name));
+    dispatch(setEqGains([...preset]));
     if (eqEnabled) {
-      MpvPlayer.setProperty('af', buildEqFilter(preset));
+      MpvPlayer.setProperty('af', buildAfFilter(preset, dialogueBoost));
     }
-  }, [eqEnabled]);
+  }, [eqEnabled, dialogueBoost, dispatch]);
 
   const handleResetEq = useCallback(() => {
-    setEqGains([...FLAT]);
-    MpvPlayer.setProperty('af', buildEqFilter(FLAT));
-    setEqEnabled(false);
-  }, []);
+    dispatch(setEqGains([...FLAT]));
+    dispatch(setEqPreset('Flat'));
+    MpvPlayer.setProperty('af', '');
+    dispatch(setEqEnabled(false));
+  }, [dispatch]);
 
   const handleToggleEq = useCallback(() => {
-    setEqEnabled(p => {
-      const next = !p;
-      MpvPlayer.setProperty('af', next ? buildEqFilter(eqGains) : '');
-      return next;
-    });
-  }, [eqGains]);
+    const next = !eqEnabled;
+    dispatch(setEqEnabled(next));
+    MpvPlayer.setProperty('af', next ? buildAfFilter(eqGains, dialogueBoost) : '');
+  }, [eqEnabled, eqGains, dialogueBoost, dispatch]);
 
   // ── Playlist ──
   const handleAddToPlaylist = useCallback(async () => {
@@ -758,9 +860,10 @@ const [controlsLocked, setControlsLocked] = useState(false);
         MpvPlayer.loadFile(entry.uri);
       }
     } catch {
-      Alert.alert('Error', 'Failed to add file to playlist.');
+      // 31.6: friendly non-blocking toast instead of a raw Alert
+      toast.show('Could not add this file to the playlist.', 'error');
     }
-  }, [dispatch, playlist.length]);
+  }, [dispatch, playlist.length, toast]);
 
   const handleRemoveFromPlaylist = useCallback((index: number) => {
     dispatch(removeFromPlaylist(index));
@@ -877,6 +980,12 @@ const [controlsLocked, setControlsLocked] = useState(false);
         const sub = MpvPlayer.onSurfaceAttached(() => {
           if (playableUri) {
             setLoadingPhase('loading');
+            MpvPlayer.setProperty('slang', subtitleSliceRef.current.languages);
+            MpvPlayer.setProperty('sub-bg-opacity', subtitleSliceRef.current.bgOpacity);
+            if (highContrastRef.current) {
+              MpvPlayer.setProperty('sub-color', '#FFFFFF');
+              MpvPlayer.setProperty('sub-bg-opacity', 0.9);
+            }
             MpvPlayer.loadFile(playableUri);
           }
           sub?.remove();
@@ -1016,6 +1125,12 @@ const [controlsLocked, setControlsLocked] = useState(false);
       const sub = MpvPlayer.onSurfaceAttached(() => {
         if (playableUri) {
           setLoadingPhase('loading');
+          MpvPlayer.setProperty('slang', subtitleSliceRef.current.languages);
+          MpvPlayer.setProperty('sub-bg-opacity', subtitleSliceRef.current.bgOpacity);
+          if (highContrastRef.current) {
+            MpvPlayer.setProperty('sub-color', '#FFFFFF');
+            MpvPlayer.setProperty('sub-bg-opacity', 0.9);
+          }
           MpvPlayer.loadFile(playableUri);
 
           setTimeout(() => {
@@ -1032,7 +1147,7 @@ const [controlsLocked, setControlsLocked] = useState(false);
                 }));
               }
             } catch (e) {
-              console.warn('Thumbnail capture failed', e);
+              logger.warn('Thumbnail capture failed', e);
             }
           }, 2000);
         }
@@ -1168,13 +1283,15 @@ const [controlsLocked, setControlsLocked] = useState(false);
         }),
       );
 
-      const resumePosition = requestedStartPosition ?? savedEntry?.position ?? 0;
-      if (resumePosition > 0) {
+      const explicitPosition = requestedStartPosition ?? 0;
+      const savedPosition = savedEntry?.position ?? 0;
+      if (explicitPosition > 0) {
+        // Explicit navigation intent (e.g. Continue Watching) — silent seek
         setLoadingPhase('seeking');
         MpvPlayer.pause();
         setTimeout(() => {
-          MpvPlayer.seekTo(resumePosition);
-          resumeTargetRef.current = resumePosition;
+          MpvPlayer.seekTo(explicitPosition);
+          resumeTargetRef.current = explicitPosition;
         }, 300);
 
         loadingFallbackTimer.current = setTimeout(() => {
@@ -1185,6 +1302,11 @@ const [controlsLocked, setControlsLocked] = useState(false);
             MpvPlayer.resume();
           }
         }, 2500);
+      } else if (savedPosition > 0) {
+        // 31.2: implicit resume — ask the user instead of silent auto-seek
+        setLoadingPhase('ready');
+        MpvPlayer.pause();
+        setResumePrompt({position: savedPosition});
       } else {
         loadingFallbackTimer.current = setTimeout(() => {
           if (loadingPhaseRef.current !== 'ready') {
@@ -1264,6 +1386,11 @@ const [controlsLocked, setControlsLocked] = useState(false);
         navigation.replace('AudioPlayer', {fileUri: nextEntry.uri, fileTitle: nextEntry.title});
         return;
       }
+      if (nextEntry) {
+        // 31.3: show "Up Next in 5s" countdown card before auto-advancing
+        startAutoAdvance(nextEntry);
+        return;
+      }
       setShowReplay(true);
     });
 
@@ -1321,7 +1448,7 @@ const [controlsLocked, setControlsLocked] = useState(false);
       unsubNotifStop();
       unsubNotifSeek();
     };
-  }, [isReady, savedEntry, requestedStartPosition, dispatch, handlePlayPause, handleNext, handlePrev, handleGoBack, controlsLocked, playlist, currentIndex, navigation]);
+  }, [isReady, savedEntry, requestedStartPosition, dispatch, handlePlayPause, handleNext, handlePrev, handleGoBack, controlsLocked, playlist, currentIndex, navigation, startAutoAdvance]);
 
   // ── Return ──
   // ── Computed labels for toolbar ──
@@ -1348,6 +1475,9 @@ const [controlsLocked, setControlsLocked] = useState(false);
     secondaryVisible,
     setSecondaryVisible,
     controlsLocked,
+    resumePrompt,
+    autoAdvance,
+    autoAdvanceCountdown,
     volume,
     nativePtr,
     showVideoSurface,
@@ -1467,6 +1597,9 @@ const [controlsLocked, setControlsLocked] = useState(false);
     handlePlayPause,
     handleSurfaceTap,
     handleToggleLock,
+    handleResumeChoice,
+    handleAutoAdvanceNow,
+    handleCancelAutoAdvance,
     handlePrev,
     handleNext,
     handleSeek,
@@ -1563,5 +1696,8 @@ const [controlsLocked, setControlsLocked] = useState(false);
 
     // Push position ref handler
     handlePushPositionRef,
+
+    // 46.1: accessibility
+    controlScale,
   };
 }

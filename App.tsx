@@ -11,6 +11,7 @@ import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {SimbaStatusBar} from './src/components/StatusBar';
 import {ToastProvider} from './src/components/feedback/Toast';
 import {lockToPortrait} from './src/utils/orientation';
+import {useAuthSession} from './src/hooks/useAuthSession';
 
 /**
  * Parse a shared content URI and navigate to the Player screen.
@@ -32,6 +33,9 @@ function handleIncomingUri(uri: string) {
 
 const AppContent: React.FC = () => {
   const {colors} = useTheme();
+
+  // ── 43.1/43.2: cold-start silent restore + foreground session expiry ──
+  useAuthSession();
 
   const fallbackColors = useMemo(
     () => ({

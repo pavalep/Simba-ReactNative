@@ -75,6 +75,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
           },
           Changelog: 'settings/changelog',
           Licenses: 'settings/licenses',
+          Privacy: 'settings/privacy',
+          Terms: 'settings/terms',
         },
       },
       Bookmarks: 'bookmarks',

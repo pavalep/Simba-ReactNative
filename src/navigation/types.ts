@@ -52,10 +52,13 @@ export type SettingsTabParamList = {
   Settings: undefined;
   About: undefined;
   AudioSettings: undefined;
+  Equalizer: undefined;
   LinkedFolders: {type: 'video' | 'audio'};
   FolderLinkingWizard: {type?: 'video' | 'audio'};
   Changelog: undefined;
   Licenses: undefined;
+  Privacy: undefined;
+  Terms: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =
@@ -107,10 +110,13 @@ type SettingsStackScreenProps<T extends keyof SettingsTabParamList> = CompositeS
 export type SettingsScreenProps = SettingsStackScreenProps<'Settings'>;
 export type AboutScreenProps = SettingsStackScreenProps<'About'>;
 export type AudioSettingsScreenProps = SettingsStackScreenProps<'AudioSettings'>;
+export type EqualizerScreenProps = SettingsStackScreenProps<'Equalizer'>;
 export type LinkedFoldersScreenProps = SettingsStackScreenProps<'LinkedFolders'>;
 export type FolderLinkingWizardScreenProps = SettingsStackScreenProps<'FolderLinkingWizard'>;
 export type ChangelogScreenProps = SettingsStackScreenProps<'Changelog'>;
 export type LicensesScreenProps = SettingsStackScreenProps<'Licenses'>;
+export type PrivacyScreenProps = SettingsStackScreenProps<'Privacy'>;
+export type TermsScreenProps = SettingsStackScreenProps<'Terms'>;
 
 /** Root stack screen props. */
 export type PreferencesScreenProps = RootStackScreenProps<'Preferences'>;

@@ -9,32 +9,14 @@ import Slider from '@react-native-community/slider';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {EQ_BANDS, EQ_PRESETS} from '../../../services/audioSettingsService';
+
+// Re-export for consumers that historically imported from this panel.
+export {EQ_BANDS, EQ_PRESETS};
 
 // ─── Constants ───────────────────────────────────────────────
 
 const ITEM_HEIGHT = 52;
-
-export const EQ_BANDS = [
-  {freq: 31, label: '31'},
-  {freq: 62, label: '62'},
-  {freq: 125, label: '125'},
-  {freq: 250, label: '250'},
-  {freq: 500, label: '500'},
-  {freq: 1000, label: '1K'},
-  {freq: 2000, label: '2K'},
-  {freq: 4000, label: '4K'},
-  {freq: 8000, label: '8K'},
-  {freq: 16000, label: '16K'},
-];
-
-export const EQ_PRESETS: Record<string, number[]> = {
-  Flat: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  Rock: [5, 5, 3, 1, -1, 0, 1, 3, 4, 5],
-  Pop: [-2, -1, 2, 4, 5, 4, 2, 0, -1, -2],
-  Jazz: [3, 3, 2, 1, 0, 1, 2, 3, 3, 3],
-  Classical: [4, 3, 2, 1, 0, 0, 1, 2, 3, 4],
-  Dance: [6, 5, 3, 1, -1, -1, 0, 2, 4, 5],
-};
 
 // ─── Props ───────────────────────────────────────────────────
 
@@ -49,7 +31,7 @@ export interface VideoPlayerEqualizerPanelProps {
 
 // ─── Component ───────────────────────────────────────────────
 
-export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps> = ({
+export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps> = React.memo(({
   eqGains,
   eqEnabled,
   onBandChange,
@@ -321,4 +303,4 @@ export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps>
       removeClippedSubviews={true}
     />
   );
-};
+});

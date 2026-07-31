@@ -50,7 +50,7 @@ function langFlag(lang?: string): string {
 
 // ─── Component ───────────────────────────────────────────────
 
-export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
+export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = React.memo(({
   audioTracks,
   activeAudioTrack,
   onSelectTrack,
@@ -203,4 +203,4 @@ export const VideoPlayerAudioPanel: React.FC<VideoPlayerAudioPanelProps> = ({
       }
     />
   );
-};
+});

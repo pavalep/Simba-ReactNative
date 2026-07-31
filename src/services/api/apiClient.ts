@@ -4,6 +4,7 @@
 
 import axios, {type AxiosInstance, type AxiosError, type AxiosRequestConfig} from 'axios';
 import type {ApiConfig, ApiSearchOptions} from '../../types/api';
+import {logger} from '../../lib/logger';
 
 // ─── Axios Instance ─────────────────────────────────────────────────────
 // We keep it local so interceptors don't pollute the global axios.
@@ -20,9 +21,7 @@ function getAxiosInstance(): AxiosInstance {
     // ── Request interceptor ──
     _instance.interceptors.request.use(
       cfg => {
-        if (__DEV__) {
-          console.log(`[API] ${cfg.method?.toUpperCase()} ${cfg.url}`);
-        }
+        logger.debug(`[API] ${cfg.method?.toUpperCase()} ${cfg.url}`);
         return cfg;
       },
       err => Promise.reject(err),

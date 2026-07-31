@@ -19,6 +19,8 @@ export interface PrimaryControlsProps {
   onForward: () => void;
   onSeek: (pct: number) => void;
   bottomInset: number;
+  /** 46.1: accessibility scale for control sizes (1 = default, >1 = larger) */
+  controlScale?: number;
 }
 
 // ─── Component ──────────────────────────────────────────────
@@ -36,6 +38,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
   onForward,
   onSeek,
   bottomInset,
+  controlScale = 1,
 }) => {
   const {colors} = useTheme();
   const iconColor = '#EDEDED';
@@ -93,22 +96,22 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           paddingVertical: 4,
         },
         transportBtn: {
-          width: 56,
-          height: 56,
-          borderRadius: 28,
+          width: 56 * controlScale,
+          height: 56 * controlScale,
+          borderRadius: 28 * controlScale,
           alignItems: 'center',
           justifyContent: 'center',
         },
         playBtn: {
-          width: 64,
-          height: 64,
-          borderRadius: 32,
+          width: 64 * controlScale,
+          height: 64 * controlScale,
+          borderRadius: 32 * controlScale,
           backgroundColor: colors.accent.gold,
           alignItems: 'center',
           justifyContent: 'center',
         },
       }),
-    [colors, bottomInset],
+    [colors, bottomInset, controlScale],
   );
 
   return (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import type {ColorTokens} from '../../../theme/tokens';
@@ -13,6 +13,8 @@ interface Props {
   onToggleShuffle: () => void;
   onToggleLoop: () => void;
   colors: ColorTokens;
+  /** 46.1: accessibility scale for control sizes (1 = default, >1 = larger) */
+  controlScale?: number;
 }
 
 export const AudioTransportControls: React.FC<Props> = ({
@@ -25,8 +27,44 @@ export const AudioTransportControls: React.FC<Props> = ({
   onToggleShuffle,
   onToggleLoop,
   colors,
+  controlScale = 1,
 }) => {
   const loopColor = loopMode !== 'none' ? colors.accent.gold : colors.text.secondary;
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        transportRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 16,
+          marginBottom: 24,
+        },
+        playBtn: {
+          width: 72 * controlScale,
+          height: 72 * controlScale,
+          borderRadius: 36 * controlScale,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        skipBtn: {
+          width: 44 * controlScale,
+          height: 44 * controlScale,
+          borderRadius: 22 * controlScale,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        secondaryBtn: {
+          width: 44 * controlScale,
+          height: 44 * controlScale,
+          borderRadius: 22 * controlScale,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+      }),
+    [controlScale],
+  );
 
   return (
     <View style={styles.transportRow}>
@@ -91,34 +129,3 @@ export const AudioTransportControls: React.FC<Props> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  transportRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 24,
-  },
-  playBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  skipBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

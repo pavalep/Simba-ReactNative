@@ -1,6 +1,7 @@
 import React, {useEffect, useRef} from 'react';
 import {Animated, StyleSheet, View} from 'react-native';
 import {useTheme} from '../../../theme';
+import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
 
 interface BufferingBarProps {
   visible: boolean;
@@ -9,9 +10,9 @@ interface BufferingBarProps {
 const BUFFERING_BAR_HEIGHT = 3;
 
 /**
- * Thin gold shimmer bar rendered below the SeekBar when the video is
- * buffering (YouTube-style).  Uses a looping translateX animation to
- * create a shimmer/pulse effect.
+ * Buffering indicator (31.4): a centered branded ActivityOrb over the video
+ * during stalls, plus a thin gold shimmer bar pinned below the SeekBar
+ * (YouTube-style).  Both fade in/out together on `visible`.
  */
 export const BufferingBar: React.FC<BufferingBarProps> = ({visible}) => {
   const {colors} = useTheme();
@@ -54,24 +55,44 @@ export const BufferingBar: React.FC<BufferingBarProps> = ({visible}) => {
   });
 
   return (
-    <View
-      style={[styles.container, {opacity: opacityAnim}]}
-      pointerEvents="none">
+    <>
+      {/* Centered branded buffering orb over the video (31.4) */}
       <Animated.View
-        style={[
-          styles.bar,
-          {
-            backgroundColor: colors.accent.gold,
-            transform: [{translateX: shimmerTranslate}],
-          },
-        ]}
-      />
-    </View>
+        pointerEvents="none"
+        accessibilityLiveRegion="polite"
+        accessibilityLabel={visible ? 'Video buffering' : undefined}
+        style={[styles.overlay, {opacity: opacityAnim}]}>
+        <ActivityOrb size={52} label="Buffering…" />
+      </Animated.View>
+
+      {/* Thin gold shimmer bar pinned below the seek bar */}
+      <View style={styles.barRow} pointerEvents="none">
+        <Animated.View
+          style={[
+            styles.bar,
+            {
+              backgroundColor: colors.accent.gold,
+              transform: [{translateX: shimmerTranslate}],
+            },
+          ]}
+        />
+      </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 16,
+  },
+  barRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 4,
     height: BUFFERING_BAR_HEIGHT,
     overflow: 'hidden',
   },

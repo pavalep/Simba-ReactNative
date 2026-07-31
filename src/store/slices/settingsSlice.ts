@@ -30,6 +30,15 @@ interface SettingsState {
   // Playback extras (Phase 22)
   skipSilenceEnabled: boolean;
 
+  // Audio settings (Phase 45)
+  sampleRate: number; // Hz, 0 = system default
+  replayGain: 'no' | 'track' | 'album';
+  gaplessPlayback: boolean;
+  audioDelay: number; // seconds, negative = delay audio
+  eqEnabled: boolean;
+  eqPreset: string;
+  eqGains: number[]; // 10 band gains in dB
+
   // Linked folders (Phase 22)
   videoFolders: string[];
   audioFolders: string[];
@@ -41,6 +50,13 @@ interface SettingsState {
 
   // App lifecycle
   hasLaunched: boolean;
+
+  // Accessibility & misc (Phase 46)
+  largerControls: boolean;
+  highContrastSubtitles: boolean;
+  scanOnLaunch: boolean;
+  notificationsEnabled: boolean;
+  appLanguage: string;
 }
 
 const initialState: SettingsState = {
@@ -67,6 +83,15 @@ const initialState: SettingsState = {
   // Playback extras defaults
   skipSilenceEnabled: false,
 
+  // Audio settings defaults
+  sampleRate: 0,
+  replayGain: 'no',
+  gaplessPlayback: false,
+  audioDelay: 0,
+  eqEnabled: false,
+  eqPreset: 'Flat',
+  eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+
   // Linked folders defaults
   videoFolders: [],
   audioFolders: [],
@@ -78,6 +103,13 @@ const initialState: SettingsState = {
 
   // App lifecycle defaults
   hasLaunched: false,
+
+  // Accessibility & misc defaults
+  largerControls: false,
+  highContrastSubtitles: false,
+  scanOnLaunch: false,
+  notificationsEnabled: true,
+  appLanguage: 'system',
 };
 
 const settingsSlice = createSlice({
@@ -139,6 +171,29 @@ const settingsSlice = createSlice({
       state.skipSilenceEnabled = action.payload;
     },
 
+    // ── Audio Settings (Phase 45) ──
+    setSampleRate(state, action: PayloadAction<number>) {
+      state.sampleRate = action.payload;
+    },
+    setReplayGain(state, action: PayloadAction<'no' | 'track' | 'album'>) {
+      state.replayGain = action.payload;
+    },
+    setGaplessPlayback(state, action: PayloadAction<boolean>) {
+      state.gaplessPlayback = action.payload;
+    },
+    setAudioDelay(state, action: PayloadAction<number>) {
+      state.audioDelay = action.payload;
+    },
+    setEqEnabled(state, action: PayloadAction<boolean>) {
+      state.eqEnabled = action.payload;
+    },
+    setEqPreset(state, action: PayloadAction<string>) {
+      state.eqPreset = action.payload;
+    },
+    setEqGains(state, action: PayloadAction<number[]>) {
+      state.eqGains = action.payload;
+    },
+
     // Linked folder management (Phase 22)
     addVideoFolder(state, action: PayloadAction<string>) {
       if (!state.videoFolders.includes(action.payload)) {
@@ -171,6 +226,23 @@ const settingsSlice = createSlice({
       state.hasLaunched = true;
     },
 
+    // ── Accessibility & misc (Phase 46) ──
+    setLargerControls(state, action: PayloadAction<boolean>) {
+      state.largerControls = action.payload;
+    },
+    setHighContrastSubtitles(state, action: PayloadAction<boolean>) {
+      state.highContrastSubtitles = action.payload;
+    },
+    setScanOnLaunch(state, action: PayloadAction<boolean>) {
+      state.scanOnLaunch = action.payload;
+    },
+    setNotificationsEnabled(state, action: PayloadAction<boolean>) {
+      state.notificationsEnabled = action.payload;
+    },
+    setAppLanguage(state, action: PayloadAction<string>) {
+      state.appLanguage = action.payload;
+    },
+
     resetToDefaults() {
       return initialState;
     },
@@ -198,6 +270,14 @@ export const {
 
   setSkipSilence,
 
+  setSampleRate,
+  setReplayGain,
+  setGaplessPlayback,
+  setAudioDelay,
+  setEqEnabled,
+  setEqPreset,
+  setEqGains,
+
   addVideoFolder,
   removeVideoFolder,
   addAudioFolder,
@@ -208,6 +288,12 @@ export const {
   setMpvOptions,
 
   markLaunched,
+
+  setLargerControls,
+  setHighContrastSubtitles,
+  setScanOnLaunch,
+  setNotificationsEnabled,
+  setAppLanguage,
 
   resetToDefaults,
 } = settingsSlice.actions;

@@ -15,7 +15,7 @@ import {spacing} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
 import {SettingsRow} from '../../components/utility/SettingsRow/SettingsRow';
-import {MpvConfigEditor, LinkedFoldersDialog, ThemePickerDialog} from './components';
+import {MpvConfigEditor, LinkedFoldersDialog, ThemePickerDialog, SubtitleLanguageDialog, SubtitleStyleDialog} from './components';
 import type {MpvOption} from './components/MpvConfigEditor';
 import {SettingsScreenProps} from '../../navigation/types';
 import {AccountSection} from '../../components/sections/AccountSection/AccountSection';
@@ -27,6 +27,10 @@ import {
   setMpvOptions,
   setSkipSilence,
   setAutoLoadSubtitles,
+  setSubtitleFontSize,
+  setSubtitleTextColor,
+  setSubtitleBackgroundOpacity,
+  setPreferredLanguages,
 } from '../../store/slices/settingsSlice';
 import {useSettingsScreen} from './hooks/useSettingsScreen';
 
@@ -50,6 +54,8 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
     themeDialogVisible,
     mpvOptions,
     subtitleTextColor,
+    subtitleFontSize,
+    subtitleBackgroundOpacity,
     subtitleFontLabel,
     subtitleBgLabel,
     autoLoadSubtitles,
@@ -67,6 +73,13 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
     handleLinkedFoldersPress,
     handleThemePress,
     handleSubtitleFontPress,
+    handleSubtitleLanguagePress,
+    handleSubtitleColorPress,
+    handleSubtitleBgPress,
+    subtitleLanguageDialogVisible,
+    setSubtitleLanguageDialogVisible,
+    subtitleStyleDialogVisible,
+    setSubtitleStyleDialogVisible,
     onRefresh,
   } = useSettingsScreen();
 
@@ -135,7 +148,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
               description={THEME_LABELS[themeMode] ?? 'System'}
               onPress={handleThemePress}
             />
-            <SettingsRow label="Accent Color" description="Gold" />
+            <SettingsRow label="Accent Color" description="Gold — Simba brand" />
           </Animated.View>
           <View style={styles.sectionDivider} />
 
@@ -252,7 +265,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
             <SettingsRow
               label="Subtitle Language"
               description={preferredLanguages || 'Default'}
-              onPress={() => {}}
+              onPress={handleSubtitleLanguagePress}
             />
           </Animated.View>
           <View style={styles.sectionDivider} />
@@ -284,12 +297,12 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
                   </AppText>
                 </View>
               }
-              onPress={() => {}}
+              onPress={handleSubtitleColorPress}
             />
             <SettingsRow
               label="Background Opacity"
               description={subtitleBgLabel}
-              onPress={() => {}}
+              onPress={handleSubtitleBgPress}
             />
             <SettingsRow
               label="Auto-Load Subtitles"
@@ -356,6 +369,26 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
         onClose={() => setThemeDialogVisible(false)}
         themeMode={themeMode}
         onSelectTheme={mode => dispatch(setThemeMode(mode))}
+        colors={colors}
+      />
+
+      <SubtitleLanguageDialog
+        visible={subtitleLanguageDialogVisible}
+        onClose={() => setSubtitleLanguageDialogVisible(false)}
+        preferredLanguages={preferredLanguages}
+        onSelect={codes => dispatch(setPreferredLanguages(codes))}
+        colors={colors}
+      />
+
+      <SubtitleStyleDialog
+        visible={subtitleStyleDialogVisible}
+        onClose={() => setSubtitleStyleDialogVisible(false)}
+        fontSize={subtitleFontSize}
+        textColor={subtitleTextColor}
+        bgOpacity={subtitleBackgroundOpacity}
+        onFontSize={px => dispatch(setSubtitleFontSize(px))}
+        onTextColor={c => dispatch(setSubtitleTextColor(c))}
+        onBgOpacity={o => dispatch(setSubtitleBackgroundOpacity(o))}
         colors={colors}
       />
     </SafeAreaView>

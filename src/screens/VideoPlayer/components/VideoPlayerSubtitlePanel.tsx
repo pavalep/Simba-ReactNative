@@ -52,7 +52,7 @@ function guessFormat(title?: string): SubtitleFormat {
 
 // ─── Component ───────────────────────────────────────────────
 
-export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> = ({
+export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> = React.memo(({
   subtitleTracks,
   activeSubtitle,
   subtitleVisible,
@@ -485,4 +485,4 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
       )}
     </ScrollView>
   );
-};
+});
