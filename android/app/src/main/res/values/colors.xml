@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_background">#0A0A0C</color>
-    <color name="splash_navbar">#0A0A0C</color>
+    <!-- Soft warm-gold (orb) — used for app icon bg, native splash bg, navbar -->
+    <color name="splash_background">#D4B47A</color>
+    <color name="splash_navbar">#D4B47A</color>
 </resources>

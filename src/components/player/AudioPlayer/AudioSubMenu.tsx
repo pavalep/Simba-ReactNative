@@ -439,14 +439,23 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
         <View style={[styles.sheet, containerBg]}>
           {/* ── Header: Artwork + Title/Artist ── */}
           <View style={styles.header}>
-            <FastImage
-              source={
-                albumArtUri
-                  ? {uri: albumArtUri, priority: FastImage.priority.normal}
-                  : require('../../../../assets/icon.png')
-              }
-              style={styles.artwork}
-            />
+            {albumArtUri ? (
+              <FastImage
+                source={{uri: albumArtUri, priority: FastImage.priority.normal}}
+                style={styles.artwork}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.artwork,
+                  styles.artworkPlaceholder,
+                  {backgroundColor: colors.border.subtle},
+                ]}>
+                <AppText style={[styles.artworkIcon, {color: colors.text.tertiary}]}>
+                  {'♫'}
+                </AppText>
+              </View>
+            )}
             <View style={styles.headerText}>
               <AppText variant="body1" color="primary" numberOfLines={1}>
                 {title}
@@ -597,6 +606,13 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: radius.sm,
     marginRight: spacing.md,
+  },
+  artworkPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  artworkIcon: {
+    fontSize: 20,
   },
   headerText: {
     flex: 1,

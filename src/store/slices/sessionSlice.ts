@@ -1,5 +1,6 @@
 import {createSlice, createSelector, PayloadAction} from '@reduxjs/toolkit';
 import type {RootState} from '../index';
+import {resetAppState} from './authSlice';
 
 export interface SessionEntry {
   fileUri: string;
@@ -142,6 +143,15 @@ const sessionSlice = createSlice({
       state.playCounts[action.payload] = (state.playCounts[action.payload] || 0) + 1;
     },
   },
+  // 49.5: purge session data on global reset (logout)
+  extraReducers: builder => {
+    builder.addCase(resetAppState, state => {
+      state.recentFiles = [];
+      state.bookmarks = [];
+      state.playCounts = {};
+      state.mediaLibrary = [];
+    });
+  },
 });
 
 export const {
@@ -154,8 +164,10 @@ export const {
 } =
   sessionSlice.actions;
 
-export const selectBookmarks = (state: RootState): BookmarkEntry[] =>
-  state.session.bookmarks ?? [];
+export const selectBookmarks = createSelector(
+  (state: RootState) => state.session.bookmarks,
+  bookmarks => bookmarks ?? [],
+);
 
 /** Selector: get saved position for a specific URI */
 export function selectSessionEntry(

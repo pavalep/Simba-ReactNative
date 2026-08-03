@@ -11,6 +11,7 @@ export interface VideoPlayerSurfaceLayerProps {
   nativePtr: number;
   showVideoSurface: boolean;
   controlsVisible: boolean;
+  loadingPhase: string;
   onSingleTap: () => void;
   onDoubleTapLeft: () => void;
   onDoubleTapRight: () => void;
@@ -20,6 +21,7 @@ export interface VideoPlayerSurfaceLayerProps {
   onBrightnessChange: (delta: number) => void;
   onVolumeGestureEnd: () => void;
   onBrightnessGestureEnd: () => void;
+  onPlayPause?: () => void;
 }
 
 /**
@@ -36,6 +38,7 @@ export const VideoPlayerSurfaceLayer = React.memo<VideoPlayerSurfaceLayerProps>(
   nativePtr,
   showVideoSurface,
   controlsVisible,
+  loadingPhase,
   onSingleTap,
   onDoubleTapLeft,
   onDoubleTapRight,
@@ -45,6 +48,7 @@ export const VideoPlayerSurfaceLayer = React.memo<VideoPlayerSurfaceLayerProps>(
   onBrightnessChange,
   onVolumeGestureEnd,
   onBrightnessGestureEnd,
+  onPlayPause,
 }) => {
   const {isPlaying} = useTransport();
 
@@ -75,6 +79,8 @@ export const VideoPlayerSurfaceLayer = React.memo<VideoPlayerSurfaceLayerProps>(
         showVideoSurface={showVideoSurface}
         isPlaying={isPlaying}
         controlsVisible={controlsVisible}
+        loadingPhase={loadingPhase}
+        onPlayPause={onPlayPause}
       />
     </Animated.View>
   </VideoPlayerGestureLayer>;

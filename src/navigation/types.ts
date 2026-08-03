@@ -14,6 +14,12 @@ export type RootStackParamList = {
     source?: string;
     liveChannels?: LiveChannelParam[];
     liveChannelIndex?: number;
+    /**
+     * Optional pre-flight error (e.g. when an upstream lookup returned no
+     * playable file). When present, the player renders this error instead
+     * of attempting to load an empty/invalid URL.
+     */
+    initialError?: {title: string; message: string};
   };
   AudioPlayer: {
     fileUri?: string;

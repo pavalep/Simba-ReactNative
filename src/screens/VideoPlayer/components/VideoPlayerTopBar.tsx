@@ -1,10 +1,46 @@
 import React, {useEffect, useMemo, useRef} from 'react';
 import {View, TouchableOpacity, StyleSheet, Animated} from 'react-native';
+import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {radius, spacing} from '../../../theme/tokens';
 
+// ─── Local Vector SVG Icons for Guaranteed Rendering ─────────
+
+const BackIcon = ({color = '#FFFFFF'}) => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M19 12H5M12 19l-7-7 7-7" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const LockIcon = ({color = '#FFFFFF'}) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Rect x="3" y="11" width="18" height="11" rx="2" stroke={color} strokeWidth="2" />
+    <Path d="M7 11V7a5 5 0 0110 0v4" stroke={color} strokeWidth="2" />
+  </Svg>
+);
+
+const UnlockIcon = ({color = '#FFFFFF'}) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Rect x="3" y="11" width="18" height="11" rx="2" stroke={color} strokeWidth="2" />
+    <Path d="M7 11V7a5 5 0 019.9-1" stroke={color} strokeWidth="2" />
+  </Svg>
+);
+
+const MoreIcon = ({color = '#FFFFFF'}) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Circle cx="12" cy="5" r="2" fill={color} />
+    <Circle cx="12" cy="12" r="2" fill={color} />
+    <Circle cx="12" cy="19" r="2" fill={color} />
+  </Svg>
+);
+
+const RotateIcon = ({color = '#FFFFFF'}) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+    <Path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 // ─── Props ───────────────────────────────────────────────────
 
@@ -18,12 +54,9 @@ export interface VideoPlayerTopBarProps {
   visible?: boolean;
   onBookmark?: () => void;
   bookmarkActive?: boolean;
-  // 56.4: native share sheet with deep link
   onShare?: () => void;
-  // 31.1 lock controls
   controlsLocked?: boolean;
   onToggleLock?: () => void;
-  // P36.5: live playback (IPTV) — LIVE badge + channel up/down
   liveBadge?: boolean;
   channelUp?: () => void;
   channelDown?: () => void;
@@ -35,7 +68,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
   title,
   onGoBack,
   topInset,
-  isLandscape,
+  isLandscape: _isLandscape,
   onToggleRotate,
   onMorePress,
   visible = true,
@@ -49,8 +82,6 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
   channelDown,
 }) => {
   const {colors} = useTheme();
-  const iconColor = colors.text.primary;
-  const iconMuted = colors.text.secondary;
   const opacity = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const bookmarkPulse = useRef(new Animated.Value(1)).current;
@@ -63,7 +94,6 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
     ]).start();
   }, [opacity, translateY, visible]);
 
-  // Bookmark pulse animation when bookmark is saved
   useEffect(() => {
     if (bookmarkActive && !prevBookmarkActive.current) {
       Animated.sequence([
@@ -92,61 +122,55 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           top: 0,
           left: 0,
           right: 0,
-          backgroundColor: colors.background.scrimMid,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border.subtle,
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          borderBottomWidth: 0.5,
+          borderBottomColor: 'rgba(255,255,255,0.1)',
           zIndex: 20,
         },
         row: {
           flexDirection: 'row',
           alignItems: 'center',
-          height: 48,
-          paddingHorizontal: 12,
+          height: 54,
+          paddingHorizontal: 16,
+          justifyContent: 'space-between',
         },
         leftSection: {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 6,
+          gap: 8,
         },
-        backBtn: {
-          width: 48,
-          height: 48,
-          borderRadius: 24,
+        glassBtn: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: 'rgba(255,255,255,0.12)',
           alignItems: 'center',
           justifyContent: 'center',
-        },
-        backBtnIcon: {
-          fontSize: 16,
-          color: iconColor,
         },
         centerSection: {
           flex: 1,
           alignItems: 'center',
           flexDirection: 'row',
           justifyContent: 'center',
-          gap: 6,
+          gap: 8,
+          paddingHorizontal: 8,
         },
         title: {
-          maxWidth: 200,
+          fontSize: 15,
+          fontWeight: '600',
+          color: '#FFFFFF',
+          letterSpacing: 0.2,
+          textAlign: 'center',
         },
         rightSection: {
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 4,
-        },
-        rotateBtn: {
-          width: 48,
-          height: 48,
-          borderRadius: 24,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        rotateBtnIcon: {
-          fontSize: 18,
-          color: iconMuted,
+          gap: 6,
         },
         lockBtnActive: {
           backgroundColor: colors.accent.goldWash,
+          borderColor: colors.accent.gold,
+          borderWidth: 1,
         },
         liveBadge: {
           backgroundColor: colors.accent.goldDim,
@@ -160,15 +184,8 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           fontWeight: '800',
           letterSpacing: 1,
         },
-        channelBtn: {
-          width: 40,
-          height: 40,
-          borderRadius: 20,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
       }),
-    [colors, iconColor, iconMuted],
+    [colors],
   );
 
   return (
@@ -176,32 +193,32 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
       style={[styles.container, {paddingTop: topInset, opacity, transform: [{translateY}]}]}
       pointerEvents={visible ? 'auto' : 'none'}>
       <View style={styles.row}>
-        {/* Left: unambiguous back affordance */}
+        {/* Left section: back button + channel nav */}
         <View style={styles.leftSection}>
-          <TouchableOpacity style={styles.backBtn} onPress={onGoBack} accessibilityLabel="Go back" accessibilityRole="button">
-            <AppText style={styles.backBtnIcon}>{'←'}</AppText>
+          <TouchableOpacity style={styles.glassBtn} onPress={onGoBack} accessibilityLabel="Go back" accessibilityRole="button">
+            <BackIcon color="#FFFFFF" />
           </TouchableOpacity>
           {!controlsLocked && channelDown && (
             <TouchableOpacity
-              style={styles.channelBtn}
+              style={styles.glassBtn}
               onPress={channelDown}
               accessibilityLabel="Previous channel"
               accessibilityRole="button">
-              <SvgIcon name="chevronDown" size={20} color={iconMuted} />
+              <SvgIcon name="chevronDown" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           )}
           {!controlsLocked && channelUp && (
             <TouchableOpacity
-              style={styles.channelBtn}
+              style={styles.glassBtn}
               onPress={channelUp}
               accessibilityLabel="Next channel"
               accessibilityRole="button">
-              <SvgIcon name="chevronUp" size={20} color={iconMuted} />
+              <SvgIcon name="chevronUp" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Center: Title + LIVE badge */}
+        {/* Center section: title */}
         <View style={styles.centerSection}>
           {liveBadge ? (
             <View style={styles.liveBadge}>
@@ -209,8 +226,6 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
             </View>
           ) : null}
           <AppText
-            variant="body2"
-            color="primary"
             numberOfLines={1}
             style={styles.title}
             accessibilityLabel={`Now playing ${title}`}
@@ -219,61 +234,55 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           </AppText>
         </View>
 
-        {/* Right: lock chip (31.1) + More + expand toggle */}
+        {/* Right section: action icons */}
         <View style={styles.rightSection}>
           {onToggleLock && (
             <TouchableOpacity
-              style={[styles.rotateBtn, controlsLocked && styles.lockBtnActive]}
+              style={[styles.glassBtn, controlsLocked && styles.lockBtnActive]}
               onPress={onToggleLock}
               accessibilityLabel={controlsLocked ? 'Unlock controls' : 'Lock controls'}
               accessibilityRole="button"
               accessibilityState={{selected: controlsLocked}}>
-              <AppText style={styles.rotateBtnIcon}>
-                {controlsLocked ? '\u{1F513}' : '\u{1F512}'}
-              </AppText>
+              {controlsLocked ? <LockIcon color={colors.accent.gold} /> : <UnlockIcon color="#FFFFFF" />}
             </TouchableOpacity>
           )}
           {!controlsLocked && onMorePress && (
-            <TouchableOpacity style={styles.rotateBtn} onPress={onMorePress} accessibilityLabel="More options" accessibilityRole="button">
-              <AppText style={styles.rotateBtnIcon}>{'⋮'}</AppText>
+            <TouchableOpacity style={styles.glassBtn} onPress={onMorePress} accessibilityLabel="More options" accessibilityRole="button">
+              <MoreIcon color="#FFFFFF" />
             </TouchableOpacity>
           )}
           {!controlsLocked && onBookmark && (
             <Animated.View style={{transform: [{scale: bookmarkPulse}]}}>
               <TouchableOpacity
-                style={styles.rotateBtn}
+                style={styles.glassBtn}
                 onPress={onBookmark}
                 accessibilityLabel={bookmarkActive ? 'Bookmark saved' : 'Save bookmark'}
                 accessibilityRole="button">
                 <SvgIcon
                   name="bookmark"
-                  size={22}
-                  color={bookmarkActive ? colors.accent.gold : iconMuted}
+                  size={18}
+                  color={bookmarkActive ? colors.accent.gold : '#FFFFFF'}
                 />
               </TouchableOpacity>
             </Animated.View>
           )}
           {!controlsLocked && onShare && (
             <TouchableOpacity
-              style={styles.rotateBtn}
+              style={styles.glassBtn}
               onPress={onShare}
               accessibilityLabel="Share video"
               accessibilityRole="button">
-              <SvgIcon name="share" size={20} color={iconMuted} />
+              <SvgIcon name="share" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           )}
-          {!controlsLocked && (
-            <TouchableOpacity
-              style={styles.rotateBtn}
-              onPress={onToggleRotate}
-              accessibilityLabel="Toggle rotation"
-              accessibilityRole="button"
-              accessibilityState={{selected: isLandscape}}>
-              <AppText style={styles.rotateBtnIcon}>
-                {isLandscape ? '⤢' : '⛶'}
-              </AppText>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.glassBtn}
+            onPress={onToggleRotate}
+            accessibilityLabel="Toggle orientation"
+            accessibilityRole="button"
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            <RotateIcon color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
       </View>
     </Animated.View>

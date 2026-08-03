@@ -1,5 +1,6 @@
 import {createSelector, createSlice, PayloadAction} from '@reduxjs/toolkit';
 import type {RootState} from '../index';
+import {resetAppState} from './authSlice';
 import type {
   DownloadRecord,
   DownloadStatus,
@@ -44,6 +45,12 @@ const downloadsSlice = createSlice({
     removeDownload(state, action: PayloadAction<string>) {
       state.records = state.records.filter(r => r.uri !== action.payload);
     },
+  },
+  // 49.5: purge download records on global reset (logout)
+  extraReducers: builder => {
+    builder.addCase(resetAppState, state => {
+      state.records = [];
+    });
   },
 });
 

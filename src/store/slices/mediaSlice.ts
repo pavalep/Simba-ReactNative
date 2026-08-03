@@ -1,5 +1,6 @@
 import {createSlice, createSelector, PayloadAction} from '@reduxjs/toolkit';
 import type {RootState} from '..';
+import {resetAppState} from './authSlice';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -186,6 +187,17 @@ const mediaSlice = createSlice({
     rebuildSearchIndex(state) {
       state.searchIndex = buildSearchIndex(state.tracks);
     },
+  },
+  // 49.5: purge media library on global reset (logout)
+  extraReducers: builder => {
+    builder.addCase(resetAppState, state => {
+      state.isScanning = false;
+      state.cancelRequested = false;
+      state.scanProgress = {currentFolder: null, filesFound: 0, totalFiles: 0, percentComplete: 0};
+      state.scanHistory = [];
+      state.tracks = [];
+      state.searchIndex = {};
+    });
   },
 });
 

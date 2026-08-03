@@ -37,6 +37,8 @@ export interface SeekBarProps {
   chapters?: Array<{startTime: number; title?: string}>;
   /** Height of the seek track (default: 16) */
   trackHeight?: number;
+  /** V5: buffered fraction [0..1] — rendered as a light-gray fill behind progress */
+  bufferedFraction?: number;
 }
 
 // ─── Component ──────────────────────────────────────────────
@@ -47,6 +49,7 @@ const SeekBar: React.FC<SeekBarProps> = ({
   onSeek,
   chapters,
   trackHeight = 16,
+  bufferedFraction = 0,
 }) => {
   const {colors} = useTheme();
   const {reduceMotion} = useAccessibility();
@@ -207,6 +210,16 @@ const SeekBar: React.FC<SeekBarProps> = ({
           borderRadius: 4,
           backgroundColor: colors.accent.gold,
         },
+        /** V5: buffered fill — light gray behind progress */
+        trackBuffered: {
+          position: 'absolute',
+          left: 0,
+          top: trackHeight / 2 - 2,
+          height: 4,
+          borderRadius: 4,
+          backgroundColor: colors.text.tertiary,
+          opacity: 0.4,
+        },
         thumb: {
           position: 'absolute',
           width: 14,
@@ -304,6 +317,11 @@ const SeekBar: React.FC<SeekBarProps> = ({
         {...panResponder.panHandlers}>
         {/* Background track */}
         <View style={styles.trackBg} />
+
+        {/* V5: Buffered region fill (gray, behind progress) */}
+        {bufferedFraction > 0 && (
+          <View style={[styles.trackBuffered, {width: `${Math.min(bufferedFraction * 100, 100)}%`}]} />
+        )}
 
         {/* Fill */}
         <View

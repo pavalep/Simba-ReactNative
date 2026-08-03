@@ -346,13 +346,33 @@ export async function getInternetArchiveVideoDetails(
     const md = data.metadata;
     const files = data.files ?? [];
 
-    // Primary video file — prefer h.264, fallback to MPEG4
+    // Primary video file — prefer h.264 MP4 (broadest device support),
+    // then MPEG4, then anything else video-shaped. Without this broad
+    // filter, items whose only video file is Matroska / Ogg Theora /
+    // WebM fall through to the directory URL and the player shows
+    // "File Not Found".
+    const VIDEO_FORMATS = [
+      'h.264',
+      'h264',
+      'MPEG4',
+      'MPEG-4',
+      'Matroska',
+      'WebM',
+      'Ogg Theora',
+      'Ogg Video',
+      'Cinepack',
+      'AVI',
+    ];
     const videoFiles = files.filter(
-      f => f.source === 'original' && (f.format === 'h.264' || f.format === 'MPEG4'),
+      f => f.source === 'original' && VIDEO_FORMATS.includes(f.format),
     );
+    // Prefer h.264 → MPEG4 → anything video-shaped
     const primaryVideo =
-      videoFiles.find(f => f.format === 'h.264') ||
-      videoFiles.find(f => f.format === 'MPEG4') ||
+      videoFiles.find(f => f.format === 'h.264' || f.format === 'h264') ||
+      videoFiles.find(f => f.format === 'MPEG4' || f.format === 'MPEG-4') ||
+      videoFiles.find(f => f.format === 'Matroska') ||
+      videoFiles.find(f => f.format === 'WebM') ||
+      videoFiles[0] ||
       null;
 
     // Subtitle files (.srt / .vtt)

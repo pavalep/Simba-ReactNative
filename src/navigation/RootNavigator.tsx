@@ -1,9 +1,9 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useNavigationState} from '@react-navigation/native';
 import {useAppSelector} from '../store';
 import {RootStackParamList} from './types';
+import {navigationRef} from './navigationHelper';
 import {TabNavigator} from './TabNavigator';
 import {MiniAudioPlayer} from '../components/player/MiniAudioPlayer/MiniAudioPlayer';
 import {SettingsStack} from './SettingsStack';
@@ -59,11 +59,29 @@ const MainTabsWithMiniPlayer: React.FC = () => {
 // Hidden while a full-screen player (AudioPlayer/VideoPlayer) is open so
 // it never overlaps; bottom position adapts to tab bar presence.
 const RootMiniPlayerOverlay: React.FC = () => {
-  const navState = useNavigationState(state => state);
-  const routeNames = navState?.routes?.map(r => r.name) ?? [];
+  const [navState, setNavState] = useState<
+    ReturnType<typeof navigationRef.getRootState>
+  >();
+
+  useEffect(() => {
+    // Sibling of the navigator → no navigation context; track root state
+    // through the global navigation ref instead of useNavigationState.
+    if (navigationRef.isReady()) {
+      setNavState(navigationRef.getRootState());
+    }
+    return navigationRef.addListener('state', () => {
+      setNavState(navigationRef.getRootState());
+    });
+  }, []);
+
+  // Wait for the first state snapshot so the overlay never flashes with
+  // guessed insets before the navigator is ready.
+  if (!navState) return null;
+
+  const routeNames = navState.routes.map(r => r.name);
   const isPlayerActive =
     routeNames.includes('AudioPlayer') || routeNames.includes('VideoPlayer');
-  const currentRoute = navState?.routes?.[navState?.index ?? 0]?.name;
+  const currentRoute = navState.routes[navState.index ?? 0]?.name;
   const overTabBar = currentRoute === 'MainTabs';
 
   if (isPlayerActive) return null;
@@ -87,7 +105,7 @@ export const RootNavigator: React.FC = () => {
         // route is honoured reactively: sign-in → MainTabs, sign-out → Login.
         // initialRouteName is only consulted on mount, so without this key a
         // sign-out would leave the user stranded on Settings (Phase 29.9).
-        key={isAuthenticated ? 'authed' : 'guest'}
+        key={isAuthenticated ? 'authed' : 'unauthed'}
         initialRouteName={initialRoute}
         screenOptions={{
           headerShown: false,

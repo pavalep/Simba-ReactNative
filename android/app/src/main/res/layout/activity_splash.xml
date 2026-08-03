@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Splash Screen Layout — Google Maps / Swiggy-style animated splash
-  Dark charcoal background with centered lion logo,
-  gold radial glow behind logo, and indeterminate loading ring.
+  Splash Screen Layout — orb color background with black lion logo,
+  black indeterminate loading ring, and black "Simba Player" subtitle.
 -->
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0A0C">
+    android:background="#C9A96E">
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -43,11 +42,11 @@
                 android:scaleX="0.85"
                 android:scaleY="0.85" />
 
-            <!-- Indeterminate loading ring around the logo -->
+            <!-- Brown indeterminate loading ring around the logo -->
             <ImageView
                 android:id="@+id/splash_loading_ring"
-                android:layout_width="130dp"
-                android:layout_height="130dp"
+                android:layout_width="180dp"
+                android:layout_height="180dp"
                 android:layout_gravity="center"
                 android:src="@drawable/splash_loading_ring"
                 android:alpha="0" />
@@ -59,7 +58,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Simba Player"
-            android:textColor="#C9A84C"
+            android:textColor="#5C3A1E"
             android:textSize="14sp"
             android:alpha="0"
             android:letterSpacing="0.15"

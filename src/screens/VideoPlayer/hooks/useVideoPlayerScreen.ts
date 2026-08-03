@@ -84,6 +84,7 @@ export function useVideoPlayerScreen(
   const fileUri = route.params?.fileUri ?? null;
   const requestedStartPosition = route.params?.startPosition;
   const routeSource = route.params?.source;
+  const initialError = route.params?.initialError ?? null;
   // P36.5: live channel list (IPTV) — enables channel up/down
   const liveChannels = route.params?.liveChannels;
   const liveChannelIndex = route.params?.liveChannelIndex ?? 0;
@@ -153,6 +154,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const [bookmarkSaved, setBookmarkSaved] = useState(false);
   const [bookmarkSheetVisible, setBookmarkSheetVisible] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [bufferedPercent, setBufferedPercent] = useState(0);
   const [showReplay, setShowReplay] = useState(false);
 
   // ── Refs (declared before useBookmarks due to value dependency) ──
@@ -398,9 +400,11 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const uiTopInset = isLandscape ? 0 : insets.top;
   const uiBottomInset = isLandscape ? 0 : insets.bottom;
 
-  // ── Auto-navigate back if no fileUri (e.g. restored nav state after restart) ──
+  // ── Auto-navigate back if no fileUri (e.g. restored nav state after restart).
+  //   But if a pre-flight initialError was provided by the caller, surface
+  //   that error in the player instead of silently bouncing back.
   useEffect(() => {
-    if (!fileUri) {
+    if (!fileUri && !initialError) {
       const t = setTimeout(() => {
         // 57.1: prefer going back to the originating screen; MainTabs only as cold-start fallback
         if (navigation.canGoBack()) {
@@ -411,7 +415,13 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       }, 100);
       return () => clearTimeout(t);
     }
-  }, [fileUri, navigation]);
+    if (initialError) {
+      setError({
+        title: initialError.title,
+        message: initialError.message,
+      });
+    }
+  }, [fileUri, initialError, navigation]);
 
   // ── Back / Cleanup ──
   const handleReplay = useCallback(() => {
@@ -1041,13 +1051,27 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
         const sub = MpvPlayer.onSurfaceAttached(() => {
           if (playableUri) {
             setLoadingPhase('loading');
-            MpvPlayer.setProperty('slang', subtitleSliceRef.current.languages);
-            MpvPlayer.setProperty('sub-bg-opacity', subtitleSliceRef.current.bgOpacity);
-            if (highContrastRef.current) {
-              MpvPlayer.setProperty('sub-color', DEFAULT_SUBTITLE_COLOR);
-              MpvPlayer.setProperty('sub-bg-opacity', 0.9);
-            }
-            MpvPlayer.loadFile(playableUri);
+            // 150ms ready-delay: matches the initial-mount behaviour and
+            // lets MPV settle before we hit setProperty/loadfile.
+            setTimeout(() => {
+              try {
+                MpvPlayer.setProperty(
+                  'slang',
+                  subtitleSliceRef.current.languages,
+                );
+                MpvPlayer.setProperty(
+                  'sub-bg-opacity',
+                  subtitleSliceRef.current.bgOpacity,
+                );
+                if (highContrastRef.current) {
+                  MpvPlayer.setProperty('sub-color', DEFAULT_SUBTITLE_COLOR);
+                  MpvPlayer.setProperty('sub-bg-opacity', '0.9');
+                }
+              } catch (e) {
+                // setProperty may fail if MPV is still warming up; ignore.
+              }
+              MpvPlayer.loadFile(playableUri);
+            }, 150);
           }
           sub?.remove();
         });
@@ -1190,32 +1214,52 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       const sub = MpvPlayer.onSurfaceAttached(() => {
         if (playableUri) {
           setLoadingPhase('loading');
-          MpvPlayer.setProperty('slang', subtitleSliceRef.current.languages);
-          MpvPlayer.setProperty('sub-bg-opacity', subtitleSliceRef.current.bgOpacity);
-          if (highContrastRef.current) {
-            MpvPlayer.setProperty('sub-color', DEFAULT_SUBTITLE_COLOR);
-            MpvPlayer.setProperty('sub-bg-opacity', 0.9);
-          }
-          MpvPlayer.loadFile(playableUri);
-
+          // Brief ready-delay: gives MPV time to fully spin up its event
+          // loop and internal state before we issue loadfile/setProperty.
+          // Without this the very first load often races MPV and surfaces
+          // as "File Not Found" even when the URL is valid.
           setTimeout(() => {
             try {
-              const thumb = MpvPlayer.captureThumbnail(playableUri);
-              if (thumb) {
-                dispatch(savePlaybackPosition({
-                  fileUri: playableUri,
-                  title: titleRef.current,
-                  position: 0,
-                  duration: MpvPlayer.getDuration() || 0,
-                  thumbnailPath: 'file://' + thumb,
-                  mediaType: getMediaType(playableUri),
-                  source: routeSourceRef.current ?? sourceFromUri(playableUri),
-                }));
+              MpvPlayer.setProperty(
+                'slang',
+                subtitleSliceRef.current.languages,
+              );
+              MpvPlayer.setProperty(
+                'sub-bg-opacity',
+                subtitleSliceRef.current.bgOpacity,
+              );
+              if (highContrastRef.current) {
+                MpvPlayer.setProperty('sub-color', DEFAULT_SUBTITLE_COLOR);
+                MpvPlayer.setProperty('sub-bg-opacity', '0.9');
               }
             } catch (e) {
-              logger.warn('Thumbnail capture failed', e);
+              // setProperty may fail if MPV is still warming up; ignore.
             }
-          }, 2000);
+            MpvPlayer.loadFile(playableUri);
+
+            // Capture thumbnail after the file has had a moment to load
+            setTimeout(() => {
+              try {
+                const thumb = MpvPlayer.captureThumbnail(playableUri);
+                if (thumb) {
+                  dispatch(
+                    savePlaybackPosition({
+                      fileUri: playableUri,
+                      title: titleRef.current,
+                      position: 0,
+                      duration: MpvPlayer.getDuration() || 0,
+                      thumbnailPath: 'file://' + thumb,
+                      mediaType: getMediaType(playableUri),
+                      source:
+                        routeSourceRef.current ?? sourceFromUri(playableUri),
+                    }),
+                  );
+                }
+              } catch (e) {
+                logger.warn('Thumbnail capture failed', e);
+              }
+            }, 2000);
+          }, 150);
         }
         sub?.remove();
       });
@@ -1303,14 +1347,53 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   }, [isReady, fileUri]);
 
   // ── Android back button ──
+  const backPressCountRef = useRef(0);
+  const backPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     const onBackPress = () => {
-      handleGoBack();
+      if (controlsLocked) {
+        toast.show('Lock to unlock controls', 'info', 1500);
+        return true;
+      }
+
+      if (navigation.canGoBack()) {
+        handleGoBack();
+        return true;
+      }
+
+      // V5: player opened as initial route — prompt before exit instead of
+      // silently killing the app
+      backPressCountRef.current += 1;
+
+      if (backPressCountRef.current === 1) {
+        toast.show('Press back again to exit', 'info', 2000);
+
+        if (backPressTimerRef.current) {
+          clearTimeout(backPressTimerRef.current);
+        }
+        backPressTimerRef.current = setTimeout(() => {
+          backPressCountRef.current = 0;
+        }, 2000);
+
+        return true; // consume — don't exit yet
+      }
+
+      // Second press within 2s — exit
+      if (backPressTimerRef.current) {
+        clearTimeout(backPressTimerRef.current);
+      }
+      BackHandler.exitApp();
       return true;
     };
     const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => subscription.remove();
-  }, [handleGoBack]);
+    return () => {
+      subscription.remove();
+      if (backPressTimerRef.current) {
+        clearTimeout(backPressTimerRef.current);
+      }
+    };
+  }, [handleGoBack, controlsLocked, navigation, toast]);
 
   // ── Mpv event subscriptions ──
   useEffect(() => {
@@ -1346,6 +1429,20 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       },
     );
 
+    // 52.4: "video truly loaded" signal. MPV_VIDEO_RECONFIG fires when the
+    // decoder produces a frame pipeline — i.e. the surface is about to present
+    // the first frame. Hiding the loader any earlier reveals the white
+    // TextureView before the first frame is drawn.
+    const unsubVideoReconfig = MpvPlayer.on('videoReconfig', () => {
+      if (
+        loadingPhaseRef.current !== 'ready' &&
+        resumeTargetRef.current == null &&
+        !resumeSeekDone.current
+      ) {
+        setLoadingPhase('ready');
+      }
+    });
+
     const unsubVol = MpvPlayer.on('onVolumeChanged', ({volume: vol}) => {
       setVolume(vol);
       setMuted(MpvPlayer.isMuted?.() ?? vol <= 0);
@@ -1355,6 +1452,10 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     });
 
     const unsubFile = MpvPlayer.on('onFileLoaded', () => {
+      // Clear any transient error from a previous failed attempt — if
+      // MPV just loaded a file, we're past the failure state.
+      setError(null);
+      setErrorIsPermission(false);
       resumeSeekDone.current = false;
       resumeTargetRef.current = null;
       hasSeenFirstPositionRef.current = false;
@@ -1401,11 +1502,15 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
         MpvPlayer.pause();
         setResumePrompt({position: savedPosition});
       } else {
+        // Safety net only — normally `videoReconfig` flips the phase to
+        // 'ready' the moment the first frame pipeline exists. This 1.5s
+        // timer guards streams that never emit video-reconfig (e.g. audio-only)
+        // without ever masking the white TextureView behind a premature reveal.
         loadingFallbackTimer.current = setTimeout(() => {
           if (loadingPhaseRef.current !== 'ready') {
             setLoadingPhase('ready');
           }
-        }, 700);
+        }, 1500);
       }
 
       try {
@@ -1502,7 +1607,9 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     });
 
     const unsubBuffering = MpvPlayer.on('onBuffering', ({percent}) => {
-      setIsBuffering(percent > 0 && percent < 100);
+      const pct = Math.min(Math.max(percent, 0), 100);
+      setIsBuffering(pct > 0 && pct < 100);
+      setBufferedPercent(pct / 100);
     });
 
     const unsubError = MpvPlayer.on('onError', ({message: errMsg}) => {
@@ -1542,6 +1649,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     return () => {
       unsubPos();
       unsubState();
+      unsubVideoReconfig();
       unsubVol();
       unsubSpeed();
       unsubFile();
@@ -1627,6 +1735,8 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     bookmarksForFile,
     bookmarkCountForFile,
     isBuffering,
+    /** V5: buffered fraction for SeekBar visualization */
+    bufferedPercent,
     showReplay,
     handleReplay,
 

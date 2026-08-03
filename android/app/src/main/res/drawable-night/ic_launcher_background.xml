@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Dark mode: black background for app icon -->
-<color xmlns:android="http://schemas.android.com/apk/android"
-       android:color="#000000" />
+<!-- Soft warm-gold (orb) background for adaptive launcher icon (dark mode) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#D4B47A" />
+</shape>

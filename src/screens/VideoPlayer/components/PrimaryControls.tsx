@@ -3,6 +3,7 @@ import {View, TouchableOpacity, StyleSheet, Animated} from 'react-native';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import SeekBar from '../../../components/player/SeekBar/SeekBar';
+import {AppText} from '../../../components/core/AppText/AppText';
 
 // ─── Props ─────────────────────────────────────────────────
 
@@ -15,15 +16,14 @@ export interface PrimaryControlsProps {
   onPlayPause: () => void;
   onPrev: () => void;
   onNext: () => void;
-  onRewind: () => void;
-  onForward: () => void;
+  onRewind?: () => void;
+  onForward?: () => void;
   onSeek: (pct: number) => void;
   bottomInset: number;
-  /** 46.1: accessibility scale for control sizes (1 = default, >1 = larger) */
+  bufferedFraction?: number;
   controlScale?: number;
+  SecondaryToolbar?: React.ReactNode;
 }
-
-// ─── Component ──────────────────────────────────────────────
 
 export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
   visible = true,
@@ -38,10 +38,11 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
   onForward,
   onSeek,
   bottomInset,
+  bufferedFraction = 0,
   controlScale = 1,
+  SecondaryToolbar,
 }) => {
   const {colors} = useTheme();
-  const iconColor = colors.text.primary;
   const opacity = useRef(new Animated.Value(1)).current;
   const translateY = useRef(new Animated.Value(0)).current;
   const playScale = useRef(new Animated.Value(1)).current;
@@ -71,6 +72,17 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
     }).start();
   }, [playScale]);
 
+  const defaultRewind = React.useCallback(() => {
+    onSeek(Math.max(0, (position - 10) / (duration || 1)));
+  }, [onSeek, position, duration]);
+
+  const defaultForward = React.useCallback(() => {
+    onSeek(Math.min(1, (position + 10) / (duration || 1)));
+  }, [onSeek, position, duration]);
+
+  const handleRewind = onRewind ?? defaultRewind;
+  const handleForward = onForward ?? defaultForward;
+
   const styles = useMemo(
     () =>
       StyleSheet.create({
@@ -80,27 +92,51 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           left: 0,
           right: 0,
           zIndex: 15,
-          paddingBottom: bottomInset + 8,
-          paddingTop: 8,
-          backgroundColor: colors.background.scrimMid,
+          paddingBottom: bottomInset + 12,
+          paddingTop: 10,
+          backgroundColor: 'rgba(0,0,0,0.88)',
+          borderTopWidth: 0.5,
+          borderTopColor: 'rgba(255,255,255,0.1)',
+        },
+        secondaryWrapper: {
+          marginBottom: 16,
         },
         seekBarWrapper: {
-          marginBottom: 2,
+          marginVertical: 8,
+          paddingHorizontal: 16,
         },
         transportRow: {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 28,
-          paddingHorizontal: 24,
-          paddingVertical: 4,
+          gap: 20,
+          paddingHorizontal: 16,
+          paddingTop: 8,
+          paddingBottom: 4,
         },
         transportBtn: {
-          width: 56 * controlScale,
-          height: 56 * controlScale,
-          borderRadius: 28 * controlScale,
+          width: 48 * controlScale,
+          height: 48 * controlScale,
+          borderRadius: 24 * controlScale,
+          backgroundColor: 'rgba(255,255,255,0.12)',
           alignItems: 'center',
           justifyContent: 'center',
+        },
+        seekBadgeBtn: {
+          width: 52 * controlScale,
+          height: 52 * controlScale,
+          borderRadius: 26 * controlScale,
+          backgroundColor: 'rgba(255,255,255,0.14)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'row',
+          gap: 2,
+        },
+        seekBadgeText: {
+          fontSize: 12,
+          fontWeight: '800',
+          color: '#FFFFFF',
+          letterSpacing: -0.5,
         },
         playBtn: {
           width: 64 * controlScale,
@@ -109,6 +145,11 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           backgroundColor: colors.accent.gold,
           alignItems: 'center',
           justifyContent: 'center',
+          shadowColor: colors.accent.gold,
+          shadowOffset: {width: 0, height: 4},
+          shadowOpacity: 0.4,
+          shadowRadius: 8,
+          elevation: 6,
         },
       }),
     [colors, bottomInset, controlScale],
@@ -118,36 +159,45 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
     <Animated.View
       style={[styles.container, {opacity, transform: [{translateY}]}]}
       pointerEvents={visible ? 'auto' : 'none'}>
-      {/* Seek bar */}
+      {/* 1. Embedded Secondary Toolbar */}
+      {SecondaryToolbar && (
+        <View style={styles.secondaryWrapper}>
+          {SecondaryToolbar}
+        </View>
+      )}
+
+      {/* 2. Embedded Seek bar */}
       <View style={styles.seekBarWrapper}>
         <SeekBar
           position={position}
           duration={duration}
           chapters={chapters}
           onSeek={onSeek}
+          bufferedFraction={bufferedFraction}
         />
       </View>
 
-      {/* Transport controls */}
+      {/* 3. Embedded Transport controls */}
       <View style={styles.transportRow}>
-        {/* Previous */}
+        {/* Previous Track */}
         <TouchableOpacity
           style={styles.transportBtn}
           onPress={onPrev}
           accessibilityRole="button"
           accessibilityLabel="Previous track"
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <SvgIcon name="skipBack" size={22} color={iconColor} />
+          <SvgIcon name="skipBack" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* -10s rewind */}
+        {/* -10s Rewind */}
         <TouchableOpacity
-          style={styles.transportBtn}
-          onPress={onRewind}
+          style={styles.seekBadgeBtn}
+          onPress={handleRewind}
           accessibilityRole="button"
           accessibilityLabel="Rewind 10 seconds"
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <SvgIcon name="skipBack" size={22} color={iconColor} />
+          <SvgIcon name="skipBack" size={14} color="#FFFFFF" />
+          <AppText style={styles.seekBadgeText}>10</AppText>
         </TouchableOpacity>
 
         {/* Play / Pause */}
@@ -162,30 +212,31 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
             hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
             <SvgIcon
               name={isPlaying ? 'pause' : 'play'}
-              size={24}
+              size={28}
               color={colors.text.inverse}
             />
           </TouchableOpacity>
         </Animated.View>
 
-        {/* +10s forward */}
+        {/* +10s Forward */}
         <TouchableOpacity
-          style={styles.transportBtn}
-          onPress={onForward}
+          style={styles.seekBadgeBtn}
+          onPress={handleForward}
           accessibilityRole="button"
           accessibilityLabel="Forward 10 seconds"
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <SvgIcon name="skipForward" size={22} color={iconColor} />
+          <AppText style={styles.seekBadgeText}>10</AppText>
+          <SvgIcon name="skipForward" size={14} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Next */}
+        {/* Next Track */}
         <TouchableOpacity
           style={styles.transportBtn}
           onPress={onNext}
           accessibilityRole="button"
           accessibilityLabel="Next track"
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <SvgIcon name="skipForward" size={22} color={iconColor} />
+          <SvgIcon name="skipForward" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </Animated.View>

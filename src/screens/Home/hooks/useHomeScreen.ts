@@ -62,7 +62,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const [isSettled, setIsSettled] = useState(false);
   const [hasError, setHasError] = useState(false);
   const dispatch = useAppDispatch();
-  const {user, isAuthenticated} = useAuth();
+  const {user} = useAuth();
 
   useEffect(() => {
     const t = setTimeout(() => setIsSettled(true), 300);
@@ -219,7 +219,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     sections,
     greeting: getGreeting(),
     dispatch,
-    user: isAuthenticated ? user : null,
+    user: user ? user : null,
     bookmarkCount: bookmarks.length,
     genres,
     handleOpenMedia,

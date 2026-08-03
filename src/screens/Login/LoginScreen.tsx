@@ -40,14 +40,22 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
   const {reduceMotion} = useAccessibility();
 
   // ── Auto-navigate to Home once authenticated ──
+  // Navigation is now driven from useAuth.signIn() so the redirect races
+  // correctly with the RootNavigator `key` remount; this effect only
+  // handles the edge case where auth flips in via silent restore.
   useEffect(() => {
-    if (isAuthenticated) {
-      navigation.replace('MainTabs', {
-        screen: 'HomeTab',
-        params: {screen: 'Home'},
+    if (isAuthenticated && navigationRef.isReady()) {
+      navigationRef.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'MainTabs',
+            params: {screen: 'HomeTab', params: {screen: 'Home'}},
+          },
+        ],
       });
     }
-  }, [isAuthenticated, navigation]);
+  }, [isAuthenticated]);
 
   // ── Stagger Entrance Animation ──
   const logoOpacity = useRef(new Animated.Value(0)).current;
@@ -126,55 +134,65 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
               ]}
               pointerEvents="none"
             />
-            {/* Lion logo + wordmark centered in the orb */}
+            {/* Lion logo + wordmark + tagline perfectly centered as one block */}
             <Animated.View
               style={[
                 styles.logoWrap,
                 {opacity: logoOpacity, transform: [{scale: logoscale}]},
               ]}>
-              <SvgIcon name="lion" size={96} color={colors.accent.gold} />
-              <AppText variant="display" color="primary" style={styles.logoText}>
+              <SvgIcon name="lion" size={96} color="#5C3A1E" />
+              <AppText
+                variant="h1"
+                style={[styles.logoText, {color: '#5C3A1E', fontWeight: '900'}]}>
                 SIMBA
               </AppText>
+              <Animated.View
+                style={[
+                  styles.taglineWrap,
+                  {opacity: taglineOpacity, transform: [{translateY: taglineTranslateY}]},
+                ]}>
+                <AppText variant="body1" style={[styles.tagline, {color: '#6B4226'}]}>
+                    Your media, your way
+                  </AppText>
+              </Animated.View>
             </Animated.View>
           </View>
-          <Animated.View style={{opacity: taglineOpacity, transform: [{translateY: taglineTranslateY}]}}>
-            <AppText
-              variant="body1"
-              style={[styles.tagline, {color: colors.text.secondary}]}>
-              Your media, your way
-            </AppText>
-          </Animated.View>
         </View>
 
         {/* Bottom section */}
-        <Animated.View style={[styles.bottomSection, {paddingBottom: insets.bottom + 24, opacity: buttonOpacity, transform: [{scale: buttonScale}]}]}>
-          <GoogleSignInButton onPress={handleSignIn} loading={isLoading} />
+        <Animated.View style={[styles.bottomSection, {paddingBottom: insets.bottom + 16, opacity: buttonOpacity}]}>
+          <Animated.View style={[styles.buttonWrap, {transform: [{scale: buttonScale}]}]}>
+            <GoogleSignInButton
+              onPress={handleSignIn}
+              loading={isLoading}
+              disabled={isAuthenticated}
+            />
 
-          {error ? (
-            <View style={styles.errorWrap}>
-              <AppText
-                style={[styles.errorText, {color: colors.semantic.error}]}>
-                {errorKind && ERROR_COPY[errorKind]
-                  ? ERROR_COPY[errorKind]
-                  : error}
-              </AppText>
-              {errorKind !== 'cancelled' ? (
-                <TouchableOpacity
-                  onPress={handleSignIn}
-                  activeOpacity={0.7}
-                  disabled={isLoading}
-                  hitSlop={{top: 12, bottom: 12, left: 24, right: 24}}>
-                  <AppText
-                    variant="bodySmall"
-                    color="accent"
-                    style={styles.retryText}>
-                    Try Again
-                  </AppText>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ) : null}
+            {error ? (
+              <View style={styles.errorWrap}>
+                <AppText
+                  style={[styles.errorText, {color: colors.semantic.error}]}>
+                  {errorKind && ERROR_COPY[errorKind]
+                    ? ERROR_COPY[errorKind]
+                    : error}
+                </AppText>
+                {errorKind !== 'cancelled' ? (
+                  <TouchableOpacity
+                    onPress={handleSignIn}
+                    activeOpacity={0.7}
+                    disabled={isLoading}
+                    hitSlop={{top: 12, bottom: 12, left: 24, right: 24}}>
+                    <AppText
+                      variant="bodySmall"
+                      color="accent"
+                      style={styles.retryText}>
+                      Try Again
+                    </AppText>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+          </Animated.View>
 
           {/* 51.2: legal links — open the in-app Privacy / Terms screens */}
           <View style={styles.legalRow}>
@@ -222,13 +240,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
     paddingHorizontal: 32,
   },
   logoArea: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: -40, // Nudge up slightly so it feels perfectly balanced
   },
   logoStack: {
     width: ORB_SIZE,
@@ -238,17 +256,28 @@ const styles = StyleSheet.create({
   },
   logoWrap: {
     alignItems: 'center',
+    justifyContent: 'center',
   },
   logoText: {
-    marginTop: 12,
-    letterSpacing: 6,
+    marginTop: 14,
+    letterSpacing: 10,
+    fontSize: 32,
+    lineHeight: 36,
+  },
+  taglineWrap: {
+    marginTop: 2,
+    alignItems: 'center',
   },
   tagline: {
     textAlign: 'center',
   },
   bottomSection: {
     alignItems: 'center',
-    gap: 16,
+  },
+  buttonWrap: {
+    marginBottom: 24, // Keep the button well above the legal links
+    alignItems: 'center',
+    minHeight: 80, // Reserve space for potential error text
   },
   errorText: {
     fontSize: 13,

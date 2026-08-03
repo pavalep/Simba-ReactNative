@@ -1,6 +1,7 @@
 import {createSlice, createSelector, PayloadAction} from '@reduxjs/toolkit';
 import {Playlist, PlaylistItem, PlaylistKind} from '../../types/playlist';
 import type {RootState} from '../index';
+import {resetAppState} from './authSlice';
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -145,6 +146,12 @@ const playlistSlice = createSlice({
         updatedAt: now,
       });
     },
+  },
+  // 49.5: purge playlists on global reset (logout)
+  extraReducers: builder => {
+    builder.addCase(resetAppState, state => {
+      state.playlists = [];
+    });
   },
 });
 

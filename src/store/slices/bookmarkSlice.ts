@@ -1,5 +1,6 @@
 import {createSlice, createSelector, PayloadAction} from '@reduxjs/toolkit';
 import type {RootState} from '../index';
+import {resetAppState} from './authSlice';
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -62,6 +63,12 @@ const bookmarkSlice = createSlice({
     setBookmarks(state, action: PayloadAction<Bookmark[]>) {
       state.items = action.payload;
     },
+  },
+  // 49.5: purge bookmarks on global reset (logout)
+  extraReducers: builder => {
+    builder.addCase(resetAppState, state => {
+      state.items = [];
+    });
   },
 });
 

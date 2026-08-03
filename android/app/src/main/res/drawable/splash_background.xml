@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Theme-aware solid background (white in light, black in dark) -->
+    <!-- Orb color solid background (matches in-app orb theme) -->
     <item android:drawable="@drawable/splash_bg_color" />
-    <!-- Centered gold lion logo on transparent background -->
+    <!-- Centered black lion logo on transparent background -->
     <item
         android:drawable="@drawable/ic_splash_logo"
         android:gravity="center" />

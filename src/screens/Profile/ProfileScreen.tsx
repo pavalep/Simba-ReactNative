@@ -51,7 +51,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const dispatch = useAppDispatch();
-  const {user, isAuthenticated, isLoading, signIn, signOut, revokeAccess} =
+  const {user, isLoading, signIn, signOut, revokeAccess} =
     useAuth();
 
   // ── Real store stats (42.3 — no fabricated numbers) ──
@@ -154,7 +154,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
         {/* ── Header card (42.1/42.2) ── */}
         <View
           style={[styles.headerCard, {backgroundColor: colors.background.elevated}]}>
-          {isAuthenticated && user ? (
+          {user ? (
             <>
               <Avatar uri={user.photo} name={user.name} size={64} />
               <View style={styles.headerInfo}>
@@ -166,44 +166,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
                 </AppText>
               </View>
             </>
-          ) : (
-            <>
-              <View
-                style={[
-                  styles.placeholderAvatar,
-                  {backgroundColor: colors.border.subtle},
-                ]}>
-                <SvgIcon name="lion" size={28} color={colors.accent.gold} />
-              </View>
-              <View style={styles.headerInfo}>
-                <AppText variant="h3" color="primary">
-                  Guest
-                </AppText>
-                <AppText variant="caption" color="secondary">
-                  Sign in to sync your library
-                </AppText>
-              </View>
-              <TouchableOpacity
-                style={[
-                  styles.signInBtn,
-                  {backgroundColor: colors.accent.gold},
-                ]}
-                onPress={signIn}
-                disabled={isLoading}
-                accessibilityRole="button"
-                accessibilityLabel="Sign in with Google">
-                {isLoading ? (
-                  <ActivityOrb size={20} />
-                ) : (
-                  <AppText
-                    variant="bodySmall"
-                    style={[styles.signInLabel, {color: colors.text.inverse}]}>
-                    Sign In
-                  </AppText>
-                )}
-              </TouchableOpacity>
-            </>
-          )}
+          ) : null}
         </View>
 
         {/* ── Stats grid (42.3) — flexWrap flow, .map kept ── */}
@@ -329,33 +292,31 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
         </View>
 
         {/* ── Account (42.6 / 42.7 / 43.5) ── */}
-        {isAuthenticated && (
-          <View style={styles.section}>
-            <AppText variant="h3" color="primary" style={styles.sectionTitle}>
-              Account
-            </AppText>
-            <View style={[styles.groupCard, {backgroundColor: colors.background.elevated}]}>
-              <SettingsRow
-                label="Sign Out"
-                description="Return to the sign-in screen"
-                onPress={() => setSignOutVisible(true)}
-                trailing={<AppText variant="caption" style={{color: colors.semantic.error}}>Logout</AppText>}
-              />
-              <SettingsRow
-                label="Revoke Google Access"
-                description="Permanently disconnect this account"
-                onPress={() => setRevokeVisible(true)}
-                trailing={<AppText variant="caption" style={{color: colors.semantic.error}}>Revoke</AppText>}
-              />
-              <SettingsRow
-                label="Clear Local Data"
-                description="Recents, bookmarks and cached files"
-                onPress={() => setWipeVisible(true)}
-                trailing={<AppText variant="caption" style={{color: colors.semantic.error}}>Wipe</AppText>}
-              />
-            </View>
+        <View style={styles.section}>
+          <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+            Account
+          </AppText>
+          <View style={[styles.groupCard, {backgroundColor: colors.background.elevated}]}>
+            <SettingsRow
+              label="Sign Out"
+              description="Return to the sign-in screen"
+              onPress={() => setSignOutVisible(true)}
+              trailing={<AppText variant="caption" style={{color: colors.semantic.error}}>Logout</AppText>}
+            />
+            <SettingsRow
+              label="Revoke Google Access"
+              description="Permanently disconnect this account"
+              onPress={() => setRevokeVisible(true)}
+              trailing={<AppText variant="caption" style={{color: colors.semantic.error}}>Revoke</AppText>}
+            />
+            <SettingsRow
+              label="Clear Local Data"
+              description="Recents, bookmarks and cached files"
+              onPress={() => setWipeVisible(true)}
+              trailing={<AppText variant="caption" style={{color: colors.semantic.error}}>Wipe</AppText>}
+            />
           </View>
-        )}
+        </View>
 
         <View style={{height: insets.bottom + 24}} />
       </ScrollView>

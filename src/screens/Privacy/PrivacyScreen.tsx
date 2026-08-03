@@ -1,7 +1,6 @@
 import React from 'react';
-import {ScrollView, StyleSheet} from 'react-native';
+import {ScrollView, StyleSheet, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
 import {PrivacyScreenProps} from '../../navigation/types';
 import {SimbaStatusBar} from '../../components/StatusBar';
@@ -17,10 +16,7 @@ export const PrivacyScreen: React.FC<Props> = ({navigation: _navigation}) => {
   return (
     <SafeAreaView style={styles.root}>
       <SimbaStatusBar variant="home" />
-      <LinearGradient
-        colors={[colors.background.primary, colors.background.elevated]}
-        style={StyleSheet.absoluteFill}
-      />
+      <View style={[StyleSheet.absoluteFill, {backgroundColor: '#D4B47A'}]} />
       <InternalHeader title="Privacy Policy" />
 
       <ScrollView

@@ -1,5 +1,6 @@
 import {Platform} from 'react-native';
 import type {AuthUser, AuthErrorKind} from '../store/slices/authSlice';
+import {ENV} from '../constants/env';
 
 /**
  * Google Sign-In wrapper.
@@ -22,9 +23,29 @@ export class AuthError extends Error {
   }
 }
 
-/** Lazy require — the native module is unavailable in unit tests. */
-function getGoogleSignin(): any {
+/** Lazy require wrapper for the google-signin module namespace.
+ *  Kept separate so unit tests can intercept without loading the native module.
+ */
+function getGoogleSigninModule(): any {
   return require('@react-native-google-signin/google-signin');
+}
+
+/**
+ * Lazy require of the `GoogleSignin` named export — the object that actually
+ * exposes `configure`, `hasPlayServices`, `signIn`, `signOut`, `revokeAccess`,
+ * `hasPreviousSignIn`, `signInSilently`, etc.
+ *
+ * NOTE: do NOT return the raw require() result — that's the module namespace,
+ * and calling `.configure()` on it raises "undefined is not a function" because
+ * the methods live on the `GoogleSignin` sub-object, not the namespace itself.
+ */
+function getGoogleSignin(): any {
+  return getGoogleSigninModule().GoogleSignin;
+}
+
+/** The `statusCodes` enum export (separate from the `GoogleSignin` object). */
+function getGoogleStatusCodes(): Record<string, unknown> {
+  return getGoogleSigninModule().statusCodes ?? {};
 }
 
 function toAuthUser(user: {
@@ -39,6 +60,36 @@ function toAuthUser(user: {
     email: user?.email ?? '',
     photo: user?.photo ?? null,
   };
+}
+
+function toAuthUserFromGooglePayload(payload: unknown): AuthUser {
+  const p = payload as any;
+  const profile =
+    p && typeof p === 'object' && p.user && typeof p.user === 'object' ? p.user : p;
+  return toAuthUser(profile ?? {});
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(
+            new AuthError({
+              kind: 'unknown',
+              message: 'Sign-in timed out. Please try again.',
+            }),
+          );
+        }, ms);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 /**
@@ -94,38 +145,69 @@ export function classifyAuthError(
   };
 }
 
-const DEV_USER: AuthUser = {
-  id: 'dev-user',
-  name: 'Dev User',
-  email: 'dev@simba.local',
-  photo: null,
-};
+/**
+ * Read the Google OAuth client ID from the build-time env.
+ * Falls back to a placeholder until you paste the real value.
+ */
+function getGoogleClientId(): string {
+  // On Android the Google Services Gradle plugin reads google-services.json
+  // at build time and exposes the default_web_client_id as a string resource.
+  // The JS side reads it from the ENV constant (injected at build time).
+  return ENV.GOOGLE_WEB_CLIENT_ID ?? '';
+}
+
+/**
+ * Build the configure() options for the current platform.
+ * Used both for one-shot init and for re-init after a sign-out/revoke.
+ */
+function getConfigureOptions(): Record<string, unknown> {
+  const options: Record<string, unknown> = {
+    offlineAccess: false,
+  };
+  const clientId = getGoogleClientId();
+  if (Platform.OS === 'android' && clientId) {
+    options.webClientId = clientId;
+  }
+  if (Platform.OS === 'ios' && clientId) {
+    options.iosClientId = clientId;
+  }
+  return options;
+}
+
+/**
+ * One-shot GoogleSignin configuration. Call once at app startup.
+ * Re-calling configure() at every signIn() is what was breaking the
+ * post-revoke sign-in flow: the library kept re-seeding state in a way
+ * that suppressed the account picker.
+ */
+let configured = false;
+export function configureGoogleSignin(): void {
+  if (configured) return;
+  const GoogleSignin = getGoogleSignin();
+  GoogleSignin.configure(getConfigureOptions());
+  configured = true;
+}
 
 /**
  * Attempt Google Sign-In.
  * Returns the authenticated user on success, throws AuthError on failure.
  */
 export async function signInWithGoogle(): Promise<AuthUser> {
-  try {
-    const GoogleSignin = getGoogleSignin();
-    GoogleSignin.configure({
-      // Minimal config — webClientId is typically loaded from
-      // google-services.json / GoogleService-Info.plist at build time.
-      offlineAccess: false,
-    });
+  // Ensure configure() has run at least once for this JS context — a previous
+  // signOut()/revokeAccess() does not invalidate the configuration.
+  configureGoogleSignin();
+  const GoogleSignin = getGoogleSignin();
 
-    await GoogleSignin.hasPlayServices();
-    const userInfo = await GoogleSignin.signIn();
-    return toAuthUser(userInfo.user);
-  } catch (error: unknown) {
-    if (__DEV__) {
-      // Dev fallback — emulators often lack Play Services / a Google account.
-      return DEV_USER;
-    }
-    throw new AuthError(
-      classifyAuthError(error, getGoogleSignin().statusCodes ?? {}),
-    );
+  await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
+  // v13: signIn() returns { type: 'success', data: User } | { type: 'cancelled' }
+  const response = await withTimeout(GoogleSignin.signIn(), 30000);
+  if (response.type !== 'success') {
+    throw new AuthError({
+      kind: 'cancelled',
+      message: 'Sign-in was cancelled.',
+    });
   }
+  return toAuthUserFromGooglePayload(response.data);
 }
 
 /**
@@ -141,28 +223,23 @@ export type SilentRestoreResult =
 
 export async function signInSilently(): Promise<SilentRestoreResult> {
   try {
+    configureGoogleSignin();
     const GoogleSignin = getGoogleSignin();
-    GoogleSignin.configure({offlineAccess: false});
 
     if (!GoogleSignin.hasPreviousSignIn()) {
       return {status: 'no_session'};
     }
 
+    // v13: signInSilently() returns { type: 'success', data: User } | { type: 'no_session' | 'sign_inRequired' }
     const userInfo = await GoogleSignin.signInSilently();
-    if (!userInfo?.user) {
+    if (userInfo.type !== 'success') {
       return {status: 'no_session'};
     }
-    return {status: 'restored', user: toAuthUser(userInfo.user)};
+    return {status: 'restored', user: toAuthUserFromGooglePayload(userInfo.data)};
   } catch (error: unknown) {
     const info = classifyAuthError(
       error,
-      (() => {
-        try {
-          return getGoogleSignin().statusCodes ?? {};
-        } catch {
-          return {};
-        }
-      })(),
+      getGoogleStatusCodes()
     );
     if (info.kind === 'session_expired' || info.kind === 'cancelled') {
       // Credential revoked or no saved credential — local session is stale.
@@ -175,14 +252,23 @@ export async function signInSilently(): Promise<SilentRestoreResult> {
 }
 
 /**
- * Sign out — calls Google sign-out then clears local state.
+ * Sign out — clears both the local session and the device-level Google account
+ * association so that the next sign-in always shows the account picker.
+ *
+ * We call revokeAccess() (not just signOut()) so that signInSilently() on the
+ * next app launch finds no saved account and returns 'no_session' — the user is
+ * never auto-routed to Home without explicitly selecting a Google account.
  */
 export async function signOutFromGoogle(): Promise<void> {
   try {
     const GoogleSignin = getGoogleSignin();
     await GoogleSignin.signOut();
+    // CRITICAL: revocation removes the saved Google account from the device's
+    // Google Sign-In cache. Without this, the account picker is skipped on the
+    // next sign-in and the previous account is silently restored.
+    await GoogleSignin.revokeAccess();
   } catch {
-    // Silently ignore sign-out errors — local state is cleared anyway
+    // Silently ignore sign-out/revoke errors — local state is cleared anyway
   }
 }
 

@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import {View, StyleSheet} from 'react-native';
+import {View, StyleSheet, TouchableOpacity} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
@@ -10,6 +10,9 @@ import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb'
 export interface VideoPlayerLoadingOverlayProps {
   visible: boolean;
   message?: string;
+  /** V5: optional back button — shown top-left so users can exit even
+   *  while the player is initializing (no other UI is visible at that point). */
+  onBack?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -17,6 +20,7 @@ export interface VideoPlayerLoadingOverlayProps {
 export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps> = ({
   visible,
   message = 'Loading…',
+  onBack,
 }) => {
   const {colors} = useTheme();
 
@@ -25,26 +29,40 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
       StyleSheet.create({
         overlay: {
           ...StyleSheet.absoluteFill,
-          backgroundColor: colors.background.overlay,
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 50,
+          // Translucent dark background overlay: allows top bar and bottom controls to stay rendered on top (zIndex > 6)
+          backgroundColor: 'rgba(0,0,0,0.75)',
+          zIndex: 6,
         },
         content: {
-          minWidth: 220,
-          paddingHorizontal: 18,
-          paddingVertical: 16,
-          borderRadius: 14,
-          backgroundColor: colors.background.elevated,
-          borderWidth: 0.5,
-          borderColor: colors.border.subtle,
+          flex: 1,
           alignItems: 'center',
+          justifyContent: 'center',
         },
         spinner: {
-          marginBottom: 10,
+          marginBottom: 14,
         },
         message: {
           textAlign: 'center',
+          fontSize: 14,
+          letterSpacing: 0.3,
+          fontWeight: '500',
+        },
+        backButton: {
+          position: 'absolute',
+          top: 16,
+          left: 16,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.background.scrimFaint,
+          zIndex: 10,
+        },
+        backIcon: {
+          color: colors.text.inverse,
+          fontSize: 20,
+          fontWeight: '600',
         },
       }),
     [colors],
@@ -55,12 +73,12 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
   }
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.content}>
+    <View style={styles.overlay} pointerEvents="box-none">
+      <View style={styles.content} pointerEvents="none">
         <View style={styles.spinner}>
           <ActivityOrb size={48} />
         </View>
-        <AppText variant="body1" color="primary" style={styles.message}>
+        <AppText variant="body1" color="onMediaSoft" style={styles.message}>
           {message}
         </AppText>
       </View>

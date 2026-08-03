@@ -18,7 +18,6 @@ import {SleepTimerSheet} from '../SleepTimerSheet/SleepTimerSheet';
 import {InfoSheet} from '../NowPlayingInfo/InfoSheet';
 import {PlaylistSheet} from '../../sheets/PlaylistSheet';
 import {QueueSheet} from '../../sheets/QueueSheet/QueueSheet';
-import {BufferingBar} from '../BufferingBar/BufferingBar';
 import {ReplayButton} from '../ReplayButton/ReplayButton';
 import {VideoPlayerResumeOverlay} from '../../../screens/VideoPlayer/components/VideoPlayerResumeOverlay';
 import {VideoPlayerAutoAdvanceCard} from '../../../screens/VideoPlayer/components/VideoPlayerAutoAdvanceCard';
@@ -57,6 +56,8 @@ export interface VideoPlayerHookData {
   errorIsPermission: boolean;
   chapters: MpvChapter[];
   isBuffering: boolean;
+  /** V5: buffered fraction [0..1] for SeekBar visualization */
+  bufferedPercent: number;
   showReplay: boolean;
 
   // Subtitle state
@@ -325,9 +326,55 @@ const VideoTransportDependentContent: React.FC<{
   isPlaying: boolean;
   pushPosition: (pos: number) => void;
 }> = ({h, position, duration, isPlaying, pushPosition}) => {
+  // #region debug-point A:report-helper
+  const debugReport = React.useCallback(
+    (hypothesisId: string, location: string, msg: string, data: Record<string, unknown> = {}) => {
+      fetch('http://10.0.2.2:7777/event', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          sessionId: 'player-controls-hidden',
+          runId: 'pre-fix',
+          hypothesisId,
+          location,
+          msg: `[DEBUG] ${msg}`,
+          data,
+          ts: Date.now(),
+        }),
+      }).catch(() => {});
+    },
+    [],
+  );
+  // #endregion
+
   React.useEffect(() => {
     h.handlePushPositionRef(pushPosition);
   }, [pushPosition, h]);
+
+  // #region debug-point A:primary-render-gates
+  React.useEffect(() => {
+    debugReport('A', 'VideoPlayer.tsx:VideoTransportDependentContent', 'primary-controls-gates', {
+      showVideoSurface: h.showVideoSurface,
+      pipUiVisible: h.pipUiVisible,
+      controlsLocked: h.controlsLocked,
+      loadingPhase: h.loadingPhase,
+      secondaryVisible: h.secondaryVisible,
+      isPlaying,
+      duration,
+      position,
+    });
+  }, [
+    debugReport,
+    duration,
+    h.controlsLocked,
+    h.loadingPhase,
+    h.pipUiVisible,
+    h.secondaryVisible,
+    h.showVideoSurface,
+    isPlaying,
+    position,
+  ]);
+  // #endregion
 
   // ── Primary controls fade + slide (26.8 / §5.3: 200ms in, 150ms out) ──
   const controlsOpacity = React.useRef(new Animated.Value(h.secondaryVisible ? 1 : 0)).current;
@@ -352,8 +399,22 @@ const VideoTransportDependentContent: React.FC<{
 
   return (
     <>
-      {h.showVideoSurface && h.pipUiVisible && !h.controlsLocked && (
-        <Animated.View style={{opacity: controlsOpacity, transform: [{translateY: controlsTranslateY}]}}>
+      {h.showVideoSurface && h.pipUiVisible && !h.controlsLocked && h.loadingPhase === 'ready' && (
+        <Animated.View
+          onLayout={event => {
+            // #region debug-point B:primary-wrapper-layout
+            const {x, y, width, height} = event.nativeEvent.layout;
+            debugReport('B', 'VideoPlayer.tsx:PrimaryControlsWrapper', 'primary-wrapper-layout', {
+              x,
+              y,
+              width,
+              height,
+              secondaryVisible: h.secondaryVisible,
+            });
+            // #endregion
+          }}
+          pointerEvents="box-none"
+          style={[{zIndex: 25}, {opacity: controlsOpacity, transform: [{translateY: controlsTranslateY}]}]}>
           <h.PrimaryControls
           visible={h.secondaryVisible}
           position={position}
@@ -365,12 +426,27 @@ const VideoTransportDependentContent: React.FC<{
           onNext={h.handleNext}
           onSeek={h.handleSeek}
           bottomInset={h.uiBottomInset}
+          bufferedFraction={h.bufferedPercent}
           controlScale={h.controlScale ?? 1}
         />
         </Animated.View>
       )}
 
-      {h.pipUiVisible && <BufferingBar visible={h.isBuffering} />}
+      {/* V5: Integrated buffering — reuse VideoPlayerLoadingOverlay for both
+            initial load AND playback buffering. Message changes dynamically. */}
+        <h.VideoPlayerLoadingOverlay
+          visible={
+            h.pipUiVisible &&
+            !h.error &&
+            (h.loadingPhase !== 'ready' || h.isBuffering)
+          }
+          message={
+            h.loadingPhase !== 'ready'
+              ? h.loadingMessage
+              : 'Buffering…'
+          }
+          onBack={h.handleGoBack}
+        />
 
       <BottomSheet
         title="Chapters"
@@ -464,6 +540,27 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
   const sleepTimerEndTime = useAppSelector(state => state.player.sleepTimerEndTime);
   const [sleepTimerSheetVisible, setSleepTimerSheetVisible] = React.useState(false);
 
+  // #region debug-point A:report-helper
+  const debugReport = React.useCallback(
+    (hypothesisId: string, location: string, msg: string, data: Record<string, unknown> = {}) => {
+      fetch('http://10.0.2.2:7777/event', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          sessionId: 'player-controls-hidden',
+          runId: 'pre-fix',
+          hypothesisId,
+          location,
+          msg: `[DEBUG] ${msg}`,
+          data,
+          ts: Date.now(),
+        }),
+      }).catch(() => {});
+    },
+    [],
+  );
+  // #endregion
+
   // ── 31.5: fade-from-black on every file load ──
   const blackFade = React.useRef(new Animated.Value(1)).current;
   React.useEffect(() => {
@@ -530,22 +627,62 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
     ]).start();
   }, [h.secondaryVisible, overlayOpacity, overlayTranslateYBottom, overlayTranslateYTop]);
 
+  // #region debug-point A:player-gates
+  React.useEffect(() => {
+    debugReport('A', 'VideoPlayer.tsx:VideoPlayerInner', 'player-gates', {
+      showVideoSurface: h.showVideoSurface,
+      pipUiVisible: h.pipUiVisible,
+      controlsLocked: h.controlsLocked,
+      loadingPhase: h.loadingPhase,
+      secondaryVisible: h.secondaryVisible,
+      isLandscape: h.isLandscape,
+      uiTopInset: h.uiTopInset,
+      uiBottomInset: h.uiBottomInset,
+      isPlaying,
+    });
+  }, [
+    debugReport,
+    h.controlsLocked,
+    h.isLandscape,
+    h.loadingPhase,
+    h.pipUiVisible,
+    h.secondaryVisible,
+    h.showVideoSurface,
+    h.uiBottomInset,
+    h.uiTopInset,
+    isPlaying,
+  ]);
+  // #endregion
+
   return (
     <View style={[styles.root, {backgroundColor: h.colors.background.primary}]}>
       <SimbaStatusBar variant="player" />
 
+      {/*
+        V5 rotation fix: no container rotation.
+        The native TextureView inside VideoPlayerVideoSurface handles the
+        video's aspect ratio natively. The container is always full-screen
+        in both portrait and landscape, so the controls (TopBar,
+        PrimaryControls, SecondaryToolbar) stay at the visual top/bottom of
+        the screen at full width — never rotated into vertical bars.
+        The `isLandscape` state is preserved for layout decisions (e.g.
+        hiding the title in landscape) but does NOT rotate the container.
+      */}
       <View
-        style={
-          h.isLandscape
-            ? {
-                width: h.screenHeight,
-                height: h.screenWidth,
-                alignSelf: 'center',
-                transform: [{rotate: '90deg'}],
-                marginVertical: (h.screenHeight - h.screenWidth) / 2,
-              }
-            : styles.rotationNeutral
-        }>
+        style={styles.playerContainer}
+        onLayout={event => {
+          // #region debug-point E:player-container-layout
+          const {x, y, width, height} = event.nativeEvent.layout;
+          debugReport('E', 'VideoPlayer.tsx:playerContainer', 'player-container-layout', {
+            x,
+            y,
+            width,
+            height,
+            screenWidth: h.screenWidth,
+            screenHeight: h.screenHeight,
+          });
+          // #endregion
+        }}>
         <h.VideoPlayerSurfaceLayer
           pipScale={h.pipScale}
           pipTranslateX={h.pipTranslateX}
@@ -553,6 +690,7 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
           nativePtr={h.nativePtr}
           showVideoSurface={h.showVideoSurface}
           controlsVisible={h.secondaryVisible}
+          loadingPhase={h.loadingPhase}
           onSingleTap={h.handleSurfaceTap}
           onDoubleTapLeft={h.handleDoubleTapLeft}
           onDoubleTapRight={h.handleDoubleTapRight}
@@ -562,6 +700,7 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
           onBrightnessChange={h.handleBrightnessSwipe}
           onVolumeGestureEnd={h.handleVolumeGestureEnd}
           onBrightnessGestureEnd={h.handleBrightnessGestureEnd}
+          onPlayPause={h.handlePlayPause}
         />
 
         {/* 31.5: cinematic fade-from-black on load (above surface, below overlays) */}
@@ -608,7 +747,21 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
         />
 
         {h.showVideoSurface && h.pipUiVisible && (
-          <Animated.View style={{opacity: overlayOpacity, transform: [{translateY: overlayTranslateYTop}]}}>
+          <Animated.View
+            onLayout={event => {
+              // #region debug-point B:top-wrapper-layout
+              const {x, y, width, height} = event.nativeEvent.layout;
+              debugReport('B', 'VideoPlayer.tsx:TopBarWrapper', 'top-wrapper-layout', {
+                x,
+                y,
+                width,
+                height,
+                secondaryVisible: h.secondaryVisible,
+              });
+              // #endregion
+            }}
+            pointerEvents="box-none"
+            style={[{zIndex: 30}, {opacity: overlayOpacity, transform: [{translateY: overlayTranslateYTop}]}]}>
             <h.VideoPlayerTopBar
               title={h.title}
               onGoBack={h.handleGoBack}
@@ -664,8 +817,22 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
           onCancel={() => dispatch(setSleepTimer(null))}
         />
 
-        {h.showVideoSurface && h.pipUiVisible && !h.controlsLocked && (
-          <Animated.View style={{opacity: overlayOpacity, transform: [{translateY: overlayTranslateYBottom}]}}>
+        {h.showVideoSurface && h.pipUiVisible && !h.controlsLocked && h.loadingPhase === 'ready' && (
+          <Animated.View
+            onLayout={event => {
+              // #region debug-point B:bottom-wrapper-layout
+              const {x, y, width, height} = event.nativeEvent.layout;
+              debugReport('B', 'VideoPlayer.tsx:BottomToolbarWrapper', 'bottom-wrapper-layout', {
+                x,
+                y,
+                width,
+                height,
+                secondaryVisible: h.secondaryVisible,
+              });
+              // #endregion
+            }}
+            pointerEvents="box-none"
+            style={[{zIndex: 25}, {opacity: overlayOpacity, transform: [{translateY: overlayTranslateYBottom}]}]}>
             <h.SecondaryToolbar
               visible={h.secondaryVisible}
               enabled={true}
@@ -688,13 +855,17 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
               onToggleShuffle={h.handleToggleShuffle}
               onToggleLoop={h.handleToggleLoop}
               onVolume={h.handleVolumeChange}
-              onSpeed={() => h.setSpeedPanelOpen(true)}
-              onScreenshot={h.handleScreenshot}
-              onToggleQueue={() => h.setQueueSheetVisible(true)}
-              onSleepTimer={() => setSleepTimerSheetVisible(true)}
-              onAutoHide={() => h.setSecondaryVisible(false)}
-              bottomInset={h.uiBottomInset}
-            />
+            onSpeed={() => h.setSpeedPanelOpen(true)}
+            onScreenshot={h.handleScreenshot}
+            onToggleQueue={() => h.setQueueSheetVisible(true)}
+            onSleepTimer={() => setSleepTimerSheetVisible(true)}
+            onAutoHide={() => h.setSecondaryVisible(false)}
+            bottomInset={h.uiBottomInset}
+            volume={h.volume}
+            muted={h.muted}
+            onVolumeValueChange={h.handleVolumeValueChange}
+            onToggleMute={h.handleToggleMute}
+          />
           </Animated.View>
         )}
 
@@ -805,11 +976,6 @@ const VideoPlayerInner: React.FC<InnerProps> = ({h}) => {
           />
         )}
 
-        <h.VideoPlayerLoadingOverlay
-          visible={h.pipUiVisible && h.loadingPhase !== 'ready' && !h.error}
-          message={h.loadingMessage}
-        />
-
         {h.pipUiVisible && (
           <ReplayButton
             visible={h.showReplay}
@@ -827,16 +993,24 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  rotationNeutral: {
+  // V5: full-screen container for surface + controls. Without `flex: 1`
+  // the View collapses to 0 height, which is why the TopBar was showing
+  // as a thin sliver and the bottom controls were completely missing.
+  playerContainer: {
     flex: 1,
   },
+  // V5: blackFade sits BELOW the controls (zIndex 5) so it never visually
+  // covers the TopBar/PrimaryControls/SecondaryToolbar. It is also
+  // pointerEvents: 'none' so it never blocks touches.
   blackFade: {
     ...StyleSheet.absoluteFill,
-    zIndex: 22,
+    zIndex: 5,
   },
+  // V5: sheetDim sits below the BottomSheets themselves (which manage
+  // their own zIndex) but above the video surface.
   sheetDim: {
     ...StyleSheet.absoluteFill,
-    zIndex: 25,
+    zIndex: 8,
   },
   // 50.3: sleep timer countdown badge (top bar area)
   sleepBadge: {

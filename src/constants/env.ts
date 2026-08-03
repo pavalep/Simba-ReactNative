@@ -11,4 +11,5 @@ export const ENV = {
   JAMENDO_CLIENT_ID: '79650c43',
   JAMENDO_CLIENT_SECRET: '1077941267104b52caf5ff02f11205c0',
   AUDIUS_API_KEY: '',
+  GOOGLE_WEB_CLIENT_ID: '342021022528-s4kg615kul5cumiho68ftbaelhe4nvs6.apps.googleusercontent.com',
 };

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "342021022528",
+    "project_id": "simba-6b840",
+    "storage_bucket": "simba-6b840.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:342021022528:android:8f50ac60e94cb8e34150a5",
+        "android_client_info": {
+          "package_name": "com.simba.player"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "342021022528-lho7go4nahhie7702ptisu68m3qr9a7j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.simba.player",
+            "certificate_hash": "8368736d580f1befffd58c3a0d1151890d1d36fe"
+          }
+        },
+        {
+          "client_id": "342021022528-s4kg615kul5cumiho68ftbaelhe4nvs6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByL8c8g3BIDhLC2qM5A3ceYNWbmKLMDUs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "342021022528-s4kg615kul5cumiho68ftbaelhe4nvs6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

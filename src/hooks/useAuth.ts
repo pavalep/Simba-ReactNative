@@ -1,11 +1,13 @@
 import {useCallback} from 'react';
-import {useAppDispatch, useAppSelector} from '../store';
+import {useAppDispatch, useAppSelector, persistor, store} from '../store';
+import {navigationRef} from '../navigation/navigationHelper';
 import {
   setLoading,
   setUser,
   setError,
   restoreStart,
   signOut as signOutAction,
+  resetAppState,
   expireSession,
   selectAuthUser,
   selectIsAuthenticated,
@@ -39,12 +41,34 @@ export function useAuth() {
   const sessionExpiresAt = useAppSelector(selectSessionExpiresAt);
 
   const signIn = useCallback(async () => {
+    // Guardrail 1: no-op when already authenticated — prevents a stray
+    // re-tap on the LoginScreen (during the navigation transition)
+    // from racing against the RootNavigator remount and bouncing the
+    // user out.
+    if (store.getState().auth.isAuthenticated) {
+      return;
+    }
     dispatch(setLoading(true));
     dispatch(setError({message: '', kind: 'unknown'}));
 
     try {
       const authUser = await signInWithGoogle();
       dispatch(setUser(authUser));
+      // Guardrail 2: navigate to the tab root once the user is in Redux.
+      // The RootNavigator also remounts via its `key` prop, so a reset
+      // here avoids any race between the remount and the LoginScreen's
+      // useEffect-driven navigation.replace.
+      if (navigationRef.isReady()) {
+        navigationRef.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'MainTabs',
+              params: {screen: 'HomeTab', params: {screen: 'Home'}},
+            },
+          ],
+        });
+      }
     } catch (err: unknown) {
       const info =
         err instanceof AuthError
@@ -66,6 +90,9 @@ export function useAuth() {
       dispatch(setUser(result.user));
     } else if (result.status === 'expired') {
       dispatch(signOutAction());
+      if (navigationRef.isReady()) {
+        navigationRef.reset({index: 0, routes: [{name: 'Login'}]});
+      }
     }
     // 'no_session' / 'unavailable' → keep persisted state as-is
   }, [dispatch]);
@@ -77,7 +104,13 @@ export function useAuth() {
     } catch {
       // Proceed with local sign-out regardless
     }
-    dispatch(signOutAction());
+    // 49.5: purge ALL persisted state — wipe AsyncStorage and reset all slices
+    persistor.purge();
+    dispatch(resetAppState());
+    // Immediately force navigation to Login
+    if (navigationRef.isReady()) {
+      navigationRef.reset({index: 0, routes: [{name: 'Login'}]});
+    }
   }, [dispatch]);
 
   /**
@@ -88,17 +121,26 @@ export function useAuth() {
     dispatch(setLoading(true));
     try {
       await revokeGoogleAccess();
-      dispatch(signOutAction());
       return true;
     } catch {
       // Revocation failed — still clear the local session (user asked to leave)
-      dispatch(signOutAction());
       return false;
+    } finally {
+      // 49.5: purge ALL persisted state after revocation
+      persistor.purge();
+      dispatch(resetAppState());
+      // Immediately force navigation to Login
+      if (navigationRef.isReady()) {
+        navigationRef.reset({index: 0, routes: [{name: 'Login'}]});
+      }
     }
   }, [dispatch]);
 
   const clearExpiredSession = useCallback(() => {
     dispatch(expireSession());
+    if (navigationRef.isReady()) {
+      navigationRef.reset({index: 0, routes: [{name: 'Login'}]});
+    }
   }, [dispatch]);
 
   return {

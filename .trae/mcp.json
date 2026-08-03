@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "getillustrations": {
+      "command": "npx",
+      "args": ["-y", "@getillustrations/mcp-server"],
+      "env": {
+        "MEILISEARCH_URL": "https://getillustrations.com/meili",
+        "MEILISEARCH_MASTER_KEY": "gi_free_f94a299439f2a8acdc633abbbae60a22050aaf5332fd5e0af59057dca3be6b78"
+      }
+    },
+    "codegraph": {
+      "command": "codegraph",
+      "args": ["serve", "--mcp", "--path", "${workspaceFolder}"]
+    },
+    "graphify": {
+      "command": "node",
+      "args": ["${workspaceFolder}\\scripts\\graphify-mcp.mjs", "--graph", "${workspaceFolder}\\graphify-out\\graph.json"]
+    }
+  }
+}

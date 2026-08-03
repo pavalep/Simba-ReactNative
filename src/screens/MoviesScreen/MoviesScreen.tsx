@@ -2,12 +2,13 @@
 // Non-tech-savvy UX: pre-built categories, no search bar.
 // Tap a category → see results grid → tap a movie → play.
 
-import React, {useCallback} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   View,
   FlatList,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -20,6 +21,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {getInternetArchiveVideoDetails} from '../../services/api/internetArchiveService';
 import type {InternetArchiveVideoResult} from '../../types/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -83,26 +85,39 @@ const CategoryChip: React.FC<CategoryChipProps> = React.memo(
 interface MovieCardProps {
   item: InternetArchiveVideoResult;
   onPress: (item: InternetArchiveVideoResult) => void;
+  isResolving?: boolean;
 }
 
-const MovieCard: React.FC<MovieCardProps> = React.memo(({item, onPress}) => {
-  const {colors} = useTheme();
+const MovieCard: React.FC<MovieCardProps> = React.memo(
+  ({item, onPress, isResolving}) => {
+    const {colors} = useTheme();
 
-  return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => onPress(item)}
-      accessibilityRole="button"
-      style={styles.movieCard}>
-      {/* Thumbnail */}
-      <View
-        style={[
-          styles.thumbnailWrap,
-          {backgroundColor: colors.background.elevated},
-        ]}>
-        <View style={styles.thumbnailPlaceholder}>
-          <SvgIcon name="video" size={24} color={colors.accent.goldDim} />
-        </View>
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => onPress(item)}
+        disabled={isResolving}
+        accessibilityRole="button"
+        style={styles.movieCard}>
+        <View
+          style={[
+            styles.thumbnailWrap,
+            {backgroundColor: colors.background.elevated},
+          ]}>
+          <View style={styles.thumbnailPlaceholder}>
+            <SvgIcon name="video" size={24} color={colors.accent.goldDim} />
+          </View>
+          {/* Resolving overlay — shows while we fetch the real file URL */}
+          {isResolving && (
+            <View
+              style={[
+                styles.thumbnailWrap,
+                styles.resolvingOverlay,
+                {backgroundColor: 'rgba(0,0,0,0.35)'},
+              ]}>
+              <ActivityOrb size={36} />
+            </View>
+          )}
         {/* Duration badge */}
         {item.duration > 0 && (
           <View
@@ -176,13 +191,68 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
     [setSelectedCategory],
   );
 
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+
   const handleMoviePress = useCallback(
-    (item: InternetArchiveVideoResult) => {
-      navigation.navigate('VideoPlayer', {
-        fileUri: item.streamingUrl,
-        fileTitle: item.title,
-        startPosition: 0,
-      });
+    async (item: InternetArchiveVideoResult) => {
+      // The search-result streamingUrl is a directory URL (e.g.
+      // https://archive.org/download/<id>/), not a playable file. We have
+      // to resolve the actual video file via getInternetArchiveVideoDetails
+      // before opening the player — otherwise the user gets
+      // "File Not Found".
+      setResolvingId(item.identifier);
+      try {
+        const details = await getInternetArchiveVideoDetails(item.identifier);
+        if (!details) {
+          // Details unavailable — surface a clear error in the player.
+          navigation.navigate('VideoPlayer', {
+            fileUri: '',
+            fileTitle: item.title,
+            startPosition: 0,
+            initialError: {
+              title: 'Unable to Load',
+              message:
+                'We could not fetch the video file for this item. Please try a different movie.',
+            },
+          });
+          return;
+        }
+        // If still a directory URL (no video file found), show a
+        // helpful error rather than a generic "File Not Found".
+        if (details.streamingUrl.endsWith('/')) {
+          navigation.navigate('VideoPlayer', {
+            fileUri: '',
+            fileTitle: item.title,
+            startPosition: 0,
+            initialError: {
+              title: 'No Video File',
+              message:
+                'This item does not have a playable video file. Please try a different movie.',
+            },
+          });
+          return;
+        }
+        navigation.navigate('VideoPlayer', {
+          fileUri: details.streamingUrl,
+          fileTitle: item.title,
+          startPosition: 0,
+        });
+      } catch (err) {
+        navigation.navigate('VideoPlayer', {
+          fileUri: '',
+          fileTitle: item.title,
+          startPosition: 0,
+          initialError: {
+            title: 'Unable to Load',
+            message:
+              err instanceof Error
+                ? err.message
+                : 'Failed to fetch the video file. Please try again.',
+          },
+        });
+      } finally {
+        setResolvingId(null);
+      }
     },
     [navigation],
   );
@@ -256,7 +326,11 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
           <FlatList
             data={currentResults}
             renderItem={({item}) => (
-              <MovieCard item={item} onPress={handleMoviePress} />
+              <MovieCard
+                item={item}
+                onPress={handleMoviePress}
+                isResolving={resolvingId === item.identifier}
+              />
             )}
             keyExtractor={item => item.identifier}
             numColumns={2}
@@ -346,6 +420,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.4,
+  },
+  resolvingOverlay: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 0,
   },
   durationBadge: {
     paddingHorizontal: 6,

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Dark mode splash: subtle dark gradient (near-black) -->
+<!-- Soft warm-gold gradient for dark mode splash (matches in-app orb theme) -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <gradient
         android:angle="135"
-        android:startColor="#1A1A1A"
-        android:centerColor="#111111"
-        android:endColor="#000000" />
+        android:startColor="#A98550"
+        android:centerColor="#D4B47A"
+        android:endColor="#E2C68A" />
 </shape>

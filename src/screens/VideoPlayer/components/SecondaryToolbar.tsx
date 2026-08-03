@@ -4,7 +4,9 @@ import {
   TouchableOpacity,
   Animated,
   StyleSheet,
+  ScrollView,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -16,7 +18,6 @@ interface ToolbarBtnProps {
   active?: boolean;
   onPress?: () => void;
   label: string;
-  /** 31.7: announce toggle state to screen readers (checked/unchecked) */
   isToggle?: boolean;
 }
 
@@ -24,7 +25,6 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label, is
   const {colors} = useTheme();
   const [showLabel, setShowLabel] = useState(false);
   const labelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const iconMuted = colors.text.secondary;
 
   const handlePressIn = useCallback(() => {
     labelTimer.current = setTimeout(() => setShowLabel(true), 600);
@@ -41,28 +41,37 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label, is
   const btnStyles = useMemo(
     () => ({
       container: {
-        width: 52,
-        height: 52,
-        borderRadius: 14,
+        height: 40,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        flexDirection: 'row' as const,
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
-        backgroundColor: active ? colors.accent.goldDim : 'transparent',
+        backgroundColor: active ? colors.accent.goldDim : 'rgba(255,255,255,0.08)',
+        borderWidth: active ? 1 : 0.5,
+        borderColor: active ? colors.accent.gold : 'rgba(255,255,255,0.08)',
+        gap: 6,
       },
       labelTooltip: {
         position: 'absolute' as const,
         bottom: -22,
-        backgroundColor: colors.background.scrimStrong,
+        backgroundColor: 'rgba(0,0,0,0.9)',
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 4,
         borderWidth: 0.5,
-        borderColor: colors.border.emphasis,
+        borderColor: 'rgba(255,255,255,0.2)',
         zIndex: 100,
       },
       labelText: {
-        fontSize: 9,
-        color: colors.accent.gold,
+        fontSize: 10,
+        color: '#FFFFFF',
         fontWeight: '500' as const,
+      },
+      btnText: {
+        fontSize: 12,
+        fontWeight: '600' as const,
+        color: active ? colors.accent.gold : '#FFFFFF',
       },
     }),
     [active, colors],
@@ -78,12 +87,13 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({icon, active, onPress, label, is
       accessibilityLabel={label}
       accessibilityState={isToggle ? {checked: !!active} : undefined}
       accessibilityHint={isToggle ? `Toggle ${label.toLowerCase()}` : undefined}
-      activeOpacity={0.6}>
+      activeOpacity={0.7}>
       <SvgIcon
         name={icon}
-        size={20}
-        color={active ? colors.accent.gold : iconMuted}
+        size={18}
+        color={active ? colors.accent.gold : '#FFFFFF'}
       />
+      <AppText style={btnStyles.btnText}>{label}</AppText>
       {showLabel && (
         <View style={btnStyles.labelTooltip}>
           <AppText style={btnStyles.labelText}>{label}</AppText>
@@ -123,13 +133,18 @@ export interface SecondaryToolbarProps {
   onSleepTimer?: () => void;
   onAutoHide: () => void;
   bottomInset: number;
+  volume?: number;
+  muted?: boolean;
+  onVolumeValueChange?: (value: number) => void;
+  onToggleMute?: () => void;
+  keepVisible?: boolean;
 }
 
 // ─── Component ──────────────────────────────────────────────
 
 export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
-  visible,
-  enabled,
+  visible: _visible,
+  enabled: _enabled,
   eqEnabled,
   shuffleActive,
   loopMode,
@@ -153,54 +168,40 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
   onSpeed,
   onScreenshot,
   onSleepTimer,
-  onAutoHide,
-  bottomInset,
+  onAutoHide: _onAutoHide,
+  bottomInset: _bottomInset,
+  volume: volumeProp = 65,
+  muted: mutedProp = false,
+  onVolumeValueChange,
+  onToggleMute,
+  keepVisible: _keepVisible,
 }) => {
   const {colors} = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-  const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoHideDuration = 5000;
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         container: {
-          position: 'absolute',
-          // Sit above the primary transport controls instead of competing for
-          // the same bottom hit area.
-          bottom: bottomInset + 92,
-          left: 0,
-          right: 0,
-          zIndex: 14,
+          width: '100%',
           alignItems: 'center',
+          paddingHorizontal: 12,
         },
         card: {
-          marginHorizontal: 12,
-          borderRadius: 18,
+          borderRadius: 24,
           overflow: 'hidden',
           borderWidth: 0.5,
-          borderColor: colors.border.emphasis,
-          backgroundColor: colors.background.scrimStrong,
+          borderColor: 'rgba(255,255,255,0.12)',
+          backgroundColor: 'rgba(18,18,18,0.88)',
+          maxWidth: '100%',
         },
-        glassBg: {
-          ...StyleSheet.absoluteFill,
-          backgroundColor: colors.background.scrimStrong,
-        },
-        toolbarContent: {
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          paddingBottom: 10,
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: 8,
-        },
-        btnRow: {
+        scrollContent: {
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
+          paddingHorizontal: 10,
+          paddingVertical: 8,
+          gap: 8,
         },
         subtitleGroup: {
           flexDirection: 'row',
@@ -208,74 +209,69 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
           gap: 4,
         },
         visToggle: {
-          width: 32,
-          height: 24,
-          borderRadius: 12,
+          height: 40,
+          paddingHorizontal: 10,
+          borderRadius: 20,
           alignItems: 'center',
           justifyContent: 'center',
+          borderWidth: 0.5,
         },
         visToggleText: {
-          fontSize: 9,
-          fontWeight: '700',
+          fontSize: 10,
+          fontWeight: '800',
           letterSpacing: 0.5,
         },
+        volumeRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          height: 40,
+          paddingHorizontal: 10,
+          borderRadius: 20,
+          backgroundColor: 'rgba(255,255,255,0.08)',
+          width: 130,
+        },
+        volumeIcon: {
+          fontSize: 14,
+        },
+        volumeSlider: {
+          flex: 1,
+          height: 20,
+        },
       }),
-    [bottomInset, colors],
+    [colors],
   );
 
-  // ── Animate visibility ──
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
-        toValue: visible ? 1 : 0,
+        toValue: 1,
         duration: 200,
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
-        toValue: visible ? 0 : 20,
+        toValue: 0,
         duration: 200,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [visible, fadeAnim, slideAnim]);
-
-  // ── Auto-hide timer ──
-  const resetAutoHide = useCallback(() => {
-    if (autoHideTimer.current) {
-      clearTimeout(autoHideTimer.current);
-    }
-    if (visible && enabled) {
-      autoHideTimer.current = setTimeout(() => {
-        onAutoHide();
-      }, autoHideDuration);
-    }
-  }, [visible, enabled, autoHideDuration, onAutoHide]);
-
-  useEffect(() => {
-    resetAutoHide();
-    return () => {
-      if (autoHideTimer.current) {
-        clearTimeout(autoHideTimer.current);
-      }
-    };
-  }, [visible, resetAutoHide]);
-
-  const handleInteraction = useCallback(() => {
-    resetAutoHide();
-  }, [resetAutoHide]);
+  }, [fadeAnim, slideAnim]);
 
   const getVisToggleStyle = useCallback(
     () => ({
       backgroundColor: subtitleVisible
         ? colors.accent.goldGlow
-        : colors.background.highlight,
+        : 'rgba(255,255,255,0.08)',
+      borderColor: subtitleVisible
+        ? colors.accent.gold
+        : 'rgba(255,255,255,0.12)',
     }),
     [subtitleVisible, colors],
   );
 
   const getVisToggleTextStyle = useCallback(
     () => ({
-      color: subtitleVisible ? colors.accent.gold : colors.text.secondary,
+      color: subtitleVisible ? colors.accent.gold : '#FFFFFF',
     }),
     [subtitleVisible, colors],
   );
@@ -289,102 +285,115 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
           transform: [{translateY: slideAnim}],
         },
       ]}
-      pointerEvents={visible ? 'auto' : 'none'}>
+      pointerEvents="auto">
       <View style={styles.card}>
-        <View style={styles.glassBg} pointerEvents="none" />
-        <View
-          style={styles.toolbarContent}
-          onStartShouldSetResponder={() => true}
-          onResponderRelease={handleInteraction}>
-          <View style={styles.btnRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}>
+          <ToolbarBtn
+            icon="list"
+            label="Chapters"
+            onPress={onToggleChapters}
+          />
+          <ToolbarBtn
+            icon="headphones"
+            active={activeAudioTrack !== null}
+            onPress={onToggleAudio}
+            label={audioLabel ? `Audio (${audioLabel})` : 'Audio'}
+            isToggle
+          />
+          <View style={styles.subtitleGroup}>
             <ToolbarBtn
-              icon="list"
-              label="Chapters"
-              onPress={onToggleChapters}
-            />
-            <ToolbarBtn
-              icon="headphones"
-              active={activeAudioTrack !== null}
-              onPress={onToggleAudio}
-              label={audioLabel ? `Audio (${audioLabel})` : 'Audio tracks'}
+              icon="subtitles"
+              active={activeSubtitle !== null}
+              onPress={onToggleSubtitles}
+              label={subtitleLabel ? `Sub (${subtitleLabel})` : 'Subtitles'}
               isToggle
             />
-            <View style={styles.subtitleGroup}>
-              <ToolbarBtn
-                icon="subtitles"
-                active={activeSubtitle !== null}
-                onPress={onToggleSubtitles}
-                label={subtitleLabel ? `Subtitles (${subtitleLabel})` : 'Subtitles'}
-                isToggle
+            {activeSubtitle !== null && onToggleSubtitleVisibility && (
+              <TouchableOpacity
+                style={[styles.visToggle, getVisToggleStyle()]}
+                onPress={onToggleSubtitleVisibility}
+                activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel="Toggle subtitle visibility"
+                accessibilityState={{checked: subtitleVisible}}>
+                <AppText style={[styles.visToggleText, getVisToggleTextStyle()]}>
+                  {subtitleVisible ? 'ON' : 'OFF'}
+                </AppText>
+              </TouchableOpacity>
+            )}
+          </View>
+          <ToolbarBtn
+            icon="sliders"
+            active={eqEnabled}
+            onPress={onToggleEq}
+            label="EQ"
+            isToggle
+          />
+          <ToolbarBtn
+            icon="listMusic"
+            active={playlistLength > 0}
+            onPress={onTogglePlaylist}
+            label="Playlist"
+            isToggle
+          />
+          <ToolbarBtn
+            icon="layoutList"
+            onPress={onToggleQueue}
+            label="Queue"
+          />
+          <ToolbarBtn
+            icon="speed"
+            onPress={onSpeed}
+            label="Speed"
+          />
+          <ToolbarBtn
+            icon="shuffle"
+            active={shuffleActive}
+            onPress={onToggleShuffle}
+            label="Shuffle"
+            isToggle
+          />
+          <ToolbarBtn
+            icon="repeat"
+            active={loopMode !== 'none'}
+            onPress={onToggleLoop}
+            label="Loop"
+            isToggle
+          />
+          {onVolumeValueChange ? (
+            <View style={styles.volumeRow}>
+              <TouchableOpacity
+                onPress={onToggleMute}
+                accessibilityRole="button"
+                accessibilityLabel={mutedProp ? 'Unmute' : 'Mute'}
+                hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+                <AppText style={[styles.volumeIcon, {color: mutedProp ? colors.text.secondary : colors.accent.gold}]}>
+                  {mutedProp ? '🔇' : '🔊'}
+                </AppText>
+              </TouchableOpacity>
+              <Slider
+                style={styles.volumeSlider}
+                value={mutedProp ? 0 : volumeProp}
+                minimumValue={0}
+                maximumValue={100}
+                step={1}
+                minimumTrackTintColor={colors.accent.gold}
+                maximumTrackTintColor="rgba(255,255,255,0.2)"
+                thumbTintColor={colors.accent.gold}
+                onValueChange={onVolumeValueChange}
+                accessibilityLabel="Volume"
               />
-              {activeSubtitle !== null && onToggleSubtitleVisibility && (
-                <TouchableOpacity
-                  style={[
-                    styles.visToggle,
-                    getVisToggleStyle(),
-                  ]}
-                  onPress={onToggleSubtitleVisibility}
-                  activeOpacity={0.6}
-                  accessibilityRole="button"
-                  accessibilityLabel="Toggle subtitle visibility"
-                  accessibilityState={{checked: subtitleVisible}}>
-                  <AppText
-                    style={[
-                      styles.visToggleText,
-                      getVisToggleTextStyle(),
-                    ]}>
-                    {subtitleVisible ? 'ON' : 'OFF'}
-                  </AppText>
-                </TouchableOpacity>
-              )}
             </View>
-            <ToolbarBtn
-              icon="sliders"
-              active={eqEnabled}
-              onPress={onToggleEq}
-              label="Equalizer"
-              isToggle
-            />
-            <ToolbarBtn
-              icon="listMusic"
-              active={playlistLength > 0}
-              onPress={onTogglePlaylist}
-              label="Playlist"
-              isToggle
-            />
-            <ToolbarBtn
-              icon="layoutList"
-              onPress={onToggleQueue}
-              label="Queue"
-            />
-            <ToolbarBtn
-              icon="music"
-              onPress={onInfo}
-              label="Details"
-            />
-          </View>
-
-          <View style={styles.btnRow}>
-            <ToolbarBtn
-              icon="shuffle"
-              active={shuffleActive}
-              onPress={onToggleShuffle}
-              label="Shuffle"
-              isToggle
-            />
-            <ToolbarBtn
-              icon="repeat"
-              active={loopMode !== 'none'}
-              onPress={onToggleLoop}
-              label="Loop"
-              isToggle
-            />
+          ) : (
             <ToolbarBtn icon="volume" onPress={onVolume} label="Volume" />
-            <ToolbarBtn icon="speed" onPress={onSpeed} label="Playback speed" />
-            <ToolbarBtn icon="camera" onPress={onScreenshot} label="Screenshot" />
-            {onSleepTimer && <ToolbarBtn icon="sliders" onPress={onSleepTimer} label="Sleep timer" />}
-          </View>
-        </View>
+          )}
+          <ToolbarBtn icon="music" onPress={onInfo} label="Details" />
+          <ToolbarBtn icon="camera" onPress={onScreenshot} label="Shot" />
+          {onSleepTimer && <ToolbarBtn icon="sliders" onPress={onSleepTimer} label="Sleep" />}
+        </ScrollView>
       </View>
     </Animated.View>
   );

@@ -4,7 +4,9 @@
  * affordances (buffering, retry-with-backoff, cached remote artwork).
  */
 
-const REMOTE_SCHEMES = ['http:', 'https:'];
+// NOTE: scheme here is extracted WITHOUT the colon (uri.split('://')[0]),
+// so entries must NOT include ':'.
+const REMOTE_SCHEMES = ['http', 'https'];
 
 /**
  * Whether a URI points to a remote network resource rather than a local file.

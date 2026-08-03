@@ -2,6 +2,7 @@ import React, {useMemo, useEffect, useCallback, useState} from 'react';
 import {Provider} from 'react-redux';
 import {Linking, View, StyleSheet} from 'react-native';
 import {PersistGate} from 'redux-persist/integration/react';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
 import type {InitialState} from '@react-navigation/native';
 import {store, persistor} from './src/store';
@@ -20,6 +21,12 @@ import {useAuthSession} from './src/hooks/useAuthSession';
 import {downloadService} from './src/services/downloadService';
 import {hydrateDownloads} from './src/store/slices/downloadsSlice';
 import {mark} from './src/utils/startupPerf';
+import {configureGoogleSignin} from './src/services/authService';
+
+// Initialize GoogleSignin once at app startup — calling configure() every
+// time on the sign-in path was breaking the post-revoke flow (the account
+// picker was suppressed). One-shot init keeps the library in a known state.
+configureGoogleSignin();
 
 /**
  * Parse a shared content URI and navigate to the Player screen.
@@ -184,13 +191,15 @@ const onRehydrated = () => {
 
 const App: React.FC = () => {
   return (
-    <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor} onBeforeLift={onRehydrated}>
-        <ThemeProvider>
-          <AppContent />
-        </ThemeProvider>
-      </PersistGate>
-    </Provider>
+    <SafeAreaProvider>
+      <Provider store={store}>
+        <PersistGate loading={null} persistor={persistor} onBeforeLift={onRehydrated}>
+          <ThemeProvider>
+            <AppContent />
+          </ThemeProvider>
+        </PersistGate>
+      </Provider>
+    </SafeAreaProvider>
   );
 };
 

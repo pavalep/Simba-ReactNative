@@ -244,7 +244,14 @@ export const MpvPlayer = {
   },
 
   setProperty(name: string, value: unknown): void {
-    ensureModule().setProperty(name, value);
+    // Native MpvBridgeModule.setProperty(name, value) requires both
+    // arguments as strings (value is sent over the JNI bridge as a
+    // String). Stringify numbers/booleans/etc. so the host function
+    // doesn't throw "Expected argument 1 of method setProperty to be
+    // a string, but got a number".
+    const stringValue =
+      typeof value === 'string' ? value : String(value);
+    ensureModule().setProperty(name, stringValue);
   },
 
   observeProperty(name: string): void {

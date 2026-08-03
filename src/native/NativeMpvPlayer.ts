@@ -77,6 +77,10 @@ export interface MpvEvents {
   onAudioDeviceChanged: {device: string};
   onVolumeChanged: {volume: Double};
   onSpeedChanged: {speed: Double};
+  /** Fires when mpv reconfigures the video output — the decoder has produced
+   *  a frame pipeline and the surface is about to present the first frame.
+   *  The earliest reliable "video is truly rendering" signal. */
+  videoReconfig: {};
 }
 
 export type MpvEventName = keyof MpvEvents;

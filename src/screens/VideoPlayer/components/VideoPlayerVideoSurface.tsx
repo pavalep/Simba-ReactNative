@@ -2,6 +2,7 @@ import React, {useMemo} from 'react';
 import {
   View,
   StyleSheet,
+  TouchableOpacity,
   requireNativeComponent,
 } from 'react-native';
 import type {ViewStyle} from 'react-native';
@@ -25,6 +26,8 @@ export interface VideoPlayerVideoSurfaceProps {
   showVideoSurface: boolean;
   isPlaying: boolean;
   controlsVisible: boolean;
+  loadingPhase: string;
+  onPlayPause?: () => void;
 }
 
 // ─── Component ───────────────────────────────────────────────
@@ -34,15 +37,22 @@ export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = R
   showVideoSurface,
   isPlaying,
   controlsVisible,
+  loadingPhase,
+  onPlayPause,
 }) => {
   const {colors} = useTheme();
+
+  const isLoaded = loadingPhase === 'ready';
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         container: {
           flex: 1,
-          backgroundColor: colors.background.primary,
+          // Black backdrop during load: the native TextureView defaults to
+          // white before mpv renders its first frame — this prevents the
+          // white-screen flash until the video surface is ready.
+          backgroundColor: isLoaded ? colors.background.primary : colors.shadow,
         },
         centerPlayBtnOverlay: {
           ...StyleSheet.absoluteFill,
@@ -62,7 +72,7 @@ export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = R
           color: colors.text.primary,
         },
       }),
-    [colors],
+    [colors, isLoaded],
   );
 
   return (
@@ -73,11 +83,20 @@ export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = R
           style={StyleSheet.absoluteFill}
         />
       )}
-      {!controlsVisible && !isPlaying && (
+      {/* Center play button: only when paused AND fully loaded (not during
+          initial load — the loading overlay covers that — and not while
+          actively playing, so the button never floats over active video).
+          Tappable: tap → play/pause (works alongside the gesture layer). */}
+      {!controlsVisible && !isPlaying && isLoaded && (
         <View style={styles.centerPlayBtnOverlay}>
-          <View style={styles.centerPlayBtn}>
+          <TouchableOpacity
+            style={styles.centerPlayBtn}
+            onPress={onPlayPause}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Play">
             <AppText style={styles.centerPlayIcon}>{'▶'}</AppText>
-          </View>
+          </TouchableOpacity>
         </View>
       )}
     </View>

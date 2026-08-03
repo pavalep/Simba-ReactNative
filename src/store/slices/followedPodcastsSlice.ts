@@ -4,6 +4,7 @@
 
 import {createSlice, createSelector, PayloadAction} from '@reduxjs/toolkit';
 import type {RootState} from '../index';
+import {resetAppState} from './authSlice';
 
 export interface FollowedPodcast {
   id: number;
@@ -39,6 +40,12 @@ const followedPodcastsSlice = createSlice({
     setFollowedPodcasts(state, action: PayloadAction<FollowedPodcast[]>) {
       state.items = action.payload;
     },
+  },
+  // 49.5: purge followed podcasts on global reset (logout)
+  extraReducers: builder => {
+    builder.addCase(resetAppState, state => {
+      state.items = [];
+    });
   },
 });
 

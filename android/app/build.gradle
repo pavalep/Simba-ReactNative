@@ -163,4 +163,15 @@ dependencies {
 
     // Media notification service (MediaSession, MediaStyle, MediaMetadata)
     implementation("androidx.media:media:1.7.0")
+
+    // Import the Firebase BoM — ensures all Firebase libs use compatible versions
+    implementation platform("com.google.firebase:firebase-bom:34.17.0")
+
+    // Firebase Analytics
+    implementation("com.google.firebase:firebase-analytics")
+
+    // Google Sign-In
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 }
+
+apply plugin: "com.google.gms.google-services"

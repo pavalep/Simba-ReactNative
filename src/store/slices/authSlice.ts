@@ -1,4 +1,4 @@
-import {createSlice, PayloadAction} from '@reduxjs/toolkit';
+import {createSlice, PayloadAction, createAction} from '@reduxjs/toolkit';
 
 export interface AuthUser {
   id: string;
@@ -17,6 +17,16 @@ export type AuthErrorKind =
   | 'offline'
   | 'session_expired'
   | 'unknown';
+
+/**
+ * 49.5: Global reset action — dispatched on logout to purge ALL persisted
+ * user data across every whitelisted slice. Without this, local library
+ * local library state (recents, bookmarks, playlists, downloads, etc.)
+ * survives logout and the app appears to be in an unauthenticated state
+ * with leftover data.
+ */
+export const RESET_APP_STATE = 'auth/RESET_APP_STATE';
+export const resetAppState = createAction(RESET_APP_STATE);
 
 /**
  * 43.2: Session TTL — 30 days of inactivity. On foreground the app
@@ -107,6 +117,19 @@ const authSlice = createSlice({
       state.lastSignedInAt = null;
       state.sessionExpiresAt = null;
     },
+  },
+  // 49.5: also clear auth state when a global reset is dispatched
+  extraReducers: builder => {
+    builder.addCase(resetAppState, state => {
+      state.user = null;
+      state.isAuthenticated = false;
+      state.error = null;
+      state.errorKind = null;
+      state.isLoading = false;
+      state.isRestoring = false;
+      state.lastSignedInAt = null;
+      state.sessionExpiresAt = null;
+    });
   },
 });
 
