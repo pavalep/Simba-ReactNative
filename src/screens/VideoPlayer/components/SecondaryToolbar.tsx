@@ -186,10 +186,12 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
         container: {
           width: '100%',
           alignItems: 'center',
-          paddingHorizontal: 12,
+          // V2-fix: parent PrimaryControls already adds paddingHorizontal:12,
+          // so don't double-pad here — that was stealing horizontal width.
+          paddingHorizontal: 0,
         },
         card: {
-          borderRadius: 24,
+          borderRadius: 22,
           overflow: 'hidden',
           borderWidth: 0.5,
           borderColor: 'rgba(255,255,255,0.12)',
@@ -199,9 +201,10 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
         scrollContent: {
           flexDirection: 'row',
           alignItems: 'center',
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          gap: 8,
+          paddingHorizontal: 8,
+          // V2-fix: was 8 — tightened to 6 to reclaim vertical space.
+          paddingVertical: 6,
+          gap: 6,
         },
         subtitleGroup: {
           flexDirection: 'row',

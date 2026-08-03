@@ -66,8 +66,18 @@ yarn-error.log
 # testing
 /coverage
 
-# Environment variables
+# Environment variables (real API keys via react-native-config)
 .env
+
+# Google Services (contains API keys)
+google-services.json
+GoogleService-Info.plist
+
+# MCP / scripts config with keys
+.mcp.json
+.trae/mcp.json
+scripts/*.mjs
+scripts/*.js
 
 # Yarn
 .yarn/*

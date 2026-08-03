@@ -24,6 +24,7 @@
     "axios": "^1.19.0",
     "react": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-config": "^1.6.1",
     "react-native-fast-image": "^8.6.3",
     "react-native-fs": "^2.20.0",
     "react-native-haptic-feedback": "^3.0.0",

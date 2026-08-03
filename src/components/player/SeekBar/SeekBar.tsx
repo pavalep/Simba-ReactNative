@@ -187,9 +187,13 @@ const SeekBar: React.FC<SeekBarProps> = ({
         container: {
           flexDirection: 'row',
           alignItems: 'center',
+          // V2-fix: was paddingVertical: 6 (added 12px around the bar).
+          // Removed vertical padding so the bar fits inside the bottom panel
+          // without colliding with the transport row below or the secondary
+          // toolbar above. Horizontal padding is owned by the parent.
+          paddingVertical: 0,
+          paddingHorizontal: 12,
           gap: 8,
-          paddingHorizontal: 16,
-          paddingVertical: 6,
         },
         trackContainer: {
           flex: 1,
@@ -247,9 +251,12 @@ const SeekBar: React.FC<SeekBarProps> = ({
           justifyContent: 'center',
           marginLeft: -10,
         },
+        // V2-fix: scrub bubble now floats BELOW the track (positive top)
+        // instead of above, because the secondary toolbar is already pinned
+        // to the top of the bottom panel and would otherwise cover it.
         scrubBubbleWrap: {
           position: 'absolute',
-          bottom: trackHeight + 10,
+          top: trackHeight + 4,
           width: 0,
           alignItems: 'center',
           zIndex: 6,
@@ -278,6 +285,7 @@ const SeekBar: React.FC<SeekBarProps> = ({
         timeLabel: {
           minWidth: 40,
           textAlign: 'center',
+          fontSize: 11,
         },
       }),
     [colors, trackHeight],

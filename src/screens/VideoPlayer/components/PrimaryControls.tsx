@@ -92,40 +92,47 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           left: 0,
           right: 0,
           zIndex: 15,
-          paddingBottom: bottomInset + 12,
-          paddingTop: 10,
+          // V2-fix: tight bottom inset — the bar already hugs the safe area,
+          // no extra breathing room needed because the transport row provides padding.
+          paddingBottom: bottomInset,
+          paddingTop: 6,
           backgroundColor: 'rgba(0,0,0,0.88)',
           borderTopWidth: 0.5,
           borderTopColor: 'rgba(255,255,255,0.1)',
         },
         secondaryWrapper: {
-          marginBottom: 16,
+          // V2-fix: was 16 → 8, so the toolbar no longer crowds the seekbar above it.
+          marginBottom: 8,
+          paddingHorizontal: 12,
         },
         seekBarWrapper: {
-          marginVertical: 8,
-          paddingHorizontal: 16,
+          // V2-fix: was marginVertical: 8 + paddingHorizontal: 16.
+          // SeekBar already has its own internal padding; adding more here was
+          // pushing the bar partially under the transport row.
+          marginTop: 2,
+          marginBottom: 4,
         },
         transportRow: {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 20,
+          gap: 16,
           paddingHorizontal: 16,
-          paddingTop: 8,
-          paddingBottom: 4,
+          paddingTop: 2,
+          paddingBottom: 2,
         },
         transportBtn: {
-          width: 48 * controlScale,
-          height: 48 * controlScale,
-          borderRadius: 24 * controlScale,
+          width: 44 * controlScale,
+          height: 44 * controlScale,
+          borderRadius: 22 * controlScale,
           backgroundColor: 'rgba(255,255,255,0.12)',
           alignItems: 'center',
           justifyContent: 'center',
         },
         seekBadgeBtn: {
-          width: 52 * controlScale,
-          height: 52 * controlScale,
-          borderRadius: 26 * controlScale,
+          width: 48 * controlScale,
+          height: 44 * controlScale,
+          borderRadius: 22 * controlScale,
           backgroundColor: 'rgba(255,255,255,0.14)',
           alignItems: 'center',
           justifyContent: 'center',
@@ -133,15 +140,15 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           gap: 2,
         },
         seekBadgeText: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '800',
           color: '#FFFFFF',
           letterSpacing: -0.5,
         },
         playBtn: {
-          width: 64 * controlScale,
-          height: 64 * controlScale,
-          borderRadius: 32 * controlScale,
+          width: 56 * controlScale,
+          height: 56 * controlScale,
+          borderRadius: 28 * controlScale,
           backgroundColor: colors.accent.gold,
           alignItems: 'center',
           justifyContent: 'center',
@@ -174,6 +181,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           chapters={chapters}
           onSeek={onSeek}
           bufferedFraction={bufferedFraction}
+          trackHeight={20}
         />
       </View>
 

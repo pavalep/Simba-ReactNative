@@ -1,15 +1,13 @@
 // ─── API Key Configuration ──────────────────────────────────────────────
-//
-// Placeholder keys for Phase 0 content APIs.
-// Replace with real keys before going to production (see .env file).
-// In React Native, .env vars are injected via react-native-config or a
-// Babel plugin at build time. These fallback values mirror the .env file.
+// Keys are read from .env via react-native-config at build time.
+// .env is gitignored — never commit real keys.
+import Config from 'react-native-config';
 
 export const ENV = {
-  PODCAST_INDEX_API_KEY: 'GJNMHDZ35CNYGBFUWK3L',
-  PODCAST_INDEX_API_SECRET: 'KGmdWuuQ8fPANPt#yVAxNJzCScaw$Ae8k6wrGSx#',
-  JAMENDO_CLIENT_ID: '79650c43',
-  JAMENDO_CLIENT_SECRET: '1077941267104b52caf5ff02f11205c0',
-  AUDIUS_API_KEY: '',
-  GOOGLE_WEB_CLIENT_ID: '342021022528-s4kg615kul5cumiho68ftbaelhe4nvs6.apps.googleusercontent.com',
+  PODCAST_INDEX_API_KEY: Config.PODCAST_INDEX_API_KEY ?? '',
+  PODCAST_INDEX_API_SECRET: Config.PODCAST_INDEX_API_SECRET ?? '',
+  JAMENDO_CLIENT_ID: Config.JAMENDO_CLIENT_ID ?? '',
+  JAMENDO_CLIENT_SECRET: Config.JAMENDO_CLIENT_SECRET ?? '',
+  AUDIUS_API_KEY: Config.AUDIUS_API_KEY ?? '',
+  GOOGLE_WEB_CLIENT_ID: Config.GOOGLE_WEB_CLIENT_ID ?? '',
 };
