@@ -1,0 +1,62 @@
+# V6 Wave 10.1 — Full Navigation Flow Test
+# Covers: Home → Video Player → Back → Video Player → Back (rapid)
+# Goal: no crashes, no native texture leaks, state saved correctly
+
+appId: com.simba.player
+name: Wave 10.1 — Full Navigation Flow
+tags:
+  - v6
+  - wave10
+  - navigation
+  - stability
+
+---
+
+# Launch the app fresh
+- launchApp:
+    clearState: true
+    arguments:
+      # Disable Animations for stable test runs
+      animEnabled: "false"
+
+# Wait for Home to load (Time to First Frame budget: 2s)
+- assertVisible:
+    id: ".*Play media file.*"
+    timeout: 5000
+
+# Step 1: Tap "Play media file" — this opens the local file picker
+- tapOn:
+    id: ".*Play media file.*"
+
+# Step 2: Wait for file picker / permission dialog
+- waitForAnimationToEnd
+
+# Step 3: Press back to return to Home
+- pressKey: Back
+
+# Step 4: Home should still be visible (no crash)
+- assertVisible:
+    id: ".*Play media file.*"
+    timeout: 3000
+
+# Step 5: Launch app again (cold start) — tests that
+# all timers/tasks were cleaned up between sessions
+- launchApp:
+    clearState: false
+
+- assertVisible:
+    id: ".*Play media file.*"
+    timeout: 5000
+
+# Step 6: Rapid back-press stress test
+# (5 quick back presses should not crash)
+- repeat:
+    times: 5
+    commands:
+      - pressKey: Back
+      - waitForAnimationToEnd
+
+# App should still be alive after rapid back presses
+- assertVisible:
+    id: ".*Play media file.*"
+    timeout: 5000

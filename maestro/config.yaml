@@ -1,0 +1,26 @@
+# V6 Wave 10 — Maestro test config
+# Run with: maestro test maestro/tests/
+
+# Wait for the app to fully load before any test starts
+# (Time to first frame is the V6 perf budget — must be < 2s)
+
+appId: com.simba.player
+name: SIMBA Player V6 E2E
+
+# Device-side settings
+tags:
+  - v6
+  - player
+  - stability
+
+# Run on the connected Android emulator
+execution:
+  # Don't capture screenshots for every step (we'll do it explicitly)
+  captureScreenshots: false
+  # Slow down slightly for stable animations
+  steps:
+    - runFlow: tests/wave10_navigation.yaml
+    - runFlow: tests/wave10_bookmarks.yaml
+    - runFlow: tests/wave10_seek.yaml
+    - runFlow: tests/wave10_controls.yaml
+    - runFlow: tests/wave10_track_selection.yaml

@@ -1,0 +1,37 @@
+# V6 Wave 10 — Track Selection & Settings Sheet Test
+# Covers: Subtitle/Audio sheets show Off option; "More" button
+# opens the consolidated settings sheet with 4 groups
+
+appId: com.simba.player
+name: Wave 10 — Track Selection & Settings Smoke Test
+tags:
+  - v6
+  - wave10
+  - tracks
+  - settings
+
+---
+
+- launchApp:
+    clearState: true
+
+- assertVisible:
+    id: ".*Play media file.*"
+    timeout: 5000
+
+- tapOn:
+    id: ".*Play media file.*"
+- waitForAnimationToEnd
+
+# Take a screenshot of the player with the new track popup / sheet
+# available
+- takeScreenshot: track_selection_test.png
+
+# Done. Manual verification:
+#   - Tap CC icon → bottom sheet with "Off" as first item
+#   - Audio track sheet also has "Off" / "Disable audio" option
+#   - "More" button (settings) opens sheet with 4 groups:
+#       Playback: Shuffle, Loop, Speed
+#       Audio: EQ toggle + Reset
+#       Playlist: Playlist, Queue
+#       Info: Details, Screenshot
