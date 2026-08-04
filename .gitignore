@@ -86,3 +86,11 @@ scripts/*.js
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Large downloaded tools / build artifacts (do not track in git)
+.tools/
+maestro/
+_reference_codes/
+*.zip
+*.tar.gz
+*.7z
