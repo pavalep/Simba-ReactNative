@@ -20,6 +20,8 @@ interface Props {
   item: Bookmark;
   onPress: (item: Bookmark) => void;
   onDelete: (id: string) => void;
+  /** V6 4.3.1: optional rename handler — surfaced via long-press */
+  onRename?: (id: string, currentLabel: string) => void;
   animatedStyle?: any;
 }
 
@@ -48,6 +50,7 @@ export const BookmarkItem: React.FC<Props> = ({
   item,
   onPress,
   onDelete,
+  onRename,
   animatedStyle,
 }) => {
   const {colors} = useTheme();
@@ -135,9 +138,12 @@ export const BookmarkItem: React.FC<Props> = ({
           <TouchableOpacity
             style={[styles.row, {borderBottomColor: colors.border.subtle}]}
             onPress={() => onPress(item)}
+            onLongPress={onRename ? () => onRename(item.id, item.label) : undefined}
+            delayLongPress={400}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={`Play ${item.title} at ${formatTime(item.position)}`}>
+            accessibilityLabel={`Play ${item.title} at ${formatTime(item.position)}`}
+            accessibilityHint={onRename ? 'Long-press to rename' : undefined}>
             {/* Thumbnail art when available, else gold bookmark icon (P34.6) */}
             {item.thumbnailPath ? (
               <View style={[styles.iconContainer, styles.thumbWrap]}>

@@ -44,7 +44,7 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
         message: {
           textAlign: 'center',
           fontSize: 14,
-          letterSpacing: 0.3,
+          letterSpacing: 0.4,
           fontWeight: '500',
         },
         backButton: {

@@ -1,7 +1,7 @@
 import React from 'react';
 import {RootStackScreenProps} from '../../navigation/types';
 import {useVideoPlayerScreen} from './hooks/useVideoPlayerScreen';
-import {VideoPlayerV2} from '../../components/player/VideoPlayer/VideoPlayerV2';
+import {VideoPlayer} from '../../components/player/VideoPlayer/VideoPlayer';
 import {VideoPlayerSurfaceLayer} from './components/VideoPlayerSurfaceLayer';
 import {VideoPlayerTopBar} from './components/VideoPlayerTopBar';
 import {PrimaryControls} from './components/PrimaryControls';
@@ -22,7 +22,7 @@ const VideoPlayerScreen: React.FC<Props> = ({navigation, route}) => {
   const hookData = useVideoPlayerScreen(navigation, route);
 
   return (
-    <VideoPlayerV2
+    <VideoPlayer
       {...hookData}
       VideoPlayerSurfaceLayer={VideoPlayerSurfaceLayer}
       VideoPlayerTopBar={VideoPlayerTopBar}

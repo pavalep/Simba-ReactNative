@@ -30,6 +30,20 @@
       </activity>
 
       <!-- ── Main React Native activity ── -->
+      <!--
+        V6 2.3.2: Locked to portrait at the OS level. The player screen
+        lets the user rotate to landscape via the rotate button in
+        VideoPlayerTopBar, which calls handleToggleRotate →
+        lockToLandscape()/lockToPortrait() from utils/orientation.ts.
+        That call uses react-native-orientation-locker, which calls
+        Activity.setRequestedOrientation(...) to override this manifest
+        at runtime. When the player unmounts, the cleanup effect
+        restores portrait (lockToPortrait()).
+        Do NOT change this to "fullSensor" or "unspecified" — the
+        nav option `orientation: 'landscape'` was removed from
+        RootNavigator.tsx (VideoPlayer screen) so the player now
+        defaults to portrait and only flips when the user asks.
+      -->
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

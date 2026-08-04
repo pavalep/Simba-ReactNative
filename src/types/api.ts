@@ -238,7 +238,6 @@ export interface InternetArchiveVideoResult {
   avgRating: number;
   downloadCount: number;
   imageUrl: string;
-  streamingUrl: string;
   subtitles: InternetArchiveSubtitleFile[];
   audioTracks: InternetArchiveAudioTrack[];
   downloadUrls: {format: string; url: string}[];

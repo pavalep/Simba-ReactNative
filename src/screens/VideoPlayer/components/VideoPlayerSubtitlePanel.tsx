@@ -9,6 +9,7 @@ import {
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {SUBTITLE_COLOR_PRESETS, DEFAULT_SUBTITLE_COLOR} from '../../../constants/subtitleColors';
 
 // ─── Props ───────────────────────────────────────────────────
@@ -175,15 +176,26 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
         loadBtn: {
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'flex-start',
           minHeight: 56,
           paddingVertical: spacing.md,
+          paddingHorizontal: spacing.lg,
           marginTop: spacing.sm,
           borderRadius: radius.sm,
           backgroundColor: colors.accent.goldDim,
+          gap: spacing.sm,
         },
         loadBtnIcon: {
           marginRight: spacing.sm,
+        },
+        loadBtnText: {
+          fontWeight: '600',
+        },
+        loadBtnHint: {
+          fontSize: 10,
+          letterSpacing: 0.4,
+          textTransform: 'uppercase',
+          opacity: 0.6,
         },
         sectionLabel: {
           marginTop: spacing.md,
@@ -355,16 +367,20 @@ export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> =
         </View>
       </TouchableOpacity>
 
-      {/* Load external subtitle file button */}
-      <TouchableOpacity style={styles.loadBtn} onPress={onLoadExternal}>
-        <AppText
-          variant="body2"
-          color="accent"
-          style={styles.loadBtnIcon}>
-          +
+      {/* V6 6.4.1: Load external subtitle button with file-type hint. */}
+      <TouchableOpacity
+        style={styles.loadBtn}
+        onPress={onLoadExternal}
+        accessibilityRole="button"
+        accessibilityLabel="Load external subtitle file"
+        accessibilityHint="Supports .srt, .vtt, and .ass subtitle files">
+        <SvgIcon name="download" size={16} color={colors.accent.gold} />
+        <AppText variant="body2" color="accent" style={styles.loadBtnText}>
+          Load external subtitle
         </AppText>
-        <AppText variant="body2" color="accent">
-          Load external subtitle file
+        <View style={{flex: 1}} />
+        <AppText variant="caption" color="tertiary" style={styles.loadBtnHint}>
+          .srt · .vtt · .ass
         </AppText>
       </TouchableOpacity>
 

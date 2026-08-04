@@ -217,5 +217,43 @@ export function usePipLifecycle(options: UsePipLifecycleOptions) {
     }, 150);
   }, [getChapterInfo, getProgressPct]);
 
+  // V6 1.3.1: PiP cleanup on unmount. If PiP is active when the player
+  // unmounts (e.g. user navigates away mid-PiP), we must exit PiP and
+  // destroy the player to release the native texture. Otherwise the
+  // native PiP window persists and crashes on the next launch.
+  //
+  // Important: this effect runs on EVERY unmount of the hook (i.e. when the
+  // owning screen unmounts due to navigation), not just when isInPipMode
+  // changes. We capture isInPipMode in a ref so the cleanup always reads
+  // the latest value, and the effect itself depends on [] so it never
+  // re-runs.
+  const isInPipModeRef = useRef(isInPipMode);
+  useEffect(() => {
+    isInPipModeRef.current = isInPipMode;
+  }, [isInPipMode]);
+
+  useEffect(() => {
+    return () => {
+      if (Platform.OS !== 'android') return;
+      if (!isInPipModeRef.current) return;
+      try {
+        MpvPlayerModule?.exitPip?.();
+      } catch {
+        // module may already be torn down
+      }
+      try {
+        MpvPlayer.stop();
+        MpvPlayer.destroy();
+      } catch {
+        // player may already be destroyed
+      }
+      try {
+        dispatch(resetPipState());
+      } catch {
+        // redux may be in a bad state
+      }
+    };
+  }, [dispatch]);
+
   return {isInPipMode, prepareAndEnterPip};
 }

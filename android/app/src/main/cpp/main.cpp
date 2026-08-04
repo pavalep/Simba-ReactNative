@@ -142,6 +142,38 @@ Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass) {
     mpv_set_option_string(mpv, "keep-open", "yes");
     mpv_set_option_string(mpv, "pause", "no");
 
+    // ── Streaming / buffering tuning ────────────────────────────────────
+    // These are the same options used by desktop MPV configs to get
+    // YouTube/Netflix-class seek-bar buffered-range visualization and
+    // snappy re-seeks on slow network streams (archive.org HLS, etc.).
+    //
+    //   • cache=yes              : enable a RAM cache even for non-network
+    //                              sources (so seek-back is instant).
+    //   • cache-secs=120         : keep ~2 minutes of stream ahead of the
+    //                              playhead in RAM. Big enough to absorb a
+    //                              brief re-buffer without a spinner, small
+    //                              enough to stay under mobile RAM limits.
+    //   • demuxer-max-bytes      : hard upper bound on the cache size in
+    //                              bytes (≈150 MB). Prevents OOM on large
+    //                              VOD files over HTTP.
+    //   • demuxer-max-back-bytes : how far backwards the cache retains
+    //                              data (~75 MB). This is what makes
+    //                              "seek back 30 s" instantaneous.
+    //   • demuxer-readahead-secs : how many seconds of stream to prefetch
+    //                              ahead of the playhead.
+    //   • demuxer-termination-timeout : if a network read stalls, fail
+    //                              the demuxer so the player can recover
+    //                              instead of hanging forever.
+    //   • prefetch-playlist=yes  : proactively fetch the next playlist
+    //                              entry (HLS / DASH) to enable gapless.
+    mpv_set_option_string(mpv, "cache", "yes");
+    mpv_set_option_string(mpv, "cache-secs", "120");
+    mpv_set_option_string(mpv, "demuxer-max-bytes", "150MiB");
+    mpv_set_option_string(mpv, "demuxer-max-back-bytes", "75MiB");
+    mpv_set_option_string(mpv, "demuxer-readahead-secs", "120");
+    mpv_set_option_string(mpv, "demuxer-termination-timeout", "10");
+    mpv_set_option_string(mpv, "prefetch-playlist", "yes");
+
     // NOTE: mpv_initialize() is deliberately NOT called here.
     // It is deferred until nativeAttachSurface so that the "wid" option
     // (which requires the Surface pointer) can be set first.
@@ -280,17 +312,21 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
 }
 
 // ── Surface size change notification ─────────────────────────────────────────
+// TextureView.onSurfaceTextureSizeChanged fires whenever React Native
+// re-lays-out the view (e.g. on rotation). MPV's `wid` backend uses the
+// underlying ANativeWindow directly, which already updates its dimensions
+// when the surface size changes — MPV sees the new size on the next render
+// frame and reflows its video output accordingly.
+//
+// The previous implementation set a fake `display-size` property, but that
+// property doesn't exist in mpv's option table, so the call was a silent
+// no-op (and a misleading log message). Now we just log the resize and let
+// the surface update pipeline handle the rest.
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSurfaceChanged(
     JNIEnv *env, jclass, jlong nativePtr, jint width, jint height) {
     if (!nativePtr || !g_initialized) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-
-    // Notify mpv of the new surface size via the "display-size" property
-    // This forces mpv's gpu VO to re-query the ANativeWindow dimensions
-    mpv_set_property_string(mpv, "display-size",
-        (std::to_string(width) + "x" + std::to_string(height)).c_str());
-    LOGI("Surface size changed: %dx%d", width, height);
+    LOGI("Surface size changed: %dx%d (handled by ANativeWindow)", width, height);
 }
 
 // ── Playback Control ────────────────────────────────────────────────────────

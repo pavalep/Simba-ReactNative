@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import {SvgIcon} from '../../utility/SvgIcon/SvgIcon';
 import {AppText} from '../../core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import type {ColorTokens} from '../../../theme/tokens';
@@ -34,7 +35,7 @@ export const ReplayButton: React.FC<ReplayButtonProps> = ({
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel="Replay video">
-        <AppText style={styles.replayIcon}>{'\u21BB'}</AppText>
+        <SvgIcon name="replay" size={36} color={colors.text.inverse} />
         <AppText style={styles.replayLabel}>Replay</AppText>
       </TouchableOpacity>
     </View>
@@ -51,8 +52,9 @@ const createStyles = (colors: ColorTokens) =>
       zIndex: 50,
     },
     replayBtn: {
-      width: 100,
+      minWidth: 100,
       height: 100,
+      paddingHorizontal: 24,
       borderRadius: 50,
       alignItems: 'center',
       justifyContent: 'center',
@@ -62,16 +64,12 @@ const createStyles = (colors: ColorTokens) =>
       shadowRadius: 8,
       elevation: 6,
     },
-    replayIcon: {
-      fontSize: 32,
+    replayLabel: {
+      fontSize: 12,
       color: colors.text.inverse,
       fontWeight: '700',
-    },
-    replayLabel: {
-      fontSize: 11,
-      color: colors.text.inverse,
-      fontWeight: '600',
-      marginTop: 2,
+      marginTop: 4,
+      letterSpacing: 0.3,
     },
   });
 

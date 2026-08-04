@@ -175,6 +175,13 @@ export const BookmarkSheet: React.FC<Props> = ({
   );
 };
 
+// V6 8.1.4: wrap in React.memo so the sheet body does not re-render on
+// every parent tick. The hook passes a fresh `MpvPlayer.getPosition()`
+// value on every render; without memo the FlatList re-renders each
+// position update while the sheet is open.
+export const MemoizedBookmarkSheet = React.memo(BookmarkSheet);
+export default MemoizedBookmarkSheet;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,

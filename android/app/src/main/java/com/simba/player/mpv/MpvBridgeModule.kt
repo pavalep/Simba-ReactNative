@@ -74,6 +74,85 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
             } catch (e: Exception) {
                 Log.w(TAG, "Property change emit failed: ${e.message}")
             }
+            // P33.4: re-emit `cache-buffering-state` updates as `onBuffering`
+            // so the JS UI can show a buffering spinner for slow streams
+            // (notably archive.org which progressively buffers before the
+            // first frame). mpv reports the property as:
+            //   • a node map {"percent": <0..100>} while actively buffering
+            //   • the literal string "false" once the cache is full / idle
+            // We always emit 100 on the "false" case so the JS guard
+            //   `percent > 0 && percent < 100` correctly drops the spinner.
+            when (name) {
+                "cache-buffering-state" -> {
+                    val percent = parseBufferingPercent(jsonValue)
+                    try {
+                        val bufPayload = Arguments.createMap().apply {
+                            putDouble("percent", percent)
+                        }
+                        eventEmitter.emit("onBuffering", bufPayload)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "onBuffering emit failed: ${e.message}")
+                    }
+                }
+                // `paused-for-cache` is the *universal* buffering signal —
+                // it's a flag that's true whenever MPV auto-paused because
+                // the network/cache can't keep up. Works for every stream
+                // type (HLS, DASH, progressive HTTP, local file during
+                // seek-back). Emits 50 when buffering, 100 when not — the
+                // same percent-based contract used for cache-buffering-state
+                // so the JS side can unify both into a single `isBuffering`
+                // boolean via `percent > 0 && percent < 100`.
+                "paused-for-cache" -> {
+                    val isBuffering = jsonValue.trim().equals("true", ignoreCase = true)
+                    try {
+                        val bufPayload = Arguments.createMap().apply {
+                            putDouble("percent", if (isBuffering) 50.0 else 100.0)
+                        }
+                        eventEmitter.emit("onBuffering", bufPayload)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "onBuffering (paused-for-cache) emit failed: ${e.message}")
+                    }
+                }
+                // `demuxer-cache-state` carries the buffered ranges — the
+                // grey overlay on the seek bar. Each range is
+                // `{start, end, flags}` in MPV; we extract `start`/`end`
+                // (in seconds, relative to the stream start) and forward
+                // them as a list so JS can paint the buffered region.
+                "demuxer-cache-state" -> {
+                    try {
+                        val parsed = parseCacheState(jsonValue)
+                        val rangesArray = Arguments.createArray()
+                        parsed.ranges.forEach { r ->
+                            val range = Arguments.createMap().apply {
+                                putDouble("start", r.first)
+                                putDouble("end", r.second)
+                            }
+                            rangesArray.pushMap(range)
+                        }
+                        val cachePayload = Arguments.createMap().apply {
+                            putArray("ranges", rangesArray)
+                            putDouble("fill", parsed.fill)
+                        }
+                        eventEmitter.emit("onCacheState", cachePayload)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "onCacheState emit failed: ${e.message}")
+                    }
+                }
+                // `seekable` is a flag — true once MPV knows enough about
+                // the stream to permit seeks. False for live streams and
+                // unknown-length sources. The seek bar dims when false.
+                "seekable" -> {
+                    val seekable = jsonValue.trim().equals("true", ignoreCase = true)
+                    try {
+                        val seekablePayload = Arguments.createMap().apply {
+                            putBoolean("seekable", seekable)
+                        }
+                        eventEmitter.emit("onSeekable", seekablePayload)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "onSeekable emit failed: ${e.message}")
+                    }
+                }
+            }
         }
 
         override fun onMpvError(code: Int, message: String) {
@@ -468,14 +547,35 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun observeProperty(name: String) {
-        ensurePtr()
-        MPVLib.nativeObserveProperty(nativePtr, name)
+        // Resilient: silently no-op if initPlayer() hasn't run yet.
+        // TransportContext may try to subscribe before the player is
+        // ready (e.g. during the brief gap between mount and isReady
+        // flipping to true on the JS side). Throwing here triggers
+        // a red-box in dev mode even though the JS caller has its own
+        // try/catch — RN doesn't always surface those errors cleanly.
+        // Better to drop the request than crash the bridge.
+        if (nativePtr == 0L) {
+            Log.w(TAG, "observeProperty('$name') called before initPlayer() — dropped")
+            return
+        }
+        try {
+            MPVLib.nativeObserveProperty(nativePtr, name)
+        } catch (e: Exception) {
+            Log.w(TAG, "observeProperty('$name') failed: ${e.message}")
+        }
     }
 
     @ReactMethod
     fun unobserveProperty(name: String) {
-        ensurePtr()
-        MPVLib.nativeUnobserveProperty(nativePtr, name)
+        if (nativePtr == 0L) {
+            // Already torn down — nothing to un-observe.
+            return
+        }
+        try {
+            MPVLib.nativeUnobserveProperty(nativePtr, name)
+        } catch (e: Exception) {
+            Log.w(TAG, "unobserveProperty('$name') failed: ${e.message}")
+        }
     }
 
     // ── Video/Audio Filters ────────────────────────────────────────────────
@@ -762,6 +862,97 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     private fun ensurePtr() {
         if (nativePtr == 0L) {
             throw IllegalStateException("MpvPlayerModule not initialized. Call initPlayer() first.")
+        }
+    }
+
+    /**
+     * Extract the cache fill percentage from a `cache-buffering-state`
+     * payload that the native property bridge has already serialised to JSON.
+     *
+     * While the stream is actively buffering, mpv emits a node map like
+     * `{"percent": 37}`. When the cache is full (or buffering stops for any
+     * other reason) the property is reported as the boolean `false`, which
+     * our C++ property serializer emits as the literal string `"false"`.
+     *
+     * Anything we can't parse (malformed JSON, missing field) defaults to
+     * `100.0` so the JS `percent > 0 && percent < 100` guard treats the
+     * unknown state as "not buffering" and avoids a stuck spinner.
+     */
+    private fun parseBufferingPercent(jsonValue: String): Double {
+        val trimmed = jsonValue.trim()
+        if (trimmed == "false" || trimmed.isEmpty() || trimmed == "null") return 100.0
+        return try {
+            val obj = JSONObject(trimmed)
+            when {
+                obj.has("percent") -> obj.getDouble("percent").coerceIn(0.0, 100.0)
+                obj.has("percentage") -> obj.getDouble("percentage").coerceIn(0.0, 100.0)
+                else -> 100.0
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "parseBufferingPercent: bad json '$jsonValue': ${e.message}")
+            100.0
+        }
+    }
+
+    /**
+     * Parse a `demuxer-cache-state` payload into buffered ranges + fill.
+     *
+     * MPV serialises this property as a node map with shape:
+     * ```
+     * {
+     *   "seekableStart": <double, may be undefined>,
+     *   "seekableEnd":   <double, may be undefined>,
+     *   "bof":           <bool>,
+     *   "eof":           <bool>,
+     *   "fw":            <double, in stream seconds>,
+     *   "ranges":        [{ "start": <double>, "end": <double>, "flags": <int> }, ...],
+     *   "buffering":     <bool>,
+     *   "cacheSize":     <double, in bytes>,
+     *   "underrun":      <bool>,
+     *   "idle":          <bool>,
+     *   "totalBytes":    <double>,
+     *   "used":          <double>
+     * }
+     * ```
+     *
+     * We extract:
+     *   • `ranges` — list of `{start, end}` in stream seconds. This is the
+     *      canonical "what bytes are buffered right now" payload — used by
+     *      the seek bar to paint the grey overlay.
+     *   • `fill` — 0..1 fill ratio of the cache (`fw / cacheSize`),
+     *      or `0` if no cache is active.
+     */
+    private data class CacheStatePayload(
+        val ranges: List<Pair<Double, Double>>,
+        val fill: Double,
+    )
+
+    private fun parseCacheState(jsonValue: String): CacheStatePayload {
+        val trimmed = jsonValue.trim()
+        if (trimmed.isEmpty() || trimmed == "null") {
+            return CacheStatePayload(emptyList(), 0.0)
+        }
+        return try {
+            val obj = JSONObject(trimmed)
+            val rangesJson = obj.optJSONArray("ranges")
+            val ranges = mutableListOf<Pair<Double, Double>>()
+            if (rangesJson != null) {
+                for (i in 0 until rangesJson.length()) {
+                    val r = rangesJson.optJSONObject(i) ?: continue
+                    val start = r.optDouble("start", Double.NaN)
+                    val end = r.optDouble("end", Double.NaN)
+                    if (!start.isNaN() && !end.isNaN() && end > start) {
+                        ranges.add(start to end)
+                    }
+                }
+            }
+            val fw = obj.optDouble("fw", 0.0).coerceAtLeast(0.0)
+            val cacheSize = obj.optDouble("cacheSize", 0.0).coerceAtLeast(0.0)
+            val fill = if (cacheSize > 0.0) (fw / cacheSize).coerceIn(0.0, 1.0) else 0.0
+            CacheStatePayload(ranges, fill)
+        } catch (e: Exception) {
+            Log.w(TAG, "parseCacheState: bad json '$jsonValue': ${e.message}")
+            CacheStatePayload(emptyList(), 0.0)
         }
     }
 }

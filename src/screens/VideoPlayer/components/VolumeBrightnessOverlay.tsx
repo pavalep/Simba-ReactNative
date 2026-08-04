@@ -5,6 +5,7 @@ import {
   View,
 } from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
+import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {useTheme} from '../../../theme';
 
 interface VolumeBrightnessOverlayProps {
@@ -50,7 +51,7 @@ export const VolumeBrightnessOverlay: React.FC<
           width: BAR_WIDTH,
           height: BAR_HEIGHT,
           borderRadius: BAR_WIDTH / 2,
-          backgroundColor: colors.background.glass,
+          backgroundColor: 'rgba(255,255,255,0.18)',
           justifyContent: 'flex-end',
           overflow: 'hidden',
         },
@@ -61,15 +62,15 @@ export const VolumeBrightnessOverlay: React.FC<
         label: {
           fontSize: 12,
           fontWeight: '600',
-          marginTop: 8,
+          marginTop: 10,
+          letterSpacing: 0.3,
           textShadowOffset: {width: 0, height: 1},
           textShadowRadius: 3,
         },
-        icon: {fontSize: 18, marginTop: 4},
         iconContainer: {
           width: 22,
           height: 22,
-          marginTop: 4,
+          marginTop: 6,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -82,7 +83,14 @@ export const VolumeBrightnessOverlay: React.FC<
 
   useEffect(() => {
     if (visible) {
-      opacityAnim.setValue(1);
+      // V6 9.4.1: animate fade-in too. The previous code snapped to 1
+      // instantly which felt jarring when the user started a swipe
+      // gesture.
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
     } else if (prevVisible.current) {
       // Fade out when transitioning from visible→hidden
       Animated.timing(opacityAnim, {
@@ -93,6 +101,24 @@ export const VolumeBrightnessOverlay: React.FC<
     }
     prevVisible.current = visible;
   }, [visible, opacityAnim]);
+
+  // V6 9.4.2: smooth value animation. The fill height jumps on every
+  // gesture tick because the parent updates the value at native
+  // refresh rate. Wrapping it in an Animated.Value and using
+  // useNativeDriver: true gives us a buttery smooth bar that lags
+  // ~80ms behind the gesture — feels responsive without flickering.
+  const fillHeightAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const clamped = Math.max(0, Math.min(100, value));
+    Animated.timing(fillHeightAnim, {
+      toValue: clamped,
+      duration: 80,
+      useNativeDriver: false, // height is a layout property; cannot use native driver
+    }).start();
+  }, [value, fillHeightAnim]);
+
+  // Label animates with the bar so the percent number doesn't jump
+  const labelOpacity = useRef(new Animated.Value(1)).current;
 
   // Icon morph transition when type changes
   useEffect(() => {
@@ -120,7 +146,10 @@ export const VolumeBrightnessOverlay: React.FC<
   }, [type, volumeIconOpacity, brightnessIconOpacity]);
 
   const clamped = Math.max(0, Math.min(100, value));
-  const fillHeight = (clamped / 100) * BAR_HEIGHT;
+  const fillHeight = fillHeightAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: [0, BAR_HEIGHT],
+  });
   const isVolume = type === 'volume';
   const fillColor = isVolume ? colors.accent.gold : colors.text.primary;
   const label = isVolume ? `Vol ${Math.round(clamped)}%` : `Bright ${Math.round(clamped)}%`;
@@ -143,8 +172,8 @@ export const VolumeBrightnessOverlay: React.FC<
       pointerEvents="none">
       {/* Pill track */}
       <View style={styles.track}>
-        {/* Fill */}
-        <View
+        {/* Fill — animated via fillHeightAnim for smooth gesture tracking */}
+        <Animated.View
           style={[
             styles.fill,
             {
@@ -164,13 +193,17 @@ export const VolumeBrightnessOverlay: React.FC<
         ]}>
         {label}
       </AppText>
-      {/* Icon — cross-fade between volume 🔊 and brightness ☀️ */}
+      {/* Icon — cross-fade between volume and brightness (vector) */}
       <View style={styles.iconContainer}>
         <Animated.View style={getIconOverlayStyle(volumeIconOpacity)}>
-          <AppText style={styles.icon}>{'\uD83D\uDD0A'}</AppText>
+          <SvgIcon
+            name={clamped === 0 ? 'volumeMute' : 'volume'}
+            size={20}
+            color={fillColor}
+          />
         </Animated.View>
         <Animated.View style={getIconOverlayStyle(brightnessIconOpacity)}>
-          <AppText style={styles.icon}>{'\u2600\uFE0F'}</AppText>
+          <SvgIcon name="sun" size={20} color={fillColor} />
         </Animated.View>
       </View>
     </Animated.View>

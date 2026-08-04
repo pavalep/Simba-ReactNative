@@ -19,6 +19,17 @@ export interface TransportState {
   isPlaying: boolean;
   /** P33.4: mpv cache fill in progress (stream stalls) */
   isBuffering: boolean;
+  /**
+   * Buffered ranges — list of `{start, end}` seconds describing the
+   * portion of the stream currently resident in the demuxer cache.
+   * Empty when no cache is active (e.g. very short local files).
+   * This is what backs the grey "downloaded" overlay on the seek bar.
+   */
+  bufferedRanges: Array<{start: number; end: number}>;
+  /** Cache fill ratio 0..1 — used by the loading spinner / progress UI. */
+  cacheFill: number;
+  /** Whether the stream is seekable. False for live streams. */
+  isSeekable: boolean;
   /** Milliseconds remaining on the active countdown timer (0 when none) */
   sleepRemainingMs: number;
   /** Whether a sleep timer is armed (countdown or end-of-track/chapter) */
@@ -79,6 +90,17 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   const [duration, setDuration] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  // Buffered ranges (from `demuxer-cache-state`) — used by the seek bar
+  // to paint the grey "downloaded" overlay like YouTube. Empty when no
+  // cache is active.
+  const [bufferedRanges, setBufferedRanges] = useState<
+    Array<{start: number; end: number}>
+  >([]);
+  // Cache fill ratio 0..1 — used by the loading spinner / progress UI.
+  const [cacheFill, setCacheFill] = useState(0);
+  // Whether seeking is permitted. False for live streams and unknown
+  // length sources. Used to dim the seek bar / disable scrubbing.
+  const [isSeekable, setIsSeekable] = useState(true);
   const dispatch = useAppDispatch();
   const sleepTimerEndTime = useAppSelector(state => state.player.sleepTimerEndTime);
   const sleepTimerMode = useAppSelector(state => state.player.sleepTimerMode);
@@ -233,10 +255,59 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       hasPlaybackStateEventsRef.current = true;
       setIsPlaying(state === 'playing');
     });
-    // P33.4: mpv reports cache fill percentage — buffering while 0 < percent < 100
+    // ── Buffering / cache-state observation ──────────────────────
+    // We watch FOUR complementary MPV properties to drive buffering UX.
+    //
+    //   1. `cache-buffering-state`  (NODE → {percent})
+    //      Granular fill percentage. Only fires for network streams.
+    //
+    //   2. `paused-for-cache`       (FLAG → bool)
+    //      Universal "MP3 auto-paused because the cache can't keep up"
+    //      signal. Fires for any stream type — HLS, DASH, progressive
+    //      HTTP, even local files when you seek backwards past the
+    //      cached region. Reliable.
+    //
+    //   3. `demuxer-cache-state`    (NODE → {ranges:[{start,end}], ...})
+    //      The buffered ranges — what backs the grey "downloaded"
+    //      overlay on the seek bar. Multiple ranges are possible
+    //      (e.g. a network stream that's been seeked around).
+    //
+    //   4. `seekable`               (FLAG → bool)
+    //      Whether seeking is supported at all (false for live and
+    //      unknown-length sources). Used to dim the seek bar.
+    //
+    // The native bridge merges `cache-buffering-state` and
+    // `paused-for-cache` into a single `onBuffering` event with a
+    // `percent` payload so the consumer has one boolean to watch.
     const unsubBuffering = MpvPlayer.on('onBuffering', ({percent}: {percent: number}) => {
       setIsBuffering(percent > 0 && percent < 100);
     });
+    const unsubCacheState = MpvPlayer.on(
+      'onCacheState',
+      ({ranges, fill}: {ranges: Array<{start: number; end: number}>; fill: number}) => {
+        setBufferedRanges(ranges);
+        setCacheFill(fill);
+      },
+    );
+    const unsubSeekable = MpvPlayer.on('onSeekable', ({seekable}: {seekable: boolean}) => {
+      setIsSeekable(seekable);
+    });
+
+    // Begin receiving the four property streams from MPV.
+    // observeProperty() is idempotent for the same property — calling it
+    // twice is safe and only registers one observer.
+    try {
+      MpvPlayer.observeProperty('cache-buffering-state');
+    } catch {}
+    try {
+      MpvPlayer.observeProperty('paused-for-cache');
+    } catch {}
+    try {
+      MpvPlayer.observeProperty('demuxer-cache-state');
+    } catch {}
+    try {
+      MpvPlayer.observeProperty('seekable');
+    } catch {}
 
     const interval = setInterval(() => {
       if (!isReadyRef.current) return;
@@ -261,6 +332,22 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       unsubPosition();
       unsubState();
       unsubBuffering();
+      unsubCacheState();
+      unsubSeekable();
+      // Stop receiving buffer-state updates so this provider doesn't
+      // leak listeners when the screen unmounts.
+      try {
+        MpvPlayer.unobserveProperty('cache-buffering-state');
+      } catch {}
+      try {
+        MpvPlayer.unobserveProperty('paused-for-cache');
+      } catch {}
+      try {
+        MpvPlayer.unobserveProperty('demuxer-cache-state');
+      } catch {}
+      try {
+        MpvPlayer.unobserveProperty('seekable');
+      } catch {}
     };
   }, [isReady, enabled, pollInterval]);
 
@@ -303,6 +390,9 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         duration,
         isPlaying,
         isBuffering,
+        bufferedRanges,
+        cacheFill,
+        isSeekable,
         sleepRemainingMs,
         sleepTimerActive: sleepTimerEndTime !== null || sleepTimerMode !== 'time',
         sleepTimerMode,

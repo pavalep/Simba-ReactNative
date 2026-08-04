@@ -73,6 +73,24 @@ export interface MpvEvents {
   onVideoParamsChanged: {params: MpvVideoParams};
   onError: {code: Double; message: string};
   onBuffering: {percent: Double};
+  /**
+   * Buffered ranges emitted from MPV's `demuxer-cache-state` property.
+   * Each range is `[startSec, endSec]`. This is the data backing the
+   * grey "how much has been downloaded" overlay on the seek bar — the
+   * same primitive YouTube uses. Multiple ranges are possible (e.g. a
+   * network stream that's been seeked around).
+   */
+  onCacheState: {
+    ranges: Array<{start: Double; end: Double}>;
+    /** Cache fill ratio (0..1) for the active range, or 0 if no cache. */
+    fill: Double;
+  };
+  /**
+   * Emitted from `seekable`. False for live streams and unknown-length
+   * sources. Use this to grey out the seek bar / disable scrubbing UI
+   * instead of silently failing on scrub.
+   */
+  onSeekable: {seekable: boolean};
   onEndReached: {};
   onAudioDeviceChanged: {device: string};
   onVolumeChanged: {volume: Double};

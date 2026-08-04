@@ -14,6 +14,10 @@ import SkipForwardSvg from '../../../assets/svg/ic_skip_forward.svg';
 import ShuffleSvg from '../../../assets/svg/ic_shuffle.svg';
 import RepeatSvg from '../../../assets/svg/ic_repeat.svg';
 import VolumeSvg from '../../../assets/svg/ic_volume.svg';
+import VolumeMuteSvg from '../../../assets/svg/ic_volume_mute.svg';
+import SunSvg from '../../../assets/svg/ic_sun.svg';
+import InfoSvg from '../../../assets/svg/ic_info.svg';
+import ReplaySvg from '../../../assets/svg/ic_replay.svg';
 import SubtitlesSvg from '../../../assets/svg/ic_subtitles.svg';
 import HeadphonesSvg from '../../../assets/svg/ic_headphones.svg';
 import SlidersSvg from '../../../assets/svg/ic_sliders.svg';
@@ -31,7 +35,10 @@ import LayoutListSvg from '../../../assets/svg/ic_layout_list.svg';
 import FolderFillSvg from '../../../assets/svg/ic_folder.svg';
 import AlertCircleSvg from '../../../assets/svg/ic_alert_circle.svg';
 import BookmarkSvg from '../../../assets/svg/ic_bookmark.svg';
+import BookmarkFilledSvg from '../../../assets/svg/ic_bookmark_filled.svg';
+import PictureInPictureSvg from '../../../assets/svg/ic_picture_in_picture.svg';
 import SpeedSvg from '../../../assets/svg/ic_speed.svg';
+import MoonSvg from '../../../assets/svg/ic_moon.svg';
 import GoogleSvg from '../../../assets/svg/ic_google.svg';
 import ShareSvg from '../../../assets/svg/ic_share.svg';
 import DownloadSvg from '../../../assets/svg/ic_download.svg';
@@ -49,9 +56,21 @@ const icons = {
   pause: PauseSvg,
   skipBack: SkipBackSvg,
   skipForward: SkipForwardSvg,
+  // V6 5.2.1: distinct semantic names for the two transport arrows.
+  // Currently aliased to the existing skipBack/skipForward SVGs because
+  // the project ships no separate "rewind10" / "prevTrack" assets. A
+  // follow-up ticket should ship dedicated 10-second and track icons.
+  rewind10: SkipBackSvg,
+  forward10: SkipForwardSvg,
+  prevTrack: SkipBackSvg,
+  nextTrack: SkipForwardSvg,
   shuffle: ShuffleSvg,
   repeat: RepeatSvg,
   volume: VolumeSvg,
+  volumeMute: VolumeMuteSvg,
+  sun: SunSvg,
+  info: InfoSvg,
+  replay: ReplaySvg,
   subtitles: SubtitlesSvg,
   headphones: HeadphonesSvg,
   sliders: SlidersSvg,
@@ -69,7 +88,10 @@ const icons = {
   folderFill: FolderFillSvg,
   alertCircle: AlertCircleSvg,
   bookmark: BookmarkSvg,
+  bookmarkFilled: BookmarkFilledSvg,
+  pictureInPicture: PictureInPictureSvg,
   speed: SpeedSvg,
+  moon: MoonSvg,
   google: GoogleSvg,
   share: ShareSvg,
   download: DownloadSvg,

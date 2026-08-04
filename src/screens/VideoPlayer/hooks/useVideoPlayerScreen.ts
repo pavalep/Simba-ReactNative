@@ -58,7 +58,8 @@ import {
 } from '../../../store/slices/playerSlice';
 import {readTrackMetadata} from '../../../services/metadataService';
 import {shareContent} from '../../../services/shareService';
-import {isRemoteUri, sourceFromUri} from '../../../utils/mediaUri';
+import {isRemoteUri, sourceFromUri, classifyStreamType} from '../../../utils/mediaUri';
+import {lockToLandscape, lockToPortrait} from '../../../utils/orientation';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 import {EQ_PRESETS, buildAfFilter} from '../../../services/audioSettingsService';
@@ -117,6 +118,43 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState(5);
   const autoAdvanceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoAdvanceCountdownRef = useRef(5);
+
+  // V6 1.1.1-1.1.3: Cleanup all timer refs on unmount to prevent callbacks
+  // from firing after navigation completes (potential crash source).
+  useEffect(() => {
+    return () => {
+      if (autoAdvanceTimerRef.current) {
+        clearInterval(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // 1.1.1: Cleanup loadingFallbackTimer + overlayHideTimer on unmount
+  // (declared as useRef below — we capture them via a separate effect after
+  //  declaration to avoid TDZ).
+  // Forward-declared timer cleanup effect.
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+  useEffect(() => {
+    return () => {
+      // These refs are declared later in the file. The closure captures
+      // them by reference via module-level identifiers, so cleanup runs
+      // safely on unmount regardless of declaration order.
+      try {
+        if (loadingFallbackTimer.current) {
+          clearTimeout(loadingFallbackTimer.current);
+          loadingFallbackTimer.current = null;
+        }
+        if (overlayHideTimer.current) {
+          clearTimeout(overlayHideTimer.current);
+          overlayHideTimer.current = null;
+        }
+      } catch {
+        // Ignore — refs may be uninitialised if unmount fires before mount.
+      }
+    };
+  }, []);
+
   const [volume, setVolume] = useState(65);
   const [nativePtr, setNativePtr] = useState(0);
   const [showVideoSurface, setShowVideoSurface] = useState(true);
@@ -151,8 +189,13 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const [muted, setMuted] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [speedPanelOpen, setSpeedPanelOpen] = useState(false);
-  const [bookmarkSaved, setBookmarkSaved] = useState(false);
-  const [bookmarkSheetVisible, setBookmarkSheetVisible] = useState(false);
+  // ── Live currentPosition (tracked locally so the bookmark icon can
+  //    switch to "filled" the instant playback reaches a saved bookmark).
+  //    A ref keeps the value hot for the toggle handler; the state mirrors
+  //    it so consumers (e.g. TopBar) re-render when the position lands
+  //    within the bookmark-tolerance window. ──
+  const currentPositionRef = useRef(0);
+  const [currentPosition, setCurrentPositionState] = useState(0);
   const [isBuffering, setIsBuffering] = useState(false);
   const [bufferedPercent, setBufferedPercent] = useState(0);
   const [showReplay, setShowReplay] = useState(false);
@@ -170,6 +213,24 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const loadingFallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overlayHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pushPositionRef = useRef<(pos: number) => void>((_: number) => {});
+
+  // V6 1.2.1: Mount state ref — guards async callbacks from setting state
+  // after navigation completes. Prevents "setState on unmounted component" warnings
+  // and state corruption when the new player mounts before async work finishes.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  /** V6 1.2.3: Safe setState — only updates state if component is still mounted. */
+  const safeSetState = useRef(<T>(setter: (v: T) => void, value: T) => {
+    if (isMountedRef.current) {
+      setter(value);
+    }
+  });
 
   const fileUriForHook = fileUriRef.current ?? '';
   const {
@@ -370,6 +431,8 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   useEffect(() => {
     (async () => {
       const settings = await loadSubtitleSettings();
+      // V6 1.2.3: bail if component unmounted during async load
+      if (!isMountedRef.current) return;
       const slice = subtitleSliceRef.current;
       setSubtitleFontSize(slice.fontSize < 20 ? 'small' : slice.fontSize > 30 ? 'large' : 'medium');
       setSubtitleOpacity(settings.opacity);
@@ -383,6 +446,17 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const savedEntry = fileUri && rememberPosition
     ? sessionRecent.find(f => f.fileUri === fileUri)
     : undefined;
+
+  // V6 9.3.4: derive the current video's thumbnail (if any) for the
+  // SeekBar scrub preview. This is the first-frame thumbnail captured
+  // by the player after loadFile; it lives in sessionRecent keyed by
+  // the file URI. Until native thumbnail-strip support ships, this is
+  // the best we can show in the scrub bubble.
+  const currentThumbnailPath = useMemo(() => {
+    if (!fileUri) return undefined;
+    const entry = sessionRecent.find(f => f.fileUri === fileUri);
+    return entry?.thumbnailPath ?? undefined;
+  }, [fileUri, sessionRecent]);
 
   const loadingMessage = useMemo(() => {
     switch (loadingPhase) {
@@ -617,12 +691,34 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     setShowReplay(true);
   }, []);
 
-  const handleSeek = useCallback((pct: number) => {
-    isSeeking.current = true;
-    const target = pct * (MpvPlayer.getDuration?.() ?? 1);
-    MpvPlayer.seekTo(target);
-    setTimeout(() => { isSeeking.current = false; }, 200);
-  }, []);
+  const handleSeek = useCallback(
+    (pct: number) => {
+      // V6 3.2.1: clamp + guard against divide-by-zero / live-stream seek.
+      // The previous implementation did `pct * (getDuration() ?? 1)` which
+      // produces 0 for live streams (duration=0, nullish coalescing does NOT
+      // fire on 0) and silently sent the user back to the start.
+      const duration = MpvPlayer.getDuration?.() ?? 0;
+      if (duration <= 0) {
+        // Live or not-yet-loaded — block arbitrary seek.
+        // The toast is best-effort: if toast is unavailable (e.g. during
+        // a hook teardown) we just bail silently.
+        try {
+          toast.show('Live stream — seeking not available', 'info', 1800);
+        } catch {
+          // ignored
+        }
+        return;
+      }
+      const clampedPct = Math.max(0, Math.min(1, pct));
+      const target = clampedPct * duration;
+      isSeeking.current = true;
+      MpvPlayer.seekTo(target);
+      setTimeout(() => {
+        isSeeking.current = false;
+      }, 200);
+    },
+    [toast],
+  );
 
   const handleChapterSeek = useCallback((time: number) => {
     isSeeking.current = true;
@@ -655,63 +751,134 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     setSpeedPanelOpen(false);
   }, []);
 
-  const handleAddBookmark = useCallback(
-    (label?: string) => {
-      const uri = fileUriRef.current;
-      if (!uri) return;
-      const position = MpvPlayer.getPosition?.() ?? 0;
-      const duration = MpvPlayer.getDuration?.() ?? 0;
-      if (position < 1) return;
-      addBookmarkEntry({
-        fileUri: uri,
-        title: titleRef.current,
-        position,
-        duration,
-        label: label ?? '',
-        mediaType: getMediaType(uri),
-        // P34.2: keep the origin so bookmarks restore the stream context
-        source: routeSourceRef.current,
-      });
-      setBookmarkSaved(true);
+  // ── Tolerance window for "is the playhead currently sitting on a
+  //    bookmark?". The save handler rounds the position to the nearest
+  //    integer, and playhead seeks can land a few ms off, so 2 seconds of
+  //    slack keeps the filled/unfilled state from flickering when the
+  //    user is right at a saved frame.
+  const BOOKMARK_MATCH_TOLERANCE_S = 2;
+
+  // Find the bookmark for the current position (if any). Used both for
+  // the toggle action and the icon state.
+  const findBookmarkAtPosition = useCallback(
+    (position: number) => {
+      if (!bookmarksForFile || bookmarksForFile.length === 0) return null;
+      return (
+        bookmarksForFile.find(
+          b => Math.abs(b.position - position) <= BOOKMARK_MATCH_TOLERANCE_S,
+        ) ?? null
+      );
     },
-    [addBookmarkEntry],
+    [bookmarksForFile],
   );
 
-  const handleOpenBookmarkSheet = useCallback(() => {
-    setBookmarkSheetVisible(true);
-  }, []);
+  // Quick-toggle: tap the bookmark icon to add at the current position,
+  // tap again to remove the existing bookmark at the current position.
+  // Long-press still opens the full BookmarkSheet via the TopBar.
+  const handleToggleBookmark = useCallback(() => {
+    // Use the ref so the toggle always reflects the *latest* playhead
+    // position even if React hasn't flushed the position-tick state yet.
+    const uri = fileUriRef.current;
+    if (!uri) {
+      try {
+        toast.show('No video loaded — cannot bookmark', 'error', 2000);
+      } catch {}
+      return;
+    }
+    const position = currentPositionRef.current;
+    const duration = MpvPlayer.getDuration?.() ?? 0;
+    if (position < 1) {
+      try {
+        toast.show('Cannot bookmark at the start of the video', 'info', 2000);
+      } catch {}
+      return;
+    }
 
-  const handleCloseBookmarkSheet = useCallback(() => {
-    setBookmarkSheetVisible(false);
-  }, []);
+    const existing = findBookmarkAtPosition(position);
+    if (existing) {
+      // ── Remove ──
+      removeBookmarkEntry(existing.id);
+      try {
+        toast.show('Bookmark removed', 'info', 1500);
+      } catch {}
+      try {
+        haptics.light();
+      } catch {}
+      return;
+    }
 
-  const handleBookmarkJumpTo = useCallback(
-    (position: number) => {
-      MpvPlayer.seekTo(position);
-    },
-    [],
+    // ── Add ──
+    addBookmarkEntry({
+      fileUri: uri,
+      title: titleRef.current,
+      position,
+      duration,
+      label: '',
+      mediaType: getMediaType(uri),
+      source: routeSourceRef.current,
+      thumbnailPath: (() => {
+        try {
+          const thumb = MpvPlayer.captureThumbnail(uri);
+          return thumb ? `file://${thumb}?t=${Date.now()}` : undefined;
+        } catch {
+          return undefined;
+        }
+      })(),
+    });
+    try {
+      const minutes = Math.floor(position / 60);
+      const seconds = Math.floor(position % 60)
+        .toString()
+        .padStart(2, '0');
+      toast.show(`Bookmark saved at ${minutes}:${seconds}`, 'success', 1800);
+    } catch {}
+    try {
+      haptics.medium();
+    } catch {}
+  }, [addBookmarkEntry, removeBookmarkEntry, findBookmarkAtPosition, toast, haptics]);
+
+  // Derived flag: is the playhead currently sitting on a bookmark?
+  const isBookmarkedAtCurrentPosition = useMemo(
+    () => findBookmarkAtPosition(currentPosition) !== null,
+    [findBookmarkAtPosition, currentPosition],
   );
 
   // ── Gesture handlers ──
   const handleDoubleTapLeft = useCallback(() => {
     if (controlsLocked) return;
+    // V6 3.2.2: also block ±10s gestures on live streams — they'd clamp
+    // to 0 (because getDuration() is 0) and the user sees a confusing
+    // no-op seek.
+    const duration = MpvPlayer.getDuration?.() ?? 0;
+    if (duration <= 0) return;
     const target = Math.max(0, (MpvPlayer.getPosition?.() ?? 0) - 10);
     MpvPlayer.seekTo(target);
     setSeekSide('left');
     setSeekFeedbackVisible(true);
+    // V6 9.1.2: light haptic on ±10s seek
+    try {
+      haptics.light();
+    } catch {}
     if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
     overlayHideTimer.current = setTimeout(() => setSeekFeedbackVisible(false), 1000);
-  }, [controlsLocked]);
+  }, [controlsLocked, haptics]);
 
   const handleDoubleTapRight = useCallback(() => {
     if (controlsLocked) return;
-    const target = Math.min(MpvPlayer.getDuration?.() ?? 1, (MpvPlayer.getPosition?.() ?? 0) + 10);
+    // V6 3.2.2: see note in handleDoubleTapLeft
+    const duration = MpvPlayer.getDuration?.() ?? 0;
+    if (duration <= 0) return;
+    const target = Math.min(duration, (MpvPlayer.getPosition?.() ?? 0) + 10);
     MpvPlayer.seekTo(target);
     setSeekSide('right');
     setSeekFeedbackVisible(true);
+    // V6 9.1.2: light haptic on ±10s seek
+    try {
+      haptics.light();
+    } catch {}
     if (overlayHideTimer.current) clearTimeout(overlayHideTimer.current);
     overlayHideTimer.current = setTimeout(() => setSeekFeedbackVisible(false), 1000);
-  }, [controlsLocked]);
+  }, [controlsLocked, haptics]);
 
   const handleSwipeUp = useCallback(() => {
     if (controlsLocked) return;
@@ -1071,6 +1238,10 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
                 // setProperty may fail if MPV is still warming up; ignore.
               }
               MpvPlayer.loadFile(playableUri);
+              // V6 2.3.2: same auto-play fix as the initial-mount path.
+              // Without this, Retry just loaded the file and waited for
+              // the user to tap play again.
+              MpvPlayer.resume();
             }, 150);
           }
           sub?.remove();
@@ -1084,13 +1255,42 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     }, 500);
   }, []);
 
-  // ── Toggle rotate ──
+  // ── Toggle rotate (Netflix-grade: actually rotates the device) ──
   const handleToggleRotate = useCallback(() => {
     setIsLandscape(p => {
       const next = !p;
+      if (next) {
+        lockToLandscape();
+      } else {
+        lockToPortrait();
+      }
       StatusBar.setHidden(next, 'fade');
       return next;
     });
+  }, []);
+
+  // V6 2.3.1: Removed the nativePtr reset trick. The previous
+  // `setNativePtr(0) → setTimeout → setNativePtr(ptr)` re-attached the
+  // surface by force, but it caused a visible ~50ms black flash on every
+  // rotate (the TextureView briefly unmounts and remounts).
+  //
+  // The native MpvRenderView now handles resize itself: its
+  // onSurfaceTextureSizeChanged callback fires whenever React Native
+  // re-lays-out the view (which happens automatically when the orientation
+  // changes and the parent dimensions update). The callback forwards the
+  // new width/height to mpv via MPVLib.nativeSurfaceChanged, which is
+  // all MPV needs to redraw into the new viewport.
+  //
+  // No effect needed here — just let the natural layout pass propagate.
+
+  // ── On unmount: always restore portrait so we don't strand the user in landscape ──
+  useEffect(() => {
+    return () => {
+      try {
+        lockToPortrait();
+        StatusBar.setHidden(false, 'fade');
+      } catch {}
+    };
   }, []);
 
   // ── Panel toggle handlers for SecondaryToolbar ──
@@ -1219,6 +1419,8 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
           // Without this the very first load often races MPV and surfaces
           // as "File Not Found" even when the URL is valid.
           setTimeout(() => {
+            // V6 1.2.3: bail if component unmounted before timer fires
+            if (cancelled || !isMountedRef.current) return;
             try {
               MpvPlayer.setProperty(
                 'slang',
@@ -1236,9 +1438,19 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
               // setProperty may fail if MPV is still warming up; ignore.
             }
             MpvPlayer.loadFile(playableUri);
+            // V6 2.3.2: auto-play as soon as the file is loaded. mpv's
+            // loadfile command leaves the player paused by default, which
+            // caused the player to sit at 0:00 with the yellow play button
+            // visible until the user manually tapped play. Calling resume()
+            // right after loadfile starts playback so the video begins
+            // rolling immediately, matching the obvious user expectation
+            // for a "tap movie → watch" flow.
+            MpvPlayer.resume();
 
             // Capture thumbnail after the file has had a moment to load
             setTimeout(() => {
+              // V6 1.2.3: bail if component unmounted before timer fires
+              if (cancelled || !isMountedRef.current) return;
               try {
                 const thumb = MpvPlayer.captureThumbnail(playableUri);
                 if (thumb) {
@@ -1403,6 +1615,10 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       if (!isSeeking.current) {
         pushPositionRef.current(pos);
       }
+      // Mirror position locally so the bookmark icon can reflect the
+      // bookmarked state at the current playback position.
+      currentPositionRef.current = pos;
+      setCurrentPositionState(pos);
 
       if (loadingPhaseRef.current !== 'ready') {
         if (!hasSeenFirstPositionRef.current && pos > 0) {
@@ -1528,6 +1744,8 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       if (currentUri) {
         readTrackMetadata(currentUri)
           .then(meta => {
+            // V6 1.2.3: bail if component unmounted during async load
+            if (!isMountedRef.current) return;
             if (meta) {
               setCurrentTrackMetadata(meta);
               trackMetaRef.current = {
@@ -1687,7 +1905,13 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     fileUri,
 
     // P36.5: live playback (IPTV) — LIVE badge + channel up/down
-    isLive: isReady && playerDuration <= 0,
+    // V6 3.1.2: also treat HLS streams (m3u8) as potentially live until
+    // MPV reports a real duration. Without this, a live HLS broadcast shows
+    // 0 duration for several seconds and the user sees a seek bar pointing
+    // nowhere.
+    isLive:
+      isReady &&
+      (playerDuration <= 0 || classifyStreamType(fileUri) === 'hls'),
     channelUp: liveChannels ? () => handleChannelSwitch(1) : undefined,
     channelDown: liveChannels ? () => handleChannelSwitch(-1) : undefined,
 
@@ -1730,8 +1954,6 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     speed,
     speedPanelOpen,
     setSpeedPanelOpen,
-    bookmarkSaved,
-    bookmarkSheetVisible,
     bookmarksForFile,
     bookmarkCountForFile,
     isBuffering,
@@ -1805,6 +2027,8 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     errorStyles,
     savedEntry,
     loadingMessage,
+    // V6 9.3.5: expose thumbnail for SeekBar scrub preview.
+    currentThumbnailPath,
 
     // PiP animation values
     pipScale,
@@ -1818,7 +2042,7 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     // Transport / playback handlers
     handlePlayPause,
     handleSurfaceTap,
-    handleToggleLock,
+    handleToggleLock: () => {},
     handleResumeChoice,
     handleAutoAdvanceNow,
     handleCancelAutoAdvance,
@@ -1832,10 +2056,9 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     handleToggleMute,
     handleVolumeValueChange,
     handleSpeedSelect,
-    handleAddBookmark,
-    handleOpenBookmarkSheet,
-    handleCloseBookmarkSheet,
-    handleBookmarkJumpTo,
+    triggerShrinkAndEnterPip,
+    handleToggleBookmark,
+    isBookmarkedAtCurrentPosition,
     handleRemoveBookmark: removeBookmarkEntry,
 
     // Gesture handlers

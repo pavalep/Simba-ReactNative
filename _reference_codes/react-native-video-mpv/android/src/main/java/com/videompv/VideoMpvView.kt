@@ -1,0 +1,508 @@
+package com.videompv
+
+import android.content.res.AssetManager
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import androidx.core.content.ContextCompat
+import com.facebook.react.bridge.LifecycleEventListener
+import com.facebook.react.uimanager.ThemedReactContext
+import com.videompv.MPVLib.MpvEndFileReason
+import com.videompv.MPVLib.MpvEvent
+import com.videompv.MPVLib.MpvFormat
+import com.videompv.api.BasicTrack
+import com.videompv.api.LangsPref
+import com.videompv.api.SubtitleStyle
+import com.videompv.api.VideoBasicTrack
+import com.videompv.api.VideoSrc
+import java.io.File
+import java.io.FileOutputStream
+
+class VideoMpvView(context: ThemedReactContext) :
+        SurfaceView(context), SurfaceHolder.Callback, LifecycleEventListener, MPVLib.EventObserver {
+
+  /* SYSTEM */
+  internal final val eventEmitter = VideoMpvEventEmitter()
+  private val eventUiHandler = Handler(Looper.getMainLooper())
+
+  private var activityIsForeground = true
+  private var playerDestoryed = false
+  private var isInHostPause = false
+  private var playerParsed = false
+  private var filePath: String? = null
+  private var hwdec: String = "mediacodec,mediacodec-copy" // https://mpv.io/manual/stable/#options-hwdec
+  private var voInUse: String = "gpu" // https://mpv.io/manual/stable/#video-output-drivers-vo
+
+  /* PROPS */
+  private var src: VideoSrc = VideoSrc()
+  private var paused: Boolean = false
+  private var muted: Boolean = false
+  private var volume = 100
+  private var repeat: Boolean = false
+  private var langsPref: LangsPref = LangsPref("", "", true)
+  private var subStyle: SubtitleStyle = SubtitleStyle()
+  private var zoomMode: Boolean = false
+  private var spuDelay: Double = 0.0
+
+  init {
+    val appContext = context.applicationContext
+    val mpvDir = File(appContext.getExternalFilesDir(null) ?: appContext.filesDir, "mpv")
+    Log.d(TAG, "mpv config dir: $mpvDir")
+
+    if (!mpvDir.exists()) mpvDir.mkdirs()
+
+    arrayOf("subfont.ttf").forEach { fileName ->
+      val file = File(mpvDir, fileName)
+      if (file.exists()) return@forEach
+      appContext.assets.open(fileName, AssetManager.ACCESS_STREAMING).copyTo(FileOutputStream(file))
+    }
+
+    (this.context as ThemedReactContext).addLifecycleEventListener(this)
+
+    MPVLib.create(context)
+    MPVLib.setOptionString("config", "yes")
+    MPVLib.setOptionString("config-dir", mpvDir.path)
+
+    initOptions()
+
+    MPVLib.init()
+
+    /* set hardcoded options */
+    postInitOptions()
+    // would crash before the surface is attached
+    MPVLib.setOptionString("force-window", "no")
+    // need to idle at least once for playFile() logic to work
+    MPVLib.setOptionString("idle", "yes")
+
+    holder.addCallback(this)
+    observeProperties()
+    MPVLib.addObserver(this)
+  }
+
+  fun initOptions() {
+    MPVLib.setOptionString("profile", "fast") // can be also "fast" for low devices
+    MPVLib.setOptionString("vo", voInUse)
+
+    // vo: set display fps as reported by android
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      val disp = ContextCompat.getDisplayOrDefault(context)
+      val refreshRate = disp.mode.refreshRate
+
+      Log.v(TAG, "Display ${disp.displayId} reports FPS of $refreshRate")
+      MPVLib.setOptionString("display-fps-override", refreshRate.toString())
+    } else {
+      Log.v(
+              TAG,
+              "Android version too old, disabling refresh rate functionality " +
+                      "(${Build.VERSION.SDK_INT} < ${Build.VERSION_CODES.M})"
+      )
+    }
+
+    setLangsPref(LangsPref.parse(null)) // language default os
+
+    MPVLib.setOptionString("tls-verify", "no")
+    MPVLib.setOptionString("sub-font-provider", "none")
+    MPVLib.setOptionString("keep-open", "always")
+    MPVLib.setOptionString("sub-scale-with-window", "yes")
+    MPVLib.setOptionString("sub-auto", "no")
+    MPVLib.setOptionString("autoload-files", "no")
+
+    // MPVLib.setOptionString("deband", "yes")
+    MPVLib.setOptionString("video-sync", "audio")
+    MPVLib.setOptionString("gpu-context", "android")
+    MPVLib.setOptionString("opengl-es", "yes")
+    MPVLib.setOptionString("hwdec", hwdec)
+    MPVLib.setOptionString("hwdec-codecs", "h264,hevc,mpeg4,mpeg2video,vp8,vp9,av1")
+    MPVLib.setOptionString("ao", "audiotrack,opensles")
+    // MPVLib.setOptionString("tls-verify", "yes")
+    // MPVLib.setOptionString("tls-ca-file", "${this.context.filesDir.path}/cacert.pem")
+    MPVLib.setOptionString("input-default-bindings", "no")
+    MPVLib.setOptionString("input-builtin-bindings", "no")
+    MPVLib.setOptionString("input-builtin-dragging", "no")
+
+    val cacheMegs = 32
+    MPVLib.setOptionString("demuxer-max-bytes", "${cacheMegs * 1024 * 1024}")
+    MPVLib.setOptionString("demuxer-max-back-bytes", "${cacheMegs * 1024 * 1024}")
+
+    // workaround for <https://github.com/mpv-player/mpv/issues/14651>
+    MPVLib.setOptionString("vd-lavc-film-grain", "cpu")
+  }
+
+  fun postInitOptions() {
+    MPVLib.setPropertyString("loop-playlist", "no")
+    MPVLib.setOptionString("save-position-on-quit", "no")
+  }
+
+  /**
+   * Deinitialize libmpv.
+   *
+   * Call this once before the view is destroyed.
+   */
+  fun destroy() {
+    if (playerDestoryed) return
+    cleanVariables()
+    playerDestoryed = true
+    (this.context as ThemedReactContext).removeLifecycleEventListener(this)
+    MPVLib.removeObserver(this)
+
+    // Disable surface callbacks to avoid using unintialized mpv state
+    holder.removeCallback(this)
+
+    MPVLib.destroy()
+  }
+
+  fun observeProperties() {
+    MPVLib.observeProperty("eof-reached", MpvFormat.MPV_FORMAT_FLAG)
+    MPVLib.observeProperty("paused-for-cache", MpvFormat.MPV_FORMAT_FLAG)
+    MPVLib.observeProperty("core-idle", MpvFormat.MPV_FORMAT_FLAG)
+    MPVLib.observeProperty("pause", MpvFormat.MPV_FORMAT_FLAG)
+    MPVLib.observeProperty("time-pos", MpvFormat.MPV_FORMAT_INT64)
+  }
+
+  /* Events */
+
+  override fun eventProperty(property: String) {}
+
+  override fun eventProperty(property: String, value: Long) {
+    when (property) {
+      "time-pos" -> updatePlaybackPos(value)
+    }
+  }
+
+  override fun eventProperty(property: String, value: Boolean) {
+    when (property) {
+      "eof-reached" -> onVideoEndReached(value)
+      "paused-for-cache" -> onVideoPausedForCache(value)
+      "core-idle" -> onVideoCoreIdle(value)
+      "pause" -> onVideoPaused(value)
+    }
+  }
+
+  override fun eventProperty(property: String, value: String) {}
+
+  override fun eventProperty(property: String, value: Double) {}
+
+  override fun event(eventId: Int) {
+    when (eventId) {
+      MpvEvent.MPV_EVENT_FILE_LOADED -> onVideoLoaded()
+      MpvEvent.MPV_EVENT_START_FILE -> onVideoLoadStart()
+    }
+  }
+
+  override fun eventFileEnd(reason: Int, error: String?) {
+    Log.d(TAG, "Video End $reason")
+    if (reason != MpvEndFileReason.MPV_END_FILE_REASON_STOP &&
+                    reason != MpvEndFileReason.MPV_END_FILE_REASON_QUIT
+    ) {
+      cleanVariables()
+      if (reason == MpvEndFileReason.MPV_END_FILE_REASON_ERROR) {
+        eventEmitter.onVideoError(error ?: "Unknown error", 1000)
+      }
+    }
+    eventEmitter.onVideoStop(reason)
+  }
+
+  private fun onVideoEndReached(value: Boolean) {
+    if (value) {
+      eventEmitter.onVideoEndReached()
+    }
+  }
+
+  private fun onVideoPausedForCache(value: Boolean) {
+    eventEmitter.onVideoBuffer(value)
+  }
+
+  private fun onVideoPaused(value: Boolean) {
+    if (!activityIsForeground) return
+    eventUiHandler.post { setKeepScreenOn(!value) }
+  }
+
+  private fun onVideoCoreIdle(value: Boolean) {
+    val isSeeking = MPVLib.getPropertyString("seeking") == "yes"
+    eventEmitter.onVideoPlaybackStateChanged(!value, isSeeking)
+  }
+
+  private fun updatePlaybackPos(pos: Long) {
+    if (playerDestoryed || !playerParsed) return
+    Log.d(TAG, "PROGRESS $pos")
+    eventEmitter.onVideoProgress(
+            pos.toDouble(),
+            (MPVLib.getPropertyDouble("duration") ?: 0.0),
+            (MPVLib.getPropertyDouble("percent-pos") ?: 0.0) / 100.0
+    )
+  }
+
+  private fun onVideoLoadStart() {
+    eventEmitter.onVideoLoadStart()
+
+    val sideloadTracks = src.sideLoadedTextTracks
+
+    if (sideloadTracks != null) {
+      val videoID = src.uniqueID
+      for (externText in sideloadTracks.tracks) {
+        if (videoID != src.uniqueID) continue // Check if video is changed
+        MPVLib.command(
+                arrayOf(
+                        "sub-add",
+                        externText.uri,
+                        "auto",
+                        externText.title ?: "",
+                        externText.language ?: ""
+                )
+        )
+      }
+    }
+  }
+
+  private fun onVideoLoaded() {
+    Log.d(TAG, "Video loaded !")
+    playerParsed = true
+
+    val textTracks = ArrayList<BasicTrack>()
+    val audioTracks = ArrayList<BasicTrack>()
+    val videosTracks = ArrayList<VideoBasicTrack>()
+
+    val count = MPVLib.getPropertyInt("track-list/count")!!
+    for (i in 0 until count) {
+      val type = MPVLib.getPropertyString("track-list/$i/type") ?: continue
+      val isAudioTrack = type == "audio"
+      val isSubTrack = type == "sub"
+      val isVideoTrack = type == "video"
+      if (!isAudioTrack && !isSubTrack && !isVideoTrack) {
+        continue
+      }
+
+      val mpvId = MPVLib.getPropertyInt("track-list/$i/id") ?: continue
+      val lang: String? = MPVLib.getPropertyString("track-list/$i/lang")
+      val title: String? = MPVLib.getPropertyString("track-list/$i/title")
+      val selected = MPVLib.getPropertyString("track-list/$i/selected") == "yes"
+      val externaled = MPVLib.getPropertyString("track-list/$i/external") == "yes"
+
+      if (isAudioTrack) {
+        audioTracks.add(BasicTrack(title, lang, mpvId, selected, externaled))
+      } else if (isSubTrack) {
+        textTracks.add(BasicTrack(title, lang, mpvId, selected, externaled))
+      } else if (isVideoTrack) {
+        videosTracks.add(
+                VideoBasicTrack(
+                        title,
+                        lang,
+                        mpvId,
+                        selected,
+                        externaled,
+                        MPVLib.getPropertyInt("track-list/$i/demux-w") ?: 0, // Width
+                        MPVLib.getPropertyInt("track-list/$i/demux-h") ?: 0 // Height
+                )
+        )
+      }
+    }
+
+    eventEmitter.onVideoLoad(
+            MPVLib.getPropertyDouble("duration") ?: 0.0,
+            MPVLib.getPropertyDouble("time-pos") ?: 0.0,
+            MPVLib.getPropertyInt("width") ?: 0,
+            MPVLib.getPropertyInt("height") ?: 0,
+            audioTracks.sortedBy { it.external },
+            textTracks.sortedBy { it.external },
+            videosTracks.sortedBy { it.external }
+    )
+  }
+
+  // Player commands
+
+  fun seek(time: Double) {
+    if (playerDestoryed || !playerParsed) return
+    MPVLib.setPropertyDouble("time-pos", time)
+  }
+
+  fun setRepeatModifier(repeatparam: Boolean) {
+    if (repeatparam != repeat) {
+      repeat = repeatparam
+      MPVLib.setPropertyString("loop-file", if (repeatparam) "inf" else "no")
+    }
+  }
+
+  fun setTextTrackDelay(newDelay: Double) {
+    if (newDelay != spuDelay) {
+      spuDelay = newDelay
+      MPVLib.setPropertyDouble("sub-delay", newDelay)
+    }
+  }
+
+  fun setMutedModifier(mutedparam: Boolean) {
+    if (muted != mutedparam) {
+      muted = mutedparam
+      MPVLib.setPropertyBoolean("mute", mutedparam)
+    }
+  }
+
+  fun setVolumeModifier(vol: Int) {
+    if (vol == volume) return
+    volume = vol
+    MPVLib.setPropertyInt("volume", vol)
+  }
+
+  fun setLangsPref(newPrefs: LangsPref) {
+    if (langsPref != newPrefs) {
+      langsPref = newPrefs
+      MPVLib.setPropertyString("alang", newPrefs.alang)
+      MPVLib.setPropertyString("slang", newPrefs.slang)
+      MPVLib.setPropertyString(
+              "subs-with-matching-audio",
+              if (newPrefs.subMatchingAudio) "yes" else "no"
+      )
+    }
+  }
+
+  fun setSubStyle(newStyle: SubtitleStyle) {
+    if (subStyle != newStyle) {
+      subStyle = newStyle
+      MPVLib.setPropertyInt("sub-font-size", newStyle.fontSize)
+      MPVLib.setPropertyString("sub-color", newStyle.color)
+      MPVLib.setPropertyString("sub-bold", if (newStyle.bold) "yes" else "no")
+      MPVLib.setPropertyString("sub-back-color", newStyle.backgroundColor)
+      MPVLib.setPropertyString("sub-border-style", newStyle.borderStyle)
+    }
+  }
+
+  fun setPlayerPropertyString(key: String, value: String) {
+    if (playerDestoryed) return
+    MPVLib.setPropertyString(key, value)
+  }
+
+  fun setPlayerPropertyInt(key: String, value: Int) {
+    if (playerDestoryed) return
+    MPVLib.setPropertyInt(key, value)
+  }
+
+  fun setSource(source: VideoSrc) {
+    if (source == src) {
+      return
+    }
+    Log.d(TAG, "Unload media (Set source)")
+    cleanVariables(source)
+
+    if (source.uri != null) {
+      if (source.headers.size > 0) {
+        // Combine all headers into a single comma-separated string
+        val httpHeaderString =
+                source.headers
+                        .map { it.key + ": " + it.value.replace(",", "\\,") }
+                        .joinToString(",")
+        // Set all headers at once using the correct MPV format
+        MPVLib.setOptionString("http-header-fields", httpHeaderString)
+      } else {
+        MPVLib.setOptionString("http-header-fields", "")
+      }
+
+      MPVLib.setOptionString("sid", "auto")
+      MPVLib.setOptionString("aid", "auto")
+      MPVLib.setOptionString("pause", if (paused) "yes" else "no")
+
+      MPVLib.setOptionString(
+              "start",
+              if (source.startPosition >= 0) source.startPosition.toString() else ""
+      )
+
+      if (MPVLib.getPropertyString("force-window") == "yes") {
+        MPVLib.command(arrayOf("loadfile", source.uri.toString()))
+      } else {
+        filePath = source.uri.toString()
+      }
+    } else {
+      unloadMedia()
+    }
+  }
+
+  fun setPausedModifier(pause: Boolean) {
+    if (pause != paused) {
+      paused = pause
+      MPVLib.setPropertyBoolean("pause", paused)
+    }
+  }
+
+  fun setZoomMode(zoom: Boolean) {
+    if (zoom != zoomMode) {
+      zoomMode = zoom
+      MPVLib.setPropertyDouble("panscan", if (zoom) 1.0 else 0.0)
+      // MPVLib.setPropertyString("video-aspect-override", "-1")
+    }
+  }
+
+  private fun cleanVariables(source: VideoSrc = VideoSrc()) {
+    filePath = null
+    playerParsed = false
+    src = source
+  }
+
+  private fun unloadMedia() {
+    MPVLib.command(arrayOf("stop"))
+  }
+
+  /** Sets the VO to use. It is automatically disabled/enabled when the surface dis-/appears. */
+  fun setVo(vo: String) {
+    if (vo != voInUse) {
+      voInUse = vo
+      MPVLib.setOptionString("vo", vo)
+    }
+  }
+
+  // React host callbacks
+  override fun onHostDestroy() {
+    destroy()
+  }
+
+  override fun onHostPause() {
+    activityIsForeground = false
+    eventUiHandler.removeCallbacksAndMessages(null)
+    if (!playerDestoryed && !paused) {
+      paused = true
+      isInHostPause = true
+      MPVLib.setPropertyBoolean("pause", true)
+    }
+  }
+
+  override fun onHostResume() {
+    activityIsForeground = true
+    if (isInHostPause) {
+      isInHostPause = false
+      paused = false
+      MPVLib.setPropertyBoolean("pause", false)
+    }
+  }
+
+  // Surface callbacks
+
+  override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+    MPVLib.setPropertyString("android-surface-size", "${width}x$height")
+  }
+
+  override fun surfaceCreated(holder: SurfaceHolder) {
+    Log.w(TAG, "attaching surface")
+    MPVLib.attachSurface(holder.surface)
+    // This forces mpv to render subs/osd/whatever into our surface even if it would ordinarily not
+    MPVLib.setOptionString("force-window", "yes")
+
+    if (filePath != null) {
+      MPVLib.command(arrayOf("loadfile", filePath as String))
+      filePath = null
+    } else {
+      // We disable video output when the context disappears, enable it back
+      MPVLib.setPropertyString("vo", voInUse)
+    }
+  }
+
+  override fun surfaceDestroyed(holder: SurfaceHolder) {
+    Log.w(TAG, "detaching surface")
+    MPVLib.setPropertyString("vo", "null")
+    MPVLib.setOptionString("force-window", "no")
+    MPVLib.detachSurface()
+  }
+
+  companion object {
+    internal const val TAG = "VideoMpvView"
+  }
+}

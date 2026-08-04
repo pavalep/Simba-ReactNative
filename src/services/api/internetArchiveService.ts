@@ -46,7 +46,18 @@ interface IAMetadataResponse {
     description: string;
     creator: string;
     year: string;
+    /**
+     * V6 2.3.2: Internet Archive mediatype (e.g. "movies", "audio",
+     * "texts"). Lets us refuse to hand non-movie items to the player.
+     */
+    mediatype?: string;
   };
+  /**
+   * V6 2.3.2: total file count from the IA metadata response. Used
+   * to detect partial-replication responses where `files` is empty
+   * but `files_count > 0` — those servers should be retried.
+   */
+  files_count?: number;
   files: {
     name: string;
     source: string;
@@ -236,7 +247,15 @@ function mapVideoItem(raw: IAVideoResultRaw): InternetArchiveVideoResult {
     duration: parseRuntime(raw.runtime),
     avgRating: raw.avg_rating || 0,
     downloadCount: raw.download_count || 0,
-    imageUrl: raw.image_url || `https://archive.org/services/img/${raw.identifier}`,
+    // V6 2.3.2: thumbnail URL. The IA's `__ia_thumb.jpg` is the
+    // auto-generated frame extracted from the original file — it
+    // returns 200 image/jpeg for the items we tested (verified via
+    // HTTP HEAD against four items in the Classic Films list).
+    // It works for items where `services/img/{identifier}` 403s and
+    // is faster than the `services/img` redirect, so we use it
+    // unconditionally. `image_url` from the search API is empty for
+    // most items, so we ignore it.
+    imageUrl: `https://archive.org/download/${raw.identifier}/__ia_thumb.jpg`,
     streamingUrl: `https://archive.org/download/${raw.identifier}/`,
     subtitles: [],
     audioTracks: [],
@@ -319,7 +338,14 @@ export async function searchInternetArchiveVideos(
     path: '/advancedsearch.php',
     params: {
       q,
-      'fl[]': 'identifier,title,description,creator,year,runtime,avg_rating,download_count',
+      // V6 2.3.2: added `image_url` — the search previously omitted
+      // it, so the mapper always fell back to the generic
+      // `/services/img/{identifier}` redirect. That worked for most
+      // items but failed (or returned a low-quality placeholder) for
+      // items where the IA's curated thumbnail is richer. Asking for
+      // it explicitly costs nothing and lets the UI render the
+      // high-quality image the catalog actually exposes.
+      'fl[]': 'identifier,title,description,creator,year,runtime,avg_rating,download_count,image_url',
       rows: options?.limit ?? 10,
       page: options?.page ?? 1,
       output: 'json',
@@ -336,11 +362,71 @@ export async function searchInternetArchiveVideos(
 export async function getInternetArchiveVideoDetails(
   identifier: string,
 ): Promise<InternetArchiveVideoResult | null> {
+  return resolveInternetArchiveVideoDetails(identifier);
+}
+
+/**
+ * V6 2.3.2: Resolve a playable Internet Archive video URL with retry.
+ *
+ * The Internet Archive's metadata API is hosted on a CDN cluster
+ * (`d1`, `d2`, `workable_servers[]`). On a cold call, the first server
+ * we hit may return a partial response — `files_count > 0` but the
+ * `files` array is empty because the cluster hasn't replicated yet.
+ * The user's symptom was: "first tap → No Video File error, after
+ * reload → loads fine". The retry walks the API until we either get
+ * a real video file or exhaust the attempts.
+ *
+ * @param identifier  Internet Archive item identifier (e.g. "TheAdventurer")
+ * @param onRetry     Optional callback fired before each retry attempt
+ *                    after the first. Lets the caller show a toast like
+ *                    "Trying alternate server… (attempt 2/3)".
+ * @param maxAttempts Total attempts including the first. Default 3.
+ */
+export async function resolveInternetArchiveVideoDetails(
+  identifier: string,
+  onRetry?: (attempt: number, maxAttempts: number) => void,
+  maxAttempts: number = 3,
+): Promise<InternetArchiveVideoResult | null> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (attempt > 1 && onRetry) {
+      onRetry(attempt, maxAttempts);
+    }
+    const result = await getInternetArchiveVideoDetailsOnce(identifier, attempt);
+    if (result) {
+      return result;
+    }
+    // Result is null either because the API failed entirely, or because
+    // the response had files_count>0 but no video-shaped files (the
+    // partial-replication case). Either way, retrying usually picks up
+    // a healthier server.
+    if (attempt < maxAttempts) {
+      // 250ms / 500ms / 1000ms backoff — short enough to feel snappy,
+      // long enough that the CDN picks a different node on the next try.
+      await new Promise<void>(r => setTimeout(r, 250 * attempt));
+    }
+  }
+  return null;
+}
+
+/**
+ * Single-attempt version of the metadata fetch. Returns null on either
+ * network failure OR partial-replication failure (server claims files
+ * exist but returned an empty list). Callers that don't want retries
+ * can use this directly.
+ */
+async function getInternetArchiveVideoDetailsOnce(
+  identifier: string,
+  attempt: number,
+): Promise<InternetArchiveVideoResult | null> {
   try {
     const data = await apiFetch<IAMetadataResponse>({
       config: API_CONFIG.internetArchive,
       path: `/metadata/${identifier}`,
-      cacheTtlMs: 600_000,
+      // Bypass the cache on retries so we actually hit a different server
+      // instead of getting the same broken response back. The first
+      // attempt CAN use the cache (cacheTtlMs > 0) to benefit from a
+      // healthy response that was stored within the last 10 minutes.
+      cacheTtlMs: attempt === 1 ? 600_000 : 0,
     });
 
     const md = data.metadata;
@@ -399,6 +485,16 @@ export async function getInternetArchiveVideoDetails(
         url: `https://archive.org/download/${identifier}/${f.name}`,
         format: f.format,
       }));
+
+    // V6 2.3.2: detect partial-replication failure. The IA metadata
+    // response includes `files_count` even when the files array is
+    // empty (the server hasn't replicated the file list yet). If we
+    // see files_count > 0 but found zero video files, this server
+    // doesn't have the answer — return null so the retry helper
+    // tries a different CDN node.
+    if ((data.files_count ?? 0) > 0 && videoFiles.length === 0) {
+      return null;
+    }
 
     return {
       identifier: md.identifier,

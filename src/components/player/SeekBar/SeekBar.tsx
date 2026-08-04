@@ -1,5 +1,5 @@
 import React, {useRef, useState, useCallback, useMemo, useEffect} from 'react';
-import {View, PanResponder, Animated, TouchableOpacity, StyleSheet, LayoutChangeEvent} from 'react-native';
+import {View, PanResponder, Animated, TouchableOpacity, StyleSheet, LayoutChangeEvent, Image} from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {useAccessibility} from '../../../hooks/useAccessibility';
@@ -37,8 +37,32 @@ export interface SeekBarProps {
   chapters?: Array<{startTime: number; title?: string}>;
   /** Height of the seek track (default: 16) */
   trackHeight?: number;
-  /** V5: buffered fraction [0..1] — rendered as a light-gray fill behind progress */
+  /** V5: buffered fraction [0..1] — rendered as a light-gray fill behind progress.
+   *  Kept for backward compatibility with legacy callers (a single
+   *  contiguous buffer from 0..fraction). For network streams with
+   *  multiple buffered ranges, prefer `bufferedRanges` below. */
   bufferedFraction?: number;
+  /**
+   * YouTube-class buffered ranges — list of `{start, end}` in seconds
+   * describing the portion of the stream currently resident in the
+   * demuxer cache. Each range renders as a separate grey segment on the
+   * track. Empty when no cache is active.
+   */
+  bufferedRanges?: Array<{start: number; end: number}>;
+  /**
+   * Whether seeking is permitted. False for live streams and unknown
+   * length sources. The track is dimmed and the scrub thumb is hidden
+   * when false so the user can see scrubbing isn't possible.
+   */
+  seekable?: boolean;
+  /**
+   * V6 9.3.1: optional thumbnail URI shown above the scrub bubble while
+   * the user is scrubbing. Best-effort: until native thumbnail-strip
+   * support ships, this is the first-frame thumbnail captured at
+   * loadFile time (sessionRecent.thumbnailPath). When undefined, the
+   * scrub bubble falls back to its text-only display.
+   */
+  thumbnailUri?: string;
 }
 
 // ─── Component ──────────────────────────────────────────────
@@ -50,13 +74,17 @@ const SeekBar: React.FC<SeekBarProps> = ({
   chapters,
   trackHeight = 16,
   bufferedFraction = 0,
+  bufferedRanges,
+  seekable = true,
+  thumbnailUri,
 }) => {
   const {colors} = useTheme();
   const {reduceMotion} = useAccessibility();
 
-  // Keep the thumb responsive without allowing a fast native event stream to
-  // make the rest of the screen feel busy.
-  const position = useDebounce(rawPosition, 80);
+  // V6 3.4.1: keep the thumb responsive. The previous 80ms debounce made
+  // the bar feel sluggish while scrubbing; 16ms (~60fps) is the sweet spot
+  // for smooth tracking without re-rendering the whole screen per frame.
+  const position = useDebounce(rawPosition, 16);
 
   // Track layout
   const trackWidthRef = useRef(0);
@@ -121,8 +149,8 @@ const SeekBar: React.FC<SeekBarProps> = ({
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponder: () => seekable,
+        onMoveShouldSetPanResponder: () => seekable,
 
         onPanResponderGrant: (evt) => {
           const x = evt.nativeEvent.locationX;
@@ -187,13 +215,9 @@ const SeekBar: React.FC<SeekBarProps> = ({
         container: {
           flexDirection: 'row',
           alignItems: 'center',
-          // V2-fix: was paddingVertical: 6 (added 12px around the bar).
-          // Removed vertical padding so the bar fits inside the bottom panel
-          // without colliding with the transport row below or the secondary
-          // toolbar above. Horizontal padding is owned by the parent.
           paddingVertical: 0,
-          paddingHorizontal: 12,
-          gap: 8,
+          paddingHorizontal: 4,
+          gap: 10,
         },
         trackContainer: {
           flex: 1,
@@ -201,62 +225,69 @@ const SeekBar: React.FC<SeekBarProps> = ({
           justifyContent: 'center',
           position: 'relative',
         },
+        // 3px thin track for a modern, refined look
         trackBg: {
-          height: 4,
-          borderRadius: 4,
-          backgroundColor: colors.text.tertiary,
+          height: 3,
+          borderRadius: 2,
+          backgroundColor: 'rgba(255,255,255,0.22)',
         },
         trackFill: {
           position: 'absolute',
           left: 0,
-          top: trackHeight / 2 - 2,
-          height: 4,
-          borderRadius: 4,
+          top: trackHeight / 2 - 1.5,
+          height: 3,
+          borderRadius: 2,
           backgroundColor: colors.accent.gold,
         },
-        /** V5: buffered fill — light gray behind progress */
+        /** V5: buffered fill — soft white at low opacity */
         trackBuffered: {
           position: 'absolute',
           left: 0,
-          top: trackHeight / 2 - 2,
-          height: 4,
-          borderRadius: 4,
-          backgroundColor: colors.text.tertiary,
-          opacity: 0.4,
+          top: trackHeight / 2 - 1.5,
+          height: 3,
+          borderRadius: 2,
+          backgroundColor: 'rgba(255,255,255,0.5)',
+          opacity: 0.5,
         },
+        // 16px gold thumb with a soft halo and 1px white inner ring
         thumb: {
           position: 'absolute',
-          width: 14,
-          height: 14,
-          borderRadius: 7,
+          width: 16,
+          height: 16,
+          borderRadius: 8,
           backgroundColor: colors.accent.gold,
-          borderWidth: 1.5,
-          borderColor: colors.accent.gold,
-          top: trackHeight / 2 - 7,
-          marginLeft: -7,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.85)',
+          top: trackHeight / 2 - 8,
+          marginLeft: -8,
+          shadowColor: colors.accent.gold,
+          shadowOffset: {width: 0, height: 0},
+          shadowOpacity: 0.6,
+          shadowRadius: 6,
+          elevation: 4,
         },
         chapterMark: {
           position: 'absolute',
-          width: 3,
-          height: 12,
-          backgroundColor: colors.text.primary,
-          opacity: 0.5,
+          width: 2,
+          height: 10,
+          backgroundColor: '#FFFFFF',
+          opacity: 0.55,
           borderRadius: 1,
         },
         chapterMarkTouch: {
           position: 'absolute',
-          width: 20,
-          height: 20,
+          width: 24,
+          height: 24,
           alignItems: 'center',
           justifyContent: 'center',
-          marginLeft: -10,
+          marginLeft: -12,
         },
-        // V2-fix: scrub bubble now floats BELOW the track (positive top)
-        // instead of above, because the secondary toolbar is already pinned
-        // to the top of the bottom panel and would otherwise cover it.
+        // Scrub bubble: floats BELOW the track so it doesn't collide with
+        // the secondary toolbar above. While scrubbing, it overlays the
+        // transport row but is pointerEvents:none so taps pass through.
         scrubBubbleWrap: {
           position: 'absolute',
-          top: trackHeight + 4,
+          top: trackHeight + 6,
           width: 0,
           alignItems: 'center',
           zIndex: 6,
@@ -265,27 +296,52 @@ const SeekBar: React.FC<SeekBarProps> = ({
           flexDirection: 'row',
           alignItems: 'center',
           gap: 6,
-          minWidth: 56,
-          maxWidth: 168,
+          minWidth: 64,
+          maxWidth: 180,
           paddingHorizontal: 10,
-          paddingVertical: 5,
-          borderRadius: 10,
-          backgroundColor: colors.background.scrimStrong,
-          borderWidth: 1,
-          borderColor: colors.border.emphasis,
+          paddingVertical: 6,
+          borderRadius: 8,
+          backgroundColor: 'rgba(10,10,12,0.92)',
+          borderWidth: 0.5,
+          borderColor: 'rgba(255,255,255,0.14)',
+          shadowColor: '#000',
+          shadowOffset: {width: 0, height: 2},
+          shadowOpacity: 0.4,
+          shadowRadius: 6,
+          elevation: 6,
         },
         scrubBubbleTime: {
           fontWeight: '700',
           fontVariant: ['tabular-nums'],
+          fontSize: 12,
+          color: colors.accent.gold,
         },
         scrubBubbleChapter: {
           flexShrink: 1,
           opacity: 0.85,
+          fontSize: 11,
+        },
+        // V6 9.3.2: thumbnail preview sits above the time/chapter row
+        // inside the same bubble. 16:9 aspect, fixed width so the
+        // bubble doesn't jump around as the thumbnail loads.
+        scrubThumbnail: {
+          width: 120,
+          height: 68,
+          borderRadius: 6,
+          backgroundColor: '#000000',
+          marginBottom: 6,
+        },
+        scrubBubbleColumn: {
+          alignItems: 'center',
         },
         timeLabel: {
-          minWidth: 40,
+          minWidth: 44,
           textAlign: 'center',
           fontSize: 11,
+          fontWeight: '500',
+          color: 'rgba(255,255,255,0.7)',
+          letterSpacing: 0.3,
+          fontVariant: ['tabular-nums'],
         },
       }),
     [colors, trackHeight],
@@ -293,7 +349,7 @@ const SeekBar: React.FC<SeekBarProps> = ({
 
   return (
     <View style={styles.container}>
-      <AppText variant="caption" color="primary" style={styles.timeLabel}>
+      <AppText style={styles.timeLabel}>
         {fmt(isScrubbing ? scrubFraction * durationSec : position)}
       </AppText>
 
@@ -324,12 +380,34 @@ const SeekBar: React.FC<SeekBarProps> = ({
         }}
         {...panResponder.panHandlers}>
         {/* Background track */}
-        <View style={styles.trackBg} />
+        <View style={[styles.trackBg, !seekable && {opacity: 0.4}]} />
 
-        {/* V5: Buffered region fill (gray, behind progress) */}
-        {bufferedFraction > 0 && (
+        {/* YouTube-class buffered region fill. When `bufferedRanges` is
+            provided (the streaming path), each range renders as a
+            separate grey segment — handling multi-range network streams
+            cleanly. Otherwise fall back to the legacy single-fill from
+            0..bufferedFraction for callers that haven't migrated yet. */}
+        {bufferedRanges && bufferedRanges.length > 0 && duration > 0 ? (
+          bufferedRanges.map((r, i) => {
+            const leftPct = Math.max(0, Math.min(100, (r.start / duration) * 100));
+            const widthPct = Math.max(
+              0,
+              Math.min(100 - leftPct, ((r.end - r.start) / duration) * 100),
+            );
+            if (widthPct <= 0) return null;
+            return (
+              <View
+                key={`buf-${i}-${r.start.toFixed(2)}-${r.end.toFixed(2)}`}
+                style={[
+                  styles.trackBuffered,
+                  {left: `${leftPct}%`, width: `${widthPct}%`},
+                ]}
+              />
+            );
+          })
+        ) : bufferedFraction > 0 ? (
           <View style={[styles.trackBuffered, {width: `${Math.min(bufferedFraction * 100, 100)}%`}]} />
-        )}
+        ) : null}
 
         {/* Fill */}
         <View
@@ -369,7 +447,15 @@ const SeekBar: React.FC<SeekBarProps> = ({
               styles.scrubBubbleWrap,
               {left: `${Math.max(6, Math.min(94, displayFraction * 100))}%`},
             ]}>
-            <View style={styles.scrubBubble}>
+            <View style={[styles.scrubBubble, styles.scrubBubbleColumn]}>
+              {thumbnailUri ? (
+                <Image
+                  source={{uri: thumbnailUri}}
+                  style={styles.scrubThumbnail}
+                  resizeMode="cover"
+                  accessibilityIgnoresInvertColors
+                />
+              ) : null}
               <AppText variant="caption" color="accent" style={styles.scrubBubbleTime}>
                 {fmt(scrubFraction * durationSec)}
               </AppText>
@@ -398,7 +484,7 @@ const SeekBar: React.FC<SeekBarProps> = ({
         )}
       </View>
 
-      <AppText variant="caption" color="primary" style={styles.timeLabel}>
+      <AppText style={styles.timeLabel}>
         {fmtDuration(duration)}
       </AppText>
     </View>

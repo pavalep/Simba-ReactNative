@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -21,7 +22,8 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
-import {getInternetArchiveVideoDetails} from '../../services/api/internetArchiveService';
+import {getInternetArchiveVideoDetails, resolveInternetArchiveVideoDetails} from '../../services/api/internetArchiveService';
+import {useToast} from '../../components/feedback/Toast';
 import type {InternetArchiveVideoResult} from '../../types/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -91,6 +93,12 @@ interface MovieCardProps {
 const MovieCard: React.FC<MovieCardProps> = React.memo(
   ({item, onPress, isResolving}) => {
     const {colors} = useTheme();
+    // V6 2.3.2: local "image failed" state so we can fall back to the
+    // placeholder instead of the broken-image icon. `imageUrl` comes
+    // from the IA search API (image_url field) with a fallback to
+    // `https://archive.org/services/img/{identifier}`.
+    const [imageFailed, setImageFailed] = useState(false);
+    const showImage = !!item.imageUrl && !imageFailed;
 
     return (
       <TouchableOpacity
@@ -104,9 +112,25 @@ const MovieCard: React.FC<MovieCardProps> = React.memo(
             styles.thumbnailWrap,
             {backgroundColor: colors.background.elevated},
           ]}>
-          <View style={styles.thumbnailPlaceholder}>
-            <SvgIcon name="video" size={24} color={colors.accent.goldDim} />
-          </View>
+          {/* V6 2.3.2: actually render the thumbnail. The IA
+              services/img redirect is wired into the field list, so
+              `item.imageUrl` is now a real IA CDN URL. The placeholder
+              underneath stays as a fallback while the image is in
+              flight and as a graceful failure if the image 404s. */}
+          {showImage && (
+            <Image
+              source={{uri: item.imageUrl}}
+              style={styles.thumbnail}
+              resizeMode="cover"
+              onError={() => setImageFailed(true)}
+              accessibilityIgnoresInvertColors
+            />
+          )}
+          {!showImage && (
+            <View style={styles.thumbnailPlaceholder}>
+              <SvgIcon name="video" size={24} color={colors.accent.goldDim} />
+            </View>
+          )}
           {/* Resolving overlay — shows while we fetch the real file URL */}
           {isResolving && (
             <View
@@ -176,6 +200,7 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
 }) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
   const {
     selectedCategory,
     setSelectedCategory,
@@ -183,6 +208,14 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
     isLoading,
     error,
   } = useMoviesScreen(route.params?.categoryId);
+
+  // V6 2.3.2: inline error state for "this movie can't be played" —
+  // shown next to the grid instead of navigating into the player with
+  // an empty fileUri (which previously surfaced as "No Video File").
+  const [movieError, setMovieError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const handleCategoryPress = useCallback(
     (id: string) => {
@@ -195,40 +228,50 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
 
   const handleMoviePress = useCallback(
     async (item: InternetArchiveVideoResult) => {
-      // The search-result streamingUrl is a directory URL (e.g.
-      // https://archive.org/download/<id>/), not a playable file. We have
-      // to resolve the actual video file via getInternetArchiveVideoDetails
-      // before opening the player — otherwise the user gets
-      // "File Not Found".
+      // V6 2.3.2: validate the URL *before* navigating into the player.
+      // The previous flow always navigated and surfaced "No Video File"
+      // inside the player when the IA CDN hadn't replicated the file
+      // list yet. We now (1) retry the metadata API up to 3 times with
+      // a toast on each switch, (2) refuse to navigate if the URL is
+      // still bad — instead show an inline error in the Movies screen.
+      setMovieError(null);
       setResolvingId(item.identifier);
       try {
-        const details = await getInternetArchiveVideoDetails(item.identifier);
+        const details = await resolveInternetArchiveVideoDetails(
+          item.identifier,
+          (attempt, max) => {
+            // Tell the user why the second-tap is slow: the CDN just
+            // handed back a partial response, so we're trying a
+            // different server. Toast, not inline, so it doesn't push
+            // the grid around.
+            toast.show(
+              `Trying alternate server… (attempt ${attempt}/${max})`,
+              'info',
+              1800,
+            );
+          },
+        );
         if (!details) {
-          // Details unavailable — surface a clear error in the player.
-          navigation.navigate('VideoPlayer', {
-            fileUri: '',
-            fileTitle: item.title,
-            startPosition: 0,
-            initialError: {
-              title: 'Unable to Load',
-              message:
-                'We could not fetch the video file for this item. Please try a different movie.',
-            },
+          // Three attempts and still no playable file. We treat this
+          // as a "this item really isn't playable" condition rather
+          // than a transient network failure — three IA attempts in
+          // <2s is enough that the item is the problem, not the net.
+          setMovieError({
+            title: 'No Video File',
+            message:
+              'This item does not have a playable video file. Please try a different movie.',
           });
           return;
         }
-        // If still a directory URL (no video file found), show a
-        // helpful error rather than a generic "File Not Found".
+        // Double-check: even after retries, refuse to navigate if the
+        // returned URL is still a directory. This is the original
+        // "No Video File" symptom and we don't want to drag the user
+        // into the player just to show them the same error there.
         if (details.streamingUrl.endsWith('/')) {
-          navigation.navigate('VideoPlayer', {
-            fileUri: '',
-            fileTitle: item.title,
-            startPosition: 0,
-            initialError: {
-              title: 'No Video File',
-              message:
-                'This item does not have a playable video file. Please try a different movie.',
-            },
+          setMovieError({
+            title: 'No Video File',
+            message:
+              'This item does not have a playable video file. Please try a different movie.',
           });
           return;
         }
@@ -238,23 +281,18 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
           startPosition: 0,
         });
       } catch (err) {
-        navigation.navigate('VideoPlayer', {
-          fileUri: '',
-          fileTitle: item.title,
-          startPosition: 0,
-          initialError: {
-            title: 'Unable to Load',
-            message:
-              err instanceof Error
-                ? err.message
-                : 'Failed to fetch the video file. Please try again.',
-          },
+        setMovieError({
+          title: 'Unable to Load',
+          message:
+            err instanceof Error
+              ? err.message
+              : 'Failed to fetch the video file. Please try again.',
         });
       } finally {
         setResolvingId(null);
       }
     },
-    [navigation],
+    [navigation, toast],
   );
 
   // Render the grid
@@ -319,6 +357,31 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
             <AppText variant="body2" color="tertiary" style={styles.stateText}>
               No movies found in this category.
             </AppText>
+          </View>
+        )}
+
+        {/* V6 2.3.2: per-movie inline error state. Shown when a tap
+            on a movie fails to resolve to a playable file — instead of
+            pushing the player with an empty fileUri, we keep the user
+            on this screen and explain why. */}
+        {movieError && (
+          <View style={styles.movieErrorBanner}>
+            <SvgIcon name="alertCircle" size={22} color={colors.accent.gold} />
+            <View style={styles.movieErrorText}>
+              <AppText variant="body2" weight="bold" color="primary">
+                {movieError.title}
+              </AppText>
+              <AppText variant="caption" color="tertiary">
+                {movieError.message}
+              </AppText>
+            </View>
+            <TouchableOpacity
+              onPress={() => setMovieError(null)}
+              accessibilityLabel="Dismiss movie error"
+              accessibilityRole="button"
+              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+              <SvgIcon name="close" size={18} color={colors.text.tertiary} />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -393,6 +456,26 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     textAlign: 'center',
   },
+  // V6 2.3.2: inline error banner styles. Sits at the top of the
+  // content area as a dismissible pill — distinguishes per-movie
+  // resolution failures from the global "couldn't load movies" state.
+  movieErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: '#2A1F0A', // dim gold-tinted surface
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#5C4A1F',
+  },
+  movieErrorText: {
+    flex: 1,
+    gap: 2,
+  },
   gridContent: {
     padding: spacing.sm,
   },
@@ -414,6 +497,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     padding: spacing.xs,
+  },
+  // V6 2.3.2: actual image style. Fills the wrapper, sits behind
+  // the duration/rating badges (z-order from JSON position), and
+  // respects the wrapper's 16:9 aspect ratio.
+  thumbnail: {
+    ...StyleSheet.absoluteFillObject,
   },
   thumbnailPlaceholder: {
     ...StyleSheet.absoluteFill,

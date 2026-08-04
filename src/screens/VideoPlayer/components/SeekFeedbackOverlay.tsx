@@ -3,11 +3,13 @@ import {
   Animated,
   StyleSheet,
   Dimensions,
+  View,
 } from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
+import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {useTheme} from '../../../theme';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
+const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 interface SeekFeedbackOverlayProps {
   /** Side of the double-tap that triggered the seek */
@@ -19,33 +21,43 @@ interface SeekFeedbackOverlayProps {
 /**
  * Animated seek direction indicator shown on double-tap gesture.
  *
- * Animation flow:
- * 1. Scale 0.5→1.0 + Opacity 0→1 over 200ms
- * 2. Hold for 600ms
- * 3. Opacity 1→0 over 200ms
- *
- * Total ~1s visibility window. Renders "-10s" on left or "+10s" on right.
+ * A circular glass disc with a vector skip-back/skip-forward icon and
+ * a gold "10" label. Animates in with scale + soft glow, holds, fades.
  */
 export const SeekFeedbackOverlay: React.FC<SeekFeedbackOverlayProps> = ({
   side,
   visible,
 }) => {
   const {colors} = useTheme();
-  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.4)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      scaleAnim.setValue(0);
-      opacityAnim.setValue(0);
+      // Entrance: scale 0.4 → 1.0 with a slight overshoot, fade in
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          friction: 4,
+          tension: 120,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      // Exit: scale down + fade
       Animated.parallel([
         Animated.timing(scaleAnim, {
-          toValue: 1,
+          toValue: 0.4,
           duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
-          toValue: 1,
+          toValue: 0,
           duration: 200,
           useNativeDriver: true,
         }),
@@ -63,20 +75,17 @@ export const SeekFeedbackOverlay: React.FC<SeekFeedbackOverlayProps> = ({
         {
           opacity: opacityAnim,
           transform: [{scale: scaleAnim}],
-          backgroundColor: colors.background.scrimDeep,
         },
       ]}
       pointerEvents="none">
-      <AppText
-        style={[
-          styles.label,
-          {
-            color: colors.accent.gold,
-            textShadowColor: colors.background.primary + '80',
-          },
-        ]}>
-        {side === 'left' ? '-10s' : '+10s'}
-      </AppText>
+      <View style={[styles.disc, {backgroundColor: 'rgba(10,10,12,0.78)', borderColor: 'rgba(255,255,255,0.14)'}]}>
+        <SvgIcon
+          name={side === 'left' ? 'skipBack' : 'skipForward'}
+          size={28}
+          color={colors.accent.gold}
+        />
+        <AppText style={[styles.label, {color: '#FFFFFF'}]}>10</AppText>
+      </View>
     </Animated.View>
   );
 };
@@ -84,22 +93,34 @@ export const SeekFeedbackOverlay: React.FC<SeekFeedbackOverlayProps> = ({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: '40%',
+    top: '38%',
     zIndex: 100,
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   left: {
-    left: SCREEN_WIDTH * 0.15,
+    left: SCREEN_WIDTH * 0.18,
   },
   right: {
-    right: SCREEN_WIDTH * 0.15,
+    right: SCREEN_WIDTH * 0.18,
+  },
+  disc: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 0.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   label: {
-    fontSize: 24,
+    fontSize: 12,
     fontWeight: '700',
-    textShadowOffset: {width: 0, height: 1},
-    textShadowRadius: 4,
+    marginTop: 2,
+    letterSpacing: 0.3,
   },
 });

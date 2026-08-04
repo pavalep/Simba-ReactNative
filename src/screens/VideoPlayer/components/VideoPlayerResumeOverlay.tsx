@@ -53,22 +53,32 @@ export const VideoPlayerResumeOverlay: React.FC<VideoPlayerResumeOverlayProps> =
         },
         scrim: {
           ...StyleSheet.absoluteFill,
-          backgroundColor: colors.background.scrimDim,
+          backgroundColor: 'rgba(0,0,0,0.55)',
         },
         card: {
           marginHorizontal: 16,
           marginBottom: 130,
-          padding: 18,
-          borderRadius: 16,
+          padding: 20,
+          borderRadius: 18,
           borderWidth: 0.5,
-          borderColor: colors.border.subtle,
-          backgroundColor: colors.background.surfaceDark,
+          borderColor: 'rgba(255,255,255,0.10)',
+          backgroundColor: 'rgba(18,18,22,0.96)',
+          shadowColor: '#000',
+          shadowOffset: {width: 0, height: 8},
+          shadowOpacity: 0.5,
+          shadowRadius: 24,
+          elevation: 12,
         },
         title: {
-          marginBottom: 4,
+          marginBottom: 6,
+          fontSize: 20,
+          fontWeight: '700',
+          letterSpacing: 0.2,
         },
         caption: {
-          marginBottom: 14,
+          marginBottom: 16,
+          fontSize: 14,
+          lineHeight: 20,
         },
         row: {
           flexDirection: 'row',
@@ -76,23 +86,25 @@ export const VideoPlayerResumeOverlay: React.FC<VideoPlayerResumeOverlayProps> =
         },
         resumeBtn: {
           flex: 1,
-          height: 48,
-          borderRadius: 12,
+          height: 50,
+          borderRadius: 14,
           backgroundColor: colors.accent.gold,
           alignItems: 'center',
           justifyContent: 'center',
         },
         resumeLabel: {
           color: colors.text.inverse,
+          fontSize: 15,
           fontWeight: '700',
+          letterSpacing: 0.3,
         },
         startOverBtn: {
           flex: 1,
-          height: 48,
-          borderRadius: 12,
-          borderWidth: 1,
-          borderColor: colors.border.subtle,
-          backgroundColor: colors.border.subtle,
+          height: 50,
+          borderRadius: 14,
+          borderWidth: 0.5,
+          borderColor: 'rgba(255,255,255,0.18)',
+          backgroundColor: 'rgba(255,255,255,0.10)',
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -105,10 +117,10 @@ export const VideoPlayerResumeOverlay: React.FC<VideoPlayerResumeOverlayProps> =
       style={[styles.container, {opacity: fadeAnim, transform: [{translateY: translateAnim}]}]}>
       <View style={styles.scrim} pointerEvents="none" />
       <View style={styles.card}>
-        <AppText variant="h3" color="primary" style={styles.title}>
+        <AppText color="primary" style={styles.title}>
           Welcome back
         </AppText>
-        <AppText variant="body2" color="secondary" style={styles.caption}>
+        <AppText color="secondary" style={styles.caption}>
           Resume from {formatDuration(position)}?
         </AppText>
         <View style={styles.row}>
@@ -118,7 +130,7 @@ export const VideoPlayerResumeOverlay: React.FC<VideoPlayerResumeOverlayProps> =
             accessibilityRole="button"
             accessibilityLabel={`Resume from ${formatDuration(position)}`}
             activeOpacity={0.8}>
-            <AppText variant="body1" style={styles.resumeLabel}>
+            <AppText style={styles.resumeLabel}>
               Resume
             </AppText>
           </TouchableOpacity>
@@ -128,7 +140,7 @@ export const VideoPlayerResumeOverlay: React.FC<VideoPlayerResumeOverlayProps> =
             accessibilityRole="button"
             accessibilityLabel="Start over from the beginning"
             activeOpacity={0.7}>
-            <AppText variant="body1" color="primary">
+            <AppText color="primary" style={{fontSize: 15, fontWeight: '600', letterSpacing: 0.3}}>
               Start Over
             </AppText>
           </TouchableOpacity>

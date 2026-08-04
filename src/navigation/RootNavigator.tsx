@@ -121,7 +121,11 @@ export const RootNavigator: React.FC = () => {
       <Stack.Screen
         name="VideoPlayer"
         options={{
-          orientation: 'landscape',
+          // V6 2.3.2: Default to portrait. Users can rotate to landscape
+          // via the rotate button in VideoPlayerTopBar, which calls
+          // handleToggleRotate → lockToLandscape()/lockToPortrait().
+          // Forcing landscape here was hijacking the user's preferred
+          // orientation on every navigation into the player.
           animation: 'fade',
         }}>
         {props => (
