@@ -1,10 +1,10 @@
 import React from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon, IconName} from '../../utility/SvgIcon';
+import {BackButton} from '../../utility/BackButton/BackButton';
 
 interface InternalHeaderProps {
   title: string;
@@ -22,7 +22,6 @@ export const InternalHeader: React.FC<InternalHeaderProps> = ({
   rightAction,
 }) => {
   const {colors} = useTheme();
-  const navigation = useNavigation();
 
   return (
     <View
@@ -33,21 +32,15 @@ export const InternalHeader: React.FC<InternalHeaderProps> = ({
           borderBottomColor: colors.border.subtle,
         },
       ]}>
-      {/* Back arrow — 44px touch target */}
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={() => navigation.goBack()}
-        style={styles.backButton}
-        accessibilityLabel="Go back"
-        accessibilityRole="button">
-        <AppText variant="body1" color="secondary" style={{fontSize: 22}}>
-          ←
-        </AppText>
-      </TouchableOpacity>
+      {/* Back arrow — shared BackButton, 44px elevated circular target */}
+      <BackButton />
 
       {/* Title area */}
       <View style={styles.titleSection}>
-        <AppText variant="h3" color="primary" numberOfLines={1}>
+        <AppText
+          color="primary"
+          numberOfLines={1}
+          style={styles.title}>
           {title}
         </AppText>
         {subtitle && (
@@ -85,19 +78,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   titleSection: {
     flex: 1,
     marginLeft: spacing.xs,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   spacer: {
     width: 44,

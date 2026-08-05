@@ -10,6 +10,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
 import {SongHero} from './components/SongHero';
@@ -49,15 +50,7 @@ export const SongScreen: React.FC<Props> = ({navigation: _navigation, route: _ro
 
       {/* Back button (fixed) */}
       <View style={sty.header}>
-        <TouchableOpacity
-          style={[sty.backBtn, {backgroundColor: colors.background.elevated}]}
-          onPress={h.goBack}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}>
-          <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton onPress={h.goBack} />
         <AppText variant="h2" color="primary">
           Track
         </AppText>
@@ -165,13 +158,6 @@ const sty = StyleSheet.create({
     paddingBottom: 12,
     gap: 12,
     zIndex: 10,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scrollContent: {
     paddingBottom: 40,

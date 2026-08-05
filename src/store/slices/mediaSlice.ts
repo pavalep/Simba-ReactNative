@@ -194,7 +194,7 @@ const mediaSlice = createSlice({
       state.isScanning = false;
       state.cancelRequested = false;
       state.scanProgress = {currentFolder: null, filesFound: 0, totalFiles: 0, percentComplete: 0};
-      state.scanHistory = [];
+      state.scanHistory = EMPTY_SCAN_HISTORY;
       state.tracks = [];
       state.searchIndex = {};
     });

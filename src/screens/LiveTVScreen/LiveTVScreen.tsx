@@ -1,47 +1,50 @@
 // ─── Live TV Browse Screen ──────────────────────────────────
-// Phase 36.4/36.5: IPTV-org channels (all / by real category /
-// favorites) + search. Tap → VideoPlayer live mode with the
-// channel list for channel up/down.
+// Phase 3 TabView formula: search above a react-native-tab-view
+// tab bar. Each tab is a lazily-mounted scene with its own
+// cached scope. Pagination via onEndReached (client-side limit-
+// bumping). Tap → VideoPlayer, long-press → option sheet.
 
 import React, {useCallback, useMemo, useState} from 'react';
 import {
   View,
   FlatList,
   TouchableOpacity,
-  RefreshControl,
   StyleSheet,
+  RefreshControl,
 } from 'react-native';
+import {
+  TabView,
+  TabBar,
+  type SceneRendererProps,
+  type Route,
+} from 'react-native-tab-view';
+import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import type {RootStackScreenProps} from '../../navigation/types';
-import {useLiveTVScreen, type LiveTVMode} from './hooks/useLiveTVScreen';
+import {
+  useLiveTVScreen,
+  LIVE_TV_TABS,
+  type LiveTVTab,
+  type LiveTVScopeState,
+} from './hooks/useLiveTVScreen';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';
-import {SvgIcon} from '../../components/utility/SvgIcon';
-import {ErrorState} from '../../components/feedback/ErrorState/ErrorState';
-import {SkeletonList} from '../../components/core/Skeleton/SkeletonList';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import FastImage from 'react-native-fast-image';
+import {SvgIcon} from '../../components/utility/SvgIcon';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {shareContent} from '../../services/shareService';
 import {useBookmarks} from '../../hooks/useBookmarks';
 import {useToast} from '../../components/feedback/Toast';
 import {useHaptics} from '../../hooks/useHaptics';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../components/core/OptionSheetDialog/OptionSheetDialog';
-import type {IPTVChannelResult} from '../../types/api';
+import type {IPTVChannelResult, IPTVCategory} from '../../types/api';
 import type {LiveFavoriteItem} from '../../store/slices/liveFavoritesSlice';
 
 type Props = RootStackScreenProps<'LiveTVScreen'>;
-
-// ─── Modes ──────────────────────────────────────────────────
-
-const MODES: Array<{id: LiveTVMode; label: string}> = [
-  {id: 'all', label: 'All Channels'},
-  {id: 'categories', label: 'Categories'},
-  {id: 'favorites', label: 'Favorites'},
-];
 
 // ─── Normalized row ─────────────────────────────────────────
 
@@ -59,9 +62,7 @@ function toRow(channel: IPTVChannelResult): ChannelRow {
     name: channel.name,
     url: channel.url,
     image: channel.logo || '',
-    subtitle: [channel.category, channel.country, channel.language]
-      .filter(Boolean)
-      .join(' · '),
+    subtitle: [channel.category, channel.country].filter(Boolean).join(' · '),
   };
 }
 
@@ -74,10 +75,6 @@ function favToRow(fav: LiveFavoriteItem): ChannelRow {
     subtitle: fav.subtitle,
   };
 }
-
-// ─── List separator (module-level to satisfy react/no-unstable-nested-components) ──
-
-const ItemSeparator = () => <View style={styles.separator} />;
 
 // ─── Channel Card ───────────────────────────────────────────
 
@@ -97,11 +94,17 @@ const ChannelCard: React.FC<ChannelCardProps> = React.memo(
         onPress={() => onPress(row)}
         onLongPress={() => onLongPress(row)}
         delayLongPress={400}
+        accessibilityRole="button"
         style={[styles.card, {backgroundColor: colors.background.elevated}]}>
-        <View style={[styles.thumb, {backgroundColor: colors.border.subtle}]}>
+        {/* Thumbnail 56×56 */}
+        <View
+          style={[styles.thumb, {backgroundColor: colors.border.subtle}]}>
           {row.image ? (
             <FastImage
-              source={{uri: row.image}}
+              source={{
+                uri: row.image,
+                priority: FastImage.priority.normal,
+              }}
               style={styles.thumb}
               resizeMode={FastImage.resizeMode.contain}
             />
@@ -109,6 +112,8 @@ const ChannelCard: React.FC<ChannelCardProps> = React.memo(
             <SvgIcon name="video" size={22} color={colors.accent.gold} />
           )}
         </View>
+
+        {/* Info */}
         <View style={styles.info}>
           <AppText variant="bodySmall" numberOfLines={1} style={styles.name}>
             {row.name}
@@ -119,15 +124,283 @@ const ChannelCard: React.FC<ChannelCardProps> = React.memo(
             </AppText>
           ) : null}
         </View>
+
+        {/* Favorite bookmark */}
         <SvgIcon
           name="bookmark"
           size={18}
           color={isFavorite ? colors.accent.gold : colors.text.tertiary}
         />
+
+        {/* Play button circle */}
         <View style={styles.playButton}>
           <SvgIcon name="play" size={16} color={colors.accent.gold} />
         </View>
       </TouchableOpacity>
+    );
+  },
+);
+
+// ─── Category Chips ─────────────────────────────────────────
+
+interface CategoryChipsProps {
+  categories: IPTVCategory[];
+  selectedCategory: string | null;
+  onSelect: (name: string) => void;
+}
+
+const CategoryChips: React.FC<CategoryChipsProps> = React.memo(
+  ({categories, selectedCategory, onSelect}) => {
+    const {colors} = useTheme();
+    return (
+      <FlatList
+        horizontal
+        data={categories}
+        keyExtractor={cat => cat.id}
+        renderItem={({item: cat}) => {
+          const isSelected = selectedCategory === cat.name;
+          return (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => onSelect(cat.name)}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: isSelected
+                    ? colors.accent.goldDim
+                    : colors.background.elevated,
+                  borderColor: isSelected
+                    ? colors.accent.gold
+                    : colors.border.subtle,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{selected: isSelected}}>
+              <AppText
+                variant="caption"
+                style={[
+                  styles.chipText,
+                  {
+                    color: isSelected
+                      ? colors.accent.gold
+                      : colors.text.secondary,
+                  },
+                ]}>
+                {cat.name} · {cat.channelCount}
+              </AppText>
+            </TouchableOpacity>
+          );
+        }}
+        contentContainerStyle={styles.chipScroll}
+        showsHorizontalScrollIndicator={false}
+      />
+    );
+  },
+);
+
+// ─── Tab Scene ───────────────────────────────────────────────
+
+interface LiveTVTabSceneProps {
+  tab: LiveTVTab;
+  scope: LiveTVScopeState;
+  favorites: LiveFavoriteItem[];
+  isSearchActive: boolean;
+  categories: IPTVCategory[];
+  selectedCategory: string | null;
+  selectCategory: (cat: string | null) => void;
+  isOnline: boolean;
+  refreshing: boolean;
+  handleRefresh: () => void;
+  ensureLoaded: (tab: LiveTVTab) => void;
+  loadMore: (tab: LiveTVTab) => void;
+  retry: (tab: LiveTVTab) => void;
+  isFavoriteId: (id: string) => boolean;
+  onPressChannel: (row: ChannelRow) => void;
+  onLongPressChannel: (row: ChannelRow) => void;
+}
+
+const LiveTVTabScene: React.FC<LiveTVTabSceneProps> = React.memo(
+  ({
+    tab,
+    scope,
+    favorites,
+    isSearchActive,
+    categories,
+    selectedCategory,
+    selectCategory,
+    isOnline,
+    refreshing,
+    handleRefresh,
+    ensureLoaded,
+    loadMore,
+    retry,
+    isFavoriteId,
+    onPressChannel,
+    onLongPressChannel,
+  }) => {
+    const {colors} = useTheme();
+
+    // Ensure data is loaded for this tab
+    React.useEffect(() => {
+      ensureLoaded(tab);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ensureLoaded, tab]);
+
+    // Convert to normalized rows
+    const rows: ChannelRow[] = useMemo(() => {
+      if (tab === 'favorites') {
+        return favorites.map(favToRow);
+      }
+      return scope.items.map(toRow);
+    }, [tab, favorites, scope.items]);
+
+    const {hasLoaded, isLoading, isLoadingMore, limit, error} = scope;
+
+    // ── Page-1 loader ──
+    if (!hasLoaded && isLoading) {
+      return (
+        <View style={styles.centerState}>
+          <ActivityOrb />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            Loading channels…
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Page-1 error ──
+    if (!hasLoaded && error) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon
+            name="alertCircle"
+            size={40}
+            color={colors.accent.goldDim}
+          />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            {isOnline ? 'Could not load channels.' : 'You are offline.'}
+          </AppText>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => retry(tab)}
+            style={[styles.retryButton, {backgroundColor: colors.accent.gold}]}
+            accessibilityRole="button">
+            <AppText variant="button" style={styles.retryText}>
+              Retry
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // ── Favorites empty ──
+    if (tab === 'favorites' && rows.length === 0) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon name="bookmark" size={40} color={colors.accent.goldDim} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            No favorite channels yet.
+          </AppText>
+          <AppText variant="caption" color="tertiary" style={styles.stateText}>
+            Long-press any channel to save it here.
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Empty (loaded, no results) ──
+    if (hasLoaded && rows.length === 0) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon
+            name={isSearchActive ? 'search' : 'video'}
+            size={40}
+            color={colors.accent.goldDim}
+          />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            {isSearchActive
+              ? 'No channels match your search.'
+              : 'No channels found.'}
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Category chips (categories tab, no search active) ──
+    const showCategories =
+      !isSearchActive &&
+      tab === 'categories' &&
+      categories.length > 0;
+
+    // ── hasMore (client-side pagination) ──
+    const hasMore =
+      tab !== 'favorites' && rows.length > 0 && rows.length >= limit;
+
+    return (
+      <View style={styles.scene}>
+        <FlatList
+          data={rows}
+          keyExtractor={item => item.id}
+          renderItem={({item}) => (
+            <ChannelCard
+              row={item}
+              isFavorite={isFavoriteId(item.id)}
+              onPress={onPressChannel}
+              onLongPress={onLongPressChannel}
+            />
+          )}
+          ListHeaderComponent={
+            showCategories ? (
+              <CategoryChips
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelect={selectCategory}
+              />
+            ) : null
+          }
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          onEndReached={() => hasMore && loadMore(tab)}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            (isLoadingMore || (error && hasLoaded && rows.length > 0)) ? (
+              <View style={styles.footer}>
+                {isLoadingMore ? (
+                  <View style={styles.footerRow}>
+                    <ActivityOrb size={22} />
+                    <AppText variant="caption" color="tertiary">
+                      Loading more…
+                    </AppText>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => loadMore(tab)}
+                    style={[
+                      styles.loadMoreRetry,
+                      {borderColor: colors.background.highlight},
+                    ]}
+                    accessibilityRole="button">
+                    <AppText variant="caption" color="secondary">
+                      Couldn't load more — tap to retry
+                    </AppText>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : null
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+            />
+          }
+          windowSize={5}
+          maxToRenderPerBatch={10}
+        />
+      </View>
     );
   },
 );
@@ -141,21 +414,23 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
   const haptics = useHaptics();
   const {add: addBookmark} = useBookmarks();
   const {
-    mode,
-    setMode,
+    selectedTab,
+    selectTab,
     selectedCategory,
-    setSelectedCategory,
+    selectCategory,
     categories,
-    channels,
-    favorites,
-    isLoading,
-    error,
     searchQuery,
     setSearchQuery,
+    setSearchTerm,
+    isSearchActive,
     isOnline,
+    getScope,
+    ensureLoaded,
+    loadMore,
+    retry,
     refreshing,
     handleRefresh,
-    retry,
+    favorites,
     isFavoriteId,
     toggleFavorite,
     removeFavorite,
@@ -167,24 +442,16 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
     React.ComponentProps<typeof PlaylistSheet>['currentItem'] | null
   >(null);
 
+  // ── Channel press / long-press ──
   const handleChannelPress = useCallback(
     (row: ChannelRow) => {
-      const list = channels.map(toRow);
-      const index = Math.max(0, list.findIndex(c => c.id === row.id));
       navigation.navigate('VideoPlayer', {
         fileUri: row.url,
         fileTitle: row.name,
         source: 'iptv',
-        liveChannels: list.map(c => ({
-          id: c.id,
-          name: c.name,
-          url: c.url,
-          logo: c.image || undefined,
-        })),
-        liveChannelIndex: index,
       });
     },
-    [navigation, channels],
+    [navigation],
   );
 
   const handleLongPress = useCallback((row: ChannelRow) => {
@@ -198,19 +465,22 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
       if (!row) return;
       switch (value) {
         case 'favorite': {
-          const channel = channels.find(c => c.id === row.id);
+          // When in favorites tab the source channel may only exist as
+          // a favorite item, so handle both cases.
+          const channel = (
+            getScope('all').items as IPTVChannelResult[]
+          ).find((c: IPTVChannelResult) => c.id === row.id);
+          const wasFavorite = isFavoriteId(row.id);
           if (channel) {
-            const wasFavorite = isFavoriteId(row.id);
             toggleFavorite(channel);
-            toast.show(
-              wasFavorite
-                ? 'Removed from favorites'
-                : 'Saved to favorites',
-            );
           } else {
             removeFavorite(row.id);
-            toast.show('Removed from favorites');
           }
+          toast.show(
+            wasFavorite
+              ? 'Removed from favorites'
+              : 'Saved to favorites',
+          );
           haptics.light();
           break;
         }
@@ -240,7 +510,11 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
         case 'share':
           shareContent({
             route: 'VideoPlayer',
-            params: {fileUri: row.url, fileTitle: row.name, source: 'iptv'},
+            params: {
+              fileUri: row.url,
+              fileTitle: row.name,
+              source: 'iptv',
+            },
             title: row.name,
             subtitle: row.subtitle,
           });
@@ -250,36 +524,123 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
     },
     [
       menuRow,
-      channels,
+      getScope,
       isFavoriteId,
-      removeFavorite,
       toggleFavorite,
+      removeFavorite,
       addBookmark,
       toast,
       haptics,
     ],
   );
 
-  const rows: ChannelRow[] = useMemo(() => {
-    if (mode === 'favorites') {
-      return favorites.map(favToRow);
-    }
-    return channels.map(toRow);
-  }, [mode, favorites, channels]);
+  // ── TabView wiring ──
+  const tabRoutes = useMemo(
+    () => LIVE_TV_TABS.map(t => ({key: t.key, title: t.title})),
+    [],
+  );
+  const tabIndex = Math.max(
+    0,
+    LIVE_TV_TABS.findIndex(t => t.key === selectedTab),
+  );
 
-  const showCategories =
-    !searchQuery.trim() && mode === 'categories' && categories.length > 0;
+  const renderTabBar = useCallback(
+    (
+      props: SceneRendererProps & {
+        navigationState: {index: number; routes: Route[]};
+      },
+    ) => (
+      <TabBar
+        {...props}
+        scrollEnabled
+        style={[
+          styles.tabBar,
+          {
+            backgroundColor: colors.background.primary,
+            borderBottomColor: colors.background.highlightDim,
+          },
+        ]}
+        indicatorStyle={[
+          styles.tabIndicator,
+          {backgroundColor: colors.accent.gold},
+        ]}
+        activeColor={colors.accent.gold}
+        inactiveColor={colors.text.secondary}
+        tabStyle={styles.tab}
+        contentContainerStyle={styles.tabBarContent}
+      />
+    ),
+    [colors],
+  );
 
-  const isEmpty =
-    rows.length === 0 && !isLoading && !error && mode !== 'favorites';
+  const renderScene = useCallback(
+    ({route: tabRoute}: {route: Route}) => {
+      const tab = LIVE_TV_TABS.find(t => t.key === tabRoute.key);
+      if (!tab) return null;
+      return (
+        <LiveTVTabScene
+          tab={tab.key}
+          scope={getScope(tab.key)}
+          favorites={favorites}
+          isSearchActive={isSearchActive}
+          categories={categories}
+          selectedCategory={selectedCategory}
+          selectCategory={selectCategory}
+          isOnline={isOnline}
+          refreshing={refreshing}
+          handleRefresh={handleRefresh}
+          ensureLoaded={ensureLoaded}
+          loadMore={loadMore}
+          retry={retry}
+          isFavoriteId={isFavoriteId}
+          onPressChannel={handleChannelPress}
+          onLongPressChannel={handleLongPress}
+        />
+      );
+    },
+    [
+      getScope,
+      favorites,
+      isSearchActive,
+      categories,
+      selectedCategory,
+      selectCategory,
+      isOnline,
+      refreshing,
+      handleRefresh,
+      ensureLoaded,
+      loadMore,
+      retry,
+      isFavoriteId,
+      handleChannelPress,
+      handleLongPress,
+    ],
+  );
 
-  const favoritesEmpty = mode === 'favorites' && favorites.length === 0;
+  const renderLazyPlaceholder = useCallback(
+    ({route: tabRoute}: {route: Route}) => (
+      <View style={styles.centerState}>
+        <ActivityOrb />
+        <AppText variant="body2" color="tertiary" style={styles.stateText}>
+          Loading{' '}
+          {LIVE_TV_TABS.find(t => t.key === tabRoute.key)?.title ??
+            'channels'}
+          …
+        </AppText>
+      </View>
+    ),
+    [],
+  );
 
+  // ── Render ─────────────────────────────────────────────────
   return (
     <View
       style={[
         styles.root,
-        {backgroundColor: colors.background.primary, paddingTop: insets.top},
+        {
+          backgroundColor: colors.background.primary,
+          paddingTop: insets.top,
+        },
       ]}>
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Live TV" />
@@ -289,181 +650,26 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
+          onDebouncedChange={setSearchTerm}
           placeholder="Search channels…"
         />
       </View>
 
-      {/* ── Mode chips ── */}
-      <View
-        style={[
-          styles.chipSection,
-          {borderBottomColor: colors.border.subtle},
-        ]}>
-        {/* 59.1: virtualized rail (FlatList) instead of ScrollView+map */}
-        <FlatList
-          horizontal
-          data={MODES}
-          keyExtractor={m => m.id}
-          renderItem={({item: m}) => (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => setMode(m.id)}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor:
-                    mode === m.id
-                      ? colors.accent.gold
-                      : colors.background.elevated,
-                  borderColor:
-                    mode === m.id
-                      ? colors.accent.gold
-                      : colors.background.highlight,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{selected: mode === m.id}}>
-              <AppText
-                variant="button"
-                style={[
-                  styles.chipText,
-                  {
-                    color:
-                      mode === m.id
-                        ? colors.text.inverse
-                        : colors.text.secondary,
-                  },
-                ]}>
-                {m.label}
-              </AppText>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.chipScroll}
-          showsHorizontalScrollIndicator={false}
-          scrollEnabled={false}
-          initialNumToRender={MODES.length}
-        />
-      </View>
+      {/* ── TabView ── */}
+      <TabView
+        navigationState={{index: tabIndex, routes: tabRoutes}}
+        onIndexChange={index =>
+          selectTab(tabRoutes[index].key as LiveTVTab)
+        }
+        renderTabBar={renderTabBar}
+        renderScene={renderScene}
+        renderLazyPlaceholder={renderLazyPlaceholder}
+        lazy
+        commonOptions={{labelStyle: styles.tabLabel}}
+        style={styles.tabView}
+      />
 
-      {/* ── Category chips (real iptv-org data) ── */}
-      {showCategories && (
-        <View style={styles.tagSection}>
-          {/* 59.1: virtualized — iptv-org exposes hundreds of categories */}
-          <FlatList
-            horizontal
-            data={categories}
-            keyExtractor={cat => cat.id}
-            renderItem={({item: cat}) => {
-              const isSelected = selectedCategory === cat.name;
-              return (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => setSelectedCategory(cat.name)}
-                  style={[
-                    styles.chip,
-                    styles.tagChip,
-                    {
-                      backgroundColor: isSelected
-                        ? colors.accent.goldDim
-                        : colors.background.elevated,
-                      borderColor: isSelected
-                        ? colors.accent.gold
-                        : colors.border.subtle,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{selected: isSelected}}>
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.tagText,
-                      {
-                        color: isSelected
-                          ? colors.accent.gold
-                          : colors.text.secondary,
-                      },
-                    ]}>
-                    {cat.name} · {cat.channelCount}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            }}
-            contentContainerStyle={styles.chipScroll}
-            showsHorizontalScrollIndicator={false}
-            initialNumToRender={24}
-            windowSize={5}
-            maxToRenderPerBatch={12}
-          />
-        </View>
-      )}
-
-      {/* ── Content ── */}
-      <View style={styles.contentArea}>
-        {isLoading && rows.length === 0 && (
-          <SkeletonList count={6} hasImage lines={2} />
-        )}
-
-        {error && rows.length === 0 && (
-          <ErrorState
-            title={isOnline ? 'Couldn\'t load channels' : 'You\'re offline'}
-            message={
-              isOnline
-                ? error
-                : 'Connect to the internet, then retry to watch.'
-            }
-            onRetry={retry}
-            retryLabel="Retry"
-          />
-        )}
-
-        {favoritesEmpty && (
-          <View style={styles.centerState}>
-            <SvgIcon name="bookmark" size={40} color={colors.accent.goldDim} />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              No favorite channels yet.
-            </AppText>
-            <AppText variant="caption" color="tertiary" style={styles.stateText}>
-              Long-press any channel to save it here.
-            </AppText>
-          </View>
-        )}
-
-        {isEmpty && (
-          <View style={styles.centerState}>
-            <SvgIcon name="video" size={40} color={colors.accent.goldDim} />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              No channels found.
-            </AppText>
-          </View>
-        )}
-
-        {!isLoading && !error && rows.length > 0 && (
-          <FlatList
-            data={rows}
-            keyExtractor={item => item.id}
-            renderItem={({item}) => (
-              <ChannelCard
-                row={item}
-                isFavorite={isFavoriteId(item.id)}
-                onPress={handleChannelPress}
-                onLongPress={handleLongPress}
-              />
-            )}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={ItemSeparator}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={colors.accent.gold}
-                colors={[colors.accent.gold]}
-              />
-            }
-          />
-        )}
-      </View>
-
+      {/* ── Long-press menu ── */}
       <OptionSheetDialog
         visible={menuVisible}
         title={menuRow?.name ?? 'Channel Options'}
@@ -486,7 +692,9 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
       <PlaylistSheet
         visible={sheetItem !== null}
         onClose={() => setSheetItem(null)}
-        currentItem={sheetItem ?? {fileUri: '', title: '', duration: 0}}
+        currentItem={
+          sheetItem ?? {fileUri: '', title: '', duration: 0}
+        }
       />
     </View>
   );
@@ -498,43 +706,38 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  // ── Search ──
   searchSection: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  chipSection: {
     paddingVertical: spacing.sm,
+  },
+  // ── TabView ──
+  tabView: {
+    flex: 1,
+  },
+  tabBar: {
     borderBottomWidth: 1,
+    elevation: 0,
+    shadowOpacity: 0,
   },
-  tagSection: {
-    paddingVertical: spacing.sm,
-  },
-  chipScroll: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  tabIndicator: {
+    height: 3,
     borderRadius: radius.full,
-    borderWidth: 1,
   },
-  chipText: {
+  tabLabel: {
     fontSize: 13,
     fontWeight: '700',
+    textTransform: 'none',
   },
-  tagChip: {
-    paddingVertical: 6,
+  tab: {
+    width: 'auto',
+    minWidth: 84,
   },
-  tagText: {
-    fontSize: 12,
-    fontWeight: '600',
+  tabBarContent: {
+    paddingHorizontal: spacing.xs,
   },
-  contentArea: {
+  // ── Scene ──
+  scene: {
     flex: 1,
   },
   centerState: {
@@ -547,11 +750,37 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     textAlign: 'center',
   },
+  // ── Retry pill ──
+  retryButton: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+  },
+  retryText: {
+    color: '#1A1206',
+  },
+  // ── Category Chips ──
+  chipScroll: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // ── Channel List ──
   listContent: {
     padding: spacing.md,
-  },
-  separator: {
-    height: spacing.sm,
   },
   card: {
     flexDirection: 'row',
@@ -559,10 +788,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radius.md,
     gap: spacing.md,
+    marginBottom: spacing.sm,
   },
   thumb: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -580,5 +810,21 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // ── Footer ──
+  footer: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  loadMoreRetry: {
+    borderWidth: 1,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
   },
 });

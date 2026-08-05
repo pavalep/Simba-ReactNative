@@ -15,12 +15,12 @@ import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
-import {useNavigation} from '@react-navigation/native';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
 import {AppText} from '../../components/core/AppText/AppText';
 import {AppButton} from '../../components/core/AppButton/AppButton';
 import {AppTextInput} from '../../components/core/AppTextInput/AppTextInput';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
@@ -29,7 +29,6 @@ import type {PlaylistKind} from '../../types/playlist';
 
 export const AllPlaylistsScreen: React.FC = () => {
   const {colors} = useTheme();
-  const navigation = useNavigation();
   const {allPlaylists, handlePlaylistPress, handleCreate, handleRename, handleDelete} =
     useAllPlaylistsScreen();
 
@@ -147,15 +146,7 @@ export const AllPlaylistsScreen: React.FC = () => {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, {backgroundColor: colors.background.elevated}]}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}>
-          <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <AppText variant="h2" color="primary" style={{flex: 1}}>
           All Playlists
         </AppText>
@@ -339,13 +330,6 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? 16 : 4,
     paddingBottom: spacing.md,
     gap: spacing.sm,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   listContent: {
     paddingHorizontal: spacing.lg,

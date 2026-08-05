@@ -8,9 +8,19 @@ export interface MovieCategory {
   icon: string;
   query: string;
   description: string;
+  /** Optional IA sort applied to the search (e.g. "downloads desc"). */
+  sort?: string;
 }
 
 export const MOVIE_CATEGORIES: MovieCategory[] = [
+  {
+    id: 'all',
+    name: 'All',
+    icon: 'layoutGrid',
+    query: 'mediatype:(movies)',
+    sort: 'downloads desc',
+    description: 'Every movie in the archive, most popular first',
+  },
   {
     id: 'classic-films',
     name: 'Classic Films',

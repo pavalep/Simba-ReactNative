@@ -16,6 +16,7 @@ import type {
   InternetArchiveAudioTrack,
   ApiSearchOptions,
   ArchiveTrack,
+  PaginatedResult,
 } from '../../types/api';
 
 // ─── Raw API response types ───────────────────────────────────────────
@@ -146,7 +147,7 @@ export async function getArchiveTracks(
 export async function searchInternetArchiveAudio(
   query: string,
   options?: ApiSearchOptions,
-): Promise<InternetArchiveItemResult[]> {
+): Promise<PaginatedResult<InternetArchiveItemResult>> {
   const q = `(${query}) AND mediatype:(audio)`;
   const data = await apiFetch<IASearchResponse>({
     config: API_CONFIG.internetArchive,
@@ -160,14 +161,15 @@ export async function searchInternetArchiveAudio(
     },
     cacheTtlMs: 300_000,
   });
-  return (data.response?.docs ?? []).map(mapItem);
+  const docs = data.response?.docs ?? [];
+  return {items: docs.map(mapItem), numFound: data.response?.numFound ?? docs.length};
 }
 
 /** Search music (non-speaking) on the Internet Archive. */
 export async function searchInternetArchiveMusic(
   query: string,
   options?: ApiSearchOptions,
-): Promise<InternetArchiveItemResult[]> {
+): Promise<PaginatedResult<InternetArchiveItemResult>> {
   const q = `(${query}) AND mediatype:(audio) AND collection:(etree OR opensource_audio OR netlabels)`;
   const data = await apiFetch<IASearchResponse>({
     config: API_CONFIG.internetArchive,
@@ -181,7 +183,8 @@ export async function searchInternetArchiveMusic(
     },
     cacheTtlMs: 300_000,
   });
-  return (data.response?.docs ?? []).map(mapItem);
+  const docs = data.response?.docs ?? [];
+  return {items: docs.map(mapItem), numFound: data.response?.numFound ?? docs.length};
 }
 
 /** Get full item details including download URLs for all formats. */
@@ -247,15 +250,21 @@ function mapVideoItem(raw: IAVideoResultRaw): InternetArchiveVideoResult {
     duration: parseRuntime(raw.runtime),
     avgRating: raw.avg_rating || 0,
     downloadCount: raw.download_count || 0,
-    // V6 2.3.2: thumbnail URL. The IA's `__ia_thumb.jpg` is the
-    // auto-generated frame extracted from the original file — it
-    // returns 200 image/jpeg for the items we tested (verified via
-    // HTTP HEAD against four items in the Classic Films list).
-    // It works for items where `services/img/{identifier}` 403s and
-    // is faster than the `services/img` redirect, so we use it
-    // unconditionally. `image_url` from the search API is empty for
-    // most items, so we ignore it.
-    imageUrl: `https://archive.org/download/${raw.identifier}/__ia_thumb.jpg`,
+    // V6 2.3.2: thumbnail URL — `https://archive.org/services/img/{id}`.
+    // This is the IA's universal thumbnail redirect:
+    //   - Returns 200 image/jpeg for every item we tested (10/10 in the
+    //     silent_films sample, plus the Three Ages item).
+    //   - Serves the IA's curated thumbnail when present.
+    //   - Falls back to the IA logo when no item thumbnail exists.
+    //   - No metadata fetch needed — works directly from the search
+    //     response, so the list shows thumbnails with zero extra API
+    //     calls.
+    // The per-frame pattern `…/{id}.thumbs/{stem}_000114.jpg` is the
+    // higher-quality option but requires the `{stem}` (video file
+    // name) which the search API doesn't expose — using it would
+    // require a metadata fetch per item. We prefer cheap-and-correct
+    // over rich-and-slow here.
+    imageUrl: `https://archive.org/services/img/${raw.identifier}`,
     streamingUrl: `https://archive.org/download/${raw.identifier}/`,
     subtitles: [],
     audioTracks: [],
@@ -331,28 +340,29 @@ interface IAVideoSearchResponse {
 export async function searchInternetArchiveVideos(
   query: string,
   options?: ApiSearchOptions,
-): Promise<InternetArchiveVideoResult[]> {
+): Promise<PaginatedResult<InternetArchiveVideoResult>> {
   const q = `(${query}) AND mediatype:(movies)`;
   const data = await apiFetch<IAVideoSearchResponse>({
     config: API_CONFIG.internetArchive,
     path: '/advancedsearch.php',
     params: {
       q,
-      // V6 2.3.2: added `image_url` — the search previously omitted
-      // it, so the mapper always fell back to the generic
-      // `/services/img/{identifier}` redirect. That worked for most
-      // items but failed (or returned a low-quality placeholder) for
-      // items where the IA's curated thumbnail is richer. Asking for
-      // it explicitly costs nothing and lets the UI render the
-      // high-quality image the catalog actually exposes.
-      'fl[]': 'identifier,title,description,creator,year,runtime,avg_rating,download_count,image_url',
+      // No `image_url` field — the search API returns it empty for
+      // almost every item, and the universal thumbnail URL
+      // (`services/img/{id}`) is constructed from the identifier in
+      // the mapper. Listing the field here just wastes bandwidth.
+      'fl[]': 'identifier,title,description,creator,year,runtime,avg_rating,download_count',
       rows: options?.limit ?? 10,
       page: options?.page ?? 1,
       output: 'json',
+      // Optional IA sort (e.g. "downloads desc" for the All tab so
+      // popular movies surface instead of relevance-ranked noise).
+      ...(options?.sort ? {'sort[]': options.sort} : {}),
     },
     cacheTtlMs: 300_000,
   });
-  return (data.response?.docs ?? []).map(mapVideoItem);
+  const docs = data.response?.docs ?? [];
+  return {items: docs.map(mapVideoItem), numFound: data.response?.numFound ?? docs.length};
 }
 
 /**

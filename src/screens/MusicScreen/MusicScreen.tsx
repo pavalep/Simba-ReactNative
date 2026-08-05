@@ -1,13 +1,21 @@
 // ─── Music Browser Screen ──────────────────────────────────────────────
-// Browse free music from Jamendo and Audius APIs with genre category chips.
+// Phase 3 formula: search above a react-native-tab-view tab bar.
+//   • each tab is a lazily-mounted TabView scene (native pager)
+//   • every (tab, searchTerm, selectedGenre) scope is cached independently —
+//     toggling tabs never refetches or clears already-loaded data
+//   • each list paginates via onEndReached (infinite scroll)
+// Tap a tab → see results list → tap a track → play.
 
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   View,
   FlatList,
   TouchableOpacity,
   StyleSheet,
+  RefreshControl,
+  ScrollView,
 } from 'react-native';
+import {TabView, TabBar, type SceneRendererProps, type Route} from 'react-native-tab-view';
 import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -15,125 +23,78 @@ import {radius, spacing} from '../../theme/tokens';
 import type {RootStackScreenProps} from '../../navigation/types';
 import {
   useMusicScreen,
-  type MusicTrackDisplayItem,
+  MUSIC_TABS,
+  JAMENDO_GENRES,
+  type MusicTab,
+  type MusicScopeState,
 } from './hooks/useMusicScreen';
-import {MUSIC_CATEGORIES} from '../../constants/musicCategories';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';
+import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
-import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
-import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useQueueActions} from '../../components/sheets/MediaActionsSheet/useQueueActions';
-import {getJamendoTrackById} from '../../services/api/jamendoService';
-import {getAudiusTrackById} from '../../services/api/audiusService';
-import type {PlaylistSheetProps} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
-import {startDownload} from '../../services/downloadService';
-import {useAppSelector} from '../../store';
-import {selectDownloadedUriSet} from '../../store/slices/downloadsSlice';
-import {useToast} from '../../components/feedback/Toast/Toast';
+import type {JamendoTrackResult} from '../../types/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 
-function fmtDur(s: number): string {
-  if (!s || s <= 0) return '--:--';
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, '0')}`;
+function formatDuration(duration: number): string {
+  if (!duration || duration <= 0) return '--:--';
+  const m = Math.floor(duration / 60);
+  const s = Math.round(duration % 60)
+    .toString()
+    .padStart(2, '0');
+  return `${m}:${s}`;
 }
-
-// ─── Genre Chip ─────────────────────────────────────────────────────────
-
-interface GenreChipProps {
-  category: (typeof MUSIC_CATEGORIES)[number];
-  isSelected: boolean;
-  onPress: () => void;
-}
-
-const GenreChip: React.FC<GenreChipProps> = React.memo(
-  ({category, isSelected, onPress}) => {
-    const {colors} = useTheme();
-    return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityState={{selected: isSelected}}
-        style={[
-          styles.chip,
-          {
-            backgroundColor: isSelected
-              ? colors.accent.gold
-              : colors.background.elevated,
-            borderColor: isSelected
-              ? colors.accent.gold
-              : colors.border.subtle,
-          },
-        ]}>
-        <AppText
-          variant="button"
-          style={[
-            styles.chipText,
-            {color: isSelected ? colors.text.inverse : colors.text.secondary},
-          ]}>
-          {category.name}
-        </AppText>
-      </TouchableOpacity>
-    );
-  },
-);
 
 // ─── Track Card ─────────────────────────────────────────────────────────
 
 interface TrackCardProps {
-  item: MusicTrackDisplayItem;
-  onPress: (item: MusicTrackDisplayItem) => void;
-  onLongPress: (item: MusicTrackDisplayItem) => void;
+  item: JamendoTrackResult;
+  onPress: (item: JamendoTrackResult) => void;
 }
 
 const TrackCard: React.FC<TrackCardProps> = React.memo(
-  ({item, onPress, onLongPress}) => {
+  ({item, onPress}) => {
     const {colors} = useTheme();
-    const hasImage = item.imageUrl.length > 0;
+    const [imageFailed, setImageFailed] = useState(false);
+    const showImage = !!item.imageUrl && !imageFailed;
 
     return (
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={() => onPress(item)}
-        onLongPress={() => onLongPress(item)}
         accessibilityRole="button"
         style={[
           styles.trackCard,
           {backgroundColor: colors.background.elevated},
         ]}>
-        {/* Square image area */}
+        {/* Thumb */}
         <View
           style={[
-            styles.imageWrap,
+            styles.thumbWrap,
             {backgroundColor: colors.background.primary},
           ]}>
-          {hasImage ? (
+          {showImage ? (
             <FastImage
-              source={{uri: item.imageUrl}}
-              style={styles.artworkImage}
+              source={{
+                uri: item.imageUrl,
+                priority: FastImage.priority.normal,
+              }}
+              style={styles.thumbImage}
               resizeMode={FastImage.resizeMode.cover}
+              onError={() => setImageFailed(true)}
+              accessibilityIgnoresInvertColors
             />
           ) : (
-            <View style={styles.imagePlaceholder}>
-              <SvgIcon name="music" size={28} color={colors.accent.goldDim} />
+            <View style={styles.thumbPlaceholder}>
+              <SvgIcon
+                name="music"
+                size={22}
+                color={colors.accent.goldDim}
+              />
             </View>
           )}
-          {/* Duration badge */}
-          <View
-            style={[styles.durationBadge, {backgroundColor: colors.background.scrimMid}]}>
-            <AppText
-              variant="caption"
-              style={[styles.durationText, {color: colors.text.bright}]}>
-              {fmtDur(item.duration)}
-            </AppText>
-          </View>
         </View>
 
         {/* Info */}
@@ -141,14 +102,298 @@ const TrackCard: React.FC<TrackCardProps> = React.memo(
           <AppText
             variant="bodySmall"
             numberOfLines={1}
-            style={styles.trackTitle}>
-            {item.title}
+            style={styles.trackName}>
+            {item.name}
           </AppText>
           <AppText variant="caption" color="secondary" numberOfLines={1}>
             {item.artistName}
           </AppText>
+          {item.albumName ? (
+            <AppText variant="caption" color="tertiary" numberOfLines={1}>
+              {item.albumName}
+            </AppText>
+          ) : null}
+        </View>
+
+        {/* Duration + play */}
+        <View style={styles.trackRight}>
+          <AppText variant="caption" color="tertiary">
+            {formatDuration(item.duration)}
+          </AppText>
+          <View
+            style={[
+              styles.playButton,
+              {backgroundColor: colors.accent.gold},
+            ]}>
+            <SvgIcon
+              name="play"
+              size={14}
+              color={colors.text.inverse}
+            />
+          </View>
         </View>
       </TouchableOpacity>
+    );
+  },
+);
+
+// ─── Tab Scene ──────────────────────────────────────────────────────────
+// One lazily-mounted scene per tab. Owns its FlatList so each tab
+// paginates independently; reads per-scope state from the screen hook.
+
+interface MusicTabSceneProps {
+  tab: MusicTab;
+  scope: MusicScopeState;
+  isSearchActive: boolean;
+  selectedGenre: string | null;
+  onSelectGenre: (genre: string | null) => void;
+  ensureLoaded: (tab: MusicTab) => void;
+  loadMore: (tab: MusicTab) => void;
+  retry: (tab: MusicTab) => void;
+  refreshing: boolean;
+  onRefresh: () => void;
+  onPressTrack: (item: JamendoTrackResult) => void;
+}
+
+const MusicTabScene: React.FC<MusicTabSceneProps> = React.memo(
+  ({
+    tab,
+    scope,
+    isSearchActive,
+    selectedGenre,
+    onSelectGenre,
+    ensureLoaded,
+    loadMore,
+    retry,
+    refreshing,
+    onRefresh,
+    onPressTrack,
+  }) => {
+    const {colors} = useTheme();
+    const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
+
+    // Load page 1 for this scope on mount / whenever the scope key changes.
+    React.useEffect(() => {
+      ensureLoaded(tab);
+    }, [ensureLoaded, tab]);
+
+    // Determine if this tab is in "prompt" state (prerequisites not met).
+    const isSearchPrompt = tab === 'search' && !isSearchActive;
+    const isGenrePrompt = tab === 'genres' && !selectedGenre;
+
+    return (
+      <View style={styles.scene}>
+        {/* ── Genre chips (Genres tab only) ── */}
+        {tab === 'genres' && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.genreChipScroll}
+            style={styles.genreChipBar}>
+            {JAMENDO_GENRES.map(genre => {
+              const active = selectedGenre === genre;
+              return (
+                <TouchableOpacity
+                  key={genre}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    onSelectGenre(active ? null : genre)
+                  }
+                  accessibilityRole="button"
+                  accessibilityState={{selected: active}}
+                  style={[
+                    styles.genreChip,
+                    {
+                      backgroundColor: active
+                        ? colors.accent.gold
+                        : colors.background.elevated,
+                      borderColor: active
+                        ? colors.accent.gold
+                        : colors.border.subtle,
+                    },
+                  ]}>
+                  <AppText
+                    variant="caption"
+                    style={[
+                      styles.genreChipText,
+                      {
+                        color: active
+                          ? colors.text.inverse
+                          : colors.text.secondary,
+                      },
+                    ]}>
+                    {genre.charAt(0).toUpperCase() + genre.slice(1)}
+                  </AppText>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        {/* ── Prompt states (no fetch until prerequisite met) ── */}
+        {isSearchPrompt && (
+          <View style={styles.centerState}>
+            <SvgIcon
+              name="search"
+              size={40}
+              color={colors.accent.goldDim}
+            />
+            <AppText
+              variant="body2"
+              color="tertiary"
+              style={styles.stateText}>
+              Search Jamendo for tracks.
+            </AppText>
+          </View>
+        )}
+
+        {tab === 'genres' && isGenrePrompt && (
+          <View style={styles.centerState}>
+            <SvgIcon
+              name="music"
+              size={40}
+              color={colors.accent.goldDim}
+            />
+            <AppText
+              variant="body2"
+              color="tertiary"
+              style={styles.stateText}>
+              Select a genre above.
+            </AppText>
+          </View>
+        )}
+
+        {/* ── Initial load ── */}
+        {!isSearchPrompt &&
+          !isGenrePrompt &&
+          !hasLoaded &&
+          isLoading && (
+            <View style={styles.centerState}>
+              <ActivityOrb />
+              <AppText
+                variant="body2"
+                color="tertiary"
+                style={styles.stateText}>
+                Loading tracks…
+              </AppText>
+            </View>
+          )}
+
+        {/* ── Load failure (page 1) ── */}
+        {!isSearchPrompt &&
+          !isGenrePrompt &&
+          !hasLoaded &&
+          !isLoading &&
+          error && (
+            <View style={styles.centerState}>
+              <SvgIcon
+                name="alertCircle"
+                size={40}
+                color={colors.accent.goldDim}
+              />
+              <AppText
+                variant="body2"
+                color="tertiary"
+                style={styles.stateText}>
+                {error}
+              </AppText>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => retry(tab)}
+                style={[
+                  styles.retryButton,
+                  {backgroundColor: colors.accent.gold},
+                ]}
+                accessibilityRole="button">
+                <AppText variant="button" style={styles.retryText}>
+                  Retry
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          )}
+
+        {/* ── Empty scope (loaded, zero results) ── */}
+        {!isSearchPrompt &&
+          !isGenrePrompt &&
+          hasLoaded &&
+          !error &&
+          items.length === 0 && (
+            <View style={styles.centerState}>
+              <SvgIcon
+                name="folder"
+                size={40}
+                color={colors.accent.goldDim}
+              />
+              <AppText
+                variant="body2"
+                color="tertiary"
+                style={styles.stateText}>
+                {tab === 'search'
+                  ? 'No tracks match your search.'
+                  : tab === 'genres'
+                  ? `No ${selectedGenre} tracks found.`
+                  : 'No popular tracks found.'}
+              </AppText>
+            </View>
+          )}
+
+        {/* ── List + infinite scroll ── */}
+        {!isSearchPrompt && !isGenrePrompt && items.length > 0 && (
+          <FlatList
+            data={items}
+            renderItem={({item}) => (
+              <TrackCard item={item} onPress={onPressTrack} />
+            )}
+            keyExtractor={item => String(item.id)}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.accent.gold}
+                colors={[colors.accent.gold]}
+              />
+            }
+            onEndReached={() => loadMore(tab)}
+            onEndReachedThreshold={0.4}
+            ListFooterComponent={
+              isLoadingMore || error ? (
+                <View style={styles.listFooter}>
+                  {isLoadingMore ? (
+                    <View style={styles.listFooterRow}>
+                      <ActivityOrb size={22} />
+                      <AppText variant="caption" color="tertiary">
+                        Loading more…
+                      </AppText>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => loadMore(tab)}
+                      style={[
+                        styles.loadMoreRetry,
+                        {
+                          borderColor:
+                            colors.background.highlight,
+                        },
+                      ]}
+                      accessibilityRole="button">
+                      <AppText
+                        variant="caption"
+                        color="secondary">
+                        Couldn't load more — tap to retry
+                      </AppText>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : null
+            }
+            windowSize={5}
+            maxToRenderPerBatch={10}
+          />
+        )}
+      </View>
     );
   },
 );
@@ -157,283 +402,159 @@ const TrackCard: React.FC<TrackCardProps> = React.memo(
 
 export const MusicScreen: React.FC<
   RootStackScreenProps<'MusicScreen'>
-> = ({navigation, route}) => {
+> = ({navigation}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {
-    selectedCategory,
-    results,
-    isLoading,
-    error,
+    selectedTab,
+    selectTab,
+    selectedGenre,
+    selectGenre,
     searchQuery,
     setSearchQuery,
-  } = useMusicScreen(route.params?.genre);
-
-  // P41.4: genre chips open the full genre detail page
-  // (local library + streaming catalog + moods + radio)
-  const handleChipPress = useCallback(
-    (genre: string) => {
-      navigation.navigate('GenreScreen', {genre});
-    },
-    [navigation],
-  );
+    setSearchTerm,
+    isSearchActive,
+    getScope,
+    ensureLoaded,
+    loadMore,
+    retry,
+    refreshing,
+    handleRefresh,
+  } = useMusicScreen();
 
   const handleTrackPress = useCallback(
-    (item: MusicTrackDisplayItem) => {
-      navigation.navigate('MusicDetail', {
-        trackId: String(item.id),
-        source: item.source,
+    (item: JamendoTrackResult) => {
+      navigation.navigate('AudioPlayer', {
+        fileUri: item.audioUrl,
+        fileTitle: item.name,
+        artworkUri: item.imageUrl,
+        source: 'jamendo',
       });
     },
     [navigation],
   );
 
-  // P34.1/34.7: long-press → standard actions menu; grid items carry no
-  // audio URL, so the full track is resolved before the menu opens.
-  const [sheetItem, setSheetItem] = useState<
-    PlaylistSheetProps['currentItem'] | null
-  >(null);
-  const [menuState, setMenuState] = useState<{
-    item: MusicTrackDisplayItem;
-    uri: string;
-    title: string;
-    duration: number;
-    source: 'jamendo' | 'audius';
-  } | null>(null);
-  const {playNext, addToQueue} = useQueueActions();
-  const toast = useToast();
-  const downloadedUris = useAppSelector(selectDownloadedUriSet);
-
-  const resolveFull = useCallback(async (item: MusicTrackDisplayItem) => {
-    const full =
-      item.source === 'jamendo'
-        ? await getJamendoTrackById(Number(item.id))
-        : await getAudiusTrackById(String(item.id));
-    if (!full) return null;
-    return {
-      fileUri: 'audioUrl' in full ? full.audioUrl : full.streamUrl,
-      title: 'name' in full ? full.name : full.title,
-      duration: full.duration,
-      artist: full.artistName,
-      album: 'albumName' in full ? full.albumName : undefined,
-      thumbnailPath: 'imageUrl' in full ? full.imageUrl : full.artworkUrl,
-    };
-  }, []);
-
-  const handleTrackLongPress = useCallback(
-    async (item: MusicTrackDisplayItem) => {
-      try {
-        const full = await resolveFull(item);
-        if (!full) return;
-        setMenuState({
-          item,
-          uri: full.fileUri,
-          title: full.title,
-          duration: full.duration,
-          source: item.source,
-        });
-      } catch {
-        // Long-press is a convenience gesture — resolve silently.
-      }
-    },
-    [resolveFull],
+  // ── TabView wiring ──
+  const routes = useMemo(
+    () => MUSIC_TABS.map(t => ({key: t.key, title: t.title})),
+    [],
+  );
+  const tabIndex = Math.max(
+    0,
+    MUSIC_TABS.findIndex(t => t.key === selectedTab),
   );
 
-  const handleMenuPlayNext = useCallback(() => {
-    if (!menuState) return;
-    playNext({
-      uri: menuState.uri,
-      title: menuState.title,
-      duration: menuState.duration,
-      source: menuState.source,
-      mediaType: 'audio',
-    });
-  }, [menuState, playNext]);
+  const renderTabBar = useCallback(
+    (
+      props: SceneRendererProps & {
+        navigationState: {index: number; routes: Route[]};
+      },
+    ) => (
+      <TabBar
+        {...props}
+        scrollEnabled
+        style={[
+          styles.tabBar,
+          {
+            backgroundColor: colors.background.primary,
+            borderBottomColor: colors.background.highlightDim,
+          },
+        ]}
+        indicatorStyle={[
+          styles.tabIndicator,
+          {backgroundColor: colors.accent.gold},
+        ]}
+        activeColor={colors.accent.gold}
+        inactiveColor={colors.text.secondary}
+        tabStyle={styles.tab}
+        contentContainerStyle={styles.tabBarContent}
+      />
+    ),
+    [colors],
+  );
 
-  const handleMenuAddToQueue = useCallback(() => {
-    if (!menuState) return;
-    addToQueue({
-      uri: menuState.uri,
-      title: menuState.title,
-      duration: menuState.duration,
-      source: menuState.source,
-      mediaType: 'audio',
-    });
-  }, [menuState, addToQueue]);
+  const renderScene = useCallback(
+    ({route: tabRoute}: {route: Route}) => {
+      const tab = tabRoute.key as MusicTab;
+      return (
+        <MusicTabScene
+          tab={tab}
+          scope={getScope(tab)}
+          isSearchActive={isSearchActive}
+          selectedGenre={selectedGenre}
+          onSelectGenre={selectGenre}
+          ensureLoaded={ensureLoaded}
+          loadMore={loadMore}
+          retry={retry}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          onPressTrack={handleTrackPress}
+        />
+      );
+    },
+    [
+      getScope,
+      isSearchActive,
+      selectedGenre,
+      selectGenre,
+      ensureLoaded,
+      loadMore,
+      retry,
+      refreshing,
+      handleRefresh,
+      handleTrackPress,
+    ],
+  );
 
-  const handleMenuSaveToPlaylist = useCallback(async () => {
-    if (!menuState) return;
-    try {
-      const full = await resolveFull(menuState.item);
-      if (!full) return;
-      setSheetItem({
-        fileUri: full.fileUri,
-        title: full.title,
-        duration: full.duration,
-        artist: full.artist,
-        album: full.album,
-        thumbnailPath: full.thumbnailPath,
-        source: menuState.source,
-        mediaType: 'audio',
-      });
-    } catch {}
-  }, [menuState, resolveFull]);
-
-  const handleMenuDownload = useCallback(() => {
-    if (!menuState) return;
-    startDownload({
-      uri: menuState.uri,
-      title: menuState.title,
-      mediaType: 'audio',
-      source: menuState.source,
-    }).catch(() => toast.show('Download failed'));
-  }, [menuState, toast]);
-
-  const menuIsDownloaded = menuState ? downloadedUris.has(menuState.uri) : false;
-
-  const isEmpty = results.length === 0 && !isLoading && !error;
+  const renderLazyPlaceholder = useCallback(
+    ({route: tabRoute}: {route: Route}) => (
+      <View style={styles.centerState}>
+        <ActivityOrb />
+        <AppText
+          variant="body2"
+          color="tertiary"
+          style={styles.stateText}>
+          Loading{' '}
+          {MUSIC_TABS.find(t => t.key === tabRoute.key)?.title ??
+            'tracks'}
+          …
+        </AppText>
+      </View>
+    ),
+    [],
+  );
 
   return (
     <View
       style={[
         styles.root,
-        {backgroundColor: colors.background.primary, paddingTop: insets.top},
+        {
+          backgroundColor: colors.background.primary,
+          paddingTop: insets.top,
+        },
       ]}>
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Music" />
 
-      {/* ── Search Bar (53.2: core SearchBar) ── */}
+      {/* ── Search (stays put while tabs change) ── */}
       <View style={styles.searchSection}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search tracks…"
+          onDebouncedChange={setSearchTerm}
+          placeholder="Search Jamendo…"
         />
       </View>
 
-      {/* ── Genre Chips ── */}
-      <View
-        style={[
-          styles.chipSection,
-          {borderBottomColor: colors.border.subtle},
-        ]}>
-        <FlatList
-          horizontal
-          data={MUSIC_CATEGORIES}
-          keyExtractor={cat => cat.id}
-          renderItem={({item: cat}) => (
-            <GenreChip
-              category={cat}
-              isSelected={selectedCategory === cat.genre}
-              onPress={() => handleChipPress(cat.genre)}
-            />
-          )}
-          contentContainerStyle={styles.chipScroll}
-          showsHorizontalScrollIndicator={false}
-          initialNumToRender={MUSIC_CATEGORIES.length}
-          windowSize={5}
-          maxToRenderPerBatch={12}
-        />
-      </View>
-
-      {/* ── Content Area ── */}
-      <View style={styles.contentArea}>
-        {isLoading && (
-          <View style={styles.centerState}>
-            <ActivityOrb />
-            <AppText
-              variant="body2"
-              color="tertiary"
-              style={styles.stateText}>
-              Loading tracks...
-            </AppText>
-          </View>
-        )}
-
-        {error && !isLoading && (
-          <View style={styles.centerState}>
-            <SvgIcon name="alertCircle" size={40} color={colors.semantic.error} />
-            <AppText
-              variant="body2"
-              color="tertiary"
-              style={styles.stateText}>
-              {error}
-            </AppText>
-          </View>
-        )}
-
-        {isEmpty && !isLoading && (
-          <View style={styles.centerState}>
-            <SvgIcon name="music" size={40} color={colors.accent.goldDim} />
-            <AppText
-              variant="body2"
-              color="tertiary"
-              style={styles.stateText}>
-              No tracks found
-            </AppText>
-          </View>
-        )}
-
-        {!isLoading && !error && results.length > 0 && (
-          <FlatList
-            data={results}
-            renderItem={({item}) => (
-              <TrackCard
-                item={item}
-                onPress={handleTrackPress}
-                onLongPress={handleTrackLongPress}
-              />
-            )}
-            keyExtractor={item => `${item.source}-${item.id}`}
-            numColumns={2}
-            columnWrapperStyle={styles.gridRow}
-            contentContainerStyle={styles.gridContent}
-            showsVerticalScrollIndicator={false}
-            getItemLayout={(_, index) => ({length: 76, offset: 76 * index, index})}
-            windowSize={5}
-            maxToRenderPerBatch={10}
-            removeClippedSubviews={true}
-          />
-        )}
-      </View>
-
-      {/* P34.1: add streaming track to a playlist (long-press menu) */}
-      <PlaylistSheet
-        visible={sheetItem !== null}
-        onClose={() => setSheetItem(null)}
-        currentItem={
-          sheetItem ?? {fileUri: '', title: '', duration: 0}
-        }
-      />
-
-      {/* 58.4/58.5: standard long-press menu — Play Next / Queue / Playlist / Download */}
-      <MediaActionsSheet
-        visible={menuState !== null}
-        onClose={() => setMenuState(null)}
-        title={menuState?.title ?? 'Track Options'}
-        subtitle={menuState?.item.artistName}
-        actions={[
-          {
-            label: 'Play Next',
-            icon: 'skipForward',
-            onPress: handleMenuPlayNext,
-          },
-          {
-            label: 'Add to Queue',
-            icon: 'list',
-            onPress: handleMenuAddToQueue,
-          },
-          {
-            label: 'Save to Playlist',
-            icon: 'listMusic',
-            onPress: handleMenuSaveToPlaylist,
-          },
-          {
-            label: menuIsDownloaded ? 'Downloaded' : 'Download',
-            icon: 'download',
-            onPress: menuIsDownloaded ? () => {} : handleMenuDownload,
-          },
-        ]}
+      {/* ── TabView (lazy scenes) ── */}
+      <TabView
+        navigationState={{index: tabIndex, routes}}
+        onIndexChange={index => selectTab(routes[index].key as MusicTab)}
+        renderTabBar={renderTabBar}
+        renderScene={renderScene}
+        renderLazyPlaceholder={renderLazyPlaceholder}
+        lazy
+        commonOptions={{labelStyle: styles.tabLabel}}
       />
     </View>
   );
@@ -447,32 +568,53 @@ const styles = StyleSheet.create({
   },
   searchSection: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-  },
-  chipSection: {
-    borderBottomWidth: 1,
     paddingVertical: spacing.sm,
   },
-  chipScroll: {
+  // ── TabView ──
+  tabBar: {
+    borderBottomWidth: 1,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  tabIndicator: {
+    height: 3,
+    borderRadius: radius.full,
+  },
+  tabLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'none',
+  },
+  tab: {
+    width: 'auto',
+    minWidth: 84,
+  },
+  tabBarContent: {
+    paddingHorizontal: spacing.xs,
+  },
+  // ── Scene ──
+  scene: {
+    flex: 1,
+  },
+  // ── Genre chips ──
+  genreChipBar: {
+    maxHeight: 52,
+  },
+  genreChipScroll: {
     paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  genreChip: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
     borderWidth: 1,
   },
-  chipText: {
-    fontSize: 13,
+  genreChipText: {
     fontWeight: '700',
   },
-  contentArea: {
-    flex: 1,
-  },
+  // ── Center states ──
   centerState: {
     flex: 1,
     alignItems: 'center',
@@ -483,50 +625,78 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     textAlign: 'center',
   },
-  gridContent: {
+  retryButton: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+  },
+  retryText: {
+    color: '#1A1206',
+  },
+  // ── List ──
+  listContent: {
     padding: spacing.sm,
   },
-  gridRow: {
-    gap: spacing.md,
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.md,
+  listFooter: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
   },
+  listFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  loadMoreRetry: {
+    borderWidth: 1,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  // ── Track card ──
   trackCard: {
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
     borderRadius: radius.md,
+  },
+  thumbWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.sm,
     overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  imageWrap: {
-    width: '100%',
-    aspectRatio: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'flex-end',
-    padding: spacing.xs,
+  thumbImage: {
+    width: 52,
+    height: 52,
   },
-  artworkImage: {
-    ...StyleSheet.absoluteFill,
-  },
-  imagePlaceholder: {
+  thumbPlaceholder: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.4,
   },
-  durationBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.sm - 2,
-  },
-  durationText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
   trackInfo: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    flex: 1,
+    marginLeft: spacing.md,
+    gap: 1,
   },
-  trackTitle: {
-    fontWeight: '700',
-    lineHeight: 16,
+  trackName: {
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  trackRight: {
+    alignItems: 'flex-end',
+    gap: spacing.xs,
+  },
+  playButton: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

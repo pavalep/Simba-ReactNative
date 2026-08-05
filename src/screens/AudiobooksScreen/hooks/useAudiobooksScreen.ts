@@ -1,116 +1,233 @@
-// ─── Audiobooks Screen Hook ─────────────────────────────────────────
-// Phase 37.1: browse LibriVox by search / genre / recent. Debounced
-// search, genre chips, offline-aware auto-retry on reconnect.
+// ─── Audiobooks Screen Hook ──────────────────────────────────────────
+// Phase 3 formula: per-scope cache + infinite scroll + search persistence.
+//
+// A "scope" is a (tab, searchTerm, selectedGenre) triplet. Every
+// combination is cached independently, so:
+//   • toggling tabs never loses results already loaded for that scope
+//   • typing a search never clears the genre/tab browse data
+//   • scrolling back to a visited tab shows its cached list instantly
+// Pagination: LibriVox has no total-count field, so hasMore is derived
+// from `items.length === PAGE_SIZE`.
 
-import {useState, useEffect, useCallback, useRef} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {
   searchAudiobooks,
   searchByGenre,
   getRecentAudiobooks,
 } from '../../../services/api/librivoxService';
-import {useDebounce} from '../../../hooks/useDebounce';
-import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {AudiobookResult} from '../../../types/api';
 
-export type AudiobooksMode = 'search' | 'genres' | 'recent';
+export type AudiobooksTab = 'search' | 'genres' | 'recent';
 
-const BOOK_LIMIT = 30;
+const PAGE_SIZE = 20;
+
+export interface AudiobookScopeState {
+  items: AudiobookResult[];
+  /** Last loaded page (1-based). 0 = nothing loaded yet. */
+  page: number;
+  hasLoaded: boolean;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  error: string | null;
+}
+
+/** Shared immutable empty state — keeps memoized scenes stable. */
+const EMPTY_SCOPE: AudiobookScopeState = {
+  items: [],
+  page: 0,
+  hasLoaded: false,
+  isLoading: false,
+  isLoadingMore: false,
+  error: null,
+};
+
+function scopeCacheKey(tab: AudiobooksTab, term: string, genre: string): string {
+  return `${tab}|${term.trim()}|${genre}`;
+}
+
+function dedupe(items: AudiobookResult[]): AudiobookResult[] {
+  const seen = new Set<number>();
+  return items.filter(i => {
+    if (seen.has(i.id)) return false;
+    seen.add(i.id);
+    return true;
+  });
+}
 
 export function useAudiobooksScreen(initialTab?: string, initialGenre?: string) {
-  const {isOnline} = useNetworkStatus();
-
-  const [mode, setMode] = useState<AudiobooksMode>(
-    (initialTab as AudiobooksMode) || 'search',
+  const [selectedTab, setSelectedTab] = useState<AudiobooksTab>(
+    (initialTab as AudiobooksTab) || 'search',
   );
   const [selectedGenre, setSelectedGenre] = useState<string | null>(
     initialGenre ?? null,
   );
-  const [books, setBooks] = useState<AudiobookResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
   const [searchQuery, setSearchQuery] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const debouncedSearch = useDebounce(searchQuery, 500);
-  const fetchingRef = useRef(false);
-  const failedRef = useRef(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // ── Book loading (search / genre / recent) ──
-  const loadBooks = useCallback(async () => {
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const q = debouncedSearch.trim();
-      let items: AudiobookResult[] = [];
-      if (mode === 'search' && q) {
-        items = await searchAudiobooks(q, {limit: BOOK_LIMIT});
-      } else if (mode === 'genres' && selectedGenre) {
-        items = await searchByGenre(selectedGenre, {limit: BOOK_LIMIT});
-      } else if (mode === 'recent') {
-        items = await getRecentAudiobooks({limit: BOOK_LIMIT});
+  const [scopes, setScopes] = useState<Record<string, AudiobookScopeState>>({});
+  const seqRef = useRef<Record<string, number>>({});
+  const guardRef = useRef<Set<string>>(new Set());
+
+  const isSearchActive = searchTerm.trim().length > 0;
+
+  const keyFor = useCallback(
+    (tab: AudiobooksTab) =>
+      scopeCacheKey(tab, searchTerm, selectedGenre ?? ''),
+    [searchTerm, selectedGenre],
+  );
+
+  const getScope = useCallback(
+    (tab: AudiobooksTab): AudiobookScopeState =>
+      scopes[keyFor(tab)] ?? EMPTY_SCOPE,
+    [scopes, keyFor],
+  );
+
+  const patchScope = useCallback(
+    (tab: AudiobooksTab, patch: Partial<AudiobookScopeState>) => {
+      const key = keyFor(tab);
+      setScopes(prev => ({
+        ...prev,
+        [key]: {...(prev[key] ?? EMPTY_SCOPE), ...patch},
+      }));
+    },
+    [keyFor],
+  );
+
+  const fetchPage = useCallback(
+    async (tab: AudiobooksTab, page: number, mode: 'initial' | 'more') => {
+      const term = searchTerm.trim();
+      const genre = selectedGenre;
+      const key = scopeCacheKey(tab, term, genre ?? '');
+      if (guardRef.current.has(key)) return;
+      guardRef.current.add(key);
+
+      const seq = (seqRef.current[key] = (seqRef.current[key] ?? 0) + 1);
+
+      if (mode === 'initial') {
+        patchScope(tab, {isLoading: true, error: null});
+      } else {
+        patchScope(tab, {isLoadingMore: true, error: null});
       }
-      setBooks(items);
-      failedRef.current = false;
-    } catch (err) {
-      failedRef.current = true;
-      setError(err instanceof Error ? err.message : 'Failed to load audiobooks');
-    } finally {
-      fetchingRef.current = false;
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  }, [debouncedSearch, mode, selectedGenre]);
 
-  useEffect(() => {
-    loadBooks();
-  }, [loadBooks]);
+      try {
+        let items: AudiobookResult[] = [];
 
-  // ── Auto-retry the failed query when connectivity returns ──
-  const wasOnlineRef = useRef(isOnline);
-  useEffect(() => {
-    const wasOnline = wasOnlineRef.current;
-    wasOnlineRef.current = isOnline;
-    if (!wasOnline && isOnline && failedRef.current) {
-      failedRef.current = false;
-      loadBooks();
-    }
-  }, [isOnline, loadBooks]);
+        if (tab === 'search' && term) {
+          items = await searchAudiobooks(term, {limit: PAGE_SIZE, page});
+        } else if (tab === 'genres' && genre) {
+          items = await searchByGenre(genre, {limit: PAGE_SIZE, page});
+        } else if (tab === 'recent') {
+          items = await getRecentAudiobooks({limit: PAGE_SIZE, page});
+        }
 
-  const retry = useCallback(() => {
-    setBooks([]);
-    loadBooks();
-  }, [loadBooks]);
+        if (seq !== (seqRef.current[key] ?? 0)) return; // stale response
 
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    retry();
-  }, [retry]);
+        setScopes(prev => {
+          const cur = prev[key] ?? EMPTY_SCOPE;
+          return {
+            ...prev,
+            [key]: {
+              ...cur,
+              items:
+                mode === 'more'
+                  ? dedupe([...cur.items, ...items])
+                  : items,
+              page,
+              hasLoaded: true,
+              isLoading: false,
+              isLoadingMore: false,
+              error: null,
+            },
+          };
+        });
+      } catch (err) {
+        if (seq !== (seqRef.current[key] ?? 0)) return;
+        patchScope(tab, {
+          isLoading: false,
+          isLoadingMore: false,
+          error:
+            err instanceof Error
+              ? err.message
+              : 'Failed to load audiobooks',
+        });
+      } finally {
+        guardRef.current.delete(key);
+      }
+    },
+    [searchTerm, selectedGenre, patchScope],
+  );
 
-  const handleModeChange = useCallback((next: AudiobooksMode) => {
-    setMode(next);
-    setSelectedGenre(null);
-    setSearchQuery('');
+  const ensureLoaded = useCallback(
+    (tab: AudiobooksTab) => {
+      // For 'search' tab with no term, or 'genres' tab with no genre
+      // selected, there's nothing to fetch yet — don't trigger a load.
+      if (tab === 'search' && !searchTerm.trim()) return;
+      if (tab === 'genres' && !selectedGenre) return;
+      const scope = getScope(tab);
+      if (scope.hasLoaded || scope.isLoading) return;
+      fetchPage(tab, 1, 'initial');
+    },
+    [getScope, fetchPage, searchTerm, selectedGenre],
+  );
+
+  const loadMore = useCallback(
+    (tab: AudiobooksTab) => {
+      const scope = getScope(tab);
+      if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore) return;
+      if (scope.items.length % PAGE_SIZE !== 0) return; // partial page = end
+      if (scope.items.length === 0) return; // nothing to load more of
+      fetchPage(tab, scope.page + 1, 'more');
+    },
+    [getScope, fetchPage],
+  );
+
+  const retry = useCallback(
+    (tab: AudiobooksTab) => {
+      const key = keyFor(tab);
+      seqRef.current[key] = (seqRef.current[key] ?? 0) + 1;
+      setScopes(prev => {
+        const cur = prev[key];
+        if (!cur) return prev;
+        return {...prev, [key]: {...cur, items: [], hasLoaded: false}};
+      });
+      fetchPage(tab, 1, 'initial');
+    },
+    [keyFor, fetchPage],
+  );
+
+  const selectTab = useCallback((tab: AudiobooksTab) => {
+    setSelectedTab(tab);
   }, []);
 
-  const handleGenreSelect = useCallback((genre: string) => {
-    setSelectedGenre(prev => (prev === genre ? null : genre));
-    setSearchQuery('');
-  }, []);
+  const selectGenre = useCallback(
+    (genre: string) => {
+      setSelectedGenre(prev => (prev === genre ? null : genre));
+    },
+    [],
+  );
+
+  // Keep the current tab scoped-loaded when it (or the search term, or
+  // selected genre) changes.
+  useEffect(() => {
+    ensureLoaded(selectedTab);
+  }, [selectedTab, ensureLoaded, keyFor]);
 
   return {
-    mode,
-    setMode: handleModeChange,
+    selectedTab,
+    selectTab,
     selectedGenre,
-    setSelectedGenre: handleGenreSelect,
-    books,
-    isLoading,
-    error,
+    selectGenre,
+    // search
     searchQuery,
     setSearchQuery,
-    isOnline,
-    refreshing,
-    handleRefresh,
+    setSearchTerm,
+    isSearchActive,
+    // per-scope data + actions
+    getScope,
+    ensureLoaded,
+    loadMore,
     retry,
   };
 }

@@ -14,6 +14,7 @@ import {useAppSelector} from '../../store';
 import {selectArtistDiscography} from '../../store/slices/mediaSlice';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import AudioWaveform from '../../components/player/AudioWaveform/AudioWaveform';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import FastImage from 'react-native-fast-image';
@@ -205,13 +206,6 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           paddingBottom: 12,
           gap: 12,
         },
-        backBtn: {
-          width: 36,
-          height: 36,
-          borderRadius: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
         shareBtn: {
           width: 36,
           height: 36,
@@ -349,12 +343,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
       {/* ── Header with back ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, {backgroundColor: colors.background.elevated}]}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}>
-          <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <AppText variant="h2" color="primary">
           Artist
         </AppText>

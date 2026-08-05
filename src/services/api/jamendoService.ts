@@ -98,6 +98,7 @@ export async function searchJamendoTracks(
       format: 'json',
       search: query,
       limit: options?.limit ?? 10,
+      page: options?.page ?? 1,
       include: 'musicinfo',
     },
     cacheTtlMs: 60_000,
@@ -118,6 +119,7 @@ export async function searchJamendoAlbums(
       format: 'json',
       search: query,
       limit: options?.limit ?? 10,
+      page: options?.page ?? 1,
     },
     cacheTtlMs: 60_000,
   });
@@ -137,6 +139,7 @@ export async function getJamendoTracksByGenre(
       format: 'json',
       tags: genre,
       limit: options?.limit ?? 10,
+      page: options?.page ?? 1,
       include: 'musicinfo',
       order: 'popularity_total',
     },

@@ -1,7 +1,9 @@
-// ─── Radio Browse Screen ────────────────────────────────────
-// Phase 36.1: top / by-genre / by-country / by-language browse
-// + search via Radio Browser. Tap → AudioPlayer live mode.
-// Long-press → favorite / playlist / bookmark / share.
+// ─── Radio Browse Screen ────────────────────────────────────────────
+// Phase 3 formula: SearchBar above TabView, each browse mode is a tab.
+//   • search persists across tab toggles (cached per scope)
+//   • all tabs paginate via onEndReached (infinite scroll)
+//   • Favorites tab = local Redux data
+//   • Long-press → favorite / playlist / bookmark / share
 
 import React, {useCallback, useMemo, useState} from 'react';
 import {
@@ -11,19 +13,25 @@ import {
   RefreshControl,
   StyleSheet,
 } from 'react-native';
+import {TabView, TabBar, type SceneRendererProps, type Route} from 'react-native-tab-view';
+import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import type {RootStackScreenProps} from '../../navigation/types';
-import {useRadioScreen, type RadioBrowseMode} from './hooks/useRadioScreen';
+import {
+  useRadioScreen,
+  RADIO_TABS,
+  type RadioBrowseMode,
+  type RadioScopeState,
+} from './hooks/useRadioScreen';
+import type {RadioBrowseTag} from '../../services/api/radioBrowserService';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';
-import {SvgIcon} from '../../components/utility/SvgIcon';
-import {ErrorState} from '../../components/feedback/ErrorState/ErrorState';
-import {SkeletonList} from '../../components/core/Skeleton/SkeletonList';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import FastImage from 'react-native-fast-image';
+import {SvgIcon} from '../../components/utility/SvgIcon';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {shareContent} from '../../services/shareService';
 import {useBookmarks} from '../../hooks/useBookmarks';
 import {useToast} from '../../components/feedback/Toast';
@@ -35,17 +43,7 @@ import type {LiveFavoriteItem} from '../../store/slices/liveFavoritesSlice';
 
 type Props = RootStackScreenProps<'RadioScreen'>;
 
-// ─── Modes ──────────────────────────────────────────────────
-
-const MODES: Array<{id: RadioBrowseMode; label: string}> = [
-  {id: 'top', label: 'Top'},
-  {id: 'genres', label: 'Genres'},
-  {id: 'countries', label: 'Countries'},
-  {id: 'languages', label: 'Languages'},
-  {id: 'favorites', label: 'Favorites'},
-];
-
-// ─── Normalized row ─────────────────────────────────────────
+// ─── Normalized row ───────────────────────────────────────────────────
 
 interface StationRow {
   id: string;
@@ -81,11 +79,7 @@ function favToRow(fav: LiveFavoriteItem): StationRow {
   };
 }
 
-// ─── List separator (module-level to satisfy react/no-unstable-nested-components) ──
-
-const ItemSeparator = () => <View style={styles.separator} />;
-
-// ─── Station Card ───────────────────────────────────────────
+// ─── Station Card ─────────────────────────────────────────────────────
 
 interface StationCardProps {
   row: StationRow;
@@ -103,15 +97,8 @@ const StationCard: React.FC<StationCardProps> = React.memo(
         onPress={() => onPress(row)}
         onLongPress={() => onLongPress(row)}
         delayLongPress={400}
-        style={[
-          styles.card,
-          {backgroundColor: colors.background.elevated},
-        ]}>
-        <View
-          style={[
-            styles.thumb,
-            {backgroundColor: colors.border.subtle},
-          ]}>
+        style={[styles.card, {backgroundColor: colors.background.elevated}]}>
+        <View style={[styles.thumb, {backgroundColor: colors.border.subtle}]}>
           {row.image ? (
             <FastImage
               source={{uri: row.image}}
@@ -134,14 +121,8 @@ const StationCard: React.FC<StationCardProps> = React.memo(
           {row.codec || row.bitrate ? (
             <View style={styles.metaRow}>
               {row.codec ? (
-                <View
-                  style={[
-                    styles.metaBadge,
-                    {backgroundColor: colors.accent.goldDim},
-                  ]}>
-                  <AppText
-                    variant="caption"
-                    style={[styles.metaBadgeText, {color: colors.accent.gold}]}>
+                <View style={[styles.metaBadge, {backgroundColor: colors.accent.goldDim}]}>
+                  <AppText variant="caption" style={[styles.metaBadgeText, {color: colors.accent.gold}]}>
                     {row.codec}
                   </AppText>
                 </View>
@@ -167,7 +148,251 @@ const StationCard: React.FC<StationCardProps> = React.memo(
   },
 );
 
-// ─── Screen ─────────────────────────────────────────────────
+// ─── In-tab Tag Chips ─────────────────────────────────────────────────
+
+interface TagChipsProps {
+  tags: RadioBrowseTag[];
+  selectedTag: string | null;
+  tagsLoaded: boolean;
+  onSelect: (name: string) => void;
+}
+
+const TagChips: React.FC<TagChipsProps> = React.memo(
+  ({tags, selectedTag, tagsLoaded, onSelect}) => {
+    const {colors} = useTheme();
+    if (!tagsLoaded) {
+      return (
+        <View style={styles.chipWrap}>
+          <ActivityOrb size={18} />
+        </View>
+      );
+    }
+    if (tags.length === 0) return null;
+    return (
+      <FlatList
+        horizontal
+        data={tags}
+        keyExtractor={tag => tag.name}
+        renderItem={({item: tag}) => {
+          const active = selectedTag === tag.name;
+          return (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => onSelect(tag.name)}
+              style={[
+                styles.chip,
+                styles.tagChip,
+                {
+                  backgroundColor: active ? colors.accent.goldDim : colors.background.elevated,
+                  borderColor: active ? colors.accent.gold : colors.border.subtle,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityState={{selected: active}}>
+              <AppText
+                variant="caption"
+                style={[
+                  styles.tagText,
+                  {color: active ? colors.accent.gold : colors.text.secondary},
+                ]}>
+                {tag.name} {tag.stationCount != null ? `· ${tag.stationCount}` : ''}
+              </AppText>
+            </TouchableOpacity>
+          );
+        }}
+        contentContainerStyle={styles.chipScroll}
+        showsHorizontalScrollIndicator={false}
+        initialNumToRender={24}
+        windowSize={5}
+        maxToRenderPerBatch={12}
+      />
+    );
+  },
+);
+
+// ─── Tab Scene ────────────────────────────────────────────────────────
+
+interface RadioTabSceneProps {
+  tab: RadioBrowseMode;
+  scope: RadioScopeState;
+  isSearchActive: boolean;
+  tags: RadioBrowseTag[];
+  tagsLoaded: boolean;
+  selectedTag: string | null;
+  setSelectedTag: (tag: string) => void;
+  isOnline: boolean;
+  refreshing: boolean;
+  ensureLoaded: (tab: RadioBrowseMode) => void;
+  loadMore: (tab: RadioBrowseMode) => void;
+  retry: (tab: RadioBrowseMode) => void;
+  handleRefresh: () => void;
+  isFavoriteId: (id: string) => boolean;
+  onPress: (row: StationRow) => void;
+  onLongPress: (row: StationRow) => void;
+}
+
+const RadioTabScene: React.FC<RadioTabSceneProps> = React.memo(
+  ({
+    tab,
+    scope,
+    isSearchActive,
+    tags,
+    tagsLoaded,
+    selectedTag,
+    setSelectedTag,
+    isOnline,
+    refreshing,
+    ensureLoaded,
+    loadMore,
+    retry,
+    handleRefresh,
+    isFavoriteId,
+    onPress,
+    onLongPress,
+  }) => {
+    const {colors} = useTheme();
+    const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
+
+    React.useEffect(() => {
+      ensureLoaded(tab);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ensureLoaded, tab]);
+
+    const rows = useMemo<StationRow[]>(() => items.map(toRow), [items]);
+
+    // ── Page-1 loader ──
+    if (!hasLoaded && isLoading) {
+      return (
+        <View style={styles.centerState}>
+          <ActivityOrb />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            Loading stations…
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Page-1 error ──
+    if (!hasLoaded && !isLoading && error) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon name="alertCircle" size={40} color={colors.accent.goldDim} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            {isOnline ? 'Could not load stations.' : 'You are offline.'}
+          </AppText>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => retry(tab)}
+            style={[styles.retryButton, {backgroundColor: colors.accent.gold}]}
+            accessibilityRole="button">
+            <AppText variant="button" style={styles.retryText}>Retry</AppText>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // ── Favorites empty ──
+    if (tab === 'favorites' && rows.length === 0) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon name="bookmark" size={40} color={colors.accent.goldDim} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            No favorite stations yet.
+          </AppText>
+          <AppText variant="caption" color="tertiary" style={styles.stateText}>
+            Long-press any station to save it here.
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Empty ──
+    if (hasLoaded && !error && rows.length === 0) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon name="headphones" size={40} color={colors.accent.goldDim} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            {isSearchActive
+              ? 'No stations match your search.'
+              : 'No stations found.'}
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Tag chips (Genres / Countries / Languages tabs) ──
+    const showTags =
+      !isSearchActive &&
+      (tab === 'genres' || tab === 'countries' || tab === 'languages');
+
+    const tagHeader = showTags ? (
+      <TagChips
+        tags={tags}
+        selectedTag={selectedTag}
+        tagsLoaded={tagsLoaded}
+        onSelect={setSelectedTag}
+      />
+    ) : null;
+
+    // ── Loaded list ──
+    const hasMore =
+      tab !== 'favorites' &&
+      rows.length > 0 &&
+      rows.length % 30 === 0;
+
+    return (
+      <FlatList
+        data={rows}
+        keyExtractor={item => item.id}
+        renderItem={({item}) => (
+          <StationCard
+            row={item}
+            isFavorite={isFavoriteId(item.id)}
+            onPress={onPress}
+            onLongPress={onLongPress}
+          />
+        )}
+        ListHeaderComponent={tagHeader}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={ItemSeparator}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.accent.gold}
+            colors={[colors.accent.gold]}
+          />
+        }
+        onEndReached={() => hasMore && loadMore(tab)}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          isLoadingMore || (hasMore && error) ? (
+            <View style={styles.footer}>
+              {isLoadingMore ? (
+                <ActivityOrb size={22} />
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => loadMore(tab)}
+                  style={[styles.loadMoreRetry, {borderColor: colors.border.subtle}]}
+                  accessibilityRole="button">
+                  <AppText variant="caption" color="secondary">
+                    Could not load more — tap to retry
+                  </AppText>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null
+        }
+        windowSize={5}
+        maxToRenderPerBatch={10}
+      />
+    );
+  },
+);
+
+// ─── Screen ───────────────────────────────────────────────────────────
 
 export const RadioScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
@@ -175,22 +400,25 @@ export const RadioScreen: React.FC<Props> = ({navigation, route}) => {
   const toast = useToast();
   const haptics = useHaptics();
   const {add: addBookmark} = useBookmarks();
+
   const {
-    mode,
-    setMode,
+    selectedTab,
+    setSelectedTab,
     selectedTag,
     setSelectedTag,
     tags,
-    stations,
-    favorites,
-    isLoading,
-    error,
+    tagsLoaded,
     searchQuery,
     setSearchQuery,
+    setSearchTerm,
+    isSearchActive,
     isOnline,
+    getScope,
+    ensureLoaded,
+    loadMore,
+    retry,
     refreshing,
     handleRefresh,
-    retry,
     isFavoriteId,
     toggleFavorite,
     removeFavorite,
@@ -225,15 +453,12 @@ export const RadioScreen: React.FC<Props> = ({navigation, route}) => {
       if (!row) return;
       switch (value) {
         case 'favorite': {
-          const station = stations.find(s => s.stationuuid === row.id);
+          const scope = getScope(selectedTab);
+          const station = scope.items.find(s => s.stationuuid === row.id);
           if (station) {
             const wasFavorite = isFavoriteId(row.id);
             toggleFavorite(station);
-            toast.show(
-              wasFavorite
-                ? 'Removed from favorites'
-                : 'Saved to favorites',
-            );
+            toast.show(wasFavorite ? 'Removed from favorites' : 'Saved to favorites');
           } else {
             removeFavorite(row.id);
             toast.show('Removed from favorites');
@@ -275,226 +500,91 @@ export const RadioScreen: React.FC<Props> = ({navigation, route}) => {
       }
       setMenuRow(null);
     },
-    [
-      menuRow,
-      stations,
-      isFavoriteId,
-      removeFavorite,
-      toggleFavorite,
-      addBookmark,
-      toast,
-      haptics,
-    ],
+    [menuRow, selectedTab, getScope, isFavoriteId, removeFavorite, toggleFavorite, addBookmark, toast, haptics],
   );
 
-  const rows: StationRow[] = useMemo(() => {
-    if (mode === 'favorites') {
-      return favorites.map(favToRow);
-    }
-    return stations.map(toRow);
-  }, [mode, favorites, stations]);
+  const tabIndex = Math.max(0, RADIO_TABS.findIndex(t => t.key === selectedTab));
+  const routes = useMemo(() => RADIO_TABS.map(t => ({key: t.key, title: t.title})), []);
 
-  const showTags =
-    !searchQuery.trim() &&
-    (mode === 'genres' || mode === 'countries' || mode === 'languages') &&
-    tags.length > 0;
+  const renderTabBar = useCallback(
+    (props: SceneRendererProps & {navigationState: {index: number; routes: Route[]}}) => (
+      <TabBar
+        {...props}
+        scrollEnabled
+        style={[styles.tabBar, {backgroundColor: colors.background.primary, borderBottomColor: colors.background.highlightDim}]}
+        indicatorStyle={[styles.tabIndicator, {backgroundColor: colors.accent.gold}]}
+        activeColor={colors.accent.gold}
+        inactiveColor={colors.text.secondary}
+        tabStyle={styles.tab}
+        contentContainerStyle={styles.tabBarContent}
+      />
+    ),
+    [colors],
+  );
 
-  const isEmpty =
-    rows.length === 0 &&
-    !isLoading &&
-    !error &&
-    mode !== 'favorites';
+  const renderScene = useCallback(
+    ({route: tabRoute}: {route: Route}) => {
+      const t = tabRoute.key as RadioBrowseMode;
+      return (
+        <RadioTabScene
+          tab={t}
+          scope={getScope(t)}
+          isSearchActive={isSearchActive}
+          tags={tags}
+          tagsLoaded={tagsLoaded}
+          selectedTag={selectedTag}
+          setSelectedTag={setSelectedTag}
+          isOnline={isOnline}
+          refreshing={refreshing}
+          ensureLoaded={ensureLoaded}
+          loadMore={loadMore}
+          retry={retry}
+          handleRefresh={handleRefresh}
+          isFavoriteId={isFavoriteId}
+          onPress={handleStationPress}
+          onLongPress={handleLongPress}
+        />
+      );
+    },
+    [getScope, isSearchActive, tags, tagsLoaded, selectedTag, setSelectedTag, isOnline, refreshing, ensureLoaded, loadMore, retry, handleRefresh, isFavoriteId, handleStationPress, handleLongPress],
+  );
 
-  const favoritesEmpty = mode === 'favorites' && favorites.length === 0;
+  const renderLazyPlaceholder = useCallback(
+    ({route: tabRoute}: {route: Route}) => (
+      <View style={styles.centerState}>
+        <ActivityOrb />
+        <AppText variant="body2" color="tertiary" style={styles.stateText}>
+          Loading {RADIO_TABS.find(t => t.key === tabRoute.key)?.title ?? 'tab'}…
+        </AppText>
+      </View>
+    ),
+    [],
+  );
 
   return (
-    <View
-      style={[
-        styles.root,
-        {backgroundColor: colors.background.primary, paddingTop: insets.top},
-      ]}>
+    <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Live Radio" />
 
-      {/* ── Search ── */}
       <View style={styles.searchSection}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
+          onDebouncedChange={setSearchTerm}
           placeholder="Search stations…"
         />
       </View>
 
-      {/* ── Mode chips ── */}
-      <View
-        style={[
-          styles.chipSection,
-          {borderBottomColor: colors.border.subtle},
-        ]}>
-        {/* 59.1: virtualized rail (FlatList) instead of ScrollView+map */}
-        <FlatList
-          horizontal
-          data={MODES}
-          keyExtractor={m => m.id}
-          renderItem={({item: m}) => (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => setMode(m.id)}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor:
-                    mode === m.id
-                      ? colors.accent.gold
-                      : colors.background.elevated,
-                  borderColor:
-                    mode === m.id
-                      ? colors.accent.gold
-                      : colors.background.highlight,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{selected: mode === m.id}}>
-              <AppText
-                variant="button"
-                style={[
-                  styles.chipText,
-                  {
-                    color:
-                      mode === m.id
-                        ? colors.text.inverse
-                        : colors.text.secondary,
-                  },
-                ]}>
-                {m.label}
-              </AppText>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.chipScroll}
-          showsHorizontalScrollIndicator={false}
-          scrollEnabled={false}
-          initialNumToRender={MODES.length}
-        />
-      </View>
-
-      {/* ── Tag chips (genre / country / language) ── */}
-      {showTags && (
-        <View style={styles.tagSection}>
-          {/* 59.1: virtualized — radio-browser tags can number in the thousands */}
-          <FlatList
-            horizontal
-            data={tags}
-            keyExtractor={tag => tag.name}
-            renderItem={({item: tag}) => {
-              const isSelected = selectedTag === tag.name;
-              return (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  // P41.4: genre tags open the genre detail page; country /
-                  // language tags keep filtering stations in-screen.
-                  onPress={() =>
-                    mode === 'genres'
-                      ? navigation.navigate('GenreScreen', {genre: tag.name})
-                      : setSelectedTag(tag.name)
-                  }
-                  style={[
-                    styles.chip,
-                    styles.tagChip,
-                    {
-                      backgroundColor: isSelected
-                        ? colors.accent.goldDim
-                        : colors.background.elevated,
-                      borderColor: isSelected
-                        ? colors.accent.gold
-                        : colors.border.subtle,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{selected: isSelected}}>
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.tagText,
-                      {color: isSelected ? colors.accent.gold : colors.text.secondary},
-                    ]}>
-                    {tag.name} · {tag.stationCount}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            }}
-            contentContainerStyle={styles.chipScroll}
-            showsHorizontalScrollIndicator={false}
-            initialNumToRender={24}
-            windowSize={5}
-            maxToRenderPerBatch={12}
-          />
-        </View>
-      )}
-
-      {/* ── Content ── */}
-      <View style={styles.contentArea}>
-        {isLoading && rows.length === 0 && <SkeletonList count={6} hasImage lines={2} />}
-
-        {error && rows.length === 0 && (
-          <ErrorState
-            title={isOnline ? 'Couldn\'t load stations' : 'You\'re offline'}
-            message={
-              isOnline
-                ? error
-                : 'Connect to the internet, then retry to tune in.'
-            }
-            onRetry={retry}
-            retryLabel="Retry"
-          />
-        )}
-
-        {favoritesEmpty && (
-          <View style={styles.centerState}>
-            <SvgIcon name="bookmark" size={40} color={colors.accent.goldDim} />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              No favorite stations yet.
-            </AppText>
-            <AppText variant="caption" color="tertiary" style={styles.stateText}>
-              Long-press any station to save it here.
-            </AppText>
-          </View>
-        )}
-
-        {isEmpty && (
-          <View style={styles.centerState}>
-            <SvgIcon name="headphones" size={40} color={colors.accent.goldDim} />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              No stations found.
-            </AppText>
-          </View>
-        )}
-
-        {!isLoading && !error && rows.length > 0 && (
-          <FlatList
-            data={rows}
-            keyExtractor={item => item.id}
-            renderItem={({item}) => (
-              <StationCard
-                row={item}
-                isFavorite={isFavoriteId(item.id)}
-                onPress={handleStationPress}
-                onLongPress={handleLongPress}
-              />
-            )}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={ItemSeparator}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={colors.accent.gold}
-                colors={[colors.accent.gold]}
-              />
-            }
-          />
-        )}
-      </View>
+      <TabView
+        navigationState={{index: tabIndex, routes}}
+        onIndexChange={index => setSelectedTab(routes[index].key as RadioBrowseMode)}
+        renderTabBar={renderTabBar}
+        renderScene={renderScene}
+        renderLazyPlaceholder={renderLazyPlaceholder}
+        lazy
+        commonOptions={{labelStyle: styles.tabLabel}}
+        style={styles.sceneContainer}
+      />
 
       <OptionSheetDialog
         visible={menuVisible}
@@ -519,28 +609,42 @@ export const RadioScreen: React.FC<Props> = ({navigation, route}) => {
   );
 };
 
-// ─── Styles ─────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────
+
+const ItemSeparator = () => <View style={styles.separator} />;
 
 const styles = StyleSheet.create({
-  root: {
+  root: {flex: 1},
+  searchSection: {paddingHorizontal: spacing.md, paddingVertical: spacing.sm},
+  sceneContainer: {flex: 1},
+  tabBar: {borderBottomWidth: 1, elevation: 0, shadowOpacity: 0},
+  tabIndicator: {height: 3, borderRadius: radius.full},
+  tabLabel: {fontSize: 13, fontWeight: '700', textTransform: 'none'},
+  tab: {width: 'auto', minWidth: 84},
+  tabBarContent: {paddingHorizontal: spacing.xs},
+
+  centerState: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 80,
   },
-  searchSection: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  chipSection: {
+  stateText: {marginTop: spacing.md, textAlign: 'center'},
+  retryButton: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
+    borderRadius: radius.full,
   },
-  tagSection: {
-    paddingVertical: spacing.sm,
-  },
-  chipScroll: {
+  retryText: {color: '#1A1206'},
+
+  chipWrap: {
     paddingHorizontal: spacing.md,
-    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
   },
+  chipScroll: {paddingHorizontal: spacing.md, gap: spacing.sm},
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -550,36 +654,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     borderWidth: 1,
   },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  tagChip: {
-    paddingVertical: 6,
-  },
-  tagText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  contentArea: {
-    flex: 1,
-  },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  stateText: {
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  listContent: {
-    padding: spacing.md,
-  },
-  separator: {
-    height: spacing.sm,
-  },
+  tagChip: {paddingVertical: 6},
+  tagText: {fontSize: 12, fontWeight: '600'},
+
+  listContent: {padding: spacing.md, paddingBottom: spacing.xxl + 80},
+  separator: {height: spacing.sm},
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -594,33 +673,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  info: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  name: {
-    fontWeight: '600',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
+  info: {flex: 1, gap: spacing.xs},
+  name: {fontWeight: '600'},
+  metaRow: {flexDirection: 'row', alignItems: 'center', gap: spacing.sm},
   metaBadge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 1,
     borderRadius: radius.sm - 2,
   },
-  metaBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
+  metaBadgeText: {fontSize: 10, fontWeight: '700'},
   playButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  footer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    minHeight: 56,
+  },
+  loadMoreRetry: {
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
 });

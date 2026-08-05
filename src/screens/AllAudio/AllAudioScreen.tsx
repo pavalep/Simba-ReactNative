@@ -20,6 +20,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {SimbaStatusBar} from '../../components/StatusBar';
@@ -128,15 +129,7 @@ export const AllAudioScreen: React.FC = () => {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.headerBtn, {backgroundColor: colors.background.elevated}]}
-          onPress={() => navigation.goBack()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}
-          activeOpacity={0.7}>
-          <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <AppText variant="h2" color="primary" style={{flex: 1}}>
           All Audio
         </AppText>

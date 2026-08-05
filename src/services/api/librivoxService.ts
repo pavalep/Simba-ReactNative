@@ -93,6 +93,7 @@ export async function searchAudiobooks(
       q: query,
       format: 'json',
       limit,
+      page: options?.page ?? 1,
     },
     cacheTtlMs: SEARCH_CACHE_TTL,
   });
@@ -136,6 +137,7 @@ export async function searchByAuthor(
       author: authorName,
       format: 'json',
       limit,
+      page: options?.page ?? 1,
     },
     cacheTtlMs: SEARCH_CACHE_TTL,
   });
@@ -159,6 +161,7 @@ export async function searchByGenre(
       genre,
       format: 'json',
       limit,
+      page: options?.page ?? 1,
     },
     cacheTtlMs: SEARCH_CACHE_TTL,
   });
@@ -180,6 +183,7 @@ export async function getRecentAudiobooks(
     params: {
       format: 'json',
       limit,
+      page: options?.page ?? 1,
     },
     cacheTtlMs: SEARCH_CACHE_TTL,
   });

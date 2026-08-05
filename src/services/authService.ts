@@ -189,6 +189,14 @@ export function configureGoogleSignin(): void {
 }
 
 /**
+ * v13 response shape of `GoogleSignin.signIn()`:
+ * `{ type: 'success', data: User } | { type: 'cancelled' }`.
+ */
+type GoogleSignInResponse =
+  | {type: 'success'; data: unknown}
+  | {type: 'cancelled'};
+
+/**
  * Attempt Google Sign-In.
  * Returns the authenticated user on success, throws AuthError on failure.
  */
@@ -199,8 +207,10 @@ export async function signInWithGoogle(): Promise<AuthUser> {
   const GoogleSignin = getGoogleSignin();
 
   await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
-  // v13: signIn() returns { type: 'success', data: User } | { type: 'cancelled' }
-  const response = await withTimeout(GoogleSignin.signIn(), 30000);
+  const response = await withTimeout<GoogleSignInResponse>(
+    GoogleSignin.signIn(),
+    30000,
+  );
   if (response.type !== 'success') {
     throw new AuthError({
       kind: 'cancelled',

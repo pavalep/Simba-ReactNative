@@ -7,6 +7,8 @@ import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {useAccessibility} from '../../../hooks/useAccessibility';
+import {useAppSelector} from '../../../store';
+import {selectAuthUser} from '../../../store/slices/authSlice';
 
 interface HomeHeaderProps {
   onSettingsPress?: () => void;
@@ -31,6 +33,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   const {colors} = useTheme();
   const {reduceMotion} = useAccessibility();
   const navigation = useNavigation<any>();
+  const authUser = useAppSelector(selectAuthUser);
   const scanAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -97,23 +100,17 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
           borderBottomColor: colors.border.subtle,
         },
       ]}>
-      {/* Left: Logo + Greeting + Subtitle */}
+      {/* Left: App logo + brand text */}
       <View style={styles.greetingSection}>
         <View style={styles.greetingRow}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleAvatarPress}
-            style={[styles.avatarContainer, {backgroundColor: colors.accent.gold + '15'}]}>
-            {avatarUrl ? (
-              <FastImage
-                source={{uri: avatarUrl}}
-                style={styles.avatarImage}
-                resizeMode={FastImage.resizeMode.cover}
-              />
-            ) : (
-              <SvgIcon name="lion" size={36} color={colors.accent.gold} />
-            )}
-          </TouchableOpacity>
+          {/* App logo always — never the user photo */}
+          <View
+            style={[
+              styles.logoContainer,
+              {backgroundColor: colors.accent.gold + '15'},
+            ]}>
+            <SvgIcon name="lion" size={36} color={colors.accent.gold} />
+          </View>
           <View>
             <AppText variant="h2" color="accent" style={styles.greetingText}>
               SIMBA
@@ -170,14 +167,32 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
         </TouchableOpacity>
       )}
 
-      {/* Settings icon */}
+      {/* Profile avatar (replaces Settings icon) */}
       <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={handleSettingsPress}
-        style={[styles.iconButton, {backgroundColor: colors.background.elevated}]}
-        accessibilityLabel="Settings"
-        accessibilityRole="button">
-        <SvgIcon name="settings" size={22} color={colors.text.secondary} />
+        activeOpacity={0.8}
+        onPress={handleAvatarPress}
+        accessibilityLabel="Open profile"
+        accessibilityRole="button"
+        style={[
+          styles.profileButton,
+          {
+            borderColor: colors.accent.gold,
+            backgroundColor: colors.background.elevated,
+          },
+        ]}>
+        {avatarUrl ? (
+          <FastImage
+            source={{uri: avatarUrl}}
+            style={styles.profileImage}
+            resizeMode={FastImage.resizeMode.cover}
+          />
+        ) : (
+          <AppText
+            variant="h3"
+            style={[styles.profileInitial, {color: colors.accent.gold}]}>
+            {(authUser?.name?.trim()?.[0] ?? 'A').toUpperCase()}
+          </AppText>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -200,7 +215,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
   },
-  avatarContainer: {
+  logoContainer: {
     width: 56,
     height: 56,
     borderRadius: 16,
@@ -208,9 +223,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  avatarImage: {
-    width: 56,
-    height: 56,
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.xs,
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileInitial: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   greetingText: {
     fontSize: 22,

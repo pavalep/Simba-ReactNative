@@ -21,6 +21,7 @@ import {spacing, radius} from '../../theme/tokens';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {ErrorState} from '../../components/feedback/ErrorState/ErrorState';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
@@ -156,12 +157,7 @@ export const GenreScreen: React.FC<
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, {backgroundColor: colors.background.elevated}]}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}>
-          <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <AppText variant="h2" color="primary" style={styles.headerTitle} numberOfLines={1}>
           {genre}
         </AppText>
@@ -418,13 +414,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   hero: {
     alignItems: 'center',

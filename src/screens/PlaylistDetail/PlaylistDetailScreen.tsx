@@ -50,6 +50,7 @@ import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/Media
 import {useConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../components/feedback/Toast/Toast';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {isRemoteUri} from '../../utils/mediaUri';
 import {useNetworkStatus} from '../../hooks/useNetworkStatus';
 
@@ -506,13 +507,6 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           borderBottomColor: colors.border.subtle,
           backgroundColor: colors.background.primary,
         },
-        backButton: {
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
         headerTitleSection: {
           flex: 1,
           marginLeft: spacing.xs,
@@ -804,16 +798,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
       {/* ── Custom Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.7}
-          onPress={() => navigation.goBack()}
-          accessibilityLabel="Go back"
-          accessibilityRole="button">
-          <AppText variant="body1" color="secondary" style={{fontSize: 22}}>
-            ←
-          </AppText>
-        </TouchableOpacity>
+        <BackButton />
 
         <View style={styles.headerTitleSection}>
           <AppText variant="h3" color="primary" numberOfLines={1}>

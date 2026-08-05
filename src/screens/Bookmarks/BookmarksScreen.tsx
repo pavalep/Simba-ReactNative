@@ -1,15 +1,13 @@
 import React, {useCallback} from 'react';
 import {
-  View,
   StyleSheet,
   Animated,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
-import {AppText} from '../../components/core/AppText/AppText';
-import {SvgIcon} from '../../components/utility/SvgIcon';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {BookmarkList} from '../../components/bookmark/BookmarkList';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {useConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
@@ -74,27 +72,15 @@ export const BookmarksScreen: React.FC = () => {
       {clearDialog}
 
       {/* ── Header ── */}
-      <Animated.View
-        style={[
-          styles.header,
-          {borderBottomColor: colors.border.subtle},
-          headerStyles[0],
-        ]}>
-        <View style={styles.headerLeft}>
-          <SvgIcon name="bookmark" size={24} color={colors.accent.gold} />
-          <AppText variant="h2" color="primary" style={{marginLeft: spacing.sm}}>
-            Bookmarks
-          </AppText>
-        </View>
-        {allBookmarks.length > 0 && (
-          <AppText
-            variant="caption"
-            color="secondary"
-            onPress={handleClearAll}
-            style={styles.clearBtn}>
-            {bookmarkCount} saved
-          </AppText>
-        )}
+      <Animated.View style={headerStyles[0]}>
+        <InternalHeader
+          title="Bookmarks"
+          rightAction={
+            allBookmarks.length > 0
+              ? {label: `${bookmarkCount} saved`, onPress: handleClearAll}
+              : undefined
+          }
+        />
       </Animated.View>
 
       {/* ── Search ── */}
@@ -137,22 +123,6 @@ export const BookmarksScreen: React.FC = () => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  clearBtn: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
   },
   searchContainer: {
     paddingHorizontal: spacing.lg,

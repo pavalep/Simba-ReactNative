@@ -15,8 +15,11 @@ const CACHE = {
 // ─── Helpers ────────────────────────────────────────────────────────────
 
 function buildParams(options?: ApiSearchOptions): Record<string, string | number | undefined> {
+  const limit = options?.limit ?? 30;
   return {
-    limit: options?.limit ?? 30,
+    limit,
+    // Radio-Browser paginates via `offset`; derive it from 1-based `page`.
+    offset: options?.page && options.page > 1 ? (options.page - 1) * limit : 0,
   };
 }
 

@@ -1,9 +1,11 @@
-// ─── Radio Screen Hook ──────────────────────────────────────
-// Phase 36.1/36.3: browse radio stations by top / genre /
-// country / language / favorites + search. Favorites are
-// persisted via the liveFavorites slice.
+// ─── Radio Screen Hook ──────────────────────────────────────────────
+// Phase 3 formula: each browse mode is a TabView tab.
+//   • search stays at screen level, scoped per (tab, term, tag)
+//   • per-scope cache + pagination (Radio Browser offset/page support)
+//   • Favorites tab = local Redux data (no API fetch)
+//   • auto-retry on reconnect, pull-to-refresh
 
-import {useState, useEffect, useCallback, useRef} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {
   searchStations,
   getTopStations,
@@ -15,7 +17,6 @@ import {
   getLanguages,
   type RadioBrowseTag,
 } from '../../../services/api/radioBrowserService';
-import {useDebounce} from '../../../hooks/useDebounce';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import {useAppDispatch, useAppSelector} from '../../../store';
 import {
@@ -32,26 +33,72 @@ export type RadioBrowseMode =
   | 'languages'
   | 'favorites';
 
-const STATION_LIMIT = 50;
+export const RADIO_TABS: Array<{key: RadioBrowseMode; title: string}> = [
+  {key: 'top', title: 'Top'},
+  {key: 'genres', title: 'Genres'},
+  {key: 'countries', title: 'Countries'},
+  {key: 'languages', title: 'Languages'},
+  {key: 'favorites', title: 'Favorites'},
+];
+
+const PAGE_SIZE = 30;
+
+export interface RadioScopeState {
+  items: RadioStationResult[];
+  page: number;
+  hasLoaded: boolean;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  error: string | null;
+}
+
+const EMPTY_SCOPE: RadioScopeState = {
+  items: [],
+  page: 0,
+  hasLoaded: false,
+  isLoading: false,
+  isLoadingMore: false,
+  error: null,
+};
+
+function scopeCacheKey(tab: RadioBrowseMode, term: string, tag: string): string {
+  return `radio|${tab}|${term.trim()}|${tag}`;
+}
+
+function dedupe(items: RadioStationResult[]): RadioStationResult[] {
+  const seen = new Set<string>();
+  return items.filter(i => {
+    if (seen.has(i.stationuuid)) return false;
+    seen.add(i.stationuuid);
+    return true;
+  });
+}
 
 export function useRadioScreen(initialTab?: string) {
   const {isOnline} = useNetworkStatus();
   const dispatch = useAppDispatch();
 
-  const [mode, setMode] = useState<RadioBrowseMode>(
+  const [selectedTab, setSelectedTab] = useState<RadioBrowseMode>(
     (initialTab as RadioBrowseMode) || 'top',
   );
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [tags, setTags] = useState<RadioBrowseTag[]>([]);
-  const [stations, setStations] = useState<RadioStationResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
-  const debouncedSearch = useDebounce(searchQuery, 500);
-  const fetchingRef = useRef(false);
-  const failedRef = useRef(false);
+  const [tagsLoaded, setTagsLoaded] = useState(false);
 
+  // ── Search ──
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const isSearchActive = searchTerm.trim().length > 0;
+
+  const [scopes, setScopes] = useState<Record<string, RadioScopeState>>({});
+  const [refreshing, setRefreshing] = useState(false);
+
+  const seqRef = useRef<Record<string, number>>({});
+  const guardRef = useRef<Set<string>>(new Set());
+  const failedKeyRef = useRef<string | null>(null);
+  const wasOnlineRef = useRef(isOnline);
+
+  // ── Redux favorites ──
   const favorites = useAppSelector(s => selectLiveFavoritesByKind(s, 'radio'));
 
   const isFavoriteId = useCallback(
@@ -59,102 +106,190 @@ export function useRadioScreen(initialTab?: string) {
     [favorites],
   );
 
-  // ── Station loading (top / tag / search) ──
-  const loadStations = useCallback(async () => {
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const q = debouncedSearch.trim();
-      let items: RadioStationResult[] = [];
-      if (q) {
-        items = await searchStations(q, {limit: STATION_LIMIT});
-      } else if (mode === 'top') {
-        items = await getTopStations({limit: STATION_LIMIT});
-      } else if (mode === 'genres' && selectedTag) {
-        items = await getStationsByGenre(selectedTag, {limit: STATION_LIMIT});
-      } else if (mode === 'countries' && selectedTag) {
-        items = await getStationsByCountry(selectedTag, {
-          limit: STATION_LIMIT,
+  const keyFor = useCallback(
+    (tab: RadioBrowseMode) => scopeCacheKey(tab, searchTerm, selectedTag ?? ''),
+    [searchTerm, selectedTag],
+  );
+
+  const getScope = useCallback(
+    (tab: RadioBrowseMode): RadioScopeState =>
+      tab === 'favorites'
+        ? {...EMPTY_SCOPE, items: favorites as unknown as RadioStationResult[], hasLoaded: true}
+        : scopes[keyFor(tab)] ?? EMPTY_SCOPE,
+    [scopes, keyFor, favorites],
+  );
+
+  const patchScope = useCallback(
+    (tab: RadioBrowseMode, patch: Partial<RadioScopeState>) => {
+      if (tab === 'favorites') return;
+      const key = keyFor(tab);
+      setScopes(prev => ({
+        ...prev,
+        [key]: {...(prev[key] ?? EMPTY_SCOPE), ...patch},
+      }));
+    },
+    [keyFor],
+  );
+
+  const fetchPage = useCallback(
+    async (tab: RadioBrowseMode, page: number, mode: 'initial' | 'more') => {
+      if (tab === 'favorites') return;
+      const term = searchTerm.trim();
+      const tag = selectedTag;
+      const key = scopeCacheKey(tab, term, tag ?? '');
+
+      if (guardRef.current.has(key)) return;
+      guardRef.current.add(key);
+
+      const seq = (seqRef.current[key] = (seqRef.current[key] ?? 0) + 1);
+
+      patchScope(tab, {isLoading: mode === 'initial', isLoadingMore: mode === 'more', error: null});
+
+      try {
+        let items: RadioStationResult[] = [];
+
+        if (term) {
+          items = await searchStations(term, {limit: PAGE_SIZE, page});
+        } else {
+          switch (tab) {
+            case 'top':
+              items = await getTopStations({limit: PAGE_SIZE, page});
+              break;
+            case 'genres':
+              if (tag) items = await getStationsByGenre(tag, {limit: PAGE_SIZE, page});
+              break;
+            case 'countries':
+              if (tag) items = await getStationsByCountry(tag, {limit: PAGE_SIZE, page});
+              break;
+            case 'languages':
+              if (tag) items = await getStationsByLanguage(tag, {limit: PAGE_SIZE, page});
+              break;
+          }
+        }
+
+        if (seq !== (seqRef.current[key] ?? 0)) return;
+
+        setScopes(prev => {
+          const cur = prev[key] ?? EMPTY_SCOPE;
+          return {
+            ...prev,
+            [key]: {
+              ...cur,
+              items: mode === 'more' ? dedupe([...cur.items, ...items]) : items,
+              page,
+              hasLoaded: true,
+              isLoading: false,
+              isLoadingMore: false,
+              error: null,
+            },
+          };
         });
-      } else if (mode === 'languages' && selectedTag) {
-        items = await getStationsByLanguage(selectedTag, {
-          limit: STATION_LIMIT,
+        failedKeyRef.current = null;
+      } catch (err) {
+        if (seq !== (seqRef.current[key] ?? 0)) return;
+        failedKeyRef.current = key;
+        patchScope(tab, {
+          isLoading: false,
+          isLoadingMore: false,
+          error: err instanceof Error ? err.message : 'Failed to load stations',
         });
+      } finally {
+        guardRef.current.delete(key);
       }
-      setStations(items);
-      failedRef.current = false;
-    } catch (err) {
-      failedRef.current = true;
-      setError(err instanceof Error ? err.message : 'Failed to load stations');
-    } finally {
-      fetchingRef.current = false;
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  }, [debouncedSearch, mode, selectedTag]);
+    },
+    [searchTerm, selectedTag, patchScope],
+  );
 
-  useEffect(() => {
-    loadStations();
-  }, [loadStations]);
+  const ensureLoaded = useCallback(
+    (tab: RadioBrowseMode) => {
+      if (tab === 'favorites') return;
+      if ((tab === 'genres' || tab === 'countries' || tab === 'languages') && !selectedTag)
+        return; // need a tag first
+      const scope = getScope(tab);
+      if (scope.hasLoaded || scope.isLoading) return;
+      fetchPage(tab, 1, 'initial');
+    },
+    [getScope, fetchPage, selectedTag],
+  );
 
-  // ── Browse tags (genres / countries / languages) ──
+  const loadMore = useCallback(
+    (tab: RadioBrowseMode) => {
+      if (tab === 'favorites') return;
+      const scope = getScope(tab);
+      if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore) return;
+      if (scope.items.length % PAGE_SIZE !== 0) return;
+      if (scope.items.length === 0) return;
+      fetchPage(tab, scope.page + 1, 'more');
+    },
+    [getScope, fetchPage],
+  );
+
+  const retry = useCallback(
+    (tab: RadioBrowseMode) => {
+      if (tab === 'favorites') return;
+      const key = keyFor(tab);
+      seqRef.current[key] = (seqRef.current[key] ?? 0) + 1;
+      setScopes(prev => {
+        const cur = prev[key];
+        if (!cur) return prev;
+        return {...prev, [key]: {...cur, items: [], hasLoaded: false}};
+      });
+      fetchPage(tab, 1, 'initial');
+    },
+    [keyFor, fetchPage],
+  );
+
+  // ── Pull-to-refresh ──
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    if (selectedTab !== 'favorites') retry(selectedTab);
+    setRefreshing(false);
+  }, [retry, selectedTab]);
+
+  // ── Tags (genres/countries/languages) ──
   useEffect(() => {
     let cancelled = false;
-    if (
-      debouncedSearch.trim() ||
-      mode === 'top' ||
-      mode === 'favorites'
-    ) {
+    if (isSearchActive || selectedTab === 'top' || selectedTab === 'favorites') {
       setTags([]);
+      setTagsLoaded(false);
       return;
     }
+    setTagsLoaded(false);
     (async () => {
       try {
         const list =
-          mode === 'genres'
+          selectedTab === 'genres'
             ? await getGenres()
-            : mode === 'countries'
+            : selectedTab === 'countries'
             ? await getCountries()
             : await getLanguages();
-        if (!cancelled) setTags(list);
+        if (!cancelled) {
+          setTags(list);
+          setTagsLoaded(true);
+        }
       } catch {
-        // Station-level error state already covers failures
+        if (!cancelled) setTagsLoaded(true);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [mode, debouncedSearch]);
+    return () => { cancelled = true; };
+  }, [selectedTab, isSearchActive]);
 
-  // ── Auto-retry the failed query when connectivity returns ──
-  const wasOnlineRef = useRef(isOnline);
+  // ── Auto-retry on reconnect ──
   useEffect(() => {
     const wasOnline = wasOnlineRef.current;
     wasOnlineRef.current = isOnline;
-    if (!wasOnline && isOnline && failedRef.current) {
-      failedRef.current = false;
-      loadStations();
+    if (!wasOnline && isOnline && failedKeyRef.current) {
+      failedKeyRef.current = null;
+      ensureLoaded(selectedTab);
     }
-  }, [isOnline, loadStations]);
+  }, [isOnline, ensureLoaded, selectedTab]);
 
-  const retry = useCallback(() => {
-    setStations([]);
-    loadStations();
-  }, [loadStations]);
+  // ── Keep current tab loaded ──
+  useEffect(() => {
+    ensureLoaded(selectedTab);
+  }, [selectedTab, ensureLoaded, keyFor]);
 
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    retry();
-  }, [retry]);
-
-  const handleModeChange = useCallback((next: RadioBrowseMode) => {
-    setMode(next);
-    setSelectedTag(null);
-    setSearchQuery('');
-  }, []);
-
+  // ── Redux actions ──
   const toggleFavorite = useCallback(
     (station: RadioStationResult) => {
       const existing = favorites.find(f => f.id === station.stationuuid);
@@ -168,9 +303,7 @@ export function useRadioScreen(initialTab?: string) {
             name: station.name,
             url: station.urlResolved || station.url,
             image: station.favicon || '',
-            subtitle: [station.country, station.tags]
-              .filter(Boolean)
-              .join(' · '),
+            subtitle: [station.country, station.tags].filter(Boolean).join(' · '),
             codec: station.codec,
             bitrate: station.bitrate,
             addedAt: new Date().toISOString(),
@@ -189,21 +322,27 @@ export function useRadioScreen(initialTab?: string) {
   );
 
   return {
-    mode,
-    setMode: handleModeChange,
+    selectedTab,
+    setSelectedTab,
     selectedTag,
     setSelectedTag,
     tags,
-    stations,
-    favorites,
-    isLoading,
-    error,
+    tagsLoaded,
+    // search
     searchQuery,
     setSearchQuery,
+    setSearchTerm,
+    isSearchActive,
     isOnline,
+    // scope
+    getScope,
+    ensureLoaded,
+    loadMore,
+    retry,
     refreshing,
     handleRefresh,
-    retry,
+    // favorites
+    favorites,
     isFavoriteId,
     toggleFavorite,
     removeFavorite,

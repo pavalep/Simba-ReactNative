@@ -33,6 +33,7 @@ import {
 } from '../../services/fileService';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import type {FolderLinkingWizardScreenProps} from '../../navigation/types';
 
@@ -658,15 +659,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
             borderBottomColor: colors.border.subtle,
           },
         ]}>
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backBtn}
-          activeOpacity={0.7}
-          accessibilityLabel="Go back">
-          <AppText variant="body1" color="secondary" style={{fontSize: 22}}>
-            ←
-          </AppText>
-        </TouchableOpacity>
+        <BackButton onPress={handleBack} />
         <AppText variant="h3" color="primary">
           Link Folder
         </AppText>

@@ -11,6 +11,7 @@ import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
 import {AlbumHero} from './components/AlbumHero';
@@ -72,18 +73,7 @@ export const AlbumScreen: React.FC<Props> = () => {
 
       {/* ── Back button (fixed, overlaid) ── */}
       <View style={[styles.backBtnContainer, {top: insets.top + 8}]}>
-        <TouchableOpacity
-          style={[
-            styles.backBtn,
-            {backgroundColor: colors.background.highlight},
-          ]}
-          onPress={handlers.goBack}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}>
-          <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton onPress={handlers.goBack} />
       </View>
 
       {/* ── Main scrollable content ── */}
@@ -155,13 +145,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     zIndex: 10,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scrollContent: {
     paddingTop: 0,

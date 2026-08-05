@@ -25,6 +25,7 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {AppButton} from '../../components/core/AppButton/AppButton';
 import {AppTextInput} from '../../components/core/AppTextInput/AppTextInput';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {WaveformBars} from '../../components/feedback/WaveformBars/WaveformBars';
 import {SimbaStatusBar} from '../../components/StatusBar';
@@ -468,14 +469,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
 
       {/* ── Header (48.1) ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, {backgroundColor: colors.background.elevated}]}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Back">
-          <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <AppText
           variant="h2"
           color="primary"
@@ -579,13 +573,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerTitle: {
     flex: 1,

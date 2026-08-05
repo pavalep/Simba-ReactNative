@@ -18,6 +18,7 @@ import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {AppButton} from '../../components/core/AppButton/AppButton';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
@@ -32,7 +33,6 @@ import type {RootStackScreenProps} from '../../navigation/types';
 type Props = RootStackScreenProps<'ArtistScreen'>;
 
 const HEADER_HEIGHT = 280;
-const BACK_BTN_SIZE = 36;
 
 function formatDuration(sec: number): string {
   if (sec <= 0) return '--:--';
@@ -148,17 +148,6 @@ export const ArtistScreen: React.FC<Props> = () => {
   const dynamicStyles = useMemo(
     () =>
       StyleSheet.create({
-        backBtn: {
-          width: BACK_BTN_SIZE,
-          height: BACK_BTN_SIZE,
-          borderRadius: BACK_BTN_SIZE / 2,
-          backgroundColor: colors.background.glass,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        backBtnElevated: {
-          backgroundColor: colors.background.elevated,
-        },
         topSectionDivider: {
           height: 1,
           backgroundColor: colors.border.subtle,
@@ -191,15 +180,7 @@ export const ArtistScreen: React.FC<Props> = () => {
 
       {/* ── Back button (fixed, overlaid) ── */}
       <View style={[styles.backBtnContainer, {top: insets.top + 8}]}>
-        <TouchableOpacity
-          style={dynamicStyles.backBtn}
-          onPress={handlers.goBack}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-          hitSlop={{top: 4, bottom: 4, left: 4, right: 4}}>
-          <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton onPress={handlers.goBack} />
       </View>
 
       {/* ── Main scrollable content ── */}

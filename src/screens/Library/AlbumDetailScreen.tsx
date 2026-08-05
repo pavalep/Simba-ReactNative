@@ -14,6 +14,7 @@ import {useAppSelector} from '../../store';
 import {selectAlbumTracks} from '../../store/slices/mediaSlice';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import FastImage from 'react-native-fast-image';
 import {radius} from '../../theme/tokens';
@@ -121,13 +122,6 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
           paddingTop: Platform.OS === 'android' ? 16 : 4,
           paddingBottom: 12,
           gap: 12,
-        },
-        backBtn: {
-          width: 36,
-          height: 36,
-          borderRadius: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
         },
         shareBtn: {
           width: 36,
@@ -270,12 +264,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, {backgroundColor: colors.background.elevated}]}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}>
-          <SvgIcon name="chevronDown" size={18} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <AppText variant="h2" color="primary">
           Album
         </AppText>

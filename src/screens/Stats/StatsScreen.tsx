@@ -10,6 +10,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {useAppSelector} from '../../store';
 import {formatDuration} from '../../utils/timeAgo';
@@ -116,13 +117,7 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
       ]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}
-          accessibilityRole="button"
-          accessibilityLabel="Go back">
-          <SvgIcon name="chevronDown" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <AppText variant="h2" color="primary" style={styles.headerTitle}>
           Stats
         </AppText>

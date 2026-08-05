@@ -11,6 +11,18 @@ export interface ApiSearchOptions {
   page?: number;
   limit?: number;
   language?: string;
+  /** Optional provider-specific sort (e.g. Internet Archive "downloads desc"). */
+  sort?: string;
+}
+
+/**
+ * Paginated response from an Internet Archive advanced search.
+ * `numFound` drives "hasMore" for infinite scroll.
+ */
+export interface PaginatedResult<T> {
+  items: T[];
+  /** Total matching documents across all pages. */
+  numFound: number;
 }
 
 // ─── TVMaze ─────────────────────────────────────────────────────────────
@@ -238,6 +250,8 @@ export interface InternetArchiveVideoResult {
   avgRating: number;
   downloadCount: number;
   imageUrl: string;
+  /** Direct playable stream URL — populated when details are resolved. */
+  streamingUrl: string;
   subtitles: InternetArchiveSubtitleFile[];
   audioTracks: InternetArchiveAudioTrack[];
   downloadUrls: {format: string; url: string}[];

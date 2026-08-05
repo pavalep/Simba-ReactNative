@@ -27,7 +27,10 @@ export async function aggregateSearch(
     searchAudiobooks(query, {...options, limit}).catch(() => []),
     getAllIPTVChannels({...options, limit}).catch(() => []),
     searchJamendoTracks(query, {...options, limit}).catch(() => []),
-    searchInternetArchiveAudio(query, {...options, limit}).catch(() => []),
+    // PaginatedResult — only the items are aggregated here.
+    searchInternetArchiveAudio(query, {...options, limit})
+      .then(r => r.items)
+      .catch(() => []),
     searchAudiusTracks(query, {...options, limit}).catch(() => []),
   ]);
 

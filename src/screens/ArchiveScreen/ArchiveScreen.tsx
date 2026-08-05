@@ -1,6 +1,11 @@
 // ─── Internet Archive Browse Screen ────────────────────────────────────
-// Phase 37.4/37.5: search audio + video items on archive.org. Audio →
-// ArchiveItemDetail (track list), video → MovieDetail (existing player).
+// Phase 3 formula: search bar above a react-native-tab-view tab bar.
+//   • Audio / Video are lazily-mounted scenes (native pager) — a scope is
+//     a (tab, searchTerm) pair, cached independently so toggling tabs never
+//     refetches or clears already-loaded data and search text survives.
+//   • Every list paginates via onEndReached (infinite scroll) using IA's
+//     `numFound` as the has-more boundary.
+// Audio → ArchiveItemDetail (track list), video → MovieDetail (player).
 
 import React, {useCallback, useMemo} from 'react';
 import {
@@ -10,18 +15,29 @@ import {
   RefreshControl,
   StyleSheet,
 } from 'react-native';
+import {
+  TabView,
+  TabBar,
+  type SceneRendererProps,
+  type Route,
+} from 'react-native-tab-view';
+import FastImage from 'react-native-fast-image';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import type {ArchiveScreenProps} from '../../navigation/types';
-import {useArchiveScreen} from './hooks/useArchiveScreen';
+import {
+  useArchiveScreen,
+  type ArchiveTab,
+  type AudioScopeState,
+  type VideoScopeState,
+} from './hooks/useArchiveScreen';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';
-import {SvgIcon} from '../../components/utility/SvgIcon';
-import {ErrorState} from '../../components/feedback/ErrorState/ErrorState';
-import {SkeletonList} from '../../components/core/Skeleton/SkeletonList';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import FastImage from 'react-native-fast-image';
+import {SvgIcon} from '../../components/utility/SvgIcon';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {ARCHIVE_QUICK_SEARCHES} from '../../constants/audiobookCategories';
 import type {
   InternetArchiveItemResult,
@@ -29,8 +45,6 @@ import type {
 } from '../../types/api';
 
 type Props = ArchiveScreenProps;
-
-const ARCHIVE_TABS = ['audio', 'video'] as const;
 
 // ─── Normalized rows ───────────────────────────────────────────────────
 
@@ -66,8 +80,8 @@ function videoToRow(item: InternetArchiveVideoResult): ArchiveRow {
 
 interface ArchiveCardProps {
   row: ArchiveRow;
-  mediaType: 'audio' | 'video';
-  onPress: (row: ArchiveRow) => void;
+  mediaType: ArchiveTab;
+  onPress: (row: ArchiveRow, mediaType: ArchiveTab) => void;
 }
 
 const ArchiveCard: React.FC<ArchiveCardProps> = React.memo(
@@ -76,7 +90,7 @@ const ArchiveCard: React.FC<ArchiveCardProps> = React.memo(
     return (
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={() => onPress(row)}
+        onPress={() => onPress(row, mediaType)}
         style={[styles.card, {backgroundColor: colors.background.elevated}]}
         accessibilityRole="button"
         accessibilityLabel={`Open ${row.title}`}>
@@ -120,34 +134,175 @@ const ArchiveCard: React.FC<ArchiveCardProps> = React.memo(
   },
 );
 
+// ─── Tab Scene ─────────────────────────────────────────────────────────
+
+interface ArchiveTabSceneProps {
+  tab: ArchiveTab;
+  scope: AudioScopeState | VideoScopeState;
+  isSearchActive: boolean;
+  isOnline: boolean;
+  refreshing: boolean;
+  ensureLoaded: (tab: ArchiveTab) => void;
+  loadMore: (tab: ArchiveTab) => void;
+  retry: (tab: ArchiveTab) => void;
+  handleRefresh: () => void;
+  onPressRow: (row: ArchiveRow, mediaType: ArchiveTab) => void;
+}
+
+const ArchiveTabScene: React.FC<ArchiveTabSceneProps> = React.memo(
+  ({
+    tab,
+    scope,
+    isSearchActive,
+    isOnline,
+    refreshing,
+    ensureLoaded,
+    loadMore,
+    retry,
+    handleRefresh,
+    onPressRow,
+  }) => {
+    const {colors} = useTheme();
+    const {hasLoaded, isLoading, isLoadingMore, error} = scope;
+
+    // Auto-load page 1 the first time this scene mounts (lazy tab).
+    React.useEffect(() => {
+      ensureLoaded(tab);
+    }, [ensureLoaded, tab]);
+
+    const rows = useMemo<ArchiveRow[]>(() => {
+      if (tab === 'audio') {
+        return (scope as AudioScopeState).items.map(audioToRow);
+      }
+      return (scope as VideoScopeState).items.map(videoToRow);
+    }, [tab, scope]);
+
+    // ── Initial page-1 loader ──
+    if (!hasLoaded && isLoading) {
+      return (
+        <View style={styles.centerState}>
+          <ActivityOrb size={36} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            Loading {tab === 'audio' ? 'Audio' : 'Video'}…
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Page-1 error ──
+    if (!hasLoaded && !isLoading && error) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon name="alertCircle" size={40} color={colors.accent.goldDim} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            {isOnline ? 'Could not load results.' : 'You are offline.'}
+          </AppText>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => retry(tab)}
+            style={[
+              styles.retryButton,
+              {backgroundColor: colors.accent.gold},
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading">
+            <AppText variant="button" style={{color: colors.background.primary}}>
+              Retry
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // ── Empty (cached or fresh) ──
+    if (hasLoaded && !error && rows.length === 0) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon name="search" size={40} color={colors.accent.goldDim} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            {isSearchActive
+              ? 'No results for this search.'
+              : 'Nothing found here yet.'}
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Loaded list with infinite scroll ──
+    return (
+      <FlatList
+        data={rows}
+        keyExtractor={item => item.identifier}
+        renderItem={({item}) => (
+          <ArchiveCard row={item} mediaType={tab} onPress={onPressRow} />
+        )}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={ItemSeparator}
+        onEndReached={() => loadMore(tab)}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          isLoadingMore || error ? (
+            <View style={styles.footer}>
+              {isLoadingMore ? (
+                <ActivityOrb size={22} />
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => loadMore(tab)}
+                  style={[
+                    styles.loadMoreRetry,
+                    {borderColor: colors.border.subtle},
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Try loading more">
+                  <AppText variant="caption" color="secondary">
+                    Could not load more — tap to retry
+                  </AppText>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.accent.gold}
+            colors={[colors.accent.gold]}
+          />
+        }
+      />
+    );
+  },
+);
+
 // ─── Component ─────────────────────────────────────────────────────────
 
 export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
+  const insets = useSafeAreaInsets();
   const {initialTab, query} = route.params ?? {};
   const {
     tab,
-    setTab,
+    selectTab,
     searchQuery,
     setSearchQuery,
-    audioResults,
-    videoResults,
-    isLoading,
-    error,
+    setSearchTerm,
+    submitSearch,
+    isSearchActive,
     isOnline,
     refreshing,
     handleRefresh,
+    getScope,
+    ensureLoaded,
+    loadMore,
     retry,
   } = useArchiveScreen(initialTab, query);
 
-  const rows = useMemo(
-    () => (tab === 'audio' ? audioResults.map(audioToRow) : videoResults.map(videoToRow)),
-    [tab, audioResults, videoResults],
-  );
-
   const handleRowPress = useCallback(
-    (row: ArchiveRow) => {
-      if (tab === 'video') {
+    (row: ArchiveRow, mediaType: ArchiveTab) => {
+      if (mediaType === 'video') {
         navigation.navigate('MovieDetail', {
           identifier: row.identifier,
           title: row.title,
@@ -159,75 +314,98 @@ export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
         });
       }
     },
-    [navigation, tab],
+    [navigation],
   );
 
-  const isEmpty = !isLoading && !error && rows.length === 0;
+  const routes = useMemo<Route[]>(
+    () => [
+      {key: 'audio', title: 'Audio'},
+      {key: 'video', title: 'Video'},
+    ],
+    [],
+  );
+  const tabIndex = tab === 'video' ? 1 : 0;
+
+  const renderTabBar = useCallback(
+    (props: SceneRendererProps & {navigationState: {index: number; routes: Route[]}}) => (
+      <TabBar
+        {...props}
+        scrollEnabled
+        indicatorStyle={[styles.tabIndicator, {backgroundColor: colors.accent.gold}]}
+        activeColor={colors.accent.gold}
+        inactiveColor={colors.text.secondary}
+        tabStyle={styles.tab}
+        contentContainerStyle={styles.tabBarContent}
+        style={[styles.tabBar, {backgroundColor: colors.background.primary}]}
+      />
+    ),
+    [colors],
+  );
+
+  const renderScene = useCallback(
+    ({route: tabRoute}: {route: Route}) => {
+      const t = tabRoute.key as ArchiveTab;
+      return (
+        <ArchiveTabScene
+          tab={t}
+          scope={getScope(t)}
+          isSearchActive={isSearchActive}
+          isOnline={isOnline}
+          refreshing={refreshing}
+          ensureLoaded={ensureLoaded}
+          loadMore={loadMore}
+          retry={retry}
+          handleRefresh={handleRefresh}
+          onPressRow={handleRowPress}
+        />
+      );
+    },
+    [
+      getScope,
+      isSearchActive,
+      isOnline,
+      refreshing,
+      ensureLoaded,
+      loadMore,
+      retry,
+      handleRefresh,
+      handleRowPress,
+    ],
+  );
+
+  const renderLazyPlaceholder = useCallback(
+    ({route: tabRoute}: {route: Route}) => (
+      <View style={styles.centerState}>
+        <ActivityOrb />
+        <AppText variant="body2" color="tertiary" style={styles.stateText}>
+          Loading {tabRoute.key === 'audio' ? 'Audio' : 'Video'}…
+        </AppText>
+      </View>
+    ),
+    [],
+  );
 
   return (
-    <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
+    <View
+      style={[
+        styles.root,
+        {backgroundColor: colors.background.primary, paddingTop: insets.top},
+      ]}>
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Internet Archive" />
 
-      <View style={styles.content}>
-        {/* Tab chips */}
-        <View style={styles.modeRow}>
-          <FlatList
-            horizontal
-            data={ARCHIVE_TABS}
-            keyExtractor={t => t}
-            renderItem={({item: t}) => {
-              const active = tab === t;
-              return (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => setTab(t)}
-                  style={[
-                    styles.modeChip,
-                    {
-                      backgroundColor: active
-                        ? colors.accent.gold
-                        : colors.background.elevated,
-                      borderColor: active
-                        ? colors.accent.gold
-                        : colors.border.subtle,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{selected: active}}
-                  accessibilityLabel={`${t === 'audio' ? 'Audio' : 'Video'} results`}>
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.modeChipText,
-                      {
-                        color: active
-                          ? colors.background.primary
-                          : colors.text.secondary,
-                      },
-                    ]}>
-                    {t === 'audio' ? 'Audio' : 'Video'}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            }}
-            contentContainerStyle={styles.modeRail}
-            showsHorizontalScrollIndicator={false}
-            scrollEnabled={false}
-            initialNumToRender={ARCHIVE_TABS.length}
-          />
-        </View>
-
+      {/* ── Search — stays put while tabs change ── */}
+      <View style={styles.searchSection}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
+          onDebouncedChange={setSearchTerm}
           placeholder={
             tab === 'audio'
               ? 'Search audio: radio, concerts, speeches…'
               : 'Search films & documentaries…'
           }
         />
-
         {/* Quick-search chips */}
         {!searchQuery.trim() && (
           <FlatList
@@ -237,10 +415,13 @@ export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
             renderItem={({item: entry}) => (
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => setSearchQuery(entry.query)}
+                onPress={() => submitSearch(entry.query)}
                 style={[
                   styles.chip,
-                  {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle},
+                  {
+                    backgroundColor: colors.background.elevated,
+                    borderColor: colors.border.subtle,
+                  },
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={`Search ${entry.label}`}>
@@ -259,46 +440,19 @@ export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
             maxToRenderPerBatch={12}
           />
         )}
-
-        {isLoading && <SkeletonList count={6} />}
-
-        {!isLoading && error && (
-          <ErrorState
-            message={isOnline ? error : 'You are offline.'}
-            onRetry={retry}
-          />
-        )}
-
-        {isEmpty && (
-          <View style={styles.centerState}>
-            <SvgIcon name="search" size={40} color={colors.accent.goldDim} />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              No results found. Try a different search.
-            </AppText>
-          </View>
-        )}
-
-        {!isLoading && !error && rows.length > 0 && (
-          <FlatList
-            data={rows}
-            keyExtractor={item => item.identifier}
-            renderItem={({item}) => (
-              <ArchiveCard row={item} mediaType={tab} onPress={handleRowPress} />
-            )}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={ItemSeparator}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={colors.accent.gold}
-                colors={[colors.accent.gold]}
-              />
-            }
-          />
-        )}
       </View>
+
+      {/* ── TabView — lazy scenes + per-scope cache ── */}
+      <TabView
+        navigationState={{index: tabIndex, routes}}
+        onIndexChange={index => selectTab(routes[index].key as ArchiveTab)}
+        renderTabBar={renderTabBar}
+        renderScene={renderScene}
+        renderLazyPlaceholder={renderLazyPlaceholder}
+        lazy
+        commonOptions={{labelStyle: styles.tabLabel}}
+        style={styles.sceneContainer}
+      />
     </View>
   );
 };
@@ -309,30 +463,12 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  content: {
-    flex: 1,
+  searchSection: {
     paddingTop: spacing.sm,
-  },
-  modeRow: {
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  modeRail: {
-    flexDirection: 'row',
     gap: spacing.sm,
-  },
-  modeChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-  },
-  modeChipText: {
-    fontWeight: '700',
   },
   chipScroll: {
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
     gap: spacing.sm,
   },
   chip: {
@@ -343,6 +479,46 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     gap: spacing.xs,
+  },
+  tabBar: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(128,128,128,0.25)',
+  },
+  tabBarContent: {
+    paddingHorizontal: spacing.md,
+  },
+  tab: {
+    width: 'auto',
+    paddingHorizontal: spacing.lg,
+  },
+  tabIndicator: {
+    height: 3,
+    borderRadius: 2,
+  },
+  tabLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    textTransform: 'none',
+  },
+  sceneContainer: {
+    flex: 1,
+  },
+  centerState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xxl,
+    gap: spacing.sm,
+    paddingBottom: 80,
+  },
+  stateText: {
+    textAlign: 'center',
+  },
+  retryButton: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    marginTop: spacing.xs,
   },
   listContent: {
     padding: spacing.md,
@@ -373,15 +549,16 @@ const styles = StyleSheet.create({
   name: {
     fontWeight: '600',
   },
-  centerState: {
-    flex: 1,
+  footer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
-    gap: spacing.sm,
-    paddingBottom: 80,
+    paddingVertical: spacing.lg,
+    minHeight: 56,
   },
-  stateText: {
-    textAlign: 'center',
+  loadMoreRetry: {
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
 });

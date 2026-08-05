@@ -1,43 +1,40 @@
-// ─── Audiobooks Browse Screen ─────────────────────────────────────────
-// Phase 37.1: browse LibriVox by search / genre / recent. Tap a book →
-// AudiobookDetail (chapter list + playback). Long-press is on detail.
+// ─── Audiobooks Browse Screen ────────────────────────────────────────
+// Phase 3 formula: search bar above a react-native-tab-view tab bar.
+//   • Search / Genres / New Releases are lazily-mounted scenes (native pager)
+//   • each (tab, searchTerm, genre) scope is cached independently —
+//     toggling tabs never refetches or clears already-loaded data
+//   • every list paginates via onEndReached (infinite scroll)
+// Tap a book → AudiobookDetail (chapter list + playback).
 
-import React, {useCallback} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {
   View,
   FlatList,
   TouchableOpacity,
-  RefreshControl,
   StyleSheet,
 } from 'react-native';
+import {TabView, TabBar, type SceneRendererProps, type Route} from 'react-native-tab-view';
+import FastImage from 'react-native-fast-image';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import type {AudiobooksScreenProps} from '../../navigation/types';
 import {
   useAudiobooksScreen,
-  type AudiobooksMode,
+  type AudiobooksTab,
+  type AudiobookScopeState,
 } from './hooks/useAudiobooksScreen';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';
-import {SvgIcon} from '../../components/utility/SvgIcon';
-import {ErrorState} from '../../components/feedback/ErrorState/ErrorState';
-import {SkeletonList} from '../../components/core/Skeleton/SkeletonList';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import FastImage from 'react-native-fast-image';
+import {SvgIcon} from '../../components/utility/SvgIcon';
+import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {LIBRIVOX_GENRES} from '../../constants/audiobookCategories';
 import {archiveImageUrl, archiveIdentifierFromUrl} from '../../services/api/internetArchiveService';
 import type {AudiobookResult} from '../../types/api';
 
 type Props = AudiobooksScreenProps;
-
-// ─── Modes ─────────────────────────────────────────────────────────────
-
-const MODES: Array<{id: AudiobooksMode; label: string}> = [
-  {id: 'search', label: 'Search'},
-  {id: 'genres', label: 'Genres'},
-  {id: 'recent', label: 'New Releases'},
-];
 
 // ─── Normalized row ────────────────────────────────────────────────────
 
@@ -96,7 +93,7 @@ const BookCard: React.FC<BookCardProps> = React.memo(({row, onPress}) => {
             resizeMode={FastImage.resizeMode.cover}
           />
         ) : (
-          <SvgIcon name="music" size={22} color={colors.accent.gold} />
+          <SvgIcon name="headphones" size={22} color={colors.accent.gold} />
         )}
       </View>
       <View style={styles.info}>
@@ -121,28 +118,243 @@ const BookCard: React.FC<BookCardProps> = React.memo(({row, onPress}) => {
   );
 });
 
-// ─── Component ─────────────────────────────────────────────────────────
+// ─── Tab Scene ─────────────────────────────────────────────────────────
+
+interface AudiobookTabSceneProps {
+  tab: AudiobooksTab;
+  scope: AudiobookScopeState;
+  isSearchActive: boolean;
+  selectedGenre: string | null;
+  selectGenre: (genre: string) => void;
+  ensureLoaded: (tab: AudiobooksTab) => void;
+  loadMore: (tab: AudiobooksTab) => void;
+  retry: (tab: AudiobooksTab) => void;
+  onPressBook: (row: BookRow) => void;
+}
+
+const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
+  ({
+    tab,
+    scope,
+    isSearchActive,
+    selectedGenre,
+    selectGenre,
+    ensureLoaded,
+    loadMore,
+    retry,
+    onPressBook,
+  }) => {
+    const {colors} = useTheme();
+    const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
+
+    React.useEffect(() => {
+      ensureLoaded(tab);
+    }, [ensureLoaded, tab]);
+
+    const rows = useMemo<BookRow[]>(() => items.map(toRow), [items]);
+
+    // ── Page-1 loader ──
+    if (!hasLoaded && isLoading) {
+      return (
+        <View style={styles.centerState}>
+          <ActivityOrb />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            Loading audiobooks…
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Page-1 error ──
+    if (!hasLoaded && !isLoading && error) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon name="alertCircle" size={40} color={colors.accent.goldDim} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            Could not load results.
+          </AppText>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => retry(tab)}
+            style={[styles.retryButton, {backgroundColor: colors.accent.gold}]}
+            accessibilityRole="button">
+            <AppText variant="button" style={styles.retryText}>
+              Retry
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // ── Empty (cached or fresh) ──
+    if (hasLoaded && !error && rows.length === 0) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon
+            name={tab === 'genres' ? 'layoutGrid' : 'headphones'}
+            size={40}
+            color={colors.accent.goldDim}
+          />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            {tab === 'search'
+              ? isSearchActive
+                ? 'No audiobooks match your search.'
+                : 'Search for audiobooks by title or author.'
+              : tab === 'genres'
+              ? 'Select a genre to browse.'
+              : 'No recent audiobooks found.'}
+          </AppText>
+          {/* Genre chips — only on the Genres tab when no results yet */}
+          {tab === 'genres' && (
+            <View style={styles.chipWrap}>
+              {LIBRIVOX_GENRES.map(g => {
+                const active = selectedGenre === g;
+                return (
+                  <TouchableOpacity
+                    key={g}
+                    activeOpacity={0.8}
+                    onPress={() => selectGenre(g)}
+                    style={[
+                      styles.genreChip,
+                      {
+                        backgroundColor: active
+                          ? colors.accent.gold
+                          : colors.background.elevated,
+                        borderColor: active
+                          ? colors.accent.gold
+                          : colors.border.subtle,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{selected: active}}>
+                    <AppText
+                      variant="caption"
+                      style={{
+                        color: active
+                          ? colors.background.primary
+                          : colors.text.secondary,
+                        fontWeight: '700',
+                      }}>
+                      {g}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    // ── Genre chips above the list (Genres tab, already loaded) ──
+    const genreChipsHeader =
+      tab === 'genres' ? (
+        <View style={styles.chipWrap}>
+          {LIBRIVOX_GENRES.map(g => {
+            const active = selectedGenre === g;
+            return (
+              <TouchableOpacity
+                key={g}
+                activeOpacity={0.8}
+                onPress={() => selectGenre(g)}
+                style={[
+                  styles.genreChip,
+                  {
+                    backgroundColor: active
+                      ? colors.accent.gold
+                      : colors.background.elevated,
+                    borderColor: active
+                      ? colors.accent.gold
+                      : colors.border.subtle,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{selected: active}}>
+                <AppText
+                  variant="caption"
+                  style={{
+                    color: active
+                      ? colors.background.primary
+                      : colors.text.secondary,
+                    fontWeight: '700',
+                  }}>
+                  {g}
+                </AppText>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null;
+
+    // ── Loaded list with infinite scroll ──
+    return (
+      <FlatList
+        data={rows}
+        keyExtractor={item => String(item.id)}
+        renderItem={({item}) => (
+          <BookCard row={item} onPress={onPressBook} />
+        )}
+        ListHeaderComponent={genreChipsHeader}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={ItemSeparator}
+        onEndReached={() => loadMore(tab)}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          isLoadingMore || error ? (
+            <View style={styles.footer}>
+              {isLoadingMore ? (
+                <ActivityOrb size={22} />
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => loadMore(tab)}
+                  style={[
+                    styles.loadMoreRetry,
+                    {borderColor: colors.border.subtle},
+                  ]}
+                  accessibilityRole="button">
+                  <AppText variant="caption" color="secondary">
+                    Could not load more — tap to retry
+                  </AppText>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : null
+        }
+        windowSize={5}
+        maxToRenderPerBatch={10}
+      />
+    );
+  },
+);
+
+// ─── Screen ────────────────────────────────────────────────────────────
+
+const TABS: Array<{key: AudiobooksTab; title: string}> = [
+  {key: 'search', title: 'Search'},
+  {key: 'genres', title: 'Genres'},
+  {key: 'recent', title: 'New Releases'},
+];
 
 export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
+  const insets = useSafeAreaInsets();
   const {initialTab, genre} = route.params ?? {};
   const {
-    mode,
-    setMode,
+    selectedTab,
+    selectTab,
     selectedGenre,
-    setSelectedGenre,
-    books,
-    isLoading,
-    error,
+    selectGenre,
     searchQuery,
     setSearchQuery,
-    isOnline,
-    refreshing,
-    handleRefresh,
+    setSearchTerm,
+    isSearchActive,
+    getScope,
+    ensureLoaded,
+    loadMore,
     retry,
   } = useAudiobooksScreen(initialTab, genre);
-
-  const rows = React.useMemo(() => books.map(toRow), [books]);
 
   const handleBookPress = useCallback(
     (row: BookRow) => {
@@ -154,157 +366,114 @@ export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
     [navigation],
   );
 
-  const showGenreChips = mode === 'genres';
-  const showSearch = mode === 'search';
-  const isEmpty = !isLoading && !error && rows.length === 0;
+  // ── TabView wiring ──
+  const routes = useMemo(
+    () => TABS.map(t => ({key: t.key, title: t.title})),
+    [],
+  );
+  const tabIndex = Math.max(
+    0,
+    TABS.findIndex(t => t.key === selectedTab),
+  );
+
+  const renderTabBar = useCallback(
+    (props: SceneRendererProps & {navigationState: {index: number; routes: Route[]}}) => (
+      <TabBar
+        {...props}
+        scrollEnabled
+        style={[
+          styles.tabBar,
+          {
+            backgroundColor: colors.background.primary,
+            borderBottomColor: colors.background.highlightDim,
+          },
+        ]}
+        indicatorStyle={[styles.tabIndicator, {backgroundColor: colors.accent.gold}]}
+        activeColor={colors.accent.gold}
+        inactiveColor={colors.text.secondary}
+        tabStyle={styles.tab}
+        contentContainerStyle={styles.tabBarContent}
+      />
+    ),
+    [colors],
+  );
+
+  const renderScene = useCallback(
+    ({route: tabRoute}: {route: Route}) => {
+      const t = tabRoute.key as AudiobooksTab;
+      return (
+        <AudiobookTabScene
+          tab={t}
+          scope={getScope(t)}
+          isSearchActive={isSearchActive}
+          selectedGenre={selectedGenre}
+          selectGenre={selectGenre}
+          ensureLoaded={ensureLoaded}
+          loadMore={loadMore}
+          retry={retry}
+          onPressBook={handleBookPress}
+        />
+      );
+    },
+    [
+      getScope,
+      isSearchActive,
+      selectedGenre,
+      selectGenre,
+      ensureLoaded,
+      loadMore,
+      retry,
+      handleBookPress,
+    ],
+  );
+
+  const renderLazyPlaceholder = useCallback(
+    ({route: tabRoute}: {route: Route}) => (
+      <View style={styles.centerState}>
+        <ActivityOrb />
+        <AppText variant="body2" color="tertiary" style={styles.stateText}>
+          Loading {TABS.find(t => t.key === tabRoute.key)?.title ?? 'tab'}…
+        </AppText>
+      </View>
+    ),
+    [],
+  );
 
   return (
-    <View style={[styles.root, {backgroundColor: colors.background.primary}]}>
+    <View
+      style={[
+        styles.root,
+        {backgroundColor: colors.background.primary, paddingTop: insets.top},
+      ]}>
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Audiobooks" />
 
-      <View style={styles.content}>
-        {/* Mode chips */}
-        <View style={styles.modeRow}>
-          <FlatList
-            horizontal
-            data={MODES}
-            keyExtractor={m => m.id}
-            renderItem={({item: m}) => {
-              const active = mode === m.id;
-              return (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => setMode(m.id)}
-                  style={[
-                    styles.modeChip,
-                    {
-                      backgroundColor: active
-                        ? colors.accent.gold
-                        : colors.background.elevated,
-                      borderColor: active
-                        ? colors.accent.gold
-                        : colors.border.subtle,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{selected: active}}
-                  accessibilityLabel={`${m.label} mode`}>
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.modeChipText,
-                      {
-                        color: active
-                          ? colors.background.primary
-                          : colors.text.secondary,
-                      },
-                    ]}>
-                    {m.label}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            }}
-            contentContainerStyle={styles.modeRail}
-            showsHorizontalScrollIndicator={false}
-            scrollEnabled={false}
-            initialNumToRender={MODES.length}
-          />
-        </View>
-
-        {showSearch && (
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search titles or authors…"
-          />
-        )}
-
-        {showGenreChips && (
-          <View style={styles.chipWrap}>
-            {LIBRIVOX_GENRES.map(g => {
-              const active = selectedGenre === g;
-              return (
-                <TouchableOpacity
-                  key={g}
-                  activeOpacity={0.8}
-                  onPress={() => setSelectedGenre(g)}
-                  style={[
-                    styles.genreChip,
-                    {
-                      backgroundColor: active
-                        ? colors.accent.gold
-                        : colors.background.elevated,
-                      borderColor: active
-                        ? colors.accent.gold
-                        : colors.border.subtle,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityState={{selected: active}}
-                  accessibilityLabel={`Genre ${g}`}>
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.modeChipText,
-                      {
-                        color: active
-                          ? colors.background.primary
-                          : colors.text.secondary,
-                      },
-                    ]}>
-                    {g}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {isLoading && <SkeletonList count={6} />}
-
-        {!isLoading && error && (
-          <ErrorState
-            message={isOnline ? error : 'You are offline.'}
-            onRetry={retry}
-          />
-        )}
-
-        {isEmpty && (
-          <View style={styles.centerState}>
-            <SvgIcon name="music" size={40} color={colors.accent.goldDim} />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              {mode === 'search'
-                ? 'No audiobooks found. Try another title or author.'
-                : 'No audiobooks in this category.'}
-            </AppText>
-          </View>
-        )}
-
-        {!isLoading && !error && rows.length > 0 && (
-          <FlatList
-            data={rows}
-            keyExtractor={item => String(item.id)}
-            renderItem={({item}) => (
-              <BookCard row={item} onPress={handleBookPress} />
-            )}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={ItemSeparator}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={colors.accent.gold}
-                colors={[colors.accent.gold]}
-              />
-            }
-          />
-        )}
+      {/* ── Search (stays put while tabs change) ── */}
+      <View style={styles.searchSection}>
+        <SearchBar
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onDebouncedChange={setSearchTerm}
+          placeholder="Search titles or authors…"
+        />
       </View>
+
+      {/* ── TabView (lazy scenes) ── */}
+      <TabView
+        navigationState={{index: tabIndex, routes}}
+        onIndexChange={index => selectTab(routes[index].key as AudiobooksTab)}
+        renderTabBar={renderTabBar}
+        renderScene={renderScene}
+        renderLazyPlaceholder={renderLazyPlaceholder}
+        lazy
+        commonOptions={{labelStyle: styles.tabLabel}}
+        style={styles.sceneContainer}
+      />
     </View>
   );
 };
+
+// ─── Styles ────────────────────────────────────────────────────────────
 
 const ItemSeparator = () => <View style={styles.separator} />;
 
@@ -312,33 +481,64 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  content: {
+  searchSection: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  // ── TabView ──
+  sceneContainer: {
     flex: 1,
-    paddingTop: spacing.sm,
   },
-  modeRow: {
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
+  tabBar: {
+    borderBottomWidth: 1,
+    elevation: 0,
+    shadowOpacity: 0,
   },
-  modeRail: {
-    flexDirection: 'row',
-    gap: spacing.sm,
+  tabIndicator: {
+    height: 3,
+    borderRadius: radius.full,
   },
-  modeChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-  },
-  modeChipText: {
+  tabLabel: {
+    fontSize: 13,
     fontWeight: '700',
+    textTransform: 'none',
   },
+  tab: {
+    width: 'auto',
+    minWidth: 84,
+  },
+  tabBarContent: {
+    paddingHorizontal: spacing.xs,
+  },
+  // ── Center states ──
+  centerState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 80,
+  },
+  stateText: {
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+  },
+  retryText: {
+    color: '#1A1206',
+  },
+  // ── Genre chips ──
   chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
+    paddingTop: spacing.sm,
     gap: spacing.sm,
+    justifyContent: 'center',
   },
   genreChip: {
     paddingHorizontal: spacing.md,
@@ -346,6 +546,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
   },
+  // ── List ──
   listContent: {
     padding: spacing.md,
     paddingBottom: spacing.xxl + 80,
@@ -375,15 +576,16 @@ const styles = StyleSheet.create({
   name: {
     fontWeight: '600',
   },
-  centerState: {
-    flex: 1,
+  footer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
-    gap: spacing.sm,
-    paddingBottom: 80,
+    paddingVertical: spacing.lg,
+    minHeight: 56,
   },
-  stateText: {
-    textAlign: 'center',
+  loadMoreRetry: {
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
 });

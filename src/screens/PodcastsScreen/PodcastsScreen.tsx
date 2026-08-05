@@ -1,6 +1,8 @@
-// ─── Podcasts Browse Screen ────────────────────────────────────────────
-// Pre-built category chips + search bar for podcast discovery.
-// Tap a podcast card → calls onPodcastPress or navigates.
+// ─── Podcasts Browse Screen ──────────────────────────────────────────
+// Phase 3 formula: SearchBar above react-native-tab-view tabs.
+// Each podcast category is a lazily-mounted tab scene with its own
+// cached data + infinite scroll. Search persists across tab toggles.
+// Tap a podcast → PodcastDetail (episode list + playback).
 
 import React, {useCallback, useMemo} from 'react';
 import {
@@ -10,74 +12,25 @@ import {
   RefreshControl,
   StyleSheet,
 } from 'react-native';
+import {TabView, TabBar, type SceneRendererProps, type Route} from 'react-native-tab-view';
+import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import type {RootStackScreenProps} from '../../navigation/types';
-import {usePodcastsScreen} from './hooks/usePodcastsScreen';
-import {PODCAST_CATEGORIES} from '../../constants/podcastCategories';
+import {
+  usePodcastsScreen,
+  type PodcastScopeState,
+} from './hooks/usePodcastsScreen';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';
+import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
-import {ErrorState} from '../../components/feedback/ErrorState/ErrorState';
-import {SkeletonList} from '../../components/core/Skeleton/SkeletonList';
-import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import FastImage from 'react-native-fast-image';
 import type {PodcastResult} from '../../types/api';
 
-// ─── Props ─────────────────────────────────────────────────────────────
-
-interface PodcastsScreenProps extends RootStackScreenProps<'PodcastsScreen'> {
-  onPodcastPress?: (item: PodcastResult) => void;
-}
-
-// ─── Category Chip ─────────────────────────────────────────────────────
-
-interface CategoryChipProps {
-  category: (typeof PODCAST_CATEGORIES)[number];
-  isSelected: boolean;
-  onPress: (id: number) => void;
-}
-
-const CategoryChip: React.FC<CategoryChipProps> = React.memo(
-  ({category, isSelected, onPress}) => {
-    const {colors} = useTheme();
-    return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => onPress(category.id)}
-        accessibilityRole="button"
-        accessibilityState={{selected: isSelected}}
-        style={[
-          styles.chip,
-          {
-            backgroundColor: isSelected
-              ? colors.accent.gold
-              : colors.background.elevated,
-            borderColor: isSelected
-              ? colors.accent.gold
-              : colors.background.highlight,
-          },
-        ]}>
-        <SvgIcon
-          name={category.icon as any}
-          size={14}
-          color={isSelected ? colors.text.inverse : colors.text.secondary}
-        />
-        <AppText
-          variant="button"
-          style={[
-            styles.chipText,
-            {color: isSelected ? colors.text.inverse : colors.text.secondary},
-          ]}>
-          {category.name}
-        </AppText>
-      </TouchableOpacity>
-    );
-  },
-);
+type Props = RootStackScreenProps<'PodcastsScreen'>;
 
 // ─── Podcast Card ──────────────────────────────────────────────────────
 
@@ -86,342 +39,369 @@ interface PodcastCardProps {
   onPress: (item: PodcastResult) => void;
 }
 
-const PodcastCard: React.FC<PodcastCardProps> = React.memo(
-  ({item, onPress}) => {
+const PodcastCard: React.FC<PodcastCardProps> = React.memo(({item, onPress}) => {
+  const {colors} = useTheme();
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => onPress(item)}
+      accessibilityRole="button"
+      style={[styles.card, {backgroundColor: colors.background.elevated}]}>
+      <View style={[styles.thumb, {backgroundColor: colors.border.subtle}]}>
+        {item.image ? (
+          <FastImage
+            source={{uri: item.image}}
+            style={styles.thumb}
+            resizeMode={FastImage.resizeMode.cover}
+          />
+        ) : (
+          <SvgIcon name="music" size={24} color={colors.accent.goldDim} />
+        )}
+      </View>
+      <View style={styles.info}>
+        <AppText variant="bodySmall" numberOfLines={1} style={styles.title}>
+          {item.title}
+        </AppText>
+        {item.author ? (
+          <AppText variant="caption" color="secondary" numberOfLines={1}>
+            {item.author}
+          </AppText>
+        ) : null}
+        {item.episodeCount > 0 && (
+          <View style={[styles.badge, {backgroundColor: colors.accent.goldDim}]}>
+            <AppText variant="caption" style={[styles.badgeText, {color: colors.accent.gold}]}>
+              {item.episodeCount} ep.
+            </AppText>
+          </View>
+        )}
+      </View>
+      <SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />
+    </TouchableOpacity>
+  );
+});
+
+// ─── Tab Scene ─────────────────────────────────────────────────────────
+
+interface PodcastTabSceneProps {
+  tabTitle: string;
+  scope: PodcastScopeState;
+  isSearchActive: boolean;
+  isOnline: boolean;
+  refreshing: boolean;
+  ensureLoaded: (title: string) => void;
+  loadMore: (title: string) => void;
+  retry: (title: string) => void;
+  handleRefresh: () => void;
+  onPressPodcast: (item: PodcastResult) => void;
+}
+
+const PodcastTabScene: React.FC<PodcastTabSceneProps> = React.memo(
+  ({
+    tabTitle,
+    scope,
+    isSearchActive,
+    isOnline,
+    refreshing,
+    ensureLoaded,
+    loadMore,
+    retry,
+    handleRefresh,
+    onPressPodcast,
+  }) => {
     const {colors} = useTheme();
+    const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
+
+    React.useEffect(() => {
+      ensureLoaded(tabTitle);
+    }, [ensureLoaded, tabTitle]);
+
+    // ── Page-1 loader ──
+    if (!hasLoaded && isLoading) {
+      return (
+        <View style={styles.centerState}>
+          <ActivityOrb />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            Loading podcasts…
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Page-1 error ──
+    if (!hasLoaded && !isLoading && error) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon name="alertCircle" size={40} color={colors.accent.goldDim} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            {isOnline ? 'Could not load podcasts.' : 'You are offline.'}
+          </AppText>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => retry(tabTitle)}
+            style={[styles.retryButton, {backgroundColor: colors.accent.gold}]}
+            accessibilityRole="button">
+            <AppText variant="button" style={styles.retryText}>
+              Retry
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // ── Empty ──
+    if (hasLoaded && !error && items.length === 0) {
+      return (
+        <View style={styles.centerState}>
+          <SvgIcon name="folder" size={40} color={colors.accent.goldDim} />
+          <AppText variant="body2" color="tertiary" style={styles.stateText}>
+            {isSearchActive
+              ? 'No podcasts match your search.'
+              : 'No podcasts found in this category.'}
+          </AppText>
+        </View>
+      );
+    }
+
+    // ── Loaded list ──
+    const hasMore = items.length >= (scope.maxRequested || 25) && (scope.maxRequested || 25) < 100;
 
     return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => onPress(item)}
-        accessibilityRole="button"
-        style={[
-          styles.podcastCard,
-          {backgroundColor: colors.background.elevated},
-        ]}>
-        {/* Image / Placeholder */}
-        <View
-          style={[
-            styles.podcastImage,
-            {backgroundColor: colors.border.subtle},
-          ]}>
-          {item.image ? (
-            <FastImage
-              source={{uri: item.image}}
-              style={styles.podcastImage}
-              resizeMode={FastImage.resizeMode.cover}
-            />
-          ) : (
-            <SvgIcon name="music" size={24} color={colors.accent.goldDim} />
-          )}
-        </View>
-
-        {/* Info column */}
-        <View style={styles.podcastInfo}>
-          <AppText
-            variant="bodySmall"
-            numberOfLines={1}
-            style={styles.podcastTitle}>
-            {item.title}
-          </AppText>
-          {item.author ? (
-            <AppText variant="caption" color="secondary" numberOfLines={1}>
-              {item.author}
-            </AppText>
-          ) : null}
-          {item.episodeCount > 0 && (
-            <View
-              style={[
-                styles.episodeBadge,
-                {backgroundColor: colors.accent.goldDim},
-              ]}>
-              <AppText
-                variant="caption"
-                style={[styles.episodeText, {color: colors.accent.gold}]}>
-                {item.episodeCount} ep.
-              </AppText>
+      <FlatList
+        data={items}
+        keyExtractor={item => String(item.id)}
+        renderItem={({item}) => (
+          <PodcastCard item={item} onPress={onPressPodcast} />
+        )}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        ItemSeparatorComponent={ItemSeparator}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.accent.gold}
+            colors={[colors.accent.gold]}
+          />
+        }
+        onEndReached={() => hasMore && loadMore(tabTitle)}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          isLoadingMore || (hasMore && error) ? (
+            <View style={styles.footer}>
+              {isLoadingMore ? (
+                <ActivityOrb size={22} />
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => loadMore(tabTitle)}
+                  style={[styles.loadMoreRetry, {borderColor: colors.border.subtle}]}
+                  accessibilityRole="button">
+                  <AppText variant="caption" color="secondary">
+                    Could not load more — tap to retry
+                  </AppText>
+                </TouchableOpacity>
+              )}
             </View>
-          )}
-        </View>
-
-        {/* Arrow */}
-        <SvgIcon
-          name="chevronRight"
-          size={18}
-          color={colors.text.tertiary}
-        />
-      </TouchableOpacity>
+          ) : null
+        }
+        windowSize={5}
+        maxToRenderPerBatch={10}
+      />
     );
   },
 );
 
 // ─── Screen ────────────────────────────────────────────────────────────
 
-export const PodcastsScreen: React.FC<PodcastsScreenProps> = ({
-  navigation,
-  route,
-  onPodcastPress,
-}) => {
+export const PodcastsScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {
-    selectedCategory,
-    setSelectedCategory,
-    results,
-    isLoading,
-    error,
+    tabs,
+    tabIndex,
+    setTabIndex,
     searchQuery,
     setSearchQuery,
+    setSearchTerm,
+    isSearchActive,
     isOnline,
+    getScope,
+    ensureLoaded,
+    loadMore,
+    retry,
     refreshing,
     handleRefresh,
-    retry,
-    loadMore,
-    hasMore,
   } = usePodcastsScreen(route.params?.categoryId);
-
-  const handleCategoryPress = useCallback(
-    (id: number) => {
-      setSearchQuery('');
-      setSelectedCategory(id);
-    },
-    [setSelectedCategory, setSearchQuery],
-  );
 
   const handlePodcastPress = useCallback(
     (item: PodcastResult) => {
-      if (onPodcastPress) {
-        onPodcastPress(item);
-        return;
-      }
-      // 35.1: default navigation when not embedded (Home passes its own)
       navigation.navigate('PodcastDetail', {
         podcastId: item.id,
         podcastTitle: item.title,
       });
     },
-    [onPodcastPress, navigation],
+    [navigation],
   );
 
-  // Derive the current results key
-  const currentKey = useMemo(() => {
-    if (searchQuery.trim()) {
-      return `search_${searchQuery.trim().toLowerCase()}`;
-    }
-    return `cat_${selectedCategory}`;
-  }, [searchQuery, selectedCategory]);
+  const routes = useMemo(
+    () => tabs.map(t => ({key: t.title, title: t.title})),
+    [tabs],
+  );
 
-  const currentResults = results[currentKey] ?? [];
-  const isEmpty = currentResults.length === 0 && !isLoading && !error;
+  const renderTabBar = useCallback(
+    (props: SceneRendererProps & {navigationState: {index: number; routes: Route[]}}) => (
+      <TabBar
+        {...props}
+        scrollEnabled
+        style={[styles.tabBar, {backgroundColor: colors.background.primary, borderBottomColor: colors.background.highlightDim}]}
+        indicatorStyle={[styles.tabIndicator, {backgroundColor: colors.accent.gold}]}
+        activeColor={colors.accent.gold}
+        inactiveColor={colors.text.secondary}
+        tabStyle={styles.tab}
+        contentContainerStyle={styles.tabBarContent}
+      />
+    ),
+    [colors],
+  );
+
+  const renderScene = useCallback(
+    ({route: tabRoute}: {route: Route}) => (
+      <PodcastTabScene
+        tabTitle={tabRoute.key}
+        scope={getScope(tabRoute.key)}
+        isSearchActive={isSearchActive}
+        isOnline={isOnline}
+        refreshing={refreshing}
+        ensureLoaded={ensureLoaded}
+        loadMore={loadMore}
+        retry={retry}
+        handleRefresh={handleRefresh}
+        onPressPodcast={handlePodcastPress}
+      />
+    ),
+    [getScope, isSearchActive, isOnline, refreshing, ensureLoaded, loadMore, retry, handleRefresh, handlePodcastPress],
+  );
+
+  const renderLazyPlaceholder = useCallback(
+    ({route: tabRoute}: {route: Route}) => (
+      <View style={styles.centerState}>
+        <ActivityOrb />
+        <AppText variant="body2" color="tertiary" style={styles.stateText}>
+          Loading {tabRoute.key}…
+        </AppText>
+      </View>
+    ),
+    [],
+  );
 
   return (
-    <View
-      style={[
-        styles.root,
-        {backgroundColor: colors.background.primary, paddingTop: insets.top},
-      ]}>
+    <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Podcasts" />
 
-      {/* ── Search Bar (53.3: core SearchBar) ── */}
       <View style={styles.searchSection}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
+          onDebouncedChange={setSearchTerm}
           placeholder="Search podcasts…"
         />
       </View>
 
-      {/* ── Category Chips ── */}
-      <View
-        style={[
-          styles.chipSection,
-          {borderBottomColor: colors.border.subtle},
-        ]}>
-        <FlatList
-          horizontal
-          data={PODCAST_CATEGORIES}
-          keyExtractor={cat => String(cat.id)}
-          renderItem={({item: cat}) => (
-            <CategoryChip
-              category={cat}
-              isSelected={selectedCategory === cat.id}
-              onPress={handleCategoryPress}
-            />
-          )}
-          contentContainerStyle={styles.chipScroll}
-          showsHorizontalScrollIndicator={false}
-          initialNumToRender={PODCAST_CATEGORIES.length}
-          windowSize={5}
-          maxToRenderPerBatch={12}
-        />
-      </View>
-
-      {/* ── Content Area ── */}
-      <View style={styles.contentArea}>
-        {isLoading && currentResults.length === 0 && (
-          <SkeletonList count={6} hasImage lines={2} />
-        )}
-
-        {error && currentResults.length === 0 && (
-          <ErrorState
-            title={isOnline ? 'Couldn\'t load podcasts' : 'You\'re offline'}
-            message={
-              isOnline
-                ? error
-                : 'Connect to the internet, then retry to browse podcasts.'
-            }
-            onRetry={retry}
-            retryLabel="Retry"
-          />
-        )}
-
-        {isEmpty && !isLoading && (
-          <View style={styles.centerState}>
-            <SvgIcon
-              name="folder"
-              size={40}
-              color={colors.accent.goldDim}
-            />
-            <AppText
-              variant="body2"
-              color="tertiary"
-              style={styles.stateText}>
-              No podcasts found.
-            </AppText>
-          </View>
-        )}
-
-        {!isLoading && !error && currentResults.length > 0 && (
-          <FlatList
-            data={currentResults}
-            renderItem={({item}) => (
-              <PodcastCard item={item} onPress={handlePodcastPress} />
-            )}
-            keyExtractor={item => String(item.id)}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={() => (
-              <View style={styles.separator} />
-            )}
-            getItemLayout={(_, index) => ({length: 76, offset: 76 * index, index})}
-            windowSize={5}
-            maxToRenderPerBatch={10}
-            removeClippedSubviews={true}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor={colors.accent.gold}
-                colors={[colors.accent.gold]}
-              />
-            }
-            onEndReached={hasMore ? loadMore : undefined}
-            onEndReachedThreshold={0.4}
-            ListFooterComponent={
-              hasMore && isLoading ? (
-                <View style={styles.footerLoading}>
-                  <ActivityOrb size={20} />
-                  <AppText variant="caption" color="tertiary">
-                    Loading more…
-                  </AppText>
-                </View>
-              ) : null
-            }
-          />
-        )}
-      </View>
+      <TabView
+        navigationState={{index: tabIndex, routes}}
+        onIndexChange={setTabIndex}
+        renderTabBar={renderTabBar}
+        renderScene={renderScene}
+        renderLazyPlaceholder={renderLazyPlaceholder}
+        lazy
+        commonOptions={{labelStyle: styles.tabLabel}}
+        style={styles.sceneContainer}
+      />
     </View>
   );
 };
 
-// ─── Styles ─────────────────────────────────────────────────────────────
+// ─── Styles ────────────────────────────────────────────────────────────
+
+const ItemSeparator = () => <View style={styles.separator} />;
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
+  root: {flex: 1},
   searchSection: {
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xs,
-  },
-  chipSection: {
     paddingVertical: spacing.sm,
+  },
+  sceneContainer: {flex: 1},
+  tabBar: {
     borderBottomWidth: 1,
+    elevation: 0,
+    shadowOpacity: 0,
   },
-  chipScroll: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+  tabIndicator: {
+    height: 3,
     borderRadius: radius.full,
-    borderWidth: 1,
   },
-  chipText: {
+  tabLabel: {
     fontSize: 13,
     fontWeight: '700',
+    textTransform: 'none',
   },
-  contentArea: {
-    flex: 1,
-  },
+  tab: {width: 'auto', minWidth: 84},
+  tabBarContent: {paddingHorizontal: spacing.xs},
+
   centerState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+    paddingBottom: 80,
   },
-  stateText: {
+  stateText: {marginTop: spacing.md, textAlign: 'center'},
+  retryButton: {
     marginTop: spacing.md,
-    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
   },
-  listContent: {
-    padding: spacing.md,
-  },
-  footerLoading: {
+  retryText: {color: '#1A1206'},
+
+  listContent: {padding: spacing.md, paddingBottom: spacing.xxl + 80},
+  separator: {height: spacing.sm},
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.lg,
-  },
-  separator: {
-    height: spacing.sm,
-  },
-  podcastCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
+    padding: spacing.sm,
     borderRadius: radius.md,
     gap: spacing.md,
   },
-  podcastImage: {
+  thumb: {
     width: 60,
     height: 60,
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  podcastInfo: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  podcastTitle: {
-    fontWeight: '600',
-  },
-  episodeBadge: {
+  info: {flex: 1, gap: spacing.xs},
+  title: {fontWeight: '600'},
+  badge: {
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.sm - 2,
   },
-  episodeText: {
-    fontSize: 11,
-    fontWeight: '700',
+  badgeText: {fontSize: 11, fontWeight: '700'},
+  footer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.lg,
+    minHeight: 56,
+  },
+  loadMoreRetry: {
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
 });

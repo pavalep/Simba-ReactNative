@@ -1,179 +1,249 @@
-// ─── Podcasts Screen Hook ──────────────────────────────────────────────
-// Manages category selection & search, fetches results from Podcast Index,
-// and returns loading/error/data state.
+// ─── Podcasts Screen Hook ────────────────────────────────────────────
+// Phase 3 formula: each podcast category is a TabView tab.
+//   • search lives at screen level, scoped per (categoryName, searchTerm)
+//   • per-scope cache + pagination via growing max-window
+//   • auto-retry on reconnect, pull-to-refresh (ArchiveScreen variant)
 //
-// 54.2/54.3/54.4: offline-aware (auto-retry on reconnect), retry(),
-// pull-to-refresh and onEndReached pagination (grows the `max` request
-// parameter and dedupes by feed id).
+// Podcast Index paginates via a growing `max` parameter (no true offset).
+// hasMore = items.length >= currentMax && currentMax < MAX_RESULTS_PER_QUERY.
 
-import {useState, useEffect, useCallback, useRef} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {searchPodcasts, getTrendingPodcasts} from '../../../services/api/podcastIndexService';
 import {PODCAST_CATEGORIES} from '../../../constants/podcastCategories';
-import {searchPodcasts} from '../../../services/api/podcastIndexService';
-import {useDebounce} from '../../../hooks/useDebounce';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {PodcastResult} from '../../../types/api';
 
-interface ResultsMap {
-  [key: string]: PodcastResult[];
+export interface PodcastCategoryTab {
+  id: number;
+  title: string;
+  icon: string;
 }
 
-/** Ceiling for paginated results per query (API has no true offset). */
+export const PODCAST_TABS: PodcastCategoryTab[] = PODCAST_CATEGORIES.slice(0, 12).map(c => ({
+  id: c.id,
+  title: c.name,
+  icon: c.icon,
+}));
+
+const INITIAL_MAX = 25;
 const MAX_RESULTS_PER_QUERY = 100;
+
+export interface PodcastScopeState {
+  items: PodcastResult[];
+  /** Current max window size last requested. */
+  maxRequested: number;
+  hasLoaded: boolean;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  error: string | null;
+}
+
+const EMPTY_SCOPE: PodcastScopeState = {
+  items: [],
+  maxRequested: 0,
+  hasLoaded: false,
+  isLoading: false,
+  isLoadingMore: false,
+  error: null,
+};
+
+function scopeCacheKey(categoryTitle: string, term: string): string {
+  return `podcast|${categoryTitle}|${term.trim()}`;
+}
+
+function dedupe(items: PodcastResult[]): PodcastResult[] {
+  const seen = new Set<number>();
+  return items.filter(i => {
+    if (seen.has(i.id)) return false;
+    seen.add(i.id);
+    return true;
+  });
+}
 
 export function usePodcastsScreen(initialCategoryId?: number) {
   const {isOnline} = useNetworkStatus();
 
-  const [selectedCategory, setSelectedCategory] = useState<number>(
-    initialCategoryId ?? PODCAST_CATEGORIES[0]?.id ?? 0,
-  );
-  const [results, setResults] = useState<ResultsMap>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const initialIndex = PODCAST_TABS.findIndex(t => t.id === initialCategoryId);
+  const [tabIndex, setTabIndex] = useState(Math.max(0, initialIndex));
+
+  // ── Search ──
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const isSearchActive = searchTerm.trim().length > 0;
+
+  const [scopes, setScopes] = useState<Record<string, PodcastScopeState>>({});
   const [refreshing, setRefreshing] = useState(false);
-  const debouncedSearch = useDebounce(searchQuery, 500);
-  const fetchingRef = useRef<Set<string>>(new Set());
-  /** Key of the most recently failed fetch — retried on reconnect. */
+
+  const seqRef = useRef<Record<string, number>>({});
+  const guardRef = useRef<Set<string>>(new Set());
   const failedKeyRef = useRef<string | null>(null);
-  /** Per-key max results requested so far (pagination). */
-  const maxByKeyRef = useRef<Record<string, number>>({});
+  const wasOnlineRef = useRef(isOnline);
 
-  const currentKey = searchQuery.trim()
-    ? `search_${searchQuery.trim().toLowerCase()}`
-    : `cat_${selectedCategory}`;
+  const selectedTab = PODCAST_TABS[tabIndex] ?? PODCAST_TABS[0];
 
-  const fetchByTerm = useCallback(
-    async (term: string, key: string) => {
-      if (fetchingRef.current.has(key)) return;
+  const keyFor = useCallback(
+    (title: string) => scopeCacheKey(title, searchTerm),
+    [searchTerm],
+  );
 
-      fetchingRef.current.add(key);
-      setIsLoading(true);
-      setError(null);
+  const getScope = useCallback(
+    (title: string): PodcastScopeState =>
+      scopes[keyFor(title)] ?? EMPTY_SCOPE,
+    [scopes, keyFor],
+  );
 
-      const max = maxByKeyRef.current[key] ?? 25;
+  const patchScope = useCallback(
+    (title: string, patch: Partial<PodcastScopeState>) => {
+      const key = keyFor(title);
+      setScopes(prev => ({
+        ...prev,
+        [key]: {...(prev[key] ?? EMPTY_SCOPE), ...patch},
+      }));
+    },
+    [keyFor],
+  );
+
+  const fetchPage = useCallback(
+    async (title: string, max: number) => {
+      const term = searchTerm.trim();
+      const query = term || title;
+      const key = scopeCacheKey(title, term);
+
+      if (guardRef.current.has(key)) return;
+      guardRef.current.add(key);
+
+      const seq = (seqRef.current[key] = (seqRef.current[key] ?? 0) + 1);
+
+      patchScope(title, {isLoading: max <= INITIAL_MAX, isLoadingMore: max > INITIAL_MAX, error: null});
 
       try {
-        const items = await searchPodcasts(term, max);
-        // Dedupe by feed id (pagination re-fetches a growing window).
-        setResults(prev => {
-          const merged = [...(prev[key] ?? []), ...items];
-          const seen = new Set<number>();
-          const deduped = merged.filter(item => {
-            if (seen.has(item.id)) return false;
-            seen.add(item.id);
-            return true;
-          });
-          return {...prev, [key]: deduped};
+        const items = await searchPodcasts(query, max);
+
+        if (seq !== (seqRef.current[key] ?? 0)) return;
+
+        setScopes(prev => {
+          const cur = prev[key] ?? EMPTY_SCOPE;
+          return {
+            ...prev,
+            [key]: {
+              ...cur,
+              items: dedupe([...cur.items, ...items]),
+              maxRequested: max,
+              hasLoaded: true,
+              isLoading: false,
+              isLoadingMore: false,
+              error: null,
+            },
+          };
         });
         failedKeyRef.current = null;
       } catch (err) {
+        if (seq !== (seqRef.current[key] ?? 0)) return;
         failedKeyRef.current = key;
-        setError(
-          err instanceof Error ? err.message : 'Failed to load podcasts',
-        );
+        patchScope(title, {
+          isLoading: false,
+          isLoadingMore: false,
+          error:
+            err instanceof Error
+              ? err.message
+              : 'Failed to load podcasts',
+        });
       } finally {
-        fetchingRef.current.delete(key);
-        setIsLoading(false);
-        setRefreshing(false);
+        guardRef.current.delete(key);
       }
     },
-    [],
+    [searchTerm, patchScope],
   );
 
-  // Fetch when category or debounced search changes
-  useEffect(() => {
-    const activeSearch = debouncedSearch.trim();
-    if (activeSearch) {
-      const key = `search_${activeSearch.toLowerCase()}`;
-      fetchByTerm(activeSearch, key);
-    } else if (selectedCategory) {
-      const category = PODCAST_CATEGORIES.find(c => c.id === selectedCategory);
-      if (category) {
-        const key = `cat_${category.id}`;
-        fetchByTerm(category.name, key);
-      }
-    }
-  }, [debouncedSearch, selectedCategory, fetchByTerm]);
+  const ensureLoaded = useCallback(
+    (title: string) => {
+      const scope = getScope(title);
+      if (scope.hasLoaded || scope.isLoading) return;
+      fetchPage(title, INITIAL_MAX);
+    },
+    [getScope, fetchPage],
+  );
 
-  // 54.2: auto-retry the failed query when connectivity returns
-  const wasOnlineRef = useRef(isOnline);
+  const loadMore = useCallback(
+    (title: string) => {
+      const scope = getScope(title);
+      const max = scope.maxRequested || INITIAL_MAX;
+      if (
+        !scope.hasLoaded ||
+        scope.isLoading ||
+        scope.isLoadingMore ||
+        scope.items.length < max ||
+        max >= MAX_RESULTS_PER_QUERY
+      ) {
+        return;
+      }
+      fetchPage(title, max * 2);
+    },
+    [getScope, fetchPage],
+  );
+
+  const retry = useCallback(
+    (title: string) => {
+      const key = keyFor(title);
+      seqRef.current[key] = (seqRef.current[key] ?? 0) + 1;
+      setScopes(prev => {
+        const cur = prev[key];
+        if (!cur) return prev;
+        return {...prev, [key]: {...cur, items: [], hasLoaded: false}};
+      });
+      fetchPage(title, INITIAL_MAX);
+    },
+    [keyFor, fetchPage],
+  );
+
+  // ── Pull-to-refresh ──
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    retry(selectedTab.title);
+    setRefreshing(false);
+  }, [retry, selectedTab.title]);
+
+  // ── Auto-retry on reconnect ──
   useEffect(() => {
     const wasOnline = wasOnlineRef.current;
     wasOnlineRef.current = isOnline;
     if (!wasOnline && isOnline && failedKeyRef.current) {
       const key = failedKeyRef.current;
-      const term = key.startsWith('search_')
-        ? key.slice('search_'.length)
-        : PODCAST_CATEGORIES.find(c => `cat_${c.id}` === key)?.name;
-      if (term) {
-        failedKeyRef.current = null;
-        fetchByTerm(term, key);
-      }
+      failedKeyRef.current = null;
+      // Re-trigger ensureLoaded for the current tab
+      ensureLoaded(selectedTab.title);
     }
-  }, [isOnline, fetchByTerm]);
+  }, [isOnline, ensureLoaded, selectedTab.title]);
 
-  // 54.3: pull-to-refresh — clear the current key and re-fetch
-  const retry = useCallback(() => {
-    const term = searchQuery.trim() || currentKey.startsWith('cat_')
-      ? PODCAST_CATEGORIES.find(c => `cat_${c.id}` === currentKey)?.name ??
-        searchQuery.trim()
-      : searchQuery.trim();
-    if (!term) return;
-    setResults(prev => {
-      const next = {...prev};
-      delete next[currentKey];
-      return next;
-    });
-    fetchByTerm(term, currentKey);
-  }, [currentKey, searchQuery, fetchByTerm]);
+  // ── Keep current tab loaded ──
+  useEffect(() => {
+    ensureLoaded(selectedTab.title);
+  }, [selectedTab.title, ensureLoaded, keyFor]);
 
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    retry();
-  }, [retry]);
-
-  // 54.4: onEndReached — request a larger window for the current query
-  const loadMore = useCallback(() => {
-    const current = results[currentKey] ?? [];
-    const max = maxByKeyRef.current[currentKey] ?? 25;
-    if (
-      fetchingRef.current.has(currentKey) ||
-      current.length < max ||
-      max >= MAX_RESULTS_PER_QUERY
-    ) {
-      return;
-    }
-    maxByKeyRef.current = {...maxByKeyRef.current, [currentKey]: max * 2};
-    const term = searchQuery.trim();
-    if (term) {
-      fetchByTerm(term, currentKey);
-    } else {
-      const category = PODCAST_CATEGORIES.find(c => c.id === selectedCategory);
-      if (category) fetchByTerm(category.name, currentKey);
-    }
-  }, [currentKey, results, searchQuery, selectedCategory, fetchByTerm]);
+  const selectTabByTitle = useCallback((title: string) => {
+    const idx = PODCAST_TABS.findIndex(t => t.title === title);
+    if (idx >= 0) setTabIndex(idx);
+  }, []);
 
   return {
-    selectedCategory,
-    setSelectedCategory,
-    results,
-    isLoading,
-    error,
+    tabs: PODCAST_TABS,
+    tabIndex,
+    setTabIndex,
+    selectedTab,
+    selectTabByTitle,
+    // search
     searchQuery,
     setSearchQuery,
-    /** 54.2: true while offline — screens can tailor messaging */
+    setSearchTerm,
+    isSearchActive,
+    // network
     isOnline,
-    /** 54.3: pull-to-refresh current query */
+    // scope
+    getScope,
+    ensureLoaded,
+    loadMore,
+    retry,
     refreshing,
     handleRefresh,
-    /** 54.7: retry the failed / current query */
-    retry,
-    /** 54.4: fetch a larger window for the current query */
-    loadMore,
-    /** 54.4: whether more results can be requested */
-    hasMore:
-      (results[currentKey] ?? []).length >=
-        (maxByKeyRef.current[currentKey] ?? 25) &&
-      (maxByKeyRef.current[currentKey] ?? 25) < MAX_RESULTS_PER_QUERY,
   };
 }

@@ -15,6 +15,7 @@ import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {ConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
 import {SimbaStatusBar} from '../../components/StatusBar';
@@ -173,14 +174,15 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = () => {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={[styles.backBtn, {borderColor: colors.border.subtle}]}
-          onPress={() => navigate('MainTabs', {screen: 'LibraryTab', params: {screen: 'Library'}})}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel="Back to Library">
-          <SvgIcon name="chevronDown" size={22} color={colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton
+          onPress={() =>
+            navigate('MainTabs', {
+              screen: 'LibraryTab',
+              params: {screen: 'Library'},
+            })
+          }
+          accessibilityLabel="Back to Library"
+        />
         <View style={styles.headerTitleWrap}>
           <AppText variant="h1" color="primary">
             Downloads
@@ -323,15 +325,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
     gap: spacing.sm,
-  },
-  backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{rotate: '90deg'}],
   },
   headerTitleWrap: {flex: 1},
   headerSpacer: {width: 44},

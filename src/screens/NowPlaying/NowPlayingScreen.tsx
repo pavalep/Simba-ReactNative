@@ -117,13 +117,6 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
           paddingTop: insets.top,
           height: 48 + insets.top,
         },
-        backButton: {
-          width: 36,
-          height: 36,
-          borderRadius: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
         headerTitle: {
           flex: 1,
           textAlign: 'center',
