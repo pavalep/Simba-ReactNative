@@ -12,13 +12,14 @@ import {
   TouchableOpacity,
   FlatList,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useSafeAreaInsets, SafeAreaView} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {AppText} from '../../components/core/AppText/AppText';
 import {Avatar} from '../../components/core/Avatar/Avatar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {SettingsRow} from '../../components/utility/SettingsRow/SettingsRow';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {ConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../components/feedback/Toast/Toast';
 import {useAuth} from '../../hooks/useAuth';
@@ -145,11 +146,18 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const recentStrip = recentFiles.slice(0, 5);
 
   return (
-    <View
-      style={[
-        styles.root,
-        {backgroundColor: colors.background.primary, paddingTop: insets.top},
-      ]}>
+    <SafeAreaView
+      style={[styles.root, {backgroundColor: colors.background.primary}]}
+      edges={['top']}>
+      {/* InternalHeader includes the canonical chevron back arrow */}
+      <InternalHeader
+        title="Profile"
+        rightAction={
+          user
+            ? {label: 'Sign out', onPress: () => setSignOutVisible(true)}
+            : undefined
+        }
+      />
       <ScrollView contentContainerStyle={styles.scroll} bounces>
         {/* ── Header card (42.1/42.2) ── */}
         <View
@@ -349,7 +357,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
         onConfirm={handleConfirmWipe}
         onCancel={() => setWipeVisible(false)}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

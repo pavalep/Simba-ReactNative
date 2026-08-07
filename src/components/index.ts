@@ -28,6 +28,8 @@ export {LoadingOverlay} from './core/Skeleton/LoadingOverlay';
 export {ActivityOrb} from './feedback/ActivityOrb/ActivityOrb';
 export {EmptyState} from './feedback/EmptyState/EmptyState';
 export {ErrorState} from './feedback/ErrorState/ErrorState';
+export {Placeholder} from './feedback/Placeholder/Placeholder';
+export type {PlaceholderProps, PlaceholderVariant} from './feedback/Placeholder/Placeholder';
 export {PlayerErrorFallback} from './feedback/PlayerErrorFallback/PlayerErrorFallback';
 export {PulseRing} from './feedback/PulseRing/PulseRing';
 export {ScanProgressBanner} from './feedback/ScanProgressBanner/ScanProgressBanner';

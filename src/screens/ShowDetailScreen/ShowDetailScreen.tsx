@@ -3,7 +3,7 @@
 // air dates; local video files matched by filename play directly;
 // themed placeholder when art is missing; show bookmarkable.
 
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {View, ScrollView, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
@@ -14,6 +14,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import FastImage from 'react-native-fast-image';
 import {useBookmarks} from '../../hooks/useBookmarks';
 import {useToast} from '../../components/feedback/Toast';
@@ -78,12 +79,22 @@ export const ShowDetailScreen: React.FC<Props> = ({navigation, route}) => {
     retry();
   }, [retry]);
 
+  // Surface load failures as a top-of-screen toast with a Retry action.
+  useEffect(() => {
+    if (error) {
+      toast.show(error, 'error', {
+        duration: 8000,
+        action: {label: 'Retry', onPress: handleRetry},
+      });
+    }
+  }, [error, toast, handleRetry]);
+
   if (isLoading) {
     return (
-      <View style={[styles.root, styles.centerState]}>
+      <View style={styles.root}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={showName ?? 'Show'} />
-        <ActivityOrb size={48} label="Loading show…" />
+        <Placeholder variant="loading" anchor="center" title="Loading show…" />
       </View>
     );
   }
@@ -93,21 +104,12 @@ export const ShowDetailScreen: React.FC<Props> = ({navigation, route}) => {
       <View style={styles.root}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={showName ?? 'Show'} />
-        <View style={styles.centerState}>
-          <SvgIcon name="alertCircle" size={48} color={colors.semantic.error} />
-          <AppText variant="body1" color="secondary" style={styles.errorText}>
-            {error ?? 'Show not found'}
-          </AppText>
-          <TouchableOpacity
-            style={[styles.retryButton, {backgroundColor: colors.accent.goldDim}]}
-            activeOpacity={0.7}
-            onPress={handleRetry}
-            accessibilityRole="button">
-            <AppText variant="button" style={{color: colors.accent.gold}}>
-              Retry
-            </AppText>
-          </TouchableOpacity>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="center"
+          icon="video"
+          title={error ?? 'Show not found'}
+        />
       </View>
     );
   }
@@ -294,20 +296,11 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  // (Replaced by the shared <Placeholder> component.)
   errorText: {
     marginTop: spacing.md,
     marginBottom: spacing.md,
     textAlign: 'center',
-  },
-  retryButton: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
   },
   scrollContent: {
     paddingBottom: spacing.xxl + 80,

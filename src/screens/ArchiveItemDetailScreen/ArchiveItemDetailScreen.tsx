@@ -4,7 +4,7 @@
 // cross-track resume via recents). Long-press → queue / playlist /
 // bookmark / share. Video items live on MovieDetail (existing screen).
 
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {View, ScrollView, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
@@ -15,6 +15,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import FastImage from 'react-native-fast-image';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/MediaActionsSheet';
@@ -185,38 +186,42 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
     retry();
   }, [retry]);
 
+  // Surface load failures as a top-of-screen toast with a Retry action.
+  useEffect(() => {
+    if (error) {
+      toast.show(error, 'error', {
+        duration: 8000,
+        action: {label: 'Retry', onPress: handleRetry},
+      });
+    }
+  }, [error, toast, handleRetry]);
+
   // ── Loading State ──
   if (isLoading) {
     return (
-      <View style={[styles.root, styles.centerState]}>
+      <View style={styles.root}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={title} />
-        <ActivityOrb size={48} label="Loading item…" />
+        <Placeholder variant="loading" anchor="center" title="Loading item…" />
       </View>
     );
   }
 
   // ── Error State ──
+  // Failures surface as a top-of-screen toast with a Retry action (see
+  // useEffect above). The header stays so the user can navigate back; the
+  // body shows a minimal placeholder rather than a giant error card.
   if (error || !item) {
     return (
       <View style={styles.root}>
         <SimbaStatusBar variant="home" />
         <InternalHeader title={title} />
-        <View style={styles.centerState}>
-          <SvgIcon name="alertCircle" size={48} color={colors.semantic.error} />
-          <AppText variant="body1" color="secondary" style={styles.errorText}>
-            {error ?? 'Item not found'}
-          </AppText>
-          <TouchableOpacity
-            style={[styles.retryButton, {backgroundColor: colors.accent.goldDim}]}
-            activeOpacity={0.7}
-            onPress={handleRetry}
-            accessibilityRole="button">
-            <AppText variant="button" style={{color: colors.accent.gold}}>
-              Retry
-            </AppText>
-          </TouchableOpacity>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="center"
+          icon="headphones"
+          title={error ?? 'Item not found'}
+        />
       </View>
     );
   }
@@ -415,20 +420,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
-  },
+  // (Replaced by the shared <Placeholder> component.)
   errorText: {
     textAlign: 'center',
     marginBottom: spacing.lg,
-  },
-  retryButton: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
   },
   // ── Hero ──
   heroSection: {

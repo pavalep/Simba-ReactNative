@@ -26,6 +26,7 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ScanProgressBanner} from '../../components/feedback/ScanProgressBanner/ScanProgressBanner';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import {useAccessibility} from '../../hooks/useAccessibility';
 import type {LinkedFoldersScreenProps} from '../../navigation/types';
 
@@ -368,16 +369,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
           borderRadius: 10,
           backgroundColor: colors.accent.goldDim,
         },
-        // ── Empty state ──
-        emptyContainer: {
-          alignItems: 'center',
-          paddingVertical: spacing.xxxl + spacing.lg,
-          gap: spacing.sm,
-        },
-        emptyIcon: {
-          opacity: 0.3,
-          marginBottom: spacing.sm,
-        },
+        // ── Empty state (replaced by the shared <Placeholder> component.) ──
         // ── Folder cards container ──
         cardList: {
           backgroundColor: colors.background.elevated,
@@ -465,20 +457,13 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
         {/* Folder list */}
         {folders.length === 0 ? (
           <View style={[styles.cardList, {padding: spacing.lg}]}>
-            <View style={styles.emptyContainer}>
-              <SvgIcon
-                name="folder"
-                size={48}
-                color={colors.text.tertiary}
-                style={styles.emptyIcon}
-              />
-              <AppText variant="body1" color="tertiary" style={{textAlign: 'center'}}>
-                No {isVideo ? 'video' : 'audio'} folders linked yet.
-              </AppText>
-              <AppText variant="caption" color="tertiary" style={{textAlign: 'center'}}>
-                Tap "Add Folder" below to link your first folder.
-              </AppText>
-            </View>
+            <Placeholder
+              variant="empty"
+              anchor="top-third"
+              icon="folder"
+              title={`No ${isVideo ? 'video' : 'audio'} folders linked yet.`}
+              message='Tap "Add Folder" below to link your first folder.'
+            />
           </View>
         ) : (
           <View style={styles.cardList}>

@@ -154,12 +154,7 @@ export function useSettingsScreen() {
       scrollContent: {
         paddingBottom: bottomChromeInset,
       },
-      centerContainer: {
-        flex: 1,
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-        paddingHorizontal: spacing.lg,
-      },
+      // (Replaced by the shared <Placeholder> component.)
       retryButton: {
         marginTop: spacing.md,
         paddingVertical: 10,

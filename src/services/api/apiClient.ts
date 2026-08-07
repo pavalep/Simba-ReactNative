@@ -1,6 +1,6 @@
 // ─── Shared HTTP Client ────────────────────────────────────────────────
 // Axios-based: rate limiting, in-memory caching, timeout, interceptors,
-// error normalization, and __DEV__ mock fallback.
+// and error normalization.
 
 import axios, {type AxiosInstance, type AxiosError, type AxiosRequestConfig} from 'axios';
 import type {ApiConfig, ApiSearchOptions} from '../../types/api';

@@ -30,6 +30,8 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
+import {useToast} from '../../components/feedback/Toast';
 import {LIBRIVOX_GENRES} from '../../constants/audiobookCategories';
 import {archiveImageUrl, archiveIdentifierFromUrl} from '../../services/api/internetArchiveService';
 import type {AudiobookResult} from '../../types/api';
@@ -145,65 +147,83 @@ const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
     onPressBook,
   }) => {
     const {colors} = useTheme();
+    const toast = useToast();
     const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
 
+    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref.
+    const ensureLoadedRef = React.useRef(ensureLoaded);
+    ensureLoadedRef.current = ensureLoaded;
     React.useEffect(() => {
-      ensureLoaded(tab);
-    }, [ensureLoaded, tab]);
+      ensureLoadedRef.current(tab);
+    }, [tab]);
+
+    // Surface page-1 load failures as a toast with a Retry action.
+    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs).
+    const lastShownErrorRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+      const shouldShow = !hasLoaded && !isLoading && !!error;
+      const currentError = shouldShow ? 'Could not load results.' : null;
+      if (currentError && currentError !== lastShownErrorRef.current) {
+        lastShownErrorRef.current = currentError;
+        toast.show(currentError, 'error', {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onPress: () => {
+              lastShownErrorRef.current = null;
+              retry(tab);
+            },
+          },
+        });
+      } else if (!currentError) {
+        lastShownErrorRef.current = null;
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasLoaded, isLoading, error]);
 
     const rows = useMemo<BookRow[]>(() => items.map(toRow), [items]);
 
     // ── Page-1 loader ──
     if (!hasLoaded && isLoading) {
       return (
-        <View style={styles.centerState}>
-          <ActivityOrb />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            Loading audiobooks…
-          </AppText>
-        </View>
+        <Placeholder
+          variant="loading"
+          anchor="top-third"
+          title="Loading audiobooks…"
+        />
       );
     }
 
-    // ── Page-1 error ──
-    if (!hasLoaded && !isLoading && error) {
+    // ── Page-1 error ── toast surfaces Retry; placeholder keeps the
+    //    screen from looking blank.
+    if (!hasLoaded && !isLoading && error && rows.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="alertCircle" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            Could not load results.
-          </AppText>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => retry(tab)}
-            style={[styles.retryButton, {backgroundColor: colors.accent.gold}]}
-            accessibilityRole="button">
-            <AppText variant="button" style={styles.retryText}>
-              Retry
-            </AppText>
-          </TouchableOpacity>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="alertCircle"
+          title="Couldn't load audiobooks."
+          message="Use Retry at the bottom of the screen to try again."
+        />
       );
     }
 
     // ── Empty (cached or fresh) ──
     if (hasLoaded && !error && rows.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon
-            name={tab === 'genres' ? 'layoutGrid' : 'headphones'}
-            size={40}
-            color={colors.accent.goldDim}
-          />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            {tab === 'search'
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon={tab === 'genres' ? 'layoutGrid' : 'headphones'}
+          title={
+            tab === 'search'
               ? isSearchActive
                 ? 'No audiobooks match your search.'
                 : 'Search for audiobooks by title or author.'
               : tab === 'genres'
               ? 'Select a genre to browse.'
-              : 'No recent audiobooks found.'}
-          </AppText>
+              : 'No recent audiobooks found.'
+          }>
           {/* Genre chips — only on the Genres tab when no results yet */}
           {tab === 'genres' && (
             <View style={styles.chipWrap}>
@@ -242,7 +262,7 @@ const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
               })}
             </View>
           )}
-        </View>
+        </Placeholder>
       );
     }
 
@@ -429,12 +449,11 @@ export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
 
   const renderLazyPlaceholder = useCallback(
     ({route: tabRoute}: {route: Route}) => (
-      <View style={styles.centerState}>
-        <ActivityOrb />
-        <AppText variant="body2" color="tertiary" style={styles.stateText}>
-          Loading {TABS.find(t => t.key === tabRoute.key)?.title ?? 'tab'}…
-        </AppText>
-      </View>
+      <Placeholder
+        variant="loading"
+        anchor="top-third"
+        title={`Loading ${TABS.find(t => t.key === tabRoute.key)?.title ?? 'tab'}…`}
+      />
     ),
     [],
   );
@@ -511,26 +530,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
   },
   // ── Center states ──
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: 80,
-  },
-  stateText: {
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-  },
-  retryText: {
-    color: '#1A1206',
-  },
+  // (Replaced by the shared <Placeholder> component.)
   // ── Genre chips ──
   chipWrap: {
     flexDirection: 'row',

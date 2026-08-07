@@ -38,6 +38,8 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
+import {useToast} from '../../components/feedback/Toast';
 import {ARCHIVE_QUICK_SEARCHES} from '../../constants/audiobookCategories';
 import type {
   InternetArchiveItemResult,
@@ -163,12 +165,45 @@ const ArchiveTabScene: React.FC<ArchiveTabSceneProps> = React.memo(
     onPressRow,
   }) => {
     const {colors} = useTheme();
+    const toast = useToast();
     const {hasLoaded, isLoading, isLoadingMore, error} = scope;
+
+    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref.
+    const ensureLoadedRef = React.useRef(ensureLoaded);
+    ensureLoadedRef.current = ensureLoaded;
 
     // Auto-load page 1 the first time this scene mounts (lazy tab).
     React.useEffect(() => {
-      ensureLoaded(tab);
-    }, [ensureLoaded, tab]);
+      ensureLoadedRef.current(tab);
+    }, [tab]);
+
+    // Surface page-1 load failures as a toast with a Retry action.
+    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs).
+    const lastShownErrorRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+      const shouldShow = !hasLoaded && !isLoading && !!error;
+      const currentError = shouldShow
+        ? isOnline
+          ? 'Could not load archive.'
+          : 'You are offline.'
+        : null;
+      if (currentError && currentError !== lastShownErrorRef.current) {
+        lastShownErrorRef.current = currentError;
+        toast.show(currentError, 'error', {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onPress: () => {
+              lastShownErrorRef.current = null;
+              retry(tab);
+            },
+          },
+        });
+      } else if (!currentError) {
+        lastShownErrorRef.current = null;
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasLoaded, isLoading, error, isOnline]);
 
     const rows = useMemo<ArchiveRow[]>(() => {
       if (tab === 'audio') {
@@ -180,51 +215,37 @@ const ArchiveTabScene: React.FC<ArchiveTabSceneProps> = React.memo(
     // ── Initial page-1 loader ──
     if (!hasLoaded && isLoading) {
       return (
-        <View style={styles.centerState}>
-          <ActivityOrb size={36} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            Loading {tab === 'audio' ? 'Audio' : 'Video'}…
-          </AppText>
-        </View>
+        <Placeholder
+          variant="loading"
+          anchor="top-third"
+          title={`Loading ${tab === 'audio' ? 'Audio' : 'Video'}…`}
+        />
       );
     }
 
-    // ── Page-1 error ──
-    if (!hasLoaded && !isLoading && error) {
+    // ── Page-1 error ── toast surfaces Retry; placeholder keeps the
+    //    screen from looking blank.
+    if (!hasLoaded && !isLoading && error && rows.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="alertCircle" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            {isOnline ? 'Could not load results.' : 'You are offline.'}
-          </AppText>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => retry(tab)}
-            style={[
-              styles.retryButton,
-              {backgroundColor: colors.accent.gold},
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Retry loading">
-            <AppText variant="button" style={{color: colors.background.primary}}>
-              Retry
-            </AppText>
-          </TouchableOpacity>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="alertCircle"
+          title={isOnline ? "Couldn't load archive." : "You're offline."}
+          message="Use Retry at the bottom of the screen to try again."
+        />
       );
     }
 
     // ── Empty (cached or fresh) ──
     if (hasLoaded && !error && rows.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="search" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            {isSearchActive
-              ? 'No results for this search.'
-              : 'Nothing found here yet.'}
-          </AppText>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="search"
+          title={isSearchActive ? 'No results for this search.' : 'Nothing found here yet.'}
+        />
       );
     }
 
@@ -375,12 +396,11 @@ export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
 
   const renderLazyPlaceholder = useCallback(
     ({route: tabRoute}: {route: Route}) => (
-      <View style={styles.centerState}>
-        <ActivityOrb />
-        <AppText variant="body2" color="tertiary" style={styles.stateText}>
-          Loading {tabRoute.key === 'audio' ? 'Audio' : 'Video'}…
-        </AppText>
-      </View>
+      <Placeholder
+        variant="loading"
+        anchor="top-third"
+        title={`Loading ${tabRoute.key === 'audio' ? 'Audio' : 'Video'}…`}
+      />
     ),
     [],
   );
@@ -503,23 +523,7 @@ const styles = StyleSheet.create({
   sceneContainer: {
     flex: 1,
   },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
-    gap: spacing.sm,
-    paddingBottom: 80,
-  },
-  stateText: {
-    textAlign: 'center',
-  },
-  retryButton: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-    marginTop: spacing.xs,
-  },
+  // (Replaced by the shared <Placeholder> component.)
   listContent: {
     padding: spacing.md,
     paddingBottom: spacing.xxl + 80,

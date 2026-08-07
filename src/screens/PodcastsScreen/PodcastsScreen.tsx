@@ -28,6 +28,8 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
+import {useToast} from '../../components/feedback/Toast';
 import type {PodcastResult} from '../../types/api';
 
 type Props = RootStackScreenProps<'PodcastsScreen'>;
@@ -109,56 +111,92 @@ const PodcastTabScene: React.FC<PodcastTabSceneProps> = React.memo(
     onPressPodcast,
   }) => {
     const {colors} = useTheme();
+    const toast = useToast();
     const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
 
+    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so this effect
+    // doesn't re-fire every time the parent re-renders. The effect now
+    // only fires when tabTitle actually changes.
+    const ensureLoadedRef = React.useRef(ensureLoaded);
+    ensureLoadedRef.current = ensureLoaded;
     React.useEffect(() => {
-      ensureLoaded(tabTitle);
-    }, [ensureLoaded, tabTitle]);
+      ensureLoadedRef.current(tabTitle);
+    }, [tabTitle]);
+
+    // Surface page-1 load failures as a toast with a Retry action.
+    // [FIX-PODCASTS-LOOP] deps only include the state that drives the
+    // toast (error / hasLoaded / isLoading / isOnline). Function refs
+    // like `toast` and `retry` are intentionally excluded to prevent the
+    // effect from re-firing on every parent re-render (which would
+    // cause an infinite loop because `toast.show` triggers a state
+    // change in ToastProvider). We also track the last shown error
+    // in a ref so the toast only fires once per new error.
+    const lastShownErrorRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+      const shouldShow = !hasLoaded && !isLoading && error;
+      const currentError = shouldShow
+        ? isOnline
+          ? 'Could not load podcasts.'
+          : 'You are offline.'
+        : null;
+      if (currentError && currentError !== lastShownErrorRef.current) {
+        lastShownErrorRef.current = currentError;
+        toast.show(currentError, 'error', {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onPress: () => {
+              lastShownErrorRef.current = null; // allow re-show on next failure
+              retry(tabTitle);
+            },
+          },
+        });
+      } else if (!currentError) {
+        lastShownErrorRef.current = null;
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasLoaded, isLoading, error, isOnline]);
 
     // ── Page-1 loader ──
     if (!hasLoaded && isLoading) {
       return (
-        <View style={styles.centerState}>
-          <ActivityOrb />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            Loading podcasts…
-          </AppText>
-        </View>
+        <Placeholder
+          variant="loading"
+          anchor="top-third"
+          title="Loading podcasts…"
+        />
       );
     }
 
-    // ── Page-1 error ──
-    if (!hasLoaded && !isLoading && error) {
+    // ── Page-1 error ── toast surfaces the Retry action (see useEffect),
+    //    but we still need a visual placeholder in the list area so the
+    //    screen doesn't look blank. Trigger when fetch has settled (not
+    //    loading) AND there's nothing to show.
+    if (!hasLoaded && !isLoading && error && items.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="alertCircle" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            {isOnline ? 'Could not load podcasts.' : 'You are offline.'}
-          </AppText>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => retry(tabTitle)}
-            style={[styles.retryButton, {backgroundColor: colors.accent.gold}]}
-            accessibilityRole="button">
-            <AppText variant="button" style={styles.retryText}>
-              Retry
-            </AppText>
-          </TouchableOpacity>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="alertCircle"
+          title={isOnline ? "Couldn't load this category." : "You're offline."}
+          message="Use Retry at the bottom of the screen to try again."
+        />
       );
     }
 
-    // ── Empty ──
+    // ── Empty (loaded successfully with zero results) ──
     if (hasLoaded && !error && items.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="folder" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            {isSearchActive
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="folder"
+          title={
+            isSearchActive
               ? 'No podcasts match your search.'
-              : 'No podcasts found in this category.'}
-          </AppText>
-        </View>
+              : 'No podcasts found in this category.'
+          }
+        />
       );
     }
 
@@ -284,12 +322,11 @@ export const PodcastsScreen: React.FC<Props> = ({navigation, route}) => {
 
   const renderLazyPlaceholder = useCallback(
     ({route: tabRoute}: {route: Route}) => (
-      <View style={styles.centerState}>
-        <ActivityOrb />
-        <AppText variant="body2" color="tertiary" style={styles.stateText}>
-          Loading {tabRoute.key}…
-        </AppText>
-      </View>
+      <Placeholder
+        variant="loading"
+        anchor="top-third"
+        title={`Loading ${tabRoute.key}…`}
+      />
     ),
     [],
   );
@@ -350,21 +387,7 @@ const styles = StyleSheet.create({
   tab: {width: 'auto', minWidth: 84},
   tabBarContent: {paddingHorizontal: spacing.xs},
 
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: 80,
-  },
-  stateText: {marginTop: spacing.md, textAlign: 'center'},
-  retryButton: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-  },
-  retryText: {color: '#1A1206'},
+  // (Replaced by the shared <Placeholder> component.)
 
   listContent: {padding: spacing.md, paddingBottom: spacing.xxl + 80},
   separator: {height: spacing.sm},

@@ -1,4 +1,4 @@
-import React, {useMemo, useState, useCallback} from 'react';
+import React, {useMemo, useState, useCallback, useEffect} from 'react';
 import {
   View,
   ScrollView,
@@ -9,12 +9,14 @@ import {
   type GestureResponderEvent,
 } from 'react-native';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SimbaStatusBar} from '../../components/StatusBar';
+import {useToast} from '../../components/feedback/Toast';
 import type {RootStackScreenProps} from '../../navigation/types';
 type NowPlayingScreenProps = RootStackScreenProps<'NowPlaying'>;
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
@@ -31,6 +33,7 @@ type Props = NowPlayingScreenProps;
 export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
 
   // ── Edge case states ──
   const [isLoading, _setIsLoading] = useState(false);
@@ -93,9 +96,20 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
     }
   }, []);
 
-  const handleRetry = useCallback(() => {
-    setError(null);
-  }, []);
+  const showErrorToast = useCallback(() => {
+    toast.show('Failed to load now playing.', 'error', {
+      duration: 8000,
+      action: {label: 'Retry', onPress: () => {
+        setError(null);
+        // No real data source yet — placeholder for future re-fetch.
+      }},
+    });
+  }, [toast]);
+
+  // Surface page-load failures as a top-of-screen toast.
+  useEffect(() => {
+    if (error) showErrorToast();
+  }, [error, showErrorToast]);
 
   const handleOpenFullPlayer = useCallback(() => {
     (navigation.navigate as any)('AudioPlayer', {
@@ -258,19 +272,7 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
           borderRadius: radius.sm,
           marginBottom: 16,
         },
-        centerContainer: {
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: spacing.lg,
-        },
-        retryButton: {
-          marginTop: spacing.md,
-          paddingVertical: 10,
-          paddingHorizontal: 24,
-          borderRadius: 10,
-          backgroundColor: colors.accent.goldDim,
-        },
+        // (Replaced by the shared <Placeholder> component.)
       }),
     [colors, insets.top],
   );
@@ -278,18 +280,17 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
   const handleEmptyState = useCallback(() => {
     if (!fileUri) {
       return (
-        <View style={[styles.scrollContent, {justifyContent: 'center', alignItems: 'center'}]}>
-          <AppText variant="h3" color="tertiary" style={{marginBottom: 8}}>
-            No Track Playing
-          </AppText>
-          <AppText variant="body2" color="tertiary" style={{textAlign: 'center', paddingHorizontal: 32}}>
-            Open a file from the player or search to start listening.
-          </AppText>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="center"
+          icon="music"
+          title="No Track Playing"
+          message="Open a file from the player or search to start listening."
+        />
       );
     }
     return null;
-  }, [fileUri, styles]);
+  }, [fileUri]);
 
   return (
     <View style={styles.root}>
@@ -305,29 +306,8 @@ export const NowPlayingScreen: React.FC<Props> = ({navigation, route}) => {
       <InternalHeader title="Now Playing" />
 
       {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityOrb size={48} />
-        </View>
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <AppText
-            variant="body1"
-            color="error"
-            style={{textAlign: 'center', marginBottom: spacing.sm}}>
-            {error}
-          </AppText>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={handleRetry}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Retry loading">
-            <AppText variant="button" color="accent">
-              Retry
-            </AppText>
-          </TouchableOpacity>
-        </View>
-      ) : fileUri ? (
+        <Placeholder variant="loading" anchor="center" />
+      ) : fileUri && !error ? (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}

@@ -7,6 +7,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import LinearGradient from 'react-native-linear-gradient';
 import RNFS from 'react-native-fs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -194,6 +195,17 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
     setRefreshing(false);
   }, [currentPath, readDirectory]);
 
+  // Surface directory read failures as a toast with a Retry action.
+  // The user can also still pull-to-refresh.
+  useEffect(() => {
+    if (error) {
+      toast.show(error, 'error', {
+        duration: 8000,
+        action: {label: 'Retry', onPress: () => readDirectory(currentPath)},
+      });
+    }
+  }, [error, currentPath, readDirectory, toast]);
+
   // ── Multi-select handlers ─────────────────────
 
   const handleToggleSelect = useCallback(() => {
@@ -351,27 +363,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
           alignItems: 'center',
           marginRight: 12,
         },
-        emptyContainer: {
-          alignItems: 'center',
-        },
-        emptyTitle: {
-          marginTop: 12,
-          textAlign: 'center',
-        },
-        emptySubtitle: {
-          marginTop: 6,
-          textAlign: 'center',
-        },
-        centerContent: {
-          flexGrow: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-        errorText: {
-          marginTop: 12,
-          textAlign: 'center',
-          paddingHorizontal: 20,
-        },
+        // (Replaced by the shared <Placeholder> component.)
         // ── Multi-select ────────────────────────
         checkbox: {
           width: 24,
@@ -528,33 +520,19 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
 
   const renderEmptyState = () => {
     if (loading) return null;
+    // Page-1 directory read failures are surfaced via the top-of-screen
+    // toast (see useEffect above). The empty state below still shows.
     if (error) {
-      return (
-        <View style={styles.centerContent}>
-          <AppText variant="h3" color="tertiary" style={styles.errorText}>
-            {error}
-          </AppText>
-          <AppText
-            variant="body2"
-            color="tertiary"
-            style={styles.emptySubtitle}>
-            Pull down to retry
-          </AppText>
-        </View>
-      );
+      return null;
     }
     return (
-      <View style={styles.emptyContainer}>
-        <AppText variant="h3" color="tertiary" style={styles.emptyTitle}>
-          This folder is empty
-        </AppText>
-        <AppText
-          variant="body2"
-          color="tertiary"
-          style={styles.emptySubtitle}>
-          No media files or subfolders found.
-        </AppText>
-      </View>
+      <Placeholder
+        variant="empty"
+        anchor="top-third"
+        icon="folder"
+        title="This folder is empty"
+        message="No media files or subfolders found."
+      />
     );
   };
 
@@ -575,9 +553,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       />
       {renderBreadcrumbs()}
       {loading && items.length === 0 ? (
-        <View style={styles.centerContent}>
-          <ActivityOrb size={48} />
-        </View>
+        <Placeholder variant="loading" anchor="top-third" title="Loading folder…" />
       ) : (
         <FlatList
           style={{flex: 1}}

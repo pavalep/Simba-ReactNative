@@ -20,31 +20,57 @@ import {AppText} from '../../core/AppText/AppText';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
 
+export interface ToastAction {
+  /** Short label, e.g. "Retry" or "Undo" */
+  label: string;
+  /** Called when the action is tapped. Toast is auto-dismissed after. */
+  onPress: () => void;
+}
+
+export interface ToastOptions {
+  /** How long the toast stays on screen, in ms. Default 3000. */
+  duration?: number;
+  /** Optional tappable action shown next to the close button. */
+  action?: ToastAction;
+}
+
 interface ToastMessage {
   message: string;
   type: ToastType;
   duration: number;
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
-  show: (message: string, type?: ToastType, duration?: number) => void;
+  show: (
+    message: string,
+    type?: ToastType,
+    options?: number | ToastOptions,
+  ) => void;
   hide: () => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const TOAST_HEIGHT = 52;
+const TOAST_HEIGHT_WITH_ACTION = 60;
 
 const ToastContent: React.FC<{
   visible: boolean;
   message: string;
   type: ToastType;
+  action?: ToastAction;
   onDismiss: () => void;
-}> = ({visible, message, type, onDismiss}) => {
+  onActionPress: () => void;
+}> = ({visible, message, type, action, onDismiss, onActionPress}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const topInset = insets.top;
-  const translateY = useRef(new Animated.Value(-TOAST_HEIGHT - topInset)).current;
+  const height = action ? TOAST_HEIGHT_WITH_ACTION : TOAST_HEIGHT;
+  // [FIX-TOAST-POSITION] Toast slides up from below the screen
+  // (bottom-anchored). Initial translateY is positive (hidden below),
+  // target is 0 (visible at the bottom inset).
+  const translateY = useRef(new Animated.Value(TOAST_HEIGHT_WITH_ACTION + insets.bottom + spacing.md)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -65,7 +91,7 @@ const ToastContent: React.FC<{
     } else {
       Animated.parallel([
         Animated.timing(translateY, {
-          toValue: -TOAST_HEIGHT - topInset,
+          toValue: TOAST_HEIGHT_WITH_ACTION + insets.bottom + spacing.md,
           duration: 200,
           useNativeDriver: true,
         }),
@@ -76,7 +102,7 @@ const ToastContent: React.FC<{
         }),
       ]).start();
     }
-  }, [visible, translateY, opacity, topInset]);
+  }, [visible, translateY, opacity, insets.bottom]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -99,27 +125,46 @@ const ToastContent: React.FC<{
           ? colors.semantic.warning
           : colors.accent.gold;
 
+  // [FIX-TOAST-POSITION] Pin to bottom (Material/iOS bottom-sheet style)
+  // instead of the very top, so the toast never covers the screen header,
+  // search bar, or content the user is trying to read. We still respect
+  // the bottom safe-area inset so it doesn't sit under the gesture bar
+  // on devices with one.
+  const bottomInset = insets.bottom;
   return (
     <Animated.View
       style={[
         styles.container,
         {
           backgroundColor: bgColor,
-          top: topInset,
-          transform: [{translateY}],
+          bottom: bottomInset + spacing.md,
+          height,
+          transform: [{translateY: -translateY}],
           opacity,
         },
       ]}
       accessibilityRole="alert"
-      accessibilityLabel={message}>
+      accessibilityLabel={action ? `${message}. ${action.label}.` : message}>
       <View style={styles.textContainer}>
         <AppText
           variant="body2"
           color="primary"
-          numberOfLines={2}>
+          numberOfLines={action ? 1 : 2}>
           {message}
         </AppText>
       </View>
+      {action && (
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={onActionPress}
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+          accessibilityRole="button"
+          accessibilityLabel={action.label}>
+          <AppText variant="button" color="primary" style={styles.actionLabel}>
+            {action.label}
+          </AppText>
+        </TouchableOpacity>
+      )}
       <TouchableOpacity
         style={styles.closeBtn}
         onPress={onDismiss}
@@ -146,13 +191,24 @@ export const ToastProvider: React.FC<{children: React.ReactNode}> = ({
   }, []);
 
   const show = useCallback(
-    (message: string, type: ToastType = 'info', duration: number = 3000) => {
+    (
+      message: string,
+      type: ToastType = 'info',
+      options?: number | ToastOptions,
+    ) => {
       // Clear any existing timer
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
 
-      setToast({message, type, duration});
+      // Back-compat: if a number is passed in the 3rd slot, treat it as
+      // the duration (matches the old `show(msg, type, duration)` API).
+      const opts: ToastOptions | undefined =
+        typeof options === 'number' ? {duration: options} : options;
+      const duration = opts?.duration ?? 3000;
+      const action = opts?.action;
+
+      setToast({message, type, duration, action});
       setVisible(true);
 
       // Auto-dismiss
@@ -162,6 +218,14 @@ export const ToastProvider: React.FC<{children: React.ReactNode}> = ({
     },
     [hide],
   );
+
+  // Wrap action taps: invoke callback, then dismiss.
+  const handleActionPress = useCallback(() => {
+    if (toast?.action) {
+      toast.action.onPress();
+    }
+    hide();
+  }, [toast, hide]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -181,7 +245,9 @@ export const ToastProvider: React.FC<{children: React.ReactNode}> = ({
         visible={visible}
         message={toast?.message ?? ''}
         type={toast?.type ?? 'info'}
+        action={toast?.action}
         onDismiss={hide}
+        onActionPress={handleActionPress}
       />
     </ToastContext.Provider>
   );
@@ -200,7 +266,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.lg,
     right: spacing.lg,
-    height: TOAST_HEIGHT,
     borderRadius: radius.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -212,7 +277,17 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: spacing.sm,
   },
-  messageText: {
+  actionBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    marginRight: spacing.xs,
+  },
+  actionLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   closeBtn: {
     width: 28,

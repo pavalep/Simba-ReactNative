@@ -191,15 +191,6 @@ export interface JamendoTrackResult {
   genreName: string;
 }
 
-export interface JamendoAlbumResult {
-  id: number;
-  name: string;
-  artistName: string;
-  releaseDate: string;
-  imageUrl: string;
-  trackCount: number;
-}
-
 // ─── Internet Archive Audio ──────────────────────────────────────────────
 
 export interface InternetArchiveItemResult {

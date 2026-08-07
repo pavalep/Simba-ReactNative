@@ -1,6 +1,16 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+
+// react-native-config: tell dotenv.gradle which .env file to load for each
+// build type. Without this, dotenv.gradle doesn't know which file to read
+// and never generates env.json in the bundled assets — so JS-side
+// Config.X is empty at runtime, even though BuildConfig.java has the
+// values on the native side. Must be set BEFORE the apply from line.
+project.ext.envConfigFiles = [
+    debug: ".env",
+    release: ".env",
+]
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
 
 /**

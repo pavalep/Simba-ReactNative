@@ -285,9 +285,14 @@ export function useArchiveScreen(initialTab?: ArchiveTab, initialQuery?: string)
 
   // Keep the active tab's scope loaded when it (or the search term)
   // changes — covers the very first mount and every new search term.
+  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effect only
+  // re-fires when the tab or search term actually changes — not on
+  // every parent re-render.
+  const ensureLoadedRef = useRef(ensureLoaded);
+  ensureLoadedRef.current = ensureLoaded;
   useEffect(() => {
-    ensureLoaded(tab);
-  }, [tab, ensureLoaded, keyFor]);
+    ensureLoadedRef.current(tab);
+  }, [tab, keyFor]);
 
   // ── Auto-retry a failed scope when connectivity returns ──
   const wasOnlineRef = useRef(isOnline);

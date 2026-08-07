@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
+import {View, StyleSheet} from 'react-native';
+import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {AppText} from '../../../components/core/AppText/AppText';
 import type {ColorTokens} from '../../../theme/tokens';
 
@@ -10,20 +10,21 @@ interface Props {
   colors: ColorTokens;
 }
 
-export const AudioPlayerHeader: React.FC<Props> = ({onGoBack, insetsTop, colors}) => {
+/**
+ * Top bar for the full-screen audio player. Uses the canonical shared
+ * BackButton (36px circular elevated target with the chevron back arrow)
+ * so every internal page is consistent. The header floats over the album
+ * art / gradient background and respects the top safe-area inset.
+ */
+export const AudioPlayerHeader: React.FC<Props> = ({onGoBack, insetsTop, colors: _colors}) => {
   return (
     <View style={[styles.header, {paddingTop: insetsTop}]}>
-      <TouchableOpacity
-        style={[styles.headerBtn, {backgroundColor: colors.border.subtle}]}
-        onPress={onGoBack}
-        activeOpacity={0.7}
-        accessibilityLabel="Go back"
-        accessibilityRole="button">
-        <SvgIcon name="chevronDown" size={20} color={colors.text.primary} />
-      </TouchableOpacity>
+      <BackButton onPress={onGoBack} />
       <AppText variant="h3" color="primary" style={styles.headerTitle}>
         Now Playing
       </AppText>
+      {/* Right spacer keeps the title visually centred, matching the 36px
+          width of the BackButton on the left. */}
       <View style={{width: 36}} />
     </View>
   );
@@ -36,16 +37,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 48,
   },
-  headerBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerTitle: {
     flex: 1,
     textAlign: 'center',
-    marginRight: 36,
+    marginHorizontal: 8,
   },
 });

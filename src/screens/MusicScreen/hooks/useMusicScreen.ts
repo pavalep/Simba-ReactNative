@@ -92,7 +92,10 @@ export function useMusicScreen(initialTab?: string) {
   const [selectedTab, setSelectedTab] = useState<MusicTab>(
     (initialTab as MusicTab) || 'search',
   );
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  // Pre-select the first genre so the Genres tab shows results on first
+  // open instead of a "Select a genre" prompt. Users can still pick a
+  // different chip to change it.
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(JAMENDO_GENRES[0]);
 
   // ── Search ──
   const [searchQuery, setSearchQuery] = useState('');
@@ -275,9 +278,14 @@ export function useMusicScreen(initialTab?: string) {
   }, [isOnline, ensureLoaded, selectedTab]);
 
   // ── Keep current tab loaded ──
+  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effect only
+  // re-fires when the selected tab actually changes — not on every
+  // parent re-render (getScope / fetchPage change ref every render).
+  const ensureLoadedRef = useRef(ensureLoaded);
+  ensureLoadedRef.current = ensureLoaded;
   useEffect(() => {
-    ensureLoaded(selectedTab);
-  }, [selectedTab, ensureLoaded, keyFor]);
+    ensureLoadedRef.current(selectedTab);
+  }, [selectedTab]);
 
   return {
     selectedTab,

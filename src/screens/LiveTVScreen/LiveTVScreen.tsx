@@ -35,6 +35,7 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import {shareContent} from '../../services/shareService';
 import {useBookmarks} from '../../hooks/useBookmarks';
 import {useToast} from '../../components/feedback/Toast';
@@ -239,12 +240,17 @@ const LiveTVTabScene: React.FC<LiveTVTabSceneProps> = React.memo(
     onLongPressChannel,
   }) => {
     const {colors} = useTheme();
+    const toast = useToast();
+
+    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so this effect
+    // doesn't re-fire every time the parent re-renders.
+    const ensureLoadedRef = React.useRef(ensureLoaded);
+    ensureLoadedRef.current = ensureLoaded;
 
     // Ensure data is loaded for this tab
     React.useEffect(() => {
-      ensureLoaded(tab);
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ensureLoaded, tab]);
+      ensureLoadedRef.current(tab);
+    }, [tab]);
 
     // Convert to normalized rows
     const rows: ChannelRow[] = useMemo(() => {
@@ -256,73 +262,78 @@ const LiveTVTabScene: React.FC<LiveTVTabSceneProps> = React.memo(
 
     const {hasLoaded, isLoading, isLoadingMore, limit, error} = scope;
 
+    // Surface page-1 load failures as a toast with a Retry action.
+    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs)
+    // to avoid infinite re-render. Track last shown error in a ref.
+    const lastShownErrorRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+      const shouldShow = !hasLoaded && !isLoading && error;
+      const currentError = shouldShow
+        ? isOnline
+          ? 'Could not load channels.'
+          : 'You are offline.'
+        : null;
+      if (currentError && currentError !== lastShownErrorRef.current) {
+        lastShownErrorRef.current = currentError;
+        toast.show(currentError, 'error', {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onPress: () => {
+              lastShownErrorRef.current = null;
+              retry(tab);
+            },
+          },
+        });
+      } else if (!currentError) {
+        lastShownErrorRef.current = null;
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasLoaded, isLoading, error, isOnline]);
+
     // ── Page-1 loader ──
     if (!hasLoaded && isLoading) {
       return (
-        <View style={styles.centerState}>
-          <ActivityOrb />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            Loading channels…
-          </AppText>
-        </View>
+        <Placeholder variant="loading" anchor="top-third" title="Loading channels…" />
       );
     }
 
-    // ── Page-1 error ──
-    if (!hasLoaded && error) {
+    // ── Page-1 error ── toast surfaces the Retry action; show a
+    //    placeholder in the list area so the screen isn't blank.
+    if (!hasLoaded && !isLoading && error && rows.length === 0 && tab !== 'favorites') {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon
-            name="alertCircle"
-            size={40}
-            color={colors.accent.goldDim}
-          />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            {isOnline ? 'Could not load channels.' : 'You are offline.'}
-          </AppText>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => retry(tab)}
-            style={[styles.retryButton, {backgroundColor: colors.accent.gold}]}
-            accessibilityRole="button">
-            <AppText variant="button" style={styles.retryText}>
-              Retry
-            </AppText>
-          </TouchableOpacity>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="alertCircle"
+          title={isOnline ? "Couldn't load channels." : "You're offline."}
+          message="Use Retry at the bottom of the screen to try again."
+        />
       );
     }
 
     // ── Favorites empty ──
     if (tab === 'favorites' && rows.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="bookmark" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            No favorite channels yet.
-          </AppText>
-          <AppText variant="caption" color="tertiary" style={styles.stateText}>
-            Long-press any channel to save it here.
-          </AppText>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="bookmark"
+          title="No favorite channels yet."
+          message="Long-press any channel to save it here."
+        />
       );
     }
 
     // ── Empty (loaded, no results) ──
     if (hasLoaded && rows.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon
-            name={isSearchActive ? 'search' : 'video'}
-            size={40}
-            color={colors.accent.goldDim}
-          />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            {isSearchActive
-              ? 'No channels match your search.'
-              : 'No channels found.'}
-          </AppText>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon={isSearchActive ? 'search' : 'video'}
+          title={isSearchActive ? 'No channels match your search.' : 'No channels found.'}
+        />
       );
     }
 
@@ -619,15 +630,11 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
 
   const renderLazyPlaceholder = useCallback(
     ({route: tabRoute}: {route: Route}) => (
-      <View style={styles.centerState}>
-        <ActivityOrb />
-        <AppText variant="body2" color="tertiary" style={styles.stateText}>
-          Loading{' '}
-          {LIVE_TV_TABS.find(t => t.key === tabRoute.key)?.title ??
-            'channels'}
-          …
-        </AppText>
-      </View>
+      <Placeholder
+        variant="loading"
+        anchor="top-third"
+        title={`Loading ${LIVE_TV_TABS.find(t => t.key === tabRoute.key)?.title ?? 'channels'}…`}
+      />
     ),
     [],
   );
@@ -739,26 +746,6 @@ const styles = StyleSheet.create({
   // ── Scene ──
   scene: {
     flex: 1,
-  },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  stateText: {
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  // ── Retry pill ──
-  retryButton: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-  },
-  retryText: {
-    color: '#1A1206',
   },
   // ── Category Chips ──
   chipScroll: {

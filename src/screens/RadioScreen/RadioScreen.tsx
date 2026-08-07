@@ -32,6 +32,7 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import {shareContent} from '../../services/shareService';
 import {useBookmarks} from '../../hooks/useBookmarks';
 import {useToast} from '../../components/feedback/Toast';
@@ -251,72 +252,93 @@ const RadioTabScene: React.FC<RadioTabSceneProps> = React.memo(
     onLongPress,
   }) => {
     const {colors} = useTheme();
+    const toast = useToast();
     const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
 
+    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref.
+    const ensureLoadedRef = React.useRef(ensureLoaded);
+    ensureLoadedRef.current = ensureLoaded;
     React.useEffect(() => {
-      ensureLoaded(tab);
+      ensureLoadedRef.current(tab);
+    }, [tab]);
+
+    // Surface page-1 load failures as a toast with a Retry action.
+    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs).
+    const lastShownErrorRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+      const shouldShow = !hasLoaded && !isLoading && !!error;
+      const currentError = shouldShow
+        ? isOnline
+          ? 'Could not load stations.'
+          : 'You are offline.'
+        : null;
+      if (currentError && currentError !== lastShownErrorRef.current) {
+        lastShownErrorRef.current = currentError;
+        toast.show(currentError, 'error', {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onPress: () => {
+              lastShownErrorRef.current = null;
+              retry(tab);
+            },
+          },
+        });
+      } else if (!currentError) {
+        lastShownErrorRef.current = null;
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ensureLoaded, tab]);
+    }, [hasLoaded, isLoading, error, isOnline]);
 
     const rows = useMemo<StationRow[]>(() => items.map(toRow), [items]);
 
     // ── Page-1 loader ──
     if (!hasLoaded && isLoading) {
       return (
-        <View style={styles.centerState}>
-          <ActivityOrb />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            Loading stations…
-          </AppText>
-        </View>
+        <Placeholder
+          variant="loading"
+          anchor="top-third"
+          title="Loading stations…"
+        />
       );
     }
 
-    // ── Page-1 error ──
-    if (!hasLoaded && !isLoading && error) {
+    // ── Page-1 error ── toast surfaces Retry; placeholder keeps the
+    //    screen from looking blank.
+    if (!hasLoaded && !isLoading && error && rows.length === 0 && tab !== 'favorites') {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="alertCircle" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            {isOnline ? 'Could not load stations.' : 'You are offline.'}
-          </AppText>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => retry(tab)}
-            style={[styles.retryButton, {backgroundColor: colors.accent.gold}]}
-            accessibilityRole="button">
-            <AppText variant="button" style={styles.retryText}>Retry</AppText>
-          </TouchableOpacity>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="alertCircle"
+          title={isOnline ? "Couldn't load stations." : "You're offline."}
+          message="Use Retry at the bottom of the screen to try again."
+        />
       );
     }
 
     // ── Favorites empty ──
     if (tab === 'favorites' && rows.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="bookmark" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            No favorite stations yet.
-          </AppText>
-          <AppText variant="caption" color="tertiary" style={styles.stateText}>
-            Long-press any station to save it here.
-          </AppText>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="bookmark"
+          title="No favorite stations yet."
+          message="Long-press any station to save it here."
+        />
       );
     }
 
     // ── Empty ──
     if (hasLoaded && !error && rows.length === 0) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="headphones" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            {isSearchActive
-              ? 'No stations match your search.'
-              : 'No stations found.'}
-          </AppText>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="headphones"
+          title={isSearchActive ? 'No stations match your search.' : 'No stations found.'}
+        />
       );
     }
 
@@ -551,12 +573,11 @@ export const RadioScreen: React.FC<Props> = ({navigation, route}) => {
 
   const renderLazyPlaceholder = useCallback(
     ({route: tabRoute}: {route: Route}) => (
-      <View style={styles.centerState}>
-        <ActivityOrb />
-        <AppText variant="body2" color="tertiary" style={styles.stateText}>
-          Loading {RADIO_TABS.find(t => t.key === tabRoute.key)?.title ?? 'tab'}…
-        </AppText>
-      </View>
+      <Placeholder
+        variant="loading"
+        anchor="top-third"
+        title={`Loading ${RADIO_TABS.find(t => t.key === tabRoute.key)?.title ?? 'tab'}…`}
+      />
     ),
     [],
   );
@@ -623,21 +644,7 @@ const styles = StyleSheet.create({
   tab: {width: 'auto', minWidth: 84},
   tabBarContent: {paddingHorizontal: spacing.xs},
 
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: 80,
-  },
-  stateText: {marginTop: spacing.md, textAlign: 'center'},
-  retryButton: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-  },
-  retryText: {color: '#1A1206'},
+  // (Replaced by the shared <Placeholder> component.)
 
   chipWrap: {
     paddingHorizontal: spacing.md,

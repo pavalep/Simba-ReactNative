@@ -31,7 +31,12 @@ export const BookmarksScreen: React.FC = () => {
   const {confirm: confirmDelete, dialog: deleteDialog} = useConfirmDialog();
   const {confirm: confirmClear, dialog: clearDialog} = useConfirmDialog();
 
-  const {styles: headerStyles} = useAnimatedEntrance(3, {
+  // Only animate the body sections; the header is a stable InternalHeader
+  // with the canonical chevron back arrow that must always be visible
+  // (no fade-in race that could hide the back affordance).
+  //   index 0 → search bar
+  //   index 1 → empty state / bookmark list
+  const {styles: headerStyles} = useAnimatedEntrance(2, {
     staggerDelay: 60,
     direction: 'fade',
     duration: 300,
@@ -71,24 +76,22 @@ export const BookmarksScreen: React.FC = () => {
       {deleteDialog}
       {clearDialog}
 
-      {/* ── Header ── */}
-      <Animated.View style={headerStyles[0]}>
-        <InternalHeader
-          title="Bookmarks"
-          rightAction={
-            allBookmarks.length > 0
-              ? {label: `${bookmarkCount} saved`, onPress: handleClearAll}
-              : undefined
-          }
-        />
-      </Animated.View>
+      {/* ── Header (canonical InternalHeader — chevron + title + right action) ── */}
+      <InternalHeader
+        title="Bookmarks"
+        rightAction={
+          allBookmarks.length > 0
+            ? {label: `${bookmarkCount} saved`, onPress: handleClearAll}
+            : undefined
+        }
+      />
 
       {/* ── Search ── */}
       {allBookmarks.length > 0 && (
         <Animated.View
           style={[
             styles.searchContainer,
-            headerStyles[1],
+            headerStyles[0],
           ]}>
           <SearchBar
             value={searchQuery}
@@ -101,7 +104,7 @@ export const BookmarksScreen: React.FC = () => {
       {/* ── Content ── */}
       {allBookmarks.length === 0 ? (
         <Animated.View
-          style={[styles.emptyWrapper, headerStyles[2]]}>
+          style={[styles.emptyWrapper, headerStyles[1]]}>
           <EmptyState
             icon="bookmark"
             title="No Bookmarks Yet"

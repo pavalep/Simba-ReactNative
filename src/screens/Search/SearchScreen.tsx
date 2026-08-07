@@ -14,6 +14,7 @@ import {useTheme} from '../../theme';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {AppText} from '../../components/core/AppText/AppText';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {useAppSelector} from '../../store';
 import {useSearch} from '../../hooks/useSearch';
@@ -413,9 +414,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
 
         {/* ── Loading ── */}
         {showResultsSection && isSearching && (
-          <View style={styles.centerContainer}>
-            <ActivityOrb size={48} />
-          </View>
+          <Placeholder variant="loading" anchor="top-third" />
         )}
 
         {/* ── Error ── */}

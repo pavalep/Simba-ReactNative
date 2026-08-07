@@ -19,6 +19,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {AppText} from '../../components/core/AppText/AppText';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import {SvgIcon} from '../../components/utility/SvgIcon/SvgIcon';
 import {useMovieDetailScreen} from './hooks/useMovieDetailScreen';
 import {shareContent} from '../../services/shareService';
@@ -75,9 +76,7 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
   if (isLoading) {
     return (
       <ScreenContainer header={<InternalHeader title={displayTitle} />}>
-        <View style={styles.centerContent}>
-          <ActivityOrb size={56} label="Loading movie details…" />
-        </View>
+        <Placeholder variant="loading" anchor="center" title="Loading movie details…" />
       </ScreenContainer>
     );
   }
@@ -87,31 +86,13 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
   if (error || !item) {
     return (
       <ScreenContainer header={<InternalHeader title={displayTitle} />}>
-        <View style={styles.centerContent}>
-          <SvgIcon
-            name="alertCircle"
-            size={48}
-            color={colors.semantic.error}
-          />
-          <AppText
-            variant="body1"
-            color="secondary"
-            style={styles.errorText}>
-            {error || 'Unable to load movie details'}
-          </AppText>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={retry}
-            accessibilityRole="button"
-            style={[
-              styles.retryButton,
-              {backgroundColor: colors.accent.gold},
-            ]}>
-            <AppText variant="button" color="primary" style={{color: colors.background.primary}}>
-              Retry
-            </AppText>
-          </TouchableOpacity>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="center"
+          icon="alertCircle"
+          iconColor={colors.semantic.error}
+          title={error || 'Unable to load movie details'}
+        />
       </ScreenContainer>
     );
   }
@@ -414,22 +395,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: spacing.md,
   },
-  centerContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xxl,
-  },
-  errorText: {
-    textAlign: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  retryButton: {
-    paddingHorizontal: spacing.xxl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-  },
+  // (Replaced by the shared <Placeholder> component.)
   // Hero
   heroContainer: {
     width: '100%',

@@ -25,6 +25,7 @@ import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {ErrorState} from '../../components/feedback/ErrorState/ErrorState';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {MediaTile} from '../../components/utility/MediaTile/MediaTile';
 import {StreamingRow} from '../../components/media/StreamingRow/StreamingRow';
@@ -277,15 +278,11 @@ export const GenreScreen: React.FC<
           )
         ) : tab === 'streaming' ? (
           streamingLoading ? (
-            <View style={styles.centerState}>
-              <ActivityOrb />
-              <AppText
-                variant="body2"
-                color="tertiary"
-                style={styles.stateText}>
-                Loading streaming catalog…
-              </AppText>
-            </View>
+            <Placeholder
+              variant="loading"
+              anchor="top-third"
+              title="Loading streaming catalog…"
+            />
           ) : streamingFailed ? (
             <ErrorState
               title="Couldn't load streaming tracks"
@@ -339,15 +336,11 @@ export const GenreScreen: React.FC<
                 : 'Pick a mood'}
             </AppText>
             {moodLoading ? (
-              <View style={styles.centerState}>
-                <ActivityOrb />
-                <AppText
-                  variant="body2"
-                  color="tertiary"
-                  style={styles.stateText}>
-                  Curating mood tracks…
-                </AppText>
-              </View>
+              <Placeholder
+                variant="loading"
+                anchor="top-third"
+                title="Curating mood tracks…"
+              />
             ) : moodTracks.length === 0 ? (
               <EmptyState
                 icon="music"
@@ -367,12 +360,11 @@ export const GenreScreen: React.FC<
             )}
           </>
         ) : radioLoading ? (
-          <View style={styles.centerState}>
-            <ActivityOrb />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              Loading stations…
-            </AppText>
-          </View>
+          <Placeholder
+            variant="loading"
+            anchor="top-third"
+            title="Loading stations…"
+          />
         ) : radioFailed ? (
           <ErrorState
             title="Couldn't load stations"
@@ -465,15 +457,7 @@ const styles = StyleSheet.create({
   trackInfo: {
     flex: 1,
   },
-  centerState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xl,
-    gap: spacing.sm,
-  },
-  stateText: {
-    textAlign: 'center',
-  },
+  // (Replaced by the shared <Placeholder> component.)
   moodRail: {
     gap: spacing.md,
     paddingVertical: spacing.xs,

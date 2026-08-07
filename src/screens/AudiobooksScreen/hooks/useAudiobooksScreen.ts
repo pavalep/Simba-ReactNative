@@ -209,10 +209,15 @@ export function useAudiobooksScreen(initialTab?: string, initialGenre?: string) 
   );
 
   // Keep the current tab scoped-loaded when it (or the search term, or
-  // selected genre) changes.
+  // selected genre) changes. Stash ensureLoaded in a ref so the effect
+  // doesn't re-fire on every callback-identity change of ensureLoaded
+  // (which happens on unrelated state updates via getScope/fetchPage).
+  // [FIX-PODCASTS-LOOP]
+  const ensureLoadedRef = useRef(ensureLoaded);
+  ensureLoadedRef.current = ensureLoaded;
   useEffect(() => {
-    ensureLoaded(selectedTab);
-  }, [selectedTab, ensureLoaded, keyFor]);
+    ensureLoadedRef.current(selectedTab);
+  }, [selectedTab, keyFor]);
 
   return {
     selectedTab,

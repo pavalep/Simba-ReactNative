@@ -320,9 +320,14 @@ export function useLiveTVScreen(initialCategoryId?: string) {
   }, [isOnline, ensureLoaded, selectedTab]);
 
   // ── Keep current tab loaded ──
+  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effect only
+  // re-fires when the selected tab actually changes — not on every
+  // parent re-render (getScope / fetchPage change ref every render).
+  const ensureLoadedRef = useRef(ensureLoaded);
+  ensureLoadedRef.current = ensureLoaded;
   useEffect(() => {
-    ensureLoaded(selectedTab);
-  }, [selectedTab, ensureLoaded, keyFor]);
+    ensureLoadedRef.current(selectedTab);
+  }, [selectedTab]);
 
   // ── Tab/category selectors ──
   // IMPORTANT: selectTab does NOT clear search text

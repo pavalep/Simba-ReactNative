@@ -261,11 +261,17 @@ export function useShowsScreen(initialTab?: string) {
 
   // ── Auto-load on tab change / search term change ────────────────────
 
+  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effect only
+  // re-fires when the selected tab actually changes — not on every
+  // parent re-render (getScope / fetchPage change ref every render).
+  const ensureLoadedRef = useRef(ensureLoaded);
+  ensureLoadedRef.current = ensureLoaded;
+
   useEffect(() => {
     if (selectedTab) {
-      ensureLoaded(selectedTab);
+      ensureLoadedRef.current(selectedTab);
     }
-  }, [selectedTab, ensureLoaded, keyFor]);
+  }, [selectedTab]);
 
   // ── Auto-retry when connectivity returns ────────────────────────────
 

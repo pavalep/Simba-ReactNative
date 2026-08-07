@@ -36,6 +36,8 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
+import {useToast} from '../../components/feedback/Toast';
 import type {TVMazeShow} from '../../types/api';
 
 // ─── Constants ──────────────────────────────────────────────────────────
@@ -170,15 +172,46 @@ const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
     onPressShow,
   }) => {
     const {colors} = useTheme();
+    const toast = useToast();
     const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
 
+    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref.
+    const ensureLoadedRef = React.useRef(ensureLoaded);
+    ensureLoadedRef.current = ensureLoaded;
+
     // Load page 1 for this scope on mount / whenever the scope key
-    // changes (e.g. a new search term). `ensureLoaded` short-circuits
-    // when the scope is already loading or loaded (except 'today' tab),
-    // so this is safe to re-run.
+    // changes (e.g. a new search term).
     React.useEffect(() => {
-      ensureLoaded(tab);
-    }, [ensureLoaded, tab]);
+      ensureLoadedRef.current(tab);
+    }, [tab]);
+
+    // Surface page-1 load failures as a toast with a Retry action.
+    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs).
+    const lastShownErrorRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+      const shouldShow = !hasLoaded && !isLoading && !!error;
+      const currentError = shouldShow
+        ? isOnline
+          ? error
+          : 'No internet connection.'
+        : null;
+      if (currentError && currentError !== lastShownErrorRef.current) {
+        lastShownErrorRef.current = currentError;
+        toast.show(currentError, 'error', {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onPress: () => {
+              lastShownErrorRef.current = null;
+              retry(tab);
+            },
+          },
+        });
+      } else if (!currentError) {
+        lastShownErrorRef.current = null;
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasLoaded, isLoading, error, isOnline]);
 
     const renderItem = useCallback(
       ({item}: {item: TVMazeShow}) => (
@@ -200,12 +233,12 @@ const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
     // ── "Empty when no search term" state for search tab ──
     if (tab === 'search' && !isSearchActive && !isLoading) {
       return (
-        <View style={styles.centerState}>
-          <SvgIcon name="search" size={40} color={colors.accent.goldDim} />
-          <AppText variant="body2" color="tertiary" style={styles.stateText}>
-            Type a show name to search TVMaze.
-          </AppText>
-        </View>
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="search"
+          title="Type a show name to search TVMaze."
+        />
       );
     }
 
@@ -213,53 +246,39 @@ const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
       <View style={styles.scene}>
         {/* Page-1 loader */}
         {!hasLoaded && isLoading && (
-          <View style={styles.centerState}>
-            <ActivityOrb />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              Loading shows…
-            </AppText>
-          </View>
+          <Placeholder
+            variant="loading"
+            anchor="top-third"
+            title="Loading shows…"
+          />
         )}
 
-        {/* Page-1 error */}
-        {!hasLoaded && !isLoading && error && (
-          <View style={styles.centerState}>
-            <SvgIcon
-              name="alertCircle"
-              size={40}
-              color={colors.accent.goldDim}
-            />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              {isOnline ? error : 'No internet connection.'}
-            </AppText>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => retry(tab)}
-              style={[styles.retryPill, {backgroundColor: colors.accent.gold}]}
-              accessibilityRole="button">
-              <AppText variant="button" style={styles.retryText}>
-                Retry
-              </AppText>
-            </TouchableOpacity>
-          </View>
+        {/* Page-1 error — toast surfaces Retry; placeholder keeps the
+            screen from looking blank. */}
+        {!hasLoaded && !isLoading && error && items.length === 0 && (
+          <Placeholder
+            variant="empty"
+            anchor="top-third"
+            icon="alertCircle"
+            title={isOnline ? "Couldn't load shows." : "You're offline."}
+            message="Use Retry at the bottom of the screen to try again."
+          />
         )}
 
         {/* Empty scope (loaded, zero results) */}
         {hasLoaded && !error && items.length === 0 && (
-          <View style={styles.centerState}>
-            <SvgIcon
-              name="video"
-              size={40}
-              color={colors.accent.goldDim}
-            />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              {tab === 'search'
+          <Placeholder
+            variant="empty"
+            anchor="top-third"
+            icon="video"
+            title={
+              tab === 'search'
                 ? 'No shows match your search.'
                 : tab === 'today'
                   ? 'No shows airing today.'
-                  : 'No shows found.'}
-            </AppText>
-          </View>
+                  : 'No shows found.'
+            }
+          />
         )}
 
         {/* Single-column list + infinite scroll */}
@@ -423,12 +442,11 @@ export const ShowsScreen: React.FC<RootStackScreenProps<'ShowsScreen'>> = ({
 
   const renderLazyPlaceholder = useCallback(
     ({route: tabRoute}: {route: Route}) => (
-      <View style={styles.centerState}>
-        <ActivityOrb />
-        <AppText variant="body2" color="tertiary" style={styles.stateText}>
-          {TABS.find(t => t.key === tabRoute.key)?.title ?? 'Shows'}…
-        </AppText>
-      </View>
+      <Placeholder
+        variant="loading"
+        anchor="top-third"
+        title={`${TABS.find(t => t.key === tabRoute.key)?.title ?? 'Shows'}…`}
+      />
     ),
     [],
   );
@@ -502,25 +520,7 @@ const styles = StyleSheet.create({
   scene: {
     flex: 1,
   },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  stateText: {
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  retryPill: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-  },
-  retryText: {
-    color: '#1A1206',
-  },
+  // (Replaced by the shared <Placeholder> component.)
   listContent: {
     padding: spacing.md,
     paddingBottom: spacing.xxl + 80,

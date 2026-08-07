@@ -27,6 +27,7 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import {resolveInternetArchiveVideoDetails} from '../../services/api/internetArchiveService';
 import {useToast} from '../../components/feedback/Toast';
 import type {InternetArchiveVideoResult} from '../../types/api';
@@ -175,64 +176,76 @@ const MovieCategoryScene: React.FC<MovieCategorySceneProps> = React.memo(
     onPressMovie,
   }) => {
     const {colors} = useTheme();
+    const toast = useToast();
     const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
 
+    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so this effect
+    // doesn't re-fire every time the parent re-renders.
+    const ensureLoadedRef = React.useRef(ensureLoaded);
+    ensureLoadedRef.current = ensureLoaded;
+
     // Load page 1 for this scope on mount / whenever the scope key
-    // changes (e.g. a new search term). `ensureLoaded` short-circuits
-    // when the scope is already loading or loaded, so this is safe to
-    // re-run.
+    // changes (e.g. a new search term).
     React.useEffect(() => {
-      ensureLoaded(category.id);
-    }, [ensureLoaded, category.id]);
+      ensureLoadedRef.current(category.id);
+    }, [category.id]);
+
+    // Surface page-1 load failures as a toast with a Retry action.
+    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs)
+    // to avoid infinite re-render. Track last shown error in a ref.
+    const lastShownErrorRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+      const shouldShow = !hasLoaded && !isLoading && !!error;
+      const currentError = shouldShow ? "Couldn't load movies." : null;
+      if (currentError && currentError !== lastShownErrorRef.current) {
+        lastShownErrorRef.current = currentError;
+        toast.show(currentError, 'error', {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onPress: () => {
+              lastShownErrorRef.current = null;
+              retry(category.id);
+            },
+          },
+        });
+      } else if (!currentError) {
+        lastShownErrorRef.current = null;
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasLoaded, isLoading, error]);
 
     return (
       <View style={styles.scene}>
         {/* Initial load */}
         {!hasLoaded && isLoading && (
-          <View style={styles.centerState}>
-            <ActivityOrb />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              Loading movies...
-            </AppText>
-          </View>
+          <Placeholder
+            variant="loading"
+            anchor="top-third"
+            title="Loading movies..."
+          />
         )}
 
-        {/* Load failure (page 1) */}
-        {!hasLoaded && !isLoading && error && (
-          <View style={styles.centerState}>
-            <SvgIcon name="alertCircle" size={40} color={colors.accent.goldDim} />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              Couldn't load movies.
-            </AppText>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => retry(category.id)}
-              style={[
-                styles.retryButton,
-                {backgroundColor: colors.accent.gold},
-              ]}
-              accessibilityRole="button">
-              <AppText variant="button" style={styles.retryText}>
-                Retry
-              </AppText>
-            </TouchableOpacity>
-          </View>
+        {/* Load failure (page 1) — toast surfaces Retry; placeholder keeps
+            the screen from looking blank. */}
+        {!hasLoaded && !isLoading && error && items.length === 0 && (
+          <Placeholder
+            variant="empty"
+            anchor="top-third"
+            icon="alertCircle"
+            title="Couldn't load movies."
+            message="Use Retry at the bottom of the screen to try again."
+          />
         )}
 
         {/* Empty scope (loaded, zero results) */}
         {hasLoaded && !error && items.length === 0 && (
-          <View style={styles.centerState}>
-            <SvgIcon
-              name={isSearchActive ? 'search' : 'folder'}
-              size={40}
-              color={colors.accent.goldDim}
-            />
-            <AppText variant="body2" color="tertiary" style={styles.stateText}>
-              {isSearchActive
-                ? 'No movies match your search.'
-                : 'No movies found in this category.'}
-            </AppText>
-          </View>
+          <Placeholder
+            variant="empty"
+            anchor="top-third"
+            icon={isSearchActive ? 'search' : 'folder'}
+            title={isSearchActive ? 'No movies match your search.' : 'No movies found in this category.'}
+          />
         )}
 
         {/* Grid + infinite scroll */}
@@ -316,21 +329,16 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
     retry,
   } = useMoviesScreen(route.params?.categoryId);
 
-  // Inline error state for "this movie can't be played" — shown next to
-  // the grid instead of navigating into the player with an empty fileUri.
-  const [movieError, setMovieError] = useState<{
-    title: string;
-    message: string;
-  } | null>(null);
-
+  // Per-movie resolution state. Failures surface as a top-of-screen toast
+  // (auto-dismiss + close button) rather than an inline banner embedded
+  // in the content — same pattern as the rest of the app.
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   const handleMoviePress = useCallback(
     async (item: InternetArchiveVideoResult) => {
       // Validate the URL *before* navigating into the player: retry the
       // metadata API up to 3 times (toast on each switch) and refuse to
-      // navigate if the URL is still bad — show an inline error instead.
-      setMovieError(null);
+      // navigate if the URL is still bad — surface a toast instead.
       setResolvingId(item.identifier);
       try {
         const details = await resolveInternetArchiveVideoDetails(
@@ -339,16 +347,16 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
             toast.show(
               `Trying alternate server… (attempt ${attempt}/${max})`,
               'info',
-              1800,
+              {duration: 1800},
             );
           },
         );
         if (!details || details.streamingUrl.endsWith('/')) {
-          setMovieError({
-            title: 'No Video File',
-            message:
-              'This item does not have a playable video file. Please try a different movie.',
-          });
+          toast.show(
+            'No Video File — this item does not have a playable video file. Please try a different movie.',
+            'error',
+            {duration: 6000},
+          );
           return;
         }
         navigation.navigate('VideoPlayer', {
@@ -357,13 +365,11 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
           startPosition: 0,
         });
       } catch (err) {
-        setMovieError({
-          title: 'Unable to Load',
-          message:
-            err instanceof Error
-              ? err.message
-              : 'Failed to fetch the video file. Please try again.',
-        });
+        const detail =
+          err instanceof Error && err.message
+            ? err.message
+            : 'Failed to fetch the video file. Please try again.';
+        toast.show(`Unable to Load — ${detail}`, 'error', {duration: 6000});
       } finally {
         setResolvingId(null);
       }
@@ -433,12 +439,11 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
 
   const renderLazyPlaceholder = useCallback(
     ({route: tabRoute}: {route: Route}) => (
-      <View style={styles.centerState}>
-        <ActivityOrb />
-        <AppText variant="body2" color="tertiary" style={styles.stateText}>
-          Loading {MOVIE_CATEGORIES.find(c => c.id === tabRoute.key)?.name ?? 'movies'}...
-        </AppText>
-      </View>
+      <Placeholder
+        variant="loading"
+        anchor="top-third"
+        title={`Loading ${MOVIE_CATEGORIES.find(c => c.id === tabRoute.key)?.name ?? 'movies'}...`}
+      />
     ),
     [],
   );
@@ -458,27 +463,8 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
         />
       </View>
 
-      {/* Per-movie inline error banner */}
-      {movieError && (
-        <View style={styles.movieErrorBanner}>
-          <SvgIcon name="alertCircle" size={22} color={colors.accent.gold} />
-          <View style={styles.movieErrorText}>
-            <AppText variant="body2" color="primary">
-          {movieError.title}
-        </AppText>
-            <AppText variant="caption" color="tertiary">
-              {movieError.message}
-            </AppText>
-          </View>
-          <TouchableOpacity
-            onPress={() => setMovieError(null)}
-            accessibilityLabel="Dismiss movie error"
-            accessibilityRole="button"
-            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-            <SvgIcon name="close" size={18} color={colors.text.tertiary} />
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Per-movie resolution errors surface via the top-of-screen toast
+          (auto-dismiss + close button). See handleMoviePress. */}
 
       {/* ── Category TabView (lazy scenes) ── */}
       <TabView
@@ -505,26 +491,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  // Per-movie inline error banner. Sits at the top of the content area
-  // as a dismissible pill — distinguishes per-movie resolution failures
-  // from the global "couldn't load movies" state.
-  movieErrorBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    backgroundColor: '#2A1F0A', // dim gold-tinted surface
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#5C4A1F',
-  },
-  movieErrorText: {
-    flex: 1,
-    gap: 2,
-  },
+  // Per-movie resolution errors surface as a top-of-screen toast
+  // (see handleMoviePress + the ToastProvider in the app root) — no
+  // inline banner state to keep here.
   // ── TabView ──
   sceneContainer: {
     flex: 1,
@@ -560,25 +529,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     opacity: 0.8,
   },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  stateText: {
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-  },
-  retryText: {
-    color: '#1A1206',
-  },
+  // (Replaced by the shared <Placeholder> component.)
   gridContent: {
     padding: spacing.sm,
   },

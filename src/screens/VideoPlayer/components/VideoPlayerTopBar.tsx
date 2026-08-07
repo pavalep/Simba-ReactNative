@@ -9,12 +9,6 @@ import {radius, spacing, typography} from '../../../theme/tokens';
 
 // ─── Local Vector SVG Icons for Guaranteed Rendering ─────────
 
-const BackIcon = ({color = '#FFFFFF'}) => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 12H5M12 19l-7-7 7-7" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
 const MoreIcon = ({color = '#FFFFFF'}) => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
     <Circle cx="12" cy="5" r="2" fill={color} />
@@ -243,7 +237,14 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
               accessibilityLabel="Go back"
               accessibilityRole="button"
               hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
-              <BackIcon color="#FFFFFF" />
+              {/* V6: canonical chevron back arrow (matches the shared
+                  BackButton used on every other internal page). */}
+              <SvgIcon
+                name="chevronRight"
+                size={20}
+                color="#FFFFFF"
+                style={{transform: [{rotate: '180deg'}]}}
+              />
             </TouchableOpacity>
             {!controlsLocked && channelDown && (
               <TouchableOpacity

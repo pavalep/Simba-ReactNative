@@ -34,6 +34,8 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
+import {useToast} from '../../components/feedback/Toast';
 import type {JamendoTrackResult} from '../../types/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -145,6 +147,7 @@ interface MusicTabSceneProps {
   tab: MusicTab;
   scope: MusicScopeState;
   isSearchActive: boolean;
+  isOnline: boolean;
   selectedGenre: string | null;
   onSelectGenre: (genre: string | null) => void;
   ensureLoaded: (tab: MusicTab) => void;
@@ -160,6 +163,7 @@ const MusicTabScene: React.FC<MusicTabSceneProps> = React.memo(
     tab,
     scope,
     isSearchActive,
+    isOnline,
     selectedGenre,
     onSelectGenre,
     ensureLoaded,
@@ -170,12 +174,46 @@ const MusicTabScene: React.FC<MusicTabSceneProps> = React.memo(
     onPressTrack,
   }) => {
     const {colors} = useTheme();
+    const toast = useToast();
     const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
+
+    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so this effect
+    // doesn't re-fire every time the parent re-renders.
+    const ensureLoadedRef = React.useRef(ensureLoaded);
+    ensureLoadedRef.current = ensureLoaded;
 
     // Load page 1 for this scope on mount / whenever the scope key changes.
     React.useEffect(() => {
-      ensureLoaded(tab);
-    }, [ensureLoaded, tab]);
+      ensureLoadedRef.current(tab);
+    }, [tab]);
+
+    // Surface page-1 load failures as a toast with a Retry action.
+    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs)
+    // to avoid infinite re-render. Track last shown error in a ref.
+    const lastShownErrorRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+      const isPrompt =
+        (tab === 'search' && !isSearchActive) ||
+        (tab === 'genres' && !selectedGenre);
+      const shouldShow = !isPrompt && !hasLoaded && !isLoading && !!error;
+      const currentError = shouldShow ? error : null;
+      if (currentError && currentError !== lastShownErrorRef.current) {
+        lastShownErrorRef.current = currentError;
+        toast.show(currentError, 'error', {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onPress: () => {
+              lastShownErrorRef.current = null;
+              retry(tab);
+            },
+          },
+        });
+      } else if (!currentError) {
+        lastShownErrorRef.current = null;
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tab, isSearchActive, selectedGenre, hasLoaded, isLoading, error]);
 
     // Determine if this tab is in "prompt" state (prerequisites not met).
     const isSearchPrompt = tab === 'search' && !isSearchActive;
@@ -232,35 +270,21 @@ const MusicTabScene: React.FC<MusicTabSceneProps> = React.memo(
 
         {/* ── Prompt states (no fetch until prerequisite met) ── */}
         {isSearchPrompt && (
-          <View style={styles.centerState}>
-            <SvgIcon
-              name="search"
-              size={40}
-              color={colors.accent.goldDim}
-            />
-            <AppText
-              variant="body2"
-              color="tertiary"
-              style={styles.stateText}>
-              Search Jamendo for tracks.
-            </AppText>
-          </View>
+          <Placeholder
+            variant="empty"
+            anchor="top-third"
+            icon="search"
+            title="Search Jamendo for tracks."
+          />
         )}
 
         {tab === 'genres' && isGenrePrompt && (
-          <View style={styles.centerState}>
-            <SvgIcon
-              name="music"
-              size={40}
-              color={colors.accent.goldDim}
-            />
-            <AppText
-              variant="body2"
-              color="tertiary"
-              style={styles.stateText}>
-              Select a genre above.
-            </AppText>
-          </View>
+          <Placeholder
+            variant="empty"
+            anchor="top-third"
+            icon="music"
+            title="Select a genre above."
+          />
         )}
 
         {/* ── Initial load ── */}
@@ -268,48 +292,32 @@ const MusicTabScene: React.FC<MusicTabSceneProps> = React.memo(
           !isGenrePrompt &&
           !hasLoaded &&
           isLoading && (
-            <View style={styles.centerState}>
-              <ActivityOrb />
-              <AppText
-                variant="body2"
-                color="tertiary"
-                style={styles.stateText}>
-                Loading tracks…
-              </AppText>
-            </View>
+            <Placeholder
+              variant="loading"
+              anchor="top-third"
+              title="Loading tracks…"
+            />
           )}
 
-        {/* ── Load failure (page 1) ── */}
+        {/* ── Load failure (page 1) ──
+            Toast surfaces the Retry action (see useEffect above).
+            The Placeholder below keeps the screen from looking blank. */}
+
+        {/* ── Load failure (page 1) — toast surfaces Retry; placeholder keeps
+            the screen from looking blank ── */}
         {!isSearchPrompt &&
           !isGenrePrompt &&
           !hasLoaded &&
           !isLoading &&
-          error && (
-            <View style={styles.centerState}>
-              <SvgIcon
-                name="alertCircle"
-                size={40}
-                color={colors.accent.goldDim}
-              />
-              <AppText
-                variant="body2"
-                color="tertiary"
-                style={styles.stateText}>
-                {error}
-              </AppText>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => retry(tab)}
-                style={[
-                  styles.retryButton,
-                  {backgroundColor: colors.accent.gold},
-                ]}
-                accessibilityRole="button">
-                <AppText variant="button" style={styles.retryText}>
-                  Retry
-                </AppText>
-              </TouchableOpacity>
-            </View>
+          error &&
+          items.length === 0 && (
+            <Placeholder
+              variant="empty"
+              anchor="top-third"
+              icon="alertCircle"
+              title={isOnline ? "Couldn't load tracks." : "You're offline."}
+              message="Use Retry at the bottom of the screen to try again."
+            />
           )}
 
         {/* ── Empty scope (loaded, zero results) ── */}
@@ -318,23 +326,18 @@ const MusicTabScene: React.FC<MusicTabSceneProps> = React.memo(
           hasLoaded &&
           !error &&
           items.length === 0 && (
-            <View style={styles.centerState}>
-              <SvgIcon
-                name="folder"
-                size={40}
-                color={colors.accent.goldDim}
-              />
-              <AppText
-                variant="body2"
-                color="tertiary"
-                style={styles.stateText}>
-                {tab === 'search'
+            <Placeholder
+              variant="empty"
+              anchor="top-third"
+              icon="folder"
+              title={
+                tab === 'search'
                   ? 'No tracks match your search.'
                   : tab === 'genres'
                   ? `No ${selectedGenre} tracks found.`
-                  : 'No popular tracks found.'}
-              </AppText>
-            </View>
+                  : 'No popular tracks found.'
+              }
+            />
           )}
 
         {/* ── List + infinite scroll ── */}
@@ -414,6 +417,7 @@ export const MusicScreen: React.FC<
     setSearchQuery,
     setSearchTerm,
     isSearchActive,
+    isOnline,
     getScope,
     ensureLoaded,
     loadMore,
@@ -481,6 +485,7 @@ export const MusicScreen: React.FC<
           tab={tab}
           scope={getScope(tab)}
           isSearchActive={isSearchActive}
+          isOnline={isOnline}
           selectedGenre={selectedGenre}
           onSelectGenre={selectGenre}
           ensureLoaded={ensureLoaded}
@@ -508,18 +513,11 @@ export const MusicScreen: React.FC<
 
   const renderLazyPlaceholder = useCallback(
     ({route: tabRoute}: {route: Route}) => (
-      <View style={styles.centerState}>
-        <ActivityOrb />
-        <AppText
-          variant="body2"
-          color="tertiary"
-          style={styles.stateText}>
-          Loading{' '}
-          {MUSIC_TABS.find(t => t.key === tabRoute.key)?.title ??
-            'tracks'}
-          …
-        </AppText>
-      </View>
+      <Placeholder
+        variant="loading"
+        anchor="top-third"
+        title={`Loading ${MUSIC_TABS.find(t => t.key === tabRoute.key)?.title ?? 'tracks'}…`}
+      />
     ),
     [],
   );
@@ -613,26 +611,6 @@ const styles = StyleSheet.create({
   },
   genreChipText: {
     fontWeight: '700',
-  },
-  // ── Center states ──
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-  },
-  stateText: {
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  retryButton: {
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-  },
-  retryText: {
-    color: '#1A1206',
   },
   // ── List ──
   listContent: {

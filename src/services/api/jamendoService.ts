@@ -9,11 +9,10 @@
 //
 // See https://developer.jamendo.com/v3.0
 
-import {apiFetch} from './apiClient';
+import {apiFetch, ApiError} from './apiClient';
 import {ENV} from '../../constants/env';
 import type {
   JamendoTrackResult,
-  JamendoAlbumResult,
   ApiSearchOptions,
 } from '../../types/api';
 
@@ -25,9 +24,9 @@ const JAMENDO_CONFIG = {
 };
 
 const clientId = (): string => {
-  if (!ENV.JAMENDO_CLIENT_ID || ENV.JAMENDO_CLIENT_ID === 'your_jamendo_client_id_here') {
-    console.warn('Jamendo client_id not set — API calls will fail until configured.');
-  }
+  // Returns the configured client_id. If unset, Jamendo will reject the
+  // request with headers.status='error' which assertJamendoSuccess
+  // surfaces as a normal ApiError to the caller.
   return ENV.JAMENDO_CLIENT_ID;
 };
 
@@ -44,17 +43,31 @@ interface JamendoTrackRaw {
   genre_name: string;
 }
 
-interface JamendoAlbumRaw {
-  id: string;
-  name: string;
-  artist_name: string;
-  releasedate: string;
-  image: string;
-  track_count: string;
+interface JamendoResponse<T> {
+  headers: {
+    status: 'success' | 'error';
+    code?: number;
+    error_message?: string;
+    results_count?: number;
+  };
+  results: T[];
 }
 
-interface JamendoResponse<T> {
-  results: {headers: Record<string, unknown>; list: T[]};
+/**
+ * Jamendo returns HTTP 200 even when the request fails (e.g. missing or
+ * invalid `client_id`). The real status lives in the response body at
+ * `headers.status`. This helper throws an ApiError when the API reports
+ * an error, so the call sites can handle it the same way as a transport
+ * failure instead of silently returning an empty list.
+ */
+function assertJamendoSuccess<T>(data: JamendoResponse<T>): T[] {
+  if (data?.headers?.status !== 'success') {
+    const code = data?.headers?.code ?? 0;
+    const message =
+      data?.headers?.error_message ?? 'Jamendo request failed.';
+    throw new ApiError(`[${code}] ${message}`, 200);
+  }
+  return Array.isArray(data.results) ? data.results : [];
 }
 
 // ─── Mappers ──────────────────────────────────────────────────────────
@@ -69,17 +82,6 @@ function mapTrack(raw: JamendoTrackRaw): JamendoTrackResult {
     audioUrl: raw.audio,
     imageUrl: raw.image,
     genreName: raw.genre_name || '',
-  };
-}
-
-function mapAlbum(raw: JamendoAlbumRaw): JamendoAlbumResult {
-  return {
-    id: parseInt(raw.id, 10),
-    name: raw.name,
-    artistName: raw.artist_name,
-    releaseDate: raw.releasedate,
-    imageUrl: raw.image,
-    trackCount: parseInt(raw.track_count, 10) || 0,
   };
 }
 
@@ -103,27 +105,7 @@ export async function searchJamendoTracks(
     },
     cacheTtlMs: 60_000,
   });
-  return (data.results?.list ?? []).map(mapTrack);
-}
-
-/** Search albums on Jamendo. */
-export async function searchJamendoAlbums(
-  query: string,
-  options?: ApiSearchOptions,
-): Promise<JamendoAlbumResult[]> {
-  const data = await apiFetch<JamendoResponse<JamendoAlbumRaw>>({
-    config: JAMENDO_CONFIG,
-    path: '/albums/',
-    params: {
-      client_id: clientId(),
-      format: 'json',
-      search: query,
-      limit: options?.limit ?? 10,
-      page: options?.page ?? 1,
-    },
-    cacheTtlMs: 60_000,
-  });
-  return (data.results?.list ?? []).map(mapAlbum);
+  return assertJamendoSuccess(data).map(mapTrack);
 }
 
 /** Get popular tracks by genre (genre name, e.g. 'rock', 'pop', 'jazz'). */
@@ -145,7 +127,7 @@ export async function getJamendoTracksByGenre(
     },
     cacheTtlMs: 120_000,
   });
-  return (data.results?.list ?? []).map(mapTrack);
+  return assertJamendoSuccess(data).map(mapTrack);
 }
 
 /** Get globally popular tracks on Jamendo. */
@@ -164,7 +146,7 @@ export async function getPopularJamendoTracks(
     },
     cacheTtlMs: 120_000,
   });
-  return (data.results?.list ?? []).map(mapTrack);
+  return assertJamendoSuccess(data).map(mapTrack);
 }
 
 /** Get a single track by ID (includes full stream URL in track.audioUrl). */
@@ -182,7 +164,7 @@ export async function getJamendoTrackById(
       },
       cacheTtlMs: 300_000,
     });
-    const list = data.results?.list ?? [];
+    const list = assertJamendoSuccess(data);
     return list.length > 0 ? mapTrack(list[0]) : null;
   } catch {
     return null;

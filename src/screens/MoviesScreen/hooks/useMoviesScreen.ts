@@ -201,11 +201,15 @@ export function useMoviesScreen(initialCategoryId?: string) {
 
   // Keep the current category scoped-loaded when it (or the search term)
   // changes — covers the very first mount and every new search term.
+  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effect only
+  // re-fires when the selected category or search term actually changes.
+  const ensureLoadedRef = useRef(ensureLoaded);
+  ensureLoadedRef.current = ensureLoaded;
   useEffect(() => {
     if (selectedCategory) {
-      ensureLoaded(selectedCategory);
+      ensureLoadedRef.current(selectedCategory);
     }
-  }, [selectedCategory, ensureLoaded, keyFor]);
+  }, [selectedCategory, keyFor]);
 
   return {
     selectedCategory,

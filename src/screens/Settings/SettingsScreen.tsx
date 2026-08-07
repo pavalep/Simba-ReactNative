@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {
   Animated,
   ScrollView,
@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
+import {Placeholder} from '../../components/feedback/Placeholder';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useNavigation} from '@react-navigation/native';
@@ -15,6 +16,8 @@ import {spacing} from '../../theme/tokens';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SectionHeader} from '../../components/utility/SectionHeader/SectionHeader';
 import {SettingsRow} from '../../components/utility/SettingsRow/SettingsRow';
+import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
+import {useToast} from '../../components/feedback/Toast';
 import {MpvConfigEditor, LinkedFoldersDialog, ThemePickerDialog, SubtitleLanguageDialog, SubtitleStyleDialog} from './components';
 import type {MpvOption} from './components/MpvConfigEditor';
 import {SettingsScreenProps} from '../../navigation/types';
@@ -82,6 +85,17 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
     setSubtitleStyleDialogVisible,
     onRefresh,
   } = useSettingsScreen();
+  const toast = useToast();
+
+  // Surface settings-load failures as a top-of-screen toast with Retry.
+  useEffect(() => {
+    if (error) {
+      toast.show(error, 'error', {
+        duration: 8000,
+        action: {label: 'Retry', onPress: () => setError(null)},
+      });
+    }
+  }, [error, toast, setError]);
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -93,35 +107,12 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
       {/* Ambient warm glow */}
       <View style={[styles.glow, {backgroundColor: colors.accent.goldGlow}]} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <AppText variant="h1" color="primary">
-          Settings
-        </AppText>
-      </View>
+      {/* Header — InternalHeader includes the chevron back arrow */}
+      <InternalHeader title="Settings" />
 
       {isLoading ? (
-        <View style={styles.centerContainer}>
-          <ActivityOrb size={48} />
-        </View>
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <AppText
-            variant="body1"
-            color="error"
-            style={{textAlign: 'center', marginBottom: spacing.sm}}>
-            {error}
-          </AppText>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => setError(null)}
-            activeOpacity={0.7}>
-            <AppText variant="button" color="accent">
-              Retry
-            </AppText>
-          </TouchableOpacity>
-        </View>
-      ) : (
+        <Placeholder variant="loading" anchor="center" />
+      ) : !error ? (
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -368,7 +359,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
           {/* Bottom spacer */}
           <View style={{height: spacing.lg}} />
         </ScrollView>
-      )}
+      ) : null}
 
       <MpvConfigEditor
         visible={mpvEditorVisible}

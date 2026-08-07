@@ -203,22 +203,30 @@ export function usePodcastsScreen(initialCategoryId?: number) {
     setRefreshing(false);
   }, [retry, selectedTab.title]);
 
+  // ── Keep current tab loaded ──
+  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effects below
+  // only re-fire when the selected tab actually changes — not on every
+  // parent re-render (getScope / fetchPage change ref every render).
+  const ensureLoadedRef = useRef(ensureLoaded);
+  ensureLoadedRef.current = ensureLoaded;
+
   // ── Auto-retry on reconnect ──
+  // [FIX-PODCASTS-LOOP] deps exclude `ensureLoaded` (changes ref every
+  // render). The wasOnlineRef captures the previous value across renders
+  // so the transition check still works.
   useEffect(() => {
     const wasOnline = wasOnlineRef.current;
     wasOnlineRef.current = isOnline;
     if (!wasOnline && isOnline && failedKeyRef.current) {
-      const key = failedKeyRef.current;
       failedKeyRef.current = null;
-      // Re-trigger ensureLoaded for the current tab
-      ensureLoaded(selectedTab.title);
+      ensureLoadedRef.current(selectedTab.title);
     }
-  }, [isOnline, ensureLoaded, selectedTab.title]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, selectedTab.title]);
 
-  // ── Keep current tab loaded ──
   useEffect(() => {
-    ensureLoaded(selectedTab.title);
-  }, [selectedTab.title, ensureLoaded, keyFor]);
+    ensureLoadedRef.current(selectedTab.title);
+  }, [selectedTab.title]);
 
   const selectTabByTitle = useCallback((title: string) => {
     const idx = PODCAST_TABS.findIndex(t => t.title === title);

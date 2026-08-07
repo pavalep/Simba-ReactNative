@@ -3,6 +3,7 @@ import {View, StyleSheet, TouchableOpacity} from 'react-native';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
+import {SvgIcon} from '../../../components/utility/SvgIcon';
 
 
 // ─── Props ───────────────────────────────────────────────────
@@ -51,18 +52,13 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
           position: 'absolute',
           top: 16,
           left: 16,
-          width: 44,
-          height: 44,
-          borderRadius: 22,
+          width: 36,
+          height: 36,
+          borderRadius: 18,
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: colors.background.scrimFaint,
           zIndex: 10,
-        },
-        backIcon: {
-          color: colors.text.inverse,
-          fontSize: 20,
-          fontWeight: '600',
         },
       }),
     [colors],
@@ -74,6 +70,25 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
 
   return (
     <View style={styles.overlay} pointerEvents="box-none">
+      {/* V5 / V6.5: canonical chevron back arrow — lets the user exit even
+          while the player is initializing (the top bar isn't shown yet at
+          this point). Sits above the dim scrim so the icon stays legible. */}
+      {onBack && (
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={onBack}
+          activeOpacity={0.7}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+          <SvgIcon
+            name="chevronRight"
+            size={20}
+            color="#FFFFFF"
+            style={{transform: [{rotate: '180deg'}]}}
+          />
+        </TouchableOpacity>
+      )}
       <View style={styles.content} pointerEvents="none">
         <View style={styles.spinner}>
           <ActivityOrb size={48} />
