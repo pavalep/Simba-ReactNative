@@ -1,9 +1,11 @@
 import React, {useCallback, useEffect} from 'react';
-import {View, FlatList, RefreshControl, StyleSheet, TouchableOpacity, Animated} from 'react-native';
+import {View, FlatList, RefreshControl, StyleSheet, TouchableOpacity} from 'react-native';
+import FastImage from 'react-native-fast-image';
 import {spacing} from '../../theme/tokens';
 import {type HomeScreenProps} from '../../navigation/types';
 import {useHomeScreen, type HomeSection} from './hooks/useHomeScreen';
 import {removeBookmark} from '../../store/slices/sessionSlice';
+import {GREETING_IMAGES} from '../../assets/images/greeting';
 
 // ── Components ──
 import {SimbaStatusBar} from '../../components/StatusBar';
@@ -15,6 +17,7 @@ import {HomeLoadingSkeleton} from './components/HomeLoadingSkeleton';
 import {HomeErrorState} from './components/HomeErrorState';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {AppText} from '../../components/core/AppText/AppText';
+import {SubsectionTitle} from '../../components/utility/SubsectionTitle/SubsectionTitle';
 import {HomeBookmarksList} from './components/HomeBookmarksList';
 import {MovieCategoriesShelf} from './components/MovieCategoriesShelf';
 import {PodcastCategoriesShelf} from './components/PodcastCategoriesShelf';
@@ -26,12 +29,9 @@ import {LiveTVCategoriesShelf} from './components/LiveTVCategoriesShelf';
 import {AudiobooksShelf} from './components/AudiobooksShelf';
 import {ArchiveShelf} from './components/ArchiveShelf';
 import {ShowsShelf} from './components/ShowsShelf';
-import type {
-  AudiobooksBrowseEntry,
-  ArchiveBrowseEntry,
-} from '../../constants/audiobookCategories';
-import type {ShowsBrowseEntry} from '../../constants/showCategories';
-import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
+import type {AudiobookCategory, ArchiveCategory} from '../../constants/audiobookCategories';
+import type {ShowCategory} from '../../constants/showCategories';
+import type {RadioCategory} from '../../constants/liveCategories';
 import {mark, logStartupSummary} from '../../utils/startupPerf';
 
 // ── Screen ──
@@ -48,7 +48,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     greeting,
     dispatch,
     user,
-    bookmarkCount,
     handleOpenMedia,
     handleItemPress,
     handlePlaylistPress,
@@ -57,12 +56,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     handleSettingsPress,
     handleSearchPress,
     handleAvatarPress,
-    handleBookmarksPress,
+    handleBookmarksSeeAll,
     onRefresh,
     setHasError,
   } = useHomeScreen(navigation);
-
-  const entrance = useAnimatedEntrance(sections.length, {staggerDelay: 80});
 
   // 59.3: cold-start milestone — initial screen mounted → log the summary
   useEffect(() => {
@@ -77,20 +74,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     [navigation],
   );
 
-  const handleMovieSeeAll = useCallback(() => {
-    navigation.navigate('MoviesScreen', {});
-  }, [navigation]);
-
   const handlePodcastCategoryPress = useCallback(
-    (categoryId: number) => {
-      navigation.navigate('PodcastsScreen', {categoryId});
+    (categoryId: number | 'all') => {
+      // The synthetic 'all' category id rides the same PodscastsScreen
+      // route — the screen's hook detects it and uses /podcasts/trending.
+      navigation.navigate('PodcastsScreen', {categoryId: categoryId as number});
     },
     [navigation],
   );
-
-  const handlePodcastSeeAll = useCallback(() => {
-    navigation.navigate('PodcastsScreen', {});
-  }, [navigation]);
 
   // 35.5: followed podcast card → podcast detail
   const handleFollowedPodcastPress = useCallback(
@@ -103,28 +94,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     [navigation],
   );
 
+  // 35.5: per-user rail — keep the "View All" link to the Podcasts screen
+  // so the user can see their full followed list.
+  const handleFollowedPodcastsSeeAll = useCallback(() => {
+    navigation.navigate('PodcastsScreen', {});
+  }, [navigation]);
+
   const handleMusicCategoryPress = useCallback(
     (genre: string) => {
+      // 'all' is a synthetic tile — landing on the Popular tab gives
+      // the user a populated "everything trending" view instead of an
+      // empty search box.
+      if (genre === 'all') {
+        navigation.navigate('MusicScreen', {initialTab: 'popular'});
+        return;
+      }
       navigation.navigate('MusicScreen', {genre});
     },
     [navigation],
   );
 
-  const handleMusicSeeAll = useCallback(() => {
-    navigation.navigate('MusicScreen', {});
-  }, [navigation]);
-
-  // P36.7: live radio + live TV browse shelves
-  const handleRadioBrowsePress = useCallback(
-    (tab: string) => {
-      navigation.navigate('RadioScreen', {initialTab: tab});
+  // P36.7 + P53: live radio + live TV browse shelves
+  // Rail tiles are now RadioCategory objects (id + radio-browser tag).
+  const handleRadioCategoryPress = useCallback(
+    (cat: RadioCategory) => {
+      if (cat.id === 'all') {
+        navigation.navigate('RadioScreen', {});
+        return;
+      }
+      navigation.navigate('RadioScreen', {initialTab: 'genres', initialTag: cat.tag});
     },
     [navigation],
   );
-
-  const handleRadioSeeAll = useCallback(() => {
-    navigation.navigate('RadioScreen', {});
-  }, [navigation]);
 
   const handleLiveTVCategoryPress = useCallback(
     (categoryId: string) => {
@@ -133,81 +134,93 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     [navigation],
   );
 
-  const handleLiveTVSeeAll = useCallback(() => {
-    navigation.navigate('LiveTVScreen', {});
-  }, [navigation]);
-
-  // P37.7: audiobooks + Internet Archive browse shelves
-  const handleAudiobookBrowsePress = useCallback(
-    (entry: AudiobooksBrowseEntry) => {
-      navigation.navigate('AudiobooksScreen', {initialTab: entry.id});
+  // P37.7 + P53: audiobooks + Internet Archive browse shelves
+  // Rail tiles are now AudiobookCategory objects (id + libriVox tag).
+  const handleAudiobookCategoryPress = useCallback(
+    (cat: AudiobookCategory) => {
+      if (cat.id === 'all') {
+        navigation.navigate('AudiobooksScreen', {});
+        return;
+      }
+      navigation.navigate('AudiobooksScreen', {initialTab: 'genres', initialGenre: cat.tag});
     },
     [navigation],
   );
 
-  const handleAudiobookGenrePress = useCallback(
-    (genre: string) => {
-      navigation.navigate('AudiobooksScreen', {initialTab: 'genres', genre});
+  // P53: rail tiles are now ArchiveCategory objects (id + IA query).
+  const handleArchiveCategoryPress = useCallback(
+    (cat: ArchiveCategory) => {
+      if (cat.id === 'all') {
+        navigation.navigate('ArchiveScreen', {});
+        return;
+      }
+      if (cat.id === 'audio' || cat.id === 'video') {
+        navigation.navigate('ArchiveScreen', {initialTab: cat.id});
+        return;
+      }
+      navigation.navigate('ArchiveScreen', {query: cat.query});
     },
     [navigation],
   );
 
-  const handleAudiobookSeeAll = useCallback(() => {
-    navigation.navigate('AudiobooksScreen', {});
-  }, [navigation]);
-
-  const handleArchiveBrowsePress = useCallback(
-    (entry: ArchiveBrowseEntry) => {
-      navigation.navigate('ArchiveScreen', {initialTab: entry.id});
+  // P38.7 + P53: rail tiles are now ShowCategory objects (id + TVMaze genre).
+  const handleShowsCategoryPress = useCallback(
+    (cat: ShowCategory) => {
+      if (cat.id === 'all') {
+        navigation.navigate('ShowsScreen', {});
+        return;
+      }
+      navigation.navigate('ShowsScreen', {initialTab: 'browse', initialGenre: cat.genre});
     },
     [navigation],
   );
 
-  const handleArchiveQuickSearch = useCallback(
-    (query: string) => {
-      navigation.navigate('ArchiveScreen', {query});
-    },
-    [navigation],
-  );
-
-  const handleArchiveSeeAll = useCallback(() => {
-    navigation.navigate('ArchiveScreen', {});
-  }, [navigation]);
-
-  // P38.7: TV shows (TVMaze) browse shelf
-  const handleShowsBrowsePress = useCallback(
-    (entry: ShowsBrowseEntry) => {
-      navigation.navigate('ShowsScreen', {initialTab: entry.id});
-    },
-    [navigation],
-  );
-
-  const handleShowsSeeAll = useCallback(() => {
-    navigation.navigate('ShowsScreen', {});
-  }, [navigation]);
-
-  // P41.5: See All coverage — pinned playlists link to the full list
+  // P41.5: Pinned Playlists' "VIEW ALL" link — kept on the per-user
+  // QuickAccessShelf only (not on the API-backed category rails).
   const handlePlaylistsSeeAll = useCallback(() => {
     navigation.navigate('AllPlaylistsScreen');
   }, [navigation]);
 
   // ── Render Item ──
   const renderSection = useCallback(
-    ({item, index}: {item: HomeSection; index: number}) => {
-      const animStyle = entrance.styles[index];
+    ({item}: {item: HomeSection; index: number}) => {
       const sectionContent = (() => {
         switch (item.type) {
           case 'GREETING':
+            // P60 (Direction 1 + image): the greeting is a clean
+            // h2 line — "Good evening, Paval" — with a small
+            // watercolor illustration on the right. The image
+            // tracks the time of day (sun / coffee / moon /
+            // stars) and is the page's first visual hint of
+            // // "this is a friendly, illustrated app" — not text.
             return (
               <View style={styles.welcomeSection}>
-                <AppText variant="h2" color="primary" style={styles.greetingMain}>
-                  {greeting}, Paval
-                </AppText>
+                <View style={styles.welcomeRow}>
+                  <AppText
+                    variant="h2"
+                    color="primary"
+                    style={styles.greetingMain}>
+                    {greeting.text}, Paval
+                  </AppText>
+                  <FastImage
+                    source={GREETING_IMAGES[greeting.image]}
+                    style={styles.greetingImage}
+                    resizeMode={FastImage.resizeMode.contain}
+                    accessibilityIgnoresInvertColors
+                  />
+                </View>
               </View>
             );
         case 'HERO':
           return item.data ? <FeaturedHeroBanner item={item.data} onPress={handleItemPress} /> : null;
+        case 'SUBSECTION_TITLE':
+          return <SubsectionTitle label={item.label} />;
         case 'SHELF':
+          // P56: per the user's spec, only Recently Played, Bookmarks,
+          // and Followed Podcasts get the chevron — and only the latter
+          // two can actually collapse. Recently Played is the SHELF
+          // we render here and it's `forceExpanded`; no chevron. The
+          // other two are handled in their dedicated cases below.
           return (
             <HomeMediaShelf
               title={item.title}
@@ -231,14 +244,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           return (
             <MovieCategoriesShelf
               onCategoryPress={handleMovieCategoryPress}
-              onSeeAll={handleMovieSeeAll}
             />
           );
         case 'PREFILLED_PODCASTS':
           return (
             <PodcastCategoriesShelf
               onCategoryPress={handlePodcastCategoryPress}
-              onSeeAll={handlePodcastSeeAll}
             />
           );
         case 'FOLLOWED_PODCASTS':
@@ -246,51 +257,43 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
             <FollowedPodcastsShelf
               items={item.items}
               onPodcastPress={handleFollowedPodcastPress}
-              onSeeAll={handlePodcastSeeAll}
+              onSeeAll={handleFollowedPodcastsSeeAll}
             />
           );
         case 'PREFILLED_MUSIC':
           return (
             <MusicCategoriesShelf
               onCategoryPress={handleMusicCategoryPress}
-              onSeeAll={handleMusicSeeAll}
             />
           );
         case 'RADIO':
           return (
             <RadioCategoriesShelf
-              onBrowsePress={handleRadioBrowsePress}
-              onSeeAll={handleRadioSeeAll}
+              onCategoryPress={handleRadioCategoryPress}
             />
           );
         case 'LIVE_TV':
           return (
             <LiveTVCategoriesShelf
               onCategoryPress={handleLiveTVCategoryPress}
-              onSeeAll={handleLiveTVSeeAll}
             />
           );
         case 'AUDIOBOOKS':
           return (
             <AudiobooksShelf
-              onBrowsePress={handleAudiobookBrowsePress}
-              onGenrePress={handleAudiobookGenrePress}
-              onSeeAll={handleAudiobookSeeAll}
+              onCategoryPress={handleAudiobookCategoryPress}
             />
           );
         case 'ARCHIVE':
           return (
             <ArchiveShelf
-              onBrowsePress={handleArchiveBrowsePress}
-              onQuickSearch={handleArchiveQuickSearch}
-              onSeeAll={handleArchiveSeeAll}
+              onCategoryPress={handleArchiveCategoryPress}
             />
           );
         case 'SHOWS':
           return (
             <ShowsShelf
-              onBrowsePress={handleShowsBrowsePress}
-              onSeeAll={handleShowsSeeAll}
+              onCategoryPress={handleShowsCategoryPress}
             />
           );
         case 'BOOKMARKS':
@@ -299,19 +302,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
               items={item.items}
               onPress={bookmark => handleItemPress({...bookmark, startPosition: bookmark.position})}
               onRemove={id => dispatch(removeBookmark(id))}
+              onSeeAll={handleBookmarksSeeAll}
             />
           );
           default:
             return null;
         }
       })();
-      return animStyle ? (
-        <Animated.View style={animStyle}>{sectionContent}</Animated.View>
-      ) : (
-        sectionContent
-      );
+      // P57: the staggered entrance animation got stuck on iOS once
+      // the section count grew past ~10. With `removeClippedSubviews`
+      // on the parent FlatList, an `Animated.View` starting at
+      // `opacity: 0` was being clipped from the native hierarchy
+      // and never came back when the animation tried to reveal it —
+      // leaving the page showing only the GREETING. We just render
+      // the section content directly; the warm parchment background
+      // and the section structure are doing the visual work now.
+      return sectionContent;
     },
-    [dispatch, greeting, handleItemPress, handlePlaylistPress, handleGenrePress, handleMovieCategoryPress, handleMovieSeeAll, handleSeeAll, handlePodcastCategoryPress, handlePodcastSeeAll, handleFollowedPodcastPress, handleMusicCategoryPress, handleMusicSeeAll, handleRadioBrowsePress, handleRadioSeeAll, handleLiveTVCategoryPress, handleLiveTVSeeAll, handleAudiobookBrowsePress, handleAudiobookGenrePress, handleAudiobookSeeAll, handleArchiveBrowsePress, handleArchiveQuickSearch, handleArchiveSeeAll, handleShowsBrowsePress, handleShowsSeeAll, handlePlaylistsSeeAll, entrance.styles],
+    [dispatch, greeting, handleItemPress, handlePlaylistPress, handleGenrePress, handleMovieCategoryPress, handleSeeAll, handlePodcastCategoryPress, handleFollowedPodcastPress, handleFollowedPodcastsSeeAll, handleMusicCategoryPress, handleRadioCategoryPress, handleLiveTVCategoryPress, handleAudiobookCategoryPress, handleArchiveCategoryPress, handleShowsCategoryPress, handlePlaylistsSeeAll],
   );
 
   if (hasError) {
@@ -323,9 +331,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           onSettingsPress={handleSettingsPress}
           onSearchPress={handleSearchPress}
           onAvatarPress={handleAvatarPress}
-          onBookmarksPress={handleBookmarksPress}
           avatarUrl={user?.photo ?? null}
-          bookmarkCount={bookmarkCount}
         />
         <HomeErrorState onRetry={() => setHasError(false)} colors={colors} />
       </View>
@@ -341,9 +347,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           onSettingsPress={handleSettingsPress}
           onSearchPress={handleSearchPress}
           onAvatarPress={handleAvatarPress}
-          onBookmarksPress={handleBookmarksPress}
           avatarUrl={user?.photo ?? null}
-          bookmarkCount={bookmarkCount}
         />
         <HomeLoadingSkeleton colors={colors} />
       </View>
@@ -358,15 +362,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         onSettingsPress={handleSettingsPress}
         onSearchPress={handleSearchPress}
         onAvatarPress={handleAvatarPress}
-        onBookmarksPress={handleBookmarksPress}
         avatarUrl={user?.photo ?? null}
-        bookmarkCount={bookmarkCount}
       />
 
       <FlatList
         data={sections}
         renderItem={renderSection}
-        keyExtractor={(item, index) => item.type + (item.type === 'SHELF' ? item.title : index.toString())}
+        keyExtractor={(item, index) =>
+          item.type === 'SHELF' ? `SHELF:${item.title}` :
+          item.type === 'SUBSECTION_TITLE' ? `SUBSECTION:${item.label}` :
+          `${item.type}:${index}`
+        }
         contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 100}]}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -377,7 +383,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
             colors={[colors.accent.gold]}
           />
         }
-        getItemLayout={(_, index) => ({length: 76, offset: 76 * index, index})}
         windowSize={5}
         maxToRenderPerBatch={10}
         removeClippedSubviews={true}
@@ -410,11 +415,33 @@ const styles = StyleSheet.create({
   root: {flex: 1},
   scrollContent: {paddingTop: spacing.md},
   welcomeSection: {
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.lg,
-    marginTop: spacing.sm,
+    // P60: greeting row (text + illustration) sits flush with the
+    // page gutter. The illustration is a visual hint, not a
+    // second focal point — it lives to the right of the text,
+    // vertically centered, and the page hero (HERO section)
+    // below it is still the dominant element.
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    marginTop: spacing.xs,
   },
-  greetingMain: {fontWeight: '700', opacity: 0.9},
+  welcomeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  greetingMain: {
+    // h2 is 24 / 700 / lineHeight 32 in the token set. flex: 1
+    // so the text takes the available space and the image sits
+    // flush right. No font tweaks — the greeting is a friendly
+    // open, not a hero.
+    fontWeight: '700',
+    flex: 1,
+    paddingRight: spacing.md,
+  },
+  greetingImage: {
+    width: 48,
+    height: 48,
+  },
   fab: {
     position: 'absolute',
     right: spacing.lg,

@@ -74,14 +74,21 @@ function dedupe(items: RadioStationResult[]): RadioStationResult[] {
   });
 }
 
-export function useRadioScreen(initialTab?: string) {
+export function useRadioScreen(initialTab?: string, initialTag?: string) {
   const {isOnline} = useNetworkStatus();
   const dispatch = useAppDispatch();
 
+  // P53: when an initial tag is supplied from a Home rail tile, jump
+  // straight to the Genres tab with the tag pre-selected so the
+  // station list is populated on first paint.
   const [selectedTab, setSelectedTab] = useState<RadioBrowseMode>(
-    (initialTab as RadioBrowseMode) || 'top',
+    initialTag
+      ? 'genres'
+      : (initialTab as RadioBrowseMode) || 'top',
   );
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(
+    initialTag ?? null,
+  );
   const [tags, setTags] = useState<RadioBrowseTag[]>([]);
   const [tagsLoaded, setTagsLoaded] = useState(false);
 

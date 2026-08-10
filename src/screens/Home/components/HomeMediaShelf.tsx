@@ -1,11 +1,12 @@
-import React from 'react';
+import React, {useCallback, useState} from 'react';
 import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
 import FastImage from 'react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
-import {radius, spacing} from '../../../theme/tokens';
+import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
+import {EmptyState} from '../../../components/utility/EmptyState/EmptyState';
 
 // ── Helpers ──
 
@@ -35,6 +36,17 @@ interface HomeMediaShelfProps {
   onItemPress: (item: MediaItem) => void;
   onSeeAll?: () => void;
   maxItems?: number;
+  /**
+   * P55: when the shelf is empty, show the premium empty-state (gold
+   * disc + title + body). Defaults to "Nothing here yet" for the
+   * Recently Played rail.
+   */
+  emptyTitle?: string;
+  emptyDescription?: string;
+  emptyIcon?: 'video' | 'music' | 'headphones' | 'bookmark' | 'list' | 'search' | 'play' | 'folder';
+  /** Optional CTA inside the empty state. */
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
 }
 
 export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
@@ -43,123 +55,167 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
   onItemPress,
   onSeeAll,
   maxItems = 8,
+  emptyTitle = 'Nothing Played Yet',
+  emptyDescription = 'Files you open will appear here — start playing something to see it show up.',
+  emptyIcon = 'video',
+  emptyActionLabel,
+  onEmptyAction,
 }: HomeMediaShelfProps) => {
   const {colors} = useTheme();
 
-  if (items.length === 0) return null;
-
+  // P58: rail owns its own collapse state — no persistence.
+  // Default: collapsed when empty, expanded when has data. The user
+  // can flip either way with the chevron. State is in-memory only
+  // and resets on every mount.
+  const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null);
   const displayItems = items.slice(0, maxItems);
+  const hasData = displayItems.length > 0;
+  const collapsed = userCollapsed ?? !hasData;
+  const onToggleCollapsed = useCallback(() => {
+    setUserCollapsed(prev => (prev ?? !hasData) ? false : true);
+  }, [hasData]);
+  const showBody = !collapsed;
 
   return (
-    <View style={[styles.container, {backgroundColor: colors.background.highlightDim}]}>
-      {/* ── Section header ── */}
+    <View style={styles.container}>
+      {/* ── Section header — always present, with chevron ── */}
       <View style={styles.header}>
-        <AppText variant="h3" color="primary" style={styles.headerTitle}>
+        <AppText variant="h2" color="primary" style={styles.headerTitle}>
           {title}
         </AppText>
-        <TouchableOpacity activeOpacity={0.7} style={styles.seeAllBtn} onPress={onSeeAll} accessibilityRole="button">
-          <AppText variant="overline" color="accent" style={styles.seeAllText}>
-            VIEW ALL
-          </AppText>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {items.length > 1 && onSeeAll ? (
+            <TouchableOpacity activeOpacity={0.7} style={styles.seeAllBtn} onPress={onSeeAll} accessibilityRole="button">
+              <AppText variant="caption" color="accent">
+                See All
+              </AppText>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            onPress={onToggleCollapsed}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={collapsed ? 'Expand section' : 'Collapse section'}
+            style={styles.chevronBtn}>
+            <SvgIcon
+              name="chevronDown"
+              size={18}
+              color={colors.text.tertiary}
+              style={collapsed ? styles.chevronUp : styles.chevronDown}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* ── Horizontal Shelf ── */}
-      <FlatList
-        horizontal
-        data={displayItems}
-        keyExtractor={item => item.fileUri}
-        renderItem={({item}) => {
-          const progress = item.duration && item.position ? Math.min(100, (item.position / item.duration) * 100) : 0;
-          
-          return (
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => onItemPress(item)}
-              accessibilityRole="button"
-              style={[styles.card, {shadowColor: colors.shadow}]}>
-              <View style={[styles.thumbnailContainer, {backgroundColor: colors.background.elevated}]}>
-                {item.thumbnailPath ? (
-                  <FastImage
-                    source={{uri: item.thumbnailPath}}
-                    style={StyleSheet.absoluteFill}
-                    resizeMode={FastImage.resizeMode.cover}
-                  />
-                ) : (
-                  <View style={styles.placeholder}>
+      {/* ── Body: empty state OR data list ── */}
+      {showBody && !hasData ? (
+        <EmptyState
+          icon={emptyIcon}
+          title={emptyTitle}
+          description={emptyDescription}
+          actionLabel={emptyActionLabel}
+          onAction={onEmptyAction}
+          variant="compact"
+        />
+      ) : null}
+
+      {showBody && hasData ? (
+        <FlatList
+          horizontal
+          data={displayItems}
+          keyExtractor={item => item.fileUri}
+          renderItem={({item}) => {
+            const progress = item.duration && item.position ? Math.min(100, (item.position / item.duration) * 100) : 0;
+
+            return (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => onItemPress(item)}
+                accessibilityRole="button"
+                style={[styles.card, {shadowColor: colors.shadow}]}>
+                <View style={[styles.thumbnailContainer, {backgroundColor: colors.background.elevated}]}>
+                  {item.thumbnailPath ? (
+                    <FastImage
+                      source={{uri: item.thumbnailPath}}
+                      style={StyleSheet.absoluteFill}
+                      resizeMode={FastImage.resizeMode.cover}
+                    />
+                  ) : (
+                    <View style={styles.placeholder}>
+                      <SvgIcon
+                        name={item.mediaType === 'audio' ? 'music' : 'video'}
+                        size={24}
+                        color={colors.text.tertiary}
+                      />
+                    </View>
+                  )}
+
+                  {/* Media type badge */}
+                  <View style={[styles.typeBadge, {backgroundColor: colors.background.scrim}]}>
                     <SvgIcon
                       name={item.mediaType === 'audio' ? 'music' : 'video'}
-                      size={24}
-                      color={colors.text.tertiary}
+                      size={12}
+                      color={colors.text.bright}
                     />
                   </View>
-                )}
 
-                {/* Media type badge */}
-                <View style={[styles.typeBadge, {backgroundColor: colors.background.scrim}]}>
-                  <SvgIcon
-                    name={item.mediaType === 'audio' ? 'music' : 'video'}
-                    size={12}
-                    color={colors.text.bright}
+                  {/* Premium Gradient Overlay */}
+                  <LinearGradient
+                    colors={['transparent', colors.background.scrimSoft, colors.background.scrim]}
+                    style={styles.overlayGradient}
                   />
-                </View>
 
-                {/* Premium Gradient Overlay */}
-                <LinearGradient
-                  colors={['transparent', colors.background.scrimSoft, colors.background.scrim]}
-                  style={styles.overlayGradient}
-                />
-
-                {/* Bottom Semi-Transparent Strip */}
-                <View style={styles.bottomStrip}>
-                  <View style={[StyleSheet.absoluteFill, {backgroundColor: colors.background.scrim}]} />
-                  <View style={styles.overlayContent}>
-                    <AppText
-                      variant="bodySmall"
-                      numberOfLines={1}
-                      style={[
-                        styles.cardTitleOverlay,
-                        {
-                          color: colors.text.bright,
-                          textShadowColor: colors.background.scrimMid,
-                        },
-                      ]}>
-                      {item.title}
-                    </AppText>
-                    {item.duration ? (
+                  {/* Bottom Semi-Transparent Strip */}
+                  <View style={styles.bottomStrip}>
+                    <View style={[StyleSheet.absoluteFill, {backgroundColor: colors.background.scrim}]} />
+                    <View style={styles.overlayContent}>
                       <AppText
-                        variant="caption"
+                        variant="bodySmall"
+                        numberOfLines={1}
                         style={[
-                          styles.cardTimeOverlay,
+                          styles.cardTitleOverlay,
                           {
-                            color: colors.text.onMediaSoft,
-                            textShadowColor: colors.background.scrim,
+                            color: colors.text.bright,
+                            textShadowColor: colors.background.scrimMid,
                           },
                         ]}>
-                        {formatTime(item.position || 0)} / {formatTime(item.duration)}
+                        {item.title}
                       </AppText>
-                    ) : null}
+                      {item.duration ? (
+                        <AppText
+                          variant="caption"
+                          style={[
+                            styles.cardTimeOverlay,
+                            {
+                              color: colors.text.onMediaSoft,
+                              textShadowColor: colors.background.scrim,
+                            },
+                          ]}>
+                          {formatTime(item.position || 0)} / {formatTime(item.duration)}
+                        </AppText>
+                      ) : null}
+                    </View>
                   </View>
-                </View>
 
-                {/* Progress bar if in progress */}
-                {progress > 0 && (
-                  <View style={[styles.progressBarTrack, {backgroundColor: colors.background.highlightStrong}]}>
-                    <View style={[styles.progressBarFill, {width: `${progress}%`, backgroundColor: colors.accent.gold}]} />
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          );
-        }}
-        contentContainerStyle={styles.shelfContent}
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={CARD_WIDTH + spacing.md}
-        decelerationRate="fast"
-        initialNumToRender={displayItems.length}
-        windowSize={5}
-        maxToRenderPerBatch={12}
-      />
+                  {/* Progress bar if in progress */}
+                  {progress > 0 && (
+                    <View style={[styles.progressBarTrack, {backgroundColor: colors.background.highlightStrong}]}>
+                      <View style={[styles.progressBarFill, {width: `${progress}%`, backgroundColor: colors.accent.gold}]} />
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          contentContainerStyle={styles.shelfContent}
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={CARD_WIDTH + spacing.md}
+          decelerationRate="fast"
+          initialNumToRender={displayItems.length}
+          windowSize={5}
+          maxToRenderPerBatch={12}
+        />
+      ) : null}
     </View>
   );
 };
@@ -169,28 +225,42 @@ const THUMB_HEIGHT = 90; // Precise 16:9
 
 const styles = StyleSheet.create({
   container: {
+    // P58: no card chrome — matches the other Your Library rails
+    // (Bookmarks / Followed Podcasts). The horizontal shelf and
+    // empty-state body carry their own internal padding.
     marginBottom: spacing.xxl,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    marginHorizontal: spacing.sm,
   },
   header: {
+    // P58: match the other two Your Library rails (Bookmarks /
+    // Followed Podcasts) — title left, action + chevron right,
+    // vertical-center alignment, same horizontal padding.
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   headerTitle: {
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: -0.5,
   },
   seeAllBtn: {
-    paddingBottom: 2,
+    paddingVertical: spacing.xs,
   },
-  seeAllText: {
-    letterSpacing: 1,
-    fontWeight: '700',
+  // P56: chevron toggle lives next to the See All link in the header.
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  chevronBtn: {
+    padding: spacing.xs,
+  },
+  chevronDown: {
+    transform: [{rotate: '0deg'}],
+  },
+  chevronUp: {
+    transform: [{rotate: '180deg'}],
   },
   shelfContent: {
     paddingHorizontal: spacing.md,

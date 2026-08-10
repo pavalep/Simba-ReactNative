@@ -1,67 +1,38 @@
 // ─── Live TV Categories Shelf ───────────────────────────────
-// Phase 36.7: browse entries for Live TV on the Home screen.
-// Category ids are real iptv-org ids — channels are fetched
-// live from the API (never fake data).
+// P53: uniform "All + content cards" Home rail. Tapping a category
+// tile opens LiveTVScreen with that iptv-org category pre-selected.
 
 import React from 'react';
-import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
-import {useTheme} from '../../../theme';
-import {radius, spacing} from '../../../theme/tokens';
+import {View, FlatList, StyleSheet} from 'react-native';
 import {IPTV_CATEGORIES} from '../../../constants/liveCategories';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {AppText} from '../../../components/core/AppText/AppText';
+import {CategoryCard} from '../../../components/utility/CategoryCard/CategoryCard';
+import {spacing} from '../../../theme/tokens';
 
 interface LiveTVCategoriesShelfProps {
   onCategoryPress: (categoryId: string) => void;
-  onSeeAll: () => void;
 }
 
 export const LiveTVCategoriesShelf: React.FC<LiveTVCategoriesShelfProps> = React.memo(
-  ({onCategoryPress, onSeeAll}) => {
-    const {colors} = useTheme();
-
+  ({onCategoryPress}) => {
     return (
       <View style={styles.container}>
-        <SectionHeader
-          label="Live TV"
-          actionLabel="See All"
-          onAction={onSeeAll}
-        />
+        <SectionHeader label="Live TV" />
         <FlatList
           horizontal
           data={IPTV_CATEGORIES}
           keyExtractor={cat => cat.id}
-          renderItem={({item: cat}) => (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => onCategoryPress(cat.id)}
-              accessibilityRole="button"
-              style={[
-                styles.card,
-                {backgroundColor: colors.background.elevated},
-              ]}>
-              <View
-                style={[
-                  styles.iconCircle,
-                  {backgroundColor: colors.accent.goldDim},
-                ]}>
-                <SvgIcon
-                  name={cat.icon as any}
-                  size={22}
-                  color={colors.accent.gold}
-                />
-              </View>
-              <AppText
-                variant="bodySmall"
-                style={styles.cardTitle}
-                numberOfLines={1}>
-                {cat.name}
-              </AppText>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.scroll}
           showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+          renderItem={({item: cat}) => (
+            <CategoryCard
+              name={cat.name}
+              description={describeIPTVCategory(cat.id)}
+              icon={cat.icon}
+              image={cat.image}
+              onPress={() => onCategoryPress(cat.id)}
+            />
+          )}
           initialNumToRender={IPTV_CATEGORIES.length}
           windowSize={5}
           maxToRenderPerBatch={12}
@@ -72,28 +43,20 @@ export const LiveTVCategoriesShelf: React.FC<LiveTVCategoriesShelfProps> = React
 );
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.lg,
-  },
-  scroll: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  card: {
-    width: 120,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitle: {
-    fontWeight: '700',
-    lineHeight: 18,
-  },
+  container: {marginBottom: spacing.lg},
+  scroll: {paddingHorizontal: spacing.md, gap: spacing.sm},
 });
+
+function describeIPTVCategory(id: string): string {
+  switch (id) {
+    case 'all':          return 'Every live channel';
+    case 'news':         return 'Live news worldwide';
+    case 'sports':       return 'Live sports & events';
+    case 'music':        return 'Music channels';
+    case 'movies':       return 'Movie-only channels';
+    case 'documentary':  return 'Documentary channels';
+    case 'kids':         return 'Channels for kids';
+    case 'entertainment':return 'Entertainment & lifestyle';
+    default:             return '';
+  }
+}

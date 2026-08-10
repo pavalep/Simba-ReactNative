@@ -40,13 +40,17 @@ export async function searchShows(query: string): Promise<TVMazeShow[]> {
 
 /**
  * P38: browse popular shows — TVmaze /shows?page=N returns 250 per page.
- * Cache: 1 hour.
+ * P53: optional `genre` adds `?genre=<name>` to filter the catalog by
+ * a real TVMaze genre (Drama, Comedy, etc.). Cache: 1 hour.
  */
-export async function getPopularShows(page: number): Promise<TVMazeShow[]> {
+export async function getPopularShows(
+  page: number,
+  genre?: string,
+): Promise<TVMazeShow[]> {
   return apiFetch<TVMazeShow[]>({
     config: API_CONFIG.tvmaze,
     path: '/shows',
-    params: {page},
+    params: genre ? {page, genre} : {page},
     cacheTtlMs: CACHE.BROWSE,
   });
 }

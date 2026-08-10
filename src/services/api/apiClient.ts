@@ -9,13 +9,22 @@ import {logger} from '../../lib/logger';
 // ─── Axios Instance ─────────────────────────────────────────────────────
 // We keep it local so interceptors don't pollute the global axios.
 
+// Default User-Agent applied to every request that doesn't override it.
+// Several public APIs (Podcast Index, TVmaze, Radio-Browser, MusicBrainz)
+// require or strongly recommend clients to identify themselves. The
+// axios default `User-Agent: axios/x.y` gets blocked / throttled.
+const DEFAULT_USER_AGENT = 'SimbaMediaPlayer/1.0.0 (paval@simba.app)';
+
 let _instance: AxiosInstance | null = null;
 
 function getAxiosInstance(): AxiosInstance {
   if (!_instance) {
     _instance = axios.create({
       timeout: 10_000,
-      headers: {Accept: 'application/json'},
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': DEFAULT_USER_AGENT,
+      },
     });
 
     // ── Request interceptor ──

@@ -64,10 +64,42 @@ interface RawReleaseGroupDetail {
   title: string;
   'first-release-date': string | null;
   'primary-type': string | null;
-  recordings?: RawRecording[];
+  /**
+   * P39.4: MusicBrainz release-group doesn't expose recordings directly
+   * (`inc=recordings` is rejected with 400). To get the tracklist, we
+   * fetch the release-group with `inc=releases+artists`, then a follow-up
+   * call to `/release/{id}?inc=recordings` for the earliest release.
+   */
+  releases?: Array<{id: string; title: string; date?: string}>;
   'cover-art-archive'?: {
     front: boolean;
   };
+}
+
+/**
+ * P39.4: MusicBrainz's `/release/{id}?inc=recordings` does NOT return
+ * recordings at the top level — they are nested under
+ * `media[*].tracks[*].recording`. We flatten that here.
+ */
+interface RawReleaseMediaTrack {
+  position: number;
+  number: string;
+  title: string;
+  length?: number | null;
+  recording: RawRecording;
+}
+
+interface RawReleaseMedia {
+  format: string;
+  'track-count': number;
+  tracks?: RawReleaseMediaTrack[];
+}
+
+interface RawReleaseWithRecordings {
+  id: string;
+  title: string;
+  'first-release-date'?: string | null;
+  media?: RawReleaseMedia[];
 }
 
 // ─── Mappers ────────────────────────────────────────────────────────────
@@ -137,6 +169,13 @@ export async function getArtistDiscography(
  * Get the cover art URL for a release group (recordings + art flags, P39.3).
  * The lookup already reports whether a front cover exists, so no extra
  * HEAD request is needed — we construct the CAA url directly.
+ *
+ * P39.4: MB rejects `inc=recordings` on /release-group. We use
+ * `inc=releases+artists` and follow up with a single /release call
+ * for the earliest release to get the tracklist. If the second call
+ * fails (e.g. the release id is gone), we still return the metadata
+ * with an empty recordings array — the consumer's "matched tracks"
+ * counter gracefully degrades to 0.
  */
 export async function getReleaseGroupDetail(
   releaseGroupId: string,
@@ -145,10 +184,46 @@ export async function getReleaseGroupDetail(
     const response = await apiFetch<RawReleaseGroupDetail>({
       config: API_CONFIG.musicbrainz,
       path: `/release-group/${releaseGroupId}`,
-      params: {inc: 'recordings', fmt: 'json'},
+      params: {inc: 'releases+artists', fmt: 'json'},
       cacheTtlMs: DISCOGRAPHY_CACHE_TTL,
       headers: {'User-Agent': USER_AGENT},
     });
+
+    // Pick the earliest release for the tracklist (most representative).
+    const sortedReleases = (response.releases ?? []).slice().sort((a, b) => {
+      const da = a.date ?? '';
+      const db = b.date ?? '';
+      return da.localeCompare(db);
+    });
+    const firstRelease = sortedReleases[0];
+
+    let recordings: RawRecording[] = [];
+    if (firstRelease) {
+      try {
+        const rel = await apiFetch<RawReleaseWithRecordings>({
+          config: API_CONFIG.musicbrainz,
+          path: `/release/${firstRelease.id}`,
+          params: {inc: 'recordings', fmt: 'json'},
+          cacheTtlMs: DISCOGRAPHY_CACHE_TTL,
+          headers: {'User-Agent': USER_AGENT},
+        });
+        // Recordings are nested under media[*].tracks[*].recording —
+        // NOT at the top level. Flatten and de-dupe by recording id.
+        const seen = new Set<string>();
+        for (const m of rel.media ?? []) {
+          for (const t of m.tracks ?? []) {
+            const r = t.recording;
+            if (r && !seen.has(r.id)) {
+              seen.add(r.id);
+              recordings.push(r);
+            }
+          }
+        }
+      } catch {
+        // release lookup failed — keep going with empty recordings
+      }
+    }
+
     return {
       id: response.id,
       title: response.title,
@@ -158,7 +233,7 @@ export async function getReleaseGroupDetail(
         response['cover-art-archive']?.front === true
           ? coverArtUrlFor(response.id)
           : null,
-      recordings: (response.recordings ?? []).map(r => ({
+      recordings: recordings.map(r => ({
         id: r.id,
         title: r.title,
         length: r.length ?? 0,

@@ -55,10 +55,16 @@ function dedupe(items: TVMazeShow[]): TVMazeShow[] {
   });
 }
 
-export function useShowsScreen(initialTab?: string) {
+export function useShowsScreen(initialTab?: string, initialGenre?: string) {
   const {isOnline} = useNetworkStatus();
+  // P53: when an initial genre is supplied from a Home rail tile, jump
+  // straight to the Browse tab with the genre pre-selected so the
+  // show list is populated on first paint.
   const [selectedTab, setSelectedTab] = useState<ShowTab>(
-    (initialTab as ShowTab) || 'search',
+    initialGenre ? 'browse' : (initialTab as ShowTab) || 'search',
+  );
+  const [selectedGenre, setSelectedGenre] = useState<string | null>(
+    initialGenre ?? null,
   );
 
   // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
@@ -160,8 +166,8 @@ export function useShowsScreen(initialTab?: string) {
           items = Array.from(unique.values());
           scopeHasMore = false;
         } else {
-          // browse — real pagination via page param
-          items = await getPopularShows(page);
+          // browse — real pagination via page param; P53 adds genre filter
+          items = await getPopularShows(page, selectedGenre ?? undefined);
           scopeHasMore = items.length === PAGE_SIZE;
         }
 
@@ -201,7 +207,7 @@ export function useShowsScreen(initialTab?: string) {
         if (mode === 'initial') setRefreshing(false);
       }
     },
-    [searchTerm, patchScope],
+    [searchTerm, selectedGenre, patchScope],
   );
 
   // ── Public actions ──────────────────────────────────────────────────

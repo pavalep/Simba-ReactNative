@@ -444,7 +444,7 @@ export const RadioScreen: React.FC<Props> = ({navigation, route}) => {
     isFavoriteId,
     toggleFavorite,
     removeFavorite,
-  } = useRadioScreen(route.params?.initialTab);
+  } = useRadioScreen(route.params?.initialTab, route.params?.initialTag);
 
   const [menuRow, setMenuRow] = useState<StationRow | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);

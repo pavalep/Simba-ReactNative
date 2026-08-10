@@ -7,6 +7,13 @@ import type {PodcastResult, PodcastEpisodeResult} from '../../types/api';
 import {sha1} from 'js-sha1';
 
 // ─── Auth headers ───────────────────────────────────────────────────────
+// Podcast Index expects the SHA-1 in the `Authorization` header (NOT
+// `X-Auth-Signature`). The API also requires a real `User-Agent` that
+// identifies the project — the default `axios/x.y` is rejected with
+// "You must include a proper User-Agent header in all API requests."
+// See: https://podcastindex-org.github.io/docs-api/#overview--authentication-details
+
+const PODCAST_INDEX_USER_AGENT = 'SimbaMediaPlayer/1.0.0 (paval@simba.app)';
 
 function buildAuthHeaders(): Record<string, string> {
   const {apiKey, apiSecret} = API_CONFIG.podcastIndex;
@@ -19,9 +26,10 @@ function buildAuthHeaders(): Record<string, string> {
   // incorrect hash (returned 401 from Podcast Index) — replaced.
   const signature = sha1(apiKey + apiSecret + timestamp);
   return {
+    'User-Agent': PODCAST_INDEX_USER_AGENT,
     'X-Auth-Key': apiKey,
     'X-Auth-Date': String(timestamp),
-    'X-Auth-Signature': signature,
+    Authorization: signature,
   };
 }
 

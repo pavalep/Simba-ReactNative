@@ -17,6 +17,7 @@ import {useLoginScreen} from './hooks/useLoginScreen';
 import type {AuthErrorKind} from '../../store/slices/authSlice';
 import type {RootStackScreenProps} from '../../navigation/types';
 import {navigationRef} from '../../navigation/navigationHelper';
+import {BRAND} from '../../constants/brand';
 
 type Props = RootStackScreenProps<'Login'>;
 
@@ -152,7 +153,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
                   {opacity: taglineOpacity, transform: [{translateY: taglineTranslateY}]},
                 ]}>
                 <AppText variant="body1" style={[styles.tagline, {color: '#6B4226'}]}>
-                    Your media, your way
+                    {BRAND.tagline}
                   </AppText>
               </Animated.View>
             </Animated.View>

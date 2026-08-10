@@ -1,3 +1,28 @@
+// ─── HomeHeader ────────────────────────────────────────────────────
+// Premium top bar for the Home screen.
+//
+// Layout (left → right):
+//   ┌─────────────────────────────────────────────────────┐
+//   │  ◼ SIMBA                          🔍  ◯            │
+//   │    YOUR MEDIA, YOUR WAY                           │
+//   └─────────────────────────────────────────────────────┘
+//
+// Notes:
+//   • The wordmark "SIMBA" is the hero — large, weight 800,
+//     tight letter-spacing, gold accent. The "YOUR MEDIA, YOUR
+//     WAY" tagline sits beneath as a small, all-caps, tracked
+//     caption in a softer tone. The Home screen may override
+//     this with a time-of-day greeting ("GOOD EVENING") so the
+//     header mirrors the body greeting.
+//   • A single search icon replaces the previous stack of
+//     bookmark + search. Bookmarks is now a section on Home
+//     (the rail itself is the entry point), so the dedicated
+//     header shortcut is redundant.
+//   • The profile avatar is a small gold-bordered ring with
+//     the user's photo (or initial fallback).
+//   • The scanning dot animates next to the wordmark when a
+//     library scan is running.
+
 import React, {useEffect, useRef} from 'react';
 import {View, TouchableOpacity, StyleSheet, Animated} from 'react-native';
 import FastImage from 'react-native-fast-image';
@@ -9,26 +34,28 @@ import {SvgIcon} from '../../utility/SvgIcon';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 import {useAppSelector} from '../../../store';
 import {selectAuthUser} from '../../../store/slices/authSlice';
+import {BRAND} from '../../../constants/brand';
 
 interface HomeHeaderProps {
   onSettingsPress?: () => void;
   onSearchPress?: () => void;
   onAvatarPress?: () => void;
-  onBookmarksPress?: () => void;
   isScanning?: boolean;
   avatarUrl?: string | null;
-  bookmarkCount?: number;
+  /** Tagline shown beneath the wordmark. Defaults to the official
+   *  brand tagline ("Your media, your way"). The Home screen
+   *  may override this — e.g. with a time-of-day greeting — when
+   *  it wants the header to mirror the body greeting. */
+  tagline?: string;
 }
-
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
   onSettingsPress,
   onSearchPress,
   onAvatarPress,
-  onBookmarksPress,
   isScanning,
   avatarUrl,
-  bookmarkCount = 0,
+  tagline = BRAND.tagline,
 }) => {
   const {colors} = useTheme();
   const {reduceMotion} = useAccessibility();
@@ -61,14 +88,6 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
     return () => loop.stop();
   }, [isScanning, scanAnim, reduceMotion]);
 
-  const handleSettingsPress = () => {
-    if (onSettingsPress) {
-      onSettingsPress();
-    } else {
-      navigation.navigate('Settings');
-    }
-  };
-
   const handleSearchPress = () => {
     if (onSearchPress) {
       onSearchPress();
@@ -83,117 +102,89 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
     }
   };
 
-  const handleBookmarksPress = () => {
-    if (onBookmarksPress) {
-      onBookmarksPress();
-    } else {
-      navigation.navigate('BookmarksScreen');
-    }
-  };
-
   return (
     <View
       style={[
         styles.root,
-        {
-          backgroundColor: colors.background.primary,
-          borderBottomColor: colors.border.subtle,
-        },
+        {backgroundColor: colors.background.primary},
       ]}>
-      {/* Left: App logo + brand text */}
-      <View style={styles.greetingSection}>
-        <View style={styles.greetingRow}>
-          {/* App logo always — never the user photo */}
-          <View
-            style={[
-              styles.logoContainer,
-              {backgroundColor: colors.accent.gold + '15'},
-            ]}>
-            <SvgIcon name="lion" size={36} color={colors.accent.gold} />
-          </View>
-          <View>
-            <AppText variant="h2" color="accent" style={styles.greetingText}>
+      {/* Left: lion mark + wordmark + tagline */}
+      <View style={styles.brand}>
+        <View
+          style={[
+            styles.logoContainer,
+            {backgroundColor: colors.accent.gold + '18'},
+          ]}>
+          <SvgIcon name="lion" size={32} color={colors.accent.gold} />
+        </View>
+        <View style={styles.brandText}>
+          <View style={styles.wordmarkRow}>
+            <AppText variant="display" color="accent" style={styles.wordmark}>
               SIMBA
             </AppText>
-            <AppText variant="caption" color="secondary" style={styles.subtitleText}>
-              Play Anything.
-            </AppText>
+            {isScanning ? (
+              <Animated.View
+                style={[
+                  styles.scanningDot,
+                  {
+                    backgroundColor: colors.accent.gold,
+                    opacity: scanAnim,
+                  },
+                ]}
+                accessibilityLabel="Scanning library"
+              />
+            ) : null}
           </View>
-          {isScanning && (
-            <Animated.View
-              style={[
-                styles.scanningDot,
-                {
-                  backgroundColor: colors.accent.gold,
-                  opacity: scanAnim,
-                },
-              ]}
-            />
-          )}
+          <AppText
+            variant="overline"
+            color="secondary"
+            style={styles.tagline}
+            numberOfLines={1}>
+            {tagline}
+          </AppText>
         </View>
       </View>
 
-      {/* Spacer */}
-      <View style={styles.spacer} />
+      {/* Right: search + profile */}
+      <View style={styles.actions}>
+        {onSearchPress ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleSearchPress}
+            style={[styles.iconButton, {backgroundColor: colors.background.elevated}]}
+            accessibilityLabel="Search"
+            accessibilityRole="button">
+            <SvgIcon name="search" size={20} color={colors.text.primary} />
+          </TouchableOpacity>
+        ) : null}
 
-      {/* Bookmarks shortcut */}
-      {onBookmarksPress && (
         <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={handleBookmarksPress}
-          style={[styles.iconButton, {backgroundColor: colors.background.elevated}]}
-          accessibilityLabel="Bookmarks"
-          accessibilityRole="button">
-          <SvgIcon name="bookmark" size={18} color={colors.text.secondary} />
-          {bookmarkCount > 0 && (
-            <View style={[styles.badge, {backgroundColor: colors.accent.gold}]}>
-              <AppText variant="caption" style={[styles.badgeText, {color: colors.text.inverse}]}>
-                {bookmarkCount > 99 ? '99+' : bookmarkCount}
-              </AppText>
-            </View>
+          activeOpacity={0.8}
+          onPress={handleAvatarPress}
+          accessibilityLabel="Open profile"
+          accessibilityRole="button"
+          style={[
+            styles.profileButton,
+            {
+              borderColor: colors.accent.gold,
+              backgroundColor: colors.background.elevated,
+            },
+          ]}>
+          {avatarUrl ? (
+            <FastImage
+              source={{uri: avatarUrl}}
+              style={styles.profileImage}
+              resizeMode={FastImage.resizeMode.cover}
+            />
+          ) : (
+            <AppText
+              variant="h3"
+              style={[styles.profileInitial, {color: colors.accent.gold}]}>
+              {(authUser?.name?.trim()?.[0] ?? 'A').toUpperCase()}
+            </AppText>
           )}
         </TouchableOpacity>
-      )}
-
-      {/* Search icon */}
-      {onSearchPress && (
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={handleSearchPress}
-          style={[styles.iconButton, {backgroundColor: colors.background.elevated}]}
-          accessibilityLabel="Search"
-          accessibilityRole="button">
-          <SvgIcon name="search" size={20} color={colors.text.secondary} />
-        </TouchableOpacity>
-      )}
-
-      {/* Profile avatar (replaces Settings icon) */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={handleAvatarPress}
-        accessibilityLabel="Open profile"
-        accessibilityRole="button"
-        style={[
-          styles.profileButton,
-          {
-            borderColor: colors.accent.gold,
-            backgroundColor: colors.background.elevated,
-          },
-        ]}>
-        {avatarUrl ? (
-          <FastImage
-            source={{uri: avatarUrl}}
-            style={styles.profileImage}
-            resizeMode={FastImage.resizeMode.cover}
-          />
-        ) : (
-          <AppText
-            variant="h3"
-            style={[styles.profileInitial, {color: colors.accent.gold}]}>
-            {(authUser?.name?.trim()?.[0] ?? 'A').toUpperCase()}
-          </AppText>
-        )}
-      </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -202,35 +193,72 @@ const styles = StyleSheet.create({
   root: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    // Removed borderBottomWidth for a cleaner "hero" look
   },
-  greetingSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  greetingRow: {
+  // ── Brand block (left) ──
+  brand: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    flexShrink: 1,
   },
   logoContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  profileButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
+  brandText: {
+    flexShrink: 1,
+  },
+  wordmarkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  wordmark: {
+    // The "display" variant is 36px / weight 800 in the token set.
+    // We tighten the letter-spacing a touch and bump the line-height
+    // so the wordmark sits comfortably with the tagline below it.
+    letterSpacing: -1,
+    lineHeight: 38,
+  },
+  tagline: {
+    // overline is 11px / 500 weight / letter-spacing 0.5 by default.
+    // We add a little more letter-spacing for the brand tagline look.
+    letterSpacing: 1.5,
+    marginTop: 2,
+    opacity: 0.7,
+  },
+  scanningDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  // ── Actions (right) ──
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: spacing.xs,
+  },
+  profileButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
   },
   profileImage: {
@@ -238,49 +266,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   profileInitial: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-  },
-  greetingText: {
-    fontSize: 22,
-    lineHeight: 28,
-  },
-  subtitleText: {
-    fontSize: 12,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    opacity: 0.8,
-  },
-  scanningDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  spacer: {
-    flex: 1,
-  },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: spacing.xs,
-    position: 'relative',
-  },
-  badge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    paddingHorizontal: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '800',
   },
 });

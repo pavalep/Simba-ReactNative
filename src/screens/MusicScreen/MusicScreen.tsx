@@ -405,7 +405,7 @@ const MusicTabScene: React.FC<MusicTabSceneProps> = React.memo(
 
 export const MusicScreen: React.FC<
   RootStackScreenProps<'MusicScreen'>
-> = ({navigation}) => {
+> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {
@@ -424,7 +424,7 @@ export const MusicScreen: React.FC<
     retry,
     refreshing,
     handleRefresh,
-  } = useMusicScreen();
+  } = useMusicScreen(route.params?.initialTab);
 
   const handleTrackPress = useCallback(
     (item: JamendoTrackResult) => {

@@ -78,11 +78,13 @@ export function useLiveTVScreen(initialCategoryId?: string) {
   const dispatch = useAppDispatch();
 
   // ── Tab / category ──
+  // The synthetic 'all' category id (from the Home shelf's "All" tile)
+  // routes to the existing 'all' tab — every channel, no filter.
   const [selectedTab, setSelectedTab] = useState<LiveTVTab>(
-    initialCategoryId ? 'categories' : 'all',
+    !initialCategoryId || initialCategoryId === 'all' ? 'all' : 'categories',
   );
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
-    initialCategoryId ?? null,
+    initialCategoryId === 'all' ? null : (initialCategoryId ?? null),
   );
   const [categories, setCategories] = useState<IPTVCategory[]>([]);
   const [categoriesLoaded, setCategoriesLoaded] = useState(false);

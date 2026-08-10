@@ -360,7 +360,7 @@ const TABS: Array<{key: AudiobooksTab; title: string}> = [
 export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const {initialTab, genre} = route.params ?? {};
+  const {initialTab, initialGenre: genre} = route.params ?? {};
   const {
     selectedTab,
     selectTab,

@@ -1,0 +1,17 @@
+import React from 'react';
+import {FlatList, View, Text} from 'react-native';
+const Test = () => {
+  const items = [{id: 1}];
+  return (
+    <FlatList
+      data={items}
+      renderItem={item => (
+        <View>
+          <Text>{item.id}</Text>
+        </View>
+      )}
+      keyExtractor={item => String(item.id)}
+    />
+  );
+};
+export default Test;

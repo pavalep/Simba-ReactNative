@@ -14,7 +14,7 @@ import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {PodcastResult} from '../../../types/api';
 
 export interface PodcastCategoryTab {
-  id: number;
+  id: number | 'all';
   title: string;
   icon: string;
 }
@@ -60,7 +60,7 @@ function dedupe(items: PodcastResult[]): PodcastResult[] {
   });
 }
 
-export function usePodcastsScreen(initialCategoryId?: number) {
+export function usePodcastsScreen(initialCategoryId?: number | 'all') {
   const {isOnline} = useNetworkStatus();
 
   const initialIndex = PODCAST_TABS.findIndex(t => t.id === initialCategoryId);
@@ -106,7 +106,6 @@ export function usePodcastsScreen(initialCategoryId?: number) {
   const fetchPage = useCallback(
     async (title: string, max: number) => {
       const term = searchTerm.trim();
-      const query = term || title;
       const key = scopeCacheKey(title, term);
 
       if (guardRef.current.has(key)) return;
@@ -117,7 +116,17 @@ export function usePodcastsScreen(initialCategoryId?: number) {
       patchScope(title, {isLoading: max <= INITIAL_MAX, isLoadingMore: max > INITIAL_MAX, error: null});
 
       try {
-        const items = await searchPodcasts(query, max);
+        // The 'all' synthetic category (id: 'all' in PODCAST_CATEGORIES) is
+        // served by /podcasts/trending — there's no "browse everything"
+        // endpoint in Podcast Index, but trending is a good universal
+        // default. Any user search term still wins over the category.
+        // Match by id (not by title) so the check survives localization.
+        const isAllCategory =
+          !term &&
+          PODCAST_TABS.find(t => t.title === title)?.id === 'all';
+        const items = isAllCategory
+          ? await getTrendingPodcasts(max)
+          : await searchPodcasts(term || title, max);
 
         if (seq !== (seqRef.current[key] ?? 0)) return;
 

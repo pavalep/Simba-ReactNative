@@ -64,19 +64,37 @@ export type RootStackParamList = {
       musicBrainzReleaseId?: string;
     };
   PodcastDetail: {podcastId: number; podcastTitle?: string};
-  MusicScreen: {genre?: string} | undefined;
+  MusicScreen: {genre?: string; initialTab?: 'search' | 'genres' | 'popular'} | undefined;
   MusicDetail: {trackId: string; source: 'jamendo' | 'audius'};
   MovieDetail: {identifier: string; title?: string};
   // ── P36: live radio + TV browse (wired RadioBrowser + IPTV-org) ──
-  RadioScreen: {initialTab?: string} | undefined;
+  RadioScreen:
+    | {
+        initialTab?: 'top' | 'genres' | 'countries' | 'languages' | 'favorites';
+        /** P53: when set, the Genres tab is preselected with this tag. */
+        initialTag?: string;
+      }
+    | undefined;
   LiveTVScreen: {categoryId?: string} | undefined;
   // ── P37: audiobooks (LibriVox) + Internet Archive ──
-  AudiobooksScreen: {initialTab?: string; genre?: string} | undefined;
+  AudiobooksScreen:
+    | {
+        initialTab?: 'search' | 'genres' | 'recent';
+        /** P53: when set, the Genres tab is preselected with this genre. */
+        initialGenre?: string;
+      }
+    | undefined;
   ArchiveScreen: {initialTab?: 'audio' | 'video'; query?: string} | undefined;
   AudiobookDetail: {bookId: number; bookTitle?: string};
   ArchiveItemDetail: {identifier: string; title?: string};
   // ── P38: TV shows (TVMaze) ──
-  ShowsScreen: {initialTab?: string} | undefined;
+  ShowsScreen:
+    | {
+        initialTab?: 'search' | 'today' | 'browse';
+        /** P53: when set, the Browse tab is preselected with this TVMaze genre. */
+        initialGenre?: string;
+      }
+    | undefined;
   ShowDetail: {showId: number; showName?: string};
   // ── P48: full-page queue (from QueueSheet / MiniAudioPlayer / deep link) ──
   // `from` records the screen that opened it so tap-to-jump can stay in the

@@ -1,0 +1,19 @@
+import React from 'react';
+import {View, FlatList} from 'react-native';
+const Test = ({items, showBody}: {items: any[]; showBody: boolean}) => {
+  return (
+    <View>
+      {showBody && items.length === 0 ? (
+        <View>empty</View>
+      ) : null}
+      {showBody && items.length > 0 ? (
+        <FlatList
+          data={items}
+          keyExtractor={(item: any) => item.id}
+          renderItem={({item}: {item: any}) => <View>{item.id}</View>}
+        />
+      )}
+    </View>
+  );
+};
+export default Test;

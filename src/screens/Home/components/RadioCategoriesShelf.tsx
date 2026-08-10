@@ -1,74 +1,41 @@
 // ─── Radio Categories Shelf ─────────────────────────────────
-// Phase 36.7: browse entries for Live Radio on the Home screen.
-// Tapping an entry opens RadioScreen on the matching tab.
+// P53: Home rail for Live Radio.
+// Same uniform "All + content cards" pattern as Movies/Podcasts/Music.
+// Browse modes (Top / Genres list / Countries / Languages / Favorites)
+// live in the RadioScreen tab bar — not here.
 
 import React from 'react';
-import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
-import {useTheme} from '../../../theme';
-import {radius, spacing} from '../../../theme/tokens';
-import {RADIO_BROWSE, type RadioBrowseEntry} from '../../../constants/liveCategories';
+import {View, FlatList, StyleSheet} from 'react-native';
+import {RADIO_CATEGORIES, type RadioCategory} from '../../../constants/liveCategories';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {AppText} from '../../../components/core/AppText/AppText';
+import {CategoryCard} from '../../../components/utility/CategoryCard/CategoryCard';
+import {spacing} from '../../../theme/tokens';
 
 interface RadioCategoriesShelfProps {
-  onBrowsePress: (id: RadioBrowseEntry['id']) => void;
-  onSeeAll: () => void;
+  onCategoryPress: (cat: RadioCategory) => void;
 }
 
 export const RadioCategoriesShelf: React.FC<RadioCategoriesShelfProps> = React.memo(
-  ({onBrowsePress, onSeeAll}) => {
-    const {colors} = useTheme();
-
+  ({onCategoryPress}) => {
     return (
       <View style={styles.container}>
-        <SectionHeader
-          label="Live Radio"
-          actionLabel="See All"
-          onAction={onSeeAll}
-        />
+        <SectionHeader label="Live Radio" />
         <FlatList
           horizontal
-          data={RADIO_BROWSE}
-          keyExtractor={entry => entry.id}
-          renderItem={({item: entry}) => (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => onBrowsePress(entry.id)}
-              accessibilityRole="button"
-              style={[
-                styles.card,
-                {backgroundColor: colors.background.elevated},
-              ]}>
-              <View
-                style={[
-                  styles.iconCircle,
-                  {backgroundColor: colors.accent.goldDim},
-                ]}>
-                <SvgIcon
-                  name={entry.icon as any}
-                  size={22}
-                  color={colors.accent.gold}
-                />
-              </View>
-              <AppText
-                variant="bodySmall"
-                style={styles.cardTitle}
-                numberOfLines={1}>
-                {entry.name}
-              </AppText>
-              <AppText
-                variant="caption"
-                color="tertiary"
-                numberOfLines={2}
-                style={styles.cardDesc}>
-                {entry.description}
-              </AppText>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.scroll}
+          data={RADIO_CATEGORIES}
+          keyExtractor={cat => cat.id}
           showsHorizontalScrollIndicator={false}
-          initialNumToRender={RADIO_BROWSE.length}
+          contentContainerStyle={styles.scroll}
+          renderItem={({item: cat}) => (
+            <CategoryCard
+              name={cat.name}
+              description={cat.description}
+              icon={cat.icon}
+              image={cat.image}
+              onPress={() => onCategoryPress(cat)}
+            />
+          )}
+          initialNumToRender={RADIO_CATEGORIES.length}
           windowSize={5}
           maxToRenderPerBatch={12}
         />
@@ -78,32 +45,6 @@ export const RadioCategoriesShelf: React.FC<RadioCategoriesShelfProps> = React.m
 );
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.lg,
-  },
-  scroll: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  card: {
-    width: 140,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitle: {
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  cardDesc: {
-    lineHeight: 14,
-    opacity: 0.7,
-  },
+  container: {marginBottom: spacing.lg},
+  scroll: {paddingHorizontal: spacing.md, gap: spacing.sm},
 });

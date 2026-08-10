@@ -1,6 +1,10 @@
 // ─── Pre-built Movie Categories ──────────────────────────────────────────
 // Users browse these categories — no typing required.
 // Each maps to a hardcoded Internet Archive advanced search query.
+// P53: each entry also carries a local `image` cover for the Home rail.
+
+import type {ImageSourcePropType} from 'react-native';
+import {CATEGORY_COVERS} from '../assets/images/categories';
 
 export interface MovieCategory {
   id: string;
@@ -8,6 +12,8 @@ export interface MovieCategory {
   icon: string;
   query: string;
   description: string;
+  /** Local cover image for the Home rail tile. */
+  image: ImageSourcePropType;
   /** Optional IA sort applied to the search (e.g. "downloads desc"). */
   sort?: string;
 }
@@ -20,6 +26,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     query: 'mediatype:(movies)',
     sort: 'downloads desc',
     description: 'Every movie in the archive, most popular first',
+    image: CATEGORY_COVERS.movies.all,
   },
   {
     id: 'classic-films',
@@ -27,6 +34,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     icon: 'video',
     query: 'subject:"classic films" AND mediatype:movies',
     description: 'Timeless cinema from the golden age',
+    image: CATEGORY_COVERS.movies.classicFilms,
   },
   {
     id: 'public-domain',
@@ -34,6 +42,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     icon: 'folder',
     query: 'subject:"public domain" AND mediatype:movies',
     description: 'Free movies you can watch anytime',
+    image: CATEGORY_COVERS.movies.publicDomain,
   },
   {
     id: 'documentaries',
@@ -41,6 +50,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     icon: 'camera',
     query: 'subject:documentary AND mediatype:movies',
     description: 'Explore the world through film',
+    image: CATEGORY_COVERS.movies.documentary,
   },
   {
     id: 'silent-films',
@@ -48,6 +58,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     icon: 'music',
     query: 'subject:"silent films" AND mediatype:movies',
     description: 'The birth of cinema',
+    image: CATEGORY_COVERS.movies.silentFilms,
   },
   {
     id: 'comedy',
@@ -55,6 +66,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     icon: 'listMusic',
     query: 'subject:comedy AND mediatype:movies',
     description: 'Classic laughs from every era',
+    image: CATEGORY_COVERS.movies.comedy,
   },
   {
     id: 'sci-fi',
@@ -62,6 +74,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     icon: 'speed',
     query: 'subject:"science fiction" AND mediatype:movies',
     description: 'Vintage sci-fi adventures',
+    image: CATEGORY_COVERS.movies.sciFi,
   },
   {
     id: 'western',
@@ -69,6 +82,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     icon: 'search',
     query: 'subject:western AND mediatype:movies',
     description: 'Saddle up for classic westerns',
+    image: CATEGORY_COVERS.movies.westerns,
   },
   {
     id: 'film-noir',
@@ -76,5 +90,6 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     icon: 'sliders',
     query: 'subject:"film noir" AND mediatype:movies',
     description: 'Dark, stylish crime dramas',
+    image: CATEGORY_COVERS.movies.filmNoir,
   },
 ];

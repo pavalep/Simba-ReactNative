@@ -86,11 +86,11 @@ function dedupe(items: JamendoTrackResult[]): JamendoTrackResult[] {
 
 // ─── Hook ───────────────────────────────────────────────────────────────
 
-export function useMusicScreen(initialTab?: string) {
+export function useMusicScreen(initialTab?: 'search' | 'genres' | 'popular') {
   const {isOnline} = useNetworkStatus();
 
   const [selectedTab, setSelectedTab] = useState<MusicTab>(
-    (initialTab as MusicTab) || 'search',
+    initialTab ?? 'search',
   );
   // Pre-select the first genre so the Genres tab shows results on first
   // open instead of a "Select a genre" prompt. Users can still pick a

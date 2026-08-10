@@ -1,35 +1,25 @@
-// ─── Podcast Categories Shelf ────────────────────────────────────────────
-// Horizontal scroll of pre-built podcast category cards for the HomeScreen.
-// Non-tech-savvy UX: tap a category → opens PodcastsScreen with results.
+// ─── Podcast Categories Shelf ───────────────────────────────────────────
+// P53: uniform "All + content cards" Home rail. Tapping a category
+// tile opens PodcastsScreen with that category pre-selected.
 
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
-import {useTheme} from '../../../theme';
-import {radius, spacing} from '../../../theme/tokens';
+import {View, FlatList, StyleSheet} from 'react-native';
 import {PODCAST_CATEGORIES} from '../../../constants/podcastCategories';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {AppText} from '../../../components/core/AppText/AppText';
+import {CategoryCard} from '../../../components/utility/CategoryCard/CategoryCard';
+import {spacing} from '../../../theme/tokens';
 
 interface PodcastCategoriesShelfProps {
-  onCategoryPress: (categoryId: number) => void;
-  onSeeAll: () => void;
+  onCategoryPress: (categoryId: number | 'all') => void;
 }
 
 export const PodcastCategoriesShelf: React.FC<PodcastCategoriesShelfProps> = React.memo(
-  ({onCategoryPress, onSeeAll}) => {
-    const {colors} = useTheme();
-
+  ({onCategoryPress}) => {
     const categories = PODCAST_CATEGORIES.slice(0, 6);
 
     return (
       <View style={styles.container}>
-        <SectionHeader
-          label="Podcasts"
-          actionLabel="See All"
-          onAction={onSeeAll}
-        />
-        {/* 59.1: virtualized category rail */}
+        <SectionHeader label="Podcasts" />
         <FlatList
           horizontal
           data={categories}
@@ -37,32 +27,13 @@ export const PodcastCategoriesShelf: React.FC<PodcastCategoriesShelfProps> = Rea
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
           renderItem={({item: cat}) => (
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <CategoryCard
+              name={cat.name}
+              description={describePodcastCategory(cat.id)}
+              icon={cat.icon}
+              image={cat.image}
               onPress={() => onCategoryPress(cat.id)}
-              accessibilityRole="button"
-              style={[
-                styles.card,
-                {backgroundColor: colors.background.elevated},
-              ]}>
-              <View
-                style={[
-                  styles.iconCircle,
-                  {backgroundColor: colors.accent.goldDim},
-                ]}>
-                <SvgIcon
-                  name={cat.icon as any}
-                  size={22}
-                  color={colors.accent.gold}
-                />
-              </View>
-              <AppText
-                variant="bodySmall"
-                style={styles.cardTitle}
-                numberOfLines={1}>
-                {cat.name}
-              </AppText>
-            </TouchableOpacity>
+            />
           )}
           initialNumToRender={Math.min(categories.length, 24)}
           windowSize={5}
@@ -74,30 +45,25 @@ export const PodcastCategoriesShelf: React.FC<PodcastCategoriesShelfProps> = Rea
 );
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.lg,
-  },
-  scroll: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  card: {
-    width: 110,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitle: {
-    fontWeight: '700',
-    lineHeight: 18,
-    textAlign: 'center',
-  },
+  container: {marginBottom: spacing.lg},
+  scroll: {paddingHorizontal: spacing.md, gap: spacing.sm},
 });
+
+function describePodcastCategory(id: number | 'all'): string {
+  if (id === 'all') return 'Trending podcasts right now';
+  switch (id) {
+    case 1:  return 'Visual arts, design, food';
+    case 10: return 'All genres of music shows';
+    case 15: return 'Careers, startups, money';
+    case 20: return 'Stand-up and comedy casts';
+    case 25: return 'Learning, science, society';
+    case 29: return 'Wellness, fitness, medicine';
+    case 30: return 'Software, hardware, the web';
+    case 33: return 'Past events and biography';
+    case 35: return 'World and local news';
+    case 49: return 'Sciences, math, nature';
+    case 55: return 'Game-day, leagues, athletes';
+    case 60: return 'TV, movies, bts interviews';
+    default: return '';
+  }
+}

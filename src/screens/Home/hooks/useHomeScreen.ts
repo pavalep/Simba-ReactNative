@@ -22,6 +22,7 @@ import {useAuth} from '../../../hooks/useAuth';
 export type HomeSection =
   | {type: 'GREETING'}
   | {type: 'HERO'; data: SessionEntry | null}
+  | {type: 'SUBSECTION_TITLE'; label: string}
   | {type: 'SHELF'; title: string; items: any[]; seeAllRoute?: keyof RootStackParamList}
   | {type: 'GENRE'; genres: {name: string; count: number}[]}
   | {type: 'PLAYLISTS'; items: any[]}
@@ -41,12 +42,32 @@ export type HomeSection =
 
 // ── Helpers ──
 
-function getGreeting(): string {
+type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
+
+interface GreetingInfo {
+  text: string;
+  /** Image key into `GREETING_IMAGES` — sun / coffee / moon / stars. */
+  image: TimeOfDay extends 'morning'
+    ? 'sun'
+    : TimeOfDay extends 'afternoon'
+    ? 'coffee'
+    : TimeOfDay extends 'evening'
+    ? 'moon'
+    : 'stars';
+}
+
+function getGreeting(): GreetingInfo {
   const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) return 'Good morning';
-  if (hour >= 12 && hour < 17) return 'Good afternoon';
-  if (hour >= 17 && hour < 22) return 'Good evening';
-  return 'Good night';
+  if (hour >= 5 && hour < 12) {
+    return {text: 'Good morning', image: 'sun'};
+  }
+  if (hour >= 12 && hour < 17) {
+    return {text: 'Good afternoon', image: 'coffee'};
+  }
+  if (hour >= 17 && hour < 22) {
+    return {text: 'Good evening', image: 'moon'};
+  }
+  return {text: 'Good night', image: 'stars'};
 }
 
 function isInProgress(item: SessionEntry): boolean {
@@ -151,6 +172,11 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     navigation.navigate('Bookmarks');
   }, [navigation]);
 
+  // P58: "See All" on the Bookmarks rail navigates to the same
+  // Bookmarks screen. Kept as a separate hook return so the rail
+  // can use it as `onSeeAll` without coupling to the avatar icon.
+  const handleBookmarksSeeAll = handleBookmarksPress;
+
   // ── Compute Sections ──
   const sections = useMemo((): HomeSection[] => {
     const cw = weightedFeatured.find(isInProgress) ?? weightedFeatured[0] ?? null;
@@ -158,6 +184,33 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     const realSections: HomeSection[] = [
       {type: 'GREETING'},
       {type: 'HERO', data: cw},
+
+      // P54 + P56: per-user "Your Library" group at the top, separated
+      // from the API-backed discover shelves below by a centered rule
+      // title. Order is now:
+      //     1. Recently Played (always expanded)
+      //     2. Bookmarks       (collapsible, auto-expanded when data)
+      //     3. Followed Podcasts (collapsible, auto-expanded when data)
+      // All three always render — empty-state hints cover the no-data
+      // case so the group never disappears.
+      {type: 'SUBSECTION_TITLE', label: 'Your Library'},
+      {
+        type: 'SHELF',
+        title: 'Recently Played',
+        items: recentFiles
+          .filter(item => item.fileUri !== cw?.fileUri)
+          .slice(0, 10),
+        seeAllRoute: 'AllVideosScreen' as keyof RootStackParamList,
+      },
+      {type: 'BOOKMARKS', items: bookmarks},
+      {type: 'FOLLOWED_PODCASTS', items: followedPodcasts},
+
+      // Discover / API-backed rails — grouped under a "Discover" sub-
+      // section title so the user can see at a glance which shelves are
+      // curated content (above) vs. catalog browse (below). These are
+      // not collapsible (per the P56 scope: only the three Your Library
+      // rails get the chevron).
+      {type: 'SUBSECTION_TITLE', label: 'Discover'},
       {type: 'MOVIES'},
       {type: 'PREFILLED_PODCASTS'},
       {type: 'PREFILLED_MUSIC'},
@@ -171,33 +224,16 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       {type: 'SHOWS'},
     ];
 
-    // 35.5: followed podcasts shelf (only when the user follows any)
-    if (followedPodcasts.length > 0) {
-      realSections.splice(3, 0, {type: 'FOLLOWED_PODCASTS', items: followedPodcasts});
-    }
-
     // Genre chips
     if (genres.length > 0) {
       realSections.push({type: 'GENRE', genres});
     }
-
-    const otherRecent = recentFiles.filter(item => item.fileUri !== cw?.fileUri);
-    realSections.push({
-      type: 'SHELF',
-      title: 'Recently Played',
-      items: otherRecent.slice(0, 10),
-      seeAllRoute: 'AllVideosScreen' as keyof RootStackParamList,
-    });
 
     const pinnedPlaylists = [...playlists]
       .sort((a, b) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())
       .slice(0, 3);
 
     realSections.push({type: 'PLAYLISTS', items: pinnedPlaylists});
-
-    if (bookmarks.length > 0) {
-      realSections.push({type: 'BOOKMARKS', items: bookmarks});
-    }
 
     return realSections;
   }, [recentFiles, weightedFeatured, playlists, bookmarks, genres, followedPodcasts]);
@@ -217,10 +253,9 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     hasError,
     isScanning,
     sections,
-    greeting: getGreeting(),
+    greeting: getGreeting(), // {text, image}
     dispatch,
     user: user ? user : null,
-    bookmarkCount: bookmarks.length,
     genres,
     handleOpenMedia,
     handleItemPress,
@@ -231,6 +266,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     handleSearchPress,
     handleAvatarPress,
     handleBookmarksPress,
+    handleBookmarksSeeAll,
     onRefresh,
     setHasError,
   };

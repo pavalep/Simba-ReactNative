@@ -101,13 +101,29 @@ export interface RadioBrowseTag {
   stationCount: number;
 }
 
-/** Genre tags ordered by station count (radio-browser /json/genres). */
+/**
+ * Genre tags ordered by station count.
+ *
+ * P52: Radio-Browser's `/json/genres` endpoint was deprecated and now
+ * returns 404. The replacement is `/json/tags?type=genre` — same
+ * response shape (`{name, stationcount}`), but a longer list and
+ * broader. We request the top entries by `order=stationcount&reverse=true`
+ * so the consumer's `.slice(0, limit)` returns the most popular tags
+ * first.
+ */
 export async function getGenres(
   limit = 40,
 ): Promise<RadioBrowseTag[]> {
   const raw = await apiFetch<Array<{name: string; stationcount: number}>>({
     config: API_CONFIG.radioBrowser,
-    path: '/json/genres',
+    path: '/json/tags',
+    params: {
+      type: 'genre',
+      hidebroken: 'true',
+      order: 'stationcount',
+      reverse: 'true',
+      limit: Math.max(limit * 2, 80), // server returns up to this many
+    },
     cacheTtlMs: CACHE.top,
   });
   return raw

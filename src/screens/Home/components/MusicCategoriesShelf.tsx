@@ -1,35 +1,25 @@
 // ─── Music Categories Shelf ─────────────────────────────────────────────
-// Horizontal scroll of pre-built music genre cards for the HomeScreen.
-// Non-tech-savvy UX: tap a genre → opens MusicScreen with results.
+// P53: uniform "All + content cards" Home rail. Tapping a genre tile
+// opens MusicScreen with that genre pre-selected.
 
 import React from 'react';
-import {View, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
-import {useTheme} from '../../../theme';
-import {radius, spacing} from '../../../theme/tokens';
+import {View, FlatList, StyleSheet} from 'react-native';
 import {MUSIC_CATEGORIES} from '../../../constants/musicCategories';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {AppText} from '../../../components/core/AppText/AppText';
+import {CategoryCard} from '../../../components/utility/CategoryCard/CategoryCard';
+import {spacing} from '../../../theme/tokens';
 
 interface MusicCategoriesShelfProps {
   onCategoryPress: (genre: string) => void;
-  onSeeAll: () => void;
 }
 
 export const MusicCategoriesShelf: React.FC<MusicCategoriesShelfProps> = React.memo(
-  ({onCategoryPress, onSeeAll}) => {
-    const {colors} = useTheme();
-
+  ({onCategoryPress}) => {
     const categories = MUSIC_CATEGORIES.slice(0, 6);
 
     return (
       <View style={styles.container}>
-        <SectionHeader
-          label="Music"
-          actionLabel="See All"
-          onAction={onSeeAll}
-        />
-        {/* 59.1: virtualized category rail */}
+        <SectionHeader label="Music" />
         <FlatList
           horizontal
           data={categories}
@@ -37,32 +27,13 @@ export const MusicCategoriesShelf: React.FC<MusicCategoriesShelfProps> = React.m
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
           renderItem={({item: cat}) => (
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <CategoryCard
+              name={cat.name}
+              description={describeMusicCategory(cat.id)}
+              icon={cat.icon}
+              image={cat.image}
               onPress={() => onCategoryPress(cat.genre)}
-              accessibilityRole="button"
-              style={[
-                styles.card,
-                {backgroundColor: colors.background.elevated},
-              ]}>
-              <View
-                style={[
-                  styles.iconCircle,
-                  {backgroundColor: colors.accent.goldDim},
-                ]}>
-                <SvgIcon
-                  name={cat.icon as any}
-                  size={22}
-                  color={colors.accent.gold}
-                />
-              </View>
-              <AppText
-                variant="bodySmall"
-                style={styles.cardTitle}
-                numberOfLines={1}>
-                {cat.name}
-              </AppText>
-            </TouchableOpacity>
+            />
           )}
           initialNumToRender={Math.min(categories.length, 24)}
           windowSize={5}
@@ -74,30 +45,23 @@ export const MusicCategoriesShelf: React.FC<MusicCategoriesShelfProps> = React.m
 );
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.lg,
-  },
-  scroll: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  card: {
-    width: 110,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    alignItems: 'center',
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardTitle: {
-    fontWeight: '700',
-    lineHeight: 18,
-    textAlign: 'center',
-  },
+  container: {marginBottom: spacing.lg},
+  scroll: {paddingHorizontal: spacing.md, gap: spacing.sm},
 });
+
+function describeMusicCategory(id: string): string {
+  switch (id) {
+    case 'all':       return 'Top tracks right now';
+    case 'rock':      return 'Classic & modern rock';
+    case 'pop':       return 'Pop hits from around the world';
+    case 'electronic':return 'House, techno, EDM';
+    case 'jazz':      return 'Smooth jazz, bebop, fusion';
+    case 'classical': return 'Symphonies, chamber, opera';
+    case 'hip-hop':   return 'Hip-hop, rap, R&B';
+    case 'ambient':   return 'Ambient, drone, chillout';
+    case 'folk':      return 'Folk, roots, americana';
+    case 'blues':     return 'Blues, soul, R&B roots';
+    case 'reggae':    return 'Reggae, dub, dancehall';
+    default:          return '';
+  }
+}

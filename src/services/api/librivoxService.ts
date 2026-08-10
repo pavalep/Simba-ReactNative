@@ -148,26 +148,51 @@ export async function searchByAuthor(
 
 /**
  * Search audiobooks by genre (P37.1 — LibriVox genre browse).
+ *
+ * The LibriVox JSON feed's `?genre=` parameter is fragile:
+ *   - It's case-sensitive: `Fiction` returns 500, `fiction` works.
+ *   - Several genres currently 500 outright (server-side issue,
+ *     not the request shape).
+ *   - Multi-word genres like "Fairy tales" need URL-encoded spaces
+ *     and still may not be recognized.
+ *
+ * Strategy: try `?genre=<lowercased>` first; on 5xx or empty result,
+ * fall back to a full-text search with the genre name as the query.
+ * The full-text search always returns *something* relevant for a
+ * real genre name.
  */
 export async function searchByGenre(
   genre: string,
   options?: ApiSearchOptions,
 ): Promise<AudiobookResult[]> {
   const limit = options?.limit ?? 20;
-  const data = await apiFetch<LibriVoxResponse>({
-    config: API_CONFIG.librivox,
-    path: '',
-    params: {
-      genre,
-      format: 'json',
-      limit,
-      page: options?.page ?? 1,
-    },
-    cacheTtlMs: SEARCH_CACHE_TTL,
-  });
 
-  const books = normalizeBooks(data.books);
-  return books.map(mapBook);
+  // Attempt 1: official genre filter, lowercased + trimmed.
+  try {
+    const data = await apiFetch<LibriVoxResponse>({
+      config: API_CONFIG.librivox,
+      path: '',
+      params: {
+        genre: genre.toLowerCase().trim(),
+        format: 'json',
+        limit,
+        page: options?.page ?? 1,
+      },
+      cacheTtlMs: SEARCH_CACHE_TTL,
+    });
+    const books = normalizeBooks(data.books);
+    if (books.length > 0) {
+      return books.map(mapBook);
+    }
+  } catch {
+    // Fall through to full-text search.
+  }
+
+  // Attempt 2: full-text search with the genre name as the query term.
+  // LibriVox's text search is reliable and returns books whose title
+  // or description contains the genre name — a reasonable approximation
+  // when the genre filter is broken.
+  return searchAudiobooks(genre, options);
 }
 
 /**

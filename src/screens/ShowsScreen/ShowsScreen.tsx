@@ -357,7 +357,7 @@ export const ShowsScreen: React.FC<RootStackScreenProps<'ShowsScreen'>> = ({
     refreshing,
     handleRefresh,
     isOnline,
-  } = useShowsScreen(route.params?.initialTab);
+  } = useShowsScreen(route.params?.initialTab, route.params?.initialGenre);
 
   const handleShowPress = useCallback(
     (show: TVMazeShow) => {
