@@ -1,11 +1,9 @@
 import React, {useCallback, useEffect} from 'react';
 import {View, FlatList, RefreshControl, StyleSheet, TouchableOpacity} from 'react-native';
-import FastImage from 'react-native-fast-image';
 import {spacing} from '../../theme/tokens';
 import {type HomeScreenProps} from '../../navigation/types';
 import {useHomeScreen, type HomeSection} from './hooks/useHomeScreen';
 import {removeBookmark} from '../../store/slices/sessionSlice';
-import {GREETING_IMAGES} from '../../assets/images/greeting';
 
 // ── Components ──
 import {SimbaStatusBar} from '../../components/StatusBar';
@@ -18,6 +16,7 @@ import {HomeErrorState} from './components/HomeErrorState';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SubsectionTitle} from '../../components/utility/SubsectionTitle/SubsectionTitle';
+import {WeatherGreeting} from './components/WeatherGreeting';
 import {HomeBookmarksList} from './components/HomeBookmarksList';
 import {MovieCategoriesShelf} from './components/MovieCategoriesShelf';
 import {PodcastCategoriesShelf} from './components/PodcastCategoriesShelf';
@@ -46,6 +45,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     isScanning,
     sections,
     greeting,
+    userFirstName,
     dispatch,
     user,
     handleOpenMedia,
@@ -187,29 +187,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
       const sectionContent = (() => {
         switch (item.type) {
           case 'GREETING':
-            // P60 (Direction 1 + image): the greeting is a clean
-            // h2 line — "Good evening, Paval" — with a small
-            // watercolor illustration on the right. The image
-            // tracks the time of day (sun / coffee / moon /
-            // stars) and is the page's first visual hint of
-            // // "this is a friendly, illustrated app" — not text.
+            // P61: greeting block extracted to its own component
+            // (WeatherGreeting). Owns its styles and the Lottie
+            // container — easier to iterate on without touching
+            // the rest of the page.
             return (
-              <View style={styles.welcomeSection}>
-                <View style={styles.welcomeRow}>
-                  <AppText
-                    variant="h2"
-                    color="primary"
-                    style={styles.greetingMain}>
-                    {greeting.text}, Paval
-                  </AppText>
-                  <FastImage
-                    source={GREETING_IMAGES[greeting.image]}
-                    style={styles.greetingImage}
-                    resizeMode={FastImage.resizeMode.contain}
-                    accessibilityIgnoresInvertColors
-                  />
-                </View>
-              </View>
+              <WeatherGreeting
+                text={greeting.text}
+                firstName={userFirstName}
+                condition={greeting.condition}
+                caption={greeting.caption}
+                isFetching={greeting.isFirstLoad}
+              />
             );
         case 'HERO':
           return item.data ? <FeaturedHeroBanner item={item.data} onPress={handleItemPress} /> : null;
@@ -319,7 +308,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
       // and the section structure are doing the visual work now.
       return sectionContent;
     },
-    [dispatch, greeting, handleItemPress, handlePlaylistPress, handleGenrePress, handleMovieCategoryPress, handleSeeAll, handlePodcastCategoryPress, handleFollowedPodcastPress, handleFollowedPodcastsSeeAll, handleMusicCategoryPress, handleRadioCategoryPress, handleLiveTVCategoryPress, handleAudiobookCategoryPress, handleArchiveCategoryPress, handleShowsCategoryPress, handlePlaylistsSeeAll],
+    [dispatch, greeting, userFirstName, handleItemPress, handlePlaylistPress, handleGenrePress, handleMovieCategoryPress, handleSeeAll, handlePodcastCategoryPress, handleFollowedPodcastPress, handleFollowedPodcastsSeeAll, handleMusicCategoryPress, handleRadioCategoryPress, handleLiveTVCategoryPress, handleAudiobookCategoryPress, handleArchiveCategoryPress, handleShowsCategoryPress, handlePlaylistsSeeAll],
   );
 
   if (hasError) {
@@ -414,34 +403,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 const styles = StyleSheet.create({
   root: {flex: 1},
   scrollContent: {paddingTop: spacing.md},
-  welcomeSection: {
-    // P60: greeting row (text + illustration) sits flush with the
-    // page gutter. The illustration is a visual hint, not a
-    // second focal point — it lives to the right of the text,
-    // vertically centered, and the page hero (HERO section)
-    // below it is still the dominant element.
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    marginTop: spacing.xs,
-  },
-  welcomeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  greetingMain: {
-    // h2 is 24 / 700 / lineHeight 32 in the token set. flex: 1
-    // so the text takes the available space and the image sits
-    // flush right. No font tweaks — the greeting is a friendly
-    // open, not a hero.
-    fontWeight: '700',
-    flex: 1,
-    paddingRight: spacing.md,
-  },
-  greetingImage: {
-    width: 48,
-    height: 48,
-  },
+  // P61: greeting block lives in components/WeatherGreeting/ now —
+  // its styles are owned there. Nothing left in this StyleSheet for
+  // the greeting (welcomeSection/welcomeRow/greetingMain/etc all
+  // removed when the component was extracted).
   fab: {
     position: 'absolute',
     right: spacing.lg,

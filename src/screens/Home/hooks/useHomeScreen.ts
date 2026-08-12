@@ -16,6 +16,9 @@ import {selectFollowedPodcasts} from '../../../store/slices/followedPodcastsSlic
 import type {FollowedPodcast} from '../../../store/slices/followedPodcastsSlice';
 import type {SessionEntry} from '../../../store/slices/sessionSlice';
 import {useAuth} from '../../../hooks/useAuth';
+import {useWeather} from '../../../hooks/useWeather';
+import type {WeatherCondition} from '../../../components/utility/WeatherIcon';
+import type {WeatherSnapshot} from '../../../services/api/weatherService';
 
 // ── Types ──
 
@@ -42,36 +45,59 @@ export type HomeSection =
 
 // ── Helpers ──
 
-type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
-
 interface GreetingInfo {
   text: string;
-  /** Image key into `GREETING_IMAGES` — sun / coffee / moon / stars. */
-  image: TimeOfDay extends 'morning'
-    ? 'sun'
-    : TimeOfDay extends 'afternoon'
-    ? 'coffee'
-    : TimeOfDay extends 'evening'
-    ? 'moon'
-    : 'stars';
+  /** Weather condition for the Lottie icon — driven by the live snapshot. */
+  condition: WeatherCondition;
+  /** Short caption shown under the h2, e.g. "Sunny in Mumbai · 28°". */
+  caption: string | null;
+  /**
+   * True only while the very first cold-start fetch is in flight AND
+   * we have no cached snapshot to fall back on. P66: the card always
+   * renders, and the caption becomes a "Fetching weather…"
+   * placeholder when this is true.
+   */
+  isFirstLoad: boolean;
 }
 
-function getGreeting(): GreetingInfo {
+function greetingTextFromHour(hour: number): string {
+  if (hour >= 5 && hour < 12) {return 'Good morning';}
+  if (hour >= 12 && hour < 17) {return 'Good afternoon';}
+  if (hour >= 17 && hour < 22) {return 'Good evening';}
+  return 'Good night';
+}
+
+function buildCaption(snapshot: WeatherSnapshot | null): string | null {
+  if (!snapshot) {return null;}
+  return `${snapshot.description} in ${snapshot.cityName} · ${snapshot.temperatureC}°`;
+}
+
+function buildGreeting(snapshot: WeatherSnapshot | null, isFirstLoad: boolean): GreetingInfo {
   const hour = new Date().getHours();
-  if (hour >= 5 && hour < 12) {
-    return {text: 'Good morning', image: 'sun'};
-  }
-  if (hour >= 12 && hour < 17) {
-    return {text: 'Good afternoon', image: 'coffee'};
-  }
-  if (hour >= 17 && hour < 22) {
-    return {text: 'Good evening', image: 'moon'};
-  }
-  return {text: 'Good night', image: 'stars'};
+  const text = greetingTextFromHour(hour);
+  const condition: WeatherCondition = snapshot?.condition ?? 'partlyCloudy';
+  // P66: don't blank the caption during the first load — the card
+  // handles the loading state itself with a "Fetching weather…"
+  // placeholder. We still pass the snapshot's caption if we have
+  // one (e.g. a persisted cache from a previous run) so the user
+  // sees real data instead of "Fetching" while the fresh fetch
+  // runs in the background.
+  const caption = buildCaption(snapshot);
+  return {text, condition, caption, isFirstLoad};
 }
 
 function isInProgress(item: SessionEntry): boolean {
   return item.position > 30 && item.position < item.duration - 5;
+}
+
+// P61: extract a first name for the greeting. The auth user carries
+// `name` as a single string ("Paval EP", "Sundar Pichai"); we want
+// just the first token. Falls back to "there" so the salutation
+// stays grammatical when no user is signed in or the name is empty.
+function deriveFirstName(authUser: {name?: string} | null | undefined): string {
+  if (!authUser?.name) {return 'there';}
+  const first = authUser.name.trim().split(/\s+/)[0] ?? '';
+  return first.length > 0 ? first : 'there';
 }
 
 // ── Hook ──
@@ -84,6 +110,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const [hasError, setHasError] = useState(false);
   const dispatch = useAppDispatch();
   const {user} = useAuth();
+  const {snapshot: weatherSnapshot, isFirstLoad: weatherFirstLoad} = useWeather();
 
   useEffect(() => {
     const t = setTimeout(() => setIsSettled(true), 300);
@@ -253,7 +280,14 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     hasError,
     isScanning,
     sections,
-    greeting: getGreeting(), // {text, image}
+    greeting: buildGreeting(weatherSnapshot, weatherFirstLoad),
+    /**
+     * P61: first name shown in the greeting block ("Good afternoon, Paval").
+     * Falls back to "there" when the user isn't signed in or the
+     * Google profile has no given name — keeps the salutation readable
+     * either way ("Good afternoon, there").
+     */
+    userFirstName: deriveFirstName(user),
     dispatch,
     user: user ? user : null,
     genres,

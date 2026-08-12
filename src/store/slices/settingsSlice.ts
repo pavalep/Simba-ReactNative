@@ -60,6 +60,11 @@ interface SettingsState {
   appLanguage: string;
   /** 49.6: keep the last N completed downloads (0 = off). */
   autoDeleteDownloads: number;
+
+  // P61: home greeting. Empty = use IP geolocation; non-empty =
+  // user-override city (e.g. "Mumbai"). Persisted via redux-persist
+  // so the choice survives a relaunch.
+  homeCity: string;
 }
 
 const initialState: SettingsState = {
@@ -116,6 +121,9 @@ const initialState: SettingsState = {
 
   // Downloads defaults
   autoDeleteDownloads: 0,
+
+  // Weather greeting defaults
+  homeCity: '',
 };
 
 const settingsSlice = createSlice({
@@ -180,6 +188,11 @@ const settingsSlice = createSlice({
     // ── Downloads (Phase 49) ──
     setAutoDeleteDownloads(state, action: PayloadAction<number>) {
       state.autoDeleteDownloads = Math.max(0, Math.floor(action.payload));
+    },
+
+    // ── Weather greeting (Phase 61) ──
+    setHomeCity(state, action: PayloadAction<string>) {
+      state.homeCity = action.payload;
     },
 
     // ── Audio Settings (Phase 45) ──
@@ -307,6 +320,7 @@ export const {
   setAppLanguage,
 
   setAutoDeleteDownloads,
+  setHomeCity,
 
   resetToDefaults,
 } = settingsSlice.actions;

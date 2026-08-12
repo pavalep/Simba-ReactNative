@@ -1,16 +1,14 @@
-import React, {useMemo, useEffect, useCallback, useState} from 'react';
+import React, {useMemo, useEffect, useCallback} from 'react';
 import {Provider} from 'react-redux';
 import {Linking, View, StyleSheet} from 'react-native';
 import {PersistGate} from 'redux-persist/integration/react';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
-import type {InitialState} from '@react-navigation/native';
 import {store, persistor} from './src/store';
 import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
 import {linking} from './src/navigation/linking';
-import {loadNavState, saveNavState} from './src/navigation/navPersistence';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {SimbaStatusBar} from './src/components/StatusBar';
 import {ToastProvider} from './src/components/feedback/Toast';
@@ -86,20 +84,13 @@ const AppContent: React.FC = () => {
     });
   }, []);
 
-  // 57.6: restore navigation state (sanitized) before mounting the container
-  // so `initialState` is honored on first render; players/auth routes excluded.
-  const [navStateReady, setNavStateReady] = useState(false);
-  const [initialNavState, setInitialNavState] = useState<InitialState | undefined>(undefined);
-
-  useEffect(() => {
-    // 59.3: first React render of the app tree
-    mark('app-mount');
-    loadNavState().then(state => {
-      setInitialNavState(state ?? undefined);
-      setNavStateReady(true);
-      mark('nav-ready');
-    });
-  }, []);
+  // P64: removed navigation-state persistence. The auth gate in
+  // RootNavigator (Splash → Login → MainTabs based on hasLaunched and
+  // isAuthenticated) is now the single source of truth for where the
+  // user lands on cold start. Persisting the last screen broke that
+  // contract — a signed-in user could re-open the app on a stale
+  // detail page from before they signed out, and vice versa. Every
+  // cold start now resolves fresh from auth state.
 
   const fallbackColors = useMemo(
     () => ({
@@ -159,15 +150,11 @@ const AppContent: React.FC = () => {
       <ToastProvider>
         <SimbaStatusBar variant="home" />
         <View style={styles.root}>
-          {navStateReady && (
-            <NavigationContainer
-              ref={navigationRef}
-              initialState={initialNavState}
-              linking={linkingConfig}
-              onStateChange={state => saveNavState(state)}>
-              <RootNavigator />
-            </NavigationContainer>
-          )}
+          <NavigationContainer
+            ref={navigationRef}
+            linking={linkingConfig}>
+            <RootNavigator />
+          </NavigationContainer>
           {/* 54.1: global offline banner overlays every screen */}
           <OfflineBanner />
           {/* 54.5: global long-operation progress (media scan) */}

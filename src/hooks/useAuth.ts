@@ -79,22 +79,51 @@ export function useAuth() {
   }, [dispatch]);
 
   /**
-   * 43.1: Silent session restore on cold start. Keeps the persisted session
-   * when the network is unreachable (offline grace), signs out only when the
-   * credential was actually revoked/expired.
+   * 43.1: Silent session restore on cold start. P67: tightened
+   * semantics — we now trust the persisted user and only force a
+   * signOut on an *explicit* revoke event.
+   *
+   * The previous version treated `signInSilently()` returning
+   * `'expired'` (which fires for `SIGN_IN_REQUIRED` or any
+   * session_expired-classified error) as a confirmed revoke. In
+   * practice `'expired'` fires for many reasons that are NOT
+   * credential revocation:
+   *   • Play Services state went stale (emulator reboot, app
+   *     upgrade, OS update).
+   *   • User switched the primary Google account on the device
+   *     without signing out of our app.
+   *   • The library's local cache is out of sync with the server.
+   * Result: a signed-in user opened the app after a normal cold
+   * start and got silently routed to Login.
+   *
+   * The fix: on cold start, the persisted `state.auth.user` is
+   * the source of truth. `signInSilently()` runs in the
+   * background to refresh the user object (photo URL may have
+   * changed), but its failure is informational, not a kick-out
+   * signal. The user explicitly signs out via Profile → Sign Out
+   * when they want to leave; we don't pre-empt that decision.
    */
   const restoreSession = useCallback(async () => {
     dispatch(restoreStart());
+    console.log('[AUTH] cold-start restoreSession: starting silent restore');
     const result = await signInSilently();
+    console.log(`[AUTH] cold-start restoreSession: result=${result.status}`);
     if (result.status === 'restored') {
+      // Refresh the persisted user object (e.g. photo URL). Don't
+      // bump lastSignedInAt / sessionExpiresAt for a silent
+      // restore — those reflect explicit sign-in, not the cold
+      // start's optimistic trust.
       dispatch(setUser(result.user));
-    } else if (result.status === 'expired') {
-      dispatch(signOutAction());
-      if (navigationRef.isReady()) {
-        navigationRef.reset({index: 0, routes: [{name: 'Login'}]});
-      }
+    } else {
+      // 'no_session' / 'expired' / 'unavailable' / 'revoked' — we
+      // intentionally do NOT force signOut here. The persisted
+      // user is trusted; the next active Google-bound action
+      // (e.g. sharing a video) will surface a re-auth prompt
+      // from the library if the credential is actually missing.
+      console.log(
+        `[AUTH] cold-start restoreSession: keeping persisted user (${result.status} is non-actionable on cold start)`,
+      );
     }
-    // 'no_session' / 'unavailable' → keep persisted state as-is
   }, [dispatch]);
 
   const signOut = useCallback(async () => {

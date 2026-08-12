@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- P61: weather greeting on Home. Foreground location only — we
+         ask at runtime via PermissionsAndroid inside the hook, never
+         in the background. Coarse is the primary; fine is the
+         upgrade when the user grants "precise". -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- Required for foreground media playback notification (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Required for foreground service media type (Android 14+) -->

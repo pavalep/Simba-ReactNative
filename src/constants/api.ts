@@ -46,4 +46,26 @@ export const API_CONFIG = {
     baseUrl: 'https://api.audius.co',
     rateLimitMs: 300,
   },
+  // P61: weather greeting on Home. No API keys, fully open source.
+  // All three URLs live here so the weather service doesn't hardcode
+  // anything — it imports from this file like every other service.
+  weather: {
+    /** IP-based geolocation. No longer used — we get coords from
+     *  the device's location service (with permission) or the IANA
+     *  timezone (no permission). Kept as a string for any future
+     *  tool that wants a free geo source. */
+    ipGeo: 'https://ipwho.is/',
+    /** Open-Meteo current-weather endpoint. */
+    forecast: 'https://api.open-meteo.com/v1/forecast',
+    /** Open-Meteo geocoding (city name → lat/lon). */
+    geocoding: 'https://geocoding-api.open-meteo.com/v1/search',
+    /** Last-resort fallback location if every network call fails. */
+    fallbackCity: {
+      name: 'Mumbai',
+      lat: 19.076,
+      lon: 72.8777,
+    },
+    /** Per-service rate limit, used by the future apiFetch wrapper. */
+    rateLimitMs: 1000, // ip-api.com allows ~45 req/min/IP
+  },
 } as const;

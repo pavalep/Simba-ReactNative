@@ -1,0 +1,290 @@
+// Generate 5 minimal Lottie JSONs for weather icons in SIMBA brand gold.
+// All animations are 64x64, 30fps, 60 frames (2s loop). Pure shape morphing —
+// no image assets, so Metro bundles them inline and there's no native build cost.
+
+const fs = require('fs');
+const path = require('path');
+
+const OUT = path.resolve(__dirname, '..', 'src', 'assets', 'lottie', 'weather');
+fs.mkdirSync(OUT, { recursive: true });
+
+const W = 64;
+const H = 64;
+const FR = 60;          // total frames
+const FPS = 30;
+const GOLD = [1, 0.78, 0.18, 1];     // #FFC72E — primary brand gold
+const GOLD_SOFT = [1, 0.85, 0.4, 1]; // #FFD966 — softer for highlights
+
+// Color shortcut: returns fill objects for Lottie shape layers
+const fill = (c) => ({ ty: 'fl', c: { a: 0, k: c.slice(0, 3) }, o: { a: 0, k: c[3] * 100 }, r: 1, bm: 0, nm: 'Fill', hd: false });
+const stroke = (c, w = 0) => ({ ty: 'st', c: { a: 0, k: c.slice(0, 3) }, o: { a: 0, k: c[3] * 100 }, w: { a: 0, k: w }, lc: 1, lj: 1, ml: 4, bm: 0, nm: 'Stroke', hd: false });
+
+// Shape builder
+const shapeGroup = (name, items) => ({ ty: 'gr', it: items, nm: name, bm: 0, hd: false });
+const rect = (x, y, w, h, r = 0) => ({ ty: 'rc', d: 1, s: { a: 0, k: [w, h] }, p: { a: 0, k: [x, y] }, r: { a: 0, k: r }, nm: 'Rect' });
+const ellipse = (x, y, w, h) => ({ ty: 'el', d: 1, s: { a: 0, k: [w, h] }, p: { a: 0, k: [x, y] }, nm: 'Ellipse' });
+const transform = (pos = [0, 0], anchor = [0, 0], scale = [100, 100], rotation = 0, opacity = 100) => ({
+  ty: 'tr',
+  p: { a: 0, k: pos },
+  a: { a: 0, k: anchor },
+  s: { a: 0, k: scale },
+  r: { a: 0, k: rotation },
+  o: { a: 0, k: opacity },
+  sk: { a: 0, k: 0 },
+  sa: { a: 0, k: 0 },
+  nm: 'Transform',
+});
+// (path helper omitted — we use rect/ellipse shapes only to keep JSON short)
+
+// Helper: animated scale keyframe on a transform
+const animatedScale = (keyframes) => ({
+  a: 1,
+  k: keyframes.map(kf => ({ t: kf.t, s: kf.s, h: 0, i: { x: [0.5], y: [1] }, o: { x: [0.5], y: [0] } })),
+});
+const animatedRotation = (keyframes) => ({
+  a: 1,
+  k: keyframes.map(kf => ({ t: kf.t, s: kf.s, h: 0, i: { x: [0.5], y: [1] }, o: { x: [0.5], y: [0] } })),
+});
+const animatedOpacity = (keyframes) => ({
+  a: 1,
+  k: keyframes.map(kf => ({ t: kf.t, s: kf.s, h: 0, i: { x: [0.5], y: [1] }, o: { x: [0.5], y: [0] } })),
+});
+
+// Standard layer skeleton
+const baseLayer = (name, ind, ip = 0, op = FR) => ({
+  ddd: 0, ind, ty: 4, nm: name, sr: 1,
+  ks: {
+    o: { a: 0, k: 100 },
+    r: { a: 0, k: 0 },
+    p: { a: 0, k: [W / 2, H / 2, 0] },
+    a: { a: 0, k: [0, 0, 0] },
+    s: { a: 0, k: [100, 100, 100] },
+  },
+  ao: 0, shapes: [], ip, op, st: 0, bm: 0,
+});
+
+// ── SUN: rotating ray ring + pulsing core ─────────────────────────────────
+function buildSun() {
+  // Sun core (pulse)
+  const core = baseLayer('Sun Core', 1);
+  core.shapes = [
+    shapeGroup('Core', [
+      ellipse(0, 0, 22, 22),
+      fill(GOLD),
+      transform(),
+    ]),
+  ];
+  core.ks.s = animatedScale([
+    { t: 0, s: [100, 100, 100] },
+    { t: 30, s: [112, 112, 100] },
+    { t: 60, s: [100, 100, 100] },
+  ]);
+
+  // Ray ring — 8 small dashes, all in one shape group, rotating as a unit
+  const rayShapes = [];
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * 360;
+    const rad = (angle * Math.PI) / 180;
+    const cx = Math.cos(rad - Math.PI / 2) * 18;
+    const cy = Math.sin(rad - Math.PI / 2) * 18;
+    rayShapes.push(
+      shapeGroup(`Ray ${i}`, [
+        rect(0, -22, 4, 8, 1),
+        fill(GOLD_SOFT),
+        transform([W / 2 + cx, H / 2 + cy, 0]),
+      ]),
+    );
+  }
+
+  const ring = baseLayer('Ray Ring', 2);
+  ring.ks.p = { a: 0, k: [W / 2, H / 2, 0] };
+  ring.ks.r = animatedRotation([
+    { t: 0, s: 0 },
+    { t: 60, s: 360 },
+  ]);
+  ring.shapes = rayShapes;
+
+  return compose([core, ring]);
+}
+
+// ── CLOUD: gentle drift + scale breath ─────────────────────────────────────
+function buildCloud() {
+  const cloud = baseLayer('Cloud', 1);
+  cloud.shapes = [
+    shapeGroup('Puff 1', [
+      ellipse(0, 0, 24, 24),
+      fill(GOLD_SOFT),
+      transform([20, 36]),
+    ]),
+    shapeGroup('Puff 2', [
+      ellipse(0, 0, 28, 28),
+      fill(GOLD),
+      transform([32, 28]),
+    ]),
+    shapeGroup('Puff 3', [
+      ellipse(0, 0, 22, 22),
+      fill(GOLD_SOFT),
+      transform([46, 36]),
+    ]),
+    shapeGroup('Base', [
+      rect(0, 0, 44, 12, 6),
+      fill(GOLD),
+      transform([22, 40]),
+    ]),
+  ];
+  cloud.ks.p = animatedPosition([
+    { t: 0, s: [W / 2, H / 2, 0] },
+    { t: 30, s: [W / 2 + 2, H / 2, 0] },
+    { t: 60, s: [W / 2, H / 2, 0] },
+  ]);
+  return compose([cloud]);
+}
+
+// ── PARTLY CLOUDY: sun + small cloud overlay ───────────────────────────────
+function buildPartlyCloudy() {
+  const sun = baseLayer('Sun', 1);
+  sun.shapes = [
+    shapeGroup('Core', [ellipse(0, 0, 18, 18), fill(GOLD), transform([W / 2 - 6, H / 2 - 6])]),
+  ];
+  sun.ks.s = animatedScale([
+    { t: 0, s: [100, 100, 100] },
+    { t: 30, s: [108, 108, 100] },
+    { t: 60, s: [100, 100, 100] },
+  ]);
+  sun.ks.r = animatedRotation([
+    { t: 0, s: 0 }, { t: 60, s: 60 },
+  ]);
+
+  const cloud = baseLayer('Cloud', 2);
+  cloud.shapes = [
+    shapeGroup('Puff 1', [ellipse(0, 0, 16, 16), fill(GOLD_SOFT), transform([28, 38])]),
+    shapeGroup('Puff 2', [ellipse(0, 0, 22, 22), fill(GOLD), transform([38, 32])]),
+    shapeGroup('Base', [rect(0, 0, 32, 10, 5), fill(GOLD), transform([38, 40])]),
+  ];
+  cloud.ks.p = animatedPosition([
+    { t: 0, s: [W / 2 + 6, H / 2 + 4, 0] },
+    { t: 30, s: [W / 2 + 8, H / 2 + 4, 0] },
+    { t: 60, s: [W / 2 + 6, H / 2 + 4, 0] },
+  ]);
+
+  return compose([sun, cloud]);
+}
+
+// ── RAIN: cloud + 3 falling drops that loop ────────────────────────────────
+function buildRain() {
+  const cloud = baseLayer('Cloud', 1);
+  cloud.shapes = [
+    shapeGroup('Puff 1', [ellipse(0, 0, 22, 22), fill(GOLD_SOFT), transform([22, 30])]),
+    shapeGroup('Puff 2', [ellipse(0, 0, 26, 26), fill(GOLD), transform([34, 24])]),
+    shapeGroup('Puff 3', [ellipse(0, 0, 20, 20), fill(GOLD_SOFT), transform([46, 30])]),
+    shapeGroup('Base', [rect(0, 0, 40, 10, 5), fill(GOLD), transform([24, 34])]),
+  ];
+
+  const dropPositions = [[28, 44], [36, 46], [44, 44]];
+  const drops = dropPositions.map(([x, y], i) => {
+    const drop = baseLayer(`Drop ${i}`, 2 + i);
+    drop.shapes = [
+      shapeGroup('Drop', [
+        ellipse(0, 0, 4, 7),
+        fill(GOLD),
+        transform([x, y]),
+      ]),
+    ];
+    // drops fall and fade, staggered
+    const offset = i * 8;
+    drop.ks.p = animatedPosition([
+      { t: 0, s: [x, y, 0] },
+      { t: 30 - offset, s: [x, y + 10, 0] },
+      { t: 60 - offset, s: [x, y, 0] },
+    ]);
+    drop.ks.o = animatedOpacity([
+      { t: 0, s: 0 },
+      { t: 10 - offset, s: 100 },
+      { t: 30 - offset, s: 100 },
+      { t: 40 - offset, s: 0 },
+      { t: 60 - offset, s: 0 },
+    ]);
+    return drop;
+  });
+
+  return compose([cloud, ...drops]);
+}
+
+// ── SNOW: 3 small dots that pulse + drift slowly ───────────────────────────
+function buildSnow() {
+  const flakePositions = [[26, 30], [38, 32], [34, 42]];
+  const flakes = flakePositions.map(([x, y], i) => {
+    const flake = baseLayer(`Flake ${i}`, 1 + i);
+    flake.shapes = [
+      shapeGroup('Flake', [ellipse(0, 0, 6, 6), fill(GOLD_SOFT), transform([x, y])]),
+    ];
+    flake.ks.p = animatedPosition([
+      { t: 0, s: [x, y, 0] },
+      { t: 30, s: [x + (i % 2 ? 2 : -2), y + 4, 0] },
+      { t: 60, s: [x, y, 0] },
+    ]);
+    flake.ks.o = animatedOpacity([
+      { t: 0, s: 60 },
+      { t: 30, s: 100 },
+      { t: 60, s: 60 },
+    ]);
+    return flake;
+  });
+  return compose(flakes);
+}
+
+// ── STARS (for night greeting): 4 small dots that twinkle ─────────────────
+function buildStars() {
+  const positions = [[20, 18], [44, 22], [28, 36], [42, 42]];
+  const stars = positions.map(([x, y], i) => {
+    const star = baseLayer(`Star ${i}`, 1 + i);
+    star.shapes = [
+      shapeGroup('Star', [ellipse(0, 0, 4, 4), fill(GOLD), transform([x, y])]),
+    ];
+    star.ks.o = animatedOpacity([
+      { t: 0, s: 30 + i * 15 },
+      { t: 30, s: 100 },
+      { t: 60, s: 30 + i * 15 },
+    ]);
+    return star;
+  });
+  return compose(stars);
+}
+
+function animatedPosition(keyframes) {
+  return {
+    a: 1,
+    k: keyframes.map(kf => ({ t: kf.t, s: kf.s, h: 0, i: { x: [0.5], y: [1] }, o: { x: [0.5], y: [0] } })),
+  };
+}
+
+function compose(layers) {
+  return {
+    v: '5.7.4',
+    fr: FPS,
+    ip: 0,
+    op: FR,
+    w: W,
+    h: H,
+    nm: 'Weather',
+    ddd: 0,
+    assets: [],
+    layers,
+    meta: { g: 'simba-weather-v1' },
+  };
+}
+
+const files = {
+  'sun.json': buildSun(),
+  'cloud.json': buildCloud(),
+  'partly-cloudy.json': buildPartlyCloudy(),
+  'rain.json': buildRain(),
+  'snow.json': buildSnow(),
+  'stars.json': buildStars(),
+};
+
+for (const [name, json] of Object.entries(files)) {
+  const dest = path.join(OUT, name);
+  fs.writeFileSync(dest, JSON.stringify(json));
+  console.log('wrote', dest, fs.statSync(dest).size, 'bytes');
+}
