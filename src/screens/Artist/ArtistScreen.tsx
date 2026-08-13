@@ -265,7 +265,7 @@ export const ArtistScreen: React.FC<Props> = () => {
         {remainingTracks.length > 0 && (
           <View style={styles.remainingSection}>
             <View style={styles.remainingHeader}>
-              <AppText variant="h3" color="primary">
+              <AppText variant="displaySans" color="primary">
                 All Tracks
               </AppText>
               <AppText variant="caption" color="tertiary">

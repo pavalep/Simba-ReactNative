@@ -136,7 +136,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
   // ── Step 0: Folder Type Selection ──
   const renderTypeSelection = () => (
     <View style={styles.stepContent}>
-      <AppText variant="h2" color="primary" style={styles.stepTitle}>
+      <AppText variant="displaySans" color="primary" style={styles.stepTitle}>
         What kind of media?
       </AppText>
       <AppText variant="body2" color="tertiary" style={styles.stepSubtitle}>
@@ -240,7 +240,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
 
   const renderFolderPicker = () => (
     <View style={styles.stepContent}>
-      <AppText variant="h2" color="primary" style={styles.stepTitle}>
+      <AppText variant="displaySans" color="primary" style={styles.stepTitle}>
         Choose a folder
       </AppText>
       <AppText variant="body2" color="tertiary" style={styles.stepSubtitle}>
@@ -660,7 +660,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
           },
         ]}>
         <BackButton onPress={handleBack} />
-        <AppText variant="h3" color="primary">
+        <AppText variant="displaySans" color="primary">
           Link Folder
         </AppText>
         <View style={styles.backBtn} />

@@ -40,8 +40,10 @@ export const PlayerErrorFallback: React.FC<PlayerErrorFallbackProps> = ({
         <AppText style={[styles.iconChar, {color: colors.semantic.error}]}>!</AppText>
       </View>
 
-      {/* Title */}
-      <AppText variant="h2" color="primary" style={styles.title}>
+      {/* Title — error state, use displaySans (Manrope) for
+          a structural title without the Cormorant cinematic
+          weight (which would feel wrong for an error). */}
+      <AppText variant="displaySans" color="primary" style={styles.title}>
         {title}
       </AppText>
 

@@ -339,7 +339,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
         {/* ── Info Section ── */}
         <View style={styles.infoSection}>
-          <AppText variant="h2" color="primary" style={styles.infoTitle}>
+          <AppText variant="displaySerif" color="primary" style={styles.infoTitle}>
             {title}
           </AppText>
           <AppText variant="body1" color="secondary" style={styles.infoArtist}>

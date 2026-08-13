@@ -107,7 +107,7 @@ export const AudioResumeOverlay: React.FC<AudioResumeOverlayProps> = ({
       style={[styles.container, {opacity: fadeAnim, transform: [{translateY: translateAnim}]}]}>
       <View style={styles.scrim} pointerEvents="none" />
       <View style={styles.card}>
-        <AppText variant="h3" color="primary" style={styles.title}>
+        <AppText variant="displaySans" color="primary" style={styles.title}>
           Welcome back
         </AppText>
         <AppText variant="body2" color="secondary" style={styles.caption}>

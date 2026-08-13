@@ -11,15 +11,25 @@ import {spacing} from '../../../theme/tokens';
 
 interface PodcastCategoriesShelfProps {
   onCategoryPress: (categoryId: number | 'all') => void;
+  /**
+   * v7: "View all" action — navigates to PodcastsScreen with
+   * the 'all' categoryId (which the screen interprets as
+   * trending / no specific category).
+   */
+  onSeeAll?: () => void;
 }
 
 export const PodcastCategoriesShelf: React.FC<PodcastCategoriesShelfProps> = React.memo(
-  ({onCategoryPress}) => {
+  ({onCategoryPress, onSeeAll}) => {
     const categories = PODCAST_CATEGORIES.slice(0, 6);
 
     return (
       <View style={styles.container}>
-        <SectionHeader label="Podcasts" />
+        <SectionHeader
+          label="Podcasts"
+          actionLabel={onSeeAll ? 'View all' : undefined}
+          onAction={onSeeAll}
+        />
         <FlatList
           horizontal
           data={categories}

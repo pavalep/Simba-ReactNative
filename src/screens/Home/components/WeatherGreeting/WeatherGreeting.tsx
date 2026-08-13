@@ -79,9 +79,12 @@ const WeatherGreetingComponent: React.FC<WeatherGreetingProps> = ({
         <WeatherChip condition={condition} style={styles.chip} />
 
         <View style={styles.textCol}>
-          {/* Time-of-day + name (h2, two-color split). */}
+          {/* v7 greeting: Cormorant Garamond prefix (displaySerif,
+              inline fontSize 28 per spec §10 — one tier smaller than
+              the user name so the Inter name reads as the dominant
+              word), then Inter Bold gold for the user name. */}
           <AppText
-            variant="h2"
+            variant="displaySerif"
             color="primary"
             style={styles.greeting}
             numberOfLines={1}
@@ -161,11 +164,20 @@ const styles = StyleSheet.create({
     minWidth: 0, // allow text to shrink below intrinsic content
   },
   greeting: {
-    fontWeight: '800',
-    letterSpacing: -0.5,
+    // v7: greeting prefix uses Cormorant Garamond (displaySerif).
+    // The fontSize 28 override is per spec §10 — one tier smaller
+    // than the user name (Inter h2 = 24 / displaySerif token = 48).
+    // The token's fontFamily + lineHeight supply the rest; the inline
+    // fontWeight is removed because the token already provides 700.
+    fontSize: 28,
+    lineHeight: 36,
   },
+  // v8: NO fontWeight override. The h2 typography token
+  // now maps to FONT_FAMILY.inter.bold (Inter-Bold.ttf
+  // deterministically). Slight negative letterSpacing so
+  // the gold user name reads tightly against the Cormorant
+  // greeting prefix.
   greetingName: {
-    fontWeight: '800',
     letterSpacing: -0.5,
   },
   caption: {

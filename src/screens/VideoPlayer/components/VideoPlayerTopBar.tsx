@@ -5,6 +5,7 @@ import Svg, {Path, Rect, Circle} from 'react-native-svg';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {radius, spacing, typography} from '../../../theme/tokens';
 
 // ─── Local Vector SVG Icons for Guaranteed Rendering ─────────
@@ -203,9 +204,11 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           paddingVertical: 2,
         },
         liveBadgeText: {
+          // v8: explicit Inter Bold via family key. See
+          // Toast.tsx actionLabel comment.
+          fontFamily: FONT_FAMILY.inter.bold,
           color: colors.text.inverse,
           fontSize: 10,
-          fontWeight: '800',
           letterSpacing: 1.2,
         },
       }),
@@ -276,6 +279,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
               </View>
             ) : null}
             <AppText
+              variant="displaySerif"
               numberOfLines={1}
               style={styles.title}
               accessibilityLabel={`Now playing ${title}`}

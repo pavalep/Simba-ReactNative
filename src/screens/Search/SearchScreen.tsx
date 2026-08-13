@@ -379,7 +379,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         {/* P40.7: trending from real API data when the query is empty */}
         {showRecentSection && trending.length > 0 && (
           <View style={styles.trendingSection}>
-            <AppText variant="h3" color="primary" style={styles.trendingTitle}>
+            <AppText variant="displaySans" color="primary" style={styles.trendingTitle}>
               Trending Now
             </AppText>
             {/* 59.1: virtualized instead of .map */}

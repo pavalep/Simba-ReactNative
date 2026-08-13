@@ -33,7 +33,7 @@ export const TrackMetadata: React.FC<TrackMetadataProps> = ({metadata}) => {
       </View>
 
       {/* ── Text rows ── */}
-      <AppText variant="h2" numberOfLines={1} style={styles.title}>
+      <AppText variant="displaySerif" numberOfLines={1} style={styles.title}>
         {metadata.title || 'Unknown Track'}
       </AppText>
 

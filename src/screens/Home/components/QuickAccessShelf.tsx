@@ -28,7 +28,7 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <AppText variant="h3" color="primary" style={styles.headerTitle}>
+        <AppText variant="displaySans" color="primary" style={styles.headerTitle}>
           {title}
         </AppText>
         {onSeeAll ? (

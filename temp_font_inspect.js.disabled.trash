@@ -1,0 +1,57 @@
+const fs = require('fs');
+function getNameTable(buf) {
+  const version = buf.readUInt32BE(0);
+  const numTables = buf.readUInt16BE(4);
+  let nameTableOffset = 0;
+  let nameTableLength = 0;
+  for (let i = 0; i < numTables; i++) {
+    const tag = buf.toString('ascii', 12 + i*16, 12 + i*16 + 4);
+    if (tag === 'name') {
+      nameTableOffset = buf.readUInt32BE(12 + i*16 + 8);
+      nameTableLength = buf.readUInt32BE(12 + i*16 + 12);
+      break;
+    }
+  }
+  if (!nameTableOffset) return null;
+  const storageOffset = buf.readUInt16BE(nameTableOffset + 4);
+  const count = buf.readUInt16BE(nameTableOffset + 6);
+  const stringOffset = nameTableOffset + storageOffset;
+  const records = [];
+  for (let i = 0; i < count; i++) {
+    const recBase = nameTableOffset + 6 + 2 + i*12;
+    const platformID = buf.readUInt16BE(recBase);
+    const encodingID = buf.readUInt16BE(recBase + 2);
+    const languageID = buf.readUInt16BE(recBase + 4);
+    const nameID = buf.readUInt16BE(recBase + 6);
+    const length = buf.readUInt16BE(recBase + 8);
+    const offset = buf.readUInt16BE(recBase + 10);
+    let str;
+    if (platformID === 3) {
+      str = buf.toString('utf16le', stringOffset + offset, stringOffset + offset + length);
+    } else if (platformID === 1) {
+      str = buf.toString('ascii', stringOffset + offset, stringOffset + offset + length);
+    } else {
+      str = '?';
+    }
+    records.push({platformID, nameID, str});
+  }
+  return records;
+}
+const files = [
+  'X:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/assets/fonts/Allura-Regular.ttf',
+  'X:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/assets/fonts/Inter-Variable.ttf',
+];
+for (const f of files) {
+  const buf = fs.readFileSync(f);
+  const names = getNameTable(buf);
+  if (!names) { console.log(f, '-> no name table'); continue; }
+  const family = names.find(n => n.nameID === 1 && n.platformID === 3);
+  const subfam = names.find(n => n.nameID === 2 && n.platformID === 3);
+  const full = names.find(n => n.nameID === 4 && n.platformID === 3);
+  const ps = names.find(n => n.nameID === 6 && n.platformID === 3);
+  console.log(f);
+  console.log('  family (1):', family && family.str);
+  console.log('  subfam (2):', subfam && subfam.str);
+  console.log('  full   (4):', full && full.str);
+  console.log('  postscript (6):', ps && ps.str);
+}

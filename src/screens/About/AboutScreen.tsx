@@ -276,7 +276,7 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.root} edges={['top']}>
-        <InternalHeader title={textContent.headerTitle} />
+        <InternalHeader title={textContent.headerTitle} titleVariant="displaySerif" />
         <Animated.View style={[styles.content, {opacity: fadeAnim}]}>
           {/* Logo with bounce animation */}
           <Animated.View

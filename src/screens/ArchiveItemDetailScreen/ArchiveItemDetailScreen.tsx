@@ -251,7 +251,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
             </View>
           )}
 
-          <AppText variant="h2" color="primary" style={styles.itemTitle}>
+          <AppText variant="displaySerif" color="primary" style={styles.itemTitle}>
             {item.title}
           </AppText>
 
@@ -303,7 +303,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
         {/* ── Tracks List ── */}
         <View style={styles.tracksSection}>
           <View style={styles.sectionHeader}>
-            <AppText variant="h3" color="primary">
+            <AppText variant="displaySans" color="primary">
               Tracks
             </AppText>
             <AppText variant="caption" color="tertiary">

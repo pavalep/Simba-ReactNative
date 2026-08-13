@@ -65,7 +65,7 @@ export const SongBookmarks: React.FC<SongBookmarksProps> = ({
     <View style={styles.section}>
       {/* Section header with add button */}
       <View style={styles.header}>
-        <AppText variant="h3" color="secondary" style={styles.sectionTitle}>
+        <AppText variant="displaySans" color="secondary" style={styles.sectionTitle}>
           Bookmarks {count > 0 ? `(${count})` : ''}
         </AppText>
         <TouchableOpacity

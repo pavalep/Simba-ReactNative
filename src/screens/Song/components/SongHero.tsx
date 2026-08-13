@@ -8,6 +8,7 @@ import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import AudioWaveform from '../../../components/player/AudioWaveform/AudioWaveform';
 
 interface SongHeroProps {
@@ -63,8 +64,8 @@ export const SongHero: React.FC<SongHeroProps> = ({
         </AppText>
       </View>
 
-      {/* Track title */}
-      <AppText variant="h1" color="primary" style={styles.title} numberOfLines={2}>
+      {/* Track title — v7 hero, Cormorant Garamond Bold */}
+      <AppText variant="displaySerif" color="primary" style={styles.title} numberOfLines={2}>
         {title}
       </AppText>
 
@@ -118,8 +119,11 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   artInitial: {
+    // v8: explicit Inter Bold via family key. The 64px
+    // initial letter on the gold disc cover should be clean
+    // Bold 700, not fake extra-bold.
+    fontFamily: FONT_FAMILY.inter.bold,
     fontSize: 64,
-    fontWeight: '800',
   },
   title: {
     fontWeight: '700',

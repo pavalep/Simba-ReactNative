@@ -416,7 +416,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
 
       <View style={styles.header}>
         <TouchableOpacity style={styles.titleWrapper} activeOpacity={0.7} onPress={() => setShowDropdown(true)}>
-          <AppText variant="h1" color="primary">{currentTitle}</AppText>
+          <AppText variant="displaySans" color="primary">{currentTitle}</AppText>
           <SvgIcon name="chevronDown" size={20} color={colors.text.primary} style={styles.titleChevron} />
         </TouchableOpacity>
         <View style={styles.headerRight}>

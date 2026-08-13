@@ -280,7 +280,7 @@ export const HelpScreen: React.FC<Props> = () => {
         colors={[colors.background.primary, colors.background.elevated]}
         style={StyleSheet.absoluteFill}
       />
-      <InternalHeader title="Help" />
+      <InternalHeader title="Help" titleVariant="displaySerif" />
       <Animated.View style={[styles.root, {opacity: fadeAnim}]}>
         {/* Search box (53.6: core SearchBar) */}
         <SearchBar
@@ -321,7 +321,7 @@ export const HelpScreen: React.FC<Props> = () => {
                       size={16}
                       color={colors.accent.gold}
                     />
-                    <AppText variant="h3" color="accent" style={styles.sectionTitle}>
+                    <AppText variant="displaySans" color="accent" style={styles.sectionTitle}>
                       {section.title}
                     </AppText>
                   </View>

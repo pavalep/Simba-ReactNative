@@ -9,6 +9,7 @@ import {
   Animated,
 } from 'react-native';
 import {AppText} from '../../core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {ActivityOrb} from '../../feedback/ActivityOrb/ActivityOrb';
 import {PlayerErrorFallback} from '../../feedback/PlayerErrorFallback';
 import {BufferingBar} from '../BufferingBar/BufferingBar';
@@ -616,8 +617,11 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   liveBadgeText: {
+    // v8: explicit Inter Bold via family key. No fontWeight
+    // field — see Toast.tsx actionLabel comment for the
+    // Android font-weight picker bug rationale.
+    fontFamily: FONT_FAMILY.inter.bold,
     fontSize: 11,
-    fontWeight: '800',
     letterSpacing: 1,
   },
 });

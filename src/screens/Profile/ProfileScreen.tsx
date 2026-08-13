@@ -199,7 +199,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
         {/* ── Recently played strip (42.4) ── */}
         {recentStrip.length > 0 && (
           <View style={styles.section}>
-            <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+            <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
               Recently Played
             </AppText>
             {/* 59.1: virtualized recent strip */}
@@ -247,7 +247,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
 
         {/* ── Shortcuts (42.4) ── */}
         <View style={styles.section}>
-          <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+          <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
             Shortcuts
           </AppText>
           <View style={[styles.groupCard, {backgroundColor: colors.background.elevated}]}>
@@ -286,7 +286,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
 
         {/* ── Preferences ── */}
         <View style={styles.section}>
-          <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+          <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
             Preferences
           </AppText>
           <View style={[styles.groupCard, {backgroundColor: colors.background.elevated}]}>
@@ -301,7 +301,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
 
         {/* ── Account (42.6 / 42.7 / 43.5) ── */}
         <View style={styles.section}>
-          <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+          <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
             Account
           </AppText>
           <View style={[styles.groupCard, {backgroundColor: colors.background.elevated}]}>

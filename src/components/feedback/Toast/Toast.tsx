@@ -13,6 +13,7 @@ import {
   Animated,
   StyleSheet,
 } from 'react-native';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
@@ -284,8 +285,12 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   actionLabel: {
+    // v8: explicit Inter Bold via family key. No fontWeight
+    // field — encoding the weight in the family name means
+    // Android deterministically picks Inter-Bold.ttf instead
+    // of fake-bolding from Bold -> extra-bold.
+    fontFamily: FONT_FAMILY.inter.bold,
     fontSize: 13,
-    fontWeight: '800',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },

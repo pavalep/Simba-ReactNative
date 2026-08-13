@@ -184,7 +184,7 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = () => {
           accessibilityLabel="Back to Library"
         />
         <View style={styles.headerTitleWrap}>
-          <AppText variant="h1" color="primary">
+          <AppText variant="displaySans" color="primary">
             Downloads
           </AppText>
           <AppText variant="caption" color="secondary">

@@ -4,6 +4,7 @@
 // Do NOT edit inline. Changes must go through the Atlas.
 
 import {TextStyle, ViewStyle, ImageStyle} from 'react-native';
+import {FONT_FAMILY} from '../constants/fontFamily';
 
 // ─── Color Tokens ────────────────────────────────────────
 
@@ -180,8 +181,25 @@ export const lightColors: ColorTokens = {
 };
 
 // ─── Typography Tokens ────────────────────────────────────
+// v8 architecture. Every variant declares its `fontFamily` via
+// the v8 per-weight `FONT_FAMILY` keys (src/constants/fontFamily.ts)
+// — never as a hard-coded string, never with a `fontWeight` field.
+//
+// The `fontWeight` axis has been REMOVED from the typography
+// tokens. Why: Android's font-weight picker is biased to Bold for
+// weights > 500 when the family has only 2 weight files. So
+// (fontFamily: Manrope + fontWeight: 600) resolved to
+// Manrope-Bold.ttf (chunky) instead of Manrope-SemiBold.ttf
+// (the spec's intent). Encoding the weight in the family key
+// eliminates the cross-axis ambiguity — there's only one TTF
+// per `(family, style)` tuple, so the pick is deterministic.
+//
+// See `md/UI_UX_Elevation_Specification_v8.md` §2 for the full
+// rationale and the Android picker bug analysis.
 
 export interface TypographyTokens {
+  // v3 Atlas variants (Inter, workhorse) — weight encoded in the
+  // family key (e.g. `FONT_FAMILY.inter.bold` → Inter-Bold.ttf).
   display: TextStyle;
   h1: TextStyle;
   h2: TextStyle;
@@ -193,22 +211,36 @@ export interface TypographyTokens {
   overline: TextStyle;
   button: TextStyle;
   tab: TextStyle;
+  // Mono (JetBrains Mono)
   mono: TextStyle;
+  // v7 NEW: brand wordmark (Allura, single weight).
+  brandScript: TextStyle;
+  // v7 NEW: cinematic display / hero titles (Cormorant Garamond Bold).
+  displaySerif: TextStyle;
+  // v7 NEW: section titles (Manrope SemiBold).
+  displaySans: TextStyle;
 }
 
 export const typography: TypographyTokens = {
-  display: {fontSize: 36, fontWeight: '800', lineHeight: 44},
-  h1: {fontSize: 32, fontWeight: '700', lineHeight: 40},
-  h2: {fontSize: 24, fontWeight: '700', lineHeight: 32},
-  h3: {fontSize: 20, fontWeight: '600', lineHeight: 28},
-  body1: {fontSize: 17, fontWeight: '400', lineHeight: 24},
-  body2: {fontSize: 15, fontWeight: '400', lineHeight: 22},
-  bodySmall: {fontSize: 14, fontWeight: '400', lineHeight: 20},
-  caption: {fontSize: 13, fontWeight: '400', lineHeight: 18},
-  overline: {fontSize: 11, fontWeight: '500', lineHeight: 16, letterSpacing: 0.5},
-  button: {fontSize: 15, fontWeight: '600', lineHeight: 22, letterSpacing: 0.3},
-  tab: {fontSize: 13, fontWeight: '500', lineHeight: 18, letterSpacing: 0.2},
-  mono: {fontSize: 14, fontWeight: '400', lineHeight: 20, fontFamily: 'monospace'},
+  // v3 Atlas variants — all Inter, weight picked via family key.
+  display:     {fontFamily: FONT_FAMILY.inter.bold,     fontSize: 36, lineHeight: 44},
+  h1:          {fontFamily: FONT_FAMILY.inter.bold,     fontSize: 32, lineHeight: 40},
+  h2:          {fontFamily: FONT_FAMILY.inter.bold,     fontSize: 24, lineHeight: 32},
+  h3:          {fontFamily: FONT_FAMILY.inter.semibold, fontSize: 20, lineHeight: 28},
+  body1:       {fontFamily: FONT_FAMILY.inter.regular,  fontSize: 17, lineHeight: 24},
+  body2:       {fontFamily: FONT_FAMILY.inter.regular,  fontSize: 15, lineHeight: 22},
+  bodySmall:   {fontFamily: FONT_FAMILY.inter.regular,  fontSize: 14, lineHeight: 20},
+  caption:     {fontFamily: FONT_FAMILY.inter.regular,  fontSize: 13, lineHeight: 18},
+  overline:    {fontFamily: FONT_FAMILY.inter.medium,   fontSize: 11, lineHeight: 16, letterSpacing: 0.5},
+  button:      {fontFamily: FONT_FAMILY.inter.semibold, fontSize: 15, lineHeight: 22, letterSpacing: 0.3},
+  tab:         {fontFamily: FONT_FAMILY.inter.medium,   fontSize: 13, lineHeight: 18, letterSpacing: 0.2},
+  mono:        {fontFamily: FONT_FAMILY.jetbrainsMono.regular, fontSize: 13, lineHeight: 20},
+  // v7 NEW: brand wordmark — Allura, single weight, no fontWeight field.
+  brandScript: {fontFamily: FONT_FAMILY.allura,           fontSize: 48, lineHeight: 56},
+  // v7 NEW: cinematic display — Cormorant Garamond Bold.
+  displaySerif:{fontFamily: FONT_FAMILY.cormorant.bold,   fontSize: 48, lineHeight: 56},
+  // v7 NEW: section titles — Manrope SemiBold.
+  displaySans: {fontFamily: FONT_FAMILY.manrope.semibold, fontSize: 22, lineHeight: 28},
 };
 
 // ─── Spacing Tokens (4pt Grid) ────────────────────────────

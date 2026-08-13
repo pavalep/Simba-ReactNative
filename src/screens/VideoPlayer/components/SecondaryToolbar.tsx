@@ -10,6 +10,7 @@ import Slider from '@react-native-community/slider';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {AppText} from '../../../components/core/AppText/AppText';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {radius, spacing} from '../../../theme/tokens';
 
 // ─── Toolbar Btn Sub-component (icon-only chip, label appears on long-press) ───
@@ -302,8 +303,10 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
           borderWidth: 0.5,
         },
         visToggleText: {
+          // v8: explicit Inter Bold via family key. See
+          // Toast.tsx actionLabel comment.
+          fontFamily: FONT_FAMILY.inter.bold,
           fontSize: 9,
-          fontWeight: '800',
           letterSpacing: 0.5,
         },
         volumeRow: {

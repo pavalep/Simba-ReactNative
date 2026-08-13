@@ -265,7 +265,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <BackButton />
-        <AppText variant="h2" color="primary">
+        <AppText variant="displaySans" color="primary">
           Album
         </AppText>
         <TouchableOpacity
@@ -298,7 +298,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
               <SvgIcon name="listMusic" size={48} color={colors.accent.gold} />
             )}
           </View>
-          <AppText variant="h1" color="primary" style={styles.albumName}>
+          <AppText variant="displaySerif" color="primary" style={styles.albumName}>
             {albumTitle}
           </AppText>
           <TouchableOpacity
@@ -393,7 +393,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
         {more.tracks.length > 0 ? (
           <>
             <AppText
-              variant="h3"
+              variant="displaySans"
               color="primary"
               style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
               More From {artistName}

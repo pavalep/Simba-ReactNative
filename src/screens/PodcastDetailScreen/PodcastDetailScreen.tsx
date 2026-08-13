@@ -445,7 +445,7 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
             </View>
           )}
 
-          <AppText variant="h2" color="primary" style={styles.podcastTitle}>
+          <AppText variant="displaySerif" color="primary" style={styles.podcastTitle}>
             {podcast.title}
           </AppText>
 
@@ -514,7 +514,7 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
         {/* ── Episodes List ── */}
         <View style={styles.episodesSection}>
           <View style={styles.sectionHeader}>
-            <AppText variant="h3" color="primary">
+            <AppText variant="displaySans" color="primary">
               Episodes
             </AppText>
             <AppText variant="caption" color="tertiary">

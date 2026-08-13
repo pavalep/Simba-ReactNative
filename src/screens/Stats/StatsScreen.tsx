@@ -118,7 +118,7 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
       {/* Header */}
       <View style={styles.header}>
         <BackButton />
-        <AppText variant="h2" color="primary" style={styles.headerTitle}>
+        <AppText variant="displaySans" color="primary" style={styles.headerTitle}>
           Stats
         </AppText>
       </View>
@@ -172,7 +172,7 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
           {/* Top media (50.4) */}
           {topMedia.length > 0 && (
             <View style={styles.section}>
-              <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+              <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
                 Most Played
               </AppText>
               <View

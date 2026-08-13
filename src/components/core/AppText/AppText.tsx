@@ -3,13 +3,18 @@ import {Text, TextProps} from 'react-native';
 import {useTheme, type ThemeContextValue} from '../../../theme';
 
 export type AppTextVariant =
-  // New v3 Atlas variants
+  // New v3 Atlas variants (Inter, workhorse)
   | 'display'
   | 'h1' | 'h2' | 'h3'
   | 'body1' | 'body2' | 'bodySmall'
   | 'button' | 'tab'
   | 'caption' | 'overline'
   | 'mono'
+  // v7 NEW: brand wordmark (Allura), cinematic display
+  // (Cormorant Garamond), section titles (Manrope).
+  | 'brandScript'
+  | 'displaySerif'
+  | 'displaySans'
   // Legacy aliases (migrate away)
   | 'h6' | 'subtitle2' | 'small' | 'time';
 
@@ -35,6 +40,10 @@ const variantMap: Record<AppTextVariant, keyof ThemeContextValue['typography']> 
   caption: 'caption',
   overline: 'overline',
   mono: 'mono',
+  // v7 NEW
+  brandScript: 'brandScript',
+  displaySerif: 'displaySerif',
+  displaySans: 'displaySans',
   // Legacy aliases
   h6: 'caption',
   subtitle2: 'body2',

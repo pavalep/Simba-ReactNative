@@ -138,7 +138,7 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
             />
             <View style={styles.heroTextContainer}>
               <AppText
-                variant="h2"
+                variant="displaySerif"
                 color="primary"
                 numberOfLines={2}
                 style={styles.heroTitle}>

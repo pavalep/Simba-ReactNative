@@ -261,7 +261,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
             </View>
           )}
 
-          <AppText variant="h2" color="primary" style={styles.bookTitle}>
+          <AppText variant="displaySerif" color="primary" style={styles.bookTitle}>
             {book.title}
           </AppText>
 
@@ -319,7 +319,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
         {/* ── Chapters List ── */}
         <View style={styles.chaptersSection}>
           <View style={styles.sectionHeader}>
-            <AppText variant="h3" color="primary">
+            <AppText variant="displaySans" color="primary">
               Chapters
             </AppText>
             <AppText variant="caption" color="tertiary">

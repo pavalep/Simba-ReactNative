@@ -51,7 +51,7 @@ export const SongScreen: React.FC<Props> = ({navigation: _navigation, route: _ro
       {/* Back button (fixed) */}
       <View style={sty.header}>
         <BackButton onPress={h.goBack} />
-        <AppText variant="h2" color="primary">
+        <AppText variant="displaySans" color="primary">
           Track
         </AppText>
       </View>
@@ -122,7 +122,7 @@ export const SongScreen: React.FC<Props> = ({navigation: _navigation, route: _ro
         {h.hasLyrics ? (
           <Animated.View style={entranceStyles[3]}>
             <View style={[sty.lyricsCard, {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle}]}>
-              <AppText variant="h3" color="secondary" style={sty.lyricsSectionTitle}>
+              <AppText variant="displaySans" color="secondary" style={sty.lyricsSectionTitle}>
                 Lyrics
               </AppText>
               <AppText variant="body2" color="tertiary" numberOfLines={3} style={sty.lyricsPreview}>

@@ -116,7 +116,7 @@ export const HomeEmptyState: React.FC<HomeEmptyStateProps> = ({
       </Animated.View>
 
       {/* ── Title ── */}
-      <AppText variant="h2" style={styles.title}>
+      <AppText variant="displaySans" style={styles.title}>
         Welcome to Simba
       </AppText>
 

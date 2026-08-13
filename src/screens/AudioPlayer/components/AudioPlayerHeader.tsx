@@ -20,7 +20,7 @@ export const AudioPlayerHeader: React.FC<Props> = ({onGoBack, insetsTop, colors:
   return (
     <View style={[styles.header, {paddingTop: insetsTop}]}>
       <BackButton onPress={onGoBack} />
-      <AppText variant="h3" color="primary" style={styles.headerTitle}>
+      <AppText variant="displaySans" color="primary" style={styles.headerTitle}>
         Now Playing
       </AppText>
       {/* Right spacer keeps the title visually centred, matching the 36px

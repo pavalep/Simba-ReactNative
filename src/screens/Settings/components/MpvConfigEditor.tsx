@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppTextInput} from '../../../components/core/AppTextInput/AppTextInput';
 import {KeyboardAwareView} from '../../../components/core/KeyboardAwareView/KeyboardAwareView';
@@ -238,11 +239,11 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
           backgroundColor: colors.background.primary,
         },
         optionKey: {
-          fontFamily: 'monospace',
+          fontFamily: FONT_FAMILY.mono,
           fontSize: 13,
         },
         optionValue: {
-          fontFamily: 'monospace',
+          fontFamily: FONT_FAMILY.mono,
           fontSize: 12,
         },
         optionActions: {
@@ -349,7 +350,7 @@ export const MpvConfigEditor: React.FC<MpvConfigEditorProps> = ({
         <View style={styles.container}>
           <View style={styles.handle} />
           <View style={styles.header}>
-            <AppText variant="h3" color="primary">
+            <AppText variant="displaySans" color="primary">
               MPV Options
             </AppText>
             <TouchableOpacity

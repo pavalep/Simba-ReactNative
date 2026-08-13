@@ -43,6 +43,9 @@ import GoogleSvg from '../../../assets/svg/ic_google.svg';
 import ShareSvg from '../../../assets/svg/ic_share.svg';
 import DownloadSvg from '../../../assets/svg/ic_download.svg';
 import CheckSvg from '../../../assets/svg/ic_check.svg';
+// v7: library rail leading icons (Recently Played / Bookmarks / Followed Podcasts)
+import ClockSvg from '../../../assets/svg/ic_clock.svg';
+import PodcastRingsSvg from '../../../assets/svg/ic_podcast_rings.svg';
 
 const icons = {
   home: HomeSvg,
@@ -96,6 +99,9 @@ const icons = {
   share: ShareSvg,
   download: DownloadSvg,
   check: CheckSvg,
+  // v7: library rail leading icons
+  clock: ClockSvg,
+  podcastRings: PodcastRingsSvg,
 } as const;
 
 export type SvgIconName = keyof typeof icons;

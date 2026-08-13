@@ -159,7 +159,7 @@ export const GenreScreen: React.FC<
       {/* ── Header ── */}
       <View style={styles.header}>
         <BackButton />
-        <AppText variant="h2" color="primary" style={styles.headerTitle} numberOfLines={1}>
+        <AppText variant="displaySans" color="primary" style={styles.headerTitle} numberOfLines={1}>
           {genre}
         </AppText>
       </View>
@@ -175,7 +175,7 @@ export const GenreScreen: React.FC<
           <View style={[styles.genreIcon, {backgroundColor: colors.accent.goldDim}]}>
             <SvgIcon name="music" size={36} color={colors.accent.gold} />
           </View>
-          <AppText variant="h1" color="primary" style={styles.genreName}>
+          <AppText variant="displaySerif" color="primary" style={styles.genreName}>
             {genre}
           </AppText>
           <AppText variant="caption" color="tertiary">

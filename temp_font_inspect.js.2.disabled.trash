@@ -1,0 +1,54 @@
+const fs = require('fs');
+function getNameTable(buf) {
+  const sfntVersion = buf.readUInt32BE(0);
+  const numTables = buf.readUInt16BE(4);
+  let nameTableOffset = 0;
+  for (let i = 0; i < numTables; i++) {
+    const tag = buf.toString('ascii', 12 + i*16, 12 + i*16 + 4);
+    if (tag === 'name') {
+      nameTableOffset = buf.readUInt32BE(12 + i*16 + 8);
+      break;
+    }
+  }
+  if (!nameTableOffset) return null;
+  // name table: format selector (2), count (2), stringOffset (2)
+  const count = buf.readUInt16BE(nameTableOffset + 2);
+  const storageOffset = buf.readUInt16BE(nameTableOffset + 4);
+  const stringBase = nameTableOffset + storageOffset;
+  const records = [];
+  for (let i = 0; i < count; i++) {
+    const recBase = nameTableOffset + 6 + i*12;
+    const platformID = buf.readUInt16BE(recBase);
+    const encodingID = buf.readUInt16BE(recBase + 2);
+    const languageID = buf.readUInt16BE(recBase + 4);
+    const nameID = buf.readUInt16BE(recBase + 6);
+    const length = buf.readUInt16BE(recBase + 8);
+    const stringOffset = buf.readUInt16BE(recBase + 10);
+    const offset = stringBase + stringOffset;
+    let str;
+    if (platformID === 3 || (platformID === 0)) {
+      str = buf.toString('utf16le', offset, offset + length);
+    } else {
+      str = buf.toString('ascii', offset, offset + length);
+    }
+    records.push({platformID, encodingID, nameID, str});
+  }
+  return records;
+}
+const files = [
+  'X:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/assets/fonts/Allura-Regular.ttf',
+  'X:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/assets/fonts/Inter-Variable.ttf',
+];
+for (const f of files) {
+  console.log('---', f, '---');
+  const buf = fs.readFileSync(f);
+  const names = getNameTable(buf);
+  if (!names) { console.log('  no name table'); continue; }
+  // Filter platform 3 (Windows) which is what RN typically uses
+  const win = names.filter(n => n.platformID === 3 && n.encodingID === 1);
+  for (const n of win) {
+    // nameID: 1=Family, 2=Subfamily, 4=Full, 6=PostScript
+    const label = ['', 'Family', 'Subfamily', '', 'Full', '', 'PostScript'][n.nameID] || ('nameID='+n.nameID);
+    console.log('  Windows', label + ':', JSON.stringify(n.str));
+  }
+}

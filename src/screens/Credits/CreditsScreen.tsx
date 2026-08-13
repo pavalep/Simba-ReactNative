@@ -137,7 +137,7 @@ export const CreditsScreen: React.FC<Props> = () => {
         colors={[colors.background.primary, colors.background.elevated]}
         style={StyleSheet.absoluteFill}
       />
-      <InternalHeader title="Credits" />
+      <InternalHeader title="Credits" titleVariant="displaySerif" />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{paddingBottom: spacing.xxxl}}
@@ -145,7 +145,7 @@ export const CreditsScreen: React.FC<Props> = () => {
         {/* Contributors (25.3) */}
         <Animated.View style={entrance.styles[0]}>
           <View style={styles.sectionCard}>
-            <AppText variant="h3" color="accent" style={styles.sectionTitle}>
+            <AppText variant="displaySans" color="accent" style={styles.sectionTitle}>
               Contributors
             </AppText>
             {/* 59.1: virtualized contributor rows */}
@@ -178,7 +178,7 @@ export const CreditsScreen: React.FC<Props> = () => {
           renderItem={({item: group, index: gi}) => (
             <Animated.View style={entrance.styles[gi + 1]}>
               <View style={styles.sectionCard}>
-                <AppText variant="h3" color="accent" style={styles.sectionTitle}>
+                <AppText variant="displaySans" color="accent" style={styles.sectionTitle}>
                   {group.title}
                 </AppText>
                 <FlatList

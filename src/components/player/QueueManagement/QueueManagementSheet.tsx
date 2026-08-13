@@ -70,7 +70,7 @@ export const QueueManagementSheet: React.FC<QueueManagementSheetProps> = ({
           {/* Header */}
           <View style={[styles.header, {borderBottomColor: colors.border.subtle}]}>
             <View style={styles.headerLeft}>
-              <AppText variant="h3">Manage Queue</AppText>
+              <AppText variant="displaySans">Manage Queue</AppText>
               <AppText variant="caption" color="tertiary">
                 {queue.length} items
               </AppText>

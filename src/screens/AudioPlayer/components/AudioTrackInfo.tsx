@@ -22,7 +22,7 @@ export const AudioTrackInfo: React.FC<Props> = ({title, artist, album, fileUri, 
       accessible
       accessibilityLabel={a11yLabel}
       accessibilityLiveRegion="polite">
-      <AppText variant="h2" color="primary" style={styles.trackTitle} numberOfLines={1}>
+      <AppText variant="displaySerif" color="primary" style={styles.trackTitle} numberOfLines={1}>
         {title}
       </AppText>
       {artist ? (

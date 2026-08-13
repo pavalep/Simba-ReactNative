@@ -144,7 +144,7 @@ export const ChangelogScreen: React.FC<Props> = () => {
         colors={[colors.background.primary, colors.background.elevated]}
         style={StyleSheet.absoluteFill}
       />
-      <InternalHeader title="Changelog" />
+      <InternalHeader title="Changelog" titleVariant="displaySerif" />
       <Animated.View style={[styles.root, {opacity: fadeAnim}]}>
         <ScrollView
           style={styles.scroll}

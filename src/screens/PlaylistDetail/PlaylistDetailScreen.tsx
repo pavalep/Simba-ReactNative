@@ -801,7 +801,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         <BackButton />
 
         <View style={styles.headerTitleSection}>
-          <AppText variant="h3" color="primary" numberOfLines={1}>
+          <AppText variant="displaySerif" color="primary" numberOfLines={1}>
             {playlist?.name ?? playlistName}
           </AppText>
           <AppText variant="caption" color="tertiary" numberOfLines={1}>

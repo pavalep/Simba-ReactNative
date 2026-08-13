@@ -145,7 +145,7 @@ export const ShowDetailScreen: React.FC<Props> = ({navigation, route}) => {
             </View>
           )}
 
-          <AppText variant="h2" color="primary" style={styles.showTitle}>
+          <AppText variant="displaySerif" color="primary" style={styles.showTitle}>
             {show.name}
           </AppText>
 

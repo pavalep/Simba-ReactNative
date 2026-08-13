@@ -198,7 +198,7 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
       {/* Header */}
       <View style={styles.header}>
         <BackButton />
-        <AppText variant="h2" color="primary" style={styles.headerTitle}>
+        <AppText variant="displaySans" color="primary" style={styles.headerTitle}>
           History
         </AppText>
         {recentFiles.length > 0 && (

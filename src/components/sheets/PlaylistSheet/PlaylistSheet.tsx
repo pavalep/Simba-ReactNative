@@ -232,7 +232,7 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
   const ListHeader = useMemo(
     () => (
       <View style={styles.listHeader}>
-        <AppText variant="h3" color="primary">
+        <AppText variant="displaySans" color="primary">
           Select a Playlist
         </AppText>
         <AppText variant="caption" color="secondary">
@@ -286,7 +286,7 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
   const CreateForm = useMemo(
     () => (
       <KeyboardAwareView style={styles.createForm}>
-        <AppText variant="h3" color="primary" style={{marginBottom: spacing.sm}}>
+        <AppText variant="displaySans" color="primary" style={{marginBottom: spacing.sm}}>
           New Playlist
         </AppText>
 

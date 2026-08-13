@@ -203,7 +203,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         case 'HERO':
           return item.data ? <FeaturedHeroBanner item={item.data} onPress={handleItemPress} /> : null;
         case 'SUBSECTION_TITLE':
-          return <SubsectionTitle label={item.label} />;
+          return <SubsectionTitle label={item.label} variant={item.variant} />;
         case 'SHELF':
           // P56: per the user's spec, only Recently Played, Bookmarks,
           // and Followed Podcasts get the chevron — and only the latter
@@ -233,12 +233,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           return (
             <MovieCategoriesShelf
               onCategoryPress={handleMovieCategoryPress}
+              onSeeAll={() => navigation.navigate('MoviesScreen')}
             />
           );
         case 'PREFILLED_PODCASTS':
           return (
             <PodcastCategoriesShelf
               onCategoryPress={handlePodcastCategoryPress}
+              onSeeAll={() => navigation.navigate('PodcastsScreen')}
             />
           );
         case 'FOLLOWED_PODCASTS':

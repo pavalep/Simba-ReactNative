@@ -237,7 +237,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           </TouchableOpacity>
 
           {/* Title */}
-          <AppText variant="h3" color="primary" style={styles.title}>
+          <AppText variant="displaySans" color="primary" style={styles.title}>
             {mode === 'create'
               ? 'New Playlist'
               : mode === 'rename'

@@ -85,7 +85,7 @@ export const BookmarkSheet: React.FC<Props> = ({
       title={
         <View style={styles.titleRow}>
           <SvgIcon name="bookmark" size={20} color={colors.accent.gold} />
-          <AppText variant="h3" color="primary" style={{marginLeft: spacing.sm}}>
+          <AppText variant="displaySans" color="primary" style={{marginLeft: spacing.sm}}>
             Bookmarks
           </AppText>
         </View>

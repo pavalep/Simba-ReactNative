@@ -17,7 +17,7 @@ export const TermsScreen: React.FC<Props> = ({navigation: _navigation}) => {
     <SafeAreaView style={styles.root}>
       <SimbaStatusBar variant="home" />
       <View style={[StyleSheet.absoluteFill, {backgroundColor: '#D4B47A'}]} />
-      <InternalHeader title="Terms of Use" />
+      <InternalHeader title="Terms of Use" titleVariant="displaySerif" />
 
       <ScrollView
         contentContainerStyle={styles.content}

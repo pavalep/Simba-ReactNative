@@ -35,7 +35,7 @@ export const ArtistBio: React.FC<ArtistBioProps> = ({bio}) => {
           borderColor: colors.border.subtle,
         },
       ]}>
-      <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+      <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
         About
       </AppText>
 

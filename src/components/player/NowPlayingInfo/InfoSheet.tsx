@@ -63,7 +63,7 @@ export const InfoSheet: React.FC<InfoSheetProps> = ({
       snapPoints={['45%', '75%']}
       title={
         <View style={headerRow}>
-          <AppText variant="h3">Now Playing</AppText>
+          <AppText variant="displaySans">Now Playing</AppText>
           {onAddToPlaylist && (
             <TouchableOpacity
               style={[addBtn, {backgroundColor: isDark ? colors.accent.goldDim : colors.accent.goldSoft}]}

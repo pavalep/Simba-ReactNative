@@ -17,7 +17,7 @@ export const PrivacyScreen: React.FC<Props> = ({navigation: _navigation}) => {
     <SafeAreaView style={styles.root}>
       <SimbaStatusBar variant="home" />
       <View style={[StyleSheet.absoluteFill, {backgroundColor: '#D4B47A'}]} />
-      <InternalHeader title="Privacy Policy" />
+      <InternalHeader title="Privacy Policy" titleVariant="displaySerif" />
 
       <ScrollView
         contentContainerStyle={styles.content}

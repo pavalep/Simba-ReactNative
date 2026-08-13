@@ -64,7 +64,7 @@ export const PlaylistPreviewSheet: React.FC<PlaylistPreviewSheetProps> = ({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <AppText variant="h3">Up Next</AppText>
+              <AppText variant="displaySans">Up Next</AppText>
               <AppText variant="caption" color="tertiary">
                 {queue.length} items
               </AppText>

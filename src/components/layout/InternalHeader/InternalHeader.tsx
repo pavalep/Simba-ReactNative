@@ -14,12 +14,24 @@ interface InternalHeaderProps {
     label?: string;
     onPress: () => void;
   };
+  /**
+   * Typography variant for the page title. Default is
+   * `displaySans` (Manrope SemiBold) — the v7 standard for
+   * page titles on list / settings screens. The 7 static
+   * informational screens (About / Changelog / Credits /
+   * Help / Licenses / Privacy / Terms) opt in to
+   * `displaySerif` (Cormorant Garamond Bold) per the v7 spec
+   * — these are "cinematic display" moments even though
+   * they don't carry media content.
+   */
+  titleVariant?: 'displaySans' | 'displaySerif';
 }
 
 export const InternalHeader: React.FC<InternalHeaderProps> = ({
   title,
   subtitle,
   rightAction,
+  titleVariant = 'displaySans',
 }) => {
   const {colors} = useTheme();
 
@@ -58,12 +70,20 @@ export const InternalHeader: React.FC<InternalHeaderProps> = ({
 
       {/* Title — absolutely positioned and centred horizontally in the full
           header width, regardless of the back button / right action widths.
-          Sits on top of the action row so it can never be pushed off-centre. */}
+          Sits on top of the action row so it can never be pushed off-centre.
+          v7: uses `displaySans` (Manrope SemiBold 22 px) for the page
+          title typography. The `style={styles.title}` inline fontSize +
+          fontWeight still applies as overrides; the typography token
+          supplies fontFamily. */}
       <View style={styles.titleOverlay} pointerEvents="none">
         <AppText
+          variant={titleVariant}
           color="primary"
           numberOfLines={1}
-          style={styles.title}>
+          style={[
+            styles.title,
+            titleVariant === 'displaySerif' && styles.titleSerif,
+          ]}>
           {title}
         </AppText>
         {subtitle && (
@@ -101,10 +121,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 96, // leave room for back + right action buttons
   },
   title: {
+    // v7 default — Manrope SemiBold 22 px (token supplies
+    // fontFamily, this style supplies 700 weight + tracking
+    // + centering). When `titleVariant="displaySerif"`
+    // (the 7 static info screens), the `titleSerif` override
+    // cancels the fontSize + weight overrides so the
+    // Cormorant 48 px token wins fully.
     fontSize: 22,
     fontWeight: '700',
     letterSpacing: 0.2,
     textAlign: 'center',
+  },
+  titleSerif: {
+    // Override the displaySans-tuned fontSize + weight with
+    // the displaySerif token's values (48 px / 700). Letter-
+    // spacing 0 matches the token default. This is a Cormorant
+    // Garamond Bold cinematic title — not the small Manrope
+    // section title.
+    fontSize: 48,
+    fontWeight: '700',
+    letterSpacing: 0,
   },
   rightSpacer: {
     // Width matches the BackButton so the row stays balanced when no

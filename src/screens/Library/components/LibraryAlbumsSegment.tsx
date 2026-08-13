@@ -55,7 +55,7 @@ export const LibraryAlbumsSegment: React.FC<LibraryAlbumsSegmentProps> = React.m
   return (
     <>
       <View style={[styles.headerRow, {borderBottomColor: colors.border.subtle}]}>
-        <AppText variant="h3" color="primary" style={{flex: 1}}>
+        <AppText variant="displaySans" color="primary" style={{flex: 1}}>
           All Albums
         </AppText>
         {onViewAllAlbums && (

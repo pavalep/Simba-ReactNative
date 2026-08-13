@@ -1,13 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Splash Screen Layout — orb color background with black lion logo,
-  black indeterminate loading ring, and black "Simba Player" subtitle.
+  v7 native splash layout — parchment background with the brown
+  lion logo, gold glow, gold indeterminate loading ring, and
+  "Simba" subtitle in SIMBA gold.
+
+  This is the SplashActivity layout (the rich animation path
+  the user sees on cold start). For Android 12+ the system
+  ALSO draws its own static splash from the @style/SplashTheme
+  windowSplashScreen* attributes, so the visual brand is
+  consistent across API levels.
 -->
 <FrameLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#C9A96E">
+    android:background="#F5F0E8">
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -21,7 +28,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
 
-            <!-- Gold radial glow behind the logo (animated alpha) -->
+            <!-- Soft gold radial glow behind the logo (animated alpha) -->
             <ImageView
                 android:id="@+id/splash_glow"
                 android:layout_width="220dp"
@@ -30,7 +37,7 @@
                 android:src="@drawable/splash_glow_radial"
                 android:alpha="0.4" />
 
-            <!-- Lion logo — starts scaled down, animated in activity -->
+            <!-- Brown lion logo — starts scaled down, animated in activity -->
             <ImageView
                 android:id="@+id/splash_logo"
                 android:layout_width="96dp"
@@ -42,7 +49,7 @@
                 android:scaleX="0.85"
                 android:scaleY="0.85" />
 
-            <!-- Brown indeterminate loading ring around the logo -->
+            <!-- SIMBA-gold indeterminate loading ring around the logo -->
             <ImageView
                 android:id="@+id/splash_loading_ring"
                 android:layout_width="180dp"
@@ -52,13 +59,13 @@
                 android:alpha="0" />
         </FrameLayout>
 
-        <!-- App name subtitle — fades in after logo -->
+        <!-- Wordmark — v7 title case "Simba" in SIMBA gold. -->
         <TextView
             android:id="@+id/splash_subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Simba Player"
-            android:textColor="#5C3A1E"
+            android:text="Simba"
+            android:textColor="#B8922E"
             android:textSize="14sp"
             android:alpha="0"
             android:letterSpacing="0.15"

@@ -25,7 +25,7 @@ import type {WeatherSnapshot} from '../../../services/api/weatherService';
 export type HomeSection =
   | {type: 'GREETING'}
   | {type: 'HERO'; data: SessionEntry | null}
-  | {type: 'SUBSECTION_TITLE'; label: string}
+  | {type: 'SUBSECTION_TITLE'; label: string; variant?: 'overline' | 'displaySans'}
   | {type: 'SHELF'; title: string; items: any[]; seeAllRoute?: keyof RootStackParamList}
   | {type: 'GENRE'; genres: {name: string; count: number}[]}
   | {type: 'PLAYLISTS'; items: any[]}
@@ -220,7 +220,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       //     3. Followed Podcasts (collapsible, auto-expanded when data)
       // All three always render — empty-state hints cover the no-data
       // case so the group never disappears.
-      {type: 'SUBSECTION_TITLE', label: 'Your Library'},
+      {type: 'SUBSECTION_TITLE', label: 'Your Library', variant: 'displaySans'},
       {
         type: 'SHELF',
         title: 'Recently Played',
@@ -237,7 +237,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       // curated content (above) vs. catalog browse (below). These are
       // not collapsible (per the P56 scope: only the three Your Library
       // rails get the chevron).
-      {type: 'SUBSECTION_TITLE', label: 'Discover'},
+      {type: 'SUBSECTION_TITLE', label: 'Discover', variant: 'displaySans'},
       {type: 'MOVIES'},
       {type: 'PREFILLED_PODCASTS'},
       {type: 'PREFILLED_MUSIC'},

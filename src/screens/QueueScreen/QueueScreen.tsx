@@ -471,7 +471,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
       <View style={styles.header}>
         <BackButton />
         <AppText
-          variant="h2"
+          variant="displaySans"
           color="primary"
           style={styles.headerTitle}
           numberOfLines={1}>

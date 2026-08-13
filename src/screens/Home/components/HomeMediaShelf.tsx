@@ -80,9 +80,29 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
     <View style={styles.container}>
       {/* ── Section header — always present, with chevron ── */}
       <View style={styles.header}>
-        <AppText variant="h2" color="primary" style={styles.headerTitle}>
-          {title}
-        </AppText>
+        {/* v8: left cluster (icon + title) so `justifyContent:
+            space-between` keeps the icon glued to the title, with
+            the actions cluster on the right. Previously icon and
+            title were siblings of the actions, so `space-between`
+            spread them across the row. */}
+        <View style={styles.headerLeft}>
+          {/* v7: leading 32×32 gold-soft circular badge (clock face
+              for Recently Played). Sits 8 px to the left of the
+              title. accessibilityElementsHidden because the icon
+              is decorative — the title text is the readable label. */}
+          <View
+            style={[
+              styles.iconBadge,
+              {backgroundColor: colors.accent.goldSoft},
+            ]}
+            accessibilityElementsHidden
+            importantForAccessibility="no">
+            <SvgIcon name="clock" size={18} color={colors.accent.gold} />
+          </View>
+          <AppText variant="displaySans" color="primary" style={styles.headerTitle}>
+            {title}
+          </AppText>
+        </View>
         <View style={styles.headerActions}>
           {items.length > 1 && onSeeAll ? (
             <TouchableOpacity activeOpacity={0.7} style={styles.seeAllBtn} onPress={onSeeAll} accessibilityRole="button">
@@ -240,8 +260,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  // v8: left cluster wraps icon + title so the title hugs the
+  // icon while the actions cluster sits at the far right via
+  // justifyContent: 'space-between'.
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  // v7: 32×32 gold-soft circular badge that sits 8 px to the
+  // left of the rail title.
+  iconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  // v8: NO fontWeight override. The displaySans typography
+  // token now encodes the weight in the family key
+  // (FONT_FAMILY.manrope.semibold -> Manrope-SemiBold.ttf
+  // deterministically). The token's fontFamily + fontSize +
+  // lineHeight drive the visual. Tight letterSpacing keeps
+  // the title visually attached to the leading icon badge.
   headerTitle: {
-    fontWeight: '800',
     letterSpacing: -0.5,
   },
   seeAllBtn: {

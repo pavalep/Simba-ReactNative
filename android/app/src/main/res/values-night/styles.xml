@@ -6,16 +6,18 @@
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 
-    <!-- Splash screen theme — soft warm-gold (orb) bg with brown logo, no status bar.
-         Works on pre-Android 12 (windowBackground) and Android 12+ (SplashScreen attrs). -->
+    <!-- v7 native splash — same parchment brand surface at night.
+         Status bar + nav bar match the parchment to avoid the
+         white-flash on cold start. The night variant exists for
+         API symmetry. -->
     <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
-        <!-- Pre-Android 12 fallback -->
+        <!-- Pre-Android 12 fallback — layer-list (parchment + lion) -->
         <item name="android:windowBackground">@drawable/splash_background</item>
         <item name="android:windowFullscreen">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
         <item name="android:navigationBarColor">@color/splash_navbar</item>
 
-        <!-- Android 12+ SplashScreen attributes -->
+        <!-- Android 12+ SplashScreen attributes. -->
         <item name="android:windowSplashScreenBackground">@color/splash_background</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
         <item name="android:windowSplashScreenAnimationDuration">300</item>

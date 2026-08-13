@@ -120,7 +120,7 @@ export const AlbumScreen: React.FC<Props> = () => {
         {/* ── Track list (entrance 2) ── */}
         <Animated.View style={entrance.styles[1]}>
           <View style={styles.trackListSection}>
-            <AppText variant="h3" color="primary" style={styles.trackListTitle}>
+            <AppText variant="displaySans" color="primary" style={styles.trackListTitle}>
               Tracks
             </AppText>
             <AlbumTrackList

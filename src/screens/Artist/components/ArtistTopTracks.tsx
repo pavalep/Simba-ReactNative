@@ -62,7 +62,7 @@ export const ArtistTopTracks: React.FC<ArtistTopTracksProps> = ({
     <View style={styles.section}>
       {/* Section header */}
       <View style={styles.sectionHeader}>
-        <AppText variant="h3" color="primary">
+        <AppText variant="displaySans" color="primary">
           Popular Tracks
         </AppText>
         {remainingCount > 0 && (

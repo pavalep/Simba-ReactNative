@@ -377,7 +377,7 @@ const AudioLyricsView: React.FC<AudioLyricsViewProps> = ({
       <View style={styles.container}>
         {/* ── Header ── */}
         <View style={styles.header}>
-          <AppText variant="h3" color="primary" style={styles.headerTitle}>
+          <AppText variant="displaySans" color="primary" style={styles.headerTitle}>
             {activeTab === 'lyrics' ? 'Lyrics' : 'Up Next'}
           </AppText>
           <TouchableOpacity

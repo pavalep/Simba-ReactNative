@@ -48,9 +48,25 @@ const Header: React.FC<{
   const {colors} = useTheme();
   return (
     <View style={styles.header}>
-      <AppText variant="h2" color="primary" style={styles.headerTitle}>
-        Bookmarks
-      </AppText>
+      {/* v8: left cluster (icon + title) so `justifyContent:
+          space-between` keeps the icon glued to the title, with
+          the actions cluster on the right. */}
+      <View style={styles.headerLeft}>
+        {/* v7: leading gold-soft circular badge with bookmark
+            ribbon glyph, 8 px to the left of the title. */}
+        <View
+          style={[
+            styles.iconBadge,
+            {backgroundColor: colors.accent.goldSoft},
+          ]}
+          accessibilityElementsHidden
+          importantForAccessibility="no">
+          <SvgIcon name="bookmark" size={18} color={colors.accent.gold} />
+        </View>
+        <AppText variant="displaySans" color="primary" style={styles.headerTitle}>
+          Bookmarks
+        </AppText>
+      </View>
       <View style={styles.headerActions}>
         {showSeeAll && onSeeAll ? (
           <TouchableOpacity
@@ -181,8 +197,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
+  // v8: left cluster wraps icon + title.
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  // v7: 32×32 gold-soft circular badge that sits 8 px to the
+  // left of the rail title.
+  iconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+  },
+  // v8: NO fontWeight override. The displaySans typography
+  // token now encodes the weight in the family key
+  // (FONT_FAMILY.manrope.semibold -> Manrope-SemiBold.ttf
+  // deterministically). Tight letterSpacing keeps the title
+  // visually attached to the leading icon badge.
   headerTitle: {
-    fontWeight: '800',
     letterSpacing: -0.5,
   },
   headerActions: {

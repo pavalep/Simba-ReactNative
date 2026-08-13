@@ -147,7 +147,7 @@ export const AllPlaylistsScreen: React.FC = () => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <BackButton />
-        <AppText variant="h2" color="primary" style={{flex: 1}}>
+        <AppText variant="displaySans" color="primary" style={{flex: 1}}>
           All Playlists
         </AppText>
         <AppButton
@@ -195,7 +195,7 @@ export const AllPlaylistsScreen: React.FC = () => {
               styles.modalContent,
               {backgroundColor: colors.background.elevated},
             ]}>
-            <AppText variant="h3" color="primary" style={{marginBottom: spacing.md}}>
+            <AppText variant="displaySans" color="primary" style={{marginBottom: spacing.md}}>
               New Playlist
             </AppText>
 
@@ -280,7 +280,7 @@ export const AllPlaylistsScreen: React.FC = () => {
               styles.modalContent,
               {backgroundColor: colors.background.elevated},
             ]}>
-            <AppText variant="h3" color="primary" style={{marginBottom: spacing.md}}>
+            <AppText variant="displaySans" color="primary" style={{marginBottom: spacing.md}}>
               Rename Playlist
             </AppText>
 

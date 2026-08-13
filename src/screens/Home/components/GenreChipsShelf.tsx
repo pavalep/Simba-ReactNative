@@ -27,7 +27,7 @@ export const GenreChipsShelf: React.FC<GenreChipsShelfProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <AppText variant="h3" color="primary" style={styles.headerTitle}>
+        <AppText variant="displaySans" color="primary" style={styles.headerTitle}>
           Browse by Genre
         </AppText>
       </View>

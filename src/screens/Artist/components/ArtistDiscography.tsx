@@ -41,7 +41,7 @@ export const ArtistDiscography: React.FC<ArtistDiscographyProps> = ({
 
   return (
     <View style={styles.section}>
-      <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+      <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
         Discography
       </AppText>
 

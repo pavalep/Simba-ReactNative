@@ -1,0 +1,53 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "assets/fonts/Allura-Regular.ttf",
+      "sha1": "b301dc43880e7597184f2e3acc11270ef6cbab4c"
+    },
+    {
+      "path": "assets/fonts/CormorantGaramond-Bold.ttf",
+      "sha1": "4d386c48eeebb71486184d8f1c01498d974fb43d"
+    },
+    {
+      "path": "assets/fonts/CormorantGaramond-Italic.ttf",
+      "sha1": "e56a55ee5e4402391e365f69ec3def247ef5c1ed"
+    },
+    {
+      "path": "assets/fonts/CormorantGaramond-Regular.ttf",
+      "sha1": "9ed7745936e33bdd65368c098eda736c8b60bb79"
+    },
+    {
+      "path": "assets/fonts/Inter-Bold.ttf",
+      "sha1": "48747b7a60086f97af0d373febcbd1f1bee87f17"
+    },
+    {
+      "path": "assets/fonts/Inter-Medium.ttf",
+      "sha1": "a418a8ba73bbcfa8c131c426ab836d78457afa9b"
+    },
+    {
+      "path": "assets/fonts/Inter-Regular.ttf",
+      "sha1": "7237d9cf55f177702066a28a4dde1e4c7e8ab576"
+    },
+    {
+      "path": "assets/fonts/Inter-SemiBold.ttf",
+      "sha1": "431007da316de60d85174aeec9b8389b5c73e7d6"
+    },
+    {
+      "path": "assets/fonts/Inter-Variable.ttf.disabled",
+      "sha1": "97d4f3722d62c6cc5340bf6220ada3d64ca367b1"
+    },
+    {
+      "path": "assets/fonts/JetBrainsMono-Regular.ttf",
+      "sha1": "d6f1f912710bba58f54bc397bee06776c2a76eb1"
+    },
+    {
+      "path": "assets/fonts/Manrope-Bold.ttf",
+      "sha1": "38d6c98baaded9ea60e69f9a6aefa2d6de0f91a4"
+    },
+    {
+      "path": "assets/fonts/Manrope-SemiBold.ttf",
+      "sha1": "b5e59950465f67853440f82e2966b36cb0aeaa03"
+    }
+  ]
+}

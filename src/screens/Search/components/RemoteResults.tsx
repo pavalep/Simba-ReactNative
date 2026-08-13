@@ -169,7 +169,7 @@ const Section: React.FC<{label: string; children: React.ReactNode}> = ({
   children,
 }) => (
   <View style={sectionStyles.section}>
-    <AppText variant="h3" color="primary" style={sectionStyles.title}>
+    <AppText variant="displaySans" color="primary" style={sectionStyles.title}>
       {label}
     </AppText>
     {children}

@@ -130,7 +130,7 @@ export const AllVideosScreen: React.FC = () => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <BackButton />
-        <AppText variant="h2" color="primary" style={{flex: 1}}>
+        <AppText variant="displaySans" color="primary" style={{flex: 1}}>
           All Videos
         </AppText>
         <TouchableOpacity

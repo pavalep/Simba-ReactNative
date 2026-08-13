@@ -54,6 +54,7 @@ export const FollowedPodcastsShelf: React.FC<FollowedPodcastsShelfProps> =
       <View style={styles.container}>
         <SectionHeader
           label="Followed Podcasts"
+          leadingIcon="podcastRings"
           // P58: "See All" only appears when the rail has more than
           // one item — if there's only one, the See All link is
           // misleading (nothing more to "see"). Hidden when the

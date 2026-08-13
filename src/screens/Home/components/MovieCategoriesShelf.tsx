@@ -11,15 +11,24 @@ import {spacing} from '../../../theme/tokens';
 
 interface MovieCategoriesShelfProps {
   onCategoryPress: (categoryId: string) => void;
+  /**
+   * v7: "View all" action — navigates to MoviesScreen with
+   * no categoryId (which the screen interprets as "all movies").
+   */
+  onSeeAll?: () => void;
 }
 
 export const MovieCategoriesShelf: React.FC<MovieCategoriesShelfProps> = React.memo(
-  ({onCategoryPress}) => {
+  ({onCategoryPress, onSeeAll}) => {
     const categories = MOVIE_CATEGORIES.slice(0, 6);
 
     return (
       <View style={styles.container}>
-        <SectionHeader label="Movies" />
+        <SectionHeader
+          label="Movies"
+          actionLabel={onSeeAll ? 'View all' : undefined}
+          onAction={onSeeAll}
+        />
         <FlatList
           horizontal
           data={categories}

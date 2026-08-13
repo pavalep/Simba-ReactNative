@@ -48,7 +48,7 @@ export const SongMetadata: React.FC<SongMetadataProps> = ({
 
   return (
     <View style={styles.section}>
-      <AppText variant="h3" color="secondary" style={styles.sectionTitle}>
+      <AppText variant="displaySans" color="secondary" style={styles.sectionTitle}>
         Details
       </AppText>
 

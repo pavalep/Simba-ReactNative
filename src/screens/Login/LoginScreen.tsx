@@ -143,16 +143,18 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
               ]}>
               <SvgIcon name="lion" size={96} color="#5C3A1E" />
               <AppText
-                variant="h1"
-                style={[styles.logoText, {color: '#5C3A1E', fontWeight: '900'}]}>
-                SIMBA
+                variant="brandScript"
+                style={[styles.logoText, {color: '#5C3A1E'}]}>
+                {BRAND.name}
               </AppText>
               <Animated.View
                 style={[
                   styles.taglineWrap,
                   {opacity: taglineOpacity, transform: [{translateY: taglineTranslateY}]},
                 ]}>
-                <AppText variant="body1" style={[styles.tagline, {color: '#6B4226'}]}>
+                <AppText
+                  variant="displaySerif"
+                  style={[styles.tagline, {color: '#6B4226'}]}>
                     {BRAND.tagline}
                   </AppText>
               </Animated.View>
@@ -259,11 +261,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // v7: wordmark uses the brandScript typography token
+  // (Allura, 48px by default). We add a small optical
+  // marginTop so the script sits comfortably under the lion.
   logoText: {
     marginTop: 14,
-    letterSpacing: 10,
-    fontSize: 32,
-    lineHeight: 36,
   },
   taglineWrap: {
     marginTop: 2,

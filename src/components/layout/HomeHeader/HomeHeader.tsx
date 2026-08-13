@@ -24,7 +24,13 @@
 //     library scan is running.
 
 import React, {useEffect, useRef} from 'react';
-import {View, TouchableOpacity, StyleSheet, Animated} from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  useWindowDimensions,
+} from 'react-native';
 import FastImage from 'react-native-fast-image';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
@@ -62,6 +68,13 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   const navigation = useNavigation<any>();
   const authUser = useAppSelector(selectAuthUser);
   const scanAnim = useRef(new Animated.Value(1)).current;
+  const {width} = useWindowDimensions();
+
+  // v7: clamp the brandScript wordmark size 44 → 48 → 52 → 58 px
+  // across phone widths. On a 320 dp screen we shrink to 44 to
+  // keep the header from colliding with the search/avatar.
+  const wordmarkFontSize =
+    width < 360 ? 44 : width < 411 ? 48 : width < 480 ? 52 : 58;
 
   useEffect(() => {
     if (!isScanning) return;
@@ -119,8 +132,12 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
         </View>
         <View style={styles.brandText}>
           <View style={styles.wordmarkRow}>
-            <AppText variant="display" color="accent" style={styles.wordmark}>
-              SIMBA
+            <AppText
+              variant="brandScript"
+              color="accent"
+              style={[styles.wordmark, {fontSize: wordmarkFontSize}]}
+              numberOfLines={1}>
+              {BRAND.name}
             </AppText>
             {isScanning ? (
               <Animated.View
@@ -136,7 +153,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
             ) : null}
           </View>
           <AppText
-            variant="overline"
+            variant="bodySmall"
             color="secondary"
             style={styles.tagline}
             numberOfLines={1}>
@@ -201,7 +218,7 @@ const styles = StyleSheet.create({
   brand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     flexShrink: 1,
   },
   logoContainer: {
@@ -221,17 +238,15 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   wordmark: {
-    // The "display" variant is 36px / weight 800 in the token set.
-    // We tighten the letter-spacing a touch and bump the line-height
-    // so the wordmark sits comfortably with the tagline below it.
-    letterSpacing: -1,
-    lineHeight: 38,
+    // v7 brandScript (Allura) — natural letter-spacing + lineHeight
+    // from the typography token. Font size is clamped via
+    // useWindowDimensions in the component.
+    paddingTop: 2, // optical alignment — Allura sits slightly low
   },
   tagline: {
-    // overline is 11px / 500 weight / letter-spacing 0.5 by default.
-    // We add a little more letter-spacing for the brand tagline look.
-    letterSpacing: 1.5,
-    marginTop: 2,
+    // v7 bodySmall (14px / 400) — light letter-spacing, no margin.
+    letterSpacing: 0.4,
+    marginTop: 0,
     opacity: 0.7,
   },
   scanningDot: {

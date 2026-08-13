@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Soft warm-gold (orb) splash background (matches in-app orb theme) -->
+<!-- v7 brand parchment — splash background. Pairs with
+     splash_background color in values/colors.xml. The lion
+     mark in ic_splash_logo is layered on top via
+     splash_background.xml's <layer-list>. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#D4B47A" />
+    <solid android:color="#F5F0E8" />
 </shape>

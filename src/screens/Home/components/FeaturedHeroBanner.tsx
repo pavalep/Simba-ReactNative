@@ -5,6 +5,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import type {ColorTokens} from '../../../theme/tokens';
 import {radius, spacing} from '../../../theme/tokens';
+import {FONT_FAMILY} from '../../../constants/fontFamily';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 
@@ -197,8 +198,10 @@ const createStyles = (colors: ColorTokens) =>
     borderRadius: radius.sm,
   },
   badgeText: {
+    // v8: explicit Inter Bold via family key. See
+    // Toast.tsx actionLabel comment.
+    fontFamily: FONT_FAMILY.inter.bold,
     fontSize: 10,
-    fontWeight: '800',
     color: colors.text.inverse,
     letterSpacing: 0.5,
   },

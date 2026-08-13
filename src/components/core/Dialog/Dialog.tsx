@@ -130,7 +130,7 @@ export const Dialog: React.FC<DialogProps> = ({
           accessibilityLiveRegion="polite"
           importantForAccessibility="yes">
           {/* Title */}
-          <AppText variant="h3" color="primary" style={styles.title}>
+          <AppText variant="displaySans" color="primary" style={styles.title}>
             {title}
           </AppText>
 

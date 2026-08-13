@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Soft warm-gold (orb) splash background (matches in-app orb theme) -->
+<!-- v7 brand parchment — splash background. Even at night,
+     the splash is on-brand parchment (not dark). The night
+     variant exists for API symmetry but the brand color is
+     the same. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#D4B47A" />
+    <solid android:color="#F5F0E8" />
 </shape>

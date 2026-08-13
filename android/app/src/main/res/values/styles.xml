@@ -6,16 +6,22 @@
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 
-    <!-- Splash screen theme — soft warm-gold (orb) bg with brown logo, no status bar.
-         Works on pre-Android 12 (windowBackground) and Android 12+ (SplashScreen attrs). -->
+    <!-- v7 native splash — parchment background (#F5F0E8), lion
+         mark centered, status bar + nav bar tinted to match the
+         parchment so the cold-boot splash is one continuous brand
+         surface (no white flash, no system spinner).
+         Works on pre-Android 12 (windowBackground) and Android 12+
+         (SplashScreen attrs). -->
     <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
-        <!-- Pre-Android 12 fallback -->
+        <!-- Pre-Android 12 fallback — layer-list (parchment + lion) -->
         <item name="android:windowBackground">@drawable/splash_background</item>
         <item name="android:windowFullscreen">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
         <item name="android:navigationBarColor">@color/splash_navbar</item>
 
-        <!-- Android 12+ SplashScreen attributes -->
+        <!-- Android 12+ SplashScreen attributes. The system draws
+             a static centered icon (the lion) on a parchment
+             background until the JS bundle mounts. -->
         <item name="android:windowSplashScreenBackground">@color/splash_background</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
         <item name="android:windowSplashScreenAnimationDuration">300</item>

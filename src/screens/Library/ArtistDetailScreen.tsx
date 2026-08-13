@@ -344,7 +344,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       {/* ── Header with back ── */}
       <View style={styles.header}>
         <BackButton />
-        <AppText variant="h2" color="primary">
+        <AppText variant="displaySans" color="primary">
           Artist
         </AppText>
         <TouchableOpacity
@@ -370,7 +370,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             <SvgIcon name="headphones" size={36} color={colors.accent.gold} />
           </View>
           <AppText
-            variant="h1"
+            variant="displaySerif"
             color="primary"
             style={styles.artistNameText}>
             {artistName}
@@ -424,7 +424,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         {/* ── Discography (MusicBrainz) ── */}
         {enrichment.releases.length > 0 ? (
           <>
-            <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+            <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
               Discography
             </AppText>
             {/* 59.1: virtualized instead of .map */}
@@ -458,7 +458,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         ) : null}
 
         {/* ── From Your Library ── */}
-        <AppText variant="h3" color="primary" style={styles.sectionTitle}>
+        <AppText variant="displaySans" color="primary" style={styles.sectionTitle}>
           From Your Library
         </AppText>
         {/* 59.1: virtualized instead of .map */}
@@ -518,7 +518,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         {more.tracks.length > 0 ? (
           <>
             <AppText
-              variant="h3"
+              variant="displaySans"
               color="primary"
               style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
               More From {artistName}
@@ -541,7 +541,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
         {/* ── All tracks ── */}
         <AppText
-          variant="h3"
+          variant="displaySans"
           color="primary"
           style={[styles.sectionTitle, styles.sectionTitleSpaced]}>
           All Tracks
