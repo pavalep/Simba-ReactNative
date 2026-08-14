@@ -268,18 +268,18 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 5.3 — Movies FAB Options + Polish
 **Files:** `src/screens/sections/components/` (options wiring), Movies config
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE (`9c80f36`)
 
-- [ ] 1. Enable Movies options: sort (Newest/Oldest/A–Z/Rating) + view density (grid-2 / list).
-- [ ] 2. Apply sort in the Movies `renderTab` data pipeline (pure function on the fetched array).
-- [ ] 3. Apply view density via `SectionContent` (`numColumns` switch).
-- [ ] 4. Confirm the FAB badge shows when sort ≠ default.
-- [ ] 5. Verify the option sheet "Reset" returns to default sort + grid.
-- [ ] 6. Visual polish: FAB does not overlap the last grid row and hides when the keyboard is open.
-- [ ] 7. Compare against pre-migration screenshots (header/search/tab geometry + card spacing).
-- [ ] 8. **Error fix** — fix sort/density race on tab switch (sort must re-apply per tab list).
-- [ ] 9. **Validation** — Movies fully matches the v10 anatomy; all options live-apply; `tsc` 0; reviewer walk-through passes.
-- [ ] 10. Commit `feat(movies): FAB options (sort + density) — pilot complete`.
+- [x] 1. Enable Movies options: sort (Newest/Oldest/A–Z/Rating) + view density (grid-2 / list).
+- [x] 2. Apply sort in the Movies `renderTab` data pipeline (pure function on the fetched array).
+- [x] 3. Apply view density via `SectionContent` (`numColumns` switch).
+- [x] 4. Confirm the FAB badge shows when sort ≠ default.
+- [x] 5. Verify the option sheet "Reset" returns to default sort + grid.
+- [x] 6. Visual polish: FAB does not overlap the last grid row and hides when the keyboard is open.
+- [x] 7. Compare against pre-migration screenshots (header/search/tab geometry + card spacing).
+- [x] 8. **Error fix** — fix sort/density race on tab switch (sort must re-apply per tab list).
+- [x] 9. **Validation** — Movies fully matches the v10 anatomy; all options live-apply; `tsc` 0; reviewer walk-through passes.
+- [x] 10. Commit `feat(movies): FAB options (sort + density) — pilot complete`.
 
 **Gate 5 ✅:** Movies is fully migrated and is the reference implementation for Waves 6–11.
 
@@ -586,7 +586,7 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 | 4.3 | `59a259d` | ✅ |
 | 5.1 | `eaf43c4` | ✅ |
 | 5.2 | `24f9a5c` | ✅ |
-| 5.3 | — | ⬜ |
+| 5.3 | `9c80f36` | ✅ |
 | 6.1 | — | ⬜ |
 | 6.2 | — | ⬜ |
 | 7.1 | — | ⬜ |
