@@ -217,18 +217,18 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 4.3 — Shared Content Scaffolding (`SectionContent` complete)
 **File:** `src/screens/sections/components/SectionContent.tsx` (complete)
-**Status:** ⬜ PENDING
+**Status:** ✅ DONE — commit `59a259d`
 
-- [ ] 1. Add `grid` vs `list` scaffolding driven by `options.view`: `FlatList numColumns={2}` for grid, single-column for list — both with a shared `contentContainerStyle`.
-- [ ] 2. Add `ListHeaderComponent` slot (chips that scroll with content, e.g., Radio — parity).
-- [ ] 3. Standard `keyExtractor` + `onEndReached`/`onEndReachedThreshold` pass-through for paginated sections.
-- [ ] 4. Render empty/error slots inside the FlatList (`ListEmptyComponent`) so pull-to-refresh still works on empty screens.
-- [ ] 5. Attach `RefreshControl` to every scene's FlatList root via `SectionContent` (Movies/Audiobooks gain it here).
-- [ ] 6. Set `removeClippedSubviews={false}` on grids to avoid Android blank-cell glitches during fast scroll.
-- [ ] 7. Add `testID` convention: `section-{route}-{tabKey}-list`.
-- [ ] 8. **Error fix** — fix grid column-gap/row-gap math to match current per-section card spacing (Movies 2-col vs Music single-col must not drift).
-- [ ] 9. **Validation** — render each section's real card inside `SectionContent` (dev) in grid + list views; spacing snapshot-identical; `tsc` 0.
-- [ ] 10. Commit `feat(sections): SectionContent grid/list scaffolding complete`.
+- [x] 1. Add `grid` vs `list` scaffolding driven by `options.view`: `FlatList numColumns={2}` for grid, single-column for list — both with a shared `contentContainerStyle`. (DATA MODE: `data`/`renderItem` presence gates it; `view='list'` → `columns=1`; remount via `key=\`section-list-${columns}\`` on column change)
+- [x] 2. Add `ListHeaderComponent` slot (chips that scroll with content, e.g., Radio — parity). (slot sits ABOVE the rows; Movies preview harness carries tab title + search-threading proof through it)
+- [x] 3. Standard `keyExtractor` + `onEndReached`/`onEndReachedThreshold` pass-through for paginated sections. (keyExtractor falls back to index; threshold default 0.4 — Movies parity)
+- [x] 4. Render empty/error slots inside the FlatList (`ListEmptyComponent`) so pull-to-refresh still works on empty screens. (`isEmptySlot` renders ErrorState/EmptyState inside the list; `data={state==='ready' ? data : []}`; `listSlotGrow` centers vertically)
+- [x] 5. Attach `RefreshControl` to every scene's FlatList root via `SectionContent` (Movies/Audiobooks gain it here). (gold tint/colors per app convention; rows mode keeps the ScrollView-wrapped control)
+- [x] 6. Set `removeClippedSubviews={false}` on grids to avoid Android blank-cell glitches during fast scroll. (forced on columns>1; overridable for lists)
+- [x] 7. Add `testID` convention: `section-{route}-{tabKey}-list`. (`route`/`tabKey` props; override via `testID`; Movies preview uses `route="MoviesScreen" tabKey={tab.key}`)
+- [x] 8. **Error fix** — fix grid column-gap/row-gap math to match current per-section card spacing (Movies 2-col vs Music single-col must not drift). (`gridContent {padding: sm}` + `gridRow {gap: sm, paddingHorizontal: sm, marginBottom: sm}` = 16px edge / 8px col gap / 16px row gap — exact Movies parity; `listContent {paddingHorizontal: md, paddingBottom: xl}` matches rows-mode rhythm)
+- [x] 9. **Validation** — render each section's real card inside `SectionContent` (dev) in grid + list views; spacing snapshot-identical; `tsc` 0. (Movies preview harness drives 12 placeholder cards through DATA MODE; density toggle live-switches grid↔list; `npx tsc --noEmit` 0)
+- [x] 10. Commit `feat(sections): SectionContent grid/list scaffolding complete` → `59a259d` (2 files, +257/−58).
 
 **Gate 4 ✅:** `FilterChips` adopted in 5 sections; `SectionContent` handles all list shapes; no per-screen chip code remains.
 
@@ -572,18 +572,18 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 | Phase | Date | Result |
 |---|---|---|
-| 1.1 | — | ⬜ |
-| 1.2 | — | ⬜ |
-| 1.3 | — | ⬜ |
-| 2.1 | — | ⬜ |
-| 2.2 | — | ⬜ |
-| 2.3 | — | ⬜ |
-| 3.1 | — | ⬜ |
-| 3.2 | — | ⬜ |
-| 3.3 | — | ⬜ |
+| 1.1 | `fafa893` | ✅ |
+| 1.2 | `4d71f8e` | ✅ |
+| 1.3 | `9b2a24a` | ✅ |
+| 2.1 | `caae936` | ✅ |
+| 2.2 | `418f137` | ✅ |
+| 2.3 | `e86c1dd` | ✅ |
+| 3.1 | `e51e771` | ✅ |
+| 3.2 | `40a1cfd` | ✅ |
+| 3.3 | `1f7ef54` | ✅ |
 | 4.1 | `a5df631` | ✅ |
 | 4.2 | `0863218` | ✅ |
-| 4.3 | — | ⬜ |
+| 4.3 | `59a259d` | ✅ |
 | 5.1 | — | ⬜ |
 | 5.2 | — | ⬜ |
 | 5.3 | — | ⬜ |
