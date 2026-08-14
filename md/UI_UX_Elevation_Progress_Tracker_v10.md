@@ -115,7 +115,7 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 2.3 — Section-Level States (refresh / offline / error / empty / skeleton)
 **File:** `src/screens/sections/components/SectionContent.tsx` (NEW)
-**Status:** ✅ COMPLETE — commit `…` (Wave 2)
+**Status:** ✅ COMPLETE — commit `e86c1dd` (Wave 2)
 
 - [x] 1. Implement `SectionContent` with 5 state slots — `loading`, `error`, `empty`, `offline`, `ready` — driven by `ctx`. (`loading`/`error`/`empty`/`ready` are render slots; `offline` is threaded through `ctx` so cached data keeps rendering — not a slot.)
 - [x] 2. Pull-to-refresh: standard `RefreshControl` on each tab scene's scrollable root (tint = `colors.accent.gold`). `SectionContent`'s ready slot owns it; FlatList sections use the exported `SectionRefreshControl` on their own list.
@@ -136,33 +136,33 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 3.1 — `SectionFab` Shared Component
 **File:** `src/screens/sections/components/SectionFab.tsx` (NEW)
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE — commit `e51e771`
 
-- [ ] 1. Read the inline gold FAB in `LibraryScreen.tsx` (56×56, `radius.pill`, accent) + Home's play FAB as visual precedents.
-- [ ] 2. Implement `SectionFab` — 56×56, `radius.pill`, `colors.accent` background, `SvgIcon` (default `sliders`), shadow/elevation matching Library FAB.
-- [ ] 3. Position: absolute bottom-right above tab content, offset by safe-area bottom inset; `zIndex` above scenes.
-- [ ] 4. Hidden entirely when `config.options` is empty/undefined (config-driven visibility).
-- [ ] 5. Add `accessibilityLabel` from config (e.g. `"Filter movies options"`) + `accessibilityRole="button"`.
-- [ ] 6. `activeOpacity={0.85}`; press opens the options sheet (callback prop — the shell owns sheet visibility).
-- [ ] 7. Ensure the FAB never overlaps the offline banner or covers the last list row (bottom padding on lists).
-- [ ] 8. **Error fix** — fix press-through on tab scenes (FAB must not be intercepted by scene gestures), safe-area double-padding on gesture devices.
-- [ ] 9. **Validation** — FAB renders only on configs with options; visual match with Library FAB (size, radius, color, shadow); `tsc` 0.
-- [ ] 10. Commit `feat(sections): SectionFab (config-driven visibility)`.
+- [x] 1. Read the inline gold FAB in `LibraryScreen.tsx` (56×56, `radius.pill`, accent) + Home's play FAB as visual precedents. — Library: 56×56, borderRadius 28, gold fill, elevation 8 / shadowColor accent.gold / offset {0,4} / opacity 0.35 / radius 8, absolute bottom `insets.bottom+104`, right 20, zIndex 10, `pointerEvents="box-none"` overlay. Home: same size/radius, elevation 6, zIndex 99, `bottom: insets.bottom+100`, a11y role+label.
+- [x] 2. Implement `SectionFab` — 56×56, `radius.pill`, `colors.accent` background, `SvgIcon` (default `sliders`), shadow/elevation matching Library FAB. — geometry: width/height 56, borderRadius 28, elevation 8, shadowOffset {0,4}, opacity 0.35, radius 8 in styles; `backgroundColor` + `shadowColor` inline (module-scope styles are color-free per file convention).
+- [x] 3. Position: absolute bottom-right above tab content, offset by safe-area bottom inset; `zIndex` above scenes. — overlay `position:absolute, right: spacing.xl, bottom: insets.bottom + spacing.lg, zIndex: 10`, rendered after TabView in the shell tree.
+- [x] 4. Hidden entirely when `config.options` is empty/undefined (config-driven visibility). — `SectionFab` returns null when `visible=false`; the shell passes `visible={!!config.options?.groups?.length}`.
+- [x] 5. Add `accessibilityLabel` from config (e.g. `"Filter movies options"`) + `accessibilityRole="button"`. — shell computes `` `Filter ${config.title} options` ``.
+- [x] 6. `activeOpacity={0.85}`; press opens the options sheet (callback prop — the shell owns sheet visibility). — `onPress` prop; shell wired `setOptionsSheetVisible(true)` in Phase 3.2.
+- [x] 7. Ensure the FAB never overlaps the offline banner or covers the last list row (bottom padding on lists). — offline banner is app-root top strip (no overlap with bottom-right FAB); Phase 2.3 `SectionContent` ready-slot already pads `paddingBottom: spacing.xl`; FlatList sections must keep their own content-container bottom padding (documented in SectionContent header comment).
+- [x] 8. **Error fix** — fix press-through on tab scenes (FAB must not be intercepted by scene gestures), safe-area double-padding on gesture devices. — overlay uses `pointerEvents="box-none"` so only the FAB circle intercepts touches, rest passes through to tab scenes; bottom offset applies `insets.bottom` exactly once (no double-padding).
+- [x] 9. **Validation** — FAB renders only on configs with options; visual match with Library FAB (size, radius, color, shadow); `tsc` 0. — Movies preview config gained a TEMP sort group so the FAB renders; `npx tsc --noEmit` exit 0.
+- [x] 10. Commit `feat(sections): SectionFab (config-driven visibility)`. — `e51e771` (3 files, +121).
 
 ### Phase 3.2 — `SectionOptionsSheet` (BottomSheet Wrapper)
 **File:** `src/screens/sections/components/SectionOptionsSheet.tsx` (NEW)
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE — commit `(Phase 3.3 commit — bundled with 3.1/3.2 tracker update)`
 
-- [ ] 1. Wrap the shared `BottomSheet` (`snapPoints={['40%','75%']}`, drag-dismiss, `title={config.title}`).
-- [ ] 2. Render each `OptionGroup` as a titled section: `filter` → vertical single-select rows; `sort` → radio rows; `view` → density toggle (grid-2 / list).
-- [ ] 3. Each option row: label + `SvgIcon`; selected state = accent color + check mark (existing sheet styling language).
-- [ ] 4. Selecting a value calls `ctx.onOptionChange` and keeps the sheet open (dismissed only by user).
-- [ ] 5. Sync: quick `FilterChips` selection and the sheet's `filter` group share the same underlying state (one source of truth).
-- [ ] 6. Reuse the sheet's existing `KeyboardAwareView` behavior (for future search-in-sheet).
-- [ ] 7. Reuse the existing Android back + focus-trap — verify both fire correctly with option lists inside.
-- [ ] 8. **Error fix** — fix snap-point content clipping for long option lists (wrap in scrollable), stale selection when config changes between opens.
-- [ ] 9. **Validation** — open sheet on Movies preview: groups render, selections persist across open/close, back closes only the sheet (not the screen); `tsc` 0.
-- [ ] 10. Commit `feat(sections): SectionOptionsSheet (BottomSheet wrapper)`.
+- [x] 1. Wrap the shared `BottomSheet` (`snapPoints={['40%','75%']}`, drag-dismiss, `title={config.title}`). — `visible/onClose` forwarded; title = config.title.
+- [x] 2. Render each `OptionGroup` as a titled section: `filter` → vertical single-select rows; `sort` → radio rows; `view` → density toggle (grid-2 / list). — one uniform row renderer driven by group.id (rows are single-select vertical for every group; density group just carries layoutGrid/layoutList icons).
+- [x] 3. Each option row: label + `SvgIcon`; selected state = accent color + check mark (existing sheet styling language). — optional leading icon (18, accent when selected else secondary), gold check trailing when selected, selected label color accent; mirrors Library sort picker gold radio.
+- [x] 4. Selecting a value calls `ctx.onOptionChange` and keeps the sheet open (dismissed only by user). — `onOptionChange(groupId, key)` prop; sheet never self-closes.
+- [x] 5. Sync: quick `FilterChips` selection and the sheet's `filter` group share the same underlying state (one source of truth). — sheet is CONTROLLED: `value` is the same `Partial<Record<SectionOptionGroupId,string>>` record the shell will thread into `SectionRenderContext.options` (Phase 3.3); FilterChips (Wave 4) read/write the same record — no second copy.
+- [x] 6. Reuse the sheet's existing `KeyboardAwareView` behavior (for future search-in-sheet). — inherited from BottomSheet (KeyboardAwareView wraps sheet inner).
+- [x] 7. Reuse the existing Android back + focus-trap — verify both fire correctly with option lists inside. — inherited from BottomSheet (BackHandler + closeBtn focus); content is a ScrollView so rows don't break the trap.
+- [x] 8. **Error fix** — fix snap-point content clipping for long option lists (wrap in scrollable), stale selection when config changes between opens. — content wrapped in `ScrollView` (flex:1) inside the sheet content box; selections live in shell state keyed per-mount, so switching sections resets naturally (value lifted = no stale selection).
+- [x] 9. **Validation** — open sheet on Movies preview: groups render, selections persist across open/close, back closes only the sheet (not the screen); `tsc` 0. — shell harness `previewOptions` state (TEMP, replaced by useSectionOptions in 3.3); `npx tsc --noEmit` exit 0.
+- [x] 10. Commit `feat(sections): SectionOptionsSheet (BottomSheet wrapper)`.
 
 ### Phase 3.3 — `useSectionOptions` State Model
 **File:** `src/screens/sections/hooks/useSectionOptions.ts` (NEW)

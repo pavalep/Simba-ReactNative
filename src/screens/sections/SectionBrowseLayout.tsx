@@ -14,7 +14,7 @@
 // a temp config override while its old body stays intact for A/B (removed
 // in Wave 5, the pilot migration).
 
-import React, {useCallback, useEffect, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {
   TabView,
@@ -31,10 +31,12 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SectionTabBar} from './components/SectionTabBar';
 import {SectionFab} from './components/SectionFab';
+import {SectionOptionsSheet} from './components/SectionOptionsSheet';
 import {useSectionTabs} from './hooks/useSectionTabs';
 import {useSectionSearch, logSearchComparison} from './hooks/useSectionSearch';
 import type {
   SectionBrowseConfig,
+  SectionOptionGroupId,
   SectionRenderContext,
   SectionRouteKey,
   SectionRouteParams,
@@ -128,11 +130,18 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
     [debouncedQuery, routeParams, isOnline],
   );
 
-  // ── FAB visibility (config-driven) ────────────────────────────────────
-  // Phase 3.1: the FAB renders only when the section defines options
-  // (spec §3.3). The shell owns sheet visibility; pressing the FAB is
-  // wired to the SectionOptionsSheet in Phase 3.2.
+  // ── FAB → options sheet (config-driven) ────────────────────────────────
+  // Phase 3.2: the SHELL owns sheet visibility — the FAB only reports the
+  // press. `previewOptions` is a TEMP in-shell harness so the sheet is
+  // live on the Movies preview (Phase 3.2 step 9 validation); Phase 3.3
+  // replaces it with the shared `useSectionOptions` hook. The record SHAPE
+  // (Partial<Record<SectionOptionGroupId, string>>) is the contract the
+  // hook + FilterChips reuse — one source of truth for selections.
   const hasOptions = !!config.options?.groups?.length;
+  const [optionsSheetVisible, setOptionsSheetVisible] = useState(false);
+  const [previewOptions, setPreviewOptions] = useState<
+    Partial<Record<SectionOptionGroupId, string>>
+  >({});
 
   // ── TabView wiring ─────────────────────────────────────────────────────
   const routes = useMemo(
@@ -207,12 +216,21 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
 
       {/* ── SectionFab — bottom-right "more this section can do" ── */}
       <SectionFab
-        onPress={() => {
-          // Phase 3.2: opens SectionOptionsSheet (shell owns visibility).
-          // eslint-disable-next-line no-empty
-        }}
+        onPress={() => setOptionsSheetVisible(true)}
         accessibilityLabel={`Filter ${config.title} options`}
         visible={hasOptions}
+      />
+
+      {/* ── SectionOptionsSheet — the FAB's payload (Phase 3.2) ── */}
+      <SectionOptionsSheet
+        visible={optionsSheetVisible}
+        onClose={() => setOptionsSheetVisible(false)}
+        title={config.title}
+        groups={config.options?.groups ?? []}
+        value={previewOptions}
+        onOptionChange={(groupId, key) =>
+          setPreviewOptions(prev => ({...prev, [groupId]: key}))
+        }
       />
     </View>
   );
