@@ -10,6 +10,8 @@
 
 import type {ReactNode} from 'react';
 import type {RootStackParamList} from '../../navigation/types';
+import {MOVIE_CATEGORIES} from '../../constants/movieCategories';
+import {renderMoviesTab} from '../MoviesScreen/MoviesContent';
 
 // ─── Route keys ──────────────────────────────────────────────────────────
 // Derived from RootStackParamList via `Extract`, so the compiler proves the
@@ -130,10 +132,33 @@ export const SECTION_CONFIGS: Record<SectionRouteKey, SectionBrowseConfig> = {
   MoviesScreen: {
     route: 'MoviesScreen',
     title: 'Movies',
-    // TODO(1.2): tabs from MOVIE_CATEGORIES (9)
-    search: {placeholder: ''},
-    tabs: [],
-    renderTab: notImplemented,
+    search: {placeholder: 'Search movies…'},
+    // Wave 5 pilot: 9 tabs from MOVIE_CATEGORIES (no quick chips —
+    // categories ARE the tabs).
+    tabs: MOVIE_CATEGORIES.map(c => ({key: c.id, title: c.name})),
+    options: {
+      groups: [
+        {
+          id: 'sort',
+          title: 'Sort by',
+          options: [
+            {key: 'newest', label: 'Newest'},
+            {key: 'oldest', label: 'Oldest'},
+            {key: 'az', label: 'A–Z'},
+            {key: 'rating', label: 'Rating'},
+          ],
+        },
+        {
+          id: 'view',
+          title: 'Density',
+          options: [
+            {key: 'grid', label: 'Grid', icon: 'layoutGrid'},
+            {key: 'list', label: 'List', icon: 'layoutList'},
+          ],
+        },
+      ],
+    },
+    renderTab: renderMoviesTab,
   },
   MusicScreen: {
     route: 'MusicScreen',
