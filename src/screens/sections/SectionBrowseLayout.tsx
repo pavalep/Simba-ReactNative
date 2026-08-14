@@ -14,7 +14,7 @@
 // a temp config override while its old body stays intact for A/B (removed
 // in Wave 5, the pilot migration).
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {
   TabView,
@@ -30,6 +30,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SectionTabBar} from './components/SectionTabBar';
 import {useSectionTabs} from './hooks/useSectionTabs';
+import {useSectionSearch, logSearchComparison} from './hooks/useSectionSearch';
 import type {
   SectionBrowseConfig,
   SectionRenderContext,
@@ -80,22 +81,21 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialTabIndex]);
 
-  // ── Search ─────────────────────────────────────────────────────────────
-  // Phase 2.1: temporary shell-local state so the shell is fully functional
-  // in preview. Phase 2.2 replaces this with the shared `useSectionSearch`
-  // hook. The debounce lives inside SearchBar (default 300ms) — do NOT
-  // double-debounce here; `query` is the raw echo, `debouncedQuery` is what
-  // content renderers read.
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  // ── Search (shared, persists across tab switches) ──────────────────────
+  // Phase 2.2: the hook owns raw + debounced state; SearchBar owns the
+  // debounce timer (no double-debounce). `handleDebouncedChange` drops stale
+  // echoes so an older keystroke can never resurrect over a newer one.
+  const {query, setQuery, debouncedQuery, handleDebouncedChange, clear, debounceMs} =
+    useSectionSearch(config, routeParams);
 
-  const handleChangeText = useCallback((text: string) => {
-    setQuery(text);
-  }, []);
-
-  const handleDebouncedChange = useCallback((text: string) => {
-    setDebouncedQuery(text);
-  }, []);
+  const onDebouncedChange = useCallback(
+    (text: string) => {
+      handleDebouncedChange(text);
+      // TEMP dev harness (Phase 2.2 step 7) — removed with the migrations.
+      logSearchComparison(config.route, query, text);
+    },
+    [handleDebouncedChange, config.route, query],
+  );
 
   // ── Render context (shell-level, shared by every tab) ──────────────────
   // Phase 2.1 stub: chips/options/refresh/offline are inert until Waves
@@ -162,10 +162,13 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
       <View style={styles.searchSection}>
         <SearchBar
           value={query}
-          onChangeText={handleChangeText}
-          onDebouncedChange={handleDebouncedChange}
-          debounceMs={config.search.debounceMs ?? 300}
+          onChangeText={setQuery}
+          onDebouncedChange={onDebouncedChange}
+          debounceMs={debounceMs}
           placeholder={config.search.placeholder}
+          accessibilityLabel={`Search ${config.title}`}
+          onClear={clear}
+          returnKeyType="search"
         />
       </View>
 

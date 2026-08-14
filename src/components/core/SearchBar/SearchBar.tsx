@@ -32,6 +32,8 @@ interface SearchBarProps {
   onCancel?: () => void;
   onSubmitEditing?: () => void;
   placeholder?: string;
+  /** Overrides the placeholder-derived accessibilityLabel (e.g. "Search Movies"). */
+  accessibilityLabel?: string;
   autoFocus?: boolean;
   returnKeyType?: ReturnKeyTypeOptions;
   style?: StyleProp<ViewStyle>;
@@ -46,6 +48,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   onCancel,
   onSubmitEditing,
   placeholder = 'Search…',
+  accessibilityLabel,
   autoFocus = false,
   returnKeyType = 'search',
   style,
@@ -108,7 +111,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           onBlur={() => setFocused(false)}
           onSubmitEditing={onSubmitEditing}
           returnKeyType={returnKeyType}
-          accessibilityLabel={placeholder}
+          accessibilityLabel={accessibilityLabel ?? placeholder}
         />
         {value.length > 0 && (
           <TouchableOpacity
