@@ -166,7 +166,7 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 3.3 — `useSectionOptions` State Model
 **File:** `src/screens/sections/hooks/useSectionOptions.ts` (NEW)
-**Status:** ✅ COMPLETE — commit `(Phase 3.3 hash — backfilled post-commit)`
+**Status:** ✅ COMPLETE — commit `1f7ef54`
 
 - [x] 1. Implement `useSectionOptions(config)` → `{state, setOption, reset}` where `state = {filters: Record<string,string|undefined>, sort, view}`. — hook returns `{state, setOption, reset, activeFilterCount, options}`; `filters` is key→subKey so Wave 4 chips can hold several keys, sheet keeps single-select.
 - [x] 2. Defaults: `view` from config (default `grid`), `sort` undefined (natural order), filters undefined. — default view derived from the config's view group first option key, fallback `'grid'`; sort/filters start undefined/empty.
