@@ -34,50 +34,50 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 1.1 — `SectionBrowseConfig` Type + Section Registry
 **File:** `src/screens/sections/sectionConfig.ts` (NEW)
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE — commit `fafa893`
 
-- [ ] 1. Define `SectionTab` type: `{key: string; title: string}`.
-- [ ] 2. Define `OptionGroup` type: `{id: 'filter'|'sort'|'view'; title: string; options: {key; label; icon?}[]}`.
-- [ ] 3. Define `SectionRenderContext`: `{query, activeChips, options, refreshing, offline, routeParams}`.
-- [ ] 4. Define `SectionBrowseConfig` per spec §3.2 (route/title/search/tabs/quickChips/options/renderTab).
-- [ ] 5. Create the registry `SECTION_CONFIGS: Record<SectionRouteKey, SectionBrowseConfig>` with 8 stub entries (title + route only, rest TODO).
-- [ ] 6. Export `getSectionConfig(route: SectionRouteKey)` helper with a dev-mode `console.warn` on unknown route.
-- [ ] 7. Type-check the stub registry against `RootStackParamList` keys (prove the key set matches, no errors yet).
-- [ ] 8. **Error fix** — resolve any TS union mismatch between `SectionRouteKey` and `RootStackParamList`; `npx tsc --noEmit` and fix every error in this phase's files only.
-- [ ] 9. **Validation** — `npx tsc --noEmit` exits 0; `SECTION_CONFIGS` has exactly 8 entries keyed by real route names.
-- [ ] 10. Commit `feat(sections): v10 SectionBrowseConfig type + registry stubs`.
+- [x] 1. Define `SectionTab` type: `{key: string; title: string}`.
+- [x] 2. Define `OptionGroup` type: `{id: 'filter'|'sort'|'view'; title: string; options: {key; label; icon?}[]}`.
+- [x] 3. Define `SectionRenderContext`: `{query, activeChips, options, refreshing, offline, routeParams}`.
+- [x] 4. Define `SectionBrowseConfig` per spec §3.2 (route/title/search/tabs/quickChips/options/renderTab).
+- [x] 5. Create the registry `SECTION_CONFIGS: Record<SectionRouteKey, SectionBrowseConfig>` with 8 stub entries (title + route only, rest TODO).
+- [x] 6. Export `getSectionConfig(route: SectionRouteKey)` helper with a dev-mode `console.warn` on unknown route.
+- [x] 7. Type-check the stub registry against `RootStackParamList` keys (prove the key set matches, no errors yet).
+- [x] 8. **Error fix** — resolve any TS union mismatch between `SectionRouteKey` and `RootStackParamList`; `npx tsc --noEmit` and fix every error in this phase's files only.
+- [x] 9. **Validation** — `npx tsc --noEmit` exits 0; `SECTION_CONFIGS` has exactly 8 entries keyed by real route names.
+- [x] 10. Commit `feat(sections): v10 SectionBrowseConfig type + registry stubs`.
 
 ### Phase 1.2 — Tab-Source Unification (`useSectionTabs`)
 **File:** `src/screens/sections/hooks/useSectionTabs.ts` (NEW)
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE — commit `4d71f8e`
 
-- [ ] 1. Audit the 4 tab-source patterns: constants (`MOVIE_CATEGORIES`, `PODCAST_CATEGORIES`), hook exports (`MUSIC_TABS`, `RADIO_TABS`, `LIVE_TV_TABS`), local arrays (Audiobooks, Shows), inline routes (Archive).
-- [ ] 2. Record the exact current tab title list per section (8 lists) into this phase's notes for regression comparison.
-- [ ] 3. Implement `toSectionTabs(raw): SectionTab[]` normalizer (accepts `{key;title}[]` or `Record<string,string>`).
-- [ ] 4. Implement `useSectionTabs(config)` → `{tabs, initialTabIndex, setTab}` — resolves config.tabs, computes `initialTabIndex` from route param `initialTab`, guards out-of-range indices.
-- [ ] 5. Add `tabKey` helpers so tab switching maps back to a source key (needed by content renderers).
-- [ ] 6. Add a temporary dev-only snapshot log of the 8 normalized lists (not shipped).
-- [ ] 7. Compare each normalized list against the audit notes; flag any reordering as an intentional diff.
-- [ ] 8. **Error fix** — fix normalizer edge cases (empty arrays, duplicate keys, non-string titles, key collisions across the 8 lists); `npx tsc --noEmit` clean.
-- [ ] 9. **Validation** — all 8 tab lists byte-identical to current screens; `tsc` 0; dev snapshot log shows no drift.
-- [ ] 10. Commit `feat(sections): useSectionTabs normalizer` (dev check removed or untracked).
+- [x] 1. Audit the 4 tab-source patterns: constants (`MOVIE_CATEGORIES`, `PODCAST_CATEGORIES`), hook exports (`MUSIC_TABS`, `RADIO_TABS`, `LIVE_TV_TABS`), local arrays (Audiobooks, Shows), inline routes (Archive).
+- [x] 2. Record the exact current tab title list per section (8 lists) into this phase's notes for regression comparison.
+- [x] 3. Implement `toSectionTabs(raw): SectionTab[]` normalizer (accepts `{key;title}[]` or `Record<string,string>`).
+- [x] 4. Implement `useSectionTabs(config)` → `{tabs, initialTabIndex, setTab}` — resolves config.tabs, computes `initialTabIndex` from route param `initialTab`, guards out-of-range indices.
+- [x] 5. Add `tabKey` helpers so tab switching maps back to a source key (needed by content renderers).
+- [x] 6. Add a temporary dev-only snapshot log of the 8 normalized lists (not shipped).
+- [x] 7. Compare each normalized list against the audit notes; flag any reordering as an intentional diff.
+- [x] 8. **Error fix** — fix normalizer edge cases (empty arrays, duplicate keys, non-string titles, key collisions across the 8 lists); `npx tsc --noEmit` clean.
+- [x] 9. **Validation** — all 8 tab lists byte-identical to current screens; `tsc` 0; dev snapshot log shows no drift.
+- [x] 10. Commit `feat(sections): useSectionTabs normalizer` (dev check removed or untracked).
 
 ### Phase 1.3 — Shared Tab-Bar Contract (kill styling drift)
 **File:** `src/screens/sections/components/SectionTabBar.tsx` (NEW)
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE — commit `9b2a24a`
 
-- [ ] 1. Inventory current tab-bar styling across all 8 screens (indicator, font, background, border, scroll behavior, lazy).
-- [ ] 2. Extract the gold 3px indicator + `typography.tab` labels + `colors.background.primary` bar from the best existing implementation (Movies) into `SectionTabBar`.
-- [ ] 3. Apply `lazy` + `scrollEnabled` as defaults; expose tab-bar overrides only via config, never per-screen inline.
-- [ ] 4. Remove `hairlineWidth` border + hardcoded rgba from Archive/Shows tab styling in this phase (they adopt `SectionTabBar`).
-- [ ] 5. Add `style` prop parity — Music's `TabView` gains the same `style` the other screens use (spec §4 row 2).
-- [ ] 6. Render `SectionTabBar` in a temp preview and compare visually vs current Movies.
-- [ ] 7. Add `accessibilityRole="tab"` + `accessibilityState={{selected}}` on each tab button.
-- [ ] 8. **Error fix** — fix indicator misalignment when `scrollEnabled`, label truncation, safe-area bleed on gesture devices.
-- [ ] 9. **Validation** — 8/8 screens resolve to identical tab-bar metrics (3px gold indicator, tab typography, same padding); `tsc` 0.
-- [ ] 10. Commit `feat(sections): shared SectionTabBar contract`.
+- [x] 1. Inventory current tab-bar styling across all 8 screens (indicator, font, background, border, scroll behavior, lazy).
+- [x] 2. Extract the gold 3px indicator + `typography.tab` labels + `colors.background.primary` bar from the best existing implementation (Movies) into `SectionTabBar`.
+- [x] 3. Apply `lazy` + `scrollEnabled` as defaults; expose tab-bar overrides only via config, never per-screen inline.
+- [x] 4. Remove `hairlineWidth` border + hardcoded rgba from Archive/Shows tab styling in this phase (they adopt `SectionTabBar`).
+- [x] 5. Add `style` prop parity — Music's `TabView` gains the same `style` the other screens use (spec §4 row 2).
+- [x] 6. Render `SectionTabBar` in a temp preview and compare visually vs current Movies.
+- [x] 7. Add `accessibilityRole="tab"` + `accessibilityState={{selected}}` on each tab button.
+- [x] 8. **Error fix** — fix indicator misalignment when `scrollEnabled`, label truncation, safe-area bleed on gesture devices.
+- [x] 9. **Validation** — 8/8 screens resolve to identical tab-bar metrics (3px gold indicator, tab typography, same padding); `tsc` 0.
+- [x] 10. Commit `feat(sections): shared SectionTabBar contract`.
 
-**Gate 1 ✅:** `SectionBrowseConfig` + `useSectionTabs` + `SectionTabBar` compile; the 8 normalized tab lists match current screens exactly.
+**Gate 1 ✅ (verified 2026-08-14):** `SectionBrowseConfig` + `useSectionTabs` + `SectionTabBar` compile; the 8 normalized tab lists match current screens exactly.
 
 ---
 
