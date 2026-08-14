@@ -112,7 +112,10 @@ export const HomeEmptyState: React.FC<HomeEmptyStateProps> = ({
           {opacity: pulseAnim},
         ]}>
         <View style={[styles.aura, {backgroundColor: colors.accent.goldGlow}]} />
-        <SvgIcon name="lion" size={80} color={colors.accent.gold} />
+        {/* v8: brand-ink engraved mark on the empty state (matches
+            the Splash / Login engraved treatment). The gold-soft
+            aura behind it stays as a soft focus glow. */}
+        <SvgIcon name="lion" size={80} color={colors.accent.brandInk} />
       </Animated.View>
 
       {/* ── Title ── */}

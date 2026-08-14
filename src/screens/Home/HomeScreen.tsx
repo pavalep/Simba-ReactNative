@@ -196,7 +196,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
                 text={greeting.text}
                 firstName={userFirstName}
                 condition={greeting.condition}
-                caption={greeting.caption}
+                weather={greeting.weather}
                 isFetching={greeting.isFirstLoad}
               />
             );

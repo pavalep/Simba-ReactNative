@@ -55,8 +55,15 @@
 
 export const FONT_FAMILY = {
   // ─── Allura (single weight, no fontWeight) ────────────────────
-  /** Brand wordmark — Allura. Single weight; never set `fontWeight`. */
-  allura: 'Allura',
+  /** Brand wordmark — Allura. Single weight; never set `fontWeight`.
+   *  Note: the v8 string is the TTF's PostScript name (matches the
+   *  filename `Allura-Regular.ttf`). On Android API 28+ the asset
+   *  registry uses the PostScript name (or filename) as the lookup
+   *  key, not just the `name` table `nameId=1`. The shipped Allura
+   *  v1.004 has `nameId=1 = "Allura"` and
+   *  `postScriptName = "Allura-Regular"`, so the PostScript name
+   *  is the safest lookup on Android. iOS also works either way. */
+  allura: 'Allura-Regular',
 
   // ─── Cormorant Garamond (3 weights) ───────────────────────────
   /** Cormorant Garamond weight variants. */
@@ -111,7 +118,7 @@ export const FONT_FAMILY = {
   // keeps working until migrated. Remove once v7 callers are gone.
 
   /** @deprecated use FONT_FAMILY.allura */
-  brandScript: 'Allura',
+  brandScript: 'Allura-Regular',
   /** @deprecated use FONT_FAMILY.cormorant.bold */
   displaySerif: 'Cormorant Garamond',
   /** @deprecated use FONT_FAMILY.manrope.semibold */
@@ -128,8 +135,8 @@ export const FONT_FAMILY = {
 // explicit. Components that need a specific weight can use the
 // nested FONT_FAMILY keys directly.
 export const FONT_ROLE = {
-  /** Brand wordmark role — Allura. */
-  brandScript: 'Allura' as const,
+  /** Brand wordmark role — Allura (PostScript name for Android). */
+  brandScript: 'Allura-Regular' as const,
   /** Cinematic display / hero titles role — Cormorant Garamond Bold. */
   displaySerif: 'Cormorant Garamond' as const,
   /** Section titles role — Manrope SemiBold. */

@@ -31,14 +31,15 @@ export interface ShowCategory {
 }
 
 export const SHOW_CATEGORIES: ShowCategory[] = [
-  {id: 'all',         name: 'All',         icon: 'layoutGrid', genre: '',                description: 'Every show in the catalog', image: CATEGORY_COVERS.shows.all},
-  {id: 'drama',       name: 'Drama',       icon: 'video',      genre: 'Drama',           description: 'Drama series', image: CATEGORY_COVERS.shows.drama},
-  {id: 'comedy',      name: 'Comedy',      icon: 'listMusic',  genre: 'Comedy',          description: 'Sitcoms and comedy shows', image: CATEGORY_COVERS.shows.comedy},
-  {id: 'action',      name: 'Action',      icon: 'speed',      genre: 'Action',          description: 'High-octane action series', image: CATEGORY_COVERS.shows.action},
-  {id: 'scifi',       name: 'Sci-Fi',      icon: 'speed',      genre: 'Science-Fiction', description: 'Science fiction shows', image: CATEGORY_COVERS.shows.sciFi},
+  // v9: sensible per-genre glyphs (Lucide) on the Home rail tiles.
+  {id: 'all',         name: 'All',         icon: 'tv',         genre: '',                description: 'Every show in the catalog', image: CATEGORY_COVERS.shows.all},
+  {id: 'drama',       name: 'Drama',       icon: 'drama',      genre: 'Drama',           description: 'Drama series', image: CATEGORY_COVERS.shows.drama},
+  {id: 'comedy',      name: 'Comedy',      icon: 'smile',      genre: 'Comedy',          description: 'Sitcoms and comedy shows', image: CATEGORY_COVERS.shows.comedy},
+  {id: 'action',      name: 'Action',      icon: 'flame',      genre: 'Action',          description: 'High-octane action series', image: CATEGORY_COVERS.shows.action},
+  {id: 'scifi',       name: 'Sci-Fi',      icon: 'rocket',     genre: 'Science-Fiction', description: 'Science fiction shows', image: CATEGORY_COVERS.shows.sciFi},
   {id: 'mystery',     name: 'Mystery',     icon: 'search',     genre: 'Mystery',         description: 'Crime, mystery, whodunit', image: CATEGORY_COVERS.shows.mystery},
-  {id: 'thriller',    name: 'Thriller',    icon: 'speed',      genre: 'Thriller',        description: 'Suspense and thriller shows', image: CATEGORY_COVERS.shows.thriller},
-  {id: 'romance',     name: 'Romance',     icon: 'listMusic',  genre: 'Romance',         description: 'Romance and relationship dramas', image: CATEGORY_COVERS.shows.romance},
-  {id: 'fantasy',     name: 'Fantasy',     icon: 'speed',      genre: 'Fantasy',         description: 'Fantasy worlds and magic', image: CATEGORY_COVERS.shows.fantasy},
+  {id: 'thriller',    name: 'Thriller',    icon: 'zap',        genre: 'Thriller',        description: 'Suspense and thriller shows', image: CATEGORY_COVERS.shows.thriller},
+  {id: 'romance',     name: 'Romance',     icon: 'heart',      genre: 'Romance',         description: 'Romance and relationship dramas', image: CATEGORY_COVERS.shows.romance},
+  {id: 'fantasy',     name: 'Fantasy',     icon: 'wand',       genre: 'Fantasy',         description: 'Fantasy worlds and magic', image: CATEGORY_COVERS.shows.fantasy},
   {id: 'documentary', name: 'Documentary', icon: 'camera',     genre: 'Documentary',     description: 'Documentary series', image: CATEGORY_COVERS.shows.documentary},
 ];

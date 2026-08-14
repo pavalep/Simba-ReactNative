@@ -62,6 +62,12 @@ export interface ColorTokens {
     goldWash: string;
     /** 55.2b: sky blue — video-type indicators */
     sky: string;
+    /** v8: dark sepia / brand ink — for the lion mark and any
+     *  monogram engraved on the parchment background. Same hue
+     *  family as the splash + login screens (`#5C3A1E`). Stays
+     *  fixed across light/dark so the mark always reads as
+     *  "engraved" on the brand surface. */
+    brandInk: string;
   };
   /** 55.2: shadow color used with elevation/shadow styles */
   shadow: string;
@@ -117,6 +123,7 @@ export const darkColors: ColorTokens = {
     goldSoft: 'rgba(201,168,76,0.10)',
     goldWash: 'rgba(201,168,76,0.18)',
     sky: 'rgba(100,181,246,0.15)',
+    brandInk: '#5C3A1E',
   },
   semantic: {
     success: '#4CAF50',
@@ -170,6 +177,7 @@ export const lightColors: ColorTokens = {
     goldSoft: 'rgba(184,146,46,0.08)',
     goldWash: 'rgba(184,146,46,0.12)',
     sky: 'rgba(66,133,244,0.12)',
+    brandInk: '#5C3A1E',
   },
   semantic: {
     success: '#4CAF50',

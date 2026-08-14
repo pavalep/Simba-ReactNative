@@ -22,7 +22,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
   {
     id: 'all',
     name: 'All',
-    icon: 'layoutGrid',
+    icon: 'clapperboard',
     query: 'mediatype:(movies)',
     sort: 'downloads desc',
     description: 'Every movie in the archive, most popular first',
@@ -31,7 +31,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
   {
     id: 'classic-films',
     name: 'Classic Films',
-    icon: 'video',
+    icon: 'award',
     query: 'subject:"classic films" AND mediatype:movies',
     description: 'Timeless cinema from the golden age',
     image: CATEGORY_COVERS.movies.classicFilms,
@@ -39,7 +39,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
   {
     id: 'public-domain',
     name: 'Public Domain',
-    icon: 'folder',
+    icon: 'unlock',
     query: 'subject:"public domain" AND mediatype:movies',
     description: 'Free movies you can watch anytime',
     image: CATEGORY_COVERS.movies.publicDomain,
@@ -55,7 +55,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
   {
     id: 'silent-films',
     name: 'Silent Films',
-    icon: 'music',
+    icon: 'drama',
     query: 'subject:"silent films" AND mediatype:movies',
     description: 'The birth of cinema',
     image: CATEGORY_COVERS.movies.silentFilms,
@@ -63,7 +63,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
   {
     id: 'comedy',
     name: 'Comedy',
-    icon: 'listMusic',
+    icon: 'smile',
     query: 'subject:comedy AND mediatype:movies',
     description: 'Classic laughs from every era',
     image: CATEGORY_COVERS.movies.comedy,
@@ -71,7 +71,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
   {
     id: 'sci-fi',
     name: 'Sci-Fi',
-    icon: 'speed',
+    icon: 'rocket',
     query: 'subject:"science fiction" AND mediatype:movies',
     description: 'Vintage sci-fi adventures',
     image: CATEGORY_COVERS.movies.sciFi,
@@ -79,7 +79,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
   {
     id: 'western',
     name: 'Westerns',
-    icon: 'search',
+    icon: 'sunset',
     query: 'subject:western AND mediatype:movies',
     description: 'Saddle up for classic westerns',
     image: CATEGORY_COVERS.movies.westerns,
@@ -87,7 +87,7 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
   {
     id: 'film-noir',
     name: 'Film Noir',
-    icon: 'sliders',
+    icon: 'moon',
     query: 'subject:"film noir" AND mediatype:movies',
     description: 'Dark, stylish crime dramas',
     image: CATEGORY_COVERS.movies.filmNoir,

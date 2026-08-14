@@ -1,14 +1,18 @@
 import type {WeatherCondition} from '../../../../components/utility/WeatherIcon';
 
+export interface WeatherDetail {
+  description: string;
+  cityName: string;
+  temperatureC: number;
+}
+
 export interface WeatherGreetingProps {
   /**
-   * Time-of-day salutation, e.g. "Good evening". The greeting is
-   * rendered INSIDE the weather card (P66) — not as a standalone
-   * h2 above the chip. The h2 variant of the text is the same as
-   * the home greeting ("Good <time-of-day>, <name>").
+   * Time-of-day salutation, e.g. "Good evening". Rendered as a
+   * small Cormorant Italic label above the user name.
    */
   text: string;
-  /** First name to show after the comma, e.g. "Paval". */
+  /** First name shown as the visual hero of the card, e.g. "Paval". */
   firstName: string;
   /**
    * Weather condition for the Lottie icon. Drives the chip's
@@ -18,18 +22,22 @@ export interface WeatherGreetingProps {
    */
   condition: WeatherCondition;
   /**
-   * Caption shown under the h2, e.g. "Partly cloudy in Mumbai · 28°".
-   * Pass `null` (or omit) to show the loading state
-   * ("Fetching weather information…") instead.
+   * Structured weather detail for the right column of the card.
+   * v9g: passes temperature + description + city as separate
+   * fields so the right column can render them in two stacked
+   * lines (large temperature, small description) rather than
+   * a single caption string sitting under the name. Pass
+   * `null` to show the loading state ("Fetching…") in the
+   * right column.
    */
-  caption?: string | null;
+  weather?: WeatherDetail | null;
   /**
    * True while the very first fetch is in flight and we have no
-   * cached snapshot to show. When true AND caption is null, the
-   * card renders the chip (tinted, no Lottie) + a muted loading
-   * caption so the user always sees a single coherent card.
+   * cached snapshot to show. When true AND weather is null, the
+   * right column renders a muted "Fetching…" line.
    *
-   * When false, the caption (if any) renders normally.
+   * When false, the weather (if any) renders normally.
    */
   isFetching?: boolean;
 }
+

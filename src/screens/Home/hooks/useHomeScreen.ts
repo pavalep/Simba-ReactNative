@@ -25,7 +25,7 @@ import type {WeatherSnapshot} from '../../../services/api/weatherService';
 export type HomeSection =
   | {type: 'GREETING'}
   | {type: 'HERO'; data: SessionEntry | null}
-  | {type: 'SUBSECTION_TITLE'; label: string; variant?: 'overline' | 'displaySans'}
+  | {type: 'SUBSECTION_TITLE'; label: string; variant?: 'overline' | 'displaySans' | 'displaySerif'}
   | {type: 'SHELF'; title: string; items: any[]; seeAllRoute?: keyof RootStackParamList}
   | {type: 'GENRE'; genres: {name: string; count: number}[]}
   | {type: 'PLAYLISTS'; items: any[]}
@@ -45,16 +45,28 @@ export type HomeSection =
 
 // ── Helpers ──
 
+interface WeatherDetail {
+  description: string;
+  cityName: string;
+  temperatureC: number;
+}
+
 interface GreetingInfo {
   text: string;
   /** Weather condition for the Lottie icon — driven by the live snapshot. */
   condition: WeatherCondition;
-  /** Short caption shown under the h2, e.g. "Sunny in Mumbai · 28°". */
-  caption: string | null;
+  /**
+   * Structured weather detail for the right column of the card
+   * (v9g: temperature + description/city, separated from the
+   * greeting so nothing sits directly under the name). Null when
+   * we don't yet have a snapshot — the card renders a loading
+   * state in that column.
+   */
+  weather: WeatherDetail | null;
   /**
    * True only while the very first cold-start fetch is in flight AND
    * we have no cached snapshot to fall back on. P66: the card always
-   * renders, and the caption becomes a "Fetching weather…"
+   * renders, and the right column becomes a "Fetching weather…"
    * placeholder when this is true.
    */
   isFirstLoad: boolean;
@@ -67,23 +79,27 @@ function greetingTextFromHour(hour: number): string {
   return 'Good night';
 }
 
-function buildCaption(snapshot: WeatherSnapshot | null): string | null {
+function buildWeather(snapshot: WeatherSnapshot | null): WeatherDetail | null {
   if (!snapshot) {return null;}
-  return `${snapshot.description} in ${snapshot.cityName} · ${snapshot.temperatureC}°`;
+  return {
+    description: snapshot.description,
+    cityName: snapshot.cityName,
+    temperatureC: snapshot.temperatureC,
+  };
 }
 
 function buildGreeting(snapshot: WeatherSnapshot | null, isFirstLoad: boolean): GreetingInfo {
   const hour = new Date().getHours();
   const text = greetingTextFromHour(hour);
   const condition: WeatherCondition = snapshot?.condition ?? 'partlyCloudy';
-  // P66: don't blank the caption during the first load — the card
+  // P66: don't blank the weather during the first load — the card
   // handles the loading state itself with a "Fetching weather…"
-  // placeholder. We still pass the snapshot's caption if we have
+  // placeholder. We still pass the snapshot's weather if we have
   // one (e.g. a persisted cache from a previous run) so the user
   // sees real data instead of "Fetching" while the fresh fetch
   // runs in the background.
-  const caption = buildCaption(snapshot);
-  return {text, condition, caption, isFirstLoad};
+  const weather = buildWeather(snapshot);
+  return {text, condition, weather, isFirstLoad};
 }
 
 function isInProgress(item: SessionEntry): boolean {
@@ -220,7 +236,12 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       //     3. Followed Podcasts (collapsible, auto-expanded when data)
       // All three always render — empty-state hints cover the no-data
       // case so the group never disappears.
-      {type: 'SUBSECTION_TITLE', label: 'Your Library', variant: 'displaySans'},
+      // v9f: Cormorant Garamond Italic 18 px at 0.9 gold — readable
+      // editorial accent, not a competing heading. v9 (full gold)
+      // was attention-seeking; v9b (goldGlow 0.25) was invisible;
+      // v9c (0.6) was close; v9d (0.7), v9e (0.8) needed more;
+      // v9f (0.9) is approaching full but stays slightly soft.
+      {type: 'SUBSECTION_TITLE', label: 'Your Library', variant: 'displaySerif'},
       {
         type: 'SHELF',
         title: 'Recently Played',
@@ -237,7 +258,10 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       // curated content (above) vs. catalog browse (below). These are
       // not collapsible (per the P56 scope: only the three Your Library
       // rails get the chevron).
-      {type: 'SUBSECTION_TITLE', label: 'Discover', variant: 'displaySans'},
+      // v9f: same treatment as "Your Library" — Cormorant Italic
+      // 18 px at 0.9 gold so both parent-block titles share a
+      // single visual voice.
+      {type: 'SUBSECTION_TITLE', label: 'Discover', variant: 'displaySerif'},
       {type: 'MOVIES'},
       {type: 'PREFILLED_PODCASTS'},
       {type: 'PREFILLED_MUSIC'},

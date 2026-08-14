@@ -17,17 +17,18 @@ export interface PodcastCategory {
 }
 
 export const PODCAST_CATEGORIES: PodcastCategory[] = [
-  {id: 'all', name: 'All',       icon: 'layoutGrid', image: CATEGORY_COVERS.podcasts.all},
-  {id: 1,    name: 'Arts',      icon: 'music',      image: CATEGORY_COVERS.podcasts.arts},
-  {id: 10,   name: 'Music',     icon: 'music',      image: CATEGORY_COVERS.podcasts.music},
-  {id: 15,   name: 'Business',  icon: 'folder',     image: CATEGORY_COVERS.podcasts.business},
-  {id: 20,   name: 'Comedy',    icon: 'listMusic',  image: CATEGORY_COVERS.podcasts.comedy},
-  {id: 25,   name: 'Education', icon: 'search',     image: CATEGORY_COVERS.podcasts.education},
-  {id: 29,   name: 'Health',    icon: 'camera',     image: CATEGORY_COVERS.podcasts.health},
-  {id: 30,   name: 'Technology',icon: 'speed',      image: CATEGORY_COVERS.podcasts.technology},
-  {id: 33,   name: 'History',   icon: 'video',      image: CATEGORY_COVERS.podcasts.history},
-  {id: 35,   name: 'News',      icon: 'camera',     image: CATEGORY_COVERS.podcasts.news},
-  {id: 49,   name: 'Science',   icon: 'search',     image: CATEGORY_COVERS.podcasts.science},
-  {id: 55,   name: 'Sports',    icon: 'speed',      image: CATEGORY_COVERS.podcasts.sports},
-  {id: 60,   name: 'TV & Film', icon: 'video',      image: CATEGORY_COVERS.podcasts.tvFilm},
+  // v9: sensible per-genre glyphs (Lucide) on the Home rail tiles.
+  {id: 'all', name: 'All',        icon: 'micVocal',    image: CATEGORY_COVERS.podcasts.all},
+  {id: 1,    name: 'Arts',       icon: 'palette',     image: CATEGORY_COVERS.podcasts.arts},
+  {id: 10,   name: 'Music',      icon: 'disc3',       image: CATEGORY_COVERS.podcasts.music},
+  {id: 15,   name: 'Business',   icon: 'briefcase',   image: CATEGORY_COVERS.podcasts.business},
+  {id: 20,   name: 'Comedy',     icon: 'smile',       image: CATEGORY_COVERS.podcasts.comedy},
+  {id: 25,   name: 'Education',  icon: 'graduationCap', image: CATEGORY_COVERS.podcasts.education},
+  {id: 29,   name: 'Health',     icon: 'heartPulse',  image: CATEGORY_COVERS.podcasts.health},
+  {id: 30,   name: 'Technology', icon: 'cpu',         image: CATEGORY_COVERS.podcasts.technology},
+  {id: 33,   name: 'History',    icon: 'history',     image: CATEGORY_COVERS.podcasts.history},
+  {id: 35,   name: 'News',       icon: 'newspaper',   image: CATEGORY_COVERS.podcasts.news},
+  {id: 49,   name: 'Science',    icon: 'flaskConical', image: CATEGORY_COVERS.podcasts.science},
+  {id: 55,   name: 'Sports',     icon: 'trophy',      image: CATEGORY_COVERS.podcasts.sports},
+  {id: 60,   name: 'TV & Film',  icon: 'tv',          image: CATEGORY_COVERS.podcasts.tvFilm},
 ];

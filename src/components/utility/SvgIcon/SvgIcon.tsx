@@ -46,6 +46,45 @@ import CheckSvg from '../../../assets/svg/ic_check.svg';
 // v7: library rail leading icons (Recently Played / Bookmarks / Followed Podcasts)
 import ClockSvg from '../../../assets/svg/ic_clock.svg';
 import PodcastRingsSvg from '../../../assets/svg/ic_podcast_rings.svg';
+// v8: Home category cards — sensible per-category glyphs (Lucide)
+import ClapperboardSvg from '../../../assets/svg/ic_clapperboard.svg';
+import AwardSvg from '../../../assets/svg/ic_award.svg';
+import UnlockSvg from '../../../assets/svg/ic_unlock.svg';
+import DramaSvg from '../../../assets/svg/ic_drama.svg';
+import SunsetSvg from '../../../assets/svg/ic_sunset.svg';
+import RocketSvg from '../../../assets/svg/ic_rocket.svg';
+import SmileSvg from '../../../assets/svg/ic_smile.svg';
+// v9: Home category cards (music / radio / live TV / audiobooks / podcasts / shows / archive) — Lucide
+import TreePalmSvg from '../../../assets/svg/ic_tree_palm.svg';
+import ZapSvg from '../../../assets/svg/ic_zap.svg';
+import MicVocalSvg from '../../../assets/svg/ic_mic_vocal.svg';
+import GuitarSvg from '../../../assets/svg/ic_guitar.svg';
+import AudioWaveformSvg from '../../../assets/svg/ic_audio_waveform.svg';
+import PianoSvg from '../../../assets/svg/ic_piano.svg';
+import WindSvg from '../../../assets/svg/ic_wind.svg';
+import Disc3Svg from '../../../assets/svg/ic_disc_3.svg';
+import HeartPulseSvg from '../../../assets/svg/ic_heart_pulse.svg';
+import BookSvg from '../../../assets/svg/ic_book.svg';
+import RadioTowerSvg from '../../../assets/svg/ic_radio_tower.svg';
+import FeatherSvg from '../../../assets/svg/ic_feather.svg';
+import NewspaperSvg from '../../../assets/svg/ic_newspaper.svg';
+import CompassSvg from '../../../assets/svg/ic_compass.svg';
+import BookOpenSvg from '../../../assets/svg/ic_book_open.svg';
+import PaletteSvg from '../../../assets/svg/ic_palette.svg';
+import TvSvg from '../../../assets/svg/ic_tv.svg';
+import MegaphoneSvg from '../../../assets/svg/ic_megaphone.svg';
+import CpuSvg from '../../../assets/svg/ic_cpu.svg';
+import BriefcaseSvg from '../../../assets/svg/ic_briefcase.svg';
+import TrophySvg from '../../../assets/svg/ic_trophy.svg';
+import ArchiveSvg from '../../../assets/svg/ic_archive.svg';
+import FlaskConicalSvg from '../../../assets/svg/ic_flask_conical.svg';
+import GraduationCapSvg from '../../../assets/svg/ic_graduation_cap.svg';
+import HeartSvg from '../../../assets/svg/ic_heart.svg';
+import SparklesSvg from '../../../assets/svg/ic_sparkles.svg';
+import HistorySvg from '../../../assets/svg/ic_history.svg';
+import FlameSvg from '../../../assets/svg/ic_flame.svg';
+import WandSvg from '../../../assets/svg/ic_wand.svg';
+import VideoCameraSvg from '../../../assets/svg/ic_video_camera.svg';
 
 const icons = {
   home: HomeSvg,
@@ -102,6 +141,45 @@ const icons = {
   // v7: library rail leading icons
   clock: ClockSvg,
   podcastRings: PodcastRingsSvg,
+  // v8: Home category cards — sensible per-category glyphs
+  clapperboard: ClapperboardSvg,
+  award: AwardSvg,
+  unlock: UnlockSvg,
+  drama: DramaSvg,
+  sunset: SunsetSvg,
+  rocket: RocketSvg,
+  smile: SmileSvg,
+  // v9: Home category cards (music / radio / live TV / audiobooks / podcasts / shows / archive)
+  treePalm: TreePalmSvg,
+  zap: ZapSvg,
+  micVocal: MicVocalSvg,
+  guitar: GuitarSvg,
+  audioWaveform: AudioWaveformSvg,
+  piano: PianoSvg,
+  wind: WindSvg,
+  disc3: Disc3Svg,
+  heartPulse: HeartPulseSvg,
+  book: BookSvg,
+  radioTower: RadioTowerSvg,
+  feather: FeatherSvg,
+  newspaper: NewspaperSvg,
+  compass: CompassSvg,
+  bookOpen: BookOpenSvg,
+  palette: PaletteSvg,
+  tv: TvSvg,
+  megaphone: MegaphoneSvg,
+  cpu: CpuSvg,
+  briefcase: BriefcaseSvg,
+  trophy: TrophySvg,
+  archive: ArchiveSvg,
+  flaskConical: FlaskConicalSvg,
+  graduationCap: GraduationCapSvg,
+  heart: HeartSvg,
+  sparkles: SparklesSvg,
+  history: HistorySvg,
+  flame: FlameSvg,
+  wand: WandSvg,
+  videoCamera: VideoCameraSvg,
 } as const;
 
 export type SvgIconName = keyof typeof icons;

@@ -39,14 +39,15 @@ export interface AudiobookCategory {
 }
 
 export const AUDIOBOOK_CATEGORIES: AudiobookCategory[] = [
-  {id: 'all',       name: 'All',         icon: 'layoutGrid', tag: '',                 description: 'Every audiobook in one place', image: CATEGORY_COVERS.audiobooks.all},
-  {id: 'fiction',   name: 'Fiction',     icon: 'listMusic',  tag: 'fiction',          description: 'Classic and modern fiction',   image: CATEGORY_COVERS.audiobooks.fiction},
+  // v9: sensible per-genre glyphs (Lucide) on the Home rail tiles.
+  {id: 'all',       name: 'All',         icon: 'book',       tag: '',                 description: 'Every audiobook in one place', image: CATEGORY_COVERS.audiobooks.all},
+  {id: 'fiction',   name: 'Fiction',     icon: 'bookOpen',   tag: 'fiction',          description: 'Classic and modern fiction',   image: CATEGORY_COVERS.audiobooks.fiction},
   {id: 'mystery',   name: 'Mystery',     icon: 'search',     tag: 'mystery',          description: 'Crime, detective, suspense',    image: CATEGORY_COVERS.audiobooks.mystery},
-  {id: 'romance',   name: 'Romance',     icon: 'listMusic',  tag: 'romance',          description: 'Love stories and romance',      image: CATEGORY_COVERS.audiobooks.romance},
-  {id: 'scifi',     name: 'Sci-Fi',      icon: 'speed',      tag: 'science fiction',  description: 'Science fiction and fantasy',   image: CATEGORY_COVERS.audiobooks.sciFi},
-  {id: 'history',   name: 'History',     icon: 'video',      tag: 'history',          description: 'Historical accounts and memoirs', image: CATEGORY_COVERS.audiobooks.history},
-  {id: 'poetry',    name: 'Poetry',      icon: 'music',      tag: 'poetry',           description: 'Classic and modern poetry',     image: CATEGORY_COVERS.audiobooks.poetry},
-  {id: 'adventure', name: 'Adventure',   icon: 'speed',      tag: 'adventure',        description: 'Action, exploration, travel',   image: CATEGORY_COVERS.audiobooks.adventure},
+  {id: 'romance',   name: 'Romance',     icon: 'heart',      tag: 'romance',          description: 'Love stories and romance',      image: CATEGORY_COVERS.audiobooks.romance},
+  {id: 'scifi',     name: 'Sci-Fi',      icon: 'rocket',     tag: 'science fiction',  description: 'Science fiction and fantasy',   image: CATEGORY_COVERS.audiobooks.sciFi},
+  {id: 'history',   name: 'History',     icon: 'history',    tag: 'history',          description: 'Historical accounts and memoirs', image: CATEGORY_COVERS.audiobooks.history},
+  {id: 'poetry',    name: 'Poetry',      icon: 'feather',    tag: 'poetry',           description: 'Classic and modern poetry',     image: CATEGORY_COVERS.audiobooks.poetry},
+  {id: 'adventure', name: 'Adventure',   icon: 'compass',    tag: 'adventure',        description: 'Action, exploration, travel',   image: CATEGORY_COVERS.audiobooks.adventure},
 ];
 
 /** Quick-search presets for the Internet Archive screen. */
@@ -89,12 +90,13 @@ export interface ArchiveCategory {
 }
 
 export const ARCHIVE_CATEGORIES: ArchiveCategory[] = [
-  {id: 'all',        name: 'All',            icon: 'layoutGrid', query: 'mediatype:(audio OR movies)', description: 'Every archive item', image: CATEGORY_COVERS.archive.all},
-  {id: 'audio',      name: 'Audio',          icon: 'headphones', query: 'mediatype:(audio)',            description: 'Audio archive (radio, music, speeches)', image: CATEGORY_COVERS.archive.audio},
-  {id: 'video',      name: 'Video',          icon: 'video',      query: 'mediatype:(movies)',           description: 'Films & documentaries', image: CATEGORY_COVERS.archive.video},
-  {id: 'oldtime',    name: 'Old Time Radio', icon: 'volume',     query: 'mediatype:(audio) AND subject:("old time radio")', description: 'Vintage radio shows', image: CATEGORY_COVERS.archive.oldTime},
-  {id: 'concerts',   name: 'Concerts',       icon: 'music',      query: 'mediatype:(audio) AND subject:("live concerts")', description: 'Live concert recordings', image: CATEGORY_COVERS.archive.concerts},
-  {id: 'speeches',   name: 'Speeches',       icon: 'volume',     query: 'mediatype:(audio) AND subject:(speeches)',        description: 'Famous speeches and lectures', image: CATEGORY_COVERS.archive.speeches},
-  {id: 'news',       name: 'News',           icon: 'bell',       query: 'mediatype:(audio) AND subject:(news)',           description: 'News reports and broadcasts', image: CATEGORY_COVERS.archive.news},
-  {id: 'audiobooks', name: 'Audiobooks',     icon: 'bookmark',   query: 'mediatype:(audio) AND subject:(audiobooks)',     description: 'Spoken-word audiobooks', image: CATEGORY_COVERS.archive.audiobooks},
+  // v9: sensible per-genre glyphs (Lucide) on the Home rail tiles.
+  {id: 'all',        name: 'All',            icon: 'archive',     query: 'mediatype:(audio OR movies)', description: 'Every archive item', image: CATEGORY_COVERS.archive.all},
+  {id: 'audio',      name: 'Audio',          icon: 'audioWaveform', query: 'mediatype:(audio)',         description: 'Audio archive (radio, music, speeches)', image: CATEGORY_COVERS.archive.audio},
+  {id: 'video',      name: 'Video',          icon: 'videoCamera', query: 'mediatype:(movies)',          description: 'Films & documentaries', image: CATEGORY_COVERS.archive.video},
+  {id: 'oldtime',    name: 'Old Time Radio', icon: 'radioTower',  query: 'mediatype:(audio) AND subject:("old time radio")', description: 'Vintage radio shows', image: CATEGORY_COVERS.archive.oldTime},
+  {id: 'concerts',   name: 'Concerts',       icon: 'micVocal',    query: 'mediatype:(audio) AND subject:("live concerts")', description: 'Live concert recordings', image: CATEGORY_COVERS.archive.concerts},
+  {id: 'speeches',   name: 'Speeches',       icon: 'megaphone',   query: 'mediatype:(audio) AND subject:(speeches)',        description: 'Famous speeches and lectures', image: CATEGORY_COVERS.archive.speeches},
+  {id: 'news',       name: 'News',           icon: 'newspaper',   query: 'mediatype:(audio) AND subject:(news)',           description: 'News reports and broadcasts', image: CATEGORY_COVERS.archive.news},
+  {id: 'audiobooks', name: 'Audiobooks',     icon: 'book',        query: 'mediatype:(audio) AND subject:(audiobooks)',     description: 'Spoken-word audiobooks', image: CATEGORY_COVERS.archive.audiobooks},
 ];

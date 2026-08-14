@@ -48,11 +48,6 @@ interface HomeHeaderProps {
   onAvatarPress?: () => void;
   isScanning?: boolean;
   avatarUrl?: string | null;
-  /** Tagline shown beneath the wordmark. Defaults to the official
-   *  brand tagline ("Your media, your way"). The Home screen
-   *  may override this — e.g. with a time-of-day greeting — when
-   *  it wants the header to mirror the body greeting. */
-  tagline?: string;
 }
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
@@ -61,7 +56,6 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   onAvatarPress,
   isScanning,
   avatarUrl,
-  tagline = BRAND.tagline,
 }) => {
   const {colors} = useTheme();
   const {reduceMotion} = useAccessibility();
@@ -121,15 +115,18 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
         styles.root,
         {backgroundColor: colors.background.primary},
       ]}>
-      {/* Left: lion mark + wordmark + tagline */}
+      {/* Left: lion mark + wordmark (no subtitle — design decision) */}
       <View style={styles.brand}>
-        <View
-          style={[
-            styles.logoContainer,
-            {backgroundColor: colors.accent.gold + '18'},
-          ]}>
-          <SvgIcon name="lion" size={32} color={colors.accent.gold} />
-        </View>
+        {/* v8: lion renders as an engraved brand-ink mark on the
+            parchment — no background container, no gold tint. The
+            SVG is fill="currentColor" so the color prop drives the
+            mark; size is bumped from 32 → 44 for visual presence. */}
+        <SvgIcon
+          name="lion"
+          size={44}
+          color={colors.accent.brandInk}
+          style={styles.lion}
+        />
         <View style={styles.brandText}>
           <View style={styles.wordmarkRow}>
             <AppText
@@ -152,13 +149,6 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
               />
             ) : null}
           </View>
-          <AppText
-            variant="bodySmall"
-            color="secondary"
-            style={styles.tagline}
-            numberOfLines={1}>
-            {tagline}
-          </AppText>
         </View>
       </View>
 
@@ -218,16 +208,15 @@ const styles = StyleSheet.create({
   brand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
     flexShrink: 1,
   },
-  logoContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
+  // v8: lion mark rendered as an engraved brand-ink element.
+  // No background container. Slight optical inset so the SVG's
+  // own internal padding (the SVG viewBox starts at the mane edge)
+  // visually centers the mark against the wordmark cap height.
+  lion: {
+    marginTop: 2,
   },
   brandText: {
     flexShrink: 1,
@@ -242,12 +231,6 @@ const styles = StyleSheet.create({
     // from the typography token. Font size is clamped via
     // useWindowDimensions in the component.
     paddingTop: 2, // optical alignment — Allura sits slightly low
-  },
-  tagline: {
-    // v7 bodySmall (14px / 400) — light letter-spacing, no margin.
-    letterSpacing: 0.4,
-    marginTop: 0,
-    opacity: 0.7,
   },
   scanningDot: {
     width: 8,
