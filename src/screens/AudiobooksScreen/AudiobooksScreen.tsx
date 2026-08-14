@@ -29,6 +29,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {FilterChips} from '../../components/utility/FilterChips';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import {useToast} from '../../components/feedback/Toast';
@@ -37,6 +38,12 @@ import {archiveImageUrl, archiveIdentifierFromUrl} from '../../services/api/inte
 import type {AudiobookResult} from '../../types/api';
 
 type Props = AudiobooksScreenProps;
+
+// v10 Wave 4: genre chips run through the shared FilterChips primitive (wrap mode)
+const GENRE_CHIP_ITEMS = LIBRIVOX_GENRES.map(genre => ({
+  key: genre,
+  label: genre,
+}));
 
 // ─── Normalized row ────────────────────────────────────────────────────
 
@@ -223,87 +230,19 @@ const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
               : tab === 'genres'
               ? 'Select a genre to browse.'
               : 'No recent audiobooks found.'
-          }>
-          {/* Genre chips — only on the Genres tab when no results yet */}
-          {tab === 'genres' && (
-            <View style={styles.chipWrap}>
-              {LIBRIVOX_GENRES.map(g => {
-                const active = selectedGenre === g;
-                return (
-                  <TouchableOpacity
-                    key={g}
-                    activeOpacity={0.8}
-                    onPress={() => selectGenre(g)}
-                    style={[
-                      styles.genreChip,
-                      {
-                        backgroundColor: active
-                          ? colors.accent.gold
-                          : colors.background.elevated,
-                        borderColor: active
-                          ? colors.accent.gold
-                          : colors.border.subtle,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{selected: active}}>
-                    <AppText
-                      variant="caption"
-                      style={{
-                        color: active
-                          ? colors.background.primary
-                          : colors.text.secondary,
-                        fontWeight: '700',
-                      }}>
-                      {g}
-                    </AppText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-        </Placeholder>
+          } />
       );
     }
 
     // ── Genre chips above the list (Genres tab, already loaded) ──
     const genreChipsHeader =
       tab === 'genres' ? (
-        <View style={styles.chipWrap}>
-          {LIBRIVOX_GENRES.map(g => {
-            const active = selectedGenre === g;
-            return (
-              <TouchableOpacity
-                key={g}
-                activeOpacity={0.8}
-                onPress={() => selectGenre(g)}
-                style={[
-                  styles.genreChip,
-                  {
-                    backgroundColor: active
-                      ? colors.accent.gold
-                      : colors.background.elevated,
-                    borderColor: active
-                      ? colors.accent.gold
-                      : colors.border.subtle,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityState={{selected: active}}>
-                <AppText
-                  variant="caption"
-                  style={{
-                    color: active
-                      ? colors.background.primary
-                      : colors.text.secondary,
-                    fontWeight: '700',
-                  }}>
-                  {g}
-                </AppText>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        <FilterChips
+          wrap
+          items={GENRE_CHIP_ITEMS}
+          selectedKey={selectedGenre}
+          onSelect={selectGenre}
+        />
       ) : null;
 
     // ── Loaded list with infinite scroll ──
@@ -531,21 +470,6 @@ const styles = StyleSheet.create({
   },
   // ── Center states ──
   // (Replaced by the shared <Placeholder> component.)
-  // ── Genre chips ──
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    gap: spacing.sm,
-    justifyContent: 'center',
-  },
-  genreChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-  },
   // ── List ──
   listContent: {
     padding: spacing.md,

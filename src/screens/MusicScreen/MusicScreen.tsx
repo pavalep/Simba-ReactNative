@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  ScrollView,
 } from 'react-native';
 import {TabView, TabBar, type SceneRendererProps, type Route} from 'react-native-tab-view';
 import FastImage from 'react-native-fast-image';
@@ -33,12 +32,20 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {FilterChips} from '../../components/utility/FilterChips';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import {useToast} from '../../components/feedback/Toast';
 import type {JamendoTrackResult} from '../../types/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
+
+// v10 Wave 4: genre chips run through the shared FilterChips primitive —
+// labels capitalized exactly as the old bespoke row did.
+const GENRE_CHIP_ITEMS = JAMENDO_GENRES.map(genre => ({
+  key: genre,
+  label: genre.charAt(0).toUpperCase() + genre.slice(1),
+}));
 
 function formatDuration(duration: number): string {
   if (!duration || duration <= 0) return '--:--';
@@ -221,51 +228,13 @@ const MusicTabScene: React.FC<MusicTabSceneProps> = React.memo(
 
     return (
       <View style={styles.scene}>
-        {/* ── Genre chips (Genres tab only) ── */}
+        {/* ── Genre chips (Genres tab only) — shared FilterChips ── */}
         {tab === 'genres' && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.genreChipScroll}
-            style={styles.genreChipBar}>
-            {JAMENDO_GENRES.map(genre => {
-              const active = selectedGenre === genre;
-              return (
-                <TouchableOpacity
-                  key={genre}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    onSelectGenre(active ? null : genre)
-                  }
-                  accessibilityRole="button"
-                  accessibilityState={{selected: active}}
-                  style={[
-                    styles.genreChip,
-                    {
-                      backgroundColor: active
-                        ? colors.accent.gold
-                        : colors.background.elevated,
-                      borderColor: active
-                        ? colors.accent.gold
-                        : colors.border.subtle,
-                    },
-                  ]}>
-                  <AppText
-                    variant="caption"
-                    style={[
-                      styles.genreChipText,
-                      {
-                        color: active
-                          ? colors.text.inverse
-                          : colors.text.secondary,
-                      },
-                    ]}>
-                    {genre.charAt(0).toUpperCase() + genre.slice(1)}
-                  </AppText>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          <FilterChips
+            items={GENRE_CHIP_ITEMS}
+            selectedKey={selectedGenre}
+            onSelect={genre => onSelectGenre(genre || null)}
+          />
         )}
 
         {/* ── Prompt states (no fetch until prerequisite met) ── */}
@@ -594,24 +563,6 @@ const styles = StyleSheet.create({
   // ── Scene ──
   scene: {
     flex: 1,
-  },
-  // ── Genre chips ──
-  genreChipBar: {
-    maxHeight: 52,
-  },
-  genreChipScroll: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  genreChip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-  },
-  genreChipText: {
-    fontWeight: '700',
   },
   // ── List ──
   listContent: {

@@ -36,7 +36,8 @@ import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import {SvgIcon} from '../../components/utility/SvgIcon';
+import {SvgIcon, type SvgIconName} from '../../components/utility/SvgIcon';
+import {FilterChips} from '../../components/utility/FilterChips';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import {useToast} from '../../components/feedback/Toast';
@@ -47,6 +48,13 @@ import type {
 } from '../../types/api';
 
 type Props = ArchiveScreenProps;
+
+// v10 Wave 4: quick-search chips run through the shared FilterChips primitive
+const QUICK_SEARCH_CHIP_ITEMS = ARCHIVE_QUICK_SEARCHES.map(entry => ({
+  key: entry.query,
+  label: entry.label,
+  icon: entry.icon as SvgIconName,
+}));
 
 // ─── Normalized rows ───────────────────────────────────────────────────
 
@@ -419,36 +427,10 @@ export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
         />
         {/* Quick-search chips */}
         {!searchQuery.trim() && (
-          <FlatList
-            horizontal
-            data={ARCHIVE_QUICK_SEARCHES}
-            keyExtractor={entry => entry.id}
-            renderItem={({item: entry}) => (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => submitSearch(entry.query)}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: colors.background.elevated,
-                    borderColor: colors.border.subtle,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Search ${entry.label}`}>
-                <SvgIcon
-                  name={entry.icon as never}
-                  size={14}
-                  color={colors.accent.gold}
-                />
-                <AppText variant="caption">{entry.label}</AppText>
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.chipScroll}
-            showsHorizontalScrollIndicator={false}
-            initialNumToRender={ARCHIVE_QUICK_SEARCHES.length}
-            windowSize={5}
-            maxToRenderPerBatch={12}
+          <FilterChips
+            items={QUICK_SEARCH_CHIP_ITEMS}
+            selectedKey={null}
+            onSelect={submitSearch}
           />
         )}
       </View>
@@ -476,19 +458,6 @@ const styles = StyleSheet.create({
   searchSection: {
     paddingTop: spacing.sm,
     gap: spacing.sm,
-  },
-  chipScroll: {
-    paddingHorizontal: spacing.md,
-    gap: spacing.sm,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    gap: spacing.xs,
   },
   sceneContainer: {
     flex: 1,

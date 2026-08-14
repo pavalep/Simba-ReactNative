@@ -31,6 +31,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {FilterChips} from '../../components/utility/FilterChips';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import {shareContent} from '../../services/shareService';
@@ -149,68 +150,6 @@ const StationCard: React.FC<StationCardProps> = React.memo(
   },
 );
 
-// ─── In-tab Tag Chips ─────────────────────────────────────────────────
-
-interface TagChipsProps {
-  tags: RadioBrowseTag[];
-  selectedTag: string | null;
-  tagsLoaded: boolean;
-  onSelect: (name: string) => void;
-}
-
-const TagChips: React.FC<TagChipsProps> = React.memo(
-  ({tags, selectedTag, tagsLoaded, onSelect}) => {
-    const {colors} = useTheme();
-    if (!tagsLoaded) {
-      return (
-        <View style={styles.chipWrap}>
-          <ActivityOrb size={18} />
-        </View>
-      );
-    }
-    if (tags.length === 0) return null;
-    return (
-      <FlatList
-        horizontal
-        data={tags}
-        keyExtractor={tag => tag.name}
-        renderItem={({item: tag}) => {
-          const active = selectedTag === tag.name;
-          return (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => onSelect(tag.name)}
-              style={[
-                styles.chip,
-                styles.tagChip,
-                {
-                  backgroundColor: active ? colors.accent.goldDim : colors.background.elevated,
-                  borderColor: active ? colors.accent.gold : colors.border.subtle,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{selected: active}}>
-              <AppText
-                variant="caption"
-                style={[
-                  styles.tagText,
-                  {color: active ? colors.accent.gold : colors.text.secondary},
-                ]}>
-                {tag.name} {tag.stationCount != null ? `· ${tag.stationCount}` : ''}
-              </AppText>
-            </TouchableOpacity>
-          );
-        }}
-        contentContainerStyle={styles.chipScroll}
-        showsHorizontalScrollIndicator={false}
-        initialNumToRender={24}
-        windowSize={5}
-        maxToRenderPerBatch={12}
-      />
-    );
-  },
-);
-
 // ─── Tab Scene ────────────────────────────────────────────────────────
 
 interface RadioTabSceneProps {
@@ -220,7 +159,7 @@ interface RadioTabSceneProps {
   tags: RadioBrowseTag[];
   tagsLoaded: boolean;
   selectedTag: string | null;
-  setSelectedTag: (tag: string) => void;
+  setSelectedTag: (tag: string | null) => void;
   isOnline: boolean;
   refreshing: boolean;
   ensureLoaded: (tab: RadioBrowseMode) => void;
@@ -292,6 +231,18 @@ const RadioTabScene: React.FC<RadioTabSceneProps> = React.memo(
 
     const rows = useMemo<StationRow[]>(() => items.map(toRow), [items]);
 
+    // v10 Wave 4: tag chips run through the shared FilterChips primitive;
+    // the station count rides the optional trailing badge.
+    const tagChipItems = useMemo(
+      () =>
+        tags.map(tag => ({
+          key: tag.name,
+          label: tag.name,
+          count: tag.stationCount,
+        })),
+      [tags],
+    );
+
     // ── Page-1 loader ──
     if (!hasLoaded && isLoading) {
       return (
@@ -348,12 +299,17 @@ const RadioTabScene: React.FC<RadioTabSceneProps> = React.memo(
       (tab === 'genres' || tab === 'countries' || tab === 'languages');
 
     const tagHeader = showTags ? (
-      <TagChips
-        tags={tags}
-        selectedTag={selectedTag}
-        tagsLoaded={tagsLoaded}
-        onSelect={setSelectedTag}
-      />
+      !tagsLoaded ? (
+        <View style={styles.chipWrap}>
+          <ActivityOrb size={18} />
+        </View>
+      ) : tags.length === 0 ? null : (
+        <FilterChips
+          items={tagChipItems}
+          selectedKey={selectedTag}
+          onSelect={setSelectedTag}
+        />
+      )
     ) : null;
 
     // ── Loaded list ──
@@ -651,18 +607,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     alignItems: 'center',
   },
-  chipScroll: {paddingHorizontal: spacing.md, gap: spacing.sm},
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-  },
-  tagChip: {paddingVertical: 6},
-  tagText: {fontSize: 12, fontWeight: '600'},
 
   listContent: {padding: spacing.md, paddingBottom: spacing.xxl + 80},
   separator: {height: spacing.sm},

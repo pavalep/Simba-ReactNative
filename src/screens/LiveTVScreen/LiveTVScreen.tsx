@@ -34,6 +34,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SvgIcon} from '../../components/utility/SvgIcon';
+import {FilterChips} from '../../components/utility/FilterChips';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import {shareContent} from '../../services/shareService';
@@ -142,63 +143,6 @@ const ChannelCard: React.FC<ChannelCardProps> = React.memo(
   },
 );
 
-// ─── Category Chips ─────────────────────────────────────────
-
-interface CategoryChipsProps {
-  categories: IPTVCategory[];
-  selectedCategory: string | null;
-  onSelect: (name: string) => void;
-}
-
-const CategoryChips: React.FC<CategoryChipsProps> = React.memo(
-  ({categories, selectedCategory, onSelect}) => {
-    const {colors} = useTheme();
-    return (
-      <FlatList
-        horizontal
-        data={categories}
-        keyExtractor={cat => cat.id}
-        renderItem={({item: cat}) => {
-          const isSelected = selectedCategory === cat.name;
-          return (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => onSelect(cat.name)}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: isSelected
-                    ? colors.accent.goldDim
-                    : colors.background.elevated,
-                  borderColor: isSelected
-                    ? colors.accent.gold
-                    : colors.border.subtle,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityState={{selected: isSelected}}>
-              <AppText
-                variant="caption"
-                style={[
-                  styles.chipText,
-                  {
-                    color: isSelected
-                      ? colors.accent.gold
-                      : colors.text.secondary,
-                  },
-                ]}>
-                {cat.name} · {cat.channelCount}
-              </AppText>
-            </TouchableOpacity>
-          );
-        }}
-        contentContainerStyle={styles.chipScroll}
-        showsHorizontalScrollIndicator={false}
-      />
-    );
-  },
-);
-
 // ─── Tab Scene ───────────────────────────────────────────────
 
 interface LiveTVTabSceneProps {
@@ -259,6 +203,19 @@ const LiveTVTabScene: React.FC<LiveTVTabSceneProps> = React.memo(
       }
       return scope.items.map(toRow);
     }, [tab, favorites, scope.items]);
+
+    // v10 Wave 4: category chips run through the shared FilterChips primitive
+    // (key = category name — matches the selectedCategory value used by the
+    // hook when filtering channels)
+    const categoryChipItems = useMemo(
+      () =>
+        categories.map(cat => ({
+          key: cat.name,
+          label: cat.name,
+          count: cat.channelCount,
+        })),
+      [categories],
+    );
 
     const {hasLoaded, isLoading, isLoadingMore, limit, error} = scope;
 
@@ -362,10 +319,10 @@ const LiveTVTabScene: React.FC<LiveTVTabSceneProps> = React.memo(
           )}
           ListHeaderComponent={
             showCategories ? (
-              <CategoryChips
-                categories={categories}
-                selectedCategory={selectedCategory}
-                onSelect={selectCategory}
+              <FilterChips
+                items={categoryChipItems}
+                selectedKey={selectedCategory}
+                onSelect={cat => selectCategory(cat === '' ? null : cat)}
               />
             ) : null
           }
@@ -746,24 +703,6 @@ const styles = StyleSheet.create({
   // ── Scene ──
   scene: {
     flex: 1,
-  },
-  // ── Category Chips ──
-  chipScroll: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   // ── Channel List ──
   listContent: {
