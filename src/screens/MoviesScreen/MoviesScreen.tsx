@@ -51,11 +51,20 @@ const MOVIES_PREVIEW_MODE = true;
 // is driven by the shell's dev flag; error/empty/loading flip here.
 const PREVIEW_FORCE_STATE: SectionContentState = 'ready';
 
+// TEMP (Phase 4.3 validation): placeholder rows for the data-mode scaffold.
+// They render through SectionContent's FlatList in grid (2-col) and list
+// views — the options sheet's Density group live-switches between them
+// (trains the numColumns remount + grid/list spacing parity). Removed with
+// the Wave 5 migration, when the real MovieCard grid replaces this.
+const PREVIEW_ITEMS = Array.from({length: 12}, (_, i) => ({id: `p${i}`}));
+
 /** Temp scene: renders the preview tab through the shared SectionContent
  *  states scaffolding. Retry resets the forced state back to ready so the
  *  shared ErrorState button is live in the A/B harness. Reads `options`
  *  from the shared ctx so live-apply is visible in the A/B harness
- *  (Phase 3.3 step 9 validation). */
+ *  (Phase 3.3 step 9 validation). Phase 4.3: data mode — grid/list view
+ *  via `options.view`, header slot carries the search-threading proof,
+ *  testID follows the `section-{route}-{tabKey}-list` convention. */
 const MoviePreviewScene: React.FC<{
   tab: SectionTab;
   query: string;
@@ -69,6 +78,8 @@ const MoviePreviewScene: React.FC<{
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 900);
   }, []);
+
+  const view = options.view === 'list' ? 'list' : 'grid';
 
   const activeOptions = [
     options.sort ? `sort: ${options.sort}` : '',
@@ -89,28 +100,41 @@ const MoviePreviewScene: React.FC<{
       }}
       onRetry={() => setState('ready')}
       refreshing={refreshing}
-      onRefresh={onRefresh}>
-      {/* Ready-slot placeholder rows — proves shell search threads through. */}
-      <AppText variant="h3" color="primary">
-        {tab.title}
-      </AppText>
-      <AppText variant="body2" color="secondary" style={styles.previewHint}>
-        {query
-          ? `Searching “${query}”…`
-          : 'Pull to refresh — gold tint per app convention.'}
-      </AppText>
-      {activeOptions.length > 0 ? (
-        <AppText variant="caption" color="accent" style={styles.previewHint}>
-          Options: {activeOptions.join(' · ')}
-        </AppText>
-      ) : null}
-      {[0, 1, 2].map(i => (
+      onRefresh={onRefresh}
+      data={PREVIEW_ITEMS}
+      renderItem={() => (
         <View
-          key={i}
-          style={[styles.previewRow, {backgroundColor: colors.accent.goldDim}]}
+          style={[
+            styles.previewCard,
+            view === 'grid' ? styles.previewCardGrid : styles.previewCardList,
+            {backgroundColor: colors.accent.goldDim},
+          ]}
         />
-      ))}
-    </SectionContent>
+      )}
+      keyExtractor={item => item.id}
+      view={view}
+      route="MoviesScreen"
+      tabKey={tab.key}
+      ListHeaderComponent={
+        // Header slot scrolls with the content — proves shell search
+        // threads through and the list header slot works (Phase 4.3 step 2).
+        <>
+          <AppText variant="h3" color="primary">
+            {tab.title}
+          </AppText>
+          <AppText variant="body2" color="secondary" style={styles.previewHint}>
+            {query
+              ? `Searching “${query}”…`
+              : 'Pull to refresh — gold tint per app convention.'}
+          </AppText>
+          {activeOptions.length > 0 ? (
+            <AppText variant="caption" color="accent" style={styles.previewHint}>
+              Options: {activeOptions.join(' · ')}
+            </AppText>
+          ) : null}
+        </>
+      }
+    />
   );
 };
 
@@ -657,12 +681,19 @@ const styles = StyleSheet.create({
   scene: {
     flex: 1,
   },
-  // [v10 Wave 2 preview] Temp placeholder rows — deleted in Wave 5.
+  // [v10 Wave 4 preview] Temp placeholder cards — deleted in Wave 5.
+  // Grid card fills its column (flex: 1); list card is full-width.
   // (Background color applied inline from the theme, per file convention.)
-  previewRow: {
-    marginTop: spacing.md,
-    height: 84,
+  previewCard: {
+    flex: 1,
     borderRadius: radius.md,
+  },
+  previewCardGrid: {
+    aspectRatio: 2 / 3,
+  },
+  previewCardList: {
+    height: 84,
+    marginBottom: spacing.sm,
   },
   previewHint: {
     marginTop: spacing.xs,
