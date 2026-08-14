@@ -16,10 +16,10 @@ import {
 } from 'react-native';
 import {
   TabView,
-  TabBar,
   type SceneRendererProps,
   type Route,
 } from 'react-native-tab-view';
+import {SectionTabBar} from '../sections/components/SectionTabBar';
 import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -384,28 +384,8 @@ export const ShowsScreen: React.FC<RootStackScreenProps<'ShowsScreen'>> = ({
       props: SceneRendererProps & {
         navigationState: {index: number; routes: Route[]};
       },
-    ) => (
-      <TabBar
-        {...props}
-        scrollEnabled
-        style={[
-          styles.tabBar,
-          {
-            backgroundColor: colors.background.primary,
-            borderBottomColor: colors.background.highlightDim,
-          },
-        ]}
-        indicatorStyle={[
-          styles.tabIndicator,
-          {backgroundColor: colors.accent.gold},
-        ]}
-        activeColor={colors.accent.gold}
-        inactiveColor={colors.text.secondary}
-        tabStyle={styles.tab}
-        contentContainerStyle={styles.tabBarContent}
-      />
-    ),
-    [colors],
+    ) => <SectionTabBar {...props} />,
+    [],
   );
 
   const renderScene = useCallback(
@@ -478,7 +458,7 @@ export const ShowsScreen: React.FC<RootStackScreenProps<'ShowsScreen'>> = ({
         renderScene={renderScene}
         renderLazyPlaceholder={renderLazyPlaceholder}
         lazy
-        commonOptions={{labelStyle: styles.tabLabel}}
+        style={styles.scene}
       />
     </View>
   );
@@ -495,28 +475,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   // ── TabView ──
-  tabBar: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    elevation: 0,
-    shadowOpacity: 0,
-  },
-  tabIndicator: {
-    height: 3,
-    borderRadius: radius.full,
-  },
-  tabLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'none',
-  },
-  tab: {
-    width: 'auto',
-    minWidth: 84,
-  },
-  tabBarContent: {
-    paddingHorizontal: spacing.xs,
-  },
-  // ── Scene ──
   scene: {
     flex: 1,
   },

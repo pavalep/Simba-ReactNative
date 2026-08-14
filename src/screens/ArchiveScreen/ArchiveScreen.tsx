@@ -17,10 +17,10 @@ import {
 } from 'react-native';
 import {
   TabView,
-  TabBar,
   type SceneRendererProps,
   type Route,
 } from 'react-native-tab-view';
+import {SectionTabBar} from '../sections/components/SectionTabBar';
 import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
@@ -349,18 +349,9 @@ export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
 
   const renderTabBar = useCallback(
     (props: SceneRendererProps & {navigationState: {index: number; routes: Route[]}}) => (
-      <TabBar
-        {...props}
-        scrollEnabled
-        indicatorStyle={[styles.tabIndicator, {backgroundColor: colors.accent.gold}]}
-        activeColor={colors.accent.gold}
-        inactiveColor={colors.text.secondary}
-        tabStyle={styles.tab}
-        contentContainerStyle={styles.tabBarContent}
-        style={[styles.tabBar, {backgroundColor: colors.background.primary}]}
-      />
+      <SectionTabBar {...props} />
     ),
-    [colors],
+    [],
   );
 
   const renderScene = useCallback(
@@ -470,7 +461,6 @@ export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
         renderScene={renderScene}
         renderLazyPlaceholder={renderLazyPlaceholder}
         lazy
-        commonOptions={{labelStyle: styles.tabLabel}}
         style={styles.sceneContainer}
       />
     </View>
@@ -499,26 +489,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1,
     gap: spacing.xs,
-  },
-  tabBar: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(128,128,128,0.25)',
-  },
-  tabBarContent: {
-    paddingHorizontal: spacing.md,
-  },
-  tab: {
-    width: 'auto',
-    paddingHorizontal: spacing.lg,
-  },
-  tabIndicator: {
-    height: 3,
-    borderRadius: 2,
-  },
-  tabLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'none',
   },
   sceneContainer: {
     flex: 1,

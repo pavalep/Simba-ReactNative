@@ -553,6 +553,7 @@ export const MusicScreen: React.FC<
         renderLazyPlaceholder={renderLazyPlaceholder}
         lazy
         commonOptions={{labelStyle: styles.tabLabel}}
+        style={styles.scene}
       />
     </View>
   );
