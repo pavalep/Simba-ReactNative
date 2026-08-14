@@ -31,6 +31,29 @@ import {Placeholder} from '../../components/feedback/Placeholder';
 import {resolveInternetArchiveVideoDetails} from '../../services/api/internetArchiveService';
 import {useToast} from '../../components/feedback/Toast';
 import type {InternetArchiveVideoResult} from '../../types/api';
+import {SectionBrowseLayout} from '../sections/SectionBrowseLayout';
+import type {SectionBrowseConfig} from '../sections/sectionConfig';
+
+// ─── [v10 Wave 2 preview] Unified-shell A/B ─────────────────────────────
+// TEMP. Movies renders through the shared SectionBrowseLayout using the
+// config below while the legacy body stays intact for A/B comparison. The
+// preview config duplicates the 9 movie tabs; Wave 5 migrates the real
+// grid into SECTION_CONFIGS and deletes this whole block (flag included).
+const MOVIES_PREVIEW_MODE = true;
+
+const MOVIES_PREVIEW_CONFIG: SectionBrowseConfig = {
+  route: 'MoviesScreen',
+  title: 'Movies',
+  search: {placeholder: 'Search movies…'},
+  tabs: MOVIE_CATEGORIES.map(c => ({key: c.id, title: c.name})),
+  renderTab: tab => (
+    <View style={styles.previewScene}>
+      <AppText variant="body2" color="secondary">
+        {tab.title}
+      </AppText>
+    </View>
+  ),
+};
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -448,6 +471,14 @@ export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
     [],
   );
 
+  // [v10 Wave 2 preview] Render through the unified shell. The legacy body
+  // below stays in the file for A/B; flip MOVIES_PREVIEW_MODE to compare.
+  if (MOVIES_PREVIEW_MODE) {
+    return (
+      <SectionBrowseLayout config={MOVIES_PREVIEW_CONFIG} routeParams={route.params} />
+    );
+  }
+
   return (
     <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
       <SimbaStatusBar variant="home" />
@@ -522,6 +553,12 @@ const styles = StyleSheet.create({
   // ── Scene ──
   scene: {
     flex: 1,
+  },
+  // [v10 Wave 2 preview] Temp centered label per tab — deleted in Wave 5.
+  previewScene: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   categoryDesc: {
     paddingHorizontal: spacing.xs,
