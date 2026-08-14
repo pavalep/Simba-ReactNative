@@ -101,6 +101,21 @@ const MOVIES_PREVIEW_CONFIG: SectionBrowseConfig = {
   title: 'Movies',
   search: {placeholder: 'Search movies…'},
   tabs: MOVIE_CATEGORIES.map(c => ({key: c.id, title: c.name})),
+  // TEMP (Wave 3 preview): gives the FAB something to open on the Movies
+  // preview. Real groups land with the Wave 5 migration.
+  options: {
+    groups: [
+      {
+        id: 'sort',
+        title: 'Sort by',
+        options: [
+          {key: 'popularity', label: 'Popularity'},
+          {key: 'rating', label: 'Rating'},
+          {key: 'releaseDate', label: 'Release date'},
+        ],
+      },
+    ],
+  },
   renderTab: (tab, ctx) => (
     <MoviePreviewScene tab={tab} query={ctx.query} />
   ),

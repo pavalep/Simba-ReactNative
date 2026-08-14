@@ -30,6 +30,7 @@ import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {SectionTabBar} from './components/SectionTabBar';
+import {SectionFab} from './components/SectionFab';
 import {useSectionTabs} from './hooks/useSectionTabs';
 import {useSectionSearch, logSearchComparison} from './hooks/useSectionSearch';
 import type {
@@ -127,6 +128,12 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
     [debouncedQuery, routeParams, isOnline],
   );
 
+  // ── FAB visibility (config-driven) ────────────────────────────────────
+  // Phase 3.1: the FAB renders only when the section defines options
+  // (spec §3.3). The shell owns sheet visibility; pressing the FAB is
+  // wired to the SectionOptionsSheet in Phase 3.2.
+  const hasOptions = !!config.options?.groups?.length;
+
   // ── TabView wiring ─────────────────────────────────────────────────────
   const routes = useMemo(
     () => tabs.map(t => ({key: t.key, title: t.title})),
@@ -198,7 +205,15 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
         style={styles.sceneContainer}
       />
 
-      {/* [SectionFab slot — Wave 3] */}
+      {/* ── SectionFab — bottom-right "more this section can do" ── */}
+      <SectionFab
+        onPress={() => {
+          // Phase 3.2: opens SectionOptionsSheet (shell owns visibility).
+          // eslint-disable-next-line no-empty
+        }}
+        accessibilityLabel={`Filter ${config.title} options`}
+        visible={hasOptions}
+      />
     </View>
   );
 };
