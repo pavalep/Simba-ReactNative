@@ -25,6 +25,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
+import {useNetworkStatus} from '../../hooks/useNetworkStatus';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
@@ -38,6 +39,13 @@ import type {
   SectionRouteParams,
 } from './sectionConfig';
 
+// TEMP (Phase 2.3 validation): flip to preview the offline state without
+// disabling the network (tracker Phase 2.3 step 9). Removed with the
+// Wave 5 migration. Note: the GLOBAL OfflineBanner (app root) already
+// covers the offline notification, so the shell does NOT duplicate a
+// banner — it threads `offline` into ctx for content renderers instead.
+const SECTION_PREVIEW_FORCE_OFFLINE = false;
+
 interface SectionBrowseLayoutProps {
   config: SectionBrowseConfig;
   /** Route params from the host screen (Home deep-link presets). */
@@ -50,6 +58,7 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
 }) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  const {isOnline} = useNetworkStatus();
 
   // ── Mount-time preselect ───────────────────────────────────────────────
   // Sections use different route-param names for the same intent
@@ -98,20 +107,24 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
   );
 
   // ── Render context (shell-level, shared by every tab) ──────────────────
-  // Phase 2.1 stub: chips/options/refresh/offline are inert until Waves
-  // 2.3–4 wire the real state machine. `query` persists across tab switches
-  // because it lives HERE, not inside a scene — the user's search-persistence
-  // standard (v10 spec §3.3).
+  // Phase 2.3: `offline` is REAL (useNetworkStatus) so content renderers can
+  // keep showing cached data while offline; `onRetry` is the shared
+  // ErrorState handler. Chips/options stay inert until Waves 3–4.
+  // `query` persists across tab switches because it lives HERE, not inside
+  // a scene — the user's search-persistence standard (v10 spec §3.3).
   const ctx = useMemo<SectionRenderContext>(
     () => ({
       query: debouncedQuery,
       activeChips: [],
       options: {},
       refreshing: false,
-      offline: false,
+      offline: SECTION_PREVIEW_FORCE_OFFLINE || !isOnline,
+      // Shell fallback so the shared ErrorState always has a live button.
+      // Wave 5+ sections rebind this to the active tab's refetch.
+      onRetry: () => {},
       routeParams: routeParams as SectionRouteParams<SectionRouteKey>,
     }),
-    [debouncedQuery, routeParams],
+    [debouncedQuery, routeParams, isOnline],
   );
 
   // ── TabView wiring ─────────────────────────────────────────────────────

@@ -32,7 +32,8 @@ import {resolveInternetArchiveVideoDetails} from '../../services/api/internetArc
 import {useToast} from '../../components/feedback/Toast';
 import type {InternetArchiveVideoResult} from '../../types/api';
 import {SectionBrowseLayout} from '../sections/SectionBrowseLayout';
-import type {SectionBrowseConfig} from '../sections/sectionConfig';
+import {SectionContent, type SectionContentState} from '../sections/components/SectionContent';
+import type {SectionBrowseConfig, SectionTab} from '../sections/sectionConfig';
 
 // ─── [v10 Wave 2 preview] Unified-shell A/B ─────────────────────────────
 // TEMP. Movies renders through the shared SectionBrowseLayout using the
@@ -41,17 +42,67 @@ import type {SectionBrowseConfig} from '../sections/sectionConfig';
 // grid into SECTION_CONFIGS and deletes this whole block (flag included).
 const MOVIES_PREVIEW_MODE = true;
 
+// TEMP (Phase 2.3 validation): force each SectionContent state slot by hand
+// (tracker Phase 2.3 step 9 — all 5 states must render). The offline strip
+// is driven by the shell's dev flag; error/empty/loading flip here.
+const PREVIEW_FORCE_STATE: SectionContentState = 'ready';
+
+/** Temp scene: renders the preview tab through the shared SectionContent
+ *  states scaffolding. Retry resets the forced state back to ready so the
+ *  shared ErrorState button is live in the A/B harness. */
+const MoviePreviewScene: React.FC<{tab: SectionTab; query: string}> = ({
+  tab,
+  query,
+}) => {
+  const {colors} = useTheme();
+  const [state, setState] = useState<SectionContentState>(PREVIEW_FORCE_STATE);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 900);
+  }, []);
+
+  return (
+    <SectionContent
+      state={state}
+      error={{message: `Could not load ${tab.title}.`}}
+      empty={{
+        icon: 'search',
+        title: `No ${tab.title.toLowerCase()} found`,
+        suggestion: query
+          ? `Nothing matches “${query}” — try a different search.`
+          : 'Try a different search or category.',
+      }}
+      onRetry={() => setState('ready')}
+      refreshing={refreshing}
+      onRefresh={onRefresh}>
+      {/* Ready-slot placeholder rows — proves shell search threads through. */}
+      <AppText variant="h3" color="primary">
+        {tab.title}
+      </AppText>
+      <AppText variant="body2" color="secondary" style={styles.previewHint}>
+        {query
+          ? `Searching “${query}”…`
+          : 'Pull to refresh — gold tint per app convention.'}
+      </AppText>
+      {[0, 1, 2].map(i => (
+        <View
+          key={i}
+          style={[styles.previewRow, {backgroundColor: colors.accent.goldDim}]}
+        />
+      ))}
+    </SectionContent>
+  );
+};
+
 const MOVIES_PREVIEW_CONFIG: SectionBrowseConfig = {
   route: 'MoviesScreen',
   title: 'Movies',
   search: {placeholder: 'Search movies…'},
   tabs: MOVIE_CATEGORIES.map(c => ({key: c.id, title: c.name})),
-  renderTab: tab => (
-    <View style={styles.previewScene}>
-      <AppText variant="body2" color="secondary">
-        {tab.title}
-      </AppText>
-    </View>
+  renderTab: (tab, ctx) => (
+    <MoviePreviewScene tab={tab} query={ctx.query} />
   ),
 };
 
@@ -554,11 +605,15 @@ const styles = StyleSheet.create({
   scene: {
     flex: 1,
   },
-  // [v10 Wave 2 preview] Temp centered label per tab — deleted in Wave 5.
-  previewScene: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  // [v10 Wave 2 preview] Temp placeholder rows — deleted in Wave 5.
+  // (Background color applied inline from the theme, per file convention.)
+  previewRow: {
+    marginTop: spacing.md,
+    height: 84,
+    borderRadius: radius.md,
+  },
+  previewHint: {
+    marginTop: spacing.xs,
   },
   categoryDesc: {
     paddingHorizontal: spacing.xs,

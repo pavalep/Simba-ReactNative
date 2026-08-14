@@ -85,48 +85,48 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 2.1 — `SectionBrowseLayout` Shell Component
 **File:** `src/screens/sections/SectionBrowseLayout.tsx` (NEW)
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE — commit `caae936`
 
-- [ ] 1. Compose the shell: `SimbaStatusBar` → `InternalHeader` (`config.title`) → shared `SearchBar` → optional `FilterChips` slot → `SectionTabBar` → content area → `SectionFab`.
-- [ ] 2. Implement `renderTab(tab, ctx)` dispatch via the config; each tab's content renders inside `SectionContent` (stubbed here, completed in 4.3).
-- [ ] 3. Use `ScreenContainer` for horizontal padding; keep the tab bar edge-to-edge per current screens.
-- [ ] 4. Keep the route structure: `RootNavigator` route components render `SectionBrowseLayout` and pass their existing params.
-- [ ] 5. Add `initialTabIndex` effect: on mount, jump to the `initialTab` param (existing behavior must not regress).
-- [ ] 6. Add a temp `PREVIEW_MODE` flag so Movies renders through the shell without deleting its old body yet.
-- [ ] 7. Set a stable `key` per tab scene so state does not leak between tabs (parity with current lazy behavior).
-- [ ] 8. **Error fix** — fix shell-level regressions: header/search/tab spacing px-identical to pre-migration; keyboard not covering search on focus.
-- [ ] 9. **Validation** — Movies preview renders the full shell + 9 tabs; `tsc` 0; screenshot diff vs old Movies shows identical header/search/tab geometry.
-- [ ] 10. Commit `feat(sections): SectionBrowseLayout shell (preview mode)`.
+- [x] 1. Compose the shell: `SimbaStatusBar` → `InternalHeader` (`config.title`) → shared `SearchBar` → optional `FilterChips` slot → `SectionTabBar` → content area → `SectionFab`.
+- [x] 2. Implement `renderTab(tab, ctx)` dispatch via the config; each tab's content renders inside `SectionContent` (stubbed here, completed in 4.3).
+- [x] 3. Use `ScreenContainer` for horizontal padding; keep the tab bar edge-to-edge per current screens.
+- [x] 4. Keep the route structure: `RootNavigator` route components render `SectionBrowseLayout` and pass their existing params.
+- [x] 5. Add `initialTabIndex` effect: on mount, jump to the `initialTab` param (existing behavior must not regress).
+- [x] 6. Add a temp `PREVIEW_MODE` flag so Movies renders through the shell without deleting its old body yet.
+- [x] 7. Set a stable `key` per tab scene so state does not leak between tabs (parity with current lazy behavior).
+- [x] 8. **Error fix** — fix shell-level regressions: header/search/tab spacing px-identical to pre-migration; keyboard not covering search on focus.
+- [x] 9. **Validation** — Movies preview renders the full shell + 9 tabs; `tsc` 0; screenshot diff vs old Movies shows identical header/search/tab geometry.
+- [x] 10. Commit `feat(sections): SectionBrowseLayout shell (preview mode)`.
 
 ### Phase 2.2 — Shared Search Wiring (`useSectionSearch`)
 **File:** `src/screens/sections/hooks/useSectionSearch.ts` (NEW)
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE — commit `418f137`
 
-- [ ] 1. Implement `useSectionSearch(config)` → `{query, setQuery, debouncedQuery, clear, active}` with `debounceMs` from config (default 300).
-- [ ] 2. Seed `query` from the route param (`query` preset from Home shelves) — pre-fill works on every section.
-- [ ] 3. Keep search text **persisting across tab switches** (one hook at shell level, not per-tab) — the user's search-persistence standard.
-- [ ] 4. Pass `debouncedQuery` through `SectionRenderContext` so every `renderTab` reads it without re-subscribing.
-- [ ] 5. Pass shared `SearchBar` props from config: `placeholder`, `returnKeyType="search"`, clear button when query non-empty.
-- [ ] 6. Add `accessibilityLabel` `"Search {config.title}"` on the search field.
-- [ ] 7. Add a dev-only regression harness comparing Movies old vs new search results for the same keystrokes.
-- [ ] 8. **Error fix** — fix debounce races (stale results arriving after a newer query), clear-on-tab-switch bugs, and double-fetch from `onChangeText` + `onDebouncedChange`.
-- [ ] 9. **Validation** — type a query on Movies preview, switch tabs, return: text persists and the new tab filters; `tsc` 0.
-- [ ] 10. Commit `feat(sections): useSectionSearch + shared SearchBar wiring`.
+- [x] 1. Implement `useSectionSearch(config)` → `{query, setQuery, debouncedQuery, clear, active}` with `debounceMs` from config (default 300).
+- [x] 2. Seed `query` from the route param (`query` preset from Home shelves) — pre-fill works on every section.
+- [x] 3. Keep search text **persisting across tab switches** (one hook at shell level, not per-tab) — the user's search-persistence standard.
+- [x] 4. Pass `debouncedQuery` through `SectionRenderContext` so every `renderTab` reads it without re-subscribing.
+- [x] 5. Pass shared `SearchBar` props from config: `placeholder`, `returnKeyType="search"`, clear button when query non-empty.
+- [x] 6. Add `accessibilityLabel` `"Search {config.title}"` on the search field.
+- [x] 7. Add a dev-only regression harness comparing Movies old vs new search results for the same keystrokes.
+- [x] 8. **Error fix** — fix debounce races (stale results arriving after a newer query), clear-on-tab-switch bugs, and double-fetch from `onChangeText` + `onDebouncedChange`.
+- [x] 9. **Validation** — type a query on Movies preview, switch tabs, return: text persists and the new tab filters; `tsc` 0.
+- [x] 10. Commit `feat(sections): useSectionSearch + shared SearchBar wiring`.
 
 ### Phase 2.3 — Section-Level States (refresh / offline / error / empty / skeleton)
-**File:** `src/screens/sections/components/SectionContent.tsx` (NEW, partial)
-**Status:** ⬜ PENDING
+**File:** `src/screens/sections/components/SectionContent.tsx` (NEW)
+**Status:** ✅ COMPLETE — commit `…` (Wave 2)
 
-- [ ] 1. Implement `SectionContent` with 5 state slots — `loading`, `error`, `empty`, `offline`, `ready` — driven by `ctx`.
-- [ ] 2. Pull-to-refresh: standard `RefreshControl` on each tab scene's scrollable root (tint = `colors.accent`).
-- [ ] 3. Offline: shared banner strip under the tab bar when `ctx.offline`; content still renders cached data.
-- [ ] 4. Error: shared `ErrorState` with retry calling `ctx.onRetry`; retry re-runs the tab's fetch without stacking requests.
-- [ ] 5. Empty: shared `EmptyState` with section-aware title + suggestion from config (replaces Music's bespoke "prompt" empties without losing their copy).
-- [ ] 6. Loading: `SkeletonList`/`SkeletonCard` by view density — no spinner flash (matches established skeleton convention).
-- [ ] 7. Add `onRetry`, `refreshing`, `offline` to `SectionRenderContext`.
-- [ ] 8. **Error fix** — fix RefreshControl-in-ScrollView double-scroll warnings, skeleton flash on fast networks, offline banner overlapping the FAB.
-- [ ] 9. **Validation** — force offline + error + empty on Movies preview: all 5 states render correctly with a11y labels; `tsc` 0.
-- [ ] 10. Commit `feat(sections): SectionContent states (refresh/offline/error/empty/skeleton)`.
+- [x] 1. Implement `SectionContent` with 5 state slots — `loading`, `error`, `empty`, `offline`, `ready` — driven by `ctx`. (`loading`/`error`/`empty`/`ready` are render slots; `offline` is threaded through `ctx` so cached data keeps rendering — not a slot.)
+- [x] 2. Pull-to-refresh: standard `RefreshControl` on each tab scene's scrollable root (tint = `colors.accent.gold`). `SectionContent`'s ready slot owns it; FlatList sections use the exported `SectionRefreshControl` on their own list.
+- [x] 3. Offline: covered by the **global OfflineBanner** (already mounted at app root, `useNetworkStatus`) — shell does NOT duplicate a banner; it threads real `offline: !isOnline` into `ctx`. TEMP `SECTION_PREVIEW_FORCE_OFFLINE` dev flag for A/B (removed Wave 5).
+- [x] 4. Error: shared `ErrorState` with retry calling `ctx.onRetry`; retry re-runs the tab's fetch without stacking requests. Shell keeps a no-op fallback so the button is always live; preview scene rebinds it to its state reset.
+- [x] 5. Empty: shared `EmptyState` with section-aware title + suggestion from config (`SectionEmptyCopy` — replaces Music's bespoke "prompt" empties without losing their copy).
+- [x] 6. Loading: `SkeletonList` by view density — no spinner flash (matches established skeleton convention).
+- [x] 7. Add `onRetry`, `refreshing`, `offline` to `SectionRenderContext` (`sectionConfig.ts`).
+- [x] 8. **Error fix** — RefreshControl-in-ScrollView double-scroll: contract documented (row sections render inside `SectionContent`'s ScrollView; FlatList sections use `SectionRefreshControl`, never nest). Skeleton flash: skeleton-only loading. Offline banner/FAB overlap: N/A (FAB is Wave 3).
+- [x] 9. **Validation** — Movies preview renders all states via `MoviePreviewScene` (force `PREVIEW_FORCE_STATE` by hand; offline via shell flag); a11y labels on error (`role="alert"`), empty (grouped summary), refresh; `tsc` 0.
+- [x] 10. Commit `feat(sections): SectionContent states (refresh/offline/error/empty/skeleton)`.
 
 **Gate 2 ✅:** Shell renders on Movies preview with unified search, states, and tab contract; old Movies body intact for A/B.
 

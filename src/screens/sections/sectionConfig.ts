@@ -67,6 +67,11 @@ export interface SectionRenderContext {
   refreshing: boolean;
   /** Device is offline — cached data still renders under a banner. */
   offline: boolean;
+  /** Retry handler for the shared ErrorState (re-runs the active tab's
+   *  fetch without stacking requests). Wave 5+ sections bind their tab
+   *  refetch here; the shell keeps a no-op default so the shared error
+   *  slot always has a live button. */
+  onRetry?: () => void;
   /** Route params passed into the screen (Home deep-link presets). */
   routeParams: SectionRouteParams<SectionRouteKey>;
 }
