@@ -19,6 +19,7 @@
 import React, {useCallback, useEffect, useMemo, useState, type ReactNode} from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import FastImage from 'react-native-fast-image';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import {useMoviesScreen, type MovieScopeState} from './hooks/useMoviesScreen';
@@ -45,6 +46,52 @@ function formatDuration(seconds: number): string {
   const m = Math.floor((seconds % 3600) / 60);
   if (h > 0) return `${h}h ${m}m`;
   return `${m}min`;
+}
+
+// ─── Client-side sort (Phase 5.3 step 2) ────────────────────────────────
+// The FAB's sort options re-order the FETCHED slice with a pure function:
+// the array is copied before sorting (never mutates the scope cache), and
+// `undefined` keeps the server's natural order (the per-category `sort`
+// field, e.g. "downloads desc" for All). Sorting only the loaded slice is
+// a known trap (spec §10.2) — `items` is a useMemo dep below, so every
+// load-more append re-sorts the full array automatically.
+function parseYear(year: string | undefined): number {
+  const n = Number(year);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/** Unknown sort keys fall through untouched (safe default: natural order). */
+function sortMovies(
+  items: InternetArchiveVideoResult[],
+  sort: string | undefined,
+): InternetArchiveVideoResult[] {
+  if (!sort) return items;
+  const copy = [...items];
+  switch (sort) {
+    case 'newest':
+      // Unknown/missing years (0) sink to the bottom; ties break by title.
+      copy.sort(
+        (a, b) => parseYear(b.year) - parseYear(a.year) ||
+          a.title.localeCompare(b.title),
+      );
+      break;
+    case 'oldest':
+      copy.sort(
+        (a, b) => parseYear(a.year) - parseYear(b.year) ||
+          a.title.localeCompare(b.title),
+      );
+      break;
+    case 'az':
+      copy.sort((a, b) => a.title.localeCompare(b.title));
+      break;
+    case 'rating':
+      copy.sort(
+        (a, b) => b.avgRating - a.avgRating ||
+          a.title.localeCompare(b.title),
+      );
+      break;
+  }
+  return copy;
 }
 
 // ─── Movie Card ─────────────────────────────────────────────────────────
@@ -266,6 +313,7 @@ const MoviesTabContent: React.FC<{
   ctx: SectionRenderContext;
 }> = ({tab, ctx}) => {
   const {colors} = useTheme();
+  const insets = useSafeAreaInsets();
   const {
     getScope,
     ensureLoaded,
@@ -312,6 +360,15 @@ const MoviesTabContent: React.FC<{
   const view = ctx.options.view === 'list' ? 'list' : 'grid';
   const category = MOVIE_CATEGORIES.find(c => c.id === tab.key);
 
+  // Phase 5.3 step 2/8: the FAB sort re-orders THIS tab's own loaded slice
+  // (never another tab's — each scene memoizes over its own `items`). The
+  // memo deps make it live: sort changes re-order instantly, and every
+  // load-more append re-sorts the full array. `undefined` = natural order.
+  const sortedItems = useMemo(
+    () => sortMovies(items, ctx.options.sort),
+    [items, ctx.options.sort],
+  );
+
   // Load-more footer only in the ready state (page-1 failures render the
   // shared ErrorState in the empty slot instead — no double error UI).
   const showFooter = isLoadingMore || (!!error && hasLoaded);
@@ -347,7 +404,7 @@ const MoviesTabContent: React.FC<{
       }}
       onRetry={() => retry(tab.key)}
       {...refreshControl}
-      data={items}
+      data={sortedItems}
       renderItem={({item}) => (
         <MovieCard
           item={item}
@@ -357,6 +414,12 @@ const MoviesTabContent: React.FC<{
       )}
       keyExtractor={item => item.identifier}
       view={view}
+      // Phase 5.3 step 6: pad the bottom so the last row can scroll fully
+      // above the floating SectionFab (56px tall, bottom-anchored at
+      // insets.bottom + spacing.lg in SectionFab) plus a breathing gap.
+      contentContainerStyle={{
+        paddingBottom: insets.bottom + spacing.lg + 56 + spacing.md,
+      }}
       route="MoviesScreen"
       tabKey={tab.key}
       ListHeaderComponent={

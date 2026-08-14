@@ -17,6 +17,7 @@ import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
+import {useKeyboard} from '../../../hooks/useKeyboard';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {AppText} from '../../../components/core/AppText/AppText';
 
@@ -39,8 +40,12 @@ export const SectionFab: React.FC<SectionFabProps> = ({
 }) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  // Phase 5.3 step 6: while the keyboard is open the FAB is dead weight
+  // (the options sheet can't open over it anyway) — hide it so it never
+  // floats above the typing UI.
+  const {keyboardVisible} = useKeyboard();
 
-  if (!visible) return null;
+  if (!visible || keyboardVisible) return null;
 
   return (
     // `pointerEvents="box-none"` is the press-through fix (Phase 3.1 step 8):
