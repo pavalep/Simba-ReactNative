@@ -238,18 +238,18 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 5.1 — Movies → Config + Shell
 **Files:** `sectionConfig.ts` (Movies entry), `src/screens/MoviesScreen/MoviesScreen.tsx`
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE (`eaf43c4`)
 
-- [ ] 1. Fill the Movies config: `route:'MoviesScreen'`, `title:'Movies'`, `search.placeholder:'Search movies…'`, tabs from `MOVIE_CATEGORIES` (9 tabs), no quick chips, options {sort: Newest/Oldest/A–Z/Rating, view: grid}.
-- [ ] 2. Rewrite `MoviesScreen.tsx` to render `<SectionBrowseLayout config={getSectionConfig('MoviesScreen')} />`.
-- [ ] 3. Move the 2-col `MovieCard` grid into `renderTab` (content only — no header/search/tab code).
-- [ ] 4. Preserve `initialTab` / `categoryId` / `query` route-param handling via the shell.
-- [ ] 5. Keep `useMoviesScreen` data fetching intact; feed its output into `ctx` (loading/error/data).
-- [ ] 6. Remove the old duplicated header/search/tab/viewpager code after parity is confirmed.
-- [ ] 7. Delete the temp preview flag — Movies is now a real shell consumer.
-- [ ] 8. **Error fix** — fix any regression vs the old screen (tab count, initial tab, query pre-fill, card layout).
-- [ ] 9. **Validation** — `npx tsc --noEmit` 0; emulator: Movies matches the shell anatomy; shelf deep-links land on the right tab with query.
-- [ ] 10. Commit `feat(movies): migrate to SectionBrowseLayout`.
+- [x] 1. Fill the Movies config: `route:'MoviesScreen'`, `title:'Movies'`, `search.placeholder:'Search movies…'`, tabs from `MOVIE_CATEGORIES` (9 tabs), no quick chips, options {sort: Newest/Oldest/A–Z/Rating, view: grid}.
+- [x] 2. Rewrite `MoviesScreen.tsx` to render `<SectionBrowseLayout config={getSectionConfig('MoviesScreen')} />`.
+- [x] 3. Move the 2-col `MovieCard` grid into `renderTab` (content only — no header/search/tab code).
+- [x] 4. Preserve `initialTab` / `categoryId` / `query` route-param handling via the shell.
+- [x] 5. Keep `useMoviesScreen` data fetching intact; feed its output into `ctx` (loading/error/data).
+- [x] 6. Remove the old duplicated header/search/tab/viewpager code after parity is confirmed.
+- [x] 7. Delete the temp preview flag — Movies is now a real shell consumer.
+- [x] 8. **Error fix** — fix any regression vs the old screen (tab count, initial tab, query pre-fill, card layout).
+- [x] 9. **Validation** — `npx tsc --noEmit` 0; emulator: Movies matches the shell anatomy; shelf deep-links land on the right tab with query.
+- [x] 10. Commit `feat(movies): migrate to SectionBrowseLayout`.
 
 ### Phase 5.2 — Movies Content + Refresh + Offline
 **Files:** `src/screens/MoviesScreen/` (hooks + grid)
@@ -584,7 +584,7 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 | 4.1 | `a5df631` | ✅ |
 | 4.2 | `0863218` | ✅ |
 | 4.3 | `59a259d` | ✅ |
-| 5.1 | — | ⬜ |
+| 5.1 | `eaf43c4` | ✅ |
 | 5.2 | — | ⬜ |
 | 5.3 | — | ⬜ |
 | 6.1 | — | ⬜ |
