@@ -253,18 +253,18 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 5.2 — Movies Content + Refresh + Offline
 **Files:** `src/screens/MoviesScreen/` (hooks + grid)
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE (`24f9a5c`)
 
-- [ ] 1. Wire `SectionContent` states to `useMoviesScreen`: loading → `SkeletonCard` grid, error → `ErrorState` + retry, empty → `EmptyState`.
-- [ ] 2. Add pull-to-refresh (`RefreshControl`) calling the hook's refresh — Movies gains this in v10.
-- [ ] 3. Add offline detection: `ctx.offline` banner under tabs + stale-content render.
-- [ ] 4. Replace `Placeholder` + toast retry with shared `ErrorState` (keep toast for non-fatal errors).
-- [ ] 5. Keep `MovieCard` visually untouched (cards may differ per spec); re-parent it into the `SectionContent` grid.
-- [ ] 6. Verify `onEndReached` pagination still works inside the new FlatList scaffolding.
-- [ ] 7. Add `testID`s for the grid and the offline banner.
-- [ ] 8. **Error fix** — fix refresh-indicator/retry conflicts (retry must not stack requests) and offline-banner overlap.
-- [ ] 9. **Validation** — offline: banner + cached list; kill network mid-load: ErrorState + retry recovers; `tsc` 0.
-- [ ] 10. Commit `feat(movies): states, refresh, offline`.
+- [x] 1. Wire `SectionContent` states to `useMoviesScreen`: loading → `SkeletonCard` grid, error → `ErrorState` + retry, empty → `EmptyState`.
+- [x] 2. Add pull-to-refresh (`RefreshControl`) calling the hook's refresh — Movies gains this in v10.
+- [x] 3. Add offline detection: `ctx.offline` banner under tabs + stale-content render.
+- [x] 4. Replace `Placeholder` + toast retry with shared `ErrorState` (keep toast for non-fatal errors).
+- [x] 5. Keep `MovieCard` visually untouched (cards may differ per spec); re-parent it into the `SectionContent` grid.
+- [x] 6. Verify `onEndReached` pagination still works inside the new FlatList scaffolding.
+- [x] 7. Add `testID`s for the grid and the offline banner.
+- [x] 8. **Error fix** — fix refresh-indicator/retry conflicts (retry must not stack requests) and offline-banner overlap.
+- [x] 9. **Validation** — offline: banner + cached list; kill network mid-load: ErrorState + retry recovers; `tsc` 0.
+- [x] 10. Commit `feat(movies): states, refresh, offline`.
 
 ### Phase 5.3 — Movies FAB Options + Polish
 **Files:** `src/screens/sections/components/` (options wiring), Movies config
@@ -585,7 +585,7 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 | 4.2 | `0863218` | ✅ |
 | 4.3 | `59a259d` | ✅ |
 | 5.1 | `eaf43c4` | ✅ |
-| 5.2 | — | ⬜ |
+| 5.2 | `24f9a5c` | ✅ |
 | 5.3 | — | ⬜ |
 | 6.1 | — | ⬜ |
 | 6.2 | — | ⬜ |
