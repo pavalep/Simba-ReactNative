@@ -162,6 +162,7 @@ interface MoviesDataContextValue {
   ensureLoaded: (categoryId: string) => void;
   loadMore: (categoryId: string) => void;
   retry: (categoryId: string) => void;
+  refresh: (categoryId: string) => void;
   setSearchTerm: (term: string) => void;
   resolvingId: string | null;
   handleMoviePress: (item: InternetArchiveVideoResult) => void;
@@ -243,6 +244,7 @@ export const MoviesDataProvider: React.FC<{
       ensureLoaded: movies.ensureLoaded,
       loadMore: movies.loadMore,
       retry: movies.retry,
+      refresh: movies.refresh,
       setSearchTerm: movies.setSearchTerm,
       resolvingId,
       handleMoviePress,
@@ -269,11 +271,13 @@ const MoviesTabContent: React.FC<{
     ensureLoaded,
     loadMore,
     retry,
+    refresh,
     isSearchActive,
     setSearchTerm,
     resolvingId,
     handleMoviePress,
   } = useMoviesData();
+  const {offline} = ctx;
 
   // Bridge: the shell owns the debounced search term, the hook owns the
   // fetch term. Sync every change so scopes keyed by `term` stay in
@@ -312,10 +316,26 @@ const MoviesTabContent: React.FC<{
   // shared ErrorState in the empty slot instead — no double error UI).
   const showFooter = isLoadingMore || (!!error && hasLoaded);
 
+  // Phase 5.2 step 8: the shared 'loading' skeleton is only for the first
+  // page-1 fetch, so a pull-to-refresh (hasLoaded stays true → 'ready')
+  // spins the gold RefreshControl without ever blanking the grid.
+  const refreshControl = {
+    refreshing: isLoading,
+    onRefresh: () => refresh(tab.key),
+  };
+
   return (
     <SectionContent
       state={state}
-      error={{message: "Couldn't load movies."}}
+      error={{
+        // Offline-aware copy (step 3): the global OfflineBanner already
+        // says we're offline — the ErrorState just confirms the retry path
+        // instead of showing a misleading network message.
+        title: offline ? "You're offline" : undefined,
+        message: offline
+          ? 'Check your connection and try again.'
+          : "Couldn't load movies.",
+      }}
       empty={{
         icon: isSearchActive ? 'search' : 'folder',
         title: isSearchActive
@@ -326,6 +346,7 @@ const MoviesTabContent: React.FC<{
           : 'Try another category.',
       }}
       onRetry={() => retry(tab.key)}
+      {...refreshControl}
       data={items}
       renderItem={({item}) => (
         <MovieCard

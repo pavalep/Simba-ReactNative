@@ -38,6 +38,7 @@ export const OfflineBanner: React.FC = () => {
   return (
     <View
       style={[styles.wrapper, {paddingTop: insets.top}]}
+      testID="offline-banner"
       pointerEvents="none">
       <Animated.View
         style={[

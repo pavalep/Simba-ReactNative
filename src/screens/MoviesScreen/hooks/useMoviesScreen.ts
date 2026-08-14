@@ -194,6 +194,20 @@ export function useMoviesScreen(initialCategoryId?: string) {
     [keyFor, fetchPage],
   );
 
+  /** Pull-to-refresh: re-fetch page 1 while KEEPING items visible. The
+   *  RefreshControl spins off `isLoading`; `hasLoaded` stays true, so the
+   *  grid remains in the ready slot (the shared 'loading' skeleton is only
+   *  for the first page-1 fetch). Guarded so a pull during any in-flight
+   *  fetch can never stack requests (Phase 5.2 step 8). */
+  const refresh = useCallback(
+    (categoryId: string) => {
+      const scope = getScope(categoryId);
+      if (scope.isLoading || scope.isLoadingMore) return;
+      fetchPage(categoryId, 1, 'initial');
+    },
+    [getScope, fetchPage],
+  );
+
   /** Tab switch — search text intentionally survives. */
   const selectCategory = useCallback((id: string) => {
     setSelectedCategory(id);
@@ -224,5 +238,6 @@ export function useMoviesScreen(initialCategoryId?: string) {
     ensureLoaded,
     loadMore,
     retry,
+    refresh,
   };
 }
