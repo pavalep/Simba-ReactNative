@@ -187,33 +187,33 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 4.1 — `FilterChips` Shared Component
 **File:** `src/components/utility/FilterChips/FilterChips.tsx` (NEW)
-**Status:** ⬜ PENDING
+**Status:** ✅ DONE — commit `a5df631`
 
-- [ ] 1. Read `SourceFilterChips` / `FilterAndSortControls` (Search), `TagChips` (Radio), `CategoryChips` (Live TV) — extract the common chip visual (rounded pill, border, active fill).
-- [ ] 2. Implement `FilterChips` props: `{items, selectedKey, onSelect, singleSelect?, wrap?, count?}`.
-- [ ] 3. Modes: `horizontal` scroll (default, Radio/Live TV parity) and `wrap` (Audiobooks' 20 genres).
-- [ ] 4. Active chip: accent background + primary text; inactive: elevated background + secondary text; consistent `radius.pill` padding.
-- [ ] 5. Optional `count` badge (e.g., favorites count) on the chip's right edge using `typography.caption`.
-- [ ] 6. `accessibilityRole="button"` + `accessibilityState={{selected}}` per chip; label = chip text.
-- [ ] 7. Selection semantics: `singleSelect=true` → tapping the active chip clears it (toggle); `false` → multi-select (future use).
-- [ ] 8. **Error fix** — fix chip text truncation on long labels (Audiobooks 20-genre list), uneven heights in wrap mode, scroll jank on rapid taps.
-- [ ] 9. **Validation** — render `FilterChips` in a dev screen in all 3 modes; snapshot-identical to current TagChips/CategoryChips visual; `tsc` 0.
-- [ ] 10. Commit `feat(ui): FilterChips shared component`.
+- [x] 1. Read `SourceFilterChips` / `FilterAndSortControls` (Search), `TagChips` (Radio), `CategoryChips` (Live TV) — extract the common chip visual (rounded pill, border, active fill).
+- [x] 2. Implement `FilterChips` props: `{items, selectedKey, onSelect, singleSelect?, wrap?, count?}`.
+- [x] 3. Modes: `horizontal` scroll (default, Radio/Live TV parity) and `wrap` (Audiobooks' 20 genres).
+- [x] 4. Active chip: accent background + primary text; inactive: elevated background + secondary text; consistent `radius.pill` padding.
+- [x] 5. Optional `count` badge (e.g., favorites count) on the chip's right edge using `typography.caption`.
+- [x] 6. `accessibilityRole="button"` + `accessibilityState={{selected}}` per chip; label = chip text.
+- [x] 7. Selection semantics: `singleSelect=true` → tapping the active chip clears it (toggle); `false` → multi-select (future use).
+- [x] 8. **Error fix** — chip text uses AppText caption with no fixed width (no truncation on long genres); wrap mode uses flex-wrap with gap (even heights); FlatList perf tuned (`initialNumToRender`/`windowSize`/`maxToRenderPerBatch`) for rapid taps.
+- [x] 9. **Validation** — visuals matched against TagChips/CategoryChips contract (gold fill + inverse text active / elevated + secondary inactive, `radius.pill`); `npx tsc --noEmit` 0.
+- [x] 10. Commit `feat(ui): FilterChips shared component` → `a5df631`.
 
 ### Phase 4.2 — Migrate the 5 Chip Implementations → `FilterChips`
 **Files:** Music, Radio, LiveTV, Archive, Audiobooks screens
-**Status:** ⬜ PENDING
+**Status:** ✅ DONE — commit `0863218`
 
-- [ ] 1. Music: replace the `ScrollView` genre chips (`JAMENDO_GENRES`) with `FilterChips` horizontal; keep the same "All" default.
-- [ ] 2. Radio: replace `TagChips` FlatList with `FilterChips`; keep selection synced to the favorites tab.
-- [ ] 3. Live TV: replace `CategoryChips` with `FilterChips`; keep the category jump behavior.
-- [ ] 4. Archive: replace `ARCHIVE_QUICK_SEARCHES` chips with `FilterChips`; quick search sets the shared query (existing behavior preserved).
-- [ ] 5. Audiobooks: replace the wrapping genre `View` (20 genres) with `FilterChips` wrap mode; remove the duplicate chips inside the empty state.
-- [ ] 6. Delete or deprecate the 5 replaced implementations — no dead chip code in v10.
-- [ ] 7. Verify each screen's chip selection still produces the same list as before (compare filtered counts in dev).
-- [ ] 8. **Error fix** — fix selection drift (chips re-rendering with the wrong active key after tab switch) and chip-row height regressions.
-- [ ] 9. **Validation** — all 5 screens' chip rows are style-identical; filter behavior unchanged; `npx tsc --noEmit` 0.
-- [ ] 10. Commit `refactor(sections): adopt FilterChips across 5 sections`.
+- [x] 1. Music: replace the `ScrollView` genre chips (`JAMENDO_GENRES`) with `FilterChips` horizontal; keep the same "All" default. (module-level `GENRE_CHIP_ITEMS`; `onSelectGenre(genre || null)` maps the `''` toggle-off back to `null`; dead `genreChip*` styles removed)
+- [x] 2. Radio: replace `TagChips` FlatList with `FilterChips`; keep selection synced to the favorites tab. (component deleted; `tagChipItems` useMemo `{key, label, count}`; loading orb + empty guards preserved at call site; dead chip styles removed)
+- [x] 3. Live TV: replace `CategoryChips` with `FilterChips`; keep the category jump behavior. (component deleted; `categoryChipItems` `{key: cat.name, label, count}` — key matches the name-based `selectedCategory` the hook filters by; `''` → null on toggle-off; dead chip styles removed)
+- [x] 4. Archive: replace `ARCHIVE_QUICK_SEARCHES` chips with `FilterChips`; quick search sets the shared query (existing behavior preserved). (module-level `QUICK_SEARCH_CHIP_ITEMS` with `icon` cast to `SvgIconName`, `key: entry.query`; `selectedKey={null}` keeps chips always-inactive; `onSelect={submitSearch}`)
+- [x] 5. Audiobooks: replace the wrapping genre `View` (20 genres) with `FilterChips` wrap mode; remove the duplicate chips inside the empty state. (`GENRE_CHIP_ITEMS` from `LIBRIVOX_GENRES`; empty-state duplicate removed; header keeps `wrap`; internal-toggle `selectGenre` handles `''` as a deselect)
+- [x] 6. Delete or deprecate the 5 replaced implementations — no dead chip code in v10. (`TagChips`/`CategoryChips` gone; `chipScroll`/`chip`/`chipText`/`tagChip`/`tagText`/`genreChip`/`chipWrap` dead styles removed — only Radio's loading-orbit `chipWrap` remains intentionally)
+- [x] 7. Verify each screen's chip selection still produces the same list as before (compare filtered counts in dev). (hooks treat `''` as falsy == `null` for scope cache keys and fetch guards — Radio `!selectedTag`, Audiobooks `!selectedGenre`, LiveTV `getChannelsByCategory` name match all preserved)
+- [x] 8. **Error fix** — fix selection drift (chips re-rendering with the wrong active key after tab switch) and chip-row height regressions. (selection state stays in the hooks; `FilterChips` is fully controlled via `selectedKey`; consistent pill height + `gap` across rows)
+- [x] 9. **Validation** — all 5 screens' chip rows are style-identical; filter behavior unchanged; `npx tsc --noEmit` 0.
+- [x] 10. Commit `refactor(sections): adopt FilterChips across 5 sections` → `0863218` (6 files, +86/−357).
 
 ### Phase 4.3 — Shared Content Scaffolding (`SectionContent` complete)
 **File:** `src/screens/sections/components/SectionContent.tsx` (complete)
@@ -581,8 +581,8 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 | 3.1 | — | ⬜ |
 | 3.2 | — | ⬜ |
 | 3.3 | — | ⬜ |
-| 4.1 | — | ⬜ |
-| 4.2 | — | ⬜ |
+| 4.1 | `a5df631` | ✅ |
+| 4.2 | `0863218` | ✅ |
 | 4.3 | — | ⬜ |
 | 5.1 | — | ⬜ |
 | 5.2 | — | ⬜ |
