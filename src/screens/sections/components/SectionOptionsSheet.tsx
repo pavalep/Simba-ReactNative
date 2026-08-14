@@ -36,6 +36,10 @@ export interface SectionOptionsSheetProps {
   value: Partial<Record<SectionOptionGroupId, string>>;
   /** Applies a selection; the sheet stays open until the user dismisses. */
   onOptionChange: (groupId: SectionOptionGroupId, key: string) => void;
+  /** One-tap "Reset" row (Phase 3.3) — clears every option back to defaults. */
+  onReset?: () => void;
+  /** Show the reset row only when something is actually active. */
+  showReset?: boolean;
 }
 
 export const SectionOptionsSheet: React.FC<SectionOptionsSheetProps> = ({
@@ -45,6 +49,8 @@ export const SectionOptionsSheet: React.FC<SectionOptionsSheetProps> = ({
   groups,
   value,
   onOptionChange,
+  onReset,
+  showReset,
 }) => {
   const {colors} = useTheme();
 
@@ -116,6 +122,28 @@ export const SectionOptionsSheet: React.FC<SectionOptionsSheetProps> = ({
             </View>
           );
         })}
+        {/* ── One-tap Reset (Phase 3.3 step 5) — only when options are active */}
+        {showReset && onReset ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Reset options"
+            onPress={onReset}
+            style={[
+              styles.resetRow,
+              {borderTopColor: colors.border.subtle},
+            ]}>
+            <SvgIcon
+              name="replay"
+              size={16}
+              color={colors.text.secondary}
+              style={styles.resetIcon}
+            />
+            <AppText variant="body2" color="secondary">
+              Reset
+            </AppText>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </BottomSheet>
   );
@@ -148,4 +176,13 @@ const styles = StyleSheet.create({
   rowIcon: {
     marginRight: spacing.sm,
   },
+  resetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    marginTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  resetIcon: {marginRight: spacing.xs},
 });

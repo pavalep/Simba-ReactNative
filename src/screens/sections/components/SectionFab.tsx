@@ -18,6 +18,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
+import {AppText} from '../../../components/core/AppText/AppText';
 
 export interface SectionFabProps {
   /** Opens the SectionOptionsSheet (the shell owns sheet visibility). */
@@ -26,12 +27,15 @@ export interface SectionFabProps {
   accessibilityLabel: string;
   /** Config-driven visibility: false when the section defines no options. */
   visible?: boolean;
+  /** Active option count — renders a small badge when > 0 (Phase 3.3). */
+  badgeCount?: number;
 }
 
 export const SectionFab: React.FC<SectionFabProps> = ({
   onPress,
   accessibilityLabel,
   visible = true,
+  badgeCount = 0,
 }) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
@@ -50,7 +54,11 @@ export const SectionFab: React.FC<SectionFabProps> = ({
         activeOpacity={0.85}
         onPress={onPress}
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
+        accessibilityLabel={
+          badgeCount > 0
+            ? `${accessibilityLabel}, ${badgeCount} active`
+            : accessibilityLabel
+        }
         style={[
           styles.fab,
           {
@@ -62,6 +70,24 @@ export const SectionFab: React.FC<SectionFabProps> = ({
         ]}>
         <SvgIcon name="sliders" size={24} color={colors.text.inverse} />
       </TouchableOpacity>
+
+      {/* ── Active-options badge (Phase 3.3 step 4) ── */}
+      {/* Counts filters + sort applied; dark pill with gold text/border so it
+          reads as "premium" on the gold FAB instead of a flat-black dot. */}
+      {badgeCount > 0 ? (
+        <View
+          style={[
+            styles.badge,
+            {
+              backgroundColor: colors.background.primary,
+              borderColor: colors.accent.gold,
+            },
+          ]}>
+          <AppText variant="caption" color="accent" style={styles.badgeText}>
+            {badgeCount}
+          </AppText>
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -86,5 +112,22 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.35,
     shadowRadius: 8,
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 14,
   },
 });

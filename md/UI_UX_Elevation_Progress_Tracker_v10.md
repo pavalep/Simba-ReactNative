@@ -151,7 +151,7 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 3.2 — `SectionOptionsSheet` (BottomSheet Wrapper)
 **File:** `src/screens/sections/components/SectionOptionsSheet.tsx` (NEW)
-**Status:** ✅ COMPLETE — commit `(Phase 3.3 commit — bundled with 3.1/3.2 tracker update)`
+**Status:** ✅ COMPLETE — commit `40a1cfd`
 
 - [x] 1. Wrap the shared `BottomSheet` (`snapPoints={['40%','75%']}`, drag-dismiss, `title={config.title}`). — `visible/onClose` forwarded; title = config.title.
 - [x] 2. Render each `OptionGroup` as a titled section: `filter` → vertical single-select rows; `sort` → radio rows; `view` → density toggle (grid-2 / list). — one uniform row renderer driven by group.id (rows are single-select vertical for every group; density group just carries layoutGrid/layoutList icons).
@@ -166,18 +166,18 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ### Phase 3.3 — `useSectionOptions` State Model
 **File:** `src/screens/sections/hooks/useSectionOptions.ts` (NEW)
-**Status:** ⬜ PENDING
+**Status:** ✅ COMPLETE — commit `(Phase 3.3 hash — backfilled post-commit)`
 
-- [ ] 1. Implement `useSectionOptions(config)` → `{state, setOption, reset}` where `state = {filters: Record<string,string|undefined>, sort, view}`.
-- [ ] 2. Defaults: `view` from config (default `grid`), `sort` undefined (natural order), filters undefined.
-- [ ] 3. In-memory per-section state (fresh on mount). Radio favorites keep their own hook persistence — out of scope to merge.
-- [ ] 4. Expose `activeFilterCount` so the FAB shows a dot badge when options are active (helps new users notice applied state).
-- [ ] 5. `reset()` clears all options (one-tap "Reset" row at the sheet bottom).
-- [ ] 6. Merge into `SectionRenderContext.options`; `renderTab` reads only from context (no direct hook calls inside tab scenes).
-- [ ] 7. Add a dev-only log of option transitions (removed before ship).
-- [ ] 8. **Error fix** — fix stale-closure bugs when options change mid-fetch; ensure `activeFilterCount` updates on every set.
-- [ ] 9. **Validation** — set sort + filter + density on Movies preview: content re-renders per selection, FAB badge counts, reset works; `tsc` 0.
-- [ ] 10. Commit `feat(sections): useSectionOptions + FAB badge`.
+- [x] 1. Implement `useSectionOptions(config)` → `{state, setOption, reset}` where `state = {filters: Record<string,string|undefined>, sort, view}`. — hook returns `{state, setOption, reset, activeFilterCount, options}`; `filters` is key→subKey so Wave 4 chips can hold several keys, sheet keeps single-select.
+- [x] 2. Defaults: `view` from config (default `grid`), `sort` undefined (natural order), filters undefined. — default view derived from the config's view group first option key, fallback `'grid'`; sort/filters start undefined/empty.
+- [x] 3. In-memory per-section state (fresh on mount). Radio favorites keep their own hook persistence — out of scope to merge. — `useState` initialized once per shell mount; documented in hook header.
+- [x] 4. Expose `activeFilterCount` so the FAB shows a dot badge when options are active (helps new users notice applied state). — counts filters + sort (view is a layout preference, excluded); `SectionFab` gained `badgeCount` prop → 20×20 dark pill, gold text + 1.5px gold border at `top:-4/right:-4`; a11y label appends `` `, ${count} active` ``.
+- [x] 5. `reset()` clears all options (one-tap "Reset" row at the sheet bottom). — `SectionOptionsSheet` gained `onReset`/`showReset` props; centered row with 16px `replay` icon + "Reset", hairline top border, rendered only when `showReset && onReset` (`activeFilterCount > 0`).
+- [x] 6. Merge into `SectionRenderContext.options`; `renderTab` reads only from context (no direct hook calls inside tab scenes). — hook's `options` record is the SAME one merged into `ctx.options` AND passed to the sheet as `value`; Movies preview `MoviePreviewScene` reads `ctx.options` and renders an "Options: …" live-apply line (one source of truth).
+- [x] 7. Add a dev-only log of option transitions (removed before ship). — `__DEV__ && console.log('[v10][useSectionOptions] <route>: <group> → <key>')` inside functional updates; reset logs separately.
+- [x] 8. **Error fix** — fix stale-closure bugs when options change mid-fetch; ensure `activeFilterCount` updates on every set. — `setOption`/`reset` use FUNCTIONAL `setState(prev => …)` (stable identities, never read a stale closure); `options`/`activeFilterCount` are `useMemo` over the live `state` dep so they recompute on every set. Also fixed declaration order bug in `SectionBrowseLayout` (hook must run before `ctx` references `options`).
+- [x] 9. **Validation** — set sort + filter + density on Movies preview: content re-renders per selection, FAB badge counts, reset works; `tsc` 0. — preview config gained TEMP `filter` (all/hd/english) + `view` (grid/list with layoutGrid/layoutList icons) groups alongside `sort`; `renderTab` passes `options={ctx.options}`; badge shows count, sheet rows apply live, Reset clears all; `npx tsc --noEmit` exit 0.
+- [x] 10. Commit `feat(sections): useSectionOptions + FAB badge`.
 
 **Gate 3 ✅:** FAB + options sheet functional on Movies preview with live-apply, badge, and reset.
 

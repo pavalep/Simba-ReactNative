@@ -34,9 +34,9 @@ import {SectionFab} from './components/SectionFab';
 import {SectionOptionsSheet} from './components/SectionOptionsSheet';
 import {useSectionTabs} from './hooks/useSectionTabs';
 import {useSectionSearch, logSearchComparison} from './hooks/useSectionSearch';
+import {useSectionOptions} from './hooks/useSectionOptions';
 import type {
   SectionBrowseConfig,
-  SectionOptionGroupId,
   SectionRenderContext,
   SectionRouteKey,
   SectionRouteParams,
@@ -109,17 +109,31 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
     [handleDebouncedChange, config.route, query],
   );
 
+  // ── FAB → options sheet (config-driven) ────────────────────────────────
+  // Phase 3.3: the hook owns ALL option state. The sheet reads/writes the
+  // SAME record threaded into `ctx.options` (one source of truth), the FAB
+  // shows `activeFilterCount` as a badge, and `reset` backs the sheet's
+  // one-tap "Reset" row. The shell owns sheet visibility — the FAB only
+  // reports the press. Declared BEFORE ctx: ctx merges `options` below.
+  const hasOptions = !!config.options?.groups?.length;
+  const [optionsSheetVisible, setOptionsSheetVisible] = useState(false);
+  const {setOption, reset, activeFilterCount, options} = useSectionOptions(
+    config,
+  );
+
   // ── Render context (shell-level, shared by every tab) ──────────────────
   // Phase 2.3: `offline` is REAL (useNetworkStatus) so content renderers can
   // keep showing cached data while offline; `onRetry` is the shared
   // ErrorState handler. Chips/options stay inert until Waves 3–4.
   // `query` persists across tab switches because it lives HERE, not inside
   // a scene — the user's search-persistence standard (v10 spec §3.3).
+  // Phase 3.3: `options` comes from `useSectionOptions` — the SAME record
+  // the sheet writes, so renderTab reads only the context (step 6).
   const ctx = useMemo<SectionRenderContext>(
     () => ({
       query: debouncedQuery,
       activeChips: [],
-      options: {},
+      options,
       refreshing: false,
       offline: SECTION_PREVIEW_FORCE_OFFLINE || !isOnline,
       // Shell fallback so the shared ErrorState always has a live button.
@@ -127,21 +141,8 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
       onRetry: () => {},
       routeParams: routeParams as SectionRouteParams<SectionRouteKey>,
     }),
-    [debouncedQuery, routeParams, isOnline],
+    [debouncedQuery, routeParams, isOnline, options],
   );
-
-  // ── FAB → options sheet (config-driven) ────────────────────────────────
-  // Phase 3.2: the SHELL owns sheet visibility — the FAB only reports the
-  // press. `previewOptions` is a TEMP in-shell harness so the sheet is
-  // live on the Movies preview (Phase 3.2 step 9 validation); Phase 3.3
-  // replaces it with the shared `useSectionOptions` hook. The record SHAPE
-  // (Partial<Record<SectionOptionGroupId, string>>) is the contract the
-  // hook + FilterChips reuse — one source of truth for selections.
-  const hasOptions = !!config.options?.groups?.length;
-  const [optionsSheetVisible, setOptionsSheetVisible] = useState(false);
-  const [previewOptions, setPreviewOptions] = useState<
-    Partial<Record<SectionOptionGroupId, string>>
-  >({});
 
   // ── TabView wiring ─────────────────────────────────────────────────────
   const routes = useMemo(
@@ -219,6 +220,7 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
         onPress={() => setOptionsSheetVisible(true)}
         accessibilityLabel={`Filter ${config.title} options`}
         visible={hasOptions}
+        badgeCount={activeFilterCount}
       />
 
       {/* ── SectionOptionsSheet — the FAB's payload (Phase 3.2) ── */}
@@ -227,10 +229,10 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
         onClose={() => setOptionsSheetVisible(false)}
         title={config.title}
         groups={config.options?.groups ?? []}
-        value={previewOptions}
-        onOptionChange={(groupId, key) =>
-          setPreviewOptions(prev => ({...prev, [groupId]: key}))
-        }
+        value={options}
+        onOptionChange={setOption}
+        onReset={reset}
+        showReset={activeFilterCount > 0}
       />
     </View>
   );

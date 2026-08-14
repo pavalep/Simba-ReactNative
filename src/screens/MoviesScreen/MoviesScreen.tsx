@@ -33,7 +33,11 @@ import {useToast} from '../../components/feedback/Toast';
 import type {InternetArchiveVideoResult} from '../../types/api';
 import {SectionBrowseLayout} from '../sections/SectionBrowseLayout';
 import {SectionContent, type SectionContentState} from '../sections/components/SectionContent';
-import type {SectionBrowseConfig, SectionTab} from '../sections/sectionConfig';
+import type {
+  SectionBrowseConfig,
+  SectionOptionGroupId,
+  SectionTab,
+} from '../sections/sectionConfig';
 
 // ─── [v10 Wave 2 preview] Unified-shell A/B ─────────────────────────────
 // TEMP. Movies renders through the shared SectionBrowseLayout using the
@@ -49,11 +53,14 @@ const PREVIEW_FORCE_STATE: SectionContentState = 'ready';
 
 /** Temp scene: renders the preview tab through the shared SectionContent
  *  states scaffolding. Retry resets the forced state back to ready so the
- *  shared ErrorState button is live in the A/B harness. */
-const MoviePreviewScene: React.FC<{tab: SectionTab; query: string}> = ({
-  tab,
-  query,
-}) => {
+ *  shared ErrorState button is live in the A/B harness. Reads `options`
+ *  from the shared ctx so live-apply is visible in the A/B harness
+ *  (Phase 3.3 step 9 validation). */
+const MoviePreviewScene: React.FC<{
+  tab: SectionTab;
+  query: string;
+  options: Partial<Record<SectionOptionGroupId, string>>;
+}> = ({tab, query, options}) => {
   const {colors} = useTheme();
   const [state, setState] = useState<SectionContentState>(PREVIEW_FORCE_STATE);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,6 +69,12 @@ const MoviePreviewScene: React.FC<{tab: SectionTab; query: string}> = ({
     setRefreshing(true);
     setTimeout(() => setRefreshing(false), 900);
   }, []);
+
+  const activeOptions = [
+    options.sort ? `sort: ${options.sort}` : '',
+    options.view ? `view: ${options.view}` : '',
+    options.filter ? `filter: ${options.filter}` : '',
+  ].filter(Boolean);
 
   return (
     <SectionContent
@@ -86,6 +99,11 @@ const MoviePreviewScene: React.FC<{tab: SectionTab; query: string}> = ({
           ? `Searching “${query}”…`
           : 'Pull to refresh — gold tint per app convention.'}
       </AppText>
+      {activeOptions.length > 0 ? (
+        <AppText variant="caption" color="accent" style={styles.previewHint}>
+          Options: {activeOptions.join(' · ')}
+        </AppText>
+      ) : null}
       {[0, 1, 2].map(i => (
         <View
           key={i}
@@ -102,9 +120,20 @@ const MOVIES_PREVIEW_CONFIG: SectionBrowseConfig = {
   search: {placeholder: 'Search movies…'},
   tabs: MOVIE_CATEGORIES.map(c => ({key: c.id, title: c.name})),
   // TEMP (Wave 3 preview): gives the FAB something to open on the Movies
-  // preview. Real groups land with the Wave 5 migration.
+  // preview. One group per option category (filter/sort/view) so Phase 3.3
+  // validation can set all three and watch the badge + live-apply line.
+  // Real groups land with the Wave 5 migration.
   options: {
     groups: [
+      {
+        id: 'filter',
+        title: 'Filter',
+        options: [
+          {key: 'all', label: 'All'},
+          {key: 'hd', label: 'HD'},
+          {key: 'english', label: 'English'},
+        ],
+      },
       {
         id: 'sort',
         title: 'Sort by',
@@ -114,10 +143,18 @@ const MOVIES_PREVIEW_CONFIG: SectionBrowseConfig = {
           {key: 'releaseDate', label: 'Release date'},
         ],
       },
+      {
+        id: 'view',
+        title: 'Density',
+        options: [
+          {key: 'grid', label: 'Grid', icon: 'layoutGrid'},
+          {key: 'list', label: 'List', icon: 'layoutList'},
+        ],
+      },
     ],
   },
   renderTab: (tab, ctx) => (
-    <MoviePreviewScene tab={tab} query={ctx.query} />
+    <MoviePreviewScene tab={tab} query={ctx.query} options={ctx.options} />
   ),
 };
 
