@@ -57,7 +57,10 @@ export const SectionFab: React.FC<SectionFabProps> = ({
       pointerEvents="box-none">
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={onPress}
+        onPress={() => {
+          console.log('[FAB] press', accessibilityLabel);
+          onPress();
+        }}
         accessibilityRole="button"
         accessibilityLabel={
           badgeCount > 0

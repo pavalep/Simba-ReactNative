@@ -1,3 +1,2 @@
 export {BottomSheet} from './BottomSheet';
-export {BottomSheetBackdrop} from './BottomSheetBackdrop';
-export type {BottomSheetProps} from './BottomSheet';
+export type {BottomSheetProps, BottomSheetHandle} from './BottomSheet';

@@ -355,8 +355,7 @@ export async function searchInternetArchiveVideos(
       rows: options?.limit ?? 10,
       page: options?.page ?? 1,
       output: 'json',
-      // Optional IA sort (e.g. "downloads desc" for the All tab so
-      // popular movies surface instead of relevance-ranked noise).
+      // Optional IA sort for callers that explicitly opt in.
       ...(options?.sort ? {'sort[]': options.sort} : {}),
     },
     cacheTtlMs: 300_000,

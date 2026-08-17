@@ -11,7 +11,7 @@
 //   • renderMoviesContent — the config's `renderContent`: bridges the
 //     shell's debounced `ctx.query` into the hook's `setSearchTerm`, reads
 //     the active category from `ctx.options.filter` ('' → the default
-//     "All" stream), then renders the 2-col MovieCard grid through
+//     "All" stream), then renders the single-column MovieCard list through
 //     SectionContent's DATA MODE (states, pagination, testID, gold
 //     RefreshControl all shared).
 //
@@ -52,21 +52,36 @@ function formatDuration(seconds: number): string {
 // ─── Client-side sort (Phase 5.3 step 2) ────────────────────────────────
 // The FAB's sort options re-order the FETCHED slice with a pure function:
 // the array is copied before sorting (never mutates the scope cache), and
-// `undefined` keeps the server's natural order (the per-category `sort`
-// field, e.g. "downloads desc" for All). Sorting only the loaded slice is
-// a known trap (spec §10.2) — `items` is a useMemo dep below, so every
+// `undefined` keeps the fetched order. Sorting only the loaded slice is a
+// known trap (spec §10.2) — `items` is a useMemo dep below, so every
 // load-more append re-sorts the full array automatically.
 function parseYear(year: string | undefined): number {
   const n = Number(year);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-/** Unknown sort keys fall through untouched (safe default: natural order). */
+/**
+ * Sort the IA catalog client-side. Server-side sort is intentionally
+ * avoided for the "default popular first" path because IA's
+ * `sort[]=downloads desc` is currently 502-proned; we materialize the
+ * same order from `downloadCount` here.
+ *
+ * Unknown sort keys fall through untouched (safe default: natural order).
+ */
 function sortMovies(
   items: InternetArchiveVideoResult[],
   sort: string | undefined,
 ): InternetArchiveVideoResult[] {
-  if (!sort) return items;
+  // Default (no sheet sort chosen) → most popular first.
+  if (!sort || sort === '' || sort === 'downloads') {
+    const copy = [...items];
+    copy.sort(
+      (a, b) =>
+        b.downloadCount - a.downloadCount ||
+        a.title.localeCompare(b.title),
+    );
+    return copy;
+  }
   const copy = [...items];
   switch (sort) {
     case 'newest':

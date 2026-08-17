@@ -54,6 +54,8 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
     const {colors} = useTheme();
     const hasActive = Object.values(value).some(v => v && v.length > 0);
 
+    console.log('[FilterSheet] render', {visible, title, groupCount: groups.length, hasActive});
+
     return (
       <BottomSheet
         visible={visible}

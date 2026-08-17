@@ -127,7 +127,6 @@ export function useMoviesScreen() {
         const result = await searchInternetArchiveVideos(scopedQuery, {
           limit: PAGE_SIZE,
           page,
-          sort: category.sort,
         });
         if (seq !== (seqRef.current[key] ?? 0)) return; // stale response
 

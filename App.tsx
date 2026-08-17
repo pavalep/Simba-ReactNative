@@ -4,6 +4,7 @@ import {Linking, View, StyleSheet} from 'react-native';
 import {PersistGate} from 'redux-persist/integration/react';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {store, persistor} from './src/store';
 import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
@@ -178,15 +179,20 @@ const onRehydrated = () => {
 
 const App: React.FC = () => {
   return (
-    <SafeAreaProvider>
-      <Provider store={store}>
-        <PersistGate loading={null} persistor={persistor} onBeforeLift={onRehydrated}>
-          <ThemeProvider>
-            <AppContent />
-          </ThemeProvider>
-        </PersistGate>
-      </Provider>
-    </SafeAreaProvider>
+    // GestureHandlerRootView is required by @lodev09/react-native-true-sheet
+    // (its drag-to-dismiss gesture uses the gesture-handler runtime) and by
+    // any nested navigation gesture support.
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <Provider store={store}>
+          <PersistGate loading={null} persistor={persistor} onBeforeLift={onRehydrated}>
+            <ThemeProvider>
+              <AppContent />
+            </ThemeProvider>
+          </PersistGate>
+        </Provider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 };
 

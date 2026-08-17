@@ -169,20 +169,16 @@ export const SECTION_CONFIGS: Record<SectionRouteKey, SectionBrowseConfig> = {
           id: 'sort',
           title: 'Sort by',
           options: [
+            // Default — most popular first, applied client-side from
+            // `downloadCount` to keep the fetch path simple and reliable.
+            {key: 'downloads', label: 'Most popular'},
             {key: 'newest', label: 'Newest'},
             {key: 'oldest', label: 'Oldest'},
             {key: 'az', label: 'A–Z'},
             {key: 'rating', label: 'Rating'},
           ],
         },
-        {
-          id: 'view',
-          title: 'Density',
-          options: [
-            {key: 'grid', label: 'Grid', icon: 'layoutGrid'},
-            {key: 'list', label: 'List', icon: 'layoutList'},
-          ],
-        },
+        // Density view omitted — v10.1 forces the section to single-column.
       ],
     },
     renderContent: renderMoviesContent,

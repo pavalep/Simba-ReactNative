@@ -156,7 +156,10 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
 
       {/* ── SectionFab — bottom-right "more this section can do" ── */}
       <SectionFab
-        onPress={() => setOptionsSheetVisible(true)}
+        onPress={() => {
+          console.log('[SectionBrowseLayout] FAB tapped — opening sheet', config.route);
+          setOptionsSheetVisible(true);
+        }}
         accessibilityLabel={`Filter ${config.title} options`}
         visible={hasOptions}
         badgeCount={activeFilterCount}
@@ -169,7 +172,10 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
           chip labels, and the badge count. */}
       <FilterSheet
         visible={optionsSheetVisible}
-        onClose={() => setOptionsSheetVisible(false)}
+        onClose={() => {
+          console.log('[SectionBrowseLayout] FilterSheet onClose', config.route);
+          setOptionsSheetVisible(false);
+        }}
         title={`${config.title} filter`}
         groups={(config.options?.groups ?? []).map<FilterSheetGroup>(g => ({
           id: g.id,

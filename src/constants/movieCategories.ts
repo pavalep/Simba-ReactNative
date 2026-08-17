@@ -32,8 +32,6 @@ export interface MovieCategory {
   description: string;
   /** Local cover image for the Home rail tile. */
   image: ImageSourcePropType;
-  /** Optional IA sort applied to the search (e.g. "downloads desc"). */
-  sort?: string;
 }
 
 export const MOVIE_CATEGORIES: MovieCategory[] = [
@@ -42,7 +40,9 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     name: 'All',
     icon: 'clapperboard',
     query: 'mediatype:(movies) AND subject:("Feature Films")',
-    sort: 'downloads desc',
+    // Keep the default fetch path unsorted. Archive.org intermittently
+    // slows down or fails on server-side popularity sorts, so Movies
+    // now loads the catalog first and applies "most popular" locally.
     description: 'Every movie in the archive, most popular first',
     image: CATEGORY_COVERS.movies.all,
   },
