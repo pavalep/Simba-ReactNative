@@ -462,7 +462,7 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
         </AppText>
       }
       onEndReached={() => loadMore(categoryId)}
-      onEndReachedThreshold={0.4}
+      onEndReachedThreshold={0.6}
       ListFooterComponent={
         showFooter ? (
           <View style={styles.gridFooter}>

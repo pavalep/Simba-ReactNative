@@ -159,7 +159,7 @@ export async function searchInternetArchiveAudio(
       page: options?.page ?? 1,
       output: 'json',
     },
-    cacheTtlMs: 300_000,
+    cacheTtlMs: 900_000, // 15 min — IA advancedsearch is slow; raise TTL
   });
   const docs = data.response?.docs ?? [];
   return {items: docs.map(mapItem), numFound: data.response?.numFound ?? docs.length};

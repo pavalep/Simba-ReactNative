@@ -170,12 +170,25 @@ export function useMoviesScreen() {
     [getScope, fetchPage],
   );
 
-  /** Infinite scroll: fetch the next page when available. */
+  /** Infinite scroll: fetch the next page when available.
+   *  Guard against double-fires (RN's onEndReached can trigger while a
+   *  previous fetch is still in flight — IA's search is slow, so the
+   *  duplicate request makes the page feel stuck).
+   *  Also rate-limit back-to-back triggers to one fetch per ~600ms
+   *  (debounce) so a quick scroll-up-then-down doesn't queue a chain.
+   */
+  const lastLoadMoreAtRef = useRef<Record<string, number>>({});
   const loadMore = useCallback(
     (categoryId: string) => {
       const scope = getScope(categoryId);
       if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore) return;
       if (scope.items.length >= scope.numFound) return; // end of results
+
+      const now = Date.now();
+      const lastAt = lastLoadMoreAtRef.current[categoryId] ?? 0;
+      if (now - lastAt < 600) return; // debounce back-to-back triggers
+      lastLoadMoreAtRef.current[categoryId] = now;
+
       fetchPage(categoryId, scope.page + 1, 'more');
     },
     [getScope, fetchPage],
