@@ -115,18 +115,20 @@ const MovieCard: React.FC<MovieCardProps> = React.memo(
 
     return (
       <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={() => onPress(item)}
-        disabled={isResolving}
-        accessibilityRole="button"
-        style={styles.movieCard}>
+      activeOpacity={0.85}
+      onPress={() => onPress(item)}
+      disabled={isResolving}
+      accessibilityRole="button"
+      style={[
+        styles.movieCard,
+        {backgroundColor: colors.background.elevated},
+      ]}>
+        {/* Portrait-ish thumbnail on the left */}
         <View
           style={[
             styles.thumbnailWrap,
-            {backgroundColor: colors.background.elevated},
+            {backgroundColor: colors.background.primary},
           ]}>
-          {/* FastImage — explicit width/height style is required, see
-              styles.thumbnail (absoluteFillObject was rendering 0×0). */}
           {showImage ? (
             <FastImage
               source={{uri: item.imageUrl, priority: FastImage.priority.normal}}
@@ -137,7 +139,7 @@ const MovieCard: React.FC<MovieCardProps> = React.memo(
             />
           ) : (
             <View style={styles.thumbnailPlaceholder}>
-              <SvgIcon name="video" size={24} color={colors.accent.goldDim} />
+              <SvgIcon name="video" size={28} color={colors.accent.goldDim} />
             </View>
           )}
           {/* Resolving overlay — shows while we fetch the real file URL */}
@@ -151,21 +153,7 @@ const MovieCard: React.FC<MovieCardProps> = React.memo(
               <ActivityOrb size={36} />
             </View>
           )}
-          {/* Duration badge */}
-          {item.duration > 0 && (
-            <View
-              style={[
-                styles.durationBadge,
-                {backgroundColor: colors.background.scrimMid},
-              ]}>
-              <AppText
-                variant="caption"
-                style={[styles.durationText, {color: colors.text.bright}]}>
-                {formatDuration(item.duration)}
-              </AppText>
-            </View>
-          )}
-          {/* Rating badge */}
+          {/* Rating badge pinned bottom-right of the thumb */}
           {item.avgRating > 0 && (
             <View
               style={[
@@ -181,20 +169,43 @@ const MovieCard: React.FC<MovieCardProps> = React.memo(
           )}
         </View>
 
-        {/* Info */}
+        {/* Right column: title + meta row + duration chip */}
         <View style={styles.movieInfo}>
-          <AppText variant="bodySmall" numberOfLines={2} style={styles.movieTitle}>
+          <AppText
+            variant="body1"
+            numberOfLines={2}
+            style={styles.movieTitle}>
             {item.title}
           </AppText>
-          {item.year ? (
-            <AppText variant="caption" color="secondary">
-              {item.year}
-            </AppText>
-          ) : null}
-          {item.creator ? (
-            <AppText variant="caption" color="tertiary" numberOfLines={1}>
-              {item.creator}
-            </AppText>
+          <View style={styles.metaRow}>
+            {item.year ? (
+              <AppText variant="caption" color="secondary">
+                {item.year}
+              </AppText>
+            ) : null}
+            {item.year && item.creator ? (
+              <AppText variant="caption" color="tertiary">
+                {' · '}
+              </AppText>
+            ) : null}
+            {item.creator ? (
+              <AppText variant="caption" color="tertiary" numberOfLines={1}>
+                {item.creator}
+              </AppText>
+            ) : null}
+          </View>
+          {item.duration > 0 ? (
+            <View
+              style={[
+                styles.durationBadge,
+                {backgroundColor: colors.accent.goldDim},
+              ]}>
+              <AppText
+                variant="caption"
+                style={[styles.durationText, {color: colors.accent.gold}]}>
+                {formatDuration(item.duration)}
+              </AppText>
+            </View>
           ) : null}
         </View>
       </TouchableOpacity>
@@ -378,7 +389,10 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
       ? 'empty'
       : 'ready';
 
-  const view = ctx.options.view === 'list' ? 'list' : 'grid';
+  // v10.1: Movies is always single-column (horizontal card) — the FAB
+  // exposes only filter + sort (no view toggle). The original 2-col
+  // grid felt cramped and made titles unreadable.
+  const view: 'list' | 'grid' = 'list';
   const category = MOVIE_CATEGORIES.find(c => c.id === categoryId);
 
   // The FAB sort re-orders THIS stream's own loaded slice (never another
@@ -511,23 +525,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
+  // Horizontal card row: 96×144 portrait thumb on the left, text on the right.
+  // Single-column list view (one item per row).
   movieCard: {
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'stretch',
     borderRadius: radius.md,
+    marginBottom: spacing.sm,
+    padding: spacing.sm,
+    gap: spacing.md,
     overflow: 'hidden',
   },
   thumbnailWrap: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: radius.md,
+    width: 96,
+    height: 144,
+    borderRadius: radius.sm,
     overflow: 'hidden',
     justifyContent: 'flex-end',
     alignItems: 'flex-end',
     padding: spacing.xs,
   },
-  // Actual image style. Fills the wrapper, sits behind the duration/
-  // rating badges (z-order from JSON position). Explicit width/height is
-  // required — absoluteFillObject renders 0×0 in this layout.
+  // Actual image style. Fills the wrapper, sits behind the rating badge.
   thumbnail: {
     width: '100%',
     height: '100%',
@@ -543,18 +561,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 0,
   },
+  // Duration is now a gold "chip" rendered in the info column.
   durationBadge: {
-    paddingHorizontal: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: radius.sm - 2,
+    borderRadius: radius.sm,
+    marginTop: spacing.xs,
   },
   durationText: {
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
   },
+  // Rating stays a floating pill on the thumbnail (bottom-left).
   ratingBadge: {
     position: 'absolute',
-    top: spacing.xs,
+    bottom: spacing.xs,
     left: spacing.xs,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -565,11 +587,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   movieInfo: {
-    paddingHorizontal: spacing.xs,
+    flex: 1,
     paddingVertical: spacing.xs,
+    justifyContent: 'center',
+    gap: 2,
   },
   movieTitle: {
     fontWeight: '600',
-    lineHeight: 16,
+    lineHeight: 20,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
 });
