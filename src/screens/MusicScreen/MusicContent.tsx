@@ -217,7 +217,20 @@ export const MusicDataProvider: React.FC<{
       setSearchTerm: music.setSearchTerm,
       handleTrackPress,
     }),
-    [music, handleTrackPress],
+    // Stabilize the context value: depend on each property individually
+    // so the memo only invalidates when one of them actually changes,
+    // not every render (the `music` object is fresh each time) — mirrors
+    // the MoviesContent fix (Phase 5.2b).
+    [
+      music.isSearchActive,
+      music.getScope,
+      music.ensureLoaded,
+      music.loadMore,
+      music.retry,
+      music.refresh,
+      music.setSearchTerm,
+      handleTrackPress,
+    ],
   );
 
   return (
@@ -255,13 +268,15 @@ const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
     setSearchTerm(ctx.query);
   }, [ctx.query, setSearchTerm]);
 
-  // Load page 1 for this genre on first mount / genre switch. Refires
-  // when the search term changes because `ensureLoaded`'s identity depends
-  // on it — the hook's loaded/loading guard makes that a no-op for cached
-  // scopes.
+  // Load page 1 for this genre on first mount / genre switch. The hook's
+  // hasLoaded/isLoading guard turns this into a no-op for already-loaded
+  // scopes. Ref-stashed so the effect doesn't re-fire when only
+  // ensureLoaded's identity changes (Phase 5.2b: mirrors MoviesContent).
+  const ensureLoadedRef = React.useRef(ensureLoaded);
+  ensureLoadedRef.current = ensureLoaded;
   useEffect(() => {
-    ensureLoaded(genre);
-  }, [genre, ensureLoaded]);
+    ensureLoadedRef.current(genre);
+  }, [genre]);
 
   const scope = getScope(genre);
   const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;

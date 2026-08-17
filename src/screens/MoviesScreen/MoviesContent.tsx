@@ -296,7 +296,22 @@ export const MoviesDataProvider: React.FC<{
       resolvingId,
       handleMoviePress,
     }),
-    [movies, resolvingId, handleMoviePress],
+    // Stabilize the context value: depend on each individual property
+    // so the memo only invalidates when one of them actually changes,
+    // not every time `movies` (a fresh object) is returned from the hook.
+    // Without this, every provider render gives the consumer a new
+    // `ensureLoaded` ref, re-firing the mount effect (Phase 5.2b).
+    [
+      movies.isSearchActive,
+      movies.getScope,
+      movies.ensureLoaded,
+      movies.loadMore,
+      movies.retry,
+      movies.refresh,
+      movies.setSearchTerm,
+      resolvingId,
+      handleMoviePress,
+    ],
   );
 
   return (
@@ -337,12 +352,16 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   }, [ctx.query, setSearchTerm]);
 
   // Load page 1 for this category on first mount / category switch.
-  // Refires when the search term changes because `ensureLoaded`'s identity
-  // depends on it — the hook's loaded/loading guard makes that a no-op for
-  // cached scopes.
+  // The hook's hasLoaded/isLoading guard turns this into a no-op for
+  // already-loaded scopes, so it's safe to fire on every categoryId
+  // change. We use a ref-stash so the effect doesn't re-fire when only
+  // ensureLoaded's identity changes (Phase 5.2b: re-firing causes the
+  // provider to re-render and produce a new context value).
+  const ensureLoadedRef = React.useRef(ensureLoaded);
+  ensureLoadedRef.current = ensureLoaded;
   useEffect(() => {
-    ensureLoaded(categoryId);
-  }, [categoryId, ensureLoaded]);
+    ensureLoadedRef.current(categoryId);
+  }, [categoryId]);
 
   const scope = getScope(categoryId);
   const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
