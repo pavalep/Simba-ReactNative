@@ -23,7 +23,7 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
 import {FilterChips, type FilterChipItem} from '../../components/utility/FilterChips';
 import {SectionFab} from './components/SectionFab';
-import {SectionOptionsSheet} from './components/SectionOptionsSheet';
+import {FilterSheet, type FilterSheetGroup} from '../../components/sheets/FilterSheet/FilterSheet';
 import {useSectionSearch} from './hooks/useSectionSearch';
 import {useSectionOptions} from './hooks/useSectionOptions';
 import type {
@@ -162,16 +162,28 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
         badgeCount={activeFilterCount}
       />
 
-      {/* ── SectionOptionsSheet — the FAB's payload (Phase 3.2) ── */}
-      <SectionOptionsSheet
+      {/* ── FilterSheet — the FAB's payload (v10.1 KISS) ── */}
+      {/* Translate the section config's groups → FilterSheet's data-driven
+          shape. Re-using the same config that drives the active filter
+          chip + FAB badge guarantees zero drift between sheet rows,
+          chip labels, and the badge count. */}
+      <FilterSheet
         visible={optionsSheetVisible}
         onClose={() => setOptionsSheetVisible(false)}
-        title={config.title}
-        groups={config.options?.groups ?? []}
-        value={options}
-        onOptionChange={setOption}
+        title={`${config.title} filter`}
+        groups={(config.options?.groups ?? []).map<FilterSheetGroup>(g => ({
+          id: g.id,
+          title: g.title,
+          rows: g.options.map(o => ({key: o.key, label: o.label})),
+        }))}
+        value={options as unknown as Record<string, string | undefined>}
+        onChange={(groupId, key) =>
+          // Compose the new partial; same single source of truth
+          // (useSectionOptions) handles the rest, including the active
+          // filter chip and FAB badge count.
+          setOption(groupId as 'filter' | 'sort' | 'view', key)
+        }
         onReset={reset}
-        showReset={activeFilterCount > 0}
       />
     </View>
   );

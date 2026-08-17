@@ -49,7 +49,7 @@ import {
   toRow,
   type ChannelRow,
 } from './components/ChannelCard';
-import {LiveTVOptionsSheet} from './components/LiveTVOptionsSheet';
+import {FilterSheet} from '../../components/sheets/FilterSheet/FilterSheet';
 
 type Props = RootStackScreenProps<'LiveTVScreen'>;
 
@@ -413,14 +413,23 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
         onPress={() => setSheetVisible(true)}
       />
 
-      <LiveTVOptionsSheet
+      <FilterSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
-        value={filters}
-        onOptionChange={handleOptionChange}
+        title="Filter channels"
+        groups={[
+          {
+            id: 'category',
+            title: 'Category',
+            rows:
+              tagsLoaded
+                ? tags.categories.map(c => ({key: c.id, label: c.name}))
+                : [],
+          },
+        ]}
+        value={{category: filters.category ?? ''}}
+        onChange={(groupId, key) => handleOptionChange(groupId as 'category', key)}
         onReset={resetFilters}
-        tags={tags}
-        tagsLoaded={tagsLoaded}
       />
 
       <OptionSheetDialog

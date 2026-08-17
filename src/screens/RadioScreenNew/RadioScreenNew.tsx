@@ -30,7 +30,7 @@ import {
   toRow,
   type StationRow,
 } from './components/RadioStationCard';
-import {RadioOptionsSheet} from './components/RadioOptionsSheet';
+import {FilterSheet} from '../../components/sheets/FilterSheet/FilterSheet';
 import {SectionFab} from '../sections/components/SectionFab';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
@@ -49,6 +49,17 @@ import {OptionSheetDialog} from '../../components/core/OptionSheetDialog/OptionS
 type Props = RootStackScreenProps<'RadioScreen'>;
 
 const PAGE_SIZE = 30;
+
+/**
+ * Radio's browse metadata items are sometimes plain strings and
+ * sometimes {id, name} records (depending on the endpoint). Flatten
+ * them into FilterSheet's uniform {key, label} row shape.
+ */
+function toRadioTagRow(t: unknown): {key: string; label: string} {
+  return typeof t === 'string'
+    ? {key: t, label: t}
+    : {key: (t as {id: string}).id, label: (t as {name: string}).name};
+}
 
 // ─── Active-filter chip row ────────────────────────────────────────────
 // Feedback + quick-clear: one gold pill per active filter; tap clears it.
@@ -365,14 +376,40 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
         badgeCount={activeFilterCount}
       />
 
-      <RadioOptionsSheet
+      <FilterSheet
         visible={sheetVisible}
         onClose={() => setSheetVisible(false)}
-        value={filters}
-        onOptionChange={handleOptionChange}
+        title="Filter radio stations"
+        groups={[
+          {
+            id: 'genre',
+            title: 'Genre',
+            rows: tagsLoaded
+              ? (tags.genres as unknown[]).map(toRadioTagRow)
+              : [],
+          },
+          {
+            id: 'country',
+            title: 'Country',
+            rows: tagsLoaded
+              ? (tags.countries as unknown[]).map(toRadioTagRow)
+              : [],
+          },
+          {
+            id: 'language',
+            title: 'Language',
+            rows: tagsLoaded
+              ? (tags.languages as unknown[]).map(toRadioTagRow)
+              : [],
+          },
+        ]}
+        value={{
+          genre: filters.genre ?? '',
+          country: filters.country ?? '',
+          language: filters.language ?? '',
+        }}
+        onChange={(groupId, key) => handleOptionChange(groupId as RadioFilterId, key)}
         onReset={resetFilters}
-        tags={tags}
-        tagsLoaded={tagsLoaded}
       />
 
       <OptionSheetDialog
