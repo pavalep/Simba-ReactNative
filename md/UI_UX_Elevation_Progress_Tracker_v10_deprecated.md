@@ -1,9 +1,10 @@
 # SIMBA Mobile: UI/UX Elevation v10 — Unified Section Browse Pattern
 ## Progress Tracker & Execution Plan
 
-> **Source Spec:** [`UI_UX_Elevation_Specification_v10.md`](UI_UX_Elevation_Specification_v10.md)
+> **⛔ DEPRECATED (2026-08-14):** superseded by [`UI_UX_Elevation_Progress_Tracker_v10.1.md`](UI_UX_Elevation_Progress_Tracker_v10.1.md) — the **FAB-only** tracker. v10.1 removes the tab shell (`TabView` / `SectionTabBar` / `useSectionTabs`); filters live in the FAB options sheet. This file is kept as the **historical record** (full Waves 1–5 detail); do **NOT** use it for new work.
+> **Source Spec:** [`UI_UX_Elevation_Specification_v10_deprecated.md`](UI_UX_Elevation_Specification_v10_deprecated.md) — deprecated; see the v10.1 spec
 > **Supersedes:** v9 icon pass (assets/constants only — carried forward, no conflicts)
-> **Status:** 🔄 IN PROGRESS
+> **Status:** ⛔ DEPRECATED
 > **Purpose:** Land all 8 Home section pages (Movies, Music, Radio, Live TV, Audiobooks, Podcasts, Shows, Archive) on one config-driven browse shell — `InternalHeader` + `SearchBar` + optional `FilterChips` + unified `TabView` + bottom-right `SectionFab` → `SectionOptionsSheet`. Content/cards stay per-section. Sub-pages are explicitly **out of scope**.
 > **Shape:** 12 WAVES · 30 PHASES · ≥10 steps per phase · every phase has an **Error fix** and a **Validation** step.
 
@@ -285,39 +286,41 @@ WAVE 12: ARCHIVE + FINAL VERIFICATION                          (3 phases)
 
 ---
 
-## WAVE 6: MUSIC
+## WAVE 6: MUSIC — FAB-ONLY (no tabs)
 
-### Phase 6.1 — Music → Shell, Tabs, Chips
-**Files:** Music config entry, `src/screens/MusicScreen/MusicScreen.tsx`
+> **Design decision (user-confirmed):** Music drops the tab bar entirely — one paginated "All" stream (popular order = random-feeling), a gold FAB opening a scrollable bottom sheet (Genre / Sort / Density), and the active genre surfacing as a selectable chip. Future genres plug into the sheet with **zero shell changes** — the Movies-common shell language makes a Movies user instantly at home. Trade-off accepted: genre switch = 2 taps (FAB → sheet) vs one tab tap.
+
+### Phase 6.1 — Music → Shell, Single-Stream, FAB Filtering
+**Files:** Music config entry, `src/screens/sections/sectionConfig.ts`, `src/screens/MusicScreen/MusicScreen.tsx`
 **Status:** ⬜ PENDING
 
-- [ ] 1. Fill Music config: tabs from `MUSIC_TABS` (via `useSectionTabs`), search "Search music…", quickChips = `JAMENDO_GENRES` (horizontal).
-- [ ] 2. Rewrite `MusicScreen.tsx` to `<SectionBrowseLayout config={getSectionConfig('MusicScreen')} />`.
-- [ ] 3. Move the single-col `TrackCard` list into `renderTab`.
-- [ ] 4. Apply the shared tab-bar contract — fixes Music's missing `TabView` `style` parity.
-- [ ] 5. Preserve `query` route-param pre-fill.
-- [ ] 6. Keep `useMusicScreen` intact; feed `ctx`.
-- [ ] 7. Delete the old duplicated shell code.
-- [ ] 8. **Error fix** — fix tab-bar parity regression (indicator position when tabs scroll) and chip re-render loops.
-- [ ] 9. **Validation** — Music matches the shell anatomy; tabs + chips behave like Movies; `tsc` 0.
-- [ ] 10. Commit `feat(music): migrate to SectionBrowseLayout`.
+- [ ] 1. Fill Music config: single synthetic tab `{key: 'all', title: 'All'}` + `hideTabBar`; search "Search music…"; options groups: **filter Genre** (`JAMENDO_GENRES` scrollable single-select), **sort** (A–Z / Recent / Duration), **view** (grid / list).
+- [ ] 2. Extend the shell: `hideTabBar?: boolean` on `SectionBrowseConfig` → render the single scene with no tab bar (FAB-only anatomy; `SectionContent` still lists per current tab).
+- [ ] 3. Extend `useSectionOptions`: filter **tap-again-to-deselect** (active filter tap → clear back to All) + optional filter seed from `routeParams.genre` (Home deep-link pre-selects genre + chip).
+- [ ] 4. Rewrite `MusicScreen.tsx` to `<MusicDataProvider><SectionBrowseLayout config={getSectionConfig('MusicScreen')} routeParams={route.params} /></MusicDataProvider>`.
+- [ ] 5. Preserve `query` route-param pre-fill (search pre-fill from Home still lands in the search bar).
+- [ ] 6. Home deep-links: `{initialTab: 'popular'}` (genre 'all') and `{genre}` both resolve to the single All stream; `{genre}` seeds the FAB filter + chip.
+- [ ] 7. Delete the old duplicated shell code (3-tab `TabView` + bespoke genre chips).
+- [ ] 8. **Error fix** — fix hideTabBar regression (single scene lazy-mounts once; no empty-tab-bar flash) and chip/option double-apply.
+- [ ] 9. **Validation** — Music matches the FAB-only anatomy; Home deep-links land on the All stream with genre pre-selected; `tsc` 0.
+- [ ] 10. Commit `feat(music): FAB-only shell migration`.
 
-### Phase 6.2 — Music Content + FAB + Polish
-**Files:** Music content, Music config
+### Phase 6.2 — Music Content + FAB Sheet + Polish
+**Files:** `src/screens/MusicScreen/` (provider + content), `useMusicScreen`, `jamendoService`
 **Status:** ⬜ PENDING
 
-- [ ] 1. Standardize Music empty states: replace bespoke "prompt" empties with shared `EmptyState` (keep the original copy as `title`/`suggestion`).
-- [ ] 2. Add loading skeletons (`SkeletonList` for the single-col list).
-- [ ] 3. Add error state + retry via `SectionContent`.
-- [ ] 4. Enable Music options: sort (A–Z / Recent / Duration) + view (list / grid).
-- [ ] 5. Wire chips ↔ options: chip select also reflects in the sheet's filter group (one source of truth).
-- [ ] 6. Add RefreshControl + offline banner parity.
-- [ ] 7. Verify `onEndReached` pagination parity.
-- [ ] 8. **Error fix** — fix list↔grid density transition glitch and chip/option double-apply.
-- [ ] 9. **Validation** — full Music walk-through vs pre-migration; `tsc` 0; screenshot diff of empty/error states.
-- [ ] 10. Commit `feat(music): states, FAB options, chip sync`.
+- [ ] 1. Extend `getPopularJamendoTracks(limit, page?)` with a backward-compatible `page` param → paginated "All" stream (`order: popularity_total` = the random-feeling default).
+- [ ] 2. Rework `useMusicScreen` to Movies-parity: single scope keyed by `(genre, searchTerm)`; keep per-scope cache/seq/guard refs; `ensureLoaded` / `loadMore` / `refresh` / `retry`; genre from FAB options (not internal tab state).
+- [ ] 3. Create `MusicDataProvider` ABOVE the shell (mirror `MoviesDataProvider`) so the All stream shares ONE cache via context.
+- [ ] 4. `renderMusicTab`: `TrackCard` grid + list via `SectionContent` DATA MODE; view from `ctx.options.view`; client-side sort (A–Z / Recent / Duration) memo on `[items, options.sort]`.
+- [ ] 5. Active genre chip: selected genre surfaces as a selectable chip in the shared `FilterChips` slot; tap → clear back to All (single source of truth with the sheet).
+- [ ] 6. Standardize states via `SectionContent`: loading skeletons, shared `ErrorState` + retry, `EmptyState` (keep original copy as title/suggestion).
+- [ ] 7. Add RefreshControl + offline banner parity (Movies 5.2).
+- [ ] 8. **Error fix** — fix grid↔list density transition glitch and sort re-apply on append (pagination trap).
+- [ ] 9. **Validation** — full Music walk-through vs pre-migration; FAB sheet genre list scrolls; chip ↔ sheet sync; `tsc` 0.
+- [ ] 10. Commit `feat(music): FAB sheet (genre/sort/density) + states`.
 
-**Gate 6 ✅:** Music fully migrated; chip + sheet sync pattern proven for reuse.
+**Gate 6 ✅:** Music migrated to FAB-only; genre sheet + chip sync pattern proven — future genres plug in with zero shell changes.
 
 ---
 

@@ -1,8 +1,8 @@
 # SIMBA Mobile: UI/UX Elevation v10 — Unified Section Browse Pattern
 ## Specification
 
-> **Document Version:** 10.0.0
-> **Status:** 🔄 **IN PROGRESS** — plan approved; execution tracked in the v10 Progress Tracker
+> **Document Version:** 10.0.0 — **⛔ DEPRECATED (2026-08-14)**
+> **Status:** ⛔ **SUPERSEDED** by [`UI_UX_Elevation_Specification_v10.1.md`](UI_UX_Elevation_Specification_v10.1.md) — v10.1 replaces the tab-based shell with the **FAB-only** pattern: **no tabs anywhere**, filters live in the FAB options sheet. This file is kept as the **historical record**; do **NOT** use it for new work.
 > **Supersedes:** v9 (per-section SVG icon pass) — this spec builds on top of it, not against it
 > **Source issue:** The 8 Home section pages (Movies, Music, Radio, Live TV, Audiobooks, Podcasts, Shows, Archive) each follow roughly the same layout formula — `InternalHeader` + `SearchBar` + `TabView` — but they are **hand-duplicated and drifted apart**: 4 different tab-source patterns, 5 different chip implementations, tab-bar styling drift, 2 sections missing pull-to-refresh + offline handling, and no consistent way to expose per-section filters. A new user landing on Music after Movies sees a *different* "language", so they feel lost.
 
