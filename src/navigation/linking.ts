@@ -172,6 +172,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
         path: 'radio/:initialTab?',
         parse: {initialTab: decodeURIComponent},
       },
+      RadioFavoritesScreen: 'radio/favorites',
       LiveTVScreen: {
         path: 'tv/:categoryId?',
         parse: {categoryId: decodeURIComponent},

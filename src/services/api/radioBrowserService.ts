@@ -73,6 +73,41 @@ export async function getStationsByLanguage(
   });
 }
 
+/**
+ * Combined-filter browse (v10.1 Wave 7 standalone Radio): one or more of
+ * genre / country / language applied simultaneously via the search
+ * endpoint's `tag`/`country`/`language` params. Empty filters are simply
+ * omitted, so a call with no filters at all behaves like top stations.
+ * Results are ordered by click count so the list reads as "top stations
+ * matching these filters".
+ */
+export interface RadioFilterSet {
+  genre?: string;
+  country?: string;
+  language?: string;
+}
+
+export async function getStationsByFilters(
+  filters: RadioFilterSet,
+  options?: ApiSearchOptions,
+): Promise<RadioStationResult[]> {
+  const params: Record<string, string | number | undefined> = {
+    ...buildParams(options),
+    order: 'clickcount',
+    reverse: 'true',
+    hidebroken: 'true',
+  };
+  if (filters.genre) params.tag = filters.genre;
+  if (filters.country) params.country = filters.country;
+  if (filters.language) params.language = filters.language;
+  return apiFetch<RadioStationResult[]>({
+    config: API_CONFIG.radioBrowser,
+    path: '/json/stations/search',
+    params,
+    cacheTtlMs: CACHE.search,
+  });
+}
+
 export async function getTopStations(
   options?: ApiSearchOptions,
 ): Promise<RadioStationResult[]> {

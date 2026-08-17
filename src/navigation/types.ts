@@ -75,6 +75,8 @@ export type RootStackParamList = {
         initialTag?: string;
       }
     | undefined;
+  // ── v10.1 Wave 7: Favorites page reached via the Radio header heart ──
+  RadioFavoritesScreen: undefined;
   LiveTVScreen: {categoryId?: string} | undefined;
   // ── P37: audiobooks (LibriVox) + Internet Archive ──
   AudiobooksScreen:
