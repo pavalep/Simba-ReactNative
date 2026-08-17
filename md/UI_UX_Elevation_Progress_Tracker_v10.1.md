@@ -99,7 +99,7 @@
 | Wave | Section | FILTER group (single-select) | Notes |
 |---|---|---|---|
 | 7 | **Radio** | country / language | StationRow cards; az sort |
-| 8 | **Live TV** | category | ChannelCard; az sort |
+| 8 | **Live TV** | category | Standalone FAB-only page (no shared shell); ChannelCard rows; header heart → Favorites page |
 | 9 | **Audiobooks** | genre | CollectionCard; grid/list |
 | 10 | **Podcasts** | category | PodcastRow; recent/az |
 | 11 | **Shows** | genre | EpisodeRow; recent/az |
@@ -120,7 +120,7 @@
 | 6.2 | Music FAB sheet + content + states | ✅ |
 | 6.3 | Movies flip (FAB-only) | ✅ |
 | 7 | Radio | ✅ |
-| 8 | Live TV | ⬜ |
+| 8 | Live TV | ✅ |
 | 9 | Audiobooks | ⬜ |
 | 10 | Podcasts | ⬜ |
 | 11 | Shows | ⬜ |
