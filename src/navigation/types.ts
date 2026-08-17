@@ -64,7 +64,7 @@ export type RootStackParamList = {
       musicBrainzReleaseId?: string;
     };
   PodcastDetail: {podcastId: number; podcastTitle?: string};
-  MusicScreen: {genre?: string; initialTab?: 'search' | 'genres' | 'popular'} | undefined;
+  MusicScreen: {genre?: string} | undefined;
   MusicDetail: {trackId: string; source: 'jamendo' | 'audius'};
   MovieDetail: {identifier: string; title?: string};
   // ── P36: live radio + TV browse (wired RadioBrowser + IPTV-org) ──

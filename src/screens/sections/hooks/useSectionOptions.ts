@@ -15,9 +15,21 @@ import {useCallback, useMemo, useState} from 'react';
 import type {
   SectionBrowseConfig,
   SectionOptionGroupId,
+  SectionRouteKey,
+  SectionRouteParams,
 } from '../sectionConfig';
 
 const DEFAULT_VIEW = 'grid';
+
+/** Route params that pre-select the FILTER group (Home deep-links).
+ *  Sections name the same intent differently — try them in order. */
+const FILTER_SEED_PARAMS = [
+  'genre',
+  'categoryId',
+  'initialTab',
+  'initialGenre',
+  'initialTag',
+] as const;
 
 export interface SectionOptionsState {
   /** Active filter selections: filterKey → subKey (Wave 4 chips may hold several). */
@@ -40,16 +52,36 @@ export interface SectionOptionsApi {
   options: Partial<Record<SectionOptionGroupId, string>>;
 }
 
-export function useSectionOptions(config: SectionBrowseConfig): SectionOptionsApi {
+export function useSectionOptions(
+  config: SectionBrowseConfig,
+  routeParams?: SectionRouteParams<SectionRouteKey>,
+): SectionOptionsApi {
   // Default view: the config's view group normally leads with the grid
   // option — derive it from the config (step 2), falling back to 'grid'.
   const defaultView =
     config.options?.groups?.find(g => g.id === 'view')?.options?.[0]?.key ??
     DEFAULT_VIEW;
 
+  // Route-param filter seed (Home deep-links). Only honored when the value
+  // is a real option in this section's FILTER group — a stale/typo'd param
+  // silently falls back to the default "All" stream.
+  const seedFilterKey = useMemo<string | undefined>(() => {
+    if (!routeParams) return undefined;
+    const filterOptions =
+      config.options?.groups?.find(g => g.id === 'filter')?.options ?? [];
+    const validKeys = new Set(filterOptions.map(o => o.key));
+    for (const param of FILTER_SEED_PARAMS) {
+      const value = (routeParams as Record<string, unknown>)[param];
+      if (typeof value === 'string' && validKeys.has(value)) {
+        return value;
+      }
+    }
+    return undefined;
+  }, [routeParams, config.options]);
+
   // In-memory per-section state — fresh on mount (step 3).
   const [state, setState] = useState<SectionOptionsState>(() => ({
-    filters: {},
+    filters: seedFilterKey ? {[seedFilterKey]: seedFilterKey} : {},
     sort: undefined,
     view: defaultView,
   }));
@@ -68,10 +100,15 @@ export function useSectionOptions(config: SectionBrowseConfig): SectionOptionsAp
         } else if (groupId === 'view') {
           next = {...prev, view: key};
         } else {
-          // filter group — single-select within the sheet (Phase 3.2 step 2),
-          // so a new filter key REPLACES the previous one. The record shape
-          // still permits several keys once Wave 4 chips write their own.
-          next = {...prev, filters: {[key]: key}};
+          // filter group — single-select within the sheet: a new filter key
+          // REPLACES the previous one, and tapping the ALREADY-ACTIVE option
+          // clears the filter back to the default "All" stream (the chip is
+          // feedback, not navigation — tap the chip to re-open the sheet).
+          const current = prev.filters[key];
+          next =
+            current !== undefined
+              ? {...prev, filters: {}}
+              : {...prev, filters: {[key]: key}};
         }
         // Dev-only transition log (step 7) — removed before ship.
         if (__DEV__) {

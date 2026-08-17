@@ -130,9 +130,14 @@ export async function getJamendoTracksByGenre(
   return assertJamendoSuccess(data).map(mapTrack);
 }
 
-/** Get globally popular tracks on Jamendo. */
+/**
+ * Get globally popular tracks on Jamendo (the FAB-only "All" stream).
+ * `page` is backward-compatible (defaults to 1) so existing single-fetch
+ * callers keep working while the Music screen paginates the stream.
+ */
 export async function getPopularJamendoTracks(
   limit: number = 20,
+  page: number = 1,
 ): Promise<JamendoTrackResult[]> {
   const data = await apiFetch<JamendoResponse<JamendoTrackRaw>>({
     config: JAMENDO_CONFIG,
@@ -141,6 +146,7 @@ export async function getPopularJamendoTracks(
       client_id: clientId(),
       format: 'json',
       limit,
+      page,
       include: 'musicinfo',
       order: 'popularity_total',
     },

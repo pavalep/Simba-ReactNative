@@ -102,11 +102,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
 
   const handleMusicCategoryPress = useCallback(
     (genre: string) => {
-      // 'all' is a synthetic tile — landing on the Popular tab gives
-      // the user a populated "everything trending" view instead of an
-      // empty search box.
+      // 'all' is a synthetic tile — no params lands on the default
+      // "All" stream (the FAB-only shell's no-filter state).
       if (genre === 'all') {
-        navigation.navigate('MusicScreen', {initialTab: 'popular'});
+        navigation.navigate('MusicScreen', {});
         return;
       }
       navigation.navigate('MusicScreen', {genre});

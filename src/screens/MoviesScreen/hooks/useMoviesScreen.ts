@@ -1,15 +1,21 @@
 // ─── Movies Screen Hook ─────────────────────────────────────────────────
-// Phase 3 formula: per-scope cache + infinite scroll + search persistence.
+// v10.1 FAB-only formula: per-scope cache + infinite scroll + search
+// persistence. No tabs — the FAB's FILTER group is the category picker.
 //
 // A "scope" is a (category, searchTerm) pair. Every combination is cached
 // independently (`key = "${categoryId}|${term}"`), so:
-//   • toggling tabs never loses results already loaded for that scope
+//   • switching categories never loses results already loaded for that scope
 //   • typing a search never clears the category browse data
-//   • scrolling back to a visited tab shows its cached list instantly
+//   • revisiting a category shows its cached list instantly
 // Pagination is driven by IA's `numFound` — `loadMore` fetches the next
 // page only while `items.length < numFound`.
+//
+// The active category is NOT owned here — the shell's useSectionOptions
+// holds the FILTER state and `renderContent` passes the current key in
+// (mirrors the Music hook). This hook is stateless re: category; the
+// "All" default stream is the `all` category.
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useRef, useState} from 'react';
 import {MOVIE_CATEGORIES} from '../../../constants/movieCategories';
 import {searchInternetArchiveVideos} from '../../../services/api/internetArchiveService';
 import type {InternetArchiveVideoResult} from '../../../types/api';
@@ -52,14 +58,10 @@ function dedupe(items: InternetArchiveVideoResult[]): InternetArchiveVideoResult
   });
 }
 
-export function useMoviesScreen(initialCategoryId?: string) {
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    initialCategoryId ?? MOVIE_CATEGORIES[0]?.id ?? '',
-  );
-
+export function useMoviesScreen() {
   // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
   // searchQuery = live input; searchTerm = settled (debounced) value.
-  // The term persists across tab switches by design.
+  // The term persists across category switches by design.
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -208,26 +210,7 @@ export function useMoviesScreen(initialCategoryId?: string) {
     [getScope, fetchPage],
   );
 
-  /** Tab switch — search text intentionally survives. */
-  const selectCategory = useCallback((id: string) => {
-    setSelectedCategory(id);
-  }, []);
-
-  // Keep the current category scoped-loaded when it (or the search term)
-  // changes — covers the very first mount and every new search term.
-  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effect only
-  // re-fires when the selected category or search term actually changes.
-  const ensureLoadedRef = useRef(ensureLoaded);
-  ensureLoadedRef.current = ensureLoaded;
-  useEffect(() => {
-    if (selectedCategory) {
-      ensureLoadedRef.current(selectedCategory);
-    }
-  }, [selectedCategory, keyFor]);
-
   return {
-    selectedCategory,
-    selectCategory,
     // search
     searchQuery,
     setSearchQuery,

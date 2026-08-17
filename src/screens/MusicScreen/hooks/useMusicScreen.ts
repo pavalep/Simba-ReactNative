@@ -1,32 +1,29 @@
 // ─── Music Screen Hook ─────────────────────────────────────────────────
-// Phase 3 formula: per-scope cache + infinite scroll + search persistence.
+// v10.1 FAB-only formula: per-scope cache + infinite scroll + search
+// persistence. No tabs — the FAB's FILTER group is the genre picker.
 //
-// A "scope" is a (tab, searchTerm, selectedGenre) triple. Every combination
-// is cached independently (`key = "${tab}|${term}|${genre}"`), so:
-//   • toggling tabs never loses results already loaded for that scope
+// A "scope" is a (genre, searchTerm) pair. Every combination is cached
+// independently (`key = "${genre}|${term}"`), so:
+//   • switching genres never loses results already loaded for that scope
 //   • typing a search never clears the genre browse data
-//   • scrolling back to a visited tab shows its cached list instantly
-// Pagination via Jamendo's {limit, page} for search/genres; popular tab
-// uses popularity_total ordering with a single fetch (no page param).
+//   • revisiting a genre shows its cached list instantly
+// Fetch branches (single stream, filter-aware):
+//   • search term → global Jamendo search
+//   • genre ('' = none = "All") → genre browse / global popular
+// Pagination via Jamendo's {limit, page} for ALL branches — the "All"
+// stream paginates through `getPopularJamendoTracks(limit, page)`.
+//
+// The active genre is NOT owned here — the shell's useSectionOptions
+// holds the FILTER state and `renderContent` passes the current key in
+// (mirrors the Movies pilot). This hook is stateless re: genre.
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useRef, useState} from 'react';
 import {
   searchJamendoTracks,
   getJamendoTracksByGenre,
   getPopularJamendoTracks,
 } from '../../../services/api/jamendoService';
-import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {JamendoTrackResult} from '../../../types/api';
-
-// ─── Tab types ──────────────────────────────────────────────────────────
-
-export type MusicTab = 'search' | 'genres' | 'popular';
-
-export const MUSIC_TABS: Array<{key: MusicTab; title: string}> = [
-  {key: 'search', title: 'Search'},
-  {key: 'genres', title: 'Genres'},
-  {key: 'popular', title: 'Popular'},
-];
 
 export const JAMENDO_GENRES = [
   'rock',
@@ -58,7 +55,7 @@ export interface MusicScopeState {
 }
 
 /** Shared immutable empty state — keeps memoized scenes stable. */
-const EMPTY_SCOPE: MusicScopeState = {
+export const EMPTY_SCOPE: MusicScopeState = {
   items: [],
   page: 0,
   hasLoaded: false,
@@ -67,12 +64,9 @@ const EMPTY_SCOPE: MusicScopeState = {
   error: null,
 };
 
-function scopeCacheKey(
-  tab: MusicTab,
-  term: string,
-  genre: string,
-): string {
-  return `${tab}|${term.trim()}|${genre}`;
+/** '' (empty string) = the "All" default stream (no genre filter). */
+export function scopeCacheKey(genre: string, term: string): string {
+  return `${genre}|${term.trim()}`;
 }
 
 function dedupe(items: JamendoTrackResult[]): JamendoTrackResult[] {
@@ -86,45 +80,35 @@ function dedupe(items: JamendoTrackResult[]): JamendoTrackResult[] {
 
 // ─── Hook ───────────────────────────────────────────────────────────────
 
-export function useMusicScreen(initialTab?: 'search' | 'genres' | 'popular') {
-  const {isOnline} = useNetworkStatus();
-
-  const [selectedTab, setSelectedTab] = useState<MusicTab>(
-    initialTab ?? 'search',
-  );
-  // Pre-select the first genre so the Genres tab shows results on first
-  // open instead of a "Select a genre" prompt. Users can still pick a
-  // different chip to change it.
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(JAMENDO_GENRES[0]);
-
-  // ── Search ──
+export function useMusicScreen() {
+  // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
+  // searchQuery = live input; searchTerm = settled (debounced) value.
+  // The term persists across filter switches by design.
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const isSearchActive = searchTerm.trim().length > 0;
 
   const [scopes, setScopes] = useState<Record<string, MusicScopeState>>({});
-  const [refreshing, setRefreshing] = useState(false);
-
+  /** Monotonic per-key sequence — drops stale/out-of-order responses. */
   const seqRef = useRef<Record<string, number>>({});
+  /** In-flight keys — one fetch per scope at a time. */
   const guardRef = useRef<Set<string>>(new Set());
-  const failedKeyRef = useRef<string | null>(null);
-  const wasOnlineRef = useRef(isOnline);
+
+  const isSearchActive = searchTerm.trim().length > 0;
 
   const keyFor = useCallback(
-    (tab: MusicTab) =>
-      scopeCacheKey(tab, searchTerm, selectedGenre ?? ''),
-    [searchTerm, selectedGenre],
+    (genre: string) => scopeCacheKey(genre, searchTerm),
+    [searchTerm],
   );
 
   const getScope = useCallback(
-    (tab: MusicTab): MusicScopeState =>
-      scopes[keyFor(tab)] ?? EMPTY_SCOPE,
+    (genre: string): MusicScopeState =>
+      scopes[keyFor(genre)] ?? EMPTY_SCOPE,
     [scopes, keyFor],
   );
 
   const patchScope = useCallback(
-    (tab: MusicTab, patch: Partial<MusicScopeState>) => {
-      const key = keyFor(tab);
+    (genre: string, patch: Partial<MusicScopeState>) => {
+      const key = keyFor(genre);
       setScopes(prev => ({
         ...prev,
         [key]: {...(prev[key] ?? EMPTY_SCOPE), ...patch},
@@ -134,39 +118,39 @@ export function useMusicScreen(initialTab?: 'search' | 'genres' | 'popular') {
   );
 
   const fetchPage = useCallback(
-    async (tab: MusicTab, page: number, mode: 'initial' | 'more') => {
+    async (genre: string, page: number, mode: 'initial' | 'more') => {
       const term = searchTerm.trim();
-      const genre = selectedGenre;
-      const key = scopeCacheKey(tab, term, genre ?? '');
-
+      const key = scopeCacheKey(genre, term);
       if (guardRef.current.has(key)) return;
       guardRef.current.add(key);
 
       const seq = (seqRef.current[key] = (seqRef.current[key] ?? 0) + 1);
 
       if (mode === 'initial') {
-        patchScope(tab, {isLoading: true, error: null});
+        patchScope(genre, {isLoading: true, error: null});
       } else {
-        patchScope(tab, {isLoadingMore: true, error: null});
+        patchScope(genre, {isLoadingMore: true, error: null});
       }
 
       try {
-        let items: JamendoTrackResult[] = [];
-
-        if (tab === 'search' && term) {
+        // Single stream, filter-aware: a search term takes priority (global
+        // search — same as the legacy Search tab); otherwise an active genre
+        // browses that genre; '' = the popular "All" stream. All branches
+        // paginate.
+        let items: JamendoTrackResult[];
+        if (term) {
           items = await searchJamendoTracks(term, {
             limit: PAGE_SIZE,
             page,
           });
-        } else if (tab === 'genres' && genre) {
+        } else if (genre) {
           items = await getJamendoTracksByGenre(genre, {
             limit: PAGE_SIZE,
             page,
           });
-        } else if (tab === 'popular') {
-          items = await getPopularJamendoTracks(PAGE_SIZE);
+        } else {
+          items = await getPopularJamendoTracks(PAGE_SIZE, page);
         }
-
         if (seq !== (seqRef.current[key] ?? 0)) return; // stale response
 
         setScopes(prev => {
@@ -187,124 +171,82 @@ export function useMusicScreen(initialTab?: 'search' | 'genres' | 'popular') {
             },
           };
         });
-        failedKeyRef.current = null;
       } catch (err) {
         if (seq !== (seqRef.current[key] ?? 0)) return;
-        failedKeyRef.current = key;
-        patchScope(tab, {
+        patchScope(genre, {
           isLoading: false,
           isLoadingMore: false,
-          error:
-            err instanceof Error
-              ? err.message
-              : 'Failed to load tracks',
+          error: err instanceof Error ? err.message : 'Failed to load tracks',
         });
       } finally {
         guardRef.current.delete(key);
       }
     },
-    [searchTerm, selectedGenre, patchScope],
+    [searchTerm, patchScope],
   );
 
-  /** Load page 1 for a tab if it isn't loaded yet (scene mount). */
+  /** Load page 1 for a genre if it isn't loaded yet (content mount). */
   const ensureLoaded = useCallback(
-    (tab: MusicTab) => {
-      // No-op when prerequisites aren't met
-      if (tab === 'search' && !isSearchActive) return; // empty prompt state
-      if (tab === 'genres' && !selectedGenre) return; // show genre chips prompt
-      const scope = getScope(tab);
+    (genre: string) => {
+      const scope = getScope(genre);
       if (scope.hasLoaded || scope.isLoading) return;
-      fetchPage(tab, 1, 'initial');
-    },
-    [getScope, fetchPage, isSearchActive, selectedGenre],
-  );
-
-  /** Infinite scroll: fetch the next page when available. */
-  const loadMore = useCallback(
-    (tab: MusicTab) => {
-      if (tab === 'popular') return; // no pagination — single fetch only
-      const scope = getScope(tab);
-      if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore)
-        return;
-      if (scope.items.length % PAGE_SIZE !== 0) return; // last page was partial
-      if (scope.items.length === 0) return;
-      fetchPage(tab, scope.page + 1, 'more');
+      fetchPage(genre, 1, 'initial');
     },
     [getScope, fetchPage],
   );
 
-  /** Re-fetch page 1 after an error. */
+  /** Infinite scroll: fetch the next page when available. */
+  const loadMore = useCallback(
+    (genre: string) => {
+      const scope = getScope(genre);
+      if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore) return;
+      if (scope.items.length % PAGE_SIZE !== 0) return; // last page was partial
+      if (scope.items.length === 0) return;
+      fetchPage(genre, scope.page + 1, 'more');
+    },
+    [getScope, fetchPage],
+  );
+
+  /** Re-fetch page 1 after an error (invalidates any stale in-flight seq). */
   const retry = useCallback(
-    (tab: MusicTab) => {
-      const key = keyFor(tab);
+    (genre: string) => {
+      const key = keyFor(genre);
       seqRef.current[key] = (seqRef.current[key] ?? 0) + 1;
       setScopes(prev => {
         const cur = prev[key];
         if (!cur) return prev;
         return {...prev, [key]: {...cur, items: [], hasLoaded: false}};
       });
-      fetchPage(tab, 1, 'initial');
+      fetchPage(genre, 1, 'initial');
     },
     [keyFor, fetchPage],
   );
 
-  // ── Pull-to-refresh ──
-  const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    retry(selectedTab);
-    // Retry is synchronous (state update) + async (fetch). The scope's
-    // isLoading will drop when the fetch completes — we mirror that
-    // onto `refreshing` so the RefreshControl stops spinning.
-    setRefreshing(false);
-  }, [retry, selectedTab]);
-
-  // ── Tab / genre selection (search text intentionally survives) ──
-  const selectTab = useCallback((tab: MusicTab) => {
-    setSelectedTab(tab);
-  }, []);
-
-  const selectGenre = useCallback((genre: string | null) => {
-    setSelectedGenre(genre);
-  }, []);
-
-  // ── Auto-retry on reconnect ──
-  useEffect(() => {
-    const wasOnline = wasOnlineRef.current;
-    wasOnlineRef.current = isOnline;
-    if (!wasOnline && isOnline && failedKeyRef.current) {
-      failedKeyRef.current = null;
-      ensureLoaded(selectedTab);
-    }
-  }, [isOnline, ensureLoaded, selectedTab]);
-
-  // ── Keep current tab loaded ──
-  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effect only
-  // re-fires when the selected tab actually changes — not on every
-  // parent re-render (getScope / fetchPage change ref every render).
-  const ensureLoadedRef = useRef(ensureLoaded);
-  ensureLoadedRef.current = ensureLoaded;
-  useEffect(() => {
-    ensureLoadedRef.current(selectedTab);
-  }, [selectedTab]);
+  /** Pull-to-refresh: re-fetch page 1 while KEEPING items visible. The
+   *  RefreshControl spins off `isLoading`; `hasLoaded` stays true, so the
+   *  list remains in the ready slot (the shared 'loading' skeleton is only
+   *  for the first page-1 fetch). Guarded so a pull during any in-flight
+   *  fetch can never stack requests. */
+  const refresh = useCallback(
+    (genre: string) => {
+      const scope = getScope(genre);
+      if (scope.isLoading || scope.isLoadingMore) return;
+      fetchPage(genre, 1, 'initial');
+    },
+    [getScope, fetchPage],
+  );
 
   return {
-    selectedTab,
-    selectTab,
-    selectedGenre,
-    selectGenre,
     // search
     searchQuery,
     setSearchQuery,
     setSearchTerm,
     isSearchActive,
-    isOnline,
-    // scope
+    // per-scope data + actions
     getScope,
     ensureLoaded,
     loadMore,
     retry,
-    // refresh
-    refreshing,
-    handleRefresh,
+    refresh,
   };
 }

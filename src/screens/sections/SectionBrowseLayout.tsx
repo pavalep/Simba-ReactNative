@@ -1,27 +1,19 @@
-// ─── v10: Unified Section Browse — Shell ─────────────────────────────────
-// Wave 2 (Phase 2.1). ONE layout for all 8 section pages (spec §3.2):
+// ─── v10.1: Unified Section Browse — Shell (FAB-only) ───────────────────
+// Wave 2 (Phase 2.1) → Wave 6 (v10.1 de-tab). ONE layout for all 8 section
+// pages (spec §3):
 //
 //   SimbaStatusBar → InternalHeader (config.title) → shared SearchBar →
-//   [FilterChips slot — Wave 4] → SectionTabBar → content area →
-//   [SectionFab slot — Wave 3]
+//   FilterChips slot (ACTIVE filter chip) → {config.renderContent(ctx)} →
+//   SectionFab → SectionOptionsSheet
 //
-// The ONLY per-section part is `config.renderTab` ("cards may differ,
-// shells may not"). Search, chips, options and refresh/offline state live
-// at the shell level so they persist across tab switches (the user's
-// search-persistence standard).
-//
-// Phase 2.1 ships the shell in PREVIEW mode: Movies renders through it via
-// a temp config override while its old body stays intact for A/B (removed
-// in Wave 5, the pilot migration).
+// The ONLY per-section part is `config.renderContent` ("cards may differ,
+// shells may not"). Search, filter state, refresh/offline state live at
+// the shell level so they persist across filter changes (the user's
+// search-persistence standard). No tabs, no pager — v10.1 removed the
+// TabView machinery (SectionTabBar / useSectionTabs / tabs[] deleted).
 
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
-import {
-  TabView,
-  type NavigationState,
-  type Route,
-  type SceneRendererProps,
-} from 'react-native-tab-view';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
@@ -29,11 +21,10 @@ import {useNetworkStatus} from '../../hooks/useNetworkStatus';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import {SectionTabBar} from './components/SectionTabBar';
+import {FilterChips, type FilterChipItem} from '../../components/utility/FilterChips';
 import {SectionFab} from './components/SectionFab';
 import {SectionOptionsSheet} from './components/SectionOptionsSheet';
-import {useSectionTabs} from './hooks/useSectionTabs';
-import {useSectionSearch, logSearchComparison} from './hooks/useSectionSearch';
+import {useSectionSearch} from './hooks/useSectionSearch';
 import {useSectionOptions} from './hooks/useSectionOptions';
 import type {
   SectionBrowseConfig,
@@ -41,13 +32,6 @@ import type {
   SectionRouteKey,
   SectionRouteParams,
 } from './sectionConfig';
-
-// TEMP (Phase 2.3 validation): flip to preview the offline state without
-// disabling the network (tracker Phase 2.3 step 9). Removed with the
-// Wave 5 migration. Note: the GLOBAL OfflineBanner (app root) already
-// covers the offline notification, so the shell does NOT duplicate a
-// banner — it threads `offline` into ctx for content renderers instead.
-const SECTION_PREVIEW_FORCE_OFFLINE = false;
 
 interface SectionBrowseLayoutProps {
   config: SectionBrowseConfig;
@@ -63,120 +47,73 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
   const insets = useSafeAreaInsets();
   const {isOnline} = useNetworkStatus();
 
-  // ── Mount-time preselect ───────────────────────────────────────────────
-  // Sections use different route-param names for the same intent
-  // (Movies/LiveTV/Podcasts: categoryId; Music/Radio/Audiobooks/Archive/
-  // Shows: initialTab; Audiobooks/Shows also accept initialGenre). Resolve
-  // whichever this section actually set — the others are undefined, so the
-  // first present one wins.
-  const preselectKey = useMemo(() => {
-    const p = (routeParams ?? {}) as {
-      initialTab?: string;
-      categoryId?: string | number;
-      initialGenre?: string;
-    };
-    return (
-      p.initialTab ??
-      (p.categoryId != null ? String(p.categoryId) : undefined) ??
-      p.initialGenre
-    );
-  }, [routeParams]);
-
-  const {tabs, index, setIndex, initialTabIndex} = useSectionTabs(
-    config,
-    preselectKey,
-  );
-
-  // Jump to the route-preselect tab on mount (and if params change later).
-  useEffect(() => {
-    setIndex(initialTabIndex);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialTabIndex]);
-
-  // ── Search (shared, persists across tab switches) ──────────────────────
-  // Phase 2.2: the hook owns raw + debounced state; SearchBar owns the
-  // debounce timer (no double-debounce). `handleDebouncedChange` drops stale
-  // echoes so an older keystroke can never resurrect over a newer one.
+  // ── Search (shared, persists across filter changes) ────────────────────
+  // The hook owns raw + debounced state; SearchBar owns the debounce timer
+  // (no double-debounce). `handleDebouncedChange` drops stale echoes so an
+  // older keystroke can never resurrect over a newer one.
   const {query, setQuery, debouncedQuery, handleDebouncedChange, clear, debounceMs} =
     useSectionSearch(config, routeParams);
 
   const onDebouncedChange = useCallback(
     (text: string) => {
       handleDebouncedChange(text);
-      // TEMP dev harness (Phase 2.2 step 7) — removed with the migrations.
-      logSearchComparison(config.route, query, text);
     },
-    [handleDebouncedChange, config.route, query],
+    [handleDebouncedChange],
   );
 
   // ── FAB → options sheet (config-driven) ────────────────────────────────
-  // Phase 3.3: the hook owns ALL option state. The sheet reads/writes the
-  // SAME record threaded into `ctx.options` (one source of truth), the FAB
-  // shows `activeFilterCount` as a badge, and `reset` backs the sheet's
-  // one-tap "Reset" row. The shell owns sheet visibility — the FAB only
-  // reports the press. Declared BEFORE ctx: ctx merges `options` below.
+  // The hook owns ALL option state (filters/sort/view). The sheet reads/
+  // writes the SAME record threaded into `ctx.options` (one source of
+  // truth), the FAB shows `activeFilterCount` as a badge, and `reset`
+  // backs the sheet's one-tap "Reset" row. The FILTER group is seeded
+  // from routeParams (deep-links pre-select a genre/category).
   const hasOptions = !!config.options?.groups?.length;
   const [optionsSheetVisible, setOptionsSheetVisible] = useState(false);
-  const {setOption, reset, activeFilterCount, options} = useSectionOptions(
+  const {state, setOption, reset, activeFilterCount, options} = useSectionOptions(
     config,
+    routeParams,
   );
 
-  // ── Render context (shell-level, shared by every tab) ──────────────────
-  // Phase 2.3: `offline` is REAL (useNetworkStatus) so content renderers can
-  // keep showing cached data while offline; `onRetry` is the shared
-  // ErrorState handler. Chips/options stay inert until Waves 3–4.
-  // `query` persists across tab switches because it lives HERE, not inside
-  // a scene — the user's search-persistence standard (v10 spec §3.3).
-  // Phase 3.3: `options` comes from `useSectionOptions` — the SAME record
-  // the sheet writes, so renderTab reads only the context (step 6).
+  // ── Active filter chip(s) (v10.1 FilterChips slot) ─────────────────────
+  // Derived from `options.filters` (the FILTER group selection). Labels
+  // come from the config's filter options so the chip reads like the
+  // sheet ("Rock", "Classic Films"), not the raw key. This is FEEDBACK,
+  // not navigation — tapping the chip clears back to the "All" default.
+  const activeChips = useMemo<FilterChipItem[]>(() => {
+    const filterGroup = config.options?.groups?.find(g => g.id === 'filter');
+    const labelByKey = new Map((filterGroup?.options ?? []).map(o => [o.key, o.label]));
+    return Object.keys(state.filters)
+      .filter(k => state.filters[k] !== undefined)
+      .map(k => ({key: k, label: labelByKey.get(k) ?? k}));
+  }, [config.options, state.filters]);
+
+  // Chip tap → setOption('filter', key); tapping the ACTIVE chip fires
+  // onSelect('') (FilterChips singleSelect) → the hook clears to "All".
+  const handleChipSelect = useCallback(
+    (key: string) => {
+      setOption('filter', key);
+    },
+    [setOption],
+  );
+
+  // ── Render context (shell-level, shared by the ONE content stream) ─────
+  // `offline` is REAL (useNetworkStatus) so content renderers can keep
+  // showing cached data while offline; `onRetry` is the shared ErrorState
+  // handler. `query` persists across filter changes because it lives HERE,
+  // not inside a scene — the user's search-persistence standard (spec §3).
   const ctx = useMemo<SectionRenderContext>(
     () => ({
       query: debouncedQuery,
-      activeChips: [],
+      activeChips,
       options,
       refreshing: false,
-      offline: SECTION_PREVIEW_FORCE_OFFLINE || !isOnline,
+      offline: !isOnline,
       // Shell fallback so the shared ErrorState always has a live button.
-      // Wave 5+ sections rebind this to the active tab's refetch.
+      // Migrated sections rebind this to the active scope's refetch.
       onRetry: () => {},
       routeParams: routeParams as SectionRouteParams<SectionRouteKey>,
     }),
-    [debouncedQuery, routeParams, isOnline, options],
-  );
-
-  // ── TabView wiring ─────────────────────────────────────────────────────
-  const routes = useMemo(
-    () => tabs.map(t => ({key: t.key, title: t.title})),
-    [tabs],
-  );
-
-  const renderTabBar = useCallback(
-    (props: SceneRendererProps & {navigationState: NavigationState<Route>}) => (
-      <SectionTabBar {...props} />
-    ),
-    [],
-  );
-
-  // Each scene is keyed by its tab key so state never leaks between tabs
-  // (parity with the legacy lazy TabView behavior).
-  const renderScene = useCallback(
-    ({route: tabRoute}: {route: Route}) => {
-      const tab = tabs.find(t => t.key === tabRoute.key);
-      if (!tab) return null;
-      return (
-        <View key={tab.key} style={styles.scene}>
-          {config.renderTab(tab, ctx)}
-        </View>
-      );
-    },
-    [tabs, config, ctx],
-  );
-
-  const renderLazyPlaceholder = useCallback(
-    ({route: tabRoute}: {route: Route}) => (
-      <View key={`lazy-${tabRoute.key}`} style={styles.scene} />
-    ),
-    [],
+    [debouncedQuery, activeChips, options, isOnline, routeParams],
   );
 
   return (
@@ -188,7 +125,7 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
       <SimbaStatusBar variant="home" />
       <InternalHeader title={config.title} />
 
-      {/* ── Shared search (stays put while tabs change) ── */}
+      {/* ── Shared search (stays put while the filter changes) ── */}
       <View style={styles.searchSection}>
         <SearchBar
           value={query}
@@ -202,18 +139,20 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
         />
       </View>
 
-      {/* [FilterChips slot — Wave 4] */}
+      {/* ── FilterChips slot — the ACTIVE filter chip (gold, tap = clear) ── */}
+      {activeChips.length > 0 ? (
+        <View style={styles.chipsSlot}>
+          <FilterChips
+            items={activeChips}
+            selectedKey={activeChips[0]?.key}
+            onSelect={handleChipSelect}
+            singleSelect
+          />
+        </View>
+      ) : null}
 
-      {/* ── SectionTabBar (edge-to-edge, unified contract) ── */}
-      <TabView
-        navigationState={{index, routes}}
-        onIndexChange={setIndex}
-        renderTabBar={renderTabBar}
-        renderScene={renderScene}
-        renderLazyPlaceholder={renderLazyPlaceholder}
-        lazy
-        style={styles.sceneContainer}
-      />
+      {/* ── ONE content stream — the only per-section part ── */}
+      <View style={styles.content}>{config.renderContent(ctx)}</View>
 
       {/* ── SectionFab — bottom-right "more this section can do" ── */}
       <SectionFab
@@ -249,10 +188,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  scene: {
-    flex: 1,
+  chipsSlot: {
+    paddingBottom: spacing.xs,
   },
-  sceneContainer: {
+  content: {
     flex: 1,
   },
 });

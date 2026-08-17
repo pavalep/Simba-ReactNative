@@ -1,17 +1,19 @@
-// ─── Movie Browser Content (v10 Wave 5 pilot) ───────────────────────────
+// ─── Movie Browser Content (v10 Wave 5 → v10.1 Wave 6 de-tab) ───────────
 // The per-section part of the unified shell (spec §5): cards + per-category
-// data. The shell (SectionBrowseLayout) owns the header/search/tabs/FAB and
-// hands every tab a `SectionRenderContext`; this module owns:
+// data. The shell (SectionBrowseLayout) owns the header/search/FAB and
+// hands the ONE content stream a `SectionRenderContext`; this module owns:
 //
 //   • MoviesDataProvider — calls `useMoviesScreen` ONCE, above the shell,
-//     so every lazily-mounted tab scene shares ONE per-scope cache (the
-//     legacy "toggle tabs never refetches" behavior). It also owns the
+//     so the single content stream shares ONE per-scope cache (the legacy
+//     "switching categories never refetches" behavior). It also owns the
 //     per-movie resolution state + press handler (uses the global
-//     `navigate` helper — renderTab content has no screen `navigation`).
-//   • renderMoviesTab — the config's `renderTab`: bridges the shell's
-//     debounced `ctx.query` into the hook's `setSearchTerm`, then renders
-//     the real 2-col MovieCard grid through SectionContent's DATA MODE
-//     (states, pagination, testID, gold RefreshControl all shared).
+//     `navigate` helper — content has no screen `navigation`).
+//   • renderMoviesContent — the config's `renderContent`: bridges the
+//     shell's debounced `ctx.query` into the hook's `setSearchTerm`, reads
+//     the active category from `ctx.options.filter` ('' → the default
+//     "All" stream), then renders the 2-col MovieCard grid through
+//     SectionContent's DATA MODE (states, pagination, testID, gold
+//     RefreshControl all shared).
 //
 // The old header/search/tab/viewpager code was deleted from the screen —
 // the shell owns all of it now.
@@ -35,7 +37,6 @@ import type {InternetArchiveVideoResult} from '../../types/api';
 import type {
   SectionBrowseConfig,
   SectionRenderContext,
-  SectionTab,
 } from '../sections/sectionConfig';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -228,13 +229,12 @@ function useMoviesData(): MoviesDataContextValue {
 }
 
 export const MoviesDataProvider: React.FC<{
-  initialCategoryId?: string;
   children: ReactNode;
-}> = ({initialCategoryId, children}) => {
+}> = ({children}) => {
   const toast = useToast();
-  // Single hook instance for the whole screen — every tab scene reads the
-  // SAME (category, searchTerm) scope cache via context (Wave 5 step 5).
-  const movies = useMoviesScreen(initialCategoryId);
+  // Single hook instance for the whole screen — the one content stream
+  // reads the SAME (category, searchTerm) scope cache via context.
+  const movies = useMoviesScreen();
 
   // Per-movie resolution state. Failures surface as a top-of-screen toast
   // (auto-dismiss + close button) rather than an inline banner — same
@@ -306,12 +306,9 @@ export const MoviesDataProvider: React.FC<{
   );
 };
 
-// ─── Per-tab content (the config's renderTab) ───────────────────────────
+// ─── Content (the config's renderContent) ───────────────────────────────
 
-const MoviesTabContent: React.FC<{
-  tab: SectionTab;
-  ctx: SectionRenderContext;
-}> = ({tab, ctx}) => {
+const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {
@@ -327,22 +324,27 @@ const MoviesTabContent: React.FC<{
   } = useMoviesData();
   const {offline} = ctx;
 
+  // Active category comes from the shell's FILTER selection — '' → the
+  // default "All" stream (the `all` category). The scope key is
+  // `${categoryId}|${searchTerm}`.
+  const categoryId = ctx.options.filter ?? 'all';
+
   // Bridge: the shell owns the debounced search term, the hook owns the
   // fetch term. Sync every change so scopes keyed by `term` stay in
-  // lockstep with the shell's search field (Wave 5 step 5).
+  // lockstep with the shell's search field.
   useEffect(() => {
     setSearchTerm(ctx.query);
   }, [ctx.query, setSearchTerm]);
 
-  // Load page 1 for this category on first mount (lazy scenes mount once;
-  // the per-scope cache makes revisits instant). Refires when the search
-  // term changes because `ensureLoaded`'s identity depends on it — the
-  // hook's loaded/loading guard makes that a no-op for cached scopes.
+  // Load page 1 for this category on first mount / category switch.
+  // Refires when the search term changes because `ensureLoaded`'s identity
+  // depends on it — the hook's loaded/loading guard makes that a no-op for
+  // cached scopes.
   useEffect(() => {
-    ensureLoaded(tab.key);
-  }, [tab.key, ensureLoaded]);
+    ensureLoaded(categoryId);
+  }, [categoryId, ensureLoaded]);
 
-  const scope = getScope(tab.key);
+  const scope = getScope(categoryId);
   const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
 
   // Legacy parity: initial load → loading; page-1 failure → error; loaded
@@ -358,12 +360,12 @@ const MoviesTabContent: React.FC<{
       : 'ready';
 
   const view = ctx.options.view === 'list' ? 'list' : 'grid';
-  const category = MOVIE_CATEGORIES.find(c => c.id === tab.key);
+  const category = MOVIE_CATEGORIES.find(c => c.id === categoryId);
 
-  // Phase 5.3 step 2/8: the FAB sort re-orders THIS tab's own loaded slice
-  // (never another tab's — each scene memoizes over its own `items`). The
-  // memo deps make it live: sort changes re-order instantly, and every
-  // load-more append re-sorts the full array. `undefined` = natural order.
+  // The FAB sort re-orders THIS stream's own loaded slice (never another
+  // category's). The memo deps make it live: sort changes re-order
+  // instantly, and every load-more append re-sorts the full array.
+  // `undefined` = natural order.
   const sortedItems = useMemo(
     () => sortMovies(items, ctx.options.sort),
     [items, ctx.options.sort],
@@ -373,21 +375,21 @@ const MoviesTabContent: React.FC<{
   // shared ErrorState in the empty slot instead — no double error UI).
   const showFooter = isLoadingMore || (!!error && hasLoaded);
 
-  // Phase 5.2 step 8: the shared 'loading' skeleton is only for the first
-  // page-1 fetch, so a pull-to-refresh (hasLoaded stays true → 'ready')
-  // spins the gold RefreshControl without ever blanking the grid.
+  // The shared 'loading' skeleton is only for the first page-1 fetch, so a
+  // pull-to-refresh (hasLoaded stays true → 'ready') spins the gold
+  // RefreshControl without ever blanking the grid.
   const refreshControl = {
     refreshing: isLoading,
-    onRefresh: () => refresh(tab.key),
+    onRefresh: () => refresh(categoryId),
   };
 
   return (
     <SectionContent
       state={state}
       error={{
-        // Offline-aware copy (step 3): the global OfflineBanner already
-        // says we're offline — the ErrorState just confirms the retry path
-        // instead of showing a misleading network message.
+        // Offline-aware copy: the global OfflineBanner already says we're
+        // offline — the ErrorState just confirms the retry path instead of
+        // showing a misleading network message.
         title: offline ? "You're offline" : undefined,
         message: offline
           ? 'Check your connection and try again.'
@@ -402,7 +404,7 @@ const MoviesTabContent: React.FC<{
           ? 'Try a different search term.'
           : 'Try another category.',
       }}
-      onRetry={() => retry(tab.key)}
+      onRetry={() => retry(categoryId)}
       {...refreshControl}
       data={sortedItems}
       renderItem={({item}) => (
@@ -414,20 +416,19 @@ const MoviesTabContent: React.FC<{
       )}
       keyExtractor={item => item.identifier}
       view={view}
-      // Phase 5.3 step 6: pad the bottom so the last row can scroll fully
-      // above the floating SectionFab (56px tall, bottom-anchored at
-      // insets.bottom + spacing.lg in SectionFab) plus a breathing gap.
+      // Pad the bottom so the last row can scroll fully above the floating
+      // SectionFab (56px tall, bottom-anchored at insets.bottom + spacing.lg
+      // in SectionFab) plus a breathing gap.
       contentContainerStyle={{
         paddingBottom: insets.bottom + spacing.lg + 56 + spacing.md,
       }}
       route="MoviesScreen"
-      tabKey={tab.key}
       ListHeaderComponent={
         <AppText variant="caption" color="tertiary" style={styles.categoryDesc}>
-          {category?.description ?? tab.title}
+          {category?.description ?? 'Every movie in the archive, most popular first'}
         </AppText>
       }
-      onEndReached={() => loadMore(tab.key)}
+      onEndReached={() => loadMore(categoryId)}
       onEndReachedThreshold={0.4}
       ListFooterComponent={
         showFooter ? (
@@ -442,7 +443,7 @@ const MoviesTabContent: React.FC<{
             ) : (
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => loadMore(tab.key)}
+                onPress={() => loadMore(categoryId)}
                 style={[
                   styles.loadMoreRetry,
                   {borderColor: colors.background.highlight},
@@ -460,9 +461,9 @@ const MoviesTabContent: React.FC<{
   );
 };
 
-/** The Movies `renderTab` — wired into SECTION_CONFIGS.MoviesScreen. */
-export const renderMoviesTab: SectionBrowseConfig['renderTab'] = (tab, ctx) => (
-  <MoviesTabContent tab={tab} ctx={ctx} />
+/** The Movies `renderContent` — wired into SECTION_CONFIGS.MoviesScreen. */
+export const renderMoviesContent: SectionBrowseConfig['renderContent'] = ctx => (
+  <MoviesContent ctx={ctx} />
 );
 
 // ─── Styles ─────────────────────────────────────────────────────────────

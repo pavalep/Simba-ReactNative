@@ -1,17 +1,22 @@
-// ─── v10: Unified Section Browse — Config System ─────────────────────────
+// ─── v10.1: Unified Section Browse — Config System ──────────────────────
 // Single source of truth describing how each of the 8 Home section pages
-// renders inside the shared browse shell (InternalHeader + SearchBar +
-// FilterChips + TabView + SectionFab → SectionOptionsSheet).
+// renders inside the shared FAB-only shell (InternalHeader + SearchBar +
+// FilterChips slot + SectionFab → SectionOptionsSheet).
 //
-// Phase 1.1 scope: types + 8-entry registry (title + route stubs).
-// Tab lists are wired in Phase 1.2 (`useSectionTabs`); the rest of the
-// fields are filled in during the per-section migration waves (5–12).
-// Sub-pages are explicitly OUT of scope for v10.
+// v10.1 (Wave 6): tabs are REMOVED everywhere. Every section is ONE stream:
+//   • `renderContent(ctx)` is the ONLY per-section part ("cards may differ,
+//     shells may not")
+//   • the FILTER options group (genres / categories) replaces the old tab
+//     list — selected via the FAB sheet, surfaced as an active chip
+// Sub-pages are explicitly OUT of scope for v10.1.
 
 import type {ReactNode} from 'react';
 import type {RootStackParamList} from '../../navigation/types';
 import {MOVIE_CATEGORIES} from '../../constants/movieCategories';
-import {renderMoviesTab} from '../MoviesScreen/MoviesContent';
+import {JAMENDO_GENRES} from '../MusicScreen/hooks/useMusicScreen';
+import type {FilterChipItem} from '../../components/utility/FilterChips';
+import {renderMoviesContent} from '../MoviesScreen/MoviesContent';
+import {renderMusicContent} from '../MusicScreen/MusicContent';
 
 // ─── Route keys ──────────────────────────────────────────────────────────
 // Derived from RootStackParamList via `Extract`, so the compiler proves the
@@ -35,12 +40,6 @@ export type SectionRouteParams<K extends SectionRouteKey> =
 
 // ─── Core types ──────────────────────────────────────────────────────────
 
-/** One tab in the section tab bar. `key` maps back to the section's source. */
-export interface SectionTab {
-  key: string;
-  title: string;
-}
-
 /** A single selectable option inside a FAB → options-sheet group. */
 export interface SectionOption {
   key: string;
@@ -59,29 +58,32 @@ export interface OptionGroup {
 
 /** Context handed to every content renderer by the shared shell. */
 export interface SectionRenderContext {
-  /** Debounced search text (shell-level — persists across tab switches). */
+  /** Debounced search text (shell-level — persists across filter changes). */
   query: string;
-  /** Currently active quick-filter chip keys. */
-  activeChips: string[];
+  /** Active filter chips derived from `options.filters` (gold, tap = clear).
+   *  One chip per active FILTER selection — e.g. `genre: 'rock'` → chip
+   *  `Rock`. Feedback, not navigation. */
+  activeChips: FilterChipItem[];
   /** Selected option key per options-sheet group id. */
   options: Partial<Record<SectionOptionGroupId, string>>;
   /** Pull-to-refresh is in flight. */
   refreshing: boolean;
   /** Device is offline — cached data still renders under a banner. */
   offline: boolean;
-  /** Retry handler for the shared ErrorState (re-runs the active tab's
-   *  fetch without stacking requests). Wave 5+ sections bind their tab
-   *  refetch here; the shell keeps a no-op default so the shared error
-   *  slot always has a live button. */
+  /** Retry handler for the shared ErrorState (re-runs the active fetch
+   *  without stacking requests). Migrated sections bind their refetch
+   *  here; the shell keeps a no-op default so the shared error slot
+   *  always has a live button. */
   onRetry?: () => void;
   /** Route params passed into the screen (Home deep-link presets). */
   routeParams: SectionRouteParams<SectionRouteKey>;
 }
 
 /**
- * Describes one section page for the shared browse shell (spec §3.2).
- * Everything is unified EXCEPT the content: `renderTab` is the only
- * per-section part ("cards may differ, shells may not").
+ * Describes one section page for the shared FAB-only shell (spec §3.2).
+ * Everything is unified EXCEPT the content: `renderContent` is the only
+ * per-section part ("cards may differ, shells may not"). No tabs — the
+ * FILTER options group carries the section's categories/genres.
  */
 export interface SectionBrowseConfig {
   /** Route this section is registered under in RootStackParamList. */
@@ -94,8 +96,6 @@ export interface SectionBrowseConfig {
     /** Debounce ms for the search term (default 300). */
     debounceMs?: number;
   };
-  /** The tab bar. Unified source — one shape for all 8 sections. */
-  tabs: SectionTab[];
   /** Optional quick-filter chips rendered below search (unified style). */
   quickChips?: {
     source: string[] | ((ctx: SectionRenderContext) => string[]);
@@ -104,40 +104,67 @@ export interface SectionBrowseConfig {
     /** Chip preselected on first mount. */
     initialKey?: string;
   };
-  /** What the FAB → options sheet exposes. */
+  /** What the FAB → options sheet exposes (FILTER | SORT | VIEW). */
   options?: {
     groups: OptionGroup[];
   };
-  /** Content renderer per tab — the ONLY per-section part. */
-  renderTab: (tab: SectionTab, ctx: SectionRenderContext) => ReactNode;
+  /** Content renderer — the ONLY per-section part (ONE stream, no tabs). */
+  renderContent: (ctx: SectionRenderContext) => ReactNode;
 }
 
 // ─── Stub fallback ───────────────────────────────────────────────────────
 
 /** Placeholder renderer for configs whose content isn't migrated yet. */
-const notImplemented: SectionBrowseConfig['renderTab'] = (_tab, _ctx) => {
+const notImplemented: SectionBrowseConfig['renderContent'] = _ctx => {
   if (__DEV__) {
-    console.warn('[v10] renderTab not implemented yet — config stub (see tracker Phase 1.x).');
+    console.warn('[v10.1] renderContent not implemented yet — config stub (see tracker Wave 7+).');
   }
   return null;
 };
 
+// ─── Option group builders ───────────────────────────────────────────────
+// Wave 6 reference: the FILTER group replaces the old tab list. "All" is
+// NOT an option — it is the state of having no filter (default stream).
+
+/** FILTER group for Movies: every category except the default "All". */
+function movieFilterGroup(): OptionGroup {
+  return {
+    id: 'filter',
+    title: 'Category',
+    options: MOVIE_CATEGORIES.filter(c => c.id !== 'all').map(c => ({
+      key: c.id,
+      label: c.name,
+      icon: c.icon,
+    })),
+  };
+}
+
+/** FILTER group for Music: every Jamendo genre (labels capitalized). */
+function musicFilterGroup(): OptionGroup {
+  return {
+    id: 'filter',
+    title: 'Genre',
+    options: JAMENDO_GENRES.map(g => ({
+      key: g,
+      label: g.charAt(0).toUpperCase() + g.slice(1),
+    })),
+  };
+}
+
 // ─── Registry ────────────────────────────────────────────────────────────
 
 /**
- * The 8 Home section pages, one entry each. Phase 1.1 seeds title + route;
- * `tabs`, `quickChips`, `options` and `renderTab` land in later phases.
+ * The 8 Home section pages, one entry each. v10.1: `renderContent` + the
+ * FILTER group are the per-section parts; everything else is the shell.
  */
 export const SECTION_CONFIGS: Record<SectionRouteKey, SectionBrowseConfig> = {
   MoviesScreen: {
     route: 'MoviesScreen',
     title: 'Movies',
     search: {placeholder: 'Search movies…'},
-    // Wave 5 pilot: 9 tabs from MOVIE_CATEGORIES (no quick chips —
-    // categories ARE the tabs).
-    tabs: MOVIE_CATEGORIES.map(c => ({key: c.id, title: c.name})),
     options: {
       groups: [
+        movieFilterGroup(),
         {
           id: 'sort',
           title: 'Sort by',
@@ -158,63 +185,77 @@ export const SECTION_CONFIGS: Record<SectionRouteKey, SectionBrowseConfig> = {
         },
       ],
     },
-    renderTab: renderMoviesTab,
+    renderContent: renderMoviesContent,
   },
   MusicScreen: {
     route: 'MusicScreen',
     title: 'Music',
-    // TODO(1.2): tabs from MUSIC_TABS (3)
-    search: {placeholder: ''},
-    tabs: [],
-    renderTab: notImplemented,
+    search: {placeholder: 'Search Jamendo…'},
+    options: {
+      groups: [
+        musicFilterGroup(),
+        {
+          id: 'sort',
+          title: 'Sort by',
+          options: [
+            {key: 'az', label: 'A–Z'},
+            {key: 'recent', label: 'Recently added'},
+            {key: 'duration', label: 'Duration'},
+          ],
+        },
+        {
+          id: 'view',
+          title: 'Density',
+          options: [
+            {key: 'grid', label: 'Grid', icon: 'layoutGrid'},
+            {key: 'list', label: 'List', icon: 'layoutList'},
+          ],
+        },
+      ],
+    },
+    renderContent: renderMusicContent,
   },
   RadioScreen: {
     route: 'RadioScreen',
     title: 'Radio',
-    // TODO(1.2): tabs from RADIO_TABS (5)
+    // TODO(Wave 7): FILTER = country / language; renderContent migrated.
     search: {placeholder: ''},
-    tabs: [],
-    renderTab: notImplemented,
+    renderContent: notImplemented,
   },
   LiveTVScreen: {
     route: 'LiveTVScreen',
     title: 'Live TV',
-    // TODO(1.2): tabs from LIVE_TV_TABS (3)
+    // TODO(Wave 8): FILTER = category; renderContent migrated.
     search: {placeholder: ''},
-    tabs: [],
-    renderTab: notImplemented,
+    renderContent: notImplemented,
   },
   AudiobooksScreen: {
     route: 'AudiobooksScreen',
     title: 'Audiobooks',
-    // TODO(1.2): tabs from local TABS (3)
+    // TODO(Wave 9): FILTER = genre; renderContent migrated.
     search: {placeholder: ''},
-    tabs: [],
-    renderTab: notImplemented,
+    renderContent: notImplemented,
   },
   PodcastsScreen: {
     route: 'PodcastsScreen',
     title: 'Podcasts',
-    // TODO(1.2): tabs from PODCAST_TABS (12)
+    // TODO(Wave 10): FILTER = category; renderContent migrated.
     search: {placeholder: ''},
-    tabs: [],
-    renderTab: notImplemented,
+    renderContent: notImplemented,
   },
   ShowsScreen: {
     route: 'ShowsScreen',
     title: 'Shows',
-    // TODO(1.2): tabs from local TABS (3)
+    // TODO(Wave 11): FILTER = genre; renderContent migrated.
     search: {placeholder: ''},
-    tabs: [],
-    renderTab: notImplemented,
+    renderContent: notImplemented,
   },
   ArchiveScreen: {
     route: 'ArchiveScreen',
     title: 'Archive',
-    // TODO(1.2): tabs from inline routes (2)
+    // TODO(Wave 12): FILTER = audio / video / collections; renderContent migrated.
     search: {placeholder: ''},
-    tabs: [],
-    renderTab: notImplemented,
+    renderContent: notImplemented,
   },
 };
 
@@ -224,7 +265,7 @@ export const SECTION_CONFIGS: Record<SectionRouteKey, SectionBrowseConfig> = {
 export function getSectionConfig(route: SectionRouteKey): SectionBrowseConfig {
   const config = SECTION_CONFIGS[route];
   if (__DEV__ && !config) {
-    console.warn(`[v10] getSectionConfig: unknown section route "${String(route)}".`);
+    console.warn(`[v10.1] getSectionConfig: unknown section route "${String(route)}".`);
   }
   return config;
 }
