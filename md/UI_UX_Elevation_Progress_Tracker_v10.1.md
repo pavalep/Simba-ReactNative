@@ -119,7 +119,7 @@
 | 6.1 | Shell simplification + Music shell | ✅ |
 | 6.2 | Music FAB sheet + content + states | ✅ |
 | 6.3 | Movies flip (FAB-only) | ✅ |
-| 7 | Radio | ⬜ |
+| 7 | Radio | ✅ |
 | 8 | Live TV | ⬜ |
 | 9 | Audiobooks | ⬜ |
 | 10 | Podcasts | ⬜ |
