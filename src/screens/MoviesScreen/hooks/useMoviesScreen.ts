@@ -16,7 +16,7 @@
 // "All" default stream is the `all` category.
 
 import {useCallback, useRef, useState} from 'react';
-import {MOVIE_CATEGORIES} from '../../../constants/movieCategories';
+import {MOVIE_CATEGORIES, withJunkFilter} from '../../../constants/movieCategories';
 import {searchInternetArchiveVideos} from '../../../services/api/internetArchiveService';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 
@@ -109,9 +109,13 @@ export function useMoviesScreen() {
 
       // Scoped query: category subject + optional title term, so search
       // is filtered *within* the active category instead of replacing it.
-      const scopedQuery = term
-        ? `(${category.query}) AND title:(${term.replace(/"/g, '')})`
-        : category.query;
+      // Also appends JUNK_FILTER (drop test/template/screener etc.)
+      // server-side — cheaper than client post-filter, matches the
+      // "real films only" intent of the Movies section.
+      const termFilter = term
+        ? ` AND title:(${term.replace(/"/g, '')})`
+        : '';
+      const scopedQuery = withJunkFilter(`${category.query}${termFilter}`);
 
       if (mode === 'initial') {
         patchScope(categoryId, {isLoading: true, error: null});
