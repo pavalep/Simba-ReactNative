@@ -78,6 +78,8 @@ export type RootStackParamList = {
   // ── v10.1 Wave 7: Favorites page reached via the Radio header heart ──
   RadioFavoritesScreen: undefined;
   LiveTVScreen: {categoryId?: string} | undefined;
+  // ── v10.1 Wave 8: Favorites page reached via the Live TV header heart ──
+  LiveTVFavoritesScreen: undefined;
   // ── P37: audiobooks (LibriVox) + Internet Archive ──
   AudiobooksScreen:
     | {

@@ -37,7 +37,8 @@ import {MusicDetailScreen} from '../screens/MusicDetailScreen/MusicDetailScreen'
 import {MovieDetailScreen} from '../screens/MovieDetailScreen/MovieDetailScreen';
 import {RadioScreenNew} from '../screens/RadioScreenNew/RadioScreenNew';
 import {RadioFavoritesScreen} from '../screens/RadioScreenNew/RadioFavoritesScreen';
-import {LiveTVScreen} from '../screens/LiveTVScreen/LiveTVScreen';
+import {LiveTVScreenNew} from '../screens/LiveTVScreenNew/LiveTVScreenNew';
+import {LiveTVFavoritesScreen} from '../screens/LiveTVScreenNew/LiveTVFavoritesScreen';
 import {AudiobooksScreen} from '../screens/AudiobooksScreen/AudiobooksScreen';
 import {AudiobookDetailScreen} from '../screens/AudiobookDetailScreen/AudiobookDetailScreen';
 import {ArchiveScreen} from '../screens/ArchiveScreen/ArchiveScreen';
@@ -286,7 +287,12 @@ export const RootNavigator: React.FC = () => {
       />
       <Stack.Screen
         name="LiveTVScreen"
-        component={LiveTVScreen}
+        component={LiveTVScreenNew}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="LiveTVFavoritesScreen"
+        component={LiveTVFavoritesScreen}
         options={{animation: 'slide_from_right'}}
       />
       <Stack.Screen
