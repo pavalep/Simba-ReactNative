@@ -14,15 +14,21 @@ import React from 'react';
 import type {RootStackScreenProps} from '../../navigation/types';
 import {SectionBrowseLayout} from '../sections/SectionBrowseLayout';
 import {getSectionConfig} from '../sections/sectionConfig';
+import {useSectionOptions} from '../sections/hooks/useSectionOptions';
 import {MusicDataProvider} from './MusicContent';
 
 export const MusicScreen: React.FC<RootStackScreenProps<'MusicScreen'>> = ({
   route,
-}) => (
-  <MusicDataProvider>
-    <SectionBrowseLayout
-      config={getSectionConfig('MusicScreen')}
-      routeParams={route.params}
-    />
-  </MusicDataProvider>
-);
+}) => {
+  const config = getSectionConfig('MusicScreen');
+  const optionsApi = useSectionOptions(config, route.params);
+  return (
+    <MusicDataProvider>
+      <SectionBrowseLayout
+        config={config}
+        optionsApi={optionsApi}
+        routeParams={route.params}
+      />
+    </MusicDataProvider>
+  );
+};

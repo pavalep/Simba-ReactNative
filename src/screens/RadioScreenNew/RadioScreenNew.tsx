@@ -404,11 +404,13 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
           },
         ]}
         value={{
-          genre: filters.genre ?? '',
-          country: filters.country ?? '',
-          language: filters.language ?? '',
+          genre: filters.genre ? [filters.genre] : [],
+          country: filters.country ? [filters.country] : [],
+          language: filters.language ? [filters.language] : [],
         }}
-        onChange={(groupId, key) => handleOptionChange(groupId as RadioFilterId, key)}
+        onChange={(groupId, keys) =>
+          handleOptionChange(groupId as RadioFilterId, keys[0] ?? '')
+        }
         onReset={resetFilters}
       />
 

@@ -142,39 +142,58 @@ function BottomSheetInner<T>(
       detents={detents}
       dismissible={dismissable}
       grabber
-      // Sit the sheet just above the bottom safe-area.
-      insetAdjustment="automatic"
+      // On Android, the `scrollable` prop applies `flex: 1` to the native
+      // content view, which is REQUIRED for child ScrollViews (FilterSheet,
+      // QueueSheet, etc.) to size correctly. Without it the body collapses
+      // to zero height and only the title row is visible.
+      scrollable
+      // We use "never" and let the consumer add insets.bottom to their
+      // last child (footer / reset button / etc.). With "automatic"
+      // true-sheet pulls the sheet above the gesture bar AND reports
+      // insets.bottom = 0 inside the sheet, which makes any consumer
+      // bottom padding a fixed value that doesn't grow on devices with
+      // tall gesture regions (Android edge-to-edge nav bar, ~32dp).
+      insetAdjustment="never"
       backgroundColor={colors.background.elevated}
       cornerRadius={radius.lg}
       onDidDismiss={() => onCloseRef.current()}
       onDetentChange={(event: DetentChangeEvent) =>
         onSnapChange?.(event.nativeEvent.index)
       }
-      // true-sheet renders a native grabber automatically; the optional
-      // `header` slot can take our title.
-      header={
-        title ? (
-          <View
-            style={[
-              styles.header,
-              {borderBottomColor: colors.border.subtle},
-            ]}>
-            {typeof title === 'string' ? (
-              <AppText
-                style={[
-                  styles.headerTitle,
-                  {color: colors.text.primary},
-                ]}>
-                {title}
-              </AppText>
-            ) : (
-              <View style={styles.headerCustom}>{title}</View>
-            )}
-          </View>
-        ) : undefined
-      }
-      style={{paddingBottom: spacing.md + insets.bottom}}>
-      <View style={styles.body}>{children}</View>
+      style={
+        // Only apply the inner bottom padding when a title row is shown
+        // — the title sits above the content and needs clearance. Sheets
+        // without a title (FilterSheet with pinned footer) want their
+        // last child to touch the sheet edge, so we drop the padding.
+        title
+          ? {paddingBottom: spacing.md + insets.bottom}
+          : undefined
+      }>
+      {/* true-sheet wraps its children in a native content view. Pass the
+          ScrollView / content the caller supplied directly — NO flex:1
+          wrapper above it, because the native content view doesn't have
+          an explicit height for `flex:1` to resolve and the body collapses
+          to zero (the "empty sheet" symptom). */}
+      {title ? (
+        <View
+          style={[
+            styles.header,
+            {borderBottomColor: colors.border.subtle},
+          ]}>
+          {typeof title === 'string' ? (
+            <AppText
+              style={[
+                styles.headerTitle,
+                {color: colors.text.primary},
+              ]}>
+              {title}
+            </AppText>
+          ) : (
+            <View style={styles.headerCustom}>{title}</View>
+          )}
+        </View>
+      ) : null}
+      {children}
     </TrueSheet>
   );
 }
@@ -198,9 +217,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   headerCustom: {
-    flex: 1,
-  },
-  body: {
     flex: 1,
   },
 });

@@ -53,8 +53,25 @@ export type SectionOptionGroupId = 'filter' | 'sort' | 'view';
 export interface OptionGroup {
   id: SectionOptionGroupId;
   title: string;
+  /** `true` → multiple options selectable at once (e.g. Movies
+   *  categories); `false` → at most one (sort / view / single-genre). */
+  multiSelect?: boolean;
+  /** When set, the sheet collapses this group to the first N options with
+   *  a "SHOW MORE"/"HIDE" toggle that reveals the rest (and extends the
+   *  sheet to its full detent). Omit for short groups (sort/view). */
+  collapsedRowLimit?: number;
   options: SectionOption[];
 }
+
+/** Merged option record handed to content renderers. `filter` is the
+ *  multi-select keys array (0+ selected categories/genres); `sort` and
+ *  `view` are single scalar keys. Renderers read exactly what they need
+ *  (`ctx.options.filter?.[0]` for a single-select section). */
+export type SectionOptionsMerged = {
+  filter?: string[];
+  sort?: string;
+  view?: string;
+};
 
 /** Context handed to every content renderer by the shared shell. */
 export interface SectionRenderContext {
@@ -64,8 +81,9 @@ export interface SectionRenderContext {
    *  One chip per active FILTER selection — e.g. `genre: 'rock'` → chip
    *  `Rock`. Feedback, not navigation. */
   activeChips: FilterChipItem[];
-  /** Selected option key per options-sheet group id. */
-  options: Partial<Record<SectionOptionGroupId, string>>;
+  /** Merged options for content renderers (see `SectionOptionsMerged`).
+   *  `filter` is the multi-select array; `sort` / `view` are scalars. */
+  options: SectionOptionsMerged;
   /** Pull-to-refresh is in flight. */
   refreshing: boolean;
   /** Device is offline — cached data still renders under a banner. */
@@ -126,11 +144,17 @@ const notImplemented: SectionBrowseConfig['renderContent'] = _ctx => {
 // Wave 6 reference: the FILTER group replaces the old tab list. "All" is
 // NOT an option — it is the state of having no filter (default stream).
 
-/** FILTER group for Movies: every category except the default "All". */
+/** FILTER group for Movies: every category except the default "All".
+ *  Multi-select — users can combine several categories (OR'd in the
+ *  Archive.org query), so the group advertises `multiSelect: true`. */
 function movieFilterGroup(): OptionGroup {
   return {
     id: 'filter',
     title: 'Category',
+    multiSelect: true,
+    // 20 genres total — show the first 6, tuck the rest behind the
+    // sheet's "SHOW MORE"/"HIDE" toggle (see FilterSheet).
+    collapsedRowLimit: 6,
     options: MOVIE_CATEGORIES.filter(c => c.id !== 'all').map(c => ({
       key: c.id,
       label: c.name,

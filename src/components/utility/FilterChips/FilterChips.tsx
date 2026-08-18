@@ -47,8 +47,13 @@ export interface FilterChipItem {
 
 interface FilterChipsProps {
   items: FilterChipItem[];
-  /** Active chip key, or null/undefined when nothing is selected. */
+  /** Active chip key, or null/undefined when nothing is selected.
+   *  Ignored when `selectedKeys` is provided. */
   selectedKey?: string | null;
+  /** Multi-select highlight: every key in this array renders ACTIVE.
+   *  Takes precedence over `selectedKey` — use it when the parent's
+   *  selection is an array (e.g. the shell's multi-select FILTER group). */
+  selectedKeys?: string[];
   onSelect: (key: string) => void;
   /** true → tapping the active chip clears it (toggle). Default true. */
   singleSelect?: boolean;
@@ -64,6 +69,7 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
   ({
     items,
     selectedKey = null,
+    selectedKeys,
     onSelect,
     singleSelect = true,
     wrap = false,
@@ -74,7 +80,9 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
 
     const renderChip = useCallback(
       (item: FilterChipItem) => {
-        const active = selectedKey === item.key;
+        const active = selectedKeys
+          ? selectedKeys.includes(item.key)
+          : selectedKey === item.key;
         return (
           <TouchableOpacity
             key={item.key}
@@ -140,7 +148,7 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
           </TouchableOpacity>
         );
       },
-      [colors, onSelect, selectedKey, singleSelect],
+      [colors, onSelect, selectedKey, selectedKeys, singleSelect],
     );
 
     // Wrap mode: flex-wrap flow (Audiobooks' 20 genres can't virtualize).

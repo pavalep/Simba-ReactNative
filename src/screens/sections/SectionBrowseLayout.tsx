@@ -7,10 +7,14 @@
 //   SectionFab → SectionOptionsSheet
 //
 // The ONLY per-section part is `config.renderContent` ("cards may differ,
-// shells may not"). Search, filter state, refresh/offline state live at
-// the shell level so they persist across filter changes (the user's
-// search-persistence standard). No tabs, no pager — v10.1 removed the
-// TabView machinery (SectionTabBar / useSectionTabs / tabs[] deleted).
+// shells may not"). Search, refresh/offline state live at the shell level
+// so they persist across filter changes (the user's search-persistence
+// standard). The OPTIONS state (filters/sort/view) is NOT owned here — it
+// lives at the composition root (the host screen) and arrives via
+// `optionsApi`, so data providers ABOVE the shell read the same state
+// (e.g. Movies passes its sort key into the fetch). No tabs, no pager —
+// v10.1 removed the TabView machinery (SectionTabBar / useSectionTabs /
+// tabs[] deleted).
 
 import React, {useCallback, useMemo, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
@@ -25,7 +29,7 @@ import {FilterChips, type FilterChipItem} from '../../components/utility/FilterC
 import {SectionFab} from './components/SectionFab';
 import {FilterSheet, type FilterSheetGroup} from '../../components/sheets/FilterSheet/FilterSheet';
 import {useSectionSearch} from './hooks/useSectionSearch';
-import {useSectionOptions} from './hooks/useSectionOptions';
+import type {SectionOptionsApi} from './hooks/useSectionOptions';
 import type {
   SectionBrowseConfig,
   SectionRenderContext,
@@ -35,12 +39,18 @@ import type {
 
 interface SectionBrowseLayoutProps {
   config: SectionBrowseConfig;
+  /** Options state (filters/sort/view) owned by the host screen — the
+   *  composition root. Passed in so data providers ABOVE the shell can
+   *  read the same selection (e.g. Movies feeds `optionsApi.options.sort`
+   *  into its fetch hook). */
+  optionsApi: SectionOptionsApi;
   /** Route params from the host screen (Home deep-link presets). */
   routeParams: SectionRouteParams<SectionRouteKey>;
 }
 
 export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
   config,
+  optionsApi,
   routeParams,
 }) => {
   const {colors} = useTheme();
@@ -62,38 +72,61 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
   );
 
   // ── FAB → options sheet (config-driven) ────────────────────────────────
-  // The hook owns ALL option state (filters/sort/view). The sheet reads/
-  // writes the SAME record threaded into `ctx.options` (one source of
-  // truth), the FAB shows `activeFilterCount` as a badge, and `reset`
-  // backs the sheet's one-tap "Reset" row. The FILTER group is seeded
-  // from routeParams (deep-links pre-select a genre/category).
+  // The host screen owns ALL option state (filters/sort/view) via
+  // `optionsApi`; the shell just reads it. The sheet reads/writes the
+  // SAME record threaded into `ctx.options` (one source of truth), the
+  // FAB shows `activeFilterCount` as a badge, and `reset` backs the
+  // sheet's one-tap "Reset" row.
   const hasOptions = !!config.options?.groups?.length;
   const [optionsSheetVisible, setOptionsSheetVisible] = useState(false);
-  const {state, setOption, reset, activeFilterCount, options} = useSectionOptions(
-    config,
-    routeParams,
-  );
+  const {state, setOption, reset, activeFilterCount, options} = optionsApi;
 
   // ── Active filter chip(s) (v10.1 FilterChips slot) ─────────────────────
-  // Derived from `options.filters` (the FILTER group selection). Labels
-  // come from the config's filter options so the chip reads like the
-  // sheet ("Rock", "Classic Films"), not the raw key. This is FEEDBACK,
-  // not navigation — tapping the chip clears back to the "All" default.
+  // Derived from `options.filters` (the FILTER group selection). Multi-
+  // select: ONE chip per selected KEY (e.g. "Classic Films" + "Westerns"
+  // → two chips). Labels come from the config's filter options so the chip
+  // reads like the sheet ("Rock", "Classic Films"), not the raw key. The
+  // active SORT selection surfaces as one more chip (single-select
+  // feedback) so the user sees the applied ordering under search too.
+  // This is FEEDBACK, not navigation — tapping a chip clears just that
+  // selection.
   const activeChips = useMemo<FilterChipItem[]>(() => {
     const filterGroup = config.options?.groups?.find(g => g.id === 'filter');
-    const labelByKey = new Map((filterGroup?.options ?? []).map(o => [o.key, o.label]));
-    return Object.keys(state.filters)
-      .filter(k => state.filters[k] !== undefined)
-      .map(k => ({key: k, label: labelByKey.get(k) ?? k}));
-  }, [config.options, state.filters]);
+    const labelByKey = new Map(
+      (filterGroup?.options ?? []).map(o => [o.key, o.label]),
+    );
+    const filterChips = Object.values(state.filters)
+      .flatMap(keys => keys)
+      .map(key => ({key, label: labelByKey.get(key) ?? key}));
+    // Sort chip: `sort:`-prefixed key so `handleChipSelect` can tell it
+    // apart from a FILTER chip on tap.
+    const sortGroup = config.options?.groups?.find(g => g.id === 'sort');
+    const sortChips =
+      state.sort && sortGroup
+        ? sortGroup.options
+            .filter(o => o.key === state.sort)
+            .map(o => ({key: `sort:${o.key}`, label: o.label}))
+        : [];
+    return [...filterChips, ...sortChips];
+  }, [config.options, state.filters, state.sort]);
 
-  // Chip tap → setOption('filter', key); tapping the ACTIVE chip fires
-  // onSelect('') (FilterChips singleSelect) → the hook clears to "All".
+  // Chip tap → remove exactly that selection. FILTER chips drop one key
+  // from the multi-select group (the sheet is where you ADD more);
+  // the SORT chip is single-select — tapping clears it back to the
+  // default order. Removing the last filter key clears the group to the
+  // default "All" stream.
   const handleChipSelect = useCallback(
     (key: string) => {
-      setOption('filter', key);
+      if (key.startsWith('sort:')) {
+        setOption('sort', '');
+        return;
+      }
+      const filterGroupId =
+        config.options?.groups?.find(g => g.id === 'filter')?.id ?? 'filter';
+      const current = state.filters[filterGroupId] ?? [];
+      setOption('filter', current.filter(k => k !== key));
     },
-    [setOption],
+    [config.options, state.filters, setOption],
   );
 
   // ── Render context (shell-level, shared by the ONE content stream) ─────
@@ -139,14 +172,14 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
         />
       </View>
 
-      {/* ── FilterChips slot — the ACTIVE filter chip (gold, tap = clear) ── */}
+      {/* ── FilterChips slot — ACTIVE filter chips (gold, tap = remove) ── */}
       {activeChips.length > 0 ? (
         <View style={styles.chipsSlot}>
           <FilterChips
             items={activeChips}
-            selectedKey={activeChips[0]?.key}
+            selectedKeys={activeChips.map(c => c.key)}
             onSelect={handleChipSelect}
-            singleSelect
+            singleSelect={false}
           />
         </View>
       ) : null}
@@ -165,11 +198,13 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
         badgeCount={activeFilterCount}
       />
 
-      {/* ── FilterSheet — the FAB's payload (v10.1 KISS) ── */}
+      {/* ── FilterSheet — the FAB's payload (v10.2 multi-select) ── */}
       {/* Translate the section config's groups → FilterSheet's data-driven
-          shape. Re-using the same config that drives the active filter
-          chip + FAB badge guarantees zero drift between sheet rows,
-          chip labels, and the badge count. */}
+          shape. The FILTER group is marked multiSelect: true so users can
+          pick several categories at once (Movies: "Classic Films +
+          Documentaries"). `value` is a per-group keys array — `filters`
+          already is; sort/view scalars are wrapped into one-element
+          arrays so the "Sort by" row lights up when picked. */}
       <FilterSheet
         visible={optionsSheetVisible}
         onClose={() => {
@@ -180,15 +215,25 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
         groups={(config.options?.groups ?? []).map<FilterSheetGroup>(g => ({
           id: g.id,
           title: g.title,
+          multiSelect: g.multiSelect ?? false,
+          collapsedRowLimit: g.collapsedRowLimit,
           rows: g.options.map(o => ({key: o.key, label: o.label})),
         }))}
-        value={options as unknown as Record<string, string | undefined>}
-        onChange={(groupId, key) =>
-          // Compose the new partial; same single source of truth
-          // (useSectionOptions) handles the rest, including the active
-          // filter chip and FAB badge count.
-          setOption(groupId as 'filter' | 'sort' | 'view', key)
-        }
+        value={{
+          ...state.filters,
+          ...(state.sort ? {sort: [state.sort]} : {}),
+          ...(state.view ? {view: [state.view]} : {}),
+        }}
+        onChange={(groupId, keys) => {
+          // FILTER group is multi-select — forward the whole array.
+          // SORT / VIEW are single-select — wrap the lone key into an
+          // array (the hook reads `[0]` for those).
+          if (groupId === 'filter') {
+            setOption('filter', keys);
+          } else {
+            setOption(groupId as 'sort' | 'view', keys[0] ?? '');
+          }
+        }}
         onReset={reset}
       />
     </View>

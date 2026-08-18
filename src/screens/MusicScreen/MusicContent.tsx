@@ -259,7 +259,10 @@ const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
 
   // Active genre comes from the shell's FILTER selection — '' = the "All"
   // default stream (popular). The scope key is `${genre}|${searchTerm}`.
-  const genre = ctx.options.filter ?? '';
+  // The shell models every filter as `string[]`; Music is single-select,
+  // so the active genre is `[0]` (or '' when the group is cleared).
+  const rawFilter = ctx.options.filter;
+  const genre = Array.isArray(rawFilter) ? (rawFilter[0] ?? '') : (rawFilter ?? '');
 
   // Bridge: the shell owns the debounced search term, the hook owns the
   // fetch term. Sync every change so scopes keyed by `term` stay in

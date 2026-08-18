@@ -2,19 +2,24 @@
 // Wave 3 (Phase 3.3). ONE options state per section, owned at the SHELL
 // level so selections survive tab switches and stay in sync everywhere.
 //
-// The sheet (Phase 3.2) is CONTROLLED: it reads `options` — the same
-// record merged into `SectionRenderContext.options` — and writes through
-// `setOption`. Exactly ONE source of truth, so the sheet, the FAB badge
-// and every `renderTab` always see the same selection (Wave 4 FilterChips
-// read/write this same record).
+// v10.2 (Phase 4.3): the `filter` group is now MULTI-select. Each
+// section can pick several values (e.g. Movies categories) and they
+// `OR` together in the IA query. The `sort` and `view` groups stay
+// single-select (they don't combine meaningfully).
 //
-// In-memory per-section state: fresh on mount. Radio-favorites keep their
-// own hook persistence — merging that is explicitly out of scope.
+// Data model:
+//   • `filters[id]` is `string[]` — 0+ keys. Empty = cleared.
+//   • `sort` and `view` are still scalar `string`.
+//
+// The sheet (Phase 3.2) is CONTROLLED: it reads `state` and writes
+// through `setOption`. Exactly ONE source of truth, so the sheet, the
+// FAB badge and every `renderTab` always see the same selection.
 
 import {useCallback, useMemo, useState} from 'react';
 import type {
   SectionBrowseConfig,
   SectionOptionGroupId,
+  SectionOptionsMerged,
   SectionRouteKey,
   SectionRouteParams,
 } from '../sectionConfig';
@@ -32,8 +37,8 @@ const FILTER_SEED_PARAMS = [
 ] as const;
 
 export interface SectionOptionsState {
-  /** Active filter selections: filterKey → subKey (Wave 4 chips may hold several). */
-  filters: Record<string, string | undefined>;
+  /** Active filter selections per group id: `string[]` (0+ keys). */
+  filters: Record<string, string[]>;
   /** Sort key (undefined = natural order). */
   sort?: string;
   /** View density key ('grid' default). */
@@ -42,14 +47,23 @@ export interface SectionOptionsState {
 
 export interface SectionOptionsApi {
   state: SectionOptionsState;
-  /** Set one option for a group id ('filter' | 'sort' | 'view'). */
-  setOption: (groupId: SectionOptionGroupId, key: string) => void;
-  /** Clear every option back to defaults (the sheet's one-tap "Reset" row). */
+  /**
+   * Set an option for a group id.
+   *   • 'filter' group: pass the full new keys array (multi-select).
+   *   • 'sort' / 'view': pass a single key string.
+   */
+  setOption(groupId: 'filter', keys: string[]): void;
+  setOption(groupId: 'sort' | 'view', key: string): void;
+  /** Clear every option back to defaults (the sheet's "Reset" row). */
   reset: () => void;
-  /** Number of active (non-default) option selections — the FAB badge. */
+  /** Total number of active filter chips — the FAB badge. */
   activeFilterCount: number;
-  /** Merged record for `SectionRenderContext.options` — renderTab reads only this. */
-  options: Partial<Record<SectionOptionGroupId, string>>;
+  /**
+   * Merged record for `SectionRenderContext.options` (a
+   * `SectionOptionsMerged`): `filter` is the selected keys array,
+   * `sort` / `view` are scalars. Renderers read only this.
+   */
+  options: SectionOptionsMerged;
 }
 
 export function useSectionOptions(
@@ -62,9 +76,9 @@ export function useSectionOptions(
     config.options?.groups?.find(g => g.id === 'view')?.options?.[0]?.key ??
     DEFAULT_VIEW;
 
-  // Route-param filter seed (Home deep-links). Only honored when the value
-  // is a real option in this section's FILTER group — a stale/typo'd param
-  // silently falls back to the default "All" stream.
+  // Route-param filter seed (Home deep-links). Only honored when the
+  // value is a real option in this section's FILTER group — a stale
+  // /typo'd param silently falls back to the default "All" stream.
   const seedFilterKey = useMemo<string | undefined>(() => {
     if (!routeParams) return undefined;
     const filterOptions =
@@ -79,40 +93,51 @@ export function useSectionOptions(
     return undefined;
   }, [routeParams, config.options]);
 
-  // In-memory per-section state — fresh on mount (step 3).
+  // Resolve the FILTER group id from config — sections sometimes call
+  // it 'filter', 'category', 'genre', etc. We find the first group
+  // marked as filter, falling back to the literal 'filter'.
+  const filterGroupId =
+    config.options?.groups?.find(g => g.id === 'filter')?.id ?? 'filter';
+
+  // In-memory per-section state — fresh on mount.
   const [state, setState] = useState<SectionOptionsState>(() => ({
-    filters: seedFilterKey ? {[seedFilterKey]: seedFilterKey} : {},
+    filters: seedFilterKey ? {[filterGroupId]: [seedFilterKey]} : {},
     sort: undefined,
     view: defaultView,
   }));
 
-  // ── Setters (step 8 error fix) ─────────────────────────────────────────
-  // `setOption`/`reset` use FUNCTIONAL updates only: they are stable
-  // identities and can never read a stale `state` closure — every write
-  // derives from the latest committed state, so options changing mid-fetch
-  // are always applied on the current state, never a captured one.
+  // `setOption` accepts either a multi-select keys array (filter
+  // group) or a single key (sort / view). Implementation uses
+  // functional updates only — it never reads a stale `state` closure,
+  // so rapid mid-fetch changes always apply on the current state.
   const setOption = useCallback(
-    (groupId: SectionOptionGroupId, key: string) => {
+    (groupId: SectionOptionGroupId, value: string | string[]): void => {
       setState(prev => {
         let next: SectionOptionsState;
         if (groupId === 'sort') {
-          next = {...prev, sort: key};
+          next = {...prev, sort: value as string};
         } else if (groupId === 'view') {
-          next = {...prev, view: key};
+          next = {...prev, view: value as string};
         } else {
-          // filter group — single-select within the sheet: a new filter key
-          // REPLACES the previous one, and tapping the ALREADY-ACTIVE option
-          // clears the filter back to the default "All" stream (the chip is
-          // feedback, not navigation — tap the chip to re-open the sheet).
-          const current = prev.filters[key];
-          next =
-            current !== undefined
-              ? {...prev, filters: {}}
-              : {...prev, filters: {[key]: key}};
+          // 'filter' — replace the entire group with the new keys array.
+          // Multi-select: empty array clears the group.
+          const keys = value as string[];
+          next = {
+            ...prev,
+            filters: keys.length === 0
+              ? Object.fromEntries(
+                  Object.entries(prev.filters).filter(
+                    ([id]) => id !== groupId,
+                  ),
+                )
+              : {...prev.filters, [groupId]: keys},
+          };
         }
-        // Dev-only transition log (step 7) — removed before ship.
         if (__DEV__) {
-          console.log(`[v10][useSectionOptions] ${config.route}: ${groupId} → ${key}`);
+          console.log(
+            `[v10][useSectionOptions] ${config.route}: ${groupId} →`,
+            JSON.stringify(value),
+          );
         }
         return next;
       });
@@ -122,7 +147,6 @@ export function useSectionOptions(
 
   const reset = useCallback(() => {
     setState(() => {
-      // Dev-only transition log (step 7) — removed before ship.
       if (__DEV__) {
         console.log(`[v10][useSectionOptions] ${config.route}: reset → defaults`);
       }
@@ -130,30 +154,33 @@ export function useSectionOptions(
     });
   }, [config.route, defaultView]);
 
-  // ── Derived (step 8 error fix) ─────────────────────────────────────────
-  // Both values recompute on EVERY state change via useMemo over the live
-  // `state` dep — never memoized against a stale closure, so a badge that
-  // must update on every setOption always reflects the current record.
-  const options = useMemo<Partial<Record<SectionOptionGroupId, string>>>(() => {
-    const merged: Partial<Record<SectionOptionGroupId, string>> = {};
-    const filterKey = Object.keys(state.filters).find(
-      k => state.filters[k] !== undefined,
+  // Derived: the active filter keys (collapsed across all filter groups,
+  // but in practice there's only one filter group per section today).
+  // Active filter count = total selected filter keys (multi-select)
+  // plus 1 if a sort is active (sort badge counts too).
+  const activeFilterCount = useMemo(() => {
+    const filterCount = Object.values(state.filters).reduce(
+      (sum, keys) => sum + keys.length,
+      0,
     );
-    if (filterKey) merged.filter = filterKey;
+    return state.sort ? filterCount + 1 : filterCount;
+  }, [state]);
+
+  // Merged record for `SectionRenderContext.options` (a
+  // `SectionOptionsMerged`). `filters` only ever holds the multi-select
+  // FILTER group, so its selected keys collapse into `merged.filter`;
+  // `sort` / `view` stay scalars. Empty groups are omitted entirely —
+  // renderers treat a missing key as the default stream.
+  const options = useMemo<SectionOptionsMerged>(() => {
+    const filterKeys = state.filters[filterGroupId];
+    const merged: SectionOptionsMerged = {};
+    if (filterKeys && filterKeys.length > 0) {
+      merged.filter = filterKeys;
+    }
     if (state.sort) merged.sort = state.sort;
     if (state.view) merged.view = state.view;
     return merged;
-  }, [state]);
-
-  // `view` is a layout preference, not a filter — the badge counts
-  // filters + sort only (step 4).
-  const activeFilterCount = useMemo(() => {
-    let count = Object.keys(state.filters).filter(
-      k => state.filters[k] !== undefined,
-    ).length;
-    if (state.sort) count += 1;
-    return count;
-  }, [state]);
+  }, [state, filterGroupId]);
 
   return {state, setOption, reset, activeFilterCount, options};
 }

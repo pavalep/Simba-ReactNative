@@ -3,11 +3,13 @@
 // data. The shell (SectionBrowseLayout) owns the header/search/FAB and
 // hands the ONE content stream a `SectionRenderContext`; this module owns:
 //
-//   • MoviesDataProvider — calls `useMoviesScreen` ONCE, above the shell,
-//     so the single content stream shares ONE per-scope cache (the legacy
-//     "switching categories never refetches" behavior). It also owns the
-//     per-movie resolution state + press handler (uses the global
-//     `navigate` helper — content has no screen `navigation`).
+//   • MoviesDataProvider — calls `useMoviesScreenParams` ONCE, above the
+//     shell, so the single content stream shares ONE per-scope cache (the
+//     legacy "switching categories never refetches" behavior). The active
+//     `sortKey` arrives as a prop from the screen (composition root), so
+//     changing "sort by" re-fetches page 1 with IA's server-side order.
+//     It also owns the per-movie resolution state + press handler (uses
+//     the global `navigate` helper — content has no screen `navigation`).
 //   • renderMoviesContent — the config's `renderContent`: bridges the
 //     shell's debounced `ctx.query` into the hook's `setSearchTerm`, reads
 //     the active category from `ctx.options.filter` ('' → the default
@@ -24,7 +26,10 @@ import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
-import {useMoviesScreen, type MovieScopeState} from './hooks/useMoviesScreen';
+import {
+  useMoviesScreenParams,
+  type MovieScopeState,
+} from './hooks/useMoviesScreen';
 import {MOVIE_CATEGORIES} from '../../constants/movieCategories';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
@@ -47,67 +52,6 @@ function formatDuration(seconds: number): string {
   const m = Math.floor((seconds % 3600) / 60);
   if (h > 0) return `${h}h ${m}m`;
   return `${m}min`;
-}
-
-// ─── Client-side sort (Phase 5.3 step 2) ────────────────────────────────
-// The FAB's sort options re-order the FETCHED slice with a pure function:
-// the array is copied before sorting (never mutates the scope cache), and
-// `undefined` keeps the fetched order. Sorting only the loaded slice is a
-// known trap (spec §10.2) — `items` is a useMemo dep below, so every
-// load-more append re-sorts the full array automatically.
-function parseYear(year: string | undefined): number {
-  const n = Number(year);
-  return Number.isFinite(n) && n > 0 ? n : 0;
-}
-
-/**
- * Sort the IA catalog client-side. Server-side sort is intentionally
- * avoided for the "default popular first" path because IA's
- * `sort[]=downloads desc` is currently 502-proned; we materialize the
- * same order from `downloadCount` here.
- *
- * Unknown sort keys fall through untouched (safe default: natural order).
- */
-function sortMovies(
-  items: InternetArchiveVideoResult[],
-  sort: string | undefined,
-): InternetArchiveVideoResult[] {
-  // Default (no sheet sort chosen) → most popular first.
-  if (!sort || sort === '' || sort === 'downloads') {
-    const copy = [...items];
-    copy.sort(
-      (a, b) =>
-        b.downloadCount - a.downloadCount ||
-        a.title.localeCompare(b.title),
-    );
-    return copy;
-  }
-  const copy = [...items];
-  switch (sort) {
-    case 'newest':
-      // Unknown/missing years (0) sink to the bottom; ties break by title.
-      copy.sort(
-        (a, b) => parseYear(b.year) - parseYear(a.year) ||
-          a.title.localeCompare(b.title),
-      );
-      break;
-    case 'oldest':
-      copy.sort(
-        (a, b) => parseYear(a.year) - parseYear(b.year) ||
-          a.title.localeCompare(b.title),
-      );
-      break;
-    case 'az':
-      copy.sort((a, b) => a.title.localeCompare(b.title));
-      break;
-    case 'rating':
-      copy.sort(
-        (a, b) => b.avgRating - a.avgRating ||
-          a.title.localeCompare(b.title),
-      );
-      break;
-  }
-  return copy;
 }
 
 // ─── Movie Card ─────────────────────────────────────────────────────────
@@ -232,11 +176,13 @@ const MovieCard: React.FC<MovieCardProps> = React.memo(
 
 interface MoviesDataContextValue {
   isSearchActive: boolean;
-  getScope: (categoryId: string) => MovieScopeState;
-  ensureLoaded: (categoryId: string) => void;
-  loadMore: (categoryId: string) => void;
-  retry: (categoryId: string) => void;
-  refresh: (categoryId: string) => void;
+  /** Hook-synced search term (drives the per-scope cache key). */
+  searchTerm: string;
+  getScope: (categoryIds: readonly string[]) => MovieScopeState;
+  ensureLoaded: (categoryIds: readonly string[]) => void;
+  loadMore: (categoryIds: readonly string[]) => void;
+  retry: (categoryIds: readonly string[]) => void;
+  refresh: (categoryIds: readonly string[]) => void;
   setSearchTerm: (term: string) => void;
   resolvingId: string | null;
   handleMoviePress: (item: InternetArchiveVideoResult) => void;
@@ -256,11 +202,16 @@ function useMoviesData(): MoviesDataContextValue {
 
 export const MoviesDataProvider: React.FC<{
   children: ReactNode;
-}> = ({children}) => {
+  /** Active sort key (undefined = IA default). Fed from the screen's
+   *  `optionsApi` — changing it re-keys the scope cache and re-fetches
+   *  page 1 in the new server-side order. */
+  sortKey?: string;
+}> = ({children, sortKey}) => {
   const toast = useToast();
   // Single hook instance for the whole screen — the one content stream
-  // reads the SAME (category, searchTerm) scope cache via context.
-  const movies = useMoviesScreen();
+  // reads the SAME (categoryIds, searchTerm, sortKey) scope cache via
+  // context.
+  const movies = useMoviesScreenParams({categoryIds: [], sortKey});
 
   // Per-movie resolution state. Failures surface as a top-of-screen toast
   // (auto-dismiss + close button) rather than an inline banner — same
@@ -313,6 +264,7 @@ export const MoviesDataProvider: React.FC<{
   const value = useMemo<MoviesDataContextValue>(
     () => ({
       isSearchActive: movies.isSearchActive,
+      searchTerm: movies.searchTerm,
       getScope: movies.getScope,
       ensureLoaded: movies.ensureLoaded,
       loadMore: movies.loadMore,
@@ -329,6 +281,7 @@ export const MoviesDataProvider: React.FC<{
     // `ensureLoaded` ref, re-firing the mount effect (Phase 5.2b).
     [
       movies.isSearchActive,
+      movies.searchTerm,
       movies.getScope,
       movies.ensureLoaded,
       movies.loadMore,
@@ -359,16 +312,27 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
     retry,
     refresh,
     isSearchActive,
+    searchTerm,
     setSearchTerm,
     resolvingId,
     handleMoviePress,
   } = useMoviesData();
   const {offline} = ctx;
 
-  // Active category comes from the shell's FILTER selection — '' → the
-  // default "All" stream (the `all` category). The scope key is
-  // `${categoryId}|${searchTerm}`.
-  const categoryId = ctx.options.filter ?? 'all';
+  // Active categories come from the shell's FILTER selection — a
+  // string[] (multi-select). Empty array → the default "All" stream
+  // (`['all']`).
+  const rawFilter = ctx.options.filter;
+  const categoryIds: readonly string[] = React.useMemo(() => {
+    if (rawFilter && rawFilter.length > 0) return rawFilter;
+    return ['all'];
+  }, [rawFilter]);
+
+  // Active sort key comes straight from the shell's SORT selection —
+  // same record the FAB sheet writes. It feeds `MoviesDataProvider`'s
+  // `sortKey` prop (via the screen), which re-keys the scope cache; the
+  // effect below re-fires page 1 in the new IA server-side order.
+  const sortKey = ctx.options.sort;
 
   // Bridge: the shell owns the debounced search term, the hook owns the
   // fetch term. Sync every change so scopes keyed by `term` stay in
@@ -377,24 +341,23 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
     setSearchTerm(ctx.query);
   }, [ctx.query, setSearchTerm]);
 
-  // Load page 1 for this category on first mount / category switch.
+  // Load page 1 for this combination on first mount / selection change.
   // The hook's hasLoaded/isLoading guard turns this into a no-op for
-  // already-loaded scopes, so it's safe to fire on every categoryId
-  // change. We use a ref-stash so the effect doesn't re-fire when only
-  // ensureLoaded's identity changes (Phase 5.2b: re-firing causes the
-  // provider to re-render and produce a new context value).
+  // already-loaded scopes, so it's safe to fire on every change. Deps
+  // cover ALL three components of the scope cache key
+  // `<sorted ids>|<term>|<sortKey>` — a new sort or search term re-keys
+  // the cache and must trigger the page-1 load. We use a ref-stash so the
+  // effect doesn't re-fire when only ensureLoaded's identity changes
+  // (Phase 5.2b).
   const ensureLoadedRef = React.useRef(ensureLoaded);
   ensureLoadedRef.current = ensureLoaded;
   useEffect(() => {
-    ensureLoadedRef.current(categoryId);
-  }, [categoryId]);
+    ensureLoadedRef.current(categoryIds);
+  }, [categoryIds, searchTerm, sortKey]);
 
-  const scope = getScope(categoryId);
+  const scope = getScope(categoryIds);
   const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
 
-  // Legacy parity: initial load → loading; page-1 failure → error; loaded
-  // with zero results → empty; otherwise the grid. Load-more errors keep
-  // showing the grid with a tap-to-retry footer (see below).
   const state: SectionContentState =
     !hasLoaded && isLoading
       ? 'loading'
@@ -405,30 +368,19 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
       : 'ready';
 
   // v10.1: Movies is always single-column (horizontal card) — the FAB
-  // exposes only filter + sort (no view toggle). The original 2-col
-  // grid felt cramped and made titles unreadable.
+  // exposes only filter + sort (no view toggle).
   const view: 'list' | 'grid' = 'list';
-  const category = MOVIE_CATEGORIES.find(c => c.id === categoryId);
+  const category = MOVIE_CATEGORIES.find(c => c.id === categoryIds[0]);
 
-  // The FAB sort re-orders THIS stream's own loaded slice (never another
-  // category's). The memo deps make it live: sort changes re-order
-  // instantly, and every load-more append re-sorts the full array.
-  // `undefined` = natural order.
-  const sortedItems = useMemo(
-    () => sortMovies(items, ctx.options.sort),
-    [items, ctx.options.sort],
-  );
+  // No client-side sort — IA owns the order via `sort[]` (see
+  // `sortParamFor` in the hook). Pagination just appends the next page;
+  // the server already returned it in the correct order. KISS.
 
-  // Load-more footer only in the ready state (page-1 failures render the
-  // shared ErrorState in the empty slot instead — no double error UI).
   const showFooter = isLoadingMore || (!!error && hasLoaded);
 
-  // The shared 'loading' skeleton is only for the first page-1 fetch, so a
-  // pull-to-refresh (hasLoaded stays true → 'ready') spins the gold
-  // RefreshControl without ever blanking the grid.
   const refreshControl = {
     refreshing: isLoading,
-    onRefresh: () => refresh(categoryId),
+    onRefresh: () => refresh(categoryIds),
   };
 
   return (
@@ -452,9 +404,9 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
           ? 'Try a different search term.'
           : 'Try another category.',
       }}
-      onRetry={() => retry(categoryId)}
+      onRetry={() => retry(categoryIds)}
       {...refreshControl}
-      data={sortedItems}
+      data={items}
       renderItem={({item}) => (
         <MovieCard
           item={item}
@@ -476,7 +428,7 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
           {category?.description ?? 'Every movie in the archive, most popular first'}
         </AppText>
       }
-      onEndReached={() => loadMore(categoryId)}
+      onEndReached={() => loadMore(categoryIds)}
       onEndReachedThreshold={0.6}
       ListFooterComponent={
         showFooter ? (
@@ -491,7 +443,7 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
             ) : (
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => loadMore(categoryId)}
+                onPress={() => loadMore(categoryIds)}
                 style={[
                   styles.loadMoreRetry,
                   {borderColor: colors.background.highlight},

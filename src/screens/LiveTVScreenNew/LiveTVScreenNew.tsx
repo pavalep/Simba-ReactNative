@@ -427,8 +427,10 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
                 : [],
           },
         ]}
-        value={{category: filters.category ?? ''}}
-        onChange={(groupId, key) => handleOptionChange(groupId as 'category', key)}
+        value={{category: filters.category ? [filters.category] : []}}
+        onChange={(groupId, keys) =>
+          handleOptionChange(groupId as 'category', keys[0] ?? '')
+        }
         onReset={resetFilters}
       />
 
