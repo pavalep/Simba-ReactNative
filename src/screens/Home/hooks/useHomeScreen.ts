@@ -30,18 +30,16 @@ export type HomeSection =
   | {type: 'GENRE'; genres: {name: string; count: number}[]}
   | {type: 'PLAYLISTS'; items: any[]}
   | {type: 'BOOKMARKS'; items: ReturnType<typeof selectBookmarks>}
-  | {type: 'MOVIES'}
   | {type: 'FOLLOWED_PODCASTS'; items: FollowedPodcast[]}
-  | {type: 'PREFILLED_PODCASTS'}
-  | {type: 'PREFILLED_MUSIC'}
-  // P36.7: live radio + TV browse shelves
-  | {type: 'RADIO'}
-  | {type: 'LIVE_TV'}
-  // P37.7: audiobooks (LibriVox) + Internet Archive browse shelves
-  | {type: 'AUDIOBOOKS'}
-  | {type: 'ARCHIVE'}
-  // P38.7: TV shows (TVMaze) browse shelf
-  | {type: 'SHOWS'};
+  // v10.2: Discover collapses the 8 per-category rails (Movies, Podcasts,
+  // Music, Radio, Live TV, Audiobooks, Shows, Archive) into ONE horizontal
+  // "Browse All" rail — one 16:9 hero card per top-level section.
+  | {type: 'BROWSE_ALL'}
+  // v10.3: Dummy / placeholder shelves under Discover — Playlists and
+  // AI-Curated sections are scoped but not yet built. Each renders as a
+  // coming-soon rail with intentional dummy data so the page structure
+  // is locked in and the real content lands by drop-in replacement.
+  | {type: 'COMING_SOON'; reason: 'PLAYLISTS' | 'AI_CURATED'};
 
 // ── Helpers ──
 
@@ -253,26 +251,23 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       {type: 'BOOKMARKS', items: bookmarks},
       {type: 'FOLLOWED_PODCASTS', items: followedPodcasts},
 
-      // Discover / API-backed rails — grouped under a "Discover" sub-
-      // section title so the user can see at a glance which shelves are
-      // curated content (above) vs. catalog browse (below). These are
-      // not collapsible (per the P56 scope: only the three Your Library
-      // rails get the chevron).
+      // Discover / API-backed catalog browse — grouped under a "Discover"
+      // sub-section title. v10.2: the 8 separate category rails collapse
+      // into ONE "Browse All" rail (one 16:9 hero card per top-level
+      // section) so the page stays scannable.
       // v9f: same treatment as "Your Library" — Cormorant Italic
       // 18 px at 0.9 gold so both parent-block titles share a
       // single visual voice.
       {type: 'SUBSECTION_TITLE', label: 'Discover', variant: 'displaySerif'},
-      {type: 'MOVIES'},
-      {type: 'PREFILLED_PODCASTS'},
-      {type: 'PREFILLED_MUSIC'},
-      // P36.7: live radio + TV browse shelves
-      {type: 'RADIO'},
-      {type: 'LIVE_TV'},
-      // P37.7: audiobooks + Internet Archive browse shelves
-      {type: 'AUDIOBOOKS'},
-      {type: 'ARCHIVE'},
-      // P38.7: TV shows (TVMaze) browse shelf
-      {type: 'SHOWS'},
+      {type: 'BROWSE_ALL'},
+      // v10.3 (Home Discover): Playlists + AI-Curated placeholder
+      // rails. The Playlists module is being polished and the
+      // recommendation engine for AI-Curated is on the roadmap —
+      // both render with dummy "Coming soon" cards for now so the
+      // section slots already exist on Home and the real content
+      // can be wired in later by replacing these entries.
+      {type: 'COMING_SOON', reason: 'PLAYLISTS'},
+      {type: 'COMING_SOON', reason: 'AI_CURATED'},
     ];
 
     // Genre chips

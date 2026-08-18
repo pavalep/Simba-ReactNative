@@ -4,11 +4,17 @@
 // TagChips, Live TV CategoryChips, Archive quick searches, Audiobooks
 // genre chips — so every section renders the same pill language.
 //
-// Visual contract (unified from the 5 sources):
-//   • pill radius (radius.pill), consistent padding
+// Visual contract (v10.3 — inverted-neutral):
+//   • pill radius (radius.pill), tight padding
 //   • ACTIVE   = gold fill + inverse text + gold border   (Music/Audiobooks/
 //                Search-filters precedent — the "accent background" state)
-//   • INACTIVE = elevated fill + subtle border + secondary text (all 5)
+//   • INACTIVE = WHITE fill + dark text + light border  (v10.3 — the user
+//                read the previous elevated-on-dark as "obviously big"
+//                because dark bg + warm elevated fill melted together;
+//                switching to a clean white pill makes the inactive set
+//                feel like a tappable, neutral chooser rather than a
+//                chunky block).
+//   • compact typography — caption-sized, semibold, never larger
 //   • optional leading icon (Archive) and trailing count badge (Radio
 //     stations / Live TV channels) on the chip's right edge
 //
@@ -106,8 +112,11 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
                     borderColor: colors.accent.gold,
                   }
                 : {
-                    backgroundColor: colors.background.elevated,
-                    borderColor: colors.border.subtle,
+                    // v10.3: clean white pill — neutral, tappable, never
+                    // confused with active gold. On dark backgrounds the
+                    // previous `elevated` fill read as warm-and-chunky.
+                    backgroundColor: '#FFFFFF',
+                    borderColor: 'rgba(0, 0, 0, 0.08)',
                   },
             ]}>
             {item.icon ? (
@@ -121,7 +130,9 @@ export const FilterChips: React.FC<FilterChipsProps> = React.memo(
               variant="caption"
               style={[
                 styles.chipText,
-                {color: active ? colors.text.inverse : colors.text.secondary},
+                {
+                  color: active ? colors.text.inverse : '#1A1A1A',
+                },
               ]}>
               {item.label}
             </AppText>
@@ -181,13 +192,21 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    gap: 4,
+    // v10.3: tighter padding (was spacing.md / 6 — now smaller). The
+    // previous size read as "obviously big" against the dark surface.
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
     borderRadius: radius.pill,
     borderWidth: 1,
   },
   chipText: {
+    // v10.3: caption + semibold was correct, but the resulting glyph
+    // height was reading too chunky because the chip itself was tall.
+    // With the tight padding above the text now reads compact, like a
+    // GitHub-style topic pill.
+    fontSize: 11,
+    lineHeight: 13,
     fontWeight: '600',
   },
   countBadge: {
@@ -205,11 +224,11 @@ const styles = StyleSheet.create({
   },
   horizontalRow: {
     paddingHorizontal: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.xs + 2,
   },
   wrapRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.xs + 2,
   },
 });

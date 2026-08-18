@@ -18,19 +18,19 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SubsectionTitle} from '../../components/utility/SubsectionTitle/SubsectionTitle';
 import {WeatherGreeting} from './components/WeatherGreeting';
 import {HomeBookmarksList} from './components/HomeBookmarksList';
-import {MovieCategoriesShelf} from './components/MovieCategoriesShelf';
-import {PodcastCategoriesShelf} from './components/PodcastCategoriesShelf';
 import {FollowedPodcastsShelf} from './components/FollowedPodcastsShelf';
-import {MusicCategoriesShelf} from './components/MusicCategoriesShelf';
 import {GenreChipsShelf} from './components/GenreChipsShelf';
-import {RadioCategoriesShelf} from './components/RadioCategoriesShelf';
-import {LiveTVCategoriesShelf} from './components/LiveTVCategoriesShelf';
-import {AudiobooksShelf} from './components/AudiobooksShelf';
-import {ArchiveShelf} from './components/ArchiveShelf';
-import {ShowsShelf} from './components/ShowsShelf';
-import type {AudiobookCategory, ArchiveCategory} from '../../constants/audiobookCategories';
-import type {ShowCategory} from '../../constants/showCategories';
-import type {RadioCategory} from '../../constants/liveCategories';
+// v10.2: Discover is one "Browse All" rail — the 8 per-category shelves
+// (MovieCategoriesShelf, PodcastCategoriesShelf, MusicCategoriesShelf,
+// RadioCategoriesShelf, LiveTVCategoriesShelf, AudiobooksShelf,
+// ArchiveShelf, ShowsShelf) were removed with their handlers.
+import {BrowseAllShelf} from './components/BrowseAllShelf';
+// v10.3: placeholder rails for not-yet-built Home sub-sections
+// (Playlists module polish + AI-curated recommendations). These
+// render as "Coming soon" shelves with dummy data and will be
+// dropped in-place with real loaders once the underlying
+// modules land.
+import {ComingSoonShelf} from './components/ComingSoonShelf';
 import {mark, logStartupSummary} from '../../utils/startupPerf';
 
 // ── Screen ──
@@ -67,21 +67,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     logStartupSummary();
   }, []);
 
-  const handleMovieCategoryPress = useCallback(
-    (categoryId: string) => {
-      navigation.navigate('MoviesScreen', {categoryId});
-    },
-    [navigation],
-  );
-
-  const handlePodcastCategoryPress = useCallback(
-    (categoryId: number | 'all') => {
-      // The synthetic 'all' category id rides the same PodscastsScreen
-      // route — the screen's hook detects it and uses /podcasts/trending.
-      navigation.navigate('PodcastsScreen', {categoryId: categoryId as number});
-    },
-    [navigation],
-  );
+  // v10.2: the per-category press handlers for Movies / Podcasts / Music /
+  // Radio / Live TV / Audiobooks / Archive / Shows were removed together
+  // with their shelves — Discover now navigates via handleSeeAll.
 
   // 35.5: followed podcast card → podcast detail
   const handleFollowedPodcastPress = useCallback(
@@ -99,80 +87,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
   const handleFollowedPodcastsSeeAll = useCallback(() => {
     navigation.navigate('PodcastsScreen', {});
   }, [navigation]);
-
-  const handleMusicCategoryPress = useCallback(
-    (genre: string) => {
-      // 'all' is a synthetic tile — no params lands on the default
-      // "All" stream (the FAB-only shell's no-filter state).
-      if (genre === 'all') {
-        navigation.navigate('MusicScreen', {});
-        return;
-      }
-      navigation.navigate('MusicScreen', {genre});
-    },
-    [navigation],
-  );
-
-  // P36.7 + P53: live radio + live TV browse shelves
-  // Rail tiles are now RadioCategory objects (id + radio-browser tag).
-  const handleRadioCategoryPress = useCallback(
-    (cat: RadioCategory) => {
-      if (cat.id === 'all') {
-        navigation.navigate('RadioScreen', {});
-        return;
-      }
-      navigation.navigate('RadioScreen', {initialTab: 'genres', initialTag: cat.tag});
-    },
-    [navigation],
-  );
-
-  const handleLiveTVCategoryPress = useCallback(
-    (categoryId: string) => {
-      navigation.navigate('LiveTVScreen', {categoryId});
-    },
-    [navigation],
-  );
-
-  // P37.7 + P53: audiobooks + Internet Archive browse shelves
-  // Rail tiles are now AudiobookCategory objects (id + libriVox tag).
-  const handleAudiobookCategoryPress = useCallback(
-    (cat: AudiobookCategory) => {
-      if (cat.id === 'all') {
-        navigation.navigate('AudiobooksScreen', {});
-        return;
-      }
-      navigation.navigate('AudiobooksScreen', {initialTab: 'genres', initialGenre: cat.tag});
-    },
-    [navigation],
-  );
-
-  // P53: rail tiles are now ArchiveCategory objects (id + IA query).
-  const handleArchiveCategoryPress = useCallback(
-    (cat: ArchiveCategory) => {
-      if (cat.id === 'all') {
-        navigation.navigate('ArchiveScreen', {});
-        return;
-      }
-      if (cat.id === 'audio' || cat.id === 'video') {
-        navigation.navigate('ArchiveScreen', {initialTab: cat.id});
-        return;
-      }
-      navigation.navigate('ArchiveScreen', {query: cat.query});
-    },
-    [navigation],
-  );
-
-  // P38.7 + P53: rail tiles are now ShowCategory objects (id + TVMaze genre).
-  const handleShowsCategoryPress = useCallback(
-    (cat: ShowCategory) => {
-      if (cat.id === 'all') {
-        navigation.navigate('ShowsScreen', {});
-        return;
-      }
-      navigation.navigate('ShowsScreen', {initialTab: 'browse', initialGenre: cat.genre});
-    },
-    [navigation],
-  );
 
   // P41.5: Pinned Playlists' "VIEW ALL" link — kept on the per-user
   // QuickAccessShelf only (not on the API-backed category rails).
@@ -228,62 +142,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
               onSeeAll={handlePlaylistsSeeAll}
             />
           );
-        case 'MOVIES':
-          return (
-            <MovieCategoriesShelf
-              onCategoryPress={handleMovieCategoryPress}
-              onSeeAll={() => navigation.navigate('MoviesScreen')}
-            />
-          );
-        case 'PREFILLED_PODCASTS':
-          return (
-            <PodcastCategoriesShelf
-              onCategoryPress={handlePodcastCategoryPress}
-              onSeeAll={() => navigation.navigate('PodcastsScreen')}
-            />
-          );
+        case 'BROWSE_ALL':
+          // v10.2: one rail, one card per top-level section.
+          return <BrowseAllShelf onSectionPress={handleSeeAll} />;
+        case 'COMING_SOON':
+          // v10.3: placeholder shelf for not-yet-built sections
+          // (Playlists, AI-Curated). Renders dummy "Coming soon"
+          // cards now; will be swapped for real loaders later.
+          return <ComingSoonShelf reason={item.reason} />;
         case 'FOLLOWED_PODCASTS':
           return (
             <FollowedPodcastsShelf
               items={item.items}
               onPodcastPress={handleFollowedPodcastPress}
               onSeeAll={handleFollowedPodcastsSeeAll}
-            />
-          );
-        case 'PREFILLED_MUSIC':
-          return (
-            <MusicCategoriesShelf
-              onCategoryPress={handleMusicCategoryPress}
-            />
-          );
-        case 'RADIO':
-          return (
-            <RadioCategoriesShelf
-              onCategoryPress={handleRadioCategoryPress}
-            />
-          );
-        case 'LIVE_TV':
-          return (
-            <LiveTVCategoriesShelf
-              onCategoryPress={handleLiveTVCategoryPress}
-            />
-          );
-        case 'AUDIOBOOKS':
-          return (
-            <AudiobooksShelf
-              onCategoryPress={handleAudiobookCategoryPress}
-            />
-          );
-        case 'ARCHIVE':
-          return (
-            <ArchiveShelf
-              onCategoryPress={handleArchiveCategoryPress}
-            />
-          );
-        case 'SHOWS':
-          return (
-            <ShowsShelf
-              onCategoryPress={handleShowsCategoryPress}
             />
           );
         case 'BOOKMARKS':
@@ -309,7 +181,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
       // and the section structure are doing the visual work now.
       return sectionContent;
     },
-    [dispatch, greeting, userFirstName, handleItemPress, handlePlaylistPress, handleGenrePress, handleMovieCategoryPress, handleSeeAll, handlePodcastCategoryPress, handleFollowedPodcastPress, handleFollowedPodcastsSeeAll, handleMusicCategoryPress, handleRadioCategoryPress, handleLiveTVCategoryPress, handleAudiobookCategoryPress, handleArchiveCategoryPress, handleShowsCategoryPress, handlePlaylistsSeeAll],
+    [dispatch, greeting, userFirstName, handleItemPress, handlePlaylistPress, handleGenrePress, handleSeeAll, handleFollowedPodcastPress, handleFollowedPodcastsSeeAll, handlePlaylistsSeeAll],
   );
 
   if (hasError) {

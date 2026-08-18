@@ -81,7 +81,7 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
   const [optionsSheetVisible, setOptionsSheetVisible] = useState(false);
   const {state, setOption, reset, activeFilterCount, options} = optionsApi;
 
-  // ── Active filter chip(s) (v10.1 FilterChips slot) ─────────────────────
+  // ── Active filter chip(s) (v10.1 → v10.3 FilterChips slot) ─────────────
   // Derived from `options.filters` (the FILTER group selection). Multi-
   // select: ONE chip per selected KEY (e.g. "Classic Films" + "Westerns"
   // → two chips). Labels come from the config's filter options so the chip
@@ -90,6 +90,14 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
   // feedback) so the user sees the applied ordering under search too.
   // This is FEEDBACK, not navigation — tapping a chip clears just that
   // selection.
+  //
+  // v10.3 order: SORT leads (always first when active), then FILTERS.
+  // The user reads sort as "how is this list ordered" while filter chips
+  // are "what slice of the catalog". Putting sort first keeps that
+  // distinction visible at a glance — no scrolling required to see why
+  // the list looks the way it does. The separator is handled visually
+  // by the chip-pill rhythm itself (sort is the only single-select
+  // chip, so its stable position doubles as identity).
   const activeChips = useMemo<FilterChipItem[]>(() => {
     const filterGroup = config.options?.groups?.find(g => g.id === 'filter');
     const labelByKey = new Map(
@@ -105,9 +113,11 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
       state.sort && sortGroup
         ? sortGroup.options
             .filter(o => o.key === state.sort)
-            .map(o => ({key: `sort:${o.key}`, label: o.label}))
+            .map(o => ({key: `sort:${o.key}`, label: `Sort: ${o.label}`}))
         : [];
-    return [...filterChips, ...sortChips];
+    // v10.3: sort FIRST so the ordering answer is always visible at the
+    // start of the chip row. Filter chips follow.
+    return [...sortChips, ...filterChips];
   }, [config.options, state.filters, state.sort]);
 
   // Chip tap → remove exactly that selection. FILTER chips drop one key
@@ -172,17 +182,24 @@ export const SectionBrowseLayout: React.FC<SectionBrowseLayoutProps> = ({
         />
       </View>
 
-      {/* ── FilterChips slot — ACTIVE filter chips (gold, tap = remove) ── */}
-      {activeChips.length > 0 ? (
-        <View style={styles.chipsSlot}>
+      {/* ── FilterChips slot — ACTIVE filter chips (gold, tap = remove).
+          Always rendered so the vertical rhythm (searchSection.paddingBottom
+          → chipsSlot.paddingTop → chip row → chipsSlot.paddingBottom → grid)
+          is identical whether chips are present or not. The chip row itself
+          collapses to zero height when `items` is empty, so absent chips
+          add no visual weight — but the breathing room below the search
+          stays put, preventing the grid from butting flush against the
+          search bar in the empty-chips state. */}
+      <View style={styles.chipsSlot}>
+        {activeChips.length > 0 ? (
           <FilterChips
             items={activeChips}
             selectedKeys={activeChips.map(c => c.key)}
             onSelect={handleChipSelect}
             singleSelect={false}
           />
-        </View>
-      ) : null}
+        ) : null}
+      </View>
 
       {/* ── ONE content stream — the only per-section part ── */}
       <View style={styles.content}>{config.renderContent(ctx)}</View>
@@ -246,13 +263,42 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
+  // v10.3: explicit breathing room ABOVE the search bar so it never
+  // hugs the InternalHeader bottom divider — the search field is its
+  // own surface and needs a visible break from the title bar above.
+  // The bottom padding is a paired rhythm with chipsSlot so that grid
+  // cards are equally distant from the search regardless of whether
+  // chips are visible.
   searchSection: {
-    // Matches the legacy Movies search geometry px-for-px (spec §2).
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    // 16px above the search so the field isn't crowding the header
+    // divider; 10px below keeps the search-to-content break tight
+    // without a visible canyon. The asymmetry is intentional — the
+    // header divider is a hard edge, while the chip-or-grid surface
+    // below already has its own visual weight that "earns" a tighter gap.
+    paddingTop: 16,
+    paddingBottom: 10,
   },
+  // v10.3: the chip slot is now bordered by explicit vertical rhythm —
+  // tighter above (chips already have spacing to the search bar via
+  // searchSection.paddingBottom) and more generous below so the grid
+  // has a clean break before its first row. The view contract:
+  //
+  //   search bar
+  //   ↓ paddingBottom: spacing.md
+  //   chip row (top edge anchored)
+  //   ↓ chipsSlot.paddingTop: spacing.xs (between chips and divider)
+  //   ↓ chipsSlot.paddingBottom: spacing.md (breathing room before grid)
+  //   grid card 1, 2, ...
+  //
+  // The bottom padding matters most — without enough breathing room the
+  // first card edge sits flush against the chips, which reads as "the
+  // chips ARE part of the grid" instead of "the chips are a separate
+  // intent selector".
   chipsSlot: {
-    paddingBottom: spacing.xs,
+    paddingTop: 0,
+    paddingHorizontal: spacing.md,
+    paddingBottom: 10,
   },
   content: {
     flex: 1,

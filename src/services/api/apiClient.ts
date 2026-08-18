@@ -155,6 +155,9 @@ export async function apiFetch<T>(opts: FetchOptions): Promise<T> {
     headers: {
       ...headers,
     },
+    // Per-API timeout override — slow-cold APIs (IA advancedsearch)
+    // need a higher ceiling than the 10s client default.
+    timeout: config.timeoutMs ?? 10_000,
     signal,
   };
 

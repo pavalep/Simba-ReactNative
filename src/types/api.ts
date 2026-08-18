@@ -5,6 +5,15 @@ export interface ApiConfig {
   apiKey?: string;
   apiSecret?: string;
   rateLimitMs: number;
+  /**
+   * Request timeout in ms. Falls back to the client default (10s).
+   * Slow-cold APIs (e.g. Internet Archive advancedsearch, which takes
+   * >10s on a cold CDN node before its query cache warms) must set a
+   * higher ceiling here — otherwise the first request in a session
+   * times out while the server is still working, and only the retry
+   * (which hits the now-warm cache) succeeds.
+   */
+  timeoutMs?: number;
 }
 
 export interface ApiSearchOptions {

@@ -193,9 +193,10 @@ export const SECTION_CONFIGS: Record<SectionRouteKey, SectionBrowseConfig> = {
           id: 'sort',
           title: 'Sort by',
           options: [
-            // Default — most popular first, applied client-side from
-            // `downloadCount` to keep the fetch path simple and reliable.
-            {key: 'downloads', label: 'Most popular'},
+            // No option is pre-selected — the default stream is unsorted
+            // (IA's natural order). Selecting "Most popular" delegates to
+            // IA's server-side `downloads desc` sort (see `sortParamFor`).
+            {key: 'popular', label: 'Most popular'},
             {key: 'newest', label: 'Newest'},
             {key: 'oldest', label: 'Oldest'},
             {key: 'az', label: 'A–Z'},

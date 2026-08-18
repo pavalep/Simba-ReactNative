@@ -25,7 +25,7 @@
 //   • data mode: RefreshControl is attached to the FlatList root here;
 //   • rows mode: it wraps children in a ScrollView with the same control.
 
-import React from 'react';
+import React, {useRef} from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -144,6 +144,16 @@ export const SectionContent = <T,>(props: SectionContentProps<T>) => {
   const dataMode = data !== undefined && renderItem !== undefined;
   const columns = view === 'list' ? 1 : numColumns ?? 2;
 
+  // Mount-time guard for pagination: FlatList fires `onEndReached` once
+  // during initial layout (distanceFromEnd reads 0 before the content is
+  // measured). Without a gate that spurious fire would silently pre-fetch
+  // page 2 the moment page 1 renders — the first "Loading more…" footer
+  // is consumed off-screen and never seen. Gate pagination on a real
+  // user scroll; from the first drag onward normal onEndReached behavior
+  // applies. Sections whose first page can't fill the viewport are
+  // unaffected (their numFound check already stops further fetching).
+  const userDraggedRef = useRef(false);
+
   const refreshControl = (
     <RefreshControl
       refreshing={refreshing}
@@ -154,6 +164,12 @@ export const SectionContent = <T,>(props: SectionContentProps<T>) => {
   );
 
   if (state === 'loading') {
+    // Grid skeletons are full-bleed (match Movies' zero-padded grid) so
+    // skip the padded wrapper — list skeletons keep horizontal padding
+    // (matches text-heavy sections like Music / Podcast).
+    if (view === 'grid') {
+      return <SkeletonList count={6} view="grid" />;
+    }
     return (
       <View style={styles.padded}>
         <SkeletonList count={4} />
@@ -213,7 +229,15 @@ export const SectionContent = <T,>(props: SectionContentProps<T>) => {
         ListHeaderComponent={ListHeaderComponent}
         ListFooterComponent={ListFooterComponent}
         ListEmptyComponent={emptySlot}
-        onEndReached={onEndReached}
+        // See `userDraggedRef` — only paginate after a real user scroll,
+        // never on the mount-time spurious fire.
+        onScrollBeginDrag={() => {
+          userDraggedRef.current = true;
+        }}
+        onEndReached={info => {
+          if (!userDraggedRef.current) return;
+          onEndReached?.(info);
+        }}
         onEndReachedThreshold={onEndReachedThreshold}
         removeClippedSubviews={
           columns > 1 ? false : removeClippedSubviews

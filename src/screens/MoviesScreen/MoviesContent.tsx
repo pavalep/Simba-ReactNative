@@ -20,9 +20,10 @@
 // The old header/search/tab/viewpager code was deleted from the screen —
 // the shell owns all of it now.
 
-import React, {useCallback, useEffect, useMemo, useState, type ReactNode} from 'react';
-import {View, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef, useState, type ReactNode} from 'react';
+import {Animated, View, TouchableOpacity, StyleSheet, type ImageSourcePropType} from 'react-native';
 import FastImage from 'react-native-fast-image';
+import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
@@ -44,127 +45,179 @@ import type {
   SectionRenderContext,
 } from '../sections/sectionConfig';
 
-// ─── Helpers ────────────────────────────────────────────────────────────
-
-function formatDuration(seconds: number): string {
-  if (!seconds || seconds <= 0) return '--:--';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}min`;
-}
-
 // ─── Movie Card ─────────────────────────────────────────────────────────
+// Premium 2-col 16:9 hero card (Apple TV+ / Prime Video style):
+//
+//   ┌───────────────────────────┐
+//   │                           │
+//   │    full-bleed image       │
+//   │                           │
+//   │  ── scrim gradient ──     │  ← LinearGradient: transparent →
+//   │  Title line               │     scrimOpaque from ~40% down
+//   │  year · creator           │
+//   └───────────────────────────┘
+//
+// The image IS the card — no surface, no border, no badges. Metadata
+// (rating, duration) deliberately drops OUT here and will live on the
+// upcoming detail/action sheet. Title + year + creator are the only
+// payload on the card. Quick scan from a wall of cards, single tap to
+// play. NumberOfLines is tightly clamped so layout is identical for
+// every item regardless of title length.
 
 interface MovieCardProps {
   item: InternetArchiveVideoResult;
   onPress: (item: InternetArchiveVideoResult) => void;
   isResolving?: boolean;
+  /** Category cover image — used as a fallback when the IA item has no
+   *  `imageUrl` so consecutive empty cards don't render as visual voids.
+   *  Prevents the "two empty cards next to each other look broken"
+   *  rhythm problem the placeholder/gradient gap exposed in the grid. */
+  placeholderImage?: ImageSourcePropType;
+  /** When true, this card is the sole item in its row (odd item count).
+   *  Renders at an explicit 50% width via `heroCardLonely` instead of
+   *  `heroCard` (which uses `flex: 1` to claim half the row). Without
+   *  this, a single trailing item stretches to full screen width and
+   *  looks like a giant banner inside the grid. */
+  isLonelyItem?: boolean;
 }
 
 const MovieCard: React.FC<MovieCardProps> = React.memo(
-  ({item, onPress, isResolving}) => {
+  ({item, onPress, isResolving, placeholderImage, isLonelyItem}) => {
     const {colors} = useTheme();
     // Local "image failed" state so we can fall back to the placeholder
     // instead of the broken-image icon. `imageUrl` comes from the IA
     // search API with a fallback to `https://archive.org/services/img/{id}`
     // (verified to return a 200 image/jpeg for every item).
     const [imageFailed, setImageFailed] = useState(false);
-    const showImage = !!item.imageUrl && !imageFailed;
+    // Cross-fade animation: every card starts at the same visual state
+    // (cover image underneath) and fades its remote image in once loaded.
+    // This makes two adjacent cards with differing load times look
+    // consistent — every cell shows the category cover while waiting,
+    // so empty cells never collapse to a dark void mid-scroll.
+    const imageOpacity = useRef(new Animated.Value(0)).current;
+    // Stack of layered images, back to front:
+    //   Layer 1  base  — cover image (always) or brand placeholder
+    //                    (only if no cover); renders synchronously and
+    //                    is what the user sees during load and on error.
+    //   Layer 2  remote — present ONLY when the item has an imageUrl AND
+    //                    the load hasn't failed yet; opacity 0 → 1 on
+    //                    load, covering the base layer.
+    const hasRemoteAttempt = !!item.imageUrl;
+    const remoteActive = hasRemoteAttempt && !imageFailed;
+    const hasCover = !!placeholderImage;
+    // Pre-build the meta row string so JSX stays compact + viewable.
+    // Both fields optional → render conditionally below.
+    const meta =
+      item.year && item.creator
+        ? `${item.year}  ·  ${item.creator}`
+        : item.year ?? item.creator ?? '';
+
+    const handleImageLoad = useCallback(() => {
+      Animated.timing(imageOpacity, {
+        toValue: 1,
+        duration: 220,
+        // opacity animation → safe on native driver
+        useNativeDriver: true,
+      }).start();
+    }, [imageOpacity]);
 
     return (
       <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => onPress(item)}
-      disabled={isResolving}
-      accessibilityRole="button"
-      style={[
-        styles.movieCard,
-        {backgroundColor: colors.background.elevated},
-      ]}>
-        {/* Portrait-ish thumbnail on the left */}
-        <View
-          style={[
-            styles.thumbnailWrap,
-            {backgroundColor: colors.background.primary},
-          ]}>
-          {showImage ? (
+        activeOpacity={0.85}
+        onPress={() => onPress(item)}
+        disabled={isResolving}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}${meta ? `, ${meta}` : ''}`}
+        style={isLonelyItem ? styles.heroCardLonely : styles.heroCard}>
+        {/* Image layer — two stacked layers.
+             Layer 1 (base): always present — category cover if available,
+             otherwise the gradient + clapperboard brand placeholder.
+             This is what the user sees DURING load and ON error, so
+             cells never collapse to a dark void while waiting.
+             Layer 2 (remote): renders ON TOP of the base only when an
+             item has an imageUrl and the load hasn't failed. Starts at
+             opacity 0 and fades to 1 on load, covering the base. */}
+        <View style={[styles.heroImageLayer, {backgroundColor: colors.background.primary}]}>
+          {hasCover ? (
             <FastImage
-              source={{uri: item.imageUrl, priority: FastImage.priority.normal}}
-              style={styles.thumbnail}
+              source={placeholderImage as unknown as number}
+              style={StyleSheet.absoluteFill}
               resizeMode={FastImage.resizeMode.cover}
-              onError={() => setImageFailed(true)}
               accessibilityIgnoresInvertColors
             />
           ) : (
-            <View style={styles.thumbnailPlaceholder}>
-              <SvgIcon name="video" size={28} color={colors.accent.goldDim} />
+            <View style={styles.heroPlaceholder}>
+              <LinearGradient
+                pointerEvents="none"
+                colors={[
+                  'rgba(28, 26, 22, 1)',
+                  'rgba(14, 13, 11, 1)',
+                  'rgba(0, 0, 0, 1)',
+                ]}
+                locations={[0, 0.5, 1]}
+                style={styles.heroPlaceholderGradient}
+              />
+              <SvgIcon
+                name="clapperboard"
+                size={56}
+                color={colors.accent.gold}
+                style={styles.heroPlaceholderIcon}
+              />
             </View>
           )}
-          {/* Resolving overlay — shows while we fetch the real file URL */}
-          {isResolving && (
-            <View
-              style={[
-                styles.thumbnailWrap,
-                styles.resolvingOverlay,
-                {backgroundColor: 'rgba(0,0,0,0.35)'},
-              ]}>
+          {remoteActive ? (
+            <Animated.View
+              style={[StyleSheet.absoluteFill, {opacity: imageOpacity}]}>
+              <FastImage
+                source={{uri: item.imageUrl, priority: FastImage.priority.normal}}
+                style={StyleSheet.absoluteFill}
+                resizeMode={FastImage.resizeMode.cover}
+                onLoad={handleImageLoad}
+                onError={() => setImageFailed(true)}
+                accessibilityIgnoresInvertColors
+              />
+            </Animated.View>
+          ) : null}
+          {/* Resolving state — centered spinner over the image. */}
+          {isResolving ? (
+            <View style={[StyleSheet.absoluteFill, styles.heroResolving]}>
               <ActivityOrb size={36} />
             </View>
-          )}
-          {/* Rating badge pinned bottom-right of the thumb */}
-          {item.avgRating > 0 && (
-            <View
-              style={[
-                styles.ratingBadge,
-                {backgroundColor: colors.background.scrimMid},
-              ]}>
-              <AppText
-                variant="caption"
-                style={[styles.ratingText, {color: colors.accent.gold}]}>
-                ★ {item.avgRating.toFixed(1)}
-              </AppText>
-            </View>
-          )}
+          ) : null}
         </View>
 
-        {/* Right column: title + meta row + duration chip */}
-        <View style={styles.movieInfo}>
+        {/* LinearGradient overlay covering the bottom 62% of the card —
+            provides guaranteed legibility with a SOFT top edge so the
+            image bleeds smoothly into the dark text region. Replaces
+            the full-card gradient + solid strip from earlier iterations
+            — fewer layers, cleaner fade, single source of truth for
+            the overlay region. */}
+        <LinearGradient
+          pointerEvents="none"
+          colors={[
+            'rgba(8, 8, 10, 0)',
+            'rgba(8, 8, 10, 0.78)',
+            'rgba(8, 8, 10, 0.95)',
+          ]}
+          locations={[0, 0.5, 1]}
+          style={styles.heroOverlayBg}
+        />
+
+        {/* Text overlay — bottom-left, breathing room inside the scrim. */}
+        <View style={styles.heroOverlay} pointerEvents="none">
           <AppText
-            variant="body1"
             numberOfLines={2}
-            style={styles.movieTitle}>
+            ellipsizeMode="tail"
+            style={styles.heroTitle}>
             {item.title}
           </AppText>
-          <View style={styles.metaRow}>
-            {item.year ? (
-              <AppText variant="caption" color="secondary">
-                {item.year}
-              </AppText>
-            ) : null}
-            {item.year && item.creator ? (
-              <AppText variant="caption" color="tertiary">
-                {' · '}
-              </AppText>
-            ) : null}
-            {item.creator ? (
-              <AppText variant="caption" color="tertiary" numberOfLines={1}>
-                {item.creator}
-              </AppText>
-            ) : null}
-          </View>
-          {item.duration > 0 ? (
-            <View
-              style={[
-                styles.durationBadge,
-                {backgroundColor: colors.accent.goldDim},
-              ]}>
-              <AppText
-                variant="caption"
-                style={[styles.durationText, {color: colors.accent.gold}]}>
-                {formatDuration(item.duration)}
-              </AppText>
-            </View>
+          {meta ? (
+            <AppText
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              style={styles.heroMeta}>
+              {meta}
+            </AppText>
           ) : null}
         </View>
       </TouchableOpacity>
@@ -356,7 +409,7 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   }, [categoryIds, searchTerm, sortKey]);
 
   const scope = getScope(categoryIds);
-  const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
+  const {items, numFound, hasLoaded, isLoading, isLoadingMore, error} = scope;
 
   const state: SectionContentState =
     !hasLoaded && isLoading
@@ -367,25 +420,155 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
       ? 'empty'
       : 'ready';
 
-  // v10.1: Movies is always single-column (horizontal card) — the FAB
-  // exposes only filter + sort (no view toggle).
-  const view: 'list' | 'grid' = 'list';
+  // v10.3 Movies: 2-col 16:9 hero grid (Apple TV+ / Prime Video parity).
+  // The shell's `view` group is intentionally absent on this section —
+  // the layout IS the brand. SectionContent's grid math handles the
+  // 2-col layout, gap rhythm, and remount key automatically.
+  const view: 'list' | 'grid' = 'grid';
   const category = MOVIE_CATEGORIES.find(c => c.id === categoryIds[0]);
 
   // No client-side sort — IA owns the order via `sort[]` (see
   // `sortParamFor` in the hook). Pagination just appends the next page;
   // the server already returned it in the correct order. KISS.
 
-  const showFooter = isLoadingMore || (!!error && hasLoaded);
+  // Reached the end of the result set — every item IA reported (numFound)
+  // is loaded, so nothing more can be fetched. Once here the footer flips
+  // from "loading" to a terminal "caught up" state.
+  const reachedEnd =
+    hasLoaded && !error && numFound > 0 && items.length >= numFound;
 
+  // Footer strategy: lives INSIDE the FlatList (ListFooterComponent).
+  // The Wrap reserves a FIXED minHeight at all times so:
+  //   1. While the user scrolls near the end, the FlatList always has
+  //      something visible BELOW the last row — the spinner or text sits
+  //      in a 56px reserved slot, never below the viewport.
+  //   2. Switching between loading / retry / caught-up / spacer does NOT
+  //      reflow the FlatList; the bottom edge stays put.
+  //
+  // No absolute overlay anymore — the previous iteration introduced a
+  // "sticky" bottom-anchored loader, but absolute siblings inside the
+  // scroll container drift when content scrolls, producing a noticeable
+  // gap below the list. The in-flow footer is the only pattern that
+  // genuinely sits glued to the last row.
   const refreshControl = {
     refreshing: isLoading,
     onRefresh: () => refresh(categoryIds),
   };
 
+  // The footer node — always 56px tall so the FlatList reserves its
+  // own vertical footprint regardless of which branch renders.
+  const footerNode = (
+    <View style={styles.gridFooterWrap}>
+      {isLoadingMore ? (
+        <View style={styles.gridFooterRow}>
+          <ActivityOrb size={22} />
+          <AppText
+            variant="caption"
+            color="secondary"
+            style={styles.gridFooterText}>
+            Loading more…
+          </AppText>
+        </View>
+      ) : !!error && hasLoaded ? (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => loadMore(categoryIds)}
+          style={[
+            styles.loadMoreRetry,
+            {borderColor: colors.background.highlight},
+          ]}
+          accessibilityRole="button">
+          <AppText variant="caption" color="secondary">
+            Couldn't load more — tap to retry
+          </AppText>
+        </TouchableOpacity>
+      ) : reachedEnd ? (
+        <AppText
+          variant="caption"
+          color="secondary"
+          style={styles.gridFooterText}>
+          You're all caught up
+        </AppText>
+      ) : (
+        // Idle spacer — same height as the active branches via the
+        // Wrap's minHeight, so toggling between branches does not
+        // reflow the FlatList.
+        <View style={styles.gridFooterSpacer} />
+      )}
+    </View>
+  );
+
   return (
-    <SectionContent
-      state={state}
+    <View style={styles.sectionRoot}>
+      {/* Centered loading affordance — fires whenever the user is
+          waiting for a fresh scope to resolve (initial mount OR
+          applying a filter that hasn't been cached yet). This
+          replaces the shared skeleton grid whenever items.length===0
+          and isLoading is true, so no empty area can render silently.
+          Uses the same orb + caption language as the grid footer. */}
+      {!hasLoaded && isLoading ? (
+        <View style={styles.centerLoader} pointerEvents="none">
+          <View
+            style={[
+              styles.centerLoaderPill,
+              {backgroundColor: colors.background.elevated},
+            ]}>
+            <ActivityOrb size={24} />
+            <AppText
+              variant="caption"
+              color="secondary"
+              style={styles.centerLoaderText}>
+              Loading movies…
+            </AppText>
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* Pull-to-refresh on a loaded scope: items stay visible
+              underneath while a floating pill confirms the refresh is
+              in-flight. Disappears the moment the new page swaps in. */}
+          {hasLoaded && isLoading ? (
+            <View style={styles.refreshPillWrap} pointerEvents="none">
+              <View
+                style={[
+                  styles.refreshPill,
+                  {backgroundColor: colors.background.elevated},
+                ]}>
+                <ActivityOrb size={20} />
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  style={styles.refreshPillText}>
+                  Refreshing…
+                </AppText>
+              </View>
+            </View>
+          ) : null}
+          {/* If items are empty AND we're loading (filter applied while
+              prior items were for a different scope, search produced 0
+              and is re-running, etc.), the centered pill stays on —
+              it floats over whatever SectionContent shows. Without
+              this, ListEmptyComponent would render with no spinner
+              feedback, looking like the section is broken. */}
+          {items.length === 0 && isLoading ? (
+            <View style={styles.centerLoader} pointerEvents="none">
+              <View
+                style={[
+                  styles.centerLoaderPill,
+                  {backgroundColor: colors.background.elevated},
+                ]}>
+                <ActivityOrb size={24} />
+                <AppText
+                  variant="caption"
+                  color="secondary"
+                  style={styles.centerLoaderText}>
+                  Loading movies…
+                </AppText>
+              </View>
+            </View>
+          ) : null}
+          <SectionContent
+            state={state}
       error={{
         // Offline-aware copy: the global OfflineBanner already says we're
         // offline — the ErrorState just confirms the retry path instead of
@@ -407,60 +590,73 @@ const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
       onRetry={() => retry(categoryIds)}
       {...refreshControl}
       data={items}
-      renderItem={({item}) => (
-        <MovieCard
-          item={item}
-          onPress={handleMoviePress}
-          isResolving={resolvingId === item.identifier}
-        />
-      )}
       keyExtractor={item => item.identifier}
       view={view}
-      // Pad the bottom so the last row can scroll fully above the floating
-      // SectionFab (56px tall, bottom-anchored at insets.bottom + spacing.lg
-      // in SectionFab) plus a breathing gap.
+      // Full-bleed grid — zero gap and zero row spacing so the cards
+      // butt against each other and the screen edge. Override must be
+      // complete (not partial) because SectionContent REPLACES its
+      // default `columnWrapperStyle` when the override is supplied.
+      // `placeholderImage` (the active category's cover) is the visual
+      // fallback for cards whose IA item has no `imageUrl` — prevents
+      // 2+ consecutive empty cells from reading as a broken grid.
+      // `isLonelyItem` flags the sole trailing card (odd item count)
+      // so it renders at explicit 50% width instead of stretching to
+      // full screen via `flex: 1`.
+      renderItem={({item, index}) => {
+        const isLonelyItem =
+          index === items.length - 1 && items.length % 2 !== 0;
+        return (
+          <MovieCard
+            item={item}
+            placeholderImage={category?.image}
+            onPress={handleMoviePress}
+            isResolving={resolvingId === item.identifier}
+            isLonelyItem={isLonelyItem}
+          />
+        );
+      }}
+      columnWrapperStyle={{
+        gap: 0,
+        marginBottom: 0,
+      }}
+      // Zero outer padding on every axis EXCEPT the bottom — cards reach
+      // both side edges of the screen (full-bleed), and only the bottom
+      // is padded so the FAB never sits on top of the last row. The
+      // footer lives IN the FlatList and is glued to the last row, so
+      // there is no separate gap between content and footer. The big
+      // +56 / +lg / +md for FAB clearance is removed because the footer
+      // IS the bottom gap now.
       contentContainerStyle={{
-        paddingBottom: insets.bottom + spacing.lg + 56 + spacing.md,
+        padding: 0,
+        paddingBottom: insets.bottom + spacing.md,
       }}
       route="MoviesScreen"
-      ListHeaderComponent={
-        <AppText variant="caption" color="tertiary" style={styles.categoryDesc}>
-          {category?.description ?? 'Every movie in the archive, most popular first'}
-        </AppText>
-      }
+      // v10.3: no header subtext under the chips. The previous
+      // category-description caption ("The birth of cinema" etc.) sat
+      // directly under the chip row and visually competed with it as a
+      // second tier of metadata. Removed — the active chip itself now
+      // communicates the selection; the FlatList flows straight into
+      // the grid.
+      ListHeaderComponent={null}
+      ListFooterComponent={footerNode}
+      // Lower threshold (0.35) so pagination kicks in BEFORE the user
+      // reaches the visual bottom of the list — at 0.6 the trigger waited
+      // until the user was almost off-screen, then jumped to a new page,
+      // which read as a sudden append with no spinner. Triggering earlier
+      // means the "Loading more…" footer is visible the moment the user
+      // scrolls near the end and the next page fills in gracefully.
       onEndReached={() => loadMore(categoryIds)}
-      onEndReachedThreshold={0.6}
-      ListFooterComponent={
-        showFooter ? (
-          <View style={styles.gridFooter}>
-            {isLoadingMore ? (
-              <View style={styles.gridFooterRow}>
-                <ActivityOrb size={22} />
-                <AppText variant="caption" color="tertiary">
-                  Loading more…
-                </AppText>
-              </View>
-            ) : (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={() => loadMore(categoryIds)}
-                style={[
-                  styles.loadMoreRetry,
-                  {borderColor: colors.background.highlight},
-                ]}
-                accessibilityRole="button">
-                <AppText variant="caption" color="secondary">
-                  Couldn't load more — tap to retry
-                </AppText>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : null
-      }
+      onEndReachedThreshold={0.35}
     />
+        </>
+      )}
+    {/* No absolute overlay here — the in-flow footer above is the only
+        pagination UI. The previous "sticky" overlay iteration drifted
+        relative to the FlatList (visible gap below the list) and has been
+        removed; the in-flow pattern sits flush with the last row. */}
+    </View>
   );
 };
-
 /** The Movies `renderContent` — wired into SECTION_CONFIGS.MoviesScreen. */
 export const renderMoviesContent: SectionBrowseConfig['renderContent'] = ctx => (
   <MoviesContent ctx={ctx} />
@@ -471,20 +667,34 @@ export const renderMoviesContent: SectionBrowseConfig['renderContent'] = ctx => 
 // SectionContent (Phase 4.3 parity: 16px edge / 8px col gap / 16px row gap).
 
 const styles = StyleSheet.create({
-  categoryDesc: {
-    paddingHorizontal: spacing.xs,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.sm,
-    opacity: 0.8,
-  },
-  gridFooter: {
-    paddingVertical: spacing.lg,
+  gridFooterWrap: {
+    // In-flow footer — lives INSIDE the FlatList (ListFooterComponent)
+    // so it sits directly under the last row, never wandering when the
+    // list scrolls. `minHeight` pins the slot's geometry across all
+    // branches (spacer / loading / caught-up), so switching from one
+    // state to another never reflows the FlatList's scroll position.
+    paddingVertical: spacing.md,
+    minHeight: 56,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridFooterSpacer: {
+    // Height kept identical to `gridFooterRow`'s visual footprint so
+    // the FlatList's bottom edge doesn't jump as the footer state
+    // toggles between loading / retry / caught-up.
+    height: 28,
   },
   gridFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+  },
+  // Footer text — explicit visible color so the loader / "caught up"
+  // caption is never collapsed to invisible. `secondary` is the
+  // app's soft on-surface text token and is guaranteed to contrast on
+  // the screen background.
+  gridFooterText: {
+    opacity: 0.85,
   },
   loadMoreRetry: {
     borderWidth: 1,
@@ -492,80 +702,170 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
   },
-  // Horizontal card row: 96×144 portrait thumb on the left, text on the right.
-  // Single-column list view (one item per row).
-  movieCard: {
+  // Section root — wraps SectionContent only. The footer is a
+  // ListFooterComponent now, so the FlatList already reserves its
+  // own height and no overlay layer is needed.
+  sectionRoot: {
+    flex: 1,
+  },
+  // ── Centered loading / refreshing pills ────────────────────────────────
+  // Same orb + caption language as the grid footer for consistency,
+  // but centered and floating over the content area. Used for two
+  // cases: initial mount (no data yet) and pull-to-refresh on an
+  // already-loaded scope (items stay visible underneath).
+  centerLoader: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    // Anchor the pill at ~20% from the top of the list area instead
+    // of dead-center so it reads as a status pill (perceived as
+    // "working near the top"), not as a splash-screen placeholder
+    // (which sits at 50% and blocks content preview entirely).
+    justifyContent: 'flex-start',
+    paddingTop: '20%',
+    zIndex: 10,
+  },
+  centerLoaderPill: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    borderRadius: radius.md,
-    marginBottom: spacing.sm,
-    padding: spacing.sm,
-    gap: spacing.md,
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  centerLoaderText: {
+    opacity: 0.85,
+  },
+  refreshPillWrap: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  refreshPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    // Soft elevation so the pill reads as floating above the cards.
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  refreshPillText: {
+    opacity: 0.85,
+  },
+  // ── 16:9 hero card ──────────────────────────────────────────────────
+  // Square-edge full-bleed mosaic (Apple Photos / Spotify album grid
+  // parity): zero gap, zero outer padding, zero radius, zero shadow.
+  // Cards sit perfectly flush against each other and the screen edge,
+  // reading as one continuous image grid rather than discrete "cards".
+  //
+  // Two variants:
+  //   • heroCard       — flex: 1, claims half the row (the common case)
+  //   • heroCardLonely — explicit 50% width, used when the card is the
+  //                       sole item in its row (odd item count). Without
+  //                       this, the lone trailing item would stretch to
+  //                       full screen width and read as a giant banner.
+  heroCard: {
+    // `flex: 1` so each row child claims half the row width.
+    flex: 1,
+    aspectRatio: 16 / 9,
+    borderRadius: 0,
     overflow: 'hidden',
   },
-  thumbnailWrap: {
-    width: 96,
-    height: 144,
-    borderRadius: radius.sm,
+  heroCardLonely: {
+    width: '50%',
+    aspectRatio: 16 / 9,
+    borderRadius: 0,
     overflow: 'hidden',
-    justifyContent: 'flex-end',
-    alignItems: 'flex-end',
-    padding: spacing.xs,
   },
-  // Actual image style. Fills the wrapper, sits behind the rating badge.
-  thumbnail: {
-    width: '100%',
-    height: '100%',
+  heroImageLayer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
   },
-  thumbnailPlaceholder: {
-    ...StyleSheet.absoluteFill,
+  heroPlaceholder: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  heroPlaceholderGradient: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  heroPlaceholderIcon: {
     opacity: 0.4,
   },
-  resolvingOverlay: {
-    justifyContent: 'center',
+  heroResolving: {
+    backgroundColor: 'rgba(0,0,0,0.40)',
     alignItems: 'center',
-    padding: 0,
+    justifyContent: 'center',
   },
-  // Duration is now a gold "chip" rendered in the info column.
-  durationBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-    marginTop: spacing.xs,
-  },
-  durationText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  // Rating stays a floating pill on the thumbnail (bottom-left).
-  ratingBadge: {
+  // LinearGradient overlay region — the bottom 62% of the card.
+  // Positioned absolute so the image layer behind it shows through
+  // above, then fades into a near-opaque dark for the text region.
+  // The gradient itself is supplied inline (3-color stops) so the
+  // legibility guarantees live next to the component, not in a
+  // distant token file.
+  heroOverlayBg: {
     position: 'absolute',
-    bottom: spacing.xs,
-    left: spacing.xs,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: radius.sm - 2,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '62%',
   },
-  ratingText: {
-    fontSize: 10,
+  // Bottom-anchored text overlay. Sized to leave the upper image area
+  // visible while keeping the title/meta legible on bright covers.
+  heroOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    gap: 4,
+  },
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
     fontWeight: '700',
+    lineHeight: 18,
+    letterSpacing: 0.1,
+    // Subtle shadow ensures the title stays legible on bright covers
+    // even before the scrim dominates the bottom 30%.
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: {width: 0, height: 1},
+    textShadowRadius: 6,
   },
-  movieInfo: {
-    flex: 1,
-    paddingVertical: spacing.xs,
-    justifyContent: 'center',
-    gap: 2,
-  },
-  movieTitle: {
-    fontWeight: '600',
-    lineHeight: 20,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
+  heroMeta: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 14,
+    letterSpacing: 0.2,
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowOffset: {width: 0, height: 1},
+    textShadowRadius: 4,
   },
 });

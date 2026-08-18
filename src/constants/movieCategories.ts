@@ -39,11 +39,14 @@ export const MOVIE_CATEGORIES: MovieCategory[] = [
     id: 'all',
     name: 'All',
     icon: 'clapperboard',
-    query: 'mediatype:(movies) AND subject:("Feature Films")',
-    // Keep the default fetch path unsorted. Archive.org intermittently
-    // slows down or fails on server-side popularity sorts, so Movies
-    // now loads the catalog first and applies "most popular" locally.
-    description: 'Every movie in the archive, most popular first',
+    // Positive `collection:` allowlist — filter by IA's curated movie
+    // collection IDs instead of a brittle title denylist. Junk (music
+    // videos, home movies, trailers, TV dumps) lives in OTHER collections,
+    // so it never enters this stream. Default is also unsorted — no
+    // `sort[]` is sent, so IA returns its natural order. Sorting is
+    // opt-in via the FAB sheet (sortParamFor).
+    query: 'collection:(feature_films OR silent_films OR short_films)',
+    description: 'Every movie in the archive',
     image: CATEGORY_COVERS.movies.all,
   },
   {

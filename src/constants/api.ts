@@ -41,6 +41,11 @@ export const API_CONFIG = {
   internetArchive: {
     baseUrl: 'https://archive.org',
     rateLimitMs: 500,
+    // advancedsearch is genuinely slow on a cold CDN node (>10s before
+    // the query cache warms). 10s would abort the FIRST request of a
+    // session (the "first load fails, refresh works" bug) — 30s keeps
+    // the ceiling inside a real query's cold latency.
+    timeoutMs: 30_000,
   },
   audius: {
     baseUrl: 'https://api.audius.co',
