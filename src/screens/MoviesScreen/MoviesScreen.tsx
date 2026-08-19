@@ -17,22 +17,22 @@
 
 import React from 'react';
 import type {RootStackScreenProps} from '../../navigation/types';
-import {SectionBrowseLayout} from '../sections/SectionBrowseLayout';
-import {getSectionConfig} from '../sections/sectionConfig';
-import {useSectionOptions} from '../sections/hooks/useSectionOptions';
+import {BrowseLayout} from './browse/BrowseLayout';
+import {useSectionOptions} from './browse/hooks/useOptions';
+import {MOVIES_SECTION_CONFIG} from './browse/config';
 import {MoviesDataProvider} from './MoviesContent';
 
 export const MoviesScreen: React.FC<RootStackScreenProps<'MoviesScreen'>> = ({
   route,
 }) => {
-  const config = getSectionConfig('MoviesScreen');
-  const optionsApi = useSectionOptions(config, route.params);
+  const params = route.params ?? {};
+  const optionsApi = useSectionOptions(MOVIES_SECTION_CONFIG, params);
   return (
     <MoviesDataProvider sortKey={optionsApi.options.sort}>
-      <SectionBrowseLayout
-        config={config}
+      <BrowseLayout
+        config={MOVIES_SECTION_CONFIG}
         optionsApi={optionsApi}
-        routeParams={route.params}
+        routeParams={params}
       />
     </MoviesDataProvider>
   );

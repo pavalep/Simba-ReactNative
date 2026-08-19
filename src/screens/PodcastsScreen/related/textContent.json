@@ -1,0 +1,30 @@
+{
+  "row": {
+    "episodesCount": "{count} ep."
+  },
+  "footer": {
+    "loadingMore": "Loading more…",
+    "loadMoreRetry": "Couldn't load more — tap to retry",
+    "caughtUp": "You're all caught up"
+  },
+  "pills": {
+    "loading": "Loading podcasts…",
+    "refreshing": "Refreshing…"
+  },
+  "errors": {
+    "hookLoadFailed": "Failed to load podcasts",
+    "offlineTitle": "You're offline",
+    "offlineMessage": "Check your connection and try again.",
+    "loadFailed": "Couldn't load podcasts."
+  },
+  "empty": {
+    "searchNoResults": "No podcasts match your search.",
+    "noResultsHere": "No podcasts found here.",
+    "noResultsInCategory": "No podcasts found in {category}.",
+    "searchSuggestion": "Try a different search term.",
+    "categorySuggestion": "Try another category."
+  },
+  "listStates": {
+    "retry": "Retry"
+  }
+}

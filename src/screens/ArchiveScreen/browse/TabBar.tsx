@@ -1,22 +1,7 @@
-// ─── v10: Shared Tab-Bar Contract ──────────────────────────────────────
-// Phase 1.3. Kills the styling drift documented in the v10 spec §2 row 2:
-//   • Archive used hairlineWidth border + hardcoded rgba + radius 2 indicator
-//   • Shows used hairlineWidth border (default border color)
-//   • content padding / tab width / indicator radius drifted per screen
-// Every section renders THIS bar; overrides come only from the section
-// config (never per-screen inline styles).
-//
-// Contract (unified for all 8 sections):
-//   • scrollEnabled — tabs scroll when they overflow the screen
-//   • gold 3px pill indicator on the active tab
-//   • typography.tab labels (no uppercase transform)
-//   • colors.background.primary bar, 1px highlightDim bottom border
-//   • auto-width tabs, min 84pt, spacing.xs edge padding
-//
-// Note on `lazy`: it is a TabView prop, not a TabBar prop — the shared
-// shell (Wave 2) enables it by default. Accessible roles come from
-// react-native-tab-view's TabBarItem, which already sets
-// accessibilityRole="tab" + accessibilityState={{selected}} per tab.
+// ─── Archive Screen — per-screen TabBar copy ─────────────────────────
+// Identical to the legacy shared SectionTabBar; copied so each screen
+// owns its own shell without a shared `sections/` folder. Used by both
+// ArchiveScreen (audio / video tabs) and any future tab-based screen.
 
 import React, {useMemo} from 'react';
 import {StyleSheet, type StyleProp, type TextStyle} from 'react-native';
@@ -44,9 +29,6 @@ export function SectionTabBar(props: SectionTabBarProps) {
     [typography],
   );
 
-  // react-native-tab-view v4 has no direct TabBar `labelStyle` prop — label
-  // styles are per-route TabDescriptor entries. Compose them here so every
-  // section renders typography.tab labels without per-screen styling.
   const mergedOptions = useMemo(() => {
     const base = options ?? {};
     return navigationState.routes.reduce<Record<string, TabDescriptor<Route>>>(

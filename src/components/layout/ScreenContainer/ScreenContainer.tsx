@@ -14,7 +14,7 @@ export interface ScreenContainerProps {
 
 export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   children,
-  scrollable = true,
+  scrollable = false,
   style,
   contentContainerStyle,
   header,

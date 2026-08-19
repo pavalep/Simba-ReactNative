@@ -19,7 +19,7 @@ import {
   type SceneRendererProps,
   type Route,
 } from 'react-native-tab-view';
-import {SectionTabBar} from '../sections/components/SectionTabBar';
+import {SectionTabBar} from './browse/TabBar';
 import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';

@@ -1,0 +1,44 @@
+{
+  "screen": {
+    "headerTitle": "Podcast Details",
+    "episodesSection": "Episodes",
+    "episodeOptionsFallback": "Episode Options"
+  },
+  "hero": {
+    "showMore": "Show more",
+    "showLess": "Show less",
+    "episodeSingular": "episode",
+    "episodePlural": "episodes",
+    "follow": "Follow",
+    "following": "Following",
+    "followAccessibility": "Follow podcast",
+    "unfollowAccessibility": "Unfollow podcast"
+  },
+  "episode": {
+    "zeroDuration": "0min",
+    "played": "Played",
+    "metaSeparator": "•",
+    "playAccessibility": "Play episode {title}"
+  },
+  "listStates": {
+    "loading": "Loading podcast…",
+    "podcastNotFound": "Podcast not found",
+    "connectionError": "Check your connection and try again.",
+    "retry": "Retry",
+    "noEpisodesTitle": "No episodes yet",
+    "noEpisodesMessage": "Episodes for this podcast will appear here once published."
+  },
+  "actions": {
+    "playingNext": "Playing next",
+    "addedToQueue": "Added to queue",
+    "bookmarked": "Bookmarked episode"
+  },
+  "errors": {
+    "loadFailed": "Failed to load podcast"
+  },
+  "footer": {
+    "loadingMore": "Loading more…",
+    "loadMoreRetry": "Couldn't load more — tap to retry",
+    "caughtUp": "You're all caught up"
+  }
+}

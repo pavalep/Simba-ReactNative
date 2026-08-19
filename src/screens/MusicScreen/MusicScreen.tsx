@@ -12,22 +12,22 @@
 
 import React from 'react';
 import type {RootStackScreenProps} from '../../navigation/types';
-import {SectionBrowseLayout} from '../sections/SectionBrowseLayout';
-import {getSectionConfig} from '../sections/sectionConfig';
-import {useSectionOptions} from '../sections/hooks/useSectionOptions';
+import {BrowseLayout} from './browse/BrowseLayout';
+import {useSectionOptions} from './browse/hooks/useOptions';
+import {MUSIC_SECTION_CONFIG} from './browse/config';
 import {MusicDataProvider} from './MusicContent';
 
 export const MusicScreen: React.FC<RootStackScreenProps<'MusicScreen'>> = ({
   route,
 }) => {
-  const config = getSectionConfig('MusicScreen');
-  const optionsApi = useSectionOptions(config, route.params);
+  const params = route.params ?? {};
+  const optionsApi = useSectionOptions(MUSIC_SECTION_CONFIG, params);
   return (
     <MusicDataProvider>
-      <SectionBrowseLayout
-        config={config}
+      <BrowseLayout
+        config={MUSIC_SECTION_CONFIG}
         optionsApi={optionsApi}
-        routeParams={route.params}
+        routeParams={params}
       />
     </MusicDataProvider>
   );

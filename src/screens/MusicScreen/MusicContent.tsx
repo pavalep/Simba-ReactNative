@@ -32,10 +32,10 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {useToast} from '../../components/feedback/Toast';
-import {SectionContent, type SectionContentState} from '../sections/components/SectionContent';
+import {SectionContent, type SectionContentState} from './browse/Content';
 import {navigate} from '../../navigation/navigationHelper';
 import type {JamendoTrackResult} from '../../types/api';
-import type {SectionBrowseConfig, SectionRenderContext} from '../sections/sectionConfig';
+import type {SectionBrowseConfig, SectionRenderContext} from './browse/types';
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 

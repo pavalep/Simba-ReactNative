@@ -36,14 +36,14 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {useToast} from '../../components/feedback/Toast';
-import {SectionContent, type SectionContentState} from '../sections/components/SectionContent';
+import {SectionContent, type SectionContentState} from './browse/Content';
 import {navigate} from '../../navigation/navigationHelper';
 import {resolveInternetArchiveVideoDetails} from '../../services/api/internetArchiveService';
 import type {InternetArchiveVideoResult} from '../../types/api';
 import type {
   SectionBrowseConfig,
   SectionRenderContext,
-} from '../sections/sectionConfig';
+} from './browse/types';
 
 // ─── Movie Card ─────────────────────────────────────────────────────────
 // Premium 2-col 16:9 hero card (Apple TV+ / Prime Video style):

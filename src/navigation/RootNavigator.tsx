@@ -30,8 +30,8 @@ import {PlaylistDetailScreen} from '../screens/PlaylistDetail/PlaylistDetailScre
 import {ArtistDetailScreen} from '../screens/Library/ArtistDetailScreen';
 import {AlbumDetailScreen} from '../screens/Library/AlbumDetailScreen';
 import {ScreenErrorBoundary} from '../components/feedback/ScreenErrorBoundary';
-import {PodcastsScreen} from '../screens/PodcastsScreen/PodcastsScreen';
-import {PodcastDetailScreen} from '../screens/PodcastDetailScreen/PodcastDetailScreen';
+import {PodcastsScreen} from '../screens/PodcastsScreen';
+import {PodcastDetailScreen} from '../screens/PodcastDetailScreen';
 import {MusicScreen} from '../screens/MusicScreen/MusicScreen';
 import {MusicDetailScreen} from '../screens/MusicDetailScreen/MusicDetailScreen';
 import {MovieDetailScreen} from '../screens/MovieDetailScreen/MovieDetailScreen';

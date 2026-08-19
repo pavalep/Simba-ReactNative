@@ -31,7 +31,7 @@ import {
   type StationRow,
 } from './components/RadioStationCard';
 import {FilterSheet} from '../../components/sheets/FilterSheet/FilterSheet';
-import {SectionFab} from '../sections/components/SectionFab';
+import {SectionFab} from './browse/Fab';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';

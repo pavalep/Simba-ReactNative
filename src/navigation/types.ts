@@ -63,7 +63,14 @@ export type RootStackParamList = {
       // P39.3: MusicBrainz release-group id for metadata enrichment
       musicBrainzReleaseId?: string;
     };
-  PodcastDetail: {podcastId: number; podcastTitle?: string};
+  // Synchronous title — required so the InternalHeader paints on the
+  // first frame after navigation. Without it the header is blank during
+  // the iOS-style slide transition (glitch visible because the header
+  // re-mounts before the API resolves the real title). Every caller
+  // (Home → podcasts, Podcasts → PodcastDetail, deep link, share) is
+  // expected to pass `podcastTitle`; we still keep an in-screen fallback
+  // for defensive completeness but the type guarantees non-undefined.
+  PodcastDetail: {podcastId: number; podcastTitle: string};
   MusicScreen: {genre?: string} | undefined;
   MusicDetail: {trackId: string; source: 'jamendo' | 'audius'};
   MovieDetail: {identifier: string; title?: string};
