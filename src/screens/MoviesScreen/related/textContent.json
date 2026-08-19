@@ -1,0 +1,20 @@
+{
+  "pills": {
+    "loading": "Loading movies…",
+    "refreshing": "Refreshing…"
+  },
+  "footer": {
+    "loadingMore": "Loading more…",
+    "loadMoreRetry": "Couldn't load more — tap to retry",
+    "caughtUp": "You're all caught up"
+  },
+  "states": {
+    "errorOfflineTitle": "You're offline",
+    "errorOfflineMessage": "Check your connection and try again.",
+    "errorLoadFailed": "Couldn't load movies.",
+    "emptySearchTitle": "No movies match your search.",
+    "emptySearchSuggestion": "Try a different search term.",
+    "emptyCategoryTitle": "No movies found in this category.",
+    "emptyCategorySuggestion": "Try another category."
+  }
+}

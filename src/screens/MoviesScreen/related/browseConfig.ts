@@ -1,12 +1,12 @@
 // ─── Movies Screen — browse config ────────────────────────────────────
 // The single Movies entry the host screen feeds to its local
 // `<BrowseLayout>`. No central SECTION_CONFIGS registry — each screen
-// owns its own entry. `renderContent` is bound at module load (the host
-// screen imports it).
+// owns its own entry. `renderContent` is bound via spread-override in
+// `index.tsx` to avoid a circular import (config → content → screen →
+// config).
 
 import {MOVIE_CATEGORIES} from '../../../constants/movieCategories';
-import {renderMoviesContent} from '../renderContent';
-import type {SectionBrowseConfig} from './types';
+import type {SectionBrowseConfig} from '../types';
 
 function movieFilterGroup() {
   return {
@@ -47,5 +47,7 @@ export const MOVIES_SECTION_CONFIG: SectionBrowseConfig = {
       },
     ],
   },
-  renderContent: renderMoviesContent,
+  // Stub — `index.tsx` overrides with the real `renderMoviesContent`
+  // via spread to break the config → content → screen → config cycle.
+  renderContent: (): null => null,
 };

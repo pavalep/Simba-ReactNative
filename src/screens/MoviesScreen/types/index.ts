@@ -60,10 +60,3 @@ export interface SectionBrowseConfig {
   options?: {groups: OptionGroup[]};
   renderContent: (ctx: SectionRenderContext) => ReactNode;
 }
-
-/** Placeholder for sections that aren't built yet. */
-export const notImplemented: SectionBrowseConfig = {
-  route: 'MoviesScreen',
-  title: '',
-  renderContent: () => null,
-};

@@ -122,19 +122,17 @@ function dedupe(items: InternetArchiveVideoResult[]): InternetArchiveVideoResult
 }
 
 export interface UseMoviesScreenParams {
-  /** Currently active category ids (0+). */
-  categoryIds: readonly string[];
-  /** Currently active sort key (undefined = IA default). */
+  /** Currently active sort key (undefined = IA default). Category ids
+   *  are passed per-call to `getScope` / `ensureLoaded` etc — the hook
+   *  itself does not need to be re-bound on filter changes. */
   sortKey?: string;
 }
 
 export interface UseMoviesScreenReturn {
-  // search
-  searchQuery: string;
-  /** Raw (untrimmed) search term — the cache-key component the provider
-   *  re-exposes so consumers can key load effects on it. */
+  /** Search term — the cache-key component the provider re-exposes so
+   *  consumers can key load effects on it. (Debounced upstream via the
+   *  SearchBar `onDebouncedChange` callback.) */
   searchTerm: string;
-  setSearchQuery: (q: string) => void;
   setSearchTerm: (t: string) => void;
   isSearchActive: boolean;
   // per-scope data + actions
@@ -146,11 +144,9 @@ export interface UseMoviesScreenReturn {
 }
 
 export function useMoviesScreenParams({
-  categoryIds,
   sortKey,
 }: UseMoviesScreenParams): UseMoviesScreenReturn {
   // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
-  const [searchQuery, setSearchQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   const [scopes, setScopes] = useState<Record<string, MovieScopeState>>({});
@@ -313,9 +309,7 @@ export function useMoviesScreenParams({
   );
 
   return {
-    searchQuery,
     searchTerm,
-    setSearchQuery,
     setSearchTerm,
     isSearchActive,
     getScope,

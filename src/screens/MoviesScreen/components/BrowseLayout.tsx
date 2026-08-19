@@ -1,10 +1,11 @@
-// ─── Movies Screen — Browse Layout Shell (per-screen copy) ───────────
+// ─── Movies Screen — Browse Layout Shell ──────────────────────────────
 // v10 unified section-browse layout: every section renders the SAME
 // shell — header + search + chips + content + FAB + filter sheet. The
-// ONLY per-screen part is `config.renderContent`. This is the per-screen
-// copy for Movies (identical in behaviour to the legacy shared
-// SectionBrowseLayout; copied so each screen owns its own shell without
-// a shared `sections/` folder).
+// ONLY per-screen part is `config.renderContent`.
+//
+// IA's `q` parameter accepts AND-combined clauses (we OR categories
+// then AND the title-search term), so Movies DOES support search +
+// category together — no auto-clear-on-search needed (unlike Podcasts).
 
 import React, {useCallback, useMemo, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
@@ -16,16 +17,16 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {FilterChips, type FilterChipItem} from '../../../components/utility/FilterChips';
-import {SectionFab} from './Fab';
+import {BrowseFab} from './BrowseFab';
 import {FilterSheet, type FilterSheetGroup} from '../../../components/sheets/FilterSheet/FilterSheet';
-import {useSectionSearch} from './hooks/useSearch';
-import type {SectionOptionsApi} from './hooks/useOptions';
+import {useSectionSearch} from '../hooks/useSearch';
+import type {SectionOptionsApi} from '../hooks/useOptions';
 import type {
   SectionBrowseConfig,
   SectionRenderContext,
   SectionRouteKey,
   SectionRouteParams,
-} from './types';
+} from '../types';
 
 interface Props {
   config: SectionBrowseConfig;
@@ -48,6 +49,8 @@ export const BrowseLayout: React.FC<Props> = ({
   const [sheetVisible, setSheetVisible] = useState(false);
   const {state, setOption, reset, activeFilterCount, options} = optionsApi;
 
+  // `activeChips` is computed here (not in ctx) and fed directly to the
+  // <FilterChips> strip — keeping the ctx dep array lean.
   const activeChips = useMemo<FilterChipItem[]>(() => {
     const filterGroup = config.options?.groups?.find(g => g.id === 'filter');
     const labelByKey = new Map(
@@ -66,18 +69,18 @@ export const BrowseLayout: React.FC<Props> = ({
     return [...sortChips, ...filterChips];
   }, [config.options, state.filters, state.sort]);
 
+  const filterGroupId =
+    config.options?.groups?.find(g => g.id === 'filter')?.id ?? 'filter';
   const handleChipSelect = useCallback(
     (key: string) => {
       if (key.startsWith('sort:')) {
         setOption('sort', '');
         return;
       }
-      const filterGroupId =
-        config.options?.groups?.find(g => g.id === 'filter')?.id ?? 'filter';
       const current = state.filters[filterGroupId] ?? [];
       setOption('filter', current.filter(k => k !== key));
     },
-    [config.options, state.filters, setOption],
+    [state.filters, filterGroupId, setOption],
   );
 
   const ctx = useMemo<SectionRenderContext>(
@@ -128,7 +131,7 @@ export const BrowseLayout: React.FC<Props> = ({
 
       <View style={styles.content}>{config.renderContent(ctx)}</View>
 
-      <SectionFab
+      <BrowseFab
         onPress={() => setSheetVisible(true)}
         accessibilityLabel={`Filter ${config.title} options`}
         visible={hasOptions}

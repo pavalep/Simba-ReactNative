@@ -1,7 +1,6 @@
-// ─── Movies Screen — per-screen useSearch copy ───────────────────────
+// ─── Movies Screen — useSectionSearch ─────────────────────────────────
 // Per-screen copy of the v10 useSectionSearch hook. Owns the debounced
-// search query + stale-echo guard. Copied so each screen owns its own
-// shell without a shared `sections/` folder.
+// search query + stale-echo guard.
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {SectionBrowseConfig} from '../types';

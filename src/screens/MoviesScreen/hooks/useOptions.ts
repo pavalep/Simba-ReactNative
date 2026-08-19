@@ -1,8 +1,6 @@
-// ─── Movies Screen — per-screen useOptions copy ───────────────────────
+// ─── Movies Screen — useSectionOptions ─────────────────────────────────
 // Per-screen copy of the v10 useSectionOptions hook. Owns the runtime
 // shape of the FAB options sheet (multi-select filters + sort + view).
-// Copied so each screen owns its own shell without a shared `sections/`
-// folder.
 
 import {useCallback, useMemo, useState} from 'react';
 import type {

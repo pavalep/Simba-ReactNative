@@ -1,27 +1,25 @@
-// ─── Movies Screen — per-screen FAB copy ──────────────────────────────
-// Identical to the legacy shared SectionFab; copied so each screen owns
-// its own shell without a shared `sections/` folder. Config-driven
-// visibility (the shell decides whether to render this), keyboard-aware
-// (Phase 5.3 step 6: hidden while typing so it never floats over the
-// typing UI).
+// ─── Movies Screen — BrowseFab ───────────────────────────────────────
+// Floating action button (gold, bottom-right) that opens the section
+// options sheet. Always visible (so users can change filters mid-search
+// without dismissing the keyboard), config-driven visibility, badge with
+// active-count.
 
 import React from 'react';
 import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
-import {useKeyboard} from '../../../hooks/useKeyboard';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {AppText} from '../../../components/core/AppText/AppText';
 
-export interface SectionFabProps {
+export interface BrowseFabProps {
   onPress: () => void;
   accessibilityLabel: string;
   visible?: boolean;
   badgeCount?: number;
 }
 
-export const SectionFab: React.FC<SectionFabProps> = ({
+export const BrowseFab: React.FC<BrowseFabProps> = ({
   onPress,
   accessibilityLabel,
   visible = true,
@@ -29,9 +27,8 @@ export const SectionFab: React.FC<SectionFabProps> = ({
 }) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const {keyboardVisible} = useKeyboard();
 
-  if (!visible || keyboardVisible) return null;
+  if (!visible) return null;
 
   return (
     <View

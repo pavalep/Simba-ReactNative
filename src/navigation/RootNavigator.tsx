@@ -20,7 +20,7 @@ import {AlbumScreen} from '../screens/Album/AlbumScreen';
 import {SongScreen} from '../screens/Song/SongScreen';
 import {GenreScreen} from '../screens/Genre/GenreScreen';
 import {AllVideosScreen} from '../screens/AllVideos/AllVideosScreen';
-import {MoviesScreen} from '../screens/MoviesScreen/MoviesScreen';
+import {MoviesScreen} from '../screens/MoviesScreen';
 import {AllAudioScreen} from '../screens/AllAudio/AllAudioScreen';
 import {AllPlaylistsScreen} from '../screens/AllPlaylists/AllPlaylistsScreen';
 import {SearchScreen} from '../screens/Search/SearchScreen';
