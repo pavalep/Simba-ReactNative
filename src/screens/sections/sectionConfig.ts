@@ -13,10 +13,12 @@
 import type {ReactNode} from 'react';
 import type {RootStackParamList} from '../../navigation/types';
 import {MOVIE_CATEGORIES} from '../../constants/movieCategories';
+import {PODCAST_CATEGORIES} from '../../constants/podcastCategories';
 import {JAMENDO_GENRES} from '../MusicScreen/hooks/useMusicScreen';
 import type {FilterChipItem} from '../../components/utility/FilterChips';
 import {renderMoviesContent} from '../MoviesScreen/MoviesContent';
 import {renderMusicContent} from '../MusicScreen/MusicContent';
+import {renderPodcastsContent} from '../PodcastsScreen/PodcastsContent';
 
 // ─── Route keys ──────────────────────────────────────────────────────────
 // Derived from RootStackParamList via `Extract`, so the compiler proves the
@@ -175,6 +177,22 @@ function musicFilterGroup(): OptionGroup {
   };
 }
 
+/** FILTER group for Podcasts: every Podcast Index category except the
+ *  default "All" (single-select, Music parity). Keys are stringified so
+ *  the sheet's string-based chip/route plumbing never sees the numeric
+ *  category id type drift. */
+function podcastFilterGroup(): OptionGroup {
+  return {
+    id: 'filter',
+    title: 'Category',
+    options: PODCAST_CATEGORIES.filter(c => c.id !== 'all').map(c => ({
+      key: String(c.id),
+      label: c.name,
+      icon: c.icon,
+    })),
+  };
+}
+
 // ─── Registry ────────────────────────────────────────────────────────────
 
 /**
@@ -260,9 +278,25 @@ export const SECTION_CONFIGS: Record<SectionRouteKey, SectionBrowseConfig> = {
   PodcastsScreen: {
     route: 'PodcastsScreen',
     title: 'Podcasts',
-    // TODO(Wave 10): FILTER = category; renderContent migrated.
-    search: {placeholder: ''},
-    renderContent: notImplemented,
+    search: {placeholder: 'Search podcasts…'},
+    options: {
+      groups: [
+        podcastFilterGroup(),
+        {
+          id: 'sort',
+          title: 'Sort by',
+          options: [
+            // Client-side sort (Music pattern) — the Podcast Index API
+            // exposes NO sort parameter, so the content re-orders its own
+            // loaded slice; toggling never re-fetches.
+            {key: 'recent', label: 'Recently added'},
+            {key: 'az', label: 'A–Z'},
+          ],
+        },
+        // Density view omitted — single-column list IS the brand.
+      ],
+    },
+    renderContent: renderPodcastsContent,
   },
   ShowsScreen: {
     route: 'ShowsScreen',
