@@ -7,7 +7,7 @@
 // subfolder, now integrated into the existing components/hooks/types
 // structure.
 
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
@@ -67,31 +67,47 @@ export const BrowseLayout: React.FC<Props> = ({
     return [...sortChips, ...filterChips];
   }, [config.options, state.filters, state.sort]);
 
+  // Search + category filter can't combine on a single Podcast Index
+  // endpoint (`/search/byterm` has `q` but no `cat`; `/podcasts/trending`
+  // and `/recent/feeds` have `cat` but no `q`). To avoid silently
+  // dropping the category the user just picked, auto-clear the filter
+  // the moment a search term becomes active. One always wins, never both.
+  const filterGroupId =
+    config.options?.groups?.find(g => g.id === 'filter')?.id ?? 'filter';
+  // Primitive count in the dep array — using `(state.filters[...] ?? []).length`
+  // avoids creating a fresh `[]` reference on every render, which would
+  // re-fire this effect (and the setOption inside) on every parent render.
+  const currentFilterCount =
+    state.filters[filterGroupId]?.length ?? 0;
+  useEffect(() => {
+    if (search.debouncedQuery.trim().length > 0 && currentFilterCount > 0) {
+      setOption('filter', []);
+    }
+  }, [search.debouncedQuery, currentFilterCount, setOption]);
+
+  // `activeChips` is computed here (not in ctx) and fed directly to the
+  // <FilterChips> strip — none of the v10 content streams read it from
+  // ctx. Keeping the dep array lean.
+
   const handleChipSelect = useCallback(
     (key: string) => {
       if (key.startsWith('sort:')) {
         setOption('sort', '');
         return;
       }
-      const filterGroupId =
-        config.options?.groups?.find(g => g.id === 'filter')?.id ?? 'filter';
       const current = state.filters[filterGroupId] ?? [];
       setOption('filter', current.filter(k => k !== key));
     },
-    [config.options, state.filters, setOption],
+    [state.filters, filterGroupId, setOption],
   );
 
   const ctx = useMemo<SectionRenderContext>(
     () => ({
       query: search.debouncedQuery,
-      activeChips,
       options,
-      refreshing: false,
       offline: !isOnline,
-      onRetry: () => {},
-      routeParams: routeParams as SectionRouteParams<SectionRouteKey>,
     }),
-    [search.debouncedQuery, activeChips, options, isOnline, routeParams],
+    [search.debouncedQuery, options, isOnline],
   );
 
   return (

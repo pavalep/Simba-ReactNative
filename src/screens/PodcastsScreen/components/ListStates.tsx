@@ -51,10 +51,13 @@ export const ListStates: React.FC<Props> = ({
     ? text.empty.noResultsHere
     : text.empty.noResultsInCategory.replace('{category}', categoryLabel);
 
+  // When we have a real error message (from the API client), surface it
+  // — the generic "Couldn't load podcasts" hides the actual cause and
+  // makes debugging search / network failures impossible.
   const message = hasError
     ? offline
       ? text.errors.offlineMessage
-      : text.errors.loadFailed
+      : error ?? text.errors.loadFailed
     : isSearchActive
     ? text.empty.searchSuggestion
     : text.empty.categorySuggestion;

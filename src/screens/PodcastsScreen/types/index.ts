@@ -45,15 +45,16 @@ export type SectionOptionsMerged = {
 };
 
 // ─── Section render context (shell → content) ─────────────────────────
-
+// KISS: only the fields content actually reads. (The legacy section
+// contract carried `refreshing` / `onRetry` / `routeParams` /
+// `activeChips` too — none of which any v10 content uses. BrowseLayout
+// uses `activeChips` directly to render <FilterChips>; refresh + retry
+// live in the content's own hook; route params are a BrowseLayout
+// prop, not a ctx field.)
 export interface SectionRenderContext {
   query: string;
-  activeChips: Array<{key: string; label: string}>;
   options: SectionOptionsMerged;
-  refreshing: boolean;
   offline: boolean;
-  onRetry?: () => void;
-  routeParams: Readonly<Record<string, unknown>> | undefined;
 }
 
 // ─── Section static config ────────────────────────────────────────────
@@ -65,11 +66,3 @@ export interface SectionBrowseConfig {
   options?: {groups: OptionGroup[]};
   renderContent: (ctx: SectionRenderContext) => ReactNode;
 }
-
-/** Placeholder for sections that aren't built yet (Radio / LiveTV /
- *  Audiobooks today). Renders an empty-state placeholder via the shell. */
-export const notImplemented: SectionBrowseConfig = {
-  route: 'PodcastsScreen',
-  title: '',
-  renderContent: () => null,
-};

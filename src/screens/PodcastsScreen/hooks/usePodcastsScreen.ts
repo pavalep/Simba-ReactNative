@@ -1,9 +1,12 @@
 // ─── Podcasts Screen Hook (KISS) ──────────────────────────────────────
 // Single current-list state — NO per-scope cache. Every category/term
-// change (and pull-to-refresh) wipes the current items and fetches fresh
-// from the API. Podcast Index exposes no sort parameter and we don't
-// client-side sort either — items render in API-returned order, and
-// loadMore appends in order.
+// change (and pull-to-refresh) wipes the current items and fetches
+// fresh from the API. The active filter (category / search term) is
+// preserved across refresh — only the list resets.
+//
+// Podcast Index exposes no sort parameter and we don't client-side sort
+// either — items render in API-returned order, and loadMore appends in
+// order.
 //
 // Podcast Index paginates by doubling a `max` window (no true offset):
 //   • loadMore doubles (25 → 50 → 100) when the API returned a full page
@@ -55,8 +58,9 @@ export interface UsePodcastsScreenReturn {
   isLoadingMore: boolean;
   error: string | null;
   // actions
-  /** Wipe and fetch the first window — used on category/search change AND
-   *  on retry AND on pull-to-refresh (same call, fresh data every time). */
+  /** Wipe and fetch the first window — used on category/search change,
+   *  on retry, AND on pull-to-refresh (same call: clear → loading →
+   *  fresh data). Resets pagination back to INITIAL_MAX. */
   load: (categoryId: string) => void;
   /** Append the next page — called from onEndReached. */
   loadMore: (categoryId: string) => void;

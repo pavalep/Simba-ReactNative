@@ -1,14 +1,14 @@
 // ─── Podcasts Screen — BrowseFab ──────────────────────────────────────
 // Floating action button (gold, bottom-right) that opens the section
-// options sheet. Keyboard-aware (hidden while typing so it never floats
-// over the keyboard), config-driven visibility, badge with active-count.
+// options sheet. Always visible (so users can change filters mid-search
+// without dismissing the keyboard), config-driven visibility, badge with
+// active-count.
 
 import React from 'react';
 import {TouchableOpacity, View, StyleSheet} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
-import {useKeyboard} from '../../../hooks/useKeyboard';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {AppText} from '../../../components/core/AppText/AppText';
 
@@ -27,9 +27,8 @@ export const BrowseFab: React.FC<BrowseFabProps> = ({
 }) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const {keyboardVisible} = useKeyboard();
 
-  if (!visible || keyboardVisible) return null;
+  if (!visible) return null;
 
   return (
     <View

@@ -11,7 +11,8 @@
 //
 // No per-scope cache: every categoryId change / searchTerm change (and
 // pull-to-refresh) wipes the current list and fetches fresh from the
-// API. The hook keeps only ONE current-list state.
+// API. The active filter (category / search term) is preserved — only
+// the list resets. The hook keeps only ONE current-list state.
 //
 // States (loading / error / empty) render through ListEmptyComponent via
 // `ListStates` (Placeholder-based, PodcastDetailScreen parity); the
