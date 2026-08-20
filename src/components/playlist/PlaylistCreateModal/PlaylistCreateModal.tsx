@@ -4,22 +4,20 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
+  Modal,
 } from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {AppTextInput} from '../../core/AppTextInput/AppTextInput';
 import {SvgIcon} from '../../utility/SvgIcon';
-import {BottomSheet} from '../../sheets/BottomSheet/BottomSheet';
-import type {PlaylistKind} from '../../../types/playlist';
-import {selectAllPlaylists} from '../../../store/slices/playlistSlice';
-import {useAppSelector} from '../../../store';
+import {usePlaylists} from '../../../features/playlists';
+import type {PlaylistKind} from '../../../features/playlists';
 
-const KIND_OPTIONS: PlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED'];
+const KIND_OPTIONS: PlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY'];
 const KIND_LABELS: Record<PlaylistKind, string> = {
   AUDIO_ONLY: 'Audio',
   VIDEO_ONLY: 'Video',
-  MIXED: 'Mixed',
 };
 
 export interface PlaylistCreateModalProps {
@@ -34,10 +32,10 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
   onCreate,
 }) => {
   const {colors} = useTheme();
-  const existingPlaylists = useAppSelector(selectAllPlaylists);
+  const {playlists: existingPlaylists} = usePlaylists();
 
   const [name, setName] = useState('');
-  const [kind, setKind] = useState<PlaylistKind>('MIXED');
+  const [kind, setKind] = useState<PlaylistKind>('AUDIO_ONLY');
   const [error, setError] = useState<string | null>(null);
 
   const existingNames = useMemo(
@@ -69,24 +67,27 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
     setError(null);
     onCreate(trimmed, kind);
     setName('');
-    setKind('MIXED');
+    setKind('AUDIO_ONLY');
   }, [name, kind, existingNames, onCreate]);
 
   const handleClose = useCallback(() => {
     setError(null);
     setName('');
-    setKind('MIXED');
+    setKind('AUDIO_ONLY');
     onClose();
   }, [onClose]);
 
   return (
-    <BottomSheet
+    <Modal
       visible={visible}
-      onClose={handleClose}
-      snapPoints={['55%']}
-      dismissable
-      title="New Playlist">
-      <View style={styles.container}>
+      transparent
+      animationType="fade"
+      onRequestClose={handleClose}>
+      <View style={[styles.overlay, {backgroundColor: colors.background.overlay}]}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={handleClose} />
+        <View style={[styles.modalCard, {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle}]}>
+          <AppText variant="h2" color="primary" style={styles.title}>New Playlist</AppText>
+          <View style={styles.container}>
         {/* ── Name Input (53.3: AppTextInput with blur validation) ── */}
         <AppTextInput
           value={name}
@@ -176,12 +177,32 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
             </AppText>
           </TouchableOpacity>
         </View>
+          </View>
+        </View>
       </View>
-    </BottomSheet>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.lg,
+    paddingTop: spacing.lg,
+    overflow: 'hidden',
+  },
+  title: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+  },
   container: {
     padding: spacing.lg,
   },

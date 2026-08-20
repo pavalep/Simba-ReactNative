@@ -1,6 +1,8 @@
 import RNFS from 'react-native-fs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {isRemoteUri, cacheKeyFromUri} from '../utils/mediaUri';
+import type {MediaKind, MediaLane, MediaSource} from '../types/media';
+import {normalizeMediaClassification} from '../types/media';
 
 /**
  * 49.1/49.6: Download manager for offline playback.
@@ -30,17 +32,23 @@ export interface DownloadRecord {
   /** Bytes written so far. */
   received: number;
   status: DownloadStatus;
-  mediaType?: 'audio' | 'video';
-  source?: string;
+    mediaType: MediaLane;
+  type: MediaKind;
+  source: MediaSource;
+  provider?: string;
   downloadedAt: number | null;
+
   error?: string;
 }
 
 export interface DownloadRequest {
   uri: string;
   title: string;
-  mediaType?: 'audio' | 'video';
-  source?: string;
+    mediaType?: MediaLane;
+  type?: MediaKind;
+  source?: MediaSource;
+  provider?: string;
+
 }
 
 const MANIFEST_KEY = 'simba-downloads-v1';
@@ -137,10 +145,21 @@ export function ensureLoaded(): Promise<DownloadRecord[]> {
         ]);
         keepLastN = policyRaw ? (parseInt(policyRaw, 10) || 0) : 0;
         if (raw) {
-          const parsed = JSON.parse(raw) as DownloadRecord[];
-          records = parsed.filter(
-            r => typeof r.uri === 'string' && typeof r.localPath === 'string',
-          );
+                    const parsed = JSON.parse(raw) as Array<Partial<DownloadRecord>>;
+          records = parsed
+            .filter(
+              r => typeof r.uri === 'string' && typeof r.localPath === 'string',
+            )
+            .map(r => ({
+              ...r,
+              ...normalizeMediaClassification({
+                source: r.source,
+                type: r.type,
+                mediaType: r.mediaType,
+                provider: r.provider,
+              }),
+            } as DownloadRecord));
+
         }
         // Drop entries whose file vanished; interrupted transfers restart paused.
         const checked: DownloadRecord[] = [];
@@ -212,17 +231,22 @@ export async function startDownload(request: DownloadRequest): Promise<void> {
   if (!isRemoteUri(request.uri)) return;
 
   const localPath = `${DOWNLOAD_DIR}/${sanitizeSegment(request.title)}-${cacheKeyFromUri(request.uri)}.${fileExtension(request.uri)}`;
-  const record: DownloadRecord = {
+    const record: DownloadRecord = {
     uri: request.uri,
     localPath,
     title: request.title || 'Untitled',
     size: 0,
     received: 0,
     status: 'downloading',
-    mediaType: request.mediaType,
-    source: request.source,
+    ...normalizeMediaClassification({
+      source: request.source ?? 'api',
+      type: request.type,
+      mediaType: request.mediaType,
+      provider: request.provider,
+    }),
     downloadedAt: null,
   };
+
   upsertRecord(record);
 
   // A stale partial from an interrupted transfer would corrupt the fresh one.
@@ -296,8 +320,15 @@ export async function resumeDownload(uri: string): Promise<void> {
     uri: record.uri,
     title: record.title,
     mediaType: record.mediaType,
+    type: record.type,
     source: record.source,
+    provider: record.provider,
   });
+}
+
+/** Explicit recovery entry point for failed transfers. */
+export async function retryDownload(uri: string): Promise<void> {
+  await resumeDownload(uri);
 }
 
 /** 49.3: stop, unlink and forget a download (and its partial file). */
@@ -341,8 +372,10 @@ export const downloadService = {
   subscribe,
   startDownload,
   pauseDownload,
-  resumeDownload,
+    resumeDownload,
+  retryDownload,
   removeDownload,
+
   setKeepLastN,
   getKeepLastN,
   getTotalDownloadedBytes,

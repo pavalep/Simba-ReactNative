@@ -17,7 +17,7 @@ import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHe
 import {EmptyState} from '../../../components/utility/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {AppText} from '../../../components/core/AppText/AppText';
-import type {FollowedPodcast} from '../../../store/slices/followedPodcastsSlice';
+import type {FollowedPodcast} from '../../../features/followedPodcasts';
 
 interface FollowedPodcastsShelfProps {
   items: FollowedPodcast[];

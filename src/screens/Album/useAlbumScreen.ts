@@ -94,9 +94,7 @@ export function useAlbumScreen() {
   const handlePlayTrack = useCallback(
     (indexInAlbum: number) => {
       const entries: PlaylistEntry[] = sortedTracks.map(t => ({
-        uri: t.uri,
-        title: t.title,
-        duration: t.duration,
+        ...t,
       }));
       if (entries.length === 0) return;
       dispatch(loadPlaylistToPlayer(entries));
@@ -113,9 +111,7 @@ export function useAlbumScreen() {
 
   const handlePlayAll = useCallback(() => {
     const entries: PlaylistEntry[] = sortedTracks.map(t => ({
-      uri: t.uri,
-      title: t.title,
-      duration: t.duration,
+      ...t,
     }));
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
@@ -127,9 +123,7 @@ export function useAlbumScreen() {
 
   const handleShuffleAll = useCallback(() => {
     const entries: PlaylistEntry[] = sortedTracks.map(t => ({
-      uri: t.uri,
-      title: t.title,
-      duration: t.duration,
+      ...t,
     }));
     for (let i = entries.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));

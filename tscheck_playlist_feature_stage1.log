@@ -1,0 +1,65 @@
+src/components/playlist/PlaylistCard/PlaylistCard.tsx(13,3): error TS2353: Object literal may only specify known properties, and 'MIXED' does not exist in type 'Record<PlaylistKind, string>'.
+src/components/playlist/PlaylistContextMenu/PlaylistContextMenu.tsx(9,34): error TS2307: Cannot find module '../../../store/slices/playlistSlice' or its corresponding type declarations.
+src/components/playlist/PlaylistContextMenu/PlaylistContextMenu.tsx(97,11): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: FlatListProps<any>): FlatList<any>', gave the following error.
+    Type 'unknown' is not assignable to type 'ArrayLike<any> | null | undefined'.
+  Overload 2 of 2, '(props: FlatListProps<any>, context: any): FlatList<any>', gave the following error.
+    Type 'unknown' is not assignable to type 'ArrayLike<any> | null | undefined'.
+src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx(15,34): error TS2307: Cannot find module '../../../store/slices/playlistSlice' or its corresponding type declarations.
+src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx(18,67): error TS2322: Type '"MIXED"' is not assignable to type 'PlaylistKind'.
+src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx(22,3): error TS2353: Object literal may only specify known properties, and 'MIXED' does not exist in type 'Record<PlaylistKind, string>'.
+src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx(40,50): error TS2345: Argument of type '"MIXED"' is not assignable to parameter of type 'PlaylistKind | (() => PlaylistKind)'.
+src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx(44,19): error TS18046: 'existingPlaylists' is of type 'unknown'.
+src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx(44,41): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx(72,13): error TS2345: Argument of type '"MIXED"' is not assignable to parameter of type 'SetStateAction<PlaylistKind>'.
+src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx(78,13): error TS2345: Argument of type '"MIXED"' is not assignable to parameter of type 'SetStateAction<PlaylistKind>'.
+src/components/sheets/PlaylistSheet/PlaylistSheet.tsx(20,8): error TS2307: Cannot find module '../../../store/slices/playlistSlice' or its corresponding type declarations.
+src/components/sheets/PlaylistSheet/PlaylistSheet.tsx(59,3): error TS2353: Object literal may only specify known properties, and 'MIXED' does not exist in type 'Record<PlaylistKind, string>'.
+src/components/sheets/PlaylistSheet/PlaylistSheet.tsx(401,11): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: FlatListProps<Playlist>): FlatList<Playlist>', gave the following error.
+    Type 'unknown' is not assignable to type 'ArrayLike<Playlist> | null | undefined'.
+  Overload 2 of 2, '(props: FlatListProps<Playlist>, context: any): FlatList<Playlist>', gave the following error.
+    Type 'unknown' is not assignable to type 'ArrayLike<Playlist> | null | undefined'.
+src/components/sheets/PlaylistSheet/PlaylistSheet.tsx(405,32): error TS18046: 'playlists' is of type 'unknown'.
+src/features/playlists/components/PlaylistModal.tsx(35,4): error TS2322: Type '"MIXED"' is not assignable to type 'PlaylistKind'.
+src/features/playlists/components/PlaylistModal.tsx(50,66): error TS2345: Argument of type '"MIXED"' is not assignable to parameter of type 'PlaylistKind | (() => PlaylistKind)'.
+src/features/playlists/components/PlaylistModal.tsx(57,23): error TS2345: Argument of type '"MIXED"' is not assignable to parameter of type 'SetStateAction<PlaylistKind>'.
+src/features/playlists/index.ts(15,3): error TS2614: Module '"./playlistReducer"' has no exported member 'isPlaylistMediaKindAllowed'. Did you mean to use 'import isPlaylistMediaKindAllowed from "./playlistReducer"' instead?
+src/features/playlists/playlistReducer.ts(107,7): error TS2367: This comparison appears to be unintentional because the types '"AUDIO_ONLY" | "VIDEO_ONLY" | undefined' and '"MIXED"' have no overlap.
+src/features/playlists/playlistReducer.ts(208,9): error TS2322: Type 'PlaylistLegacyKind' is not assignable to type '"AUDIO_ONLY" | "VIDEO_ONLY" | undefined'.
+  Type '"MIXED"' is not assignable to type '"AUDIO_ONLY" | "VIDEO_ONLY" | undefined'.
+src/features/playlists/playlistReducer.ts(227,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(actionCreator: TypedActionCreator<string>, reducer: CaseReducer<PlaylistState, Action<string>>): ActionReducerMapBuilder<PlaylistState>', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type 'TypedActionCreator<string>'.
+  Overload 2 of 2, '(type: "persist/REHYDRATE", reducer: CaseReducer<PlaylistState, Action<"persist/REHYDRATE">>): ActionReducerMapBuilder<PlaylistState>', gave the following error.
+    Argument of type '(state: WritableNonArrayDraft<PlaylistState>, action: { payload?: { playlists?: unknown; } | undefined; }) => void' is not assignable to parameter of type 'CaseReducer<PlaylistState, Action<"persist/REHYDRATE">>'.
+      Types of parameters 'action' and 'action' are incompatible.
+        Type 'Action<"persist/REHYDRATE">' has no properties in common with type '{ payload?: { playlists?: unknown; } | undefined; }'.
+src/hooks/useSearch.ts(9,34): error TS2307: Cannot find module '../store/slices/playlistSlice' or its corresponding type declarations.
+src/hooks/useSearch.ts(211,5): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/hooks/useSearch.ts(211,26): error TS7006: Parameter 'pl' implicitly has an 'any' type.
+src/screens/AllPlaylists/useAllPlaylistsScreen.ts(8,82): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/AllPlaylists/useAllPlaylistsScreen.ts(58,5): error TS2322: Type 'unknown' is not assignable to type 'Playlist[]'.
+src/screens/FolderBrowser/FolderBrowserScreen.tsx(24,49): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/FolderBrowser/FolderBrowserScreen.tsx(326,11): error TS2367: This comparison appears to be unintentional because the types 'PlaylistKind' and '"MIXED"' have no overlap.
+src/screens/Home/hooks/useHomeScreen.ts(10,34): error TS2307: Cannot find module '../../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/Home/hooks/useHomeScreen.ts(287,33): error TS2488: Type 'unknown' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/screens/Library/hooks/useLibraryScreen.ts(7,34): error TS2307: Cannot find module '../../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/Library/hooks/useLibraryScreen.ts(112,12): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(112,32): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/Library/hooks/useLibraryScreen.ts(207,18): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(207,36): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/Library/hooks/useLibraryScreen.ts(227,18): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(227,36): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/Library/hooks/useLibraryScreen.ts(251,18): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(251,36): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(25,8): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(69,7): error TS2322: Type '"MIXED"' is not assignable to type 'PlaylistKind'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(133,41): error TS2339: Property 'items' does not exist on type '{}'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(157,35): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(202,28): error TS2339: Property 'name' does not exist on type '{}'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(817,24): error TS2339: Property 'name' does not exist on type '{}'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(909,32): error TS2339: Property 'name' does not exist on type '{}'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(916,32): error TS2339: Property 'name' does not exist on type '{}'.
+src/screens/Profile/ProfileScreen.tsx(28,34): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/QueueScreen/useQueueScreen.ts(23,30): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.

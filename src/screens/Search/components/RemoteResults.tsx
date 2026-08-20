@@ -21,6 +21,7 @@ import type {
   JamendoTrackResult,
 } from '../../../types/api';
 import type {SearchSource} from './SourceFilterChips';
+import type {MediaSource} from '../../../types/media';
 
 // ── Compact per-source row ──
 
@@ -60,7 +61,7 @@ interface MediaRowProps {
   icon: IconName;
   trailing: 'play' | 'chevron';
   /** 49.5: optional offline download action (renders DownloadButton). */
-  download?: {uri: string; title: string; mediaType?: 'audio' | 'video'; source?: string};
+  download?: {uri: string; title: string; mediaType?: 'audio' | 'video'; source?: MediaSource};
   onPress: () => void;
 }
 
@@ -100,7 +101,7 @@ const MediaRow: React.FC<MediaRowProps> = React.memo(
             uri={download.uri}
             title={download.title}
             mediaType={download.mediaType}
-            source={download.source}
+            source={download.source ?? 'api'}
             size={16}
           />
         ) : (
@@ -230,7 +231,7 @@ export const RemoteResults: React.FC<RemoteResultsProps> = React.memo(
                     imageUrl={item.imageUrl}
                     icon="music"
                     trailing="play"
-                    download={{uri: item.audioUrl, title: item.name, mediaType: 'audio', source: 'jamendo'}}
+                    download={{uri: item.audioUrl, title: item.name, mediaType: 'audio', source: 'api'}}
                     onPress={() => handlers.onPlayTrack(item)}
                   />
                 )}
@@ -247,7 +248,7 @@ export const RemoteResults: React.FC<RemoteResultsProps> = React.memo(
                     imageUrl={item.artworkUrl}
                     icon="music"
                     trailing="play"
-                    download={{uri: item.streamUrl, title: item.title, mediaType: 'audio', source: 'audius'}}
+                    download={{uri: item.streamUrl, title: item.title, mediaType: 'audio', source: 'api'}}
                     onPress={() => handlers.onPlayAudius(item)}
                   />
                 )}

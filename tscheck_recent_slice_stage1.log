@@ -1,0 +1,62 @@
+src/hooks/usePipLifecycle.ts(12,9): error TS2614: Module '"../store/slices/sessionSlice"' has no exported member 'clearAllRecent'. Did you mean to use 'import clearAllRecent from "../store/slices/sessionSlice"' instead?
+src/screens/ArchiveItemDetailScreen/ArchiveItemDetailScreen.tsx(72,55): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/AudiobookDetailScreen/AudiobookDetailScreen.tsx(82,55): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/AudioPlayer/hooks/useAudioPlayerScreen.ts(15,9): error TS2614: Module '"../../../store/slices/sessionSlice"' has no exported member 'savePlaybackPosition'. Did you mean to use 'import savePlaybackPosition from "../../../store/slices/sessionSlice"' instead?
+src/screens/AudioPlayer/hooks/useAudioPlayerScreen.ts(195,63): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/AudioPlayer/hooks/useAudioPlayerScreen.ts(359,55): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/screens/AudioPlayer/hooks/useAudioPlayerScreen.ts(687,50): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/screens/History/HistoryScreen.tsx(25,9): error TS2614: Module '"../../store/slices/sessionSlice"' has no exported member 'removeRecentFile'. Did you mean to use 'import removeRecentFile from "../../store/slices/sessionSlice"' instead?
+src/screens/History/HistoryScreen.tsx(25,27): error TS2614: Module '"../../store/slices/sessionSlice"' has no exported member 'clearAllRecent'. Did you mean to use 'import clearAllRecent from "../../store/slices/sessionSlice"' instead?
+src/screens/History/HistoryScreen.tsx(55,61): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/History/HistoryScreen.tsx(71,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/screens/History/HistoryScreen.tsx(73,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/screens/History/HistoryScreen.tsx(75,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/screens/History/HistoryScreen.tsx(79,28): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/screens/Home/hooks/useHomeScreen.ts(112,61): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/Home/hooks/useHomeScreen.ts(215,27): error TS2769: No overload matches this call.
+  Argument of type '[keyof RootStackParamList]' is not assignable to parameter of type '[screen: "Settings", params: NavigatorScreenParams<SettingsTabParamList>, options?: { merge?: boolean | undefined; pop?: boolean | undefined; } | undefined] | ... 39 more ... | [screen: ...]'.
+    Type '[keyof RootStackParamList]' is not assignable to type '[screen: "Search", params?: undefined, options?: { merge?: boolean | undefined; pop?: boolean | undefined; } | undefined] | [screen: "Splash", params?: undefined, options?: { merge?: boolean | undefined; pop?: boolean | undefined; } | undefined] | ... 20 more ... | [screen: ...]'.
+      Type '[keyof RootStackParamList]' is not assignable to type '[screen: "Downloads", params?: undefined, options?: { merge?: boolean | undefined; pop?: boolean | undefined; } | undefined]'.
+        Type at position 0 in source is not compatible with type at position 0 in target.
+          Type 'keyof RootStackParamList' is not assignable to type '"Downloads"'.
+            Type '"Settings"' is not assignable to type '"Downloads"'.
+  Overload 2 of 2, '(options: { name: "Home"; params: undefined; path?: string | undefined; merge?: boolean | undefined; pop?: boolean | undefined; } | { name: "HomeTab"; params: NavigatorScreenParams<HomeTabParamList>; path?: string | undefined; merge?: boolean | undefined; pop?: boolean | undefined; } | ... 41 more ... | { ...; }): void', gave the following error.
+    Argument of type 'string' is not assignable to parameter of type '{ name: "Home"; params: undefined; path?: string | undefined; merge?: boolean | undefined; pop?: boolean | undefined; } | { name: "HomeTab"; params: NavigatorScreenParams<HomeTabParamList>; path?: string | undefined; merge?: boolean | undefined; pop?: boolean | undefined; } | ... 41 more ... | { ...; }'.
+      Type 'string' is not assignable to type '{ name: "Home"; params: undefined; path?: string | undefined; merge?: boolean | undefined; pop?: boolean | undefined; } | { name: "HomeTab"; params: NavigatorScreenParams<HomeTabParamList>; path?: string | undefined; merge?: boolean | undefined; pop?: boolean | undefined; } | ... 41 more ... | { ...; }'.
+src/screens/Home/index.tsx(119,67): error TS2322: Type '(item: { mediaType?: "audio" | "video"; fileUri: string; title: string; startPosition?: number; position?: number; source?: "local" | "api"; type?: "audio" | "podcast" | "video" | "movie" | "radio" | "audiobook" | "live-tv" | "show" | "archive"; provider?: string; folderId?: string; }) => void' is not assignable to type '(item: FeaturedItem) => void'.
+  Types of parameters 'item' and 'item' are incompatible.
+    Type 'FeaturedItem' is not assignable to type '{ mediaType?: "audio" | "video" | undefined; fileUri: string; title: string; startPosition?: number | undefined; position?: number | undefined; source?: "local" | "api" | undefined; type?: "audio" | ... 8 more ... | undefined; provider?: string | undefined; folderId?: string | undefined; }'.
+      Types of property 'mediaType' are incompatible.
+        Type 'string | undefined' is not assignable to type '"audio" | "video" | undefined'.
+          Type 'string' is not assignable to type '"audio" | "video" | undefined'.
+src/screens/Home/index.tsx(132,15): error TS2322: Type '(item: { mediaType?: "audio" | "video"; fileUri: string; title: string; startPosition?: number; position?: number; source?: "local" | "api"; type?: "audio" | "podcast" | "video" | "movie" | "radio" | "audiobook" | "live-tv" | "show" | "archive"; provider?: string; folderId?: string; }) => void' is not assignable to type '(item: MediaItem) => void'.
+  Types of parameters 'item' and 'item' are incompatible.
+    Type 'MediaItem' is not assignable to type '{ mediaType?: "audio" | "video" | undefined; fileUri: string; title: string; startPosition?: number | undefined; position?: number | undefined; source?: "local" | "api" | undefined; type?: "audio" | ... 8 more ... | undefined; provider?: string | undefined; folderId?: string | undefined; }'.
+      Types of property 'mediaType' are incompatible.
+        Type 'string | undefined' is not assignable to type '"audio" | "video" | undefined'.
+          Type 'string' is not assignable to type '"audio" | "video" | undefined'.
+src/screens/Home/index.tsx(167,52): error TS2345: Argument of type '{ startPosition: number; id: string; fileUri: string; title: string; position: number; duration: number; createdAt: string; thumbnailPath?: string; mediaType: MediaLane; type: MediaKind; source: MediaSource; provider?: string; folderId?: string; }' is not assignable to parameter of type '{ mediaType?: "audio" | "video" | undefined; fileUri: string; title: string; startPosition?: number | undefined; position?: number | undefined; source?: "local" | "api" | undefined; type?: "audio" | ... 8 more ... | undefined; provider?: string | undefined; folderId?: string | undefined; }'.
+  Types of property 'type' are incompatible.
+    Type 'MediaKind' is not assignable to type '"audio" | "podcast" | "audiobook" | "radio" | "video" | "movie" | "live-tv" | "archive" | "show" | undefined'.
+      Type '"music"' is not assignable to type '"audio" | "podcast" | "audiobook" | "radio" | "video" | "movie" | "live-tv" | "archive" | "show" | undefined'.
+src/screens/PodcastDetailScreen/index.tsx(74,53): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/PodcastDetailScreen/index.tsx(78,38): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/screens/Profile/ProfileScreen.tsx(32,9): error TS2614: Module '"../../store/slices/sessionSlice"' has no exported member 'clearAllRecent'. Did you mean to use 'import clearAllRecent from "../../store/slices/sessionSlice"' instead?
+src/screens/Profile/ProfileScreen.tsx(70,61): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/Profile/ProfileScreen.tsx(87,27): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/screens/Profile/ProfileScreen.tsx(87,32): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/screens/Search/SearchScreen.tsx(67,61): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/Stats/StatsScreen.tsx(30,61): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/Stats/StatsScreen.tsx(44,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/screens/Stats/StatsScreen.tsx(68,25): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/screens/Stats/StatsScreen.tsx(95,17): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/screens/Stats/StatsScreen.tsx(96,16): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/screens/Stats/StatsScreen.tsx(96,19): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/screens/VideoPlayer/hooks/useVideoPlayerScreen.ts(31,9): error TS2614: Module '"../../../store/slices/sessionSlice"' has no exported member 'savePlaybackPosition'. Did you mean to use 'import savePlaybackPosition from "../../../store/slices/sessionSlice"' instead?
+src/screens/VideoPlayer/hooks/useVideoPlayerScreen.ts(326,63): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/VideoPlayer/hooks/useVideoPlayerScreen.ts(506,26): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/screens/VideoPlayer/hooks/useVideoPlayerScreen.ts(516,38): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/screens/VideoPlayer/hooks/useVideoPlayerScreen.ts(1615,58): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/screens/VideoPlayer/hooks/useVideoPlayerScreen.ts(1654,56): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/store/slices/recentHistorySlice.ts(37,11): error TS2300: Duplicate identifier 'RecentHistoryState'.
+src/store/slices/recentHistorySlice.ts(110,13): error TS2300: Duplicate identifier 'RecentHistoryState'.

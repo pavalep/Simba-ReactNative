@@ -49,7 +49,7 @@ export const HomeEmptyState: React.FC<HomeEmptyStateProps> = ({
     if (onBrowseLibrary) {
       onBrowseLibrary();
     } else {
-      navigation.navigate('MainTabs', {screen: 'LibraryTab'});
+      navigation.navigate('Library');
     }
   };
 

@@ -22,6 +22,7 @@ import {StreamingRow} from '../../components/media/StreamingRow/StreamingRow';
 import type {JamendoTrackResult, AudiusTrackResult} from '../../types/api';
 import {shareContent} from '../../services/shareService';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
+import {usePlaybackCommands} from '../../modules/playback';
 
 type Props = MusicDetailScreenProps;
 
@@ -36,6 +37,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {trackId, source} = route.params;
   const {track, isLoading, error} = useMusicDetailScreen(trackId, source);
   const {colors} = useTheme();
+  const {openPlayer} = usePlaybackCommands();
   // P34.1: add-to-playlist sheet for streaming tracks
   const [sheetVisible, setSheetVisible] = useState(false);
 
@@ -48,25 +50,33 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
       'imageUrl' in track
         ? (track as JamendoTrackResult).imageUrl
         : (track as AudiusTrackResult).artworkUrl;
-    navigation.navigate('AudioPlayer', {
-      fileUri,
-      fileTitle,
+    openPlayer({
+      uri: fileUri,
+      title: fileTitle,
+      duration: 0,
       artworkUri: artwork ?? undefined,
-      source,
+      source: 'api',
+      type: 'music',
+      mediaType: 'audio',
+      provider: source,
     });
-  }, [track, navigation, source]);
+  }, [track, openPlayer, source]);
 
   // P39.5: streaming rows play directly
   const handleMorePlay = useCallback(
     (t: JamendoTrackResult) => {
-      navigation.navigate('AudioPlayer', {
-        fileUri: t.audioUrl,
-        fileTitle: t.name,
+      openPlayer({
+        uri: t.audioUrl,
+        title: t.name,
+        duration: 0,
         artworkUri: t.imageUrl || undefined,
-        source: 'jamendo',
+        source: 'api',
+        type: 'music',
+        mediaType: 'audio',
+        provider: 'jamendo',
       });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const handleShare = useCallback(() => {
@@ -456,7 +466,9 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
           artist: artistName,
           album: albumName,
           thumbnailPath: imageUrl ?? undefined,
-          source,
+          source: 'api',
+          provider: source,
+          type: 'music',
           mediaType: 'audio',
         }}
       />

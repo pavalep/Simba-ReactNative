@@ -318,7 +318,7 @@ export const SplashScreen: React.FC = () => {
       dispatch(markLaunched());
       navigation.reset({
         index: 0,
-        routes: [{name: isAuthenticated ? 'MainTabs' : 'Login'}],
+        routes: [{name: isAuthenticated ? 'Home' : 'Login'}],
       });
     }, minMs);
 

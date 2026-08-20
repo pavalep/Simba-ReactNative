@@ -1,3 +1,5 @@
+import type {MediaKind, MediaLane, MediaSource} from './media';
+
 export interface MediaFile {
   uri: string;
   title: string;
@@ -5,13 +7,22 @@ export interface MediaFile {
   album?: string;
   duration: number;
   thumbnail?: string;
+  source: MediaSource;
+  type: MediaKind;
+  mediaType: MediaLane;
+  provider?: string;
+  folderId?: string;
 }
 
 export interface MediaItem {
   uri: string;
   title: string;
   duration: number;
-  type: 'video' | 'audio';
+  source: MediaSource;
+  type: MediaKind;
+  mediaType: MediaLane;
+  provider?: string;
+  folderId?: string;
   fileSize: number;
   dateAdded: string;
 }
@@ -33,3 +44,10 @@ export interface PlayerSettings {
   audioTrack?: string;
   subtitleTrack?: string;
 }
+
+export type {
+  PlaybackEntry,
+  PlaybackEntryInput,
+  PlaybackOrigin,
+} from './playback';
+export {normalizePlaybackEntry} from './playback';

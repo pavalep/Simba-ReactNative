@@ -8,6 +8,8 @@ import {View, TouchableOpacity} from 'react-native';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
+import {BookmarkButton} from '../../../components/bookmark/BookmarkButton';
+
 import {createDetailItemStyles} from '../styles';
 import text from '../related/textContent.json';
 import type {PodcastEpisodeResult} from '../../../types/api';
@@ -18,6 +20,7 @@ interface Props {
   progress: number | undefined;
   onPress: () => void;
   onLongPress: () => void;
+  onBookmark: () => void;
 }
 
 function formatDuration(seconds: number): string {
@@ -36,7 +39,9 @@ export const DetailItem: React.FC<Props> = ({
   progress,
   onPress,
   onLongPress,
+  onBookmark,
 }) => {
+
   const {colors} = useTheme();
   const styles = useMemo(() => createDetailItemStyles(colors), [colors]);
 
@@ -103,9 +108,13 @@ export const DetailItem: React.FC<Props> = ({
         )}
       </View>
 
-      <View style={styles.playButton}>
-        <SvgIcon name="play" size={20} color={colors.accent.gold} />
+      <View style={styles.actionColumn}>
+        <BookmarkButton onPress={onBookmark} size={19} />
+        <View style={styles.playButton}>
+          <SvgIcon name="play" size={20} color={colors.accent.gold} />
+        </View>
       </View>
     </TouchableOpacity>
+
   );
 };

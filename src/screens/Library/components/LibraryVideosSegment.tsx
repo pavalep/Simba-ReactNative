@@ -4,6 +4,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {radius, ColorTokens} from '../../../theme/tokens';
+import {linkedMediaFolderId} from '../../../types/media';
 
 interface LibraryVideosSegmentProps {
   videoFolders: string[];
@@ -100,7 +101,7 @@ export const LibraryVideosSegment: React.FC<LibraryVideosSegmentProps> = ({
       {/* 59.1: virtualized instead of .map */}
       <FlatList
         data={videoFolders}
-        keyExtractor={(folder, index) => `video-${index}`}
+        keyExtractor={folder => linkedMediaFolderId(folder, 'video')}
         renderItem={({item: folder}) => (
           <TouchableOpacity
             style={styles.folderCard}

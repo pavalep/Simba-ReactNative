@@ -14,7 +14,7 @@ import type {
   HelpScreenProps,
 } from './types';
 import {SettingsTabParamList} from './types';
-import {SettingsScreen} from '../screens/Settings/SettingsScreen';
+import {SettingsScreen} from '../screens/Settings';
 import {AboutScreen} from '../screens/About/AboutScreen';
 import {AudioSettingsScreen} from '../screens/AudioSettings/AudioSettingsScreen';
 import {EqualizerScreen} from '../screens/Equalizer/EqualizerScreen';

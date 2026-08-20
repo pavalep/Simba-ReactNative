@@ -19,7 +19,7 @@ export type AppTextVariant =
   | 'h6' | 'subtitle2' | 'small' | 'time';
 
 type TokenColorKey =
-  | 'primary' | 'secondary' | 'tertiary'
+  | 'primary' | 'secondary' | 'tertiary' | 'inverse' | 'bright'
   | 'accent' | 'error' | 'success' | 'warning';
 
 interface AppTextProps extends TextProps {
@@ -67,6 +67,8 @@ export const AppText: React.FC<AppTextProps> = ({
       case 'primary': return colors.text.primary;
       case 'secondary': return colors.text.secondary;
       case 'tertiary': return colors.text.tertiary;
+      case 'inverse': return colors.text.inverse;
+      case 'bright': return colors.text.bright;
       case 'accent': return colors.accent.gold;
       case 'error': return colors.semantic.error;
       case 'success': return colors.semantic.success;

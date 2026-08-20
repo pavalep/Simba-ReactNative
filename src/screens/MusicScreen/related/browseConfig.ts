@@ -1,0 +1,34 @@
+// ─── Music Screen — browse config ───────────────────────────────────
+// The single Music entry the host screen feeds to its local
+// `<BrowseLayout>`. No central SECTION_CONFIGS registry — each screen
+// owns its own entry. `renderContent` is bound via spread-override in
+// `index.tsx` to avoid a circular import (config → content → screen →
+// config).
+
+import {MUSIC_CATEGORIES} from '../../../constants/musicCategories';
+import type {SectionBrowseConfig} from '../types';
+
+function musicFilterGroup() {
+  return {
+    id: 'filter',
+    title: 'Genre',
+    multiSelect: true,
+    options: MUSIC_CATEGORIES.filter(g => g.id !== 'all').map(g => ({
+      key: String(g.id),
+      label: g.name,
+      icon: g.icon,
+    })),
+  };
+}
+
+export const MUSIC_SECTION_CONFIG: SectionBrowseConfig = {
+  route: 'MusicScreen',
+  title: 'Music',
+  search: {placeholder: 'Search music…'},
+  options: {
+    groups: [musicFilterGroup()],
+  },
+  // Stub — `index.tsx` overrides with the real `renderMusicContent`
+  // via spread to break the config → content → screen → config cycle.
+  renderContent: (): null => null,
+};

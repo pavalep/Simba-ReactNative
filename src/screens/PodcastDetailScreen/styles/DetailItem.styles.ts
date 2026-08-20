@@ -34,6 +34,13 @@ export const createDetailItemStyles = (colors: ColorTokens) =>
     episodeDescription: {
       marginTop: spacing.xs,
     },
+    actionColumn: {
+      width: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'center',
+      gap: spacing.xs,
+    },
     playButton: {
       width: 44,
       height: 44,
@@ -41,7 +48,6 @@ export const createDetailItemStyles = (colors: ColorTokens) =>
       backgroundColor: colors.accent.goldDim,
       alignItems: 'center',
       justifyContent: 'center',
-      alignSelf: 'center',
     },
     progressTrack: {
       height: 3,

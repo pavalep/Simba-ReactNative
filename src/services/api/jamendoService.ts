@@ -131,28 +131,90 @@ export async function getJamendoTracksByGenre(
 }
 
 /**
+ * Order fallback chain for the "All" stream. Jamendo's per-order
+ * availability is unreliable — `popularity_total` historically returns
+ * 0 rows for some client IDs, and every order occasionally returns
+ * 0 rows for a single request even when the same order works seconds
+ * later. We try each in turn and use the first one that yields rows.
+ *
+ *   • `popularity_week` — closest to "popular this week" semantics;
+ *     most reliable for the FAB's "All" label.
+ *   • `buzzrate`       — engagement-rate ranking; usually populated.
+ *   • `releasedate`    — newest tracks; Jamendo's indexing means this
+ *     stream is always populated in principle, but flaky in practice.
+ *   • `relevance`      — default order; works as a last resort.
+ */
+const POPULAR_FALLBACK_ORDERS = [
+  'popularity_week',
+  'buzzrate',
+  'releasedate',
+  'relevance',
+] as const;
+
+/**
+ * Discovered working order. The first successful call records which
+ * order actually returned rows for this client_id; subsequent pages
+ * try that order first so pagination stays consistent (same ordering
+ * across pages). If the cached order later returns 0 rows, we fall
+ * through to the rest of the chain.
+ */
+let cachedWorkingOrder: string | null = null;
+
+function preferredOrder(): readonly string[] {
+  if (cachedWorkingOrder) {
+    return [
+      cachedWorkingOrder,
+      ...POPULAR_FALLBACK_ORDERS.filter(o => o !== cachedWorkingOrder),
+    ];
+  }
+  return POPULAR_FALLBACK_ORDERS;
+}
+
+/**
  * Get globally popular tracks on Jamendo (the FAB-only "All" stream).
- * `page` is backward-compatible (defaults to 1) so existing single-fetch
- * callers keep working while the Music screen paginates the stream.
+ *
+ * Tries each order in the fallback chain until one returns at least one
+ * row. The Music screen maps an empty list to the `ListStates` empty
+ * state, so falling back silently keeps the user out of the
+ * "No popular tracks found." dead end. The first successful order is
+ * remembered for the rest of the session so page 2 / page 3 / … use the
+ * same ordering (otherwise a working-but-different order on page 2
+ * would return a totally different slice and the items wouldn't
+ * append sensibly).
+ *
+ * `page` is kept backward-compatible (defaults to 1) so existing
+ * single-fetch callers keep working while the Music screen paginates
+ * the stream.
  */
 export async function getPopularJamendoTracks(
   limit: number = 20,
   page: number = 1,
 ): Promise<JamendoTrackResult[]> {
-  const data = await apiFetch<JamendoResponse<JamendoTrackRaw>>({
-    config: JAMENDO_CONFIG,
-    path: '/tracks/',
-    params: {
-      client_id: clientId(),
-      format: 'json',
-      limit,
-      page,
-      include: 'musicinfo',
-      order: 'popularity_total',
-    },
-    cacheTtlMs: 120_000,
-  });
-  return assertJamendoSuccess(data).map(mapTrack);
+  const {limit: l = limit, page: p = page} = {limit, page};
+
+  let lastEmpty: JamendoTrackResult[] = [];
+  for (const order of preferredOrder()) {
+    const data = await apiFetch<JamendoResponse<JamendoTrackRaw>>({
+      config: JAMENDO_CONFIG,
+      path: '/tracks/',
+      params: {
+        client_id: clientId(),
+        format: 'json',
+        limit: l,
+        offset: (p - 1) * l,
+        include: 'musicinfo',
+        order,
+      },
+      cacheTtlMs: 120_000,
+    });
+    const results = assertJamendoSuccess(data).map(mapTrack);
+    if (results.length > 0) {
+      cachedWorkingOrder = order;
+      return results;
+    }
+    lastEmpty = results;
+  }
+  return lastEmpty;
 }
 
 /** Get a single track by ID (includes full stream URL in track.audioUrl). */

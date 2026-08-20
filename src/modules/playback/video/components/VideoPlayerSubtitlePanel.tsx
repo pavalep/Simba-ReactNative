@@ -1,0 +1,518 @@
+import React, {useMemo, useCallback} from 'react';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  FlatList,
+} from 'react-native';
+import {AppText} from '../../../../components/core/AppText/AppText';
+import {useTheme} from '../../../../theme';
+import {spacing, radius} from '../../../../theme/tokens';
+import {SvgIcon} from '../../../../components/utility/SvgIcon';
+import {SUBTITLE_COLOR_PRESETS, DEFAULT_SUBTITLE_COLOR} from '../../../../constants/subtitleColors';
+
+// ─── Props ───────────────────────────────────────────────────
+
+/** Subtitle format inferred from track metadata */
+type SubtitleFormat = 'SRT' | 'ASS' | 'VTT' | 'PGS' | 'SUB' | '';
+
+export interface VideoPlayerSubtitlePanelProps {
+  subtitleTracks: Array<{
+    id: number;
+    title?: string;
+    lang?: string;
+    selected?: boolean;
+  }>;
+  activeSubtitle: number | null;
+  subtitleVisible: boolean;
+  onSelectTrack: (trackId: number | null) => void;
+  onToggleVisibility: () => void;
+  onLoadExternal: () => void;
+  subtitleFontSize: 'small' | 'medium' | 'large';
+  onFontSizeChange: (size: 'small' | 'medium' | 'large') => void;
+  subtitleOpacity: number;
+  onOpacityChange: (opacity: number) => void;
+  subtitlePosition: number;
+  onPositionChange: (position: number) => void;
+  subtitleTextColor?: string;
+  onTextColorChange?: (color: string) => void;
+  subtitleBgOpacity?: number;
+  onBgOpacityChange?: (opacity: number) => void;
+}
+
+/** Guess subtitle format from track title/name */
+function guessFormat(title?: string): SubtitleFormat {
+  if (!title) return '';
+  const t = title.toLowerCase();
+  if (t.includes('.srt') || t.includes('srt') || t.includes('subrip')) return 'SRT';
+  if (t.includes('.ass') || t.includes('ass') || t.includes('advanced')) return 'ASS';
+  if (t.includes('.vtt') || t.includes('vtt') || t.includes('webvtt')) return 'VTT';
+  if (t.includes('.pgs') || t.includes('pgs') || t.includes('hdmv')) return 'PGS';
+  if (t.includes('.sub') || t.includes('sub') || t.includes('microdvd')) return 'SUB';
+  return '';
+}
+
+// ─── Component ───────────────────────────────────────────────
+
+export const VideoPlayerSubtitlePanel: React.FC<VideoPlayerSubtitlePanelProps> = React.memo(({
+  subtitleTracks,
+  activeSubtitle,
+  subtitleVisible,
+  subtitleFontSize,
+  subtitleOpacity,
+  onSelectTrack,
+  onToggleVisibility,
+  onLoadExternal,
+  onFontSizeChange,
+  onOpacityChange,
+  subtitlePosition,
+  onPositionChange,
+  subtitleTextColor = DEFAULT_SUBTITLE_COLOR,
+  onTextColorChange,
+  subtitleBgOpacity = 0.5,
+  onBgOpacityChange,
+}) => {
+  const {colors} = useTheme();
+
+  // 55.8: palette is DATA (mpv sub-color values), shared via constants
+  const PRESET_COLORS = useMemo(() => SUBTITLE_COLOR_PRESETS.map(p => p.hex), []);
+
+  const handleBgOpacityDown = useCallback(() => {
+    if (!onBgOpacityChange) return;
+    const newVal = Math.max(0.0, Math.round((subtitleBgOpacity - 0.1) * 10) / 10);
+    onBgOpacityChange(newVal);
+  }, [subtitleBgOpacity, onBgOpacityChange]);
+
+  const handleBgOpacityUp = useCallback(() => {
+    if (!onBgOpacityChange) return;
+    const newVal = Math.min(1.0, Math.round((subtitleBgOpacity + 0.1) * 10) / 10);
+    onBgOpacityChange(newVal);
+  }, [subtitleBgOpacity, onBgOpacityChange]);
+
+  const handleOpacityDown = useCallback(() => {
+    const newVal = Math.max(0.3, Math.round((subtitleOpacity - 0.1) * 10) / 10);
+    onOpacityChange(newVal);
+  }, [subtitleOpacity, onOpacityChange]);
+
+  const handleOpacityUp = useCallback(() => {
+    const newVal = Math.min(1.0, Math.round((subtitleOpacity + 0.1) * 10) / 10);
+    onOpacityChange(newVal);
+  }, [subtitleOpacity, onOpacityChange]);
+
+  const movePosition = useCallback((delta: number) => {
+    onPositionChange(Math.max(5, Math.min(95, subtitlePosition + delta)));
+  }, [onPositionChange, subtitlePosition]);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        scrollContent: {
+          paddingHorizontal: spacing.lg,
+        },
+        trackRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          minHeight: 60,
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.sm,
+          borderRadius: radius.md,
+        },
+        radioOuter: {
+          width: 16,
+          height: 16,
+          borderRadius: 8,
+          borderWidth: 2,
+          borderColor: colors.border.subtle,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        radioFilled: {
+          width: 16,
+          height: 16,
+          borderRadius: 8,
+          backgroundColor: colors.accent.gold,
+        },
+        trackInfo: {
+          flex: 1,
+          marginLeft: spacing.md,
+        },
+        trackIdText: {
+          marginLeft: spacing.sm,
+        },
+        divider: {
+          height: 1,
+          backgroundColor: colors.border.subtle,
+          marginVertical: spacing.xs,
+        },
+        toggleRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          minHeight: 58,
+          paddingVertical: spacing.sm,
+        },
+        toggleTrack: {
+          width: 36,
+          height: 20,
+          borderRadius: 10,
+          backgroundColor: colors.border.emphasis,
+          justifyContent: 'center',
+          paddingHorizontal: 2,
+        },
+        toggleTrackOn: {
+          backgroundColor: colors.accent.goldDim,
+        },
+        toggleThumb: {
+          width: 16,
+          height: 16,
+          borderRadius: 8,
+          backgroundColor: colors.text.primary,
+        },
+        toggleThumbOn: {
+          alignSelf: 'flex-end',
+          backgroundColor: colors.accent.gold,
+        },
+        loadBtn: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          minHeight: 56,
+          paddingVertical: spacing.md,
+          paddingHorizontal: spacing.lg,
+          marginTop: spacing.sm,
+          borderRadius: radius.sm,
+          backgroundColor: colors.accent.goldDim,
+          gap: spacing.sm,
+        },
+        loadBtnIcon: {
+          marginRight: spacing.sm,
+        },
+        loadBtnText: {
+          fontWeight: '600',
+        },
+        loadBtnHint: {
+          fontSize: 10,
+          letterSpacing: 0.4,
+          textTransform: 'uppercase',
+          opacity: 0.6,
+        },
+        sectionLabel: {
+          marginTop: spacing.md,
+          marginBottom: spacing.sm,
+        },
+        styleRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingVertical: spacing.xs,
+        },
+        sizeChips: {
+          flexDirection: 'row',
+          gap: spacing.sm,
+        },
+        sizeChip: {
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.xs,
+          borderRadius: radius.sm,
+          backgroundColor: colors.border.subtle,
+        },
+        sizeChipActive: {
+          backgroundColor: colors.accent.goldDim,
+        },
+        opacityBtn: {
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          backgroundColor: colors.border.subtle,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        opacityValue: {
+          minWidth: 32,
+          textAlign: 'center',
+        },
+        selectedRow: {
+          backgroundColor: colors.accent.goldDim,
+        },
+        emptyState: {
+          paddingVertical: spacing.lg,
+        },
+        formatBadge: {
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          borderRadius: 4,
+          backgroundColor: colors.border.subtle,
+          marginLeft: spacing.sm,
+        },
+        colorRow: {
+          flexDirection: 'row',
+          gap: spacing.sm,
+          paddingVertical: spacing.xs,
+        },
+        colorSwatch: {
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          borderWidth: 2,
+          borderColor: colors.border.subtle,
+        },
+        colorSwatchActive: {
+          borderColor: colors.accent.gold,
+          borderWidth: 3,
+        },
+        row: {
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        rowWithGap: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.sm,
+        },
+      }),
+    [colors],
+  );
+
+  return (
+    <ScrollView
+      style={styles.scrollContent}
+      showsVerticalScrollIndicator={false}>
+      {/* Off option (always at top) */}
+      <TouchableOpacity
+        style={[styles.trackRow, activeSubtitle === null && styles.selectedRow]}
+        onPress={() => onSelectTrack(null)}>
+        <View
+          style={
+            activeSubtitle === null
+              ? styles.radioFilled
+              : styles.radioOuter
+          }
+        />
+        <View style={styles.trackInfo}>
+          <AppText variant="body2" color="primary">
+            Off
+          </AppText>
+        </View>
+      </TouchableOpacity>
+
+      <View style={styles.divider} />
+
+      {/* 59.1: virtualized track list */}
+      <FlatList
+        data={subtitleTracks}
+        keyExtractor={track => String(track.id)}
+        renderItem={({item: track}) => {
+          const isSelected = track.id === activeSubtitle;
+          const format = guessFormat(track.title);
+          return (
+            <TouchableOpacity
+              style={[styles.trackRow, isSelected && styles.selectedRow]}
+              onPress={() => onSelectTrack(track.id)}>
+              <View
+                style={isSelected ? styles.radioFilled : styles.radioOuter}
+              />
+              <View style={styles.trackInfo}>
+                <View style={styles.row}>
+                  <AppText variant="body2" color="primary">
+                    {track.title || `Track ${track.id}`}
+                  </AppText>
+                  {format ? (
+                    <AppText variant="caption" color="tertiary" style={styles.formatBadge}>
+                      {format}
+                    </AppText>
+                  ) : null}
+                </View>
+                {track.lang ? (
+                  <AppText variant="caption" color="secondary">
+                    {track.lang}
+                  </AppText>
+                ) : null}
+              </View>
+              {isSelected && <AppText variant="caption" color="accent">Selected</AppText>}
+            </TouchableOpacity>
+          );
+        }}
+        scrollEnabled={false}
+        initialNumToRender={subtitleTracks.length}
+      />
+
+      {subtitleTracks.length === 0 && (
+        <View style={styles.emptyState}>
+          <AppText variant="body2" color="secondary">No embedded subtitle tracks</AppText>
+          <AppText variant="caption" color="tertiary">You can load an external subtitle file below.</AppText>
+        </View>
+      )}
+
+      <View style={styles.divider} />
+
+      {/* Toggle visibility row */}
+      <TouchableOpacity
+        style={styles.toggleRow}
+        onPress={onToggleVisibility}>
+        <AppText variant="body2" color="primary">
+          Show Subtitles
+        </AppText>
+        <View
+          style={[
+            styles.toggleTrack,
+            subtitleVisible && styles.toggleTrackOn,
+          ]}>
+          <View
+            style={[
+              styles.toggleThumb,
+              subtitleVisible && styles.toggleThumbOn,
+            ]}
+          />
+        </View>
+      </TouchableOpacity>
+
+      {/* V6 6.4.1: Load external subtitle button with file-type hint. */}
+      <TouchableOpacity
+        style={styles.loadBtn}
+        onPress={onLoadExternal}
+        accessibilityRole="button"
+        accessibilityLabel="Load external subtitle file"
+        accessibilityHint="Supports .srt, .vtt, and .ass subtitle files">
+        <SvgIcon name="download" size={16} color={colors.accent.gold} />
+        <AppText variant="body2" color="accent" style={styles.loadBtnText}>
+          Load external subtitle
+        </AppText>
+        <View style={{flex: 1}} />
+        <AppText variant="caption" color="tertiary" style={styles.loadBtnHint}>
+          .srt · .vtt · .ass
+        </AppText>
+      </TouchableOpacity>
+
+      {/* Style section */}
+      <View style={styles.divider} />
+      <AppText variant="caption" color="secondary" style={styles.sectionLabel}>
+        Style
+      </AppText>
+
+      {/* Font size chips */}
+      <View style={styles.styleRow}>
+        <AppText variant="body2" color="primary">
+          Font Size
+        </AppText>
+        {/* 59.1: virtualized size chips */}
+        <FlatList
+          horizontal
+          data={['small', 'medium', 'large'] as Array<'small' | 'medium' | 'large'>}
+          keyExtractor={size => size}
+          renderItem={({item: size}) => {
+            const label = size === 'small' ? 'S' : size === 'medium' ? 'M' : 'L';
+            const isActive = subtitleFontSize === size;
+            return (
+              <TouchableOpacity
+                style={[styles.sizeChip, isActive && styles.sizeChipActive]}
+                onPress={() => onFontSizeChange(size)}>
+                <AppText
+                  variant="caption"
+                  color={isActive ? 'accent' : 'secondary'}>
+                  {label}
+                </AppText>
+              </TouchableOpacity>
+            );
+          }}
+          contentContainerStyle={styles.sizeChips}
+          scrollEnabled={false}
+          initialNumToRender={3}
+        />
+      </View>
+
+      <View style={styles.styleRow}>
+        <View>
+          <AppText variant="body2" color="primary">Subtitle position</AppText>
+          <AppText variant="caption" color="secondary">Move captions up or down</AppText>
+        </View>
+        <View style={styles.rowWithGap}>
+          <TouchableOpacity style={styles.opacityBtn} onPress={() => movePosition(-5)} accessibilityLabel="Move subtitles down">
+            <AppText variant="body2" color="secondary">−</AppText>
+          </TouchableOpacity>
+          <AppText variant="body2" color="primary" style={styles.opacityValue}>{subtitlePosition}%</AppText>
+          <TouchableOpacity style={styles.opacityBtn} onPress={() => movePosition(5)} accessibilityLabel="Move subtitles up">
+            <AppText variant="body2" color="secondary">+</AppText>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Opacity slider */}
+      <View style={styles.styleRow}>
+        <AppText variant="body2" color="primary">
+          Opacity
+        </AppText>
+        <View style={styles.rowWithGap}>
+          <TouchableOpacity style={styles.opacityBtn} onPress={handleOpacityDown}>
+            <AppText variant="body2" color="secondary">
+              -
+            </AppText>
+          </TouchableOpacity>
+          <AppText
+            variant="body2"
+            color="primary"
+            style={styles.opacityValue}>
+            {subtitleOpacity.toFixed(1)}
+          </AppText>
+          <TouchableOpacity style={styles.opacityBtn} onPress={handleOpacityUp}>
+            <AppText variant="body2" color="secondary">
+              +
+            </AppText>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Text color (5 presets) */}
+      {onTextColorChange && (
+        <View style={styles.styleRow}>
+          <AppText variant="body2" color="primary">
+            Text Color
+          </AppText>
+          {/* 59.1: virtualized color presets */}
+          <FlatList
+            horizontal
+            data={PRESET_COLORS}
+            keyExtractor={color => color}
+            renderItem={({item: color}) => {
+              const isActive = subtitleTextColor === color;
+              return (
+                <TouchableOpacity
+                  onPress={() => onTextColorChange(color)}
+                  style={[
+                    styles.colorSwatch,
+                    {backgroundColor: color},
+                    isActive && styles.colorSwatchActive,
+                  ]}
+                  accessibilityLabel={`Text color ${color}`}
+                />
+              );
+            }}
+            contentContainerStyle={styles.colorRow}
+            scrollEnabled={false}
+            initialNumToRender={PRESET_COLORS.length}
+          />
+        </View>
+      )}
+
+      {/* Background opacity */}
+      {onBgOpacityChange && (
+        <View style={styles.styleRow}>
+          <AppText variant="body2" color="primary">
+            BG Opacity
+          </AppText>
+          <View style={styles.rowWithGap}>
+            <TouchableOpacity style={styles.opacityBtn} onPress={handleBgOpacityDown}>
+              <AppText variant="body2" color="secondary">-</AppText>
+            </TouchableOpacity>
+            <AppText variant="body2" color="primary" style={styles.opacityValue}>
+              {subtitleBgOpacity.toFixed(1)}
+            </AppText>
+            <TouchableOpacity style={styles.opacityBtn} onPress={handleBgOpacityUp}>
+              <AppText variant="body2" color="secondary">+</AppText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </ScrollView>
+  );
+});

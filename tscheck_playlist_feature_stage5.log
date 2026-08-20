@@ -1,0 +1,29 @@
+src/features/playlists/index.ts(15,3): error TS2614: Module '"./playlistReducer"' has no exported member 'isPlaylistMediaKindAllowed'. Did you mean to use 'import isPlaylistMediaKindAllowed from "./playlistReducer"' instead?
+src/hooks/useSearch.ts(9,34): error TS2307: Cannot find module '../store/slices/playlistSlice' or its corresponding type declarations.
+src/hooks/useSearch.ts(211,5): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/hooks/useSearch.ts(211,26): error TS7006: Parameter 'pl' implicitly has an 'any' type.
+src/screens/AllPlaylists/useAllPlaylistsScreen.ts(8,82): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/AllPlaylists/useAllPlaylistsScreen.ts(58,5): error TS2322: Type 'unknown' is not assignable to type 'Playlist[]'.
+src/screens/FolderBrowser/FolderBrowserScreen.tsx(24,49): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/FolderBrowser/FolderBrowserScreen.tsx(326,11): error TS2367: This comparison appears to be unintentional because the types 'PlaylistKind' and '"MIXED"' have no overlap.
+src/screens/Home/hooks/useHomeScreen.ts(10,34): error TS2307: Cannot find module '../../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/Home/hooks/useHomeScreen.ts(287,33): error TS2488: Type 'unknown' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/screens/Library/hooks/useLibraryScreen.ts(7,34): error TS2307: Cannot find module '../../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/Library/hooks/useLibraryScreen.ts(112,12): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(112,32): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/Library/hooks/useLibraryScreen.ts(207,18): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(207,36): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/Library/hooks/useLibraryScreen.ts(227,18): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(227,36): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/Library/hooks/useLibraryScreen.ts(251,18): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(251,36): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(25,8): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(36,29): error TS2307: Cannot find module '../../features/playlists/components/PlaylistModal' or its corresponding type declarations.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(69,7): error TS2322: Type '"MIXED"' is not assignable to type 'PlaylistKind'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(133,41): error TS2339: Property 'items' does not exist on type '{}'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(157,35): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(202,28): error TS2339: Property 'name' does not exist on type '{}'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(817,24): error TS2339: Property 'name' does not exist on type '{}'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(909,32): error TS2339: Property 'name' does not exist on type '{}'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(916,32): error TS2339: Property 'name' does not exist on type '{}'.
+src/screens/Profile/ProfileScreen.tsx(28,34): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.

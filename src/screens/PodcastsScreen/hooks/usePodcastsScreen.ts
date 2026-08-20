@@ -13,27 +13,18 @@
 //   • 600ms throttle + in-flight guard prevent endReached spam
 //
 // Single-select category: the shell sends one id at a time
-// ('' → the 'all' trending stream; anything else → search by category
-// name). The 'all' synthetic category is served by /podcasts/trending —
-// there's no "browse everything" endpoint. A search term always wins
-// over the category stream.
+// ('all' → the unfiltered trending stream; otherwise → the official
+// `/podcasts/trending?cat={id}` filter). A search term always wins over
+// the category stream and uses `/search/byterm`.
 
 import {useCallback, useRef, useState} from 'react';
 import {
   searchPodcasts,
   getTrendingPodcasts,
 } from '../../../services/api/podcastIndexService';
-import {PODCAST_CATEGORIES} from '../../../constants/podcastCategories';
 import {INITIAL_MAX, MAX_RESULTS_PER_QUERY} from '../related/constants';
 import text from '../related/textContent.json';
 import type {PodcastResult} from '../../../types/api';
-
-function categoryNameFor(categoryId: string): string {
-  return (
-    PODCAST_CATEGORIES.find(c => String(c.id) === categoryId)?.name ??
-    categoryId
-  );
-}
 
 /** Drop duplicates a paginated response can re-emit (same id seen). */
 function dedupe(items: PodcastResult[]): PodcastResult[] {
@@ -106,12 +97,11 @@ export function usePodcastsScreen(): UsePodcastsScreenReturn {
 
       try {
         const term = searchTerm.trim();
-        // Single-select category: '' (the default) → 'all' trending;
-        // otherwise → search by category name. A typed search term wins.
-        const isAllCategory = !term && categoryId === 'all';
-        const result = isAllCategory
-          ? await getTrendingPodcasts(max)
-          : await searchPodcasts(term || categoryNameFor(categoryId), max);
+        // A typed search term wins; otherwise use the category-aware
+        // trending endpoint with the selected Podcast Index category ID.
+        const result = term
+          ? await searchPodcasts(term, max)
+          : await getTrendingPodcasts(max, categoryId);
 
         if (seq !== seqRef.current) return; // stale response
 

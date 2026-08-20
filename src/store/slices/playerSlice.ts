@@ -1,20 +1,24 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {PlaybackState} from '../../types';
+import {
+  normalizePlaybackEntry,
+  type PlaybackEntry,
+  type PlaybackEntryInput,
+} from '../../types/playback';
+import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
 
-export interface PlaylistEntry {
-  uri: string;
-  title: string;
-  duration: number;
-  /** P33: origin label for remote/streaming entries (host, e.g. "cdn.example.com") */
-  source?: string;
-  /** P34: explicit media type so remote URLs (no extension) route to the right player */
-  mediaType?: 'audio' | 'video';
-}
+/** Playlist entries are the queue-ready subset of the shared playback record. */
+export interface PlaylistEntry extends PlaybackEntry {}
 
 export interface QueueItem {
   fileUri: string;
   title: string;
-  mediaType: 'audio' | 'video';
+  source: MediaSource;
+  type: MediaKind;
+  mediaType: MediaLane;
+  provider?: string;
+  /** Optional stable linked-folder identity for local entries. */
+  folderId?: string;
 }
 
 interface PlayerState {
@@ -39,6 +43,16 @@ interface PlayerState {
   equalizerEnabled: boolean;
   /** Multi-select indices for queue batch operations (Phase 23) */
   selectedQueueIndices: number[];
+}
+
+function normalizeSingleLane(entries: PlaybackEntryInput[]): PlaylistEntry[] {
+  const normalized = entries.map(normalizePlaybackEntry);
+  const lane = normalized[0]?.mediaType;
+  return lane ? normalized.filter(entry => entry.mediaType === lane) : normalized;
+}
+
+function activeLane(state: PlayerState): MediaLane | undefined {
+  return state.currentFile?.mediaType ?? state.playlist[0]?.mediaType;
 }
 
 const initialState: PlayerState = {
@@ -66,31 +80,38 @@ const playerSlice = createSlice({
   name: 'player',
   initialState,
   reducers: {
-    playFile(state, action: PayloadAction<PlaylistEntry>) {
-      state.currentFile = action.payload;
+    playFile(state, action: PayloadAction<PlaybackEntryInput>) {
+      state.currentFile = normalizePlaybackEntry(action.payload);
       state.playbackState = 'playing';
       state.currentPosition = 0;
     },
 
     /** Replace entire playlist */
-    setPlaylist(state, action: PayloadAction<PlaylistEntry[]>) {
-      state.playlist = action.payload;
-      state.currentIndex = action.payload.length > 0 ? 0 : -1;
+    setPlaylist(state, action: PayloadAction<PlaybackEntryInput[]>) {
+      state.playlist = normalizeSingleLane(action.payload);
+      state.currentIndex = state.playlist.length > 0 ? 0 : -1;
     },
 
     /** Load a user playlist into the player: sets items, starts playback from index 0, clears queue */
-    loadPlaylistToPlayer(state, action: PayloadAction<PlaylistEntry[]>) {
-      state.playlist = action.payload;
-      state.currentIndex = action.payload.length > 0 ? 0 : -1;
-      state.currentFile = action.payload.length > 0 ? action.payload[0] : null;
+    loadPlaylistToPlayer(state, action: PayloadAction<PlaybackEntryInput[]>) {
+      const entries = normalizeSingleLane(action.payload);
+      state.playlist = entries;
+      state.currentIndex = entries.length > 0 ? 0 : -1;
+      state.currentFile = entries.length > 0 ? entries[0] : null;
       state.currentPosition = 0;
-      state.playbackState = action.payload.length > 0 ? 'playing' : 'idle';
+      state.playbackState = entries.length > 0 ? 'playing' : 'idle';
       state.queue = [];
     },
 
     /** Append one or more files to end of playlist */
-    addToPlaylist(state, action: PayloadAction<PlaylistEntry | PlaylistEntry[]>) {
-      const items = Array.isArray(action.payload) ? action.payload : [action.payload];
+    addToPlaylist(state, action: PayloadAction<PlaybackEntryInput | PlaybackEntryInput[]>) {
+      const incoming = (
+        Array.isArray(action.payload) ? action.payload : [action.payload]
+      ).map(normalizePlaybackEntry);
+      const lane = activeLane(state) ?? incoming[0]?.mediaType;
+      const items = lane
+        ? incoming.filter(entry => entry.mediaType === lane)
+        : incoming;
       state.playlist.push(...items);
       // If playlist was empty, auto-set the current index
       if (state.currentIndex === -1 && state.playlist.length > 0) {
@@ -209,13 +230,19 @@ const playerSlice = createSlice({
 
     // ── Queue Management ──
 
-    addToQueue(state, action: PayloadAction<PlaylistEntry>) {
-      state.queue.push(action.payload);
+    addToQueue(state, action: PayloadAction<PlaybackEntryInput>) {
+      const entry = normalizePlaybackEntry(action.payload);
+      const lane = activeLane(state) ?? state.queue[0]?.mediaType;
+      if (lane && entry.mediaType !== lane) return;
+      state.queue.push(entry);
     },
 
     /** Insert at front of queue — "Play Next" */
-    prependToQueue(state, action: PayloadAction<PlaylistEntry>) {
-      state.queue.unshift(action.payload);
+    prependToQueue(state, action: PayloadAction<PlaybackEntryInput>) {
+      const entry = normalizePlaybackEntry(action.payload);
+      const lane = activeLane(state) ?? state.queue[0]?.mediaType;
+      if (lane && entry.mediaType !== lane) return;
+      state.queue.unshift(entry);
     },
 
     removeFromQueue(state, action: PayloadAction<number>) {
@@ -253,18 +280,20 @@ const playerSlice = createSlice({
       const idx = action.payload;
       if (idx < 0 || idx >= state.queue.length) return;
       const [item] = state.queue.splice(idx, 1);
+      if (!item) return;
+      const entry = normalizePlaybackEntry(item);
       const insertAt = state.currentIndex + 1;
-      state.playlist.splice(insertAt, 0, item);
+      state.playlist.splice(insertAt, 0, entry);
       state.currentIndex = insertAt;
-      state.currentFile = item;
+      state.currentFile = entry;
       state.currentPosition = 0;
       state.playbackState = 'playing';
     },
 
     // ── Playback History (Phase 23.9) ──
 
-    addToPlaybackHistory(state, action: PayloadAction<PlaylistEntry>) {
-      state.playbackHistory.push(action.payload);
+    addToPlaybackHistory(state, action: PayloadAction<PlaybackEntryInput>) {
+      state.playbackHistory.push(normalizePlaybackEntry(action.payload));
     },
 
     clearPlaybackHistory(state) {
@@ -416,7 +445,9 @@ export function playlistItemsToEntries(items: PlaylistItem[]): PlaylistEntry[] {
     title: item.title,
     duration: item.duration,
     source: item.source,
+    type: item.type,
     mediaType: item.mediaType,
+    ...(item.provider ? {provider: item.provider} : {}),
   }));
 }
 

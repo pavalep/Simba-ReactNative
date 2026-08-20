@@ -1,7 +1,7 @@
 import {useCallback, useMemo, useState} from 'react';
 import {useNavigation} from '@react-navigation/native';
-import {useBookmarks} from '../../hooks/useBookmarks';
-import type {Bookmark} from '../../store/slices/bookmarkSlice';
+import {useBookmarks} from '../../features/bookmarks';
+import type {Bookmark} from '../../features/bookmarks';
 
 export interface UseBookmarksScreenResult {
   allBookmarks: ReturnType<typeof useBookmarks>['allBookmarks'];
@@ -39,8 +39,11 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
           fileUri: item.fileUri,
           fileTitle: item.title,
           startPosition: item.position,
-          // P34.6: restore the stream context (origin + cached art)
+          type: item.type,
+          mediaType: item.mediaType,
           ...(item.source ? {source: item.source} : {}),
+          ...(item.provider ? {provider: item.provider} : {}),
+          ...(item.folderId ? {folderId: item.folderId} : {}),
           ...(item.thumbnailPath ? {artworkUri: item.thumbnailPath} : {}),
         });
       } else {
@@ -48,7 +51,11 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
           fileUri: item.fileUri,
           fileTitle: item.title,
           startPosition: item.position,
+          type: item.type,
+          mediaType: item.mediaType,
           ...(item.source ? {source: item.source} : {}),
+          ...(item.provider ? {provider: item.provider} : {}),
+          ...(item.folderId ? {folderId: item.folderId} : {}),
         });
       }
     },

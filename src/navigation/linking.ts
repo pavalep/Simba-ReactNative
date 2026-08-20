@@ -7,8 +7,6 @@ import type {RootStackParamList} from './types';
  * Scheme: simbaplayer://
  *
  * Examples:
- *   simbaplayer://video-player?uri=...&title=...
- *   simbaplayer://audio-player?uri=...&title=...
  *   simbaplayer://artist/Eminem
  *   simbaplayer://album/Recovery/Eminem
  *   simbaplayer://song?uri=...
@@ -26,44 +24,15 @@ import type {RootStackParamList} from './types';
 export const linking: LinkingOptions<RootStackParamList> = {
   prefixes: ['simbaplayer://', 'https://simbaplayer.app'],
   config: {
-    initialRouteName: 'MainTabs',
+    initialRouteName: 'Home',
     screens: {
       Splash: 'splash',
       Login: 'login',
       Profile: 'profile',
       History: 'history',
             Stats: 'stats',
-      MainTabs: {
-        screens: {
-          HomeTab: {
-            screens: {
-              Home: 'home',
-            },
-          },
-          LibraryTab: {
-            screens: {
-              Library: 'library',
-            },
-          },
-        },
-      },
-      VideoPlayer: {
-        path: 'video-player',
-        exact: true,
-        parse: {
-          fileUri: decodeURIComponent,
-          fileTitle: decodeURIComponent,
-          startPosition: Number,
-        },
-      },
-      AudioPlayer: {
-        path: 'audio-player',
-        exact: true,
-        parse: {
-          fileUri: decodeURIComponent,
-          fileTitle: decodeURIComponent,
-        },
-      },
+      Home: 'home',
+      Library: 'library',
       Settings: {
         screens: {
           Settings: 'settings',

@@ -9,7 +9,7 @@
 
 import React, {useCallback, useMemo, useState, type ReactNode} from 'react';
 import {useToast} from '../../../components/feedback/Toast';
-import {navigate} from '../../../navigation/navigationHelper';
+import {usePlaybackCommands} from '../../../modules/playback';
 import {resolveInternetArchiveVideoDetails} from '../../../services/api/internetArchiveService';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 import {
@@ -51,6 +51,7 @@ export const MoviesDataProvider: React.FC<{
   sortKey?: string;
 }> = ({children, sortKey}) => {
   const toast = useToast();
+  const {openPlayer} = usePlaybackCommands();
   // Single hook instance for the whole screen — the one content stream
   // reads the SAME (categoryIds, searchTerm, sortKey) scope cache via
   // context.
@@ -86,10 +87,15 @@ export const MoviesDataProvider: React.FC<{
           );
           return;
         }
-        navigate('VideoPlayer', {
-          fileUri: details.streamingUrl,
-          fileTitle: item.title,
+        openPlayer({
+          uri: details.streamingUrl,
+          title: item.title,
+          duration: item.duration ?? 0,
           startPosition: 0,
+          source: 'api',
+          type: 'movie',
+          mediaType: 'video',
+          provider: 'internetarchive',
         });
       } catch (err) {
         const detail =
@@ -101,7 +107,7 @@ export const MoviesDataProvider: React.FC<{
         setResolvingId(null);
       }
     },
-    [toast],
+    [openPlayer, toast],
   );
 
   // Stabilize the context value: depend on each individual property

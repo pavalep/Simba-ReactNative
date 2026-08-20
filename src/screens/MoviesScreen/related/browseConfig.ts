@@ -32,7 +32,7 @@ export const MOVIES_SECTION_CONFIG: SectionBrowseConfig = {
         id: 'sort',
         title: 'Sort by',
         options: [
-          {key: 'recent', label: 'Recently added'},
+          {key: 'newest', label: 'Recently added'},
           {key: 'popular', label: 'Most popular'},
           {key: 'az', label: 'A–Z'},
         ],

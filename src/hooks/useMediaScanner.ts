@@ -13,7 +13,11 @@ import {
   selectCancelRequested,
   type ScanHistory,
 } from '../store/slices/mediaSlice';
-import {setLastScanTimestamp} from '../store/slices/settingsSlice';
+import {
+  setLastScanTimestamp,
+  setLinkedFoldersLastScan,
+  syncLinkedFolders,
+} from '../store/slices/settingsSlice';
 import {
   scanFoldersIncremental,
   fileEntriesToTracks,
@@ -65,9 +69,12 @@ export function useMediaScanner() {
 
   // ── Start scan ──
   const startScan = useCallback(
-    async (forceFullRescan: boolean = false) => {
+    async (forceFullRescan: boolean = false, foldersOverride?: string[]) => {
       if (isScanningRef.current || scanInFlight) return;
-      if (videoFolders.length === 0 && audioFolders.length === 0) return;
+      const foldersToScan = foldersOverride?.length
+        ? [...new Set(foldersOverride)]
+        : [...new Set([...videoFolders, ...audioFolders])];
+      if (foldersToScan.length === 0) return;
 
       scanInFlight = true;
       cancelRef.current = false;
@@ -78,7 +85,7 @@ export function useMediaScanner() {
         !forceFullRescan && settingsLastScan !== null ? settingsLastScan : null;
 
       // Collect all folders to scan
-      const allFolders = [...new Set([...videoFolders, ...audioFolders])];
+      const allFolders = foldersToScan;
 
       try {
         // Phase 1: Enumerate files (incremental)
@@ -110,16 +117,22 @@ export function useMediaScanner() {
         const newTracks = fileEntriesToTracks(result.files);
 
         // Phase 3: Merge with existing tracks
-        const existingUris = new Set(allTracks.map(t => t.uri));
-        const trulyNew = newTracks.filter(t => !existingUris.has(t.uri));
+        const existingByUri = new Map(allTracks.map(track => [track.uri, track]));
+        const trulyNew = newTracks.filter(track => !existingByUri.has(track.uri));
+        const refreshedExisting = allTracks.map(
+          track => newTracks.find(next => next.uri === track.uri) ?? track,
+        );
 
-        if (trulyNew.length > 0 || result.skippedCount === 0) {
-          // Full replacement for first scan, append for incremental
-          if (allTracks.length === 0) {
-            dispatch(setTracks(trulyNew));
-          } else {
-            dispatch(setTracks([...allTracks, ...trulyNew]));
-          }
+        if (newTracks.length > 0 || allTracks.length === 0) {
+          // Incremental scans refresh changed records and append new records.
+          // Existing records outside the incremental result remain intact.
+          dispatch(
+            setTracks(
+              allTracks.length === 0
+                ? newTracks
+                : [...refreshedExisting, ...trulyNew],
+            ),
+          );
         }
 
         // Phase 4: Update scan history
@@ -134,6 +147,12 @@ export function useMediaScanner() {
 
         // Also update settingsSlice's lastScanTimestamp for banner display
         dispatch(setLastScanTimestamp(result.scanTimestamp));
+        dispatch(
+          setLinkedFoldersLastScan({
+            timestamp: result.scanTimestamp,
+            paths: allFolders,
+          }),
+        );
       } catch {
         // Silently fail — user can retry
       } finally {
@@ -155,6 +174,7 @@ export function useMediaScanner() {
 
   // ── Auto-scan on app launch if linked folders changed ──
   useEffect(() => {
+    dispatch(syncLinkedFolders({videoFolders, audioFolders}));
     // Build a hash of current folder list
     const currentHash = [...videoFolders, ...audioFolders].sort().join('|');
     const prevHash = prevFolderHashRef.current;
@@ -174,7 +194,7 @@ export function useMediaScanner() {
       startScan();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoFolders, audioFolders]);
+  }, [dispatch, videoFolders, audioFolders]);
 
   return {
     /** Start scanning all linked folders. Pass true to force a full re-scan. */

@@ -6,7 +6,7 @@
 // playlist / bookmark / share.
 
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {View, ScrollView, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
+import {Alert, View, ScrollView, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import type {AudiobookDetailScreenProps} from '../../navigation/types';
@@ -20,9 +20,12 @@ import {Placeholder} from '../../components/feedback/Placeholder';
 import FastImage from 'react-native-fast-image';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useAppDispatch, useAppSelector} from '../../store';
+import {useAppDispatch} from '../../store';
+import {useRecentHistory} from '../../features/recentHistory';
+import {usePlaybackCommands} from '../../modules/playback';
+
 import {prependToQueue, addToQueue} from '../../store/slices/playerSlice';
-import {useBookmarks} from '../../hooks/useBookmarks';
+import {useBookmarks} from '../../features/bookmarks';
 import {useToast} from '../../components/feedback/Toast';
 import {useHaptics} from '../../hooks/useHaptics';
 import {shareContent} from '../../services/shareService';
@@ -31,6 +34,7 @@ import {
   archiveIdentifierFromUrl,
 } from '../../services/api/internetArchiveService';
 import type {ArchiveTrack} from '../../types/api';
+import type {MediaSource} from '../../types/media';
 
 type Props = AudiobookDetailScreenProps;
 
@@ -53,7 +57,9 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const dispatch = useAppDispatch();
   const toast = useToast();
   const haptics = useHaptics();
-  const {add: addBookmark} = useBookmarks();
+    const {add: addBookmark} = useBookmarks();
+  const {openPlayer} = usePlaybackCommands();
+
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [menuChapter, setMenuChapter] = useState<ArchiveTrack | null>(null);
   const [chapterMenuVisible, setChapterMenuVisible] = useState(false);
@@ -63,7 +69,9 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
     duration: number;
     artist?: string;
     thumbnailPath?: string;
-    source?: string;
+    source?: MediaSource;
+    provider?: string;
+    type?: 'audiobook';
     mediaType?: 'audio' | 'video';
   } | null>(null);
 
@@ -76,7 +84,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
     : '';
 
   // ── Per-chapter progress from session recents (P37.3) ──
-  const sessionRecent = useAppSelector(s => s.session.recentFiles);
+  const {list: sessionRecent} = useRecentHistory();
   const chapterProgress = useMemo(() => {
     const map: Record<string, number> = {};
     for (const r of sessionRecent) {
@@ -95,16 +103,20 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
         title: c.title,
         duration: c.lengthSeconds || undefined,
       }));
-      navigation.navigate('AudioPlayer', {
-        fileUri: chapter.url,
-        fileTitle: chapter.title,
+      openPlayer({
+        uri: chapter.url,
+        title: chapter.title,
+        duration: chapter.lengthSeconds || 0,
         artworkUri: coverImage || undefined,
-        source: 'librivox',
+        source: 'api',
+        provider: 'librivox',
+        type: 'audiobook',
+        mediaType: 'audio',
         chapterList: list,
         chapterIndex: index,
       });
     },
-    [navigation, book, chapters, coverImage],
+    [openPlayer, book, chapters, coverImage],
   );
 
   // P37.6: long-press → play next / queue / playlist / bookmark / share
@@ -124,7 +136,9 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
               uri: chapter.url,
               title: chapter.title,
               duration: chapter.lengthSeconds,
-              source: 'librivox',
+              source: 'api',
+              provider: 'librivox',
+              type: 'audiobook',
               mediaType: 'audio',
             }),
           );
@@ -136,7 +150,9 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
               uri: chapter.url,
               title: chapter.title,
               duration: chapter.lengthSeconds,
-              source: 'librivox',
+              source: 'api',
+              provider: 'librivox',
+              type: 'audiobook',
               mediaType: 'audio',
             }),
           );
@@ -149,30 +165,53 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
             duration: chapter.lengthSeconds,
             artist: book?.author,
             thumbnailPath: coverImage || undefined,
-            source: 'librivox',
+            source: 'api',
+            provider: 'librivox',
+            type: 'audiobook',
             mediaType: 'audio',
           });
           break;
-        case 'bookmark':
-          addBookmark({
+        case 'bookmark': {
+          const input = {
             fileUri: chapter.url,
             title: chapter.title,
             position: 0,
             duration: chapter.lengthSeconds,
             label: '',
             thumbnailPath: coverImage || undefined,
-            mediaType: 'audio',
-            source: 'librivox',
-          });
-          toast.show('Bookmarked chapter');
+            mediaType: 'audio' as const,
+            source: 'api' as const,
+            provider: 'librivox',
+            type: 'audiobook' as const,
+          };
+          const result = addBookmark(input);
+          if (result.status === 'requires-confirmation') {
+            Alert.alert(
+              'Bookmark limit reached',
+              `Adding “${chapter.title}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
+              [
+                {text: 'Cancel', style: 'cancel'},
+                {
+                  text: 'Remove & Add',
+                  style: 'destructive',
+                  onPress: () => addBookmark(result.requested, {evictId: result.candidate.id}),
+                },
+              ],
+            );
+          } else {
+            toast.show('Bookmarked chapter');
+          }
           break;
+        }
         case 'share':
           shareContent({
             route: 'AudioPlayer',
             params: {
               fileUri: chapter.url,
               fileTitle: chapter.title,
-              source: 'librivox',
+              source: 'api',
+              provider: 'librivox',
+              type: 'audiobook',
             },
             title: chapter.title,
             subtitle: book?.author,

@@ -9,7 +9,6 @@ import {
   selectIsInPipMode,
 } from '../store/slices/pipSlice';
 import {MpvPlayer, MpvChapter} from '../native';
-import {clearAllRecent} from '../store/slices/sessionSlice';
 
 const {MpvPlayerModule} = NativeModules;
 
@@ -181,7 +180,6 @@ export function usePipLifecycle(options: UsePipLifecycleOptions) {
       } catch {
         // player already destroyed
       }
-      dispatch(clearAllRecent());
       dispatch(resetPipState());
       // Navigate back to main screen
       onNavigateBackRef.current();

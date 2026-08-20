@@ -1,0 +1,37 @@
+src/modules/playback/audio/components/AudioActionRow.tsx(3,23): error TS2307: Cannot find module '../../utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioActionRow.tsx(4,23): error TS2307: Cannot find module '../../core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(11,23): error TS2307: Cannot find module '../../core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(13,27): error TS2307: Cannot find module '../../feedback/ActivityOrb/ActivityOrb' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(14,35): error TS2307: Cannot find module '../../feedback/PlayerErrorFallback' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(15,28): error TS2307: Cannot find module '../BufferingBar/BufferingBar' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(16,29): error TS2307: Cannot find module '../../player/AudioVisualizer/AudioVisualizer' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(17,29): error TS2307: Cannot find module '../../player/AudioLyricsView/AudioLyricsView' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(18,23): error TS2307: Cannot find module '../../utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(30,25): error TS2307: Cannot find module '../NowPlayingInfo/InfoSheet' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(31,28): error TS2307: Cannot find module '../NowPlayingInfo/ChapterList' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(33,36): error TS2307: Cannot find module '../PlaylistPreview/PlaylistPreviewSheet' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(34,26): error TS2307: Cannot find module '../../sheets/QueueSheet/QueueSheet' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(35,29): error TS2307: Cannot find module '../../sheets/PlaylistSheet' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(36,29): error TS2307: Cannot find module '../../bookmark/BookmarkSheet' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioPlayer.tsx(249,10): error TS2741: Property 'colors' is missing in type '{ albumArtUri: string; }' but required in type 'Props'.
+src/modules/playback/audio/components/AudioPlayer.tsx(457,18): error TS7006: Parameter 'time' implicitly has an 'any' type.
+src/modules/playback/audio/components/AudioQueuePeek.tsx(3,23): error TS2307: Cannot find module '../../core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioQueuePeek.tsx(4,23): error TS2307: Cannot find module '../../utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioSeekBar.tsx(10,23): error TS2307: Cannot find module '../../core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioSubMenu.tsx(13,23): error TS2307: Cannot find module '../../utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioSubMenu.tsx(14,23): error TS2307: Cannot find module '../../core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioSubMenu.tsx(15,28): error TS2307: Cannot find module '../../core/AppTextInput/AppTextInput' or its corresponding type declarations.
+src/modules/playback/audio/components/AudioVolumeSlider.tsx(10,23): error TS2307: Cannot find module '../../core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(10,23): error TS2307: Cannot find module '../../core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(12,30): error TS2307: Cannot find module '../../StatusBar' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(13,27): error TS2307: Cannot find module '../../sheets/BottomSheet/BottomSheet' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(14,30): error TS2307: Cannot find module '../ChapterBrowser/ChapterBrowser' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(15,31): error TS2307: Cannot find module '../SleepTimerSheet/SleepTimerSheet' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(16,25): error TS2307: Cannot find module '../NowPlayingInfo/InfoSheet' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(17,29): error TS2307: Cannot find module '../../sheets/PlaylistSheet' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(18,26): error TS2307: Cannot find module '../../sheets/QueueSheet/QueueSheet' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(19,28): error TS2307: Cannot find module '../ReplayButton/ReplayButton' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayer.tsx(671,28): error TS7006: Parameter 'minutes' implicitly has an 'any' type.
+src/modules/playback/video/components/VideoPlayer.tsx(672,25): error TS7006: Parameter 'mode' implicitly has an 'any' type.
+src/modules/playback/video/components/VideoPlayer.tsx(740,22): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/modules/playback/video/components/VideoPlayer.tsx(741,24): error TS7006: Parameter 'idx' implicitly has an 'any' type.

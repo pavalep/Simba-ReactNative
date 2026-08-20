@@ -1,0 +1,479 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\DownloadButton\DownloadButton.tsx:16:* error). Double duty as the offline badge (49.5): a completed download shows
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\DownloadButton\DownloadButton.tsx:17:* a check so any surface with this button advertises offline availability.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\DownloadButton\DownloadButton.tsx:121:return 'Download for offline';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\PlayerErrorFallback\PlayerErrorFallback.tsx:20:onOpenSettings?: () => void;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\PlayerErrorFallback\PlayerErrorFallback.tsx:32:onOpenSettings,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\PlayerErrorFallback\PlayerErrorFallback.tsx:104:{onOpenSettings && (
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\PlayerErrorFallback\PlayerErrorFallback.tsx:107:onPress={onOpenSettings}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\media\StreamingRow\StreamingRow.tsx:24:/** 49.5: show the offline download action (badge + download). */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioAlbumArt.tsx:69:cache: FastImage.cacheControl.immutable,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioGradientBg.tsx:62:cache: FastImage.cacheControl.immutable,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioPlayer.tsx:417:onOpenSettings={h.errorIsPermission ? () => Linking.openSettings() : undefined}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx:271:cache: FastImage.cacheControl.immutable,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\NowPlayingInfo\TrackMetadata.tsx:25:cache: FastImage.cacheControl.immutable,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\SeekBar\SeekBar.tsx:42:*  contiguous buffer from 0..fraction). For network streams with
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\SeekBar\SeekBar.tsx:48:* demuxer cache. Each range renders as a separate grey segment on the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\SeekBar\SeekBar.tsx:49:* track. Empty when no cache is active.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\SeekBar\SeekBar.tsx:387:separate grey segment — handling multi-range network streams
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:310:onPress={() => Linking.openSettings()}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:341:cacheFill,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:501:// MPV `demuxer-cache-state` observer in TransportContext —
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:503:// network streams (e.g. seeked archive.org videos) render
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:504:// each cached segment as its own grey bar.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:506:bufferedFraction={cacheFill}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:604:: cacheFill > 0
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:605:? `Buffering… ${Math.round(cacheFill * 100)}%`
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\status\OfflineBanner\OfflineBanner.tsx:2:// Simba Player — Global OfflineBanner (Phase 54.1)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\status\OfflineBanner\OfflineBanner.tsx:5:// Replaces the Home-only NoNetworkBanner.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\status\OfflineBanner\OfflineBanner.tsx:12:import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\status\OfflineBanner\OfflineBanner.tsx:16:export const OfflineBanner: React.FC = () => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\status\OfflineBanner\OfflineBanner.tsx:19:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\status\OfflineBanner\OfflineBanner.tsx:41:testID="offline-banner"
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\utility\MediaTile\MediaTile.tsx:56:cache: FastImage.cacheControl.immutable,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\index.ts:46:export {OfflineBanner} from './status/OfflineBanner/OfflineBanner';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\api.ts:45:// the query cache warms). 10s would abort the FIRST request of a
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\api.ts:67:/** Last-resort fallback location if every network call fails. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:25:openSettings: 'Open Settings',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:85:settingsClearCache: 'Clear Cache',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:150:videoErrorPermission: 'Permission Denied',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:204:errorNetwork: 'Network error. Check your connection.',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:207:errorPermissionDenied: 'Permission Denied',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:20:/** P33.4: mpv cache fill in progress (stream stalls) */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:24:* portion of the stream currently resident in the demuxer cache.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:25:* Empty when no cache is active (e.g. very short local files).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:29:/** Cache fill ratio 0..1 — used by the loading spinner / progress UI. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:30:cacheFill: number;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:93:// Buffered ranges (from `demuxer-cache-state`) — used by the seek bar
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:95:// cache is active.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:99:// Cache fill ratio 0..1 — used by the loading spinner / progress UI.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:100:const [cacheFill, setCacheFill] = useState(0);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:258:// ── Buffering / cache-state observation ──────────────────────
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:261://   1. `cache-buffering-state`  (NODE → {percent})
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:262://      Granular fill percentage. Only fires for network streams.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:264://   2. `paused-for-cache`       (FLAG → bool)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:265://      Universal "MP3 auto-paused because the cache can't keep up"
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:268://      cached region. Reliable.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:270://   3. `demuxer-cache-state`    (NODE → {ranges:[{start,end}], ...})
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:273://      (e.g. a network stream that's been seeked around).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:279:// The native bridge merges `cache-buffering-state` and
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:280:// `paused-for-cache` into a single `onBuffering` event with a
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:285:const unsubCacheState = MpvPlayer.on(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:286:'onCacheState',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:289:setCacheFill(fill);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:300:MpvPlayer.observeProperty('cache-buffering-state');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:303:MpvPlayer.observeProperty('paused-for-cache');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:306:MpvPlayer.observeProperty('demuxer-cache-state');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:335:unsubCacheState();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:340:MpvPlayer.unobserveProperty('cache-buffering-state');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:343:MpvPlayer.unobserveProperty('paused-for-cache');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:346:MpvPlayer.unobserveProperty('demuxer-cache-state');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:394:cacheFill,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\index.ts:11:export {useNetworkStatus} from './useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useAuth.ts:95:*   • The library's local cache is out of sync with the server.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useAuthSession.ts:9:* - On cold start: silently restore the persisted session (kept when offline).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:5:getCachedArtPathSync,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:6:getCachedArtPath,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:7:cacheArt,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:8:} from '../services/artCacheService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:11:* Resolve a remote artwork URL to a locally cached `file://` path (P33.7).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:13:* Once cached, later calls resolve synchronously from memory (59.4) so
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:17:export function useCachedArt(uri: string | null | undefined): string | null {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:19:// already-cached art, so remounts never flash the placeholder.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:20:const [cached, setCached] = useState<string | null>(() =>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:21:uri ? getCachedArtPathSync(uri) : null,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:27:setCached(null);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:31:if (getCachedArtPathSync(uri)) return;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:33:const existing = await getCachedArtPath(uri);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:36:setCached(existing);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:39:const downloaded = await cacheArt(uri);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:40:if (!cancelled) setCached(downloaded);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useCachedArt.ts:47:return cached;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useMoreFromArtist.ts:3:// Song/Album pages. Fails silently — offline just hides the section.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useNetworkStatus.ts:3:interface NetworkStatus {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useNetworkStatus.ts:5:wasEverOffline: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useNetworkStatus.ts:8:export function useNetworkStatus(): NetworkStatus {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useNetworkStatus.ts:10:const wasEverOffline = useRef(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useNetworkStatus.ts:13:// Try @react-native-community/netinfo first
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useNetworkStatus.ts:17:const NetInfo = require('@react-native-community/netinfo');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useNetworkStatus.ts:18:unsubscribe = NetInfo.addEventListener((state: {isConnected: boolean}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useNetworkStatus.ts:21:if (!online) wasEverOffline.current = true;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useNetworkStatus.ts:33:return {isOnline, wasEverOffline: wasEverOffline.current};
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useWeather.ts:11://     The cached chip + caption render immediately.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:77:* Buffered ranges emitted from MPV's `demuxer-cache-state` property.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:81:* network stream that's been seeked around).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:83:onCacheState: {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:85:/** Cache fill ratio (0..1) for the active range, or 0 if no cache. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:103:// 49.4: offline remap — prefer the downloaded copy when one exists.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:108:// 49.4: remap each entry so offline playlists play from disk.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\RootNavigator.tsx:332:{/* ── P49: downloads & offline ── */}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\types.ts:122:// ── P49: downloads & offline ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\components\ArchiveContent.tsx:4://     a (tab, searchTerm) pair, cached independently so toggling tabs never
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\components\ArchiveContent.tsx:176:: 'You are offline.'
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\components\ArchiveContent.tsx:222:title={isOnline ? "Couldn't load archive." : "You're offline."}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\components\ArchiveContent.tsx:228:// ── Empty (cached or fresh) ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\hooks\useArchiveScreen.ts:2:// Phase 3 formula: per-scope cache + infinite scroll + search persistence.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\hooks\useArchiveScreen.ts:4:// A "scope" is a (tab, searchTerm) pair. Every combination is cached
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\hooks\useArchiveScreen.ts:8://   • scrolling back to a visited tab shows its cached list instantly
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\hooks\useArchiveScreen.ts:17:import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\hooks\useArchiveScreen.ts:77:export function scopeCacheKey(tab: ArchiveTab, term: string): string {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\hooks\useArchiveScreen.ts:91:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\hooks\useArchiveScreen.ts:112:(t: ArchiveTab) => scopeCacheKey(t, searchTerm),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveScreen\hooks\useArchiveScreen.ts:147:const key = scopeCacheKey(t, term);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobooksScreen\components\AudiobooksContent.tsx:4://   • each (tab, searchTerm, genre) scope is cached independently —
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobooksScreen\components\AudiobooksContent.tsx:203:// ── Empty (cached or fresh) ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobooksScreen\hooks\useAudiobooksScreen.ts:2:// Phase 3 formula: per-scope cache + infinite scroll + search persistence.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobooksScreen\hooks\useAudiobooksScreen.ts:5:// combination is cached independently, so:
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobooksScreen\hooks\useAudiobooksScreen.ts:8://   • scrolling back to a visited tab shows its cached list instantly
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobooksScreen\hooks\useAudiobooksScreen.ts:44:function scopeCacheKey(tab: AudiobooksTab, term: string, genre: string): string {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobooksScreen\hooks\useAudiobooksScreen.ts:77:scopeCacheKey(tab, searchTerm, selectedGenre ?? ''),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobooksScreen\hooks\useAudiobooksScreen.ts:102:const key = scopeCacheKey(tab, term, genre ?? '');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AlbumArtBackground.tsx:43:cache: FastImage.cacheControl.immutable,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:48:import {cacheArt} from '../../../services/artCacheService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:68:// P33.6: remote stream metadata — artwork URL to disk-cache, source label
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:223:// P33.6: cached local path for remote artwork — feeds recents/bookmarks
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:281:// P33: remote streams skip local-file validation (network-loaded by mpv)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:295:if (validation.title === 'Permission Denied') {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:384:// ── P33.6: remote artwork → disk LRU cache; local path powers player art
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:385://     and the thumbnail saved to recents (works offline, no repeat fetches)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:388:// P34.3: local artwork (file:// path from art cache / playlist thumbnails)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:399:const cached = await cacheArt(artworkUri);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:400:if (cancelled || !cached) return;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:401:remoteArtPathRef.current = cached;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:402:setMetadata(prev => (prev.albumArtUri ? prev : {...prev, albumArtUri: cached}));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Changelog\ChangelogScreen.tsx:30:'Preferences: cache management, library rescan, privacy and terms pages',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\DownloadsScreen\DownloadsScreen.tsx:4:// Downloads & offline: storage usage bar, auto-delete policy (keep
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\DownloadsScreen\DownloadsScreen.tsx:22:import {formatBytes} from '../../services/cacheService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\DownloadsScreen\DownloadsScreen.tsx:204:: 'Offline playback'}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Help\HelpScreen.tsx:101:a: 'Open Profile (tap your avatar on the Home screen). There you can sign out, revoke Google access, or clear all local data — recent history, bookmarks, playlists, and cached files.',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Help\HelpScreen.tsx:145:a: 'Try toggling hardware acceleration in Settings → Audio & Playback, close other heavy apps, and make sure the file is stored locally rather than on a slow network share.',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\WeatherGreeting\WeatherGreeting.tsx:48:// cached weather renders immediately on cold start while the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\WeatherGreeting\WeatherGreeting.tsx:93://   • first cold load in flight + no cache → "Fetching…"
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\WeatherGreeting\WeatherGreeting.types.ts:21:* anchor while the network call is in flight.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\WeatherGreeting\WeatherGreeting.types.ts:36:* cached snapshot to show. When true AND weather is null, the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\hooks\useHomeScreen.ts:46:* we have no cached snapshot to fall back on. P66: the card always
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\hooks\useHomeScreen.ts:76:// one (e.g. a persisted cache from a previous run) so the user
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\AlbumDetailScreen.tsx:21:import {useCachedArt} from '../../hooks/useCachedArt';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\AlbumDetailScreen.tsx:75:// P39.2: CAA cover resolved through the Phase 33 art cache
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\AlbumDetailScreen.tsx:76:const cachedCover = useCachedArt(enrichment.releaseGroup?.coverArtUrl);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\AlbumDetailScreen.tsx:291:{cachedCover ? (
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\AlbumDetailScreen.tsx:293:source={{uri: cachedCover}}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx:22:import {useCachedArt} from '../../hooks/useCachedArt';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx:33:// ── P39: MusicBrainz discography row (CAA cover via art cache) ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx:68:const cached = useCachedArt(coverUrl);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx:81:{cached ? (
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx:83:source={{uri: cached}}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\hooks\useLiveTVScreen.ts:2:// Phase 3 TabView formula: per-scope cache + client-side pagination
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\hooks\useLiveTVScreen.ts:14:import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\hooks\useLiveTVScreen.ts:57:function scopeCacheKey(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\hooks\useLiveTVScreen.ts:77:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\hooks\useLiveTVScreen.ts:117:scopeCacheKey(tab, searchTerm, selectedCategory ?? ''),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\hooks\useLiveTVScreen.ts:156:const key = scopeCacheKey(tab, term, selectedCategory ?? '');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\LiveTVScreen.tsx:4:// cached scope. Pagination via onEndReached (client-side limit-
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\LiveTVScreen.tsx:231:: 'You are offline.'
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\LiveTVScreen.tsx:266:title={isOnline ? "Couldn't load channels." : "You're offline."}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:157:: 'You are offline.'
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:294:title={isOnline ? "Couldn't load channels." : "You're offline."}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\hooks\useLiveTVBrowser.ts:6://     statically cached at 10 minutes)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\hooks\useLiveTVBrowser.ts:9:// Scope key = `${category}|${term}` so each (filter, search) combo is cached.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\hooks\useLiveTVBrowser.ts:18:import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\hooks\useLiveTVBrowser.ts:37:/** Total channels fetched from the API (cache ceiling for slicing). */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\hooks\useLiveTVBrowser.ts:60:function scopeCacheKey(category: string | null, term: string): string {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\hooks\useLiveTVBrowser.ts:67:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\hooks\useLiveTVBrowser.ts:104:() => scopeCacheKey(filters.category, searchTerm),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Login\LoginScreen.tsx:31:offline: "You're offline. Connect to the internet and try again.",
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\BrowseLayout.tsx:15:import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\BrowseLayout.tsx:44:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\BrowseLayout.tsx:92:offline: !isOnline,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\ListStates.tsx:24:/** Global offline flag — swaps copy for the offline-aware message. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\ListStates.tsx:25:offline: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\ListStates.tsx:33:offline,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\ListStates.tsx:63:title={offline ? text.states.errorOfflineTitle : undefined}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\ListStates.tsx:65:offline
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\ListStates.tsx:66:? text.states.errorOfflineMessage
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\MoviesContent.tsx:30:const {offline} = ctx;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\MoviesContent.tsx:74:offline={offline}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\MoviesContent.tsx:109:offline={offline}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\MoviesDataProvider.tsx:3:// cache — the legacy "switching categories never refetches" behavior.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\MoviesDataProvider.tsx:22:/** Hook-synced search term (drives the per-scope cache key). */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\MoviesDataProvider.tsx:49:*  `optionsApi` — changing it re-keys the scope cache and re-fetches
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\components\MoviesDataProvider.tsx:55:// reads the SAME (categoryIds, searchTerm, sortKey) scope cache via
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\hooks\useMoviesScreen.ts:2:// v10.2 FAB-only multi-select: per-scope cache + infinite scroll + search
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\hooks\useMoviesScreen.ts:7:// single search. Per-combination cache, so every distinct (sorted
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\hooks\useMoviesScreen.ts:11:// Every combination is cached independently:
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\hooks\useMoviesScreen.ts:15://   • revisiting a combination shows its cached list instantly
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\hooks\useMoviesScreen.ts:58:/** Stable cache key — sorted ids ensure (a, b) and (b, a) hit the same
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\hooks\useMoviesScreen.ts:59:*  cache entry. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\hooks\useMoviesScreen.ts:60:export function scopeCacheKey(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\hooks\useMoviesScreen.ts:132:/** Search term — the cache-key component the provider re-exposes so
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\hooks\useMoviesScreen.ts:162:scopeCacheKey(ids, searchTerm, sortKey),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\types\index.ts:49:offline: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\BrowseLayout.tsx:11:import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\BrowseLayout.tsx:40:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\BrowseLayout.tsx:88:offline: !isOnline,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\ListStates.tsx:20:/** Global offline flag — swaps copy for the offline-aware message. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\ListStates.tsx:21:offline: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\ListStates.tsx:35:offline,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\ListStates.tsx:67:title={offline ? text.states.errorOfflineTitle : undefined}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\ListStates.tsx:69:offline
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\ListStates.tsx:70:? text.states.errorOfflineMessage
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\MusicContent.tsx:39:const {offline} = ctx;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\MusicContent.tsx:83:offline={offline}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\MusicContent.tsx:115:offline={offline}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\MusicDataProvider.tsx:3:// cache — the legacy "switching genres never refetches" behavior.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\MusicDataProvider.tsx:41:// reads the SAME (genre, searchTerm) scope cache via context.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\hooks\useMusicScreen.ts:2:// v10.1 FAB-only formula: per-scope cache + infinite scroll + search
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\hooks\useMusicScreen.ts:5:// A "scope" is a (genre, searchTerm) pair. Every combination is cached
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\hooks\useMusicScreen.ts:9://   • revisiting a genre shows its cached list instantly
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\hooks\useMusicScreen.ts:78:export function scopeCacheKey(genre: string, term: string): string {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\hooks\useMusicScreen.ts:108:(genre: string) => scopeCacheKey(genre, searchTerm),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\hooks\useMusicScreen.ts:132:const key = scopeCacheKey(genre, term);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\types\index.ts:49:offline: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:55:import {useNetworkStatus} from '../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:118:// P34.5: offline guard for remote/streaming playlist items
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:119:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:146:// P34.5: skip remote items while offline
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:149:toast.show('Offline — streams are unavailable');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:211:// Copy to the app cache so RNFS can read it (content:// is unsupported)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:214:destination: 'cachesDirectory',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:351:// P34.5: remote items need a network connection to stream
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:353:toast.show('Offline — this stream is unavailable');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:398:toast.show('Offline — stream unavailable');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:415:toast.show('Offline — stream unavailable');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:592:offlineBadge: {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:597:offlineBadgeText: {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:709:{/* P34.5: offline badge for remote items */}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:711:<View style={styles.offlineBadge}>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:717:<AppText style={styles.offlineBadgeText}>Offline</AppText>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\hooks\usePodcastDetailScreen.ts:13:// current-list, no per-scope cache, fresh fetch on every podcastId
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\BrowseLayout.tsx:15:import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\BrowseLayout.tsx:44:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\BrowseLayout.tsx:108:offline: !isOnline,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\ListStates.tsx:19:/** Global offline flag — swaps the copy for the offline-aware message. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\ListStates.tsx:20:offline: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\ListStates.tsx:33:offline,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\ListStates.tsx:45:? offline
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\ListStates.tsx:46:? text.errors.offlineTitle
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\ListStates.tsx:56:// makes debugging search / network failures impossible.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\ListStates.tsx:58:? offline
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\ListStates.tsx:59:? text.errors.offlineMessage
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\PodcastsContent.tsx:43:const {offline} = ctx;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\PodcastsContent.tsx:110:offline={offline}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\PodcastsDataProvider.tsx:4:// cache — see the hook header for the rationale). Also owns the podcast
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\PodcastsOverlays.tsx:31:// hasn't been cached yet): the centered pill REPLACES the list area.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\hooks\usePodcastCategories.ts:14:* The static catalog remains a deliberate offline/startup fallback so the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\hooks\usePodcastsScreen.ts:2:// Single current-list state — NO per-scope cache. Every category/term
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\hooks\usePodcastsScreen.ts:44:// current list state (no per-scope cache)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\hooks\usePodcastsScreen.ts:66:// ── Single current-list state — no Record<key, scope> cache ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\hooks\usePodcastsScreen.ts:77:// API with a fast filter/search change. Not a cache: just staleness
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\hooks\usePodcastsScreen.ts:135:// after a fresh category/search change. No cache to invalidate —
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\hooks\usePodcastsScreen.ts:136:// this IS the cache invalidation.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\types\index.ts:57:offline: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Privacy\PrivacyScreen.tsx:31:Network access is used exclusively for optional features you
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:35:import {clearCache} from '../../services/cacheService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:135:await clearCache();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:137:// cache clear is best-effort
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:290:description="Offline media and download status"
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:344:description="Recents, bookmarks and cached files"
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:376:message="This permanently removes playback history, bookmarks and cached files from this device. This cannot be undone."
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:156:: 'You are offline.'
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:268:title={isOnline ? "Couldn't load stations." : "You're offline."}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\hooks\useRadioBrowser.ts:4:// search term. Per-scope cache (scope = filters + term), stale-response
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\hooks\useRadioBrowser.ts:12:// so every combination keeps its own cached page state.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\hooks\useRadioBrowser.ts:24:import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\hooks\useRadioBrowser.ts:73:function scopeCacheKey(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\hooks\useRadioBrowser.ts:91:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\hooks\useRadioBrowser.ts:136:() => scopeCacheKey(filters, searchTerm),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\RemoteResults.tsx:62:/** 49.5: optional offline download action (renders DownloadButton). */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx:40:'cache',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx:41:'cache-secs',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowDetailScreen\ShowDetailScreen.tsx:120:if (show.network?.name) metaParts.push(show.network.name);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts:2:// Phase 3 formula: per-scope cache + TabView scenes + infinite scroll.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts:4:// A "scope" is a (tab, searchTerm) pair. Every combination is cached
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts:8://   • scrolling back to a visited tab shows its cached list instantly
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts:18:import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts:45:export function scopeCacheKey(tab: ShowTab, term: string): string {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts:59:const {isOnline} = useNetworkStatus();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts:91:(tab: ShowTab) => scopeCacheKey(tab, searchTerm),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts:117:const key = scopeCacheKey(tab, term);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts:216:*  The 'today' tab always reloads fresh (short server-side cache). */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\ShowsScreen.tsx:4://   • every (tab, searchTerm) scope is cached independently —
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\ShowsScreen.tsx:263:title={isOnline ? "Couldn't load shows." : "You're offline."}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1439:if (validation.title === 'Permission Denied') {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:7:// cache-aware variant). Do NOT create your own axios.create() in a
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:70:// ─── Cache ──────────────────────────────────────────────────────────────
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:72:interface CacheEntry<T> {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:77:const cache = new Map<string, CacheEntry<unknown>>();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:79:function getCached<T>(key: string): T | null {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:80:const entry = cache.get(key);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:83:cache.delete(key);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:89:function setCache<T>(key: string, data: T, ttlMs: number): void {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:90:cache.set(key, {data, expiresAt: Date.now() + ttlMs});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:123:/** Cache TTL in ms. 0 = no cache. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:124:cacheTtlMs?: number;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:135:const {config, path, params, cacheTtlMs = 0, headers, signal} = opts;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:137:// Build URL (just for cache key & logging; axios gets the full URL)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:140:const cacheKey = url + (params ? JSON.stringify(params) : '');
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:142:// Check cache
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:143:if (cacheTtlMs > 0) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:144:const cached = getCached<T>(cacheKey);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:145:if (cached) {return cached;}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:184:// Cache
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:185:if (cacheTtlMs > 0) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\apiClient.ts:186:setCache(cacheKey, data, cacheTtlMs);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\audiusService.ts:3:// streaming network. No API key required for read-only queries.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\audiusService.ts:103:cacheTtlMs: 60_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\audiusService.ts:120:cacheTtlMs: 120_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\audiusService.ts:136:cacheTtlMs: 300_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\internetArchiveService.ts:121:cacheTtlMs: 600_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\internetArchiveService.ts:162:cacheTtlMs: 900_000, // 15 min — IA advancedsearch is slow; raise TTL
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\internetArchiveService.ts:184:cacheTtlMs: 300_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\internetArchiveService.ts:198:cacheTtlMs: 600_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\internetArchiveService.ts:361:cacheTtlMs: 300_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\internetArchiveService.ts:422:* network failure OR partial-replication failure (server claims files
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\internetArchiveService.ts:434:// Bypass the cache on retries so we actually hit a different server
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\internetArchiveService.ts:436:// attempt CAN use the cache (cacheTtlMs > 0) to benefit from a
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\internetArchiveService.ts:438:cacheTtlMs: attempt === 1 ? 600_000 : 0,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\iptvService.ts:42:cacheTtlMs: 600_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\iptvService.ts:106:cacheTtlMs: 600_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:106:cacheTtlMs: 60_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:128:cacheTtlMs: 120_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:158:* across pages). If the cached order later returns 0 rows, we fall
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:161:let cachedWorkingOrder: string | null = null;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:164:if (cachedWorkingOrder) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:166:cachedWorkingOrder,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:167:...POPULAR_FALLBACK_ORDERS.filter(o => o !== cachedWorkingOrder),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:208:cacheTtlMs: 120_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:212:cachedWorkingOrder = order;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\jamendoService.ts:233:cacheTtlMs: 300_000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\librivoxService.ts:12:const SEARCH_CACHE_TTL = 600_000; // 10 min
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\librivoxService.ts:13:const DETAIL_CACHE_TTL = 3_600_000; // 1 hour
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\librivoxService.ts:98:cacheTtlMs: SEARCH_CACHE_TTL,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\librivoxService.ts:118:cacheTtlMs: DETAIL_CACHE_TTL,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\librivoxService.ts:142:cacheTtlMs: SEARCH_CACHE_TTL,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\librivoxService.ts:181:cacheTtlMs: SEARCH_CACHE_TTL,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\librivoxService.ts:213:cacheTtlMs: SEARCH_CACHE_TTL,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\musicbrainzService.ts:16:const SEARCH_CACHE_TTL = 10 * 60 * 1000;   // 10 minutes
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\musicbrainzService.ts:17:const DISCOGRAPHY_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\musicbrainzService.ts:148:cacheTtlMs: SEARCH_CACHE_TTL,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\musicbrainzService.ts:162:cacheTtlMs: DISCOGRAPHY_CACHE_TTL,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\musicbrainzService.ts:188:cacheTtlMs: DISCOGRAPHY_CACHE_TTL,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\musicbrainzService.ts:207:cacheTtlMs: DISCOGRAPHY_CACHE_TTL,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\podcastIndexService.ts:40:// ─── Cache TTLs (ms) ────────────────────────────────────────────────────
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\podcastIndexService.ts:42:const CACHE = {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\podcastIndexService.ts:139:cacheTtlMs: CACHE.search,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\podcastIndexService.ts:160:cacheTtlMs: CACHE.trending,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\podcastIndexService.ts:178:cacheTtlMs: CACHE.episodes,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\podcastIndexService.ts:210:cacheTtlMs: 24 * 60 * 60 * 1000,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:8:// ─── Cache TTLs (ms) ────────────────────────────────────────────────────
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:10:const CACHE = {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:36:cacheTtlMs: CACHE.search,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:48:cacheTtlMs: CACHE.search,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:60:cacheTtlMs: CACHE.search,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:72:cacheTtlMs: CACHE.search,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:107:cacheTtlMs: CACHE.search,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:118:cacheTtlMs: CACHE.top,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:162:cacheTtlMs: CACHE.top,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:177:cacheTtlMs: CACHE.top,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\radioBrowserService.ts:192:cacheTtlMs: CACHE.top,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:15:// ─── Cache TTLs (ms) ───────────────────────────────────────────────────
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:17:const CACHE = {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:29:* Cache: 10 minutes.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:36:cacheTtlMs: CACHE.SEARCH,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:44:* a real TVMaze genre (Drama, Comedy, etc.). Cache: 1 hour.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:54:cacheTtlMs: CACHE.BROWSE,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:60:* Cache: 1 hour.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:66:cacheTtlMs: CACHE.DETAILS,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:72:* Cache: 1 hour.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:80:cacheTtlMs: CACHE.DETAILS,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:86:* Cache: 30 minutes.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\tvmazeService.ts:113:cacheTtlMs: CACHE.SCHEDULE,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\weatherService.ts:18://   All network calls are best-effort. If everything fails (no
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\weatherService.ts:19://   network, VPN blocks geo, Open-Meteo rate limit), we still
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\api\weatherService.ts:57:// ─── Network shapes ─────────────────────────────────────────────
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\device\geolocation.ts:73:// Permission denied, hardware error, no fix, etc.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\device\geolocation.ts:97:* network failure or if the coords are in the middle of an ocean.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:3:import {isRemoteUri, cacheKeyFromUri} from '../utils/mediaUri';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:6:* Remote artwork disk LRU cache (P33.7).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:7:* Downloads http(s) artwork once into cachesDirectory/artCache, keyed by a
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:9:* recents/bookmarks keep working offline without repeat network fetches.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:12:const ART_CACHE_DIR = `${RNFS.CachesDirectoryPath}/artCache`;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:15:/** In-memory uri→localPath mirror (59.4): makes already-cached art resolve
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:18:const memoryCache = new Map<string, string>();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:21:memoryCache.set(uri, localUri);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:22:if (memoryCache.size > MEMORY_MAX) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:23:const oldest = memoryCache.keys().next().value;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:24:if (oldest !== undefined) memoryCache.delete(oldest);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:29:* Sync memory-only lookup — instant for already-cached art, no disk IO.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:31:export function getCachedArtPathSync(uri: string | null | undefined): string | null {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:33:return memoryCache.get(uri) ?? null;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:39:return `${ART_CACHE_DIR}/${cacheKeyFromUri(uri)}.${ext}`;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:43:* Local `file://` path for a remote artwork URL if already cached, else null.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:45:export async function getCachedArtPath(uri: string): Promise<string | null> {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:47:const memHit = getCachedArtPathSync(uri);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:64:* Download a remote artwork URL into the disk cache and return its local
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:65:* `file://` path (no-op if already cached). Returns null on failure.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:67:export async function cacheArt(uri: string): Promise<string | null> {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:73:await RNFS.mkdir(ART_CACHE_DIR);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:77:pruneArtCache().catch(() => {});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:89:export async function pruneArtCache(maxFiles: number = MAX_FILES): Promise<void> {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\artCacheService.ts:91:const files = await RNFS.readDir(ART_CACHE_DIR);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\authService.ts:136:if (/network|internet|offline|connection|timed?\s*out|no_network/.test(lowered)) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\authService.ts:138:kind: 'offline',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\authService.ts:139:message: 'You appear to be offline. Check your connection and try again.',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\authService.ts:165:offlineAccess: false,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\authService.ts:226:* between re-auth, sign-out, or keeping the persisted session (offline grace).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\authService.ts:258:// Network / Play Services trouble — keep the persisted session so the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\authService.ts:259:// local library stays usable offline (43.6 offline grace).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\authService.ts:277:// Google Sign-In cache. Without this, the account picker is skipped on the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\cacheService.ts:5:* Reports the app cache footprint and clears it. Cache lives under the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\cacheService.ts:6:* platform cache directory (thumbnails, temp extraction, mpv scratch).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\cacheService.ts:26:/** Total cache size in bytes. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\cacheService.ts:27:export async function getCacheSize(): Promise<number> {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\cacheService.ts:28:return dirSize(RNFS.CachesDirectoryPath);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\cacheService.ts:43:/** Delete everything under the cache directory. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\cacheService.ts:44:export async function clearCache(): Promise<void> {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\cacheService.ts:46:const items = await RNFS.readDir(RNFS.CachesDirectoryPath);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\downloadService.ts:3:import {isRemoteUri, cacheKeyFromUri} from '../utils/mediaUri';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\downloadService.ts:8:* 49.1/49.6: Download manager for offline playback.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\downloadService.ts:10:* - Files live under <DocumentDirectoryPath>/downloads (persistent, not cache).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\downloadService.ts:13:* - The in-memory map powers the SYNC offline remap used by MpvPlayer.loadFile
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\downloadService.ts:72:// non-fatal — manifest is a convenience cache of the in-memory state
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\downloadService.ts:202:* 49.4: sync offline remap — returns the local file path when the remote uri
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\downloadService.ts:233:const localPath = `${DOWNLOAD_DIR}/${sanitizeSegment(request.title)}-${cacheKeyFromUri(request.uri)}.${fileExtension(request.uri)}`;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\fileService.ts:84://     player handles network loading. (P33 streaming model)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\fileService.ts:115:title: 'Permission Denied',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\fileService.ts:287:type: 'file_not_found' | 'permission_denied' | 'unsupported_format' | 'corrupt' | 'network';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\fileService.ts:326:title: 'Permission Denied',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\fileService.ts:350:// ─── Phase 18.3 — Network Error Handling ───────────────────
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\fileService.ts:352:export interface NetworkError {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\fileService.ts:359:* Parse and structure network errors for streaming URLs.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\fileService.ts:362:export function parseNetworkError(url: string, error: Error): NetworkError {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\fileService.ts:366:return {type: 'timeout', url, message: 'Connection timed out. Check your network and try again.'};
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:3:// ─── In-memory cache ─────────────────────────────────────
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:5:const lrcCache = new Map<string, LrcParseResult>();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:17:* On success the result is cached; subsequent calls return instantly.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:20:// Check cache first
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:21:if (lrcCache.has(fileUri)) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:22:return lrcCache.get(fileUri)!;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:34:lrcCache.set(fileUri, result);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:45:* Invalidate cached LRC data for a file (e.g. when the file changes).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:47:export function clearLrcCache(fileUri?: string): void {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:49:lrcCache.delete(fileUri);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\lrcService.ts:51:lrcCache.clear();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\metadataService.ts:346:// Folder may not exist or permission denied — skip silently
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\authSlice.ts:12:* (offline / cancelled / Play Services / expired session).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\authSlice.ts:17:| 'offline'
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\downloadsSlice.ts:11:* manifest is the source of truth (survives restarts + powers the sync offline
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\downloadsSlice.ts:76:/** Set of completed-download uris — powers the offline badges (49.5). */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:13:/** Absolute path to a cached thumbnail screenshot for this file, or empty. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\weatherSlice.ts:2:// Caches the latest weather snapshot for the Home greeting.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\weatherSlice.ts:7:// last good snapshot means cold start shows the cached chip
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\weatherSlice.ts:199:// 3. Timezone-derived city (no permission, no network until
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\rootReducer.ts:28:// successful snapshot is cached so cold start shows the chip +
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\types\api.ts:21:* >10s on a cold CDN node before its query cache warms) must set a
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\types\api.ts:24:* (which hits the now-warm cache) succeeds.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\types\api.ts:60:network?: {name: string} | null;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\utils\mediaUri.ts:4:* affordances (buffering, retry-with-backoff, cached remote artwork).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\utils\mediaUri.ts:12:* Whether a URI points to a remote network resource rather than a local file.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\utils\mediaUri.ts:41:* Extract a stable cache key (hash) from a URI for artwork caching.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\utils\mediaUri.ts:44:export function cacheKeyFromUri(uri: string): string {

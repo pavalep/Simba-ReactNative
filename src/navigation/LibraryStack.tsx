@@ -1,6 +1,6 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {LibraryScreen} from '../screens/Library/LibraryScreen';
+import {LibraryScreen} from '../screens/Library';
 import type {LibraryTabParamList} from './types';
 
 const Stack = createNativeStackNavigator<LibraryTabParamList>();

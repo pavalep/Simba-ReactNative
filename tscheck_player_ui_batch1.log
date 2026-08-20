@@ -1,0 +1,2 @@
+src/components/player/AudioPlayer/AudioActionRow.tsx(200,1): error TS2304: Cannot find name 'EOF'.
+src/screens/AudioPlayer/components/AudioTransportControls.tsx(164,1): error TS2304: Cannot find name 'EOF'.

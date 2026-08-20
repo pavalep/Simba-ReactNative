@@ -1,4 +1,4 @@
-import React, {useRef, useCallback} from 'react';
+import React, {useCallback, useRef} from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
@@ -10,8 +10,9 @@ import FastImage from 'react-native-fast-image';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../core/AppText/AppText';
+import {AppBadge} from '../core/AppBadge/AppBadge';
 import {SvgIcon} from '../utility/SvgIcon';
-import type {Bookmark} from '../../store/slices/bookmarkSlice';
+import type {Bookmark} from '../../features/bookmarks';
 
 const SWIPE_THRESHOLD = 70;
 const DELETE_WIDTH = 80;
@@ -172,6 +173,17 @@ export const BookmarkItem: React.FC<Props> = ({
               <AppText variant="body2" color="primary" numberOfLines={1}>
                 {item.title}
               </AppText>
+              <View style={styles.badgeRow}>
+                <AppBadge
+                  label={item.source === 'local' ? 'Local' : 'API'}
+                  tone={item.source === 'local' ? 'success' : 'accent'}
+                />
+                <AppBadge
+                  label={item.type}
+                  tone="neutral"
+                  style={styles.kindBadge}
+                />
+              </View>
               <AppText variant="caption" color="secondary" numberOfLines={1}>
                 {formatTime(item.position)} · {formatRelativeDate(item.createdAt)}
                 {item.label ? ` · "${item.label}"` : ''}
@@ -234,5 +246,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: spacing.md,
     gap: spacing.xs,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  kindBadge: {
+    maxWidth: 110,
   },
 });

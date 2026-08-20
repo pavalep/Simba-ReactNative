@@ -1,0 +1,51 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkSheet.tsx:153:No bookmarks yet. Save your current position to start.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\AppButton\AppButton.tsx:28:iconPosition?: 'left' | 'right';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\AppButton\AppButton.tsx:49:iconPosition = 'left',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\AppButton\AppButton.tsx:133:<View style={[styles.inner, {flexDirection: iconPosition === 'right' ? 'row-reverse' : 'row'}]}>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:196:isBookmarkedAtCurrentPosition: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:352:// ── Push position ref for bookmark sheet ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:574:bookmarkActive={h.isBookmarkedAtCurrentPosition}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:803:onPositionChange={h.handleSubtitlePositionChange}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:238:const unsubPosition = MpvPlayer.on('onPositionChanged', ({position: nextPosition}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:6:updateBookmarkLabel,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:20:updateBookmarkLabel as persistUpdateLabel,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:75:const id = `bookmark-${input.fileUri}-${Math.round(input.position)}-${Date.now()}`;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:105:dispatch(updateBookmarkLabel({id, label}));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\index.ts:18:* const unsub = MpvPlayer.on('onPositionChanged', ({position}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:68:onPositionChanged: {position: Double};
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:179:const handleBookmarkJumpTo = useCallback((position: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\textContent.ts:15:bookmarkA11y: 'Bookmark this position',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Bookmarks\BookmarksScreen.tsx:111:description="Save your position in any video or audio file to create bookmarks. They will appear here."
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Bookmarks\textContent.ts:2:* Bookmarks screen — list of saved playback positions with search and clear all.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Changelog\ChangelogScreen.tsx:47:'Bookmark system for named positions in media files',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Help\HelpScreen.tsx:87:a: 'Bookmarks save a named position inside a file. Open the player, tap the bookmark icon, and save the current spot. Jump back to any bookmark from the bookmarks sheet or the Bookmarks screen.',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\index.tsx:164:onPress={bookmark => handleItemPress({...bookmark, startPosition: bookmark.position})}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:271:description={`${bookmarkCount} saved positions`}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Song\components\SongBookmarks.tsx:61:// Entry point: bookmark for saving uses position=0 (user sets it when navigating)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Song\components\SongBookmarks.tsx:105:accessibilityLabel={`Jump to bookmark ${bm.label || formatDuration(bm.position)}`}>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Song\components\SongBookmarks.tsx:128:accessibilityLabel={`Delete bookmark ${bm.label || formatDuration(bm.position)}`}>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:37:onPositionChange: (position: number) => void;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:70:onPositionChange,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:104:onPositionChange(Math.max(5, Math.min(95, subtitlePosition + delta)));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:105:}, [onPositionChange, subtitlePosition]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:211:// ── Live currentPosition (tracked locally so the bookmark icon can
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:854://    bookmark?". The save handler rounds the position to the nearest
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:860:// Find the bookmark for the current position (if any). Used both for
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:862:const findBookmarkAtPosition = useCallback(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:867:b => Math.abs(b.position - position) <= BOOKMARK_MATCH_TOLERANCE_S,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:874:// Quick-toggle: tap the bookmark icon to add at the current position,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:875:// tap again to remove the existing bookmark at the current position.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:896:const existing = findBookmarkAtPosition(position);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:943:}, [addBookmarkEntry, removeBookmarkEntry, findBookmarkAtPosition, toast, haptics]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:946:const isBookmarkedAtCurrentPosition = useMemo(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:947:() => findBookmarkAtPosition(currentPosition) !== null,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:948:[findBookmarkAtPosition, currentPosition],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1753:const unsubPos = MpvPlayer.on('onPositionChanged', ({position: pos}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1757:// Mirror position locally so the bookmark icon can reflect the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1758:// bookmarked state at the current playback position.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2206:isBookmarkedAtCurrentPosition,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\textContent.ts:11:bookmarkA11y: 'Bookmark this position',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\bookmarkService.ts:40:export async function updateBookmarkLabel(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\recentHistoryService.ts:8:export function recordPlaybackCheckpoint(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\bookmarkSlice.ts:52:updateBookmarkLabel(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\bookmarkSlice.ts:83:updateBookmarkLabel,

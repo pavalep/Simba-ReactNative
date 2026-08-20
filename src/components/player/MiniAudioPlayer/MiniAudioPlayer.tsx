@@ -15,7 +15,8 @@ import {SvgIcon} from '../../utility/SvgIcon';
 import AudioWaveform from '../AudioWaveform/AudioWaveform';
 import {MiniProgressBar} from './MiniProgressBar';
 import {useMiniPlayer} from './useMiniPlayer';
-import {navigate} from '../../../navigation/navigationHelper';
+import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
+import {navigationRef} from '../../../navigation/navigationHelper';
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -24,9 +25,8 @@ const ARTWORK_SIZE = 40;
 // WCAG 2.1 AA minimum touch target: 44×44 (was 36×36 — audit 32.1)
 const CONTROL_BUTTON_SIZE = 44;
 
-// Tab bar constants must match FloatingTabBar
-const TAB_BAR_HEIGHT = 60;
-const TAB_BAR_BOTTOM_MARGIN = 10;
+// v11 Wave 1: the authenticated shell no longer reserves space for a
+// persistent bottom tab bar. Keep a small separation from the safe-area edge.
 const MINI_PLAYER_GAP = 4;
 
 // Swipe gesture thresholds (32.4)
@@ -42,19 +42,20 @@ const formatRemaining = (ms: number): string => {
 // ─── Component ──────────────────────────────────────────────
 
 interface MiniAudioPlayerProps {
-  /** 58.6: true (default) when floating above the tab bar (MainTabs);
-   *  false on root-stack screens that have no tab bar below. */
+  /**
+   * Legacy compatibility prop. The v11 shell has no persistent bottom tab
+   * bar, so this remains false by default and should not be used by new code.
+   */
   overTabBar?: boolean;
 }
 
-export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = ({
-  overTabBar = true,
-}) => {
+export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = () => {
   const {colors, spacing, radius, shadows} = useTheme();
   const insets = useSafeAreaInsets();
 
-  const {isVisible, isPlaying, currentTrack, progress, sleepRemainingMs, sleepTimerActive, handlePlayPause, handleNext, handlePrevious, handleDismiss} =
+  const {isVisible, isPlaying, currentTrack, currentPosition, duration, progress, sleepRemainingMs, sleepTimerActive, handlePlayPause, handleNext, handlePrevious, handleDismiss} =
     useMiniPlayer();
+  const {openPlayer} = usePlaybackCommands();
 
   // ── Slide animation ──────────────────────────────────
   const slideAnim = useRef(new Animated.Value(1)).current;
@@ -88,14 +89,24 @@ export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = ({
     outputRange: [1, 0.5, 0],
   });
 
-  // ── Tap to open AudioPlayer ──────────────────────────
+  // ── Tap to expand the root playback overlay ──────────
   const handleOpenPlayer = useCallback(() => {
     if (!currentTrack) return;
-    navigate('AudioPlayer', {
-      fileUri: currentTrack.uri,
-      fileTitle: currentTrack.title,
+    openPlayer({
+      uri: currentTrack.uri,
+      title: currentTrack.title,
+      duration: currentTrack.duration ?? duration,
+      artist: currentTrack.artist,
+      album: currentTrack.album,
+      artworkUri: currentTrack.artworkUri,
+      source: currentTrack.source,
+      type: currentTrack.type,
+      mediaType: currentTrack.mediaType,
+      provider: currentTrack.provider,
+      folderId: currentTrack.folderId,
+      startPosition: currentPosition,
     });
-  }, [currentTrack]);
+  }, [currentPosition, currentTrack, duration, openPlayer]);
 
   // ── Stop propagation on control buttons ────────────
   const handlePrevPress = useCallback(() => {
@@ -105,6 +116,10 @@ export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = ({
   const handleNextPress = useCallback(() => {
     handleNext();
   }, [handleNext]);
+
+  const handleClosePress = useCallback(() => {
+    handleDismiss();
+  }, [handleDismiss]);
 
   // ── Swipe gestures: down = dismiss, left/right = next/prev (32.4) ──
   const panResponder = useMemo(
@@ -135,11 +150,10 @@ export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = ({
   const subtitle = currentTrack?.title || ''; // no separate artist field in PlaylistEntry
 
   // ── Styles ───────────────────────────────────────────
-  // 58.6: over a tab bar the player floats above it; on root-stack
-  // screens (Search, Queue, Downloads, …) it rests on the bottom inset.
-  const bottomPosition = overTabBar
-    ? TAB_BAR_HEIGHT + TAB_BAR_BOTTOM_MARGIN + insets.bottom + MINI_PLAYER_GAP
-    : insets.bottom + MINI_PLAYER_GAP;
+  // v11 Wave 1: the player rests directly above the safe-area inset. The
+  // legacy prop is intentionally ignored so no screen can reintroduce the
+  // retired tab-bar offset by accident.
+  const bottomPosition = insets.bottom + MINI_PLAYER_GAP;
 
   const styles = useMemo(
     () =>
@@ -257,7 +271,7 @@ export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = ({
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handleOpenPlayer}
-        onLongPress={() => navigate('Queue', {from: 'mini'})}
+        onLongPress={() => navigationRef.navigate('Queue', {from: 'mini'})}
         delayLongPress={450}
         style={styles.touchableArea}
         accessibilityRole="button"
@@ -343,6 +357,16 @@ export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = ({
             accessibilityLabel="Next track"
             accessibilityHint="Swipe left on the mini player for the same action">
             <SvgIcon name="skipForward" size={20} color={colors.text.secondary} />
+          </TouchableOpacity>
+
+          {/* Explicit dismiss action; swipe-down remains available as a gesture. */}
+          <TouchableOpacity
+            onPress={handleClosePress}
+            style={styles.controlButton}
+            accessibilityRole="button"
+            accessibilityLabel="Close mini player"
+            accessibilityHint="Pauses playback and dismisses the mini player">
+            <SvgIcon name="close" size={19} color={colors.text.secondary} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>

@@ -1,6 +1,7 @@
 import {createSlice, createSelector, PayloadAction} from '@reduxjs/toolkit';
 import type {RootState} from '..';
 import {resetAppState} from './authSlice';
+import type {MediaKind, MediaSource} from '../../types/media';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -25,8 +26,20 @@ export interface ScannedTrack {
   albumArtUri: string;
   /** The parent folder path for grouping */
   folderPath: string;
-  /** Whether this is an 'audio' or 'video' file */
+  /** Stable linked-folder identity for rescan and downstream joins. */
+  folderId: string;
+  /** Coarse provenance used by badges, filters, and persistence. */
+  source: MediaSource;
+  /** Product-facing semantic kind used by badges and content-area grouping. */
+  type: MediaKind;
+  /** Whether this is an 'audio' or 'video' playback lane. */
   mediaType: 'audio' | 'video';
+  /** Optional provider/catalog name for API-backed entries. */
+  provider?: string;
+  /** Optional file size in bytes; populated by scanners that expose it. */
+  sizeBytes?: number;
+  /** Optional filesystem/import timestamp in epoch milliseconds. */
+  dateAdded?: number;
 }
 
 export interface ArtistEntry {

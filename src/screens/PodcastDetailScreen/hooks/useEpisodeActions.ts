@@ -8,11 +8,11 @@ import type {PodcastResult, PodcastEpisodeResult} from '../../../types/api';
 import type {PodcastDetailScreenProps} from '../../../navigation/types';
 import {useAppDispatch} from '../../../store';
 import {addToQueue, prependToQueue} from '../../../store/slices/playerSlice';
-import {useBookmarks} from '../../../hooks/useBookmarks';
+import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {shareContent} from '../../../services/shareService';
-import {sourceFromUri} from '../../../utils/mediaUri';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
+import {usePlaybackCommands} from '../../../modules/playback';
 import text from '../related/textContent.json';
 
 type Navigation = PodcastDetailScreenProps['navigation'];
@@ -27,6 +27,7 @@ export function useEpisodeActions({podcast, navigation}: Options) {
   const dispatch = useAppDispatch();
   const toast = useToast();
   const {add: addBookmark} = useBookmarks();
+  const {openPlayer} = usePlaybackCommands();
 
   // 35.6: episode long-press actions
   const [menuEpisode, setMenuEpisode] = useState<PodcastEpisodeResult | null>(
@@ -38,14 +39,18 @@ export function useEpisodeActions({podcast, navigation}: Options) {
   // 35.2: play an episode with art + origin metadata
   const handleEpisodePress = useCallback(
     (episode: PodcastEpisodeResult) => {
-      navigation.navigate('AudioPlayer', {
-        fileUri: episode.enclosureUrl,
-        fileTitle: episode.title,
+      openPlayer({
+        uri: episode.enclosureUrl,
+        title: episode.title,
+        duration: episode.duration || 0,
         artworkUri: episode.image || podcast?.image || undefined,
-        source: sourceFromUri(episode.enclosureUrl),
+        source: 'api',
+        provider: 'podcastIndex',
+        type: 'podcast',
+        mediaType: 'audio',
       });
     },
-    [navigation, podcast],
+    [openPlayer, podcast],
   );
 
   // 35.6: long-press → play next / queue / playlist / bookmark / share
@@ -62,7 +67,8 @@ export function useEpisodeActions({podcast, navigation}: Options) {
       const ep = menuEpisode;
       if (!ep) return;
       const art = ep.image || podcast?.image || undefined;
-      const source = sourceFromUri(ep.enclosureUrl);
+      const source = 'api' as const;
+      const provider = 'podcastIndex' as const;
       switch (value) {
         case 'play-next':
           dispatch(
@@ -71,6 +77,8 @@ export function useEpisodeActions({podcast, navigation}: Options) {
               title: ep.title,
               duration: ep.duration,
               source,
+              provider,
+              type: 'podcast',
               mediaType: 'audio',
             }),
           );
@@ -83,6 +91,8 @@ export function useEpisodeActions({podcast, navigation}: Options) {
               title: ep.title,
               duration: ep.duration,
               source,
+              provider,
+              type: 'podcast',
               mediaType: 'audio',
             }),
           );
@@ -96,6 +106,8 @@ export function useEpisodeActions({podcast, navigation}: Options) {
             artist: podcast?.author,
             thumbnailPath: art,
             source,
+            provider,
+            type: 'podcast',
             mediaType: 'audio',
           });
           break;
@@ -109,13 +121,22 @@ export function useEpisodeActions({podcast, navigation}: Options) {
             thumbnailPath: art,
             mediaType: 'audio',
             source,
+            provider,
+            type: 'podcast',
           });
           toast.show(text.actions.bookmarked);
           break;
         case 'share':
           shareContent({
             route: 'AudioPlayer',
-            params: {fileUri: ep.enclosureUrl, fileTitle: ep.title, source},
+            params: {
+              fileUri: ep.enclosureUrl,
+              fileTitle: ep.title,
+              source,
+              provider,
+              type: 'podcast',
+              mediaType: 'audio',
+            },
             title: ep.title,
             subtitle: podcast?.author,
           });

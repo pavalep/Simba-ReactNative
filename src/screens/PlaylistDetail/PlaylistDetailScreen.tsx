@@ -13,16 +13,12 @@ import FastImage from 'react-native-fast-image';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
-import {useAppDispatch, useAppSelector} from '../../store';
+import {useAppDispatch} from '../../store';
 import {
-  removeItemFromPlaylist,
-  reorderPlaylistItems,
-  renamePlaylist,
-  deletePlaylist,
-  clearPlaylist,
-  importPlaylist,
-  selectPlaylistById,
-} from '../../store/slices/playlistSlice';
+  usePlaylist,
+  usePlaylists,
+  type PlaylistKind,
+} from '../../features/playlists';
 import {
   addToQueue,
   prependToQueue,
@@ -33,9 +29,8 @@ import {AppText} from '../../components/core/AppText/AppText';
 import type {RootStackScreenProps} from '../../navigation/types';
 type PlaylistDetailScreenProps = RootStackScreenProps<'PlaylistDetail'>;
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
-import {PlaylistModal} from '../../features/playlists/components/PlaylistModal';
+import {PlaylistManageModal} from '../../components/playlist/PlaylistManageModal/PlaylistManageModal';
 import type {PlaylistItem} from '../../types/playlist';
-import type {PlaylistKind} from '../../types/playlist';
 import {
   generateM3u,
   generatePlaylistJson,
@@ -53,6 +48,7 @@ import {SvgIcon} from '../../components/utility/SvgIcon';
 import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {isRemoteUri} from '../../utils/mediaUri';
 import {useNetworkStatus} from '../../hooks/useNetworkStatus';
+import {usePlaybackCommands} from '../../modules/playback';
 
 type Props = PlaylistDetailScreenProps;
 
@@ -62,14 +58,11 @@ const ITEM_HEIGHT = 66;
 // ─── Import helpers (56.5) ─────────────────────────────────
 
 /** Derive a playlist kind from the media types of its items. */
-function deriveKind(items: PlaylistItem[]): PlaylistKind {
+function deriveKind(items: PlaylistItem[]): PlaylistKind | null {
   const hasVideo = items.some(i => i.mediaType === 'video');
   const hasAudio = items.some(i => i.mediaType === 'audio');
-  return hasVideo && hasAudio
-    ? 'MIXED'
-    : hasVideo
-      ? 'VIDEO_ONLY'
-      : 'AUDIO_ONLY';
+  if (hasVideo && hasAudio) return null;
+  return hasVideo ? 'VIDEO_ONLY' : 'AUDIO_ONLY';
 }
 
 /** Parse the app's JSON playlist export into PlaylistItems (validated). */
@@ -80,6 +73,20 @@ function parseImportedJson(content: string): PlaylistItem[] {
     if (!raw || typeof raw !== 'object') return [];
     const entry = raw as Record<string, unknown>;
     if (typeof entry.fileUri !== 'string' || !entry.fileUri) return [];
+    const mediaType =
+      entry.mediaType === 'video' || entry.mediaType === 'audio'
+        ? entry.mediaType
+        : isVideoFile(entry.fileUri)
+          ? 'video'
+          : 'audio';
+    const source = entry.source === 'local' ? 'local' : 'api';
+    const type =
+      typeof entry.type === 'string' &&
+      ['audio', 'music', 'podcast', 'audiobook', 'radio', 'video', 'movie'].includes(entry.type)
+        ? (entry.type as PlaylistItem['type'])
+        : mediaType === 'video'
+          ? 'video'
+          : 'audio';
     return [
       {
         id: `imp_${Date.now()}_${i}`,
@@ -94,15 +101,11 @@ function parseImportedJson(content: string): PlaylistItem[] {
         thumbnailPath:
           typeof entry.thumbnailPath === 'string' ? entry.thumbnailPath : undefined,
         addedAt: new Date().toISOString(),
-        // P34.4: prefer the exported media type — extensionless remote URLs
-        // misclassify as video when guessed from the file name alone.
-        mediaType:
-          entry.mediaType === 'video' || entry.mediaType === 'audio'
-            ? entry.mediaType
-            : isVideoFile(entry.fileUri)
-              ? 'video'
-              : 'audio',
-        source: typeof entry.source === 'string' ? entry.source : undefined,
+        mediaType,
+        source,
+        type,
+        provider: typeof entry.provider === 'string' ? entry.provider : undefined,
+        folderId: typeof entry.folderId === 'string' ? entry.folderId : undefined,
       },
     ];
   });
@@ -111,15 +114,17 @@ function parseImportedJson(content: string): PlaylistItem[] {
 export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
+  const {playlistId, playlistName} = route.params;
   const dispatch = useAppDispatch();
+  const {renamePlaylist, deletePlaylist, removeItem, reorderItems, clearPlaylist, importPlaylist} = usePlaylists();
+  const playlist = usePlaylist(playlistId);
   const toast = useToast();
   const {confirm, dialog} = useConfirmDialog();
-  const {playlistId, playlistName} = route.params;
   // P34.5: offline guard for remote/streaming playlist items
   const {isOnline} = useNetworkStatus();
+  const {openPlayer} = usePlaybackCommands();
 
-  // ── Redux data ──
-  const playlist = useAppSelector(selectPlaylistById(playlistId));
+  // ── Isolated playlist data ──
   const items = useMemo(() => playlist?.items ?? [], [playlist]);
 
   // ── Local UI state ──
@@ -152,19 +157,18 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     const entries = playlistItemsToEntries(playable);
     dispatch(loadPlaylistToPlayer(entries));
     const first = playable[0];
-    // P34.4: mediaType wins over extension guessing for remote URLs
-    const isVideo = first.mediaType
-      ? first.mediaType === 'video'
-      : isVideoFile(first.fileUri);
-    navigation.navigate(isVideo ? 'VideoPlayer' : 'AudioPlayer', {
-      fileUri: first.fileUri,
-      fileTitle: first.title,
-      ...(first.source ? {source: first.source} : {}),
-      ...(!isVideo && first.thumbnailPath
-        ? {artworkUri: first.thumbnailPath}
-        : {}),
+    openPlayer({
+      uri: first.fileUri,
+      title: first.title,
+      duration: first.duration,
+      source: first.source,
+      type: first.type,
+      mediaType: first.mediaType,
+      ...(first.provider ? {provider: first.provider} : {}),
+      ...(first.folderId ? {folderId: first.folderId} : {}),
+      ...(first.thumbnailPath ? {artworkUri: first.thumbnailPath} : {}),
     });
-  }, [items, dispatch, navigation, isOnline, toast]);
+  }, [items, dispatch, isOnline, openPlayer, toast]);
 
   // ── Header: Options menu (52.1) ──
   const handleMore = useCallback(() => {
@@ -236,6 +240,8 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           duration: e.duration > 0 ? e.duration * 1000 : 0,
           artist: e.artist,
           addedAt: new Date().toISOString(),
+          source: isRemoteUri(e.fileUri) ? 'api' : 'local',
+          type: isVideoFile(e.fileUri) ? 'video' : 'audio',
           mediaType: isVideoFile(e.fileUri) ? 'video' : 'audio',
         }));
       } else if (ext === 'json') {
@@ -250,20 +256,23 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         return;
       }
 
-      dispatch(
-        importPlaylist({
-          name: `${playlistName} (imported)`,
-          items: imported,
-          kind: deriveKind(imported),
-        }),
-      );
+      const importedKind = deriveKind(imported);
+      if (!importedKind) {
+        toast.show('Mixed audio and video playlists are not supported');
+        return;
+      }
+      importPlaylist({
+        name: `${playlistName} (imported)`,
+        items: imported,
+        kind: importedKind,
+      });
       toast.show(
         `Imported ${imported.length} item${imported.length !== 1 ? 's' : ''}`,
       );
     } catch {
       toast.show('Import failed — invalid file');
     }
-  }, [dispatch, playlistName, toast]);
+  },     [importPlaylist, playlistName, toast]);
 
   const handleClearPlaylist = useCallback(async () => {
     const ok = await confirm({
@@ -273,10 +282,10 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       destructive: true,
     });
     if (ok) {
-      dispatch(clearPlaylist(playlistId));
+      clearPlaylist(playlistId);
       toast.show('Playlist cleared');
     }
-  }, [confirm, dispatch, items.length, playlistName, playlistId, toast]);
+  }, [confirm, clearPlaylist, items.length, playlistName, playlistId, toast]);
 
   const handlePlaylistMenuSelect = useCallback(
     (value: string | number) => {
@@ -331,14 +340,12 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     });
     if (!ok) return;
     selectedIds.forEach(id => {
-      dispatch(
-        removeItemFromPlaylist({playlistId, itemId: id}),
-      );
+      removeItem(playlistId, id);
     });
     setSelectedIds(new Set());
     setIsSelecting(false);
     toast.show(`Removed ${count} item${count !== 1 ? 's' : ''}`);
-  }, [selectedIds, confirm, dispatch, playlistId, toast]);
+  }, [selectedIds, confirm, removeItem, playlistId, toast]);
 
   const exitBatchMode = useCallback(() => {
     setIsSelecting(false);
@@ -353,20 +360,19 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         toast.show('Offline — this stream is unavailable');
         return;
       }
-      // P34.4: mediaType wins over extension guessing for remote URLs
-      const isVideo = item.mediaType
-        ? item.mediaType === 'video'
-        : isVideoFile(item.fileUri);
-      navigation.navigate(isVideo ? 'VideoPlayer' : 'AudioPlayer', {
-        fileUri: item.fileUri,
-        fileTitle: item.title,
-        ...(item.source ? {source: item.source} : {}),
-        ...(!isVideo && item.thumbnailPath
-          ? {artworkUri: item.thumbnailPath}
-          : {}),
+      openPlayer({
+        uri: item.fileUri,
+        title: item.title,
+        duration: item.duration,
+        source: item.source,
+        type: item.type,
+        mediaType: item.mediaType,
+        ...(item.provider ? {provider: item.provider} : {}),
+        ...(item.folderId ? {folderId: item.folderId} : {}),
+        ...(item.thumbnailPath ? {artworkUri: item.thumbnailPath} : {}),
       });
     },
-    [navigation, isOnline, toast],
+    [isOnline, openPlayer, toast],
   );
 
   const handleItemPress = useCallback(
@@ -458,23 +464,23 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     (fromIndex: number, direction: 'up' | 'down') => {
       const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
       if (toIndex < 0 || toIndex >= items.length) return;
-      dispatch(reorderPlaylistItems({playlistId, fromIndex, toIndex}));
+      reorderItems(playlistId, fromIndex, toIndex);
     },
-    [dispatch, playlistId, items.length],
+    [reorderItems, playlistId, items.length],
   );
 
   // ── Modal handlers ──
   const handleModalConfirm = useCallback(
     (result: string | boolean) => {
       if (modalMode === 'rename' && typeof result === 'string') {
-        dispatch(renamePlaylist({id: playlistId, newName: result}));
+        renamePlaylist(playlistId, result);
       } else if (modalMode === 'delete' && result === true) {
-        dispatch(deletePlaylist(playlistId));
+        deletePlaylist(playlistId);
         navigation.goBack();
       }
       setModalMode(null);
     },
-    [modalMode, dispatch, playlistId, navigation],
+    [modalMode, renamePlaylist, deletePlaylist, playlistId, navigation],
   );
 
   const handleModalCancel = useCallback(() => {
@@ -891,16 +897,9 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       />
 
       {/* ── Modals ── */}
-      <PlaylistModal
-        visible={modalMode === 'rename'}
-        mode="rename"
-        currentName={playlist?.name ?? playlistName}
-        onConfirm={handleModalConfirm}
-        onCancel={handleModalCancel}
-      />
-      <PlaylistModal
-        visible={modalMode === 'delete'}
-        mode="delete"
+      <PlaylistManageModal
+        visible={modalMode !== null}
+        mode={modalMode ?? 'rename'}
         currentName={playlist?.name ?? playlistName}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}

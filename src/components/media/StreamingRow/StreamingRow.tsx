@@ -43,8 +43,11 @@ export const StreamingRow: React.FC<StreamingRowProps> = React.memo(
       startDownload({
         uri: track.audioUrl,
         title: track.name,
-        mediaType: 'audio',
-        source: 'jamendo',
+                mediaType: 'audio',
+        type: 'music',
+        source: 'api',
+        provider: 'jamendo',
+
       }).catch(() => toast.show('Download failed'));
     }, [track, toast]);
 
@@ -87,7 +90,8 @@ export const StreamingRow: React.FC<StreamingRowProps> = React.memo(
               uri={track.audioUrl}
               title={track.name}
               mediaType="audio"
-              source="jamendo"
+              source="api"
+              provider="jamendo"
               size={16}
             />
           ) : (
@@ -121,8 +125,10 @@ export const StreamingRow: React.FC<StreamingRowProps> = React.memo(
                   uri: track.audioUrl,
                   title: track.name,
                   duration: track.duration,
-                  source: 'jamendo',
+                  source: 'api',
+                  type: 'music',
                   mediaType: 'audio',
+                  provider: 'jamendo',
                 }),
             },
             {
@@ -133,8 +139,10 @@ export const StreamingRow: React.FC<StreamingRowProps> = React.memo(
                   uri: track.audioUrl,
                   title: track.name,
                   duration: track.duration,
-                  source: 'jamendo',
+                  source: 'api',
+                  type: 'music',
                   mediaType: 'audio',
+                  provider: 'jamendo',
                 }),
             },
             {

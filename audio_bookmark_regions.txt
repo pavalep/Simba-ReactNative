@@ -1,0 +1,162 @@
+
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:15:import {useRecentHistory} from '../../../features/recentHistory';
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:16:import {useBookmarks} from '../../../hooks/useBookmarks';
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:17:import {
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:18:  addToPlaylist,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:87:  // 58.2: explicit resume intent (e.g. Continue Listening on Home) — silent
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:88:  // seek; implicit saved positions ask via the resume overlay instead.
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:89:  const startPosition = route.params?.startPosition;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:90:
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:91:  // ── P37.3: audiobook chapter list — drives EOF auto-advance ──
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:118:  const [isPlaying, setIsPlaying] = useState(false);
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:119:  // 58.2: saved-position resume choice (mirrors 31.2 video overlay)
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:120:  const [resumePrompt, setResumePrompt] = useState<{position: number} | null>(null);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:121:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:122:  // ── Bookmark state ──
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:123:  const [bookmarkSheetVisible, setBookmarkSheetVisible] = useState(false);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:124:  const {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:125:    bookmarksForFile: audioBookmarksForFile,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:126:    bookmarkCountForFile: audioBookmarkCount,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:127:    add: addAudioBookmark,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:128:    remove: removeAudioBookmark,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:129:  } = useBookmarks(activeUri ?? undefined);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:130:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:131:  const handleOpenBookmarkSheet = useCallback(() => {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:132:    setBookmarkSheetVisible(true);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:133:  }, []);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:134:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:135:  const handleCloseBookmarkSheet = useCallback(() => {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:136:    setBookmarkSheetVisible(false);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:137:  }, []);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:138:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:139:  const handleBookmarkAdd = useCallback(
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:140:    (label?: string) => {
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:141:      const uri = fileUriRef.current;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:142:      if (!uri) return;
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:143:      const position = MpvPlayer.getPosition?.() ?? 0;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:144:      const dur = MpvPlayer.getDuration?.() ?? 0;
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:145:      if (position < 1) return;
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:146:      addAudioBookmark({
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:147:        fileUri: uri,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:148:        title,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:149:        position,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:150:        duration: dur,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:151:        label: label ?? '',
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:152:        // P34.2: keep art + origin so bookmarks restore the stream context
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:153:        thumbnailPath: remoteArtPathRef.current || undefined,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:154:        mediaType: mediaLane,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:161:    [
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:162:      addAudioBookmark,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:163:      title,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:164:      sourceLabel,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:171:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:172:  const handleBookmarkDelete = useCallback(
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:173:    (id: string) => {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:174:      removeAudioBookmark(id);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:175:    },
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:176:    [removeAudioBookmark],
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:177:  );
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:178:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:179:  const handleBookmarkJumpTo = useCallback((position: number) => {
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:180:    try {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:181:      MpvPlayer.seekTo(position);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:182:    } catch {}
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:183:  }, []);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:194:  const allTracks = useAppSelector(selectAllTracks);
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:195:const {list: sessionRecent, addRecent} = useRecentHistory();
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:196:  const sessionRecentRef = useRef(sessionRecent);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:197:
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:198:  // 46.1: accessibility — larger controls scale
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:231:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:232:  // P33.6: cached local path for remote artwork — feeds recents/bookmarks
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:233:  const remoteArtPathRef = useRef('');
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:234:
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:236:  useEffect(() => { fileUriRef.current = activeUri; }, [activeUri]);
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:237:  useEffect(() => { sessionRecentRef.current = sessionRecent; }, [sessionRecent]);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:238:  useEffect(() => { activeTitleRef.current = activeTitle; }, [activeTitle]);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:239:  useEffect(() => { chapterListRef.current = chapterList; }, [chapterList]);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:349:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:350:        // Restore the saved playback position once the file loads.
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:351:        // Covers reopening from MiniAudioPlayer mid-track (resume, not restart).
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:352:        let initialLoadDone = false;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:358:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:359:          const saved = sessionRecentRef.current.find(f => f.fileUri === fileUri);
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:360:          const resumePosition = saved?.position ?? 0;
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:361:          const explicitPosition = startPosition ?? 0;
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:362:          if (explicitPosition > 0) {
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:363:            // 58.2: explicit navigation intent (Continue Listening) — silent seek
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:364:            setTimeout(() => {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:365:              try { MpvPlayer.seekTo(explicitPosition); } catch {}
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:366:            }, 200);
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:367:          } else if (resumePosition > 0) {
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:368:            // 58.2: implicit resume — ask the user instead of silent auto-seek
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:369:            try { MpvPlayer.pause(); } catch {}
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:370:            setResumePrompt({position: resumePosition});
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:371:          }
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:372:        });
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:395:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:396:  }, [fileUri, title, dispatch, retryNonce, sourceLabel, startPosition]);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:397:
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:398:  // ── 58.2: Resume / Start Over choice on load (mirrors 31.2 video) ──
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:401:      if (!resumePrompt) return;
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:402:      const pos = resumePrompt.position;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:403:      setResumePrompt(null);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:404:      if (shouldResume && pos > 1) {
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:461:            {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:462:              position: MpvPlayer.getPosition?.() ?? 0,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:463:              duration: MpvPlayer.getDuration?.() ?? 1,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:464:              isPlaying: MpvPlayer.getPlaybackState() === 'playing',
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:502:            },
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:503:            {position: 0, duration: MpvPlayer.getDuration?.() ?? 1, isPlaying: false},
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:504:          );
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:505:        }
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:528:        {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:529:          position: MpvPlayer.getPosition?.() ?? 0,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:530:          duration: MpvPlayer.getDuration?.() ?? 1,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:531:          isPlaying: MpvPlayer.getPlaybackState() === 'playing',
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:580:    const curUri = fileUriRef.current;
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:581:    const curPos = MpvPlayer.getPosition?.() ?? 0;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:582:    const curDur = MpvPlayer.getDuration?.() ?? 0;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:583:
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:584:    if (curUri) {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:585:addRecent({
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:586:        fileUri: curUri,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:587:        title: activeTitleRef.current,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:588:        position: curPos,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:589:        duration: curDur,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:590:        thumbnailPath: remoteArtPathRef.current || '',
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:622:    if (list && list.length > 0) {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:623:      const pos = MpvPlayer.getPosition?.() ?? 0;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:624:      if (pos > 5) {
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:625:        MpvPlayer.seekTo(0);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:641:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:642:    const pos = MpvPlayer.getPosition?.() ?? 0;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:643:    if (pos > 5) {
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:644:      MpvPlayer.seekTo(0);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:683:    // Cross-chapter resume: continue where this chapter was left off.
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:684:    const recent = sessionRecentRef.current.find(r => r.fileUri === next.uri);
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:685:    MpvPlayer.loadFile(next.uri);
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:686:    if (recent && recent.position > 0) {
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:687:      const pos = recent.position;
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:688:      setTimeout(() => {
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:689:        try { MpvPlayer.seekTo(pos); } catch {}
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1013:    relatedTracks,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1014:    // 58.2: saved-position resume choice
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1015:    resumePrompt,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1016:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1017:    // Bookmark state
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1018:    bookmarkSheetVisible,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1019:    audioBookmarksForFile,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1020:    audioBookmarkCount,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1021:
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1022:    // Redux
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1079:
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1080:    // Bookmark handlers
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1081:    handleOpenBookmarkSheet,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1082:    handleCloseBookmarkSheet,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1083:    handleBookmarkAdd,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1084:    handleBookmarkDelete,
+> src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1085:    handleBookmarkJumpTo,
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1086:  };
+  src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1087:}
+

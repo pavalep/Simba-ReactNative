@@ -6,6 +6,7 @@ import {MpvPlayer} from '../native/player.api';
 import {isRemoteUri} from '../utils/mediaUri';
 
 import type {ScannedTrack} from '../store/slices/mediaSlice';
+import {linkedMediaFolderId} from '../types/media';
 
 /** Subtitle file types for document picker */
 const SUBTITLE_TYPES = [
@@ -642,7 +643,15 @@ export function fileEntriesToTracks(files: FileEntry[]): ScannedTrack[] {
       duration: 0,
       albumArtUri: '',
       folderPath: f.uri.substring(0, f.uri.lastIndexOf('/')),
+      folderId: linkedMediaFolderId(
+        f.uri.substring(0, f.uri.lastIndexOf('/')),
+        mediaType,
+      ),
+      source: 'local',
+      type: mediaType,
       mediaType,
+      sizeBytes: f.size,
+      dateAdded: f.mtimeMs,
     });
   }
 

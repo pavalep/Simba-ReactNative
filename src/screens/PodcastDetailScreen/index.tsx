@@ -16,14 +16,11 @@ import {HeroSection} from './components/HeroSection';
 import {DetailItem} from './components/DetailItem';
 import {ListStates} from './components/ListStates';
 import {shareContent} from '../../services/shareService';
-import {useAppDispatch, useAppSelector} from '../../store';
-import {
-  addFollowedPodcast,
-  removeFollowedPodcast,
-  selectIsPodcastFollowed,
-} from '../../store/slices/followedPodcastsSlice';
+import {useFollowedPodcasts} from '../../features/followedPodcasts';
+import {useRecentHistory} from '../../features/recentHistory';
 import {useToast} from '../../components/feedback/Toast';
 import {useHaptics} from '../../hooks/useHaptics';
+import {useBookmarks} from '../../features/bookmarks';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import text from './related/textContent.json';
@@ -33,9 +30,14 @@ type Props = PodcastDetailScreenProps;
 
 export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
-  const dispatch = useAppDispatch();
   const toast = useToast();
   const haptics = useHaptics();
+  const {add: addBookmark} = useBookmarks();
+  const {
+    isFollowed: isPodcastFollowed,
+    follow: followPodcast,
+    unfollow: unfollowPodcast,
+  } = useFollowedPodcasts();
   const {podcastId} = route.params;
   const {
     podcast,
@@ -64,12 +66,10 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   // 35.5: follow/unfollow this podcast (persisted via redux-persist)
-  const isFollowed = useAppSelector(s =>
-    selectIsPodcastFollowed(s, podcastId),
-  );
+  const isFollowed = isPodcastFollowed(podcastId);
 
   // 35.4: per-episode playback progress (keyed by enclosure URL)
-  const recentFiles = useAppSelector(s => s.session.recentFiles);
+  const {list: recentFiles} = useRecentHistory();
   const episodeProgress = useMemo(() => {
     const map: Record<string, number> = {};
     for (const ep of episodes) {
@@ -90,15 +90,34 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
     });
   }, [podcastId]);
 
+  const handleEpisodeBookmark = useCallback(
+    (episode: (typeof episodes)[number]) => {
+      addBookmark({
+        fileUri: episode.enclosureUrl,
+        title: episode.title,
+        position: 0,
+        duration: episode.duration,
+        label: '',
+        thumbnailPath: episode.image || podcast?.image || undefined,
+        source: 'api',
+        type: 'podcast',
+        mediaType: 'audio',
+        provider: 'podcast-index',
+      });
+      haptics.light();
+      toast.show('Bookmarked episode', 'success');
+    },
+    [addBookmark, haptics, podcast, toast],
+  );
+
   const handleToggleFollow = useCallback(() => {
     if (!podcast) return;
     if (isFollowed) {
-      dispatch(removeFollowedPodcast(podcast.id));
+      unfollowPodcast(podcast.id);
       haptics.light();
       toast.show(`Unfollowed "${podcast.title}"`, 'info');
     } else {
-      dispatch(
-        addFollowedPodcast({
+      followPodcast({
           id: podcast.id,
           title: podcast.title,
           author: podcast.author,
@@ -106,12 +125,11 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
           feedUrl: podcast.feedUrl,
           episodeCount: podcast.episodeCount,
           followedAt: new Date().toISOString(),
-        }),
-      );
+      });
       haptics.medium();
       toast.show(`Following "${podcast.title}"`, 'success');
     }
-  }, [podcast, isFollowed, dispatch, haptics, toast]);
+  }, [podcast, isFollowed, followPodcast, unfollowPodcast, haptics, toast]);
 
   const handleRetry = useCallback(() => {
     navigation.replace('PodcastDetail', {
@@ -210,6 +228,7 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
             progress={episodeProgress[item.enclosureUrl]}
             onPress={() => handleEpisodePress(item)}
             onLongPress={() => handleEpisodeLongPress(item)}
+            onBookmark={() => handleEpisodeBookmark(item)}
           />
         )}
         ListEmptyComponent={

@@ -1,0 +1,204 @@
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(4,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(5,46): error TS2307: Cannot find module '../../../../../store' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(6,24): error TS2307: Cannot find module '../../../../../lib/errorLogger' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(7,25): error TS2307: Cannot find module '../../../../../native' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(8,35): error TS2307: Cannot find module '../../../../../services/notificationService' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(12,8): error TS2307: Cannot find module '../../../../../services/audioSettingsService' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(13,36): error TS2307: Cannot find module '../../../../../navigation/types' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(14,26): error TS2307: Cannot find module '../../../../../hooks/useHaptics' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(15,32): error TS2307: Cannot find module '../../../../../features/recentHistory' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(16,28): error TS2307: Cannot find module '../../../../../features/bookmarks' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(37,8): error TS2307: Cannot find module '../../../../../store/slices/playerSlice' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(44,8): error TS2307: Cannot find module '../../../../../services/fileService' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(45,42): error TS2307: Cannot find module '../../../../../utils/mediaUri' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(46,54): error TS2307: Cannot find module '../../../../../types/media' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(47,38): error TS2307: Cannot find module '../../../../../types/playback' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(49,64): error TS2307: Cannot find module '../../../../../services/metadataService' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(50,23): error TS2307: Cannot find module '../../../../../services/lrcService' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(51,24): error TS2307: Cannot find module '../../../../../services/artCacheService' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(52,28): error TS2307: Cannot find module '../../../../../utils/lrcParser' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(53,31): error TS2307: Cannot find module '../../../../../store/slices/mediaSlice' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(54,33): error TS2307: Cannot find module '../../../../../store/slices/mediaSlice' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(55,28): error TS2307: Cannot find module '../../../../../components/player/NowPlayingInfo/ChapterList' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(59,8): error TS2307: Cannot find module '../../../../../services/playbackTransitionService' or its corresponding type declarations.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(204,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(205,32): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(206,38): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(207,39): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(208,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(209,34): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(210,42): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(211,47): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(217,41): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(222,47): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(223,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(263,40): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(285,7): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(345,63): error TS7031: Binding element 'state' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(350,65): error TS7031: Binding element 'nextVolume' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(353,62): error TS7031: Binding element 'nextSpeed' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(377,55): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(440,19): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(450,19): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(722,50): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(848,44): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(893,49): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(964,59): error TS7031: Binding element 'errMsg' implicitly has an 'any' type.
+src/modules/playback/audio/ui/AudioActionRow.tsx(3,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioActionRow.tsx(4,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioAlbumArt.tsx(4,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(11,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(13,27): error TS2307: Cannot find module '../../../../../components/feedback/ActivityOrb/ActivityOrb' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(14,35): error TS2307: Cannot find module '../../../../../components/feedback/PlayerErrorFallback' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(15,28): error TS2307: Cannot find module '../../../../../components/player/BufferingBar/BufferingBar' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(16,29): error TS2307: Cannot find module '../../../../../components/player/AudioVisualizer/AudioVisualizer' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(17,29): error TS2307: Cannot find module '../../../../../components/player/AudioLyricsView/AudioLyricsView' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(18,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(30,25): error TS2307: Cannot find module '../../../../../components/player/NowPlayingInfo/InfoSheet' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(31,28): error TS2307: Cannot find module '../../../../../components/player/NowPlayingInfo/ChapterList' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(33,36): error TS2307: Cannot find module '../../../../../components/player/PlaylistPreview/PlaylistPreviewSheet' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(34,26): error TS2307: Cannot find module '../../../../../components/sheets/QueueSheet/QueueSheet' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(35,29): error TS2307: Cannot find module '../../../../../components/sheets/PlaylistSheet' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(36,29): error TS2307: Cannot find module '../../../../../components/bookmark/BookmarkSheet' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioPlayer.tsx(457,18): error TS7006: Parameter 'time' implicitly has an 'any' type.
+src/modules/playback/audio/ui/AudioQueuePeek.tsx(3,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioQueuePeek.tsx(4,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioSeekBar.tsx(10,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioSubMenu.tsx(13,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioSubMenu.tsx(14,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioSubMenu.tsx(15,28): error TS2307: Cannot find module '../../../../../components/core/AppTextInput/AppTextInput' or its corresponding type declarations.
+src/modules/playback/audio/ui/AudioVolumeSlider.tsx(10,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/PrimaryControls.tsx(4,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/PrimaryControls.tsx(5,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon/SvgIcon' or its corresponding type declarations.
+src/modules/playback/video/components/PrimaryControls.tsx(6,21): error TS2307: Cannot find module '../../../../../components/player/SeekBar/SeekBar' or its corresponding type declarations.
+src/modules/playback/video/components/PrimaryControls.tsx(7,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/SecondaryToolbar.tsx(10,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/SecondaryToolbar.tsx(11,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon/SvgIcon' or its corresponding type declarations.
+src/modules/playback/video/components/SecondaryToolbar.tsx(12,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/SecondaryToolbar.tsx(13,27): error TS2307: Cannot find module '../../../../../constants/fontFamily' or its corresponding type declarations.
+src/modules/playback/video/components/SecondaryToolbar.tsx(14,31): error TS2307: Cannot find module '../../../../../theme/tokens' or its corresponding type declarations.
+src/modules/playback/video/components/SeekFeedbackOverlay.tsx(8,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/SeekFeedbackOverlay.tsx(9,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon/SvgIcon' or its corresponding type declarations.
+src/modules/playback/video/components/SeekFeedbackOverlay.tsx(10,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerAudioPanel.tsx(8,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerAudioPanel.tsx(9,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerAudioPanel.tsx(10,23): error TS2307: Cannot find module '../../../../../theme/tokens' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerAutoAdvanceCard.tsx(3,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerAutoAdvanceCard.tsx(4,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon/SvgIcon' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerAutoAdvanceCard.tsx(5,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerEqualizerPanel.tsx(9,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerEqualizerPanel.tsx(10,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerEqualizerPanel.tsx(11,31): error TS2307: Cannot find module '../../../../../theme/tokens' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerEqualizerPanel.tsx(12,36): error TS2307: Cannot find module '../../../../../services/audioSettingsService' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerGestureLayer.tsx(8,51): error TS2307: Cannot find module '../../../../../hooks/usePlayerGestures' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerLoadingOverlay.tsx(3,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerLoadingOverlay.tsx(4,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerLoadingOverlay.tsx(5,27): error TS2307: Cannot find module '../../../../../components/feedback/ActivityOrb/ActivityOrb' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerLoadingOverlay.tsx(6,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerPlaylistPanel.tsx(12,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerPlaylistPanel.tsx(13,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerPlaylistPanel.tsx(14,32): error TS2307: Cannot find module '../../../../../hooks/useAccessibility' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerPlaylistPanel.tsx(15,31): error TS2307: Cannot find module '../../../../../theme/tokens' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerResumeOverlay.tsx(3,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerResumeOverlay.tsx(4,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerResumeOverlay.tsx(5,30): error TS2307: Cannot find module '../../../../../utils/timeAgo' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerSpeedPanel.tsx(3,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerSpeedPanel.tsx(4,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerSubtitlePanel.tsx(9,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerSubtitlePanel.tsx(10,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerSubtitlePanel.tsx(11,31): error TS2307: Cannot find module '../../../../../theme/tokens' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerSubtitlePanel.tsx(12,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerSubtitlePanel.tsx(13,62): error TS2307: Cannot find module '../../../../../constants/subtitleColors' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerSubtitlePanel.tsx(79,66): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/modules/playback/video/components/VideoPlayerSurfaceLayer.tsx(5,28): error TS2307: Cannot find module '../../../../../contexts/TransportContext' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerSurfaceLayer.tsx(56,5): error TS2322: Type '{ children: Element; onSingleTap: () => void; onDoubleTapLeft: () => void; onDoubleTapRight: () => void; onSwipeUp: () => void; onSwipeDown: () => void; onVolumeChange: (delta: number) => void; onBrightnessChange: (delta: number) => void; onVolumeGestureEnd: () => void; onBrightnessGestureEnd: () => void; }' is not assignable to type 'IntrinsicAttributes & Props'.
+  Property 'onSingleTap' does not exist on type 'IntrinsicAttributes & Props'.
+src/modules/playback/video/components/VideoPlayerTopBar.tsx(5,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerTopBar.tsx(6,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerTopBar.tsx(7,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerTopBar.tsx(8,27): error TS2307: Cannot find module '../../../../../constants/fontFamily' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerTopBar.tsx(9,43): error TS2307: Cannot find module '../../../../../theme/tokens' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerVideoSurface.tsx(11,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon/SvgIcon' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerVideoSurface.tsx(12,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerVolumePanel.tsx(4,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/components/VideoPlayerVolumePanel.tsx(5,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VolumeBrightnessOverlay.tsx(7,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/components/VolumeBrightnessOverlay.tsx(8,23): error TS2307: Cannot find module '../../../../../components/utility/SvgIcon/SvgIcon' or its corresponding type declarations.
+src/modules/playback/video/components/VolumeBrightnessOverlay.tsx(9,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(10,24): error TS2307: Cannot find module '../../../../../theme' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(11,65): error TS2307: Cannot find module '../../../../../native' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(12,24): error TS2307: Cannot find module '../../../../../lib/errorLogger' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(13,22): error TS2307: Cannot find module '../../../../../lib/logger' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(14,35): error TS2307: Cannot find module '../../../../../services/notificationService' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(15,41): error TS2307: Cannot find module '../../../../../navigation/types' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(16,54): error TS2307: Cannot find module '../../../../../types/media' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(17,38): error TS2307: Cannot find module '../../../../../types/playback' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(18,26): error TS2307: Cannot find module '../../../../../hooks/useHaptics' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(19,31): error TS2307: Cannot find module '../../../../../hooks/usePipLifecycle' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(20,27): error TS2307: Cannot find module '../../../../../hooks/usePipEntry' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(27,8): error TS2307: Cannot find module '../../../../../services/fileService' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(28,58): error TS2307: Cannot find module '../../../../../services/subtitleSettingsService' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(29,38): error TS2307: Cannot find module '../../../../../constants/subtitleColors' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(30,24): error TS2307: Cannot find module '../../../../../components/feedback/Toast/Toast' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(31,46): error TS2307: Cannot find module '../../../../../store' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(32,32): error TS2307: Cannot find module '../../../../../features/recentHistory' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(40,8): error TS2307: Cannot find module '../../../../../store/slices/settingsSlice' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(41,28): error TS2307: Cannot find module '../../../../../features/bookmarks' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(62,8): error TS2307: Cannot find module '../../../../../store/slices/playerSlice' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(63,33): error TS2307: Cannot find module '../../../../../services/metadataService' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(67,8): error TS2307: Cannot find module '../../../../../services/playbackTransitionService' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(68,28): error TS2307: Cannot find module '../../../../../services/shareService' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(69,62): error TS2307: Cannot find module '../../../../../utils/mediaUri' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(70,47): error TS2307: Cannot find module '../../../../../utils/orientation' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(71,31): error TS2307: Cannot find module '../../../../../store/slices/mediaSlice' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(72,33): error TS2307: Cannot find module '../../../../../store/slices/mediaSlice' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(78,8): error TS2307: Cannot find module '../../../../../services/audioSettingsService' or its corresponding type declarations.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(269,34): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(270,36): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(271,40): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(275,47): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(325,5): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(327,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(330,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(331,32): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(332,39): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(333,35): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(334,34): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(335,42): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(336,47): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(338,48): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(339,41): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(350,48): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(351,49): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(352,49): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(353,45): error TS7006: Parameter 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(362,48): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(402,41): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(415,7): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(508,26): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(518,38): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(869,11): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(1261,44): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(1306,49): error TS7006: Parameter 'i' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(1630,58): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(1667,56): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(1790,68): error TS7031: Binding element 'pos' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(1819,9): error TS7031: Binding element 'state' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(1838,64): error TS7031: Binding element 'vol' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(1842,64): error TS7031: Binding element 'nextSpeed' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(1935,17): error TS7006: Parameter 'meta' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(2009,58): error TS7031: Binding element 'percent' implicitly has an 'any' type.
+src/modules/playback/video/hooks/useVideoPlayerScreen.ts(2015,59): error TS7031: Binding element 'errMsg' implicitly has an 'any' type.
+src/modules/playback/video/ui/VideoPlayer.tsx(10,23): error TS2307: Cannot find module '../../../../../components/core/AppText/AppText' or its corresponding type declarations.
+src/modules/playback/video/ui/VideoPlayer.tsx(12,30): error TS2307: Cannot find module '../../StatusBar' or its corresponding type declarations.
+src/modules/playback/video/ui/VideoPlayer.tsx(13,27): error TS2307: Cannot find module '../../../../../components/sheets/BottomSheet/BottomSheet' or its corresponding type declarations.
+src/modules/playback/video/ui/VideoPlayer.tsx(14,30): error TS2307: Cannot find module '../../../../../components/player/ChapterBrowser/ChapterBrowser' or its corresponding type declarations.
+src/modules/playback/video/ui/VideoPlayer.tsx(15,31): error TS2307: Cannot find module '../../../../../components/player/SleepTimerSheet/SleepTimerSheet' or its corresponding type declarations.
+src/modules/playback/video/ui/VideoPlayer.tsx(16,25): error TS2307: Cannot find module '../../../../../components/player/NowPlayingInfo/InfoSheet' or its corresponding type declarations.
+src/modules/playback/video/ui/VideoPlayer.tsx(17,29): error TS2307: Cannot find module '../../../../../components/sheets/PlaylistSheet' or its corresponding type declarations.
+src/modules/playback/video/ui/VideoPlayer.tsx(18,26): error TS2307: Cannot find module '../../../../../components/sheets/QueueSheet/QueueSheet' or its corresponding type declarations.
+src/modules/playback/video/ui/VideoPlayer.tsx(19,28): error TS2307: Cannot find module '../../../../../components/player/ReplayButton/ReplayButton' or its corresponding type declarations.
+src/modules/playback/video/ui/VideoPlayer.tsx(671,28): error TS7006: Parameter 'minutes' implicitly has an 'any' type.
+src/modules/playback/video/ui/VideoPlayer.tsx(672,25): error TS7006: Parameter 'mode' implicitly has an 'any' type.
+src/modules/playback/video/ui/VideoPlayer.tsx(740,22): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/modules/playback/video/ui/VideoPlayer.tsx(741,24): error TS7006: Parameter 'idx' implicitly has an 'any' type.

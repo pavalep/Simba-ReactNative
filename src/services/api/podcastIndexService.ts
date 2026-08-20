@@ -3,7 +3,11 @@
 
 import {apiFetch} from './apiClient';
 import {API_CONFIG} from '../../constants/api';
-import type {PodcastResult, PodcastEpisodeResult} from '../../types/api';
+import type {
+  PodcastCategoryResult,
+  PodcastResult,
+  PodcastEpisodeResult,
+} from '../../types/api';
 import {sha1} from 'js-sha1';
 
 // ─── Auth headers ───────────────────────────────────────────────────────
@@ -86,6 +90,11 @@ interface RawFeedResponse {
   feed: RawFeed;
 }
 
+interface RawCategoriesResponse {
+  status: 'true' | 'false';
+  feeds?: Array<{id: number; name: string}>;
+}
+
 // ─── Mapping helpers ────────────────────────────────────────────────────
 
 function mapFeed(feed: RawFeed): PodcastResult {
@@ -137,12 +146,16 @@ export async function searchPodcasts(
 
 export async function getTrendingPodcasts(
   max: number = 10,
+  categoryId?: string,
 ): Promise<PodcastResult[]> {
   const headers = buildAuthHeaders();
   const response = await apiFetch<RawTrendingResponse>({
     config: API_CONFIG.podcastIndex,
     path: '/podcasts/trending',
-    params: {max},
+    params: {
+      max,
+      ...(categoryId && categoryId !== 'all' ? {cat: categoryId} : {}),
+    },
     headers,
     cacheTtlMs: CACHE.trending,
   });
@@ -182,5 +195,25 @@ export async function getPodcastById(id: number): Promise<PodcastResult> {
     throw new Error('Podcast Index feed lookup returned non-ok status');
   }
   return mapFeed(response.feed);
+}
+
+/**
+ * Fetch the authoritative Podcast Index category catalog.
+ * Docs: https://podcastindex-org.github.io/docs-api/#categories-list
+ */
+export async function getPodcastCategories(): Promise<PodcastCategoryResult[]> {
+  const headers = buildAuthHeaders();
+  const response = await apiFetch<RawCategoriesResponse>({
+    config: API_CONFIG.podcastIndex,
+    path: '/categories/list',
+    headers,
+    cacheTtlMs: 24 * 60 * 60 * 1000,
+  });
+  if (response.status !== 'true') {
+    throw new Error('Podcast Index category lookup returned non-ok status');
+  }
+  return (response.feeds ?? [])
+    .filter(category => Number.isFinite(category.id) && category.name.trim())
+    .map(category => ({id: category.id, name: category.name.trim()}));
 }
 

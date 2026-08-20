@@ -1,0 +1,13 @@
+src/screens/ArchiveItemDetailScreen/ArchiveItemDetailScreen.tsx:154:          addBookmark({
+src/screens/AudioPlayer/hooks/useAudioPlayerScreen.ts:161:      const result = addAudioBookmark(input);
+src/screens/AudioPlayer/hooks/useAudioPlayerScreen.ts:172:                addAudioBookmark(result.requested, {evictId: result.candidate.id});
+src/screens/AudiobookDetailScreen/AudiobookDetailScreen.tsx:170:          addBookmark({
+src/screens/LiveTVScreen/LiveTVScreen.tsx:468:          addBookmark({
+src/screens/LiveTVScreenNew/LiveTVFavoritesScreen.tsx:100:          addBookmark({
+src/screens/PodcastDetailScreen/hooks/useEpisodeActions.ts:112:          addBookmark({
+src/screens/PodcastDetailScreen/index.tsx:98:      addBookmark({
+src/screens/RadioScreenNew/RadioFavoritesScreen.tsx:91:          addBookmark({
+src/screens/ShowDetailScreen/ShowDetailScreen.tsx:44:    addBookmark({
+src/screens/Song/useSongScreen.ts:80:      addBookmark({
+src/screens/VideoPlayer/hooks/useVideoPlayerScreen.ts:929:    const result = addBookmarkEntry(input);
+src/screens/VideoPlayer/hooks/useVideoPlayerScreen.ts:940:              addBookmarkEntry(result.requested, {evictId: result.candidate.id});

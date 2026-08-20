@@ -1,0 +1,2 @@
+src/screens/Home/components/FollowedPodcastsShelf.tsx:20:import type {FollowedPodcast} from '../../../store/slices/followedPodcastsSlice';
+src/screens/Profile/ProfileScreen.tsx:30:import {selectFollowedPodcastCount} from '../../store/slices/followedPodcastsSlice';

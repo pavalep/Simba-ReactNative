@@ -1,0 +1,79 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\usePipLifecycle.ts:12:import {clearAllRecent} from '../store/slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\usePipLifecycle.ts:184:dispatch(clearAllRecent());
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useSearch.ts:61:recentFiles: Array<{
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useSearch.ts:229:recentFiles.forEach(entry => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useSearch.ts:298:artists, albums, allPlaylists, recentFiles, playlist, videoFolders, audioFolders,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\ArchiveItemDetailScreen.tsx:72:const sessionRecent = useAppSelector(s => s.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\AudiobookDetailScreen.tsx:82:const sessionRecent = useAppSelector(s => s.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:15:import {savePlaybackPosition} from '../../../store/slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:195:const sessionRecent = useAppSelector(state => state.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:586:savePlaybackPosition({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:25:import {removeRecentFile, clearAllRecent} from '../../store/slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:55:const recentFiles = useAppSelector(state => state.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:69:let items = recentFiles;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:82:}, [recentFiles, filter, query]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:113:dispatch(removeRecentFile(fileUri));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:127:dispatch(clearAllRecent());
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:133:({item}: {item: (typeof recentFiles)[number]}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:204:{recentFiles.length > 0 && (
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\hooks\useHomeScreen.ts:112:const recentFiles = useAppSelector(state => state.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\hooks\useHomeScreen.ts:256:items: recentFiles.slice(0, 10),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\hooks\useHomeScreen.ts:293:}, [recentFiles, playlists, bookmarks, genres, followedPodcasts]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\index.tsx:74:const recentFiles = useAppSelector(s => s.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\index.tsx:78:const entry = recentFiles.find(f => f.fileUri === ep.enclosureUrl);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\index.tsx:84:}, [episodes, recentFiles]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:32:import {clearAllRecent} from '../../store/slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:70:const recentFiles = useAppSelector(state => state.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:87:recentFiles.reduce((sum, entry) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:91:[recentFiles, playCounts],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:132:dispatch(clearAllRecent());
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:143:(entry: (typeof recentFiles)[number]) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:154:const recentStrip = recentFiles.slice(0, 5);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\SearchScreen.tsx:67:const recentFiles = useAppSelector(state => state.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\SearchScreen.tsx:99:} = useSearch(recentFiles, playlist, videoFolders, audioFolders);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Stats\StatsScreen.tsx:30:const recentFiles = useAppSelector(state => state.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Stats\StatsScreen.tsx:40:/** Σ(playCount × duration) — mediaLibrary is authoritative, recentFiles fallback. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Stats\StatsScreen.tsx:44:recentFiles.forEach(e => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Stats\StatsScreen.tsx:54:}, [mediaLibrary, recentFiles, playCounts]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Stats\StatsScreen.tsx:68:recentFiles.forEach(e => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Stats\StatsScreen.tsx:75:}, [recentFiles]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Stats\StatsScreen.tsx:94:recentFiles
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Stats\StatsScreen.tsx:98:[recentFiles, playCounts],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Stats\StatsScreen.tsx:101:const hasData = totalPlays > 0 || recentFiles.length > 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:31:import {savePlaybackPosition} from '../../../store/slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:326:const sessionRecent = useAppSelector(state => state.session.recentFiles);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:590:savePlaybackPosition({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1572:savePlaybackPosition({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1617:savePlaybackPosition({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1656:savePlaybackPosition({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1833:savePlaybackPosition({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\sessionService.ts:2:private recentFiles: string[] = [];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\sessionService.ts:4:async getRecentFiles(): Promise<string[]> {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\sessionService.ts:5:return this.recentFiles;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\sessionService.ts:9:this.recentFiles = [
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\sessionService.ts:11:...this.recentFiles.filter(f => f !== filePath),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\sessionService.ts:15:async clearRecentFiles(): Promise<void> {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\sessionService.ts:16:this.recentFiles = [];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:60:recentFiles: SessionEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:73:recentFiles: [],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:84:savePlaybackPosition(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:103:const filtered = state.recentFiles.filter(f => f.fileUri !== fileUri);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:106:const existingEntry = state.recentFiles.find(f => f.fileUri === fileUri);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:117:state.recentFiles = [
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:150:removeRecentFile(state, action: PayloadAction<string>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:151:state.recentFiles = state.recentFiles.filter(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:156:clearAllRecent(state) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:157:state.recentFiles = [];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:172:/** (5.2) Directly increment a file's play count outside savePlaybackPosition. */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:180:state.recentFiles = [];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:189:savePlaybackPosition,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:190:removeRecentFile,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:191:clearAllRecent,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:208:return state.session.recentFiles.find(f => f.fileUri === fileUri);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:215:[(state: RootState) => state.session.recentFiles,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:217:(recentFiles, playCounts) =>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:218:recentFiles
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:240:export const selectWeightedFeatured = createSelector(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:241:[(state: RootState) => state.session.recentFiles,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:243:(recentFiles, playCounts) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:249:const scored = (recentFiles ?? []).map(entry => {

@@ -1,0 +1,3 @@
+src/components/player/MiniAudioPlayer/MiniAudioPlayer.tsx(273,28): error TS2304: Cannot find name 'navigate'.
+src/modules/playback/PlaybackOverlayHost.tsx(44,19): error TS2551: Property 'absoluteFillObject' does not exist on type 'typeof StyleSheet'. Did you mean 'absoluteFill'?
+src/modules/playback/PlaybackOverlayHost.tsx(49,19): error TS2551: Property 'absoluteFillObject' does not exist on type 'typeof StyleSheet'. Did you mean 'absoluteFill'?

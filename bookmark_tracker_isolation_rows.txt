@@ -1,0 +1,165 @@
+
+  v11_manus_tracker.md:76:
+> v11_manus_tracker.md:77:This batch is a prerequisite for completing W4-P21 through W4-P25 and for the later badge, playlist, Recent, Bookmark, download, and player work. It is tracked as supplemental implementation evidence until the final typecheck, migration, device, and runtime gates are executed.
+  v11_manus_tracker.md:78:
+  v11_manus_tracker.md:79:| Done | Supplemental implementation checkpoint | Evidence |
+  v11_manus_tracker.md:84:| ☑ | Carry source/type/lane metadata through local scanner normalization. | `mediaSlice.ts` `ScannedTrack` and `fileService.ts` `fileEntriesToTracks()`. |
+> v11_manus_tracker.md:85:| ☑ | Carry metadata through Recent and media-library persistence. | `sessionSlice.ts` `savePlaybackPosition` normalizes and preserves classification. |
+  v11_manus_tracker.md:86:| ☑ | Carry metadata through playlists and player queue conversion. | `types/playlist.ts`, `playlistSlice.ts`, and `playerSlice.ts`; cross-lane additions are rejected for new non-legacy playlists. |
+> v11_manus_tracker.md:87:| ☑ | Carry metadata through bookmarks and offline downloads. | `bookmarkSlice.ts`, `useBookmarks.ts`, `downloadService.ts`, and `DownloadButton.tsx`; legacy storage is normalized at hydration. `BookmarkItem.tsx` now surfaces source and media-kind badges, and `BookmarkList.tsx` restores the required `useMemo` import. |
+  v11_manus_tracker.md:88:| ☑ | Carry metadata through queue actions, M3U interchange, API DTOs, and video navigation. | `useQueueActions.ts`, `m3uParser.ts`, `types/api.ts`, `navigation/types.ts`, and VideoPlayer route/progress payloads. |
+> v11_manus_tracker.md:89:| ☑ | Preserve linked-folder identity through scanner normalization, settings persistence, rescans, and Local Files stable keys. | `media.ts`, `fileService.ts`, `mediaSlice.ts`, `settingsSlice.ts`, `useMediaScanner.ts`, `LibraryAudioSegment.tsx`, and `LibraryVideosSegment.tsx`. |
+  v11_manus_tracker.md:90:| ☑ | Preserve local provenance when FolderBrowser files are opened or inserted into playlists. | `FolderBrowserScreen.tsx` now emits normalized local source/type/lane/mediaType and deterministic linked-folder identity. |
+> v11_manus_tracker.md:91:| ☑ | Preserve source/type/lane/provider/folder identity when Local Files and playlists launch players. | `useLibraryScreen.ts` normalizes scanned tracks and persistent playlist items before VideoPlayer/AudioPlayer navigation. |
+  v11_manus_tracker.md:92:| ☐ | Complete linked-folder identity/rescan migration and verify every caller supplies explicit classification. | Remaining constructor audit, runtime behavior, migration compatibility, and final typecheck gates remain open. |
+  v11_manus_tracker.md:93:
+  v11_manus_tracker.md:101:| Wave 3 | Content and Settings hub | Movies/Podcasts/Music/detail consistency and reachable Settings hub | In progress — execution Wave 2 |
+> v11_manus_tracker.md:102:| Wave 4 | Personal/account functionality | Login, Profile, Settings, Follow, Bookmark, permissions, offline behavior | Not started |
+  v11_manus_tracker.md:103:| Wave 5 | Playback core | Shared contract, audio/video UI, recovery, separate queues | Not started |
+  v11_manus_tracker.md:104:| Wave 6 | Continuity | Mini player, supported PiP, tracks, resume, lifecycle, downloads | Not started |
+  v11_manus_tracker.md:231:
+> v11_manus_tracker.md:232:| ☐ | Inventory session, recent, bookmark, follow, download, and settings state. | |
+  v11_manus_tracker.md:233:
+  v11_manus_tracker.md:234:| ☐ | Inventory player route parameter shapes. | |
+  v11_manus_tracker.md:245:
+> v11_manus_tracker.md:246:| ☐ | Record all persistence whitelists and retention limits. | |
+  v11_manus_tracker.md:247:
+  v11_manus_tracker.md:248:| ☐ | Approve the shared data-flow map before player refactoring. | |
+  v11_manus_tracker.md:481:
+> v11_manus_tracker.md:482:| ☐ | Remove the persistent bottom-tab presentation from Home. | |
+  v11_manus_tracker.md:483:
+  v11_manus_tracker.md:484:| ☐ | Define the Home header and primary actions. | |
+  v11_manus_tracker.md:504:
+> v11_manus_tracker.md:505:#### W2-P12 — Recent media model and persistence
+  v11_manus_tracker.md:506:
+  v11_manus_tracker.md:507:**Objective:** Fix Recent as a dependable user-facing feature.  
+  v11_manus_tracker.md:510:**Blocker:** Runtime/device verification and reducer tests remain pending  
+> v11_manus_tracker.md:511:**Evidence:** Isolated reducer and façade now live under `src/features/recentHistory/`; shared root reducer and persistence whitelist are wired; TypeScript clean in `tscheck_recent_isolation_complete.log`.
+  v11_manus_tracker.md:512:
+  v11_manus_tracker.md:513:| Done | Checkable step | Notes/evidence |
+  v11_manus_tracker.md:519:
+> v11_manus_tracker.md:520:| ☑ | Define update-on-open behavior. | Player load/open paths call the isolated `addRecent` façade. |
+  v11_manus_tracker.md:521:
+  v11_manus_tracker.md:522:| ☑ | Define update-on-progress behavior. | Audio and Video player checkpoint paths call the façade. |
+  v11_manus_tracker.md:527:
+> v11_manus_tracker.md:528:| ☑ | Define retention and maximum recent count. | Isolated reducer evicts oldest entries at a hard cap of 20. |
+  v11_manus_tracker.md:529:
+  v11_manus_tracker.md:530:| ☑ | Define deduplication behavior. | Existing `fileUri` entries are removed before newest-first insertion. |
+  v11_manus_tracker.md:531:
+> v11_manus_tracker.md:532:| ☑ | Define migration behavior for older persisted entries. | Normalization fills classification and defensive numeric defaults for persisted/legacy payloads. |
+  v11_manus_tracker.md:533:
+  v11_manus_tracker.md:534:| ☐ | Write reducer/controller tests for recent updates. | Deferred to final verification gate. |
+  v11_manus_tracker.md:549:
+> v11_manus_tracker.md:550:| ☑ | Render Recent from persisted state. | Home now reads `useRecentHistory().list`; reducer is whitelisted for persistence. |
+  v11_manus_tracker.md:551:
+  v11_manus_tracker.md:552:| ☐ | Show distinct audio and video metadata. | |
+  v11_manus_tracker.md:591:
+> v11_manus_tracker.md:592:| ☐ | Persist linked source metadata safely. | |
+  v11_manus_tracker.md:593:
+  v11_manus_tracker.md:594:| ☐ | Define scan progress and cancellation. | |
+  v11_manus_tracker.md:734:
+> v11_manus_tracker.md:735:| ☐ | Keep TrackCard and list states isolated. | |
+  v11_manus_tracker.md:736:
+  v11_manus_tracker.md:737:| ☐ | Verify API order and pagination behavior. | |
+  v11_manus_tracker.md:770:
+> v11_manus_tracker.md:771:| ☐ | Wire bookmark/unbookmark where applicable. | |
+  v11_manus_tracker.md:772:
+  v11_manus_tracker.md:773:| ☐ | Wire add-to-playlist only for the correct media type. | |
+  v11_manus_tracker.md:869:
+> v11_manus_tracker.md:870:| ☑ | Inventory every Profile row and button. | Header sign-out, stats, recent strip, History, Stats, Bookmarks, Playlists, Downloads, Local Media, Settings, Theme, revoke, and clear-data actions reviewed. |
+  v11_manus_tracker.md:871:
+  v11_manus_tracker.md:872:| ☑ | Classify each item as functional, pending, or remove. | Existing rows are wired or intentionally retained; Followed content and account refresh/offline states remain pending. |
+  v11_manus_tracker.md:879:
+> v11_manus_tracker.md:880:| ☑ | Wire history/bookmarks/followed content links. | History and Bookmarks are linked; a dedicated followed-content destination remains open for W4-P24. |
+  v11_manus_tracker.md:881:
+  v11_manus_tracker.md:882:| ☑ | Wire downloads/local media links where appropriate. | Profile now links to `Downloads` and the Settings `LinkedFolders` route; local media retains linked-folder identity. |
+  v11_manus_tracker.md:907:
+> v11_manus_tracker.md:908:| ☑ | Connect subtitle preferences to subtitle behavior. | `useVideoPlayerScreen.ts` applies preferred languages, auto-load mode, font size, text color, background opacity, and high-contrast overrides to active mpv playback; existing in-player controls persist changes. |
+  v11_manus_tracker.md:909:
+> v11_manus_tracker.md:910:| ☑ | Connect theme preferences to the theme provider. | Theme picker and Profile quick-toggle dispatch `setThemeMode`; runtime persistence verification remains open. |
+  v11_manus_tracker.md:911:
+  v11_manus_tracker.md:912:| ☑ | Connect local media settings to source/index services. | Settings refresh and Linked Folders rescans now call `useMediaScanner.startScan`; targeted rescans preserve linked-folder identity. |
+  v11_manus_tracker.md:919:
+> v11_manus_tracker.md:920:| ☐ | Show persisted state after restart. | |
+  v11_manus_tracker.md:921:
+  v11_manus_tracker.md:922:| ☑ | Hide or label unsupported settings instead of pretending they work. | Discover destinations and library controls are now explicit; unsupported runtime verification remains open. |
+  v11_manus_tracker.md:926:
+> v11_manus_tracker.md:927:#### W4-P24 — Follow and bookmark system
+  v11_manus_tracker.md:928:
+  v11_manus_tracker.md:929:**Objective:** Fix personal actions across Home, browse, detail, and Profile.  
+  v11_manus_tracker.md:932:**Blocker:** None recorded  
+> v11_manus_tracker.md:933:**Evidence:** Canonical bookmark metadata, follow selectors, detail-screen actions, and storage-failure rollback are implemented; list-card coverage, unavailable-item handling, and restart verification remain open.
+  v11_manus_tracker.md:934:
+  v11_manus_tracker.md:935:| Done | Checkable step | Notes/evidence |
+  v11_manus_tracker.md:937:
+> v11_manus_tracker.md:938:| ☑ | Define bookmark identity and media-type fields. | Bookmark, Recent, playlist, queue, API, and player contracts now carry `source`, semantic `type`, `mediaType` lane, optional `provider`, and optional `folderId`. |
+  v11_manus_tracker.md:939:
+  v11_manus_tracker.md:940:| ☑ | Define follow identity and provider fields. | `FollowedPodcast` retains stable Podcast Index `id`, `feedUrl`, author/title, and followed timestamp; shared count/id/item selectors added. |
+  v11_manus_tracker.md:941:
+> v11_manus_tracker.md:942:| ☑ | Create shared selectors for bookmarked items. | Bookmark slice exposes all, per-file, count, and media-aware records; hydration normalizes legacy metadata. |
+  v11_manus_tracker.md:943:
+  v11_manus_tracker.md:944:| ☑ | Create shared selectors for followed items. | Added `selectFollowedPodcastCount`, `selectFollowedPodcastIds`, `selectFollowedPodcastById`, and existing membership selector. |
+  v11_manus_tracker.md:945:
+> v11_manus_tracker.md:946:| ☑ | Wire bookmark actions on detail screens. | Archive, audiobook, live-content, and podcast detail flows retain bookmark actions; PodcastDetail now also exposes a direct per-episode `BookmarkButton` with canonical Podcast Index metadata. |
+  v11_manus_tracker.md:947:
+> v11_manus_tracker.md:948:| ☐ | Wire bookmark actions on list cards where appropriate. | |
+  v11_manus_tracker.md:949:
+> v11_manus_tracker.md:950:| ☑ | Wire follow actions for podcasts/shows/artists where appropriate. | Existing podcast follow state is persisted and Profile now exposes a Followed Podcasts destination; broader show/artist actions remain open. |
+  v11_manus_tracker.md:951:
+> v11_manus_tracker.md:952:| ☑ | Show optimistic state only with rollback on failure. | `useBookmarks` updates Redux immediately and restores the prior item when bookmark persistence or deletion rejects. |
+  v11_manus_tracker.md:953:
+  v11_manus_tracker.md:954:| ☐ | Handle removed or unavailable personal items. | |
+  v11_manus_tracker.md:955:
+> v11_manus_tracker.md:956:| ☐ | Verify persistence and Profile presentation after restart. | |
+  v11_manus_tracker.md:957:
+  v11_manus_tracker.md:958:**Exit gate:** Record changed files, verification commands, screenshots/recordings, test devices, and unresolved defects before changing Status to Done.
+  v11_manus_tracker.md:1010:| ☐ | Loading, buffering, failed, recovering, missing-source, permission, and unsupported-media states. | Each state has distinct copy, control availability, and recovery action. |
+> v11_manus_tracker.md:1011:| ☐ | Track continuity across source changes. | Subtitle/audio tracks refresh and persisted supported preferences are reapplied without stale controls. |
+  v11_manus_tracker.md:1012:| ☐ | Professional UI hierarchy and accessibility. | No clipping, overlap, dead controls, unexplained placeholders, or unstable touch targets; labels and hints are present. |
+  v11_manus_tracker.md:1013:| ☐ | Local, remote, downloaded, and offline source behavior. | Source-specific loading and recovery paths are visible and preserve the canonical playback entry. |
+  v11_manus_tracker.md:1037:
+> v11_manus_tracker.md:1038:| ☑ | Map downloaded content sources into the type. | Download and resume persistence preserve canonical source/type/lane classification; legacy records normalize at hydration. |
+  v11_manus_tracker.md:1039:
+  v11_manus_tracker.md:1040:| ☑ | Map playlist context into the type. | PlaylistSheet, AllPlaylists, FolderBrowser, PlaylistDetail imports, and player insertion boundaries now carry complete lane-aware entries; mixed creation is removed from active pickers. |
+  v11_manus_tracker.md:1043:
+> v11_manus_tracker.md:1044:| ☑ | Map artwork and display metadata into the type. | Player, detail, queue, bookmark, and remote-result payloads retain artwork and display metadata alongside canonical entries. |
+  v11_manus_tracker.md:1045:
+  v11_manus_tracker.md:1046:| ☐ | Map origin route and autoplay intent into the type. | |
+  v11_manus_tracker.md:1060:**Blocker:** Runtime/device verification pending  
+> v11_manus_tracker.md:1061:**Evidence:** `AudioPlayer.tsx` now presents a focused now-playing card with status eyebrow, artwork, metadata, seek surface, transport, secondary actions, lyrics, and queue preview. `AudioTransportControls.tsx` separates primary transport from shuffle/repeat utilities with 44pt-plus targets. `AudioActionRow.tsx` provides visible bookmark, like, share, info, queue, manage, playlist, and overflow actions; `AudioAlbumArt.tsx` adds restrained frame depth and clipping; `AudioVolumeSlider.tsx` now provides a 44pt gesture surface while retaining native-confirmed percentage display. TypeScript passes in `tscheck_player_ui_batch8.log`.
+  v11_manus_tracker.md:1062:
+  v11_manus_tracker.md:1063:| Done | Checkable step | Notes/evidence |
+  v11_manus_tracker.md:1103:
+> v11_manus_tracker.md:1104:| ☑ | Define header, title, back, and action hierarchy. | Existing top bar remains the primary title/back/bookmark/share/overflow and rotate surface. |
+  v11_manus_tracker.md:1105:
+  v11_manus_tracker.md:1106:| ☑ | Define transport controls and hide/show behavior. | PrimaryControls retains animated visibility and now separates seek, track navigation, and 10-second transport actions with stronger targets. |
+  v11_manus_tracker.md:1177:
+> v11_manus_tracker.md:1178:| ☑ | Define queue persistence and migration. | Queue/playlist reducers normalize legacy partial entries at state boundaries; migration behavior still needs device/runtime evidence. |
+  v11_manus_tracker.md:1179:
+  v11_manus_tracker.md:1180:| ☑ | Define next/previous behavior within each media type. | `playbackTransitionService.ts` resolves queue-first, lane-aware previous/next transitions for full-screen and mini-player controls. |
+  v11_manus_tracker.md:1290:
+> v11_manus_tracker.md:1291:| ☐ | Persist supported track preferences. | |
+  v11_manus_tracker.md:1292:
+  v11_manus_tracker.md:1293:| ☐ | Show track-loading and track-error states. | |
+  v11_manus_tracker.md:1358:
+> v11_manus_tracker.md:1359:| ☐ | Respect retention settings. | |
+  v11_manus_tracker.md:1360:
+  v11_manus_tracker.md:1361:| ☐ | Expose downloads from Settings/Profile. | |
+  v11_manus_tracker.md:1427:
+> v11_manus_tracker.md:1428:| ☐ | Add bookmark/follow tests. | |
+  v11_manus_tracker.md:1429:
+  v11_manus_tracker.md:1430:| ☐ | Add local media classification tests. | |
+  v11_manus_tracker.md:1529:
+> v11_manus_tracker.md:1530:| ☐ | Run follow/bookmark smoke paths. | |
+  v11_manus_tracker.md:1531:
+  v11_manus_tracker.md:1532:| ☐ | Run Movies/Podcasts/Music browse paths. | |
+  v11_manus_tracker.md:1556:| ☐ | Local sorting by Newest, Size, and Name | |
+> v11_manus_tracker.md:1557:| ☐ | Follow and Bookmark from supported content surfaces | |
+  v11_manus_tracker.md:1558:| ☐ | Profile shows working personal destinations | |
+  v11_manus_tracker.md:1559:| ☐ | Settings rows and toggles perform their stated actions | |
+  v11_manus_tracker.md:1614:| Archives | Future content-area pipeline | Planned | Archive search, metadata/detail, media classification, filters, pagination, unsupported-file handling |
+> v11_manus_tracker.md:1615:| Details/shared routes | Cross-cutting W3–W6 | In pipeline | Consistent detail shell, related content, Follow/Bookmark, media-safe player handoff |
+> v11_manus_tracker.md:1616:| Settings/Profile | W2 and W4 | In pipeline | Functional source management, account/preferences, Follow/Bookmark destinations, permission states |
+  v11_manus_tracker.md:1617:
+  v11_manus_tracker.md:1618:> **Manager note:** “Planned” means explicitly included in the v11 pipeline and tracked for future execution. It does not mean implemented or verified. Each area will receive its own architecture, API/data-contract, UI/UX, state, navigation, and release-evidence work before it can be reported as complete.
+

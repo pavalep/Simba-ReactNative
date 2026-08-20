@@ -3,16 +3,13 @@ import {View, StyleSheet} from 'react-native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useAppSelector} from '../store';
 import {RootStackParamList} from './types';
-import {navigationRef} from './navigationHelper';
-import {TabNavigator} from './TabNavigator';
-import {MiniAudioPlayer} from '../components/player/MiniAudioPlayer/MiniAudioPlayer';
+import {HomeScreen} from '../screens/Home';
+import {LibraryScreen} from '../screens/Library';
 import {SettingsStack} from './SettingsStack';
 import {SplashScreen} from '../screens/Splash/SplashScreen';
-import {VideoPlayerScreen} from '../screens/VideoPlayer/VideoPlayerScreen';
-import {AudioPlayerScreen} from '../screens/AudioPlayer/AudioPlayerScreen';
-import {LoginScreen} from '../screens/Login/LoginScreen';
+import {LoginScreen} from '../screens/Login';
 import {BookmarksScreen} from '../screens/Bookmarks/BookmarksScreen';
-import {ProfileScreen} from '../screens/Profile/ProfileScreen';
+import {ProfileScreen} from '../screens/Profile';
 import {HistoryScreen} from '../screens/History/HistoryScreen';
 import {StatsScreen} from '../screens/Stats/StatsScreen';
 import {ArtistScreen} from '../screens/Artist/ArtistScreen';
@@ -32,63 +29,26 @@ import {AlbumDetailScreen} from '../screens/Library/AlbumDetailScreen';
 import {ScreenErrorBoundary} from '../components/feedback/ScreenErrorBoundary';
 import {PodcastsScreen} from '../screens/PodcastsScreen';
 import {PodcastDetailScreen} from '../screens/PodcastDetailScreen';
-import {MusicScreen} from '../screens/MusicScreen/MusicScreen';
+import {MusicScreen} from '../screens/MusicScreen';
 import {MusicDetailScreen} from '../screens/MusicDetailScreen/MusicDetailScreen';
 import {MovieDetailScreen} from '../screens/MovieDetailScreen/MovieDetailScreen';
-import {RadioScreenNew} from '../screens/RadioScreenNew/RadioScreenNew';
+import {RadioScreenNew} from '../screens/RadioScreenNew';
 import {RadioFavoritesScreen} from '../screens/RadioScreenNew/RadioFavoritesScreen';
-import {LiveTVScreenNew} from '../screens/LiveTVScreenNew/LiveTVScreenNew';
+import {LiveTVScreenNew} from '../screens/LiveTVScreenNew';
 import {LiveTVFavoritesScreen} from '../screens/LiveTVScreenNew/LiveTVFavoritesScreen';
-import {AudiobooksScreen} from '../screens/AudiobooksScreen/AudiobooksScreen';
+import {AudiobooksScreen} from '../screens/AudiobooksScreen';
 import {AudiobookDetailScreen} from '../screens/AudiobookDetailScreen/AudiobookDetailScreen';
-import {ArchiveScreen} from '../screens/ArchiveScreen/ArchiveScreen';
+import {ArchiveScreen} from '../screens/ArchiveScreen';
 import {ArchiveItemDetailScreen} from '../screens/ArchiveItemDetailScreen/ArchiveItemDetailScreen';
 import {ShowsScreen} from '../screens/ShowsScreen/ShowsScreen';
 import {ShowDetailScreen} from '../screens/ShowDetailScreen/ShowDetailScreen';
 import {QueueScreen} from '../screens/QueueScreen/QueueScreen';
 import {DownloadsScreen} from '../screens/DownloadsScreen/DownloadsScreen';
+import {OfflineBanner} from '../components/status/OfflineBanner/OfflineBanner';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// ─── Wrapper: TabNavigator + MiniAudioPlayer overlay ──────
-const MainTabsWithMiniPlayer: React.FC = () => {
-  return <TabNavigator />;
-};
-
-// ── 58.6: MiniAudioPlayer persists on every root-stack screen ──
-// Mounted once at navigator level (sibling of the stack) so Search,
-// Bookmarks, Queue, Downloads, ShowDetail, … all keep the mini player.
-// Hidden while a full-screen player (AudioPlayer/VideoPlayer) is open so
-// it never overlaps; bottom position adapts to tab bar presence.
-const RootMiniPlayerOverlay: React.FC = () => {
-  const [navState, setNavState] = useState<
-    ReturnType<typeof navigationRef.getRootState>
-  >();
-
-  useEffect(() => {
-    // Sibling of the navigator → no navigation context; track root state
-    // through the global navigation ref instead of useNavigationState.
-    if (navigationRef.isReady()) {
-      setNavState(navigationRef.getRootState());
-    }
-    return navigationRef.addListener('state', () => {
-      setNavState(navigationRef.getRootState());
-    });
-  }, []);
-
-  // Wait for the first state snapshot so the overlay never flashes with
-  // guessed insets before the navigator is ready.
-  if (!navState) return null;
-
-  const routeNames = navState.routes.map(r => r.name);
-  const isPlayerActive =
-    routeNames.includes('AudioPlayer') || routeNames.includes('VideoPlayer');
-  const currentRoute = navState.routes[navState.index ?? 0]?.name;
-  const overTabBar = currentRoute === 'MainTabs';
-
-  if (isPlayerActive) return null;
-  return <MiniAudioPlayer overTabBar={overTabBar} />;
-};
+// ─── Direct authenticated destinations ─────────────────────────────
 
 export const RootNavigator: React.FC = () => {
   const hasLaunched = useAppSelector(state => state.settings.hasLaunched);
@@ -98,13 +58,13 @@ export const RootNavigator: React.FC = () => {
     ? 'Splash'
     : !isAuthenticated
     ? 'Login'
-    : 'MainTabs';
+    : 'Home';
 
   return (
     <View style={styles.wrapper}>
       <Stack.Navigator
         // Remount the navigator whenever auth state flips so the initial
-        // route is honoured reactively: sign-in → MainTabs, sign-out → Login.
+        // route is honoured reactively: sign-in → Home, sign-out → Login.
         // initialRouteName is only consulted on mount, so without this key a
         // sign-out would leave the user stranded on Settings (Phase 29.9).
         key={isAuthenticated ? 'authed' : 'unauthed'}
@@ -119,34 +79,16 @@ export const RootNavigator: React.FC = () => {
         component={LoginScreen}
         options={{gestureEnabled: false}}
       />
-      <Stack.Screen name="MainTabs" component={MainTabsWithMiniPlayer} />
       <Stack.Screen
-        name="VideoPlayer"
-        options={{
-          // V6 2.3.2: Default to portrait. Users can rotate to landscape
-          // via the rotate button in VideoPlayerTopBar, which calls
-          // handleToggleRotate → lockToLandscape()/lockToPortrait().
-          // Forcing landscape here was hijacking the user's preferred
-          // orientation on every navigation into the player.
-          animation: 'fade',
-        }}>
-        {props => (
-          <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
-            <VideoPlayerScreen {...props} />
-          </ScreenErrorBoundary>
-        )}
-      </Stack.Screen>
+        name="Home"
+        component={HomeScreen}
+        options={{animation: 'fade'}}
+      />
       <Stack.Screen
-        name="AudioPlayer"
-        options={{
-          animation: 'slide_from_bottom',
-        }}>
-        {props => (
-          <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>
-            <AudioPlayerScreen {...props} />
-          </ScreenErrorBoundary>
-        )}
-      </Stack.Screen>
+        name="Library"
+        component={LibraryScreen}
+        options={{animation: 'slide_from_right'}}
+      />
       <Stack.Screen
         name="Settings"
         component={SettingsStack}
@@ -339,8 +281,8 @@ export const RootNavigator: React.FC = () => {
       />
       </Stack.Navigator>
 
-      {/* 58.6: mini player overlays every root-stack screen */}
-      <RootMiniPlayerOverlay />
+      {/* Global connectivity state is visible on every root-stack screen. */}
+      <OfflineBanner />
     </View>
   );
 };

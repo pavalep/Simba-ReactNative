@@ -3,68 +3,54 @@ import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAppSelector, useAppDispatch} from '../../../store';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
-import {selectAllPlaylists} from '../../../store/slices/playlistSlice';
+import type {ScannedTrack} from '../../../store/slices/mediaSlice';
+import {usePlaylists} from '../../../features/playlists';
 import {loadPlaylistToPlayer, playlistItemsToEntries} from '../../../store/slices/playerSlice';
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
 import {isVideoFile} from '../../../utils/timeAgo';
 import {useToast} from '../../../components/feedback/Toast';
 import {ViewMode} from '../components/ViewToggle';
 import type {PlaylistKind} from '../../../types/playlist';
-import type {SvgIconName} from '../../../components/utility/SvgIcon';
 import type {LibraryScreenProps} from '../../../navigation/types';
+import {normalizeMediaClassification} from '../../../types/media';
+import {usePlaybackCommands} from '../../../modules/playback';
+import type {
+  ContentMode,
+  FilterType,
+  LocalMediaFilter,
+  Segment,
+  SortOption,
+} from '../types';
+import {
+  LOCAL_CONTENT_MODES,
+  LOCAL_FILE_SEGMENTS,
+  LOCAL_FILTER_SEGMENTS,
+  LOCAL_GRID_GAP,
+  LOCAL_MEDIA_FILTERS,
+  LOCAL_PLAYLIST_FILTERS,
+  LOCAL_SORT_OPTIONS,
+  LOCAL_SORT_SEGMENTS,
+  LOCAL_VIEW_TOGGLE_SEGMENTS,
+} from '../related/localFilesConfig';
 
-// ── Types ──
+const SEGMENTS = LOCAL_FILE_SEGMENTS;
+const FILTER_CHIPS = LOCAL_MEDIA_FILTERS;
+const SORT_OPTIONS = LOCAL_SORT_OPTIONS;
+const CONTENT_MODE_OPTIONS = LOCAL_CONTENT_MODES;
+const PLAYLIST_FILTER_TYPES = LOCAL_PLAYLIST_FILTERS;
+const GRID_GAP = LOCAL_GRID_GAP;
+const VIEW_TOGGLE_SEGMENTS = LOCAL_VIEW_TOGGLE_SEGMENTS;
+const SORT_SEGMENTS = LOCAL_SORT_SEGMENTS;
+const FILTER_SEGMENTS = LOCAL_FILTER_SEGMENTS;
 
-export type Segment = 'audio' | 'artists' | 'albums' | 'folders';
-export type ContentMode = 'library' | 'playlists';
-export type FilterType = 'ALL' | 'AUDIO_ONLY' | 'VIDEO_ONLY' | 'MIXED';
-export type SortOption = 'name' | 'dateAdded' | 'duration' | 'artist' | 'album';
-
-// ── Constants ──
-
-export const SEGMENTS: {key: Segment; label: string; icon: SvgIconName}[] = [
-  {key: 'folders', label: 'Folders', icon: 'folder'},
-  {key: 'audio', label: 'Audio', icon: 'music'},
-  {key: 'artists', label: 'Artists', icon: 'headphones'},
-  {key: 'albums', label: 'Albums', icon: 'list'},
-];
-
-export const FILTER_CHIPS: {key: 'all' | 'video' | 'audio'; label: string}[] = [
-  {key: 'all', label: 'All'},
-  {key: 'video', label: 'Video'},
-  {key: 'audio', label: 'Audio'},
-];
-
-export const SORT_OPTIONS: {key: SortOption; label: string}[] = [
-  {key: 'name', label: 'Name'},
-  {key: 'dateAdded', label: 'Date Added'},
-  {key: 'duration', label: 'Duration'},
-  {key: 'artist', label: 'Artist'},
-  {key: 'album', label: 'Album'},
-];
-
-export const CONTENT_MODE_OPTIONS: {key: ContentMode; label: string}[] = [
-  {key: 'library', label: 'Library'},
-  {key: 'playlists', label: 'Playlists'},
-];
-
-export const PLAYLIST_FILTER_TYPES: {key: FilterType; label: string}[] = [
-  {key: 'ALL', label: 'All'},
-  {key: 'AUDIO_ONLY', label: 'Audio'},
-  {key: 'VIDEO_ONLY', label: 'Video'},
-  {key: 'MIXED', label: 'Mixed'},
-];
-
-/** Segments that support grid/list view toggle */
-const VIEW_TOGGLE_SEGMENTS: Segment[] = ['audio'];
-
-/** Segments that show sort controls */
-const SORT_SEGMENTS: Segment[] = [];
-
-/** Segments that show filter chips */
-const FILTER_SEGMENTS: Segment[] = [];
-
-export const GRID_GAP = 8;
+export {
+  SEGMENTS,
+  FILTER_CHIPS,
+  SORT_OPTIONS,
+  CONTENT_MODE_OPTIONS,
+  PLAYLIST_FILTER_TYPES,
+  GRID_GAP,
+};
 
 // ── Hook ──
 
@@ -74,6 +60,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const insets = useSafeAreaInsets();
   const bottomChromeInset = insets.bottom + 104;
   const dispatch = useAppDispatch();
+  const {openPlayer} = usePlaybackCommands();
 
   // ── Library State ──
   const [activeSegment, setActiveSegment] = useState<Segment>('folders');
@@ -83,7 +70,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   // ── View / Sort / Filter ──
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [sortBy, setSortBy] = useState<SortOption>('name');
-  const [filterType, setFilterType] = useState<'all' | 'video' | 'audio'>('all');
+  const [filterType, setFilterType] = useState<LocalMediaFilter>('all');
   const [sortPickerVisible, setSortPickerVisible] = useState(false);
 
   // ── Playlist State ──
@@ -100,7 +87,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const lastScanTimestamp = useAppSelector(s => s.settings?.lastScanTimestamp ?? null);
   const scannedTracks = useAppSelector(selectAllTracks);
   const scannedTrackCount = scannedTracks.length;
-  const allPlaylists = useAppSelector(selectAllPlaylists);
+  const {list: allPlaylists, createPlaylist} = usePlaylists();
 
   // ── Player Selectors (for AudioWaveform) ──
   const currentFile = useAppSelector(s => s.player.currentFile);
@@ -197,13 +184,35 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
     startScan();
   }, [startScan]);
 
+  const handleMediaPress = useCallback(
+    (track: ScannedTrack) => {
+      openPlayer({
+        uri: track.uri,
+        title: track.title,
+        duration: track.duration ?? 0,
+        ...normalizeMediaClassification({
+          ...track,
+          mediaType:
+            track.mediaType === 'video' || isVideoFile(track.uri)
+              ? 'video'
+              : 'audio',
+        }),
+      });
+    },
+    [openPlayer],
+  );
+
   // ── Playlist Handlers ──
   const handleCreatePlaylist = useCallback(
     (name: string, kind: PlaylistKind) => {
-      dispatch({type: 'playlists/createPlaylist', payload: {name, kind}});
-      setCreateModalVisible(false);
+      const result = createPlaylist({name, kind});
+      if (result.status === 'created') {
+        setCreateModalVisible(false);
+      } else {
+        toast.show('You can have up to 20 playlists', 'error');
+      }
     },
-    [dispatch],
+    [createPlaylist, toast],
   );
 
   const handlePlayAllPlaylist = useCallback(
@@ -214,8 +223,12 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
         dispatch(loadPlaylistToPlayer(entries));
         const first = pl.items[0];
         (navigation as any).navigate(
-          isVideoFile(first.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
-          {fileUri: first.fileUri, fileTitle: first.title},
+          first.mediaType === 'video' || isVideoFile(first.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
+          {
+            fileUri: first.fileUri,
+            fileTitle: first.title,
+            ...normalizeMediaClassification(first),
+          },
         );
       }
     },
@@ -234,8 +247,12 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
         dispatch(loadPlaylistToPlayer(entries));
         const first = pl.items[0];
         (navigation as any).navigate(
-          isVideoFile(first.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
-          {fileUri: first.fileUri, fileTitle: first.title},
+          first.mediaType === 'video' || isVideoFile(first.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
+          {
+            fileUri: first.fileUri,
+            fileTitle: first.title,
+            ...normalizeMediaClassification(first),
+          },
         );
       }
     },
@@ -273,7 +290,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
     isAudioPlaying, currentAudioUri,
     handleRefresh,
     navigateToSettings, navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
-    handleArtistPress, handleAlbumPress, handleScanAudioFolders,
+    handleArtistPress, handleAlbumPress, handleScanAudioFolders, handleMediaPress,
     handleCreatePlaylist, handlePlayAllPlaylist, handleShufflePlaylist,
     handlePlaylistCardPress,
   };

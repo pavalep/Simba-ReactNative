@@ -1,17 +1,43 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useAppSelector, useAppDispatch} from '../../../store';
 import {
   setPlaybackState,
-  nextTrack,
-  previousTrack,
+  playFromPlaylist,
+  playFromQueue,
   clearPlayer,
 } from '../../../store/slices/playerSlice';
 import {MpvPlayer} from '../../../native';
+import {
+  resolveNextTransition,
+  resolvePreviousTransition,
+} from '../../../services/playbackTransitionService';
 
 export function useMiniPlayer() {
   const dispatch = useAppDispatch();
-  const {currentFile, playbackState, currentPosition, duration, sleepTimerEndTime} =
-    useAppSelector(state => state.player);
+  const {
+    currentFile,
+    playbackState,
+    currentPosition,
+    duration,
+    sleepTimerEndTime,
+    playlist,
+    queue,
+    currentIndex,
+    loopMode,
+  } = useAppSelector(state => state.player);
+
+  const dismissPendingRef = useRef(false);
+
+  useEffect(() => {
+    const unsubscribe = MpvPlayer.on('onPlaybackStateChanged', ({state}) => {
+      dispatch(setPlaybackState(state));
+      if (dismissPendingRef.current && state !== 'playing') {
+        dismissPendingRef.current = false;
+        dispatch(clearPlayer());
+      }
+    });
+    return unsubscribe;
+  }, [dispatch]);
 
   const isActive: boolean =
     playbackState === 'playing' || playbackState === 'paused';
@@ -32,49 +58,101 @@ export function useMiniPlayer() {
 
   const handlePlayPause = useCallback(() => {
     try {
-      if (isPlaying) {
+      if (MpvPlayer.getPlaybackState() === 'playing') {
         MpvPlayer.pause();
-        dispatch(setPlaybackState('paused'));
       } else {
         MpvPlayer.play();
-        dispatch(setPlaybackState('playing'));
       }
     } catch {
-      // native module not available
+      dispatch(setPlaybackState('error'));
     }
-  }, [isPlaying, dispatch]);
+  }, [dispatch]);
 
   const handleNext = useCallback(() => {
-    dispatch(nextTrack());
-    try {
-      MpvPlayer.next();
-    } catch {
-      // native module not available
+    if (!currentFile) return;
+    const transition = resolveNextTransition({
+      lane: currentFile.mediaType,
+      playlist,
+      queue,
+      currentIndex,
+      loopMode,
+    });
+    if (transition.kind === 'ended') {
+      dispatch(setPlaybackState('stopped'));
+      return;
     }
-  }, [dispatch]);
+
+    if (transition.kind === 'queue') {
+      dispatch(playFromQueue(transition.queueIndex));
+    } else {
+      dispatch(playFromPlaylist(transition.playlistIndex));
+    }
+    try {
+      MpvPlayer.loadFile(transition.entry.uri);
+    } catch {
+      dispatch(setPlaybackState('error'));
+    }
+  }, [currentFile, currentIndex, dispatch, loopMode, playlist, queue]);
 
   const handlePrevious = useCallback(() => {
-    dispatch(previousTrack());
-    try {
-      MpvPlayer.previous();
-    } catch {
-      // native module not available
+    if (!currentFile) return;
+    const position = MpvPlayer.getPosition?.() ?? currentPosition;
+    if (position > 5) {
+      try {
+        MpvPlayer.seekTo(0);
+      } catch {
+        dispatch(setPlaybackState('error'));
+      }
+      return;
     }
-  }, [dispatch]);
 
-  // Swipe-down dismiss: pause playback and clear the player (32.4)
-  const handleDismiss = useCallback(() => {
+    const transition = resolvePreviousTransition({
+      lane: currentFile.mediaType,
+      playlist,
+      queue,
+      currentIndex,
+      loopMode,
+    });
+    if (transition.kind === 'restart') {
+      try {
+        MpvPlayer.seekTo(0);
+      } catch {
+        dispatch(setPlaybackState('error'));
+      }
+      return;
+    }
+
+    dispatch(playFromPlaylist(transition.playlistIndex));
     try {
+      MpvPlayer.loadFile(transition.entry.uri);
+    } catch {
+      dispatch(setPlaybackState('error'));
+    }
+  }, [currentFile, currentIndex, currentPosition, dispatch, loopMode, playlist, queue]);
+
+  // Swipe-down or explicit close: clear only after native pause is confirmed.
+  const handleDismiss = useCallback(() => {
+    if (!currentFile) return;
+    try {
+      if (MpvPlayer.getPlaybackState() !== 'playing') {
+        dispatch(clearPlayer());
+        return;
+      }
+      dismissPendingRef.current = true;
       MpvPlayer.pause();
-    } catch {}
-    dispatch(clearPlayer());
-  }, [dispatch]);
+    } catch {
+      dismissPendingRef.current = false;
+      dispatch(setPlaybackState('error'));
+    }
+  }, [currentFile, dispatch]);
 
   return {
     // Idle state: never surface the mini player without an active track
     isVisible: isActive && !!currentFile,
     isPlaying,
     currentTrack: currentFile,
+    currentPosition,
+    duration,
     progress,
     sleepRemainingMs,
     sleepTimerActive: sleepTimerEndTime !== null,

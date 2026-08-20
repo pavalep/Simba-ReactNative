@@ -4,7 +4,7 @@
 // station menu (remove / playlist / bookmark / share).
 
 import React, {useCallback, useMemo, useState} from 'react';
-import {View, FlatList, StyleSheet} from 'react-native';
+import {Alert, View, FlatList, StyleSheet} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
@@ -27,7 +27,8 @@ import {useHaptics} from '../../hooks/useHaptics';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {shareContent} from '../../services/shareService';
-import {useBookmarks} from '../../hooks/useBookmarks';
+import {useBookmarks} from '../../features/bookmarks';
+import {usePlaybackCommands} from '../../modules/playback';
 
 type Props = RootStackScreenProps<'RadioFavoritesScreen'>;
 
@@ -36,6 +37,7 @@ export const RadioFavoritesScreen: React.FC<Props> = ({navigation}) => {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const haptics = useHaptics();
+  const {openPlayer} = usePlaybackCommands();
   const {add: addBookmark} = useBookmarks();
   const dispatch = useAppDispatch();
 
@@ -50,14 +52,18 @@ export const RadioFavoritesScreen: React.FC<Props> = ({navigation}) => {
 
   const handleStationPress = useCallback(
     (row: StationRow) => {
-      navigation.navigate('AudioPlayer', {
-        fileUri: row.url,
-        fileTitle: row.name,
+      openPlayer({
+        uri: row.url,
+        title: row.name,
+        duration: 0,
         artworkUri: row.image || undefined,
-        source: 'radio',
+        source: 'api',
+        type: 'radio',
+        mediaType: 'audio',
+        provider: 'radio',
       });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const handleLongPress = useCallback((row: StationRow) => {
@@ -81,23 +87,43 @@ export const RadioFavoritesScreen: React.FC<Props> = ({navigation}) => {
             title: row.name,
             duration: 0,
             thumbnailPath: row.image || undefined,
-            source: 'radio',
+            source: 'api',
+            provider: 'radio',
             mediaType: 'audio',
           });
           break;
-        case 'bookmark':
-          addBookmark({
+        case 'bookmark': {
+          const input = {
             fileUri: row.url,
             title: row.name,
             position: 0,
             duration: 0,
             label: '',
             thumbnailPath: row.image || undefined,
-            mediaType: 'audio',
-            source: 'radio',
-          });
-          toast.show('Station bookmarked');
+            mediaType: 'audio' as const,
+            source: 'api' as const,
+            provider: 'radio',
+            type: 'radio' as const,
+          };
+          const result = addBookmark(input);
+          if (result.status === 'requires-confirmation') {
+            Alert.alert(
+              'Bookmark limit reached',
+              `Adding “${row.name}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
+              [
+                {text: 'Cancel', style: 'cancel'},
+                {
+                  text: 'Remove & Add',
+                  style: 'destructive',
+                  onPress: () => addBookmark(result.requested, {evictId: result.candidate.id}),
+                },
+              ],
+            );
+          } else {
+            toast.show('Station bookmarked');
+          }
           break;
+        }
         case 'share':
           shareContent({
             route: 'AudioPlayer',

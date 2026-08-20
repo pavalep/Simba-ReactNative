@@ -1,0 +1,9 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Bookmarks\BookmarksScreen.tsx:50:confirmLabel: 'Remove',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Bookmarks\BookmarksScreen.tsx:57:[confirmDelete, removeBookmark],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\DownloadsScreen\DownloadsScreen.tsx:305:? `"${h.confirmRecord.title}" will be removed from this device.`
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\DownloadsScreen\DownloadsScreen.tsx:306:: 'This download will be removed from this device.'
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:105:confirmLabel: 'Remove',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\HistoryScreen.tsx:112:[confirm, removeRecent],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\PlaylistDetailScreen.tsx:341:confirmLabel: 'Remove',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx:166:confirmLabel: 'Remove',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\SettingsScreen.tsx:378:Alert.alert(

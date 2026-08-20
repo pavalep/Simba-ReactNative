@@ -70,7 +70,7 @@ WAVE 6: Polish & Perfection ─── Phases 26-30  (Performance, errors, testin
 | 2.3 | Lion logo SVG animated: fade-in + gold glow pulse (1.5s max duration) | ✅ | Kotlin `AnimatorSet`: fade-in (0→1) + scale (0.85→1) + gold glow pulse with `ValueAnimator.INFINITE` |
 | 2.4 | Dark charcoal background with subtle animated gradient radial glow | ✅ | `#0A0A0C` background + `splash_glow_radial.xml` radial gradient alpha-pulsed |
 | 2.5 | Loading ring animated around logo (indeterminate, not progress bar) | ✅ | `splash_loading_ring.xml` with `animated-rotate` + sweep gradient ring |
-| 2.6 | First-launch flow: splash → scan prompt. Returning user: splash → cached home | ✅ | `settingsSlice.hasLaunched` flag (persisted) + `RootNavigator.initialRouteName` conditional. First launch: SplashScreen → scan prompt → MainTabs. Returning: MainTabs directly |
+| 2.6 | First-launch flow: splash → scan prompt. Returning user: splash → cached home | ✅ | `settingsSlice.hasLaunched` flag (persisted) + `RootNavigator.initialRouteName` conditional. First launch: SplashScreen → scan prompt → Home. Returning: Home directly |
 | 2.7 | No flicker or white flash between splash and main app | ✅ | SplashTheme `windowBackground` (dark `#0A0A0C`) fills cold-start frame → crossfade transition |
 
 ---
@@ -288,7 +288,7 @@ WAVE 6: Polish & Perfection ─── Phases 26-30  (Performance, errors, testin
 
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
-| 12.1 | Root stack updated with all routes (Splash, Home, Player, Library, Settings, Detail screens) | ✅ | All routes present: Splash, MainTabs (HomeTab+LibraryTab), VideoPlayer, AudioPlayer, Preferences, Settings, LinkedFolders |
+| 12.1 | Root stack updated with all routes (Splash, Home, Player, Library, Settings, Detail screens) | ✅ | All routes present: Splash, Home, Library, VideoPlayer, AudioPlayer, Preferences, Settings, LinkedFolders |
 | 12.2 | Tab navigator uses route keys (not index) for stable tab state | ✅ | Uses `route.name` matching in FloatingTabBar |
 | 12.3 | Deep linking configured for artist, album, playlist, video, audio URIs | ⚪ | Deferred — requires linking.ts config |
 | 12.4 | Modal presentation for sheets and selectors | ⚪ | Deferred — sheets use BottomSheet overlay pattern |

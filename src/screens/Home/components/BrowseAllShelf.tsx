@@ -1,6 +1,7 @@
 // ─── Browse All Shelf ────────────────────────────────────────────────────
-// v10.2: Home "Discover" collapses the 8 per-category rails (Movies,
-// Podcasts, Music, Radio, Live TV, Audiobooks, Shows, Archive) into ONE
+// v10.2: Home "Discover" collapses the catalog category rails into ONE
+// horizontal shelf and keeps Local Files visible alongside the API-backed
+// areas so the user's linked media is discoverable from the same surface.
 // horizontal shelf — one CategoryCard per top-level section, in the same
 // "previous" 140×160 portrait + image + gradient + icon-disc + title/
 // description pattern that was used by MovieCategoriesShelf / MusicCateg
@@ -20,10 +21,10 @@ export interface BrowseAllEntry {
   name: string;
   description: string;
   icon: string;
-  image: ReturnType<typeof require>;
+  image?: ReturnType<typeof require>;
 }
 
-/** Canonical order of the 8 top-level sections in the Discover rail. */
+/** Canonical order of the top-level sections in the Discover rail. */
 export const BROWSE_ALL_SECTIONS: BrowseAllEntry[] = [
   {
     route: 'MoviesScreen',
@@ -80,6 +81,12 @@ export const BROWSE_ALL_SECTIONS: BrowseAllEntry[] = [
     description: 'Audio, video & old-time radio',
     icon: 'archive',
     image: CATEGORY_COVERS.archive.all,
+  },
+  {
+    route: 'LocalFiles',
+    name: 'Local Files',
+    description: 'Linked folders and offline media',
+    icon: 'folder',
   },
 ];
 

@@ -4,7 +4,7 @@
 // themed placeholder when art is missing; show bookmarkable.
 
 import React, {useCallback, useEffect, useState} from 'react';
-import {View, ScrollView, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
+import {Alert, View, ScrollView, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import type {ShowDetailScreenProps} from '../../navigation/types';
@@ -16,10 +16,11 @@ import {SvgIcon} from '../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import FastImage from 'react-native-fast-image';
-import {useBookmarks} from '../../hooks/useBookmarks';
+import {useBookmarks} from '../../features/bookmarks';
 import {useToast} from '../../components/feedback/Toast';
 import {useHaptics} from '../../hooks/useHaptics';
 import {shareContent} from '../../services/shareService';
+import {usePlaybackCommands} from '../../modules/playback';
 
 type Props = ShowDetailScreenProps;
 
@@ -41,16 +42,34 @@ export const ShowDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
   const handleBookmarkShow = useCallback(() => {
     if (!show) return;
-    addBookmark({
+    const input = {
       fileUri: `tvmaze://show/${show.id}`,
       title: show.name,
       position: 0,
       duration: 0,
       label: '',
       thumbnailPath: show.image?.medium || undefined,
-      mediaType: 'video',
-      source: 'tvmaze',
-    });
+      mediaType: 'video' as const,
+      source: 'api' as const,
+      provider: 'tvmaze',
+      type: 'video' as const,
+    };
+    const result = addBookmark(input);
+    if (result.status === 'requires-confirmation') {
+      Alert.alert(
+        'Bookmark limit reached',
+        `Adding “${show.name}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
+        [
+          {text: 'Cancel', style: 'cancel'},
+          {
+            text: 'Remove & Add',
+            style: 'destructive',
+            onPress: () => addBookmark(result.requested, {evictId: result.candidate.id}),
+          },
+        ],
+      );
+      return;
+    }
     haptics.light();
     toast.show('Show bookmarked');
   }, [show, addBookmark, haptics, toast]);
@@ -64,15 +83,21 @@ export const ShowDetailScreen: React.FC<Props> = ({navigation, route}) => {
     });
   }, [show]);
 
+    const {openPlayer} = usePlaybackCommands();
+
   const handleEpisodePress = useCallback(
+
     (localUri: string, episode: {season: number; number: number; name: string}) => {
-      navigation.navigate('VideoPlayer', {
-        fileUri: localUri,
-        fileTitle: `${show?.name ?? showName ?? ''} S${String(episode.season).padStart(2, '0')}E${String(episode.number).padStart(2, '0')} — ${episode.name}`,
+      openPlayer({
+        uri: localUri,
+        title: `${show?.name ?? showName ?? ''} S${String(episode.season).padStart(2, '0')}E${String(episode.number).padStart(2, '0')} — ${episode.name}`,
+        duration: 0,
         source: 'local',
+        type: 'video',
+        mediaType: 'video',
       });
     },
-    [navigation, show?.name, showName],
+    [openPlayer, show?.name, showName],
   );
 
   const handleRetry = useCallback(() => {

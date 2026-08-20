@@ -1,0 +1,28 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkItem.tsx:15:import type {Bookmark} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkList.tsx:9:import type {Bookmark} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkSheet.tsx:16:import type {Bookmark} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\recentHistory\index.ts:7:import {recordPlaybackStats} from '../../store/slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:3:* Bookmark state, persistence, retention, and commands live in features/bookmarks.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:11:} from '../features/bookmarks';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:20:} from '../features/bookmarks';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Bookmarks\useBookmarksScreen.ts:4:import type {Bookmark} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\HomeBookmarksList.tsx:22:import type {BookmarkEntry} from '../../../store/slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\HomeBookmarksList.tsx:25:items: BookmarkEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\HomeBookmarksList.tsx:26:onPress: (item: BookmarkEntry) => void;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\HomeBookmarksList.tsx:124:({item}: {item: BookmarkEntry}) => (
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\hooks\useHomeScreen.ts:9:import {useBookmarks} from '../../../features/bookmarks';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\types\index.ts:2:import type {Bookmark} from '../../../features/bookmarks';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:29:import {selectBookmarkCount, clearAllBookmarks} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Song\components\SongBookmarks.tsx:13:import type {Bookmark} from '../../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:262:add: addBookmarkEntry,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:263:remove: removeBookmarkEntry,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:899:removeBookmarkEntry(existing.id);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:910:addBookmarkEntry({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:943:}, [addBookmarkEntry, removeBookmarkEntry, findBookmarkAtPosition, toast, haptics]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2207:handleRemoveBookmark: removeBookmarkEntry,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\bookmarkService.ts:3:* Bookmark persistence is implemented privately by features/bookmarks.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\bookmarkService.ts:9:} from '../features/bookmarks/bookmarkPersistence';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:7:import type {Bookmark} from '../../features/bookmarks/bookmarkReducer';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:26:export type BookmarkEntry = Bookmark;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\rootReducer.ts:4:import sessionReducer from './slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\rootReducer.ts:9:import bookmarkReducer from '../features/bookmarks/bookmarkReducer';

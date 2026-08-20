@@ -1,8 +1,11 @@
 import React, {useEffect} from 'react';
+
 import {
+  Alert,
   Animated,
   ScrollView,
   Switch,
+
   TouchableOpacity,
   View,
   RefreshControl,
@@ -34,7 +37,9 @@ import {
   setSubtitleTextColor,
   setSubtitleBackgroundOpacity,
   setPreferredLanguages,
+  resetPreferencesToDefaults,
 } from '../../store/slices/settingsSlice';
+
 import {useSettingsScreen} from './hooks/useSettingsScreen';
 
 type Props = SettingsScreenProps;
@@ -164,11 +169,25 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
               }
               onPress={() => setMpvEditorVisible(true)}
             />
+                    </Animated.View>
+          <View style={styles.sectionDivider} />
+
+          {/* ── Discover Section (3) ── */}
+          <Animated.View style={entrance.styles[3]}>
+            <SectionHeader label="Discover" />
+            <SettingsRow label="Movies" description="Browse films and videos" onPress={() => nav.getParent()?.navigate('MoviesScreen')} />
+            <SettingsRow label="Podcasts" description="Browse podcast feeds and episodes" onPress={() => nav.getParent()?.navigate('PodcastsScreen')} />
+            <SettingsRow label="Music" description="Browse music and genres" onPress={() => nav.getParent()?.navigate('MusicScreen')} />
+            <SettingsRow label="Live TV" description="Browse live television channels" onPress={() => nav.getParent()?.navigate('LiveTVScreen')} />
+            <SettingsRow label="Live Radio" description="Browse live radio stations" onPress={() => nav.getParent()?.navigate('RadioScreen')} />
+            <SettingsRow label="Audiobooks" description="Browse spoken-word books" onPress={() => nav.getParent()?.navigate('AudiobooksScreen')} />
+            <SettingsRow label="Archives" description="Browse Internet Archive media" onPress={() => nav.getParent()?.navigate('ArchiveScreen')} />
           </Animated.View>
           <View style={styles.sectionDivider} />
 
-          {/* ── Playback Section (3) ── */}
-          <Animated.View style={entrance.styles[3]}>
+          {/* ── Playback Section (4) ── */}
+          <Animated.View style={entrance.styles[4]}>
+
             <SectionHeader label="Playback" />
             <SettingsRow
               label="Hardware Acceleration"
@@ -267,8 +286,9 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
           </Animated.View>
           <View style={styles.sectionDivider} />
 
-          {/* ── Subtitles Section (4) ── */}
-          <Animated.View style={entrance.styles[4]}>
+                    {/* ── Subtitles Section (5) ── */}
+          <Animated.View style={entrance.styles[5]}>
+
             <SectionHeader label="Subtitles" />
             <SettingsRow
               label="Font Size"
@@ -325,8 +345,9 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
           </Animated.View>
           <View style={styles.sectionDivider} />
 
-          {/* ── About Section (5) ── */}
-          <Animated.View style={entrance.styles[5]}>
+                    {/* ── About Section (6) ── */}
+          <Animated.View style={entrance.styles[6]}>
+
             <SectionHeader label="About" />
             <SettingsRow
               label="Version"
@@ -350,6 +371,28 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
               description="FAQ and troubleshooting"
               onPress={() => nav.navigate('Help')}
             />
+            <SettingsRow
+              label="Reset Preferences"
+              description="Restore playback, subtitle, and appearance defaults"
+              onPress={() =>
+                Alert.alert(
+                  'Reset preferences?',
+                  'Linked folders, local media, downloads, and personal items will be preserved.',
+                  [
+                    {text: 'Cancel', style: 'cancel'},
+                    {
+                      text: 'Reset',
+                      style: 'destructive',
+                      onPress: () => {
+                        dispatch(resetPreferencesToDefaults());
+                        toast.show('Preferences reset');
+                      },
+                    },
+                  ],
+                )
+              }
+            />
+
             <SettingsRow
               label="Licenses"
               onPress={() => nav.navigate('Licenses')}
@@ -405,3 +448,6 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
     </SafeAreaView>
   );
 };
+
+export default SettingsScreen;
+

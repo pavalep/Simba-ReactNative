@@ -2,14 +2,20 @@ import {useCallback} from 'react';
 import {useAppDispatch} from '../../../store';
 import {prependToQueue, addToQueue as addToQueueAction} from '../../../store/slices/playerSlice';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
+import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
+import {normalizeMediaClassification} from '../../../types/media';
+
 import {useToast} from '../../feedback/Toast/Toast';
 
 export interface QueueableItem {
   uri: string;
   title: string;
   duration?: number;
-  source?: string;
-  mediaType?: 'audio' | 'video';
+  source?: MediaSource;
+  type?: MediaKind;
+  mediaType?: MediaLane;
+  provider?: string;
+  folderId?: string;
 }
 
 /**
@@ -25,8 +31,13 @@ export function useQueueActions() {
       uri: item.uri,
       title: item.title,
       duration: item.duration ?? 0,
-      ...(item.source ? {source: item.source} : {}),
-      ...(item.mediaType ? {mediaType: item.mediaType} : {}),
+      ...normalizeMediaClassification({
+        source: item.source,
+        type: item.type,
+        mediaType: item.mediaType,
+        provider: item.provider,
+      }),
+      folderId: item.folderId,
     };
   }, []);
 

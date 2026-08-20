@@ -7,6 +7,7 @@ import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {EmptyState} from '../../../components/utility/EmptyState/EmptyState';
+import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 
 // ── Helpers ──
 
@@ -24,10 +25,15 @@ function formatTime(seconds: number): string {
 interface MediaItem {
   fileUri: string;
   title: string;
-  mediaType?: string;
+  mediaType?: MediaLane;
+  type?: MediaKind;
+  source?: MediaSource;
+  provider?: string;
+  folderId?: string;
   thumbnailPath?: string;
   position?: number;
   duration?: number;
+  startPosition?: number;
 }
 
 interface HomeMediaShelfProps {

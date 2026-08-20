@@ -18,9 +18,8 @@ import {useAppDispatch, useAppSelector} from '../../store';
 import {
   removeVideoFolder,
   removeAudioFolder,
-  setScanning,
-  setLastScanTimestamp,
 } from '../../store/slices/settingsSlice';
+
 import {selectAllTracks, selectTrackCount} from '../../store/slices/mediaSlice';
 import {AppText} from '../../components/core/AppText/AppText';
 import {SvgIcon} from '../../components/utility/SvgIcon';
@@ -28,6 +27,8 @@ import {ScanProgressBanner} from '../../components/feedback/ScanProgressBanner/S
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import {useAccessibility} from '../../hooks/useAccessibility';
+import {useMediaScanner} from '../../hooks/useMediaScanner';
+
 import type {LinkedFoldersScreenProps} from '../../navigation/types';
 
 // ─── Constants ──────────────────────────────────────────────
@@ -279,7 +280,8 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
   const folders = useAppSelector(s =>
     isVideo ? s.settings.videoFolders : s.settings.audioFolders,
   );
-  const isScanning = useAppSelector(s => s.settings.isScanning);
+  const {startScan, isScanning} = useMediaScanner();
+
   const lastScanTimestamp = useAppSelector(s => s.settings.lastScanTimestamp);
   const allTracks = useAppSelector(selectAllTracks);
   const totalTrackCount = useAppSelector(selectTrackCount);
@@ -308,25 +310,15 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
   );
 
   const handleRescanFolder = useCallback(
-    (_folder: string) => {
-      dispatch(setScanning(true));
-      // Simulate scan — in real implementation, this would call the scanner for one folder
-      setTimeout(() => {
-        dispatch(setScanning(false));
-        dispatch(setLastScanTimestamp(Date.now()));
-      }, 2000);
+    async (folder: string) => {
+      await startScan(true, [folder]);
     },
-    [dispatch],
+    [startScan],
   );
 
-  const handleScanAll = useCallback(() => {
-    dispatch(setScanning(true));
-    // Simulate full scan
-    setTimeout(() => {
-      dispatch(setScanning(false));
-      dispatch(setLastScanTimestamp(Date.now()));
-    }, 3000);
-  }, [dispatch]);
+  const handleScanAll = useCallback(async () => {
+    await startScan(true);
+  }, [startScan]);
 
   const handleAddFolder = useCallback(() => {
     nav.navigate('FolderLinkingWizard', {type});

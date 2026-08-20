@@ -1,0 +1,12 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkItem.tsx:15:import type {Bookmark} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkList.tsx:9:import type {Bookmark} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkSheet.tsx:16:import type {Bookmark} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:14:} from '../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Bookmarks\useBookmarksScreen.ts:4:import type {Bookmark} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\ProfileScreen.tsx:29:import {selectBookmarkCount, clearAllBookmarks} from '../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Song\components\SongBookmarks.tsx:13:import type {Bookmark} from '../../../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\bookmarkService.ts:2:import type {Bookmark} from '../store/slices/bookmarkSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\bookmarkSlice.ts:36:const bookmarkSlice = createSlice({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\bookmarkSlice.ts:86:} = bookmarkSlice.actions;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\bookmarkSlice.ts:112:export default bookmarkSlice.reducer;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\rootReducer.ts:9:import bookmarkReducer from './slices/bookmarkSlice';

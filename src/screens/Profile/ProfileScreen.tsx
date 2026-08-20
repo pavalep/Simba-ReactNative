@@ -25,13 +25,17 @@ import {useToast} from '../../components/feedback/Toast/Toast';
 import {useAuth} from '../../hooks/useAuth';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {selectTrackCount, selectAllTracks} from '../../store/slices/mediaSlice';
-import {selectAllPlaylists} from '../../store/slices/playlistSlice';
-import {selectBookmarkCount, clearAllBookmarks} from '../../store/slices/bookmarkSlice';
-import {clearAllRecent} from '../../store/slices/sessionSlice';
+import {usePlaylists} from '../../features/playlists';
+import {useBookmarks} from '../../features/bookmarks';
+import {useFollowedPodcasts} from '../../features/followedPodcasts';
+
+import {useRecentHistory} from '../../features/recentHistory';
 import {setThemeMode} from '../../store/slices/settingsSlice';
 import {formatDuration} from '../../utils/timeAgo';
 import {clearCache} from '../../services/cacheService';
 import type {RootStackScreenProps} from '../../navigation/types';
+import {normalizeMediaClassification} from '../../types/media';
+import {usePlaybackCommands} from '../../modules/playback';
 
 type Props = RootStackScreenProps<'Profile'>;
 
@@ -51,18 +55,21 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const dispatch = useAppDispatch();
+    const dispatch = useAppDispatch();
+  const {openPlayer} = usePlaybackCommands();
+
   const {user, isLoading, signIn, signOut, revokeAccess} =
     useAuth();
 
   // ── Real store stats (42.3 — no fabricated numbers) ──
   const trackCount = useAppSelector(selectTrackCount);
   const allTracks = useAppSelector(selectAllTracks);
-  const playlistCount = useAppSelector(
-    state => selectAllPlaylists(state).length,
-  );
-  const bookmarkCount = useAppSelector(selectBookmarkCount);
-  const recentFiles = useAppSelector(state => state.session.recentFiles);
+  const {playlists} = usePlaylists();
+  const playlistCount = playlists.length;
+  const {bookmarkCount, clearAll: clearAllBookmarks} = useBookmarks();
+  const {count: followedPodcastCount} = useFollowedPodcasts();
+
+  const {list: recentFiles, clearRecent} = useRecentHistory();
   const playCounts = useAppSelector(state => state.session.playCounts);
   const themeMode = useAppSelector(state => state.settings.themeMode);
 
@@ -95,7 +102,9 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
     {label: 'Tracks', value: String(trackCount)},
     {label: 'Videos', value: String(videoCount)},
     {label: 'Bookmarks', value: String(bookmarkCount)},
+    {label: 'Followed', value: String(followedPodcastCount)},
     {label: 'Playlists', value: String(playlistCount)},
+
     {label: 'Plays', value: String(totalPlays)},
     {label: 'Playback', value: formatDuration(playbackSeconds)},
   ];
@@ -122,25 +131,27 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
 
   const handleConfirmWipe = useCallback(async () => {
     setWipeVisible(false);
-    dispatch(clearAllRecent());
-    dispatch(clearAllBookmarks());
+    clearRecent();
+    clearAllBookmarks();
     try {
       await clearCache();
     } catch {
       // cache clear is best-effort
     }
     toast.show('Local data cleared');
-  }, [dispatch, toast]);
+  }, [clearRecent, clearAllBookmarks, toast]);
 
   const handleRecentPress = useCallback(
-    (fileUri: string, mediaType?: 'video' | 'audio', title?: string) => {
-      if (mediaType === 'audio') {
-        navigation.navigate('AudioPlayer', {fileUri, fileTitle: title});
-      } else {
-        navigation.navigate('VideoPlayer', {fileUri, fileTitle: title});
-      }
+    (entry: (typeof recentFiles)[number]) => {
+      openPlayer({
+        uri: entry.fileUri,
+        title: entry.title,
+        duration: entry.duration,
+        startPosition: entry.position,
+        ...normalizeMediaClassification(entry),
+      });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const recentStrip = recentFiles.slice(0, 5);
@@ -214,13 +225,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
                     styles.recentChip,
                     {backgroundColor: colors.background.elevated},
                   ]}
-                  onPress={() =>
-                    handleRecentPress(
-                      entry.fileUri,
-                      entry.mediaType,
-                      entry.title,
-                    )
-                  }
+                  onPress={() => handleRecentPress(entry)}
                   activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityLabel={entry.title}>
@@ -238,6 +243,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
                   </AppText>
                 </TouchableOpacity>
               )}
+
               initialNumToRender={Math.min(recentStrip.length, 24)}
               windowSize={5}
               maxToRenderPerBatch={12}
@@ -273,6 +279,24 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
               label="Playlists"
               description={`${playlistCount} playlists`}
               onPress={() => navigation.navigate('AllPlaylistsScreen')}
+              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
+            />
+            <SettingsRow
+              label="Followed Podcasts"
+              description={`${followedPodcastCount} followed feeds`}
+              onPress={() => navigation.navigate('PodcastsScreen')}
+              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
+            />
+            <SettingsRow
+              label="Downloads"
+              description="Offline media and download status"
+              onPress={() => navigation.navigate('Downloads')}
+              trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
+            />
+            <SettingsRow
+              label="Local Media"
+              description="Linked folders and device library"
+              onPress={() => navigation.navigate('Settings', {screen: 'LinkedFolders', params: {type: 'audio'}})}
               trailing={<SvgIcon name="chevronRight" size={18} color={colors.text.tertiary} />}
             />
             <SettingsRow

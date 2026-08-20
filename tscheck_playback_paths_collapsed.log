@@ -1,0 +1,1 @@
+src/modules/playback/video/ui/VideoPlayer.tsx(12,30): error TS2307: Cannot find module '../../StatusBar' or its corresponding type declarations.

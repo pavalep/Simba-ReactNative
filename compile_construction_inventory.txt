@@ -1,0 +1,74 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\media\StreamingRow\StreamingRow.tsx:127:source: 'jamendo',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\media\StreamingRow\StreamingRow.tsx:139:source: 'jamendo',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioPlayer.tsx:87:playlist: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioPlayer.tsx:88:queue: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioPlayer.tsx:93:playbackHistory: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioPlayer\AudioQueuePeek.tsx:13:queue: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:158:queue: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayer\VideoPlayer.tsx:162:playbackHistory: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx:27:queue: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx:29:playbackHistory: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx:64:data: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\types.ts:83:MusicDetail: {trackId: string; source: 'jamendo' | 'audius'};
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\useAlbumScreen.ts:96:const entries: PlaylistEntry[] = sortedTracks.map(t => ({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\useAlbumScreen.ts:115:const entries: PlaylistEntry[] = sortedTracks.map(t => ({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\useAlbumScreen.ts:129:const entries: PlaylistEntry[] = sortedTracks.map(t => ({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\ArchiveItemDetailScreen.tsx:91:source: 'internetArchive',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\ArchiveItemDetailScreen.tsx:116:source: 'internetArchive',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\ArchiveItemDetailScreen.tsx:128:source: 'internetArchive',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\ArchiveItemDetailScreen.tsx:141:source: 'internetArchive',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\ArchiveItemDetailScreen.tsx:154:source: 'internetArchive',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\ArchiveItemDetailScreen.tsx:164:source: 'internetArchive',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\useArtistScreen.ts:95:const entries: PlaylistEntry[] = allTracks.map(t => ({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\useArtistScreen.ts:109:const entries: PlaylistEntry[] = allTracks.map(t => ({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\AudiobookDetailScreen.tsx:102:source: 'librivox',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\AudiobookDetailScreen.tsx:127:source: 'librivox',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\AudiobookDetailScreen.tsx:139:source: 'librivox',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\AudiobookDetailScreen.tsx:152:source: 'librivox',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\AudiobookDetailScreen.tsx:165:source: 'librivox',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\AudiobookDetailScreen.tsx:175:source: 'librivox',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\useGenreScreen.ts:188:source: 'jamendo',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\useGenreScreen.ts:200:source: 'radio',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\AlbumDetailScreen.tsx:98:source: 'jamendo',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\ArtistDetailScreen.tsx:168:source: 'jamendo',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\LiveTVScreen.tsx:419:source: 'iptv',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\LiveTVScreen.tsx:461:source: 'iptv',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\LiveTVScreen.tsx:474:source: 'iptv',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\LiveTVScreen.tsx:484:source: 'iptv',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:182:source: 'iptv',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:221:source: 'iptv',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:234:source: 'iptv',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:244:source: 'iptv',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicDetailScreen\hooks\useMusicDetailScreen.ts:10:source: 'jamendo' | 'audius',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicDetailScreen\MusicDetailScreen.tsx:66:source: 'jamendo',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\components\MusicDataProvider.tsx:49:source: 'jamendo',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\QueueScreen\QueueScreen.tsx:362:data: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\QueueScreen\useQueueScreen.ts:42:upNext: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\QueueScreen\useQueueScreen.ts:46:history: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:182:source: 'radio',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:217:source: 'radio',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:230:source: 'radio',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:237:params: {fileUri: row.url, fileTitle: row.name, source: 'radio'},
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\RadioFavoritesScreen.tsx:57:source: 'radio',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\RadioFavoritesScreen.tsx:84:source: 'radio',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\RadioFavoritesScreen.tsx:97:source: 'radio',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\RadioFavoritesScreen.tsx:104:params: {fileUri: row.url, fileTitle: row.name, source: 'radio'},
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\RemoteResults.tsx:233:download={{uri: item.audioUrl, title: item.name, mediaType: 'audio', source: 'jamendo'}}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\RemoteResults.tsx:250:download={{uri: item.streamUrl, title: item.title, mediaType: 'audio', source: 'audius'}}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\SearchScreen.tsx:274:source: 'jamendo',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\SearchScreen.tsx:286:source: 'audius',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\SearchScreen.tsx:317:source: 'iptv',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowDetailScreen\ShowDetailScreen.tsx:52:source: 'tvmaze',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerPlaylistPanel.tsx:26:playlist: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:25:playlist: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:26:queue: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:27:playbackHistory: PlaylistEntry[];
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:47:function normalizeSingleLane(entries: PlaylistEntry[]): PlaylistEntry[] {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:82:playFile(state, action: PayloadAction<PlaylistEntry>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:89:setPlaylist(state, action: PayloadAction<PlaylistEntry[]>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:95:loadPlaylistToPlayer(state, action: PayloadAction<PlaylistEntry[]>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:106:addToPlaylist(state, action: PayloadAction<PlaylistEntry | PlaylistEntry[]>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:232:addToQueue(state, action: PayloadAction<PlaylistEntry>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:240:prependToQueue(state, action: PayloadAction<PlaylistEntry>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:294:addToPlaybackHistory(state, action: PayloadAction<PlaylistEntry>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\playerSlice.ts:441:export function playlistItemsToEntries(items: PlaylistItem[]): PlaylistEntry[] {

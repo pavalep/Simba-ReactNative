@@ -26,6 +26,7 @@ import type {JamendoTrackResult} from '../../types/api';
 import type {RootStackScreenProps} from '../../navigation/types';
 type AlbumDetailScreenProps = RootStackScreenProps<'AlbumDetail'>;
 import {shareContent} from '../../services/shareService';
+import {usePlaybackCommands} from '../../modules/playback';
 
 type Props = AlbumDetailScreenProps;
 
@@ -49,6 +50,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
+  const {openPlayer} = usePlaybackCommands();
 
   const tracks = useAppSelector(state =>
     selectAlbumTracks(state, albumTitle, artistName),
@@ -76,29 +78,45 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const cachedCover = useCachedArt(enrichment.releaseGroup?.coverArtUrl);
 
   const handlePlayAll = () => {
-    if (sortedTracks.length > 0) {
-      (navigation as any).navigate('AudioPlayer', {
-        fileUri: sortedTracks[0].uri,
-        fileTitle: sortedTracks[0].title,
+    const firstTrack = sortedTracks[0];
+    if (firstTrack) {
+      openPlayer({
+        uri: firstTrack.uri,
+        title: firstTrack.title,
+        duration: firstTrack.duration,
+        source: 'local',
+        type: 'music',
+        mediaType: 'audio',
       });
     }
   };
 
   const handlePlayTrack = (uri: string, title: string) => {
-    (navigation as any).navigate('AudioPlayer', {fileUri: uri, fileTitle: title});
+    openPlayer({
+      uri,
+      title,
+      duration: 0,
+      source: 'local',
+      type: 'music',
+      mediaType: 'audio',
+    });
   };
 
   // P39.5: streaming rows play directly
   const handleStreamingPlay = useCallback(
     (track: JamendoTrackResult) => {
-      navigation.navigate('AudioPlayer', {
-        fileUri: track.audioUrl,
-        fileTitle: track.name,
+      openPlayer({
+        uri: track.audioUrl,
+        title: track.name,
+        duration: 0,
         artworkUri: track.imageUrl || undefined,
-        source: 'jamendo',
+        source: 'api',
+        type: 'music',
+        mediaType: 'audio',
+        provider: 'jamendo',
       });
     },
-    [navigation],
+    [openPlayer],
   );
 
   // 56.4: share the album via deep link + https fallback

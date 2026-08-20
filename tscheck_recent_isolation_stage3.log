@@ -1,0 +1,19 @@
+src/screens/Home/index.tsx(119,67): error TS2322: Type '(item: { mediaType?: MediaLane; fileUri: string; title: string; startPosition?: number; position?: number; source?: MediaSource; type?: MediaKind; provider?: string; folderId?: string; }) => void' is not assignable to type '(item: FeaturedItem) => void'.
+  Types of parameters 'item' and 'item' are incompatible.
+    Type 'FeaturedItem' is not assignable to type '{ mediaType?: MediaLane | undefined; fileUri: string; title: string; startPosition?: number | undefined; position?: number | undefined; source?: MediaSource | undefined; type?: MediaKind | undefined; provider?: string | undefined; folderId?: string | undefined; }'.
+      Types of property 'mediaType' are incompatible.
+        Type 'string | undefined' is not assignable to type 'MediaLane | undefined'.
+          Type 'string' is not assignable to type 'MediaLane | undefined'.
+src/screens/Home/index.tsx(132,15): error TS2322: Type '(item: { mediaType?: MediaLane; fileUri: string; title: string; startPosition?: number; position?: number; source?: MediaSource; type?: MediaKind; provider?: string; folderId?: string; }) => void' is not assignable to type '(item: MediaItem) => void'.
+  Types of parameters 'item' and 'item' are incompatible.
+    Type 'MediaItem' is not assignable to type '{ mediaType?: MediaLane | undefined; fileUri: string; title: string; startPosition?: number | undefined; position?: number | undefined; source?: MediaSource | undefined; type?: MediaKind | undefined; provider?: string | undefined; folderId?: string | undefined; }'.
+      Types of property 'mediaType' are incompatible.
+        Type 'string | undefined' is not assignable to type 'MediaLane | undefined'.
+          Type 'string' is not assignable to type 'MediaLane | undefined'.
+src/screens/PodcastDetailScreen/index.tsx(74,53): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/PodcastDetailScreen/index.tsx(78,38): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/screens/Profile/ProfileScreen.tsx(32,9): error TS2614: Module '"../../store/slices/sessionSlice"' has no exported member 'clearAllRecent'. Did you mean to use 'import clearAllRecent from "../../store/slices/sessionSlice"' instead?
+src/screens/Profile/ProfileScreen.tsx(70,61): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/Profile/ProfileScreen.tsx(87,27): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/screens/Profile/ProfileScreen.tsx(87,32): error TS7006: Parameter 'entry' implicitly has an 'any' type.
+src/screens/Search/SearchScreen.tsx(67,61): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.

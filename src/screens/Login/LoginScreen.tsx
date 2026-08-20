@@ -1,4 +1,4 @@
-import React, {useRef, useEffect} from 'react';
+import React, {useEffect, useRef} from 'react';
 import {
   View,
   StyleSheet,
@@ -50,8 +50,7 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
         index: 0,
         routes: [
           {
-            name: 'MainTabs',
-            params: {screen: 'HomeTab', params: {screen: 'Home'}},
+            name: 'Home',
           },
         ],
       });
@@ -184,6 +183,9 @@ export const LoginScreen: React.FC<Props> = ({navigation}) => {
                     onPress={handleSignIn}
                     activeOpacity={0.7}
                     disabled={isLoading}
+                    accessibilityRole="button"
+                    accessibilityLabel={isLoading ? 'Signing in' : 'Try signing in again'}
+                    accessibilityState={{disabled: isLoading}}
                     hitSlop={{top: 12, bottom: 12, left: 24, right: 24}}>
                     <AppText
                       variant="bodySmall"

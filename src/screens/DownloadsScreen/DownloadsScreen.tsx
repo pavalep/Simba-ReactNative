@@ -68,11 +68,12 @@ interface DownloadRowProps {
   record: DownloadRecord;
   colors: ReturnType<typeof useTheme>['colors'];
   onPauseResume: (uri: string, status: string) => void;
+  onRetry: (uri: string) => void;
   onDelete: (uri: string) => void;
 }
 
 const DownloadRow: React.FC<DownloadRowProps> = React.memo(
-  ({record, colors, onPauseResume, onDelete}) => {
+  ({record, colors, onPauseResume, onRetry, onDelete}) => {
     const active = record.status === 'downloading';
     const paused = record.status === 'paused';
     const failed = record.status === 'error';
@@ -113,12 +114,21 @@ const DownloadRow: React.FC<DownloadRowProps> = React.memo(
         <View style={styles.rowActions}>
           <TouchableOpacity
             style={[styles.actionBtn, {borderColor: colors.border.subtle}]}
-            onPress={() => onPauseResume(record.uri, record.status)}
+            onPress={() =>
+              failed ? onRetry(record.uri) : onPauseResume(record.uri, record.status)
+            }
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={active ? 'Pause download' : 'Resume download'}>
-            <SvgIcon name={active ? 'pause' : 'download'} size={16} color={colors.accent.gold} />
+            accessibilityLabel={
+              failed ? 'Retry download' : active ? 'Pause download' : 'Resume download'
+            }>
+            <SvgIcon
+              name={failed || !active ? 'download' : 'pause'}
+              size={16}
+              color={colors.accent.gold}
+            />
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.actionBtn, {borderColor: colors.border.subtle}]}
             onPress={() => onDelete(record.uri)}
@@ -157,10 +167,11 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = () => {
         record={item}
         colors={colors}
         onPauseResume={h.handlePauseResume}
+        onRetry={h.handleRetry}
         onDelete={h.setConfirmUri}
       />
     ),
-    [colors, h.handlePauseResume, h.setConfirmUri],
+    [colors, h.handlePauseResume, h.handleRetry, h.setConfirmUri],
   );
 
   return (
@@ -175,12 +186,8 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = () => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <BackButton
-          onPress={() =>
-            navigate('MainTabs', {
-              screen: 'LibraryTab',
-              params: {screen: 'Library'},
-            })
-          }
+                    onPress={() => navigate('Library')}
+
           accessibilityLabel="Back to Library"
         />
         <View style={styles.headerTitleWrap}>
@@ -203,7 +210,8 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = () => {
             title="No downloads yet"
             description="Save tracks and videos to play them without an internet connection."
             actionLabel="Go to Library"
-            onAction={() => navigate('MainTabs', {screen: 'LibraryTab', params: {screen: 'Library'}})}
+                        onAction={() => navigate('Library')}
+
           />
         </View>
       ) : (

@@ -1,0 +1,12 @@
+Playback module extraction verification
+
+Command:
+npx tsc --noEmit --pretty false
+
+Result:
+TSC_EXIT=0
+
+Targeted residual-route scan:
+NO_RESIDUAL_PLAYER_ROUTE_OR_DELETED_SCREEN_MATCHES_IN_TARGETED_FILES
+
+Runtime/device/build verification remains deferred by project instruction.

@@ -1,11 +1,16 @@
 import React, {useCallback, useMemo} from 'react';
+
 import {StyleSheet, TouchableOpacity, View, ViewStyle} from 'react-native';
+
 import {useTheme} from '../../../theme';
 import {useAppSelector} from '../../../store';
 import {selectDownloadByUri} from '../../../store/slices/downloadsSlice';
 import {downloadService} from '../../../services/downloadService';
 import {navigate} from '../../../navigation/navigationHelper';
+import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
+
 import {useDownloadsSync} from '../../../hooks/useDownloadsSync';
+
 import {useHaptics} from '../../../hooks/useHaptics';
 import {SvgIcon, SvgIconName} from '../../utility/SvgIcon';
 
@@ -23,8 +28,11 @@ import {SvgIcon, SvgIconName} from '../../utility/SvgIcon';
 export interface DownloadButtonProps {
   uri: string;
   title: string;
-  mediaType?: 'audio' | 'video';
-  source?: string;
+    mediaType?: MediaLane;
+  type?: MediaKind;
+  source?: MediaSource;
+  provider?: string;
+
   size?: number;
   style?: ViewStyle;
 }
@@ -35,7 +43,9 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   uri,
   title,
   mediaType,
+  type,
   source,
+  provider,
   size = 20,
   style,
 }) => {
@@ -47,7 +57,8 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   const handlePress = useCallback(() => {
     if (!record || record.status === 'idle') {
       medium();
-      downloadService.startDownload({uri, title, mediaType, source});
+            downloadService.startDownload({uri, title, mediaType, type, source, provider});
+
       return;
     }
     switch (record.status) {
@@ -65,7 +76,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
       default:
         break;
     }
-  }, [record, uri, title, mediaType, source, medium]);
+  }, [record, uri, title, mediaType, type, source, provider, medium]);
 
   const {icon, color, progress} = useMemo(() => {
     const status = record?.status ?? 'idle';

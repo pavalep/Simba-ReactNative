@@ -13,6 +13,8 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
+import {usePlaybackCommands} from '../../modules/playback';
+
 import {RootStackScreenProps} from '../../navigation/types';
 import {ScreenContainer} from '../../components/layout/ScreenContainer/ScreenContainer';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
@@ -48,9 +50,9 @@ function extractYear(yearStr: string): string {
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
-// ─── Component ───────────────────────────────────────────────────────────
-
-const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
+// ─── Component ──────────────────────────────────────────────────────────
+export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
+  const {openPlayer} = usePlaybackCommands();
   const {identifier, title: routeTitle} = route.params;
   const {item, isLoading, error, retry} = useMovieDetailScreen(identifier);
   const {colors} = useTheme();
@@ -360,10 +362,15 @@ const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
           accessibilityRole="button"
           accessibilityLabel={`Play ${item.title}`}
           onPress={() => {
-            navigation.navigate('VideoPlayer', {
-              fileUri: item.streamingUrl,
-              fileTitle: item.title,
+            openPlayer({
+              uri: item.streamingUrl,
+              title: item.title,
+              duration: item.duration ?? 0,
               startPosition: 0,
+              source: 'api',
+              type: 'movie',
+              mediaType: 'video',
+              provider: 'movie',
             });
           }}
           style={[
@@ -516,5 +523,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export {MovieDetailScreen};
+
 export default MovieDetailScreen;

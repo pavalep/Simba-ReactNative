@@ -1,0 +1,47 @@
+src/screens/Artist/ArtistScreen.tsx(96,32): error TS2345: Argument of type '{ uri: string; title: string; duration: number; }' is not assignable to parameter of type 'PlaylistEntry'.
+  Type '{ uri: string; title: string; duration: number; }' is missing the following properties from type 'PlaylistEntry': source, type, mediaType
+src/screens/AudiobookDetailScreen/AudiobookDetailScreen.tsx(163,13): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type '{ fileUri: string; title: string; duration: number; artist?: string | undefined; thumbnailPath?: string | undefined; source?: MediaSource | undefined; provider?: string | undefined; mediaType?: "audio" | ... 1 more ... | undefined; } | ((prevState: { ...; } | null) => { ...; } | null)'.
+src/screens/Library/AlbumDetailScreen.tsx(98,9): error TS2322: Type '"jamendo"' is not assignable to type 'MediaSource | undefined'.
+src/screens/Library/ArtistDetailScreen.tsx(168,9): error TS2322: Type '"jamendo"' is not assignable to type 'MediaSource | undefined'.
+src/screens/LiveTVScreen/LiveTVScreen.tsx(419,9): error TS2322: Type '"iptv"' is not assignable to type 'MediaSource | undefined'.
+src/screens/LiveTVScreen/LiveTVScreen.tsx(461,13): error TS2322: Type '"iptv"' is not assignable to type 'MediaSource | undefined'.
+src/screens/LiveTVScreen/LiveTVScreen.tsx(474,13): error TS2322: Type '"iptv"' is not assignable to type 'MediaSource'.
+src/screens/LiveTVScreenNew/components/LiveTVContent.tsx(182,9): error TS2322: Type '"iptv"' is not assignable to type 'MediaSource | undefined'.
+src/screens/LiveTVScreenNew/components/LiveTVContent.tsx(221,13): error TS2322: Type '"iptv"' is not assignable to type 'MediaSource | undefined'.
+src/screens/LiveTVScreenNew/components/LiveTVContent.tsx(234,13): error TS2322: Type '"iptv"' is not assignable to type 'MediaSource'.
+src/screens/MusicDetailScreen/MusicDetailScreen.tsx(55,7): error TS2322: Type '"jamendo" | "audius"' is not assignable to type 'MediaSource | undefined'.
+  Type '"jamendo"' is not assignable to type 'MediaSource | undefined'.
+src/screens/MusicDetailScreen/MusicDetailScreen.tsx(66,9): error TS2322: Type '"jamendo"' is not assignable to type 'MediaSource | undefined'.
+src/screens/MusicDetailScreen/MusicDetailScreen.tsx(459,11): error TS2322: Type '"jamendo" | "audius"' is not assignable to type 'MediaSource | undefined'.
+  Type '"jamendo"' is not assignable to type 'MediaSource | undefined'.
+src/screens/MusicScreen/components/MusicDataProvider.tsx(49,7): error TS2322: Type '"jamendo"' is not assignable to type 'MediaSource | undefined'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(105,9): error TS2322: Type 'string | undefined' is not assignable to type 'MediaSource'.
+  Type 'undefined' is not assignable to type 'MediaSource'.
+src/screens/PlaylistDetail/PlaylistDetailScreen.tsx(231,9): error TS2322: Type '{ id: string; fileUri: string; title: string; duration: number; artist: string | undefined; addedAt: string; mediaType: "audio" | "video"; }[]' is not assignable to type 'PlaylistItem[]'.
+  Type '{ id: string; fileUri: string; title: string; duration: number; artist: string | undefined; addedAt: string; mediaType: "audio" | "video"; }' is missing the following properties from type 'PlaylistItem': source, type
+src/screens/PodcastDetailScreen/hooks/useEpisodeActions.ts(45,9): error TS2322: Type 'string | undefined' is not assignable to type 'MediaSource | undefined'.
+  Type 'string' is not assignable to type 'MediaSource | undefined'.
+src/screens/PodcastDetailScreen/hooks/useEpisodeActions.ts(73,15): error TS2322: Type 'string | undefined' is not assignable to type 'MediaSource | undefined'.
+  Type 'string' is not assignable to type 'MediaSource | undefined'.
+src/screens/PodcastDetailScreen/hooks/useEpisodeActions.ts(85,15): error TS2322: Type 'string | undefined' is not assignable to type 'MediaSource | undefined'.
+  Type 'string' is not assignable to type 'MediaSource | undefined'.
+src/screens/PodcastDetailScreen/hooks/useEpisodeActions.ts(98,13): error TS2322: Type 'string | undefined' is not assignable to type 'MediaSource | undefined'.
+  Type 'string' is not assignable to type 'MediaSource | undefined'.
+src/screens/PodcastDetailScreen/hooks/useEpisodeActions.ts(111,13): error TS2322: Type 'string | undefined' is not assignable to type 'MediaSource'.
+  Type 'undefined' is not assignable to type 'MediaSource'.
+src/screens/Profile/ProfileScreen.tsx(144,27): error TS2339: Property 'lane' does not exist on type 'SessionEntry'.
+src/screens/Profile/ProfileScreen.tsx(148,9): error TS2783: 'mediaType' is specified more than once, so this usage will be overwritten.
+src/screens/RadioScreenNew/components/RadioContent.tsx(182,9): error TS2322: Type '"radio"' is not assignable to type 'MediaSource | undefined'.
+src/screens/RadioScreenNew/components/RadioContent.tsx(217,13): error TS2322: Type '"radio"' is not assignable to type 'MediaSource | undefined'.
+src/screens/RadioScreenNew/components/RadioContent.tsx(230,13): error TS2322: Type '"radio"' is not assignable to type 'MediaSource'.
+src/screens/RadioScreenNew/RadioFavoritesScreen.tsx(57,9): error TS2322: Type '"radio"' is not assignable to type 'MediaSource | undefined'.
+src/screens/RadioScreenNew/RadioFavoritesScreen.tsx(84,13): error TS2322: Type '"radio"' is not assignable to type 'MediaSource | undefined'.
+src/screens/RadioScreenNew/RadioFavoritesScreen.tsx(97,13): error TS2322: Type '"radio"' is not assignable to type 'MediaSource'.
+src/screens/Search/components/RemoteResults.tsx(103,13): error TS2322: Type 'string | undefined' is not assignable to type 'MediaSource | undefined'.
+  Type 'string' is not assignable to type 'MediaSource | undefined'.
+src/screens/Search/SearchScreen.tsx(274,9): error TS2322: Type '"jamendo"' is not assignable to type 'MediaSource | undefined'.
+src/screens/Search/SearchScreen.tsx(286,9): error TS2322: Type '"audius"' is not assignable to type 'MediaSource | undefined'.
+src/screens/Search/SearchScreen.tsx(317,9): error TS2322: Type '"iptv"' is not assignable to type 'MediaSource | undefined'.
+src/screens/ShowDetailScreen/ShowDetailScreen.tsx(52,7): error TS2322: Type '"tvmaze"' is not assignable to type 'MediaSource'.
+src/screens/Song/useSongScreen.ts(79,19): error TS2345: Argument of type '{ fileUri: string; title: string; position: number; duration: number; label: string; mediaType: "audio"; }' is not assignable to parameter of type 'Omit<Bookmark, "id" | "createdAt">'.
+  Type '{ fileUri: string; title: string; position: number; duration: number; label: string; mediaType: "audio"; }' is missing the following properties from type 'Omit<Bookmark, "id" | "createdAt">': type, source

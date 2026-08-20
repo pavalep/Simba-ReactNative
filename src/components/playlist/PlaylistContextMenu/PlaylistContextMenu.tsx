@@ -5,9 +5,8 @@ import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {BottomSheet} from '../../sheets/BottomSheet/BottomSheet';
-import {useAppSelector} from '../../../store';
-import {selectAllPlaylists} from '../../../store/slices/playlistSlice';
-import type {Playlist} from '../../../types/playlist';
+import {usePlaylists} from '../../../features/playlists';
+import type {Playlist} from '../../../features/playlists';
 
 export interface PlaylistContextMenuProps {
   /** The media item to add to a playlist (single-item mode) */
@@ -43,7 +42,7 @@ export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
   onCreateNew,
 }) => {
   const {colors} = useTheme();
-  const allPlaylists = useAppSelector(selectAllPlaylists);
+  const {playlists: allPlaylists} = usePlaylists();
 
   const sheetTitle = useMemo(() => {
     if (batchCount && batchCount > 1) {

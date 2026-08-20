@@ -2,6 +2,7 @@ import RNFS from 'react-native-fs';
 import MpvPlayer from '../native/player.api';
 import {LrcParseResult, parseLrc} from '../utils/lrcParser';
 import type {ScannedTrack} from '../store/slices/mediaSlice';
+import {linkedMediaFolderIdFromPath} from '../types/media';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -205,6 +206,8 @@ function parseTrackFromPath(
   const segments = filePath.replace(/^file:\/\//, '').split('/').filter(Boolean);
   const parentDir = segments.length >= 2 ? segments[segments.length - 2] : '';
   const grandParentDir = segments.length >= 3 ? segments[segments.length - 3] : '';
+  const folderPath = segments.slice(0, -1).join('/');
+  const folderId = linkedMediaFolderIdFromPath(folderPath);
 
   // Pattern 1: "Artist - Title"
   const dashSplit = name.match(/^(.+?)\s*[-–—]\s*(.+)$/);
@@ -222,8 +225,11 @@ function parseTrackFromPath(
         genre: '',
         trackNumber: extractTrackNumber(name),
         albumArtUri: '',
-        folderPath: segments.slice(0, -1).join('/'),
+        folderPath,
         mediaType: 'audio',
+        source: 'local',
+        type: 'audio',
+        folderId,
       };
     }
 
@@ -235,8 +241,11 @@ function parseTrackFromPath(
       genre: '',
       trackNumber: 0,
       albumArtUri: '',
-      folderPath: segments.slice(0, -1).join('/'),
+      folderPath,
       mediaType: 'audio',
+      source: 'local',
+      type: 'audio',
+      folderId,
     };
   }
 
@@ -251,8 +260,11 @@ function parseTrackFromPath(
       genre: '',
       trackNumber: extractTrackNumber(name),
       albumArtUri: '',
-      folderPath: segments.slice(0, -1).join('/'),
+      folderPath,
       mediaType: 'audio',
+      source: 'local',
+      type: 'audio',
+      folderId,
     };
   }
 
@@ -267,8 +279,11 @@ function parseTrackFromPath(
       genre: '',
       trackNumber: extractTrackNumber(name),
       albumArtUri: '',
-      folderPath: segments.slice(0, -1).join('/'),
+      folderPath,
       mediaType: 'audio',
+      source: 'local',
+      type: 'audio',
+      folderId,
     };
   }
 
@@ -281,8 +296,11 @@ function parseTrackFromPath(
     genre: '',
     trackNumber: 0,
     albumArtUri: '',
-    folderPath: '',
+    folderPath,
     mediaType: 'audio',
+    source: 'local',
+    type: 'audio',
+    folderId,
   };
 }
 
@@ -335,6 +353,9 @@ export async function scanFolderForAudio(
           albumArtUri: parsed.albumArtUri,
           folderPath: parsed.folderPath || folderPath,
           mediaType: 'audio',
+          source: 'local',
+          type: 'audio',
+          folderId: linkedMediaFolderIdFromPath(parsed.folderPath || folderPath),
         });
       }
     }

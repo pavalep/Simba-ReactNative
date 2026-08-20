@@ -539,11 +539,8 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
     if (folderType === 'audio' || folderType === 'mixed') {
       dispatch(addAudioFolder(selectedPath));
     }
-    // Jump straight to the Library tab so scanned media is immediately visible
-    nav.navigate('MainTabs', {
-      screen: 'LibraryTab',
-      params: {screen: 'Library'},
-    });
+    // Jump straight to Library so scanned media is immediately visible
+    nav.navigate('Library');
   }, [folderType, selectedPath, dispatch, nav]);
 
   const handleAddAnother = useCallback(() => {

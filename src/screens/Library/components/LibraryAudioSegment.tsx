@@ -5,9 +5,16 @@ import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {WaveformBars} from '../../../components/feedback/WaveformBars/WaveformBars';
 import {radius, ColorTokens} from '../../../theme/tokens';
+import type {ScannedTrack} from '../../../store/slices/mediaSlice';
+import {linkedMediaFolderId} from '../../../types/media';
+import type {LocalMediaFilter, SortOption} from '../types';
+import MediaListItem from './MediaListItem';
 
 interface LibraryAudioSegmentProps {
   audioFolders: string[];
+  scannedTracks: ScannedTrack[];
+  filterType: LocalMediaFilter;
+  sortBy: SortOption;
   colors: ColorTokens;
   viewMode?: 'grid' | 'list';
   isAudioPlaying?: boolean;
@@ -15,15 +22,20 @@ interface LibraryAudioSegmentProps {
   onNavigateToSettings: () => void;
   onNavigateToFolderBrowser: (folderPath: string) => void;
   onNavigateToLinkedFolders: (type: 'video' | 'audio') => void;
+  onMediaPress: (track: ScannedTrack) => void;
 }
 
 export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = React.memo(({
   audioFolders,
+  scannedTracks,
+  filterType,
+  sortBy,
   colors,
   isAudioPlaying = false,
   onNavigateToSettings,
   onNavigateToFolderBrowser,
   onNavigateToLinkedFolders,
+  onMediaPress,
 }) => {
   const styles = React.useMemo(
     () =>
@@ -106,7 +118,30 @@ export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = React.mem
     [colors],
   );
 
-  if (audioFolders.length === 0) {
+  const visibleTracks = React.useMemo(() => {
+    const filtered = scannedTracks.filter(track =>
+      filterType === 'all' ? true : track.mediaType === filterType,
+    );
+    return [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'dateAdded':
+          return (b.dateAdded ?? 0) - (a.dateAdded ?? 0);
+        case 'size':
+          return (b.sizeBytes ?? 0) - (a.sizeBytes ?? 0);
+        case 'duration':
+          return b.duration - a.duration;
+        case 'artist':
+          return a.artist.localeCompare(b.artist);
+        case 'album':
+          return a.album.localeCompare(b.album);
+        case 'name':
+        default:
+          return a.title.localeCompare(b.title);
+      }
+    });
+  }, [filterType, scannedTracks, sortBy]);
+
+  if (audioFolders.length === 0 && visibleTracks.length === 0) {
     return (
       <EmptyState
         icon="music"
@@ -131,11 +166,31 @@ export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = React.mem
         </View>
       )}
 
+      {visibleTracks.length > 0 && (
+        <FlatList
+          data={visibleTracks}
+          keyExtractor={track => track.uri}
+          renderItem={({item}) => (
+            <MediaListItem
+              id={item.uri}
+              title={item.title}
+              duration={item.duration * 1000}
+              artist={item.artist}
+              onPress={() => onMediaPress(item)}
+            />
+          )}
+          scrollEnabled={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+        />
+      )}
+
       <View style={styles.folderGrid}>
         {/* 59.1: virtualized instead of .map */}
         <FlatList
           data={audioFolders}
-          keyExtractor={(folder, index) => `audio-${index}`}
+          keyExtractor={folder => linkedMediaFolderId(folder, 'audio')}
           renderItem={({item: folder}) => (
             <TouchableOpacity
               style={styles.folderCard}

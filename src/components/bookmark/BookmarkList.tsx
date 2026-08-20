@@ -6,7 +6,7 @@ import {AppText} from '../core/AppText/AppText';
 import {SvgIcon} from '../utility/SvgIcon';
 import {BookmarkItem} from './BookmarkItem';
 import {useAnimatedEntrance} from '../../hooks/useAnimatedEntrance';
-import type {Bookmark} from '../../store/slices/bookmarkSlice';
+import type {Bookmark} from '../../features/bookmarks';
 
 const ITEM_HEIGHT = 76;
 

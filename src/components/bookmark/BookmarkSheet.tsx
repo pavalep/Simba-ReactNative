@@ -13,7 +13,7 @@ import {KeyboardAwareView} from '../core/KeyboardAwareView/KeyboardAwareView';
 import {SvgIcon} from '../utility/SvgIcon';
 import {BookmarkItem} from './BookmarkItem';
 import {BottomSheet} from '../sheets/BottomSheet/BottomSheet';
-import type {Bookmark} from '../../store/slices/bookmarkSlice';
+import type {Bookmark} from '../../features/bookmarks';
 
 interface Props {
   visible: boolean;

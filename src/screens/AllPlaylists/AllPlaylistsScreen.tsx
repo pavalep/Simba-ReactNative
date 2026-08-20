@@ -27,6 +27,8 @@ import {useConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
 import {useAllPlaylistsScreen} from './useAllPlaylistsScreen';
 import type {PlaylistKind} from '../../types/playlist';
 
+type SingleLanePlaylistKind = Exclude<PlaylistKind, 'MIXED'>;
+
 export const AllPlaylistsScreen: React.FC = () => {
   const {colors} = useTheme();
   const {allPlaylists, handlePlaylistPress, handleCreate, handleRename, handleDelete} =
@@ -37,7 +39,7 @@ export const AllPlaylistsScreen: React.FC = () => {
   // ── Create Modal State ──
   const [createVisible, setCreateVisible] = useState(false);
   const [createName, setCreateName] = useState('');
-  const [createKind, setCreateKind] = useState<PlaylistKind>('AUDIO_ONLY');
+  const [createKind, setCreateKind] = useState<SingleLanePlaylistKind>('AUDIO_ONLY');
 
   // ── Rename Modal State ──
   const [renameVisible, setRenameVisible] = useState(false);
@@ -214,7 +216,7 @@ export const AllPlaylistsScreen: React.FC = () => {
             {/* Kind selector (59.1: virtualized) */}
             <FlatList
               horizontal
-              data={['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED'] as PlaylistKind[]}
+              data={['AUDIO_ONLY', 'VIDEO_ONLY'] as SingleLanePlaylistKind[]}
               keyExtractor={k => k}
               renderItem={({item: k}) => (
                 <TouchableOpacity
@@ -232,11 +234,11 @@ export const AllPlaylistsScreen: React.FC = () => {
                   activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityState={{selected: createKind === k}}
-                  accessibilityLabel={`${k === 'AUDIO_ONLY' ? 'Audio' : k === 'VIDEO_ONLY' ? 'Video' : 'Mixed'} playlist type`}>
+                  accessibilityLabel={`${k === 'AUDIO_ONLY' ? 'Audio' : 'Video'} playlist type`}>
                   <AppText
                     variant="caption"
                     color={createKind === k ? 'onGold' : 'secondary'}>
-                    {k === 'AUDIO_ONLY' ? 'Audio' : k === 'VIDEO_ONLY' ? 'Video' : 'Mixed'}
+                    {k === 'AUDIO_ONLY' ? 'Audio' : 'Video'}
                   </AppText>
                 </TouchableOpacity>
               )}

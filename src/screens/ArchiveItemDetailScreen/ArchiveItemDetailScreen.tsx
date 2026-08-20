@@ -5,7 +5,7 @@
 // bookmark / share. Video items live on MovieDetail (existing screen).
 
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {View, ScrollView, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
+import {Alert, View, ScrollView, TouchableOpacity, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../theme';
 import {radius, spacing} from '../../theme/tokens';
 import type {ArchiveItemDetailScreenProps} from '../../navigation/types';
@@ -19,13 +19,17 @@ import {Placeholder} from '../../components/feedback/Placeholder';
 import FastImage from 'react-native-fast-image';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useAppDispatch, useAppSelector} from '../../store';
+import {useAppDispatch} from '../../store';
+import {useRecentHistory} from '../../features/recentHistory';
+import {usePlaybackCommands} from '../../modules/playback';
+
 import {prependToQueue, addToQueue} from '../../store/slices/playerSlice';
-import {useBookmarks} from '../../hooks/useBookmarks';
+import {useBookmarks} from '../../features/bookmarks';
 import {useToast} from '../../components/feedback/Toast';
 import {useHaptics} from '../../hooks/useHaptics';
 import {shareContent} from '../../services/shareService';
 import type {ArchiveTrack} from '../../types/api';
+import type {MediaSource} from '../../types/media';
 
 type Props = ArchiveItemDetailScreenProps;
 
@@ -48,7 +52,9 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
   const dispatch = useAppDispatch();
   const toast = useToast();
   const haptics = useHaptics();
-  const {add: addBookmark} = useBookmarks();
+    const {add: addBookmark} = useBookmarks();
+  const {openPlayer} = usePlaybackCommands();
+
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [menuTrack, setMenuTrack] = useState<ArchiveTrack | null>(null);
   const [trackMenuVisible, setTrackMenuVisible] = useState(false);
@@ -58,7 +64,9 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
     duration: number;
     artist?: string;
     thumbnailPath?: string;
-    source?: string;
+    source?: MediaSource;
+    provider?: string;
+    type?: 'archive-audio' | 'archive-video';
     mediaType?: 'audio' | 'video';
   } | null>(null);
 
@@ -66,7 +74,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
   const imageUrl = item?.imageUrl ?? '';
 
   // ── Per-track progress from session recents (P37.5) ──
-  const sessionRecent = useAppSelector(s => s.session.recentFiles);
+  const {list: sessionRecent} = useRecentHistory();
   const trackProgress = useMemo(() => {
     const map: Record<string, number> = {};
     for (const r of sessionRecent) {
@@ -84,16 +92,20 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
         title: t.title,
         duration: t.lengthSeconds || undefined,
       }));
-      navigation.navigate('AudioPlayer', {
-        fileUri: track.url,
-        fileTitle: track.title,
+      openPlayer({
+        uri: track.url,
+        title: track.title,
+        duration: track.lengthSeconds || 0,
         artworkUri: imageUrl || undefined,
-        source: 'internetArchive',
+        source: 'api',
+        type: 'archive-audio',
+        mediaType: 'audio',
+        provider: 'internet-archive',
         chapterList: list,
         chapterIndex: index,
       });
     },
-    [navigation, tracks, imageUrl],
+    [openPlayer, tracks, imageUrl],
   );
 
   // P37.6: long-press → play next / queue / playlist / bookmark / share
@@ -113,7 +125,8 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
               uri: track.url,
               title: track.title,
               duration: track.lengthSeconds,
-              source: 'internetArchive',
+              source: 'api',
+            provider: 'internetArchive',
               mediaType: 'audio',
             }),
           );
@@ -125,7 +138,8 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
               uri: track.url,
               title: track.title,
               duration: track.lengthSeconds,
-              source: 'internetArchive',
+              source: 'api',
+            provider: 'internetArchive',
               mediaType: 'audio',
             }),
           );
@@ -138,30 +152,51 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
             duration: track.lengthSeconds,
             artist: item?.creator,
             thumbnailPath: imageUrl || undefined,
-            source: 'internetArchive',
+            source: 'api',
+            provider: 'internetArchive',
             mediaType: 'audio',
           });
           break;
-        case 'bookmark':
-          addBookmark({
+        case 'bookmark': {
+          const input = {
             fileUri: track.url,
             title: track.title,
             position: 0,
             duration: track.lengthSeconds,
             label: '',
             thumbnailPath: imageUrl || undefined,
-            mediaType: 'audio',
-            source: 'internetArchive',
-          });
-          toast.show('Bookmarked track');
+            mediaType: 'audio' as const,
+            source: 'api' as const,
+            provider: 'internetArchive',
+            type: 'archive-audio' as const,
+          };
+          const result = addBookmark(input);
+          if (result.status === 'requires-confirmation') {
+            Alert.alert(
+              'Bookmark limit reached',
+              `Adding “${track.title}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
+              [
+                {text: 'Cancel', style: 'cancel'},
+                {
+                  text: 'Remove & Add',
+                  style: 'destructive',
+                  onPress: () => addBookmark(result.requested, {evictId: result.candidate.id}),
+                },
+              ],
+            );
+          } else {
+            toast.show('Bookmarked track');
+          }
           break;
+        }
         case 'share':
           shareContent({
             route: 'AudioPlayer',
             params: {
               fileUri: track.url,
               fileTitle: track.title,
-              source: 'internetArchive',
+              source: 'api',
+            provider: 'internetArchive',
             },
             title: track.title,
             subtitle: item?.creator,

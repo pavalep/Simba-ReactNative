@@ -93,11 +93,7 @@ export const ArtistScreen: React.FC<Props> = () => {
           ]}
           activeOpacity={0.6}
           onPress={() =>
-            handlers.playTrack({
-              uri: track.uri,
-              title: track.title,
-              duration: track.duration,
-            })
+            handlers.playTrack({...track})
           }
           accessibilityRole="button"
           accessibilityLabel={`Play ${track.title}`}

@@ -1,0 +1,14 @@
+src/components/playlist/PlaylistManageModal/PlaylistManageModal.tsx(59,118): error TS2339: Property 'status' does not exist on type 'ColorTokens'.
+src/screens/FolderBrowser/FolderBrowserScreen.tsx(24,49): error TS2307: Cannot find module '../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/FolderBrowser/FolderBrowserScreen.tsx(326,11): error TS2367: This comparison appears to be unintentional because the types 'PlaylistKind' and '"MIXED"' have no overlap.
+src/screens/Home/hooks/useHomeScreen.ts(10,34): error TS2307: Cannot find module '../../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/Home/hooks/useHomeScreen.ts(287,33): error TS2488: Type 'unknown' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/screens/Library/hooks/useLibraryScreen.ts(7,34): error TS2307: Cannot find module '../../../store/slices/playlistSlice' or its corresponding type declarations.
+src/screens/Library/hooks/useLibraryScreen.ts(112,12): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(112,32): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/Library/hooks/useLibraryScreen.ts(207,18): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(207,36): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/Library/hooks/useLibraryScreen.ts(227,18): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(227,36): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/screens/Library/hooks/useLibraryScreen.ts(251,18): error TS18046: 'allPlaylists' is of type 'unknown'.
+src/screens/Library/hooks/useLibraryScreen.ts(251,36): error TS7006: Parameter 'p' implicitly has an 'any' type.

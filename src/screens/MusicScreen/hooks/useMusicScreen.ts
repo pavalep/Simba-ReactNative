@@ -51,6 +51,15 @@ export interface MusicScopeState {
   hasLoaded: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
+  /**
+   * True once a 'more' fetch returned zero NEW rows (after dedupe). With
+   * Jamendo's offset-based pagination, the API never returns a total
+   * count, so this is the only reliable end-of-stream signal — the
+   * legacy "items.length % PAGE_SIZE !== 0" partial-page check fails
+   * when the API consistently returns 0 rows past page 1 (which it does
+   * for some client ids / orders), and loadMore would loop forever.
+   */
+  exhausted: boolean;
   error: string | null;
 }
 
@@ -61,6 +70,7 @@ export const EMPTY_SCOPE: MusicScopeState = {
   hasLoaded: false,
   isLoading: false,
   isLoadingMore: false,
+  exhausted: false,
   error: null,
 };
 
@@ -82,9 +92,8 @@ function dedupe(items: JamendoTrackResult[]): JamendoTrackResult[] {
 
 export function useMusicScreen() {
   // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
-  // searchQuery = live input; searchTerm = settled (debounced) value.
-  // The term persists across filter switches by design.
-  const [searchQuery, setSearchQuery] = useState('');
+  // searchTerm = settled (debounced) value. The term persists across
+  // filter switches by design.
   const [searchTerm, setSearchTerm] = useState('');
 
   const [scopes, setScopes] = useState<Record<string, MusicScopeState>>({});
@@ -155,18 +164,23 @@ export function useMusicScreen() {
 
         setScopes(prev => {
           const cur = prev[key] ?? EMPTY_SCOPE;
+          const merged =
+            mode === 'more' ? dedupe([...cur.items, ...items]) : items;
           return {
             ...prev,
             [key]: {
               ...cur,
-              items:
-                mode === 'more'
-                  ? dedupe([...cur.items, ...items])
-                  : items,
+              items: merged,
               page,
               hasLoaded: true,
               isLoading: false,
               isLoadingMore: false,
+              // A 'more' fetch that produced zero NEW rows is the end of
+              // the stream. Without this, the partial-page heuristic
+              // (`items.length % PAGE_SIZE`) never trips when the API
+              // consistently returns 0 rows past page 1, and loadMore
+              // would re-fire on every scroll.
+              exhausted: mode === 'more' ? merged.length === cur.items.length : cur.exhausted,
               error: null,
             },
           };
@@ -200,6 +214,7 @@ export function useMusicScreen() {
     (genre: string) => {
       const scope = getScope(genre);
       if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore) return;
+      if (scope.exhausted) return; // API returned 0 new rows last time
       if (scope.items.length % PAGE_SIZE !== 0) return; // last page was partial
       if (scope.items.length === 0) return;
       fetchPage(genre, scope.page + 1, 'more');
@@ -215,7 +230,10 @@ export function useMusicScreen() {
       setScopes(prev => {
         const cur = prev[key];
         if (!cur) return prev;
-        return {...prev, [key]: {...cur, items: [], hasLoaded: false}};
+        return {
+          ...prev,
+          [key]: {...cur, items: [], hasLoaded: false, exhausted: false},
+        };
       });
       fetchPage(genre, 1, 'initial');
     },
@@ -238,8 +256,6 @@ export function useMusicScreen() {
 
   return {
     // search
-    searchQuery,
-    setSearchQuery,
     setSearchTerm,
     isSearchActive,
     // per-scope data + actions

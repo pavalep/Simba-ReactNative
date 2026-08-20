@@ -8,6 +8,9 @@
 
 import {Platform} from 'react-native';
 import type {PlaylistItem} from '../types/playlist';
+import type {MediaLane, MediaSource} from '../types/media';
+import {getMediaType} from '../services/fileService';
+import {isRemoteUri} from './mediaUri';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -16,6 +19,9 @@ export interface M3uEntry {
   title: string;
   artist?: string;
   fileUri: string;
+  source: MediaSource;
+  type: 'audio' | 'video';
+  mediaType: MediaLane;
 }
 
 export interface M3uParseResult {
@@ -75,12 +81,18 @@ export function parseM3u(content: string): M3uParseResult {
       continue;
     }
 
+    const mediaType = getMediaType(fileUri);
+    const source: MediaSource = isRemoteUri(fileUri) ? 'api' : 'local';
+
     if (currentExtinf) {
       entries.push({
         duration: currentExtinf.duration,
         title: currentExtinf.title,
         artist: currentExtinf.artist,
         fileUri,
+        source,
+        type: mediaType,
+        mediaType,
       });
       currentExtinf = null;
     } else {
@@ -90,6 +102,9 @@ export function parseM3u(content: string): M3uParseResult {
         duration: -1,
         title: stripExtension(name),
         fileUri,
+        source,
+        type: mediaType,
+        mediaType,
       });
     }
   }
@@ -126,6 +141,10 @@ export function generatePlaylistJson(items: PlaylistItem[]): string {
       album: item.album ?? null,
       duration: item.duration,
       fileUri: item.fileUri,
+      source: item.source,
+      type: item.type,
+      mediaType: item.mediaType,
+      provider: item.provider ?? null,
       thumbnailPath: item.thumbnailPath ?? null,
     })),
     null,

@@ -4,22 +4,25 @@
 
 import {useCallback} from 'react';
 import {useNavigation} from '@react-navigation/native';
-import {useAppSelector, useAppDispatch} from '../../store';
-import {selectAllPlaylists, createPlaylist, renamePlaylist, deletePlaylist} from '../../store/slices/playlistSlice';
+import {usePlaylists} from '../../features/playlists';
 import type {Playlist} from '../../types/playlist';
 
 export interface UseAllPlaylistsScreenResult {
   allPlaylists: Playlist[];
   handlePlaylistPress: (playlist: Playlist) => void;
-  handleCreate: (name: string, kind: 'AUDIO_ONLY' | 'VIDEO_ONLY' | 'MIXED') => void;
+  handleCreate: (name: string, kind: 'AUDIO_ONLY' | 'VIDEO_ONLY') => void;
   handleRename: (id: string, newName: string) => void;
   handleDelete: (id: string) => void;
 }
 
 export function useAllPlaylistsScreen(): UseAllPlaylistsScreenResult {
   const navigation = useNavigation<any>();
-  const dispatch = useAppDispatch();
-  const allPlaylists = useAppSelector(selectAllPlaylists);
+  const {
+    playlists: allPlaylists,
+    createPlaylist: create,
+    renamePlaylist: rename,
+    deletePlaylist: remove,
+  } = usePlaylists();
 
   const handlePlaylistPress = useCallback(
     (playlist: Playlist) => {
@@ -32,26 +35,26 @@ export function useAllPlaylistsScreen(): UseAllPlaylistsScreenResult {
   );
 
   const handleCreate = useCallback(
-    (name: string, kind: 'AUDIO_ONLY' | 'VIDEO_ONLY' | 'MIXED') => {
-      dispatch(createPlaylist({name, kind}));
+    (name: string, kind: 'AUDIO_ONLY' | 'VIDEO_ONLY') => {
+      create({name, kind});
     },
-    [dispatch],
+    [create],
   );
 
   const handleRename = useCallback(
     (id: string, newName: string) => {
       if (newName.trim()) {
-        dispatch(renamePlaylist({id, newName: newName.trim()}));
+        rename(id, newName.trim());
       }
     },
-    [dispatch],
+    [rename],
   );
 
   const handleDelete = useCallback(
     (id: string) => {
-      dispatch(deletePlaylist(id));
+      remove(id);
     },
-    [dispatch],
+    [remove],
   );
 
   return {

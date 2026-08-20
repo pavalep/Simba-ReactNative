@@ -21,6 +21,7 @@ import {downloadService} from './src/services/downloadService';
 import {hydrateDownloads} from './src/store/slices/downloadsSlice';
 import {mark} from './src/utils/startupPerf';
 import {configureGoogleSignin} from './src/services/authService';
+import {PlaybackProvider, PlaybackOverlayHost, usePlaybackCommands} from './src/modules/playback';
 
 // Initialize GoogleSignin once at app startup — calling configure() every
 // time on the sign-in path was breaking the post-revoke flow (the account
@@ -31,7 +32,10 @@ configureGoogleSignin();
  * Parse a shared content URI and navigate to the Player screen.
  * Accepts both content:// URIs from Share Sheet and file:// URIs.
  */
-function handleIncomingUri(uri: string) {
+function handleIncomingUri(
+  uri: string,
+  openPlayer: ReturnType<typeof usePlaybackCommands>['openPlayer'],
+) {
   if (!uri || !navigationRef.isReady()) return;
   // Only handle video/audio content URIs
   if (!uri.startsWith('content://') && !uri.startsWith('file://')) return;
@@ -39,9 +43,13 @@ function handleIncomingUri(uri: string) {
   const fileName = uri.split('/').pop() ?? 'Shared File';
   const displayName = decodeURIComponent(fileName.replace(/\.[^.]+$/, ''));
 
-  navigationRef.navigate('VideoPlayer', {
-    fileUri: uri,
-    fileTitle: displayName,
+  openPlayer({
+    uri,
+    title: displayName,
+    duration: 0,
+    source: 'local',
+    type: 'video',
+    mediaType: 'video',
   });
 }
 
@@ -73,6 +81,7 @@ function waitForAuthSettle(timeoutMs = 10000): Promise<void> {
 
 const AppContent: React.FC = () => {
   const {colors} = useTheme();
+  const {openPlayer} = usePlaybackCommands();
 
   // 43.1/43.2: cold-start silent restore + foreground session expiry
   useAuthSession();
@@ -86,7 +95,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   // P64: removed navigation-state persistence. The auth gate in
-  // RootNavigator (Splash → Login → MainTabs based on hasLaunched and
+  // RootNavigator (Splash → Login → Home based on hasLaunched and
   // isAuthenticated) is now the single source of truth for where the
   // user lands on cold start. Persisting the last screen broke that
   // contract — a signed-in user could re-open the app on a stale
@@ -127,8 +136,8 @@ const AppContent: React.FC = () => {
 
   // ── Deep linking: handle incoming content:// URIs ──
   const handleUrl = useCallback((event: {url: string}) => {
-    handleIncomingUri(event.url);
-  }, []);
+    handleIncomingUri(event.url, openPlayer);
+  }, [openPlayer]);
 
   useEffect(() => {
     // Lock to portrait globally (PlayerScreen toggles to landscape on demand)
@@ -138,7 +147,7 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     // Check for initial URL on cold start
     Linking.getInitialURL().then(url => {
-      if (url) handleIncomingUri(url);
+      if (url) handleIncomingUri(url, openPlayer);
     });
 
     // Listen for incoming URLs while app is running
@@ -155,6 +164,7 @@ const AppContent: React.FC = () => {
             ref={navigationRef}
             linking={linkingConfig}>
             <RootNavigator />
+            <PlaybackOverlayHost />
           </NavigationContainer>
           {/* 54.1: global offline banner overlays every screen */}
           <OfflineBanner />
@@ -187,7 +197,9 @@ const App: React.FC = () => {
         <Provider store={store}>
           <PersistGate loading={null} persistor={persistor} onBeforeLift={onRehydrated}>
             <ThemeProvider>
-              <AppContent />
+              <PlaybackProvider>
+                <AppContent />
+              </PlaybackProvider>
             </ThemeProvider>
           </PersistGate>
         </Provider>

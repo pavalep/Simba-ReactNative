@@ -21,9 +21,8 @@ import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {useConfirmDialog} from '../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../components/feedback/Toast/Toast';
 import {SearchBar} from '../../components/core/SearchBar/SearchBar';
-import {useAppDispatch, useAppSelector} from '../../store';
-import {removeRecentFile, clearAllRecent} from '../../store/slices/sessionSlice';
-import type {SessionEntry} from '../../store/slices/sessionSlice';
+import {useRecentHistory, type RecentHistoryEntry} from '../../features/recentHistory';
+import {usePlaybackCommands} from '../../modules/playback';
 import {MediaActionsSheet} from '../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../components/sheets/MediaActionsSheet/useQueueActions';
 import {formatDuration} from '../../utils/timeAgo';
@@ -49,14 +48,13 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const dispatch = useAppDispatch();
   const {confirm, dialog} = useConfirmDialog();
-
-  const recentFiles = useAppSelector(state => state.session.recentFiles);
+  const {list: recentFiles, removeRecent, clearRecent} = useRecentHistory();
+  const {openPlayer} = usePlaybackCommands();
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [query, setQuery] = useState('');
   // 58.4/58.5: standard long-press menu (Play Next / Queue / Remove)
-  const [menuItem, setMenuItem] = useState<SessionEntry | null>(null);
+  const [menuItem, setMenuItem] = useState<RecentHistoryEntry | null>(null);
   const {playNext, addToQueue} = useQueueActions();
   // 54.3: pull-to-refresh — local store data, so just pulse the spinner
   const [refreshing, setRefreshing] = useState(false);
@@ -83,22 +81,19 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
 
   const handlePress = useCallback(
     (fileUri: string, mediaType?: 'video' | 'audio', title?: string, position?: number) => {
-      if (mediaType === 'audio') {
-        // 58.2: explicit tap intent — silent seek to the saved position
-        navigation.navigate('AudioPlayer', {
-          fileUri,
-          fileTitle: title,
-          startPosition: position,
-        });
-      } else {
-        navigation.navigate('VideoPlayer', {
-          fileUri,
-          fileTitle: title,
-          startPosition: position,
-        });
-      }
+      const lane = mediaType ?? 'video';
+      // 58.2: explicit tap intent — silent seek to the saved position
+      openPlayer({
+        uri: fileUri,
+        title: title ?? 'Untitled',
+        duration: 0,
+        startPosition: position,
+        source: isStreamingUri(fileUri) ? 'api' : 'local',
+        type: lane === 'audio' ? 'audio' : 'video',
+        mediaType: lane,
+      });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const handleRemove = useCallback(
@@ -110,10 +105,10 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
         destructive: true,
       });
       if (ok) {
-        dispatch(removeRecentFile(fileUri));
+        removeRecent(fileUri);
       }
     },
-    [confirm, dispatch],
+    [confirm, removeRecent],
   );
 
   const handleClearAll = useCallback(async () => {
@@ -124,10 +119,10 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
       destructive: true,
     });
     if (ok) {
-      dispatch(clearAllRecent());
+      clearRecent();
       toast.show('History cleared');
     }
-  }, [confirm, dispatch, toast]);
+  }, [clearRecent, confirm, toast]);
 
   const renderRow = useCallback(
     ({item}: {item: (typeof recentFiles)[number]}) => {

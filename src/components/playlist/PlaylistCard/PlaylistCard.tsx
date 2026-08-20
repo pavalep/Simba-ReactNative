@@ -10,7 +10,6 @@ import type {Playlist, PlaylistKind} from '../../../types/playlist';
 const KIND_LABELS: Record<PlaylistKind, string> = {
   AUDIO_ONLY: 'Audio',
   VIDEO_ONLY: 'Video',
-  MIXED: 'Mixed',
 };
 
 export interface PlaylistCardProps {

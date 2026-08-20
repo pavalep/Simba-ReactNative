@@ -6,6 +6,11 @@
 
 // Core
 export {AppButton} from './core/AppButton/AppButton';
+export {AppDivider} from './core/AppDivider/AppDivider';
+export type {AppDividerProps} from './core/AppDivider/AppDivider';
+export {AppBadge} from './core/AppBadge/AppBadge';
+export type {AppBadgeProps} from './core/AppBadge/AppBadge';
+
 export {AppText} from './core/AppText/AppText';
 export type {AppTextVariant} from './core/AppText/AppText';
 export {AppCard} from './core/AppCard/AppCard';

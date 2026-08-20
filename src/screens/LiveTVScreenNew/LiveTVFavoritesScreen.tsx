@@ -5,6 +5,7 @@
 
 import React, {useCallback, useState} from 'react';
 import {
+  Alert,
   View,
   FlatList,
   TouchableOpacity,
@@ -24,11 +25,12 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import {shareContent} from '../../services/shareService';
-import {useBookmarks} from '../../hooks/useBookmarks';
+import {useBookmarks} from '../../features/bookmarks';
 import {useToast} from '../../components/feedback/Toast';
 import {useHaptics} from '../../hooks/useHaptics';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../components/core/OptionSheetDialog/OptionSheetDialog';
+import {usePlaybackCommands} from '../../modules/playback';
 import {
   ChannelCard,
   favToRow,
@@ -44,6 +46,7 @@ export const LiveTVFavoritesScreen: React.FC<Props> = ({navigation}) => {
   const toast = useToast();
   const haptics = useHaptics();
   const {add: addBookmark} = useBookmarks();
+  const {openPlayer} = usePlaybackCommands();
 
   const favorites = useAppSelector(s =>
     selectLiveFavoritesByKind(s, 'tv'),
@@ -58,13 +61,17 @@ export const LiveTVFavoritesScreen: React.FC<Props> = ({navigation}) => {
 
   const handleChannelPress = useCallback(
     (row: ChannelRow) => {
-      navigation.navigate('VideoPlayer', {
-        fileUri: row.url,
-        fileTitle: row.name,
-        source: 'iptv',
+      openPlayer({
+        uri: row.url,
+        title: row.name,
+        duration: 0,
+        source: 'api',
+        type: 'live-tv',
+        mediaType: 'video',
+        provider: 'iptv',
       });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const handleLongPress = useCallback((row: ChannelRow) => {
@@ -88,30 +95,53 @@ export const LiveTVFavoritesScreen: React.FC<Props> = ({navigation}) => {
             title: row.name,
             duration: 0,
             thumbnailPath: row.image || undefined,
-            source: 'iptv',
+            source: 'api',
+            type: 'live-tv',
+            provider: 'iptv',
             mediaType: 'video',
           });
           break;
-        case 'bookmark':
-          addBookmark({
+        case 'bookmark': {
+          const input = {
             fileUri: row.url,
             title: row.name,
             position: 0,
             duration: 0,
             label: '',
             thumbnailPath: row.image || undefined,
-            mediaType: 'video',
-            source: 'iptv',
-          });
-          toast.show('Channel bookmarked');
+            mediaType: 'video' as const,
+            type: 'live-tv' as const,
+            source: 'api' as const,
+            provider: 'iptv',
+          };
+          const result = addBookmark(input);
+          if (result.status === 'requires-confirmation') {
+            Alert.alert(
+              'Bookmark limit reached',
+              `Adding “${row.name}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
+              [
+                {text: 'Cancel', style: 'cancel'},
+                {
+                  text: 'Remove & Add',
+                  style: 'destructive',
+                  onPress: () => addBookmark(result.requested, {evictId: result.candidate.id}),
+                },
+              ],
+            );
+          } else {
+            toast.show('Channel bookmarked');
+          }
           break;
+        }
         case 'share':
           shareContent({
             route: 'VideoPlayer',
             params: {
               fileUri: row.url,
               fileTitle: row.name,
-              source: 'iptv',
+              source: 'api',
+              type: 'live-tv',
+              provider: 'iptv',
             },
             title: row.name,
             subtitle: row.subtitle,

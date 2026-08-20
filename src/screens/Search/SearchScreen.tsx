@@ -17,6 +17,9 @@ import {AppText} from '../../components/core/AppText/AppText';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {useAppSelector} from '../../store';
+import {useRecentHistory} from '../../features/recentHistory';
+import {usePlaybackCommands} from '../../modules/playback';
+
 import {useSearch} from '../../hooks/useSearch';
 import type {RootStackScreenProps} from '../../navigation/types';
 import {spacing} from '../../theme/tokens';
@@ -64,7 +67,9 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const isDark = theme === 'dark';
   const {width: screenWidth} = useWindowDimensions();
 
-  const recentFiles = useAppSelector(state => state.session.recentFiles);
+    const {list: recentFiles} = useRecentHistory();
+  const {openPlayer} = usePlaybackCommands();
+
   const playlist = useAppSelector(state => state.player.playlist);
   const videoFolders = useAppSelector(state => state.settings.videoFolders);
   const audioFolders = useAppSelector(state => state.settings.audioFolders);
@@ -247,12 +252,17 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const handleClearRecent = useCallback(() => setRecentSearches([]), []);
   const handlePlayFile = useCallback(
     (fileUri: string, fileTitle: string) => {
-      navigation.navigate(
-        isVideoFile(fileTitle) ? 'VideoPlayer' : 'AudioPlayer',
-        {fileUri, fileTitle},
-      );
+      const mediaType = isVideoFile(fileTitle) ? 'video' : 'audio';
+      openPlayer({
+        uri: fileUri,
+        title: fileTitle,
+        duration: 0,
+        source: 'local',
+        type: mediaType,
+        mediaType,
+      });
     },
-    [navigation],
+    [openPlayer],
   );
   const handleRetry = useCallback(() => setError(null), []);
   const handleSubmitSearch = useCallback(() => {
@@ -267,26 +277,34 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   // ── P40.5: remote rows route to their correct destination ──
   const handlePlayTrack = useCallback(
     (track: JamendoTrackResult) => {
-      navigation.navigate('AudioPlayer', {
-        fileUri: track.audioUrl,
-        fileTitle: track.name,
+      openPlayer({
+        uri: track.audioUrl,
+        title: track.name,
+        duration: 0,
         artworkUri: track.imageUrl || undefined,
-        source: 'jamendo',
+        source: 'api',
+        type: 'music',
+        mediaType: 'audio',
+        provider: 'jamendo',
       });
     },
-    [navigation],
+        [openPlayer],
   );
 
   const handlePlayAudius = useCallback(
     (track: AudiusTrackResult) => {
-      navigation.navigate('AudioPlayer', {
-        fileUri: track.streamUrl,
-        fileTitle: track.title,
+      openPlayer({
+        uri: track.streamUrl,
+        title: track.title,
+        duration: 0,
         artworkUri: track.artworkUrl || undefined,
-        source: 'audius',
-      });
+        source: 'api',
+        type: 'music',
+        mediaType: 'audio',
+        provider: 'audius',
+            });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const handleOpenAudiobook = useCallback(
@@ -311,13 +329,17 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
 
   const handleOpenChannel = useCallback(
     (channel: IPTVChannelResult) => {
-      navigation.navigate('VideoPlayer', {
-        fileUri: channel.url,
-        fileTitle: channel.name,
-        source: 'iptv',
+      openPlayer({
+        uri: channel.url,
+        title: channel.name,
+        duration: 0,
+        source: 'api',
+        type: 'live-tv',
+        mediaType: 'video',
+        provider: 'iptv',
       });
     },
-    [navigation],
+        [openPlayer],
   );
 
   const remoteHandlers: RemoteResultsHandlers = {

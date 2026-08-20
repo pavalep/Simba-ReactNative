@@ -6,7 +6,7 @@ import {
   selectAlbums,
   selectSearchIndex,
 } from '../store/slices/mediaSlice';
-import {selectAllPlaylists} from '../store/slices/playlistSlice';
+import {usePlaylists} from '../features/playlists';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ export function useSearch(
   const searchIndex = useAppSelector(selectSearchIndex);
   const artists = useAppSelector(selectArtists);
   const albums = useAppSelector(selectAlbums);
-  const allPlaylists = useAppSelector(selectAllPlaylists);
+  const {playlists: allPlaylists} = usePlaylists();
 
   const query = debouncedQuery.toLowerCase();
 
@@ -174,9 +174,8 @@ export function useSearch(
           group: 'artists',
           relevanceScore: artist.name.toLowerCase().indexOf(query) === 0 ? 95 : 50,
           navigateTo: {
-            route: 'MainTabs',
-            screen: 'LibraryTab',
-            params: {screen: 'ArtistDetail', params: {artistName: artist.name}},
+            route: 'ArtistDetail',
+            params: {artistName: artist.name},
           },
         });
       }
@@ -196,12 +195,8 @@ export function useSearch(
           thumbnailPath: album.albumArtUri,
           relevanceScore: album.title.toLowerCase().indexOf(query) === 0 ? 95 : 50,
           navigateTo: {
-            route: 'MainTabs',
-            screen: 'LibraryTab',
-            params: {
-              screen: 'AlbumDetail',
-              params: {albumTitle: album.title, artistName: album.artist},
-            },
+            route: 'AlbumDetail',
+            params: {albumTitle: album.title, artistName: album.artist},
           },
         });
       }
@@ -217,9 +212,8 @@ export function useSearch(
           group: 'playlists',
           relevanceScore: pl.name.toLowerCase().indexOf(query) === 0 ? 90 : 45,
           navigateTo: {
-            route: 'MainTabs',
-            screen: 'LibraryTab',
-            params: {screen: 'PlaylistDetail', params: {playlistId: pl.id}},
+            route: 'PlaylistDetail',
+            params: {playlistId: pl.id, playlistName: pl.name},
           },
         });
       }
@@ -267,9 +261,8 @@ export function useSearch(
           group: 'folders',
           relevanceScore: 30,
           navigateTo: {
-            route: 'MainTabs',
-            screen: 'LibraryTab',
-            params: {screen: 'FolderBrowser', params: {initialPath: folder}},
+            route: 'FolderBrowser',
+            params: {initialPath: folder},
           },
         });
       }
@@ -284,9 +277,8 @@ export function useSearch(
           group: 'folders',
           relevanceScore: 30,
           navigateTo: {
-            route: 'MainTabs',
-            screen: 'LibraryTab',
-            params: {screen: 'FolderBrowser', params: {initialPath: folder}},
+            route: 'FolderBrowser',
+            params: {initialPath: folder},
           },
         });
       }

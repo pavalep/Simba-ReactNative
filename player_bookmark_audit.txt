@@ -1,0 +1,260 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AlbumArtBackground.tsx:77:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AlbumArtBackground.tsx:85:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioActionButtons.tsx:13:onBookmark: () => void;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioActionButtons.tsx:14:bookmarkCount?: number;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioActionButtons.tsx:23:onBookmark,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioActionButtons.tsx:24:bookmarkCount = 0,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioActionButtons.tsx:66:onPress={onBookmark}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioActionButtons.tsx:68:accessibilityLabel={bookmarkCount > 0 ? `${bookmarkCount} bookmarks` : 'Bookmark'}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioActionButtons.tsx:70:<SvgIcon name="bookmark" size={20} color={bookmarkCount > 0 ? colors.accent.gold : colors.text.primary} />
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioActionButtons.tsx:71:<AppText variant="caption" color="primary" style={{color: bookmarkCount > 0 ? colors.accent.gold : colors.text.primary}}>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioActionButtons.tsx:72:{bookmarkCount > 0 ? `Bookmarks (${bookmarkCount})` : 'Bookmark'}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioResumeOverlay.tsx:10:/** Saved playback position in seconds to resume from */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioResumeOverlay.tsx:11:position: number;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioResumeOverlay.tsx:20:* VideoPlayerResumeOverlay: when a saved position exists, ask the user
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioResumeOverlay.tsx:25:position,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioResumeOverlay.tsx:114:Resume from {formatDuration(position)}?
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\AudioResumeOverlay.tsx:121:accessibilityLabel={`Resume from ${formatDuration(position)}`}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\LyricsQueuePanel.tsx:29:/** Current playback position in seconds */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\LyricsQueuePanel.tsx:30:currentPosition: number;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\LyricsQueuePanel.tsx:33:/** Called when user taps a lyric line to seek to that position */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\LyricsQueuePanel.tsx:44:// Only the active line re-renders on position ticks; inactive rows
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\LyricsQueuePanel.tsx:140:currentPosition,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\LyricsQueuePanel.tsx:156:if (lyrics[i].time <= currentPosition) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\components\LyricsQueuePanel.tsx:163:}, [lyrics, currentPosition]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:16:import {useBookmarks} from '../../../hooks/useBookmarks';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:88:// seek; implicit saved positions ask via the resume overlay instead.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:89:const startPosition = route.params?.startPosition;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:119:// 58.2: saved-position resume choice (mirrors 31.2 video overlay)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:120:const [resumePrompt, setResumePrompt] = useState<{position: number} | null>(null);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:122:// ── Bookmark state ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:123:const [bookmarkSheetVisible, setBookmarkSheetVisible] = useState(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:125:bookmarksForFile: audioBookmarksForFile,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:126:bookmarkCountForFile: audioBookmarkCount,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:127:add: addAudioBookmark,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:128:remove: removeAudioBookmark,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:129:} = useBookmarks(activeUri ?? undefined);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:131:const handleOpenBookmarkSheet = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:132:setBookmarkSheetVisible(true);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:135:const handleCloseBookmarkSheet = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:136:setBookmarkSheetVisible(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:139:const handleBookmarkAdd = useCallback(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:143:const position = MpvPlayer.getPosition?.() ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:145:if (position < 1) return;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:146:addAudioBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:149:position,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:152:// P34.2: keep art + origin so bookmarks restore the stream context
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:162:addAudioBookmark,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:172:const handleBookmarkDelete = useCallback(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:174:removeAudioBookmark(id);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:176:[removeAudioBookmark],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:179:const handleBookmarkJumpTo = useCallback((position: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:181:MpvPlayer.seekTo(position);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:232:// P33.6: cached local path for remote artwork — feeds recents/bookmarks
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:350:// Restore the saved playback position once the file loads.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:360:const resumePosition = saved?.position ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:361:const explicitPosition = startPosition ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:362:if (explicitPosition > 0) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:365:try { MpvPlayer.seekTo(explicitPosition); } catch {}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:367:} else if (resumePosition > 0) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:370:setResumePrompt({position: resumePosition});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:396:}, [fileUri, title, dispatch, retryNonce, sourceLabel, startPosition]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:402:const pos = resumePrompt.position;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:462:position: MpvPlayer.getPosition?.() ?? 0,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:503:{position: 0, duration: MpvPlayer.getDuration?.() ?? 1, isPlaying: false},
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:529:position: MpvPlayer.getPosition?.() ?? 0,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:581:const curPos = MpvPlayer.getPosition?.() ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:588:position: curPos,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:623:const pos = MpvPlayer.getPosition?.() ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:642:const pos = MpvPlayer.getPosition?.() ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:686:if (recent && recent.position > 0) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:687:const pos = recent.position;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1014:// 58.2: saved-position resume choice
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1017:// Bookmark state
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1018:bookmarkSheetVisible,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1019:audioBookmarksForFile,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1020:audioBookmarkCount,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1080:// Bookmark handlers
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1081:handleOpenBookmarkSheet,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1082:handleCloseBookmarkSheet,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1083:handleBookmarkAdd,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1084:handleBookmarkDelete,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\hooks\useAudioPlayerScreen.ts:1085:handleBookmarkJumpTo,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudioPlayer\textContent.ts:15:bookmarkA11y: 'Bookmark this position',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\PrimaryControls.tsx:13:position: number;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\PrimaryControls.tsx:47:position,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\PrimaryControls.tsx:123:onSeek(Math.max(0, (position - 10) / (duration || 1)));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\PrimaryControls.tsx:124:}, [onSeek, position, duration]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\PrimaryControls.tsx:127:onSeek(Math.min(1, (position + 10) / (duration || 1)));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\PrimaryControls.tsx:128:}, [onSeek, position, duration]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\PrimaryControls.tsx:139:// absolute positioning; this is a normal flex child that flows
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\PrimaryControls.tsx:239:position={position}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\PrimaryControls.tsx:340:// every position tick (TransportContext updates ~4Hz during playback). The
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\SecondaryToolbar.tsx:107:position: 'absolute' as const,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\SecondaryToolbar.tsx:488:// TransportContext tick (position changes ~4Hz). Only the active props
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\SeekFeedbackOverlay.tsx:95:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerAutoAdvanceCard.tsx:51:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerEqualizerPanel.tsx:114:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerLoadingOverlay.tsx:52:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerPlaylistPanel.tsx:63:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerResumeOverlay.tsx:10:/** Saved playback position in seconds to resume from */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerResumeOverlay.tsx:11:position: number;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerResumeOverlay.tsx:19:* 31.2 Netflix-style resume choice: when a saved position exists, ask the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerResumeOverlay.tsx:23:position,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerResumeOverlay.tsx:124:Resume from {formatDuration(position)}?
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerResumeOverlay.tsx:131:accessibilityLabel={`Resume from ${formatDuration(position)}`}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:36:subtitlePosition: number;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:37:onPositionChange: (position: number) => void;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:69:subtitlePosition,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:70:onPositionChange,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:103:const movePosition = useCallback((delta: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:104:onPositionChange(Math.max(5, Math.min(95, subtitlePosition + delta)));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:105:}, [onPositionChange, subtitlePosition]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:426:<AppText variant="body2" color="primary">Subtitle position</AppText>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:430:<TouchableOpacity style={styles.opacityBtn} onPress={() => movePosition(-5)} accessibilityLabel="Move subtitles down">
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:433:<AppText variant="body2" color="primary" style={styles.opacityValue}>{subtitlePosition}%</AppText>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerSubtitlePanel.tsx:434:<TouchableOpacity style={styles.opacityBtn} onPress={() => movePosition(5)} accessibilityLabel="Move subtitles up">
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:67:onBookmark?: () => void;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:68:/** Long-press the bookmark icon to open the bookmark list sheet */
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:69:onBookmarkLongPress?: () => void;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:70:bookmarkActive?: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:89:onBookmark,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:90:onBookmarkLongPress,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:91:bookmarkActive = false,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:102:const bookmarkPulse = useRef(new Animated.Value(1)).current;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:103:const prevBookmarkActive = useRef(bookmarkActive);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:113:if (bookmarkActive && !prevBookmarkActive.current) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:115:Animated.spring(bookmarkPulse, {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:121:Animated.spring(bookmarkPulse, {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:129:prevBookmarkActive.current = bookmarkActive;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:130:}, [bookmarkActive, bookmarkPulse]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:137:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:188:// right-section icons (bookmark / more / rotate).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:293:bookmark (most common) → channel nav (live TV) → overflow.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:297:{!controlsLocked && onBookmark && (
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:298:<Animated.View style={{transform: [{scale: bookmarkPulse}]}}>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:300:style={[styles.glassChip, bookmarkActive && styles.glassChipActive]}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:301:onPress={onBookmark}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:303:bookmarkActive ? 'Remove bookmark' : 'Save bookmark'
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:308:name={bookmarkActive ? 'bookmarkFilled' : 'bookmark'}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:310:color={bookmarkActive ? colors.accent.gold : '#FFFFFF'}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:345:// position tick (because the hook recomputes `secondaryVisible` based on
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerTopBar.tsx:346:// position); without memo the gradient and all glass chips re-paint
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VideoPlayerVideoSurface.tsx:122:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VolumeBrightnessOverlay.tsx:43:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VolumeBrightnessOverlay.tsx:78:position: 'absolute',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\components\VolumeBrightnessOverlay.tsx:159:position: 'absolute' as const,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:40:import {useBookmarks} from '../../../hooks/useBookmarks';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:98:const requestedStartPosition = route.params?.startPosition;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:135:const [resumePrompt, setResumePrompt] = useState<{position: number} | null>(null);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:199:const [subtitlePosition, setSubtitlePosition] = useState(90);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:211:// ── Live currentPosition (tracked locally so the bookmark icon can
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:212://    switch to "filled" the instant playback reaches a saved bookmark).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:214://    it so consumers (e.g. TopBar) re-render when the position lands
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:215://    within the bookmark-tolerance window. ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:216:const currentPositionRef = useRef(0);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:217:const [currentPosition, setCurrentPositionState] = useState(0);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:222:// ── Refs (declared before useBookmarks due to value dependency) ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:234:const hasSeenFirstPositionRef = useRef(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:238:const pushPositionRef = useRef<(pos: number) => void>((_: number) => {});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:260:bookmarksForFile,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:261:bookmarkCountForFile,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:262:add: addBookmarkEntry,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:263:remove: removeBookmarkEntry,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:264:} = useBookmarks(fileUriForHook);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:322:const rememberPosition = useAppSelector(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:323:state => state.settings.rememberPlaybackPosition,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:336:const playerCurrentPosition = useAppSelector(state => state.player.currentPosition);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:498:setSubtitlePosition(settings.position);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:505:const savedEntry = fileUri && rememberPosition
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:569:const curPos = MpvPlayer.getPosition?.() ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:592:position: curPos,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:624:position: playerCurrentPosition,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:683:const position = MpvPlayer.getPosition?.() ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:684:if (position > 5) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:738:const pos = resumePrompt.position;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:854://    bookmark?". The save handler rounds the position to the nearest
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:858:const BOOKMARK_MATCH_TOLERANCE_S = 2;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:860:// Find the bookmark for the current position (if any). Used both for
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:862:const findBookmarkAtPosition = useCallback(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:863:(position: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:864:if (!bookmarksForFile || bookmarksForFile.length === 0) return null;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:866:bookmarksForFile.find(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:867:b => Math.abs(b.position - position) <= BOOKMARK_MATCH_TOLERANCE_S,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:871:[bookmarksForFile],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:874:// Quick-toggle: tap the bookmark icon to add at the current position,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:875:// tap again to remove the existing bookmark at the current position.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:876:// Long-press still opens the full BookmarkSheet via the TopBar.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:877:const handleToggleBookmark = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:879:// position even if React hasn't flushed the position-tick state yet.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:883:toast.show('No video loaded — cannot bookmark', 'error', 2000);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:887:const position = currentPositionRef.current;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:889:if (position < 1) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:891:toast.show('Cannot bookmark at the start of the video', 'info', 2000);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:896:const existing = findBookmarkAtPosition(position);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:899:removeBookmarkEntry(existing.id);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:901:toast.show('Bookmark removed', 'info', 1500);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:910:addBookmarkEntry({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:913:position,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:934:const minutes = Math.floor(position / 60);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:935:const seconds = Math.floor(position % 60)
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:938:toast.show(`Bookmark saved at ${minutes}:${seconds}`, 'success', 1800);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:943:}, [addBookmarkEntry, removeBookmarkEntry, findBookmarkAtPosition, toast, haptics]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:945:// Derived flag: is the playhead currently sitting on a bookmark?
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:946:const isBookmarkedAtCurrentPosition = useMemo(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:947:() => findBookmarkAtPosition(currentPosition) !== null,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:948:[findBookmarkAtPosition, currentPosition],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:959:const target = Math.max(0, (MpvPlayer.getPosition?.() ?? 0) - 10);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:976:const target = Math.min(duration, (MpvPlayer.getPosition?.() ?? 0) + 10);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1126:const handleSubtitlePositionChange = useCallback((position: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1127:setSubtitlePosition(position);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1128:MpvPlayer.setProperty('sub-pos', position);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1129:saveSubtitleSettings({position});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1312:hasSeenFirstPositionRef.current = false;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1447:// ── Push position ref handler for VideoTransportDependentContent ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1448:const handlePushPositionRef = useCallback((fn: (pos: number) => void) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1449:pushPositionRef.current = fn;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1473:hasSeenFirstPositionRef.current = false;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1572:position: 0,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1608:const curPos = MpvPlayer.getPosition?.() ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1610:if (curUri && rememberPosition && curPos > 0) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1615:position: curPos,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1639:}, [dispatch, fileUri, rememberPosition, requestedStartPosition]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1641:// ── Periodic position save ──
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1643:if (!fileUri || !rememberPosition) return;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1646:const curPos = MpvPlayer.getPosition?.() ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1652:position: curPos,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1674:}, [fileUri, rememberPosition, dispatch]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1691:position: MpvPlayer.getPosition?.() ?? 0,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1753:const unsubPos = MpvPlayer.on('onPositionChanged', ({position: pos}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1755:pushPositionRef.current(pos);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1757:// Mirror position locally so the bookmark icon can reflect the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1758:// bookmarked state at the current playback position.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1759:currentPositionRef.current = pos;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1760:setCurrentPositionState(pos);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1763:if (!hasSeenFirstPositionRef.current && pos > 0) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1764:hasSeenFirstPositionRef.current = true;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1816:hasSeenFirstPositionRef.current = false;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1827:position: 0,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1848:const explicitPosition = requestedStartPosition ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1849:const savedPosition = savedEntry?.position ?? 0;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1850:if (explicitPosition > 0) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1855:MpvPlayer.seekTo(explicitPosition);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1856:resumeTargetRef.current = explicitPosition;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1867:} else if (savedPosition > 0) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1871:setResumePrompt({position: savedPosition});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1922:position: MpvPlayer.getPosition?.() ?? 0,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:1943:position: 0,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2009:pushPositionRef.current(pos);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2029:}, [isReady, savedEntry, requestedStartPosition, dispatch, handlePlayPause, handleNext, handlePrev, handleGoBack, controlsLocked, playlist, currentIndex, navigation, startAutoAdvance]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2087:subtitlePosition,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2102:bookmarksForFile,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2103:bookmarkCountForFile,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2158:pushPositionRef,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2205:handleToggleBookmark,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2206:isBookmarkedAtCurrentPosition,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2207:handleRemoveBookmark: removeBookmarkEntry,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2239:handleSubtitlePositionChange,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2288:// Push position ref handler
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\hooks\useVideoPlayerScreen.ts:2289:handlePushPositionRef,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\VideoPlayer\textContent.ts:11:bookmarkA11y: 'Bookmark this position',

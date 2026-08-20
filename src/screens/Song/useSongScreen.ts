@@ -3,18 +3,20 @@
 // ────────────────────────────────────────────────────────
 
 import {useState, useEffect, useCallback, useMemo} from 'react';
-import {Share} from 'react-native';
+import {Alert, Share} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAppSelector, useAppDispatch} from '../../store';
 import {selectAllTracks} from '../../store/slices/mediaSlice';
 import {addToQueue} from '../../store/slices/playerSlice';
-import {useBookmarks} from '../../hooks/useBookmarks';
+import {useBookmarks} from '../../features/bookmarks';
 import {useToast} from '../../components/feedback/Toast';
 import {loadLrc} from '../../services/lrcService';
 import type {RootStackParamList} from '../../navigation/types';
 import type {LrcLine} from '../../utils/lrcParser';
+import {isRemoteUri} from '../../utils/mediaUri';
+import {usePlaybackCommands} from '../../modules/playback';
 
 type SongRoute = RouteProp<RootStackParamList, 'SongScreen'>;
 type SongNav = NativeStackNavigationProp<RootStackParamList, 'SongScreen'>;
@@ -40,6 +42,7 @@ export function useSongScreen() {
   const navigation = useNavigation<SongNav>();
   const dispatch = useAppDispatch();
   const {show: showToast} = useToast();
+  const {openPlayer} = usePlaybackCommands();
 
   const {fileUri, title: titleParam, artist: artistParam, album: albumParam} = route.params;
 
@@ -76,14 +79,37 @@ export function useSongScreen() {
 
   const handleSaveBookmark = useCallback(
     (label: string) => {
-      addBookmark({
+      const source: 'api' | 'local' = isRemoteUri(fileUri) ? 'api' : 'local';
+      const input = {
         fileUri,
         title: displayTitle,
         position: 0,
         duration: displayDuration,
         label,
-        mediaType: 'audio',
-      });
+        source,
+        type: 'music' as const,
+        mediaType: 'audio' as const,
+      };
+      const result = addBookmark(input);
+      if (result.status === 'requires-confirmation') {
+        Alert.alert(
+          'Bookmark limit reached',
+          `Adding “${displayTitle}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
+          [
+            {text: 'Cancel', style: 'cancel'},
+            {
+              text: 'Remove & Add',
+              style: 'destructive',
+              onPress: () => {
+                addBookmark(result.requested, {evictId: result.candidate.id});
+                showToast('Bookmark saved', 'success');
+                setBookmarkSheetVisible(false);
+              },
+            },
+          ],
+        );
+        return;
+      }
       showToast('Bookmark saved', 'success');
       setBookmarkSheetVisible(false);
     },
@@ -99,13 +125,18 @@ export function useSongScreen() {
   );
 
   const handleJumpToBookmark = useCallback(
-    (_position: number) => {
-      navigation.navigate('AudioPlayer', {
-        fileUri,
-        fileTitle: displayTitle,
+    (position: number) => {
+      openPlayer({
+        uri: fileUri,
+        title: displayTitle,
+        duration: displayDuration,
+        startPosition: position,
+        source: isRemoteUri(fileUri) ? 'api' : 'local',
+        type: 'music',
+        mediaType: 'audio',
       });
     },
-    [navigation, fileUri, displayTitle],
+    [openPlayer, fileUri, displayTitle, displayDuration],
   );
 
   // Lyrics
@@ -149,8 +180,15 @@ export function useSongScreen() {
   // ── Actions ──
 
   const handlePlay = useCallback(() => {
-    navigation.navigate('AudioPlayer', {fileUri, fileTitle: displayTitle});
-  }, [navigation, fileUri, displayTitle]);
+    openPlayer({
+      uri: fileUri,
+      title: displayTitle,
+      duration: displayDuration,
+      source: isRemoteUri(fileUri) ? 'api' : 'local',
+      type: 'music',
+      mediaType: 'audio',
+    });
+  }, [openPlayer, fileUri, displayTitle, displayDuration]);
 
   const handleAddToPlaylist = useCallback(() => {
     setPlaylistSheetVisible(true);
@@ -189,8 +227,15 @@ export function useSongScreen() {
   }, [displayPath, showToast]);
 
   const handleViewFullLyrics = useCallback(() => {
-    navigation.navigate('AudioPlayer', {fileUri, fileTitle: displayTitle});
-  }, [navigation, fileUri, displayTitle]);
+    openPlayer({
+      uri: fileUri,
+      title: displayTitle,
+      duration: displayDuration,
+      source: isRemoteUri(fileUri) ? 'api' : 'local',
+      type: 'music',
+      mediaType: 'audio',
+    });
+  }, [openPlayer, fileUri, displayTitle, displayDuration]);
 
   const goToArtist = useCallback(() => {
     navigation.navigate('ArtistScreen', {artistName: displayArtist});

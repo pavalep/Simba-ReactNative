@@ -1,5 +1,15 @@
 // ─── Shared API Result Types for Phase 0 Content Integrations ─────────────
 
+import type {MediaKind, MediaLane, MediaSource} from './media';
+
+/** Optional DTO metadata normalized to required fields at durable-state boundaries. */
+export interface ApiMediaClassification {
+  source?: MediaSource;
+  type?: MediaKind;
+  mediaType?: MediaLane;
+  provider?: string;
+}
+
 export interface ApiConfig {
   baseUrl: string;
   apiKey?: string;
@@ -100,7 +110,7 @@ export interface MusicBrainzReleaseGroupDetail {
 
 // ─── Podcast Index ──────────────────────────────────────────────────────
 
-export interface PodcastResult {
+export interface PodcastResult extends ApiMediaClassification {
   id: number;
   title: string;
   author: string;
@@ -111,7 +121,12 @@ export interface PodcastResult {
   categories: Record<string, string>;
 }
 
-export interface PodcastEpisodeResult {
+export interface PodcastCategoryResult {
+  id: number;
+  name: string;
+}
+
+export interface PodcastEpisodeResult extends ApiMediaClassification {
   id: number;
   title: string;
   description: string;
@@ -125,7 +140,7 @@ export interface PodcastEpisodeResult {
 
 // ─── Radio Browser ──────────────────────────────────────────────────────
 
-export interface RadioStationResult {
+export interface RadioStationResult extends ApiMediaClassification {
   stationuuid: string;
   name: string;
   url: string;
@@ -141,7 +156,7 @@ export interface RadioStationResult {
 
 // ─── LibriVox ───────────────────────────────────────────────────────────
 
-export interface AudiobookResult {
+export interface AudiobookResult extends ApiMediaClassification {
   id: number;
   title: string;
   author: string;
@@ -155,7 +170,7 @@ export interface AudiobookResult {
 
 // ─── Audius ──────────────────────────────────────────────────────────────
 
-export interface AudiusTrackResult {
+export interface AudiusTrackResult extends ApiMediaClassification {
   id: string;
   title: string;
   artistName: string;
@@ -169,7 +184,7 @@ export interface AudiusTrackResult {
 
 // ─── IPTV-org ───────────────────────────────────────────────────────────
 
-export interface IPTVChannelResult {
+export interface IPTVChannelResult extends ApiMediaClassification {
   id: string;
   name: string;
   url: string;
@@ -189,7 +204,7 @@ export interface IPTVCategory {
 
 // ─── Jamendo ────────────────────────────────────────────────────────────
 
-export interface JamendoTrackResult {
+export interface JamendoTrackResult extends ApiMediaClassification {
   id: number;
   name: string;
   artistName: string;
@@ -202,7 +217,7 @@ export interface JamendoTrackResult {
 
 // ─── Internet Archive Audio ──────────────────────────────────────────────
 
-export interface InternetArchiveItemResult {
+export interface InternetArchiveItemResult extends ApiMediaClassification {
   identifier: string;
   title: string;
   description: string;
@@ -217,7 +232,7 @@ export interface InternetArchiveItemResult {
 }
 
 /** P37: a single streamable audio file inside an archive item (chapter/track). */
-export interface ArchiveTrack {
+export interface ArchiveTrack extends ApiMediaClassification {
   name: string;
   title: string;
   url: string;
@@ -240,7 +255,7 @@ export interface InternetArchiveAudioTrack {
   format: string;
 }
 
-export interface InternetArchiveVideoResult {
+export interface InternetArchiveVideoResult extends ApiMediaClassification {
   identifier: string;
   title: string;
   description: string;

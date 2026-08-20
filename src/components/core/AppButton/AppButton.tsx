@@ -138,7 +138,6 @@ export const AppButton: React.FC<AppButtonProps> = ({
                 {
                   color: txtColor,
                   fontSize: sz.fs,
-                  fontWeight: '600',
                 },
                 textStyle,
               ]}

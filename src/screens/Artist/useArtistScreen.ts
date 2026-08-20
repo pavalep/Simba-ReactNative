@@ -93,9 +93,7 @@ export function useArtistScreen() {
 
   const handlePlayAll = useCallback(() => {
     const entries: PlaylistEntry[] = allTracks.map(t => ({
-      uri: t.uri,
-      title: t.title,
-      duration: t.duration,
+      ...t,
     }));
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
@@ -107,9 +105,7 @@ export function useArtistScreen() {
 
   const handleShuffleAll = useCallback(() => {
     const entries: PlaylistEntry[] = allTracks.map(t => ({
-      uri: t.uri,
-      title: t.title,
-      duration: t.duration,
+      ...t,
     }));
     // Fisher-Yates shuffle
     for (let i = entries.length - 1; i > 0; i--) {

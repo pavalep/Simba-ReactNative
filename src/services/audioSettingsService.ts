@@ -50,7 +50,29 @@ export function buildAfFilter(
 }
 
 /**
+ * Push persisted playback preferences from Redux onto the live mpv instance.
+ * Each option is guarded because native support varies by platform and mpv
+ * may not yet be initialized when a preference changes.
+ */
+export function applyPlaybackSettingsToMpv(): void {
+  const s = store.getState().settings;
+  const properties: Array<[string, string | number]> = [
+    ['hwdec', s.isHardwareAccelerationEnabled ? 'auto' : 'no'],
+    ['sub-auto', s.isAutoLoadSubtitlesEnabled ? 'fuzzy' : 'no'],
+    ['slang', s.preferredLanguages],
+  ];
+  for (const [name, value] of properties) {
+    try {
+      MpvPlayer.setProperty(name, value);
+    } catch {
+      // Ignore unsupported properties; the player remains usable.
+    }
+  }
+}
+
+/**
  * Push the persisted audio settings from Redux onto the live mpv instance.
+
  * Every property is individually guarded: mpv may be uninitialized, and
  * unsupported properties must never crash the app.
  */

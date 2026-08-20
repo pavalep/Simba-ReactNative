@@ -6,40 +6,19 @@ import {CommonActions} from '@react-navigation/native';
 import {type HomeScreenProps} from '../../../navigation/types';
 import type {RootStackParamList} from '../../../navigation/types';
 import {pickMediaFile, getMediaType} from '../../../services/fileService';
-import {
-  selectWeightedFeatured,
-  selectBookmarks,
-} from '../../../store/slices/sessionSlice';
-import {selectAllPlaylists} from '../../../store/slices/playlistSlice';
+import {useBookmarks} from '../../../features/bookmarks';
+import {usePlaylists} from '../../../features/playlists';
+
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
-import {selectFollowedPodcasts} from '../../../store/slices/followedPodcastsSlice';
-import type {FollowedPodcast} from '../../../store/slices/followedPodcastsSlice';
-import type {SessionEntry} from '../../../store/slices/sessionSlice';
+import {useFollowedPodcasts} from '../../../features/followedPodcasts';
+
+import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
+import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import {useAuth} from '../../../hooks/useAuth';
 import {useWeather} from '../../../hooks/useWeather';
 import type {WeatherCondition} from '../../../components/utility/WeatherIcon';
 import type {WeatherSnapshot} from '../../../services/api/weatherService';
-
-// ── Types ──
-
-export type HomeSection =
-  | {type: 'GREETING'}
-  | {type: 'HERO'; data: SessionEntry | null}
-  | {type: 'SUBSECTION_TITLE'; label: string; variant?: 'overline' | 'displaySans' | 'displaySerif'}
-  | {type: 'SHELF'; title: string; items: any[]; seeAllRoute?: keyof RootStackParamList}
-  | {type: 'GENRE'; genres: {name: string; count: number}[]}
-  | {type: 'PLAYLISTS'; items: any[]}
-  | {type: 'BOOKMARKS'; items: ReturnType<typeof selectBookmarks>}
-  | {type: 'FOLLOWED_PODCASTS'; items: FollowedPodcast[]}
-  // v10.2: Discover collapses the 8 per-category rails (Movies, Podcasts,
-  // Music, Radio, Live TV, Audiobooks, Shows, Archive) into ONE horizontal
-  // "Browse All" rail — one 16:9 hero card per top-level section.
-  | {type: 'BROWSE_ALL'}
-  // v10.3: Dummy / placeholder shelves under Discover — Playlists and
-  // AI-Curated sections are scoped but not yet built. Each renders as a
-  // coming-soon rail with intentional dummy data so the page structure
-  // is locked in and the real content lands by drop-in replacement.
-  | {type: 'COMING_SOON'; reason: 'PLAYLISTS' | 'AI_CURATED'};
+import type {HomeSection} from '../types';
 
 // ── Helpers ──
 
@@ -100,7 +79,7 @@ function buildGreeting(snapshot: WeatherSnapshot | null, isFirstLoad: boolean): 
   return {text, condition, weather, isFirstLoad};
 }
 
-function isInProgress(item: SessionEntry): boolean {
+function isInProgress(item: RecentHistoryEntry): boolean {
   return item.position > 30 && item.position < item.duration - 5;
 }
 
@@ -132,12 +111,12 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   }, []);
 
   // ── Data from Redux ──
-  const recentFiles = useAppSelector(state => state.session.recentFiles);
-  const bookmarks = useAppSelector(selectBookmarks);
-  const weightedFeatured = useAppSelector(selectWeightedFeatured);
-  const playlists = useAppSelector(selectAllPlaylists);
+  const {list: recentFiles} = useRecentHistory();
+  const {allBookmarks: bookmarks, remove: removeBookmark} = useBookmarks();
+  
+  const {list: playlists} = usePlaylists();
   const allTracks = useAppSelector(selectAllTracks);
-  const followedPodcasts = useAppSelector(selectFollowedPodcasts);
+  const {list: followedPodcasts} = useFollowedPodcasts();
   const isScanning = useAppSelector(s => s.media?.isScanning ?? false);
 
   // ── Derived Data ──
@@ -167,9 +146,33 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   }, [navigation]);
 
   const handleItemPress = useCallback(
-    (item: {mediaType?: string; fileUri: string; title: string; startPosition?: number; position?: number}) => {
+    (item: {
+      mediaType?: MediaLane;
+      fileUri: string;
+      title: string;
+      startPosition?: number;
+      position?: number;
+      source?: MediaSource;
+      type?: MediaKind;
+      provider?: string;
+      folderId?: string;
+    }) => {
       const screen = item.mediaType === 'audio' ? 'AudioPlayer' : 'VideoPlayer';
-      navigation.dispatch(CommonActions.navigate({name: screen, params: {fileUri: item.fileUri, fileTitle: item.title, startPosition: item.startPosition ?? item.position}}));
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: screen,
+          params: {
+            fileUri: item.fileUri,
+            fileTitle: item.title,
+            startPosition: item.startPosition ?? item.position,
+            source: item.source,
+            type: item.type,
+            mediaType: item.mediaType,
+            provider: item.provider,
+            folderId: item.folderId,
+          },
+        }),
+      );
     },
     [navigation],
   );
@@ -198,8 +201,12 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   );
 
   const handleSeeAll = useCallback(
-    (routeName: keyof RootStackParamList) => {
-      navigation.navigate(routeName as any);
+    (routeName: keyof RootStackParamList | 'LocalFiles') => {
+      if (routeName === 'LocalFiles') {
+        navigation.navigate('Library');
+        return;
+      }
+      navigation.dispatch(CommonActions.navigate({name: routeName}));
     },
     [navigation],
   );
@@ -220,11 +227,8 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
 
   // ── Compute Sections ──
   const sections = useMemo((): HomeSection[] => {
-    const cw = weightedFeatured.find(isInProgress) ?? weightedFeatured[0] ?? null;
-
     const realSections: HomeSection[] = [
       {type: 'GREETING'},
-      {type: 'HERO', data: cw},
 
       // P54 + P56: per-user "Your Library" group at the top, separated
       // from the API-backed discover shelves below by a centered rule
@@ -243,10 +247,8 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       {
         type: 'SHELF',
         title: 'Recently Played',
-        items: recentFiles
-          .filter(item => item.fileUri !== cw?.fileUri)
-          .slice(0, 10),
-        seeAllRoute: 'AllVideosScreen' as keyof RootStackParamList,
+        items: recentFiles.slice(0, 10),
+        seeAllRoute: 'History',
       },
       {type: 'BOOKMARKS', items: bookmarks},
       {type: 'FOLLOWED_PODCASTS', items: followedPodcasts},
@@ -282,7 +284,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     realSections.push({type: 'PLAYLISTS', items: pinnedPlaylists});
 
     return realSections;
-  }, [recentFiles, weightedFeatured, playlists, bookmarks, genres, followedPodcasts]);
+  }, [recentFiles, playlists, bookmarks, genres, followedPodcasts]);
 
   // ── Pull-to-refresh ──
   const onRefresh = useCallback(async () => {
@@ -308,6 +310,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
      */
     userFirstName: deriveFirstName(user),
     dispatch,
+    removeBookmark,
     user: user ? user : null,
     genres,
     handleOpenMedia,

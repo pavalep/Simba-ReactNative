@@ -1,0 +1,3 @@
+src/screens/Home/hooks/useHomeScreen.ts(9,9): error TS2614: Module '"../../../store/slices/sessionSlice"' has no exported member 'selectBookmarks'. Did you mean to use 'import selectBookmarks from "../../../store/slices/sessionSlice"' instead?
+src/screens/Home/index.tsx(8,9): error TS2614: Module '"../../store/slices/sessionSlice"' has no exported member 'removeBookmark'. Did you mean to use 'import removeBookmark from "../../store/slices/sessionSlice"' instead?
+src/screens/Home/types/index.ts(2,9): error TS2614: Module '"../../../store/slices/sessionSlice"' has no exported member 'selectBookmarks'. Did you mean to use 'import selectBookmarks from "../../../store/slices/sessionSlice"' instead?

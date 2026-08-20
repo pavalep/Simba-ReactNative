@@ -388,7 +388,7 @@ Consolidate the `StackInTabProps` generic usage. Ensure every screen in every st
 
 **Deliverables:**
 - All screens typed with composite props
-- `RootStackParamList` includes: `MainTabs`, `Player`, `Preferences`
+- `RootStackParamList` includes direct `Home` and `Library` routes plus `Player` and `Preferences`
 - All tab stacks properly typed
 
 **Checklist:**

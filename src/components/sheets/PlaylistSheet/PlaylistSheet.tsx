@@ -4,21 +4,18 @@ import {
   TouchableOpacity,
   FlatList,
   StyleSheet,
+  Modal,
 } from 'react-native';
-import {BottomSheet} from '../BottomSheet/BottomSheet';
 import {AppText} from '../../core/AppText/AppText';
 import {AppTextInput} from '../../core/AppTextInput/AppTextInput';
 import {KeyboardAwareView} from '../../core/KeyboardAwareView/KeyboardAwareView';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
-import {useAppDispatch, useAppSelector} from '../../../store';
-import {
-  selectAllPlaylists,
-  addItemToPlaylist,
-  removeItemFromPlaylist,
-  createPlaylist,
-} from '../../../store/slices/playlistSlice';
-import type {Playlist, PlaylistItem, PlaylistKind} from '../../../types/playlist';
+import {usePlaylists} from '../../../features/playlists';
+import type {Playlist, PlaylistKind} from '../../../features/playlists';
+import {isPlaylistMediaKindAllowed} from '../../../types/playlist';
+import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
+import {normalizeMediaClassification} from '../../../types/media';
 import {useToast} from '../../feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {SvgIcon} from '../../utility/SvgIcon';
@@ -41,8 +38,11 @@ export interface PlaylistSheetProps {
     album?: string;
     /** P34: remote/streaming metadata so playlists keep art + source + media type */
     thumbnailPath?: string;
-    source?: string;
-    mediaType?: 'audio' | 'video';
+    source?: MediaSource;
+    type?: MediaKind;
+    mediaType?: MediaLane;
+    provider?: string;
+    folderId?: string;
   };
 }
 
@@ -51,10 +51,11 @@ export interface PlaylistSheetProps {
 const KIND_LABELS: Record<PlaylistKind, string> = {
   AUDIO_ONLY: 'Audio',
   VIDEO_ONLY: 'Video',
-  MIXED: 'Mixed',
 };
 
-const KIND_OPTIONS: PlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED'];
+ type SingleLanePlaylistKind = PlaylistKind;
+
+const KIND_OPTIONS: SingleLanePlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY'];
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -68,24 +69,45 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
   currentItem,
 }) => {
   const {colors} = useTheme();
-  const dispatch = useAppDispatch();
   const toast = useToast();
   const haptics = useHaptics();
-  const playlists = useAppSelector(selectAllPlaylists);
+  const {playlists, addItem, createPlaylist} = usePlaylists();
+  const classifiedCurrentItem = useMemo(
+    () => normalizeMediaClassification(currentItem),
+    [currentItem],
+  );
+  const compatiblePlaylists = useMemo(
+    () => playlists.filter(playlist =>
+      isPlaylistMediaKindAllowed(
+        playlist.kind,
+        classifiedCurrentItem.type,
+        classifiedCurrentItem.mediaType,
+      ),
+    ),
+    [playlists, classifiedCurrentItem],
+  );
+  const currentPlaylistKind: SingleLanePlaylistKind =
+    classifiedCurrentItem.mediaType === 'video' ? 'VIDEO_ONLY' : 'AUDIO_ONLY';
+  const availableKindOptions = useMemo(
+    () => KIND_OPTIONS.filter(kind => kind === currentPlaylistKind),
+    [currentPlaylistKind],
+  );
 
   // ── Create-mode state ──
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newKind, setNewKind] = useState<PlaylistKind>('MIXED');
+  const [newKind, setNewKind] = useState<SingleLanePlaylistKind>('AUDIO_ONLY');
 
   // Reset create mode on close
   useEffect(() => {
     if (!visible) {
       setCreating(false);
       setNewName('');
-      setNewKind('MIXED');
+      setNewKind(currentPlaylistKind);
+      return;
     }
-  }, [visible]);
+    setNewKind(currentPlaylistKind);
+  }, [currentPlaylistKind, visible]);
 
   // ── Check if item is in a playlist ──
   const itemExistsIn = useCallback(
@@ -97,64 +119,82 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
   // ── Add item to playlist ──
   const handleAddToPlaylist = useCallback(
     (playlistId: string, playlistName: string) => {
-      const newItem: PlaylistItem = {
-        id: generateItemId(),
+      const result = addItem(playlistId, {
         fileUri: currentItem.fileUri,
         title: currentItem.title,
         duration: currentItem.duration,
         artist: currentItem.artist,
         album: currentItem.album,
         thumbnailPath: currentItem.thumbnailPath,
-        mediaType: currentItem.mediaType,
-        source: currentItem.source,
-        addedAt: new Date().toISOString(),
-      };
-      dispatch(addItemToPlaylist({playlistId, item: newItem}));
+        ...classifiedCurrentItem,
+        provider: currentItem.provider,
+        folderId: currentItem.folderId,
+      });
+      if (result.status === 'duplicate') {
+        toast.show(`Already in "${playlistName}"`, 'info');
+        return;
+      }
+      if (result.status === 'playlist-full') {
+        toast.show(`"${playlistName}" is full (100 items)`, 'error');
+        return;
+      }
+      if (result.status === 'lane-mismatch' || result.status === 'unsupported-media-kind') {
+        toast.show('This media type cannot be added to that playlist', 'error');
+        return;
+      }
+      if (result.status !== 'added') {
+        toast.show('Unable to add to playlist', 'error');
+        return;
+      }
       haptics.medium();
       toast.show(`Added to "${playlistName}"`, 'success');
-      // Auto-dismiss after short delay
       setTimeout(onClose, 800);
     },
-    [currentItem, dispatch, haptics, toast, onClose],
+    [addItem, classifiedCurrentItem, currentItem, haptics, toast, onClose],
   );
 
-  // ── Remove item from playlist ──
-  const handleRemoveFromPlaylist = useCallback(
-    (playlist: Playlist) => {
-      const existing = playlist.items.find(i => i.fileUri === currentItem.fileUri);
-      if (existing) {
-        dispatch(
-          removeItemFromPlaylist({playlistId: playlist.id, itemId: existing.id}),
-        );
-        haptics.medium();
-        toast.show(`Removed from "${playlist.name}"`, 'info');
-        setTimeout(onClose, 800);
-      }
-    },
-    [currentItem.fileUri, dispatch, haptics, toast, onClose],
-  );
-
-  // ── Toggle add/remove ──
+  // ── Add-only player popup behavior ──
   const handleTogglePlaylist = useCallback(
     (playlist: Playlist) => {
       if (itemExistsIn(playlist)) {
-        handleRemoveFromPlaylist(playlist);
-      } else {
-        handleAddToPlaylist(playlist.id, playlist.name);
+        toast.show(`Already in "${playlist.name}". Remove it from the playlist page.`, 'info');
+        return;
       }
+      handleAddToPlaylist(playlist.id, playlist.name);
     },
-    [itemExistsIn, handleRemoveFromPlaylist, handleAddToPlaylist],
+    [itemExistsIn, handleAddToPlaylist, toast],
   );
 
   // ── Create new playlist ──
   const handleCreatePlaylist = useCallback(() => {
-    if (!newName.trim()) return;
-    dispatch(createPlaylist({name: newName.trim(), kind: newKind}));
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+    const created = createPlaylist({name: trimmedName, kind: newKind});
+    if (created.status === 'limit-reached') {
+      toast.show(`You can create up to ${created.max} playlists`, 'error');
+      return;
+    }
+    const added = addItem(created.playlist.id, {
+      fileUri: currentItem.fileUri,
+      title: currentItem.title,
+      duration: currentItem.duration,
+      artist: currentItem.artist,
+      album: currentItem.album,
+      thumbnailPath: currentItem.thumbnailPath,
+      ...classifiedCurrentItem,
+      provider: currentItem.provider,
+      folderId: currentItem.folderId,
+    });
+    if (added.status !== 'added') {
+      toast.show('Playlist created, but this item could not be added', 'error');
+      return;
+    }
     haptics.light();
-    toast.show(`Created "${newName.trim()}"`, 'success');
+    toast.show(`Created "${trimmedName}" and added the item`, 'success');
     setCreating(false);
     setNewName('');
-  }, [newName, newKind, dispatch, haptics, toast]);
+    setTimeout(onClose, 800);
+  }, [addItem, classifiedCurrentItem, createPlaylist, currentItem, haptics, newName, newKind, onClose, toast]);
 
   // ── Render playlist row ──
   const renderPlaylistItem = useCallback(
@@ -308,7 +348,7 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
         {/* 59.1: virtualized kind chips */}
         <FlatList
           horizontal
-          data={KIND_OPTIONS}
+          data={availableKindOptions}
           keyExtractor={k => k}
           renderItem={({item: k}) => (
             <TouchableOpacity
@@ -378,23 +418,33 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
         </View>
       </KeyboardAwareView>
     ),
-    [colors, newName, newKind, handleCreatePlaylist],
+    [availableKindOptions, colors, newName, newKind, handleCreatePlaylist],
   );
 
   return (
-    <BottomSheet
+    <Modal
       visible={visible}
-      onClose={onClose}
-      title="Playlists">
-      {creating ? (
-        CreateForm
-      ) : (
-        <FlatList
-          data={playlists}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}>
+      <View style={[styles.overlay, {backgroundColor: colors.background.overlay}]}>
+        <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+        <View style={[styles.popupCard, {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle}]}>
+          <View style={styles.popupHeader}>
+            <AppText variant="displaySans" color="primary">Playlists</AppText>
+            <TouchableOpacity onPress={onClose} accessibilityRole="button" accessibilityLabel="Close playlists">
+              <AppText variant="h2" color="secondary">×</AppText>
+            </TouchableOpacity>
+          </View>
+          {creating ? (
+            CreateForm
+          ) : (
+            <FlatList
+          data={compatiblePlaylists}
           renderItem={renderPlaylistItem}
           keyExtractor={keyExtractor}
           ListHeaderComponent={ListHeader}
-          ListFooterComponent={playlists.length > 0 ? ListFooter : null}
+          ListFooterComponent={compatiblePlaylists.length > 0 ? ListFooter : null}
           ListEmptyComponent={EmptyList}
           contentContainerStyle={styles.listContent}
           keyboardShouldPersistTaps="handled"
@@ -407,14 +457,38 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
           maxToRenderPerBatch={10}
           removeClippedSubviews={true}
         />
-      )}
-    </BottomSheet>
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 };
 
 // ─── Styles ─────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  popupCard: {
+    width: '100%',
+    maxWidth: 460,
+    maxHeight: '82%',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  popupHeader: {
+    minHeight: 56,
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   listContent: {
     paddingBottom: spacing.lg,
   },

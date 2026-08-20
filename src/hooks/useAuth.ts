@@ -54,7 +54,7 @@ export function useAuth() {
     try {
       const authUser = await signInWithGoogle();
       dispatch(setUser(authUser));
-      // Guardrail 2: navigate to the tab root once the user is in Redux.
+      // Guardrail 2: navigate to the direct Home root once the user is in Redux.
       // The RootNavigator also remounts via its `key` prop, so a reset
       // here avoids any race between the remount and the LoginScreen's
       // useEffect-driven navigation.replace.
@@ -63,8 +63,7 @@ export function useAuth() {
           index: 0,
           routes: [
             {
-              name: 'MainTabs',
-              params: {screen: 'HomeTab', params: {screen: 'Home'}},
+              name: 'Home',
             },
           ],
         });

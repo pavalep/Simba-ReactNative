@@ -4,6 +4,7 @@ import {useAppDispatch, useAppSelector} from '../../store';
 import {selectDownloads, selectDownloadsTotalBytes} from '../../store/slices/downloadsSlice';
 import {setAutoDeleteDownloads} from '../../store/slices/settingsSlice';
 import {downloadService} from '../../services/downloadService';
+
 import {useDownloadsSync} from '../../hooks/useDownloadsSync';
 
 /**
@@ -71,6 +72,10 @@ export function useDownloadsScreen() {
     else downloadService.resumeDownload(uri);
   }, []);
 
+  const handleRetry = useCallback((uri: string) => {
+    downloadService.retryDownload(uri);
+  }, []);
+
   const handleDelete = useCallback(async () => {
     if (!confirmUri) return;
     const uri = confirmUri;
@@ -92,6 +97,8 @@ export function useDownloadsScreen() {
     setConfirmUri,
     handlePolicyChange,
     handlePauseResume,
+    handleRetry,
+
     handleDelete,
   };
 }

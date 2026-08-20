@@ -13,32 +13,25 @@ import RNFS from 'react-native-fs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../theme';
 import {isVideoFile} from '../../utils/timeAgo';
+import {getMediaType} from '../../services/fileService';
+import {linkedMediaFolderIdFromPath, normalizeMediaClassification} from '../../types/media';
+
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {AppText} from '../../components/core/AppText/AppText';
 import type {RootStackScreenProps} from '../../navigation/types';
 type FolderBrowserScreenProps = RootStackScreenProps<'FolderBrowser'>;
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
-import {addItemToPlaylist, createPlaylist} from '../../store/slices/playlistSlice';
+
 import {PlaylistContextMenu} from '../../components/playlist/PlaylistContextMenu';
 import {PlaylistCreateModal} from '../../components/playlist/PlaylistCreateModal';
 import {useToast} from '../../components/feedback/Toast/Toast';
 import {logger} from '../../lib/logger';
-import {useAppDispatch, useAppSelector, type RootState} from '../../store';
-import {createSelector} from '@reduxjs/toolkit';
-import type {Playlist, PlaylistItem, PlaylistKind} from '../../types/playlist';
+import {usePlaylists} from '../../features/playlists';
+import {usePlaybackCommands} from '../../modules/playback';
 
-// 59.2: stable selector — the inline map rebuilt a fresh object on EVERY
-// store dispatch (incl. mpv position ticks) and re-rendered the browser.
-const selectPlaylistNameMap = createSelector(
-  (state: RootState) => state.playlists.playlists,
-  playlists => {
-    const map: Record<string, string> = {};
-    for (const pl of playlists) {
-      map[pl.id] = pl.name;
-    }
-    return map;
-  },
-);
+import type {PlaylistItem, PlaylistKind} from '../../types/playlist';
+
+
 
 // ── Constants ──────────────────────────────────────────
 
@@ -67,7 +60,8 @@ interface DirItem {
 export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const dispatch = useAppDispatch();
+  const {playlists, addItem, createPlaylist} = usePlaylists();
+  const {openPlayer} = usePlaybackCommands();
 
   // Initialize breadcrumbs from initialPath param
   const initialPath = route.params?.initialPath ?? '';
@@ -128,11 +122,23 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       setItems(filtered);
     } catch (err: any) {
       logger.warn('FolderBrowser readDir error:', err);
-      setError(err.message || 'Unable to read directory');
+      const code = String(err?.code ?? '').toUpperCase();
+      const message = String(err?.message ?? '').toLowerCase();
+      const permissionDenied =
+        code.includes('EACCES') ||
+        code.includes('PERMISSION') ||
+        message.includes('permission') ||
+        message.includes('access denied');
+      setError(
+        permissionDenied
+          ? 'Storage permission is required to browse this folder. Open Settings to review access, then retry.'
+          : err.message || 'Unable to read directory',
+      );
       setItems([]);
     } finally {
       setLoading(false);
     }
+
   }, []);
 
   // ── Effect: read directory when path changes ──
@@ -178,15 +184,20 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         });
         return;
       }
-      navigation.navigate(
-        isVideoFile(fileName) ? 'VideoPlayer' : 'AudioPlayer',
-        {
-          fileUri: `file://${filePath}`,
-          fileTitle: fileName,
-        },
-      );
+      const mediaType = getMediaType(filePath);
+      openPlayer({
+        uri: `file://${filePath}`,
+        title: fileName,
+        duration: 0,
+        ...normalizeMediaClassification({
+          source: 'local',
+          type: mediaType === 'audio' ? 'audio' : 'video',
+          mediaType,
+          folderId: linkedMediaFolderIdFromPath(currentPath),
+        }),
+      });
     },
-    [navigation, isSelecting],
+    [openPlayer, isSelecting, currentPath],
   );
 
   const handleRefresh = useCallback(async () => {
@@ -201,10 +212,15 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
     if (error) {
       toast.show(error, 'error', {
         duration: 8000,
-        action: {label: 'Retry', onPress: () => readDirectory(currentPath)},
+        action: error.toLowerCase().includes('permission')
+          ? {
+              label: 'Settings',
+              onPress: () => navigation.navigate('Settings', {screen: 'Settings'}),
+            }
+          : {label: 'Retry', onPress: () => readDirectory(currentPath)},
       });
     }
-  }, [error, currentPath, readDirectory, toast]);
+  }, [error, currentPath, navigation, readDirectory, toast]);
 
   // ── Multi-select handlers ─────────────────────
 
@@ -241,7 +257,13 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
     [isSelecting, handleToggleFileSelection],
   );
 
-  const playlistNameMap = useAppSelector(selectPlaylistNameMap);
+  const playlistNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    playlists.forEach(playlist => {
+      map[playlist.id] = playlist.name;
+    });
+    return map;
+  }, [playlists]);
 
   const handleBatchAddConfirm = useCallback(
     (playlistId: string) => {
@@ -253,10 +275,16 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
           title: file.name,
           duration: 0,
           addedAt: new Date().toISOString(),
+          ...normalizeMediaClassification({
+            source: 'local',
+            type: getMediaType(file.path) === 'audio' ? 'audio' : 'video',
+            mediaType: getMediaType(file.path),
+            folderId: linkedMediaFolderIdFromPath(currentPath),
+          }),
         }));
 
       selectedItems.forEach(item => {
-        dispatch(addItemToPlaylist({playlistId, item}));
+        addItem(playlistId, item);
       });
 
       const plName = playlistNameMap[playlistId] ?? 'Playlist';
@@ -271,7 +299,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         navigation.goBack();
       }
     },
-    [items, selectedFileNames, toast, playlistNameMap, dispatch, targetPlaylistId, navigation],
+    [items, selectedFileNames, toast, playlistNameMap, addItem, targetPlaylistId, navigation],
   );
 
   const handleBatchAddToPlaylist = useCallback(() => {
@@ -291,8 +319,12 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   const handleCreatePlaylistFromBatch = useCallback(
     (name: string, kind: PlaylistKind) => {
       setShowCreateModal(false);
-      const result = dispatch(createPlaylist({name, kind}));
-      const playlistId = (result as {payload: Playlist}).payload.id;
+      const result = createPlaylist({name, kind});
+      if (result.status !== 'created') {
+        toast.show('You can have up to 20 playlists', 'error');
+        return;
+      }
+      const playlistId = result.playlist.id;
 
       const selectedItems: PlaylistItem[] = items
         .filter(i => !i.isDirectory && selectedFileNames.has(i.name))
@@ -302,10 +334,16 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
           title: file.name,
           duration: 0,
           addedAt: new Date().toISOString(),
+          ...normalizeMediaClassification({
+            source: 'local',
+            type: getMediaType(file.path) === 'audio' ? 'audio' : 'video',
+            mediaType: getMediaType(file.path),
+            folderId: linkedMediaFolderIdFromPath(currentPath),
+          }),
         }));
 
       selectedItems.forEach(item => {
-        dispatch(addItemToPlaylist({playlistId, item}));
+        addItem(playlistId, item);
       });
       toast.show(
         `Added ${selectedItems.length} items to "${name}"`,
@@ -314,7 +352,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       setIsSelecting(false);
       setSelectedFileNames(new Set());
     },
-    [items, selectedFileNames, toast, dispatch],
+    [items, selectedFileNames, toast, createPlaylist, addItem],
   );
 
   // ── Styles ────────────────────────────────────────────

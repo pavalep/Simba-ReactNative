@@ -10,7 +10,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BookmarkSheet} from '../../../components/bookmark/BookmarkSheet';
 import {spacing, radius} from '../../../theme/tokens';
-import type {Bookmark} from '../../../store/slices/bookmarkSlice';
+import type {Bookmark} from '../../../features/bookmarks';
 
 interface SongBookmarksProps {
   fileUri: string;

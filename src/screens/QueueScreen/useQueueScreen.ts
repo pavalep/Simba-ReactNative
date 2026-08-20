@@ -20,14 +20,23 @@ import {
   reorderPlaylist,
   reorderQueue,
 } from '../../store/slices/playerSlice';
-import {importPlaylist} from '../../store/slices/playlistSlice';
+import {playlistActions} from '../../features/playlists';
 import {MpvPlayer} from '../../native';
 import {useHaptics} from '../../hooks/useHaptics';
 import type {PlaylistEntry} from '../../store/slices/playerSlice';
 import type {PlaylistItem} from '../../types/playlist';
+import type {MediaLane} from '../../types/media';
 import type {RootStackScreenProps} from '../../navigation/types';
+import {usePlaybackCommands} from '../../modules/playback';
+
+interface QueueDisplayRow {
+  entry: PlaylistEntry;
+  origin: 'queue' | 'playlist';
+  rawIndex: number;
+}
 
 export interface UseQueueScreenResult {
+
   /** Currently playing track (Now Playing section) */
   currentTrack: PlaylistEntry | null;
   /** Combined Up Next list: explicit queue first, then remaining playlist */
@@ -56,6 +65,7 @@ export function useQueueScreen(): UseQueueScreenResult {
   const route = useRoute<RootStackScreenProps<'Queue'>['route']>();
   const dispatch = useAppDispatch();
   const haptics = useHaptics();
+  const {openPlayer} = usePlaybackCommands();
 
   const currentTrack = useAppSelector(state => state.player.currentFile);
   const playlist = useAppSelector(state => state.player.playlist);
@@ -63,23 +73,42 @@ export function useQueueScreen(): UseQueueScreenResult {
   const playbackHistory = useAppSelector(state => state.player.playbackHistory);
   const currentIndex = useAppSelector(state => state.player.currentIndex);
   const playbackState = useAppSelector(state => state.player.playbackState);
+  const routeLane = route.params?.from === 'video' ? 'video' : 'audio';
+  const activeLane: MediaLane = currentTrack?.mediaType ?? routeLane;
 
-  const queueCount = queue.length;
+  const upNextRows = useMemo<QueueDisplayRow[]>(() => {
+    const queuedRows = queue
+      .map((entry, rawIndex) => ({entry, origin: 'queue' as const, rawIndex}))
+      .filter(row => row.entry.mediaType === activeLane);
+    const playlistRows = playlist
+      .map((entry, rawIndex) => ({entry, origin: 'playlist' as const, rawIndex}))
+      .filter(row => row.rawIndex > currentIndex && row.entry.mediaType === activeLane);
+    return [...queuedRows, ...playlistRows];
+  }, [activeLane, currentIndex, playlist, queue]);
 
-  // Up Next = explicit queue first, then everything after the current track.
-  const upNext = useMemo(
-    () => [...queue, ...playlist.slice(currentIndex + 1)],
-    [queue, playlist, currentIndex],
+  const upNext = useMemo(() => upNextRows.map(row => row.entry), [upNextRows]);
+  const queueCount = upNextRows.filter(row => row.origin === 'queue').length;
+
+  const history = useMemo(
+    () => playbackHistory.filter(entry => entry.mediaType === activeLane).reverse(),
+    [activeLane, playbackHistory],
   );
-
-  const history = useMemo(() => [...playbackHistory].reverse(), [playbackHistory]);
 
   const hasContent = !!currentTrack || upNext.length > 0 || history.length > 0;
 
   const handleJumpTo = useCallback(
     (entry: PlaylistEntry) => {
-      const playlistIdx = playlist.findIndex(e => e.uri === entry.uri);
-      const queueIdx = queue.findIndex(e => e.uri === entry.uri);
+      const sameEntry = (candidate: PlaylistEntry) =>
+        candidate === entry ||
+        (candidate.uri === entry.uri &&
+          candidate.source === entry.source &&
+          candidate.type === entry.type &&
+          candidate.mediaType === entry.mediaType &&
+          candidate.provider === entry.provider &&
+          candidate.folderId === entry.folderId);
+      const playlistIdx = playlist.findIndex(sameEntry);
+      const queueIdx = queue.findIndex(sameEntry);
+
       if (playlistIdx >= 0) {
         dispatch(playFromPlaylist(playlistIdx));
       } else if (queueIdx >= 0) {
@@ -92,53 +121,72 @@ export function useQueueScreen(): UseQueueScreenResult {
       try {
         MpvPlayer.loadFile(entry.uri);
       } catch {}
-      // Cross-type jump: open the matching player unless we're already
-      // inside it (the mounted player reacts to mpv's onFileLoaded event).
-      const target = entry.mediaType === 'video' ? 'VideoPlayer' : 'AudioPlayer';
+
+      // Open the matching player unless we are already inside that lane.
+      // Forward the complete classification so resume, badges, and local-folder
+      // identity survive a queue jump.
       const from = route.params?.from ?? 'mini';
       const sameContext =
-        (target === 'AudioPlayer' && from === 'audio') ||
-        (target === 'VideoPlayer' && from === 'video');
+        (entry.mediaType === 'audio' && from === 'audio') ||
+        (entry.mediaType === 'video' && from === 'video');
       if (!sameContext) {
-        navigation.navigate(target, {fileUri: entry.uri, fileTitle: entry.title});
+        openPlayer({
+          uri: entry.uri,
+          title: entry.title,
+          duration: entry.duration,
+          source: entry.source,
+          type: entry.type,
+          mediaType: entry.mediaType,
+          provider: entry.provider,
+          folderId: entry.folderId,
+        });
       }
+
     },
-    [dispatch, playlist, queue, route.params?.from, navigation],
+    [dispatch, openPlayer, playlist, queue, route.params?.from],
   );
 
   const handleReorder = useCallback(
     (fromIndex: number, toIndex: number) => {
       if (fromIndex === toIndex) return;
-      if (fromIndex < 0 || fromIndex >= upNext.length) return;
-      const target = Math.max(0, Math.min(upNext.length - 1, toIndex));
-      if (fromIndex < queueCount) {
-        // Queue run: clamp inside the queue so items keep their origin.
-        const clamped = Math.max(0, Math.min(queueCount - 1, target));
-        if (clamped === fromIndex) return;
-        dispatch(reorderQueue({fromIndex, toIndex: clamped}));
+      const source = upNextRows[fromIndex];
+      if (!source) return;
+      const boundedTarget = Math.max(0, Math.min(upNextRows.length - 1, toIndex));
+      const sameOriginRows = upNextRows.filter(row => row.origin === source.origin);
+      const sourcePosition = sameOriginRows.findIndex(row => row.rawIndex === source.rawIndex);
+      if (sourcePosition < 0) return;
+
+      const targetRow = upNextRows[boundedTarget];
+      const targetPosition = targetRow?.origin === source.origin
+        ? sameOriginRows.findIndex(row => row.rawIndex === targetRow.rawIndex)
+        : boundedTarget < fromIndex
+          ? 0
+          : sameOriginRows.length - 1;
+      const destination = sameOriginRows[Math.max(0, Math.min(sameOriginRows.length - 1, targetPosition))];
+      if (!destination || destination.rawIndex === source.rawIndex) return;
+
+      if (source.origin === 'queue') {
+        dispatch(reorderQueue({fromIndex: source.rawIndex, toIndex: destination.rawIndex}));
       } else {
-        // Playlist run: map back to playlist indices (after the current track).
-        const plFrom = currentIndex + 1 + (fromIndex - queueCount);
-        const clamped = Math.max(queueCount, Math.min(upNext.length - 1, target));
-        const plTo = currentIndex + 1 + (clamped - queueCount);
-        if (plTo === plFrom) return;
-        dispatch(reorderPlaylist({fromIndex: plFrom, toIndex: plTo}));
+        dispatch(reorderPlaylist({fromIndex: source.rawIndex, toIndex: destination.rawIndex}));
       }
       haptics.medium();
     },
-    [upNext.length, queueCount, currentIndex, dispatch, haptics],
+    [dispatch, haptics, upNextRows],
   );
 
   const handleRemove = useCallback(
     (index: number) => {
-      if (index < queueCount) {
-        dispatch(removeFromQueue(index));
+      const row = upNextRows[index];
+      if (!row) return;
+      if (row.origin === 'queue') {
+        dispatch(removeFromQueue(row.rawIndex));
       } else {
-        dispatch(removeFromPlaylist(currentIndex + 1 + (index - queueCount)));
+        dispatch(removeFromPlaylist(row.rawIndex));
       }
       haptics.light();
     },
-    [queueCount, currentIndex, dispatch, haptics],
+    [dispatch, haptics, upNextRows],
   );
 
   const handlePlayNext = useCallback(
@@ -168,15 +216,18 @@ export function useQueueScreen(): UseQueueScreenResult {
         title: entry.title,
         duration: entry.duration,
         source: entry.source,
+        type: entry.type,
         mediaType: entry.mediaType,
+        ...(entry.provider ? {provider: entry.provider} : {}),
+        ...(entry.folderId ? {folderId: entry.folderId} : {}),
         addedAt: now,
       }));
-      const kind = items.some(i => i.mediaType === 'video') ? 'MIXED' : 'AUDIO_ONLY';
-      dispatch(importPlaylist({name: trimmed, items, kind}));
+      const kind = activeLane === 'video' ? 'VIDEO_ONLY' : 'AUDIO_ONLY';
+      dispatch(playlistActions.importPlaylistAction({name: trimmed, items, kind}));
       haptics.medium();
       return true;
     },
-    [upNext, dispatch, haptics],
+    [activeLane, upNext, dispatch, haptics],
   );
 
   return {

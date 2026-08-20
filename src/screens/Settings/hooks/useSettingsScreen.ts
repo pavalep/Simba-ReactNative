@@ -6,6 +6,7 @@ import {useAppDispatch, useAppSelector} from '../../../store';
 import {spacing} from '../../../theme/tokens';
 
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
+import {useMediaScanner} from '../../../hooks/useMediaScanner';
 
 const THEME_LABELS: Record<string, string> = {
   system: 'System',
@@ -13,7 +14,7 @@ const THEME_LABELS: Record<string, string> = {
   light: 'Light',
 };
 
-const SECTION_COUNT = 6; // ACCOUNT, APPEARANCE, LIBRARY, PLAYBACK, SUBTITLES, ABOUT
+const SECTION_COUNT = 7; // ACCOUNT, APPEARANCE, LIBRARY, DISCOVER, PLAYBACK, SUBTITLES, ABOUT
 
 /** Get app version from package info */
 function getAppVersion(): string {
@@ -43,8 +44,10 @@ export function useSettingsScreen() {
   const bottomChromeInset = insets.bottom + 104;
 
   const entrance = useAnimatedEntrance(SECTION_COUNT, {staggerDelay: 80});
+  const {startScan, isScanning} = useMediaScanner();
 
   // ── Redux State ──
+
   const hardwareAcceleration = useAppSelector(s => s.settings.isHardwareAccelerationEnabled);
   const audioNormalization = useAppSelector(s => s.settings.isAudioNormalizationEnabled);
   const dialogueBoost = useAppSelector(s => s.settings.isDialogueBoostEnabled);
@@ -106,13 +109,13 @@ export function useSettingsScreen() {
     setRefreshing(true);
     setError(null);
     try {
-      await new Promise<void>(resolve => setTimeout(resolve, 1000));
+      await startScan(true);
     } catch {
-      setError('Failed to refresh settings.');
+      setError('Failed to refresh the local library.');
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [startScan]);
 
   // ── Derived ──
   const appVersion = useMemo(() => getAppVersion(), []);
@@ -181,7 +184,7 @@ export function useSettingsScreen() {
     entrance,
     isLoading,
     error,
-    refreshing,
+    refreshing: refreshing || isScanning,
     // Redux state
     hardwareAcceleration,
     audioNormalization,

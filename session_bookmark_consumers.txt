@@ -1,0 +1,41 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\bookmarkReducer.ts:101:addBookmark(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\bookmarkReducer.ts:130:removeBookmark(state, action: PayloadAction<string>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\bookmarkReducer.ts:169:export const selectBookmarksForFile = createSelector(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\index.ts:10:selectBookmarksForFile,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\index.ts:63:function dispatchAddBookmark(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\index.ts:118:fileUri ? selectBookmarksForFile(state, fileUri) : [],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\index.ts:145:dispatchAddBookmark(dispatch, allBookmarks, input, options),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\index.ts:191:export function addBookmark(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\index.ts:197:return dispatchAddBookmark(dispatch, items, input, options);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\index.ts:207:export function removeBookmark(dispatch: AppDispatch, id: string): void {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:10:selectBookmarksForFile,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:46:fileUri ? selectBookmarksForFile(state, fileUri) : [],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:84:dispatch(addBookmark(bookmark));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:86:dispatch(removeBookmark(bookmark.id));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:95:dispatch(removeBookmark(id));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useBookmarks.ts:97:if (previous) dispatch(addBookmark(previous));
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\ArchiveItemDetailScreen.tsx:154:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\AudiobookDetailScreen.tsx:170:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Bookmarks\BookmarksScreen.tsx:54:removeBookmark(id);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\hooks\useHomeScreen.ts:9:import {selectBookmarks} from '../../../store/slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\hooks\useHomeScreen.ts:114:const bookmarks = useAppSelector(selectBookmarks);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\types\index.ts:2:import {selectBookmarks} from '../../../store/slices/sessionSlice';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\types\index.ts:11:| {type: 'BOOKMARKS'; items: ReturnType<typeof selectBookmarks>}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\index.tsx:165:onRemove={id => dispatch(removeBookmark(id))}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\LiveTVScreen.tsx:468:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:228:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\LiveTVFavoritesScreen.tsx:100:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\hooks\useEpisodeActions.ts:112:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\index.tsx:98:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:224:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\RadioFavoritesScreen.tsx:91:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowDetailScreen\ShowDetailScreen.tsx:44:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Song\useSongScreen.ts:80:addBookmark({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Song\useSongScreen.ts:98:removeBookmark(id);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\bookmarkSlice.ts:40:addBookmark(state, action: PayloadAction<Bookmark>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\bookmarkSlice.ts:48:removeBookmark(state, action: PayloadAction<string>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\bookmarkSlice.ts:93:export const selectBookmarksForFile = createSelector(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:86:addBookmark(state, action: PayloadAction<BookmarkEntry>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:94:removeBookmark(state, action: PayloadAction<string>) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:118:export const selectBookmarks = createSelector(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\sessionSlice.ts:119:(state: RootState) => state.session.bookmarks,

@@ -1,6 +1,8 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {RepeatMode} from '../../types';
 import {DEFAULT_SUBTITLE_COLOR} from '../../constants/subtitleColors';
+import type {LinkedMediaFolder, MediaLane} from '../../types/media';
+import {linkedMediaFolderId} from '../../types/media';
 
 interface MpvOption {
   key: string;
@@ -43,6 +45,8 @@ interface SettingsState {
   // Linked folders (Phase 22)
   videoFolders: string[];
   audioFolders: string[];
+  /** Durable identity records for linked local folders. */
+  linkedFolders: LinkedMediaFolder[];
   lastScanTimestamp: number | null;
   isScanning: boolean;
 
@@ -103,6 +107,7 @@ const initialState: SettingsState = {
   // Linked folders defaults
   videoFolders: [],
   audioFolders: [],
+  linkedFolders: [],
   lastScanTimestamp: null,
   isScanning: false,
 
@@ -125,6 +130,25 @@ const initialState: SettingsState = {
   // Weather greeting defaults
   homeCity: '',
 };
+
+function upsertLinkedFolder(
+  state: SettingsState,
+  path: string,
+  mediaType: MediaLane,
+): void {
+  const existing = state.linkedFolders.find(
+    folder => folder.path === path && folder.mediaType === mediaType,
+  );
+  if (existing) return;
+  state.linkedFolders.push({
+    id: linkedMediaFolderId(path, mediaType),
+    path,
+    mediaType,
+    source: 'local',
+    addedAt: Date.now(),
+    lastScanAt: null,
+  });
+}
 
 const settingsSlice = createSlice({
   name: 'settings',
@@ -223,17 +247,54 @@ const settingsSlice = createSlice({
       if (!state.videoFolders.includes(action.payload)) {
         state.videoFolders.push(action.payload);
       }
+      upsertLinkedFolder(state, action.payload, 'video');
     },
     removeVideoFolder(state, action: PayloadAction<string>) {
       state.videoFolders = state.videoFolders.filter(f => f !== action.payload);
+      state.linkedFolders = state.linkedFolders.filter(
+        folder => folder.path !== action.payload || folder.mediaType !== 'video',
+      );
     },
     addAudioFolder(state, action: PayloadAction<string>) {
       if (!state.audioFolders.includes(action.payload)) {
         state.audioFolders.push(action.payload);
       }
+      upsertLinkedFolder(state, action.payload, 'audio');
     },
     removeAudioFolder(state, action: PayloadAction<string>) {
       state.audioFolders = state.audioFolders.filter(f => f !== action.payload);
+      state.linkedFolders = state.linkedFolders.filter(
+        folder => folder.path !== action.payload || folder.mediaType !== 'audio',
+      );
+    },
+    syncLinkedFolders(
+      state,
+      action: PayloadAction<{videoFolders: string[]; audioFolders: string[]}>,
+    ) {
+      for (const path of action.payload.videoFolders) {
+        upsertLinkedFolder(state, path, 'video');
+      }
+      for (const path of action.payload.audioFolders) {
+        upsertLinkedFolder(state, path, 'audio');
+      }
+      const active = new Set([
+        ...action.payload.videoFolders.map(path => `${path}:video`),
+        ...action.payload.audioFolders.map(path => `${path}:audio`),
+      ]);
+      state.linkedFolders = state.linkedFolders.filter(
+        folder => active.has(`${folder.path}:${folder.mediaType}`),
+      );
+    },
+    setLinkedFoldersLastScan(
+      state,
+      action: PayloadAction<{timestamp: number; paths: string[]}>,
+    ) {
+      const pathSet = new Set(action.payload.paths);
+      state.linkedFolders = state.linkedFolders.map(folder =>
+        pathSet.has(folder.path)
+          ? {...folder, lastScanAt: action.payload.timestamp}
+          : folder,
+      );
     },
     setScanning(state, action: PayloadAction<boolean>) {
       state.isScanning = action.payload;
@@ -269,6 +330,16 @@ const settingsSlice = createSlice({
 
     resetToDefaults() {
       return initialState;
+    },
+    resetPreferencesToDefaults(state) {
+      const preserved = {
+        videoFolders: state.videoFolders,
+        audioFolders: state.audioFolders,
+        linkedFolders: state.linkedFolders,
+        lastScanTimestamp: state.lastScanTimestamp,
+        isScanning: state.isScanning,
+      };
+      return {...initialState, ...preserved};
     },
   },
 });
@@ -308,6 +379,8 @@ export const {
   removeAudioFolder,
   setScanning,
   setLastScanTimestamp,
+  setLinkedFoldersLastScan,
+  syncLinkedFolders,
 
   setMpvOptions,
 
@@ -323,5 +396,6 @@ export const {
   setHomeCity,
 
   resetToDefaults,
+  resetPreferencesToDefaults,
 } = settingsSlice.actions;
 export default settingsSlice.reducer;

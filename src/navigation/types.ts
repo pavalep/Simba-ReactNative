@@ -1,37 +1,11 @@
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 import type {CompositeScreenProps, NavigatorScreenParams} from '@react-navigation/native';
 
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
-  MainTabs: NavigatorScreenParams<TabParamList>;
-  /** P36.5: optional live channel list (IPTV) for channel up/down in the player */
-  VideoPlayer: {
-    fileUri?: string;
-    fileTitle?: string;
-    startPosition?: number;
-    source?: string;
-    liveChannels?: LiveChannelParam[];
-    liveChannelIndex?: number;
-    /**
-     * Optional pre-flight error (e.g. when an upstream lookup returned no
-     * playable file). When present, the player renders this error instead
-     * of attempting to load an empty/invalid URL.
-     */
-    initialError?: {title: string; message: string};
-  };
-  AudioPlayer: {
-    fileUri?: string;
-    fileTitle?: string;
-    artworkUri?: string;
-    source?: string;
-    /** 58.2: explicit resume intent (e.g. Continue Listening) — silent seek */
-    startPosition?: number;
-    /** P37.3: ordered chapter/track list — drives EOF auto-advance */
-    chapterList?: AudioChapterParam[];
-    chapterIndex?: number;
-  };
+  Home: undefined;
+  Library: undefined;
   Settings: NavigatorScreenParams<SettingsTabParamList>;
   Bookmarks: undefined;
   Profile: undefined;
@@ -115,20 +89,6 @@ export type RootStackParamList = {
   Downloads: undefined;
 };
 
-/** P37.3: a single chapter/track passed to AudioPlayer for auto-advance. */
-export interface AudioChapterParam {
-  uri: string;
-  title: string;
-  duration?: number;
-}
-/** P36.5: a single live channel passed to VideoPlayer for channel up/down. */
-export interface LiveChannelParam {
-  id: string;
-  name: string;
-  url: string;
-  logo?: string;
-}
-
 export type TabParamList = {
   HomeTab: NavigatorScreenParams<HomeTabParamList>;
   LibraryTab: NavigatorScreenParams<LibraryTabParamList>;
@@ -162,28 +122,28 @@ export type RootStackScreenProps<T extends keyof RootStackParamList> =
 
 export type TabScreenProps<T extends keyof TabParamList> =
   CompositeScreenProps<
-    BottomTabScreenProps<TabParamList, T>,
+    NativeStackScreenProps<TabParamList, T>,
     RootStackScreenProps<keyof RootStackParamList>
   >;
 
-// ── Reusable helper for any screen inside a tab's stack navigator ──
-type StackInTabProps<
-  TabParam extends Record<string, object | undefined>,
-  TabKey extends keyof TabParamList,
-  ScreenName extends keyof TabParam & string,
+// ── Reusable helper for any screen inside the authenticated shell ──
+type StackInShellProps<
+  ScreenParam extends Record<string, object | undefined>,
+  ShellKey extends keyof TabParamList,
+  ScreenName extends keyof ScreenParam & string,
 > = CompositeScreenProps<
-  NativeStackScreenProps<TabParam, ScreenName>,
+  NativeStackScreenProps<ScreenParam, ScreenName>,
   CompositeScreenProps<
-    BottomTabScreenProps<TabParamList, TabKey>,
+    NativeStackScreenProps<TabParamList, ShellKey>,
     RootStackScreenProps<keyof RootStackParamList>
   >
 >;
 
-/** Composite props for Home tab stack screens. */
-export type HomeScreenProps = StackInTabProps<HomeTabParamList, 'HomeTab', 'Home'>;
+/** Composite props for the Home stack screen. */
+export type HomeScreenProps = StackInShellProps<HomeTabParamList, 'HomeTab', 'Home'>;
 
-/** Composite props for Library tab stack screens. */
-export type LibraryScreenProps = StackInTabProps<LibraryTabParamList, 'LibraryTab', 'Library'>;
+/** Composite props for the Library stack screen. */
+export type LibraryScreenProps = StackInShellProps<LibraryTabParamList, 'LibraryTab', 'Library'>;
 
 /** Root stack screen props for screens moved out of tab stacks (Phase 14.0). */
 export type SearchScreenProps = RootStackScreenProps<'Search'>;

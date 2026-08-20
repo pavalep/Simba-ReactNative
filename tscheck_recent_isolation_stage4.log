@@ -1,0 +1,5 @@
+src/screens/Home/related/homeSectionKey.ts(19,10): error TS2678: Type '"HERO"' is not comparable to type '"GREETING" | "SUBSECTION_TITLE" | "SHELF" | "GENRE" | "PLAYLISTS" | "BOOKMARKS" | "FOLLOWED_PODCASTS" | "BROWSE_ALL" | "COMING_SOON"'.
+src/screens/Profile/ProfileScreen.tsx(32,9): error TS2614: Module '"../../store/slices/sessionSlice"' has no exported member 'clearAllRecent'. Did you mean to use 'import clearAllRecent from "../../store/slices/sessionSlice"' instead?
+src/screens/Profile/ProfileScreen.tsx(70,61): error TS2339: Property 'recentFiles' does not exist on type 'SessionState'.
+src/screens/Profile/ProfileScreen.tsx(87,27): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/screens/Profile/ProfileScreen.tsx(87,32): error TS7006: Parameter 'entry' implicitly has an 'any' type.

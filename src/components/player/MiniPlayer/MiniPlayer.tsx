@@ -119,12 +119,12 @@ export const MiniPlayer: React.FC = () => {
   // ── Tap to expand ────────────────────────────────────
   const handleTap = useCallback(() => {
     if (navigationRef.isReady()) {
-      navigationRef.navigate('MainTabs' as any, {
-        screen: 'HomeTab',
-        params: {screen: 'NowPlaying'},
-      } as any);
+      navigationRef.navigate('NowPlaying', {
+        fileUri: currentFile?.uri,
+        fileTitle: currentFile?.title,
+      });
     }
-  }, []);
+  }, [currentFile]);
 
   // ── Derived values ───────────────────────────────────
   const positionPct =

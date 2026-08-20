@@ -13,8 +13,10 @@ import {SvgIcon} from '../../components/utility/SvgIcon';
 import {BackButton} from '../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../components/feedback/EmptyState/EmptyState';
 import {useAppSelector} from '../../store';
+import {useRecentHistory} from '../../features/recentHistory';
 import {formatDuration} from '../../utils/timeAgo';
 import type {RootStackScreenProps} from '../../navigation/types';
+import {usePlaybackCommands} from '../../modules/playback';
 
 type Props = RootStackScreenProps<'Stats'>;
 
@@ -25,9 +27,10 @@ function dayKey(d: Date): string {
 
 export const StatsScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
-  const insets = useSafeAreaInsets();
+    const insets = useSafeAreaInsets();
+  const {openPlayer} = usePlaybackCommands();
 
-  const recentFiles = useAppSelector(state => state.session.recentFiles);
+  const {list: recentFiles} = useRecentHistory();
   const mediaLibrary = useAppSelector(state => state.session.mediaLibrary);
   const playCounts = useAppSelector(state => state.session.playCounts);
 
@@ -91,7 +94,7 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
   // ── Top media (50.4) ──
   const topMedia = useMemo(
     () =>
-      recentFiles
+      [...recentFiles]
         .filter(e => (playCounts[e.fileUri] ?? 0) > 0)
         .sort((a, b) => (playCounts[b.fileUri] ?? 0) - (playCounts[a.fileUri] ?? 0))
         .slice(0, 5),
@@ -130,12 +133,8 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
             title="No Stats Yet"
             description="Play some music or videos and your totals, streaks and top media will show up here."
             actionLabel="Browse Library"
-            onAction={() =>
-              navigation.navigate('MainTabs', {
-                screen: 'LibraryTab',
-                params: {screen: 'Library'},
-              })
-            }
+                        onAction={() => navigation.navigate('Library')}
+
           />
         </View>
       ) : (
@@ -188,17 +187,17 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
                     <TouchableOpacity
                       style={[styles.topRow, {borderBottomColor: colors.border.subtle}]}
                       onPress={() => {
-                        if (entry.mediaType === 'audio') {
-                          navigation.navigate('AudioPlayer', {
-                            fileUri: entry.fileUri,
-                            fileTitle: entry.title,
-                          });
-                        } else {
-                          navigation.navigate('VideoPlayer', {
-                            fileUri: entry.fileUri,
-                            fileTitle: entry.title,
-                          });
-                        }
+                        openPlayer({
+                          uri: entry.fileUri,
+                          title: entry.title,
+                          duration: entry.duration,
+                          startPosition: entry.position,
+                          source: entry.source,
+                          type: entry.type,
+                          mediaType: entry.mediaType,
+                          provider: entry.provider,
+                          folderId: entry.folderId,
+                        });
                       }}
                       activeOpacity={0.7}
                       accessibilityRole="button"

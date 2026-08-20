@@ -7,7 +7,7 @@ import {EqualizerScreenProps} from '../../navigation/types';
 import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';
-import {VideoPlayerEqualizerPanel} from '../VideoPlayer/components/VideoPlayerEqualizerPanel';
+import {VideoPlayerEqualizerPanel} from '../../modules/playback/video/components/VideoPlayerEqualizerPanel';
 import {useAppDispatch, useAppSelector} from '../../store';
 import {
   setEqEnabled,

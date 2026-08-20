@@ -38,10 +38,12 @@ import {FilterChips} from '../../components/utility/FilterChips';
 import {ActivityOrb} from '../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../components/feedback/Placeholder';
 import {shareContent} from '../../services/shareService';
-import {useBookmarks} from '../../hooks/useBookmarks';
+import {useBookmarks} from '../../features/bookmarks';
 import {useToast} from '../../components/feedback/Toast';
 import {useHaptics} from '../../hooks/useHaptics';
 import {PlaylistSheet} from '../../components/sheets/PlaylistSheet/PlaylistSheet';
+import {usePlaybackCommands} from '../../modules/playback';
+
 import {OptionSheetDialog} from '../../components/core/OptionSheetDialog/OptionSheetDialog';
 import type {IPTVChannelResult, IPTVCategory} from '../../types/api';
 import type {LiveFavoriteItem} from '../../store/slices/liveFavoritesSlice';
@@ -409,17 +411,22 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
   const [sheetItem, setSheetItem] = useState<
     React.ComponentProps<typeof PlaylistSheet>['currentItem'] | null
   >(null);
+  const {openPlayer} = usePlaybackCommands();
 
   // ── Channel press / long-press ──
   const handleChannelPress = useCallback(
     (row: ChannelRow) => {
-      navigation.navigate('VideoPlayer', {
-        fileUri: row.url,
-        fileTitle: row.name,
-        source: 'iptv',
+      openPlayer({
+        uri: row.url,
+        title: row.name,
+        duration: 0,
+        source: 'api',
+        type: 'video',
+        mediaType: 'video',
+        provider: 'iptv',
       });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const handleLongPress = useCallback((row: ChannelRow) => {
@@ -458,7 +465,8 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
             title: row.name,
             duration: 0,
             thumbnailPath: row.image || undefined,
-            source: 'iptv',
+            source: 'api',
+        provider: 'iptv',
             mediaType: 'video',
           });
           break;
@@ -471,7 +479,9 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
             label: '',
             thumbnailPath: row.image || undefined,
             mediaType: 'video',
-            source: 'iptv',
+            source: 'api',
+            provider: 'iptv',
+            type: 'video',
           });
           toast.show('Channel bookmarked');
           break;
@@ -481,7 +491,8 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
             params: {
               fileUri: row.url,
               fileTitle: row.name,
-              source: 'iptv',
+              source: 'api',
+        provider: 'iptv',
             },
             title: row.name,
             subtitle: row.subtitle,
