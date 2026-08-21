@@ -221,18 +221,23 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
       if (pl && pl.items.length > 0) {
         const entries = playlistItemsToEntries(pl.items);
         dispatch(loadPlaylistToPlayer(entries));
-        const first = pl.items[0];
-        (navigation as any).navigate(
-          first.mediaType === 'video' || isVideoFile(first.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
-          {
-            fileUri: first.fileUri,
-            fileTitle: first.title,
-            ...normalizeMediaClassification(first),
-          },
-        );
+        const first = entries[0];
+        if (!first) return;
+        openPlayer({
+          uri: first.uri,
+          title: first.title,
+          duration: first.duration,
+          artworkUri: first.artworkUri,
+          startPosition: first.resumePosition,
+          source: first.source,
+          type: first.type,
+          mediaType: first.mediaType,
+          provider: first.provider,
+          folderId: first.folderId,
+        });
       }
     },
-    [allPlaylists, dispatch, navigation],
+    [allPlaylists, dispatch, openPlayer],
   );
 
   const handleShufflePlaylist = useCallback(
@@ -245,18 +250,23 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
           [entries[i], entries[j]] = [entries[j], entries[i]];
         }
         dispatch(loadPlaylistToPlayer(entries));
-        const first = pl.items[0];
-        (navigation as any).navigate(
-          first.mediaType === 'video' || isVideoFile(first.fileUri) ? 'VideoPlayer' : 'AudioPlayer',
-          {
-            fileUri: first.fileUri,
-            fileTitle: first.title,
-            ...normalizeMediaClassification(first),
-          },
-        );
+        const first = entries[0];
+        if (!first) return;
+        openPlayer({
+          uri: first.uri,
+          title: first.title,
+          duration: first.duration,
+          artworkUri: first.artworkUri,
+          startPosition: first.resumePosition,
+          source: first.source,
+          type: first.type,
+          mediaType: first.mediaType,
+          provider: first.provider,
+          folderId: first.folderId,
+        });
       }
     },
-    [allPlaylists, dispatch, navigation],
+    [allPlaylists, dispatch, openPlayer],
   );
 
   const handlePlaylistCardPress = useCallback(

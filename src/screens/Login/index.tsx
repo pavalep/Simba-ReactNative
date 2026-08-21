@@ -1,2 +1,2 @@
-export {LoginScreen} from './LoginScreen';
-export {default} from './LoginScreen';
+export {LoginScreen as default, LoginScreen} from './components/LoginScreen';
+export type {LoginScreenProps} from './types';

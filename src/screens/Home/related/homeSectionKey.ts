@@ -6,8 +6,6 @@ export function getHomeSectionKey(item: HomeSection): string {
       return `home:shelf:${item.title}`;
     case 'SUBSECTION_TITLE':
       return `home:subsection:${item.label}`;
-    case 'COMING_SOON':
-      return `home:coming-soon:${item.reason}`;
     case 'GENRE':
       return 'home:genres';
     case 'PLAYLISTS':

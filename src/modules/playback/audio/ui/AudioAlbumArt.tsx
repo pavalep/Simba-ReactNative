@@ -59,7 +59,7 @@ export const AudioAlbumArt: React.FC<AudioAlbumArtProps> = ({albumArtUri}) => {
         <Animated.View
           style={[
             styles.artFrame,
-            {borderColor: colors.border.subtle},
+            {borderColor: colors.border.subtle, shadowColor: colors.shadow},
             {opacity: fadeOpacity, transform: [{scale}]},
           ]}>
           <FastImage
@@ -103,7 +103,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 2,
     overflow: 'hidden',
-    shadowColor: '#000000',
     shadowOpacity: 0.34,
     shadowRadius: 18,
     shadowOffset: {width: 0, height: 10},

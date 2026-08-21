@@ -120,6 +120,7 @@ export const BrowseAllShelf: React.FC<BrowseAllShelfProps> = React.memo(
               description={item.description}
               icon={item.icon}
               image={item.image}
+              fallbackVariant={item.route === 'LocalFiles' ? 'localFiles' : 'default'}
               onPress={() => onSectionPress(item.route)}
             />
           )}

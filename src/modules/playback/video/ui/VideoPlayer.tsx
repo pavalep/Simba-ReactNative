@@ -437,7 +437,7 @@ const VideoPlayerInner: React.FC<{h: VideoPlayerHookData}> = ({h}) => {
   const showSecondaryToolbar = h.showVideoSurface && h.pipUiVisible && !h.controlsLocked;
 
   return (
-    <View style={[styles.root, {backgroundColor: '#000000'}]}>
+    <View style={[styles.root, {backgroundColor: h.colors.background.surfaceDark}]}>
       <SimbaStatusBar variant="player" />
 
       {/* ═══ Layer 0: Video surface + gestures (absoluteFill) ═══ */}
@@ -465,7 +465,7 @@ const VideoPlayerInner: React.FC<{h: VideoPlayerHookData}> = ({h}) => {
       {h.pipUiVisible && (
         <Animated.View
           pointerEvents="none"
-          style={[styles.absolute, styles.blackFade, {opacity: blackFade}]}
+              style={[styles.absolute, styles.blackFade, {backgroundColor: h.colors.background.scrimStrong, opacity: blackFade}]}
         />
       )}
 
@@ -473,7 +473,7 @@ const VideoPlayerInner: React.FC<{h: VideoPlayerHookData}> = ({h}) => {
       {h.pipUiVisible && (
         <Animated.View
           pointerEvents="none"
-          style={[styles.absolute, styles.sheetDim, {opacity: sheetDim}]}
+            style={[styles.absolute, styles.sheetDim, {backgroundColor: h.colors.background.scrimDim, opacity: sheetDim}]}
         />
       )}
 
@@ -581,8 +581,9 @@ const VideoPlayerInner: React.FC<{h: VideoPlayerHookData}> = ({h}) => {
 
           {/* Sleep timer badge */}
           {sleepTimerActive && !h.controlsLocked && (
-            <View style={[styles.sleepBadge, {top: h.uiTopInset + 52}]}>
-              <AppText variant="caption" style={styles.sleepBadgeText}>
+            <View style={[styles.sleepBadge, {top: h.uiTopInset + 52, backgroundColor: h.colors.accent.gold}]}>
+
+              <AppText variant="caption" style={[styles.sleepBadgeText, {color: h.colors.text.inverse}]}>
                 {sleepTimerMode === 'time'
                   ? `Sleep ${formatSleepRemaining(sleepRemainingMs)}`
                   : sleepTimerModeLabel(sleepTimerMode)}
@@ -874,12 +875,12 @@ const styles = StyleSheet.create({
   /** zIndex below controls (5) so it tints the video but never covers top/bottom bars */
   blackFade: {
     zIndex: 5,
-    backgroundColor: '#000000',
+
   },
   /** Dim backdrop below sheets, above video */
   sheetDim: {
     zIndex: 8,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+
   },
   /**
    * Bottom panel wrapper — absolutely pinned to the bottom of the screen.
@@ -907,11 +908,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: '#D4B47A',
+
   },
   sleepBadgeText: {
     fontSize: 12,
-    color: '#000000',
+
   },
 });
 

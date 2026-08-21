@@ -1,0 +1,62 @@
+MUSIC_PLAYER_FOCUSED_SCAN
+STALE_OR_ALIAS_MATCHES=37
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\components\AudioPlayerError.tsx:13:export const AudioPlayerError: React.FC<Props> = ({message, onRetry, colors}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\components\AudioPlayerHeader.tsx:19:export const AudioPlayerHeader: React.FC<Props> = ({onGoBack, insetsTop, colors: _colors}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\components\AudioResumeOverlay.tsx:20:* VideoPlayerResumeOverlay: when a saved position exists, ask the user
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:67:export function useAudioPlayerScreen(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:311:logError({code: 'ERR_NO_FILE', message: 'No file URI provided.', source: 'AudioPlayerScreen'});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:327:source: 'AudioPlayerScreen',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:335:logError({code: 'ERR_VALIDATE_FAIL', message: 'File validation threw unexpectedly', source: 'AudioPlayerScreen'});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:345:logError({code: 'ERR_INIT_FAIL', message: 'Failed to initialize audio player.', source: 'AudioPlayerScreen'});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:373:// Covers reopening from MiniAudioPlayer mid-track (resume, not restart).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:399:// Track the file in Redux so MiniAudioPlayer persists after back
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:405:logError({code: 'ERR_INIT_EXCEPTION', message: String(e), source: 'AudioPlayerScreen'});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:641:// Keep the file loaded so MiniAudioPlayer can control it after back;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:995:source: 'AudioPlayerScreen',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioPlayer.tsx:17:import {AudioPlayerHeader} from '../components/AudioPlayerHeader';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioPlayer.tsx:45:export interface AudioPlayerHookData {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioPlayer.tsx:131:export const AudioPlayer: React.FC<AudioPlayerHookData> = h => (
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioPlayer.tsx:136:<AudioPlayerInner h={h} />
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioPlayer.tsx:140:const AudioPlayerInner: React.FC<{h: AudioPlayerHookData}> = ({h}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioPlayer.tsx:184:<AudioPlayerHeader onGoBack={h.handleGoBack} insetsTop={h.insets.top} colors={h.colors} />
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioPlayer.tsx:417:export default AudioPlayer;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioSubMenu.tsx:380:route: 'AudioPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:2:import {AudioPlayer} from './ui/AudioPlayer';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:3:import {useAudioPlayerScreen} from './hooks/useAudioPlayerScreen';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:7:interface AudioPlayerModuleProps {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:11:export const AudioPlayerModule: React.FC<AudioPlayerModuleProps> = ({active}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:42:const hookData = useAudioPlayerScreen(overlayNavigation, route);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:43:return <AudioPlayer {...hookData} />;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\textContent.ts:2:* AudioPlayer screen — full-screen audio player with transport controls and action buttons.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx:26:interface MiniAudioPlayerProps {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx:37:export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = () => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx:293:export default MiniAudioPlayer;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackOverlayHost.tsx:4:import {MiniAudioPlayer} from '../../components/player/MiniAudioPlayer/MiniAudioPlayer';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackOverlayHost.tsx:6:import {AudioPlayerModule} from './audio/AudioPlayerModule';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackOverlayHost.tsx:7:import {VideoPlayerModule} from './video/VideoPlayerModule';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackOverlayHost.tsx:26:<MiniAudioPlayer overTabBar={false} />
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackOverlayHost.tsx:34:<VideoPlayerModule active={active} />
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackOverlayHost.tsx:36:<AudioPlayerModule active={active} />
+PRESENTATION_CLOSE_REFERENCES=22
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:12:const {collapsePlayer} = usePlaybackCommands();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:17:goBack: collapsePlayer,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:18:navigateHome: collapsePlayer,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayerModule.tsx:20:[collapsePlayer],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx:52:handleDismiss,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx:94:handleDismiss();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx:103:[handleDismiss, handleNext, handlePrevious],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx:275:onPress={handleDismiss}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\useMiniPlayer.ts:18:const {closePlayer} = usePlaybackCommands();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\useMiniPlayer.ts:132:const handleDismiss = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\useMiniPlayer.ts:141:closePlayer();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\useMiniPlayer.ts:143:}, [closePlayer, currentFile, dispatch]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\useMiniPlayer.ts:158:handleDismiss,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackContext.tsx:39:const setPresentation = useCallback((presentation: PlaybackPresentation) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackContext.tsx:47:const expandPlayer = useCallback(() => setPresentation('expanded'), [setPresentation]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackContext.tsx:48:const collapsePlayer = useCallback(() => setPresentation('mini'), [setPresentation]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackContext.tsx:49:const closePlayer = useCallback(() => setPresentation('none'), [setPresentation]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackContext.tsx:56:collapsePlayer,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackContext.tsx:57:closePlayer,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackContext.tsx:59:[active, closePlayer, collapsePlayer, expandPlayer, openPlayer],
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackContext.tsx:83:const {openPlayer, expandPlayer, collapsePlayer, closePlayer} = usePlayback();
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\PlaybackContext.tsx:84:return {openPlayer, expandPlayer, collapsePlayer, closePlayer};

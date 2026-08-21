@@ -131,13 +131,13 @@ export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = R
           width: 72,
           height: 72,
           borderRadius: 36,
-          backgroundColor: 'rgba(20,20,22,0.78)',
+          backgroundColor: colors.background.scrimMid,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.18)',
+          borderColor: colors.border.emphasis,
           alignItems: 'center',
           justifyContent: 'center',
           // Soft shadow
-          shadowColor: '#000',
+          shadowColor: colors.shadow,
           shadowOffset: {width: 0, height: 4},
           shadowOpacity: 0.45,
           shadowRadius: 12,
@@ -176,7 +176,7 @@ export const VideoPlayerVideoSurface: React.FC<VideoPlayerVideoSurfaceProps> = R
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Play">
-              <SvgIcon name="play" size={32} color="#FFFFFF" />
+              <SvgIcon name="play" size={32} color={colors.text.bright} />
             </TouchableOpacity>
           </Animated.View>
         </View>

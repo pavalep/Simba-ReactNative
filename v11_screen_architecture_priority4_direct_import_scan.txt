@@ -1,0 +1,12 @@
+Priority 4 structural verification
+===============================
+Search: publicIndex=True implementation=True typesIndex=True
+FolderBrowser: publicIndex=True implementation=True typesIndex=True
+LinkedFolders: publicIndex=True implementation=True typesIndex=True
+DownloadsScreen: publicIndex=True implementation=True typesIndex=True
+NowPlaying: publicIndex=True implementation=True typesIndex=True
+NavigatorDirectImplementationImports=0
+IndexBasedKeyExtractors=0
+MigratedScreenStalePlayerRouteReferences=0
+RootNavigatorPublicBoundaryImports=Verified
+SettingsStackPublicBoundaryImports=Verified

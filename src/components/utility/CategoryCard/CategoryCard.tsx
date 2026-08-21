@@ -35,12 +35,23 @@ export interface CategoryCardProps {
   image?: ImageSourcePropType;
   /** Optional override for the touchable's accessibility label. */
   accessibilityLabel?: string;
+  /** Theme-driven visual treatment for entries without artwork. */
+  fallbackVariant?: 'default' | 'localFiles';
 }
 
 export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
-  ({name, description, icon, onPress, image, accessibilityLabel}) => {
+  ({
+    name,
+    description,
+    icon,
+    onPress,
+    image,
+    accessibilityLabel,
+    fallbackVariant = 'default',
+  }) => {
     const {colors} = useTheme();
     const hasImage = !!image;
+    const hasFallbackGradient = !hasImage && fallbackVariant === 'localFiles';
 
     return (
       <TouchableOpacity
@@ -50,7 +61,12 @@ export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
         accessibilityLabel={accessibilityLabel ?? name}
         style={[
           styles.card,
-          {backgroundColor: hasImage ? 'transparent' : colors.background.elevated},
+          {
+            backgroundColor:
+              hasImage || hasFallbackGradient
+                ? 'transparent'
+                : colors.background.elevated,
+          },
         ]}>
         {hasImage ? (
           <>
@@ -65,6 +81,17 @@ export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
               style={StyleSheet.absoluteFill}
             />
           </>
+        ) : hasFallbackGradient ? (
+          <LinearGradient
+            colors={[
+              colors.accent.goldDim,
+              colors.background.elevated,
+              colors.accent.goldSoft,
+            ]}
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 1}}
+            style={StyleSheet.absoluteFill}
+          />
         ) : null}
 
         <View
@@ -72,12 +99,12 @@ export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
             styles.iconCircle,
             hasImage
               ? {backgroundColor: 'rgba(0,0,0,0.45)'}
-              : {backgroundColor: colors.accent.goldDim},
+              : {backgroundColor: colors.accent.goldSoft},
           ]}>
           <SvgIcon
             name={icon as never}
             size={22}
-            color={hasImage ? '#ffffff' : colors.accent.gold}
+            color={colors.accent.gold}
           />
         </View>
 
@@ -95,7 +122,9 @@ export const CategoryCard: React.FC<CategoryCardProps> = React.memo(
           numberOfLines={2}
           style={[
             styles.description,
-            {color: hasImage ? 'rgba(255,255,255,0.78)' : colors.text.tertiary},
+            {
+              color: hasImage ? 'rgba(255,255,255,0.78)' : colors.text.tertiary,
+            },
           ]}>
           {description}
         </AppText>

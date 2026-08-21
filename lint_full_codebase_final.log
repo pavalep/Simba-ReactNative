@@ -1,0 +1,857 @@
+
+> SimbaPlayer@0.0.1 lint
+> eslint .
+
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\App.tsx
+  158:6  error  React Hook useEffect has a missing dependency: 'openPlayer'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\react-native-video-mpv\src\VideoMpvViewNativeComponent.ts
+  2:36  warning  'react-native/Libraries/Utilities/codegenNativeComponent' React Native deep imports are deprecated. Please use the top level import instead  @react-native/no-deep-imports
+  3:35  warning  'react-native/Libraries/Utilities/codegenNativeCommands' React Native deep imports are deprecated. Please use the top level import instead   @react-native/no-deep-imports
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\tmdb\tmdb-episode.js
+  2:14  error  Parsing error: Missing semicolon. (2:14)
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\tmdb\tmdb-movie.js
+  1:8  error  Parsing error: Missing semicolon. (1:8)
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\tmdb\tmdb-season.js
+  2:9  error  Parsing error: Missing semicolon. (2:9)
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\tmdb\tmdb-show.js
+  2:11  error  Parsing error: Missing semicolon. (2:11)
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\tvdb\tvdb-movie.js
+  1:10  error  Parsing error: Missing semicolon. (1:10)
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\tvdb\tvdb-show-episode.js
+  1:17  error  Parsing error: Missing semicolon. (1:17)
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\tvdb\tvdb-show-season.js
+  44:16  error  Parsing error: Unexpected token, expected "," (44:16)
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\tvdb\tvdb-show.js
+  428:42  error  Parsing error: Unexpected token, expected "," (428:42)
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\webhook\radarr.js
+   1:5   warning  'x' is assigned a value but never used  no-unused-vars
+   3:15  error    'YYY' is not defined                    no-undef
+   8:19  error    'XXXX' is not defined                   no-undef
+  34:19  error    'xxx' is not defined                    no-undef
+  40:15  error    'yyy' is not defined                    no-undef
+  48:17  error    'XXX' is not defined                    no-undef
+  84:17  error    'zzz' is not defined                    no-undef
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\example\webhook\sonarr.js
+    1:5   warning  'x' is assigned a value but never used  no-unused-vars
+    3:15  error    'yyy' is not defined                    no-undef
+    7:19  error    'uuu' is not defined                    no-undef
+    8:21  error    'zzz' is not defined                    no-undef
+    9:19  error    'xxx' is not defined                    no-undef
+   52:19  error    'xxx' is not defined                    no-undef
+   59:25  error    'xxx' is not defined                    no-undef
+   60:23  error    'yyy' is not defined                    no-undef
+   71:17  error    'XXX' is not defined                    no-undef
+  112:17  error    'XXX' is not defined                    no-undef
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\design\snowby.js
+  250:29  error  Parsing error: Missing semicolon. (250:29)
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\api-client.js
+  85:39  error  'payload' is not defined  no-undef
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\app-context.js
+   25:13  warning  'SnowStyle' is assigned a value but never used                                                                                                                                                                                                       no-unused-vars
+  130:24  error    React Hook "useSnapshot" is called in function "onApiError" that is neither a React function component nor a custom React Hook function. React component names must start with an uppercase letter. React Hook names must start with the word "use"  react-hooks/rules-of-hooks
+  242:8   error    React Hook React.useEffect has a missing dependency: 'logout'. Either include it or remove the dependency array                                                                                                                                      react-hooks/exhaustive-deps
+  306:8   error    React Hook React.useEffect has missing dependencies: 'logout', 'popModal', and 'pushModal'. Either include them or remove the dependency array                                                                                                       react-hooks/exhaustive-deps
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\comp\mpv-video-view.js
+   2:22  warning  'DEFAULT_ACCELERATED_CODECS' is defined but never used                                                                            no-unused-vars
+  39:8   error    React Hook React.useEffect has a missing dependency: 'player.isVideoViewReady'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  46:8   error    React Hook React.useEffect has a missing dependency: 'player.isVideoViewReady'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  52:8   error    React Hook React.useEffect has a missing dependency: 'player.isVideoViewReady'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  58:8   error    React Hook React.useEffect has a missing dependency: 'player.isVideoViewReady'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\comp\null-video-view.js
+  14:58  warning  Expected '!==' and instead saw '!='                                                                                      eqeqeq
+  46:8   error    React Hook React.useEffect has a missing dependency: 'updateInterval'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  48:31  warning  Inline style: { width: '85%' }                                                                                           react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\comp\rnv-video-view.js
+   82:8   error    React Hook React.useEffect has missing dependencies: 'player.audioTrackIndex', 'player.isTranscode', 'player.isVideoViewReady', 'player.subtitleTrackIndex', and 'requestTranscode'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  143:28  warning  Inline style: { textShadowColor: 'rgba(0, 0, 0)', textShadowRadius: 5, opacity: 0.9 }                                                                                                                                                    react-native/no-inline-styles
+  146:34  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts                                                                                                                  no-restricted-syntax
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\comp\snow-track-selector.js
+  2:10  warning  'View' is defined but never used  no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\comp\snow-video-controls.js
+  51:8   error    React Hook React.useEffect has missing dependencies: 'closeOverlay' and 'openOverlay'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  54:16  warning  Empty components are self-closing                                                                                                          react/self-closing-comp
+  65:9   warning  'swapTitle' is assigned a value but never used                                                                                             no-unused-vars
+  70:9   warning  'transcodeTitle' is assigned a value but never used                                                                                        no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\comp\snow-video-player.js
+   21:9   error    React Hook "useKeepAwake" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                           react-hooks/rules-of-hooks
+   44:31  warning  'player' is already declared in the upper scope on line 16 column 11                                                                                                                                                                                                                                                                                                                                                      no-shadow
+   60:46  warning  Inline style: { flex: 1, backgroundColor: 'rgb(10, 10, 25)', opacity: 0.45 }                                                                                                                                                                                                                                                                                                                                              react-native/no-inline-styles
+   62:54  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts                                                                                                                                                                                                                                                                                                   no-restricted-syntax
+   90:8   error    React Hook React.useEffect has missing dependencies: 'closeOverlay', 'openOverlay', 'player.clientOptions.nightFilter', 'popModal', 'props', and 'pushModal'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside React.useEffect  react-hooks/exhaustive-deps
+  102:31  warning  'player' is already declared in the upper scope on line 16 column 11                                                                                                                                                                                                                                                                                                                                                      no-shadow
+  109:26  warning  'props' is already declared in the upper scope on line 14 column 41                                                                                                                                                                                                                                                                                                                                                       no-shadow
+  119:8   error    React Hook React.useEffect has missing dependencies: 'closeOverlay', 'popModal', and 'pushModal'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                      react-hooks/exhaustive-deps
+  130:31  warning  'player' is already declared in the upper scope on line 16 column 11                                                                                                                                                                                                                                                                                                                                                      no-shadow
+  160:8   error    React Hook React.useEffect has missing dependencies: 'player.logs', 'popModal', and 'pushModal'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                       react-hooks/exhaustive-deps
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\auth-page-loader.js
+  82:8  error  React Hook React.useEffect has missing dependencies: 'navPush', 'routes.landing', and 'routes.signIn'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\play\media.js
+  27:42  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+  28:41  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+  34:38  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+  35:37  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\play\playing-queue.js
+  1:13  warning  'Player' is defined but never used  no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\play\streamable.js
+  36:32  error  'resolve' is not defined  no-undef
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\admin-form-page.js
+  17:21  warning  'setDeleted' is assigned a value but never used  no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\admin-list-page.js
+  55:5  error  Unreachable code  no-unreachable
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\cached-text\cached-text-details.js
+  4:24  warning  'routes' is assigned a value but never used  no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\dashboard.js
+  29:13  warning  Empty components are self-closing  react/self-closing-comp
+  36:13  warning  Empty components are self-closing  react/self-closing-comp
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\guide-source\channels-edit.js
+   19:17  error    'setKindIndex' is not defined                                               no-undef
+   20:23  error    'guideSourceKinds' is not defined                                           no-undef
+  118:87  warning  'guideSource' is already declared in the upper scope on line 113 column 12  no-shadow
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\guide-source\guide-source-edit.js
+  36:26  warning  Do not define components during render. React will see a new component type on every render and destroy the entire subtreeΓÇÖs DOM nodes and state (https://reactjs.org/docs/reconciliation.html#elements-of-different-types). Instead, move this component definition out of the parent component ΓÇ£GuideSourceEditPageΓÇ¥ and pass data as props. If you want to allow component creation in props, set allowAsProps option to true  react/no-unstable-nested-components
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\job\job-list.js
+  22:9  warning  Redundant double negation  no-extra-boolean-cast
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\stream-source\stream-source-edit.js
+  38:26  warning  Do not define components during render. React will see a new component type on every render and destroy the entire subtreeΓÇÖs DOM nodes and state (https://reactjs.org/docs/reconciliation.html#elements-of-different-types). Instead, move this component definition out of the parent component ΓÇ£StreamSourceEditPageΓÇ¥ and pass data as props. If you want to allow component creation in props, set allowAsProps option to true  react/no-unstable-nested-components
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\user\user-access.js
+   29:42  warning  'tags' is already declared in the upper scope on line 13 column 12           no-shadow
+   34:44  warning  'shelves' is already declared in the upper scope on line 14 column 12        no-shadow
+   39:51  warning  'streamSources' is already declared in the upper scope on line 15 column 12  no-shadow
+  116:21  warning  Empty components are self-closing                                            react/self-closing-comp
+  125:17  warning  Empty components are self-closing                                            react/self-closing-comp
+  146:21  warning  Empty components are self-closing                                            react/self-closing-comp
+  155:17  warning  Empty components are self-closing                                            react/self-closing-comp
+  176:21  warning  Empty components are self-closing                                            react/self-closing-comp
+  185:17  warning  Empty components are self-closing                                            react/self-closing-comp
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\user\user-edit.js
+  39:26  warning  Do not define components during render. React will see a new component type on every render and destroy the entire subtreeΓÇÖs DOM nodes and state (https://reactjs.org/docs/reconciliation.html#elements-of-different-types). Instead, move this component definition out of the parent component ΓÇ£UserEditPageΓÇ¥ and pass data as props. If you want to allow component creation in props, set allowAsProps option to true  react/no-unstable-nested-components
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\admin\video-file\video-file-list.js
+  4:24  warning  'routes' is assigned a value but never used  no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\details\media-tracks.js
+  121:28  warning  Expected '===' and instead saw '=='                                                                                                                                                                                                                                                                                                        eqeqeq
+  128:31  warning  Expected '===' and instead saw '=='                                                                                                                                                                                                                                                                                                        eqeqeq
+  191:30  warning  Expected '===' and instead saw '=='                                                                                                                                                                                                                                                                                                        eqeqeq
+  196:31  warning  Do not define components during render. React will see a new component type on every render and destroy the entire subtreeΓÇÖs DOM nodes and state (https://reactjs.org/docs/reconciliation.html#elements-of-different-types). Instead, move this component definition out of the parent component ΓÇ£MediaTracksPageΓÇ¥ and pass data as props  react/no-unstable-nested-components
+  196:32  warning  'props' is already declared in the upper scope on line 13 column 41                                                                                                                                                                                                                                                                        no-shadow
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\list\movie.js
+  1:10  warning  'C' is defined but never used  no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\auth\wrap\list\watchable-list.js
+  25:41  warning  Expected '===' and instead saw '=='                                     eqeqeq
+  30:40  warning  'response' is already declared in the upper scope on line 23 column 24  no-shadow
+  78:28  warning  Expected '===' and instead saw '=='                                     eqeqeq
+  91:43  warning  Expected '===' and instead saw '=='                                     eqeqeq
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\page-loader.js
+   3:10  warning  'View' is defined but never used                                      no-unused-vars
+   3:16  warning  'Platform' is defined but never used                                  no-unused-vars
+  40:13  warning  'routes' is already declared in the upper scope on line 11 column 10  no-shadow
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\page\sign-in.js
+   22:22  warning  'setPassword' is assigned a value but never used  no-unused-vars
+  117:29  warning  Redundant double negation                         no-extra-boolean-cast
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\player\player-manager.js
+    1:8   warning  '_' is defined but never used                                                                                                                            no-unused-vars
+   52:11  warning  'warn' is assigned a value but never used                                                                                                                no-unused-vars
+  102:8   error    React Hook React.useEffect has missing dependencies: 'addActionListener' and 'removeActionListener'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\settings.js
+  16:15  warning  'animeUrl' is assigned a value but never used           no-unused-vars
+  17:15  warning  'movieUrl' is assigned a value but never used           no-unused-vars
+  18:15  warning  'showUrl' is assigned a value but never used            no-unused-vars
+  19:15  warning  'whiteLetterBoxUrl' is assigned a value but never used  no-unused-vars
+  20:15  warning  'h264TenBit' is assigned a value but never used         no-unused-vars
+  21:15  warning  'h265TenBitHDR' is assigned a value but never used      no-unused-vars
+  22:15  warning  'cartoonUrl' is assigned a value but never used         no-unused-vars
+  23:15  warning  'seekUrl' is assigned a value but never used            no-unused-vars
+  24:15  warning  'transcodeUrl' is assigned a value but never used       no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\_reference_codes\snowstream\expo\src\util.js
+  71:18  warning  Expected error to be handled  handle-callback-err
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\app\ErrorBoundary.tsx
+  159:21  warning  Inline style: { marginTop: 8 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\bookmark\BookmarkSheet.tsx
+  136:24  warning  Inline style: { marginLeft: 4 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\AppButton\AppButton.tsx
+  109:11  warning  Inline style: {
+  borderWidth: "variant === 'outline' ? 1 : 0",
+  alignSelf: "fullWidth ? 'stretch' : undefined",
+  opacity: 'disabled ? 0.5 : 1'
+}  react-native/no-inline-styles
+  133:39  warning  Inline style: { flexDirection: "iconPosition === 'right' ? 'row-reverse' : 'row'" }                                                                  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\Avatar\Avatar.tsx
+  37:16  warning  Inline style: { overflow: 'hidden' }                                       react-native/no-inline-styles
+  47:18  warning  Inline style: { flex: 1, alignItems: 'center', justifyContent: 'center' }  react-native/no-inline-styles
+  53:20  warning  Inline style: { fontWeight: '600' }                                        react-native/no-inline-styles
+  64:14  warning  Inline style: { alignItems: 'center', justifyContent: 'center' }           react-native/no-inline-styles
+  74:18  warning  Inline style: { fontWeight: '600' }                                        react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\Dialog\Dialog.tsx
+  117:13  warning  Inline style: { shadowOpacity: 0.4, shadowRadius: 24, elevation: 16 }  react-native/no-inline-styles
+  181:46  warning  Inline style: { opacity: 0.4 }                                         react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\core\GoogleSignInButton\GoogleSignInButton.tsx
+  73:20  error  Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\EmptyState\EmptyState.tsx
+  57:16  warning  Inline style: { textAlign: 'center' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\Placeholder\Placeholder.tsx
+  4:18  error  'radius' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\ScanProgressBanner\ScanProgressBanner.tsx
+  102:39  warning  Inline style: { opacity: 0.8 }  react-native/no-inline-styles
+  154:33  warning  Inline style: { opacity: 0.6 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\feedback\Toast\Toast.tsx
+  69:9  error  'topInset' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\layout\HomeHeader\HomeHeader.tsx
+  54:3  error  'onSettingsPress' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\AudioLyricsView\AudioLyricsView.tsx
+  458:40  warning  Inline style: { paddingVertical: 16, paddingBottom: 60 }  react-native/no-inline-styles
+  484:40  warning  Inline style: { paddingBottom: 60 }                       react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\MiniAudioPlayer\MiniAudioPlayer.tsx
+  293:52  warning  Inline style: { alignItems: 'center', justifyContent: 'center' }  react-native/no-inline-styles
+  303:52  warning  Inline style: { alignItems: 'center', justifyContent: 'center' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\NowPlayingInfo\ChapterList.tsx
+  90:15  warning  Inline style: {
+  backgroundColor: 'isActive\n' +
+    '                  ? colors.accent.goldDim\n' +
+    "                  : 'transparent'"
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\NowPlayingInfo\InfoSheet.tsx
+  94:42  warning  Inline style: { borderBottomWidth: 2 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\PlaylistPreview\PlaylistPreviewSheet.tsx
+  100:21  warning  Inline style: {
+  backgroundColor: 'isCurrent\n' +
+    '                        ? colors.accent.goldDim\n' +
+    "                        : 'transparent'"
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\QueueManagement\QueueManagementSheet.tsx
+  156:25  warning  Inline style: { opacity: 'canMoveUp ? 1 : 0.25' }    react-native/no-inline-styles
+  166:25  warning  Inline style: { opacity: 'canMoveDown ? 1 : 0.25' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\SeekBar\SeekBar.tsx
+  199:5   error    React Hook useMemo has a missing dependency: 'seekable'. Either include it or remove the dependency array                react-hooks/exhaustive-deps
+  232:28  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  249:28  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  260:24  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  273:28  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  304:28  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  306:24  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  307:24  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  331:28  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  342:18  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  383:52  warning  Inline style: { opacity: 0.4 }                                                                                           react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\SleepTimerSheet\SleepTimerSheet.tsx
+  192:49  warning  Inline style: { opacity: 0.4 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\TrackSelectionPopup\TrackSelectionPopup.tsx
+  130:28  error  Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  145:24  error  Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayerSettingsSheet\VideoPlayerSettingsSheet.tsx
+  49:6  error  'Group' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistCard\PlaylistCard.tsx
+   91:45  warning  Inline style: { fontSize: 9, fontWeight: '700' }  react-native/no-inline-styles
+  118:49  warning  Inline style: { marginLeft: 4 }                   react-native/no-inline-styles
+  131:49  warning  Inline style: { marginLeft: 4 }                   react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistContextMenu\PlaylistContextMenu.tsx
+  106:64  warning  Inline style: { textAlign: 'center' }           react-native/no-inline-styles
+  121:29  warning  Inline style: { fontSize: 18, lineHeight: 20 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistCreateModal\PlaylistCreateModal.tsx
+  143:26  warning  Inline style: { marginRight: 6 }     react-native/no-inline-styles
+  166:45  warning  Inline style: { fontWeight: '600' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\playlist\PlaylistManageModal\PlaylistManageModal.tsx
+  60:47  warning  Inline style: { fontWeight: '600' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sections\AccountSection\AccountSection.tsx
+  27:18  warning  Inline style: { textAlign: 'center' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\BottomSheet\BottomSheet.tsx
+   32:6   error    'TrueSheetApi' is defined but never used                                  @typescript-eslint/no-unused-vars
+  201:29  warning  '@typescript-eslint/no-explicit-any' rule is disabled but never reported  eslint-comments/no-unused-disable
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\FilterSheet\FilterSheet.tsx
+  115:11  warning  Inline style: { fontWeight: "selected ? '700' : '500'" }                          react-native/no-inline-styles
+  219:23  error    'title' is assigned a value but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\PlaylistSheet\PlaylistSheet.tsx
+   25:7   error    'generateItemId' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  244:26  warning  Inline style: { fontSize: 10 }                         react-native/no-inline-styles
+  257:31  warning  Inline style: { fontSize: 16 }                         react-native/no-inline-styles
+  300:27  warning  Inline style: { fontSize: 18, lineHeight: 20 }         react-native/no-inline-styles
+  393:15  warning  Inline style: { opacity: 'newName.trim() ? 1 : 0.5' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx
+   80:15  warning  Inline style: { backgroundColor: "isSelected ? colors.accent.gold : 'transparent'" }  react-native/no-inline-styles
+  115:24  warning  Inline style: { fontSize: 9, fontWeight: '700' }                                      react-native/no-inline-styles
+  134:41  warning  Inline style: { opacity: 'canMoveUp ? 1 : 0.25' }                                     react-native/no-inline-styles
+  143:41  warning  Inline style: { opacity: 'canMoveDown ? 1 : 0.25' }                                   react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx
+  146:60  warning  Inline style: { fontWeight: '600' }             react-native/no-inline-styles
+  151:24  warning  Inline style: { flexDirection: 'row', gap: 8 }  react-native/no-inline-styles
+  242:26  warning  Inline style: { fontWeight: '600' }             react-native/no-inline-styles
+  281:58  warning  Inline style: { textAlign: 'center' }           react-native/no-inline-styles
+  284:60  warning  Inline style: { textAlign: 'center' }           react-native/no-inline-styles
+  327:51  warning  Inline style: { fontWeight: '600' }             react-native/no-inline-styles
+  337:51  warning  Inline style: { fontWeight: '600' }             react-native/no-inline-styles
+  347:68  warning  Inline style: { fontWeight: '600' }             react-native/no-inline-styles
+  357:69  warning  Inline style: { fontWeight: '600' }             react-native/no-inline-styles
+  373:67  warning  Inline style: { fontWeight: '600' }             react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\tabbar\FloatingTabBar.tsx
+  124:11  warning  Inline style: { shadowOpacity: 0.4, shadowRadius: 16, elevation: 12 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\utility\CategoryCard\CategoryCard.tsx
+   64:11  warning  Inline style: {
+  backgroundColor: 'hasImage || hasFallbackGradient\n' +
+    "                ? 'transparent'\n" +
+    '                : colors.background.elevated'
+}  react-native/no-inline-styles
+  101:17  warning  Inline style: { backgroundColor: 'rgba(0,0,0,0.45)' }                                                                                                                    react-native/no-inline-styles
+  101:35  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts                                                  no-restricted-syntax
+  116:13  warning  Inline style: { color: "hasImage ? '#ffffff' : colors.text.primary" }                                                                                                    react-native/no-inline-styles
+  125:13  warning  Inline style: { color: "hasImage ? 'rgba(255,255,255,0.78)' : colors.text.tertiary" }                                                                                    react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\utility\FilterChips\FilterChips.tsx
+  114:19  warning  Inline style: { backgroundColor: '#FFFFFF', borderColor: 'rgba(0, 0, 0, 0.08)' }                                         react-native/no-inline-styles
+  118:38  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  119:34  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  133:17  warning  Inline style: { color: "active ? colors.text.inverse : '#1A1A1A'" }                                                      react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\utility\SectionHeader\SectionHeader.tsx
+  68:52  warning  Inline style: { letterSpacing: 0.5 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\utility\SettingsRow\SettingsRow.tsx
+  29:62  warning  Inline style: { marginTop: 2 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\utility\WeatherIcon\WeatherChip.tsx
+  29:22  error  'useMemo' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx
+  242:15  warning  'now' is already declared in the upper scope on line 148 column 10  @typescript-eslint/no-shadow
+  319:17  warning  'now' is already declared in the upper scope on line 148 column 10  @typescript-eslint/no-shadow
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\bookmarks\index.ts
+  129:5   warning  Expected 'undefined' and instead saw 'void'  no-void
+  140:30  warning  Expected 'undefined' and instead saw 'void'  no-void
+  162:5   warning  Expected 'undefined' and instead saw 'void'  no-void
+  214:3   warning  Expected 'undefined' and instead saw 'void'  no-void
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\followedPodcasts\index.ts
+  43:9  warning  'getFollowed' is already declared in the upper scope on line 85 column 17  @typescript-eslint/no-shadow
+  44:9  warning  'isFollowed' is already declared in the upper scope on line 92 column 17   @typescript-eslint/no-shadow
+  48:9  warning  'follow' is already declared in the upper scope on line 99 column 17       @typescript-eslint/no-shadow
+  52:9  warning  'unfollow' is already declared in the upper scope on line 103 column 17    @typescript-eslint/no-shadow
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\features\recentHistory\index.ts
+  53:9  warning  'addRecent' is already declared in the upper scope on line 88 column 17     @typescript-eslint/no-shadow
+  61:9  warning  'removeRecent' is already declared in the upper scope on line 92 column 17  @typescript-eslint/no-shadow
+  65:9  warning  'clearRecent' is already declared in the upper scope on line 96 column 17   @typescript-eslint/no-shadow
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\useAuth.ts
+  9:14  error  'signOutAction' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\components\AlbumArtBackground.tsx
+  51:40  warning  Inline style: { backgroundColor: 'transparent' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\components\AudioPlayerHeader.tsx
+  28:20  warning  Inline style: { width: 36 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\components\AudioTransportControls.tsx
+  79:5  error  React Hook useMemo has a missing dependency: 'scaled'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\components\LyricsQueuePanel.tsx
+  100:13  warning  Inline style: { paddingVertical: 6, paddingHorizontal: 4, borderRadius: 6 }  react-native/no-inline-styles
+  108:20  warning  Inline style: { fontSize: 16, fontWeight: '700' }                            react-native/no-inline-styles
+  124:14  warning  Inline style: { paddingVertical: 6, paddingHorizontal: 4 }                   react-native/no-inline-styles
+  128:16  warning  Inline style: { fontSize: 15, lineHeight: 22 }                               react-native/no-inline-styles
+  309:32  warning  Inline style: { paddingBottom: 16 }                                          react-native/no-inline-styles
+  334:40  warning  Inline style: { marginBottom: 4 }                                            react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts
+    2:9   error    'Alert' import from 'react-native' is restricted. Use ConfirmDialog / OptionSheetDialog / Toast instead of Alert.alert  no-restricted-imports
+  648:6   error    React Hook useCallback has a missing dependency: 'addRecent'. Either include it or remove the dependency array          react-hooks/exhaustive-deps
+  851:46  warning  'fileUri' is already declared in the upper scope on line 78 column 9                                                    @typescript-eslint/no-shadow
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioGradientBg.tsx
+  71:40  warning  Inline style: { backgroundColor: 'transparent' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioPlayer.tsx
+  320:20  warning  Inline style: { marginBottom: 8, marginLeft: 20 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioSeekBar.tsx
+  293:15  warning  Inline style: { marginLeft: -30 }                      react-native/no-inline-styles
+  308:15  warning  Inline style: { shadowOpacity: 0.3, shadowRadius: 4 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioSubMenu.tsx
+  146:96  warning  Inline style: { opacity: 0.4 }  react-native/no-inline-styles
+  574:26  warning  Inline style: { height: 24 }    react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\ui\AudioVolumeSlider.tsx
+  76:17  warning  Inline style: {
+  backgroundColor: "i < activeBars ? color : 'transparent'",
+  borderWidth: 'i >= activeBars ? 1 : 0'
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\types.ts
+  96:21   error  '_mediaLane' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  96:48   error  '_startPosition' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  96:77   error  '_chapterList' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  96:105  error  '_chapterIndex' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  96:134  error  '_liveChannels' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  96:167  error  '_liveChannelIndex' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  96:200  error  '_initialError' is assigned a value but never used      @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\components\PrimaryControls.tsx
+    7:9   error    'AppText' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+  293:22  warning  Inline style: {
+  width: '100%',
+  height: '100%',
+  alignItems: 'center',
+  justifyContent: 'center'
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\components\SecondaryToolbar.tsx
+   14:9   error  'radius' is defined but never used                                                  @typescript-eslint/no-unused-vars
+   14:17  error  'spacing' is defined but never used                                                 @typescript-eslint/no-unused-vars
+  236:3   error  'eqEnabled' is defined but never used. Allowed unused args must match /^_/u         @typescript-eslint/no-unused-vars
+  237:3   error  'shuffleActive' is defined but never used. Allowed unused args must match /^_/u     @typescript-eslint/no-unused-vars
+  239:3   error  'playlistLength' is defined but never used. Allowed unused args must match /^_/u    @typescript-eslint/no-unused-vars
+  249:3   error  'onToggleEq' is defined but never used. Allowed unused args must match /^_/u        @typescript-eslint/no-unused-vars
+  250:3   error  'onTogglePlaylist' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  251:3   error  'onToggleQueue' is defined but never used. Allowed unused args must match /^_/u     @typescript-eslint/no-unused-vars
+  252:3   error  'onToggleShuffle' is defined but never used. Allowed unused args must match /^_/u   @typescript-eslint/no-unused-vars
+  253:3   error  'onToggleLoop' is defined but never used. Allowed unused args must match /^_/u      @typescript-eslint/no-unused-vars
+  257:3   error  'onScreenshot' is defined but never used. Allowed unused args must match /^_/u      @typescript-eslint/no-unused-vars
+  258:3   error  'onSleepTimer' is defined but never used. Allowed unused args must match /^_/u      @typescript-eslint/no-unused-vars
+  367:9   error  'loopLabel' is assigned a value but never used                                      @typescript-eslint/no-unused-vars
+  368:9   error  'loopActive' is assigned a value but never used                                     @typescript-eslint/no-unused-vars
+  369:9   error  'loopActiveVariant' is assigned a value but never used                              @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\components\VideoPlayerResumeOverlay.tsx
+  143:45  warning  Inline style: { fontSize: 15, fontWeight: '600', letterSpacing: 0.3 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\components\VideoPlayerSubtitlePanel.tsx
+  381:22  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\components\VideoPlayerTopBar.tsx
+    9:26  error  'typography' is defined but never used                                                 @typescript-eslint/no-unused-vars
+   21:7   error  'RotateIcon' is assigned a value but never used                                        @typescript-eslint/no-unused-vars
+  101:3   error  'onBookmarkLongPress' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\components\VolumeBrightnessOverlay.tsx
+  121:9  error  'labelOpacity' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\hooks\useVideoPlayerScreen.ts
+     3:3   error    'Alert' import from 'react-native' is restricted. Use ConfirmDialog / OptionSheetDialog / Toast instead of Alert.alert                                                                                                                                                             no-restricted-imports
+   157:31  warning  '@typescript-eslint/no-use-before-define' rule is disabled but never reported                                                                                                                                                                                                      eslint-comments/no-unused-disable
+   253:9   error    'safeSetState' is assigned a value but never used                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   494:13  warning  'settings' is already declared in the upper scope on line 327 column 9                                                                                                                                                                                                             @typescript-eslint/no-shadow
+   619:6   error    React Hook useCallback has a missing dependency: 'addRecent'. Either include it or remove the dependency array                                                                                                                                                                     react-hooks/exhaustive-deps
+  1366:24  error    'e' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  1486:11  error    'routeSourceSnapshot' is assigned a value but never used                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  1568:22  error    'e' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  1639:30  error    The ref value 'routeTypeRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'routeTypeRef.current' to a variable inside the effect, and use that variable in the cleanup function            react-hooks/exhaustive-deps
+  1640:37  error    The ref value 'routeMediaTypeRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'routeMediaTypeRef.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+  1644:32  error    The ref value 'routeSourceRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'routeSourceRef.current' to a variable inside the effect, and use that variable in the cleanup function        react-hooks/exhaustive-deps
+  1647:34  error    The ref value 'routeProviderRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'routeProviderRef.current' to a variable inside the effect, and use that variable in the cleanup function    react-hooks/exhaustive-deps
+  1649:42  error    The ref value 'routeFolderIdRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'routeFolderIdRef.current' to a variable inside the effect, and use that variable in the cleanup function    react-hooks/exhaustive-deps
+  1658:6   error    React Hook useEffect has a missing dependency: 'addRecent'. Either include it or remove the dependency array                                                                                                                                                                       react-hooks/exhaustive-deps
+  1693:6   error    React Hook useEffect has a missing dependency: 'addRecent'. Either include it or remove the dependency array                                                                                                                                                                       react-hooks/exhaustive-deps
+  2066:6   error    React Hook useEffect has missing dependencies: 'addRecent', 'loopMode', and 'queue'. Either include them or remove the dependency array                                                                                                                                            react-hooks/exhaustive-deps
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\ui\VideoPlayer.tsx
+  22:9  error  'MpvPlayer' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\RootNavigator.tsx
+  1:16  error  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+  1:27  error  'useState' is defined but never used   @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\About\components\AboutScreen.tsx
+  309:22  warning  Inline style: { width: '100%', textAlign: 'center', marginBottom: 4 }  react-native/no-inline-styles
+  337:52  warning  Inline style: { flexDirection: 'row', alignItems: 'center' }           react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\components\AlbumHero.tsx
+  95:11  warning  Inline style: { opacity: 'isDark ? 0.18 : 0.1' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\components\AlbumScreen.tsx
+   7:25  error  'TouchableOpacity' is defined but never used  @typescript-eslint/no-unused-vars
+  13:9   error  'SvgIcon' is defined but never used           @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\components\AlbumTrackList.tsx
+  74:13  warning  Inline style: {
+  backgroundColor: 'isActive\n' +
+    '                ? colors.accent.goldFaint\n' +
+    "                : 'transparent'"
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllAudio\components\AllAudioScreen.tsx
+   43:9   error    'navigation' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  133:63  warning  Inline style: { flex: 1 }                        react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllPlaylists\components\AllPlaylistsScreen.tsx
+  152:63  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllVideos\components\AllVideosScreen.tsx
+   43:9   error    'navigation' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  133:63  warning  Inline style: { flex: 1 }                        react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\components\ArchiveItemDetailScreen.tsx
+   8:9   error  'Alert' import from 'react-native' is restricted. Use ConfirmDialog / OptionSheetDialog / Toast instead of Alert.alert  no-restricted-imports
+  17:9   error  'ActivityOrb' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  47:59  error  'navigation' is defined but never used. Allowed unused args must match /^_/u                                            @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\components\ArtistHeader.tsx
+  95:11  warning  Inline style: { opacity: 'isDark ? 0.2 : 0.1' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\components\ArtistScreen.tsx
+  86:13  warning  Inline style: {
+  backgroundColor: 'isActive\n' +
+    '                ? colors.accent.goldFaint\n' +
+    "                : 'transparent'"
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\components\ArtistTopTracks.tsx
+  89:15  warning  Inline style: {
+  backgroundColor: 'isActive\n' +
+    '                  ? colors.accent.goldFaint\n' +
+    "                  : 'transparent'"
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\components\AudiobookDetailScreen.tsx
+   9:9   error  'Alert' import from 'react-native' is restricted. Use ConfirmDialog / OptionSheetDialog / Toast instead of Alert.alert  no-restricted-imports
+  18:9   error  'ActivityOrb' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  52:57  error  'navigation' is defined but never used. Allowed unused args must match /^_/u                                            @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobooksScreen\components\AudiobooksContent.tsx
+  40:3  error  'AudiobookScopeState' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Credits\components\CreditsScreen.tsx
+  217:20  warning  Inline style: { textAlign: 'center' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderBrowser\components\FolderBrowserScreen.tsx
+    9:9   error    'ActivityOrb' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+   15:9   error    'isVideoFile' is defined but never used                                                                           @typescript-eslint/no-unused-vars
+  301:5   error    React Hook useCallback has a missing dependency: 'currentPath'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  354:5   error    React Hook useCallback has a missing dependency: 'currentPath'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  499:20  warning  Inline style: { flex: 1 }                                                                                         react-native/no-inline-styles
+  507:22  warning  Inline style: { marginLeft: 8 }                                                                                   react-native/no-inline-styles
+  596:18  warning  Inline style: { flex: 1 }                                                                                         react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\FolderLinkingWizard\components\FolderLinkingWizard.tsx
+  184:17  warning  Inline style: {
+  backgroundColor: "folderType === opt.type ? colors.accent.gold : 'transparent'"
+}  react-native/no-inline-styles
+  326:22  warning  Inline style: { textAlign: 'center' }                                                                react-native/no-inline-styles
+  367:26  warning  Inline style: { textAlign: 'center' }                                                                react-native/no-inline-styles
+  474:20  warning  Inline style: { textAlign: 'center' }                                                                react-native/no-inline-styles
+  484:20  warning  Inline style: { textAlign: 'center' }                                                                react-native/no-inline-styles
+  526:18  warning  Inline style: { textAlign: 'center' }                                                                react-native/no-inline-styles
+  559:43  warning  Inline style: { fontSize: 48 }                                                                       react-native/no-inline-styles
+  567:16  warning  Inline style: { textAlign: 'center' }                                                                react-native/no-inline-styles
+  573:16  warning  Inline style: { textAlign: 'center' }                                                                react-native/no-inline-styles
+  671:16  warning  Inline style: { flex: 1 }                                                                            react-native/no-inline-styles
+  672:32  warning  Inline style: { flexGrow: 1 }                                                                        react-native/no-inline-styles
+  674:31  warning  Inline style: { flex: 1 }                                                                            react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\components\GenreScreen.tsx
+  27:9   error  'ActivityOrb' is defined but never used                                       @typescript-eslint/no-unused-vars
+  96:58  error  'navigation' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\History\components\HistoryScreen.tsx
+   47:49  error    'navigation' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+  244:24  warning  Inline style: { fontWeight: "active ? '700' : '400'" }                        react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\ContinueWatchingHero.tsx
+  75:15  warning  Inline style: { borderWidth: 3 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\FeaturedHeroBanner.tsx
+  80:48  warning  Inline style: { alignItems: 'center', justifyContent: 'center' }  react-native/no-inline-styles
+  81:79  warning  Inline style: { opacity: 0.2 }                                    react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\components\QuickAccessShelf.tsx
+  79:68  warning  Inline style: { fontSize: 10, fontWeight: '700' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\hooks\useHomeScreen.ts
+  82:10  error  'isInProgress' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Home\index.tsx
+   17:9   error    'AppText' is defined but never used                                                                                                                @typescript-eslint/no-unused-vars
+  172:5   error    React Hook useCallback has missing dependencies: 'handleBookmarksSeeAll' and 'removeBookmark'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  245:11  warning  Inline style: { shadowOpacity: 0.3, shadowRadius: 4.5 }                                                                                            react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\AlbumDetailScreen.tsx
+  275:11  warning  Inline style: { opacity: 'isDark ? 0.22 : 0.12' }  react-native/no-inline-styles
+  404:22  warning  Inline style: { fontWeight: '600' }                react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\ArtistDetailScreen.tsx
+  350:11  warning  Inline style: { opacity: 'isDark ? 0.22 : 0.12' }  react-native/no-inline-styles
+  509:28  warning  Inline style: { flex: 1 }                          react-native/no-inline-styles
+  576:47  warning  Inline style: { borderBottomWidth: 0 }             react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryAlbumsSegment.tsx
+  58:63  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryArtistsSegment.tsx
+  58:63  warning  Inline style: { flex: 1 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryFoldersSegment.tsx
+  208:30  warning  Inline style: { fontSize: 10, fontWeight: '600' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryScreenContent.tsx
+  392:93  warning  Inline style: { fontWeight: '600' }                react-native/no-inline-styles
+  419:38  warning  Inline style: { opacity: 'isDark ? 0.22 : 0.12' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LinkedFolders\components\LinkedFoldersScreen.tsx
+  413:57  warning  Inline style: { textAlign: 'center' }  react-native/no-inline-styles
+  492:58  warning  Inline style: { fontWeight: '600' }    react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVFavoritesScreen.tsx
+    8:3   error    'Alert' import from 'react-native' is restricted. Use ConfirmDialog / OptionSheetDialog / Toast instead of Alert.alert                                                                                                                                                                                                                                                                                                              no-restricted-imports
+   11:3   error    'TouchableOpacity' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   25:9   error    'AppText' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-vars
+   42:57  error    'navigation' is defined but never used. Allowed unused args must match /^_/u                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  196:35  warning  Do not define components during render. React will see a new component type on every render and destroy the entire subtreeΓÇÖs DOM nodes and state (https://reactjs.org/docs/reconciliation.html#elements-of-different-types). Instead, move this component definition out of the parent component ΓÇ£LiveTVFavoritesScreenΓÇ¥ and pass data as props. If you want to allow component creation in props, set allowAsProps option to true  react/no-unstable-nested-components
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\hooks\useLiveTVBrowser.ts
+  219:33  warning  'react-hooks/exhaustive-deps' rule is disabled but never reported  eslint-comments/no-unused-disable
+  236:33  warning  'react-hooks/exhaustive-deps' rule is disabled but never reported  eslint-comments/no-unused-disable
+  251:33  warning  'react-hooks/exhaustive-deps' rule is disabled but never reported  eslint-comments/no-unused-disable
+  258:33  warning  'react-hooks/exhaustive-deps' rule is disabled but never reported  eslint-comments/no-unused-disable
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\components\LiveTVScreen.tsx
+  381:48  error  'navigation' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Login\components\LoginScreen.tsx
+   36:47  error    'navigation' is defined but never used. Allowed unused args must match /^_/u                                             @typescript-eslint/no-unused-vars
+  143:52  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  146:42  warning  Inline style: { color: '#5C3A1E' }                                                                                       react-native/no-inline-styles
+  146:50  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  156:43  warning  Inline style: { color: '#6B4226' }                                                                                       react-native/no-inline-styles
+  156:51  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MovieDetailScreen\components\MovieDetailScreen.tsx
+   22:9   error    'ActivityOrb' is defined but never used                                       @typescript-eslint/no-unused-vars
+   54:53  error    'navigation' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+   57:34  error    'retry' is assigned a value but never used                                    @typescript-eslint/no-unused-vars
+  348:22  warning  Inline style: { height: 80 }                                                  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\styles\MoviesScreen.styles.ts
+  7:9  error  'spacing' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MoviesScreen\types\index.ts
+  12:32  error  'T' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicScreen\types\index.ts
+  12:32  error  'T' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\components\NowPlayingScreen.tsx
+   11:9   error    'ActivityOrb' is defined but never used  @typescript-eslint/no-unused-vars
+   16:9   error    'spacing' is defined but never used      @typescript-eslint/no-unused-vars
+  432:19  warning  Inline style: { width: '70%' }           react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\components\PlaylistDetailScreen.tsx
+  766:24  warning  Inline style: { fontSize: 14, fontWeight: '700' }  react-native/no-inline-styles
+  882:32  warning  Inline style: { flex: 1 }                          react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\hooks\useEpisodeActions.ts
+  26:45  error  'navigation' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\index.tsx
+    5:9   error  'spacing' is defined but never used               @typescript-eslint/no-unused-vars
+    5:18  error  'radius' is defined but never used                @typescript-eslint/no-unused-vars
+    8:9   error  'SearchBar' is defined but never used             @typescript-eslint/no-unused-vars
+  134:9   error  'handleRetry' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\components\ListStates.tsx
+  31:3  error  'isLoading' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\styles\PodcastsScreen.styles.ts
+  10:44  error  'colors' is defined but never used. Allowed unused args must match /^_/u  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastsScreen\types\index.ts
+  17:32  error  'T' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Privacy\components\PrivacyScreen.tsx
+  14:10  error    'colors' is assigned a value but never used                                                                              @typescript-eslint/no-unused-vars
+  19:46  warning  Inline style: { backgroundColor: '#D4B47A' }                                                                             react-native/no-inline-styles
+  19:64  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Profile\components\ProfileScreen.tsx
+  20:9   error  'ActivityOrb' is defined but never used         @typescript-eslint/no-unused-vars
+  61:16  error  'isLoading' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  61:27  error  'signIn' is assigned a value but never used     @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\QueueScreen\hooks\useQueueScreen.ts
+  63:9  error  'navigation' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioFavoritesScreen.tsx
+   7:9   error  'Alert' import from 'react-native' is restricted. Use ConfirmDialog / OptionSheetDialog / Toast instead of Alert.alert  no-restricted-imports
+  35:56  error  'navigation' is defined but never used. Allowed unused args must match /^_/u                                            @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\hooks\useRadioBrowser.ts
+  308:33  warning  'react-hooks/exhaustive-deps' rule is disabled but never reported  eslint-comments/no-unused-disable
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\FilterAndSortControls.tsx
+   67:26  warning  Inline style: { fontWeight: "isActive ? '600' : '400'" }  react-native/no-inline-styles
+  105:26  warning  Inline style: { fontWeight: "isActive ? '600' : '400'" }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\HighlightedText.tsx
+  54:60  warning  Inline style: { fontSize: 12 }       react-native/no-inline-styles
+  68:58  warning  Inline style: { fontSize: 12 }       react-native/no-inline-styles
+  73:30  warning  Inline style: { fontWeight: '500' }  react-native/no-inline-styles
+  91:28  warning  Inline style: { fontWeight: '600' }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\ResultTile.tsx
+  101:67  warning  Inline style: { fontSize: 12 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Search\components\SearchScreen.tsx
+   15:9   error    'ActivityOrb' is defined but never used            @typescript-eslint/no-unused-vars
+  369:11  warning  Inline style: { opacity: 'isDark ? 0.22 : 0.12' }  react-native/no-inline-styles
+  389:18  warning  Inline style: { marginBottom: 16 }                 react-native/no-inline-styles
+  447:22  warning  Inline style: { textAlign: 'center' }              react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\LinkedFoldersDialog.tsx
+  46:13  warning  Inline style: { borderWidth: 1 }  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\MpvConfigEditor.tsx
+  380:28  warning  Inline style: { alignItems: 'center' }  react-native/no-inline-styles
+  395:47  warning  Inline style: { borderWidth: 1 }        react-native/no-inline-styles
+  400:32  warning  Inline style: { flex: 1 }               react-native/no-inline-styles
+  424:32  warning  Inline style: { fontSize: 12 }          react-native/no-inline-styles
+  437:32  warning  Inline style: { fontSize: 12 }          react-native/no-inline-styles
+  452:64  warning  Inline style: { fontWeight: '600' }     react-native/no-inline-styles
+  501:53  warning  Inline style: { fontWeight: '600' }     react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\SettingsScreen.tsx
+    4:3   error    'Alert' import from 'react-native' is restricted. Use ConfirmDialog / OptionSheetDialog / Toast instead of Alert.alert  no-restricted-imports
+    9:3   error    'TouchableOpacity' is defined but never used                                                                            @typescript-eslint/no-unused-vars
+   13:9   error    'ActivityOrb' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  109:16  warning  Inline style: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }                                            react-native/no-inline-styles
+  301:30  warning  Inline style: { flexDirection: 'row', alignItems: 'center', gap: 6 }                                                    react-native/no-inline-styles
+  303:28  warning  Inline style: { width: 16, height: 16, borderRadius: 4, borderWidth: 1 }                                                react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\SubtitleLanguageDialog.tsx
+  81:17  warning  Inline style: {
+  backgroundColor: 'isSelected\r\n' +
+    '                    ? colors.accent.goldDim\r\n' +
+    "                    : 'transparent'"
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\SubtitleStyleDialog.tsx
+   67:17  warning  Inline style: {
+  backgroundColor: 'isSelected\r\n' +
+    '                    ? colors.accent.goldDim\r\n' +
+    "                    : 'transparent'"
+}  react-native/no-inline-styles
+  131:17  warning  Inline style: {
+  backgroundColor: 'isSelected\r\n' +
+    '                    ? colors.accent.goldDim\r\n' +
+    "                    : 'transparent'"
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Settings\components\ThemePickerDialog.tsx
+  41:17  warning  Inline style: {
+  backgroundColor: 'isSelected\n' +
+    '                    ? colors.accent.gold\n' +
+    "                    : 'transparent'",
+  borderWidth: 1
+}  react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowDetailScreen\components\ShowDetailScreen.tsx
+   7:9   error  'Alert' import from 'react-native' is restricted. Use ConfirmDialog / OptionSheetDialog / Toast instead of Alert.alert  no-restricted-imports
+  16:9   error  'ActivityOrb' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  31:52  error  'navigation' is defined but never used. Allowed unused args must match /^_/u                                            @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowsScreen\hooks\useShowsScreen.ts
+  66:25  error  'setSelectedGenre' is assigned a value but never used. Allowed unused elements of array destructuring must match /^_/u  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Song\components\SongScreen.tsx
+  12:9  error  'SvgIcon' is defined but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Song\hooks\useSongScreen.ts
+  6:9  error  'Alert' import from 'react-native' is restricted. Use ConfirmDialog / OptionSheetDialog / Toast instead of Alert.alert  no-restricted-imports
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Splash\components\SplashScreen.tsx
+   81:10  error    'width' is assigned a value but never used                                                                               @typescript-eslint/no-unused-vars
+  167:21  warning  'react-hooks/exhaustive-deps' rule is disabled but never reported                                                        eslint-comments/no-unused-disable
+  352:17  warning  Inline style: { alignItems: 'center', justifyContent: 'center' }                                                         react-native/no-inline-styles
+  378:54  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  388:44  warning  Inline style: { color: '#5C3A1E' }                                                                                       react-native/no-inline-styles
+  388:52  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  397:43  warning  Inline style: { color: '#6B4226' }                                                                                       react-native/no-inline-styles
+  397:51  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+  407:24  warning  Inline style: { marginTop: 48, alignItems: 'center' }                                                                    react-native/no-inline-styles
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Terms\components\TermsScreen.tsx
+  14:10  error    'colors' is assigned a value but never used                                                                              @typescript-eslint/no-unused-vars
+  19:46  warning  Inline style: { backgroundColor: '#D4B47A' }                                                                             react-native/no-inline-styles
+  19:64  error    Raw color literals are banned ΓÇö use design tokens (colors.text.primary, colors.accent.gold, ΓÇª) from src/theme/tokens.ts  no-restricted-syntax
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\index.ts
+  56:5  error  'settleTimer' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\store\slices\weatherSlice.ts
+  315:1  warning  Expected 'undefined' and instead saw 'void'  no-void
+
+Γ£û 446 problems (191 errors, 255 warnings)
+  0 errors and 21 warnings potentially fixable with the `--fix` option.
+

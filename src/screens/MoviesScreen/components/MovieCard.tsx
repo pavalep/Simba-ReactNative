@@ -43,7 +43,7 @@ interface MovieCardProps {
 export const MovieCard: React.FC<MovieCardProps> = React.memo(
   ({item, onPress, isResolving, placeholderImage, isLonelyItem}) => {
     const {colors} = useTheme();
-    const styles = useMemo(() => createMovieCardStyles(), []);
+    const styles = useMemo(() => createMovieCardStyles(colors), [colors]);
     // Local "image failed" state so we can fall back to the placeholder
     // instead of the broken-image icon. `imageUrl` comes from the IA
     // search API with a fallback to `https://archive.org/services/img/{id}`
@@ -110,9 +110,9 @@ export const MovieCard: React.FC<MovieCardProps> = React.memo(
               <LinearGradient
                 pointerEvents="none"
                 colors={[
-                  'rgba(28, 26, 22, 1)',
-                  'rgba(14, 13, 11, 1)',
-                  'rgba(0, 0, 0, 1)',
+                  colors.background.surfaceDark,
+                  colors.background.scrimStrong,
+                  colors.background.scrimOpaque,
                 ]}
                 locations={[0, 0.5, 1]}
                 style={styles.heroPlaceholderGradient}
@@ -155,9 +155,9 @@ export const MovieCard: React.FC<MovieCardProps> = React.memo(
         <LinearGradient
           pointerEvents="none"
           colors={[
-            'rgba(8, 8, 10, 0)',
-            'rgba(8, 8, 10, 0.78)',
-            'rgba(8, 8, 10, 0.95)',
+            colors.background.scrimFaint,
+            colors.background.scrimMid,
+            colors.background.scrimStrong,
           ]}
           locations={[0, 0.5, 1]}
           style={styles.heroOverlayBg}

@@ -1,0 +1,38 @@
+src/components/player/MiniAudioPlayer/MiniAudioPlayer.tsx:26:interface MiniAudioPlayerProps {
+src/components/player/MiniAudioPlayer/MiniAudioPlayer.tsx:37:export const MiniAudioPlayer: React.FC<MiniAudioPlayerProps> = () => {
+src/components/player/MiniAudioPlayer/MiniAudioPlayer.tsx:293:export default MiniAudioPlayer;
+src/modules/playback/PlaybackOverlayHost.tsx:4:import {MiniAudioPlayer} from '../../components/player/MiniAudioPlayer/MiniAudioPlayer';
+src/modules/playback/PlaybackOverlayHost.tsx:6:import {AudioPlayerModule} from './audio/AudioPlayerModule';
+src/modules/playback/PlaybackOverlayHost.tsx:26:        <MiniAudioPlayer overTabBar={false} />
+src/modules/playback/PlaybackOverlayHost.tsx:36:        <AudioPlayerModule active={active} />
+src/modules/playback/audio/AudioPlayerModule.tsx:2:import {AudioPlayer} from './ui/AudioPlayer';
+src/modules/playback/audio/AudioPlayerModule.tsx:3:import {useAudioPlayerScreen} from './hooks/useAudioPlayerScreen';
+src/modules/playback/audio/AudioPlayerModule.tsx:7:interface AudioPlayerModuleProps {
+src/modules/playback/audio/AudioPlayerModule.tsx:11:export const AudioPlayerModule: React.FC<AudioPlayerModuleProps> = ({active}) => {
+src/modules/playback/audio/AudioPlayerModule.tsx:42:  const hookData = useAudioPlayerScreen(overlayNavigation, route);
+src/modules/playback/audio/AudioPlayerModule.tsx:43:  return <AudioPlayer {...hookData} />;
+src/modules/playback/audio/components/AudioPlayerError.tsx:13:export const AudioPlayerError: React.FC<Props> = ({message, onRetry, colors}) => {
+src/modules/playback/audio/components/AudioPlayerHeader.tsx:19:export const AudioPlayerHeader: React.FC<Props> = ({onGoBack, insetsTop, colors: _colors}) => {
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:68:export function useAudioPlayerScreen(
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:312:        logError({code: 'ERR_NO_FILE', message: 'No file URI provided.', source: 'AudioPlayerScreen'});
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:328:              source: 'AudioPlayerScreen',
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:336:          logError({code: 'ERR_VALIDATE_FAIL', message: 'File validation threw unexpectedly', source: 'AudioPlayerScreen'});
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:346:          logError({code: 'ERR_INIT_FAIL', message: 'Failed to initialize audio player.', source: 'AudioPlayerScreen'});
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:374:        // Covers reopening from MiniAudioPlayer mid-track (resume, not restart).
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:400:        // Track the complete entry in Redux so MiniAudioPlayer and reopen
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:417:          logError({code: 'ERR_INIT_EXCEPTION', message: String(e), source: 'AudioPlayerScreen'});
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:674:    // Keep the file loaded so MiniAudioPlayer can control it after back;
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts:1028:          source: 'AudioPlayerScreen',
+src/modules/playback/audio/textContent.ts:2: * AudioPlayer screen — full-screen audio player with transport controls and action buttons.
+src/modules/playback/audio/ui/AudioPlayer.tsx:17:import {AudioPlayerHeader} from '../components/AudioPlayerHeader';
+src/modules/playback/audio/ui/AudioPlayer.tsx:45:export interface AudioPlayerHookData {
+src/modules/playback/audio/ui/AudioPlayer.tsx:131:export const AudioPlayer: React.FC<AudioPlayerHookData> = h => (
+src/modules/playback/audio/ui/AudioPlayer.tsx:136:    <AudioPlayerInner h={h} />
+src/modules/playback/audio/ui/AudioPlayer.tsx:140:const AudioPlayerInner: React.FC<{h: AudioPlayerHookData}> = ({h}) => {
+src/modules/playback/audio/ui/AudioPlayer.tsx:184:        <AudioPlayerHeader onGoBack={h.handleGoBack} insetsTop={h.insets.top} colors={h.colors} />
+src/modules/playback/audio/ui/AudioPlayer.tsx:417:export default AudioPlayer;
+src/modules/playback/index.ts:8:export {AudioPlayerModule} from './audio/AudioPlayerModule';
+src/navigation/navPersistence.ts.disabled:15:// AudioPlayer, NowPlaying, SongScreen) are excluded: they carry live playback
+src/navigation/types.ts:84:  // ── P48: full-page queue (from QueueSheet / MiniAudioPlayer / deep link) ──
+src/screens/ArchiveItemDetailScreen/hooks/useArchiveItemDetailScreen.ts:3:// list. Tracks stream straight into the AudioPlayer (with auto-advance).
+src/screens/RadioScreenNew/components/RadioContent.tsx:9:// Long-press → favorite / playlist / bookmark / share; press → AudioPlayer.

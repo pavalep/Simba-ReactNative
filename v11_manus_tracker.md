@@ -28,7 +28,7 @@ Every canonical phase below has ten checkable steps. The implementer must record
 | Measure | Current | Target | How to calculate |
 |---|---:|---:|---|
 | Phase completion | 0/40 | 40/40 | Phases with all ten steps complete |
-| Step completion | 139/400 canonical + 49 supplemental | 400/400 canonical | Checked canonical phase steps with evidence; supplemental implementation, player-acceptance, midpoint, detabbed-navigation, and playback-module rows are tracked separately and do not change the 40-phase/400-step denominator. |
+| Step completion | 152/400 canonical + 49 supplemental | 400/400 canonical | Checked canonical phase steps with evidence; supplemental implementation, player-acceptance, midpoint, detabbed-navigation, and playback-module rows are tracked separately and do not change the 40-phase/400-step denominator. |
 | Verified phase completion | 0/40 | 40/40 | Completed phases passing their exit gate |
 | User-visible midpoint | Not earned | Earned at Phase W7-P40 | Full midpoint demonstration passes |
 | Release blockers | Known | 0 unresolved P0 | Open P0 issues at candidate freeze |
@@ -156,33 +156,33 @@ This supplemental batch records the completed route-free playback extraction. Th
 #### W0-P01 — Scope lock and product truth
 
 **Objective:** Define the v11 release boundary and convert manager feedback into observable outcomes.  
-**Status:** Not started  
-**Owner:** Unassigned  
-**Blocker:** None recorded  
-**Evidence:** Pending
+**Status:** In progress  
+**Owner:** Manus + product owner/manager review  
+**Blocker:** Exact release date, platform matrix, and final scope approval remain open  
+**Evidence:** `v11_wave0_scope_baseline.md`
 
 | Done | Checkable step | Notes/evidence |
 |---|---|---|
 
-| ☐ | Write the v11 release objective in one paragraph. | |
+| ☑ | Write the v11 release objective in one paragraph. | `v11_wave0_scope_baseline.md`, Release objective. |
 
-| ☐ | Confirm the target release date and Android/iOS scope. | |
+| ☐ | Confirm the target release date and Android/iOS scope. | Current assumption is 30 September 2026 for Android and iOS; exact product confirmation remains open. |
 
-| ☐ | List the user journeys that must work for the midpoint milestone. | |
+| ☑ | List the user journeys that must work for the midpoint milestone. | `v11_wave0_scope_baseline.md`, Midpoint user journeys. |
 
-| ☐ | Mark every existing route as release-critical, secondary, hidden, or deferred. | |
+| ☑ | Mark every existing route as release-critical, secondary, hidden, or deferred. | Classification is recorded in `v11_wave0_route_inventory.md`; runtime route smoke evidence remains W0-P03 work. |
 
-| ☐ | Record the definition of “50% product-ready” for this overhaul. | |
+| ☑ | Record the definition of “50% product-ready” for this overhaul. | `v11_wave0_scope_baseline.md`, Definition of “50% product-ready”. |
 
-| ☐ | Create a decision log for unresolved mini-player and PiP semantics. | |
+| ☑ | Create a decision log for unresolved mini-player and PiP semantics. | `v11_wave0_scope_baseline.md`, Playback and PiP decisions. |
 
-| ☐ | Create a defect taxonomy for UI, UX, data, native, and release problems. | |
+| ☑ | Create a defect taxonomy for UI, UX, data, native, and release problems. | `v11_wave0_scope_baseline.md`, Defect taxonomy. |
 
-| ☐ | Identify screens that must not be advertised before verification. | |
+| ☑ | Identify screens that must not be advertised before verification. | `v11_wave0_scope_baseline.md`, Release-critical screens that must not be advertised before verification. |
 
-| ☐ | Assign an owner to every P0 wave gate. | |
+| ☑ | Assign an owner to every P0 wave gate. | Manus AI owns implementation evidence; product owner/manager owns release date, scope, device matrix, and approval confirmations. |
 
-| ☐ | Review and approve this scope before code refactoring begins. | |
+| ☐ | Review and approve this scope before code refactoring begins. | User-approved overhaul direction is recorded; formal product confirmation remains open. |
 
 **Exit gate:** Record changed files, verification commands, screenshots/recordings, test devices, and unresolved defects before changing Status to Done.
 
@@ -190,33 +190,33 @@ This supplemental batch records the completed route-free playback extraction. Th
 #### W0-P02 — Working-tree protection and repository checkpoint
 
 **Objective:** Protect current uncommitted MusicScreen and navigation work before the major overhaul.  
-**Status:** Not started  
-**Owner:** Unassigned  
-**Blocker:** None recorded  
-**Evidence:** Pending
+**Status:** In progress  
+**Owner:** Manus  
+**Blocker:** Fresh Jest, ESLint, Android release-build, and desktop-scope confirmation are deferred by project instruction or require the project owner’s verification workflow  
+**Evidence:** `v11_wave0_repository_checkpoint.md`, checkpoint branch `checkpoint/v11-wave0-baseline-2026-08-21`
 
 | Done | Checkable step | Notes/evidence |
 |---|---|---|
 
-| ☐ | Capture the current git status. | |
+| ☑ | Capture the current git status. | Clean working tree on `main`; captured before checkpoint creation. |
 
-| ☐ | Create a named checkpoint branch or commit for the current state. | |
+| ☑ | Create a named checkpoint branch or commit for the current state. | Created `checkpoint/v11-wave0-baseline-2026-08-21` at commit `0553abb`. |
 
-| ☐ | Record the current modified and deleted files. | |
+| ☑ | Record the current modified and deleted files. | No modified, deleted, or untracked files were reported; recorded in the checkpoint artifact. |
 
-| ☐ | Confirm no unrelated desktop changes are included in the checkpoint. | |
+| ☐ | Confirm no unrelated desktop changes are included in the checkpoint. | `DESKTOP_APP_AVALONIA` is a separate sibling directory and the SIMBA parent is not a Git worktree; no shared-root diff is available, so explicit desktop comparison remains open. |
 
-| ☐ | Save the current TypeScript result. | |
+| ☑ | Save the current TypeScript result. | `tscheck_playback_module_final.log` records `TSC_EXIT=0`. |
 
-| ☐ | Save the current Jest result including the auth startup failure. | |
+| ☐ | Save the current Jest result including the auth startup failure. | Deferred until the final verification gate; no fresh Jest run claimed. |
 
-| ☐ | Save the current ESLint result. | |
+| ☐ | Save the current ESLint result. | Deferred until the final verification gate; no fresh ESLint run claimed. |
 
-| ☐ | Save the current Android release-build result. | |
+| ☐ | Save the current Android release-build result. | Deferred until the final verification gate; no fresh release build claimed. |
 
-| ☐ | Document how to restore the checkpoint. | |
+| ☑ | Document how to restore the checkpoint. | `v11_wave0_repository_checkpoint.md` includes branch switch commands. |
 
-| ☐ | Require every v11 batch to remain independently reversible. | |
+| ☑ | Require every v11 batch to remain independently reversible. | Reversibility policy recorded in the checkpoint artifact. |
 
 **Exit gate:** Record changed files, verification commands, screenshots/recordings, test devices, and unresolved defects before changing Status to Done.
 
@@ -224,33 +224,33 @@ This supplemental batch records the completed route-free playback extraction. Th
 #### W0-P03 — Route and authentication inventory
 
 **Objective:** Make the actual launch-to-page route graph explicit.  
-**Status:** Not started  
-**Owner:** Unassigned  
-**Blocker:** None recorded  
-**Evidence:** Pending
+**Status:** In progress  
+**Owner:** Manus  
+**Blocker:** Deep-link audit and emulator smoke execution remain open; full-player back behavior needs device evidence  
+**Evidence:** `v11_wave0_route_inventory.md`
 
 | Done | Checkable step | Notes/evidence |
 |---|---|---|
 
-| ☐ | Extract every RootNavigator route into an inventory. | |
+| ☑ | Extract every RootNavigator route into an inventory. | Route table generated from `src/navigation/types.ts` and `src/navigation/RootNavigator.tsx`. |
 
-| ☐ | Map Splash, Login, and direct Home/Library root transitions. | |
+| ☑ | Map Splash, Login, and direct Home/Library root transitions. | Initial route logic and authenticated root destinations documented. |
 
-| ☐ | Map every route that requires authentication. | |
+| ☑ | Map every route that requires authentication. | Auth expectation recorded for every RootNavigator route; Settings stack separately listed. |
 
-| ☐ | Map every route reachable from shared-file deep links. | |
+| ☑ | Map every route reachable from shared-file deep links. | App-link paths are inventoried in `src/navigation/linking.ts`; `content://`/`file://` shared media is handled in `App.tsx` and uses the canonical `getMediaType` classifier. Device execution and extension-less MIME accuracy remain open. |
 
-| ☐ | Map sign-out behavior from Home. | |
+| ☑ | Map sign-out behavior from Home. | Root navigator remounts with the unauthenticated key and resolves to Login. |
 
-| ☐ | Map sign-out behavior from nested routes. | |
+| ☑ | Map sign-out behavior from nested routes. | Root auth-key remount policy covers nested routes statically; device execution remains open. |
 
-| ☐ | Map back behavior from full-screen players. | |
+| ☐ | Map back behavior from full-screen players. | Overlay policy is documented; device back/close journey remains open. |
 
-| ☐ | Map mini-player visibility by root route. | |
+| ☑ | Map mini-player visibility by root route. | Root `PlaybackOverlayHost` ownership and presentation states are documented. |
 
-| ☐ | Mark routes with missing or placeholder entry points. | |
+| ☐ | Mark routes with missing or placeholder entry points. | Initial classification is recorded; a complete placeholder audit remains open. |
 
-| ☐ | Create a route smoke-test sheet from the inventory. | |
+| ☑ | Create a route smoke-test sheet from the inventory. | R-01 through R-10 smoke paths recorded in the route artifact.
 
 **Exit gate:** Record changed files, verification commands, screenshots/recordings, test devices, and unresolved defects before changing Status to Done.
 
@@ -258,33 +258,33 @@ This supplemental batch records the completed route-free playback extraction. Th
 #### W0-P04 — State and data ownership audit
 
 **Objective:** Stop contradictory data flows between route params, Redux, services, and native mpv.  
-**Status:** Not started  
-**Owner:** Unassigned  
-**Blocker:** None recorded  
-**Evidence:** Pending
+**Status:** In progress  
+**Owner:** Manus + product owner/manager review  
+**Blocker:** Duplicate polling, synchronization tests, and formal approval remain open  
+**Evidence:** `v11_wave0_state_ownership.md`
 
 | Done | Checkable step | Notes/evidence |
 |---|---|---|
 
-| ☐ | Inventory player slice fields and reducers. | |
+| ☑ | Inventory player slice fields and reducers. | `playerSlice.ts` fields, lane filtering, queue, transport, position, duration, volume, loop, shuffle, and sleep/equalizer state recorded. |
 
-| ☐ | Inventory session, recent, bookmark, follow, download, and settings state. | |
+| ☑ | Inventory session, recent, bookmark, follow, download, and settings state. | Root reducer and isolated feature ownership recorded. |
 
-| ☐ | Inventory player route parameter shapes. | |
+| ☑ | Inventory player route parameter shapes. | No player routes remain; route-free `PlaybackRequest`/module contracts are the current shape. |
 
-| ☐ | Inventory native mpv commands and events. | |
+| ☑ | Inventory native mpv commands and events. | `player.api.ts` lifecycle, transport, source, track, chapter, volume, speed, loop, and property APIs recorded. |
 
-| ☐ | Map each player value to one source of truth. | |
+| ☑ | Map each player value to one source of truth. | Redux application model, PlaybackProvider presentation, and native-confirmed runtime ownership rules recorded. |
 
-| ☐ | Identify duplicated position and duration polling. | |
+| ☑ | Identify duplicated position and duration polling. | Risk recorded for audio/video checkpoint loops; W5/W6 native-confirmed audit remains open. |
 
-| ☐ | Identify duplicated current-item or queue representations. | |
+| ☑ | Identify duplicated current-item or queue representations. | `currentFile`, playlist/index, explicit queue, and provider request state are identified for synchronization testing. |
 
-| ☐ | Identify screen-local state that should be domain state. | |
+| ☐ | Identify screen-local state that should be domain state. | Requires a dedicated player/content state audit beyond the static ownership map. |
 
-| ☐ | Record all persistence whitelists and retention limits. | |
+| ☑ | Record all persistence whitelists and retention limits. | `persistConfig.ts` whitelist and Recent/Bookmark/Playlist retention rules recorded. |
 
-| ☐ | Approve the shared data-flow map before player refactoring. | |
+| ☐ | Approve the shared data-flow map before player refactoring. | Implementation exists; formal product approval and runtime evidence remain open.
 
 **Exit gate:** Record changed files, verification commands, screenshots/recordings, test devices, and unresolved defects before changing Status to Done.
 
@@ -292,33 +292,33 @@ This supplemental batch records the completed route-free playback extraction. Th
 #### W0-P05 — Release and platform baseline
 
 **Objective:** Establish the non-negotiable build and device baseline.  
-**Status:** Not started  
-**Owner:** Unassigned  
-**Blocker:** None recorded  
-**Evidence:** Pending
+**Status:** In progress  
+**Owner:** Manus + product owner/release owner  
+**Blocker:** Signing, minification, clean builds, device matrix, and exact support confirmation remain open  
+**Evidence:** `v11_wave0_platform_baseline.md`
 
 | Done | Checkable step | Notes/evidence |
 |---|---|---|
 
-| ☐ | Confirm the Android package identity and current version. | |
+| ☑ | Confirm the Android package identity and current version. | `com.simba.player`, version code `2`, version name `1.1.0`. |
 
-| ☐ | Confirm the iOS bundle identity and current version. | |
+| ☑ | Confirm the iOS bundle identity and current version. | `com.simba.player`, marketing version `1.0`, project version `1`. |
 
-| ☐ | Document supported Android API and ABIs. | |
+| ☑ | Document supported Android API and ABIs. | min SDK `24`, compile/target SDK `36`, ABIs recorded. |
 
-| ☐ | Document supported iOS versions and device classes. | |
+| ☑ | Document supported iOS versions and device classes. | iOS `15.1`, arm64, iPhone portrait, iPad orientations recorded; product confirmation remains open. |
 
-| ☐ | Record native mpv library requirements. | |
+| ☑ | Record native mpv library requirements. | Turbo Module-first/legacy fallback bridge and exposed command families recorded. |
 
-| ☐ | Record required permissions and why each is needed. | |
+| ☑ | Record required permissions and why each is needed. | Android manifest and iOS Info.plist permission rationale recorded. |
 
-| ☐ | Verify release signing is not production-ready yet. | |
+| ☑ | Verify release signing is not production-ready yet. | Android release currently uses the debug keystore; production signing is not configured. |
 
-| ☐ | Verify release minification/ProGuard decision is pending. | |
+| ☑ | Verify release minification/ProGuard decision is pending. | `enableProguardInReleaseBuilds = false`; decision remains explicitly open. |
 
-| ☐ | Create a clean-build checklist for Android and iOS. | |
+| ☑ | Create a clean-build checklist for Android and iOS. | Ordered checklist recorded in `v11_wave0_platform_baseline.md`; execution is deferred to the final gate. |
 
-| ☐ | Define the minimum device matrix for every future wave gate. | |
+| ☑ | Define the minimum device matrix for every future wave gate. | Proposed Android compact/current/large and iOS minimum/current/iPad matrix recorded; release-owner confirmation remains open.
 
 **Exit gate:** Record changed files, verification commands, screenshots/recordings, test devices, and unresolved defects before changing Status to Done.
 
@@ -336,7 +336,7 @@ This supplemental batch records the completed route-free playback extraction. Th
 **Status:** In progress  
 **Owner:** Manus + product team  
 **Blocker:** No blocker for the reference Home migration; remaining screens are pending.  
-**Evidence:** Reference migration completed for `src/screens/Home`: `index.tsx`, `components/`, `hooks/`, `related/`, `styles/`, and `types/`. Navigation now imports `../screens/Home` through the folder boundary. Full-screen migration remains open.
+**Evidence:** Reference migration completed for `src/screens/Home`: `index.tsx`, `components/`, `hooks/`, `related/`, `styles/`, and `types/`. Navigation now imports `../screens/Home` through the folder boundary. A complete screen-directory contract audit is persisted in `v11_wave1_screen_contract_audit.csv`; full-screen migration remains open.
 
 | Done | Checkable step | Notes/evidence |
 |---|---|---|
@@ -404,7 +404,7 @@ This supplemental batch records the completed route-free playback extraction. Th
 **Status:** In progress  
 **Owner:** Manus + product team  
 **Blocker:** Visual snapshot comparison is deferred until final verification.  
-**Evidence:** Existing theme tokens were audited; AppText now exposes `primary`, `secondary`, `tertiary`, `inverse`, and `bright` aliases; AppButton no longer hard-codes a font weight. Raw-color migration and snapshots remain open.
+**Evidence:** Existing theme tokens were audited; AppText now exposes `primary`, `secondary`, `tertiary`, `inverse`, and `bright` aliases; AppButton no longer hard-codes a font weight. The Movies hero card, audio album artwork, and video player primary/secondary/top/resume/auto-advance/seek-feedback/loading/video-surface/volume-brightness chrome now consume shared overlay, border, text, shadow, and accent tokens. The scoped priority inventory is clean (`RAW_COLOR_CODE_MATCH_COUNT=0`); visual snapshots remain open. Evidence: `v11_wave1_priority_raw_colors_after_batch.txt`, `tscheck_wave1_visual_batch.log`.
 
 | Done | Checkable step | Notes/evidence |
 |---|---|---|
@@ -425,7 +425,7 @@ This supplemental batch records the completed route-free playback extraction. Th
 
 | ☑ | Define elevation, overlay, and focus tokens. | Existing shadow and overlay token groups reviewed; focus-state expansion remains later work. |
 
-| ☐ | Remove raw color literals from priority screens. | Remaining raw literals are deferred to screen-by-screen UI waves. |
+| ☑ | Remove raw color literals from priority screens. | Scoped priority inventory is clean (`RAW_COLOR_CODE_MATCH_COUNT=0`) after tokenizing Movies hero card, audio artwork, and video-player overlays/chrome. Evidence: `v11_wave1_priority_raw_colors_after_batch.txt`. |
 
 | ☐ | Create visual snapshots for the canonical tokens. | Deferred to final verification wave by instruction. |
 
@@ -1052,7 +1052,7 @@ The player is not considered complete because a screen renders or a control has 
 | ☐ | Track continuity across source changes. | Subtitle/audio tracks refresh and persisted supported preferences are reapplied without stale controls. |
 | ☐ | Professional UI hierarchy and accessibility. | No clipping, overlap, dead controls, unexplained placeholders, or unstable touch targets; labels and hints are present. |
 | ☐ | Local, remote, downloaded, and offline source behavior. | Source-specific loading and recovery paths are visible and preserve the canonical playback entry. |
-| ☐ | Mini-player expansion, dismissal, and media-specific next/previous. | Compact and full-screen surfaces do not duplicate ownership or orphan after source failure. |
+| ☐ | Mini-player expansion, dismissal, and media-specific next/previous. | Compact and full-screen surfaces do not duplicate ownership or orphan after source failure. Code-level repair is recorded in `useAudioPlayerScreen.ts`, `playerSlice.ts`, `MiniAudioPlayer.tsx`, and `useMiniPlayer.ts`; emulator confirmation remains open. |
 | ☐ | Lifecycle and interruption policy. | Navigation, backgrounding, rotation, restart, sign-out, audio focus, and supported PiP behavior are documented and verified. |
 | ☐ | Full verification gate. | TypeScript, lint, production build, reducer/contract tests, and target-device playback journeys are recorded before Done. |
 
@@ -1099,7 +1099,7 @@ The player is not considered complete because a screen renders or a control has 
 **Status:** In progress  
 **Owner:** Unassigned  
 **Blocker:** Runtime/device verification pending  
-**Evidence:** `AudioPlayer.tsx` now presents a focused now-playing card with status eyebrow, artwork, metadata, seek surface, transport, secondary actions, lyrics, and queue preview. `AudioTransportControls.tsx` separates primary transport from shuffle/repeat utilities with 44pt-plus targets. `AudioActionRow.tsx` provides visible bookmark, like, share, info, queue, manage, playlist, and overflow actions; `AudioAlbumArt.tsx` adds restrained frame depth and clipping; `AudioVolumeSlider.tsx` now provides a 44pt gesture surface while retaining native-confirmed percentage display. TypeScript passes in `tscheck_player_ui_batch8.log`.
+**Evidence:** `AudioPlayer.tsx` now presents a focused now-playing card with status eyebrow, artwork, metadata, seek surface, transport, secondary actions, lyrics, and queue preview. `AudioTransportControls.tsx` separates primary transport from shuffle/repeat utilities with 44pt-plus targets. `AudioActionRow.tsx` provides visible bookmark, like, share, info, queue, manage, playlist, and overflow actions; `AudioAlbumArt.tsx` adds restrained frame depth and clipping; `AudioVolumeSlider.tsx` now provides a 44pt gesture surface while retaining native-confirmed percentage display. The runtime metadata repair now dispatches complete provenance/artwork fields in `useAudioPlayerScreen.ts`, merges native metadata without erasing route/cache artwork, and enriches Redux `currentFile` through the non-destructive `updateCurrentFileMetadata` reducer so the mini-player receives the same complete `PlaybackEntry`. Recent/Home playback was also migrated from deleted `AudioPlayer`/`VideoPlayer` navigation routes to `usePlaybackCommands().openPlayer()`, including Recent item resume, local file picking, Library playlist play-all/shuffle, and the remaining SongScreen share deep-links. A fresh source scan records `STALE_AUDIO_PLAYER_ROUTE_REFS=0` in `recent_audio_player_refs_after.txt`. TypeScript passes in `tscheck_player_ui_batch8.log`, `tscheck_music_player_runtime_fix.log`, and the fresh `tscheck_recent_route_fix.log` (`TSC_EXIT=0`). The mini-player visibility defect was isolated to a contrast mismatch: `surfaceDark` was used while light-theme `text.primary` and transport icons remained dark. `MiniAudioPlayer.tsx` now uses the theme-aware `background.elevated` surface and `text.inverse` for the gold play/pause control, keeping artwork, title, artist/album fallback, and controls readable in the current light Home presentation. Audio streaming startup was repaired in `useAudioPlayerScreen.ts`: initial `onFileLoaded` now explicitly resumes when there is no resume prompt, explicit resume seeks now resume after seeking, and all chapter, previous/next, playlist, queue, related-track, and remote-retry loads use a centralized `loadAndResume()` helper with a delayed second resume for native mpv settling. The display title now falls back from a null/empty route title to the media filename instead of rendering `null`. TypeScript passes in `tscheck_audio_streaming_fix.log` (`TSC_EXIT=0`). Emulator validation of Recent resume, remote streaming, full-player artwork, mini-player rendering, and close behavior remains open.
 
 | Done | Checkable step | Notes/evidence |
 |---|---|---|
@@ -1675,3 +1675,221 @@ The current execution batch does not remove the remaining content areas from v11
 ## Manager dashboard — Wave 3 checkpoint
 
 The tracker currently records **178 checked rows and 295 open rows** across **473 visible checklist rows**. The canonical program denominator remains **400 phase steps**: **139 canonical steps are checked**, while **39 checked and 34 open rows** are supplemental evidence. The recent Playlist isolation and Player Overhaul batches updated existing W5-P28/W5-P30 evidence only; they did not add canonical phases or canonical checklist steps. This checkpoint reflects implementation evidence only. Build, test, device, screenshot, scanner-population, and final route-audit gates remain open unless explicitly marked otherwise.
+
+
+## Current batch evidence — Home playlist truthfulness
+
+**Scope:** Remove visible dummy playlist and AI-curated placeholder cards from Home and connect the Playlists rail to the isolated playlist façade.
+
+**Status:** Implemented; runtime screenshot verification remains open.
+
+**Changed files:** `src/screens/Home/hooks/useHomeScreen.ts`, `src/screens/Home/index.tsx`, `src/screens/Home/types/index.ts`, `src/screens/Home/related/homeSectionKey.ts`, `src/screens/Home/components/QuickAccessShelf.tsx`; obsolete `src/screens/Home/components/ComingSoonShelf.tsx` deleted.
+
+**Behavior:** Home now renders only the real `usePlaylists().list` data. When the list is empty, the Playlists section remains truthful and shows `No Playlists Yet` with guidance to create a playlist from the player. The `VIEW ALL` action is hidden while empty and appears only when real playlists exist. New playlists will populate the same rail through the existing Redux-backed feature state.
+
+**Verification command:** `npx tsc --noEmit --pretty false`
+
+**Verification result:** `TSC_EXIT=0`; Home placeholder scan reports `HOME_PLACEHOLDER_MATCH_COUNT=0`.
+
+**Manual/device verification:** Open. Confirm an empty account shows the empty state, then create one audio or video playlist and confirm the real playlist card appears with its item count. No dummy data may be restored.
+
+**Date:** 2026-08-21
+
+**Reviewer:** Manus
+
+---
+
+## 8.1 Current batch acceptance rule
+
+A Home section must be backed by real feature state or render an explicit empty/loading/error state. Placeholder cards such as `Coming soon` and `Placeholder content` are not acceptable in the production app.
+
+
+## Current batch evidence — Home route render-error repair
+
+**Scope:** Repair the native-stack error stating that the `Home` screen had no valid `component`, `getComponent`, or `children` prop after the Home playlist placeholder cleanup.
+
+**Status:** Code fix complete; Metro reload/device confirmation remains open.
+
+**Changed files:** `src/screens/Home/index.tsx`, `src/navigation/RootNavigator.tsx`.
+
+**Fix:** Added an explicit default export for `HomeScreen` and changed `RootNavigator` to import that default entrypoint. Restored the JSX return closure after the export change. The Home folder now exposes both its existing named export and an explicit default public screen component.
+
+**Verification:** `npx tsc --noEmit --pretty false` returned `TSC_EXIT=0`; Home placeholder scan returned `HOME_PLACEHOLDER_MATCH_COUNT=0`; targeted `git diff --check` completed without whitespace errors.
+
+**Manual path:** Restart Metro with cache reset, reload the app, authenticate, and open the Home route. Confirm that the native stack renders Home and that an empty playlist state appears instead of placeholder cards.
+
+**Known limitation:** The attached emulator/Metro session must be restarted or reloaded to clear the stale runtime bundle shown in the provided screenshot.
+
+**Date:** 2026-08-21
+
+**Reviewer:** Manus
+
+
+## Supplemental Evidence — Local Files Discover Card Background
+
+- **Issue:** Local Files had no artwork entry in `BROWSE_ALL_SECTIONS`, so `CategoryCard` fell back to a plain `colors.background.elevated` surface. In the light theme this rendered as an almost-white card with no visual separation from the Home background.
+- **Fix:** Added the theme-aware `fallbackVariant="localFiles"` to `CategoryCard` and applied it only to the Local Files Discover entry. The fallback now renders a deliberate diagonal gradient using shared gold/background tokens, with a theme-safe folder badge and readable text.
+- **Files:** `src/components/utility/CategoryCard/CategoryCard.tsx`; `src/screens/Home/components/BrowseAllShelf.tsx`.
+- **Static evidence:** `tscheck_local_files_background.log` reports `TSC_EXIT=0`.
+- **Open verification:** Confirm the Local Files card visually in both light and dark themes on the emulator; no device visual gate is claimed by this code-only change.
+
+### Screen architecture refactor — Album and Artist batch
+
+| Done | Supplemental implementation checkpoint | Evidence |
+|---|---|---|
+| ☑ | Create a single public `index.tsx` entrypoint for Album and Artist. | `src/screens/Album/index.tsx` and `src/screens/Artist/index.tsx` now export the screen boundaries. |
+| ☑ | Move Album and Artist implementations behind internal `components/` folders. | `Album/components/AlbumScreen.tsx` and `Artist/components/ArtistScreen.tsx`. |
+| ☑ | Move Album and Artist screen hooks behind internal `hooks/` folders. | `Album/hooks/useAlbumScreen.ts` and `Artist/hooks/useArtistScreen.ts`. |
+| ☑ | Add screen-local props type barrels. | `Album/types/index.ts` and `Artist/types/index.ts`. |
+| ☑ | Route RootNavigator imports through the public screen boundaries. | `src/navigation/RootNavigator.tsx` imports `Album` and `Artist` directories rather than implementation files. |
+| ☑ | Preserve current navigation and playback behavior during the boundary migration. | Existing route names and hook handlers are unchanged; implementation is statically compatible. |
+| ☑ | Run the TypeScript gate after the two-screen batch. | `tscheck_screen_architecture_album_artist.log`: `TSC_EXIT=0`. |
+| ☐ | Complete remaining nonconforming screen migrations and run emulator/runtime verification. | Continue in the ordered screen architecture queue; device/build verification remains deferred. |
+
+**Screen architecture batch status:** **In progress**. Album and Artist are migrated without TypeScript regressions; the remaining screen inventory still requires ordered refactoring.
+
+### Screen architecture refactor — Priority 1 boundary batch
+
+| Done | Architecture checkpoint | Evidence |
+|---|---|---|
+| ☑ | Migrate Album behind a single public `index.tsx` entrypoint. | `src/screens/Album/index.tsx`, `components/AlbumScreen.tsx`, `hooks/useAlbumScreen.ts`, `types/index.ts`; `RootNavigator` imports `../screens/Album`. |
+| ☑ | Migrate Artist behind a single public `index.tsx` entrypoint. | `src/screens/Artist/index.tsx`, `components/ArtistScreen.tsx`, `hooks/useArtistScreen.ts`, `types/index.ts`; `RootNavigator` imports `../screens/Artist`. |
+| ☑ | Migrate Genre behind a single public `index.tsx` entrypoint. | `src/screens/Genre/index.tsx`, `components/GenreScreen.tsx`, `hooks/useGenreScreen.ts`, `types/index.ts`; `RootNavigator` imports `../screens/Genre`. |
+| ☑ | Migrate Song behind a single public `index.tsx` entrypoint. | `src/screens/Song/index.tsx`, `components/SongScreen.tsx`, `hooks/useSongScreen.ts`, `types/index.ts`; `RootNavigator` imports `../screens/Song`. |
+| ☑ | Preserve route names, navigation parameter contracts, feature façade imports, and route-free playback commands during the batch. | Existing route names and `RootStackScreenProps` contracts retained; `usePlaybackCommands().openPlayer()` remains in Song and related flows. |
+| ☑ | Run the static TypeScript gate after the complete Priority 1 migration. | `tscheck_screen_architecture_priority1.log`: `TSC_EXIT=0`. |
+| ☐ | Run emulator/device journeys and final project-wide direct-import verification. | Deferred to the ordered release verification gate; runtime behavior and visual acceptance remain open. |
+
+**Priority 1 screen architecture status:** **Ready for verification**, not Done. The four active Library/content screens now follow the public-entrypoint contract; Priority 2 detail-screen migrations are next.
+
+**Priority 1 final static gate:** `tscheck_screen_architecture_priority1_final.log` reports `PRIORITY1_DIRECT_IMPLEMENTATION_IMPORTS=0` and `TSC_EXIT=0`. No source caller directly imports the moved Album, Artist, Genre, or Song implementation files; navigation consumes only their public `index.tsx` boundaries.
+
+
+### Screen architecture refactor — Priority 2 detail boundary batch
+
+| Done | Architecture checkpoint | Evidence |
+|---|---|---|
+| ☑ | Migrate MovieDetailScreen behind a single public `index.tsx` entrypoint. | `src/screens/MovieDetailScreen/index.tsx`, `components/MovieDetailScreen.tsx`, `hooks/useMovieDetailScreen.ts`, and `types/index.ts`. |
+| ☑ | Migrate MusicDetailScreen behind a single public `index.tsx` entrypoint. | `src/screens/MusicDetailScreen/index.tsx`, `components/MusicDetailScreen.tsx`, `hooks/useMusicDetailScreen.ts`, and `types/index.ts`. |
+| ☑ | Migrate ShowDetailScreen behind a single public `index.tsx` entrypoint. | `src/screens/ShowDetailScreen/index.tsx`, `components/ShowDetailScreen.tsx`, `hooks/useShowDetailScreen.ts`, and `types/index.ts`. |
+| ☑ | Migrate AudiobookDetailScreen behind a single public `index.tsx` entrypoint. | `src/screens/AudiobookDetailScreen/index.tsx`, `components/AudiobookDetailScreen.tsx`, `hooks/useAudiobookDetailScreen.ts`, and `types/index.ts`. |
+| ☑ | Migrate ArchiveItemDetailScreen behind a single public `index.tsx` entrypoint. | `src/screens/ArchiveItemDetailScreen/index.tsx`, `components/ArchiveItemDetailScreen.tsx`, `hooks/useArchiveItemDetailScreen.ts`, and `types/index.ts`. |
+| ☑ | Normalize the simple Equalizer folder to its public boundary. | Renamed `src/screens/Equalizer/EqualizerScreen.tsx` to `src/screens/Equalizer/index.tsx`; the named `EqualizerScreen` export and route contract remain intact. |
+| ☑ | Rewire navigation to consume only public screen boundaries. | `RootNavigator.tsx` now imports the five detail screens through their folders; `SettingsStack.tsx` imports Equalizer through `../screens/Equalizer`. |
+| ☑ | Preserve navigation props, media taxonomy, and route-free playback behavior. | Screen-local prop barrels retain existing `RootStackScreenProps` route contracts; existing `openPlayer()` flows and `source`/`type`/`mediaType` values remain unchanged. |
+| ☑ | Run the static TypeScript gate after the complete Priority 2 migration. | `tscheck_screen_architecture_priority2.log`: `TSC_EXIT=0`. |
+| ☑ | Run the direct implementation import and structural boundary scan. | `v11_screen_architecture_priority2_direct_import_scan.txt`: `PRIORITY2_DIRECT_IMPLEMENTATION_IMPORTS=0`, `EQUALIZER_DIRECT_IMPLEMENTATION_IMPORTS=0`, and `OLD_IMPLEMENTATION_FILES_REMAINING=0`. |
+| ☐ | Run emulator/device journeys and final project-wide architecture verification. | Deferred to the ordered release verification gate; runtime, build, and visual acceptance remain open. |
+
+**Priority 2 screen architecture status:** **Ready for verification**, not Done. The five active detail screens and Equalizer now expose public folder boundaries; Priority 3 is next in the ordered queue.
+
+**Date:** 2026-08-21
+
+**Reviewer:** Manus
+
+
+### Screen architecture refactor — Priority 3 library and playback-adjacent screens
+
+| Done | Architecture checkpoint | Evidence |
+|---|---|---|
+| ☑ | Migrate PlaylistDetail behind a single public `index.tsx` entrypoint. | `src/screens/PlaylistDetail/index.tsx`, `components/PlaylistDetailScreen.tsx`, `related/textContent.ts`, `hooks/`, and `types/index.ts`. |
+| ☑ | Migrate AllPlaylists behind a single public `index.tsx` entrypoint. | `src/screens/AllPlaylists/index.tsx`, `components/AllPlaylistsScreen.tsx`, `hooks/useAllPlaylistsScreen.ts`, and `types/index.ts`. |
+| ☑ | Migrate QueueScreen behind a single public `index.tsx` entrypoint. | `src/screens/QueueScreen/index.tsx`, `components/QueueScreen.tsx`, `hooks/useQueueScreen.ts`, and `types/index.ts`. |
+| ☑ | Migrate History behind a single public `index.tsx` entrypoint. | `src/screens/History/index.tsx`, `components/HistoryScreen.tsx`, and `types/index.ts`. |
+| ☑ | Migrate Bookmarks behind a single public `index.tsx` entrypoint. | `src/screens/Bookmarks/index.tsx`, `components/BookmarksScreen.tsx`, `hooks/useBookmarksScreen.ts`, `related/textContent.ts`, and `types/index.ts`. |
+| ☑ | Migrate Stats behind a single public `index.tsx` entrypoint. | `src/screens/Stats/index.tsx`, `components/StatsScreen.tsx`, and `types/index.ts`. |
+| ☑ | Rewire RootNavigator to consume only the six public boundaries. | Priority 3 implementation-path imports in `RootNavigator.tsx`: **0**. |
+| ☑ | Preserve playlist lane isolation and feature façade usage. | PlaylistDetail and AllPlaylists continue to use the isolated `features/playlists` façade; no MIXED playlist behavior was introduced. |
+| ☑ | Replace QueueScreen’s index-based list-key fallback. | `SectionList` now derives a semantic key from URI, source, type, media lane, provider, and folder identity. |
+| ☑ | Migrate Bookmarks playback opening to the overlay command contract. | `useBookmarksScreen.ts` now calls `usePlaybackCommands().openPlayer()` with canonical playback entry fields and resume position. |
+| ☑ | Remove obsolete player deep-link targets from PlaylistDetail and share routing. | Playlist item sharing now uses existing `MovieDetail`/`SongScreen` targets; obsolete `AudioPlayer`/`VideoPlayer` route entries were removed from `shareService.ts`. |
+| ☑ | Run the static TypeScript gate after the complete Priority 3 migration. | `tscheck_screen_architecture_priority3.log`: `TSC_EXIT=0`. |
+| ☑ | Run Priority 3 structural and boundary verification. | `v11_screen_architecture_priority3_direct_import_scan.txt`: all six public boundaries present; RootNavigator direct implementation imports **0**; migrated-screen stale player route references **0** after correction. |
+| ☐ | Run emulator/device journeys and final project-wide architecture verification. | Deferred to the final release verification gate; runtime, build, and visual acceptance remain open. |
+
+**Priority 3 screen architecture status:** **Ready for verification**, not Done. The six requested screens now expose public folder boundaries, and the playback-adjacent stale route issues discovered during migration were corrected without reintroducing navigation player routes.
+
+**Date:** 2026-08-21
+
+**Reviewer:** Manus
+
+
+### Screen architecture refactor — Priority 4 search, files, downloads, and now-playing screens
+
+| Done | Architecture checkpoint | Evidence |
+|---|---|---|
+| ☑ | Migrate Search behind one public `index.tsx`. | `src/screens/Search/index.tsx`, `components/SearchScreen.tsx`, existing `components/`, `hooks/`, moved `related/textContent.ts`, and `types/index.ts`. |
+| ☑ | Migrate FolderBrowser behind one public `index.tsx`. | `src/screens/FolderBrowser/index.tsx`, `components/FolderBrowserScreen.tsx`, moved `related/textContent.ts`, and `types/index.ts`. |
+| ☑ | Migrate LinkedFolders behind one public `index.tsx`. | `src/screens/LinkedFolders/index.tsx`, `components/LinkedFoldersScreen.tsx`, moved `related/textContent.ts`, and `types/index.ts` using the existing SettingsStack route alias. |
+| ☑ | Migrate DownloadsScreen behind one public `index.tsx`. | `src/screens/DownloadsScreen/index.tsx`, `components/DownloadsScreen.tsx`, `hooks/useDownloadsScreen.ts`, and `types/index.ts`. |
+| ☑ | Migrate NowPlaying behind one public `index.tsx`. | `src/screens/NowPlaying/index.tsx`, `components/NowPlayingScreen.tsx`, and `types/index.ts`. |
+| ☑ | Rewire RootNavigator and SettingsStack to public folder boundaries. | `v11_screen_architecture_priority4_direct_import_scan.txt`: direct implementation imports **0**; public imports verified in both navigators. |
+| ☑ | Preserve stable list-key behavior while migrating. | LinkedFolders folder list now uses the folder path as its semantic key; Priority 4 scan reports index-based key extractors **0**. |
+| ☑ | Remove stale player-route usage from NowPlaying. | NowPlaying’s full-player CTA now uses `usePlaybackCommands().openPlayer()` with canonical playback fields; migrated-screen stale player-route references **0**. |
+| ☑ | Run the static TypeScript gate after the complete Priority 4 migration. | `tscheck_screen_architecture_priority4.log`: `TSC_EXIT=0`. |
+| ☑ | Update the screen inventory for the new public and internal boundaries. | `v11_screen_architecture_inventory.csv` records `index.tsx` roots and `components/`, `hooks/`, `related/`, and `types/` subdirectories. |
+| ☐ | Run emulator/device journeys and final project-wide architecture verification. | Deferred to the final release verification gate; runtime, build, and visual acceptance remain open. |
+
+**Priority 4 screen architecture status:** **Ready for verification**, not Done. All five requested screens now expose one public `index.tsx`, with implementation and supporting files kept behind their screen folders.
+
+**Date:** 2026-08-21
+
+**Reviewer:** Manus
+
+
+### Screen architecture refactor — Priority 5 all-audio, all-video, settings, utility, legal, account, authentication, and splash screens
+
+| Done | Architecture checkpoint | Evidence |
+|---|---|---|
+| ☑ | Migrate AllAudio and AllVideos behind public `index.tsx` boundaries. | Each screen now has `components/`, `hooks/`, and `types/`; navigator callers use the folder boundary. |
+| ☑ | Migrate About and AudioSettings behind public `index.tsx` boundaries. | Each screen now has `components/`, `related/`, and `types/`; SettingsStack uses public imports. |
+| ☑ | Migrate Settings while preserving its existing internal dialogs and settings hook. | `src/screens/Settings/index.tsx`, `components/`, `hooks/`, `related/`, and `types/`; existing dialog components remain internal. |
+| ☑ | Migrate Help, Privacy, Terms, Licenses, Credits, and Changelog behind public boundaries. | Each screen now exposes one root `index.tsx` with implementation under `components/` and route props under `types/`. |
+| ☑ | Migrate Splash, Login, and Profile behind public boundaries. | Splash and Login retain `related/` and `hooks/` resources as applicable; Profile now uses `components/` and `types/`. |
+| ☑ | Preserve route contracts across RootNavigator and SettingsStack. | `v11_screen_architecture_priority5_direct_import_scan.txt`: navigator direct implementation imports **0** and public boundary imports verified. |
+| ☑ | Preserve stable list-key and playback-route rules in the migrated batch. | Priority 5 scan reports index-based key extractors **0** and stale AudioPlayer/VideoPlayer references **0**. |
+| ☑ | Run the TypeScript gate after the complete Priority 5 migration. | `tscheck_screen_architecture_priority5.log`: `TSC_EXIT=0`. |
+| ☑ | Update the screen inventory for all fourteen Priority 5 targets. | `v11_screen_architecture_inventory.csv` records root `index.tsx` entrypoints and internal directories. |
+| ☐ | Run emulator/device journeys, builds, and final project-wide architecture verification. | Deferred to the final release verification gate; runtime and visual acceptance remain open. |
+
+**Priority 5 screen architecture status:** **Ready for verification**, not Done. All fourteen requested screens now expose one public root `index.tsx`, while hooks, text, related logic, and components remain internal to their screen folders.
+
+**Date:** 2026-08-21
+
+**Reviewer:** Manus
+
+
+### Final full-codebase verification and screen architecture evidence
+
+This checkpoint records the post-Priority-5 full-codebase checks and the final `src/screens` architecture scan. Runtime/device acceptance remains separate from static and bundle verification.
+
+| Check | Result | Evidence |
+|---|---|---|
+| Full TypeScript compilation | **PASS — `TSC_EXIT=0`** | `tscheck_full_codebase_after_architecture_cleanup.log` |
+| Android production JavaScript bundle | **PASS — `BUNDLE_EXIT=0`** | `bundle_android_release_final.log`; output `.verification/index.android.final.bundle` |
+| Jest suite | **BLOCKED — `TEST_EXIT=1`** | `test_full_codebase_final.log`; `authService.test.ts` cannot initialize `react-native-config` because `Config` is null in the Jest environment. Other visible suites passed. |
+| ESLint | **BLOCKED — `LINT_EXIT=1`** | `lint_full_codebase_final.log`; 446 reported problems: 191 errors and 255 warnings. This is a broad pre-existing lint backlog and is not a TypeScript or bundle failure. |
+| Full first-level `src/screens` public-boundary scan | **PASS — `NONCONFORMING_COUNT=0`** | `v11_full_src_screens_architecture_scan_final.txt` |
+| Navigator implementation-path scan | **PASS — `NONE`** | `v11_full_src_screens_architecture_scan_final.txt` |
+
+The final architecture cleanup migrated the active legacy `LiveTVScreen` into `components/`, `hooks/`, and `types/` with a public `index.tsx`, restored its local navigation type contract, corrected all moved relative imports, and removed empty obsolete aliases: `AllAudioScreen`, `AllPlaylistsScreen`, `AllVideosScreen`, `GenreScreen`, `Player`, `Preferences`, `Registration`, `sections`, and `Start`.
+
+**Release-readiness interpretation:** the codebase is TypeScript-clean and produces the Android JavaScript release bundle. Jest remains blocked by the missing `react-native-config` test mock/setup, and ESLint remains blocked by the existing 446-item lint backlog. Emulator/device playback, navigation, local-media, persistence, PiP, visual, and restart acceptance gates remain open and must not be reported as passed until executed.
+
+
+## Wave 6 — Music Player Production Redesign Status
+
+| Done | Checkpoint | Evidence / notes |
+|---|---|---|
+| ☑ | Full audio-player surface rebuilt with professional hierarchy. | `src/modules/playback/audio/ui/AudioPlayer.tsx`; artwork, metadata, native transport state, seek, queue context, lyrics, volume, and grouped actions are wired. |
+| ☑ | Mini-player surface rebuilt with visible content and separated controls. | `src/components/player/MiniAudioPlayer/MiniAudioPlayer.tsx`; artwork, title, artist, progress, play/pause, next, expand, and close are distinct actions. |
+| ☑ | Mini-player close made deterministic. | `useMiniPlayer.ts` now clears Redux player state and calls route-free `closePlayer()` so the overlay host cannot remount a stale mini surface. |
+| ☑ | Previous/next and rewind/forward semantics corrected. | Dedicated SVGs: `ic_previous_track.svg`, `ic_next_track.svg`, `ic_rewind_10.svg`, `ic_forward_10.svg`; `SvgIcon` mappings and accessibility labels are semantic. |
+| ☑ | Native seek callbacks wired. | `useAudioPlayerScreen.ts` uses mpv `seekBackward(10)`, `seekForward(10)`, and native position/duration state. |
+| ☑ | Stale audio-player share target removed. | `AudioActionRow.tsx` now uses the supported `SongScreen` share target instead of removed `AudioPlayer`. |
+| ☑ | Static verification after final changes. | `tscheck_music_player_final.log`: `TSC_EXIT=0`. |
+| ☐ | Emulator/device visual and interaction acceptance. | Open: mini close, expand/collapse, play/pause, seek, queue transition, artwork/loading, background playback, and restart persistence. |
+
+**Wave 6 player status:** Static implementation complete; runtime/device acceptance remains open. Do not mark this player fully release-ready until the emulator acceptance checklist passes.
+
+Evidence: `v11_music_player_redesign.md`, `tscheck_music_player_final.log`

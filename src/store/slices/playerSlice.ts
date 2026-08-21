@@ -86,6 +86,23 @@ const playerSlice = createSlice({
       state.currentPosition = 0;
     },
 
+    /**
+     * Enrich the active entry after native metadata/artwork resolution.
+     * This intentionally does not reset playback state or position.
+     */
+    updateCurrentFileMetadata(state, action: PayloadAction<Partial<PlaylistEntry>>) {
+      if (!state.currentFile) return;
+      state.currentFile = {...state.currentFile, ...action.payload};
+      const currentUri = state.currentFile.uri;
+      const playlistIndex = state.playlist.findIndex(entry => entry.uri === currentUri);
+      if (playlistIndex >= 0) {
+        state.playlist[playlistIndex] = {
+          ...state.playlist[playlistIndex],
+          ...action.payload,
+        };
+      }
+    },
+
     /** Replace entire playlist */
     setPlaylist(state, action: PayloadAction<PlaybackEntryInput[]>) {
       state.playlist = normalizeSingleLane(action.payload);
@@ -397,6 +414,7 @@ const playerSlice = createSlice({
 
 export const {
   playFile,
+  updateCurrentFileMetadata,
   setPlaylist,
   loadPlaylistToPlayer,
   addToPlaylist,

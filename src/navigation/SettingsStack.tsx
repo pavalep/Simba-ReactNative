@@ -15,17 +15,17 @@ import type {
 } from './types';
 import {SettingsTabParamList} from './types';
 import {SettingsScreen} from '../screens/Settings';
-import {AboutScreen} from '../screens/About/AboutScreen';
-import {AudioSettingsScreen} from '../screens/AudioSettings/AudioSettingsScreen';
-import {EqualizerScreen} from '../screens/Equalizer/EqualizerScreen';
-import {LinkedFoldersScreen} from '../screens/LinkedFolders/LinkedFoldersScreen';
-import {FolderLinkingWizard} from '../screens/FolderLinkingWizard/FolderLinkingWizard';
-import {ChangelogScreen} from '../screens/Changelog/ChangelogScreen';
-import {LicensesScreen} from '../screens/Licenses/LicensesScreen';
-import {CreditsScreen} from '../screens/Credits/CreditsScreen';
-import {PrivacyScreen} from '../screens/Privacy/PrivacyScreen';
-import {TermsScreen} from '../screens/Terms/TermsScreen';
-import {HelpScreen} from '../screens/Help/HelpScreen';
+import {AboutScreen} from '../screens/About';
+import {AudioSettingsScreen} from '../screens/AudioSettings';
+import {EqualizerScreen} from '../screens/Equalizer';
+import {LinkedFoldersScreen} from '../screens/LinkedFolders';
+import {FolderLinkingWizard} from '../screens/FolderLinkingWizard';
+import {ChangelogScreen} from '../screens/Changelog';
+import {LicensesScreen} from '../screens/Licenses';
+import {CreditsScreen} from '../screens/Credits';
+import {PrivacyScreen} from '../screens/Privacy';
+import {TermsScreen} from '../screens/Terms';
+import {HelpScreen} from '../screens/Help';
 import {ScreenErrorBoundary} from '../components/feedback/ScreenErrorBoundary';
 
 const Stack = createNativeStackNavigator<SettingsTabParamList>();

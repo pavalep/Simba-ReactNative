@@ -82,7 +82,7 @@ export const AudioActionRow: React.FC<AudioActionRowProps> = ({
 
   const handleShare = useCallback(async () => {
     await shareContent({
-      route: 'AudioPlayer',
+      route: 'SongScreen',
       params: shareUri
         ? {fileUri: shareUri, fileTitle: shareTitle ?? '', source: source ?? 'api'}
         : undefined,

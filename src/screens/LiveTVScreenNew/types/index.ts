@@ -6,6 +6,7 @@ export interface ActiveFilterChipsProps {
   onClear: (id: 'category') => void;
 }
 
+export type {RootStackScreenProps} from '../../../navigation/types';
 export type LiveTVScreenProps = import('../../../navigation/types').RootStackScreenProps<'LiveTVScreen'>;
 export type LiveTVFilterId = 'category';
 export type LiveTVMediaType = 'video';

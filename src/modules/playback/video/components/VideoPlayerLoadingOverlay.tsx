@@ -31,7 +31,7 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
         overlay: {
           ...StyleSheet.absoluteFill,
           // Translucent dark background overlay: allows top bar and bottom controls to stay rendered on top (zIndex > 6)
-          backgroundColor: 'rgba(0,0,0,0.75)',
+          backgroundColor: colors.background.scrimStrong,
           zIndex: 6,
         },
         content: {
@@ -84,7 +84,7 @@ export const VideoPlayerLoadingOverlay: React.FC<VideoPlayerLoadingOverlayProps>
           <SvgIcon
             name="chevronRight"
             size={20}
-            color="#FFFFFF"
+            color={colors.text.bright}
             style={{transform: [{rotate: '180deg'}]}}
           />
         </TouchableOpacity>

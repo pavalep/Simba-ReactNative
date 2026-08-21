@@ -242,7 +242,7 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
           break;
         case 'share':
           shareContent({
-            route: 'AudioPlayer',
+            route: 'SongScreen',
             params: {fileUri: row.url, fileTitle: row.name, source: 'radio'},
             title: row.name,
             subtitle: row.subtitle,

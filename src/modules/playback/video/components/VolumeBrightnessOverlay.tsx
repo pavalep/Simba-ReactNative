@@ -51,7 +51,7 @@ export const VolumeBrightnessOverlay: React.FC<
           width: BAR_WIDTH,
           height: BAR_HEIGHT,
           borderRadius: BAR_WIDTH / 2,
-          backgroundColor: 'rgba(255,255,255,0.18)',
+          backgroundColor: colors.background.highlightStrong,
           justifyContent: 'flex-end',
           overflow: 'hidden',
         },

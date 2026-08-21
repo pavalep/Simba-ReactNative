@@ -10,7 +10,7 @@ import {radius, spacing, typography} from '../../../../theme/tokens';
 
 // ─── Local Vector SVG Icons for Guaranteed Rendering ─────────
 
-const MoreIcon = ({color = '#FFFFFF'}) => (
+const MoreIcon = ({color}: {color: string}) => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
     <Circle cx="12" cy="5" r="2" fill={color} />
     <Circle cx="12" cy="12" r="2" fill={color} />
@@ -18,13 +18,13 @@ const MoreIcon = ({color = '#FFFFFF'}) => (
   </Svg>
 );
 
-const RotateIcon = ({color = '#FFFFFF'}) => (
+const RotateIcon = ({color}: {color: string}) => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
     <Path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
-const RotateLandscapeIcon = ({color = '#FFFFFF'}) => (
+const RotateLandscapeIcon = ({color}: {color: string}) => (
   // V6 2.3.2: Lucide `expand` icon — "enter fullscreen" / "expand to
   // landscape". Universally recognized (YouTube, Netflix, VLC).
   // 4 diagonal arrows pointing outward to the corners.
@@ -39,7 +39,7 @@ const RotateLandscapeIcon = ({color = '#FFFFFF'}) => (
   </Svg>
 );
 
-const RotatePortraitIcon = ({color = '#FFFFFF'}) => (
+const RotatePortraitIcon = ({color}: {color: string}) => (
   // V6 2.3.2: Lucide `minimize` icon — "exit fullscreen" / "back to
   // portrait". 4 arrows pointing inward to center. Unmistakable paired
   // with the expand icon above.
@@ -54,7 +54,7 @@ const RotatePortraitIcon = ({color = '#FFFFFF'}) => (
   </Svg>
 );
 
-const LockIcon = ({locked, color = '#FFFFFF'}: {locked: boolean; color?: string}) => (
+const LockIcon = ({locked, color}: {locked: boolean; color: string}) => (
   <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
     <Rect x="5" y="10" width="14" height="11" rx="2" stroke={color} strokeWidth="2" />
     {locked ? (
@@ -177,9 +177,9 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           width: isLandscape ? 36 : 40,
           height: isLandscape ? 36 : 40,
           borderRadius: isLandscape ? 18 : 20,
-          backgroundColor: 'rgba(255,255,255,0.10)',
+          backgroundColor: colors.background.highlight,
           borderWidth: 0.5,
-          borderColor: 'rgba(255,255,255,0.14)',
+          borderColor: colors.border.emphasis,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -201,10 +201,10 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
           minWidth: 0,
           fontSize: isLandscape ? 14 : 13,
           fontWeight: '700',
-          color: '#FFFFFF',
+          color: colors.text.bright,
           letterSpacing: 0.2,
           textAlign: 'left',
-          textShadowColor: 'rgba(0,0,0,0.45)',
+          textShadowColor: colors.shadow,
           textShadowOffset: {width: 0, height: 1},
           textShadowRadius: 4,
         },
@@ -235,7 +235,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
       pointerEvents={visible ? 'auto' : 'none'}>
       {/* Top-down gradient: opaque at top, fading to transparent at bottom */}
       <LinearGradient
-        colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0)']}
+        colors={[colors.background.scrimDeep, colors.background.scrimDim, colors.background.scrimFaint]}
         locations={[0, 0.6, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
@@ -256,7 +256,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
               <SvgIcon
                 name="chevronRight"
                 size={20}
-                color="#FFFFFF"
+                color={colors.text.bright}
                 style={{transform: [{rotate: '180deg'}]}}
               />
             </TouchableOpacity>
@@ -267,7 +267,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
                 accessibilityLabel="Previous channel"
                 accessibilityRole="button"
                 hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
-                <SvgIcon name="chevronDown" size={18} color="#FFFFFF" />
+                <SvgIcon name="chevronDown" size={18} color={colors.text.bright} />
               </TouchableOpacity>
             )}
             {!controlsLocked && channelUp && (
@@ -277,7 +277,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
                 accessibilityLabel="Next channel"
                 accessibilityRole="button"
                 hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
-                <SvgIcon name="chevronUp" size={18} color="#FFFFFF" />
+                <SvgIcon name="chevronUp" size={18} color={colors.text.bright} />
               </TouchableOpacity>
             )}
           </View>
@@ -312,7 +312,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
                 accessibilityLabel={controlsLocked ? 'Unlock video controls' : 'Lock video controls'}
                 accessibilityRole="button"
                 hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
-                <LockIcon locked={controlsLocked} color={controlsLocked ? colors.accent.gold : '#FFFFFF'} />
+                <LockIcon locked={controlsLocked} color={controlsLocked ? colors.accent.gold : colors.text.bright} />
               </TouchableOpacity>
             )}
             {!controlsLocked && onBookmark && (
@@ -328,7 +328,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
                   <SvgIcon
                     name={bookmarkActive ? 'bookmarkFilled' : 'bookmark'}
                     size={18}
-                    color={bookmarkActive ? colors.accent.gold : '#FFFFFF'}
+                    color={bookmarkActive ? colors.accent.gold : colors.text.bright}
                   />
                 </TouchableOpacity>
               </Animated.View>
@@ -340,7 +340,7 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
                 accessibilityLabel="More options"
                 accessibilityRole="button"
                 hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
-                <MoreIcon color="#FFFFFF" />
+                <MoreIcon color={colors.text.bright} />
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -350,9 +350,9 @@ export const VideoPlayerTopBar: React.FC<VideoPlayerTopBarProps> = ({
               accessibilityRole="button"
               hitSlop={{top: 6, bottom: 6, left: 6, right: 6}}>
               {isLandscape ? (
-                <RotatePortraitIcon color="#FFFFFF" />
+                <RotatePortraitIcon color={colors.text.bright} />
               ) : (
-                <RotateLandscapeIcon color="#FFFFFF" />
+                <RotateLandscapeIcon color={colors.text.bright} />
               )}
             </TouchableOpacity>
           </View>

@@ -1,0 +1,30 @@
+
+> SimbaPlayer@0.0.1 test
+> jest --runInBand --passWithNoTests
+
+PASS __tests__/components/AppButton.test.tsx (24.407 s)
+PASS __tests__/authSlice.test.ts
+PASS __tests__/components/AppText.test.tsx
+FAIL __tests__/authService.test.ts
+  ΓùÅ Test suite failed to run
+
+    TypeError: Cannot read properties of null (reading 'getConfig')
+
+      2 | // Keys are read from .env via react-native-config at build time.
+      3 | // .env is gitignored ΓÇö never commit real keys.
+    > 4 | import Config from 'react-native-config';
+        | ^
+      5 |
+      6 | export const ENV = {
+      7 |   PODCAST_INDEX_API_KEY: Config.PODCAST_INDEX_API_KEY ?? '',
+
+      at Object.<anonymous> (node_modules/react-native-config/index.js:4:50)
+      at Object.require (src/constants/env.ts:4:1)
+      at Object.require (src/services/authService.ts:3:1)
+      at Object.<anonymous> (__tests__/authService.test.ts:1:1)
+
+Test Suites: 1 failed, 3 passed, 4 total
+Tests:       13 passed, 13 total
+Snapshots:   0 total
+Time:        30.174 s
+Ran all test suites.

@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {useAppSelector, useAppDispatch} from '../../../store';
 import {
   setPlaybackState,
@@ -7,6 +7,7 @@ import {
   clearPlayer,
 } from '../../../store/slices/playerSlice';
 import {MpvPlayer} from '../../../native';
+import {usePlaybackCommands} from '../../../modules/playback';
 import {
   resolveNextTransition,
   resolvePreviousTransition,
@@ -14,6 +15,7 @@ import {
 
 export function useMiniPlayer() {
   const dispatch = useAppDispatch();
+  const {closePlayer} = usePlaybackCommands();
   const {
     currentFile,
     playbackState,
@@ -26,15 +28,9 @@ export function useMiniPlayer() {
     loopMode,
   } = useAppSelector(state => state.player);
 
-  const dismissPendingRef = useRef(false);
-
   useEffect(() => {
     const unsubscribe = MpvPlayer.on('onPlaybackStateChanged', ({state}) => {
       dispatch(setPlaybackState(state));
-      if (dismissPendingRef.current && state !== 'playing') {
-        dismissPendingRef.current = false;
-        dispatch(clearPlayer());
-      }
     });
     return unsubscribe;
   }, [dispatch]);
@@ -130,21 +126,21 @@ export function useMiniPlayer() {
     }
   }, [currentFile, currentIndex, currentPosition, dispatch, loopMode, playlist, queue]);
 
-  // Swipe-down or explicit close: clear only after native pause is confirmed.
+  // Explicit close always removes the mini surface. Playback is paused first;
+  // the player state is cleared immediately so a missed native event cannot
+  // leave an unclosable stale mini-player mounted.
   const handleDismiss = useCallback(() => {
-    if (!currentFile) return;
     try {
-      if (MpvPlayer.getPlaybackState() !== 'playing') {
-        dispatch(clearPlayer());
-        return;
+      if (currentFile && MpvPlayer.getPlaybackState() === 'playing') {
+        MpvPlayer.pause();
       }
-      dismissPendingRef.current = true;
-      MpvPlayer.pause();
     } catch {
-      dismissPendingRef.current = false;
       dispatch(setPlaybackState('error'));
+    } finally {
+      dispatch(clearPlayer());
+      closePlayer();
     }
-  }, [currentFile, dispatch]);
+  }, [closePlayer, currentFile, dispatch]);
 
   return {
     // Idle state: never surface the mini player without an active track

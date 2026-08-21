@@ -1,0 +1,21 @@
+Priority 5 structural verification
+===============================
+AllAudio: publicIndex=True implementation=True typesIndex=True
+AllVideos: publicIndex=True implementation=True typesIndex=True
+About: publicIndex=True implementation=True typesIndex=True
+AudioSettings: publicIndex=True implementation=True typesIndex=True
+Help: publicIndex=True implementation=True typesIndex=True
+Privacy: publicIndex=True implementation=True typesIndex=True
+Terms: publicIndex=True implementation=True typesIndex=True
+Licenses: publicIndex=True implementation=True typesIndex=True
+Credits: publicIndex=True implementation=True typesIndex=True
+Changelog: publicIndex=True implementation=True typesIndex=True
+Splash: publicIndex=True implementation=True typesIndex=True
+Login: publicIndex=True implementation=True typesIndex=True
+Profile: publicIndex=True implementation=True typesIndex=True
+Settings: publicIndex=True implementation=True typesIndex=True
+NavigatorDirectImplementationImports=0
+IndexBasedKeyExtractors=0
+MigratedScreenStalePlayerRouteReferences=0
+RootNavigatorPublicBoundaryImports=Verified
+SettingsStackPublicBoundaryImports=Verified

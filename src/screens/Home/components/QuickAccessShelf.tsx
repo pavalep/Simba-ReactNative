@@ -1,10 +1,12 @@
-import React from 'react';
+import React, {useCallback, useState} from 'react';
 import {View, FlatList, StyleSheet, TouchableOpacity} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
+import {EmptyState} from '../../../components/utility/EmptyState/EmptyState';
+import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
 
 interface QuickAccessShelfProps {
   title?: string;
@@ -21,31 +23,39 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
   onSeeAll,
 }) => {
   const {colors} = useTheme();
-
-  if (playlists.length === 0) return null;
+  // Match the other Home rails: empty sections start collapsed, while
+  // populated sections start expanded. The chevron owns in-memory state.
+  const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null);
+  const hasData = playlists.length > 0;
+  const collapsed = userCollapsed ?? !hasData;
+  const onToggleCollapsed = useCallback(() => {
+    setUserCollapsed(prev => (prev ?? !hasData) ? false : true);
+  }, [hasData]);
+  const showBody = !collapsed;
 
   return (
     <View style={styles.container}>
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <AppText variant="displaySans" color="primary" style={styles.headerTitle}>
-          {title}
-        </AppText>
-        {onSeeAll ? (
-          <TouchableOpacity
-            activeOpacity={0.7}
-            style={styles.seeAllBtn}
-            onPress={onSeeAll}
-            accessibilityRole="button">
-            <AppText variant="overline" color="accent" style={styles.seeAllText}>
-              VIEW ALL
-            </AppText>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      <SectionHeader
+        label={title}
+        leadingIcon="listMusic"
+        actionLabel={playlists.length > 1 ? 'See All' : undefined}
+        onAction={onSeeAll}
+        collapsible
+        collapsed={collapsed}
+        onToggleCollapsed={onToggleCollapsed}
+      />
 
-      {/* ── Horizontal scroll ── */}
-      <FlatList
+      {showBody && playlists.length === 0 ? (
+        <EmptyState
+          icon="listMusic"
+          title="No Playlists Yet"
+          description="Create a playlist from the player to see it here."
+          variant="compact"
+        />
+      ) : null}
+
+      {showBody && playlists.length > 0 ? (
+        <FlatList
         horizontal
         data={playlists}
         keyExtractor={playlist => playlist.id}
@@ -87,8 +97,9 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
         showsHorizontalScrollIndicator={false}
         initialNumToRender={Math.min(playlists.length, 24)}
         windowSize={5}
-        maxToRenderPerBatch={12}
-      />
+          maxToRenderPerBatch={12}
+        />
+      ) : null}
     </View>
   );
 };
@@ -96,24 +107,6 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.xxl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: spacing.md,
-    marginBottom: spacing.md,
-  },
-  headerTitle: {
-    fontWeight: '700',
-    letterSpacing: -0.5,
-  },
-  seeAllBtn: {
-    paddingBottom: 2,
-  },
-  seeAllText: {
-    letterSpacing: 1,
-    fontWeight: '700',
   },
   scrollContent: {
     paddingHorizontal: spacing.md,

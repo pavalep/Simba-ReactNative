@@ -1,0 +1,82 @@
+src\screens\MoviesScreen\components\MovieCard.tsx:113:'rgba(28, 26, 22, 1)',
+src\screens\MoviesScreen\components\MovieCard.tsx:114:'rgba(14, 13, 11, 1)',
+src\screens\MoviesScreen\components\MovieCard.tsx:115:'rgba(0, 0, 0, 1)',
+src\screens\MoviesScreen\components\MovieCard.tsx:158:'rgba(8, 8, 10, 0)',
+src\screens\MoviesScreen\components\MovieCard.tsx:159:'rgba(8, 8, 10, 0.78)',
+src\screens\MoviesScreen\components\MovieCard.tsx:160:'rgba(8, 8, 10, 0.95)',
+src\screens\MoviesScreen\styles\MovieCard.styles.ts:58:backgroundColor: 'rgba(0,0,0,0.40)',
+src\screens\MoviesScreen\styles\MovieCard.styles.ts:80:color: '#FFFFFF',
+src\screens\MoviesScreen\styles\MovieCard.styles.ts:85:textShadowColor: 'rgba(0,0,0,0.55)',
+src\screens\MoviesScreen\styles\MovieCard.styles.ts:90:color: 'rgba(255,255,255,0.85)',
+src\screens\MoviesScreen\styles\MovieCard.styles.ts:95:textShadowColor: 'rgba(0,0,0,0.55)',
+src\screens\PodcastsScreen\styles\PodcastsOverlays.styles.ts:52:shadowColor: '#000',
+src\modules\playback\audio\ui\AudioAlbumArt.tsx:106:shadowColor: '#000000',
+src\modules\playback\video\components\PrimaryControls.tsx:170:backgroundColor: 'rgba(255,255,255,0.10)',
+src\modules\playback\video\components\PrimaryControls.tsx:172:borderColor: 'rgba(255,255,255,0.12)',
+src\modules\playback\video\components\PrimaryControls.tsx:183:borderColor: 'rgba(255,255,255,0.22)',
+src\modules\playback\video\components\PrimaryControls.tsx:211:borderColor: 'rgba(255,255,255,0.18)',
+src\modules\playback\video\components\PrimaryControls.tsx:223:flat rgba(0,0,0,0.88) slab and creates a cinematic dissolve. */}
+src\modules\playback\video\components\PrimaryControls.tsx:225:colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.35)', 'rgba(10,10,12,0.92)']}
+src\modules\playback\video\components\PrimaryControls.tsx:269:<SvgIcon name="rewind10" size={18} color="#FFFFFF" />
+src\modules\playback\video\components\PrimaryControls.tsx:281:<SvgIcon name="prevTrack" size={20} color="#FFFFFF" />
+src\modules\playback\video\components\PrimaryControls.tsx:288:colors={[colors.accent.gold, '#E2C26A']}
+src\modules\playback\video\components\PrimaryControls.tsx:319:<SvgIcon name="nextTrack" size={20} color="#FFFFFF" />
+src\modules\playback\video\components\PrimaryControls.tsx:332:<SvgIcon name="forward10" size={18} color="#FFFFFF" />
+src\modules\playback\video\components\SecondaryToolbar.tsx:89:: 'rgba(255,255,255,0.08)',
+src\modules\playback\video\components\SecondaryToolbar.tsx:94:: 'rgba(201,168,76,0.4)'
+src\modules\playback\video\components\SecondaryToolbar.tsx:95:: 'rgba(255,255,255,0.10)',
+src\modules\playback\video\components\SecondaryToolbar.tsx:109:backgroundColor: 'rgba(10,10,12,0.95)',
+src\modules\playback\video\components\SecondaryToolbar.tsx:114:borderColor: 'rgba(255,255,255,0.14)',
+src\modules\playback\video\components\SecondaryToolbar.tsx:119:color: '#FFFFFF',
+src\modules\playback\video\components\SecondaryToolbar.tsx:132:: 'rgba(255,255,255,0.85)',
+src\modules\playback\video\components\SecondaryToolbar.tsx:144:: '#FFFFFF';
+src\modules\playback\video\components\SecondaryToolbar.tsx:319:backgroundColor: 'rgba(255,255,255,0.08)',
+src\modules\playback\video\components\SecondaryToolbar.tsx:321:borderColor: 'rgba(255,255,255,0.10)',
+src\modules\playback\video\components\SecondaryToolbar.tsx:351:: 'rgba(255,255,255,0.08)',
+src\modules\playback\video\components\SecondaryToolbar.tsx:354:: 'rgba(255,255,255,0.12)',
+src\modules\playback\video\components\SecondaryToolbar.tsx:361:color: subtitleVisible ? colors.accent.gold : '#FFFFFF',
+src\modules\playback\video\components\SecondaryToolbar.tsx:448:maximumTrackTintColor="rgba(255,255,255,0.2)"
+src\modules\playback\video\components\SeekFeedbackOverlay.tsx:81:<View style={[styles.disc, {backgroundColor: 'rgba(10,10,12,0.78)', borderColor: 'rgba(255,255,255,0.14)'}]}>
+src\modules\playback\video\components\SeekFeedbackOverlay.tsx:87:<AppText style={[styles.label, {color: '#FFFFFF'}]}>10</AppText>
+src\modules\playback\video\components\SeekFeedbackOverlay.tsx:114:shadowColor: '#000',
+src\modules\playback\video\components\VideoPlayerAutoAdvanceCard.tsx:60:borderColor: 'rgba(255,255,255,0.10)',
+src\modules\playback\video\components\VideoPlayerAutoAdvanceCard.tsx:61:backgroundColor: 'rgba(18,18,22,0.94)',
+src\modules\playback\video\components\VideoPlayerAutoAdvanceCard.tsx:62:shadowColor: '#000',
+src\modules\playback\video\components\VideoPlayerAutoAdvanceCard.tsx:107:borderColor: 'rgba(255,255,255,0.14)',
+src\modules\playback\video\components\VideoPlayerAutoAdvanceCard.tsx:108:backgroundColor: 'rgba(255,255,255,0.08)',
+src\modules\playback\video\components\VideoPlayerLoadingOverlay.tsx:34:backgroundColor: 'rgba(0,0,0,0.75)',
+src\modules\playback\video\components\VideoPlayerLoadingOverlay.tsx:87:color="#FFFFFF"
+src\modules\playback\video\components\VideoPlayerResumeOverlay.tsx:56:backgroundColor: 'rgba(0,0,0,0.55)',
+src\modules\playback\video\components\VideoPlayerResumeOverlay.tsx:64:borderColor: 'rgba(255,255,255,0.10)',
+src\modules\playback\video\components\VideoPlayerResumeOverlay.tsx:65:backgroundColor: 'rgba(18,18,22,0.96)',
+src\modules\playback\video\components\VideoPlayerResumeOverlay.tsx:66:shadowColor: '#000',
+src\modules\playback\video\components\VideoPlayerResumeOverlay.tsx:106:borderColor: 'rgba(255,255,255,0.18)',
+src\modules\playback\video\components\VideoPlayerResumeOverlay.tsx:107:backgroundColor: 'rgba(255,255,255,0.10)',
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:13:const MoreIcon = ({color = '#FFFFFF'}) => (
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:21:const RotateIcon = ({color = '#FFFFFF'}) => (
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:27:const RotateLandscapeIcon = ({color = '#FFFFFF'}) => (
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:42:const RotatePortraitIcon = ({color = '#FFFFFF'}) => (
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:57:const LockIcon = ({locked, color = '#FFFFFF'}: {locked: boolean; color?: string}) => (
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:180:backgroundColor: 'rgba(255,255,255,0.10)',
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:182:borderColor: 'rgba(255,255,255,0.14)',
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:204:color: '#FFFFFF',
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:207:textShadowColor: 'rgba(0,0,0,0.45)',
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:238:colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0)']}
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:259:color="#FFFFFF"
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:270:<SvgIcon name="chevronDown" size={18} color="#FFFFFF" />
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:280:<SvgIcon name="chevronUp" size={18} color="#FFFFFF" />
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:315:<LockIcon locked={controlsLocked} color={controlsLocked ? colors.accent.gold : '#FFFFFF'} />
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:331:color={bookmarkActive ? colors.accent.gold : '#FFFFFF'}
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:343:<MoreIcon color="#FFFFFF" />
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:353:<RotatePortraitIcon color="#FFFFFF" />
+src\modules\playback\video\components\VideoPlayerTopBar.tsx:355:<RotateLandscapeIcon color="#FFFFFF" />
+src\modules\playback\video\components\VideoPlayerVideoSurface.tsx:134:backgroundColor: 'rgba(20,20,22,0.78)',
+src\modules\playback\video\components\VideoPlayerVideoSurface.tsx:136:borderColor: 'rgba(255,255,255,0.18)',
+src\modules\playback\video\components\VideoPlayerVideoSurface.tsx:140:shadowColor: '#000',
+src\modules\playback\video\components\VideoPlayerVideoSurface.tsx:179:<SvgIcon name="play" size={32} color="#FFFFFF" />
+src\modules\playback\video\components\VolumeBrightnessOverlay.tsx:54:backgroundColor: 'rgba(255,255,255,0.18)',
+src\modules\playback\video\ui\VideoPlayer.tsx:440:<View style={[styles.root, {backgroundColor: '#000000'}]}>
+src\modules\playback\video\ui\VideoPlayer.tsx:877:backgroundColor: '#000000',
+src\modules\playback\video\ui\VideoPlayer.tsx:882:backgroundColor: 'rgba(0,0,0,0.45)',
+src\modules\playback\video\ui\VideoPlayer.tsx:910:backgroundColor: '#D4B47A',
+src\modules\playback\video\ui\VideoPlayer.tsx:914:color: '#000000',

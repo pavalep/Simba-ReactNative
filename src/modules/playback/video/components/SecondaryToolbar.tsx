@@ -86,13 +86,13 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({
           ? activeVariant === 'strong'
             ? colors.accent.gold
             : colors.accent.goldDim
-          : 'rgba(255,255,255,0.08)',
+          : colors.background.highlight,
         borderWidth: active ? 0.5 : 0.5,
         borderColor: active
           ? activeVariant === 'strong'
             ? colors.accent.gold
-            : 'rgba(201,168,76,0.4)'
-          : 'rgba(255,255,255,0.10)',
+            : colors.accent.goldGlow
+          : colors.border.emphasis,
         opacity: disabled ? 0.4 : 1,
       },
       // V6 7.3.2: outer wrapper that stacks icon over inline label.
@@ -106,17 +106,17 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({
       labelTooltip: {
         position: 'absolute' as const,
         bottom: -26,
-        backgroundColor: 'rgba(10,10,12,0.95)',
+        backgroundColor: colors.background.scrimOpaque,
         paddingHorizontal: 8,
         paddingVertical: 3,
         borderRadius: 6,
         borderWidth: 0.5,
-        borderColor: 'rgba(255,255,255,0.14)',
+        borderColor: colors.border.emphasis,
         zIndex: 100,
       },
       labelText: {
         fontSize: 10,
-        color: '#FFFFFF',
+        color: colors.text.bright,
         fontWeight: '600' as const,
         letterSpacing: 0.2,
       },
@@ -129,7 +129,7 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({
           ? activeVariant === 'strong'
             ? colors.text.inverse
             : colors.accent.gold
-          : 'rgba(255,255,255,0.85)',
+          : colors.text.onMediaSoft,
         maxWidth: 64,
         textAlign: 'center' as const,
       },
@@ -141,7 +141,7 @@ const ToolbarBtn: React.FC<ToolbarBtnProps> = ({
     ? activeVariant === 'strong'
       ? colors.text.inverse
       : colors.accent.gold
-    : '#FFFFFF';
+    : colors.text.bright;
 
   const chip = (
     <View style={btnStyles.container}>
@@ -316,9 +316,9 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
           height: 44,
           paddingHorizontal: 12,
           borderRadius: 22,
-          backgroundColor: 'rgba(255,255,255,0.08)',
+          backgroundColor: colors.background.highlight,
           borderWidth: 0.5,
-          borderColor: 'rgba(255,255,255,0.10)',
+          borderColor: colors.border.emphasis,
           minWidth: 132,
         },
         volumeSlider: {
@@ -348,17 +348,17 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
     () => ({
       backgroundColor: subtitleVisible
         ? colors.accent.goldDim
-        : 'rgba(255,255,255,0.08)',
+        : colors.background.highlight,
       borderColor: subtitleVisible
         ? colors.accent.gold
-        : 'rgba(255,255,255,0.12)',
+        : colors.border.emphasis,
     }),
     [subtitleVisible, colors],
   );
 
   const getVisToggleTextStyle = useCallback(
     () => ({
-      color: subtitleVisible ? colors.accent.gold : '#FFFFFF',
+      color: subtitleVisible ? colors.accent.gold : colors.text.bright,
     }),
     [subtitleVisible, colors],
   );
@@ -445,7 +445,7 @@ export const SecondaryToolbar: React.FC<SecondaryToolbarProps> = ({
               maximumValue={100}
               step={1}
               minimumTrackTintColor={colors.accent.gold}
-              maximumTrackTintColor="rgba(255,255,255,0.2)"
+              maximumTrackTintColor={colors.background.highlightStrong}
               thumbTintColor={colors.accent.gold}
               onValueChange={onVolumeValueChange}
               accessibilityLabel="Volume"

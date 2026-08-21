@@ -128,7 +128,7 @@ export function useEpisodeActions({podcast, navigation}: Options) {
           break;
         case 'share':
           shareContent({
-            route: 'AudioPlayer',
+            route: 'SongScreen',
             params: {
               fileUri: ep.enclosureUrl,
               fileTitle: ep.title,

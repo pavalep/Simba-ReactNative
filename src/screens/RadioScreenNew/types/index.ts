@@ -6,6 +6,7 @@ export interface ActiveRadioFilterChipProps {
   onClear: import('../hooks/useRadioBrowser').RadioFilterId;
 }
 
+export type {RootStackScreenProps} from '../../../navigation/types';
 export type RadioScreenProps = import('../../../navigation/types').RootStackScreenProps<'RadioScreen'>;
 export type RadioMediaType = 'audio';
 export type RadioSource = 'radio';

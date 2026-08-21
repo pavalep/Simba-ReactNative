@@ -49,7 +49,7 @@ export const createPodcastsOverlaysStyles = (colors: ColorTokens) =>
       paddingVertical: spacing.sm,
       backgroundColor: colors.background.elevated,
       // Soft elevation so the pill reads as floating above the cards.
-      shadowColor: '#000',
+      shadowColor: colors.shadow,
       shadowOffset: {width: 0, height: 2},
       shadowOpacity: 0.2,
       shadowRadius: 6,

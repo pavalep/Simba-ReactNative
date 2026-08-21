@@ -10,5 +10,4 @@ export type HomeSection =
   | {type: 'PLAYLISTS'; items: any[]}
   | {type: 'BOOKMARKS'; items: Bookmark[]}
   | {type: 'FOLLOWED_PODCASTS'; items: FollowedPodcast[]}
-  | {type: 'BROWSE_ALL'}
-  | {type: 'COMING_SOON'; reason: 'PLAYLISTS' | 'AI_CURATED'};
+  | {type: 'BROWSE_ALL'};

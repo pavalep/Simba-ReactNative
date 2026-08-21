@@ -377,7 +377,7 @@ export const AudioSubMenu: React.FC<AudioSubMenuProps> = ({
   const handleShare = useCallback(async () => {
     // 56.4: real deep link (simbaplayer:// + https fallback)
     await shareContent({
-      route: 'AudioPlayer',
+      route: 'SongScreen',
       params: fileUri ? {fileUri, fileTitle: title} : undefined,
       title,
       subtitle: artist,

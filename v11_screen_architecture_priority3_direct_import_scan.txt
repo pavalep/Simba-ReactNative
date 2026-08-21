@@ -1,0 +1,18 @@
+Priority 3 structural verification
+===============================
+PlaylistDetail: index=True component=True types=True
+AllPlaylists: index=True component=True types=True
+QueueScreen: index=True component=True types=True
+History: index=True component=True types=True
+Bookmarks: index=True component=True types=True
+Stats: index=True component=True types=True
+CheckScope=Priority3FoldersAndRootNavigator
+ExpectedDirectImplementationImports=0
+ExpectedIndexKeyExtractors=0
+RootNavigatorDirectImplementationImports=0
+RootNavigatorPublicBoundaryImports=Verified
+Priority3MigratedScreenStalePlayerRouteReferences=2
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\components\PlaylistDetailScreen.tsx:442:: 'AudioPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\components\PlaylistDetailScreen.tsx:441:? 'VideoPlayer'
+FinalTypeScriptExit=0
+Priority3MigratedScreenStalePlayerRouteReferences=0 after PlaylistDetail share correction

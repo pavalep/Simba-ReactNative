@@ -167,9 +167,9 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           width: 56 * controlScale,
           height: 48 * controlScale,
           borderRadius: 20 * controlScale,
-          backgroundColor: 'rgba(255,255,255,0.10)',
+          backgroundColor: colors.background.highlight,
           borderWidth: 0.5,
-          borderColor: 'rgba(255,255,255,0.12)',
+          borderColor: colors.border.emphasis,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -180,7 +180,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           borderRadius: 24 * controlScale,
           backgroundColor: 'transparent',
           borderWidth: 0.5,
-          borderColor: 'rgba(255,255,255,0.22)',
+          borderColor: colors.background.highlightStrong,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -208,7 +208,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.18)',
+          borderColor: colors.border.emphasis,
         },
       }),
     [colors, bottomInset, controlScale],
@@ -220,9 +220,9 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
       pointerEvents={visible ? 'auto' : 'none'}>
       {/* Gradient backdrop: transparent at the top edge of the panel,
           fading down to near-opaque at the bottom. This replaces the
-          flat rgba(0,0,0,0.88) slab and creates a cinematic dissolve. */}
+          flat dark slab and creates a cinematic dissolve. */}
       <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.35)', 'rgba(10,10,12,0.92)']}
+        colors={[colors.background.scrimFaint, colors.background.scrimDim, colors.background.scrimStrong]}
         locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
@@ -266,7 +266,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           accessibilityLabel="Rewind 10 seconds"
           accessibilityState={{disabled: !seekControlsEnabled}}
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <SvgIcon name="rewind10" size={18} color="#FFFFFF" />
+          <SvgIcon name="rewind10" size={18} color={colors.text.bright} />
         </TouchableOpacity>
 
         {/* V6 5.3.2: prev track only when there is a playlist */}
@@ -278,14 +278,14 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
             accessibilityLabel="Previous track"
             accessibilityHint="Play the previous item in this video queue"
             hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-            <SvgIcon name="prevTrack" size={20} color="#FFFFFF" />
+            <SvgIcon name="prevTrack" size={20} color={colors.text.bright} />
           </TouchableOpacity>
         )}
 
         {/* Play / Pause — gold gradient disc with soft outer glow */}
         <Animated.View style={[styles.playBtnWrap, {transform: [{scale: playScale}]}]}>
           <LinearGradient
-            colors={[colors.accent.gold, '#E2C26A']}
+            colors={[colors.accent.gold, colors.background.warm]}
             start={{x: 0, y: 0}}
             end={{x: 0, y: 1}}
             style={styles.playBtnInner}>
@@ -316,7 +316,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
             accessibilityLabel="Next track"
             accessibilityHint="Play the next item in this video queue"
             hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-            <SvgIcon name="nextTrack" size={20} color="#FFFFFF" />
+            <SvgIcon name="nextTrack" size={20} color={colors.text.bright} />
           </TouchableOpacity>
         )}
 
@@ -329,7 +329,7 @@ export const PrimaryControls: React.FC<PrimaryControlsProps> = ({
           accessibilityLabel="Forward 10 seconds"
           accessibilityState={{disabled: !seekControlsEnabled}}
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <SvgIcon name="forward10" size={18} color="#FFFFFF" />
+          <SvgIcon name="forward10" size={18} color={colors.text.bright} />
         </TouchableOpacity>
       </Animated.View>
     </Animated.View>

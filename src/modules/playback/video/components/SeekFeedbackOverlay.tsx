@@ -78,13 +78,13 @@ export const SeekFeedbackOverlay: React.FC<SeekFeedbackOverlayProps> = ({
         },
       ]}
       pointerEvents="none">
-      <View style={[styles.disc, {backgroundColor: 'rgba(10,10,12,0.78)', borderColor: 'rgba(255,255,255,0.14)'}]}>
+      <View style={[styles.disc, {backgroundColor: colors.background.scrimMid, borderColor: colors.border.emphasis, shadowColor: colors.shadow}]}>
         <SvgIcon
           name={side === 'left' ? 'skipBack' : 'skipForward'}
           size={28}
           color={colors.accent.gold}
         />
-        <AppText style={[styles.label, {color: '#FFFFFF'}]}>10</AppText>
+        <AppText style={[styles.label, {color: colors.text.bright}]}>10</AppText>
       </View>
     </Animated.View>
   );
@@ -111,7 +111,6 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.4,
     shadowRadius: 12,

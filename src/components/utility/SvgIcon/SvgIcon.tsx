@@ -11,6 +11,10 @@ import PlaySvg from '../../../assets/svg/ic_play.svg';
 import PauseSvg from '../../../assets/svg/ic_pause.svg';
 import SkipBackSvg from '../../../assets/svg/ic_skip_back.svg';
 import SkipForwardSvg from '../../../assets/svg/ic_skip_forward.svg';
+import PreviousTrackSvg from '../../../assets/svg/ic_previous_track.svg';
+import NextTrackSvg from '../../../assets/svg/ic_next_track.svg';
+import Rewind10Svg from '../../../assets/svg/ic_rewind_10.svg';
+import Forward10Svg from '../../../assets/svg/ic_forward_10.svg';
 import ShuffleSvg from '../../../assets/svg/ic_shuffle.svg';
 import RepeatSvg from '../../../assets/svg/ic_repeat.svg';
 import VolumeSvg from '../../../assets/svg/ic_volume.svg';
@@ -98,14 +102,10 @@ const icons = {
   pause: PauseSvg,
   skipBack: SkipBackSvg,
   skipForward: SkipForwardSvg,
-  // V6 5.2.1: distinct semantic names for the two transport arrows.
-  // Currently aliased to the existing skipBack/skipForward SVGs because
-  // the project ships no separate "rewind10" / "prevTrack" assets. A
-  // follow-up ticket should ship dedicated 10-second and track icons.
-  rewind10: SkipBackSvg,
-  forward10: SkipForwardSvg,
-  prevTrack: SkipBackSvg,
-  nextTrack: SkipForwardSvg,
+  rewind10: Rewind10Svg,
+  forward10: Forward10Svg,
+  prevTrack: PreviousTrackSvg,
+  nextTrack: NextTrackSvg,
   shuffle: ShuffleSvg,
   repeat: RepeatSvg,
   volume: VolumeSvg,

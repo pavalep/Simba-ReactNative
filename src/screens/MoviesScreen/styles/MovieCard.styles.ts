@@ -10,9 +10,9 @@
 // half-width instead of stretching to full screen.
 
 import {StyleSheet} from 'react-native';
-import {spacing} from '../../../theme/tokens';
+import {spacing, type ColorTokens} from '../../../theme/tokens';
 
-export const createMovieCardStyles = () =>
+export const createMovieCardStyles = (colors: ColorTokens) =>
   StyleSheet.create({
     heroCard: {
       // `flex: 1` so each row child claims half the row width.
@@ -55,7 +55,7 @@ export const createMovieCardStyles = () =>
       opacity: 0.4,
     },
     heroResolving: {
-      backgroundColor: 'rgba(0,0,0,0.40)',
+      backgroundColor: colors.background.scrimDim,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -77,22 +77,22 @@ export const createMovieCardStyles = () =>
       gap: 4,
     },
     heroTitle: {
-      color: '#FFFFFF',
+      color: colors.text.bright,
       fontSize: 15,
       fontWeight: '700',
       lineHeight: 18,
       letterSpacing: 0.1,
-      textShadowColor: 'rgba(0,0,0,0.55)',
+      textShadowColor: colors.shadow,
       textShadowOffset: {width: 0, height: 1},
       textShadowRadius: 6,
     },
     heroMeta: {
-      color: 'rgba(255,255,255,0.85)',
+      color: colors.text.onMediaSoft,
       fontSize: 12,
       fontWeight: '500',
       lineHeight: 14,
       letterSpacing: 0.2,
-      textShadowColor: 'rgba(0,0,0,0.55)',
+      textShadowColor: colors.shadow,
       textShadowOffset: {width: 0, height: 1},
       textShadowRadius: 4,
     },

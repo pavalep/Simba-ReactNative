@@ -21,6 +21,7 @@ import {downloadService} from './src/services/downloadService';
 import {hydrateDownloads} from './src/store/slices/downloadsSlice';
 import {mark} from './src/utils/startupPerf';
 import {configureGoogleSignin} from './src/services/authService';
+import {getMediaType} from './src/services/fileService';
 import {PlaybackProvider, PlaybackOverlayHost, usePlaybackCommands} from './src/modules/playback';
 
 // Initialize GoogleSignin once at app startup — calling configure() every
@@ -43,13 +44,14 @@ function handleIncomingUri(
   const fileName = uri.split('/').pop() ?? 'Shared File';
   const displayName = decodeURIComponent(fileName.replace(/\.[^.]+$/, ''));
 
+  const mediaType = getMediaType(uri);
   openPlayer({
     uri,
     title: displayName,
     duration: 0,
     source: 'local',
-    type: 'video',
-    mediaType: 'video',
+    type: mediaType,
+    mediaType,
   });
 }
 

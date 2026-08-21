@@ -25,12 +25,6 @@ import {GenreChipsShelf} from './components/GenreChipsShelf';
 // RadioCategoriesShelf, LiveTVCategoriesShelf, AudiobooksShelf,
 // ArchiveShelf, ShowsShelf) were removed with their handlers.
 import {BrowseAllShelf} from './components/BrowseAllShelf';
-// v10.3: placeholder rails for not-yet-built Home sub-sections
-// (Playlists module polish + AI-curated recommendations). These
-// render as "Coming soon" shelves with dummy data and will be
-// dropped in-place with real loaders once the underlying
-// modules land.
-import {ComingSoonShelf} from './components/ComingSoonShelf';
 import {mark, logStartupSummary} from '../../utils/startupPerf';
 
 // ── Screen ──
@@ -144,11 +138,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         case 'BROWSE_ALL':
           // v10.2: one rail, one card per top-level section.
           return <BrowseAllShelf onSectionPress={handleSeeAll} />;
-        case 'COMING_SOON':
-          // v10.3: placeholder shelf for not-yet-built sections
-          // (Playlists, AI-Curated). Renders dummy "Coming soon"
-          // cards now; will be swapped for real loaders later.
-          return <ComingSoonShelf reason={item.reason} />;
         case 'FOLLOWED_PODCASTS':
           return (
             <FollowedPodcastsShelf
@@ -268,5 +257,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     </View>
   );
 };
+
+export default HomeScreen;
 
 

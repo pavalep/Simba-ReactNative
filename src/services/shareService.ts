@@ -31,8 +31,7 @@ const ROUTE_PATHS: Record<string, string> = {
   PlaylistDetail: 'playlist/:playlistId',
   ArtistDetail: 'library/artist/:artistName',
   AlbumDetail: 'library/album/:albumTitle/:artistName',
-  AudioPlayer: 'audio-player',
-  VideoPlayer: 'video-player',
+  
   SongScreen: 'song',
 };
 

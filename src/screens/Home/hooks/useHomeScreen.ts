@@ -13,6 +13,7 @@ import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
+import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import {useAuth} from '../../../hooks/useAuth';
 import {useWeather} from '../../../hooks/useWeather';
@@ -102,6 +103,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const [isSettled, setIsSettled] = useState(false);
   const [hasError, setHasError] = useState(false);
   const dispatch = useAppDispatch();
+  const {openPlayer} = usePlaybackCommands();
   const {user} = useAuth();
   const {snapshot: weatherSnapshot, isFirstLoad: weatherFirstLoad} = useWeather();
 
@@ -140,16 +142,23 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       const file = await pickMediaFile();
       if (!file) return;
       const mediaType = getMediaType(file.uri);
-      const screen = mediaType === 'audio' ? 'AudioPlayer' : 'VideoPlayer';
-      navigation.dispatch(CommonActions.navigate({name: screen, params: {fileUri: file.uri, fileTitle: file.title || 'Untitled'}}));
+      openPlayer({
+        uri: file.uri,
+        title: file.title || 'Untitled',
+        duration: 0,
+        source: 'local',
+        type: mediaType === 'audio' ? 'music' : 'video',
+        mediaType,
+      });
     } catch {}
-  }, [navigation]);
+  }, [openPlayer]);
 
   const handleItemPress = useCallback(
     (item: {
       mediaType?: MediaLane;
       fileUri: string;
       title: string;
+      thumbnailPath?: string;
       startPosition?: number;
       position?: number;
       source?: MediaSource;
@@ -157,24 +166,20 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       provider?: string;
       folderId?: string;
     }) => {
-      const screen = item.mediaType === 'audio' ? 'AudioPlayer' : 'VideoPlayer';
-      navigation.dispatch(
-        CommonActions.navigate({
-          name: screen,
-          params: {
-            fileUri: item.fileUri,
-            fileTitle: item.title,
-            startPosition: item.startPosition ?? item.position,
-            source: item.source,
-            type: item.type,
-            mediaType: item.mediaType,
-            provider: item.provider,
-            folderId: item.folderId,
-          },
-        }),
-      );
+      openPlayer({
+        uri: item.fileUri,
+        title: item.title,
+        duration: 0,
+        artworkUri: item.thumbnailPath || undefined,
+        startPosition: item.startPosition ?? item.position,
+        source: item.source,
+        type: item.type,
+        mediaType: item.mediaType,
+        provider: item.provider,
+        folderId: item.folderId,
+      });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const handlePlaylistPress = useCallback(
@@ -262,14 +267,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       // single visual voice.
       {type: 'SUBSECTION_TITLE', label: 'Discover', variant: 'displaySerif'},
       {type: 'BROWSE_ALL'},
-      // v10.3 (Home Discover): Playlists + AI-Curated placeholder
-      // rails. The Playlists module is being polished and the
-      // recommendation engine for AI-Curated is on the roadmap —
-      // both render with dummy "Coming soon" cards for now so the
-      // section slots already exist on Home and the real content
-      // can be wired in later by replacing these entries.
-      {type: 'COMING_SOON', reason: 'PLAYLISTS'},
-      {type: 'COMING_SOON', reason: 'AI_CURATED'},
+      
     ];
 
     // Genre chips

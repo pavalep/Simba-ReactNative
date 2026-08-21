@@ -29,6 +29,7 @@ import {
   setPlaybackState,
   setPlaybackSpeed,
   playFile,
+  updateCurrentFileMetadata,
   setQueueSelection,
   clearQueueSelection,
   removeSelectedFromQueue,
@@ -74,7 +75,8 @@ export function useAudioPlayerScreen(
   const dispatch = useAppDispatch();
 
   // ── Route params ──
-  const title = route.params?.fileTitle ?? 'Unknown Track';
+    const title = route.params?.fileTitle || (route.params?.fileUri ? getFileName(route.params.fileUri) : 'Unknown Track');
+
   const fileUri = route.params?.fileUri ?? null;
   // P33.6: remote stream metadata — artwork URL to disk-cache, source label
   const artworkUri = route.params?.artworkUri;
@@ -381,23 +383,42 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           const saved = sessionRecentRef.current.find(f => f.fileUri === fileUri);
           const resumePosition = saved?.position ?? 0;
           const explicitPosition = startPosition ?? 0;
-          if (explicitPosition > 0) {
+                    if (explicitPosition > 0) {
             // 58.2: explicit navigation intent (Continue Listening) — silent seek
             setTimeout(() => {
-              try { MpvPlayer.seekTo(explicitPosition); } catch {}
+              try {
+                MpvPlayer.seekTo(explicitPosition);
+                MpvPlayer.resume();
+              } catch {}
             }, 200);
           } else if (resumePosition > 0) {
             // 58.2: implicit resume — ask the user instead of silent auto-seek
             try { MpvPlayer.pause(); } catch {}
             setResumePrompt({position: resumePosition});
+          } else {
+            // mpv loadFile() does not guarantee autoplay on every native build.
+            // Explicitly resume once the file is ready so remote streams start.
+            try { MpvPlayer.resume(); } catch {}
           }
+
         });
 
         setIsReady(true);
         setIsLoading(false);
 
-        // Track the file in Redux so MiniAudioPlayer persists after back
-        dispatch(playFile({uri: fileUri, title, duration: 0, source: sourceLabel}));
+        // Track the complete entry in Redux so MiniAudioPlayer and reopen
+        // flows retain artwork, provenance, and the correct audio lane.
+        dispatch(playFile({
+          uri: fileUri,
+          title,
+          duration: 0,
+          source: sourceLabel,
+          type: mediaKind,
+          mediaType: mediaLane,
+          provider,
+          folderId: routeFolderId,
+          artworkUri,
+        }));
       } catch (e) {
         if (!cancelled) {
           setError('Player initialization failed.');
@@ -417,7 +438,26 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
 
   }, [fileUri, title, dispatch, retryNonce, sourceLabel, startPosition]);
 
+    // Load a new queue/chapter item and explicitly clear mpv's paused state.
+  // Native loadFile() is intentionally separate from play(), so every
+  // transition must resume after loading instead of assuming autoplay.
+  const loadAndResume = useCallback((uri: string, resumePosition?: number) => {
+    try {
+      MpvPlayer.loadFile(uri);
+      MpvPlayer.resume();
+      setTimeout(() => {
+        try {
+          MpvPlayer.resume();
+          if (resumePosition && resumePosition > 0) {
+            MpvPlayer.seekTo(resumePosition);
+          }
+        } catch {}
+      }, 250);
+    } catch {}
+  }, []);
+
   // ── 58.2: Resume / Start Over choice on load (mirrors 31.2 video) ──
+
   const handleResumeChoice = useCallback(
     (shouldResume: boolean) => {
       if (!resumePrompt) return;
@@ -441,6 +481,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     // can be used directly — no download needed.
     if (!isRemoteUri(artworkUri)) {
       remoteArtPathRef.current = artworkUri;
+      dispatch(updateCurrentFileMetadata({artworkUri}));
       setMetadata(prev =>
         prev.albumArtUri ? prev : {...prev, albumArtUri: artworkUri},
       );
@@ -451,6 +492,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
       const cached = await cacheArt(artworkUri);
       if (cancelled || !cached) return;
       remoteArtPathRef.current = cached;
+      dispatch(updateCurrentFileMetadata({artworkUri: cached}));
       setMetadata(prev => (prev.albumArtUri ? prev : {...prev, albumArtUri: cached}));
     })();
     return () => {
@@ -467,7 +509,26 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     (async () => {
       try {
         const meta = await readTrackMetadata(fileUri);
-        if (!cancelled) setMetadata(meta);
+        if (!cancelled) {
+          setMetadata(prev => ({
+            ...meta,
+            title: meta.title || prev.title || title,
+            artist: meta.artist || prev.artist,
+            album: meta.album || prev.album,
+            // Remote streams generally have no local cover file. Preserve
+            // route/cache artwork instead of replacing it with an empty URI.
+            albumArtUri: meta.albumArtUri || prev.albumArtUri || artworkUri || '',
+          }));
+
+          const metadataPatch: Partial<PlaylistEntry> = {
+            title: meta.title || title,
+          };
+          if (meta.artist) metadataPatch.artist = meta.artist;
+          if (meta.album) metadataPatch.album = meta.album;
+          const resolvedArtworkUri = meta.albumArtUri || artworkUri;
+          if (resolvedArtworkUri) metadataPatch.artworkUri = resolvedArtworkUri;
+          dispatch(updateCurrentFileMetadata(metadataPatch));
+        }
 
         // 51.3: start only when the user has media notifications enabled
         if (notificationsEnabledRef.current) {
@@ -677,7 +738,7 @@ addRecent({
       setActiveUri(prev.uri);
       setActiveTitle(prev.title);
       dispatch(playFile({uri: prev.uri, title: prev.title, duration: prev.duration ?? 0, source: sourceLabel}));
-      MpvPlayer.loadFile(prev.uri);
+      loadAndResume(prev.uri);
       return;
     }
 
@@ -700,7 +761,7 @@ addRecent({
     }
 
     dispatch(playFromPlaylist(transition.playlistIndex));
-    MpvPlayer.loadFile(transition.entry.uri);
+    loadAndResume(transition.entry.uri);
   }, [
     currentIndex,
     dispatch,
@@ -709,6 +770,7 @@ addRecent({
     playlist,
     queue,
     sourceLabel,
+    loadAndResume,
   ]);
 
   // ── P37.3: load the next chapter when a chapter list is active ──
@@ -724,15 +786,9 @@ addRecent({
     dispatch(playFile({uri: next.uri, title: next.title, duration: next.duration ?? 0, source: sourceLabel}));
     // Cross-chapter resume: continue where this chapter was left off.
     const recent = sessionRecentRef.current.find(r => r.fileUri === next.uri);
-    MpvPlayer.loadFile(next.uri);
-    if (recent && recent.position > 0) {
-      const pos = recent.position;
-      setTimeout(() => {
-        try { MpvPlayer.seekTo(pos); } catch {}
-      }, 250);
-    }
+    loadAndResume(next.uri, recent?.position);
     return true;
-  }, [dispatch, sourceLabel]);
+  }, [dispatch, sourceLabel, loadAndResume]);
 
   const transitionToNextAudio = useCallback(() => {
     const transition = resolveNextTransition({
@@ -753,9 +809,9 @@ addRecent({
     } else {
       dispatch(playFromPlaylist(transition.playlistIndex));
     }
-    MpvPlayer.loadFile(transition.entry.uri);
+    loadAndResume(transition.entry.uri);
     return true;
-  }, [dispatch, mediaLane, queue]);
+  }, [dispatch, mediaLane, queue, loadAndResume]);
 
   const handleNext = useCallback(() => {
     // P37.3: chapter list (audiobook) takes precedence over the lane queue.
@@ -763,13 +819,29 @@ addRecent({
     transitionToNextAudio();
   }, [playNextChapter, transitionToNextAudio]);
 
-  const handleSeek = useCallback((pct: number) => {
+    const handleSeek = useCallback((pct: number) => {
     isSeeking.current = true;
     const dur = MpvPlayer.getDuration?.() ?? 1;
-    const target = pct * dur;
-    MpvPlayer.seekTo(target);
+    const target = Math.max(0, Math.min(dur, pct * dur));
+    try {
+      MpvPlayer.seekTo(target);
+    } catch {}
     setTimeout(() => { isSeeking.current = false; }, 200);
   }, []);
+
+  const handleRewind = useCallback(() => {
+    try {
+      MpvPlayer.seekBackward(10);
+    } catch {}
+    haptics.light();
+  }, [haptics]);
+
+  const handleForward = useCallback(() => {
+    try {
+      MpvPlayer.seekForward(10);
+    } catch {}
+    haptics.light();
+  }, [haptics]);
 
   const handleVolumeChange = useCallback((delta: number) => {
     const current = MpvPlayer.getVolume?.() ?? volume;
@@ -821,10 +893,10 @@ addRecent({
       });
       dispatch(addToPlaylist(entry));
       if (playlist.length === 0) {
-        MpvPlayer.loadFile(entry.uri);
+        loadAndResume(entry.uri);
       }
     } catch {}
-  }, [dispatch, playlist.length]);
+    }, [dispatch, playlist.length, loadAndResume]);
 
   const handleRemoveFromPlaylist = useCallback((index: number) => {
     dispatch(removeFromPlaylist(index));
@@ -834,8 +906,8 @@ addRecent({
     const entry = playlist[index];
     if (!entry) return;
     dispatch(playFromPlaylist(index));
-    MpvPlayer.loadFile(entry.uri);
-  }, [dispatch, playlist]);
+    loadAndResume(entry.uri);
+  }, [dispatch, playlist, loadAndResume]);
 
   // ── Queue management ──
   const handleQueueMoveItem = useCallback((fromIndex: number, direction: 'up' | 'down') => {
@@ -854,11 +926,11 @@ addRecent({
       const entry = playlist[playlistIdx];
       if (entry) {
         dispatch(playFromPlaylist(playlistIdx));
-        MpvPlayer.loadFile(entry.uri);
+        loadAndResume(entry.uri);
       }
     }
     setQueueSheetVisible(false);
-  }, [dispatch, playlist, currentIndex]);
+    }, [dispatch, playlist, currentIndex, loadAndResume]);
 
   const handleSelectQueueItem = useCallback((idx: number) => {
     const item = queue[idx];
@@ -921,10 +993,10 @@ addRecent({
   const handlePlayRelatedTrack = useCallback(
     (track: ScannedTrack) => {
       setInfoSheetVisible(false);
-      MpvPlayer.loadFile(track.uri);
+      loadAndResume(track.uri);
       setChapters([]);
     },
-    [],
+    [loadAndResume],
   );
 
   // ── Notification action event subscriptions ──
@@ -987,7 +1059,7 @@ addRecent({
       const delay = 1500 * 2 ** (attempt - 1);
       setTimeout(() => {
         try {
-          MpvPlayer.loadFile(uri);
+          loadAndResume(uri);
         } catch {}
       }, delay);
     });
@@ -996,7 +1068,7 @@ addRecent({
       unsubError();
       retryCountRef.current = 0;
     };
-  }, []);
+  }, [loadAndResume]);
 
   // ── P37.3: auto-advance when the current file ends ──
   useEffect(() => {
@@ -1093,6 +1165,8 @@ addRecent({
     handlePrev,
     handleNext,
     handleSeek,
+    handleRewind,
+    handleForward,
     handleVolumeChange,
     handleSeekToLyric,
     handleToggleShuffle,

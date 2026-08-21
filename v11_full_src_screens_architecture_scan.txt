@@ -1,0 +1,69 @@
+Full src/screens architecture scan
+=================================
+About: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+Album: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+AllAudio: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+AllAudioScreen: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=-; subdirs=-
+AllPlaylists: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+AllPlaylistsScreen: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=-; subdirs=-
+AllVideos: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+AllVideosScreen: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=-; subdirs=-
+ArchiveItemDetailScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+ArchiveScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=browse|components|hooks|related|styles|types
+Artist: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+AudiobookDetailScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+AudiobooksScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|styles|types
+AudioSettings: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+Bookmarks: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+Changelog: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+Credits: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+DownloadsScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+Equalizer: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=-
+FolderBrowser: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|related|types
+FolderLinkingWizard: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=FolderLinkingWizard.tsx; subdirs=-
+Genre: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+GenreScreen: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=-; subdirs=-
+Help: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+History: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|types
+Home: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|styles|types
+Library: status=NONCONFORMING; publicIndex=True; rootImplementationFiles=AlbumDetailScreen.tsx|albumDetailTextContent.ts|ArtistDetailScreen.tsx|artistDetailTextContent.ts|textContent.ts; subdirs=components|hooks|related|types
+Licenses: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+LinkedFolders: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|related|types
+LiveTVScreen: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=LiveTVScreen.tsx; subdirs=hooks
+LiveTVScreenNew: status=NONCONFORMING; publicIndex=True; rootImplementationFiles=LiveTVFavoritesScreen.tsx; subdirs=browse|components|hooks|styles|types
+Login: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+MovieDetailScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+MoviesScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|styles|types
+MusicDetailScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+MusicScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=browse|components|hooks|related|styles|types
+NowPlaying: status=NONCONFORMING; publicIndex=True; rootImplementationFiles=textContent.ts; subdirs=components|hooks|types
+Player: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=-; subdirs=components
+PlaylistDetail: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|related|types
+PodcastDetailScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|styles
+PodcastsScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|styles|types
+Preferences: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=-; subdirs=-
+Privacy: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+Profile: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+QueueScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+RadioScreenNew: status=NONCONFORMING; publicIndex=True; rootImplementationFiles=RadioFavoritesScreen.tsx; subdirs=browse|components|hooks|styles|types
+Registration: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=-; subdirs=hooks
+Search: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+sections: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=-; subdirs=components|hooks
+Settings: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+ShowDetailScreen: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+ShowsScreen: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=ShowsScreen.tsx; subdirs=browse|hooks
+Song: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|types
+Splash: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+Start: status=NONCONFORMING; publicIndex=False; rootImplementationFiles=-; subdirs=-
+Stats: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|types
+Terms: status=CONFORMING; publicIndex=True; rootImplementationFiles=-; subdirs=components|hooks|related|types
+
+NONCONFORMING_COUNT=16
+NONCONFORMING_FOLDERS=AllAudioScreen|AllPlaylistsScreen|AllVideosScreen|FolderLinkingWizard|GenreScreen|Library|LiveTVScreen|LiveTVScreenNew|NowPlaying|Player|Preferences|RadioScreenNew|Registration|sections|ShowsScreen|Start
+
+Direct implementation-path imports under src:
+src/navigation/RootNavigator.tsx:27:import {ArtistDetailScreen} from '../screens/Library/ArtistDetailScreen';
+src/navigation/RootNavigator.tsx:28:import {AlbumDetailScreen} from '../screens/Library/AlbumDetailScreen';
+src/navigation/RootNavigator.tsx:36:import {RadioFavoritesScreen} from '../screens/RadioScreenNew/RadioFavoritesScreen';
+src/navigation/RootNavigator.tsx:38:import {LiveTVFavoritesScreen} from '../screens/LiveTVScreenNew/LiveTVFavoritesScreen';
+src/navigation/RootNavigator.tsx:43:import {ShowsScreen} from '../screens/ShowsScreen/ShowsScreen';
