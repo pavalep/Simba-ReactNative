@@ -19,7 +19,7 @@ object MPVLib {
     // ── Lifecycle ──────────────────────────────────────────────────────────
 
     /** Create mpv instance. Returns native pointer as Long. */
-    external fun nativeCreate(): Long
+    external fun nativeCreate(caFilePath: String): Long
 
     /** Destroy mpv instance. */
     external fun nativeDestroy()

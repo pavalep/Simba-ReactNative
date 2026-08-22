@@ -1,0 +1,320 @@
+08-22 17:17:41.531 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:41.531 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:41.721 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:41.721 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:41.722 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:41.722 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:41.725 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:41.725 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:41.907 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:41.907 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:41.907 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:41.938 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=29, buffered position=0, speed=1.0, updated=155158809, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:42.352 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:42.353 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:42.353 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:42.355 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:42.355 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:42.803 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:42.803 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:42.803 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:42.823 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=30, buffered position=0, speed=1.0, updated=155159694, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:42.832 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:42.833 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:42.833 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:42.835 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:42.839 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:42.840 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:43.083 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:43.083 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:43.083 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:43.084 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:43.089 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:43.089 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:43.379 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:43.379 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:43.379 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:43.382 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:43.383 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:43.820 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:43.821 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:43.821 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:43.835 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=31, buffered position=0, speed=1.0, updated=155160706, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:44.191 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:44.191 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:44.192 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:44.192 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:44.201 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:44.201 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:44.387 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:44.387 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:44.387 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:44.396 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:44.396 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:44.442 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:44.442 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:44.442 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:44.442 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:44.539 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:44.540 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:44.837 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:44.837 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:44.837 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:44.858 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=32, buffered position=0, speed=1.0, updated=155161729, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:45.368 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:45.368 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:45.368 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:45.368 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:45.372 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:45.372 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:45.536 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:45.536 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:45.536 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:45.545 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:45.545 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:45.620 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:45.620 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:45.620 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:45.621 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:45.687 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:45.687 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:45.860 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:45.860 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:45.860 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:45.874 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=34, buffered position=0, speed=1.0, updated=155162745, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:46.419 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:46.419 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:46.419 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:46.422 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:46.422 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:46.728 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:46.728 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:46.728 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:46.728 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:46.733 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:46.733 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:46.875 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:46.875 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:46.876 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:46.896 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=34, buffered position=0, speed=1.0, updated=155163767, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:46.976 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:46.976 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:46.976 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:46.976 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:46.980 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:46.980 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:47.168 I/system_server(  695): Background young concurrent mark compact GC freed 23MB AllocSpace bytes, 3(96KB) LOS objects, 38% free, 37MB/60MB, paused 8.826ms,57.984ms total 104.471ms
+08-22 17:17:47.436 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:47.436 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:47.436 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:47.440 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:47.441 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:47.887 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:47.887 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:47.888 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:47.911 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=35, buffered position=0, speed=1.0, updated=155164782, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:48.089 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:48.089 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:48.089 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:48.089 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:48.093 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:48.094 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:48.335 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:48.335 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:48.335 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:48.335 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:48.338 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:48.338 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:48.452 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:48.452 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:48.453 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:48.455 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:48.455 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:48.902 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:48.903 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:48.903 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:48.923 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=37, buffered position=0, speed=1.0, updated=155165794, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:49.268 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:49.268 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:49.269 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:49.269 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:49.272 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:49.272 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:49.279 I/ndroid.systemui( 1209): Background young concurrent mark compact GC freed 12MB AllocSpace bytes, 63(8352KB) LOS objects, 37% free, 36MB/58MB, paused 1.668ms,75.595ms total 97.487ms
+08-22 17:17:49.469 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:49.469 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:49.469 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:49.471 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:49.472 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:49.520 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:49.520 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:49.520 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:49.520 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:49.598 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:49.598 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:49.922 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:49.922 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:49.922 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:49.954 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=38, buffered position=0, speed=1.0, updated=155166825, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:50.485 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:50.485 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:50.486 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:50.488 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:50.488 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:50.627 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:50.627 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:50.627 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:50.628 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:50.636 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:50.636 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:50.880 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:50.880 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:50.880 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:50.881 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:50.895 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:50.896 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:51.039 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:51.039 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:51.039 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:51.059 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=39, buffered position=0, speed=1.0, updated=155167929, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:51.514 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:51.514 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:51.514 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:51.551 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:51.551 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:51.956 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:51.956 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:51.956 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:51.981 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=40, buffered position=0, speed=1.0, updated=155168852, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:51.991 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:51.991 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:51.991 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:51.991 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:51.997 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:51.997 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:52.234 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:52.234 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:52.234 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:52.235 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:52.244 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:52.245 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:52.734 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:52.734 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:52.734 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:52.765 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:52.766 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:53.016 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:53.016 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:53.018 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:53.138 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=41, buffered position=0, speed=1.0, updated=155170009, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:53.168 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:53.169 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:53.169 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:53.169 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:53.212 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:53.212 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:53.214 I/om.simba.player(17565): NativeAlloc concurrent mark compact GC freed 10MB AllocSpace bytes, 0(0B) LOS objects, 49% free, 15MB/31MB, paused 2.419ms,39.716ms total 110.198ms
+08-22 17:17:53.424 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:53.425 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:53.426 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:53.427 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:53.467 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:53.467 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:53.685 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:53.685 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:53.685 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:53.694 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:53.694 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:53.970 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:53.970 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:53.971 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:53.990 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=42, buffered position=0, speed=1.0, updated=155170861, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:54.525 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:54.525 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:54.525 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:54.525 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:54.530 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:54.530 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:54.781 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:54.782 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:54.782 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:54.784 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:54.933 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:54.933 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:54.934 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:54.943 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:54.944 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:55.240 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:55.240 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:55.240 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:55.256 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=43, buffered position=0, speed=1.0, updated=155172127, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:55.569 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:55.569 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:55.569 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:55.575 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:55.575 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:55.899 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:55.899 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:55.905 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:55.905 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:55.952 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:55.952 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:56.091 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:56.091 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:56.092 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:56.108 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=44, buffered position=0, speed=1.0, updated=155172978, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:56.148 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:56.148 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:56.149 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:56.149 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:56.154 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:56.154 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:56.592 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:56.592 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:56.593 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:56.596 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:56.596 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:57.076 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:57.077 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:57.077 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:57.117 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=45, buffered position=0, speed=1.0, updated=155173986, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:57.252 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:57.252 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:57.253 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:57.253 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:57.287 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:57.287 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:57.521 I/MpvEvent(17565): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=warn text=Audio device underrun detected.
+08-22 17:17:57.521 D/mpv     (17565): [cplayer] warn: Audio device underrun detected.
+08-22 17:17:57.550 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:57.550 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:57.555 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:57.555 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:57.560 I/MpvEvent(17565): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=restarting audio after underrun
+08-22 17:17:57.560 D/mpv     (17565): [cplayer] v: restarting audio after underrun
+08-22 17:17:58.163 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:58.165 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:58.167 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:58.168 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:58.168 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:58.170 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:58.195 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:58.195 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:58.239 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=46, buffered position=0, speed=1.0, updated=155175110, actions=823, custom actions=[], active item id=-1, error=null}
+08-22 17:17:58.615 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:58.618 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:58.619 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:58.629 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:58.838 I/MpvEvent(17565): [PlaybackTrace][Native][property] name=demuxer-cache-state format=6 value=null
+08-22 17:17:58.838 I/MpvEvent(17565): [PlaybackTrace][Native][dispatch:property] name=demuxer-cache-state value=null
+08-22 17:17:58.845 D/MPVLib  (17565): onNativePropertyChanged: demuxer-cache-state = null
+08-22 17:17:58.848 I/MpvBridgeModule(17565): [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value=null
+08-22 17:17:59.044 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:59.044 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:59.045 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:59.087 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:59.087 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:59.087 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217388352464 state=playing idle=false eof=false pause=false
+08-22 17:17:59.126 I/MpvJNI  (17565): [PlaybackTrace][Native][getDuration] result=0 duration=149.696033
+08-22 17:17:59.127 D/MpvBridgeModule(17565): [PlaybackTrace][Bridge][getDuration] ptr=131217388352464 duration=149.69603333333333
+08-22 17:17:59.226 D/MediaSessionService(  695): onSessionPlaybackStateChanged: record=com.simba.player/MediaNotification/27 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=47, buffered position=0, speed=1.0, updated=155176097, actions=823, custom actions=[], active item id=-1, error=null}

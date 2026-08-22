@@ -120,15 +120,53 @@ This supplemental batch records the completed route-free playback extraction. Th
 | ☑ | Create the root playback provider and command façade. | `src/modules/playback/PlaybackContext.tsx` exposes `openPlayer`, `closePlayer`, `expandPlayer`, and `collapsePlayer`. |
 | ☑ | Define route-free playback contracts. | `src/modules/playback/types.ts` defines `PlaybackRequest`, module navigation/params, and presentation-state contracts. |
 | ☑ | Add the root overlay host. | `src/modules/playback/PlaybackOverlayHost.tsx` selects mini, audio-full, or video-full presentation and is mounted beside `RootNavigator` in `App.tsx`. |
-| ☑ | Add audio and video module adapters. | `src/modules/playback/audio/AudioPlayerModule.tsx` and `src/modules/playback/video/VideoPlayerModule.tsx` supply module contracts without navigation routes. |
+| ☑ | Add audio and video module adapters. | `src/modules/playback/audio/v2/AudioV2Module.tsx` and `src/modules/playback/video/VideoPlayerModule.tsx` supply module contracts without navigation routes. |
 | ☑ | Move the audio and video UI trees into the module. | `src/modules/playback/audio/` and `src/modules/playback/video/` own the extracted UI, hooks, controllers, and overlays. |
 | ☑ | Remove legacy player screens, component trees, and root routes. | Deleted legacy player screen/component trees; `AudioPlayer` and `VideoPlayer` were removed from `RootStackParamList` and `RootNavigator`. |
-| ☑ | Migrate mini-player expansion to the context command. | `MiniAudioPlayer` expands through `usePlaybackCommands()` rather than a player route. |
+| ☑ | Migrate mini-player expansion to the context command. | `MiniAudioV2` expands through `usePlaybackCommands()` rather than a player route. |
 | ☑ | Migrate all remaining playback callers. | Library, PlaylistDetail, Profile, Queue, Movies, Music, Radio, details, search, history, and related callers now use `openPlayer()`. |
 | ☑ | Repair extracted overlay and equalizer imports. | Seek feedback, resume, auto-advance, and equalizer panel consumers now point to `src/modules/playback/video/components/`. |
 | ☑ | Run the static playback extraction gate. | `tscheck_playback_module_final.log`: `TSC_EXIT=0` after the complete caller/import migration. |
 
 **Playback module extraction status:** **Ready for verification**, not Done. The route-free architecture and TypeScript contract are clean; emulator playback journeys, visual acceptance, native-confirmed controls, PiP, lifecycle, and production build remain open.
+
+### Audio Player V2 buffering and Spotify-level playback research
+
+This supplemental block records the research and runtime evidence required before further buffering implementation. It does not create new canonical phases or claim that streaming acceptance is complete. The full research/design record is `v11_audio_playback_buffering_blueprint.md`, with source links to the current mpv manual, mpv property documentation, Android Media3, maintained mpv-android, MDN media ranges, AVFoundation, and React Native Track Player.
+
+| Done | Playback reliability checkpoint | Evidence / acceptance requirement |
+|---|---|---|
+| ☑ | Confirm the HTTPS/TLS boundary and audible native output. | TLS-fixed debug APK successfully loaded the remote stream and produced audio; CA verification remains enabled. |
+| ☑ | Capture a fresh rebuilt runtime trace instead of relying on the stale Maestro artifact. | `mpv_runtime_fresh_rebuilt_attempt_filtered.log` and TLS-fixed trace artifacts. |
+| ☑ | Establish that the reported restart is not normal cache underrun behavior. | Timeline shows repeated same-URI `loadFile`/`resume` calls; a genuine `paused-for-cache` event must keep the item loaded and must not issue `loadFile`. |
+| ☑ | Research current mpv cache-pause and cache-state semantics. | `audio_buffering_research_2026-08-22.md` and `v11_audio_playback_buffering_blueprint.md`; sources include `mpv.io/manual/stable` and current `DOCS/man/input.rst`. |
+| ☑ | Research maintained Android/libmpv and platform state models. | Verified `mpv-android`, Android Media3, MDN, AVFoundation, and React Native Track Player references are recorded with URLs. |
+| ☑ | Replace broad remote-error reloads with classified terminal-error recovery. | `useAudioPlayerScreen.ts` now treats `onError` as terminal, while cache pauses, seeks, stop/reload events, and ordinary mpv diagnostics do not call `loadFile`; the fresh TypeScript gate passes in `tscheck_controller_cache_fix.log`. |
+| ☑ | Add load-generation and single-flight guards for delayed resume/retry callbacks. | `useAudioPlayerScreen.ts` invalidates stale delayed callbacks with `loadGenerationRef`, clears explicit retry timers, and rejects stale file-loaded/resume work; runtime confirmation of zero duplicate reloads remains part of the device gate. |
+| ☑ | Correct the native cache-range contract. | `property.cpp` observes scalar mpv cache properties with their documented formats; `MpvBridgeModule.kt` parses `demuxer-cache-state.seekable-ranges` and numeric `cache-buffering-state`; `TransportContext.tsx` uses the cache state for V2 transport. Isolated `simbaplayer_mpv` build passes in `native_target_controller_cache_fix.log`. |
+| ☐ | Implement first-class buffering/effective-playback state. | Distinguish user pause, `paused-for-cache`, seeking, loading, effective playing, ended, and terminal error in native, controller, and V2 view-model contracts. |
+| ☐ | Implement layered V2 progress UI. | Render played position, one or more buffered ranges, seekable capability, seeking feedback, and accessible buffering status without reusing V1 presentation code. |
+| ☐ | Tune and measure mobile cache policy. | Validate bounded forward/back byte budgets, startup/rebuffer thresholds, memory use, and recovery latency across API, archive/progressive, local, and non-range streams. |
+| ☐ | Verify end-to-end Spotify-level playback acceptance. | Startup, uninterrupted playback, forced rebuffer/recovery, seek within/outside buffer, unseekable source, saved-position resume, mini-player/background, queue transitions, and restart persistence; each run records unexpected `loadFile` calls. |
+
+**Audio V2 buffering status:** **Research and core controller/cache implementation complete; broader acceptance remains pending.** The reload-loop repair, native buffered-range/state contract, maintained native stack update, and user-confirmed remote seek behavior are recorded above. No blanket “Spotify-level” release claim should be made until the remaining emulator journeys and production-like build gate pass.
+
+### Audio Player V2 cutover and V1 removal
+
+This supplemental checkpoint records the production cutover after user-confirmed runtime playback and remote seeking. The V1 audio presentation is no longer part of the source tree; audio full-player and mini-player rendering are owned by the isolated V2 module, while the orchestration hook remains shared as controller logic.
+
+| Done | Cutover checkpoint | Evidence |
+|---|---|---|
+| ☑ | Mount Audio V2 as the only active full-player and mini-player presentation. | `src/modules/playback/PlaybackOverlayHost.tsx` renders `AudioV2Module` and `MiniAudioV2`; no V1 presentation import remains. |
+| ☑ | Remove the stale V1 playback barrel export. | `src/modules/playback/index.ts` no longer exports `AudioPlayerModule`. |
+| ☑ | Delete the inactive V1 full-player module and presentation tree. | Deleted `src/modules/playback/audio/AudioPlayerModule.tsx`, `audio/components/`, `audio/ui/`, and `audio/textContent.ts`. Retained `audio/hooks/useAudioPlayerScreen.ts` because it is the orchestration controller consumed by V2. |
+| ☑ | Delete the inactive V1 mini-player implementation. | Deleted `src/components/player/MiniAudioPlayer/`; the overlay now uses `src/modules/playback/audio/v2/MiniAudioV2.tsx`. |
+| ☑ | Prove the source tree has no stale V1 entry-point imports. | Post-removal source scan found no `AudioPlayerModule`, `MiniAudioPlayer`, `audio/ui`, or `audio/components` imports; only the controller’s historical comment mentions the former player name. |
+| ☑ | Run the TypeScript gate after deletion. | `tscheck_audio_v1_removal.log`: `TSC_EXIT=0`. |
+| ☑ | Confirm runtime audio and remote-seek behavior on the installed build. | User-confirmed after the maintained mpv-android native stack update: audio is now playing reliably and remote seeking behaves correctly. Full native build/install evidence remains in `android_build_after_mpv_native_update.log`. |
+| ☐ | Complete the broader Audio V2 visual and device acceptance gate. | Buffered-range rendering, paused-versus-buffering visual acceptance, background/lifecycle, queue transitions, and production-like release verification remain open. |
+
+**Audio V2 cutover status:** **Implementation complete; broader release acceptance remains open.**
 
 ## 4. Wave gates
 
@@ -1099,7 +1137,7 @@ The player is not considered complete because a screen renders or a control has 
 **Status:** In progress  
 **Owner:** Unassigned  
 **Blocker:** Runtime/device verification pending  
-**Evidence:** `AudioPlayer.tsx` now presents a focused now-playing card with status eyebrow, artwork, metadata, seek surface, transport, secondary actions, lyrics, and queue preview. `AudioTransportControls.tsx` separates primary transport from shuffle/repeat utilities with 44pt-plus targets. `AudioActionRow.tsx` provides visible bookmark, like, share, info, queue, manage, playlist, and overflow actions; `AudioAlbumArt.tsx` adds restrained frame depth and clipping; `AudioVolumeSlider.tsx` now provides a 44pt gesture surface while retaining native-confirmed percentage display. The runtime metadata repair now dispatches complete provenance/artwork fields in `useAudioPlayerScreen.ts`, merges native metadata without erasing route/cache artwork, and enriches Redux `currentFile` through the non-destructive `updateCurrentFileMetadata` reducer so the mini-player receives the same complete `PlaybackEntry`. Recent/Home playback was also migrated from deleted `AudioPlayer`/`VideoPlayer` navigation routes to `usePlaybackCommands().openPlayer()`, including Recent item resume, local file picking, Library playlist play-all/shuffle, and the remaining SongScreen share deep-links. A fresh source scan records `STALE_AUDIO_PLAYER_ROUTE_REFS=0` in `recent_audio_player_refs_after.txt`. TypeScript passes in `tscheck_player_ui_batch8.log`, `tscheck_music_player_runtime_fix.log`, and the fresh `tscheck_recent_route_fix.log` (`TSC_EXIT=0`). The mini-player visibility defect was isolated to a contrast mismatch: `surfaceDark` was used while light-theme `text.primary` and transport icons remained dark. `MiniAudioPlayer.tsx` now uses the theme-aware `background.elevated` surface and `text.inverse` for the gold play/pause control, keeping artwork, title, artist/album fallback, and controls readable in the current light Home presentation. Audio streaming startup was repaired in `useAudioPlayerScreen.ts`: initial `onFileLoaded` now explicitly resumes when there is no resume prompt, explicit resume seeks now resume after seeking, and all chapter, previous/next, playlist, queue, related-track, and remote-retry loads use a centralized `loadAndResume()` helper with a delayed second resume for native mpv settling. The display title now falls back from a null/empty route title to the media filename instead of rendering `null`. TypeScript passes in `tscheck_audio_streaming_fix.log` (`TSC_EXIT=0`). Emulator validation of Recent resume, remote streaming, full-player artwork, mini-player rendering, and close behavior remains open.
+**Evidence:** `AudioPlayer.tsx` now presents a focused now-playing card with status eyebrow, artwork, metadata, seek surface, transport, secondary actions, lyrics, and queue preview. `AudioTransportControls.tsx` separates primary transport from shuffle/repeat utilities with 44pt-plus targets. `AudioActionRow.tsx` provides visible bookmark, like, share, info, queue, manage, playlist, and overflow actions; `AudioAlbumArt.tsx` adds restrained frame depth and clipping; `AudioVolumeSlider.tsx` now provides a 44pt gesture surface while retaining native-confirmed percentage display. The runtime metadata repair now dispatches complete provenance/artwork fields in `useAudioPlayerScreen.ts`, merges native metadata without erasing route/cache artwork, and enriches Redux `currentFile` through the non-destructive `updateCurrentFileMetadata` reducer so the mini-player receives the same complete `PlaybackEntry`. Recent/Home playback was also migrated from deleted `AudioPlayer`/`VideoPlayer` navigation routes to `usePlaybackCommands().openPlayer()`, including Recent item resume, local file picking, Library playlist play-all/shuffle, and the remaining SongScreen share deep-links. A fresh source scan records `STALE_AUDIO_PLAYER_ROUTE_REFS=0` in `recent_audio_player_refs_after.txt`. TypeScript passes in `tscheck_player_ui_batch8.log`, `tscheck_music_player_runtime_fix.log`, and the fresh `tscheck_recent_route_fix.log` (`TSC_EXIT=0`). The mini-player visibility defect was isolated to a contrast mismatch: `surfaceDark` was used while light-theme `text.primary` and transport icons remained dark. `MiniAudioPlayer.tsx` now uses the theme-aware `background.elevated` surface and `text.inverse` for the gold play/pause control, keeping artwork, title, artist/album fallback, and controls readable in the current light Home presentation. Audio streaming startup was repaired in `useAudioPlayerScreen.ts`: initial `onFileLoaded` now explicitly resumes when there is no resume prompt, explicit resume seeks now resume after seeking, and all chapter, previous/next, playlist, queue, related-track, and remote-retry loads use a centralized `loadAndResume()` helper with a delayed second resume for native mpv settling. The display title now falls back from a null/empty route title to the media filename instead of rendering `null`. A guarded delayed resume fallback now covers native builds that emit `onFileLoaded` before the JavaScript listener is attached. Before collapsing the full player, `updateCurrentFileMetadata` now preserves a non-null title and resolved artwork in Redux, and the mini-player independently falls back to the media filename if Redux receives an empty title. TypeScript passes in `tscheck_audio_stream_handoff_fix.log` (`TSC_EXIT=0`). Emulator validation of Recent resume, remote streaming, full-player artwork, mini-player rendering, and close behavior remains open.
 
 | Done | Checkable step | Notes/evidence |
 |---|---|---|
@@ -1893,3 +1931,32 @@ The final architecture cleanup migrated the active legacy `LiveTVScreen` into `c
 **Wave 6 player status:** Static implementation complete; runtime/device acceptance remains open. Do not mark this player fully release-ready until the emulator acceptance checklist passes.
 
 Evidence: `v11_music_player_redesign.md`, `tscheck_music_player_final.log`
+
+
+## Current libmpv integration audit — 22 August 2026
+
+- [x] Compared SIMBA’s Android/libmpv bridge with current source lines from [`Dusk-Labs/react-native-mpv`](https://github.com/Dusk-Labs/react-native-mpv), [`pigeonmal/react-native-video-mpv`](https://github.com/pigeonmal/react-native-video-mpv), [`mpv-android/mpv-android`](https://github.com/mpv-android/mpv-android), [`mpvKt`](https://github.com/abdallahmehiz/mpvKt), and [`mpvEx`](https://github.com/marlboro-advance/mpvEx); archived `mpvKt` is historical-only and was not treated as a dependency source.
+- [x] Decoupled native mpv initialization from video-surface creation so audio-only remote streams can start without a TextureView.
+- [x] Replaced fragile string-form native commands with explicit argument arrays and added native command failure logging.
+- [x] Added JSON-safe escaping for native property strings and forwarded fatal/error log messages to JavaScript.
+- [x] Corrected native playback-state derivation from conflated `core-idle` usage to `idle-active`, `eof-reached`, and `pause`.
+- [x] Queued property observers requested before `initPlayer()` and registered them after initialization instead of silently dropping them.
+- [x] Added repository report: `v11_mpv_integration_audit.md`; source notes: `/home/ubuntu/mpv_audit_sources.md`.
+- [x] Static verification: `DIFF_CHECK_EXIT=0`; TypeScript: `TSC_EXIT=0`; obsolete `core-idle` references: `0`.
+- [ ] Android native Gradle/C++ acceptance remains open: the attached Windows workspace timed out while building React Native dependency targets before producing a definitive SIMBA C++ compile result.
+
+See `v11_mpv_integration_audit.md` for current/deprecated API decisions, applied fixes, reference links, and remaining production-hardening items.
+
+
+## Audio Player V2 — Ground-Up Replacement
+
+- [x] Created isolated `src/modules/playback/audio/v2/` boundary with a single public `index.tsx` entrypoint.
+- [x] Created original V2 visual primitives and icon paths; V2 does not import V1 player UI, V1 icon registry, V1 SVG assets, or the legacy mini-player controller.
+- [x] Created typed SOLID contracts separating playback orchestration, view-model construction, artwork, controls, progress, action strip, full player, and mini-player responsibilities.
+- [x] Implemented the new full-player hierarchy with artwork, metadata, progress/volume, transport, shuffle/repeat, queue, lyrics, chapters, related tracks, playlist, bookmark, info, share, retry, and resume-choice flows.
+- [x] Implemented the new mini-player hierarchy with artwork/title/artist/status, progress, previous/next, play/pause, expand, and close behavior.
+- [x] Switched `PlaybackOverlayHost` from V1 `AudioPlayerModule`/`MiniAudioPlayer` to `AudioV2Module`/`MiniAudioV2`; V1 is disconnected from the runtime overlay path.
+- [x] Corrected V2 Save actions to call the real bookmark toggle command rather than opening a dead legacy sheet.
+- [x] Added the missing `TransportProvider` boundary around `AudioV2Content`, preventing `useTransport must be used within a TransportProvider` at runtime while keeping V2 isolated from V1.
+- [x] TypeScript verification after the provider-boundary fix: `TSC_EXIT=0` (`tscheck_audio_v2_transport_provider.log`).
+- [ ] Manual emulator acceptance remains open: full-player entry, remote streaming, pause/resume, seek, volume, previous/next, queue selection, lyrics/chapter seek, bookmark, playlist, share, back-to-mini, mini-player expand, and close.

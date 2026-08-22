@@ -2,6 +2,7 @@
 #include <android/log.h>
 #include <string>
 #include <cstring>
+#include <cstdio>
 #include <client.h>
 
 #define LOG_TAG "MpvEvent"
@@ -21,7 +22,113 @@ extern jmethodID g_mid_onError;
 
 // ── Helper: attach current thread to JVM and call static void method ────────
 
+static std::string jsonQuote(const char *value) {
+    std::string out;
+    out.push_back(34);
+    if (value) {
+        for (const unsigned char *p = reinterpret_cast<const unsigned char *>(value); *p; ++p) {
+            switch (*p) {
+                case 92:
+                    out.push_back(92);
+                    out.push_back(92);
+                    break;
+                case 34:
+                    out.push_back(92);
+                    out.push_back(34);
+                    break;
+                case 8:
+                    out.push_back(92);
+                    out.push_back('b');
+                    break;
+                case 12:
+                    out.push_back(92);
+                    out.push_back('f');
+                    break;
+                case 10:
+                    out.push_back(92);
+                    out.push_back('n');
+                    break;
+                case 13:
+                    out.push_back(92);
+                    out.push_back('r');
+                    break;
+                case 9:
+                    out.push_back(92);
+                    out.push_back('t');
+                    break;
+                default:
+                    if (*p < 0x20) {
+                        char escaped[7];
+                        out.push_back(92);
+                        snprintf(escaped, sizeof(escaped), "u%04x", *p);
+                        out += escaped;
+                    } else {
+                        out += static_cast<char>(*p);
+                    }
+            }
+        }
+    }
+    out.push_back(34);
+    return out;
+}
+
+static std::string jsonNode(const mpv_node *node) {
+    if (!node) return "null";
+
+    switch (node->format) {
+        case MPV_FORMAT_NONE:
+            return "null";
+        case MPV_FORMAT_STRING:
+            return jsonQuote(node->u.string);
+        case MPV_FORMAT_FLAG:
+            return node->u.flag ? "true" : "false";
+        case MPV_FORMAT_INT64: {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "%lld", static_cast<long long>(node->u.int64));
+            return buf;
+        }
+        case MPV_FORMAT_DOUBLE: {
+            char buf[64];
+            snprintf(buf, sizeof(buf), "%.6f", node->u.double_);
+            return buf;
+        }
+        case MPV_FORMAT_BYTE_ARRAY:
+            // Buffering properties are node/string/number values. Do not
+            // expose arbitrary binary data as malformed JSON.
+            return "null";
+        case MPV_FORMAT_NODE_ARRAY: {
+            std::string out = "[";
+            const mpv_node_list *list = node->u.list;
+            if (list) {
+                for (int i = 0; i < list->num; ++i) {
+                    if (i > 0) out += ",";
+                    out += jsonNode(&list->values[i]);
+                }
+            }
+            out += "]";
+            return out;
+        }
+        case MPV_FORMAT_NODE_MAP: {
+            std::string out = "{";
+            const mpv_node_list *list = node->u.list;
+            if (list) {
+                for (int i = 0; i < list->num; ++i) {
+                    if (i > 0) out += ",";
+                    out += jsonQuote(list->keys && list->keys[i] ? list->keys[i] : "");
+                    out += ":";
+                    out += jsonNode(&list->values[i]);
+                }
+            }
+            out += "}";
+            return out;
+        }
+        default:
+            return "null";
+    }
+}
+
 static void callJavaEvent(const char *event, const char *jsonPayload) {
+    LOGI("[PlaybackTrace][Native][dispatch:event] name=%s payload=%s", event, jsonPayload ? jsonPayload : "null");
     JNIEnv *env = nullptr;
     bool attached = false;
     int getEnvStat = g_vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
@@ -48,6 +155,7 @@ static void callJavaEvent(const char *event, const char *jsonPayload) {
 }
 
 static void callJavaPropertyChanged(const char *name, const char *jsonValue) {
+    LOGI("[PlaybackTrace][Native][dispatch:property] name=%s value=%s", name ? name : "null", jsonValue ? jsonValue : "null");
     JNIEnv *env = nullptr;
     bool attached = false;
     int getEnvStat = g_vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
@@ -68,6 +176,7 @@ static void callJavaPropertyChanged(const char *name, const char *jsonValue) {
 }
 
 static void callJavaError(int code, const char *message) {
+    LOGE("[PlaybackTrace][Native][dispatch:error] code=%d message=%s", code, message ? message : "null");
     JNIEnv *env = nullptr;
     bool attached = false;
     int getEnvStat = g_vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
@@ -92,7 +201,11 @@ void eventLoop() {
 
     while (g_running) {
         mpv_event *event = mpv_wait_event(g_mpv, -1);
-        if (!event) continue;
+        if (!event) {
+            LOGE("[PlaybackTrace][Native][eventLoop] mpv_wait_event returned null");
+            continue;
+        }
+        LOGI("[PlaybackTrace][Native][eventLoop] event_id=%d error=%d", event->event_id, event->error);
 
         switch (event->event_id) {
             case MPV_EVENT_NONE:
@@ -115,18 +228,33 @@ void eventLoop() {
 
             case MPV_EVENT_END_FILE: {
                 auto *prop = (mpv_event_end_file *)event->data;
+                LOGE("[PlaybackTrace][Native][eventLoop] MPV_EVENT_END_FILE reason=%d error=%d", prop ? prop->reason : -1, prop ? prop->error : -1);
                 char payload[128];
+                const int reason = prop ? prop->reason : -1;
+                const int error = prop ? prop->error : -1;
                 snprintf(payload, sizeof(payload), "{\"reason\":%d,\"error\":%d}",
-                         prop->reason, prop->error);
+                         reason, error);
                 callJavaEvent("endFile", payload);
+                // Only a non-zero end-file error is a terminal playback failure.
+                // MPV log lines at level `error` can be recoverable decoder noise
+                // (for example mjpeg overread warnings) and must not trigger a
+                // JavaScript reload of an already-playing stream.
+                if (prop && prop->error != 0) {
+                    char errorMessage[160];
+                    snprintf(errorMessage, sizeof(errorMessage),
+                             "mpv end-file error=%d reason=%d", prop->error, prop->reason);
+                    callJavaError(prop->error, errorMessage);
+                }
                 break;
             }
 
             case MPV_EVENT_PLAYBACK_RESTART:
+                LOGI("[PlaybackTrace][Native][eventLoop] MPV_EVENT_PLAYBACK_RESTART");
                 callJavaEvent("playbackRestart", "{}");
                 break;
 
             case MPV_EVENT_SEEK:
+                LOGI("[PlaybackTrace][Native][eventLoop] MPV_EVENT_SEEK");
                 callJavaEvent("seek", "{}");
                 break;
 
@@ -137,36 +265,50 @@ void eventLoop() {
 
             case MPV_EVENT_PROPERTY_CHANGE: {
                 auto *prop = (mpv_event_property *)event->data;
-                if (prop->format == MPV_FORMAT_NONE) break;
-                mpv_node node;
-                node.format = prop->format;
-                // Copy value based on format — simplified
+                if (!prop || !prop->name) {
+                    LOGE("[PlaybackTrace][Native][eventLoop] property event missing data");
+                    break;
+                }
+                if (prop->format == MPV_FORMAT_NONE) {
+                    LOGI("[PlaybackTrace][Native][eventLoop] property=%s format=NONE", prop->name);
+                    break;
+                }
                 std::string json;
-                if (prop->format == MPV_FORMAT_STRING && prop->data) {
-                    json = "\"";
-                    json += (const char *)prop->data;
-                    json += "\"";
-                } else if (prop->format == MPV_FORMAT_FLAG) {
-                    json = *(int *)prop->data ? "true" : "false";
-                } else if (prop->format == MPV_FORMAT_DOUBLE) {
+                if (prop->format == MPV_FORMAT_NODE && prop->data) {
+                    json = jsonNode(static_cast<const mpv_node *>(prop->data));
+                } else if (prop->format == MPV_FORMAT_STRING && prop->data) {
+                    json = jsonQuote(static_cast<const char *>(prop->data));
+                } else if (prop->format == MPV_FORMAT_FLAG && prop->data) {
+                    json = *static_cast<const int *>(prop->data) ? "true" : "false";
+                } else if (prop->format == MPV_FORMAT_DOUBLE && prop->data) {
                     char buf[64];
-                    snprintf(buf, sizeof(buf), "%.6f", *(double *)prop->data);
+                    snprintf(buf, sizeof(buf), "%.6f", *static_cast<const double *>(prop->data));
                     json = buf;
-                } else if (prop->format == MPV_FORMAT_INT64) {
+                } else if (prop->format == MPV_FORMAT_INT64 && prop->data) {
                     char buf[32];
-                    snprintf(buf, sizeof(buf), "%lld", (long long)*(int64_t *)prop->data);
+                    snprintf(buf, sizeof(buf), "%lld", static_cast<long long>(*static_cast<const int64_t *>(prop->data)));
                     json = buf;
                 } else {
                     json = "null";
                 }
+                LOGI("[PlaybackTrace][Native][property] name=%s format=%d value=%s", prop->name, prop->format, json.c_str());
                 callJavaPropertyChanged(prop->name, json.c_str());
                 break;
             }
 
             case MPV_EVENT_LOG_MESSAGE: {
                 auto *log = (mpv_event_log_message *)event->data;
+                LOGI("[PlaybackTrace][Native][mpv-log] prefix=%s level=%s text=%s", log && log->prefix ? log->prefix : "", log && log->level ? log->level : "", log && log->text ? log->text : "");
                 __android_log_print(ANDROID_LOG_DEBUG, "mpv", "[%s] %s: %s",
                                     log->prefix, log->level, log->text);
+                // Do not promote every `error`-level mpv log to a playback
+                // failure. Decoder warnings such as recoverable mjpeg overread
+                // messages are common during network playback and previously
+                // caused the JS controller to reload the stream mid-playback.
+                // Terminal failures are reported through MPV_EVENT_END_FILE.
+                if (log->level && strcmp(log->level, "fatal") == 0) {
+                    callJavaError(-1, log->text ? log->text : "mpv fatal error");
+                }
                 break;
             }
             case MPV_EVENT_CLIENT_MESSAGE:
@@ -177,7 +319,7 @@ void eventLoop() {
                 callJavaEvent("videoReconfig", "{}");
                 break;
             case MPV_EVENT_AUDIO_RECONFIG:
-                LOGI("MPV_EVENT_AUDIO_RECONFIG");
+                LOGI("[PlaybackTrace][Native][eventLoop] MPV_EVENT_AUDIO_RECONFIG");
                 callJavaEvent("audioReconfig", "{}");
                 break;
 

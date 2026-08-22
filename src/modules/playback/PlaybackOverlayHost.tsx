@@ -1,9 +1,8 @@
 import React from 'react';
 import {StyleSheet, View} from 'react-native';
 import {useAppSelector} from '../../store';
-import {MiniAudioPlayer} from '../../components/player/MiniAudioPlayer/MiniAudioPlayer';
 import {usePlaybackState} from './PlaybackContext';
-import {AudioPlayerModule} from './audio/AudioPlayerModule';
+import {AudioV2Module, MiniAudioV2} from './audio/v2';
 import {VideoPlayerModule} from './video/VideoPlayerModule';
 
 /**
@@ -23,7 +22,7 @@ export const PlaybackOverlayHost: React.FC = () => {
   if (presentation === 'mini') {
     return (
       <View pointerEvents="box-none" style={styles.miniLayer}>
-        <MiniAudioPlayer overTabBar={false} />
+        <MiniAudioV2 />
       </View>
     );
   }
@@ -33,7 +32,7 @@ export const PlaybackOverlayHost: React.FC = () => {
       {lane === 'video' ? (
         <VideoPlayerModule active={active} />
       ) : (
-        <AudioPlayerModule active={active} />
+        <AudioV2Module active={active} />
       )}
     </View>
   );

@@ -42,10 +42,17 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
             .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
     }
 
+    /**
+     * Property observers requested by JS before native initialization completes.
+     * Keep them until the handle exists instead of silently dropping them.
+     */
+    private val pendingObservedProperties = linkedSetOf<String>()
+
     // ── MPVLib Listener → JS Event Bridge ──────────────────────────────────
 
     private val mpvListener = object : MPVLib.MpvEventListener {
         override fun onMpvEvent(event: String, jsonPayload: String) {
+            Log.i(TAG, "[PlaybackTrace][Bridge][listener:event] name=$event payload=$jsonPayload")
             // Map to JS event name conventions
             val jsEvent = when (event) {
                 "fileLoaded"        -> "onFileLoaded"
@@ -65,6 +72,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         }
 
         override fun onMpvPropertyChanged(name: String, jsonValue: String) {
+            Log.i(TAG, "[PlaybackTrace][Bridge][listener:property] name=$name value=$jsonValue")
             try {
                 val payload = Arguments.createMap().apply {
                     putString("property", name)
@@ -152,15 +160,52 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
                         Log.w(TAG, "onSeekable emit failed: ${e.message}")
                     }
                 }
+                // Keep the dedicated JS event contract backed by mpv's generic
+                // property observer stream. These events are consumed by both
+                // the playback controller and TransportContext for low-latency
+                // state updates; polling remains as a defensive fallback.
+                "time-pos" -> emitNumericEvent("onPositionChanged", "position", jsonValue)
+                "duration" -> emitNumericEvent("onDurationChanged", "duration", jsonValue)
+                "volume" -> emitNumericEvent("onVolumeChanged", "volume", jsonValue)
+                "speed" -> emitNumericEvent("onSpeedChanged", "speed", jsonValue)
+                "pause" -> {
+                    val paused = jsonValue.trim().trim('"').equals("true", ignoreCase = true)
+                    emitPlaybackStateEvent(if (paused) "paused" else "playing")
+                }
+                "idle-active", "eof-reached" -> emitPlaybackStateEvent(getPlaybackState())
             }
         }
 
         override fun onMpvError(code: Int, message: String) {
+            Log.e(TAG, "[PlaybackTrace][Bridge][listener:error] code=$code message=$message")
             val payload = Arguments.createMap().apply {
                 putInt("code", code)
                 putString("message", message)
             }
             eventEmitter.emit("onError", payload)
+        }
+    }
+
+    private fun emitNumericEvent(eventName: String, key: String, rawValue: String) {
+        val value = rawValue.trim().trim('"').toDoubleOrNull() ?: return
+        try {
+            val payload = Arguments.createMap().apply {
+                putDouble(key, value)
+            }
+            eventEmitter.emit(eventName, payload)
+        } catch (e: Exception) {
+            Log.w(TAG, "$eventName emit failed: ${e.message}")
+        }
+    }
+
+    private fun emitPlaybackStateEvent(state: String) {
+        try {
+            val payload = Arguments.createMap().apply {
+                putString("state", state)
+            }
+            eventEmitter.emit("onPlaybackStateChanged", payload)
+        } catch (e: Exception) {
+            Log.w(TAG, "onPlaybackStateChanged emit failed: ${e.message}")
         }
     }
 
@@ -186,18 +231,23 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun play() {
         ensurePtr()
+        Log.i(TAG, "[PlaybackTrace][Bridge][play] ptr=$nativePtr")
         MPVLib.nativePlay(nativePtr)
+        Log.i(TAG, "[PlaybackTrace][Bridge][play] nativePlay returned")
     }
 
     @ReactMethod
     fun pause() {
         ensurePtr()
+        Log.i(TAG, "[PlaybackTrace][Bridge][pause] ptr=$nativePtr")
         MPVLib.nativePause(nativePtr)
+        Log.i(TAG, "[PlaybackTrace][Bridge][pause] nativePause returned")
     }
 
     @ReactMethod
     fun stop() {
         ensurePtr()
+        Log.i(TAG, "[PlaybackTrace][Bridge][stop] ptr=$nativePtr")
         MPVLib.nativeStop(nativePtr)
     }
 
@@ -222,6 +272,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun seekAbsolute(position: Double) {
         ensurePtr()
+        Log.i(TAG, "[PlaybackTrace][Bridge][seekAbsolute] position=$position ptr=$nativePtr")
         MPVLib.nativeSeek(nativePtr, position)
     }
 
@@ -261,7 +312,14 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     fun loadFile(path: String) {
         ensurePtr()
         val resolvedPath = resolveContentUri(path)
-        MPVLib.nativeLoadFile(nativePtr, resolvedPath)
+        Log.i(TAG, "[PlaybackTrace][Bridge][loadFile] requested=$path resolved=$resolvedPath ptr=$nativePtr")
+        try {
+            MPVLib.nativeLoadFile(nativePtr, resolvedPath)
+            Log.i(TAG, "[PlaybackTrace][Bridge][loadFile] nativeLoadFile returned")
+        } catch (e: Exception) {
+            Log.e(TAG, "[PlaybackTrace][Bridge][loadFile] nativeLoadFile threw: ${e.message}", e)
+            throw e
+        }
     }
 
     /**
@@ -453,6 +511,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun setVolume(volume: Double) {
         ensurePtr()
+        Log.i(TAG, "[PlaybackTrace][Bridge][setVolume] volume=$volume ptr=$nativePtr")
         MPVLib.nativeSetVolume(nativePtr, volume)
     }
 
@@ -478,13 +537,19 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     fun getAudioDevices(): String {
         ensurePtr()
         return try {
-            MPVLib.nativeGetProperty(nativePtr, "audio-device-list")
-        } catch (_: Exception) { "[]" }
+            val devices = MPVLib.nativeGetProperty(nativePtr, "audio-device-list")
+            Log.i(TAG, "[PlaybackTrace][Bridge][getAudioDevices] $devices")
+            devices
+        } catch (e: Exception) {
+            Log.e(TAG, "[PlaybackTrace][Bridge][getAudioDevices] failed: ${e.message}", e)
+            "[]"
+        }
     }
 
     @ReactMethod
     fun setAudioDevice(deviceName: String) {
         ensurePtr()
+        Log.i(TAG, "[PlaybackTrace][Bridge][setAudioDevice] device=$deviceName ptr=$nativePtr")
         MPVLib.nativeSetProperty(nativePtr, "audio-device", "\"$deviceName\"")
     }
 
@@ -547,15 +612,11 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun observeProperty(name: String) {
-        // Resilient: silently no-op if initPlayer() hasn't run yet.
-        // TransportContext may try to subscribe before the player is
-        // ready (e.g. during the brief gap between mount and isReady
-        // flipping to true on the JS side). Throwing here triggers
-        // a red-box in dev mode even though the JS caller has its own
-        // try/catch — RN doesn't always surface those errors cleanly.
-        // Better to drop the request than crash the bridge.
+        if (name.isBlank()) return
+        Log.i(TAG, "[PlaybackTrace][Bridge][observeProperty] name=$name initialized=${nativePtr != 0L}")
+        pendingObservedProperties.add(name)
         if (nativePtr == 0L) {
-            Log.w(TAG, "observeProperty('$name') called before initPlayer() — dropped")
+            Log.i(TAG, "Queued property observer '$name' until initPlayer()")
             return
         }
         try {
@@ -567,10 +628,8 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun unobserveProperty(name: String) {
-        if (nativePtr == 0L) {
-            // Already torn down — nothing to un-observe.
-            return
-        }
+        pendingObservedProperties.remove(name)
+        if (nativePtr == 0L) return
         try {
             MPVLib.nativeUnobserveProperty(nativePtr, name)
         } catch (e: Exception) {
@@ -636,21 +695,48 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod(isBlockingSynchronousMethod = true)
     fun getPosition(): Double {
-        return if (nativePtr != 0L) MPVLib.nativeGetPosition(nativePtr) else 0.0
+        val position = if (nativePtr != 0L) MPVLib.nativeGetPosition(nativePtr) else 0.0
+        Log.d(TAG, "[PlaybackTrace][Bridge][getPosition] ptr=$nativePtr position=$position")
+        return position
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
     fun getDuration(): Double {
-        return if (nativePtr != 0L) MPVLib.nativeGetDuration(nativePtr) else 0.0
+        val duration = if (nativePtr != 0L) MPVLib.nativeGetDuration(nativePtr) else 0.0
+        Log.d(TAG, "[PlaybackTrace][Bridge][getDuration] ptr=$nativePtr duration=$duration")
+        return duration
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
     fun getPlaybackState(): String {
-        if (nativePtr == 0L) return "idle"
-        val state = try {
-            MPVLib.nativeGetProperty(nativePtr, "core-idle").trim('"')
-        } catch (_: Exception) { "true" }
-        return if (state.toBoolean()) "paused" else "playing"
+        if (nativePtr == 0L) {
+            Log.d(TAG, "[PlaybackTrace][Bridge][getPlaybackState] ptr=0 state=idle")
+            return "idle"
+        }
+        return try {
+            val idle = MPVLib.nativeGetProperty(nativePtr, "idle-active")
+                .trim('"').toBoolean()
+            if (idle) {
+                Log.d(TAG, "[PlaybackTrace][Bridge][getPlaybackState] ptr=$nativePtr state=idle idle=true")
+                return "idle"
+            }
+
+            val ended = MPVLib.nativeGetProperty(nativePtr, "eof-reached")
+                .trim('"').toBoolean()
+            if (ended) {
+                Log.d(TAG, "[PlaybackTrace][Bridge][getPlaybackState] ptr=$nativePtr state=stopped eof=true")
+                return "stopped"
+            }
+
+            val paused = MPVLib.nativeGetProperty(nativePtr, "pause")
+                .trim('"').toBoolean()
+            val state = if (paused) "paused" else "playing"
+            Log.d(TAG, "[PlaybackTrace][Bridge][getPlaybackState] ptr=$nativePtr state=$state idle=$idle eof=$ended pause=$paused")
+            state
+        } catch (e: Exception) {
+            Log.e(TAG, "[PlaybackTrace][Bridge][getPlaybackState] failed: ${e.message}", e)
+            "idle"
+        }
     }
 
     @ReactMethod(isBlockingSynchronousMethod = true)
@@ -660,19 +746,47 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
 
+    private fun prepareMpvCaBundle(): String {
+        val target = File(reactApplicationContext.filesDir, "mpv/cacert.pem")
+        return try {
+            if (!target.exists() || target.length() < 1024L) {
+                target.parentFile?.mkdirs()
+                reactApplicationContext.assets.open("mpv/cacert.pem").use { input ->
+                    target.outputStream().use { output -> input.copyTo(output) }
+                }
+            }
+            Log.i(TAG, "[PlaybackTrace][Bridge][tls] caFile=${target.absolutePath} bytes=${target.length()}")
+            target.absolutePath
+        } catch (error: Exception) {
+            Log.e(TAG, "[PlaybackTrace][Bridge][tls] failed to prepare CA bundle: ${error.message}", error)
+            ""
+        }
+    }
+
     @ReactMethod(isBlockingSynchronousMethod = true)
     fun initPlayer(): Boolean {
+        Log.i(TAG, "[PlaybackTrace][Bridge][initPlayer] call currentPtr=$nativePtr")
         if (nativePtr != 0L) {
-            Log.w(TAG, "Already initialized")
+            Log.w(TAG, "[PlaybackTrace][Bridge][initPlayer] Already initialized ptr=$nativePtr")
             return true
         }
-        nativePtr = MPVLib.nativeCreate()
+        val caFilePath = prepareMpvCaBundle()
+        nativePtr = MPVLib.nativeCreate(caFilePath)
+        Log.i(TAG, "[PlaybackTrace][Bridge][initPlayer] nativeCreate returned ptr=$nativePtr")
         if (nativePtr == 0L) {
             Log.e(TAG, "Failed to create mpv instance")
             return false
         }
-        Log.i(TAG, "mpv initialized, nativePtr=$nativePtr")
+        pendingObservedProperties.forEach { property ->
+            try {
+                MPVLib.nativeObserveProperty(nativePtr, property)
+            } catch (e: Exception) {
+                Log.w(TAG, "Deferred observeProperty('$property') failed: ${e.message}")
+            }
+        }
+        Log.i(TAG, "mpv initialized, nativePtr=$nativePtr, observers=${pendingObservedProperties.size}")
         return true
+
     }
 
     @ReactMethod
@@ -861,6 +975,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
 
     private fun ensurePtr() {
         if (nativePtr == 0L) {
+            Log.e(TAG, "[PlaybackTrace][Bridge][ensurePtr] native pointer is zero")
             throw IllegalStateException("MpvPlayerModule not initialized. Call initPlayer() first.")
         }
     }
@@ -880,9 +995,11 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
      */
     private fun parseBufferingPercent(jsonValue: String): Double {
         val trimmed = jsonValue.trim()
-        if (trimmed == "false" || trimmed.isEmpty() || trimmed == "null") return 100.0
+                if (trimmed == "false" || trimmed.isEmpty() || trimmed == "null") return 100.0
+        trimmed.toDoubleOrNull()?.let { return it.coerceIn(0.0, 100.0) }
         return try {
             val obj = JSONObject(trimmed)
+
             when {
                 obj.has("percent") -> obj.getDouble("percent").coerceIn(0.0, 100.0)
                 obj.has("percentage") -> obj.getDouble("percentage").coerceIn(0.0, 100.0)
@@ -897,30 +1014,16 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     /**
      * Parse a `demuxer-cache-state` payload into buffered ranges + fill.
      *
-     * MPV serialises this property as a node map with shape:
-     * ```
-     * {
-     *   "seekableStart": <double, may be undefined>,
-     *   "seekableEnd":   <double, may be undefined>,
-     *   "bof":           <bool>,
-     *   "eof":           <bool>,
-     *   "fw":            <double, in stream seconds>,
-     *   "ranges":        [{ "start": <double>, "end": <double>, "flags": <int> }, ...],
-     *   "buffering":     <bool>,
-     *   "cacheSize":     <double, in bytes>,
-     *   "underrun":      <bool>,
-     *   "idle":          <bool>,
-     *   "totalBytes":    <double>,
-     *   "used":          <double>
-     * }
-     * ```
+          * MPV serialises this property as a node map whose documented fields
+     * include `seekable-ranges`, `bof-cached`, `eof-cached`, `fw-bytes`,
+     * `file-cache-bytes`, `cache-end`, `reader-pts`, and `cache-duration`.
+     * The seekable ranges are the authoritative buffered timeline ranges.
      *
-     * We extract:
-     *   • `ranges` — list of `{start, end}` in stream seconds. This is the
-     *      canonical "what bytes are buffered right now" payload — used by
-     *      the seek bar to paint the grey overlay.
-     *   • `fill` — 0..1 fill ratio of the cache (`fw / cacheSize`),
-     *      or `0` if no cache is active.
+     * We extract only those ranges here. Cache fill is intentionally not
+     * fabricated from byte counts: mpv exposes the user-facing fill percentage
+     * through the separate `cache-buffering-state` property, which is mapped
+     * to `onBuffering` and consumed by TransportContext.
+
      */
     private data class CacheStatePayload(
         val ranges: List<Pair<Double, Double>>,
@@ -934,7 +1037,9 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         }
         return try {
             val obj = JSONObject(trimmed)
-            val rangesJson = obj.optJSONArray("ranges")
+            val rangesJson = obj.optJSONArray("seekable-ranges")
+                ?: obj.optJSONArray("ranges") // compatibility with older native payloads
+
             val ranges = mutableListOf<Pair<Double, Double>>()
             if (rangesJson != null) {
                 for (i in 0 until rangesJson.length()) {
@@ -946,10 +1051,8 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
                     }
                 }
             }
-            val fw = obj.optDouble("fw", 0.0).coerceAtLeast(0.0)
-            val cacheSize = obj.optDouble("cacheSize", 0.0).coerceAtLeast(0.0)
-            val fill = if (cacheSize > 0.0) (fw / cacheSize).coerceIn(0.0, 1.0) else 0.0
-            CacheStatePayload(ranges, fill)
+                        CacheStatePayload(ranges, 0.0)
+
         } catch (e: Exception) {
             Log.w(TAG, "parseCacheState: bad json '$jsonValue': ${e.message}")
             CacheStatePayload(emptyList(), 0.0)

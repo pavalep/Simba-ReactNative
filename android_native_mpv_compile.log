@@ -1,0 +1,216 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.3.1/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:shared:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:shared:compileJava NO-SOURCE
+> Task :gradle-plugin:shared:processResources NO-SOURCE
+> Task :gradle-plugin:shared:classes UP-TO-DATE
+> Task :gradle-plugin:shared:jar UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:settings-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:settings-plugin:jar UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :gradle-plugin:react-native-gradle-plugin:compileKotlin UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+> Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:processResources UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:classes UP-TO-DATE
+> Task :gradle-plugin:react-native-gradle-plugin:jar UP-TO-DATE
+
+> Configure project :app
+Reading env from: .env
+
+> Configure project :react-native-mmkv
+[NitroModules] ? NitroMmkv is boosted by nitro!
+
+> Configure project :react-native-nitro-modules
+[NitroModules] ? Your app is boosted by nitro modules!
+
+> Task :app:generateAutolinkingNewArchitectureFiles UP-TO-DATE
+> Task :app:generateAutolinkingPackageList UP-TO-DATE
+> Task :app:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :app:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :app:generateReactNativeEntryPoint UP-TO-DATE
+> Task :lodev09_react-native-true-sheet:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :lodev09_react-native-true-sheet:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :lodev09_react-native-true-sheet:preBuild UP-TO-DATE
+> Task :lottie-react-native:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :lottie-react-native:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :lottie-react-native:preBuild UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-async-storage_async-storage:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-async-storage_async-storage:preBuild UP-TO-DATE
+> Task :react-native-clipboard_clipboard:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-clipboard_clipboard:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-clipboard_clipboard:preBuild UP-TO-DATE
+> Task :react-native-community_blur:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-community_blur:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-community_blur:preBuild UP-TO-DATE
+> Task :react-native-community_geolocation:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-community_geolocation:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-community_geolocation:preBuild UP-TO-DATE
+> Task :react-native-community_slider:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-community_slider:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-community_slider:preBuild UP-TO-DATE
+> Task :react-native-config:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-config:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-config:preBuild UP-TO-DATE
+> Task :react-native-documents_picker:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-documents_picker:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-documents_picker:preBuild UP-TO-DATE
+> Task :react-native-fast-image:preBuild UP-TO-DATE
+> Task :react-native-fs:preBuild UP-TO-DATE
+> Task :react-native-gesture-handler:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-gesture-handler:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-gesture-handler:preBuild UP-TO-DATE
+> Task :react-native-google-signin_google-signin:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-google-signin_google-signin:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-google-signin_google-signin:preBuild UP-TO-DATE
+> Task :react-native-haptic-feedback:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-haptic-feedback:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-haptic-feedback:preBuild UP-TO-DATE
+> Task :react-native-linear-gradient:preBuild UP-TO-DATE
+> Task :react-native-localize:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-localize:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-localize:preBuild UP-TO-DATE
+> Task :react-native-mmkv:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-mmkv:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-mmkv:preBuild UP-TO-DATE
+> Task :react-native-nitro-modules:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-nitro-modules:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-nitro-modules:prepareHeaders UP-TO-DATE
+> Task :react-native-nitro-modules:preBuild UP-TO-DATE
+> Task :react-native-orientation-locker:preBuild UP-TO-DATE
+> Task :react-native-pager-view:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-pager-view:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-pager-view:preBuild UP-TO-DATE
+> Task :react-native-reanimated:assertMinimalReactNativeVersionTask
+> Task :react-native-reanimated:assertWorkletsVersionTask
+> Task :react-native-reanimated:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-reanimated:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-reanimated:prepareReanimatedHeadersForPrefabs UP-TO-DATE
+> Task :react-native-reanimated:preBuild
+> Task :react-native-safe-area-context:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-safe-area-context:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-safe-area-context:preBuild UP-TO-DATE
+> Task :react-native-screens:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-screens:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-screens:preBuild UP-TO-DATE
+> Task :react-native-svg:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-svg:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-svg:preBuild UP-TO-DATE
+> Task :react-native-vector-icons:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-vector-icons:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-vector-icons:preBuild UP-TO-DATE
+> Task :react-native-worklets:assertMinimalReactNativeVersionTask
+> Task :react-native-worklets:generateCodegenSchemaFromJavaScript UP-TO-DATE
+> Task :react-native-worklets:generateCodegenArtifactsFromSchema UP-TO-DATE
+> Task :react-native-worklets:prepareWorkletsHeadersForPrefabs UP-TO-DATE
+> Task :react-native-worklets:preBuild
+> Task :app:preBuild
+> Task :app:preDebugBuild
+> Task :react-native-nitro-modules:preDebugBuild UP-TO-DATE
+
+> Task :react-native-nitro-modules:configureCMakeDebug[arm64-v8a]
+[CXX5304] This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+[CXX5304] This version only understands SDK XML versions up to 3 but an SDK XML file of version 4 was encountered. This can happen if you use versions of Android Studio and the command-line tools that were released at different times.
+
+> Task :react-native-nitro-modules:buildCMakeDebug[arm64-v8a]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.arm64-v8a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-nitro-modules\android\build\intermediates\cxx\Debug\375b112b\obj\arm64-v8a\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.arm64-v8a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-nitro-modules\android\build\intermediates\cxx\Debug\375b112b\obj\arm64-v8a\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-nitro-modules:configureCMakeDebug[armeabi-v7a]
+
+> Task :react-native-nitro-modules:buildCMakeDebug[armeabi-v7a]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.armeabi-v7a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-nitro-modules\android\build\intermediates\cxx\Debug\375b112b\obj\armeabi-v7a\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.armeabi-v7a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-nitro-modules\android\build\intermediates\cxx\Debug\375b112b\obj\armeabi-v7a\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-nitro-modules:configureCMakeDebug[x86]
+
+> Task :react-native-nitro-modules:buildCMakeDebug[x86]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-nitro-modules\android\build\intermediates\cxx\Debug\375b112b\obj\x86\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-nitro-modules\android\build\intermediates\cxx\Debug\375b112b\obj\x86\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-nitro-modules:configureCMakeDebug[x86_64]
+
+> Task :react-native-nitro-modules:buildCMakeDebug[x86_64]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86_64\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-nitro-modules\android\build\intermediates\cxx\Debug\375b112b\obj\x86_64\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86_64\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-nitro-modules\android\build\intermediates\cxx\Debug\375b112b\obj\x86_64\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-nitro-modules:externalNativeBuildDebug
+> Task :react-native-nitro-modules:generateJsonModelDebug
+> Task :react-native-nitro-modules:prefabDebugConfigurePackage
+> Task :react-native-reanimated:preDebugBuild
+> Task :react-native-worklets:preDebugBuild
+> Task :react-native-worklets:configureCMakeDebug[arm64-v8a]
+
+> Task :react-native-worklets:buildCMakeDebug[arm64-v8a][worklets]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.arm64-v8a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-worklets\android\build\intermediates\cxx\Debug\4e2xz552\obj\arm64-v8a\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.arm64-v8a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-worklets\android\build\intermediates\cxx\Debug\4e2xz552\obj\arm64-v8a\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-worklets:configureCMakeDebug[armeabi-v7a]
+
+> Task :react-native-worklets:buildCMakeDebug[armeabi-v7a][worklets]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.armeabi-v7a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-worklets\android\build\intermediates\cxx\Debug\4e2xz552\obj\armeabi-v7a\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.armeabi-v7a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-worklets\android\build\intermediates\cxx\Debug\4e2xz552\obj\armeabi-v7a\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-worklets:configureCMakeDebug[x86]
+
+> Task :react-native-worklets:buildCMakeDebug[x86][worklets]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-worklets\android\build\intermediates\cxx\Debug\4e2xz552\obj\x86\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-worklets\android\build\intermediates\cxx\Debug\4e2xz552\obj\x86\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-worklets:configureCMakeDebug[x86_64]
+
+> Task :react-native-worklets:buildCMakeDebug[x86_64][worklets]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86_64\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-worklets\android\build\intermediates\cxx\Debug\4e2xz552\obj\x86_64\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86_64\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-worklets\android\build\intermediates\cxx\Debug\4e2xz552\obj\x86_64\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-worklets:externalNativeBuildDebug
+> Task :react-native-worklets:generateJsonModelDebug
+> Task :react-native-worklets:prefabDebugConfigurePackage
+> Task :react-native-reanimated:configureCMakeDebug[arm64-v8a]
+> Task :react-native-reanimated:configureCMakeDebug[armeabi-v7a]
+> Task :react-native-reanimated:configureCMakeDebug[x86]
+> Task :react-native-reanimated:configureCMakeDebug[x86_64]
+> Task :react-native-reanimated:generateJsonModelDebug
+> Task :react-native-reanimated:prefabDebugConfigurePackage UP-TO-DATE
+> Task :app:configureCMakeDebug[arm64-v8a]
+> Task :react-native-nitro-modules:prefabDebugPackage UP-TO-DATE
+> Task :react-native-worklets:prefabDebugPackage UP-TO-DATE
+
+> Task :react-native-reanimated:buildCMakeDebug[arm64-v8a][reanimated]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.arm64-v8a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-reanimated\android\build\intermediates\cxx\Debug\5kw1mf41\obj\arm64-v8a\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.arm64-v8a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-reanimated\android\build\intermediates\cxx\Debug\5kw1mf41\obj\arm64-v8a\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-reanimated:buildCMakeDebug[armeabi-v7a][reanimated]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.armeabi-v7a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-reanimated\android\build\intermediates\cxx\Debug\5kw1mf41\obj\armeabi-v7a\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.armeabi-v7a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-reanimated\android\build\intermediates\cxx\Debug\5kw1mf41\obj\armeabi-v7a\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-reanimated:buildCMakeDebug[x86][reanimated]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-reanimated\android\build\intermediates\cxx\Debug\5kw1mf41\obj\x86\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-reanimated\android\build\intermediates\cxx\Debug\5kw1mf41\obj\x86\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-reanimated:buildCMakeDebug[x86_64][reanimated]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86_64\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-reanimated\android\build\intermediates\cxx\Debug\5kw1mf41\obj\x86_64\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86_64\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\node_modules\react-native-reanimated\android\build\intermediates\cxx\Debug\5kw1mf41\obj\x86_64\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :react-native-worklets:mergeDebugJniLibFolders UP-TO-DATE
+> Task :react-native-worklets:mergeDebugNativeLibs UP-TO-DATE
+> Task :react-native-worklets:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :react-native-reanimated:externalNativeBuildDebug
+> Task :react-native-reanimated:prefabDebugPackage UP-TO-DATE
+
+> Task :app:buildCMakeDebug[arm64-v8a]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.arm64-v8a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\build\intermediates\cxx\Debug\455e4b3r\obj\arm64-v8a\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.arm64-v8a\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\build\intermediates\cxx\Debug\455e4b3r\obj\arm64-v8a\libreactnative.so' failed. Doing a slower copy instead.
+
+> Task :app:configureCMakeDebug[x86_64]
+
+> Task :app:buildCMakeDebug[x86_64]
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86_64\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\build\intermediates\cxx\Debug\455e4b3r\obj\x86_64\libreactnative.so' failed. Doing a slower copy instead.
+C/C++: Hard link from 'C:\Users\paval\.gradle\caches\9.3.1\transforms\65765d2660fc0221f7968a137a7f2299\workspace\transformed\react-android-0.86.0-debug\prefab\modules\reactnative\libs\android.x86_64\libreactnative.so' to 'X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\build\intermediates\cxx\Debug\455e4b3r\obj\x86_64\libreactnative.so' failed. Doing a slower copy instead.

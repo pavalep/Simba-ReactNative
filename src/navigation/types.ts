@@ -81,7 +81,7 @@ export type RootStackParamList = {
       }
     | undefined;
   ShowDetail: {showId: number; showName?: string};
-  // ── P48: full-page queue (from QueueSheet / MiniAudioPlayer / deep link) ──
+  // ── P48: full-page queue (from QueueSheet / audio overlay / deep link) ──
   // `from` records the screen that opened it so tap-to-jump can stay in the
   // same player (audio↔audio) or switch players (cross-type jump, 48.8).
   Queue: {from?: 'audio' | 'video' | 'mini'} | undefined;

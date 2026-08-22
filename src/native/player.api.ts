@@ -43,12 +43,20 @@ function ensureModule(): Spec {
   return NativeModule;
 }
 
+function tracePlayback(scope: string, ...args: unknown[]): void {
+  logger.info(`[PlaybackTrace][JS][${scope}]`, ...args);
+}
+
 export const MpvPlayer = {
   // ── Lifecycle ──
   initPlayer(): boolean {
+    tracePlayback('initPlayer:call');
     try {
-      return ensureModule().initPlayer();
-    } catch {
+      const result = ensureModule().initPlayer();
+      tracePlayback('initPlayer:return', result);
+      return result;
+    } catch (error) {
+      logger.error('[PlaybackTrace][JS][initPlayer:error]', error);
       return false;
     }
   },
@@ -63,10 +71,12 @@ export const MpvPlayer = {
 
   // ── Playback Control ──
   play(): void {
+    tracePlayback('play:call');
     ensureModule().play();
   },
 
   pause(): void {
+    tracePlayback('pause:call');
     ensureModule().pause();
   },
 
@@ -87,6 +97,7 @@ export const MpvPlayer = {
   },
 
   seekTo(position: number): void {
+    tracePlayback('seekTo:call', position);
     ensureModule().seekAbsolute(position);
   },
 
@@ -101,7 +112,15 @@ export const MpvPlayer = {
   // ── File Loading ──
   loadFile(path: string): void {
     // 49.4: offline remap — prefer the downloaded copy when one exists.
-    ensureModule().loadFile(getLocalPath(path) ?? path);
+    const resolvedPath = getLocalPath(path) ?? path;
+    tracePlayback('loadFile:call', {requestedPath: path, resolvedPath});
+    try {
+      ensureModule().loadFile(resolvedPath);
+      tracePlayback('loadFile:return', {resolvedPath});
+    } catch (error) {
+      logger.error('[PlaybackTrace][JS][loadFile:error]', {resolvedPath, error});
+      throw error;
+    }
   },
 
   loadPlaylist(paths: string[], startIndex?: number): void {
@@ -180,7 +199,9 @@ export const MpvPlayer = {
 
   // ── Volume / Audio ──
   setVolume(volume: number): void {
-    ensureModule().setVolume(Math.max(0, Math.min(100, volume)));
+    const clampedVolume = Math.max(0, Math.min(100, volume));
+    tracePlayback('setVolume:call', clampedVolume);
+    ensureModule().setVolume(clampedVolume);
   },
 
   getVolume(): number {
@@ -208,6 +229,7 @@ export const MpvPlayer = {
   },
 
   resume(): void {
+    tracePlayback('resume:call');
     ensureModule().play();
   },
 

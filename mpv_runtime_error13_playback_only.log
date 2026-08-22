@@ -1,0 +1,758 @@
+08-22 18:05:32.784 I/MediaProvider( 1910): Invalidating LocalCallingIdentity cache for package com.simba.player. Reason: package android.intent.action.PACKAGE_REMOVED
+08-22 18:05:32.825 I/Finsky  (  466): [2] Flushing in-memory image cache
+08-22 18:05:33.045 W/MediaProvider( 1910): WorkProfileOwnerApps cache is empty
+08-22 18:05:34.715 I/Finsky  (  466): [2] Flushing in-memory image cache
+08-22 18:05:34.716 I/Finsky  (  466): [2] Flushing in-memory image cache
+08-22 18:05:34.767 I/Finsky  (  466): [2] Flushing in-memory image cache
+08-22 18:05:35.087 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:35.087 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:35.214 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:05:35.319 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:35.339 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:37.362 W/SignedPackage(  695): Package doesn't have required signing certificate: com.google.android.retaildemo
+08-22 18:05:37.425 W/SignedPackage(  695): Package doesn't have required signing certificate: com.google.android.apps.work.clouddpc
+08-22 18:05:37.531 I/Finsky  (  466): [2] AIM: AppInfoCacheUpdater -> invalidating apps: [com.simba.player]
+08-22 18:05:38.150 I/Finsky  (  466): [195] AIM: AppInfoManager-Perf > OnDeviceAppInfo > cacheHitCount=0, cacheMissCount=1. Missed  in cache (limit 10) : [com.simba.player]
+08-22 18:05:39.101 I/Finsky  (  466): [192] AIM: AppInfoManager-Perf > ItemModel > CacheSize=36, cacheHitCount=0, cacheMissCount=0, total appsWithNoServerDataCount=2. Missed  in cache (limit 10) : []
+08-22 18:05:39.234 I/Finsky  (  466): [195] AIM: AppInfoManager-Perf > OnDeviceAppInfo > cacheHitCount=1, cacheMissCount=0. Missed  in cache (limit 10) : []
+08-22 18:05:39.531 I/Finsky  (  466): [195] AIM: AppInfoManager-Perf > ItemModel > CacheSize=36, cacheHitCount=0, cacheMissCount=0, total appsWithNoServerDataCount=2. Missed  in cache (limit 10) : []
+08-22 18:05:40.267 I/Finsky  (  466): [2] AIM: AppInfoCacheUpdater -> invalidating apps: [com.simba.player]
+08-22 18:05:40.282 I/Finsky  (  466): [192] AIM: AppInfoManager-Perf > OnDeviceAppInfo > cacheHitCount=0, cacheMissCount=1. Missed  in cache (limit 10) : [com.simba.player]
+08-22 18:05:40.671 I/Finsky  (  466): [193] AIM: AppInfoManager-Perf > OnDeviceAppInfo > cacheHitCount=1, cacheMissCount=0. Missed  in cache (limit 10) : []
+08-22 18:05:40.792 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:40.792 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:40.825 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:05:40.915 I/Finsky  (  466): [194] AIM: AppInfoManager-Perf > ItemModel > CacheSize=36, cacheHitCount=0, cacheMissCount=0, total appsWithNoServerDataCount=2. Missed  in cache (limit 10) : []
+08-22 18:05:41.239 I/Finsky  (  466): [193] AIM: AppInfoManager-Perf > ItemModel > CacheSize=36, cacheHitCount=0, cacheMissCount=0, total appsWithNoServerDataCount=2. Missed  in cache (limit 10) : []
+08-22 18:05:41.245 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:41.451 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:41.656 I/Finsky  (  466): [2] Flushing in-memory image cache
+08-22 18:05:41.679 I/Finsky  (  466): [2] Flushing in-memory image cache
+08-22 18:05:41.728 I/Finsky  (  466): [2] Flushing in-memory image cache
+08-22 18:05:47.229 I/libbinder.BpBinder(  547): onLastStrongRef automatically unlinking death recipients for binder (0x702bb0848da0) with descriptor: '(not cached)'
+08-22 18:05:50.441 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:50.441 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:50.536 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:05:50.698 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:50.878 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:05:52.274 D/ApplicationLoaders(20777): Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+08-22 18:05:52.275 D/ApplicationLoaders(20777): Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+08-22 18:05:57.893 D/ActivityThread(20777): Set OS env TMPDIR to /data/user/0/com.simba.player/cache
+08-22 18:06:01.245 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:01.245 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:01.447 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:06:01.691 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:01.756 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:03.727 I/FontLog ( 7937): (REDACTED) Pulling font file for id = %d, cache size = %d
+08-22 18:06:03.769 I/FontLog ( 7937): (REDACTED) Pulling font file for id = %d, cache size = %d
+08-22 18:06:05.660 I/libbinder.BpBinder(  547): onLastStrongRef automatically unlinking death recipients for binder (0x702bb0863cb0) with descriptor: '(not cached)'
+08-22 18:06:08.530 I/Finsky  (  466): [2] Flushing in-memory image cache
+08-22 18:06:10.057 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:10.057 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:10.075 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:06:10.108 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:10.117 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:20.084 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:20.084 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:20.103 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:06:20.136 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:20.146 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:20.775 D/ApplicationLoaders(20777): Returning zygote-cached class loader: /system/framework/android.test.base.jar
+08-22 18:06:20.775 D/ApplicationLoaders(20777): Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+08-22 18:06:24.897 W/ReactNativeJS(20777):            mediaType: 'audio',
+08-22 18:06:24.897 W/ReactNativeJS(20777):            artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' },
+08-22 18:06:24.897 W/ReactNativeJS(20777):         isAudioNormalizationEnabled: false,
+08-22 18:06:24.897 W/ReactNativeJS(20777):         audioDelay: 0,
+08-22 18:06:24.897 W/ReactNativeJS(20777):         audioFolders: [],
+08-22 18:06:24.897 W/ReactNativeJS(20777):              mediaType: 'audio',
+08-22 18:06:24.898 W/ReactNativeJS(20777):              thumbnailPath: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg',
+08-22 18:06:24.898 W/ReactNativeJS(20777):              mediaType: 'audio',
+08-22 18:06:26.594 I/ReactNativeJS(20777):         mediaType: 'audio',
+08-22 18:06:26.594 I/ReactNativeJS(20777):         artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' },
+08-22 18:06:26.594 I/ReactNativeJS(20777):      isAudioNormalizationEnabled: false,
+08-22 18:06:26.594 I/ReactNativeJS(20777):      audioDelay: 0,
+08-22 18:06:26.594 I/ReactNativeJS(20777):      audioFolders: [],
+08-22 18:06:26.594 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:26.596 I/ReactNativeJS(20777):           thumbnailPath: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg',
+08-22 18:06:26.596 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:26.602 I/ReactNativeJS(20777):         mediaType: 'audio',
+08-22 18:06:26.602 I/ReactNativeJS(20777):         artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' },
+08-22 18:06:26.602 I/ReactNativeJS(20777):      isAudioNormalizationEnabled: false,
+08-22 18:06:26.602 I/ReactNativeJS(20777):      audioDelay: 0,
+08-22 18:06:26.602 I/ReactNativeJS(20777):      audioFolders: [],
+08-22 18:06:26.602 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:26.602 I/ReactNativeJS(20777):           thumbnailPath: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg',
+08-22 18:06:26.602 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:30.014 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:30.014 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:30.029 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:06:30.051 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:30.061 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:38.287 I/MpvJNI  (20777): av_jni_set_java_vm called successfully
+08-22 18:06:38.287 I/MpvJNI  (20777): JNI_OnLoad complete
+08-22 18:06:38.302 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=0 duration=0.0
+08-22 18:06:38.432 D/AudioFlinger(  543): mixer(0x706cddd47790) throttle end: throttle time(35)
+08-22 18:06:38.579 I/APM_AudioPolicyManager(  543): getNewOutputDevices io 13 recent device override {AUDIO_DEVICE_OUT_SPEAKER, @:}
+08-22 18:06:38.675 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][effect:start]', { fileUri: 'https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D',
+08-22 18:06:38.675 I/ReactNativeJS(20777):   mediaLane: 'audio' }
+08-22 18:06:38.686 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][init:call]', 'https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D'
+08-22 18:06:38.691 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][JS][initPlayer:call]'
+08-22 18:06:38.691 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][initPlayer] call currentPtr=0
+08-22 18:06:38.692 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][tls] caFile=/data/user/0/com.simba.player/files/mpv/cacert.pem bytes=188900
+08-22 18:06:38.696 I/MpvJNI  (20777): [PlaybackTrace][Native][create] option vo=null result=0
+08-22 18:06:38.696 I/MpvJNI  (20777): [PlaybackTrace][Native][create] option gpu-api=opengl result=0
+08-22 18:06:38.696 I/MpvJNI  (20777): [PlaybackTrace][Native][create] option hwdec=mediacodec result=0
+08-22 18:06:38.696 I/MpvJNI  (20777): [PlaybackTrace][Native][create] option audio-device-auto=yes result=-5
+08-22 18:06:38.696 I/MpvJNI  (20777): [PlaybackTrace][Native][create] option tls-ca-file=/data/user/0/com.simba.player/files/mpv/cacert.pem result=0
+08-22 18:06:38.697 I/MpvJNI  (20777): [PlaybackTrace][Native][create] option tls-verify=yes result=0
+08-22 18:06:38.697 I/MpvJNI  (20777): [PlaybackTrace][Native][create] option keep-open=yes result=0
+08-22 18:06:38.697 I/MpvJNI  (20777): [PlaybackTrace][Native][create] option pause=no result=0
+08-22 18:06:38.698 I/MpvJNI  (20777): [PlaybackTrace][Native][create] mpv_create succeeded handle=0x77576dc6d460
+08-22 18:06:38.698 I/MpvJNI  (20777): [PlaybackTrace][Native][initialize] calling mpv_initialize
+08-22 18:06:38.703 I/MpvJNI  (20777): [PlaybackTrace][Native][initialize] mpv_initialize succeeded
+08-22 18:06:38.703 I/MpvJNI  (20777): [PlaybackTrace][Native][initialize] requested mpv verbose logs
+08-22 18:06:38.703 I/MpvJNI  (20777): mpv initialized and event loop started
+08-22 18:06:38.703 I/MpvJNI  (20777): mpv instance created and initialized without a required surface
+08-22 18:06:38.704 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][initPlayer] nativeCreate returned ptr=131217387607136
+08-22 18:06:38.704 I/MpvBridgeModule(20777): mpv initialized, nativePtr=131217387607136, observers=0
+08-22 18:06:38.705 I/MpvEvent(20777): Event loop started
+08-22 18:06:38.709 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.709 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Waiting for scripts...
+08-22 18:06:38.715 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][JS][initPlayer:return]', true
+08-22 18:06:38.716 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][init:return]', { ok: true, cancelled: false }
+08-22 18:06:38.720 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][listeners:register]'
+08-22 18:06:38.726 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][loadFile:before]', 'https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D'
+08-22 18:06:38.729 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.729 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Done loading scripts.
+08-22 18:06:38.730 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=11 error=0
+08-22 18:06:38.730 I/MpvEvent(20777): Unhandled mpv event: 11
+08-22 18:06:38.737 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][JS][loadFile:call]', { requestedPath: 'https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D',
+08-22 18:06:38.738 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][loadFile] requested=https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D resolved=https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D ptr=131217387607136
+08-22 18:06:38.739 I/MpvJNI  (20777): [PlaybackTrace][Native][loadFile] begin path=https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D initialized=1
+08-22 18:06:38.741 I/MpvJNI  (20777): [PlaybackTrace][Native][loadFile] loadfile command accepted result=0
+08-22 18:06:38.741 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.741 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Running hook: auto_profiles/on_before_start_file
+08-22 18:06:38.741 D/mpv     (20777): [cplayer] v: Running hook: auto_profiles/on_before_start_file
+08-22 18:06:38.741 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][loadFile] nativeLoadFile returned
+08-22 18:06:38.741 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.741 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Failed sending hook command auto_profiles/on_before_start_file. Removing hook.
+08-22 18:06:38.741 D/mpv     (20777): [cplayer] v: Failed sending hook command auto_profiles/on_before_start_file. Removing hook.
+08-22 18:06:38.741 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=6 error=0
+08-22 18:06:38.741 I/MpvEvent(20777): MPV_EVENT_START_FILE
+08-22 18:06:38.741 I/MpvEvent(20777): [PlaybackTrace][Native][dispatch:event] name=startFile payload={}
+08-22 18:06:38.742 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][listener:event] name=startFile payload={}
+08-22 18:06:38.742 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][JS][loadFile:return]', { resolvedPath: 'https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D' }
+08-22 18:06:38.746 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.746 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Running hook: auto_profiles/on_load
+08-22 18:06:38.746 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.746 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Failed sending hook command auto_profiles/on_load. Removing hook.
+08-22 18:06:38.746 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.746 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Running hook: ytdl_hook/on_load
+08-22 18:06:38.746 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.746 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Running hook: ytdl_hook/on_load
+08-22 18:06:38.746 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.747 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][loadFile:after]', 'https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D'
+08-22 18:06:38.747 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=playlist hook
+08-22 18:06:38.747 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.747 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=stream_callback level=v text=Opening https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D
+08-22 18:06:38.748 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][settings:before]'
+08-22 18:06:38.748 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.749 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ffmpeg level=v text=Opening https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D
+08-22 18:06:38.759 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.759 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: hwdec="auto" -> 1
+08-22 18:06:38.760 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.760 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: sub-auto="fuzzy" -> 1
+08-22 18:06:38.761 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.761 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: slang="eng, jpn, und" -> 1
+08-22 18:06:38.762 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.762 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: volume-max="130" -> 1
+08-22 18:06:38.762 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.762 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: replaygain="no" -> 1
+08-22 18:06:38.763 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.763 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: gapless-audio="no" -> 1
+08-22 18:06:38.763 D/mpv     (20777): [cplayer] v: Set property: gapless-audio="no" -> 1
+08-22 18:06:38.763 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.763 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: audio-delay="0" -> 1
+08-22 18:06:38.763 D/mpv     (20777): [cplayer] v: Set property: audio-delay="0" -> 1
+08-22 18:06:38.763 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.763 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: audio-samplerate="0" -> 1
+08-22 18:06:38.763 D/mpv     (20777): [cplayer] v: Set property: audio-samplerate="0" -> 1
+08-22 18:06:38.764 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.764 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: af="" -> 1
+08-22 18:06:38.764 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][settings:after]'
+08-22 18:06:38.767 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][speed:before]', 1
+08-22 18:06:38.770 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][speed:after]', 1
+08-22 18:06:38.770 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:38.771 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: speed=1.000000 -> 1
+08-22 18:06:38.772 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][ready]', { fileUri: 'https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D' }
+08-22 18:06:38.787 I/ReactNativeJS(20777):         mediaType: 'audio',
+08-22 18:06:38.787 I/ReactNativeJS(20777):         artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' },
+08-22 18:06:38.787 I/ReactNativeJS(20777):      isAudioNormalizationEnabled: false,
+08-22 18:06:38.787 I/ReactNativeJS(20777):      audioDelay: 0,
+08-22 18:06:38.787 I/ReactNativeJS(20777):      audioFolders: [],
+08-22 18:06:38.787 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:38.788 I/ReactNativeJS(20777):           thumbnailPath: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg',
+08-22 18:06:38.788 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:38.793 I/ReactNativeJS(20777):      mediaType: 'audio',
+08-22 18:06:38.793 I/ReactNativeJS(20777):      artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' } }
+08-22 18:06:38.796 I/ReactNativeJS(20777):         mediaType: 'audio',
+08-22 18:06:38.796 I/ReactNativeJS(20777):         artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' },
+08-22 18:06:38.796 I/ReactNativeJS(20777):      isAudioNormalizationEnabled: false,
+08-22 18:06:38.796 I/ReactNativeJS(20777):      audioDelay: 0,
+08-22 18:06:38.796 I/ReactNativeJS(20777):      audioFolders: [],
+08-22 18:06:38.796 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:38.796 I/ReactNativeJS(20777):           thumbnailPath: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg',
+08-22 18:06:38.796 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:38.827 I/ReactNativeJS(20777):         mediaType: 'audio',
+08-22 18:06:38.827 I/ReactNativeJS(20777):         artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' },
+08-22 18:06:38.827 I/ReactNativeJS(20777):      isAudioNormalizationEnabled: false,
+08-22 18:06:38.827 I/ReactNativeJS(20777):      audioDelay: 0,
+08-22 18:06:38.827 I/ReactNativeJS(20777):      audioFolders: [],
+08-22 18:06:38.827 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:38.827 I/ReactNativeJS(20777):           thumbnailPath: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg',
+08-22 18:06:38.827 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:38.828 I/ReactNativeJS(20777):   payload: { artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' } }
+08-22 18:06:38.837 I/ReactNativeJS(20777):         mediaType: 'audio',
+08-22 18:06:38.837 I/ReactNativeJS(20777):         artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' },
+08-22 18:06:38.837 I/ReactNativeJS(20777):      isAudioNormalizationEnabled: false,
+08-22 18:06:38.837 I/ReactNativeJS(20777):      audioDelay: 0,
+08-22 18:06:38.837 I/ReactNativeJS(20777):      audioFolders: [],
+08-22 18:06:38.837 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:38.837 I/ReactNativeJS(20777):           thumbnailPath: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg',
+08-22 18:06:38.837 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:38.860 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][observeProperty] name=cache-buffering-state initialized=true
+08-22 18:06:38.862 I/MpvProperty(20777): [PlaybackTrace][Native][observe] property=cache-buffering-state id=4060560534374325851 format=5 result=0
+08-22 18:06:38.862 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][observeProperty] name=paused-for-cache initialized=true
+08-22 18:06:38.862 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=22 error=0
+08-22 18:06:38.862 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] property=cache-buffering-state format=NONE
+08-22 18:06:38.863 I/MpvProperty(20777): [PlaybackTrace][Native][observe] property=paused-for-cache id=5839792331034341279 format=3 result=0
+08-22 18:06:38.863 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][observeProperty] name=demuxer-cache-state initialized=true
+08-22 18:06:38.863 I/MpvProperty(20777): [PlaybackTrace][Native][observe] property=demuxer-cache-state id=10892494493859709653 format=6 result=0
+08-22 18:06:38.864 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][observeProperty] name=seekable initialized=true
+08-22 18:06:38.864 I/MpvProperty(20777): [PlaybackTrace][Native][observe] property=seekable id=3256581842898 format=3 result=0
+08-22 18:06:38.864 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=22 error=0
+08-22 18:06:38.864 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] property=paused-for-cache format=NONE
+08-22 18:06:38.864 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=22 error=0
+08-22 18:06:38.864 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] property=demuxer-cache-state format=NONE
+08-22 18:06:38.864 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=22 error=0
+08-22 18:06:38.864 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] property=seekable format=NONE
+08-22 18:06:38.975 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:38.975 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:39.155 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.156 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: hwdec="auto" -> 1
+08-22 18:06:39.156 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.156 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: sub-auto="fuzzy" -> 1
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: slang="eng, jpn, und" -> 1
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: volume-max="130" -> 1
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: replaygain="no" -> 1
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: gapless-audio="no" -> 1
+08-22 18:06:39.157 D/mpv     (20777): [cplayer] v: Set property: gapless-audio="no" -> 1
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: audio-delay="0" -> 1
+08-22 18:06:39.157 D/mpv     (20777): [cplayer] v: Set property: audio-delay="0" -> 1
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.157 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: audio-samplerate="0" -> 1
+08-22 18:06:39.158 D/mpv     (20777): [cplayer] v: Set property: audio-samplerate="0" -> 1
+08-22 18:06:39.158 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.158 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: af="" -> 1
+08-22 18:06:39.158 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.158 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: speed=1.000000 -> 1
+08-22 18:06:39.171 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.171 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: speed=1.000000 -> 1
+08-22 18:06:39.478 D/AudioFlinger(  543): mixer(0x706cddd47790) throttle end: throttle time(36)
+08-22 18:06:39.685 I/APM_AudioPolicyManager(  543): getNewOutputDevices io 13 recent device override {AUDIO_DEVICE_OUT_SPEAKER, @:}
+08-22 18:06:39.697 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.701 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ffmpeg level=error text=tls: mbedtls_ssl_handshake returned -0x6600
+08-22 18:06:39.701 D/mpv     (20777): [ffmpeg] error: tls: mbedtls_ssl_handshake returned -0x6600
+08-22 18:06:39.736 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.736 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=stream level=error text=Failed to open https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D.
+08-22 18:06:39.743 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.743 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Opening failed or was aborted: https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D
+08-22 18:06:39.743 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.743 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Running hook: ytdl_hook/on_load_fail
+08-22 18:06:39.744 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.744 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=No youtube-dl found with path yt-dlp in config directories
+08-22 18:06:39.829 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:39.829 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=Starting subprocess: [yt-dlp, --no-warnings, -J, --flat-playlist, --sub-format, ass/srt/best, --sub-langs, all, --write-srt, --no-playlist, --, https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D]
+08-22 18:06:39.882 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:39.883 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:39.885 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:39.885 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:39.885 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=playing idle=false eof=false pause=false
+08-22 18:06:39.926 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:39.927 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:40.013 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:40.013 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:40.025 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.025 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=error text=Subprocess failed: init
+08-22 18:06:40.026 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.026 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=youtube-dl with path yt-dlp not found in PATH or not enough permissions
+08-22 18:06:40.026 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.026 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=No youtube-dl found with path yt-dlp_x86 in config directories
+08-22 18:06:40.034 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:06:40.056 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.061 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=Starting subprocess: [yt-dlp_x86, --no-warnings, -J, --flat-playlist, --sub-format, ass/srt/best, --sub-langs, all, --write-srt, --no-playlist, --, https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D]
+08-22 18:06:40.071 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:40.079 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.079 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=error text=Subprocess failed: init
+08-22 18:06:40.079 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.080 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=youtube-dl with path yt-dlp_x86 not found in PATH or not enough permissions
+08-22 18:06:40.080 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.080 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=No youtube-dl found with path youtube-dl in config directories
+08-22 18:06:40.085 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:40.101 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.101 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=Starting subprocess: [youtube-dl, --no-warnings, -J, --flat-playlist, --sub-format, ass/srt/best, --sub-langs, all, --write-srt, --no-playlist, --, https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D]
+08-22 18:06:40.132 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.132 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=error text=Subprocess failed: init
+08-22 18:06:40.132 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.132 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=youtube-dl with path youtube-dl not found in PATH or not enough permissions
+08-22 18:06:40.133 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.134 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: user-data/mpv/ytdl/path="" -> 1
+08-22 18:06:40.134 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=7 error=0
+08-22 18:06:40.134 E/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] MPV_EVENT_END_FILE reason=4 error=-13
+08-22 18:06:40.134 I/MpvEvent(20777): [PlaybackTrace][Native][dispatch:event] name=endFile payload={"reason":4,"error":-13}
+08-22 18:06:40.135 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][listener:event] name=endFile payload={"reason":4,"error":-13}
+08-22 18:06:40.149 E/MpvEvent(20777): [PlaybackTrace][Native][dispatch:error] code=-13 message=mpv end-file error=-13 reason=4
+08-22 18:06:40.153 E/MPVLib  (20777): onNativeError: code=-13 msg=mpv end-file error=-13 reason=4
+08-22 18:06:40.154 E/MpvBridgeModule(20777): [PlaybackTrace][Bridge][listener:error] code=-13 message=mpv end-file error=-13 reason=4
+08-22 18:06:40.155 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=11 error=0
+08-22 18:06:40.155 I/MpvEvent(20777): Unhandled mpv event: 11
+08-22 18:06:40.155 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: user-data/mpv/ytdl/json-subprocess-result={"stderr":"","status":-3,"killed_by_us":false,"stdout":"","error_string":"init"} -> 1
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=status: -3
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=reason: init
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=stdout: 
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=v text=stderr: 
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=error text=
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.156 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=ytdl_hook level=error text=youtube-dl failed: not found or not enough permissions
+08-22 18:06:40.157 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.157 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=finished playback, loading failed (reason 4)
+08-22 18:06:40.157 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:40.157 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Running hook: ytdl_hook/on_after_end_file
+08-22 18:06:40.309 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][event:onEndFile]', { reason: 4, error: -13 }
+08-22 18:06:40.321 E/ReactNativeJS(20777): '[ERROR]', '[PlaybackTrace][Controller][event:onError:terminal]', { uri: 'https://prod-1.storage.jamendo.com/?trackid=1593988&format=mp31&from=%2FV3E9Qwm8kkOD6hbkNYXkg%3D%3D%7CMJJdmScXeWFhFQqasgwXjQ%3D%3D',
+08-22 18:06:40.321 E/ReactNativeJS(20777):   message: 'mpv end-file error=-13 reason=4' }
+08-22 18:06:40.371 I/ReactNativeJS(20777):         mediaType: 'audio',
+08-22 18:06:40.371 I/ReactNativeJS(20777):         artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' },
+08-22 18:06:40.371 I/ReactNativeJS(20777):      isAudioNormalizationEnabled: false,
+08-22 18:06:40.371 I/ReactNativeJS(20777):      audioDelay: 0,
+08-22 18:06:40.371 I/ReactNativeJS(20777):      audioFolders: [],
+08-22 18:06:40.371 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:40.372 I/ReactNativeJS(20777):           thumbnailPath: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg',
+08-22 18:06:40.372 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:40.382 I/ReactNativeJS(20777):         mediaType: 'audio',
+08-22 18:06:40.382 I/ReactNativeJS(20777):         artworkUri: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg' },
+08-22 18:06:40.382 I/ReactNativeJS(20777):      isAudioNormalizationEnabled: false,
+08-22 18:06:40.382 I/ReactNativeJS(20777):      audioDelay: 0,
+08-22 18:06:40.382 I/ReactNativeJS(20777):      audioFolders: [],
+08-22 18:06:40.382 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:40.382 I/ReactNativeJS(20777):           thumbnailPath: 'file:///data/user/0/com.simba.player/cache/artCache/3lffo4-26.jpg',
+08-22 18:06:40.382 I/ReactNativeJS(20777):           mediaType: 'audio',
+08-22 18:06:40.612 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:40.612 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:40.908 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:40.908 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:40.908 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:40.908 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:40.908 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:40.911 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:40.911 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:41.928 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:41.928 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:41.928 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:41.928 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:41.928 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:42.562 D/android.hardware.audio@7.1-impl.ranchu(  497): threadLoop: entering standby, frames: 150457344
+08-22 18:06:42.562 D/android.hardware.audio@7.1-impl.ranchu(  497): ~TinyalsaSink: joining consumeThread
+08-22 18:06:42.562 D/android.hardware.audio@7.1-impl.ranchu(  497): consumeThread: exiting
+08-22 18:06:42.702 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:42.703 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:42.703 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:42.703 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:42.703 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:42.725 I/MpvBridgeModule(20777): MediaNotificationService started: "V3E9Qwm8kkOD6hbkNYXkg==|MJJdmScXeWFhFQqasgwXjQ=="
+08-22 18:06:42.936 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:42.936 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:42.936 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:42.936 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:42.936 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:43.969 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:43.969 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:43.970 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:43.970 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:43.970 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:44.447 I/APM_AudioPolicyManager(  543): getNewOutputDevices io 13 recent device override {AUDIO_DEVICE_OUT_SPEAKER, @:}
+08-22 18:06:44.991 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:44.991 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:44.991 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:44.992 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:44.992 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:46.006 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:46.006 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:46.006 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:46.006 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:46.006 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:47.024 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:47.024 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:47.024 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:47.024 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:47.024 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:47.298 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:47.299 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][Controller][handlePlayPause]', { nativeState: 'idle',
+08-22 18:06:47.299 I/ReactNativeJS(20777): '[INFO]', '[PlaybackTrace][JS][resume:call]'
+08-22 18:06:47.299 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][play] ptr=131217387607136
+08-22 18:06:47.303 I/MpvJNI  (20777): [PlaybackTrace][Native][play] pause=no result=0
+08-22 18:06:47.303 I/MpvEvent(20777): [PlaybackTrace][Native][eventLoop] event_id=2 error=0
+08-22 18:06:47.303 I/MpvEvent(20777): [PlaybackTrace][Native][mpv-log] prefix=cplayer level=v text=Set property: pause="no" -> 1
+08-22 18:06:47.303 I/MpvBridgeModule(20777): [PlaybackTrace][Bridge][play] nativePlay returned
+08-22 18:06:47.323 D/AudioFlinger(  543): mixer(0x706cddd47790) throttle end: throttle time(38)
+08-22 18:06:47.527 I/APM_AudioPolicyManager(  543): getNewOutputDevices io 13 recent device override {AUDIO_DEVICE_OUT_SPEAKER, @:}
+08-22 18:06:48.042 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:48.042 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:48.042 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:48.042 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:48.042 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:49.059 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:49.060 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:49.060 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:49.060 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:49.060 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:49.938 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:49.939 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:49.958 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:06:49.980 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:49.989 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:50.070 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:50.070 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:50.070 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:50.070 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:50.071 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:50.396 D/android.hardware.audio@7.1-impl.ranchu(  497): threadLoop: entering standby, frames: 150753280
+08-22 18:06:50.396 D/android.hardware.audio@7.1-impl.ranchu(  497): ~TinyalsaSink: joining consumeThread
+08-22 18:06:50.396 D/android.hardware.audio@7.1-impl.ranchu(  497): consumeThread: exiting
+08-22 18:06:51.087 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:51.088 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:51.088 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:51.088 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:51.088 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:52.102 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:52.102 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:52.102 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:52.102 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:52.102 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:53.119 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:53.120 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:53.120 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:53.120 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:53.122 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:54.136 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:54.136 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:54.136 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:54.136 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:54.137 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:55.153 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:55.153 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:55.153 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:55.153 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:55.153 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:56.169 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:56.169 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:56.169 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:56.169 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:56.170 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:57.187 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:57.187 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:57.187 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:57.187 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:57.187 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:58.223 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:58.224 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:58.224 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:58.224 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:58.225 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:59.223 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:06:59.223 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:06:59.224 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:06:59.224 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:06:59.224 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:06:59.878 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:59.879 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:59.891 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:06:59.910 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:06:59.918 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:00.236 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:00.236 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:00.236 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:00.236 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:00.236 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:01.253 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:01.253 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:01.253 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:01.253 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:01.253 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:02.269 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:02.269 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:02.269 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:02.270 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:02.270 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:03.285 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:03.285 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:03.286 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:03.286 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:03.286 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:04.303 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:04.304 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:04.304 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:04.304 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:04.305 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:05.321 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:05.321 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:05.322 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:05.322 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:05.322 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:06.336 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:06.336 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:06.337 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:06.337 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:06.337 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:07.352 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:07.352 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:07.352 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:07.352 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:07.352 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:08.371 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:08.371 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:08.372 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:08.372 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:08.373 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:09.388 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:09.388 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:09.389 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:09.389 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:09.389 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:10.091 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:10.091 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:10.118 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:07:10.144 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:10.154 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:10.404 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:10.404 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:10.405 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:10.405 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:10.405 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:11.426 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:11.426 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:11.426 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:11.426 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:11.426 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:12.443 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:12.443 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:12.443 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:12.443 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:12.443 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:13.459 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:13.459 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:13.459 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:13.460 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:13.460 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:14.473 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:14.474 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:14.474 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:14.474 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:14.474 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:15.490 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:15.491 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:15.491 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:15.491 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:15.491 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:16.509 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:16.509 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:16.509 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:16.509 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:16.511 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:17.521 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:17.521 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:17.521 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:17.521 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:17.522 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:18.535 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:18.535 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:18.535 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:18.535 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:18.536 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:19.557 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:19.557 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:19.557 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:19.557 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:19.557 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:20.012 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:20.012 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:20.030 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:07:20.051 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:20.061 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:20.575 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:20.575 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:20.575 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:20.575 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:20.575 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:21.598 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:21.598 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:21.598 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:21.598 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:21.598 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:21.804 I/ForwardSyncCache(17881): reclaimMemory: Clearing caches
+08-22 18:07:22.605 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:22.605 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:22.605 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:22.605 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:22.605 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:23.619 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:23.619 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:23.619 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:23.619 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:23.620 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:24.637 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:24.637 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:24.638 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:24.638 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:24.638 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:25.652 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:25.652 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:25.652 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:25.652 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:25.653 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:26.670 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:26.671 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:26.671 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:26.671 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:26.672 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:27.686 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:27.686 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:27.686 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:27.686 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:27.686 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:28.702 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:28.703 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:28.703 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:28.703 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:28.703 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:29.726 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:29.727 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:29.727 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:29.727 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:29.728 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:29.998 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:29.998 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:30.014 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:07:30.039 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:30.046 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:30.735 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:30.736 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:30.736 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:30.736 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:30.736 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:31.757 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:31.757 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:31.757 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:31.757 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:31.758 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:32.769 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:32.770 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:32.770 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:32.770 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:32.770 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:33.787 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:33.787 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:33.787 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:33.787 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:33.787 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:34.802 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:34.802 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:34.802 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:34.802 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:34.803 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:35.819 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:35.819 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:35.819 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:35.819 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:35.820 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:36.836 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:36.837 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:36.837 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:36.837 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:36.837 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:37.853 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:37.854 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:37.854 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:37.854 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:37.855 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:38.870 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:38.870 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:38.870 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:38.870 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:38.870 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:39.897 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:39.897 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:39.897 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:39.897 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:39.897 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:39.993 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:39.993 I/artd    ( 2575): GetBestInfo: odex next to the dex file (/data/app/~~cVlLWCT9ljsXbq81BACgbQ==/com.google.android.gms-il2lviOBz37-Rt3KaLazxg==/oat/x86_64/split_GoogleCertificates_installtime.odex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:40.012 I/artd    ( 2575): GetBestInfo: /data/user_de/0/com.google.android.gms/app_chimera/m/00000005/GoogleCertificates.apk has no usable artifacts
+08-22 18:07:40.037 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/D76594F451C00E79F4C61E3B54BC3D01968BC47C/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:40.046 I/artd    ( 2575): GetBestInfo: vdex next to the dex file (/data/user/0/com.google.android.gms/app_dg_cache/90356F09B5269D8AF0E8BAEAA661BE4AFD715065/oat/x86_64/the.vdex) is kOatUpToDate with filter 'verify' executable 'false'
+08-22 18:07:40.903 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:40.903 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:40.903 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:40.903 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:40.903 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:41.919 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:41.919 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:41.919 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:41.920 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:41.920 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:42.936 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:42.936 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:42.936 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:42.936 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:42.936 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:43.953 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:43.953 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:43.954 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:43.954 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:43.954 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:44.971 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:44.971 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:44.971 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:44.971 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:44.972 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:45.986 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:45.986 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:45.987 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:45.987 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:45.987 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:47.004 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:47.004 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:47.004 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:47.004 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:47.005 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:48.019 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:48.019 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:48.019 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:48.019 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:48.019 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true
+08-22 18:07:49.035 I/MpvJNI  (20777): [PlaybackTrace][Native][getPosition] result=-10 position=0.000000
+08-22 18:07:49.035 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPosition] ptr=131217387607136 position=0.0
+08-22 18:07:49.035 I/MpvJNI  (20777): [PlaybackTrace][Native][getDuration] result=-10 duration=0.000000
+08-22 18:07:49.035 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getDuration] ptr=131217387607136 duration=0.0
+08-22 18:07:49.035 D/MpvBridgeModule(20777): [PlaybackTrace][Bridge][getPlaybackState] ptr=131217387607136 state=idle idle=true

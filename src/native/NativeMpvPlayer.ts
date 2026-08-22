@@ -91,6 +91,9 @@ export interface MpvEvents {
    * instead of silently failing on scrub.
    */
   onSeekable: {seekable: boolean};
+  /** Native MPV end-file notification. `reason=0` is natural EOF; other reasons include stop/reload. */
+  onEndFile: {reason: Double; error: Double};
+  /** @deprecated Use onEndFile; retained for compatibility with older consumers. */
   onEndReached: {};
   onAudioDeviceChanged: {device: string};
   onVolumeChanged: {volume: Double};

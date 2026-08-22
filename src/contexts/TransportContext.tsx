@@ -229,9 +229,10 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     return () => clearInterval(interval);
   }, [sleepTimerEndTime, sleepTimerMode, enabled, pollInterval, dispatch, disarmTimer]);
 
-  // Position and playback state are event-driven. Poll only duration as a
-  // low-frequency fallback; querying mpv across the JS bridge every 250 ms
-  // made controls and orientation transitions visibly stutter.
+  // The native bridge may not emit dedicated position/state events on every
+  // build. Keep the event subscriptions for low-latency updates, but also poll
+  // the synchronous mpv properties so the UI cannot remain frozen at 0:00 or
+  // show PAUSED while the native player is actually advancing.
   useEffect(() => {
     if (!isReady || !enabled) return;
 
@@ -280,13 +281,18 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     // `paused-for-cache` into a single `onBuffering` event with a
     // `percent` payload so the consumer has one boolean to watch.
     const unsubBuffering = MpvPlayer.on('onBuffering', ({percent}: {percent: number}) => {
-      setIsBuffering(percent > 0 && percent < 100);
+      const normalized = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 100;
+      setCacheFill(normalized / 100);
+      setIsBuffering(normalized > 0 && normalized < 100);
     });
     const unsubCacheState = MpvPlayer.on(
       'onCacheState',
-      ({ranges, fill}: {ranges: Array<{start: number; end: number}>; fill: number}) => {
-        setBufferedRanges(ranges);
-        setCacheFill(fill);
+      ({ranges}: {ranges: Array<{start: number; end: number}>; fill?: number}) => {
+        setBufferedRanges(
+          ranges
+            .filter(range => Number.isFinite(range.start) && Number.isFinite(range.end) && range.end > range.start)
+            .map(range => ({start: Math.max(0, range.start), end: Math.max(0, range.end)})),
+        );
       },
     );
     const unsubSeekable = MpvPlayer.on('onSeekable', ({seekable}: {seekable: boolean}) => {
@@ -312,15 +318,23 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     const interval = setInterval(() => {
       if (!isReadyRef.current) return;
       try {
+        const nextPosition = MpvPlayer.getPosition();
         const dur = MpvPlayer.getDuration();
+        const nativeState = MpvPlayer.getPlaybackState();
 
-        if (!isNaN(dur)) setDuration(dur || 1);
-        if (!hasPlaybackStateEventsRef.current) {
-          const now = Date.now();
-          if (isPlayingRef.current && now - lastMoveAtRef.current > 1500) {
-            moveStreakRef.current = 0;
-            setIsPlaying(false);
+        if (Number.isFinite(nextPosition) && nextPosition >= 0) {
+          if (nextPosition > lastPositionRef.current + 0.12) {
+            lastMoveAtRef.current = Date.now();
+            moveStreakRef.current += 1;
           }
+          lastPositionRef.current = nextPosition;
+          setPosition(nextPosition);
+        }
+        if (Number.isFinite(dur) && dur > 0) setDuration(dur);
+
+        const nativeIsPlaying = nativeState === 'playing';
+        if (nativeIsPlaying !== isPlayingRef.current) {
+          setIsPlaying(nativeIsPlaying);
         }
       } catch {
         // silently ignore if player was destroyed mid-poll

@@ -4,6 +4,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../../theme';
 import {useAppDispatch, useAppSelector} from '../../../../store';
 import {logError} from '../../../../lib/errorLogger';
+import {logger} from '../../../../lib/logger';
 import {MpvPlayer} from '../../../../native';
 import {NotificationService} from '../../../../services/notificationService';
 import {
@@ -248,10 +249,12 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
   const currentIndexRef = useRef(currentIndex);
   const loopModeRef = useRef(loopMode);
 
-  // P33.3: retry nonce re-runs the init effect (true reload); backoff counter
-  // for remote-stream auto-retries on mpv load errors
+  // A retry nonce is reserved for an explicit user retry. Every load also
+  // receives a generation so delayed callbacks from an older stream can never
+  // resume or seek a newer stream.
   const [retryNonce, setRetryNonce] = useState(0);
-  const retryCountRef = useRef(0);
+  const loadGenerationRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // P33.6: cached local path for remote artwork — feeds recents/bookmarks
   const remoteArtPathRef = useRef('');
@@ -300,14 +303,28 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
 
   // ── Init player on mount ──
   useEffect(() => {
+    const loadGeneration = ++loadGenerationRef.current;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     let cancelled = false;
     let unsubLoaded: (() => void) | null = null;
+    logger.info('[PlaybackTrace][Controller][effect:start]', {
+      fileUri,
+      title,
+      startPosition,
+      source: sourceLabel,
+      mediaKind,
+      mediaLane,
+    });
     let unsubState: (() => void) | null = null;
     let unsubVolume: (() => void) | null = null;
     let unsubSpeed: (() => void) | null = null;
 
     (async () => {
       if (!fileUri) {
+        logger.error('[PlaybackTrace][Controller][no-file-uri]');
         setError('No file URI provided.');
         setIsLoading(false);
         logError({code: 'ERR_NO_FILE', message: 'No file URI provided.', source: 'AudioPlayerScreen'});
@@ -316,6 +333,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
 
       // P33: remote streams skip local-file validation (network-loaded by mpv)
       if (!isRemoteUri(fileUri)) {
+        logger.info('[PlaybackTrace][Controller][validate-local]', fileUri);
         try {
           const validation = await validateMediaFile(fileUri);
           if (cancelled) return;
@@ -339,7 +357,9 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
       }
 
       try {
+        logger.info('[PlaybackTrace][Controller][init:call]', fileUri);
         const ok = MpvPlayer.initPlayer();
+        logger.info('[PlaybackTrace][Controller][init:return]', {ok, cancelled});
         if (cancelled) return;
         if (!ok) {
           setError('Failed to initialize audio player.');
@@ -348,44 +368,39 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           return;
         }
 
+        logger.info('[PlaybackTrace][Controller][listeners:register]');
         unsubState = MpvPlayer.on('onPlaybackStateChanged', ({state}) => {
+          logger.info('[PlaybackTrace][Controller][event:onPlaybackStateChanged]', {state, cancelled});
           if (cancelled) return;
           setIsPlaying(state === 'playing');
           dispatch(setPlaybackState(state));
         });
         unsubVolume = MpvPlayer.on('onVolumeChanged', ({volume: nextVolume}) => {
+          logger.info('[PlaybackTrace][Controller][event:onVolumeChanged]', {volume: nextVolume, cancelled});
           if (!cancelled) setVolume(nextVolume);
         });
         unsubSpeed = MpvPlayer.on('onSpeedChanged', ({speed: nextSpeed}) => {
+          logger.info('[PlaybackTrace][Controller][event:onSpeedChanged]', {speed: nextSpeed, cancelled});
           if (!cancelled) dispatch(setPlaybackSpeed(nextSpeed));
         });
 
-        MpvPlayer.loadFile(fileUri);
-
-        // Push persisted playback and audio settings before playback starts.
-        applyPlaybackSettingsToMpv();
-        applyAudioSettingsToMpv();
-
-        // Re-apply the persisted playback speed (mpv resets to 1.0 on load)
-        try {
-          MpvPlayer.setSpeed(playbackSpeedRef.current);
-        } catch {}
-
-        // Restore the saved playback position once the file loads.
-        // Covers reopening from MiniAudioPlayer mid-track (resume, not restart).
+        // Subscribe before loadFile. Native mpv can complete a local or cached
+        // load synchronously enough that registering afterwards loses the only
+        // reliable first-load transition and leaves the stream paused.
         let initialLoadDone = false;
         unsubLoaded = MpvPlayer.on('onFileLoaded', () => {
-          if (cancelled || initialLoadDone) return;
+          logger.info('[PlaybackTrace][Controller][event:onFileLoaded]', {fileUri, cancelled, initialLoadDone});
+          if (cancelled || loadGenerationRef.current !== loadGeneration || initialLoadDone) return;
           initialLoadDone = true;
           endHandledRef.current = false;
-          retryCountRef.current = 0; // P33.3: a successful load resets backoff
 
           const saved = sessionRecentRef.current.find(f => f.fileUri === fileUri);
           const resumePosition = saved?.position ?? 0;
           const explicitPosition = startPosition ?? 0;
-                    if (explicitPosition > 0) {
+          if (explicitPosition > 0) {
             // 58.2: explicit navigation intent (Continue Listening) — silent seek
             setTimeout(() => {
+              if (cancelled || loadGenerationRef.current !== loadGeneration) return;
               try {
                 MpvPlayer.seekTo(explicitPosition);
                 MpvPlayer.resume();
@@ -398,15 +413,58 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           } else {
             // mpv loadFile() does not guarantee autoplay on every native build.
             // Explicitly resume once the file is ready so remote streams start.
-            try { MpvPlayer.resume(); } catch {}
+            try {
+              logger.info('[PlaybackTrace][Controller][onFileLoaded:resume]');
+              MpvPlayer.resume();
+            } catch (error) {
+              logger.error('[PlaybackTrace][Controller][onFileLoaded:resume:error]', error);
+            }
           }
-
         });
+
+        logger.info('[PlaybackTrace][Controller][loadFile:before]', fileUri);
+        MpvPlayer.loadFile(fileUri);
+        logger.info('[PlaybackTrace][Controller][loadFile:after]', fileUri);
+
+        // Push persisted playback and audio settings before playback starts.
+        logger.info('[PlaybackTrace][Controller][settings:before]');
+        applyPlaybackSettingsToMpv();
+        applyAudioSettingsToMpv();
+        logger.info('[PlaybackTrace][Controller][settings:after]');
+
+        // Re-apply the persisted playback speed (mpv resets to 1.0 on load)
+        try {
+          logger.info('[PlaybackTrace][Controller][speed:before]', playbackSpeedRef.current);
+          MpvPlayer.setSpeed(playbackSpeedRef.current);
+          logger.info('[PlaybackTrace][Controller][speed:after]', playbackSpeedRef.current);
+        } catch (error) {
+          logger.error('[PlaybackTrace][Controller][speed:error]', error);
+        }
+
+        // Defensive fallback for native builds where the load event is delayed
+        // or unavailable. Do not disturb the saved-position prompt; only resume
+        // a genuinely fresh start.
+        const hasSavedPosition = (startPosition ?? 0) > 0 ||
+          (sessionRecentRef.current.find(f => f.fileUri === fileUri)?.position ?? 0) > 0;
+        if (!hasSavedPosition) {
+          retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            if (cancelled || loadGenerationRef.current !== loadGeneration) return;
+            try {
+              logger.info('[PlaybackTrace][Controller][fallback-resume]');
+              MpvPlayer.resume();
+            } catch (error) {
+              logger.error('[PlaybackTrace][Controller][fallback-resume:error]', error);
+            }
+          }, 700);
+        }
 
         setIsReady(true);
         setIsLoading(false);
+        logger.info('[PlaybackTrace][Controller][ready]', {fileUri});
 
-        // Track the complete entry in Redux so MiniAudioPlayer and reopen
+        // Track the complete entry in Redux so the mini audio overlay and reopen
+
         // flows retain artwork, provenance, and the correct audio lane.
         dispatch(playFile({
           uri: fileUri,
@@ -420,6 +478,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           artworkUri,
         }));
       } catch (e) {
+        logger.error('[PlaybackTrace][Controller][effect:error]', e);
         if (!cancelled) {
           setError('Player initialization failed.');
           setIsLoading(false);
@@ -429,7 +488,12 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     })();
 
     return () => {
+      logger.info('[PlaybackTrace][Controller][effect:cleanup]', {fileUri, loadGeneration});
       cancelled = true;
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
       unsubLoaded?.();
       unsubState?.();
       unsubVolume?.();
@@ -442,10 +506,19 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
   // Native loadFile() is intentionally separate from play(), so every
   // transition must resume after loading instead of assuming autoplay.
   const loadAndResume = useCallback((uri: string, resumePosition?: number) => {
+    const loadGeneration = ++loadGenerationRef.current;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    logger.info('[PlaybackTrace][Controller][loadAndResume:before]', {uri, resumePosition, loadGeneration});
     try {
       MpvPlayer.loadFile(uri);
+      logger.info('[PlaybackTrace][Controller][loadAndResume:loaded]', {uri, loadGeneration});
       MpvPlayer.resume();
+      logger.info('[PlaybackTrace][Controller][loadAndResume:resumed]', {uri, loadGeneration});
       setTimeout(() => {
+        if (loadGenerationRef.current !== loadGeneration) return;
         try {
           MpvPlayer.resume();
           if (resumePosition && resumePosition > 0) {
@@ -453,7 +526,9 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           }
         } catch {}
       }, 250);
-    } catch {}
+    } catch (error) {
+      logger.error('[PlaybackTrace][Controller][loadAndResume:error]', {uri, loadGeneration, error});
+    }
   }, []);
 
   // ── 58.2: Resume / Start Over choice on load (mirrors 31.2 video) ──
@@ -685,12 +760,23 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     const curDur = MpvPlayer.getDuration?.() ?? 0;
 
     if (curUri) {
-addRecent({
+      const handoffTitle = activeTitleRef.current || title || getFileName(curUri);
+      const handoffArtwork = remoteArtPathRef.current || artworkUri;
+
+      // Keep Redux currentFile authoritative before collapsing the overlay.
+      // The mini-player reads this entry directly and must never receive a
+      // null title after returning from the full player.
+      dispatch(updateCurrentFileMetadata({
+        title: handoffTitle,
+        ...(handoffArtwork ? {artworkUri: handoffArtwork} : {}),
+      }));
+
+      addRecent({
         fileUri: curUri,
-        title: activeTitleRef.current,
+        title: handoffTitle,
         position: curPos,
         duration: curDur,
-        thumbnailPath: remoteArtPathRef.current || '',
+        thumbnailPath: handoffArtwork || '',
         mediaType: mediaLane,
         type: mediaKind,
         source: sourceLabel,
@@ -699,23 +785,27 @@ addRecent({
       });
     }
 
-    // Keep the file loaded so MiniAudioPlayer can control it after back;
+    // Keep the file loaded so the audio overlay can control it after back;
     // pause (not stop) so the mini player's state matches the native player.
     try { MpvPlayer.pause(); } catch {}
     dispatch(setPlaybackState('paused'));
     NotificationService.stop();
 
     navigation.goBack();
-  }, [dispatch, navigation, sourceLabel, mediaLane, mediaKind, provider, routeFolderId]);
+  }, [artworkUri, dispatch, getFileName, navigation, sourceLabel, mediaLane, mediaKind, provider, routeFolderId, title, updateCurrentFileMetadata]);
 
   const handlePlayPause = useCallback(() => {
     try {
-      if (MpvPlayer.getPlaybackState() === 'playing') {
+      const nativeState = MpvPlayer.getPlaybackState();
+      logger.info('[PlaybackTrace][Controller][handlePlayPause]', {nativeState, fileUri: fileUriRef.current});
+      if (nativeState === 'playing') {
         MpvPlayer.pause();
       } else {
         MpvPlayer.resume();
       }
-    } catch {}
+    } catch (error) {
+      logger.error('[PlaybackTrace][Controller][handlePlayPause:error]', error);
+    }
     haptics.medium();
   }, [haptics]);
 
@@ -938,6 +1028,14 @@ addRecent({
     handleQueueSelectItem(item.uri);
   }, [queue, handleQueueSelectItem]);
 
+  const handlePlayQueueIndex = useCallback((index: number) => {
+    const item = queue[index];
+    if (!item) return;
+    dispatch(playFromQueue(index));
+    loadAndResume(item.uri);
+    setQueueSheetVisible(false);
+  }, [dispatch, loadAndResume, queue]);
+
   const handleSelectHistoryItem = useCallback((idx: number) => {
     const item = playbackHistory[idx];
     if (!item) return;
@@ -1027,57 +1125,58 @@ addRecent({
   }, [handlePlayPause, handleNext, handlePrev, handleGoBack]);
 
   const handleRetry = useCallback(() => {
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    // Invalidate delayed callbacks from the failed generation before the
+    // explicit user retry causes the initialization effect to run again.
+    loadGenerationRef.current += 1;
     setError(null);
     setErrorIsPermission(false);
     setIsReady(false);
     setIsLoading(true);
-    // P33.3: bump the nonce so the init effect actually re-runs (real reload)
     setRetryNonce(n => n + 1);
   }, []);
 
-  // ── P33.3: remote-stream error auto-retry with exponential backoff ──
+  // Native onError is reserved for fatal/terminal failures. Recoverable
+  // network underruns must remain inside the same mpv load and be represented
+  // by paused-for-cache; reloading here caused the observed same-URI storm.
   useEffect(() => {
     const unsubError = MpvPlayer.on('onError', ({message: errMsg}) => {
       const uri = fileUriRef.current;
-      if (!uri || !isRemoteUri(uri)) return;
-
-      if (retryCountRef.current >= 3) {
-        retryCountRef.current = 0;
-        setError(errMsg || 'Stream playback failed.');
-        setIsLoading(false);
-        logError({
-          code: 'ERR_STREAM_FAIL',
-          message: errMsg || 'Stream playback failed.',
-          source: 'AudioPlayerScreen',
-        });
-        return;
-      }
-
-      const attempt = retryCountRef.current + 1;
-      retryCountRef.current = attempt;
-      // 1.5s, 3s, 6s — back off on repeated failures
-      const delay = 1500 * 2 ** (attempt - 1);
-      setTimeout(() => {
-        try {
-          loadAndResume(uri);
-        } catch {}
-      }, delay);
+      logger.error('[PlaybackTrace][Controller][event:onError:terminal]', {uri, message: errMsg});
+      if (!uri) return;
+      setError(errMsg || 'Stream playback failed.');
+      setIsLoading(false);
+      setIsReady(false);
+      setIsPlaying(false);
+      dispatch(setPlaybackState('stopped'));
+      logError({
+        code: 'ERR_STREAM_FAIL',
+        message: errMsg || 'Stream playback failed.',
+        source: 'AudioPlayerScreen',
+      });
     });
 
     return () => {
       unsubError();
-      retryCountRef.current = 0;
     };
-  }, [loadAndResume]);
+  }, [dispatch]);
 
-  // ── P37.3: auto-advance when the current file ends ──
+    // ── P37.3: auto-advance only on natural EOF ──
   useEffect(() => {
-    const unsubEnd = MpvPlayer.on('onEndReached', () => {
+    const unsubEnd = MpvPlayer.on('onEndFile', ({reason, error}) => {
+      logger.info('[PlaybackTrace][Controller][event:onEndFile]', {reason, error});
+
+      // MPV emits end-file for stop/reload as well as natural EOF. A reload
+      // reports reason=2 and must never advance or restart the queue. Only
+      // reason=0 represents the current item reaching its natural end.
+      if (reason !== 0) return;
       if (endHandledRef.current) return;
       endHandledRef.current = true;
 
       // 1. Loop-file mode replays the current track
-
       if (loopModeRef.current === 'file') {
         MpvPlayer.seekTo(0);
         try { MpvPlayer.resume(); } catch {}
@@ -1178,6 +1277,7 @@ addRecent({
     handleQueueRemoveItem,
     handleQueueSelectItem,
     handleSelectQueueItem,
+    handlePlayQueueIndex,
     handleSelectHistoryItem,
     handlePlayNext,
     handleAddToQueue,

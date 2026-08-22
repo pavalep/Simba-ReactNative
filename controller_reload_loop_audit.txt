@@ -1,0 +1,126 @@
+
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:254:  // resume or seek a newer stream.
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:255:  const [retryNonce, setRetryNonce] = useState(0);
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:256:  const loadGenerationRef = useRef(0);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:257:  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:258:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:305:  useEffect(() => {
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:306:    const loadGeneration = ++loadGenerationRef.current;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:307:    if (retryTimerRef.current) {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:308:      clearTimeout(retryTimerRef.current);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:392:          logger.info('[PlaybackTrace][Controller][event:onFileLoaded]', {fileUri, cancelled, initialLoadDone});
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:393:          if (cancelled || loadGenerationRef.current !== loadGeneration || initialLoadDone) return;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:394:          initialLoadDone = true;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:395:          endHandledRef.current = false;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:402:            setTimeout(() => {
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:403:              if (cancelled || loadGenerationRef.current !== loadGeneration) return;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:404:              try {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:405:                MpvPlayer.seekTo(explicitPosition);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:451:            retryTimerRef.current = null;
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:452:            if (cancelled || loadGenerationRef.current !== loadGeneration) return;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:453:            try {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:454:              logger.info('[PlaybackTrace][Controller][fallback-resume]');
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:502:
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:503:  }, [fileUri, title, dispatch, retryNonce, sourceLabel, startPosition]);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:504:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:505:    // Load a new queue/chapter item and explicitly clear mpv's paused state.
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:507:  // transition must resume after loading instead of assuming autoplay.
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:508:  const loadAndResume = useCallback((uri: string, resumePosition?: number) => {
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:509:    const loadGeneration = ++loadGenerationRef.current;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:510:    if (retryTimerRef.current) {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:511:      clearTimeout(retryTimerRef.current);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:513:    }
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:514:    logger.info('[PlaybackTrace][Controller][loadAndResume:before]', {uri, resumePosition, loadGeneration});
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:515:    try {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:516:      MpvPlayer.loadFile(uri);
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:517:      logger.info('[PlaybackTrace][Controller][loadAndResume:loaded]', {uri, loadGeneration});
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:518:      MpvPlayer.resume();
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:519:      logger.info('[PlaybackTrace][Controller][loadAndResume:resumed]', {uri, loadGeneration});
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:520:      setTimeout(() => {
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:521:        if (loadGenerationRef.current !== loadGeneration) return;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:522:        try {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:523:          MpvPlayer.resume();
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:529:    } catch (error) {
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:530:      logger.error('[PlaybackTrace][Controller][loadAndResume:error]', {uri, loadGeneration, error});
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:531:    }
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:532:  }, []);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:830:      dispatch(playFile({uri: prev.uri, title: prev.title, duration: prev.duration ?? 0, source: sourceLabel}));
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:831:      loadAndResume(prev.uri);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:832:      return;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:833:    }
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:853:    dispatch(playFromPlaylist(transition.playlistIndex));
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:854:    loadAndResume(transition.entry.uri);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:855:  }, [
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:856:    currentIndex,
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:862:    sourceLabel,
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:863:    loadAndResume,
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:864:  ]);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:865:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:878:    const recent = sessionRecentRef.current.find(r => r.fileUri === next.uri);
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:879:    loadAndResume(next.uri, recent?.position);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:880:    return true;
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:881:  }, [dispatch, sourceLabel, loadAndResume]);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:882:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:883:  const transitionToNextAudio = useCallback(() => {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:901:    }
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:902:    loadAndResume(transition.entry.uri);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:903:    return true;
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:904:  }, [dispatch, mediaLane, queue, loadAndResume]);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:905:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:906:  const handleNext = useCallback(() => {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:985:      if (playlist.length === 0) {
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:986:        loadAndResume(entry.uri);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:987:      }
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:988:    } catch {}
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:989:    }, [dispatch, playlist.length, loadAndResume]);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:990:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:991:  const handleRemoveFromPlaylist = useCallback((index: number) => {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:998:    dispatch(playFromPlaylist(index));
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:999:    loadAndResume(entry.uri);
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1000:  }, [dispatch, playlist, loadAndResume]);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1001:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1002:  // ── Queue management ──
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1018:        dispatch(playFromPlaylist(playlistIdx));
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1019:        loadAndResume(entry.uri);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1020:      }
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1021:    }
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1022:    setQueueSheetVisible(false);
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1023:    }, [dispatch, playlist, currentIndex, loadAndResume]);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1024:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1025:  const handleSelectQueueItem = useCallback((idx: number) => {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1034:    dispatch(playFromQueue(index));
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1035:    loadAndResume(item.uri);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1036:    setQueueSheetVisible(false);
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1037:  }, [dispatch, loadAndResume, queue]);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1038:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1039:  const handleSelectHistoryItem = useCallback((idx: number) => {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1093:      setInfoSheetVisible(false);
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1094:      loadAndResume(track.uri);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1095:      setChapters([]);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1096:    },
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1097:    [loadAndResume],
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1098:  );
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1099:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1133:    // explicit user retry causes the initialization effect to run again.
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1134:    loadGenerationRef.current += 1;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1135:    setError(null);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1136:    setErrorIsPermission(false);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1138:    setIsLoading(true);
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1139:    setRetryNonce(n => n + 1);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1140:  }, []);
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1141:
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1142:  // Native onError is reserved for fatal/terminal failures. Recoverable
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1143:  // network underruns must remain inside the same mpv load and be represented
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1144:  // by paused-for-cache; reloading here caused the observed same-URI storm.
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1145:  useEffect(() => {
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1146:    const unsubError = MpvPlayer.on('onError', ({message: errMsg}) => {
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1147:      const uri = fileUriRef.current;
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1148:      logger.error('[PlaybackTrace][Controller][event:onError:terminal]', {uri, message: errMsg});
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1149:      if (!uri) return;
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1150:      setError(errMsg || 'Stream playback failed.');
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1168:  useEffect(() => {
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1169:    const unsubEnd = MpvPlayer.on('onEndFile', ({reason, error}) => {
+> src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1170:      logger.info('[PlaybackTrace][Controller][event:onEndFile]', {reason, error});
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1171:
+  src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1172:      // MPV emits end-file for stop/reload as well as natural EOF. A reload
+

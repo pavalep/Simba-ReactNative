@@ -32,6 +32,43 @@ jmethodID g_mid_onError = nullptr;
 
 void eventLoop();
 
+static bool initializeMpv(mpv_handle *mpv) {
+    if (!mpv) {
+        LOGE("[PlaybackTrace][Native][initialize] null mpv handle");
+        return false;
+    }
+    if (g_initialized) {
+        LOGI("[PlaybackTrace][Native][initialize] already initialized");
+        return true;
+    }
+
+    LOGI("[PlaybackTrace][Native][initialize] calling mpv_initialize");
+    int result = mpv_initialize(mpv);
+    if (result < 0) {
+        LOGE("mpv_initialize failed: %s", mpv_error_string(result));
+        return false;
+    }
+
+    LOGI("[PlaybackTrace][Native][initialize] mpv_initialize succeeded");
+    mpv_request_log_messages(mpv, "v");
+    LOGI("[PlaybackTrace][Native][initialize] requested mpv verbose logs");
+    g_initialized = true;
+    g_running = true;
+    if (pthread_create(&g_eventThread, nullptr, [](void *) -> void * {
+            eventLoop();
+            return nullptr;
+        }, nullptr) != 0) {
+        LOGE("Failed to create mpv event thread");
+        g_running = false;
+        g_initialized = false;
+        mpv_terminate_destroy(mpv);
+        return false;
+    }
+
+    LOGI("mpv initialized and event loop started");
+    return true;
+}
+
 // ── JNI_OnLoad ────────────────────────────────────────────────────────────
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
@@ -113,7 +150,7 @@ static JNIEnv *getEnv() {
 // ── Lifecycle ─────────────────────────────────────────────────────────────
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass) {
+Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass, jstring caFilePath) {
     if (g_mpv) {
         LOGI("mpv instance already exists, returning existing");
         return reinterpret_cast<jlong>(g_mpv);
@@ -129,18 +166,45 @@ Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass) {
 
     // Set pre-init options (NOT wid — that requires the Surface and will be
     // set in nativeAttachSurface before mpv_initialize).
-    mpv_set_option_string(mpv, "vo", "gpu");
-    mpv_set_option_string(mpv, "gpu-api", "opengl");
-    mpv_set_option_string(mpv, "hwdec", "mediacodec");
+    // Audio overlays do not mount a video surface. Keep video output disabled
+    // until a surface is explicitly attached by MpvRenderView.
+    int optionResult = mpv_set_option_string(mpv, "vo", "null");
+    LOGI("[PlaybackTrace][Native][create] option vo=null result=%d", optionResult);
+    optionResult = mpv_set_option_string(mpv, "gpu-api", "opengl");
+    LOGI("[PlaybackTrace][Native][create] option gpu-api=opengl result=%d", optionResult);
+    optionResult = mpv_set_option_string(mpv, "hwdec", "mediacodec");
+    LOGI("[PlaybackTrace][Native][create] option hwdec=mediacodec result=%d", optionResult);
     // Let mpv preserve the source transfer function and range instead of
     // applying a blanket SDR conversion. This keeps SDR/HDR content neutral
     // on devices that expose the required display metadata.
     mpv_set_option_string(mpv, "video-output-levels", "auto");
     mpv_set_option_string(mpv, "target-colorspace-hint", "yes");
     mpv_set_option_string(mpv, "correct-downscaling", "yes");
-    mpv_set_option_string(mpv, "audio-device-auto", "yes");
-    mpv_set_option_string(mpv, "keep-open", "yes");
-    mpv_set_option_string(mpv, "pause", "no");
+    optionResult = mpv_set_option_string(mpv, "audio-device-auto", "yes");
+    LOGI("[PlaybackTrace][Native][create] option audio-device-auto=yes result=%d", optionResult);
+
+    // Android libmpv builds do not consistently discover the platform trust
+    // store. Supply the app-bundled Mozilla CA bundle while keeping TLS
+    // verification enabled for HTTPS streams.
+    if (caFilePath) {
+        const char *caPath = env->GetStringUTFChars(caFilePath, nullptr);
+        if (caPath && caPath[0] != '\0') {
+            optionResult = mpv_set_option_string(mpv, "tls-ca-file", caPath);
+            LOGI("[PlaybackTrace][Native][create] option tls-ca-file=%s result=%d", caPath, optionResult);
+            env->ReleaseStringUTFChars(caFilePath, caPath);
+        } else {
+            LOGE("[PlaybackTrace][Native][create] empty CA bundle path; HTTPS validation may fail");
+            if (caPath) env->ReleaseStringUTFChars(caFilePath, caPath);
+        }
+    } else {
+        LOGE("[PlaybackTrace][Native][create] null CA bundle path; HTTPS validation may fail");
+    }
+    optionResult = mpv_set_option_string(mpv, "tls-verify", "yes");
+    LOGI("[PlaybackTrace][Native][create] option tls-verify=yes result=%d", optionResult);
+    optionResult = mpv_set_option_string(mpv, "keep-open", "yes");
+    LOGI("[PlaybackTrace][Native][create] option keep-open=yes result=%d", optionResult);
+    optionResult = mpv_set_option_string(mpv, "pause", "no");
+    LOGI("[PlaybackTrace][Native][create] option pause=no result=%d", optionResult);
 
     // ── Streaming / buffering tuning ────────────────────────────────────
     // These are the same options used by desktop MPV configs to get
@@ -174,14 +238,18 @@ Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass) {
     mpv_set_option_string(mpv, "demuxer-termination-timeout", "10");
     mpv_set_option_string(mpv, "prefetch-playlist", "yes");
 
-    // NOTE: mpv_initialize() is deliberately NOT called here.
-    // It is deferred until nativeAttachSurface so that the "wid" option
-    // (which requires the Surface pointer) can be set first.
-    // mpv_set_option("wid") after mpv_initialize() is undefined behavior.
+    // Initialize immediately so audio-only playback can load streams without
+    // waiting for a video surface. Video surfaces remain independently attachable.
 
+    LOGI("[PlaybackTrace][Native][create] mpv_create succeeded handle=%p", mpv);
     g_mpv = mpv;
-    LOGI("mpv instance created (awaiting surface for init)");
+    if (!initializeMpv(mpv)) {
+        g_mpv = nullptr;
+        return 0;
+    }
+    LOGI("mpv instance created and initialized without a required surface");
     return reinterpret_cast<jlong>(mpv);
+
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -240,34 +308,12 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
         }
 
         if (!g_initialized) {
-            // First attach — set wid, then initialize mpv and start
-            // the event thread.  Setting wid after init is typically UB
-            // in mpv, but we only do it here before init.
-            int64_t wid = reinterpret_cast<intptr_t>(g_surface);
-            int result = mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &wid);
-            if (result < 0) {
-                LOGE("mpv_set_option(wid) failed: %s", mpv_error_string(result));
-                env->DeleteGlobalRef(g_surface);
-                g_surface = nullptr;
-                return;
-            }
-
-            if (mpv_initialize(mpv) < 0) {
-                LOGE("mpv_initialize failed");
-                env->DeleteGlobalRef(g_surface);
-                g_surface = nullptr;
-                return;
-            }
-            mpv_request_log_messages(mpv, "v");
-            g_initialized = true;
-            g_running = true;
-            pthread_create(&g_eventThread, nullptr, [](void *) -> void * {
-                eventLoop();
-                return nullptr;
-            }, nullptr);
-
-            LOGI("Surface attached and mpv initialized");
+            LOGE("Surface attach rejected because mpv is not initialized");
+            env->DeleteGlobalRef(g_surface);
+            g_surface = nullptr;
+            return;
         } else {
+
             // Re-attach — mpv was told to set vo=null (destroying the gpu
             // VO and releasing the old ANativeWindow) before this call.
             // Now we must update the wid option so that when vo=gpu is
@@ -334,33 +380,54 @@ Java_com_simba_player_mpv_MPVLib_nativeSurfaceChanged(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeLoadFile(
     JNIEnv *env, jclass, jlong nativePtr, jstring path) {
-    if (!nativePtr || !path) return;
+    if (!nativePtr || !path || !g_initialized) {
+        LOGE("nativeLoadFile rejected: mpv is not initialized or path is null");
+        return;
+    }
+
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
     const char *utfPath = env->GetStringUTFChars(path, nullptr);
+    LOGI("[PlaybackTrace][Native][loadFile] begin path=%s initialized=%d", utfPath, g_initialized ? 1 : 0);
     const char *cmd[] = {"loadfile", utfPath, nullptr};
-    mpv_command(mpv, cmd);
+    int result = mpv_command(mpv, cmd);
+    if (result < 0) {
+        LOGE("[PlaybackTrace][Native][loadFile] loadfile command failed result=%d error=%s", result, mpv_error_string(result));
+    } else {
+        LOGI("[PlaybackTrace][Native][loadFile] loadfile command accepted result=%d", result);
+    }
     env->ReleaseStringUTFChars(path, utfPath);
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativePlay(JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return;
+    if (!nativePtr) {
+        LOGE("[PlaybackTrace][Native][play] rejected null pointer");
+        return;
+    }
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    mpv_set_property_string(mpv, "pause", "no");
+    int result = mpv_set_property_string(mpv, "pause", "no");
+    LOGI("[PlaybackTrace][Native][play] pause=no result=%d", result);
+    if (result < 0) LOGE("[PlaybackTrace][Native][play] error=%s", mpv_error_string(result));
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativePause(JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return;
+    if (!nativePtr) {
+        LOGE("[PlaybackTrace][Native][pause] rejected null pointer");
+        return;
+    }
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    mpv_set_property_string(mpv, "pause", "yes");
+    int result = mpv_set_property_string(mpv, "pause", "yes");
+    LOGI("[PlaybackTrace][Native][pause] pause=yes result=%d", result);
+    if (result < 0) LOGE("[PlaybackTrace][Native][pause] error=%s", mpv_error_string(result));
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeStop(JNIEnv *env, jclass, jlong nativePtr) {
     if (!nativePtr) return;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    mpv_command_string(mpv, "stop");
+    const char *args[] = {"stop", nullptr};
+    mpv_command(mpv, args);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -400,10 +467,13 @@ Java_com_simba_player_mpv_MPVLib_nativeStepFrame(
     JNIEnv *env, jclass, jlong nativePtr, jint direction) {
     if (!nativePtr) return;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    if (direction > 0)
-        mpv_command_string(mpv, "frame-step");
-    else
-        mpv_command_string(mpv, "frame-back-step");
+    if (direction > 0) {
+        const char *args[] = {"frame-step", nullptr};
+        mpv_command(mpv, args);
+    } else {
+        const char *args[] = {"frame-back-step", nullptr};
+        mpv_command(mpv, args);
+    }
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -423,9 +493,14 @@ Java_com_simba_player_mpv_MPVLib_nativeScreenshot(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetVolume(
     JNIEnv *env, jclass, jlong nativePtr, jdouble volume) {
-    if (!nativePtr) return;
+    if (!nativePtr) {
+        LOGE("[PlaybackTrace][Native][volume] rejected null pointer");
+        return;
+    }
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    mpv_set_property(mpv, "volume", MPV_FORMAT_DOUBLE, &volume);
+    int result = mpv_set_property(mpv, "volume", MPV_FORMAT_DOUBLE, &volume);
+    LOGI("[PlaybackTrace][Native][volume] volume=%f result=%d", volume, result);
+    if (result < 0) LOGE("[PlaybackTrace][Native][volume] error=%s", mpv_error_string(result));
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
@@ -499,11 +574,18 @@ Java_com_simba_player_mpv_MPVLib_nativeGetLoopMode(
     JNIEnv *env, jclass, jlong nativePtr) {
     if (!nativePtr) return 0;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    char val[8] = {0};
-    mpv_get_property(mpv, "loop-file", MPV_FORMAT_STRING, &val);
-    if (strcmp(val, "inf") == 0 || strcmp(val, "yes") == 0) return 1;
-    mpv_get_property(mpv, "loop-playlist", MPV_FORMAT_STRING, &val);
-    if (strcmp(val, "inf") == 0 || strcmp(val, "yes") == 0) return 2;
+    char *val = nullptr;
+    if (mpv_get_property(mpv, "loop-file", MPV_FORMAT_STRING, &val) >= 0 && val) {
+        const bool loopFile = strcmp(val, "inf") == 0 || strcmp(val, "yes") == 0;
+        mpv_free(val);
+        if (loopFile) return 1;
+    }
+    val = nullptr;
+    if (mpv_get_property(mpv, "loop-playlist", MPV_FORMAT_STRING, &val) >= 0 && val) {
+        const bool loopPlaylist = strcmp(val, "inf") == 0 || strcmp(val, "yes") == 0;
+        mpv_free(val);
+        if (loopPlaylist) return 2;
+    }
     return 0;
 }
 
@@ -514,13 +596,17 @@ Java_com_simba_player_mpv_MPVLib_nativeLoadPlaylist(
     JNIEnv *env, jclass, jlong nativePtr, jobjectArray paths, jint startIndex) {
     if (!nativePtr || !paths) return;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    mpv_command_string(mpv, "playlist-clear");
+    const char *clearArgs[] = {"playlist-clear", nullptr};
+    mpv_command(mpv, clearArgs);
     jsize count = env->GetArrayLength(paths);
     for (jsize i = 0; i < count; i++) {
         jstring jpath = (jstring)env->GetObjectArrayElement(paths, i);
         const char *utfPath = env->GetStringUTFChars(jpath, nullptr);
         const char *cmd[] = {"loadfile", utfPath, i == 0 ? "replace" : "append", nullptr};
-        mpv_command(mpv, cmd);
+        int result = mpv_command(mpv, cmd);
+        if (result < 0) {
+            LOGE("playlist loadfile command failed at index %d: %s", static_cast<int>(i), mpv_error_string(result));
+        }
         env->ReleaseStringUTFChars(jpath, utfPath);
     }
     if (startIndex > 0) {
@@ -533,7 +619,8 @@ Java_com_simba_player_mpv_MPVLib_nativePlaylistNext(
     JNIEnv *env, jclass, jlong nativePtr) {
     if (!nativePtr) return;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    mpv_command_string(mpv, "playlist-next");
+    const char *args[] = {"playlist-next", nullptr};
+    mpv_command(mpv, args);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -541,7 +628,8 @@ Java_com_simba_player_mpv_MPVLib_nativePlaylistPrev(
     JNIEnv *env, jclass, jlong nativePtr) {
     if (!nativePtr) return;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    mpv_command_string(mpv, "playlist-prev");
+    const char *args[] = {"playlist-prev", nullptr};
+    mpv_command(mpv, args);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -560,7 +648,8 @@ Java_com_simba_player_mpv_MPVLib_nativePlaylistShuffle(
     JNIEnv *env, jclass, jlong nativePtr) {
     if (!nativePtr) return;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    mpv_command_string(mpv, "playlist-shuffle");
+    const char *args[] = {"playlist-shuffle", nullptr};
+    mpv_command(mpv, args);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -568,7 +657,8 @@ Java_com_simba_player_mpv_MPVLib_nativePlaylistClear(
     JNIEnv *env, jclass, jlong nativePtr) {
     if (!nativePtr) return;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    mpv_command_string(mpv, "playlist-clear");
+    const char *clearArgs[] = {"playlist-clear", nullptr};
+    mpv_command(mpv, clearArgs);
 }
 
 // ── Tracks ──────────────────────────────────────────────────────────────────
@@ -623,7 +713,8 @@ Java_com_simba_player_mpv_MPVLib_nativeGetPosition(
     if (!nativePtr) return 0;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
     double pos = 0;
-    mpv_get_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, &pos);
+    int result = mpv_get_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, &pos);
+    LOGI("[PlaybackTrace][Native][getPosition] result=%d position=%f", result, pos);
     return pos;
 }
 
@@ -633,6 +724,7 @@ Java_com_simba_player_mpv_MPVLib_nativeGetDuration(
     if (!nativePtr) return 0;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
     double dur = 0;
-    mpv_get_property(mpv, "duration", MPV_FORMAT_DOUBLE, &dur);
+    int result = mpv_get_property(mpv, "duration", MPV_FORMAT_DOUBLE, &dur);
+    LOGI("[PlaybackTrace][Native][getDuration] result=%d duration=%f", result, dur);
     return dur;
 }

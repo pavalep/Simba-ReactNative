@@ -1,0 +1,912 @@
+diff --git a/android/app/src/main/cpp/property.cpp b/android/app/src/main/cpp/property.cpp
+index b17ebee..aa96ee7 100644
+--- a/android/app/src/main/cpp/property.cpp
++++ b/android/app/src/main/cpp/property.cpp
+@@ -118,8 +118,25 @@ Java_com_simba_player_mpv_MPVLib_nativeObserveProperty(
+     uint64_t hash = 0;
+     for (const char *p = propName; *p; p++)
+         hash = hash * 31 + *p;
+-    mpv_observe_property(mpv, hash, propName, MPV_FORMAT_NODE);
+-    LOGI("Observing property: %s (id=%llu)", propName, (unsigned long long)hash);
++    enum mpv_format format = MPV_FORMAT_NODE;
++    if (strcmp(propName, "paused-for-cache") == 0 ||
++        strcmp(propName, "seekable") == 0 ||
++        strcmp(propName, "seeking") == 0 ||
++        strcmp(propName, "idle-active") == 0 ||
++        strcmp(propName, "eof-reached") == 0 ||
++        strcmp(propName, "pause") == 0) {
++        format = MPV_FORMAT_FLAG;
++    } else if (strcmp(propName, "cache-buffering-state") == 0 ||
++               strcmp(propName, "time-pos") == 0 ||
++               strcmp(propName, "duration") == 0 ||
++               strcmp(propName, "volume") == 0 ||
++               strcmp(propName, "speed") == 0) {
++        format = MPV_FORMAT_DOUBLE;
++    }
++    const int err = mpv_observe_property(mpv, hash, propName, format);
++    LOGI("[PlaybackTrace][Native][observe] property=%s id=%llu format=%d result=%d",
++         propName, (unsigned long long)hash, format, err);
++
+     env->ReleaseStringUTFChars(name, propName);
+ }
+ 
+diff --git a/android/app/src/main/java/com/simba/player/mpv/MpvBridgeModule.kt b/android/app/src/main/java/com/simba/player/mpv/MpvBridgeModule.kt
+index 88117fc..25c91c1 100644
+--- a/android/app/src/main/java/com/simba/player/mpv/MpvBridgeModule.kt
++++ b/android/app/src/main/java/com/simba/player/mpv/MpvBridgeModule.kt
+@@ -42,10 +42,17 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+             .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+     }
+ 
++    /**
++     * Property observers requested by JS before native initialization completes.
++     * Keep them until the handle exists instead of silently dropping them.
++     */
++    private val pendingObservedProperties = linkedSetOf<String>()
++
+     // ΓöÇΓöÇ MPVLib Listener ΓåÆ JS Event Bridge ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ 
+     private val mpvListener = object : MPVLib.MpvEventListener {
+         override fun onMpvEvent(event: String, jsonPayload: String) {
++            Log.i(TAG, "[PlaybackTrace][Bridge][listener:event] name=$event payload=$jsonPayload")
+             // Map to JS event name conventions
+             val jsEvent = when (event) {
+                 "fileLoaded"        -> "onFileLoaded"
+@@ -65,6 +72,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+         }
+ 
+         override fun onMpvPropertyChanged(name: String, jsonValue: String) {
++            Log.i(TAG, "[PlaybackTrace][Bridge][listener:property] name=$name value=$jsonValue")
+             try {
+                 val payload = Arguments.createMap().apply {
+                     putString("property", name)
+@@ -152,10 +160,24 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+                         Log.w(TAG, "onSeekable emit failed: ${e.message}")
+                     }
+                 }
++                // Keep the dedicated JS event contract backed by mpv's generic
++                // property observer stream. These events are consumed by both
++                // the playback controller and TransportContext for low-latency
++                // state updates; polling remains as a defensive fallback.
++                "time-pos" -> emitNumericEvent("onPositionChanged", "position", jsonValue)
++                "duration" -> emitNumericEvent("onDurationChanged", "duration", jsonValue)
++                "volume" -> emitNumericEvent("onVolumeChanged", "volume", jsonValue)
++                "speed" -> emitNumericEvent("onSpeedChanged", "speed", jsonValue)
++                "pause" -> {
++                    val paused = jsonValue.trim().trim('"').equals("true", ignoreCase = true)
++                    emitPlaybackStateEvent(if (paused) "paused" else "playing")
++                }
++                "idle-active", "eof-reached" -> emitPlaybackStateEvent(getPlaybackState())
+             }
+         }
+ 
+         override fun onMpvError(code: Int, message: String) {
++            Log.e(TAG, "[PlaybackTrace][Bridge][listener:error] code=$code message=$message")
+             val payload = Arguments.createMap().apply {
+                 putInt("code", code)
+                 putString("message", message)
+@@ -164,6 +186,29 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+         }
+     }
+ 
++    private fun emitNumericEvent(eventName: String, key: String, rawValue: String) {
++        val value = rawValue.trim().trim('"').toDoubleOrNull() ?: return
++        try {
++            val payload = Arguments.createMap().apply {
++                putDouble(key, value)
++            }
++            eventEmitter.emit(eventName, payload)
++        } catch (e: Exception) {
++            Log.w(TAG, "$eventName emit failed: ${e.message}")
++        }
++    }
++
++    private fun emitPlaybackStateEvent(state: String) {
++        try {
++            val payload = Arguments.createMap().apply {
++                putString("state", state)
++            }
++            eventEmitter.emit("onPlaybackStateChanged", payload)
++        } catch (e: Exception) {
++            Log.w(TAG, "onPlaybackStateChanged emit failed: ${e.message}")
++        }
++    }
++
+     // ΓöÇΓöÇ Screen Brightness ΓöÇΓöÇ
+ 
+     @ReactMethod
+@@ -186,18 +231,23 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+     @ReactMethod
+     fun play() {
+         ensurePtr()
++        Log.i(TAG, "[PlaybackTrace][Bridge][play] ptr=$nativePtr")
+         MPVLib.nativePlay(nativePtr)
++        Log.i(TAG, "[PlaybackTrace][Bridge][play] nativePlay returned")
+     }
+ 
+     @ReactMethod
+     fun pause() {
+         ensurePtr()
++        Log.i(TAG, "[PlaybackTrace][Bridge][pause] ptr=$nativePtr")
+         MPVLib.nativePause(nativePtr)
++        Log.i(TAG, "[PlaybackTrace][Bridge][pause] nativePause returned")
+     }
+ 
+     @ReactMethod
+     fun stop() {
+         ensurePtr()
++        Log.i(TAG, "[PlaybackTrace][Bridge][stop] ptr=$nativePtr")
+         MPVLib.nativeStop(nativePtr)
+     }
+ 
+@@ -222,6 +272,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+     @ReactMethod
+     fun seekAbsolute(position: Double) {
+         ensurePtr()
++        Log.i(TAG, "[PlaybackTrace][Bridge][seekAbsolute] position=$position ptr=$nativePtr")
+         MPVLib.nativeSeek(nativePtr, position)
+     }
+ 
+@@ -261,7 +312,14 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+     fun loadFile(path: String) {
+         ensurePtr()
+         val resolvedPath = resolveContentUri(path)
+-        MPVLib.nativeLoadFile(nativePtr, resolvedPath)
++        Log.i(TAG, "[PlaybackTrace][Bridge][loadFile] requested=$path resolved=$resolvedPath ptr=$nativePtr")
++        try {
++            MPVLib.nativeLoadFile(nativePtr, resolvedPath)
++            Log.i(TAG, "[PlaybackTrace][Bridge][loadFile] nativeLoadFile returned")
++        } catch (e: Exception) {
++            Log.e(TAG, "[PlaybackTrace][Bridge][loadFile] nativeLoadFile threw: ${e.message}", e)
++            throw e
++        }
+     }
+ 
+     /**
+@@ -453,6 +511,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+     @ReactMethod
+     fun setVolume(volume: Double) {
+         ensurePtr()
++        Log.i(TAG, "[PlaybackTrace][Bridge][setVolume] volume=$volume ptr=$nativePtr")
+         MPVLib.nativeSetVolume(nativePtr, volume)
+     }
+ 
+@@ -478,13 +537,19 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+     fun getAudioDevices(): String {
+         ensurePtr()
+         return try {
+-            MPVLib.nativeGetProperty(nativePtr, "audio-device-list")
+-        } catch (_: Exception) { "[]" }
++            val devices = MPVLib.nativeGetProperty(nativePtr, "audio-device-list")
++            Log.i(TAG, "[PlaybackTrace][Bridge][getAudioDevices] $devices")
++            devices
++        } catch (e: Exception) {
++            Log.e(TAG, "[PlaybackTrace][Bridge][getAudioDevices] failed: ${e.message}", e)
++            "[]"
++        }
+     }
+ 
+     @ReactMethod
+     fun setAudioDevice(deviceName: String) {
+         ensurePtr()
++        Log.i(TAG, "[PlaybackTrace][Bridge][setAudioDevice] device=$deviceName ptr=$nativePtr")
+         MPVLib.nativeSetProperty(nativePtr, "audio-device", "\"$deviceName\"")
+     }
+ 
+@@ -547,15 +612,11 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+ 
+     @ReactMethod
+     fun observeProperty(name: String) {
+-        // Resilient: silently no-op if initPlayer() hasn't run yet.
+-        // TransportContext may try to subscribe before the player is
+-        // ready (e.g. during the brief gap between mount and isReady
+-        // flipping to true on the JS side). Throwing here triggers
+-        // a red-box in dev mode even though the JS caller has its own
+-        // try/catch ΓÇö RN doesn't always surface those errors cleanly.
+-        // Better to drop the request than crash the bridge.
++        if (name.isBlank()) return
++        Log.i(TAG, "[PlaybackTrace][Bridge][observeProperty] name=$name initialized=${nativePtr != 0L}")
++        pendingObservedProperties.add(name)
+         if (nativePtr == 0L) {
+-            Log.w(TAG, "observeProperty('$name') called before initPlayer() ΓÇö dropped")
++            Log.i(TAG, "Queued property observer '$name' until initPlayer()")
+             return
+         }
+         try {
+@@ -567,10 +628,8 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+ 
+     @ReactMethod
+     fun unobserveProperty(name: String) {
+-        if (nativePtr == 0L) {
+-            // Already torn down ΓÇö nothing to un-observe.
+-            return
+-        }
++        pendingObservedProperties.remove(name)
++        if (nativePtr == 0L) return
+         try {
+             MPVLib.nativeUnobserveProperty(nativePtr, name)
+         } catch (e: Exception) {
+@@ -636,21 +695,48 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+ 
+     @ReactMethod(isBlockingSynchronousMethod = true)
+     fun getPosition(): Double {
+-        return if (nativePtr != 0L) MPVLib.nativeGetPosition(nativePtr) else 0.0
++        val position = if (nativePtr != 0L) MPVLib.nativeGetPosition(nativePtr) else 0.0
++        Log.d(TAG, "[PlaybackTrace][Bridge][getPosition] ptr=$nativePtr position=$position")
++        return position
+     }
+ 
+     @ReactMethod(isBlockingSynchronousMethod = true)
+     fun getDuration(): Double {
+-        return if (nativePtr != 0L) MPVLib.nativeGetDuration(nativePtr) else 0.0
++        val duration = if (nativePtr != 0L) MPVLib.nativeGetDuration(nativePtr) else 0.0
++        Log.d(TAG, "[PlaybackTrace][Bridge][getDuration] ptr=$nativePtr duration=$duration")
++        return duration
+     }
+ 
+     @ReactMethod(isBlockingSynchronousMethod = true)
+     fun getPlaybackState(): String {
+-        if (nativePtr == 0L) return "idle"
+-        val state = try {
+-            MPVLib.nativeGetProperty(nativePtr, "core-idle").trim('"')
+-        } catch (_: Exception) { "true" }
+-        return if (state.toBoolean()) "paused" else "playing"
++        if (nativePtr == 0L) {
++            Log.d(TAG, "[PlaybackTrace][Bridge][getPlaybackState] ptr=0 state=idle")
++            return "idle"
++        }
++        return try {
++            val idle = MPVLib.nativeGetProperty(nativePtr, "idle-active")
++                .trim('"').toBoolean()
++            if (idle) {
++                Log.d(TAG, "[PlaybackTrace][Bridge][getPlaybackState] ptr=$nativePtr state=idle idle=true")
++                return "idle"
++            }
++
++            val ended = MPVLib.nativeGetProperty(nativePtr, "eof-reached")
++                .trim('"').toBoolean()
++            if (ended) {
++                Log.d(TAG, "[PlaybackTrace][Bridge][getPlaybackState] ptr=$nativePtr state=stopped eof=true")
++                return "stopped"
++            }
++
++            val paused = MPVLib.nativeGetProperty(nativePtr, "pause")
++                .trim('"').toBoolean()
++            val state = if (paused) "paused" else "playing"
++            Log.d(TAG, "[PlaybackTrace][Bridge][getPlaybackState] ptr=$nativePtr state=$state idle=$idle eof=$ended pause=$paused")
++            state
++        } catch (e: Exception) {
++            Log.e(TAG, "[PlaybackTrace][Bridge][getPlaybackState] failed: ${e.message}", e)
++            "idle"
++        }
+     }
+ 
+     @ReactMethod(isBlockingSynchronousMethod = true)
+@@ -660,19 +746,47 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+ 
+     // ΓöÇΓöÇ Lifecycle ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ 
++    private fun prepareMpvCaBundle(): String {
++        val target = File(reactApplicationContext.filesDir, "mpv/cacert.pem")
++        return try {
++            if (!target.exists() || target.length() < 1024L) {
++                target.parentFile?.mkdirs()
++                reactApplicationContext.assets.open("mpv/cacert.pem").use { input ->
++                    target.outputStream().use { output -> input.copyTo(output) }
++                }
++            }
++            Log.i(TAG, "[PlaybackTrace][Bridge][tls] caFile=${target.absolutePath} bytes=${target.length()}")
++            target.absolutePath
++        } catch (error: Exception) {
++            Log.e(TAG, "[PlaybackTrace][Bridge][tls] failed to prepare CA bundle: ${error.message}", error)
++            ""
++        }
++    }
++
+     @ReactMethod(isBlockingSynchronousMethod = true)
+     fun initPlayer(): Boolean {
++        Log.i(TAG, "[PlaybackTrace][Bridge][initPlayer] call currentPtr=$nativePtr")
+         if (nativePtr != 0L) {
+-            Log.w(TAG, "Already initialized")
++            Log.w(TAG, "[PlaybackTrace][Bridge][initPlayer] Already initialized ptr=$nativePtr")
+             return true
+         }
+-        nativePtr = MPVLib.nativeCreate()
++        val caFilePath = prepareMpvCaBundle()
++        nativePtr = MPVLib.nativeCreate(caFilePath)
++        Log.i(TAG, "[PlaybackTrace][Bridge][initPlayer] nativeCreate returned ptr=$nativePtr")
+         if (nativePtr == 0L) {
+             Log.e(TAG, "Failed to create mpv instance")
+             return false
+         }
+-        Log.i(TAG, "mpv initialized, nativePtr=$nativePtr")
++        pendingObservedProperties.forEach { property ->
++            try {
++                MPVLib.nativeObserveProperty(nativePtr, property)
++            } catch (e: Exception) {
++                Log.w(TAG, "Deferred observeProperty('$property') failed: ${e.message}")
++            }
++        }
++        Log.i(TAG, "mpv initialized, nativePtr=$nativePtr, observers=${pendingObservedProperties.size}")
+         return true
++
+     }
+ 
+     @ReactMethod
+@@ -861,6 +975,7 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+ 
+     private fun ensurePtr() {
+         if (nativePtr == 0L) {
++            Log.e(TAG, "[PlaybackTrace][Bridge][ensurePtr] native pointer is zero")
+             throw IllegalStateException("MpvPlayerModule not initialized. Call initPlayer() first.")
+         }
+     }
+@@ -880,9 +995,11 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+      */
+     private fun parseBufferingPercent(jsonValue: String): Double {
+         val trimmed = jsonValue.trim()
+-        if (trimmed == "false" || trimmed.isEmpty() || trimmed == "null") return 100.0
++                if (trimmed == "false" || trimmed.isEmpty() || trimmed == "null") return 100.0
++        trimmed.toDoubleOrNull()?.let { return it.coerceIn(0.0, 100.0) }
+         return try {
+             val obj = JSONObject(trimmed)
++
+             when {
+                 obj.has("percent") -> obj.getDouble("percent").coerceIn(0.0, 100.0)
+                 obj.has("percentage") -> obj.getDouble("percentage").coerceIn(0.0, 100.0)
+@@ -897,30 +1014,16 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+     /**
+      * Parse a `demuxer-cache-state` payload into buffered ranges + fill.
+      *
+-     * MPV serialises this property as a node map with shape:
+-     * ```
+-     * {
+-     *   "seekableStart": <double, may be undefined>,
+-     *   "seekableEnd":   <double, may be undefined>,
+-     *   "bof":           <bool>,
+-     *   "eof":           <bool>,
+-     *   "fw":            <double, in stream seconds>,
+-     *   "ranges":        [{ "start": <double>, "end": <double>, "flags": <int> }, ...],
+-     *   "buffering":     <bool>,
+-     *   "cacheSize":     <double, in bytes>,
+-     *   "underrun":      <bool>,
+-     *   "idle":          <bool>,
+-     *   "totalBytes":    <double>,
+-     *   "used":          <double>
+-     * }
+-     * ```
++          * MPV serialises this property as a node map whose documented fields
++     * include `seekable-ranges`, `bof-cached`, `eof-cached`, `fw-bytes`,
++     * `file-cache-bytes`, `cache-end`, `reader-pts`, and `cache-duration`.
++     * The seekable ranges are the authoritative buffered timeline ranges.
+      *
+-     * We extract:
+-     *   ΓÇó `ranges` ΓÇö list of `{start, end}` in stream seconds. This is the
+-     *      canonical "what bytes are buffered right now" payload ΓÇö used by
+-     *      the seek bar to paint the grey overlay.
+-     *   ΓÇó `fill` ΓÇö 0..1 fill ratio of the cache (`fw / cacheSize`),
+-     *      or `0` if no cache is active.
++     * We extract only those ranges here. Cache fill is intentionally not
++     * fabricated from byte counts: mpv exposes the user-facing fill percentage
++     * through the separate `cache-buffering-state` property, which is mapped
++     * to `onBuffering` and consumed by TransportContext.
++
+      */
+     private data class CacheStatePayload(
+         val ranges: List<Pair<Double, Double>>,
+@@ -934,7 +1037,9 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+         }
+         return try {
+             val obj = JSONObject(trimmed)
+-            val rangesJson = obj.optJSONArray("ranges")
++            val rangesJson = obj.optJSONArray("seekable-ranges")
++                ?: obj.optJSONArray("ranges") // compatibility with older native payloads
++
+             val ranges = mutableListOf<Pair<Double, Double>>()
+             if (rangesJson != null) {
+                 for (i in 0 until rangesJson.length()) {
+@@ -946,10 +1051,8 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
+                     }
+                 }
+             }
+-            val fw = obj.optDouble("fw", 0.0).coerceAtLeast(0.0)
+-            val cacheSize = obj.optDouble("cacheSize", 0.0).coerceAtLeast(0.0)
+-            val fill = if (cacheSize > 0.0) (fw / cacheSize).coerceIn(0.0, 1.0) else 0.0
+-            CacheStatePayload(ranges, fill)
++                        CacheStatePayload(ranges, 0.0)
++
+         } catch (e: Exception) {
+             Log.w(TAG, "parseCacheState: bad json '$jsonValue': ${e.message}")
+             CacheStatePayload(emptyList(), 0.0)
+diff --git a/src/contexts/TransportContext.tsx b/src/contexts/TransportContext.tsx
+index ec08fd5..27abb4d 100644
+--- a/src/contexts/TransportContext.tsx
++++ b/src/contexts/TransportContext.tsx
+@@ -229,9 +229,10 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
+     return () => clearInterval(interval);
+   }, [sleepTimerEndTime, sleepTimerMode, enabled, pollInterval, dispatch, disarmTimer]);
+ 
+-  // Position and playback state are event-driven. Poll only duration as a
+-  // low-frequency fallback; querying mpv across the JS bridge every 250 ms
+-  // made controls and orientation transitions visibly stutter.
++  // The native bridge may not emit dedicated position/state events on every
++  // build. Keep the event subscriptions for low-latency updates, but also poll
++  // the synchronous mpv properties so the UI cannot remain frozen at 0:00 or
++  // show PAUSED while the native player is actually advancing.
+   useEffect(() => {
+     if (!isReady || !enabled) return;
+ 
+@@ -280,13 +281,18 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
+     // `paused-for-cache` into a single `onBuffering` event with a
+     // `percent` payload so the consumer has one boolean to watch.
+     const unsubBuffering = MpvPlayer.on('onBuffering', ({percent}: {percent: number}) => {
+-      setIsBuffering(percent > 0 && percent < 100);
++      const normalized = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 100;
++      setCacheFill(normalized / 100);
++      setIsBuffering(normalized > 0 && normalized < 100);
+     });
+     const unsubCacheState = MpvPlayer.on(
+       'onCacheState',
+-      ({ranges, fill}: {ranges: Array<{start: number; end: number}>; fill: number}) => {
+-        setBufferedRanges(ranges);
+-        setCacheFill(fill);
++      ({ranges}: {ranges: Array<{start: number; end: number}>; fill?: number}) => {
++        setBufferedRanges(
++          ranges
++            .filter(range => Number.isFinite(range.start) && Number.isFinite(range.end) && range.end > range.start)
++            .map(range => ({start: Math.max(0, range.start), end: Math.max(0, range.end)})),
++        );
+       },
+     );
+     const unsubSeekable = MpvPlayer.on('onSeekable', ({seekable}: {seekable: boolean}) => {
+@@ -312,15 +318,23 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
+     const interval = setInterval(() => {
+       if (!isReadyRef.current) return;
+       try {
++        const nextPosition = MpvPlayer.getPosition();
+         const dur = MpvPlayer.getDuration();
++        const nativeState = MpvPlayer.getPlaybackState();
+ 
+-        if (!isNaN(dur)) setDuration(dur || 1);
+-        if (!hasPlaybackStateEventsRef.current) {
+-          const now = Date.now();
+-          if (isPlayingRef.current && now - lastMoveAtRef.current > 1500) {
+-            moveStreakRef.current = 0;
+-            setIsPlaying(false);
++        if (Number.isFinite(nextPosition) && nextPosition >= 0) {
++          if (nextPosition > lastPositionRef.current + 0.12) {
++            lastMoveAtRef.current = Date.now();
++            moveStreakRef.current += 1;
+           }
++          lastPositionRef.current = nextPosition;
++          setPosition(nextPosition);
++        }
++        if (Number.isFinite(dur) && dur > 0) setDuration(dur);
++
++        const nativeIsPlaying = nativeState === 'playing';
++        if (nativeIsPlaying !== isPlayingRef.current) {
++          setIsPlaying(nativeIsPlaying);
+         }
+       } catch {
+         // silently ignore if player was destroyed mid-poll
+diff --git a/src/modules/playback/audio/hooks/useAudioPlayerScreen.ts b/src/modules/playback/audio/hooks/useAudioPlayerScreen.ts
+index f11a78a..8a04bb5 100644
+--- a/src/modules/playback/audio/hooks/useAudioPlayerScreen.ts
++++ b/src/modules/playback/audio/hooks/useAudioPlayerScreen.ts
+@@ -4,6 +4,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
+ import {useTheme} from '../../../../theme';
+ import {useAppDispatch, useAppSelector} from '../../../../store';
+ import {logError} from '../../../../lib/errorLogger';
++import {logger} from '../../../../lib/logger';
+ import {MpvPlayer} from '../../../../native';
+ import {NotificationService} from '../../../../services/notificationService';
+ import {
+@@ -248,10 +249,12 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+   const currentIndexRef = useRef(currentIndex);
+   const loopModeRef = useRef(loopMode);
+ 
+-  // P33.3: retry nonce re-runs the init effect (true reload); backoff counter
+-  // for remote-stream auto-retries on mpv load errors
++  // A retry nonce is reserved for an explicit user retry. Every load also
++  // receives a generation so delayed callbacks from an older stream can never
++  // resume or seek a newer stream.
+   const [retryNonce, setRetryNonce] = useState(0);
+-  const retryCountRef = useRef(0);
++  const loadGenerationRef = useRef(0);
++  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+ 
+   // P33.6: cached local path for remote artwork ΓÇö feeds recents/bookmarks
+   const remoteArtPathRef = useRef('');
+@@ -300,14 +303,28 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+ 
+   // ΓöÇΓöÇ Init player on mount ΓöÇΓöÇ
+   useEffect(() => {
++    const loadGeneration = ++loadGenerationRef.current;
++    if (retryTimerRef.current) {
++      clearTimeout(retryTimerRef.current);
++      retryTimerRef.current = null;
++    }
+     let cancelled = false;
+     let unsubLoaded: (() => void) | null = null;
++    logger.info('[PlaybackTrace][Controller][effect:start]', {
++      fileUri,
++      title,
++      startPosition,
++      source: sourceLabel,
++      mediaKind,
++      mediaLane,
++    });
+     let unsubState: (() => void) | null = null;
+     let unsubVolume: (() => void) | null = null;
+     let unsubSpeed: (() => void) | null = null;
+ 
+     (async () => {
+       if (!fileUri) {
++        logger.error('[PlaybackTrace][Controller][no-file-uri]');
+         setError('No file URI provided.');
+         setIsLoading(false);
+         logError({code: 'ERR_NO_FILE', message: 'No file URI provided.', source: 'AudioPlayerScreen'});
+@@ -316,6 +333,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+ 
+       // P33: remote streams skip local-file validation (network-loaded by mpv)
+       if (!isRemoteUri(fileUri)) {
++        logger.info('[PlaybackTrace][Controller][validate-local]', fileUri);
+         try {
+           const validation = await validateMediaFile(fileUri);
+           if (cancelled) return;
+@@ -339,7 +357,9 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+       }
+ 
+       try {
++        logger.info('[PlaybackTrace][Controller][init:call]', fileUri);
+         const ok = MpvPlayer.initPlayer();
++        logger.info('[PlaybackTrace][Controller][init:return]', {ok, cancelled});
+         if (cancelled) return;
+         if (!ok) {
+           setError('Failed to initialize audio player.');
+@@ -348,44 +368,39 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+           return;
+         }
+ 
++        logger.info('[PlaybackTrace][Controller][listeners:register]');
+         unsubState = MpvPlayer.on('onPlaybackStateChanged', ({state}) => {
++          logger.info('[PlaybackTrace][Controller][event:onPlaybackStateChanged]', {state, cancelled});
+           if (cancelled) return;
+           setIsPlaying(state === 'playing');
+           dispatch(setPlaybackState(state));
+         });
+         unsubVolume = MpvPlayer.on('onVolumeChanged', ({volume: nextVolume}) => {
++          logger.info('[PlaybackTrace][Controller][event:onVolumeChanged]', {volume: nextVolume, cancelled});
+           if (!cancelled) setVolume(nextVolume);
+         });
+         unsubSpeed = MpvPlayer.on('onSpeedChanged', ({speed: nextSpeed}) => {
++          logger.info('[PlaybackTrace][Controller][event:onSpeedChanged]', {speed: nextSpeed, cancelled});
+           if (!cancelled) dispatch(setPlaybackSpeed(nextSpeed));
+         });
+ 
+-        MpvPlayer.loadFile(fileUri);
+-
+-        // Push persisted playback and audio settings before playback starts.
+-        applyPlaybackSettingsToMpv();
+-        applyAudioSettingsToMpv();
+-
+-        // Re-apply the persisted playback speed (mpv resets to 1.0 on load)
+-        try {
+-          MpvPlayer.setSpeed(playbackSpeedRef.current);
+-        } catch {}
+-
+-        // Restore the saved playback position once the file loads.
+-        // Covers reopening from MiniAudioPlayer mid-track (resume, not restart).
++        // Subscribe before loadFile. Native mpv can complete a local or cached
++        // load synchronously enough that registering afterwards loses the only
++        // reliable first-load transition and leaves the stream paused.
+         let initialLoadDone = false;
+         unsubLoaded = MpvPlayer.on('onFileLoaded', () => {
+-          if (cancelled || initialLoadDone) return;
++          logger.info('[PlaybackTrace][Controller][event:onFileLoaded]', {fileUri, cancelled, initialLoadDone});
++          if (cancelled || loadGenerationRef.current !== loadGeneration || initialLoadDone) return;
+           initialLoadDone = true;
+           endHandledRef.current = false;
+-          retryCountRef.current = 0; // P33.3: a successful load resets backoff
+ 
+           const saved = sessionRecentRef.current.find(f => f.fileUri === fileUri);
+           const resumePosition = saved?.position ?? 0;
+           const explicitPosition = startPosition ?? 0;
+-                    if (explicitPosition > 0) {
++          if (explicitPosition > 0) {
+             // 58.2: explicit navigation intent (Continue Listening) ΓÇö silent seek
+             setTimeout(() => {
++              if (cancelled || loadGenerationRef.current !== loadGeneration) return;
+               try {
+                 MpvPlayer.seekTo(explicitPosition);
+                 MpvPlayer.resume();
+@@ -398,15 +413,58 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+           } else {
+             // mpv loadFile() does not guarantee autoplay on every native build.
+             // Explicitly resume once the file is ready so remote streams start.
+-            try { MpvPlayer.resume(); } catch {}
++            try {
++              logger.info('[PlaybackTrace][Controller][onFileLoaded:resume]');
++              MpvPlayer.resume();
++            } catch (error) {
++              logger.error('[PlaybackTrace][Controller][onFileLoaded:resume:error]', error);
++            }
+           }
+-
+         });
+ 
++        logger.info('[PlaybackTrace][Controller][loadFile:before]', fileUri);
++        MpvPlayer.loadFile(fileUri);
++        logger.info('[PlaybackTrace][Controller][loadFile:after]', fileUri);
++
++        // Push persisted playback and audio settings before playback starts.
++        logger.info('[PlaybackTrace][Controller][settings:before]');
++        applyPlaybackSettingsToMpv();
++        applyAudioSettingsToMpv();
++        logger.info('[PlaybackTrace][Controller][settings:after]');
++
++        // Re-apply the persisted playback speed (mpv resets to 1.0 on load)
++        try {
++          logger.info('[PlaybackTrace][Controller][speed:before]', playbackSpeedRef.current);
++          MpvPlayer.setSpeed(playbackSpeedRef.current);
++          logger.info('[PlaybackTrace][Controller][speed:after]', playbackSpeedRef.current);
++        } catch (error) {
++          logger.error('[PlaybackTrace][Controller][speed:error]', error);
++        }
++
++        // Defensive fallback for native builds where the load event is delayed
++        // or unavailable. Do not disturb the saved-position prompt; only resume
++        // a genuinely fresh start.
++        const hasSavedPosition = (startPosition ?? 0) > 0 ||
++          (sessionRecentRef.current.find(f => f.fileUri === fileUri)?.position ?? 0) > 0;
++        if (!hasSavedPosition) {
++          retryTimerRef.current = setTimeout(() => {
++            retryTimerRef.current = null;
++            if (cancelled || loadGenerationRef.current !== loadGeneration) return;
++            try {
++              logger.info('[PlaybackTrace][Controller][fallback-resume]');
++              MpvPlayer.resume();
++            } catch (error) {
++              logger.error('[PlaybackTrace][Controller][fallback-resume:error]', error);
++            }
++          }, 700);
++        }
++
+         setIsReady(true);
+         setIsLoading(false);
++        logger.info('[PlaybackTrace][Controller][ready]', {fileUri});
+ 
+         // Track the complete entry in Redux so MiniAudioPlayer and reopen
++
+         // flows retain artwork, provenance, and the correct audio lane.
+         dispatch(playFile({
+           uri: fileUri,
+@@ -420,6 +478,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+           artworkUri,
+         }));
+       } catch (e) {
++        logger.error('[PlaybackTrace][Controller][effect:error]', e);
+         if (!cancelled) {
+           setError('Player initialization failed.');
+           setIsLoading(false);
+@@ -429,7 +488,12 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+     })();
+ 
+     return () => {
++      logger.info('[PlaybackTrace][Controller][effect:cleanup]', {fileUri, loadGeneration});
+       cancelled = true;
++      if (retryTimerRef.current) {
++        clearTimeout(retryTimerRef.current);
++        retryTimerRef.current = null;
++      }
+       unsubLoaded?.();
+       unsubState?.();
+       unsubVolume?.();
+@@ -442,10 +506,19 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+   // Native loadFile() is intentionally separate from play(), so every
+   // transition must resume after loading instead of assuming autoplay.
+   const loadAndResume = useCallback((uri: string, resumePosition?: number) => {
++    const loadGeneration = ++loadGenerationRef.current;
++    if (retryTimerRef.current) {
++      clearTimeout(retryTimerRef.current);
++      retryTimerRef.current = null;
++    }
++    logger.info('[PlaybackTrace][Controller][loadAndResume:before]', {uri, resumePosition, loadGeneration});
+     try {
+       MpvPlayer.loadFile(uri);
++      logger.info('[PlaybackTrace][Controller][loadAndResume:loaded]', {uri, loadGeneration});
+       MpvPlayer.resume();
++      logger.info('[PlaybackTrace][Controller][loadAndResume:resumed]', {uri, loadGeneration});
+       setTimeout(() => {
++        if (loadGenerationRef.current !== loadGeneration) return;
+         try {
+           MpvPlayer.resume();
+           if (resumePosition && resumePosition > 0) {
+@@ -453,7 +526,9 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+           }
+         } catch {}
+       }, 250);
+-    } catch {}
++    } catch (error) {
++      logger.error('[PlaybackTrace][Controller][loadAndResume:error]', {uri, loadGeneration, error});
++    }
+   }, []);
+ 
+   // ΓöÇΓöÇ 58.2: Resume / Start Over choice on load (mirrors 31.2 video) ΓöÇΓöÇ
+@@ -685,12 +760,23 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
+     const curDur = MpvPlayer.getDuration?.() ?? 0;
+ 
+     if (curUri) {
+-addRecent({
++      const handoffTitle = activeTitleRef.current || title || getFileName(curUri);
++      const handoffArtwork = remoteArtPathRef.current || artworkUri;
++
++      // Keep Redux currentFile authoritative before collapsing the overlay.
++      // The mini-player reads this entry directly and must never receive a
++      // null title after returning from the full player.
++      dispatch(updateCurrentFileMetadata({
++        title: handoffTitle,
++        ...(handoffArtwork ? {artworkUri: handoffArtwork} : {}),
++      }));
++
++      addRecent({
+         fileUri: curUri,
+-        title: activeTitleRef.current,
++        title: handoffTitle,
+         position: curPos,
+         duration: curDur,
+-        thumbnailPath: remoteArtPathRef.current || '',
++        thumbnailPath: handoffArtwork || '',
+         mediaType: mediaLane,
+         type: mediaKind,
+         source: sourceLabel,
+@@ -706,16 +792,20 @@ addRecent({
+     NotificationService.stop();
+ 
+     navigation.goBack();
+-  }, [dispatch, navigation, sourceLabel, mediaLane, mediaKind, provider, routeFolderId]);
++  }, [artworkUri, dispatch, getFileName, navigation, sourceLabel, mediaLane, mediaKind, provider, routeFolderId, title, updateCurrentFileMetadata]);
+ 
+   const handlePlayPause = useCallback(() => {
+     try {
+-      if (MpvPlayer.getPlaybackState() === 'playing') {
++      const nativeState = MpvPlayer.getPlaybackState();
++      logger.info('[PlaybackTrace][Controller][handlePlayPause]', {nativeState, fileUri: fileUriRef.current});
++      if (nativeState === 'playing') {
+         MpvPlayer.pause();
+       } else {
+         MpvPlayer.resume();
+       }
+-    } catch {}
++    } catch (error) {
++      logger.error('[PlaybackTrace][Controller][handlePlayPause:error]', error);
++    }
+     haptics.medium();
+   }, [haptics]);
+ 
+@@ -938,6 +1028,14 @@ addRecent({
+     handleQueueSelectItem(item.uri);
+   }, [queue, handleQueueSelectItem]);
+ 
++  const handlePlayQueueIndex = useCallback((index: number) => {
++    const item = queue[index];
++    if (!item) return;
++    dispatch(playFromQueue(index));
++    loadAndResume(item.uri);
++    setQueueSheetVisible(false);
++  }, [dispatch, loadAndResume, queue]);
++
+   const handleSelectHistoryItem = useCallback((idx: number) => {
+     const item = playbackHistory[idx];
+     if (!item) return;
+@@ -1027,57 +1125,58 @@ addRecent({
+   }, [handlePlayPause, handleNext, handlePrev, handleGoBack]);
+ 
+   const handleRetry = useCallback(() => {
++    if (retryTimerRef.current) {
++      clearTimeout(retryTimerRef.current);
++      retryTimerRef.current = null;
++    }
++    // Invalidate delayed callbacks from the failed generation before the
++    // explicit user retry causes the initialization effect to run again.
++    loadGenerationRef.current += 1;
+     setError(null);
+     setErrorIsPermission(false);
+     setIsReady(false);
+     setIsLoading(true);
+-    // P33.3: bump the nonce so the init effect actually re-runs (real reload)
+     setRetryNonce(n => n + 1);
+   }, []);
+ 
+-  // ΓöÇΓöÇ P33.3: remote-stream error auto-retry with exponential backoff ΓöÇΓöÇ
++  // Native onError is reserved for fatal/terminal failures. Recoverable
++  // network underruns must remain inside the same mpv load and be represented
++  // by paused-for-cache; reloading here caused the observed same-URI storm.
+   useEffect(() => {
+     const unsubError = MpvPlayer.on('onError', ({message: errMsg}) => {
+       const uri = fileUriRef.current;
+-      if (!uri || !isRemoteUri(uri)) return;
+-
+-      if (retryCountRef.current >= 3) {
+-        retryCountRef.current = 0;
+-        setError(errMsg || 'Stream playback failed.');
+-        setIsLoading(false);
+-        logError({
+-          code: 'ERR_STREAM_FAIL',
+-          message: errMsg || 'Stream playback failed.',
+-          source: 'AudioPlayerScreen',
+-        });
+-        return;
+-      }
+-
+-      const attempt = retryCountRef.current + 1;
+-      retryCountRef.current = attempt;
+-      // 1.5s, 3s, 6s ΓÇö back off on repeated failures
+-      const delay = 1500 * 2 ** (attempt - 1);
+-      setTimeout(() => {
+-        try {
+-          loadAndResume(uri);
+-        } catch {}
+-      }, delay);
++      logger.error('[PlaybackTrace][Controller][event:onError:terminal]', {uri, message: errMsg});
++      if (!uri) return;
++      setError(errMsg || 'Stream playback failed.');
++      setIsLoading(false);
++      setIsReady(false);
++      setIsPlaying(false);
++      dispatch(setPlaybackState('stopped'));
++      logError({
++        code: 'ERR_STREAM_FAIL',
++        message: errMsg || 'Stream playback failed.',
++        source: 'AudioPlayerScreen',
++      });
+     });
+ 
+     return () => {
+       unsubError();
+-      retryCountRef.current = 0;
+     };
+-  }, [loadAndResume]);
++  }, [dispatch]);
+ 
+-  // ΓöÇΓöÇ P37.3: auto-advance when the current file ends ΓöÇΓöÇ
++    // ΓöÇΓöÇ P37.3: auto-advance only on natural EOF ΓöÇΓöÇ
+   useEffect(() => {
+-    const unsubEnd = MpvPlayer.on('onEndReached', () => {
++    const unsubEnd = MpvPlayer.on('onEndFile', ({reason, error}) => {
++      logger.info('[PlaybackTrace][Controller][event:onEndFile]', {reason, error});
++
++      // MPV emits end-file for stop/reload as well as natural EOF. A reload
++      // reports reason=2 and must never advance or restart the queue. Only
++      // reason=0 represents the current item reaching its natural end.
++      if (reason !== 0) return;
+       if (endHandledRef.current) return;
+       endHandledRef.current = true;
+ 
+       // 1. Loop-file mode replays the current track
+-
+       if (loopModeRef.current === 'file') {
+         MpvPlayer.seekTo(0);
+         try { MpvPlayer.resume(); } catch {}
+@@ -1178,6 +1277,7 @@ addRecent({
+     handleQueueRemoveItem,
+     handleQueueSelectItem,
+     handleSelectQueueItem,
++    handlePlayQueueIndex,
+     handleSelectHistoryItem,
+     handlePlayNext,
+     handleAddToQueue,
+diff --git a/src/native/NativeMpvPlayer.ts b/src/native/NativeMpvPlayer.ts
+index 8caa480..2113ec5 100644
+--- a/src/native/NativeMpvPlayer.ts
++++ b/src/native/NativeMpvPlayer.ts
+@@ -91,6 +91,9 @@ export interface MpvEvents {
+    * instead of silently failing on scrub.
+    */
+   onSeekable: {seekable: boolean};
++  /** Native MPV end-file notification. `reason=0` is natural EOF; other reasons include stop/reload. */
++  onEndFile: {reason: Double; error: Double};
++  /** @deprecated Use onEndFile; retained for compatibility with older consumers. */
+   onEndReached: {};
+   onAudioDeviceChanged: {device: string};
+   onVolumeChanged: {volume: Double};

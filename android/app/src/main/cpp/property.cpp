@@ -118,8 +118,25 @@ Java_com_simba_player_mpv_MPVLib_nativeObserveProperty(
     uint64_t hash = 0;
     for (const char *p = propName; *p; p++)
         hash = hash * 31 + *p;
-    mpv_observe_property(mpv, hash, propName, MPV_FORMAT_NODE);
-    LOGI("Observing property: %s (id=%llu)", propName, (unsigned long long)hash);
+    enum mpv_format format = MPV_FORMAT_NODE;
+    if (strcmp(propName, "paused-for-cache") == 0 ||
+        strcmp(propName, "seekable") == 0 ||
+        strcmp(propName, "seeking") == 0 ||
+        strcmp(propName, "idle-active") == 0 ||
+        strcmp(propName, "eof-reached") == 0 ||
+        strcmp(propName, "pause") == 0) {
+        format = MPV_FORMAT_FLAG;
+    } else if (strcmp(propName, "cache-buffering-state") == 0 ||
+               strcmp(propName, "time-pos") == 0 ||
+               strcmp(propName, "duration") == 0 ||
+               strcmp(propName, "volume") == 0 ||
+               strcmp(propName, "speed") == 0) {
+        format = MPV_FORMAT_DOUBLE;
+    }
+    const int err = mpv_observe_property(mpv, hash, propName, format);
+    LOGI("[PlaybackTrace][Native][observe] property=%s id=%llu format=%d result=%d",
+         propName, (unsigned long long)hash, format, err);
+
     env->ReleaseStringUTFChars(name, propName);
 }
 

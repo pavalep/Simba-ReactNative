@@ -1,0 +1,17 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\CMakeLists.txt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\event.cpp
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\property.cpp
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\include\mpv\client.h
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\include\mpv\render_gl.h
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\include\mpv\render.h
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\MainActivity.kt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\MainApplication.kt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\MediaNotificationService.kt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\PipManager.kt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\SplashActivity.kt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\mpv\MpvBridgeModule.kt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\mpv\MPVLib.kt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\mpv\MpvPlayerPackage.kt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\mpv\MpvRenderView.kt
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\java\com\simba\player\mpv\MpvRenderViewManager.kt

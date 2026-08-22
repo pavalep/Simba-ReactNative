@@ -1,0 +1,18 @@
+255: const [retryNonce, setRetryNonce] = useState(0);
+426: MpvPlayer.loadFile(fileUri);
+516: MpvPlayer.loadFile(uri);
+831: loadAndResume(prev.uri);
+854: loadAndResume(transition.entry.uri);
+879: loadAndResume(next.uri, recent?.position);
+902: loadAndResume(transition.entry.uri);
+986: loadAndResume(entry.uri);
+999: loadAndResume(entry.uri);
+1019: loadAndResume(entry.uri);
+1035: loadAndResume(item.uri);
+1094: loadAndResume(track.uri);
+1139: setRetryNonce(n => n + 1);
+1142: // Native onError is reserved for fatal/terminal failures. Recoverable
+1146: const unsubError = MpvPlayer.on('onError', ({message: errMsg}) => {
+1148: logger.error('[PlaybackTrace][Controller][event:onError:terminal]', {uri, message: errMsg});
+1169: const unsubEnd = MpvPlayer.on('onEndFile', ({reason, error}) => {
+1170: logger.info('[PlaybackTrace][Controller][event:onEndFile]', {reason, error});
