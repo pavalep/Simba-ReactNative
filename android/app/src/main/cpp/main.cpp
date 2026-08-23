@@ -559,14 +559,20 @@ Java_com_simba_player_mpv_MPVLib_nativeSetLoopMode(
     JNIEnv *env, jclass, jlong nativePtr, jint mode) {
     if (!nativePtr) return;
     mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
-    switch (mode) {
-        case 1: mpv_set_property_string(mpv, "loop-file", "inf"); break;
-        case 2: mpv_set_property_string(mpv, "loop-playlist", "inf"); break;
-        default:
-            mpv_set_property_string(mpv, "loop-file", "no");
-            mpv_set_property_string(mpv, "loop-playlist", "no");
-            break;
+
+    // Clear both native loop flags before enabling the requested mode. Without
+    // this, switching from repeat-one to repeat-all leaves loop-file=inf set;
+    // mpv then replays the current media item instead of advancing normally.
+    const int clearFile = mpv_set_property_string(mpv, "loop-file", "no");
+    const int clearPlaylist = mpv_set_property_string(mpv, "loop-playlist", "no");
+    int enableResult = 0;
+    if (mode == 1) {
+        enableResult = mpv_set_property_string(mpv, "loop-file", "inf");
+    } else if (mode == 2) {
+        enableResult = mpv_set_property_string(mpv, "loop-playlist", "inf");
     }
+    LOGI("[PlaybackTrace][Native][loop] mode=%d clearFile=%d clearPlaylist=%d enable=%d",
+         mode, clearFile, clearPlaylist, enableResult);
 }
 
 extern "C" JNIEXPORT jint JNICALL

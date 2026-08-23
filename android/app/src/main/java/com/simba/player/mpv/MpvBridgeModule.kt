@@ -160,6 +160,17 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
                         Log.w(TAG, "onSeekable emit failed: ${e.message}")
                     }
                 }
+                "seeking" -> {
+                    val seeking = jsonValue.trim().equals("true", ignoreCase = true)
+                    try {
+                        val seekingPayload = Arguments.createMap().apply {
+                            putBoolean("seeking", seeking)
+                        }
+                        eventEmitter.emit("onSeeking", seekingPayload)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "onSeeking emit failed: ${e.message}")
+                    }
+                }
                 // Keep the dedicated JS event contract backed by mpv's generic
                 // property observer stream. These events are consumed by both
                 // the playback controller and TransportContext for low-latency

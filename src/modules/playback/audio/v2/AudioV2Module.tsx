@@ -1,22 +1,21 @@
 import React, {useCallback, useMemo} from 'react';
-import {TransportProvider, useTransport} from '../../../../contexts/TransportContext';
+import {useTransport} from '../../../../contexts/TransportContext';
 import {usePlaybackCommands} from '../../PlaybackContext';
-import type {ActivePlayback, AudioPlaybackParams, PlaybackNavigation} from '../../types';
+import type {ActivePlayback, AudioPlaybackParams, PlaybackNavigation, PlaybackPresentation} from '../../types';
 import {useAudioPlayerScreen} from '../hooks/useAudioPlayerScreen';
 import {AudioV2Player} from './AudioV2Player';
 import {buildAudioV2ViewModel, type AudioV2ControllerState} from './AudioV2Types';
 
 interface AudioV2ModuleProps {
   active: ActivePlayback;
+  presentation?: PlaybackPresentation;
 }
 
-export const AudioV2Module: React.FC<AudioV2ModuleProps> = ({active}) => (
-  <TransportProvider>
-    <AudioV2Content active={active} />
-  </TransportProvider>
+export const AudioV2Module: React.FC<AudioV2ModuleProps> = ({active, presentation = 'expanded'}) => (
+  <AudioV2Content active={active} presentation={presentation} />
 );
 
-const AudioV2Content: React.FC<AudioV2ModuleProps> = ({active}) => {
+const AudioV2Content: React.FC<AudioV2ModuleProps> = ({active, presentation = 'expanded'}) => {
   const {collapsePlayer} = usePlaybackCommands();
   const transport = useTransport();
 
@@ -70,7 +69,8 @@ const AudioV2Content: React.FC<AudioV2ModuleProps> = ({active}) => {
       isReady: controller.isReady,
       error: controller.error,
       errorIsPermission: controller.errorIsPermission,
-      isPlaying: transport.isPlaying || controller.isPlaying,
+      isPlaying: transport.isPlaying,
+      isEnded: transport.isEnded,
       volume: controller.volume,
       metadata: controller.metadata,
       chapters: controller.chapters,
@@ -83,6 +83,11 @@ const AudioV2Content: React.FC<AudioV2ModuleProps> = ({active}) => {
       relatedTracks: controller.relatedTracks,
       currentIndex: controller.currentIndex,
       resumePrompt: controller.resumePrompt,
+      isBuffering: transport.isBuffering,
+      isSeeking: transport.isSeeking,
+      isSeekable: transport.isSeekable,
+      bufferedRanges: transport.bufferedRanges,
+      cacheFill: transport.cacheFill,
       onBack: controller.handleGoBack,
       onPlayPause: controller.handlePlayPause,
       onPrevious: controller.handlePrev,
@@ -109,7 +114,7 @@ const AudioV2Content: React.FC<AudioV2ModuleProps> = ({active}) => {
       onRetry: controller.handleRetry,
       onResumeChoice: controller.handleResumeChoice,
     }),
-    [controller, toggleBookmark, transport.isPlaying],
+    [controller, toggleBookmark, transport.isBuffering, transport.isEnded, transport.isPlaying, transport.isSeekable, transport.isSeeking, transport.bufferedRanges, transport.cacheFill],
   );
 
   const model = useMemo(
@@ -117,7 +122,7 @@ const AudioV2Content: React.FC<AudioV2ModuleProps> = ({active}) => {
     [controllerState, transport.duration, transport.position],
   );
 
-  return <AudioV2Player model={model} />;
+  return presentation === 'expanded' ? <AudioV2Player model={model} /> : null;
 };
 
 export type {AudioV2ModuleProps};

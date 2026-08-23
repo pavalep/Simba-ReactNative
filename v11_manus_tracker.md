@@ -145,7 +145,8 @@ This supplemental block records the research and runtime evidence required befor
 | ☑ | Add load-generation and single-flight guards for delayed resume/retry callbacks. | `useAudioPlayerScreen.ts` invalidates stale delayed callbacks with `loadGenerationRef`, clears explicit retry timers, and rejects stale file-loaded/resume work; runtime confirmation of zero duplicate reloads remains part of the device gate. |
 | ☑ | Correct the native cache-range contract. | `property.cpp` observes scalar mpv cache properties with their documented formats; `MpvBridgeModule.kt` parses `demuxer-cache-state.seekable-ranges` and numeric `cache-buffering-state`; `TransportContext.tsx` uses the cache state for V2 transport. Isolated `simbaplayer_mpv` build passes in `native_target_controller_cache_fix.log`. |
 | ☐ | Implement first-class buffering/effective-playback state. | Distinguish user pause, `paused-for-cache`, seeking, loading, effective playing, ended, and terminal error in native, controller, and V2 view-model contracts. |
-| ☐ | Implement layered V2 progress UI. | Render played position, one or more buffered ranges, seekable capability, seeking feedback, and accessible buffering status without reusing V1 presentation code. |
+| ☑ | Implement layered V2 progress UI. | `AudioV2Progress.tsx` renders the played layer, multiple buffered ranges, seekability disablement, native seeking feedback, and accessible state without extra progress alert text; the buffered layer uses the app’s stronger neutral `highlightStrong` token for visibility. `MiniAudioV2.tsx` renders buffered ranges and buffering/seeking status. No V1 presentation code is reused. TypeScript passes in `tscheck_audio_v2_buffered_ranges_dark.log`; Android build remains valid from `android_build_audio_v2_buffered_ranges.log`. |
+| ☑ | Normalize buffered ranges at the transport boundary and preserve legitimate islands. | `src/modules/playback/audio/rangeNormalization.ts` rejects invalid ranges, clamps known-duration values, sorts ranges, merges overlap/direct adjacency within a 50 ms numerical epsilon, and never fills meaningful gaps. `TransportContext.tsx` now resets cache state on media load and records raw versus normalized ranges around cache changes; full and mini V2 consume the same normalizer. `tscheck_buffered_range_normalization.log`: `TSC_EXIT=0`. |
 | ☐ | Tune and measure mobile cache policy. | Validate bounded forward/back byte budgets, startup/rebuffer thresholds, memory use, and recovery latency across API, archive/progressive, local, and non-range streams. |
 | ☐ | Verify end-to-end Spotify-level playback acceptance. | Startup, uninterrupted playback, forced rebuffer/recovery, seek within/outside buffer, unseekable source, saved-position resume, mini-player/background, queue transitions, and restart persistence; each run records unexpected `loadFile` calls. |
 
@@ -164,7 +165,17 @@ This supplemental checkpoint records the production cutover after user-confirmed
 | ☑ | Prove the source tree has no stale V1 entry-point imports. | Post-removal source scan found no `AudioPlayerModule`, `MiniAudioPlayer`, `audio/ui`, or `audio/components` imports; only the controller’s historical comment mentions the former player name. |
 | ☑ | Run the TypeScript gate after deletion. | `tscheck_audio_v1_removal.log`: `TSC_EXIT=0`. |
 | ☑ | Confirm runtime audio and remote-seek behavior on the installed build. | User-confirmed after the maintained mpv-android native stack update: audio is now playing reliably and remote seeking behaves correctly. Full native build/install evidence remains in `android_build_after_mpv_native_update.log`. |
-| ☐ | Complete the broader Audio V2 visual and device acceptance gate. | Buffered-range rendering, paused-versus-buffering visual acceptance, background/lifecycle, queue transitions, and production-like release verification remain open. |
+| ☑ | Repair V2 play/pause control state authority. | Full and mini V2 controls now query native playback state before issuing pause/resume and update Redux immediately for responsive feedback; controller diagnostics identify the active URI and native state. |
+| ☑ | Repair V2 previous/next transition indexing. | Full and mini V2 resolve the active playlist index by current URI when Redux `currentIndex` is unset/stale, preventing same-track reloads or no-op transitions; queue/playlist lane semantics remain centralized in `playbackTransitionService.ts`. |
+| ☑ | Correct V2 previous/next icon direction and mini-player touch boundaries. | `AudioV2Icon.tsx` uses left-pointing `previous` and right-pointing `next` geometry; `MiniAudioV2.tsx` separates the expand hit area from play/pause and close buttons so touches cannot be intercepted by the parent surface. `tscheck_audio_v2_controls_final.log`: `TSC_EXIT=0`; `DIFF_CHECK=0`. |
+| ☑ | Keep disconnected cache islands out of the active progress view. | `selectCurrentBufferedWindow` preserves canonical transport ranges for diagnostics/future policy but renders only the range containing the current playhead, so a disconnected forward island is not presented as active buffer. |
+| ☑ | Preserve current-track cache across full/mini presentation changes. | `PlaybackOverlayHost.tsx` now owns one `TransportProvider` around both full and mini presentations; `AudioV2Module` no longer creates a nested provider. Cache state resets on `onFileLoaded`, not on full-player collapse. |
+| ☑ | Make repeat-off, repeat-one, and repeat-all explicit and prevent unintended replay. | Controller synchronizes Redux loop mode to native mpv; native `nativeSetLoopMode` clears both loop flags before enabling one mode, preventing stale `loop-file=inf` from replaying the current item. V2 labels the off state `Play once`. |
+| ☑ | Add explicit natural-EOF state and Play once restart behavior. | `TransportContext` exposes `isEnded`, marks only natural EOF as finished, and resets it on a new file, seek, or resumed playback. Full and mini V2 show `FINISHED`/`Finished`; Play after EOF seeks to zero before resuming. |
+| ☑ | Preserve finished state when minimizing and reopening the same item. | `useAudioPlayerScreen.ts` now reuses the already loaded native item when the reopened URI matches the current Redux item, skips saved-position resume and the fresh-load fallback timer, and preserves native EOF position/state. `tscheck_audio_finished_reopen.log`: `TSC_EXIT=0`. |
+| ☑ | Prevent mini-player expansion from reapplying stale start position. | `PlaybackContext.collapsePlayer` now clears one-time `startPosition` intent when changing presentation to mini. Expanding the mini-player is presentation-only and preserves the current native position, EOF state, and cache. `tscheck_audio_mini_expansion_position.log`: `TSC_EXIT=0`. |
+| ☑ | Retain current-track cache across minimize/expand and reset only on item change. | A single host-level `TransportProvider` remains mounted while full/mini presentation changes; `onFileLoaded` is the cache reset boundary. No cache clear is tied to pause, EOF, collapse, or expansion. |
+| ☐ | Complete the broader Audio V2 visual and device acceptance gate. | Buffered-range rendering, paused-versus-buffering visual acceptance, Play once/repeat mode and end-of-track behavior, background/lifecycle, queue transitions, and production-like release verification remain open pending the installed-build test. |
 
 **Audio V2 cutover status:** **Implementation complete; broader release acceptance remains open.**
 
@@ -1960,3 +1971,137 @@ See `v11_mpv_integration_audit.md` for current/deprecated API decisions, applied
 - [x] Added the missing `TransportProvider` boundary around `AudioV2Content`, preventing `useTransport must be used within a TransportProvider` at runtime while keeping V2 isolated from V1.
 - [x] TypeScript verification after the provider-boundary fix: `TSC_EXIT=0` (`tscheck_audio_v2_transport_provider.log`).
 - [ ] Manual emulator acceptance remains open: full-player entry, remote streaming, pause/resume, seek, volume, previous/next, queue selection, lyrics/chapter seek, bookmark, playlist, share, back-to-mini, mini-player expand, and close.
+
+
+## Audio V2 UI/UX specification — 23 August 2026
+
+The detailed product specification is now documented in [`player UI UX.md`](./player%20UI%20UX.md). It defines the Audio V2 visual language, full-player and mini-player hierarchy, transport control semantics, buffering and seek presentation, completion behavior, repeat modes, presentation-only mini/full synchronization, cache-retention policy, accessibility requirements, SOLID ownership boundaries, and the production QA matrix.
+
+The design baseline follows current platform and accessibility guidance rather than inventing alternate control meanings. Android media controls are derived from player state, Apple recommends predictable audio controls and appropriate playback behavior, W3C requires accessible media-player support, and Red Hat documents logical focus order and independent close/menu interaction.[^audio-ui-android] [^audio-ui-apple] [^audio-ui-w3c] [^audio-ui-redhat]
+
+| UI/UX gate | Status | Evidence / requirement |
+|---|---:|---|
+| Header hierarchy | ☑ | Retain centered SIMBA Audio / Now playing context, down-chevron collapse affordance, and overflow action. |
+| Full-player transport hierarchy | ☑ | Keep artwork identity above progress, center Play/Pause, correctly oriented Previous/Next, and separate rewind/forward controls. |
+| Mini-player touch isolation | ☑ | Expand, Play/Pause, Previous, Next, and Close are separate hit targets; expansion must change presentation only. |
+| Current-track cache retention | ☑ | One host-level transport session spans full and mini presentations; ranges reset only at native `onFileLoaded`. |
+| Honest buffered ranges | ☑ | Transport keeps canonical islands; V2 displays only the current contiguous buffered window and never synthesizes a bridge. |
+| Play once completion | ☑ | Natural EOF exposes Finished and Play; reopening the same active item must not consume an old recent-position value. |
+| Repeat semantics | ☑ | Explicit Play once, Repeat one, and Repeat all labels; controller owns policy and native flags are synchronized defensively. |
+| Accessibility | ☐ | Complete emulator/device acceptance for labels, state announcements, touch targets, and traversal order. |
+| Visual acceptance | ☐ | Compare the refined implementation against the specification on compact and tall Android devices; no V1 presentation reuse. |
+| Runtime acceptance | ☐ | Verify remote seek, cache-edge buffering, mini/full expansion, completion, repeat modes, queue transitions, and background/system controls. |
+
+[^audio-ui-android]: [Android Developers — Media controls](https://developer.android.com/media/implement/surfaces/mobile)
+[^audio-ui-apple]: [Apple Human Interface Guidelines — Playing audio](https://developer.apple.com/design/human-interface-guidelines/playing-audio)
+[^audio-ui-w3c]: [W3C WAI — Making Audio and Video Media Accessible](https://www.w3.org/WAI/media/av/)
+[^audio-ui-redhat]: [Red Hat Design System — Audio player accessibility](https://ux.redhat.com/elements/audio-player/accessibility/)
+
+The implementation must continue in the following order: **state correctness, presentation synchronization, completion and repeat policy, visual hierarchy, then motion polish**. A screenshot alone does not satisfy the release gate. The full and mini players must expose the same active session, every control must perform its named action, and the progress bar must represent real buffering rather than a visual approximation.
+
+
+### Audio V2 UI implementation batch — 23 August 2026
+
+| UI implementation gate | Status | Evidence |
+|---|---:|---|
+| Shared transport presentation boundary | ☑ | Added `AudioV2TransportControls.tsx` so the full-player transport uses one balanced play/pause, previous, next, rewind, and forward contract with state-aware accessibility labels. |
+| Full-player header refinement | ☑ | The top-left control now uses the V2 down-chevron minimize affordance; header hierarchy remains centered and independent from transport commands. |
+| Full-player primary control refinement | ☑ | Reduced the oversized primary control to a balanced 64 px control and kept Play/Pause/Finished semantics tied to the view model. |
+| Mini-player visual refinement | ☑ | Removed hardcoded black/blue styling; MiniAudioV2 now uses theme tokens for surface, text, neutral buffer, accent, border, and explicit expansion. |
+| Mini-player touch isolation | ☑ | Track information, Expand, Play/Pause, and Close remain separate controls; Previous and Next stay in the compact transport row. |
+| Completion and expansion state review | ☑ | Detailed code and state-flow review added to `player UI UX.md`; active native item, ended state, and cache are preserved across presentation changes. |
+| Static verification | ☑ | `tscheck_audio_v2_ui_ux_implementation.log`: `TSC_EXIT=0`. |
+| Device visual/interaction acceptance | ☐ | Reload Metro and validate the refined full and mini layouts, Play once completion, mini/full expansion, controls, and buffered-range presentation on emulator/device. |
+
+
+### Audio V2 UI/UX revision 2.0 — uncluttered 2026 direction
+
+The detailed specification in [`player UI UX.md`](./player%20UI%20UX.md) has been rewritten after visual review. The previous persistent seven-action strip and full-width percentage volume row are rejected as too dense and dated for the listening task.
+
+| Revised decision | Product requirement |
+|---|---|
+| Primary surface | Keep only identity, state, progress, five-button transport, one playback-mode control, and compact output control in the main player. |
+| Secondary actions | Move Save, Add to playlist, Queue, Lyrics, Info, and Share behind one More/Actions surface using one level of progressive disclosure. |
+| Volume/output | Replace the permanent full-width volume row with a compact speaker/output affordance that expands only while adjusting. Hide the percentage at rest. |
+| Header | Retain the centered SIMBA Audio / Now playing hierarchy, down-chevron minimize affordance, and one overflow action. |
+| Transport | Use one balanced primary Play/Pause control; retain correct rewind, previous, next, and forward semantics. |
+| Mini-player | Keep artwork, identity, state, progress, expand, Play/Pause, and Close immediately available; do not create a second full action strip. |
+| State | Continue using explicit Playing, Paused, Seeking, Buffering, Finished, Connecting, and Error states; Finished must show Play. |
+| Cache | Keep canonical ranges in the shared transport session; render only the current contiguous window and preserve the data across mini/full presentation changes. |
+
+The revision is grounded in current platform and UX guidance: Apple’s December 2025 toolbar guidance says to avoid overcrowding and move less-important actions into More; Apple’s current button guidance recommends one or two prominent actions, familiar symbols, press feedback, and 44-point hit regions; Android media controls derive actions from player state; and progressive disclosure keeps essential actions visible while deferring advanced functions.[^audio-ui-revision-apple-toolbar] [^audio-ui-revision-apple-buttons] [^audio-ui-revision-android] [^audio-ui-revision-progressive]
+
+| Gate | Status |
+|---|---:|
+| Rewrite detailed specification | ☑ |
+| Define persistent-versus-secondary action hierarchy | ☑ |
+| Define compact output/volume interaction | ☑ |
+| Document state-machine and cache-retention implementation | ☑ |
+| Replace existing action strip in code | ☐ |
+| Replace existing volume row in code | ☐ |
+| Runtime visual acceptance | ☐ |
+
+[^audio-ui-revision-apple-toolbar]: [Apple Human Interface Guidelines — Toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars)
+[^audio-ui-revision-apple-buttons]: [Apple Human Interface Guidelines — Buttons](https://developer.apple.com/design/human-interface-guidelines/buttons)
+[^audio-ui-revision-android]: [Android Developers — Media controls](https://developer.android.com/media/implement/surfaces/mobile)
+[^audio-ui-revision-progressive]: [Interaction Design Foundation — Progressive disclosure](https://ixdf.org/literature/topics/progressive-disclosure)
+
+
+### Audio V2 functional mini-player and priority actions — 23 August 2026
+
+The UI/UX direction is now reflected in functional V2 code. The mini-player is a compact transport dock with a dedicated corner expand control, separate close control, grouped Previous / Play-Pause / Next controls, and an interactive seek bar. The full player exposes Save and Queue as the only immediate secondary actions; Add to playlist, Lyrics, Info, and Share remain in the single More/Actions surface. The volume control is represented by a compact expandable output control rather than a permanent full-width row.
+
+| Implementation gate | Status | Evidence |
+|---|---:|---|
+| Mini-player expand affordance | ☑ | Dedicated `chevronUp` button; expansion remains presentation-only. |
+| Mini-player transport grouping | ☑ | Previous / Play-Pause / Next are one visual and interaction group with independent hit targets. |
+| Mini-player seeking | ☑ | `AudioV2MiniProgress.tsx` is an accessible interactive `Pressable` using the transport seek boundary and current buffered window. |
+| Full-player Save and Queue | ☑ | `AudioV2PriorityActions.tsx` replaces the seven-item persistent action strip. |
+| Compact output/volume | ☑ | `AudioV2OutputControl.tsx` is collapsed at rest and reveals the volume adjustment primitive only when requested. |
+| UI/UX specification | ☑ | `player UI UX.md` revision 2.1 documents the updated hierarchy and component responsibilities. |
+| TypeScript verification | ☑ | `tscheck_audio_v2_mini_functional_actions.log`: `TSC_EXIT=0`. |
+| Runtime touch/seek acceptance | ☐ | Reload Metro and test mini expand, close, Previous, Play/Pause, Next, seek bar, full-player Save, Queue, More, and compact volume. |
+
+
+### Audio V2 runtime correction revision 2.2 — edge-to-edge, volume, and minimize continuity
+
+The first runtime visual pass exposed four issues: header content did not explicitly honor the edge-to-edge status-bar inset, the full player still looked like a heavy white card, the volume interaction did not map touch position to a real volume target, and minimizing paused active playback. The implementation has been corrected at the relevant boundaries.
+
+| Gate | Status | Evidence |
+|---|---:|---|
+| Edge-to-edge header | ☑ | Full player now uses `react-native-safe-area-context` `SafeAreaView` with explicit top and bottom edges. |
+| Flat page surface | ☑ | Removed the heavy bordered white hero card; the page surface now carries the player hierarchy. |
+| Mini/full controller lifetime | ☑ | `AudioV2Module` stays mounted while MiniAudioV2 is visible; presentation changes no longer unmount orchestration. |
+| Minimize continuity | ☑ | Controller `handleGoBack` records position and changes presentation without pausing, stopping notification, or altering native play intent. |
+| Functional volume | ☑ | `AudioV2Volume` measures track width and handles press/touch-start/touch-move to send deterministic volume deltas. |
+| Full-player priority actions | ☑ | Save and Queue remain compact immediate actions; the seven-item persistent strip is not restored. |
+| TypeScript verification | ☑ | `tscheck_audio_v2_edge_volume_minimize_fix_final.log`: `TSC_EXIT=0`. |
+| Runtime acceptance | ☐ | Reload Metro and verify status-bar clearance, active audio through minimize, interactive volume, mini seek, and full/mini state parity. |
+
+
+### Audio V2 transport visibility and volume feedback correction — 23 August 2026
+
+The latest device feedback identified two remaining presentation/feedback defects: the Previous and Next symbols were too faint/outline-dependent at their rendered size, and native volume changed without the slider thumb updating immediately. The V2 primitives were corrected without changing queue or native playback semantics.
+
+| Correction | Status | Evidence |
+|---|---:|---|
+| Previous icon visibility | ☑ | Uses a filled left-facing triangle and a stronger skip bar on the left. |
+| Next icon visibility | ☑ | Uses a filled right-facing triangle and a stronger skip bar on the right. |
+| Volume touch capture | ☑ | Volume slider captures start and move responders in addition to press. |
+| Volume state feedback | ☑ | Controller updates local volume immediately after `MpvPlayer.setVolume`; native event remains the authoritative follow-up. |
+| Static verification | ☑ | `tscheck_audio_v2_icon_volume_feedback.log`: `TSC_EXIT=0`. |
+| Runtime acceptance | ☐ | Reload Metro and verify icon contrast and slider-thumb movement while tapping and dragging volume. |
+
+
+### Audio V2 transport icon geometry revision — 23 August 2026
+
+The V2 icon family was corrected after visual review of the emulator screen. Rewind and Forward now use complete filled double-arrow geometry with an explicit 10-second marker; Previous and Next use filled directional triangles with separated skip bars; Shuffle and Repeat use stronger strokes; Play once uses a distinct non-loop glyph rather than generic repeat arrows.
+
+| Gate | Status | Evidence |
+|---|---:|---|
+| Rewind / Forward recognizability | ☑ | Complete directional glyphs with visible `10` marker. |
+| Previous / Next visibility | ☑ | Filled triangle and skip-bar geometry with stronger visual weight. |
+| Play once semantics | ☑ | Dedicated `playOnce` icon used when repeat mode is off. |
+| Shuffle / Repeat visibility | ☑ | Stroke width increased and geometry simplified. |
+| TypeScript verification | ☑ | `tscheck_audio_v2_icon_geometry_final.log`: `TSC_EXIT=0`. |
+| Emulator visual acceptance | ☐ | Reload Metro and confirm all six glyphs at device scale. |

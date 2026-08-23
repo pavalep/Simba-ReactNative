@@ -45,7 +45,15 @@ export const PlaybackProvider: React.FC<PlaybackProviderProps> = ({children}) =>
   }, []);
 
   const expandPlayer = useCallback(() => setPresentation('expanded'), [setPresentation]);
-  const collapsePlayer = useCallback(() => setPresentation('mini'), [setPresentation]);
+  const collapsePlayer = useCallback(() => {
+    setActive(current => {
+      if (!current) return current;
+      // `startPosition` is an initial open intent, not presentation state.
+      // Once the full player has been collapsed, mini expansion must preserve
+      // the native item and position instead of replaying that old timestamp.
+      return {...current, presentation: 'mini', startPosition: undefined};
+    });
+  }, []);
   const closePlayer = useCallback(() => setPresentation('none'), [setPresentation]);
 
   const value = useMemo<PlaybackContextValue>(

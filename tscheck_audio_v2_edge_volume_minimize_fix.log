@@ -1,0 +1,3 @@
+src/modules/playback/PlaybackOverlayHost.tsx(32,44): error TS2322: Type 'string' is not assignable to type 'PlaybackPresentation | undefined'.
+
+TSC_EXIT=2

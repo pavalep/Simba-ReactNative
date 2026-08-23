@@ -8,6 +8,8 @@ import React, {
   type ReactNode,
 } from 'react';
 import {MpvPlayer} from '../native';
+import {logger} from '../lib/logger';
+import {normalizeBufferedRanges} from '../modules/playback/audio/rangeNormalization';
 import {useAppDispatch, useAppSelector} from '../store';
 import {setPlaybackState, setSleepTimer} from '../store/slices/playerSlice';
 
@@ -17,6 +19,8 @@ export interface TransportState {
   position: number;
   duration: number;
   isPlaying: boolean;
+  /** True only after a natural end-of-file event for the current item. */
+  isEnded: boolean;
   /** P33.4: mpv cache fill in progress (stream stalls) */
   isBuffering: boolean;
   /**
@@ -30,6 +34,8 @@ export interface TransportState {
   cacheFill: number;
   /** Whether the stream is seekable. False for live streams. */
   isSeekable: boolean;
+  /** Whether mpv is resolving a seek, including a remote range fetch. */
+  isSeeking: boolean;
   /** Milliseconds remaining on the active countdown timer (0 when none) */
   sleepRemainingMs: number;
   /** Whether a sleep timer is armed (countdown or end-of-track/chapter) */
@@ -89,6 +95,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isEnded, setIsEnded] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   // Buffered ranges (from `demuxer-cache-state`) — used by the seek bar
   // to paint the grey "downloaded" overlay like YouTube. Empty when no
@@ -101,6 +108,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   // Whether seeking is permitted. False for live streams and unknown
   // length sources. Used to dim the seek bar / disable scrubbing.
   const [isSeekable, setIsSeekable] = useState(true);
+  const [isSeeking, setIsSeeking] = useState(false);
   const dispatch = useAppDispatch();
   const sleepTimerEndTime = useAppSelector(state => state.player.sleepTimerEndTime);
   const sleepTimerMode = useAppSelector(state => state.player.sleepTimerMode);
@@ -126,6 +134,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   durationRef.current = duration;
   const chaptersRef = useRef(chapters);
   chaptersRef.current = chapters;
+  const lastCacheRangesSignatureRef = useRef('');
 
   // 50.7: volume fade-out state (captured once, restored on expiry)
   const baseVolumeRef = useRef<number | null>(null);
@@ -255,6 +264,24 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     const unsubState = MpvPlayer.on('onPlaybackStateChanged', ({state}: {state: string}) => {
       hasPlaybackStateEventsRef.current = true;
       setIsPlaying(state === 'playing');
+      if (state === 'playing') setIsEnded(false);
+    });
+    const unsubEndFile = MpvPlayer.on('onEndFile', ({reason}: {reason: number}) => {
+      if (reason !== 0) return;
+      setIsPlaying(false);
+      setIsEnded(true);
+      dispatch(setPlaybackState('stopped'));
+      logger.info('[PlaybackTrace][Transport][ended]', {position: positionRef.current, duration: durationRef.current});
+    });
+    const unsubFileLoaded = MpvPlayer.on('onFileLoaded', () => {
+      lastCacheRangesSignatureRef.current = '';
+      setBufferedRanges([]);
+      setCacheFill(0);
+      setIsBuffering(false);
+      setIsSeeking(false);
+      setIsEnded(false);
+      setIsSeekable(true);
+      logger.info('[PlaybackTrace][Transport][file-loaded] reset cache-range state');
     });
     // ── Buffering / cache-state observation ──────────────────────
     // We watch FOUR complementary MPV properties to drive buffering UX.
@@ -288,15 +315,34 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     const unsubCacheState = MpvPlayer.on(
       'onCacheState',
       ({ranges}: {ranges: Array<{start: number; end: number}>; fill?: number}) => {
-        setBufferedRanges(
-          ranges
-            .filter(range => Number.isFinite(range.start) && Number.isFinite(range.end) && range.end > range.start)
-            .map(range => ({start: Math.max(0, range.start), end: Math.max(0, range.end)})),
+        const rawRanges = ranges.map(range => ({start: range.start, end: range.end}));
+        const normalizedRanges = normalizeBufferedRanges(
+          rawRanges,
+          durationRef.current > 1 ? durationRef.current : undefined,
         );
+        const signature = JSON.stringify(normalizedRanges);
+        if (signature !== lastCacheRangesSignatureRef.current) {
+          lastCacheRangesSignatureRef.current = signature;
+          logger.info('[PlaybackTrace][Transport][cache-ranges]', {
+            rawRanges,
+            normalizedRanges,
+            duration: durationRef.current,
+          });
+        }
+        setBufferedRanges(normalizedRanges);
       },
     );
     const unsubSeekable = MpvPlayer.on('onSeekable', ({seekable}: {seekable: boolean}) => {
       setIsSeekable(seekable);
+    });
+    const unsubSeeking = MpvPlayer.on('onSeeking', ({seeking}: {seeking: boolean}) => {
+      setIsSeeking(seeking);
+      if (seeking) setIsEnded(false);
+      logger.info('[PlaybackTrace][Transport][seeking]', {
+        seeking,
+        position: positionRef.current,
+        duration: durationRef.current,
+      });
     });
 
     // Begin receiving the four property streams from MPV.
@@ -313,6 +359,9 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     } catch {}
     try {
       MpvPlayer.observeProperty('seekable');
+    } catch {}
+    try {
+      MpvPlayer.observeProperty('seeking');
     } catch {}
 
     const interval = setInterval(() => {
@@ -345,9 +394,12 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       clearInterval(interval);
       unsubPosition();
       unsubState();
+      unsubEndFile();
+      unsubFileLoaded();
       unsubBuffering();
       unsubCacheState();
       unsubSeekable();
+      unsubSeeking();
       // Stop receiving buffer-state updates so this provider doesn't
       // leak listeners when the screen unmounts.
       try {
@@ -361,6 +413,9 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       } catch {}
       try {
         MpvPlayer.unobserveProperty('seekable');
+      } catch {}
+      try {
+        MpvPlayer.unobserveProperty('seeking');
       } catch {}
     };
   }, [isReady, enabled, pollInterval]);
@@ -403,10 +458,12 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         position,
         duration,
         isPlaying,
+        isEnded,
         isBuffering,
         bufferedRanges,
         cacheFill,
         isSeekable,
+        isSeeking,
         sleepRemainingMs,
         sleepTimerActive: sleepTimerEndTime !== null || sleepTimerMode !== 'time',
         sleepTimerMode,

@@ -91,6 +91,8 @@ export interface MpvEvents {
    * instead of silently failing on scrub.
    */
   onSeekable: {seekable: boolean};
+  /** True while mpv is resolving a seek request, including a remote range fetch. */
+  onSeeking: {seeking: boolean};
   /** Native MPV end-file notification. `reason=0` is natural EOF; other reasons include stop/reload. */
   onEndFile: {reason: Double; error: Double};
   /** @deprecated Use onEndFile; retained for compatibility with older consumers. */

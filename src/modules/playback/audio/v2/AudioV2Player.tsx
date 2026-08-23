@@ -6,18 +6,20 @@ import {
   Image,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   Share,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {AudioV2Artwork} from './AudioV2Artwork';
 import {AudioV2Button} from './AudioV2Button';
-import {AudioV2ActionStrip} from './AudioV2ActionStrip';
+import {AudioV2PriorityActions} from './AudioV2PriorityActions';
+import {AudioV2OutputControl} from './AudioV2OutputControl';
 import {AudioV2Icon} from './AudioV2Icon';
-import {AudioV2Progress, AudioV2Volume, formatAudioTime} from './AudioV2Progress';
+import {AudioV2Progress, formatAudioTime} from './AudioV2Progress';
+import {AudioV2TransportControls} from './AudioV2TransportControls';
 import type {AudioV2ViewModel} from './AudioV2Types';
 
 interface AudioV2PlayerProps {
@@ -37,6 +39,7 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
     album,
     artworkUri,
     isPlaying,
+    isEnded,
     isLoading,
     isReady,
     error,
@@ -51,6 +54,10 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
     playlist,
     currentIndex,
     resumePrompt,
+    isBuffering,
+    isSeeking,
+    isSeekable,
+    bufferedRanges,
     commands,
   } = model;
   const palette = useMemo(() => ({
@@ -63,9 +70,11 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
     line: colors.border.subtle,
     accent: colors.accent.gold,
     accentWash: colors.accent.goldWash,
+    buffered: colors.background.highlightStrong,
     danger: colors.accent.love,
   }), [colors]);
-  const status = isLoading ? 'CONNECTING' : isPlaying ? 'PLAYING NOW' : isReady ? 'PAUSED' : 'READY';
+  const status = isLoading ? 'CONNECTING' : isSeeking ? 'SEEKING' : isBuffering ? 'BUFFERING' : isPlaying ? 'PLAYING NOW' : isEnded ? 'FINISHED' : isReady ? 'PAUSED' : 'READY';
+  const repeatLabel = repeatMode === 'one' ? 'Repeat one' : repeatMode === 'all' ? 'Repeat all' : 'Play once';
 
   const openShare = async () => {
     try {
@@ -84,9 +93,9 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
 
   return (
     <View style={[styles.root, {backgroundColor: palette.page}]}>
-      <SafeAreaView style={styles.safe}>
-        <View style={[styles.topBar, {paddingTop: Math.max(8, insets.top * 0.2)}]}>
-          <AudioV2Button icon="back" label="Back to previous screen" onPress={commands.onBack} color={palette.primary} size={46} backgroundColor={palette.card} />
+      <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
+        <View style={styles.topBar}>
+          <AudioV2Button icon="chevronDown" label="Minimize player" onPress={commands.onBack} color={palette.primary} size={44} backgroundColor={palette.card} />
           <View style={styles.topTitle}>
             <Text style={[styles.eyebrow, {color: palette.accent}]}>SIMBA AUDIO</Text>
             <Text style={[styles.nowPlaying, {color: palette.primary}]}>Now playing</Text>
@@ -96,14 +105,15 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
 
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.content, {paddingBottom: Math.max(36, insets.bottom + 24)}]}>
-          <View style={styles.statusRow}>
-            <View style={[styles.statusDot, {backgroundColor: isPlaying ? palette.accent : palette.muted}]} />
+          contentContainerStyle={[styles.content, {paddingBottom: 24}]}>
+                      <View style={styles.statusRow}>
+              <View style={[styles.statusDot, {backgroundColor: isPlaying && !isBuffering && !isSeeking ? palette.accent : palette.muted}]} />
+
             <Text style={[styles.status, {color: palette.secondary}]}>{status}</Text>
             {model.sourceLabel ? <View style={[styles.sourceBadge, {backgroundColor: palette.accentWash}]}><Text style={[styles.sourceText, {color: palette.accent}]}>{model.sourceLabel.toUpperCase()}</Text></View> : null}
           </View>
 
-          <View style={[styles.hero, {backgroundColor: palette.card, borderColor: palette.line}]}>
+          <View style={styles.hero}>
             <View style={[styles.artworkShadow, {shadowColor: palette.accent}]}>
               <AudioV2Artwork uri={artworkUri} title={title} size={Math.min(340, 300)} accent={palette.accent} />
             </View>
@@ -116,21 +126,34 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
               <AudioV2Button icon={liked ? 'heartFilled' : 'heart'} label={liked ? 'Unlike track' : 'Like track'} onPress={() => setLiked(value => !value)} color={liked ? palette.danger : palette.secondary} size={44} />
             </View>
 
-            <AudioV2Progress position={position} duration={duration} onSeek={commands.onSeek} accent={palette.accent} muted={palette.line} />
+            <AudioV2Progress
+              position={position}
+              duration={duration}
+              bufferedRanges={bufferedRanges}
+              isBuffering={isBuffering}
+              isSeeking={isSeeking}
+              isSeekable={isSeekable}
+              onSeek={commands.onSeek}
+              accent={palette.accent}
+              muted={palette.line}
+              buffered={palette.buffered}
+            />
 
             <View style={styles.transportRow}>
-              <AudioV2Button icon="rewind" label="Rewind 10 seconds" onPress={commands.onRewind} color={palette.secondary} size={46} />
-              <AudioV2Button icon="previous" label="Previous track" onPress={commands.onPrevious} color={palette.primary} size={48} />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
-                accessibilityState={{busy: isLoading}}
-                onPress={commands.onPlayPause}
-                style={({pressed}) => [styles.playButton, {backgroundColor: palette.accent}, pressed && styles.playPressed]}>
-                {isLoading ? <ActivityIndicator color={palette.page} size="small" /> : <AudioV2Icon name={isPlaying ? 'pause' : 'play'} size={34} color={palette.page} strokeWidth={2.2} />}
-              </Pressable>
-              <AudioV2Button icon="next" label="Next track" onPress={commands.onNext} color={palette.primary} size={48} />
-              <AudioV2Button icon="forward" label="Forward 10 seconds" onPress={commands.onForward} color={palette.secondary} size={46} />
+              <AudioV2TransportControls
+                isPlaying={isPlaying}
+                isEnded={isEnded}
+                isLoading={isLoading}
+                onPlayPause={commands.onPlayPause}
+                onPrevious={commands.onPrevious}
+                onNext={commands.onNext}
+                onRewind={commands.onRewind}
+                onForward={commands.onForward}
+                primary={palette.primary}
+                secondary={palette.secondary}
+                page={palette.page}
+                accent={palette.accent}
+              />
             </View>
 
             <View style={styles.modeRow}>
@@ -138,30 +161,31 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
                 <AudioV2Icon name="shuffle" size={19} color={shuffle ? palette.accent : palette.secondary} />
                 <Text style={[styles.modeText, {color: shuffle ? palette.accent : palette.secondary}]}>Shuffle</Text>
               </Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel="Toggle repeat" accessibilityState={{selected: repeatMode !== 'off'}} onPress={commands.onToggleRepeat} style={({pressed}) => [styles.modeButton, repeatMode !== 'off' && {backgroundColor: palette.accentWash}, pressed && styles.pressed]}>
-                <AudioV2Icon name="repeat" size={19} color={repeatMode !== 'off' ? palette.accent : palette.secondary} />
-                <Text style={[styles.modeText, {color: repeatMode !== 'off' ? palette.accent : palette.secondary}]}>{repeatMode === 'one' ? 'Repeat one' : 'Repeat'}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Playback mode: ${repeatLabel}`} accessibilityState={{selected: repeatMode !== 'off'}} onPress={commands.onToggleRepeat} style={({pressed}) => [styles.modeButton, repeatMode !== 'off' && {backgroundColor: palette.accentWash}, pressed && styles.pressed]}>
+                <AudioV2Icon name={repeatMode === 'off' ? 'playOnce' : 'repeat'} size={19} color={repeatMode !== 'off' ? palette.accent : palette.secondary} />
+                <Text style={[styles.modeText, {color: repeatMode !== 'off' ? palette.accent : palette.secondary}]}>{repeatLabel}</Text>
               </Pressable>
             </View>
 
-            <AudioV2Volume
-              volume={volume}
-              onChange={commands.onVolumeChange}
+            <AudioV2PriorityActions
+              isBookmarked={isBookmarked}
+              primary={palette.primary}
+              secondary={palette.secondary}
               accent={palette.accent}
-              muted={palette.line}
-              icon={<AudioV2Icon name="volume" size={20} color={palette.secondary} />}
+              surface={palette.page}
+              border={palette.line}
+              onBookmark={commands.onBookmark}
+              onQueue={() => openPanel('queue')}
             />
 
-            <AudioV2ActionStrip
-              colors={{primary: palette.primary, secondary: palette.secondary, border: palette.line, accent: palette.accent}}
-              isBookmarked={isBookmarked}
-              onBookmark={commands.onBookmark}
-              onPlaylist={() => openPanel('playlist')}
-              onQueue={() => openPanel('queue')}
-              onLyrics={() => openPanel('lyrics')}
-              onInfo={() => openPanel('info')}
-              onShare={openShare}
-              onMore={() => openPanel('more')}
+            <AudioV2OutputControl
+              volume={volume}
+              onChange={commands.onVolumeChange}
+              primary={palette.primary}
+              secondary={palette.secondary}
+              accent={palette.accent}
+              surface={palette.page}
+              border={palette.line}
             />
           </View>
 
@@ -296,27 +320,25 @@ const MorePanel: React.FC<{model: AudioV2ViewModel; palette: AudioV2PanelProps['
 
 const styles = StyleSheet.create({
   root: {flex: 1},
-  safe: {flex: 1},
-  topBar: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingBottom: 12},
+  safe: {flex: 1, paddingTop: 0},
+  topBar: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingTop: 6, paddingBottom: 12},
   topTitle: {alignItems: 'center'},
   eyebrow: {fontSize: 10, fontWeight: '800', letterSpacing: 1.8},
   nowPlaying: {fontSize: 19, fontWeight: '700', marginTop: 2},
-  content: {paddingHorizontal: 18, paddingTop: 4},
+  content: {paddingHorizontal: 18, paddingTop: 8},
   statusRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 14},
   statusDot: {width: 8, height: 8, borderRadius: 4},
   status: {fontSize: 11, fontWeight: '700', letterSpacing: 1.4},
   sourceBadge: {paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginLeft: 4},
   sourceText: {fontSize: 9, fontWeight: '800', letterSpacing: 1},
-  hero: {borderWidth: StyleSheet.hairlineWidth, borderRadius: 30, padding: 16},
+  hero: {paddingHorizontal: 2, paddingVertical: 10},
   artworkShadow: {alignSelf: 'center', borderRadius: 28, shadowOpacity: 0.24, shadowRadius: 24, shadowOffset: {width: 0, height: 12}, elevation: 12},
   trackHeader: {flexDirection: 'row', alignItems: 'center', marginTop: 18},
   trackCopy: {flex: 1, paddingRight: 8},
-  title: {fontSize: 24, lineHeight: 29, fontWeight: '800'},
+  title: {fontSize: 23, lineHeight: 28, fontWeight: '800', letterSpacing: -0.3},
   artist: {fontSize: 15, fontWeight: '600', marginTop: 7},
   album: {fontSize: 13, marginTop: 4},
-  transportRow: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20},
-  playButton: {width: 74, height: 74, borderRadius: 37, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: {width: 0, height: 5}, elevation: 7},
-  playPressed: {transform: [{scale: 0.94}], opacity: 0.85},
+  transportRow: {marginTop: 4},
   modeRow: {flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 18},
   modeButton: {flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, paddingVertical: 9, borderRadius: 18},
   modeText: {fontSize: 12, fontWeight: '600'},

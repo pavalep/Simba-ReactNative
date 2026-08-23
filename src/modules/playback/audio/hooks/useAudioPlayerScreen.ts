@@ -246,8 +246,10 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
   const endHandledRef = useRef(false);
   const playlistRef = useRef(playlist);
 
-  const currentIndexRef = useRef(currentIndex);
+    const currentIndexRef = useRef(currentIndex);
   const loopModeRef = useRef(loopMode);
+
+
 
   // A retry nonce is reserved for an explicit user retry. Every load also
   // receives a generation so delayed callbacks from an older stream can never
@@ -268,7 +270,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
   useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
   useEffect(() => { loopModeRef.current = loopMode; }, [loopMode]);
 
-  // ── Playback speed (persisted in playerSlice) ──
+    // ── Playback speed (persisted in playerSlice) ──
+
   const playbackSpeed = useAppSelector(state => state.player.playbackSpeed);
   useEffect(() => {
     playbackSpeedRef.current = playbackSpeed;
@@ -361,11 +364,22 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
         const ok = MpvPlayer.initPlayer();
         logger.info('[PlaybackTrace][Controller][init:return]', {ok, cancelled});
         if (cancelled) return;
-        if (!ok) {
+                if (!ok) {
           setError('Failed to initialize audio player.');
+
           setIsLoading(false);
           logError({code: 'ERR_INIT_FAIL', message: 'Failed to initialize audio player.', source: 'AudioPlayerScreen'});
           return;
+        }
+
+        // Repeat semantics are owned by this controller because the app has
+        // lane-aware queue and playlist transitions. Native mpv looping would
+        // race the controller's EOF transition and can replay an item twice.
+        try {
+          MpvPlayer.setLoopMode(loopModeRef.current);
+          logger.info('[PlaybackTrace][Controller][native-loop-sync]', {mode: loopModeRef.current});
+        } catch (error) {
+          logger.warn('[PlaybackTrace][Controller][native-loop-reset:error]', error);
         }
 
         logger.info('[PlaybackTrace][Controller][listeners:register]');
@@ -422,12 +436,37 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           }
         });
 
-        logger.info('[PlaybackTrace][Controller][loadFile:before]', fileUri);
-        MpvPlayer.loadFile(fileUri);
-        logger.info('[PlaybackTrace][Controller][loadFile:after]', fileUri);
+        const canReuseLoadedItem = !startPosition && currentFile?.uri === fileUri;
+        let reusedLoadedItem = false;
+        if (canReuseLoadedItem) {
+          try {
+            const nativeState = MpvPlayer.getPlaybackState();
+            reusedLoadedItem = nativeState !== 'idle';
+            logger.info('[PlaybackTrace][Controller][reuse-loaded-item]', {
+              fileUri,
+              nativeState,
+              reusedLoadedItem,
+            });
+            if (reusedLoadedItem) {
+              setIsReady(true);
+              setIsLoading(false);
+              setError(null);
+              setResumePrompt(null);
+              setIsPlaying(nativeState === 'playing');
+            }
+          } catch (error) {
+            logger.warn('[PlaybackTrace][Controller][reuse-loaded-item:error]', {fileUri, error});
+          }
+        }
+
+        if (!reusedLoadedItem) {
+          logger.info('[PlaybackTrace][Controller][loadFile:before]', fileUri);
+          MpvPlayer.loadFile(fileUri);
+          logger.info('[PlaybackTrace][Controller][loadFile:after]', fileUri);
+        }
 
         // Push persisted playback and audio settings before playback starts.
-        logger.info('[PlaybackTrace][Controller][settings:before]');
+        logger.info('[PlaybackTrace][Controller][settings:before]', {reusedLoadedItem});
         applyPlaybackSettingsToMpv();
         applyAudioSettingsToMpv();
         logger.info('[PlaybackTrace][Controller][settings:after]');
@@ -444,9 +483,9 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
         // Defensive fallback for native builds where the load event is delayed
         // or unavailable. Do not disturb the saved-position prompt; only resume
         // a genuinely fresh start.
-        const hasSavedPosition = (startPosition ?? 0) > 0 ||
-          (sessionRecentRef.current.find(f => f.fileUri === fileUri)?.position ?? 0) > 0;
-        if (!hasSavedPosition) {
+        const hasSavedPosition = !reusedLoadedItem && ((startPosition ?? 0) > 0 ||
+          (sessionRecentRef.current.find(f => f.fileUri === fileUri)?.position ?? 0) > 0);
+        if (!reusedLoadedItem && !hasSavedPosition) {
           retryTimerRef.current = setTimeout(() => {
             retryTimerRef.current = null;
             if (cancelled || loadGenerationRef.current !== loadGeneration) return;
@@ -459,9 +498,11 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           }, 700);
         }
 
-        setIsReady(true);
-        setIsLoading(false);
-        logger.info('[PlaybackTrace][Controller][ready]', {fileUri});
+        if (!reusedLoadedItem) {
+          setIsReady(true);
+          setIsLoading(false);
+        }
+        logger.info('[PlaybackTrace][Controller][ready]', {fileUri, reusedLoadedItem});
 
         // Track the complete entry in Redux so the mini audio overlay and reopen
 
@@ -515,6 +556,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     try {
       MpvPlayer.loadFile(uri);
       logger.info('[PlaybackTrace][Controller][loadAndResume:loaded]', {uri, loadGeneration});
+      MpvPlayer.setLoopMode(loopModeRef.current);
+      logger.info('[PlaybackTrace][Controller][loadAndResume:loop-sync]', {mode: loopModeRef.current, uri});
       MpvPlayer.resume();
       logger.info('[PlaybackTrace][Controller][loadAndResume:resumed]', {uri, loadGeneration});
       setTimeout(() => {
@@ -785,29 +828,36 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
       });
     }
 
-    // Keep the file loaded so the audio overlay can control it after back;
-    // pause (not stop) so the mini player's state matches the native player.
-    try { MpvPlayer.pause(); } catch {}
-    dispatch(setPlaybackState('paused'));
-    NotificationService.stop();
-
+        // Minimize is a presentation transition, not a playback command. Keep the
+    // native session, user play intent, current position, and cache unchanged.
+    logger.info('[PlaybackTrace][Controller][minimize]', {
+      fileUri: curUri,
+      position: curPos,
+      nativeState: MpvPlayer.getPlaybackState(),
+    });
     navigation.goBack();
+
   }, [artworkUri, dispatch, getFileName, navigation, sourceLabel, mediaLane, mediaKind, provider, routeFolderId, title, updateCurrentFileMetadata]);
 
   const handlePlayPause = useCallback(() => {
     try {
       const nativeState = MpvPlayer.getPlaybackState();
-      logger.info('[PlaybackTrace][Controller][handlePlayPause]', {nativeState, fileUri: fileUriRef.current});
-      if (nativeState === 'playing') {
+      const eofValue = MpvPlayer.getProperty?.('eof-reached');
+      const hasReachedEnd = nativeState === 'stopped' || eofValue === true || String(eofValue).trim().replace(/^"|"$/g, '') === 'true';
+      logger.info('[PlaybackTrace][Controller][handlePlayPause]', {nativeState, hasReachedEnd, fileUri: fileUriRef.current});
+      if (nativeState === 'playing' && !hasReachedEnd) {
         MpvPlayer.pause();
+        dispatch(setPlaybackState('paused'));
       } else {
+        if (hasReachedEnd) MpvPlayer.seekTo(0);
         MpvPlayer.resume();
+        dispatch(setPlaybackState('playing'));
       }
     } catch (error) {
       logger.error('[PlaybackTrace][Controller][handlePlayPause:error]', error);
     }
     haptics.medium();
-  }, [haptics]);
+  }, [dispatch, haptics]);
 
   const handlePrev = useCallback(() => {
     // P37.3: with a chapter list, back = previous chapter (or restart).
@@ -838,11 +888,19 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
       return;
     }
 
+    const activePlaylistIndex = playlist.findIndex(entry => entry.uri === fileUriRef.current);
+    const resolvedCurrentIndex = activePlaylistIndex >= 0 ? activePlaylistIndex : currentIndex;
+    logger.info('[PlaybackTrace][Controller][handlePrev]', {
+      fileUri: fileUriRef.current,
+      currentIndex,
+      resolvedCurrentIndex,
+      playlistLength: playlist.length,
+    });
     const transition = resolvePreviousTransition({
       lane: mediaLane,
       playlist,
       queue,
-      currentIndex,
+      currentIndex: resolvedCurrentIndex,
       loopMode,
     });
     if (transition.kind === 'restart') {
@@ -881,15 +939,27 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
   }, [dispatch, sourceLabel, loadAndResume]);
 
   const transitionToNextAudio = useCallback(() => {
+    const activePlaylist = playlistRef.current;
+    const activePlaylistIndex = activePlaylist.findIndex(entry => entry.uri === fileUriRef.current);
+    const resolvedCurrentIndex = activePlaylistIndex >= 0 ? activePlaylistIndex : currentIndexRef.current;
     const transition = resolveNextTransition({
       lane: mediaLane,
-      playlist: playlistRef.current,
+      playlist: activePlaylist,
       queue,
-      currentIndex: currentIndexRef.current,
+      currentIndex: resolvedCurrentIndex,
       loopMode: loopModeRef.current,
     });
 
+    logger.info('[PlaybackTrace][Controller][handleNext]', {
+      fileUri: fileUriRef.current,
+      currentIndex: currentIndexRef.current,
+      resolvedCurrentIndex,
+      playlistLength: activePlaylist.length,
+      queueLength: queue.length,
+      transition: transition.kind,
+    });
     if (transition.kind === 'ended') {
+      try { MpvPlayer.pause(); } catch {}
       dispatch(setPlaybackState('stopped'));
       return false;
     }
@@ -938,6 +1008,9 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     const next = Math.max(0, Math.min(100, current + delta));
     try {
       MpvPlayer.setVolume(next);
+      // Keep the visual thumb responsive even if the native property event is
+      // delivered one polling cycle later.
+      setVolume(next);
     } catch {}
   }, [volume]);
 
@@ -963,7 +1036,14 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
 
   const handleToggleLoop = useCallback(() => {
     const next = loopMode === 'none' ? 'file' : loopMode === 'file' ? 'playlist' : 'none';
+    logger.info('[PlaybackTrace][Controller][loop-mode-request]', {mode: next});
     dispatch(setLoopMode(next));
+    try {
+      MpvPlayer.setLoopMode(next);
+      logger.info('[PlaybackTrace][Controller][loop-mode-applied]', {mode: next});
+    } catch (error) {
+      logger.warn('[PlaybackTrace][Controller][loop-mode-apply:error]', {mode: next, error});
+    }
     haptics.medium();
   }, [loopMode, dispatch, haptics]);
 

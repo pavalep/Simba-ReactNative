@@ -16,6 +16,7 @@ export interface AudioV2ControllerState {
   error: string | null;
   errorIsPermission: boolean;
   isPlaying: boolean;
+  isEnded: boolean;
   volume: number;
   metadata: TrackMetadata;
   chapters: Chapter[];
@@ -28,6 +29,11 @@ export interface AudioV2ControllerState {
   relatedTracks: ScannedTrack[];
   currentIndex: number;
   resumePrompt: {position: number} | null;
+  isBuffering: boolean;
+  isSeeking: boolean;
+  isSeekable: boolean;
+  bufferedRanges: Array<{start: number; end: number}>;
+  cacheFill: number;
   onBack: () => void;
   onPlayPause: () => void;
   onPrevious: () => void;
@@ -69,6 +75,7 @@ export interface AudioV2ViewModel {
   error: string | null;
   errorIsPermission: boolean;
   isPlaying: boolean;
+  isEnded: boolean;
   position: number;
   duration: number;
   volume: number;
@@ -83,6 +90,11 @@ export interface AudioV2ViewModel {
   playlist: PlaylistEntry[];
   currentIndex: number;
   resumePrompt: {position: number} | null;
+  isBuffering: boolean;
+  isSeeking: boolean;
+  isSeekable: boolean;
+  bufferedRanges: Array<{start: number; end: number}>;
+  cacheFill: number;
   commands: Pick<AudioV2ControllerState, 'onBack' | 'onPlayPause' | 'onPrevious' | 'onNext' | 'onRewind' | 'onForward' | 'onSeek' | 'onSeekToLyric' | 'onVolumeChange' | 'onToggleShuffle' | 'onToggleRepeat' | 'onOpenBookmark' | 'onBookmark' | 'onOpenQueue' | 'onOpenLyrics' | 'onOpenPlaylist' | 'onOpenInfo' | 'onPlayIndex' | 'onPlayQueueIndex' | 'onPlayRelated' | 'onShare' | 'onMore' | 'onDismiss' | 'onRetry' | 'onResumeChoice'>;
 }
 
@@ -104,6 +116,7 @@ export const buildAudioV2ViewModel = (
   error: state.error,
   errorIsPermission: state.errorIsPermission,
   isPlaying: state.isPlaying,
+  isEnded: state.isEnded,
   position,
   duration,
   volume: state.volume,
@@ -118,6 +131,11 @@ export const buildAudioV2ViewModel = (
   queue: state.queue,
   currentIndex: state.currentIndex,
   resumePrompt: state.resumePrompt,
+  isBuffering: state.isBuffering,
+  isSeeking: state.isSeeking,
+  isSeekable: state.isSeekable,
+  bufferedRanges: state.bufferedRanges,
+  cacheFill: state.cacheFill,
   commands: {
     onBack: state.onBack,
     onPlayPause: state.onPlayPause,

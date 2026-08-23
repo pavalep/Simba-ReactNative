@@ -1,0 +1,4 @@
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(255,2): error TS1435: Unknown keyword or identifier. Did you mean 'never'?
+src/modules/playback/audio/hooks/useAudioPlayerScreen.ts(255,8): error TS1434: Unexpected keyword or identifier.
+
+TSC_EXIT=2

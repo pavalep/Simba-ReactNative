@@ -2,6 +2,7 @@ import React from 'react';
 import {StyleSheet, View} from 'react-native';
 import {useAppSelector} from '../../store';
 import {usePlaybackState} from './PlaybackContext';
+import {TransportProvider} from '../../contexts/TransportContext';
 import {AudioV2Module, MiniAudioV2} from './audio/v2';
 import {VideoPlayerModule} from './video/VideoPlayerModule';
 
@@ -18,23 +19,27 @@ export const PlaybackOverlayHost: React.FC = () => {
   // Never expose user playback controls over Splash/Login. The provider may
   // remain mounted across auth transitions for lifecycle continuity.
   if (!isAuthenticated || !active || presentation === 'none') return null;
-
-  if (presentation === 'mini') {
-    return (
-      <View pointerEvents="box-none" style={styles.miniLayer}>
-        <MiniAudioV2 />
-      </View>
-    );
-  }
+  const audioPresentation = presentation === 'mini' ? 'mini' : 'expanded';
 
   return (
-    <View style={styles.fullscreenLayer} pointerEvents="box-none">
+    <TransportProvider>
       {lane === 'video' ? (
-        <VideoPlayerModule active={active} />
+        <View style={styles.fullscreenLayer} pointerEvents="box-none">
+          <VideoPlayerModule active={active} />
+        </View>
       ) : (
-        <AudioV2Module active={active} />
+        <>
+          <View style={audioPresentation === 'expanded' ? styles.fullscreenLayer : styles.controllerLayer} pointerEvents={audioPresentation === 'expanded' ? 'box-none' : 'none'}>
+            <AudioV2Module active={active} presentation={audioPresentation} />
+          </View>
+          {presentation === 'mini' ? (
+            <View pointerEvents="box-none" style={styles.miniLayer}>
+              <MiniAudioV2 />
+            </View>
+          ) : null}
+        </>
       )}
-    </View>
+    </TransportProvider>
   );
 };
 
@@ -48,5 +53,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     zIndex: 90,
     elevation: 90,
+  },
+  controllerLayer: {
+    ...StyleSheet.absoluteFill,
+    zIndex: 80,
+    elevation: 80,
   },
 });
