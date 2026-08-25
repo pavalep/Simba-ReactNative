@@ -62,8 +62,14 @@ export interface MpvPropertyChange {
 // Event payloads
 // ──────────────────────────────────────────────
 
+export interface MpvFileLoadedEvent {
+  readonly requestId?: string;
+  readonly resolvedPath?: string;
+  readonly file?: MpvFileInfo;
+}
+
 export interface MpvEvents {
-  onFileLoaded: {file: MpvFileInfo};
+  onFileLoaded: MpvFileLoadedEvent;
   onPlaybackStateChanged: {state: MpvPlaybackState};
   onPositionChanged: {position: Double};
   onDurationChanged: {duration: Double};
@@ -104,6 +110,10 @@ export interface MpvEvents {
    *  a frame pipeline and the surface is about to present the first frame.
    *  The earliest reliable "video is truly rendering" signal. */
   videoReconfig: {};
+  onPipModeChanged: {isInPip: boolean};
+  onPipPlayPause: {};
+  onPipExpand: {};
+  onPipClose: {};
 }
 
 export type MpvEventName = keyof MpvEvents;
@@ -126,6 +136,7 @@ export interface Spec extends TurboModule {
 
   // ── File Loading ──
   readonly loadFile: (path: string) => void;
+  readonly loadFileWithRequestId: (path: string, requestId: string) => void;
   readonly loadPlaylist: (paths: string[], startIndex?: Double) => void;
   readonly getFileInfo: () => string; // Returns JSON string
   readonly getVideoParams: () => string; // Returns JSON string
@@ -190,6 +201,11 @@ export interface Spec extends TurboModule {
   readonly initPlayer: () => boolean;
   readonly destroy: () => void;
   readonly getNativePtr: () => Double;
+
+  // ── Picture in Picture ──
+  readonly enterPip: (chapterTitle?: string, progressPct?: string) => void;
+  readonly exitPip: () => void;
+  readonly exitPipAndFinish: () => void;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('MpvPlayerModule');

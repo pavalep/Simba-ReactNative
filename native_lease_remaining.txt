@@ -1,0 +1,58 @@
+24:std::atomic<bool> g_running{false};
+25:std::atomic<bool> g_initialized{false};
+307:if (!nativePtr || nativePtr != reinterpret_cast<jlong>(g_mpv) || !g_initialized.load()) return;
+397:if (!nativePtr || !path || !g_initialized) {
+402:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+404:LOGI("[PlaybackTrace][Native][loadFile] begin path=%s initialized=%d", utfPath, g_initialized ? 1 : 0);
+417:if (!nativePtr) {
+421:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+429:if (!nativePtr) {
+433:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+441:if (!nativePtr) return;
+442:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+450:if (!nativePtr) return;
+451:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+460:if (!nativePtr) return;
+461:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+471:if (!nativePtr) return;
+472:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+482:if (!nativePtr) return;
+483:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+496:if (!nativePtr) return env->NewStringUTF("");
+497:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+510:if (!nativePtr) {
+514:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+523:if (!nativePtr) return 0;
+524:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+533:if (!nativePtr) return;
+534:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+542:if (!nativePtr) return JNI_FALSE;
+543:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+554:if (!nativePtr) return;
+555:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+562:if (!nativePtr) return 1.0;
+563:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+596:if (!nativePtr) return 0;
+597:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+618:if (!nativePtr || !paths) return;
+619:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+641:if (!nativePtr) return;
+642:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+650:if (!nativePtr) return;
+651:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+659:if (!nativePtr) return;
+660:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+670:if (!nativePtr) return;
+671:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+679:if (!nativePtr) return;
+680:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+690:if (!nativePtr) return;
+691:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+700:if (!nativePtr || !filter) return;
+701:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+716:if (!nativePtr || !filter) return;
+717:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+734:if (!nativePtr) return 0;
+735:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+745:if (!nativePtr) return 0;
+746:mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);

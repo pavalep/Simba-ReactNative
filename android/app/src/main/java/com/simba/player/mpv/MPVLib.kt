@@ -1,7 +1,7 @@
 package com.simba.player.mpv
 
 import android.graphics.SurfaceTexture
-import android.util.Log
+import java.util.concurrent.CopyOnWriteArrayList
 import android.view.Surface
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,7 +14,6 @@ import org.json.JSONObject
  */
 object MPVLib {
 
-    private const val TAG = "MPVLib"
 
     // ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -33,6 +32,7 @@ object MPVLib {
     // ── Playback Control ───────────────────────────────────────────────────
 
     external fun nativeLoadFile(nativePtr: Long, path: String)
+    external fun nativeLoadFileWithRequestId(nativePtr: Long, path: String, requestId: String)
     external fun nativePlay(nativePtr: Long)
     external fun nativePause(nativePtr: Long)
     external fun nativeStop(nativePtr: Long)
@@ -102,22 +102,25 @@ object MPVLib {
     /** Called from native event loop thread via JNI. */
     @JvmStatic
     fun onNativeEvent(event: String, jsonPayload: String) {
-        Log.d(TAG, "onNativeEvent: $event $jsonPayload")
-        listeners.forEach { it.onMpvEvent(event, jsonPayload) }
+        listeners.forEach { listener ->
+            runCatching { listener.onMpvEvent(event, jsonPayload) }
+        }
     }
 
     /** Called from native event loop when an observed property changes. */
     @JvmStatic
     fun onNativePropertyChanged(name: String, jsonValue: String) {
-        Log.d(TAG, "onNativePropertyChanged: $name = $jsonValue")
-        listeners.forEach { it.onMpvPropertyChanged(name, jsonValue) }
+        listeners.forEach { listener ->
+            runCatching { listener.onMpvPropertyChanged(name, jsonValue) }
+        }
     }
 
     /** Called from native on error. */
     @JvmStatic
     fun onNativeError(code: Int, message: String) {
-        Log.e(TAG, "onNativeError: code=$code msg=$message")
-        listeners.forEach { it.onMpvError(code, message) }
+        listeners.forEach { listener ->
+            runCatching { listener.onMpvError(code, message) }
+        }
     }
 
     // ── Listener pattern ───────────────────────────────────────────────────
@@ -128,10 +131,10 @@ object MPVLib {
         fun onMpvError(code: Int, message: String) = Unit
     }
 
-    private val listeners = mutableListOf<MpvEventListener>()
+    private val listeners = CopyOnWriteArrayList<MpvEventListener>()
 
     fun addListener(listener: MpvEventListener) {
-        listeners.add(listener)
+        if (!listeners.contains(listener)) listeners.add(listener)
     }
 
     fun removeListener(listener: MpvEventListener) {

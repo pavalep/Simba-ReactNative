@@ -150,31 +150,6 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     };
   }, []);
 
-  // 1.1.1: Cleanup loadingFallbackTimer + overlayHideTimer on unmount
-  // (declared as useRef below — we capture them via a separate effect after
-  //  declaration to avoid TDZ).
-  // Forward-declared timer cleanup effect.
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define
-  useEffect(() => {
-    return () => {
-      // These refs are declared later in the file. The closure captures
-      // them by reference via module-level identifiers, so cleanup runs
-      // safely on unmount regardless of declaration order.
-      try {
-        if (loadingFallbackTimer.current) {
-          clearTimeout(loadingFallbackTimer.current);
-          loadingFallbackTimer.current = null;
-        }
-        if (overlayHideTimer.current) {
-          clearTimeout(overlayHideTimer.current);
-          overlayHideTimer.current = null;
-        }
-      } catch {
-        // Ignore — refs may be uninitialised if unmount fires before mount.
-      }
-    };
-  }, []);
-
   const [volume, setVolume] = useState(65);
   const [nativePtr, setNativePtr] = useState(0);
   const [showVideoSurface, setShowVideoSurface] = useState(true);
@@ -236,7 +211,43 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
   const loadingPhaseRef = useRef(loadingPhase);
   const loadingFallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overlayHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seekReleaseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resumeSeekTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const surfaceLoadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const thumbnailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const surfaceAttachedSubscription = useRef<{remove: () => void} | null>(null);
   const pushPositionRef = useRef<(pos: number) => void>((_: number) => {});
+
+  useEffect(() => {
+    return () => {
+      if (loadingFallbackTimer.current) {
+        clearTimeout(loadingFallbackTimer.current);
+        loadingFallbackTimer.current = null;
+      }
+      if (overlayHideTimer.current) {
+        clearTimeout(overlayHideTimer.current);
+        overlayHideTimer.current = null;
+      }
+      if (seekReleaseTimer.current) {
+        clearTimeout(seekReleaseTimer.current);
+        seekReleaseTimer.current = null;
+      }
+      if (resumeSeekTimer.current) {
+        clearTimeout(resumeSeekTimer.current);
+        resumeSeekTimer.current = null;
+      }
+      if (surfaceLoadTimer.current) {
+        clearTimeout(surfaceLoadTimer.current);
+        surfaceLoadTimer.current = null;
+      }
+      if (thumbnailTimer.current) {
+        clearTimeout(thumbnailTimer.current);
+        thumbnailTimer.current = null;
+      }
+      surfaceAttachedSubscription.current?.remove();
+      surfaceAttachedSubscription.current = null;
+    };
+  }, []);
 
   // V6 1.2.1: Mount state ref — guards async callbacks from setting state
   // after navigation completes. Prevents "setState on unmounted component" warnings
@@ -792,6 +803,14 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
     setShowReplay(true);
   }, []);
 
+  const releaseSeekingSoon = useCallback(() => {
+    if (seekReleaseTimer.current) clearTimeout(seekReleaseTimer.current);
+    seekReleaseTimer.current = setTimeout(() => {
+      seekReleaseTimer.current = null;
+      isSeeking.current = false;
+    }, 200);
+  }, []);
+
   const handleSeek = useCallback(
     (pct: number) => {
       // V6 3.2.1: clamp + guard against divide-by-zero / live-stream seek.
@@ -814,18 +833,16 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       const target = clampedPct * duration;
       isSeeking.current = true;
       MpvPlayer.seekTo(target);
-      setTimeout(() => {
-        isSeeking.current = false;
-      }, 200);
+      releaseSeekingSoon();
     },
-    [toast],
+    [releaseSeekingSoon, toast],
   );
 
   const handleChapterSeek = useCallback((time: number) => {
     isSeeking.current = true;
     MpvPlayer.seekTo(time);
-    setTimeout(() => { isSeeking.current = false; }, 200);
-  }, []);
+    releaseSeekingSoon();
+  }, [releaseSeekingSoon]);
 
   const handleVolumeChange = useCallback(() => {
     setVolumePanelOpen(true);
@@ -1020,9 +1037,12 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
 
   const handleScreenshot = useCallback(() => {
     try {
-      MpvPlayer.captureThumbnail(fileUriRef.current ?? '');
-    } catch {}
-  }, []);
+      const output = MpvPlayer.captureThumbnail(fileUriRef.current ?? '');
+      toast.show(output ? 'Screenshot saved.' : 'Could not save screenshot.', output ? 'success' : 'error');
+    } catch {
+      toast.show('Could not save screenshot.', 'error');
+    }
+  }, [toast]);
 
   // ── InfoSheet callbacks (Phase 8) ──
   const handleInfo = useCallback(() => {
@@ -1540,14 +1560,16 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
       setIsReady(true);
       setLoadingPhase('loading');
 
-      const sub = MpvPlayer.onSurfaceAttached(() => {
+      surfaceAttachedSubscription.current?.remove();
+      surfaceAttachedSubscription.current = MpvPlayer.onSurfaceAttached(() => {
         if (playableUri) {
           setLoadingPhase('loading');
           // Brief ready-delay: gives MPV time to fully spin up its event
           // loop and internal state before we issue loadfile/setProperty.
           // Without this the very first load often races MPV and surfaces
           // as "File Not Found" even when the URL is valid.
-          setTimeout(() => {
+          surfaceLoadTimer.current = setTimeout(() => {
+            surfaceLoadTimer.current = null;
             // V6 1.2.3: bail if component unmounted before timer fires
             if (cancelled || !isMountedRef.current) return;
             try {
@@ -1579,7 +1601,8 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
             MpvPlayer.resume();
 
             // Capture thumbnail after the file has had a moment to load
-            setTimeout(() => {
+            thumbnailTimer.current = setTimeout(() => {
+              thumbnailTimer.current = null;
               // V6 1.2.3: bail if component unmounted before timer fires
               if (cancelled || !isMountedRef.current) return;
               try {
@@ -1612,12 +1635,27 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
             }, 2000);
           }, 150);
         }
-        sub?.remove();
-      });
+        surfaceAttachedSubscription.current?.remove();
+        surfaceAttachedSubscription.current = null;
+      }) ?? null;
     })();
 
     return () => {
       cancelled = true;
+      surfaceAttachedSubscription.current?.remove();
+      surfaceAttachedSubscription.current = null;
+      if (surfaceLoadTimer.current) {
+        clearTimeout(surfaceLoadTimer.current);
+        surfaceLoadTimer.current = null;
+      }
+      if (thumbnailTimer.current) {
+        clearTimeout(thumbnailTimer.current);
+        thumbnailTimer.current = null;
+      }
+      if (resumeSeekTimer.current) {
+        clearTimeout(resumeSeekTimer.current);
+        resumeSeekTimer.current = null;
+      }
       if (loadingFallbackTimer.current) {
         clearTimeout(loadingFallbackTimer.current);
         loadingFallbackTimer.current = null;
@@ -1888,7 +1926,10 @@ const [autoAdvance, setAutoAdvance] = useState<{uri: string; title: string} | nu
         // Explicit navigation intent (e.g. Continue Watching) — silent seek
         setLoadingPhase('seeking');
         MpvPlayer.pause();
-        setTimeout(() => {
+        if (resumeSeekTimer.current) clearTimeout(resumeSeekTimer.current);
+        resumeSeekTimer.current = setTimeout(() => {
+          resumeSeekTimer.current = null;
+          if (!isMountedRef.current) return;
           MpvPlayer.seekTo(explicitPosition);
           resumeTargetRef.current = explicitPosition;
         }, 300);

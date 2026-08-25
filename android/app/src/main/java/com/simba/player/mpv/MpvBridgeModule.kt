@@ -322,13 +322,31 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun loadFile(path: String) {
         ensurePtr()
-        val resolvedPath = resolveContentUri(path)
+        val resolvedPath = normalizeMpvInput(resolveContentUri(path))
         Log.i(TAG, "[PlaybackTrace][Bridge][loadFile] requested=$path resolved=$resolvedPath ptr=$nativePtr")
         try {
             MPVLib.nativeLoadFile(nativePtr, resolvedPath)
             Log.i(TAG, "[PlaybackTrace][Bridge][loadFile] nativeLoadFile returned")
         } catch (e: Exception) {
             Log.e(TAG, "[PlaybackTrace][Bridge][loadFile] nativeLoadFile threw: ${e.message}", e)
+            throw e
+        }
+    }
+
+    @ReactMethod
+    fun loadFileWithRequestId(path: String, requestId: String) {
+        ensurePtr()
+        if (requestId.isBlank()) {
+            loadFile(path)
+            return
+        }
+        val resolvedPath = normalizeMpvInput(resolveContentUri(path))
+        Log.i(TAG, "[PlaybackTrace][Bridge][loadFileWithRequestId] requested=$path resolved=$resolvedPath requestId=$requestId ptr=$nativePtr")
+        try {
+            MPVLib.nativeLoadFileWithRequestId(nativePtr, resolvedPath, requestId)
+            Log.i(TAG, "[PlaybackTrace][Bridge][loadFileWithRequestId] nativeLoadFileWithRequestId returned requestId=$requestId")
+        } catch (e: Exception) {
+            Log.e(TAG, "[PlaybackTrace][Bridge][loadFileWithRequestId] failed: ${e.message}", e)
             throw e
         }
     }
@@ -393,6 +411,19 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
      * file descriptor, and returns "fd://<N>" for MPV's built-in fd:// protocol.
      * MPV closes the fd automatically when playback ends.
      */
+    private fun normalizeMpvInput(uri: String): String {
+        if (!uri.startsWith("http://") && !uri.startsWith("https://")) return uri
+        // Archive and other API providers occasionally return raw spaces in
+        // path segments. libmpv's curl backend rejects those as an illegal
+        // URL, so encode only whitespace/control characters and preserve
+        // already-escaped URLs and valid query delimiters.
+        return uri
+            .replace(" ", "%20")
+            .replace("\t", "%09")
+            .replace("\r", "%0D")
+            .replace("\n", "%0A")
+    }
+
     private fun resolveContentUri(uri: String): String {
         if (!uri.startsWith("content://")) return uri
         try {
@@ -413,7 +444,9 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     @ReactMethod
     fun loadPlaylist(paths: ReadableArray, startIndex: Double) {
         ensurePtr()
-        val arr = Array(paths.size()) { i -> paths.getString(i) ?: "" }
+        val arr = Array(paths.size()) { i ->
+            normalizeMpvInput(resolveContentUri(paths.getString(i) ?: ""))
+        }
         MPVLib.nativeLoadPlaylist(nativePtr, arr, startIndex.toInt())
     }
 
@@ -809,6 +842,18 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    @ReactMethod
+    fun addListener(eventName: String) {
+        // Required by NativeEventEmitter. MPVLib listener registration is
+        // owned by initialize()/onCatalystInstanceDestroy(), not JS callers.
+    }
+
+    @ReactMethod
+    fun removeListeners(count: Double) {
+        // Required by NativeEventEmitter. Keep the native listener attached
+        // for the lifetime of this module instance.
+    }
+
     override fun initialize() {
         super.initialize()
         MPVLib.addListener(mpvListener)
@@ -833,13 +878,18 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     fun enterPip(chapterTitle: String? = null, progressPct: String? = null) {
         val activity = getCurrentActivity()
         if (activity == null || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return
-        val pipParams = com.simba.player.PipManager.buildPipParams(
-            context = activity,
-            chapterTitle = chapterTitle,
-            progressPercentage = progressPct,
-        )
         try {
-            activity.enterPictureInPictureMode(pipParams)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val pipParams = com.simba.player.PipManager.buildPipParams(
+                    context = activity,
+                    chapterTitle = chapterTitle,
+                    progressPercentage = progressPct,
+                )
+                activity.enterPictureInPictureMode(pipParams)
+            } else {
+                // API 24–25 support PiP but not PictureInPictureParams.
+                activity.enterPictureInPictureMode()
+            }
         } catch (_: IllegalStateException) {
             // Activity not in foreground or PiP not supported
         }

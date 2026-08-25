@@ -2,7 +2,7 @@
 
 **Tracker status:** Expanded draft for manual review  \
 **Companion specification:** `v11_manus_specification.md`  \
-**Date:** 20 August 2026  \
+**Date:** 24 August 2026  \
 **Target release assumption:** 30 September 2026 (assumption; confirm with product)  \
 **Program size:** 8 waves, 40 phases, 400 checkable steps  
 **Current execution alias:** Execution Wave 2 = canonical Wave 3, specifically W3-P16 Movies and W3-P17 Podcasts. The current Live TV/Live Radio/Audiobooks/Archives batch is tracked as supplemental content-area execution evidence while canonical wave numbering is preserved for manager reports.
@@ -28,7 +28,7 @@ Every canonical phase below has ten checkable steps. The implementer must record
 | Measure | Current | Target | How to calculate |
 |---|---:|---:|---|
 | Phase completion | 0/40 | 40/40 | Phases with all ten steps complete |
-| Step completion | 152/400 canonical + 49 supplemental | 400/400 canonical | Checked canonical phase steps with evidence; supplemental implementation, player-acceptance, midpoint, detabbed-navigation, and playback-module rows are tracked separately and do not change the 40-phase/400-step denominator. |
+| Step completion | 152/400 canonical + 64 supplemental | 400/400 canonical | Checked canonical phase steps with evidence; supplemental implementation, player-acceptance, midpoint, detabbed-navigation, and playback-module rows are tracked separately and do not change the 40-phase/400-step denominator. |
 | Verified phase completion | 0/40 | 40/40 | Completed phases passing their exit gate |
 | User-visible midpoint | Not earned | Earned at Phase W7-P40 | Full midpoint demonstration passes |
 | Release blockers | Known | 0 unresolved P0 | Open P0 issues at candidate freeze |
@@ -2105,3 +2105,303 @@ The V2 icon family was corrected after visual review of the emulator screen. Rew
 | Shuffle / Repeat visibility | ☑ | Stroke width increased and geometry simplified. |
 | TypeScript verification | ☑ | `tscheck_audio_v2_icon_geometry_final.log`: `TSC_EXIT=0`. |
 | Emulator visual acceptance | ☐ | Reload Metro and confirm all six glyphs at device scale. |
+
+
+### Video Player V2 hardening implementation evidence — 24 August 2026
+
+This supplemental block records the implementation hardening pass requested after the initial Video V2 cutover. It does not claim emulator acceptance because the user explicitly requested manual testing later. The companion design contract is `video player UI UX.md`.
+
+| Done | Video V2 hardening checkpoint | Evidence |
+|---|---|---|
+| ☑ | Keep Video V2 route-free and active as the only video presentation. | `PlaybackOverlayHost.tsx` imports and renders `video/v2/VideoV2Module`; `src/modules/playback/index.ts` exports only the V2 public entry point for video. |
+| ☑ | Remove V1 presentation dependencies from the V2 folder. | Bounded import scan over `src/modules/playback/video/v2`: `V1_IMPORT_COUNT=0`; dead-marker scan: `DEAD_MARKER_COUNT=0`. |
+| ☑ | Introduce a narrow orchestration boundary between the controller and V2 presentation. | `video/v2/useVideoV2Controller.ts` exposes only the typed playback, transport-adjacent, track, caption, queue, policy, and recovery members consumed by the V2 adapter. Presentation no longer receives the undifferentiated controller object. |
+| ☑ | Preserve playback intent through minimize/expand and same-URI replacement decisions. | `VideoV2Module.tsx` keeps route intent in a stable ref, prevents collapse from reapplying a stale start position, and retains the controller module mounted across `mini`/`expanded` presentation changes. |
+| ☑ | Add a functional independent Video V2 mini-player. | `MiniVideoV2.tsx` retains the native surface, current title, state label, compact seek bar, Play/Pause, Expand, and Close. Previous/Next were intentionally removed from the mini surface to prevent narrow-phone crowding; full-player transport retains them. |
+| ☑ | Implement truthful secondary playback controls. | V2 More now provides native-backed Speed, Volume/Mute, Repeat, Shuffle, Audio Track, Captions, and caption appearance controls. Unsupported or unavailable rows are omitted. |
+| ☑ | Implement caption language and appearance flows without V1 sheet reuse. | `VideoV2MoreSheet.tsx` and `VideoV2VolumeControl.tsx` provide independent selection surfaces for subtitle track, size, opacity, background opacity, and vertical position. |
+| ☑ | Implement independent queue, chapters, information, and playlist panels. | `VideoV2ContextSheet.tsx` renders queue/chapter selection and metadata; `VideoV2PlaylistSheet.tsx` handles video-only selection and creation. No V1 sheet is mounted. |
+| ☑ | Enforce video-only playlist additions and fix create-then-add state consistency. | `VideoV2Module.tsx` validates video/movie media before adding; `features/playlists/index.ts` now reads the live Redux store rather than a stale selector snapshot, so a newly created playlist can receive the current video immediately. |
+| ☑ | Make screenshot behavior truthful. | `useVideoPlayerScreen.ts` now reports screenshot success or failure through the existing Toast façade instead of silently invoking the native call. |
+| ☑ | Make primary surface interaction common-pattern and state-aware. | One tap reveals hidden controls; a tap with visible unlocked controls toggles playback; locked surfaces delegate only to unlock/reveal behavior. Controls auto-hide after playback resumes, while paused and locked states remain visible. |
+| ☑ | Harden buffered-range rendering. | `VideoV2SeekBar.tsx` clamps and filters ranges when duration is known and renders no invalid geometry while duration is unknown. |
+| ☑ | Keep the visual hierarchy frame-first and reduce clutter. | Full player keeps only core transport on-frame; secondary actions remain in More; landscape receives reduced bottom-panel vertical padding; mini-player uses essential continuity actions only. |
+| ☑ | Apply theme-token discipline to the new V2 surfaces. | V2 overlay scrims and dynamic surfaces use SIMBA theme tokens; the targeted V2 ESLint gate reports `ESLINT_EXIT=0`. |
+| ☑ | Pass static type and Android debug-build gates after hardening. | `tscheck_video_v2_latest_hardening.log`, `tscheck_video_v2_caption_settings.log`, and `tscheck_video_v2_quality_gate.log` record `TSC_EXIT=0`; `android_build_video_v2_hardened.log` records `ANDROID_BUILD_EXIT=0`. |
+| ☐ | Manually verify remote/local playback, seeking, rebuffering, EOF, repeat, queue, tracks, captions, orientation, PiP, mini continuity, and close behavior. | Deliberately left open for the user’s manual test pass; no emulator or Maestro result is claimed in this batch. |
+| ☐ | Verify iOS native surface, PiP, orientation, and screenshot behavior. | Open; the current static pass covers the shared TypeScript contract and Android build only. |
+
+**Video V2 hardening status:** **Implementation hardened and statically validated; manual/device acceptance remains open.** The implementation should not be reported as release-complete until the open Android and iOS journeys are exercised on the target matrix.
+
+### Video V2 implementation artifacts
+
+| Artifact | Purpose |
+|---|---|
+| `video player UI UX.md` | Product, UX, state-machine, accessibility, buffering, PiP, lifecycle, SOLID, and V1-decoupling contract. |
+| `tscheck_video_v2_quality_gate.log` | Targeted V2 TypeScript and ESLint gate evidence. |
+| `tscheck_video_v2_latest_hardening.log` | Post-mini/volume hardening TypeScript evidence. |
+| `android_build_video_v2_hardened.log` | Android debug build evidence after the hardening changes. |
+| `src/modules/playback/video/v2/useVideoV2Controller.ts` | Narrow controller-to-adapter boundary. |
+| `src/modules/playback/video/v2/VideoV2ContextSheet.tsx` | Independent queue, chapters, and information panels. |
+| `src/modules/playback/video/v2/VideoV2VolumeControl.tsx` | Independent functional volume/mute panel. |
+
+> Manager status note: this batch closes implementation gaps found during static audit. It intentionally does not convert manual runtime gates into checked items.
+
+
+### Video V2 mini-to-full transition stability fix — 24 August 2026
+
+A user-reported crash or hang was traced to the presentation swap mounting two different native `MpvRenderView` trees. The old mini tree owned one surface and the full tree owned another; React Native could call `MpvRenderViewManager.onDropViewInstance()` during the swap, whose cleanup detaches the mpv surface and changes the native `vo` state while the next surface is being created. This was unsafe for route-free continuity.
+
+| Done | Stability checkpoint | Evidence |
+|---|---|---|
+| ☑ | Keep one native V2 surface mounted for the lifetime of `VideoV2Module`. | `VideoV2Module.tsx` now owns the only `VideoV2Surface`; `VideoV2Player.tsx` and `MiniVideoV2.tsx` no longer mount native surfaces. |
+| ☑ | Change only surface geometry during full/mini presentation changes. | The module switches the persistent surface between `StyleSheet.absoluteFill` and a memoized compact rectangle; the mpv view is not unmounted during expansion. |
+| ☑ | Prevent the native surface from intercepting V2 chrome touches. | `VideoV2Surface.tsx` uses `pointerEvents="none"`; full controls and mini actions retain ownership of interaction. |
+| ☑ | Keep the mini preview transparent over the persistent native frame. | `MiniVideoV2.tsx` no longer paints an opaque placeholder over the compact video surface. |
+| ☑ | Stabilize compact style identity across transport ticks. | `VideoV2Module.tsx` memoizes the mini surface geometry so position updates do not repeatedly relayout the native TextureView. |
+| ☑ | Preserve the controller lifecycle across presentation changes. | `PlaybackOverlayHost` continues to keep `VideoV2Module` mounted while the `presentation` value changes; only explicit close removes the session. |
+| ☑ | Re-run static gates after the fix. | `tscheck_video_v2_transition_static_fix.log`: `TSC_EXIT=0`; targeted V2 lint remained clean in the preceding quality gate. No emulator/Maestro test was run by instruction. |
+| ☐ | Confirm the mini-to-full journey on the user’s emulator, including repeated expand/collapse and playback continuity. | Intentionally open for manual verification; no runtime success claim is made. |
+
+**Stability status:** **Code-level surface-lifecycle fix implemented and statically validated; manual confirmation required.**
+
+
+### Video V2 lifecycle-leak and transition-smoothness hardening — 24 August 2026
+
+This follow-up addresses the reported mini/full transition instability and the requested memory/listener audit. No emulator, Maestro, or screenshot test was run.
+
+| Done | Lifecycle / UX checkpoint | Evidence |
+|---|---|---|
+| ☑ | Confirm the native surface is module-owned rather than mini/full-owned. | `VideoV2Module.tsx` owns one `VideoV2Surface`; `VideoV2Player.tsx` and `MiniVideoV2.tsx` contain no native surface mount. |
+| ☑ | Keep the native render view mounted across mini/full changes. | The module changes only the persistent surface host geometry; `MpvRenderViewManager.onDropViewInstance()` is therefore not invoked by ordinary presentation changes. |
+| ☑ | Make surface cleanup idempotent for actual teardown. | `VideoV2Surface.tsx` uses a single native child with `pointerEvents="none"`; native cleanup remains reserved for actual view/module teardown. |
+| ☑ | Remove native surface-attachment listener leaks. | `useVideoPlayerScreen.ts` stores the `onSurfaceAttached` subscription in `surfaceAttachedSubscription`, removes it after the first callback, and removes it on load cancellation and unmount. |
+| ☑ | Cancel delayed native callbacks and seek timers. | Controller-owned refs now cover surface-load, thumbnail, resume-seek, seek-release, loading-fallback, overlay-hide, and auto-advance timers; cleanup runs on teardown and replacement. |
+| ☑ | Preserve existing provider/controller listener cleanup. | The video controller’s native event and NotificationService registrations retain explicit unsubscribe calls; shared `TransportProvider` cleanup remains the ownership boundary for transport listeners and property observers. |
+| ☑ | Add a smooth mini/full transition without native view recreation. | `VideoV2Module.tsx` uses one persistent `Animated.Value`, memoized interpolated surface geometry, and crossfaded full/mini chrome layers. |
+| ☑ | Prevent hidden full-player sheets from appearing over mini mode. | `VideoV2Player` receives expanded visibility and closes More, playlist, and context panels when it becomes hidden. |
+| ☑ | Re-run static gates. | `tscheck_video_v2_lifecycle_animation.log`, `tscheck_video_v2_lifecycle_animation_fixed2.log`, and `tscheck_video_v2_lifecycle_ux.log` record TypeScript success; `eslint_video_v2_lifecycle_targeted.log` records `ESLINT_EXIT=0`. |
+| ☐ | Confirm repeated mini/full transitions, surface frames, animation smoothness, and teardown on the target emulator. | Intentionally open for manual verification by the user; no runtime claim is made. |
+
+**Lifecycle/transition status:** **Code-level leak protection and persistent-surface animation implemented; manual device confirmation remains open.**
+
+
+### Video V2 evidence-based UI/UX uplift and reference audit — 24 August 2026
+
+This supplemental block records the research and implementation batch requested after the observed unprofessional loading and media-surface treatment. The attached/source screenshot was treated as a symptom report only; it was not used as a visual asset or copied layout. Runtime testing remains intentionally open for the user’s manual pass.
+
+| Done | Research / implementation checkpoint | Evidence |
+|---|---|---|
+| ☑ | Inspect maintained open-source React Native player implementations. | `reference_codes/react-native-video-player` at commit `b5b484511e6a945e453d0827f29df4d166bc6ed9`; `reference_codes/react-native-video-controls` at commit `e20bd2674f27ae1b07f0580e1b7a499a41a9251f`. |
+| ☑ | Record licenses and prevent research code from entering production compilation. | Both snapshots are MIT; `reference_codes/README.md` records provenance and read-only rules; `tsconfig.json` excludes both `reference_codes` and the pre-existing `_reference_codes`. |
+| ☑ | Inspect primary Android playback and PiP guidance. | Android Developers playback controls, Media3 `PlayerView`, and PiP links and findings are recorded in `reference_codes/README.md`, `video player UI UX uplift.md`, and `/home/ubuntu/video_player_research_findings.md`. |
+| ☑ | Inspect primary Apple video guidance for cross-platform behavior. | Apple HIG Playing Video findings are cited in `video player UI UX uplift.md`; SIMBA must preserve aspect ratio, minimize loading content, and avoid audio mixing across modes. |
+| ☑ | Inspect Huawei/HarmonyOS safe-area and responsive-layout guidance. | Huawei official responsive-layout and safe-area references are cited in the uplift specification and research notes; the implementation keeps media edge-to-edge and applies insets to controls. |
+| ☑ | Decide whether a V3 folder is justified. | Decision: retain V2. Current V2 boundaries are appropriate; the defects are surface, state, and lifecycle hardening issues, not evidence for duplicating the architecture. |
+| ☑ | Create a detailed Netflix-level Video V2 uplift and edge-case specification. | `video player UI UX uplift.md` defines cinematic surface, loading/error states, full/mini/PiP hierarchy, responsive rules, safe areas, edge-case matrix, SOLID boundaries, and manual acceptance gates. |
+| ☑ | Replace page-theme loading/background treatment with a cinematic media surface. | `VideoV2Player.tsx` and `VideoV2Module.tsx` use the dedicated dark media surface token; the loading overlay is restrained, centered, and transparent over the surface. |
+| ☑ | Improve full-player scrim hierarchy and light-theme media contrast. | `VideoV2Controls.tsx` uses token-driven gradients for top/bottom scrims and media-safe muted text; no pale opaque control card is used. |
+| ☑ | Align loading state with actual playback semantics. | Spinner is shown for connection/buffering only; seeking retains the current frame and uses seek/state feedback rather than a full loading treatment. |
+| ☑ | Preserve smooth mini/full transition semantics. | Existing persistent-surface animation remains split into geometry and native-driver opacity animation; the native surface is not recreated. |
+| ☑ | Re-run static production gates after adding reference snapshots and uplift code. | `tscheck_video_v2_research_uplift_fixed2.log`: `TSC_EXIT=0`; `tscheck_video_v2_research_uplift_quality.log`: `TSC_EXIT=0`; `eslint_video_v2_research_uplift_quality.log`: `ESLINT_EXIT=0`. |
+| ☐ | Manually verify dark loading surface, first frame, buffering, fullscreen, mini/full transition, PiP, orientation, and all edge-case states. | Open for user manual testing; no emulator/Maestro/runtime claim is made. |
+
+**Video V2 uplift status:** **Research-backed implementation complete and statically validated; manual device acceptance remains open.**
+
+
+### Video Player V3 specification-first reset — 24 August 2026
+
+Manager feedback identifies the current player presentation as below professional quality. The next implementation is therefore a **clean-room Video Player V3**, specified before coding. The V3 document is [`video player V3 UI UX.md`](./video%20player%20V3%20UI%20UX.md); the existing V2 specification now links to this decision.
+
+| Done | Checkpoint | Evidence / gate |
+|---|---|---|
+| ☑ | Research current premium implementation patterns. | Mux 2026 React Native player architecture, Netflix playback UI engineering findings, maintained TheWidlarzGroup player source, and current Android/Apple/Huawei/HarmonyOS guidance reviewed. |
+| ☑ | Define V3 clean-room boundary. | No V2 visual, layout, style, icon, panel, loading treatment, hook, type, or presentation import/copy is permitted. |
+| ☑ | Define V3 premium visual direction. | Cinema Obsidian media plane, content-first hierarchy, transient controls, no light page-surface player, no oversized/duplicated control chrome. |
+| ☑ | Define V3 native-truth and source-fingerprint architecture. | Native session owns playback truth; JS owns user intent/presentation; source replacement is generation-guarded; full/mini/PiP are one session. |
+| ☑ | Define Huawei/HarmonyOS responsive rules. | Edge-to-edge media with inset interactive chrome, responsive control density, landscape/tablet/foldable behavior, and no fixed status-bar offsets. |
+| ☑ | Define six-wave, 36-step implementation plan. | V3 specification contains Waves A–F covering session, state, surface, controls, continuity, platform behavior, and proof gates. |
+| ☐ | Create V3 production folder and code. | Intentionally not started; begins only after specification review. |
+| ☐ | Run V3 static/build/manual gates. | Open until implementation exists; no success claim made. |
+
+**V3 status:** **Specification complete; clean-room implementation pending.**
+
+
+### Video Player V3 — Wave A implementation evidence — 24 August 2026
+
+Wave A is implemented as a clean-room foundation. No V3 file imports the V2 tree, and no V3 presentation/UI code has been created yet. This wave deliberately stops before rendering full, mini, PiP, controls, panels, icons, styles, or animations.
+
+| Done | Checkpoint | Evidence |
+|---|---|---|
+| ☑ | A1: Create the new V3 boundary. | `src/modules/playback/video/v3/` contains independent `domain`, `ports`, `session`, `controller`, `state`, and `infrastructure` boundaries plus a local README. |
+| ☑ | A2: Define source identity and clean fingerprinting. | `domain/VideoV3Types.ts` and `domain/VideoV3Fingerprint.ts` preserve URI, source, media kind, video lane, provider, and folder identity. |
+| ☑ | A3: Define native-truth session events and state. | `ports/VideoV3SessionPort.ts` and `domain/VideoV3Types.ts` define typed load, playback, buffering, cache, seeking, tracks, chapters, first-frame, EOF, and error contracts. |
+| ☑ | A4: Implement the presentation-neutral native session adapter. | `session/VideoV3MpvSession.ts` wraps the existing native mpv API with generation-aware loading, one listener registry, same-source no-reload behavior, and idempotent release. |
+| ☑ | A5: Implement typed intent serialization. | `controller/VideoV3IntentController.ts` serializes commands and prevents commands after disposal. |
+| ☑ | A6: Implement capability and state boundaries. | `state/VideoV3StateAdapter.ts`, `infrastructure/VideoV3PlatformCapabilities.ts`, and `ports/VideoV3SurfacePort.ts` expose truthful capabilities and a one-surface ownership contract. |
+| ☑ | Static TypeScript validation. | `tscheck_video_v3_wave_a.log`: `TSC_EXIT=0`. |
+| ☑ | Targeted V3 lint validation. | `eslint_video_v3_wave_a.log`: `ESLINT_EXIT=0`. |
+| ☑ | Clean-room scan. | V3 tree scan found no `v2`, `V2`, `video/v2`, or `VideoV2` references. |
+| ☐ | Wave B native-session hardening and presentation implementation. | Not started. |
+| ☐ | Manual device/emulator acceptance. | Not run; reserved for the user’s manual testing phase. |
+
+**Current V3 status:** **Wave A foundation implemented and statically validated. Wave B and all presentation work remain open.**
+
+
+### Video Player V3 — Wave B session hardening and state synchronization — 24 August 2026
+
+Wave B progressed only within the presentation-independent session layer. The V3 native adapter now reconciles event-driven updates with synchronous mpv properties, correlates file-loaded events to the requested native path, preserves an attached surface across source replacement, guards native callbacks against inactive generations, and exposes surface/refresh synchronization events. No presentation UI or host integration was added.
+
+| Done | Checkpoint | Evidence |
+|---|---|---|
+| ☑ | Native state refresh adapter. | `state/VideoV3NativeStateSynchronizer.ts` serializes refresh calls and reconciles state after file load, surface attachment, first frame, and EOF. |
+| ☑ | Pure synchronization reducer. | `state/reduceVideoV3SessionEvent.ts` handles typed native events and ignores stale generations before mutation. |
+| ☑ | Lifecycle refresh command. | `VideoV3SessionPort.refresh()` and the `refresh` intent allow future lifecycle hosts to reconcile mpv truth without direct native access. |
+| ☑ | Source replacement hardening. | `VideoV3MpvSession` tracks active file generation and expected native path; delayed state/EOF events from inactive files are ignored. |
+| ☑ | Synchronous load race hardening. | Autoplay intent is recorded before `loadFile`, so a synchronously emitted file-loaded event cannot lose the requested play intent. |
+| ☑ | Attached-surface continuity. | V3 snapshot preserves `hasSurfaceAttached` across media replacement and emits a typed `surface-attached` event. |
+| ☑ | Partial native read resilience. | `refresh()` reads playback state, position, duration, volume, mute, and speed independently so one unavailable property does not discard all reconciliation. |
+| ☑ | Static validation. | `tscheck_video_v3_wave_b.log`: `TSC_EXIT=0`; `eslint_video_v3_wave_b.log`: `ESLINT_EXIT=0`. |
+| ☑ | Clean-room scan. | V3 tree scan passed with no `v2`, `V2`, `video/v2`, or `VideoV2` references. |
+| ☐ | Native surface attach/reattach implementation. | Port and event contract exist; actual render-view integration remains open for the presentation/surface wave. |
+| ☐ | Seek serialization and cancellation. | The intent queue exists, but a dedicated seek transaction/cancellation policy remains open before visual scrubbing is implemented. |
+| ☐ | Runtime/manual acceptance. | Not run; reserved for the user’s manual testing phase. |
+
+**Current V3 status:** **Wave A complete; selected Wave B session/state hardening complete; surface integration, seek transaction completion, presentation, host cutover, and manual gates remain open.**
+
+
+### Video Player V3 — Waves A/B completion and Wave C foundation — 24 August 2026
+
+The remaining Wave A/B gates are now complete within the V3 clean-room foundation. Wave C added the dedicated seek coordinator and native render-surface bridge/ownership controller. This batch did not add the full-player or compact-player presentation host, controls, safe-area geometry, PiP UX, Android build verification, or manual device acceptance.
+
+| Done | Checkpoint | Evidence |
+|---|---|---|
+| ☑ | Finish all Wave A gates. | V3 domain, fingerprint, session/event ports, capabilities, source provenance, and clean-room directory are complete. |
+| ☑ | Finish all Wave B gates. | Lifecycle session, listener cleanup, stale-generation/path guards, native surface attachment state, seek supersession/cancellation, and explicit session states are implemented. |
+| ☑ | Dedicated seek cancellation. | `controller/VideoV3SeekCoordinator.ts` assigns request identities, supersedes stale queued targets, cancels on teardown, and distinguishes applied/superseded/cancelled outcomes. |
+| ☑ | Seek-controller integration. | `VideoV3IntentController` routes seek intents through the coordinator and invalidates seek intent before waiting for native teardown. |
+| ☑ | Native render-surface integration. | `surface/VideoV3NativeSurface.tsx` is the independent React Native wrapper around `MpvRenderView`; `surface/VideoV3SurfaceController.ts` owns one JS-side attachment lease and geometry/presentation state. |
+| ☑ | Surface continuity contract. | A compact/full/system presentation must update geometry or ownership without replacing the mounted native surface. |
+| ☑ | Wave C static checks. | `tscheck_video_v3_wave_c_final.log`: `TSC_EXIT=0`; `eslint_video_v3_wave_c_final.log`: `ESLINT_EXIT=0`; V3 clean-room scan passed. |
+| ☑ | Architecture presentation. | Eight-slide editable deck prepared: `manus-slides://GmpVPhiePq9j3ddBKKiNJW`. It summarizes the clean-room architecture, Wave B hardening, Wave C foundations, evidence, and open gates. |
+| ☐ | Wave C visual presentation layer. | Cinema Obsidian tokens, full/compact host, controls, loading surface, safe-area geometry, and motion remain open. |
+| ☐ | Android build in this batch. | Not run. |
+| ☐ | Manual runtime acceptance. | Not run; user-directed manual device/emulator verification remains required. |
+
+**Current V3 status:** **Waves A and B foundation complete. Wave C seek and native-surface foundations complete. Presentation/host work and manual acceptance remain open.**
+
+
+### Video Player V3 — Cinema Obsidian controls, safe geometry, and buffer policy — 24 August 2026
+
+Implemented the V3 control-layer foundation after auditing the native Android mpv bridge and existing playback buffer-range behavior. This is presentation code created inside the independent `video/v3/presentation` boundary; it does not import or adapt any older player presentation module.
+
+| Done | Checkpoint | Evidence |
+|---|---|---|
+| ☑ | Native bridge audit. | `MpvBridgeModule.kt` maps `cache-buffering-state` and `paused-for-cache` to buffering, `demuxer-cache-state.seekable-ranges` to cache ranges, and `seekable`, `seeking`, and `surfaceAttached` to dedicated signals. C++ uses absolute seeks and configured mpv cache/readahead options. |
+| ☑ | V3 buffer-range policy. | `domain/VideoV3BufferPolicy.ts` preserves normalized native ranges and renders only the active range containing the playhead; disconnected islands ahead are hidden rather than painted as continuous cache. |
+| ☑ | Cinema Obsidian icons. | `presentation/VideoV3Icon.tsx` contains original V3 icon geometry for transport, captions, fullscreen, locking, volume, close, and navigation actions. |
+| ☑ | Capability-safe actions. | `presentation/VideoV3ControlLayer.tsx` renders secondary actions only when callbacks and native capabilities exist. Unsupported actions are omitted. |
+| ☑ | Edge-to-edge safe geometry. | `presentation/VideoV3PresentationTypes.ts` and `useVideoV3PresentationGeometry.ts` calculate inset-aware top/bottom/horizontal content geometry from current safe-area insets and viewport dimensions, including compact and landscape adjustments. |
+| ☑ | Full and compact control layer. | `VideoV3ControlLayer` provides content-first top chrome, minimal transport, truthful progress rail, status line, center action for paused/finished/error, and compact controls with expand/close actions. |
+| ☑ | Safe wrapper. | `VideoV3SafeControlLayer.tsx` prevents a future host from forgetting safe-area geometry. |
+| ☑ | Static validation. | `tscheck_video_v3_cinema_controls.log`: `TSC_EXIT=0`; `eslint_video_v3_cinema_controls.log`: `ESLINT_EXIT=0`. |
+| ☐ | First-frame/loading surface. | Still open; controls intentionally do not claim this behavior yet. |
+| ☐ | Host cutover and native runtime verification. | Not performed; presentation host integration, Android build, emulator/Maestro, Huawei-device, and manual playback checks remain open. |
+
+**Buffer-island decision:** V3 retains all native ranges in state, never bridges meaningful gaps during normalization, and exposes only the playhead-containing range in the visible rail. An absolute seek outside the active range is allowed when native `seekable` is true; mpv owns the network fetch and cache-boundary pause while V3 reports buffering separately.
+
+
+### Video Player V3 — first-frame loading and route-free host cutover — 24 August 2026
+
+The independent V3 host is now the active video branch of `PlaybackOverlayHost`. The video lane no longer mounts the previous video presentation or wraps V3 in the generic transport observer, avoiding duplicate video state ownership. Audio remains on its separate lane and transport boundary.
+
+| Done | Checkpoint | Evidence |
+|---|---|---|
+| ☑ | First-frame loading gate. | `loading/VideoV3FirstFrameLoading.tsx` keeps the media surface dark and controls visually gated until V3 receives `hasFirstFrame`; reveal is delayed to avoid a short loading flash and fades with a native-driver opacity animation after first frame. |
+| ☑ | Single V3 host composition. | `host/VideoV3Host.tsx` owns one V3 playback unit, state adapter subscription, surface controller, native pointer acquisition, source-fingerprint load effect, loading layer, and control layer. |
+| ☑ | Source-only loading effect. | V3 loads when the source fingerprint changes, not when presentation changes or when the initial start-position field is cleared during collapse. |
+| ☑ | Presentation continuity. | Full and compact branches remain inside one mounted V3 host; the same surface controller and session are retained while `PlaybackContext` changes presentation. |
+| ☑ | Close versus presentation lifecycle. | Host cleanup releases the V3 unit only when the host truly unmounts. Full/mini presentation changes call only the surface presentation boundary. |
+| ☑ | Overlay host cutover. | `PlaybackOverlayHost.tsx` now sends the video lane to `VideoV3Host`; no legacy video host import remains there. |
+| ☑ | Static validation. | `tscheck_video_v3_host_cutover.log`: `TSC_EXIT=0`; `eslint_video_v3_host_cutover.log`: `ESLINT_EXIT=0`. |
+| ☐ | Runtime acceptance. | Not run. Manual verification remains required for first frame, source replacement, play/pause, seeking, compact/full continuity, close, and background behavior. |
+| ☐ | Transition motion/PiP/orientation. | Not implemented in this batch; remains open in Waves E/F. |
+
+**Current V3 status:** **Session, synchronization, surface, controls, first-frame loading, and video host cutover are implemented and statically validated. Android build and manual/device acceptance remain open.**
+
+
+### Video Player V3 — transition animation and Android PiP bridge — 24 August 2026
+
+Implemented the remaining V3 presentation-continuity foundations without importing legacy video presentation code.
+
+| Done | Checkpoint | Evidence |
+|---|---|---|
+| ☑ | Interrupted full/compact transitions. | `presentation/VideoV3PresentationShell.tsx` animates the projection container rather than replacing the native render view. Width, height, offsets, radius, and chrome opacity are animated; transition generations invalidate stale completion paths. |
+| ☑ | One surface across projections. | `VideoV3NativeSurface` remains a single child of the V3 presentation shell. Full/compact changes update projection geometry and chrome pointer ownership only. |
+| ☑ | Typed PiP native contract. | Added `enterPip`, `exitPip`, and `exitPipAndFinish` to `NativeMpvPlayer.Spec` and `player.api.ts`; added typed `onPipModeChanged`, `onPipPlayPause`, `onPipExpand`, and `onPipClose` events. |
+| ☑ | V3 PiP adapter. | `platform/VideoV3PipAdapter.ts` owns Android capability gating, entering/pip/exiting state, event cleanup, and remote-action dispatch. |
+| ☑ | Host PiP continuity. | V3 host hides normal chrome during PiP entry/active/exit, retains the session and native surface, and routes remote play/pause, expand, and close through V3 boundaries. |
+| ☑ | Android bridge compatibility. | `MpvBridgeModule.enterPip` now uses `PictureInPictureParams` on API 26+ and the parameterless PiP call on API 24–25. Existing manifest/activity support was audited and retained. |
+| ☑ | Static checks. | `tscheck_video_v3_pip_transition.log`: `TSC_EXIT=0`; `eslint_video_v3_pip_transition.log`: `ESLINT_EXIT=0`. |
+| ☑ | Android Kotlin compile. | `android_compile_video_v3_pip.log`: `ANDROID_KOTLIN_EXIT=0`, Gradle build successful. |
+| ☐ | Device acceptance. | PiP entry/exit, remote actions, task restoration, aspect ratio, interrupted transitions, and configuration changes remain unverified until manual Android testing. |
+| ☐ | Orientation/background behavior. | Still open in the V3 specification. |
+
+
+### Video Player V3 — P0 native lifecycle and callback remediation — 24 August 2026
+
+Implemented the first native remediation batch after the Android bridge/code-quality review. The audio player was audited for neutral buffering behavior only; no audio presentation code or UI structure was copied.
+
+| Done | Checkpoint | Evidence |
+|---|---|---|
+| ☑ | Native lifecycle gate. | Added `native_state.h` read leases and an exclusive `g_mpvLifecycleMutex` around create, surface replacement, and destroy. Native command/query entry points now reject handles that are not the active initialized pointer. |
+| ☑ | Surface/global-reference teardown. | `nativeDestroy()` wakes and joins the event thread, deletes `g_surface`, clears pending load requests, then destroys the mpv handle. |
+| ☑ | V3 request-token correlation. | Added `loadFileWithRequestId` across native C++, Kotlin JNI facade, `MpvBridgeModule`, TypeScript native contract, `player.api.ts`, and `VideoV3MpvSession`. `fileLoaded` now includes `requestId` and `resolvedPath`. |
+| ☑ | Content-URI safety. | V3 no longer depends only on original URI equality when Android transforms `content://` into `fd://N`; mismatched native paths do not consume pending tokens, preventing stale source cross-talk. |
+| ☑ | JNI event-thread reuse. | `event.cpp` caches one JNI attachment for the mpv event thread, clears Java callback exceptions, and detaches once at event-loop exit. |
+| ☑ | Listener concurrency. | `MPVLib.listeners` now uses `CopyOnWriteArrayList`, de-duplicates listeners, and isolates listener exceptions so one callback cannot stop fan-out. |
+| ☑ | Event pressure reduction. | High-volume raw event/property logging was disabled in the native event dispatcher and MPVLib callback path. Milestone/error logging remains. |
+| ☑ | Audio comparison. | Audited `src/modules/playback/audio/rangeNormalization.ts`; retained only neutral finite validation, duration clamping, sorting, epsilon merging, meaningful-gap preservation, and active-playhead-window rendering concepts in V3. |
+| ☑ | TypeScript and lint. | `tscheck_video_v3_p0_remediation.log`: `TSC_EXIT=0`; `eslint_video_v3_p0_remediation.log`: `ESLINT_EXIT=0`. |
+| ☑ | Android native compile. | `android_compile_mpv_v3_remediation.log`: `ANDROID_REMEDIATION_EXIT=0`; Gradle native/Kotlin tasks succeeded after correcting the request-payload declaration. |
+| ☐ | Runtime acceptance. | Still open: content-provider playback, replacement races, concurrent surface teardown, callback pressure, and close/reopen behavior on the emulator/device. |
+
+
+#### P0 remediation follow-up — same-path replacement and final validation
+
+The native pending-load queue now removes older pending tokens for the same resolved native path before enqueueing a new V3 request. This prevents a repeated load of the same local file or transformed `fd://N` source from consuming an obsolete token and leaving the current V3 generation without a matching `fileLoaded` event.
+
+Final validation after this correction:
+
+- `tscheck_video_v3_p0_remediation_final.log`: `TSC_EXIT=0`.
+- `eslint_video_v3_p0_remediation_final.log`: `ESLINT_EXIT=0` for V3 and native TypeScript boundaries.
+- `android_compile_mpv_v3_remediation_final.log`: `ANDROID_REMEDIATION_EXIT=0`; Kotlin and external native build tasks succeeded.
+- `clean_room_p0_remediation_final.log`: `CLEAN_ROOM_SCAN=0`.
+
+Manual runtime gates remain open and are not marked complete.
+
+
+### Video Player V3 — first-frame startup stall remediation — 25 August 2026
+
+A device screenshot showed the V3 host mounted but stuck at `Preparing video`, `Starting the first frame…`, and `0:00`. The captured Android logcat window contained no SIMBA/mpv/V3 playback traces, so it was negative evidence about the capture method rather than proof of a native error.
+
+Code tracing found the startup vulnerability in the `MPV_EVENT_FILE_LOADED` handoff: `event.cpp` read mpv's `path` property and the pending-load queue returned `{}` when the path was empty or normalized differently from the Android-resolved path. V3 then rejected the callback because the request token was absent, leaving the active file generation unset and blocking first-frame progression.
+
+The queue now preserves the token for an unambiguous single pending request when mpv reports an empty or normalized path, while still rejecting ambiguous multi-request matches. Same-path pending requests replace older tokens. A low-volume native diagnostic now reports only path length, token-match status, and payload length. Media URLs are not logged.
+
+Validation: `TSC_EXIT=0`; Android Kotlin/external-native build `ANDROID_BUILD_EXIT=0`. Runtime acceptance remains open. The next manual test must use a newly rebuilt and installed APK so `loadFileWithRequestId` and the corrected native queue are actually present. Observe `fileLoaded` token match, `videoReconfig`, first-frame transition, and position progression.
+
+
+### Video Player V3 — TextureView background-prop crash fix — 25 August 2026
+
+The device error reported `TextureView doesn't support displaying a background drawable` while Fabric updated `MpvRenderView.backgroundColor`. The V3 host was forwarding a dark media background through the native surface style, which is unsupported by Android `TextureView`.
+
+Fixed the issue by making the V3 projection shell the sole owner of the cinematic background and stripping `backgroundColor` from styles at the `VideoV3NativeSurface` boundary. The host no longer passes a background-bearing style to `MpvRenderView`. This keeps the native surface responsible only for rendering and geometry, while the surrounding V3 shell owns visual background treatment.
+
+Validation:
+
+- `surface_background_audit.txt`: only the defensive `backgroundColor` removal remains inside the V3 surface wrapper; no host surface call forwards a background color.
+- `tscheck_video_v3_texture_surface_fix.log`: `TSC_EXIT=0`.
+- `eslint_video_v3_texture_surface_fix.log`: `ESLINT_EXIT=0`.
+- Attached images were not reopened with file tools.
+- APK installation and device retest remain open; rebuild/reinstall is required before manual verification.

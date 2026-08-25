@@ -1,0 +1,23 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:24:std::atomic<bool> g_running{false};
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:25:std::atomic<bool> g_initialized{false};
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:26:std::shared_mutex g_mpvLifecycleMutex;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:45:if (g_initialized.load()) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:60:g_initialized.store(true);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:61:g_running.store(true);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:67:g_running.store(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:68:g_initialized.store(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:159:std::unique_lock<std::shared_mutex> lifecycleLock(g_mpvLifecycleMutex);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:165:g_initialized.store(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:263:std::unique_lock<std::shared_mutex> lifecycleLock(g_mpvLifecycleMutex);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:266:g_running.store(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:267:g_initialized.store(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:306:std::unique_lock<std::shared_mutex> lifecycleLock(g_mpvLifecycleMutex);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:307:if (!nativePtr || nativePtr != reinterpret_cast<jlong>(g_mpv) || !g_initialized.load()) return;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:323:if (!g_initialized.load()) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\event.cpp:203:while (g_running.load()) {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\event.cpp:217:g_running.store(false);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.h:14:extern std::atomic<bool> g_running;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.h:15:extern std::atomic<bool> g_initialized;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.h:16:extern std::shared_mutex g_mpvLifecycleMutex;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.h:21:: lock_(g_mpvLifecycleMutex),
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.h:25:return handle_ != nullptr && handle_ == g_mpv && g_initialized.load();

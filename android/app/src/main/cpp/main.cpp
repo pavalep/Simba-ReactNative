@@ -7,6 +7,9 @@
 #include <map>
 #include <cstring>
 #include <dlfcn.h>
+#include <shared_mutex>
+#include <mutex>
+#include <native_state.h>
 #include <client.h>   // mpv
 
 #define LOG_TAG "MpvJNI"
@@ -18,9 +21,11 @@
 
 JavaVM *g_vm = nullptr;
 mpv_handle *g_mpv = nullptr;
+std::atomic<bool> g_running{false};
+std::atomic<bool> g_initialized{false};
+std::shared_mutex g_mpvLifecycleMutex;
 static pthread_t g_eventThread = 0;
-volatile bool g_running = false;
-volatile bool g_initialized = false;  // true after mpv_initialize()
+ANativeWindow *g_window = nullptr;
 
 // Cached Java references
 jclass g_cls_MPVLib = nullptr;
@@ -37,7 +42,7 @@ static bool initializeMpv(mpv_handle *mpv) {
         LOGE("[PlaybackTrace][Native][initialize] null mpv handle");
         return false;
     }
-    if (g_initialized) {
+    if (g_initialized.load()) {
         LOGI("[PlaybackTrace][Native][initialize] already initialized");
         return true;
     }
@@ -52,15 +57,15 @@ static bool initializeMpv(mpv_handle *mpv) {
     LOGI("[PlaybackTrace][Native][initialize] mpv_initialize succeeded");
     mpv_request_log_messages(mpv, "v");
     LOGI("[PlaybackTrace][Native][initialize] requested mpv verbose logs");
-    g_initialized = true;
-    g_running = true;
+    g_initialized.store(true);
+    g_running.store(true);
     if (pthread_create(&g_eventThread, nullptr, [](void *) -> void * {
             eventLoop();
             return nullptr;
         }, nullptr) != 0) {
         LOGE("Failed to create mpv event thread");
-        g_running = false;
-        g_initialized = false;
+        g_running.store(false);
+        g_initialized.store(false);
         mpv_terminate_destroy(mpv);
         return false;
     }
@@ -151,12 +156,13 @@ static JNIEnv *getEnv() {
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass, jstring caFilePath) {
+    std::unique_lock<std::shared_mutex> lifecycleLock(g_mpvLifecycleMutex);
     if (g_mpv) {
         LOGI("mpv instance already exists, returning existing");
         return reinterpret_cast<jlong>(g_mpv);
     }
 
-    g_initialized = false;
+    g_initialized.store(false);
 
     mpv_handle *mpv = mpv_create();
     if (!mpv) {
@@ -254,30 +260,36 @@ Java_com_simba_player_mpv_MPVLib_nativeCreate(JNIEnv *env, jclass, jstring caFil
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeDestroy(JNIEnv *env, jclass) {
+    std::unique_lock<std::shared_mutex> lifecycleLock(g_mpvLifecycleMutex);
     if (!g_mpv) return;
 
-    g_running = false;
-    g_initialized = false;
-
-    mpv_wakeup(g_mpv);
+    g_running.store(false);
+    g_initialized.store(false);
+    mpv_handle *handle = g_mpv;
+    mpv_wakeup(handle);
     if (g_eventThread) {
         pthread_join(g_eventThread, nullptr);
         g_eventThread = 0;
     }
 
-    mpv_destroy(g_mpv);
+    if (g_window) {
+        ANativeWindow_release(g_window);
+        g_window = nullptr;
+    }
+    clearPendingLoadRequests();
+    mpv_destroy(handle);
     g_mpv = nullptr;
     LOGI("mpv instance destroyed");
 }
 
-// Global reference to the surface so mpv's thread can use it
-static jobject g_surface = nullptr;
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetPropertyString(
     JNIEnv *env, jclass, jlong nativePtr, jstring property, jstring value) {
-    if (!nativePtr || !property) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    if (!property) return;
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *prop = env->GetStringUTFChars(property, nullptr);
     const char *val = value ? env->GetStringUTFChars(value, nullptr) : nullptr;
     int result = mpv_set_property_string(mpv, prop, val);
@@ -291,48 +303,45 @@ Java_com_simba_player_mpv_MPVLib_nativeSetPropertyString(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
     JNIEnv *env, jclass, jlong nativePtr, jobject surface) {
-    if (!nativePtr) return;
+    std::unique_lock<std::shared_mutex> lifecycleLock(g_mpvLifecycleMutex);
+    if (!nativePtr || nativePtr != reinterpret_cast<jlong>(g_mpv) || !g_initialized.load()) return;
 
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    mpv_handle *mpv = g_mpv;
 
     if (surface) {
         // ── Attach surface ──────────────────────────────────────────────
-        if (g_surface) {
-            env->DeleteGlobalRef(g_surface);
-            g_surface = nullptr;
-        }
-        g_surface = env->NewGlobalRef(surface);
-        if (!g_surface) {
-            LOGE("Failed to create GlobalRef for surface");
+        // mpv's Android wid contract requires an ANativeWindow pointer, not
+        // a JNI jobject/global-reference address. Passing the latter can
+        // corrupt Android file-descriptor ownership during surface churn.
+        ANativeWindow *newWindow = ANativeWindow_fromSurface(env, surface);
+        if (!newWindow) {
+            LOGE("Surface attach rejected: ANativeWindow_fromSurface returned null");
             return;
         }
 
-        if (!g_initialized) {
+        if (g_window) {
+            ANativeWindow_release(g_window);
+            g_window = nullptr;
+        }
+        g_window = newWindow;
+
+        if (!g_initialized.load()) {
             LOGE("Surface attach rejected because mpv is not initialized");
-            env->DeleteGlobalRef(g_surface);
-            g_surface = nullptr;
+            ANativeWindow_release(g_window);
+            g_window = nullptr;
             return;
-        } else {
-
-            // Re-attach — mpv was told to set vo=null (destroying the gpu
-            // VO and releasing the old ANativeWindow) before this call.
-            // Now we must update the wid option so that when vo=gpu is
-            // restored (from the Java side), mpv creates a new ANativeWindow
-            // from the new Surface.
-            //
-            // mpv_set_option("wid") after init is typically UB, but it
-            // works safely here because the gpu VO is currently unloaded
-            // (vo=null), so there is nothing actively using the wid value.
-            // The option is simply stored and picked up when the VO is
-            // re-initialized.
-            int64_t wid = reinterpret_cast<intptr_t>(g_surface);
-            int result = mpv_set_property(mpv, "wid", MPV_FORMAT_INT64, &wid);
-            if (result < 0) {
-                LOGW("mpv_set_property(wid) on re-attach failed: %s", mpv_error_string(result));
-            }
-
-            LOGI("Surface re-attached with new wid");
         }
+
+        // mpv was told to set vo=null before this call, so the VO is not
+        // actively using the previous window. Store the real native window
+        // pointer; Java restores vo=gpu after this JNI call returns.
+        int64_t wid = reinterpret_cast<intptr_t>(g_window);
+        int result = mpv_set_property(mpv, "wid", MPV_FORMAT_INT64, &wid);
+        if (result < 0) {
+            LOGW("mpv_set_property(wid) on attach failed: %s", mpv_error_string(result));
+        }
+
+        LOGI("Surface attached with ANativeWindow wid");
 
         // Emit surfaceAttached event
         JNIEnv* jniEnv = getEnv();
@@ -345,15 +354,14 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
         }
     } else {
         // ── Detach surface ─────────────────────────────────────────────
-        // NOTE: The caller (MpvRenderView) should have set vo=null BEFORE
-        // calling this. This forces mpv's gpu VO to release its
-        // ANativeWindow reference, making it safe to delete the JNI global
-        // ref without causing a stale reference crash later.
-        if (g_surface) {
-            env->DeleteGlobalRef(g_surface);
-            g_surface = nullptr;
+        // NOTE: The caller (MpvRenderView) sets vo=null BEFORE calling this.
+        // That forces mpv's gpu VO to release its reference before we release
+        // the ANativeWindow acquired by ANativeWindow_fromSurface().
+        if (g_window) {
+            ANativeWindow_release(g_window);
+            g_window = nullptr;
         }
-        LOGI("Surface detached (JNI ref cleaned up)");
+        LOGI("Surface detached (ANativeWindow ref released)");
     }
 }
 
@@ -371,40 +379,61 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSurfaceChanged(
     JNIEnv *env, jclass, jlong nativePtr, jint width, jint height) {
-    if (!nativePtr || !g_initialized) return;
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
     LOGI("Surface size changed: %dx%d (handled by ANativeWindow)", width, height);
 }
 
 // ── Playback Control ────────────────────────────────────────────────────────
 
-extern "C" JNIEXPORT void JNICALL
-Java_com_simba_player_mpv_MPVLib_nativeLoadFile(
-    JNIEnv *env, jclass, jlong nativePtr, jstring path) {
-    if (!nativePtr || !path || !g_initialized) {
-        LOGE("nativeLoadFile rejected: mpv is not initialized or path is null");
+static void nativeLoadFileInternal(JNIEnv *env, jlong nativePtr, jstring path, jstring requestId) {
+    if (!path) {
+        LOGE("nativeLoadFile rejected: path is null");
+        return;
+    }
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) {
+        LOGE("nativeLoadFile rejected: mpv is not the active initialized handle");
         return;
     }
 
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    mpv_handle *mpv = lease.get();
     const char *utfPath = env->GetStringUTFChars(path, nullptr);
-    LOGI("[PlaybackTrace][Native][loadFile] begin path=%s initialized=%d", utfPath, g_initialized ? 1 : 0);
-    const char *cmd[] = {"loadfile", utfPath, nullptr};
-    int result = mpv_command(mpv, cmd);
-    if (result < 0) {
-        LOGE("[PlaybackTrace][Native][loadFile] loadfile command failed result=%d error=%s", result, mpv_error_string(result));
-    } else {
-        LOGI("[PlaybackTrace][Native][loadFile] loadfile command accepted result=%d", result);
+    const char *utfRequestId = requestId ? env->GetStringUTFChars(requestId, nullptr) : nullptr;
+    if (utfRequestId && utfRequestId[0] != '\0') {
+        enqueueLoadRequest({utfRequestId, utfPath});
     }
+    const char *cmd[] = {"loadfile", utfPath, nullptr};
+    const int result = mpv_command(mpv, cmd);
+    if (result < 0 && utfRequestId && utfRequestId[0] != '\0') {
+        dropLoadRequest(utfRequestId);
+    }
+    LOGI("[PlaybackTrace][Native][loadFile] result=%d pathLength=%zu token=%s",
+         result, strlen(utfPath), utfRequestId && utfRequestId[0] != '\0' ? "present" : "none");
+    if (utfRequestId) env->ReleaseStringUTFChars(requestId, utfRequestId);
     env->ReleaseStringUTFChars(path, utfPath);
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_simba_player_mpv_MPVLib_nativeLoadFile(
+    JNIEnv *env, jclass, jlong nativePtr, jstring path) {
+    nativeLoadFileInternal(env, nativePtr, path, nullptr);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_simba_player_mpv_MPVLib_nativeLoadFileWithRequestId(
+    JNIEnv *env, jclass, jlong nativePtr, jstring path, jstring requestId) {
+    nativeLoadFileInternal(env, nativePtr, path, requestId);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativePlay(JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) {
-        LOGE("[PlaybackTrace][Native][play] rejected null pointer");
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) {
+        LOGE("[PlaybackTrace][Native][play] rejected inactive pointer");
         return;
     }
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    mpv_handle *mpv = lease.get();
     int result = mpv_set_property_string(mpv, "pause", "no");
     LOGI("[PlaybackTrace][Native][play] pause=no result=%d", result);
     if (result < 0) LOGE("[PlaybackTrace][Native][play] error=%s", mpv_error_string(result));
@@ -412,11 +441,12 @@ Java_com_simba_player_mpv_MPVLib_nativePlay(JNIEnv *env, jclass, jlong nativePtr
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativePause(JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) {
-        LOGE("[PlaybackTrace][Native][pause] rejected null pointer");
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) {
+        LOGE("[PlaybackTrace][Native][pause] rejected inactive pointer");
         return;
     }
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    mpv_handle *mpv = lease.get();
     int result = mpv_set_property_string(mpv, "pause", "yes");
     LOGI("[PlaybackTrace][Native][pause] pause=yes result=%d", result);
     if (result < 0) LOGE("[PlaybackTrace][Native][pause] error=%s", mpv_error_string(result));
@@ -424,8 +454,9 @@ Java_com_simba_player_mpv_MPVLib_nativePause(JNIEnv *env, jclass, jlong nativePt
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeStop(JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *args[] = {"stop", nullptr};
     mpv_command(mpv, args);
 }
@@ -433,8 +464,9 @@ Java_com_simba_player_mpv_MPVLib_nativeStop(JNIEnv *env, jclass, jlong nativePtr
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeTogglePlayPause(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     int pause;
     mpv_get_property(mpv, "pause", MPV_FORMAT_FLAG, &pause);
     mpv_set_property_string(mpv, "pause", pause ? "no" : "yes");
@@ -443,8 +475,9 @@ Java_com_simba_player_mpv_MPVLib_nativeTogglePlayPause(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSeek(
     JNIEnv *env, jclass, jlong nativePtr, jdouble position) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "%.3f", position);
     const char *args[] = {"seek", cmd, "absolute", nullptr};
@@ -454,8 +487,9 @@ Java_com_simba_player_mpv_MPVLib_nativeSeek(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSeekRelative(
     JNIEnv *env, jclass, jlong nativePtr, jdouble seconds) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "%.3f", seconds);
     const char *args[] = {"seek", cmd, "relative", nullptr};
@@ -465,8 +499,9 @@ Java_com_simba_player_mpv_MPVLib_nativeSeekRelative(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeStepFrame(
     JNIEnv *env, jclass, jlong nativePtr, jint direction) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     if (direction > 0) {
         const char *args[] = {"frame-step", nullptr};
         mpv_command(mpv, args);
@@ -479,8 +514,9 @@ Java_com_simba_player_mpv_MPVLib_nativeStepFrame(
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeScreenshot(
     JNIEnv *env, jclass, jlong nativePtr, jstring outputPath) {
-    if (!nativePtr) return env->NewStringUTF("");
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return env->NewStringUTF("");
+    mpv_handle *mpv = lease.get();
     const char *path = env->GetStringUTFChars(outputPath, nullptr);
     const char *args[] = {"screenshot-to-file", path, nullptr};
     mpv_command(mpv, args);
@@ -493,11 +529,12 @@ Java_com_simba_player_mpv_MPVLib_nativeScreenshot(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetVolume(
     JNIEnv *env, jclass, jlong nativePtr, jdouble volume) {
-    if (!nativePtr) {
-        LOGE("[PlaybackTrace][Native][volume] rejected null pointer");
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) {
+        LOGE("[PlaybackTrace][Native][volume] rejected inactive pointer");
         return;
     }
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    mpv_handle *mpv = lease.get();
     int result = mpv_set_property(mpv, "volume", MPV_FORMAT_DOUBLE, &volume);
     LOGI("[PlaybackTrace][Native][volume] volume=%f result=%d", volume, result);
     if (result < 0) LOGE("[PlaybackTrace][Native][volume] error=%s", mpv_error_string(result));
@@ -506,8 +543,9 @@ Java_com_simba_player_mpv_MPVLib_nativeSetVolume(
 extern "C" JNIEXPORT jdouble JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeGetVolume(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return 0;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return 0;
+    mpv_handle *mpv = lease.get();
     double vol = 100;
     mpv_get_property(mpv, "volume", MPV_FORMAT_DOUBLE, &vol);
     return vol;
@@ -516,8 +554,9 @@ Java_com_simba_player_mpv_MPVLib_nativeGetVolume(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetMuted(
     JNIEnv *env, jclass, jlong nativePtr, jboolean muted) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     int flag = muted ? 1 : 0;
     mpv_set_property(mpv, "mute", MPV_FORMAT_FLAG, &flag);
 }
@@ -525,8 +564,9 @@ Java_com_simba_player_mpv_MPVLib_nativeSetMuted(
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeGetMuted(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return JNI_FALSE;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return JNI_FALSE;
+    mpv_handle *mpv = lease.get();
     int muted = 0;
     mpv_get_property(mpv, "mute", MPV_FORMAT_FLAG, &muted);
     return muted ? JNI_TRUE : JNI_FALSE;
@@ -537,16 +577,18 @@ Java_com_simba_player_mpv_MPVLib_nativeGetMuted(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetSpeed(
     JNIEnv *env, jclass, jlong nativePtr, jdouble speed) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     mpv_set_property(mpv, "speed", MPV_FORMAT_DOUBLE, &speed);
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeGetSpeed(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return 1.0;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return 1.0;
+    mpv_handle *mpv = lease.get();
     double speed = 1.0;
     mpv_get_property(mpv, "speed", MPV_FORMAT_DOUBLE, &speed);
     return speed;
@@ -557,8 +599,9 @@ Java_com_simba_player_mpv_MPVLib_nativeGetSpeed(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetLoopMode(
     JNIEnv *env, jclass, jlong nativePtr, jint mode) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
 
     // Clear both native loop flags before enabling the requested mode. Without
     // this, switching from repeat-one to repeat-all leaves loop-file=inf set;
@@ -578,8 +621,9 @@ Java_com_simba_player_mpv_MPVLib_nativeSetLoopMode(
 extern "C" JNIEXPORT jint JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeGetLoopMode(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return 0;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return 0;
+    mpv_handle *mpv = lease.get();
     char *val = nullptr;
     if (mpv_get_property(mpv, "loop-file", MPV_FORMAT_STRING, &val) >= 0 && val) {
         const bool loopFile = strcmp(val, "inf") == 0 || strcmp(val, "yes") == 0;
@@ -600,8 +644,10 @@ Java_com_simba_player_mpv_MPVLib_nativeGetLoopMode(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeLoadPlaylist(
     JNIEnv *env, jclass, jlong nativePtr, jobjectArray paths, jint startIndex) {
-    if (!nativePtr || !paths) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    if (!paths) return;
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *clearArgs[] = {"playlist-clear", nullptr};
     mpv_command(mpv, clearArgs);
     jsize count = env->GetArrayLength(paths);
@@ -623,8 +669,9 @@ Java_com_simba_player_mpv_MPVLib_nativeLoadPlaylist(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativePlaylistNext(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *args[] = {"playlist-next", nullptr};
     mpv_command(mpv, args);
 }
@@ -632,8 +679,9 @@ Java_com_simba_player_mpv_MPVLib_nativePlaylistNext(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativePlaylistPrev(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *args[] = {"playlist-prev", nullptr};
     mpv_command(mpv, args);
 }
@@ -641,8 +689,9 @@ Java_com_simba_player_mpv_MPVLib_nativePlaylistPrev(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativePlaylistRemove(
     JNIEnv *env, jclass, jlong nativePtr, jint index) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     char cmd[32];
     snprintf(cmd, sizeof(cmd), "%d", index);
     const char *args[] = {"playlist-remove", cmd, nullptr};
@@ -652,8 +701,9 @@ Java_com_simba_player_mpv_MPVLib_nativePlaylistRemove(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativePlaylistShuffle(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *args[] = {"playlist-shuffle", nullptr};
     mpv_command(mpv, args);
 }
@@ -661,8 +711,9 @@ Java_com_simba_player_mpv_MPVLib_nativePlaylistShuffle(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativePlaylistClear(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *clearArgs[] = {"playlist-clear", nullptr};
     mpv_command(mpv, clearArgs);
 }
@@ -672,8 +723,9 @@ Java_com_simba_player_mpv_MPVLib_nativePlaylistClear(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSelectTrack(
     JNIEnv *env, jclass, jlong nativePtr, jint trackId) {
-    if (!nativePtr) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     mpv_set_property(mpv, "vid", MPV_FORMAT_INT64, &trackId);
 }
 
@@ -682,8 +734,10 @@ Java_com_simba_player_mpv_MPVLib_nativeSelectTrack(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetVideoFilter(
     JNIEnv *env, jclass, jlong nativePtr, jstring filter, jboolean enable) {
-    if (!nativePtr || !filter) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    if (!filter) return;
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *utf = env->GetStringUTFChars(filter, nullptr);
     if (enable) {
         const char *cmd[] = {"vf", "add", utf, nullptr};
@@ -698,8 +752,10 @@ Java_com_simba_player_mpv_MPVLib_nativeSetVideoFilter(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetAudioFilter(
     JNIEnv *env, jclass, jlong nativePtr, jstring filter, jboolean enable) {
-    if (!nativePtr || !filter) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    if (!filter) return;
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *utf = env->GetStringUTFChars(filter, nullptr);
     if (enable) {
         const char *cmd[] = {"af", "add", utf, nullptr};
@@ -716,8 +772,9 @@ Java_com_simba_player_mpv_MPVLib_nativeSetAudioFilter(
 extern "C" JNIEXPORT jdouble JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeGetPosition(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return 0;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return 0;
+    mpv_handle *mpv = lease.get();
     double pos = 0;
     int result = mpv_get_property(mpv, "time-pos", MPV_FORMAT_DOUBLE, &pos);
     LOGI("[PlaybackTrace][Native][getPosition] result=%d position=%f", result, pos);
@@ -727,8 +784,9 @@ Java_com_simba_player_mpv_MPVLib_nativeGetPosition(
 extern "C" JNIEXPORT jdouble JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeGetDuration(
     JNIEnv *env, jclass, jlong nativePtr) {
-    if (!nativePtr) return 0;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return 0;
+    mpv_handle *mpv = lease.get();
     double dur = 0;
     int result = mpv_get_property(mpv, "duration", MPV_FORMAT_DOUBLE, &dur);
     LOGI("[PlaybackTrace][Native][getDuration] result=%d duration=%f", result, dur);

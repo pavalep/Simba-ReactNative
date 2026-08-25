@@ -3,6 +3,7 @@
 #include <string>
 #include <cstring>
 #include <client.h>
+#include <native_state.h>
 
 #define LOG_TAG "MpvProperty"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -75,8 +76,10 @@ static void appendNode(std::string &out, const mpv_node *node) {
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeGetProperty(
     JNIEnv *env, jclass, jlong nativePtr, jstring name) {
-    if (!nativePtr || !name) return env->NewStringUTF("null");
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    if (!name) return env->NewStringUTF("null");
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return env->NewStringUTF("null");
+    mpv_handle *mpv = lease.get();
     const char *propName = env->GetStringUTFChars(name, nullptr);
 
     mpv_node node;
@@ -96,8 +99,10 @@ Java_com_simba_player_mpv_MPVLib_nativeGetProperty(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSetProperty(
     JNIEnv *env, jclass, jlong nativePtr, jstring name, jstring valueJson) {
-    if (!nativePtr || !name) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    if (!name) return;
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *propName = env->GetStringUTFChars(name, nullptr);
     const char *json = valueJson ? env->GetStringUTFChars(valueJson, nullptr) : "null";
 
@@ -111,8 +116,10 @@ Java_com_simba_player_mpv_MPVLib_nativeSetProperty(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeObserveProperty(
     JNIEnv *env, jclass, jlong nativePtr, jstring name) {
-    if (!nativePtr || !name) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    if (!name) return;
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *propName = env->GetStringUTFChars(name, nullptr);
     // Use a hash of the property name as the reply_userdata
     uint64_t hash = 0;
@@ -143,8 +150,10 @@ Java_com_simba_player_mpv_MPVLib_nativeObserveProperty(
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeUnobserveProperty(
     JNIEnv *env, jclass, jlong nativePtr, jstring name) {
-    if (!nativePtr || !name) return;
-    mpv_handle *mpv = reinterpret_cast<mpv_handle *>(nativePtr);
+    if (!name) return;
+    NativeMpvReadLease lease(nativePtr);
+    if (!lease.valid()) return;
+    mpv_handle *mpv = lease.get();
     const char *propName = env->GetStringUTFChars(name, nullptr);
     uint64_t hash = 0;
     for (const char *p = propName; *p; p++)

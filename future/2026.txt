@@ -1,0 +1,297 @@
+Skip to main content
+Accessibility help
+AI Mode
+All
+Images
+Videos
+Shopping
+More
+Upgrade
+tanstack react native
+TanStack Query (formerly React Query) is the industry standard for managing server state, data fetching, and caching in React Native and Expo apps. It works seamlessly out of the box with native runtimes, but requires a few mobile-specific configurations to handle the unique nature of smartphones (like unstable internet connectivity and app backgrounding). 
+📦 1. Installation
+Run the following command in your project root to install the library:
+bash
+
+npm i @tanstack/react-query
+
+Use code with caution.
+🚀 2. App Setup
+Wrap your application root layout with the QueryClientProvider. 
+tsx
+
+import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import MyComponent from './MyComponent';
+
+// Create a client instance
+const queryClient = new QueryClient();
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <MyComponent />
+    </QueryClientProvider>
+  );
+}
+
+Use code with caution.
+📡 3. Basic Data Fetching (useQuery)
+Use the useQuery hook to fetch and cache remote data automatically. 
+tsx
+
+import React from 'react';
+import { Text, FlatList, ActivityIndicator, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+
+interface Todo {
+  id: number;
+  title: string;
+}
+
+const fetchTodos = async (): Promise<Todo[]> => {
+  const response = await fetch('https://typicode.com');
+  if (!response.ok) throw new Error('Network error');
+  return response.json();
+};
+
+export default function TodoList() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['todos'],
+    queryFn: fetchTodos,
+  });
+
+  if (isLoading) return <ActivityIndicator size="large" style={{ flex: 1 }} />;
+  if (error) return <Text>Error loading data: {error.message}</Text>;
+
+  return (
+    <FlatList
+      data={data}
+      keyExtractor={(item) => item.id.toString()}
+      renderItem={({ item }) => <Text style={{ padding: 10 }}>{item.title}</Text>}
+    />
+  );
+}
+
+Use code with caution.
+📱 4. Crucial Mobile Configurations
+Mobile apps require manual integration with native APIs to handle network state changes and app backgrounding effectively. Add these implementations to your root component: 
+A. Refetch on App Focus (Resume)
+Unlike web browsers, mobile apps do not register window focus events. You must map React Native's AppState to TanStack’s focusManager: 
+tsx
+
+import { AppState, Platform } from 'react-native';
+import { focusManager } from '@tanstack/react-query';
+
+function onAppStateChange(status: string) {
+  if (Platform.OS !== 'web') {
+    focusManager.setFocused(status === 'active');
+  }
+}
+
+useEffect(() => {
+  const subscription = AppState.addEventListener('change', onAppStateChange);
+  return () => subscription.remove();
+}, []);
+
+Use code with caution.
+B. Auto Refetch on Reconnect
+To ensure data updates as soon as an offline device reconnects to cellular data or Wi-Fi, pass the network status using Expo NetInfo or similar utilities: 
+tsx
+
+import { onlineManager } from '@tanstack/react-query';
+import NetInfo from '@react-native-community/netinfo';
+
+useEffect(() => {
+  return NetInfo.addEventListener((state) => {
+    onlineManager.setOnline(!!state.isConnected);
+  });
+}, []);
+
+Use code with caution.
+💡 5. Essential Best Practices
+
+    Use Query Keys Wisely: Structure keys hierarchically (e.g., ['todos', todoId]) so you can clear or invalidate cache slices predictably. 
+    Leverage staleTime: Set a default staleTime (e.g., 5 minutes) in your QueryClient options to avoid firing network requests every time a user alternates back and forth between navigation screens. 
+    Offline Persistence: For full offline capability, implement the experimental @tanstack/react-query-persist-client combined with an asynchronous local storage engine like MMKV or AsyncStorage.
+
+If you would like, let me know:
+
+    Are you using Expo or React Native CLI?
+    Do you need an example of mutations (useMutation) to add/delete data?
+    Are you trying to configure infinite scrolling/pagination? 
+
+I can provide the exact code block you need!
+AI can make mistakes, so double-check responses
+
+    TanStack
+    React Native | TanStack Query React Docs
+    React Query is designed to work with React Native. You can use React Query onlineManager to add auto refetch on reconnect in React...
+    YouTube·Pradip Debnath
+    TanStack Query in React Native for Beginners | React Query v5
+    22 Jul 2025 — In this tutorial, we are going to discuss about TanStack Query, previously known as React Query, and how to use it in a React Nati...
+    1m
+    TanStack
+    React Native | TanStack Query React Docs
+    To refetch when the app is focused in React Native, you can use the React Query focusManager. Here's an example of how to use it: ...
+
+Show all
+is it useful or its an okk package, is anoyone using alongside react native
+TanStack Query (historically called React Query) is far better than an "okay" package—it is the industry-standard, go-to data fetching library for production React Native and Expo applications. 
+Almost everyone building professional React Native apps has migrated away from manually handling data fetching with useEffect and standard fetch/axios state. They use TanStack Query alongside a lightweight client-state manager (like Zustand). 
+🏆 Why It Is Highly Useful (Not Just "Okk")
+If you don't use it, you have to write hundreds of lines of boilerplate code to handle edge cases that TanStack Query gives you out of the box: 
+
+    Automatic Caching: If a user opens a screen, goes back, and opens it again, the data displays instantly from the cache while updating silently in the background. 
+    Deduplication: If three different components on the screen request the exact same profile data simultaneously, TanStack Query executes exactly one network request. 
+    Built-in Status Trackers: You get explicit boolean values (isLoading, isFetching, isError) immediately, saving you from setting up separate tracking states for every API request. 
+    Infinite Scrolling: Hand-coding a "pull to refresh" or infinite scroll container with page increments is incredibly error-prone. TanStack’s useInfiniteQuery automates this entirely. 
+
+👥 Who is using it alongside React Native?
+Major tech companies, prominent open-source starter templates, and independent developers widely adopt it: 
+
+    Production Tech Stacks: Teams at companies like Shopify, Microsoft, and thousands of startups use it to scale complex mobile applications.
+    Standard Templates: Standard architecture boilerplates (such as Obytes React Native Starter) pre-install TanStack Query as the default network engine. 
+    The Global Developer Community: In regular community assessments (like the State of React Native), it consistently ranks at the top for retention and satisfaction alongside native fetch. 
+
+⚖️ The Competition: TanStack Query vs. The Alternatives
+Library	Is it widely used with React Native?	When should you choose it?
+TanStack Query	Yes (Industry Standard)	The default choice for almost every new app. Decoupled, powerful, and clean.
+RTK Query	Yes (Mainly in Legacy Apps)	Only if your app is already heavily built using Redux Toolkit. Do not install Redux just to use RTK Query.
+SWR	Rarely on Mobile	Better suited for lightweight Next.js web applications where micro-managing bundle size is paramount.
+GraphQL/Apollo	Yes (Niche)	Only if your backend relies strictly on a GraphQL architecture.
+🛠️ What Developers Say (Community Consensus)
+The overarching rule in the modern React Native landscape is to separate your states: 
+
+    Use TanStack Query for Server State (anything pulled from an API base URL).
+    Use Zustand or React Context for Client State (local themes, toggles, auth tokens, or onboarding steps). 
+
+If you would like to see how they interact, let me know:
+
+    Do you want an example of how TanStack Query integrates with Zustand?
+    Would you like to see a complete example of Infinite Scrolling for a list?
+    Are you trying to handle offline cache persistence using react-native-mmkv? 
+
+    LinkedIn·Tanya Gangegedara
+    My first experience with TanStack Query: A React developer's ...
+    16 Jul 2025 — Explored and used TanStack Query in one of my recent projects, and it really changes the way you think about server state in React...
+    YouTube·tapaScript by Tapas Adhikary
+    Do You Really Need React Query || An Architectural Overview
+    11 Jul 2024 — React Query(aka Tastack Query now) is a superb library for developer productivity and asynchronous state management for your appli...
+    29:30
+    GitHub
+    Why not use @tanstack/query for the react hooks? #46 - GitHub
+    10 Dec 2023 — The @tanstack/query library is pretty mature and nice to use. If I were to give the sales pitch, here's what I could say. it's fra...
+
+Show all
+zustand vs redxu, when to use when
+Both Zustand and Redux are excellent state management libraries, but they serve completely different development styles. In modern React and React Native development, Zustand has largely become the default choice for new projects because it provides 90% of what developers love about Redux with 10% of the boilerplate code.
+Here is a direct breakdown of when to use which.
+🚀 Choose Zustand if...
+
+    You want speed and simplicity: You can set up a Zustand store in under 10 lines of code. There are no providers, reducers, actions, or dispatch functions required.
+    You are starting a new project: Unless you have an explicit structural reason to use Redux, Zustand is faster to write, easier to maintain, and performs flawlessly out of the box.
+    You want a small bundle footprint: Zustand is tiny (~1KB), compared to the larger footprints of Redux Toolkit and React-Redux.
+    You want easy React Native integration: Zustand works beautifully with mobile apps and integrates seamlessly with local storage modules like react-native-mmkv for instant data persistence.
+
+What a Zustand Store looks like:
+ts
+
+import { create } from 'zustand'
+
+const useCounterStore = create((set) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+}))
+
+Use code with caution.
+🏢 Choose Redux (Redux Toolkit) if...
+
+    You are working on a massive enterprise codebase: Redux enforces a very strict, highly opinionated architectural pattern. In teams with dozens of developers, this rigidity ensures that everyone writes state logic exactly the same way.
+    You need elite debugging tools: The Redux DevTools are unmatched. If your app requires heavy time-travel debugging, complex state diff tracking, or middleware monitoring, Redux remains the gold standard.
+    You are maintaining a legacy application: If you join a project that already heavily uses Redux, it is usually safer to stick with Redux Toolkit (RTK) rather than trying to migrate everything to Zustand.
+
+What a Redux Toolkit Store looks like:
+ts
+
+import { createSlice, configureStore } from '@reduxjs/toolkit'
+
+const counterSlice = createSlice({
+  name: 'counter',
+  initialState: { value: 0 },
+  reducers: {
+    increment: (state) => { state.value += 1 },
+  },
+})
+
+export const store = configureStore({ reducer: counterSlice.reducer })
+
+Use code with caution.
+📊 Direct Comparison Matrix
+Feature	Zustand 🐻	Redux Toolkit 🎒
+Boilerplate	Extremely low	Medium to High
+Learning Curve	Very easy (minutes)	Steep (days/weeks)
+Context Providers	Not needed	Required at App root
+Performance	Excellent (selective re-renders)	Excellent (with selectors)
+DevTools	Supports Redux DevTools	Native, powerful DevTools
+State Mutability	Functional updates (set)	Uses Immer (looks mutable)
+⚠️ The Modern Golden Rule
+Before choosing either library for global state, remember the rule from the previous topic: Do not put your API data into Zustand or Redux.
+
+    Use TanStack Query for 90% of your data (fetching, caching, loading states, server data).
+    Use Zustand only for the remaining 10% of global client data (UI themes, user authentication status, feature flags, local shopping cart state).
+
+If you want to dive deeper, let me know:
+
+    Do you want an example of a Zustand store with TypeScript?
+    Would you like to see how to make a Zustand store persist its data (save to disk) automatically?
+    Are you migrating an existing Redux app and want to see how to rewrite it in Zustand?
+
+which others are bocing the nor m in react native
+In 2026, the React Native ecosystem has unified around a highly efficient, performance-first stack. The era of bulky, configuration-heavy libraries has passed. The community now prioritizes native speed, minimal boilerplate, and seamless multi-platform (iOS, Android, and Web) compatibility.
+The core libraries that have definitively become the industry norm for any modern React Native or Expo project include:
+🗺️ 1. Navigation: Expo Router
+While React Navigation remains the underlying engine, Expo Router is now the default standard for structuring apps.
+
+    Why it’s the norm: It introduces file-based routing (identical to Next.js or Remix) to mobile apps.
+    The Benefit: You manage your screens by creating files in an app/ directory (e.g., app/profile/settings.tsx). It automatically generates type-safe navigation routes, native layouts, and deep links without complex configuration files.
+
+🎨 2. Styling: NativeWind (v4+)
+Styling in React Native has shifted away from writing massive StyleSheet.create objects toward utility-first classes via NativeWind.
+
+    Why it’s the norm: It brings the power of Tailwind CSS directly into React Native components using the standard className prop.
+    The Benefit: It compiles down to native React Native styles under the hood, meaning zero runtime performance penalty. It makes building responsive layouts for mobile and web using shared code incredibly fast.
+
+⚡ 3. Local Storage: react-native-mmkv
+The legacy AsyncStorage package is officially outdated. react-native-mmkv is the undisputed champion for local key-value storage.
+
+    Why it’s the norm: It uses a direct C++ binding to the JavaScript engine via React Native's JSI (JavaScript Interface).
+    The Benefit: Data reading and writing happen synchronously and are roughly 30x to 50x faster than AsyncStorage. There are no asynchronous bridge hops, making it fast enough to back local cache persistence for libraries like Zustand.
+
+📋 4. Forms & Validation: React Hook Form + Zod
+Handling form state manually with component useState hooks leads to massive, unmaintainable files and unnecessary screen re-renders.
+
+    Why it’s the norm: React Hook Form handles form state and inputs via uncontrolled components for maximum performance. Zod handles the schema validation.
+    The Benefit: You write standard, fast inputs, and Zod cleanly handles the errors, validation rules, and TypeScript types in a single, reusable schema.
+
+🖼️ 5. Image Handling: expo-image
+Standard native <Image /> components frequently cause memory leaks and stuttering performance when users scroll through heavy, unoptimized image lists.
+
+    Why it’s the norm: expo-image is a high-performance image component designed specifically for fast caching and smooth rendering.
+    The Benefit: It supports next-generation formats like AVIF and WebP, utilizes native caching mechanisms (SDWebImage on iOS, Glide on Android), features built-in blurhash placeholders, and prevents application memory spikes.
+
+🛠️ Summary Matrix: The Modern React Native Stack
+Category	The Old Way (Legacy Stack)	The Modern Norm (Modern Stack)
+Data Fetching	useEffect + Axios / Fetch	TanStack Query
+Global State	Redux / Context API	Zustand
+Navigation	Hand-mapped React Navigation	Expo Router
+Styling	StyleSheet.create	NativeWind
+Storage	@react-native-async-storage	react-native-mmkv
+Forms	Formik	React Hook Form + Zod
+If you'd like to explore this stack further, let me know:
+
+    Which styling approach do you prefer? (e.g., utility classes like NativeWind, or component-based styling like Tamagui?)
+    Do you want a code snippet showing how Expo Router handles tab navigation?
+    Do you need an example combining React Hook Form and Zod for a login screen?
+
+AI Mode response is ready

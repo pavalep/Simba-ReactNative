@@ -1,0 +1,38 @@
+# graphify-specific exclusions (merged with .gitignore; these can only exclude MORE)
+
+# Vendored third-party reference code - not part of the shipped app
+reference_codes/
+_reference_codes/
+
+# Design mockups / prototypes (not app code)
+mockup/
+
+# Native lib extraction scratch dir
+temp_mpv_extract/
+
+# Build / bundle artifacts
+.verification/
+android/app/build/
+*.bundle
+*.jsbundle
+
+# Debug logs, audit dumps, probes
+*.log
+*.diff
+adb_logcat_*
+/*.txt
+hs_err_pid*
+replay_pid*
+
+# graphify's own outputs
+graphify-out/
+
+# Icon/asset images and fonts (self-evident, no knowledge-graph value)
+*.svg
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.ico
+*.ttf

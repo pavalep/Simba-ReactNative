@@ -1,5 +1,6 @@
 import {useCallback, useImperativeHandle, useMemo} from 'react';
 import type {Ref} from 'react';
+import {useStore} from 'react-redux';
 import {useAppDispatch, useAppSelector} from '../../store';
 import type {AppDispatch, RootState} from '../../store';
 import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
@@ -140,6 +141,7 @@ export function normalizePlaylistStorage(raw: unknown): Playlist[] {
 
 export function usePlaylists(ref?: Ref<PlaylistController>) {
   const dispatch = useAppDispatch();
+  const store = useStore<RootState>();
   const list = useAppSelector(selectAllPlaylists);
 
   const getPlaylist = useCallback(
@@ -149,8 +151,8 @@ export function usePlaylists(ref?: Ref<PlaylistController>) {
 
   const access = useMemo<PlaylistStoreAccess>(() => ({
     dispatch,
-    getState: () => ({playlists: {playlists: list}} as RootState),
-  }), [dispatch, list]);
+    getState: store.getState,
+  }), [dispatch, store]);
 
   const create = useCallback(
     (input: {name: string; info?: string; kind: PlaylistKind}) => createPlaylist(access, input),

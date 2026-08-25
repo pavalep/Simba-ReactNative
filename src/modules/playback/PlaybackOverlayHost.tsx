@@ -4,41 +4,45 @@ import {useAppSelector} from '../../store';
 import {usePlaybackState} from './PlaybackContext';
 import {TransportProvider} from '../../contexts/TransportContext';
 import {AudioV2Module, MiniAudioV2} from './audio/v2';
-import {VideoPlayerModule} from './video/VideoPlayerModule';
+import {VideoV3Host} from './video/v3';
 
 /**
  * Root-level playback presentation host.
  *
- * The playback engine is independent from navigation. This host only decides
- * which visual presentation is currently visible over the active root route.
+ * Playback remains independent from navigation. Video uses the V3 session and
+ * surface host; audio retains its own transport provider and presentation lane.
  */
 export const PlaybackOverlayHost: React.FC = () => {
   const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
   const {active, lane, presentation} = usePlaybackState();
 
-  // Never expose user playback controls over Splash/Login. The provider may
-  // remain mounted across auth transitions for lifecycle continuity.
   if (!isAuthenticated || !active || presentation === 'none') return null;
-  const audioPresentation = presentation === 'mini' ? 'mini' : 'expanded';
 
+  if (lane === 'video') {
+    return (
+      <View
+        style={presentation === 'mini' ? styles.miniLayer : styles.fullscreenLayer}
+        pointerEvents="box-none"
+      >
+        <VideoV3Host active={active} />
+      </View>
+    );
+  }
+
+  const audioPresentation = presentation === 'mini' ? 'mini' : 'expanded';
   return (
     <TransportProvider>
-      {lane === 'video' ? (
-        <View style={styles.fullscreenLayer} pointerEvents="box-none">
-          <VideoPlayerModule active={active} />
+      <View
+        style={audioPresentation === 'expanded' ? styles.fullscreenLayer : styles.controllerLayer}
+        pointerEvents={audioPresentation === 'expanded' ? 'box-none' : 'none'}
+      >
+        <AudioV2Module active={active} presentation={audioPresentation} />
+      </View>
+      {presentation === 'mini' ? (
+        <View pointerEvents="box-none" style={styles.miniLayer}>
+          <MiniAudioV2 />
         </View>
-      ) : (
-        <>
-          <View style={audioPresentation === 'expanded' ? styles.fullscreenLayer : styles.controllerLayer} pointerEvents={audioPresentation === 'expanded' ? 'box-none' : 'none'}>
-            <AudioV2Module active={active} presentation={audioPresentation} />
-          </View>
-          {presentation === 'mini' ? (
-            <View pointerEvents="box-none" style={styles.miniLayer}>
-              <MiniAudioV2 />
-            </View>
-          ) : null}
-        </>
-      )}
+      ) : null}
     </TransportProvider>
   );
 };

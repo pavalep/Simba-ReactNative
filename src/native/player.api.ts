@@ -123,6 +123,11 @@ export const MpvPlayer = {
     }
   },
 
+  loadFileWithRequestId(path: string, requestId: string): void {
+    const resolvedPath = getLocalPath(path) ?? path;
+    ensureModule().loadFileWithRequestId(resolvedPath, requestId);
+  },
+
   loadPlaylist(paths: string[], startIndex?: number): void {
     // 49.4: remap each entry so offline playlists play from disk.
     ensureModule().loadPlaylist(
@@ -321,6 +326,19 @@ export const MpvPlayer = {
   // ── Native Pointer (for MpvRenderView) ──
   getNativePtr(): number {
     return ensureModule().getNativePtr();
+  },
+
+  // ── Picture in Picture ──
+  enterPip(chapterTitle?: string, progressPct?: string): void {
+    ensureModule().enterPip(chapterTitle, progressPct);
+  },
+
+  exitPip(): void {
+    ensureModule().exitPip();
+  },
+
+  exitPipAndFinish(): void {
+    ensureModule().exitPipAndFinish();
   },
 
   // ── State ──

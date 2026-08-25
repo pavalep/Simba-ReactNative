@@ -101,6 +101,7 @@ add_library(
     main.cpp
     property.cpp
     event.cpp
+    native_state.cpp
 )
 
 # Locate pre-built libmpv.so
