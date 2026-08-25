@@ -1,8 +1,8 @@
 import React from 'react';
 import Svg, {Circle, Line, Path, Rect} from 'react-native-svg';
-import {darkColors as cinemaColors} from '../../../../../theme/tokens';
+import {darkColors as cinemaColors} from '../../../../theme/tokens';
 
-export type VideoV3IconName =
+export type VideoIconName =
   | 'back'
   | 'more'
   | 'play'
@@ -20,19 +20,19 @@ export type VideoV3IconName =
   | 'volume'
   | 'mute';
 
-export interface VideoV3IconProps {
-  readonly name: VideoV3IconName;
+export interface VideoIconProps {
+  readonly name: VideoIconName;
   readonly size?: number;
   readonly color?: string;
   readonly strokeWidth?: number;
 }
 
-export function VideoV3Icon({
+export function VideoIcon({
   name,
   size = 24,
   color = cinemaColors.text.bright,
   strokeWidth = 1.9,
-}: VideoV3IconProps) {
+}: VideoIconProps) {
   const common = {
     fill: 'none',
     stroke: color,

@@ -10,6 +10,7 @@ import {
 } from './types';
 
 const PlaybackStateContext = createContext<PlaybackContextValue | null>(null);
+let nextOpenRequestId = 0;
 
 export interface PlaybackProviderProps {
   children: ReactNode;
@@ -24,9 +25,11 @@ export const PlaybackProvider: React.FC<PlaybackProviderProps> = ({children}) =>
       mediaType: request.mediaType ?? request.mediaLane,
     });
 
+    nextOpenRequestId += 1;
     setActive({
       entry,
       presentation: 'expanded',
+      openRequestId: nextOpenRequestId,
       startPosition: request.startPosition ?? request.resumePosition,
       chapterList: request.chapterList,
       chapterIndex: request.chapterIndex,

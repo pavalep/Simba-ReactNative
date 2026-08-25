@@ -1,9 +1,9 @@
 import React from 'react';
 import {ActivityIndicator, Pressable, StyleSheet, View} from 'react-native';
-import {AudioV2Button} from './AudioV2Button';
-import {AudioV2Icon} from './AudioV2Icon';
+import {AudioButton} from './AudioButton';
+import {AudioIcon} from './AudioIcon';
 
-interface AudioV2TransportControlsProps {
+interface AudioTransportControlsProps {
   isPlaying: boolean;
   isEnded: boolean;
   isLoading: boolean;
@@ -23,7 +23,7 @@ interface AudioV2TransportControlsProps {
  * Playback policy stays in the controller; this component only expresses
  * native-confirmed state and routes user intent to named commands.
  */
-export const AudioV2TransportControls: React.FC<AudioV2TransportControlsProps> = ({
+export const AudioTransportControls: React.FC<AudioTransportControlsProps> = ({
   isPlaying,
   isEnded,
   isLoading,
@@ -38,8 +38,8 @@ export const AudioV2TransportControls: React.FC<AudioV2TransportControlsProps> =
   accent,
 }) => (
   <View style={styles.row}>
-    <AudioV2Button icon="rewind" label="Rewind 10 seconds" onPress={onRewind} color={secondary} size={44} />
-    <AudioV2Button icon="previous" label="Previous track" onPress={onPrevious} color={primary} size={44} />
+    <AudioButton icon="rewind" label="Rewind 10 seconds" onPress={onRewind} color={secondary} size={44} />
+    <AudioButton icon="previous" label="Previous track" onPress={onPrevious} color={primary} size={44} />
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={isLoading ? 'Loading track' : isPlaying ? 'Pause' : isEnded ? 'Play from beginning' : 'Play'}
@@ -49,11 +49,11 @@ export const AudioV2TransportControls: React.FC<AudioV2TransportControlsProps> =
       {isLoading ? (
         <ActivityIndicator color={page} size="small" />
       ) : (
-        <AudioV2Icon name={isPlaying ? 'pause' : 'play'} size={29} color={page} strokeWidth={2.2} />
+        <AudioIcon name={isPlaying ? 'pause' : 'play'} size={29} color={page} strokeWidth={2.2} />
       )}
     </Pressable>
-    <AudioV2Button icon="next" label="Next track" onPress={onNext} color={primary} size={44} />
-    <AudioV2Button icon="forward" label="Forward 10 seconds" onPress={onForward} color={secondary} size={44} />
+    <AudioButton icon="next" label="Next track" onPress={onNext} color={primary} size={44} />
+    <AudioButton icon="forward" label="Forward 10 seconds" onPress={onForward} color={secondary} size={44} />
   </View>
 );
 

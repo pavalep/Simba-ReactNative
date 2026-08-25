@@ -1,11 +1,11 @@
-import type {ColorTokens} from '../../../../theme/tokens';
-import type {TrackMetadata} from '../../../../services/metadataService';
-import type {PlaylistEntry} from '../../../../store/slices/playerSlice';
-import type {ScannedTrack} from '../../../../store/slices/mediaSlice';
-import type {Chapter} from '../../../../components/player/NowPlayingInfo/ChapterList';
-import type {LrcLine} from '../../../../utils/lrcParser';
+import type {ColorTokens} from '../../../theme/tokens';
+import type {TrackMetadata} from '../../../services/metadataService';
+import type {PlaylistEntry} from '../../../store/slices/playerSlice';
+import type {ScannedTrack} from '../../../store/slices/mediaSlice';
+import type {Chapter} from '../../../components/player/NowPlayingInfo/ChapterList';
+import type {LrcLine} from '../../../utils/lrcParser';
 
-export interface AudioV2ControllerState {
+export interface AudioControllerState {
   colors: ColorTokens;
   insets: {top: number; bottom: number; left: number; right: number};
   title: string;
@@ -61,9 +61,9 @@ export interface AudioV2ControllerState {
   onResumeChoice: (shouldResume: boolean) => void;
 }
 
-export interface AudioV2ViewModel {
+export interface AudioViewModel {
   colors: ColorTokens;
-  insets: AudioV2ControllerState['insets'];
+  insets: AudioControllerState['insets'];
   title: string;
   artist: string;
   album: string;
@@ -95,14 +95,14 @@ export interface AudioV2ViewModel {
   isSeekable: boolean;
   bufferedRanges: Array<{start: number; end: number}>;
   cacheFill: number;
-  commands: Pick<AudioV2ControllerState, 'onBack' | 'onPlayPause' | 'onPrevious' | 'onNext' | 'onRewind' | 'onForward' | 'onSeek' | 'onSeekToLyric' | 'onVolumeChange' | 'onToggleShuffle' | 'onToggleRepeat' | 'onOpenBookmark' | 'onBookmark' | 'onOpenQueue' | 'onOpenLyrics' | 'onOpenPlaylist' | 'onOpenInfo' | 'onPlayIndex' | 'onPlayQueueIndex' | 'onPlayRelated' | 'onShare' | 'onMore' | 'onDismiss' | 'onRetry' | 'onResumeChoice'>;
+  commands: Pick<AudioControllerState, 'onBack' | 'onPlayPause' | 'onPrevious' | 'onNext' | 'onRewind' | 'onForward' | 'onSeek' | 'onSeekToLyric' | 'onVolumeChange' | 'onToggleShuffle' | 'onToggleRepeat' | 'onOpenBookmark' | 'onBookmark' | 'onOpenQueue' | 'onOpenLyrics' | 'onOpenPlaylist' | 'onOpenInfo' | 'onPlayIndex' | 'onPlayQueueIndex' | 'onPlayRelated' | 'onShare' | 'onMore' | 'onDismiss' | 'onRetry' | 'onResumeChoice'>;
 }
 
-export const buildAudioV2ViewModel = (
-  state: AudioV2ControllerState,
+export const buildAudioViewModel = (
+  state: AudioControllerState,
   position: number,
   duration: number,
-): AudioV2ViewModel => ({
+): AudioViewModel => ({
   colors: state.colors,
   insets: state.insets,
   title: state.title?.trim() || state.fileUri?.split('/').pop() || 'Untitled audio',

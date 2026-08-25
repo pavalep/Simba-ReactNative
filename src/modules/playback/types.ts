@@ -71,6 +71,8 @@ export type PlaybackPresentation = 'none' | 'mini' | 'expanded';
 export interface ActivePlayback {
   entry: PlaybackEntry;
   presentation: Exclude<PlaybackPresentation, 'none'>;
+  /** Monotonic identity for a new openPlayer intent; unchanged by collapse/expand. */
+  openRequestId?: number;
   startPosition?: number;
   chapterList?: PlaybackChapterParam[];
   chapterIndex?: number;

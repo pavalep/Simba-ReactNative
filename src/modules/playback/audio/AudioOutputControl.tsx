@@ -1,9 +1,9 @@
 import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {AudioV2Icon} from './AudioV2Icon';
-import {AudioV2Volume} from './AudioV2Progress';
+import {AudioIcon} from './AudioIcon';
+import {AudioVolume} from './AudioProgress';
 
-interface AudioV2OutputControlProps {
+interface AudioOutputControlProps {
   volume: number;
   onChange: (delta: number) => void;
   primary: string;
@@ -14,7 +14,7 @@ interface AudioV2OutputControlProps {
 }
 
 /** Compact at rest; exposes the real volume control only during adjustment. */
-export const AudioV2OutputControl: React.FC<AudioV2OutputControlProps> = ({
+export const AudioOutputControl: React.FC<AudioOutputControlProps> = ({
   volume,
   onChange,
   primary,
@@ -33,13 +33,13 @@ export const AudioV2OutputControl: React.FC<AudioV2OutputControlProps> = ({
         accessibilityState={{expanded}}
         onPress={() => setExpanded(value => !value)}
         style={({pressed}) => [styles.trigger, {backgroundColor: surface, borderColor: border}, pressed && styles.pressed]}>
-        <AudioV2Icon name="volume" size={18} color={secondary} />
+        <AudioIcon name="volume" size={18} color={secondary} />
         <Text style={[styles.label, {color: primary}]}>Volume</Text>
-        <AudioV2Icon name={expanded ? 'chevronUp' : 'chevronDown'} size={16} color={secondary} />
+        <AudioIcon name={expanded ? 'chevronUp' : 'chevronDown'} size={16} color={secondary} />
       </Pressable>
       {expanded ? (
         <View style={[styles.panel, {backgroundColor: surface, borderColor: border}]}>
-          <AudioV2Volume volume={volume} onChange={onChange} accent={accent} muted={border} icon={<AudioV2Icon name="volume" size={18} color={secondary} />} />
+          <AudioVolume volume={volume} onChange={onChange} accent={accent} muted={border} icon={<AudioIcon name="volume" size={18} color={secondary} />} />
           <Text style={[styles.value, {color: secondary}]}>{Math.round(Math.max(0, Math.min(100, volume)))}%</Text>
         </View>
       ) : null}

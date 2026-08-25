@@ -1,15 +1,15 @@
 import React from 'react';
-import type {VideoV3ControlLayerProps} from './VideoV3ControlLayer';
-import {VideoV3ControlLayer} from './VideoV3ControlLayer';
-import {useVideoV3PresentationGeometry} from './useVideoV3PresentationGeometry';
+import type {VideoControlLayerProps} from './VideoControlLayer';
+import {VideoControlLayer} from './VideoControlLayer';
+import {useVideoPresentationGeometry} from './useVideoPresentationGeometry';
 
-type SafeControlLayerProps = Omit<VideoV3ControlLayerProps, 'geometry'>;
+type SafeControlLayerProps = Omit<VideoControlLayerProps, 'geometry'>;
 
 /**
  * Inset-aware V3 control layer. The media surface remains edge-to-edge while
  * all interactive chrome is derived from current safe-area and viewport data.
  */
-export function VideoV3SafeControlLayer(props: SafeControlLayerProps) {
-  const geometry = useVideoV3PresentationGeometry();
-  return <VideoV3ControlLayer {...props} geometry={geometry} />;
+export function VideoSafeControlLayer(props: SafeControlLayerProps) {
+  const geometry = useVideoPresentationGeometry();
+  return <VideoControlLayer {...props} geometry={geometry} />;
 }

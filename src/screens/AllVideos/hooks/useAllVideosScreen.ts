@@ -5,10 +5,10 @@
 
 import {useCallback, useMemo, useState} from 'react';
 import {createSelector} from '@reduxjs/toolkit';
-import {useNavigation} from '@react-navigation/native';
 import {useAppSelector} from '../../../store';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
+import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 
 // 59.2: stable selector — inline filters re-ran on EVERY store dispatch
@@ -36,7 +36,7 @@ export interface UseAllVideosScreenResult {
 }
 
 export function useAllVideosScreen(): UseAllVideosScreenResult {
-  const navigation = useNavigation<any>();
+  const {openPlayer} = usePlaybackCommands();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('title');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -78,9 +78,16 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
 
   const handlePlayTrack = useCallback(
     (uri: string, title: string) => {
-      navigation.navigate('VideoPlayer', {fileUri: uri, fileTitle: title});
+      openPlayer({
+        uri,
+        title,
+        duration: 0,
+        source: 'local',
+        type: 'video',
+        mediaType: 'video',
+      });
     },
-    [navigation],
+    [openPlayer],
   );
 
   // 54.3: pull-to-refresh — force a full re-scan of linked folders

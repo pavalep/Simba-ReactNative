@@ -5,6 +5,7 @@
 namespace {
 std::mutex g_loadQueueMutex;
 std::deque<PendingLoadRequest> g_pendingLoads;
+PendingLoadRequest g_activeLoad{};
 
 std::string jsonQuote(const std::string &value) {
     std::string result;
@@ -34,7 +35,13 @@ void enqueueLoadRequest(PendingLoadRequest request) {
             ++iterator;
         }
     }
+    g_activeLoad = request;
     g_pendingLoads.push_back(std::move(request));
+}
+
+void clearActiveLoadRequest() {
+    std::lock_guard<std::mutex> guard(g_loadQueueMutex);
+    g_activeLoad = {};
 }
 
 void dropLoadRequest(const std::string &requestId) {
@@ -43,9 +50,20 @@ void dropLoadRequest(const std::string &requestId) {
     for (auto iterator = g_pendingLoads.begin(); iterator != g_pendingLoads.end(); ++iterator) {
         if (iterator->requestId == requestId) {
             g_pendingLoads.erase(iterator);
+            if (g_activeLoad.requestId == requestId) g_activeLoad = {};
             return;
         }
     }
+}
+
+std::string activeLoadRequestId(const std::string &resolvedPath) {
+    std::lock_guard<std::mutex> guard(g_loadQueueMutex);
+    if (g_activeLoad.requestId.empty()) return "";
+    if (!resolvedPath.empty() && !g_activeLoad.resolvedPath.empty() &&
+        g_activeLoad.resolvedPath != resolvedPath) {
+        return "";
+    }
+    return g_activeLoad.requestId;
 }
 
 std::string consumeFileLoadedPayload(const std::string &resolvedPath) {
@@ -86,4 +104,5 @@ std::string consumeFileLoadedPayload(const std::string &resolvedPath) {
 void clearPendingLoadRequests() {
     std::lock_guard<std::mutex> guard(g_loadQueueMutex);
     g_pendingLoads.clear();
+    g_activeLoad = {};
 }

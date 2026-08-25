@@ -6,12 +6,13 @@
 // ────────────────────────────────────────────────────────
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
+import {useRoute, RouteProp} from '@react-navigation/native';
 import {useAppSelector} from '../../../store';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {JamendoTrackResult, RadioStationResult} from '../../../types/api';
+import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
 import {getJamendoTracksByGenre} from '../../../services/api/jamendoService';
 import {getStationsByGenre} from '../../../services/api/radioBrowserService';
 import {
@@ -48,7 +49,7 @@ export interface UseGenreScreenResult {
 }
 
 export function useGenreScreen(): UseGenreScreenResult {
-  const navigation = useNavigation<any>();
+  const {openPlayer} = usePlaybackCommands();
   const route = useRoute<RouteProp<RootStackParamList, 'GenreScreen'>>();
   const {genre, initialTab} = route.params;
 
@@ -174,33 +175,48 @@ export function useGenreScreen(): UseGenreScreenResult {
 
   const handlePlayTrack = useCallback(
     (uri: string, title: string) => {
-      navigation.navigate('AudioPlayer', {fileUri: uri, fileTitle: title});
+      openPlayer({
+        uri,
+        title,
+        duration: 0,
+        source: 'local',
+        type: 'music',
+        mediaType: 'audio',
+      });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const handlePlayStreaming = useCallback(
     (track: JamendoTrackResult) => {
-      navigation.navigate('AudioPlayer', {
-        fileUri: track.audioUrl,
-        fileTitle: track.name,
+      openPlayer({
+        uri: track.audioUrl,
+        title: track.name,
+        duration: 0,
         artworkUri: track.imageUrl || undefined,
-        source: 'jamendo',
+        source: 'api',
+        type: 'music',
+        mediaType: 'audio',
+        provider: 'jamendo',
       });
     },
-    [navigation],
+    [openPlayer],
   );
 
   const handlePlayStation = useCallback(
     (station: RadioStationResult) => {
-      navigation.navigate('AudioPlayer', {
-        fileUri: station.urlResolved || station.url,
-        fileTitle: station.name,
+      openPlayer({
+        uri: station.urlResolved || station.url,
+        title: station.name,
+        duration: 0,
         artworkUri: station.favicon || undefined,
-        source: 'radio',
+        source: 'api',
+        type: 'radio',
+        mediaType: 'audio',
+        provider: 'radio-browser',
       });
     },
-    [navigation],
+    [openPlayer],
   );
 
   return {

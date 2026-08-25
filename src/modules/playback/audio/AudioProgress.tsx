@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useMemo, useState} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {selectCurrentBufferedWindow} from '../rangeNormalization';
+import {selectCurrentBufferedWindow} from './rangeNormalization';
 
 export const formatAudioTime = (seconds: number): string => {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -15,7 +15,7 @@ interface AudioRange {
   end: number;
 }
 
-interface AudioV2ProgressProps {
+interface AudioProgressProps {
   position: number;
   duration: number;
   bufferedRanges: AudioRange[];
@@ -28,7 +28,7 @@ interface AudioV2ProgressProps {
   buffered: string;
 }
 
-export const AudioV2Progress: React.FC<AudioV2ProgressProps> = ({
+export const AudioProgress: React.FC<AudioProgressProps> = ({
   position,
   duration,
   bufferedRanges,
@@ -94,7 +94,7 @@ export const AudioV2Progress: React.FC<AudioV2ProgressProps> = ({
   );
 };
 
-interface AudioV2VolumeProps {
+interface AudioVolumeProps {
   volume: number;
   onChange: (delta: number) => void;
   icon: React.ReactNode;
@@ -102,7 +102,7 @@ interface AudioV2VolumeProps {
   muted: string;
 }
 
-export const AudioV2Volume: React.FC<AudioV2VolumeProps> = ({volume, onChange, icon, accent, muted}) => {
+export const AudioVolume: React.FC<AudioVolumeProps> = ({volume, onChange, icon, accent, muted}) => {
   const [trackWidth, setTrackWidth] = useState(1);
   const lastVolumeRef = useRef(volume);
 

@@ -1,9 +1,9 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
-import {AudioV2Button} from './AudioV2Button';
-import {AudioV2Icon} from './AudioV2Icon';
+import {AudioButton} from './AudioButton';
+import {AudioIcon} from './AudioIcon';
 
-interface AudioV2ActionStripProps {
+interface AudioActionStripProps {
   colors: {primary: string; secondary: string; border: string; accent: string};
   isBookmarked: boolean;
   onBookmark: () => void;
@@ -15,14 +15,14 @@ interface AudioV2ActionStripProps {
   onMore: () => void;
 }
 
-const Action: React.FC<{label: string; icon: React.ComponentProps<typeof AudioV2Icon>['name']; onPress: () => void; color: string; active?: boolean}> = ({label, icon, onPress, color, active}) => (
+const Action: React.FC<{label: string; icon: React.ComponentProps<typeof AudioIcon>['name']; onPress: () => void; color: string; active?: boolean}> = ({label, icon, onPress, color, active}) => (
   <View style={styles.action}>
-    <AudioV2Button icon={icon} label={label} onPress={onPress} color={color} size={42} active={active} />
+    <AudioButton icon={icon} label={label} onPress={onPress} color={color} size={42} active={active} />
     <Text style={[styles.label, {color}]} numberOfLines={1}>{label}</Text>
   </View>
 );
 
-export const AudioV2ActionStrip: React.FC<AudioV2ActionStripProps> = ({colors, isBookmarked, onBookmark, onPlaylist, onQueue, onLyrics, onInfo, onShare, onMore}) => (
+export const AudioActionStrip: React.FC<AudioActionStripProps> = ({colors, isBookmarked, onBookmark, onPlaylist, onQueue, onLyrics, onInfo, onShare, onMore}) => (
   <View style={[styles.container, {borderTopColor: colors.border, borderBottomColor: colors.border}]}>
     <Action label="Save" icon={isBookmarked ? 'bookmarkFilled' : 'bookmark'} onPress={onBookmark} color={isBookmarked ? colors.accent : colors.secondary} active={isBookmarked} />
     <Action label="Playlist" icon="playlist" onPress={onPlaylist} color={colors.secondary} />

@@ -13,22 +13,22 @@ import {
   View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import {AudioV2Artwork} from './AudioV2Artwork';
-import {AudioV2Button} from './AudioV2Button';
-import {AudioV2PriorityActions} from './AudioV2PriorityActions';
-import {AudioV2OutputControl} from './AudioV2OutputControl';
-import {AudioV2Icon} from './AudioV2Icon';
-import {AudioV2Progress, formatAudioTime} from './AudioV2Progress';
-import {AudioV2TransportControls} from './AudioV2TransportControls';
-import type {AudioV2ViewModel} from './AudioV2Types';
+import {AudioArtwork} from './AudioArtwork';
+import {AudioButton} from './AudioButton';
+import {AudioPriorityActions} from './AudioPriorityActions';
+import {AudioOutputControl} from './AudioOutputControl';
+import {AudioIcon} from './AudioIcon';
+import {AudioProgress, formatAudioTime} from './AudioProgress';
+import {AudioTransportControls} from './AudioTransportControls';
+import type {AudioViewModel} from './AudioTypes';
 
-interface AudioV2PlayerProps {
-  model: AudioV2ViewModel;
+interface AudioPlayerProps {
+  model: AudioViewModel;
 }
 
 type Panel = 'queue' | 'lyrics' | 'info' | 'playlist' | 'more' | null;
 
-export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
+export const AudioPlayer: React.FC<AudioPlayerProps> = ({model}) => {
   const [panel, setPanel] = useState<Panel>(null);
   const [liked, setLiked] = useState(false);
   const {
@@ -95,12 +95,12 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
     <View style={[styles.root, {backgroundColor: palette.page}]}>
       <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
         <View style={styles.topBar}>
-          <AudioV2Button icon="chevronDown" label="Minimize player" onPress={commands.onBack} color={palette.primary} size={44} backgroundColor={palette.card} />
+          <AudioButton icon="chevronDown" label="Minimize player" onPress={commands.onBack} color={palette.primary} size={44} backgroundColor={palette.card} />
           <View style={styles.topTitle}>
             <Text style={[styles.eyebrow, {color: palette.accent}]}>SIMBA AUDIO</Text>
             <Text style={[styles.nowPlaying, {color: palette.primary}]}>Now playing</Text>
           </View>
-          <AudioV2Button icon="more" label="More audio actions" onPress={() => openPanel('more')} color={palette.primary} size={46} backgroundColor={palette.card} />
+          <AudioButton icon="more" label="More audio actions" onPress={() => openPanel('more')} color={palette.primary} size={46} backgroundColor={palette.card} />
         </View>
 
         <ScrollView
@@ -115,7 +115,7 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
 
           <View style={styles.hero}>
             <View style={[styles.artworkShadow, {shadowColor: palette.accent}]}>
-              <AudioV2Artwork uri={artworkUri} title={title} size={Math.min(340, 300)} accent={palette.accent} />
+              <AudioArtwork uri={artworkUri} title={title} size={Math.min(340, 300)} accent={palette.accent} />
             </View>
             <View style={styles.trackHeader}>
               <View style={styles.trackCopy}>
@@ -123,10 +123,10 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
                 <Text style={[styles.artist, {color: palette.secondary}]} numberOfLines={1}>{artist}</Text>
                 <Text style={[styles.album, {color: palette.muted}]} numberOfLines={1}>{album}</Text>
               </View>
-              <AudioV2Button icon={liked ? 'heartFilled' : 'heart'} label={liked ? 'Unlike track' : 'Like track'} onPress={() => setLiked(value => !value)} color={liked ? palette.danger : palette.secondary} size={44} />
+              <AudioButton icon={liked ? 'heartFilled' : 'heart'} label={liked ? 'Unlike track' : 'Like track'} onPress={() => setLiked(value => !value)} color={liked ? palette.danger : palette.secondary} size={44} />
             </View>
 
-            <AudioV2Progress
+            <AudioProgress
               position={position}
               duration={duration}
               bufferedRanges={bufferedRanges}
@@ -140,7 +140,7 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
             />
 
             <View style={styles.transportRow}>
-              <AudioV2TransportControls
+              <AudioTransportControls
                 isPlaying={isPlaying}
                 isEnded={isEnded}
                 isLoading={isLoading}
@@ -158,16 +158,16 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
 
             <View style={styles.modeRow}>
               <Pressable accessibilityRole="button" accessibilityLabel="Toggle shuffle" accessibilityState={{selected: shuffle}} onPress={commands.onToggleShuffle} style={({pressed}) => [styles.modeButton, shuffle && {backgroundColor: palette.accentWash}, pressed && styles.pressed]}>
-                <AudioV2Icon name="shuffle" size={19} color={shuffle ? palette.accent : palette.secondary} />
+                <AudioIcon name="shuffle" size={19} color={shuffle ? palette.accent : palette.secondary} />
                 <Text style={[styles.modeText, {color: shuffle ? palette.accent : palette.secondary}]}>Shuffle</Text>
               </Pressable>
               <Pressable accessibilityRole="button" accessibilityLabel={`Playback mode: ${repeatLabel}`} accessibilityState={{selected: repeatMode !== 'off'}} onPress={commands.onToggleRepeat} style={({pressed}) => [styles.modeButton, repeatMode !== 'off' && {backgroundColor: palette.accentWash}, pressed && styles.pressed]}>
-                <AudioV2Icon name={repeatMode === 'off' ? 'playOnce' : 'repeat'} size={19} color={repeatMode !== 'off' ? palette.accent : palette.secondary} />
+                <AudioIcon name={repeatMode === 'off' ? 'playOnce' : 'repeat'} size={19} color={repeatMode !== 'off' ? palette.accent : palette.secondary} />
                 <Text style={[styles.modeText, {color: repeatMode !== 'off' ? palette.accent : palette.secondary}]}>{repeatLabel}</Text>
               </Pressable>
             </View>
 
-            <AudioV2PriorityActions
+            <AudioPriorityActions
               isBookmarked={isBookmarked}
               primary={palette.primary}
               secondary={palette.secondary}
@@ -178,7 +178,7 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
               onQueue={() => openPanel('queue')}
             />
 
-            <AudioV2OutputControl
+            <AudioOutputControl
               volume={volume}
               onChange={commands.onVolumeChange}
               primary={palette.primary}
@@ -190,13 +190,13 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
           </View>
 
           <Pressable accessibilityRole="button" accessibilityLabel="Open play queue" onPress={() => openPanel('queue')} style={({pressed}) => [styles.upNext, {backgroundColor: palette.card, borderColor: palette.line}, pressed && styles.pressed]}>
-            <View style={[styles.queueGlyph, {backgroundColor: palette.accentWash}]}><AudioV2Icon name="queue" size={22} color={palette.accent} /></View>
+            <View style={[styles.queueGlyph, {backgroundColor: palette.accentWash}]}><AudioIcon name="queue" size={22} color={palette.accent} /></View>
             <View style={styles.upNextCopy}>
               <Text style={[styles.upNextLabel, {color: palette.accent}]}>UP NEXT</Text>
               <Text style={[styles.upNextTitle, {color: palette.primary}]}>{queueCount > 0 ? `${queueCount} item${queueCount === 1 ? '' : 's'} in your queue` : 'Your queue is empty'}</Text>
               <Text style={[styles.upNextMeta, {color: palette.muted}]}>{playlist.length > 0 ? `Track ${Math.min(currentIndex + 1, playlist.length)} of ${playlist.length}` : 'Add tracks from any audio section'}</Text>
             </View>
-            <AudioV2Icon name="chevronDown" size={21} color={palette.secondary} />
+            <AudioIcon name="chevronDown" size={21} color={palette.secondary} />
           </Pressable>
 
           {error ? (
@@ -224,21 +224,21 @@ export const AudioV2Player: React.FC<AudioV2PlayerProps> = ({model}) => {
         </View>
       ) : null}
 
-      <AudioV2Panel panel={panel} model={model} palette={palette} onClose={closePanel} onPlayIndex={playIndex} onShare={openShare} />
+      <AudioPanel panel={panel} model={model} palette={palette} onClose={closePanel} onPlayIndex={playIndex} onShare={openShare} />
     </View>
   );
 };
 
-interface AudioV2PanelProps {
+interface AudioPanelProps {
   panel: Panel;
-  model: AudioV2ViewModel;
+  model: AudioViewModel;
   palette: {page: string; card: string; raised: string; primary: string; secondary: string; muted: string; line: string; accent: string; accentWash: string; danger: string};
   onClose: () => void;
   onPlayIndex: (index: number) => void;
   onShare: () => void;
 }
 
-const AudioV2Panel: React.FC<AudioV2PanelProps> = ({panel, model, palette, onClose, onPlayIndex, onShare}) => {
+const AudioPanel: React.FC<AudioPanelProps> = ({panel, model, palette, onClose, onPlayIndex, onShare}) => {
   if (!panel) return null;
   const title = panel === 'queue' ? 'Play queue' : panel === 'lyrics' ? 'Lyrics' : panel === 'info' ? 'Track details' : panel === 'playlist' ? 'Add to playlist' : 'More actions';
   return (
@@ -248,7 +248,7 @@ const AudioV2Panel: React.FC<AudioV2PanelProps> = ({panel, model, palette, onClo
           <View style={styles.panelHandle} />
           <View style={styles.panelHeader}>
             <View><Text style={[styles.panelEyebrow, {color: palette.accent}]}>AUDIO CONTROL</Text><Text style={[styles.panelTitle, {color: palette.primary}]}>{title}</Text></View>
-            <AudioV2Button icon="close" label="Close panel" onPress={onClose} color={palette.primary} backgroundColor={palette.card} size={42} />
+            <AudioButton icon="close" label="Close panel" onPress={onClose} color={palette.primary} backgroundColor={palette.card} size={42} />
           </View>
           {panel === 'queue' ? <QueuePanel model={model} palette={palette} onPlayIndex={onPlayIndex} /> : null}
           {panel === 'lyrics' ? <LyricsPanel model={model} palette={palette} /> : null}
@@ -261,30 +261,30 @@ const AudioV2Panel: React.FC<AudioV2PanelProps> = ({panel, model, palette, onClo
   );
 };
 
-const QueuePanel: React.FC<{model: AudioV2ViewModel; palette: AudioV2PanelProps['palette']; onPlayIndex: (index: number) => void}> = ({model, palette, onPlayIndex}) => (
+const QueuePanel: React.FC<{model: AudioViewModel; palette: AudioPanelProps['palette']; onPlayIndex: (index: number) => void}> = ({model, palette, onPlayIndex}) => (
   <FlatList
     data={model.queue}
     keyExtractor={item => item.uri}
     ListEmptyComponent={<Text style={[styles.emptyPanel, {color: palette.secondary}]}>Your queue is empty. Add an item from a player or content page.</Text>}
     renderItem={({item, index}) => (
       <Pressable accessibilityRole="button" accessibilityLabel={`Play ${item.title || 'audio item'}`} onPress={() => model.commands.onPlayQueueIndex(index)} style={({pressed}) => [styles.listRow, item.uri === model.fileUri && {backgroundColor: palette.accentWash}, pressed && styles.pressed]}>
-        <AudioV2Artwork uri={item.artworkUri || ''} title={item.title || 'Audio'} size={52} accent={palette.accent} borderRadius={14} />
+        <AudioArtwork uri={item.artworkUri || ''} title={item.title || 'Audio'} size={52} accent={palette.accent} borderRadius={14} />
         <View style={styles.listCopy}><Text numberOfLines={1} style={[styles.listTitle, {color: palette.primary}]}>{item.title || 'Untitled audio'}</Text><Text numberOfLines={1} style={[styles.listMeta, {color: palette.secondary}]}>{item.artist || item.source || 'Audio'}</Text></View>
-        {item.uri === model.fileUri ? <View style={[styles.nowDot, {backgroundColor: palette.accent}]} /> : <AudioV2Icon name="play" size={19} color={palette.secondary} />}
+        {item.uri === model.fileUri ? <View style={[styles.nowDot, {backgroundColor: palette.accent}]} /> : <AudioIcon name="play" size={19} color={palette.secondary} />}
       </Pressable>
     )}
   />
 );
 
-const LyricsPanel: React.FC<{model: AudioV2ViewModel; palette: AudioV2PanelProps['palette']}> = ({model, palette}) => (
+const LyricsPanel: React.FC<{model: AudioViewModel; palette: AudioPanelProps['palette']}> = ({model, palette}) => (
   <ScrollView contentContainerStyle={styles.panelScroll}>
     {model.lyrics.length ? model.lyrics.map((line, index) => <Pressable key={`${line.time}-${index}`} accessibilityRole="button" accessibilityLabel={`Seek to ${line.text}`} onPress={() => model.commands.onSeekToLyric(line.time)} style={styles.lyricLine}><Text style={[styles.lyricText, {color: palette.primary}]}>{line.text}</Text></Pressable>) : <Text style={[styles.emptyPanel, {color: palette.secondary}]}>Lyrics are not available for this track yet.</Text>}
   </ScrollView>
 );
 
-const InfoPanel: React.FC<{model: AudioV2ViewModel; palette: AudioV2PanelProps['palette']}> = ({model, palette}) => (
+const InfoPanel: React.FC<{model: AudioViewModel; palette: AudioPanelProps['palette']}> = ({model, palette}) => (
   <ScrollView contentContainerStyle={styles.panelScroll}>
-    <View style={[styles.detailArtwork, {backgroundColor: palette.card}]}><AudioV2Artwork uri={model.artworkUri} title={model.title} size={112} accent={palette.accent} borderRadius={18} /><View style={styles.detailCopy}><Text style={[styles.detailTitle, {color: palette.primary}]}>{model.title}</Text><Text style={[styles.detailMeta, {color: palette.secondary}]}>{model.artist}</Text><Text style={[styles.detailMeta, {color: palette.muted}]}>{model.album}</Text></View></View>
+    <View style={[styles.detailArtwork, {backgroundColor: palette.card}]}><AudioArtwork uri={model.artworkUri} title={model.title} size={112} accent={palette.accent} borderRadius={18} /><View style={styles.detailCopy}><Text style={[styles.detailTitle, {color: palette.primary}]}>{model.title}</Text><Text style={[styles.detailMeta, {color: palette.secondary}]}>{model.artist}</Text><Text style={[styles.detailMeta, {color: palette.muted}]}>{model.album}</Text></View></View>
     <DetailRow label="Source" value={model.sourceLabel || 'Audio'} palette={palette} />
     <DetailRow label="Length" value={model.duration > 0 ? formatAudioTime(model.duration) : 'Live / unknown'} palette={palette} />
     <DetailRow label="Position" value={formatAudioTime(model.position)} palette={palette} />
@@ -292,30 +292,30 @@ const InfoPanel: React.FC<{model: AudioV2ViewModel; palette: AudioV2PanelProps['
   </ScrollView>
 );
 
-const DetailRow: React.FC<{label: string; value: string; palette: AudioV2PanelProps['palette']}> = ({label, value, palette}) => <View style={[styles.detailRow, {borderBottomColor: palette.line}]}><Text style={[styles.detailLabel, {color: palette.muted}]}>{label}</Text><Text style={[styles.detailValue, {color: palette.primary}]}>{value}</Text></View>;
+const DetailRow: React.FC<{label: string; value: string; palette: AudioPanelProps['palette']}> = ({label, value, palette}) => <View style={[styles.detailRow, {borderBottomColor: palette.line}]}><Text style={[styles.detailLabel, {color: palette.muted}]}>{label}</Text><Text style={[styles.detailValue, {color: palette.primary}]}>{value}</Text></View>;
 
-const PlaylistPanel: React.FC<{model: AudioV2ViewModel; palette: AudioV2PanelProps['palette']}> = ({model, palette}) => (
+const PlaylistPanel: React.FC<{model: AudioViewModel; palette: AudioPanelProps['palette']}> = ({model, palette}) => (
   <View>
     <Text style={[styles.emptyPanel, {color: palette.secondary}]}>Choose a saved audio playlist, or play one of the items already in the current playlist.</Text>
     {model.playlist.length > 0 ? model.playlist.map((item, index) => (
       <Pressable key={item.uri} accessibilityRole="button" accessibilityLabel={`Play ${item.title || 'audio item'}`} onPress={() => model.commands.onPlayIndex(index)} style={({pressed}) => [styles.listRow, pressed && styles.pressed]}>
-        <AudioV2Artwork uri={item.artworkUri || ''} title={item.title || 'Audio'} size={48} accent={palette.accent} borderRadius={13} />
+        <AudioArtwork uri={item.artworkUri || ''} title={item.title || 'Audio'} size={48} accent={palette.accent} borderRadius={13} />
         <View style={styles.listCopy}><Text numberOfLines={1} style={[styles.listTitle, {color: palette.primary}]}>{item.title || 'Untitled audio'}</Text><Text numberOfLines={1} style={[styles.listMeta, {color: palette.secondary}]}>{item.artist || item.source || 'Audio'}</Text></View>
-        <AudioV2Icon name="play" size={18} color={palette.secondary} />
+        <AudioIcon name="play" size={18} color={palette.secondary} />
       </Pressable>
     )) : null}
     <Pressable accessibilityRole="button" accessibilityLabel="Open playlist manager" onPress={model.commands.onOpenPlaylist} style={[styles.fullButton, {backgroundColor: palette.accent}]}><Text style={[styles.fullButtonText, {color: palette.page}]}>Manage playlists</Text></Pressable>
   </View>
 );
 
-const MorePanel: React.FC<{model: AudioV2ViewModel; palette: AudioV2PanelProps['palette']; onShare: () => void}> = ({model, palette, onShare}) => {
+const MorePanel: React.FC<{model: AudioViewModel; palette: AudioPanelProps['palette']; onShare: () => void}> = ({model, palette, onShare}) => {
   const actions = [
     {label: 'Share this track', icon: 'share' as const, onPress: onShare},
     {label: 'Save a bookmark here', icon: 'bookmark' as const, onPress: model.commands.onBookmark},
     {label: 'Open track information', icon: 'info' as const, onPress: model.commands.onOpenInfo},
     {label: 'Open the queue', icon: 'queue' as const, onPress: model.commands.onOpenQueue},
   ];
-  return <View>{actions.map(action => <Pressable key={action.label} accessibilityRole="button" accessibilityLabel={action.label} onPress={action.onPress} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioV2Icon name={action.icon} size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>{action.label}</Text><AudioV2Icon name="chevronDown" size={18} color={palette.muted} /></Pressable>)}</View>;
+  return <View>{actions.map(action => <Pressable key={action.label} accessibilityRole="button" accessibilityLabel={action.label} onPress={action.onPress} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name={action.icon} size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>{action.label}</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>)}</View>;
 };
 
 const styles = StyleSheet.create({

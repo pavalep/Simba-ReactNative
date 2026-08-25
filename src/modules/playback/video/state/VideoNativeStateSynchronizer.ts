@@ -1,19 +1,19 @@
 import type {
-  VideoV3SessionEvent,
-  VideoV3SessionPort,
-  VideoV3Unsubscribe,
-} from '../ports/VideoV3SessionPort';
+  VideoSessionEvent,
+  VideoSessionPort,
+  VideoUnsubscribe,
+} from '../ports/VideoSessionPort';
 
 /**
  * Reconciles event-driven updates with mpv's synchronous properties at
  * lifecycle boundaries. It deliberately avoids a polling loop in Wave B.
  */
-export class VideoV3NativeStateSynchronizer {
-  private readonly unsubscribeSession: VideoV3Unsubscribe;
+export class VideoNativeStateSynchronizer {
+  private readonly unsubscribeSession: VideoUnsubscribe;
   private refreshTail: Promise<void> = Promise.resolve();
   private disposed = false;
 
-  constructor(private readonly session: VideoV3SessionPort) {
+  constructor(private readonly session: VideoSessionPort) {
     this.unsubscribeSession = session.subscribe(event => this.handleEvent(event));
   }
 
@@ -31,7 +31,7 @@ export class VideoV3NativeStateSynchronizer {
     this.unsubscribeSession();
   }
 
-  private handleEvent(event: VideoV3SessionEvent): void {
+  private handleEvent(event: VideoSessionEvent): void {
     if (
       event.type === 'file-loaded' ||
       event.type === 'surface-attached' ||

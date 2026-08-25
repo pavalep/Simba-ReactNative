@@ -1,8 +1,8 @@
 import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {AudioV2Icon} from './AudioV2Icon';
+import {AudioIcon} from './AudioIcon';
 
-interface AudioV2PriorityActionsProps {
+interface AudioPriorityActionsProps {
   isBookmarked: boolean;
   primary: string;
   secondary: string;
@@ -14,7 +14,7 @@ interface AudioV2PriorityActionsProps {
 }
 
 /** Keeps only the two high-frequency secondary actions on the main player surface. */
-export const AudioV2PriorityActions: React.FC<AudioV2PriorityActionsProps> = ({
+export const AudioPriorityActions: React.FC<AudioPriorityActionsProps> = ({
   isBookmarked,
   primary,
   secondary,
@@ -31,7 +31,7 @@ export const AudioV2PriorityActions: React.FC<AudioV2PriorityActionsProps> = ({
       accessibilityState={{selected: isBookmarked}}
       onPress={onBookmark}
       style={({pressed}) => [styles.action, {backgroundColor: surface, borderColor: isBookmarked ? accent : border}, pressed && styles.pressed]}>
-      <AudioV2Icon name={isBookmarked ? 'bookmarkFilled' : 'bookmark'} size={18} color={isBookmarked ? accent : secondary} />
+      <AudioIcon name={isBookmarked ? 'bookmarkFilled' : 'bookmark'} size={18} color={isBookmarked ? accent : secondary} />
       <Text style={[styles.label, {color: isBookmarked ? accent : primary}]}>{isBookmarked ? 'Saved' : 'Save'}</Text>
     </Pressable>
     <Pressable
@@ -39,7 +39,7 @@ export const AudioV2PriorityActions: React.FC<AudioV2PriorityActionsProps> = ({
       accessibilityLabel="Open queue"
       onPress={onQueue}
       style={({pressed}) => [styles.action, {backgroundColor: surface, borderColor: border}, pressed && styles.pressed]}>
-      <AudioV2Icon name="queue" size={18} color={secondary} />
+      <AudioIcon name="queue" size={18} color={secondary} />
       <Text style={[styles.label, {color: primary}]}>Queue</Text>
     </Pressable>
   </View>

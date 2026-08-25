@@ -47,6 +47,79 @@ function tracePlayback(scope: string, ...args: unknown[]): void {
   logger.info(`[PlaybackTrace][JS][${scope}]`, ...args);
 }
 
+function parseNativeJson<T>(raw: string | T, fallback: T): T {
+  if (typeof raw !== 'string') return raw;
+  try {
+    return JSON.parse(raw) as T;
+  } catch (error) {
+    logger.warn('[PlaybackTrace][JS][native-json-parse]', {error});
+    return fallback;
+  }
+}
+
+function parseNativeArray<T>(raw: string | readonly unknown[], label: string): T[] {
+  const parsed = parseNativeJson<unknown>(raw, []);
+  if (!Array.isArray(parsed)) {
+    logger.warn(`[PlaybackTrace][JS][${label}] expected array`);
+    return [];
+  }
+  return parsed as T[];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function finiteNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function parseTracks(raw: string | MpvTrack[]): MpvTrack[] {
+  return parseNativeArray<Record<string, unknown>>(raw, 'tracks')
+    .map(track => {
+      const type = track.type === 'video' || track.type === 'audio' || track.type === 'sub'
+        ? track.type
+        : null;
+      if (!type) return null;
+      return {
+        id: finiteNumber(track.id, -1),
+        type,
+        ...(typeof track.title === 'string' ? {title: track.title} : {}),
+        ...(typeof track.lang === 'string' ? {lang: track.lang} : {}),
+        default: track.default === true,
+        selected: track.selected === true,
+        ...(typeof track.codec === 'string' ? {codec: track.codec} : {}),
+      } satisfies MpvTrack;
+    })
+    .filter((track): track is MpvTrack => track !== null && track.id >= 0);
+}
+
+function parseChapters(raw: string | readonly unknown[]): MpvChapter[] {
+  return parseNativeArray<Record<string, unknown>>(raw, 'chapters')
+    .map((chapter, index, chapters) => {
+      const startTime = finiteNumber(chapter.startTime ?? chapter.time, NaN);
+      const nextStart = chapters[index + 1]
+        ? finiteNumber(chapters[index + 1].startTime ?? chapters[index + 1].time, NaN)
+        : NaN;
+      const endTime = finiteNumber(chapter.endTime ?? chapter.end, Number.isFinite(nextStart) ? nextStart : startTime);
+      if (!Number.isFinite(startTime)) return null;
+      return {
+        id: finiteNumber(chapter.id, index),
+        title: typeof chapter.title === 'string' ? chapter.title : `Chapter ${index + 1}`,
+        startTime: Math.max(0, startTime),
+        endTime: Math.max(startTime, endTime),
+      } satisfies MpvChapter;
+    })
+    .filter((chapter): chapter is MpvChapter => chapter !== null);
+}
+
+function parseCurrentChapter(raw: string | MpvChapter | null): MpvChapter | null {
+  const parsed = parseNativeJson<unknown>(raw, null);
+  if (!isRecord(parsed)) return null;
+  const chapters = parseChapters([parsed]);
+  return chapters[0] ?? null;
+}
+
 export const MpvPlayer = {
   // ── Lifecycle ──
   initPlayer(): boolean {
@@ -170,7 +243,7 @@ export const MpvPlayer = {
 
   // ── Tracks ──
   getTracks(): MpvTrack[] {
-    return ensureModule().getTracks();
+    return parseTracks(ensureModule().getTracks());
   },
 
   selectTrack(trackId: number): void {
@@ -187,7 +260,7 @@ export const MpvPlayer = {
 
   // ── Chapters ──
   getChapters(): MpvChapter[] {
-    return ensureModule().getChapters();
+    return parseChapters(ensureModule().getChapters());
   },
 
   seekNextChapter(): void {
@@ -199,7 +272,7 @@ export const MpvPlayer = {
   },
 
   getCurrentChapter(): MpvChapter | null {
-    return ensureModule().getCurrentChapter();
+    return parseCurrentChapter(ensureModule().getCurrentChapter());
   },
 
   // ── Volume / Audio ──
@@ -370,12 +443,19 @@ export const MpvPlayer = {
   once<E extends MpvEventName>(
     event: E,
     handler: (payload: MpvEvents[E]) => void,
-  ): void {
-    if (!eventEmitter) {
-      logger.warn(`[MpvPlayer] EventEmitter not available for "${event}"`);
-      return;
-    }
-    (eventEmitter as any).once(event, handler);
+  ): () => void {
+    let active = true;
+    let unsubscribe: () => void = () => undefined;
+    unsubscribe = MpvPlayer.on(event, payload => {
+      if (!active) return;
+      active = false;
+      unsubscribe();
+      handler(payload);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   },
 
   removeAllListeners(event?: MpvEventName): void {

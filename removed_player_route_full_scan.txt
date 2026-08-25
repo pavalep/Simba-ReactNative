@@ -1,0 +1,48 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayerEqualizerPanel\VideoPlayerEqualizerPanel.tsx:23:export interface VideoPlayerEqualizerPanelProps {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\player\VideoPlayerEqualizerPanel\VideoPlayerEqualizerPanel.tsx:34:export const VideoPlayerEqualizerPanel: React.FC<VideoPlayerEqualizerPanelProps> = React.memo(({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\BottomSheet\BottomSheet.tsx:7:// PlaylistSheet, BookmarkSheet, InfoSheet, VideoPlayer overlays,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:115:audioPlayerTitle: 'Now Playing',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:135:videoPlayerTitle: 'Video Player',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\usePipEntry.ts:26:* Called from VideoPlayerGestureLayer's onSwipeDown handler.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\usePipEntry.ts:42:* with VideoPlayerGestureLayer. Use triggerShrinkAndEnterPip from the
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\usePipLifecycle.ts:197:* Called by VideoPlayerScreen when swipe-down gesture is detected.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\hooks\usePlayerGestures.ts:5:// for both VideoPlayerGestureLayer and other surfaces.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:69:export function useAudioPlayerScreen(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:333:logError({code: 'ERR_NO_FILE', message: 'No file URI provided.', source: 'AudioPlayerScreen'});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:350:source: 'AudioPlayerScreen',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:358:logError({code: 'ERR_VALIDATE_FAIL', message: 'File validation threw unexpectedly', source: 'AudioPlayerScreen'});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:371:logError({code: 'ERR_INIT_FAIL', message: 'Failed to initialize audio player.', source: 'AudioPlayerScreen'});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:526:logError({code: 'ERR_INIT_EXCEPTION', message: String(e), source: 'AudioPlayerScreen'});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1238:source: 'AudioPlayerScreen',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioModule.tsx:5:import {useAudioPlayerScreen} from './hooks/useAudioPlayerScreen';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioModule.tsx:6:import {AudioPlayer} from './AudioPlayer';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioModule.tsx:50:const controller = useAudioPlayerScreen(overlayNavigation, route);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioModule.tsx:125:return presentation === 'expanded' ? <AudioPlayer model={model} /> : null;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayer.tsx:25:interface AudioPlayerProps {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayer.tsx:31:export const AudioPlayer: React.FC<AudioPlayerProps> = ({model}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\index.tsx:2:export {AudioPlayer} from './AudioPlayer';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\hooks\useAlbumScreen.ts:104:(navigation as any).navigate('AudioPlayer', {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\hooks\useAlbumScreen.ts:118:(navigation as any).navigate('AudioPlayer', {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\hooks\useAlbumScreen.ts:134:(navigation as any).navigate('AudioPlayer', {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllAudio\hooks\useAllAudioScreen.ts:81:navigation.navigate('AudioPlayer', {fileUri: uri, fileTitle: title});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllVideos\hooks\useAllVideosScreen.ts:81:navigation.navigate('VideoPlayer', {fileUri: uri, fileTitle: title});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\components\ArchiveItemDetailScreen.tsx:3:// Tap a track → AudioPlayer with the full track list (EOF auto-advance,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\components\ArchiveItemDetailScreen.tsx:194:route: 'AudioPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\hooks\useArchiveItemDetailScreen.ts:3:// list. Tracks stream straight into the AudioPlayer (with auto-advance).
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\hooks\useArtistScreen.ts:86:(navigation as any).navigate('AudioPlayer', {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\hooks\useArtistScreen.ts:100:(navigation as any).navigate('AudioPlayer', {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\hooks\useArtistScreen.ts:117:(navigation as any).navigate('AudioPlayer', {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\components\AudiobookDetailScreen.tsx:3:// metadata. Tap a chapter → AudioPlayer with the full chapter list so
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\components\AudiobookDetailScreen.tsx:208:route: 'AudioPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Equalizer\index.tsx:10:import {VideoPlayerEqualizerPanel} from '../../components/player/VideoPlayerEqualizerPanel/VideoPlayerEqualizerPanel';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Equalizer\index.tsx:92:<VideoPlayerEqualizerPanel
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\hooks\useGenreScreen.ts:177:navigation.navigate('AudioPlayer', {fileUri: uri, fileTitle: title});
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\hooks\useGenreScreen.ts:184:navigation.navigate('AudioPlayer', {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\hooks\useGenreScreen.ts:196:navigation.navigate('AudioPlayer', {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\components\LiveTVScreen.tsx:5:// bumping). Tap → VideoPlayer, long-press → option sheet.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\components\LiveTVScreen.tsx:491:route: 'VideoPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:9://   • Press a channel → VideoPlayer
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:250:route: 'VideoPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVFavoritesScreen.tsx:138:route: 'VideoPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:9:// Long-press → favorite / playlist / bookmark / share; press → AudioPlayer.
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioFavoritesScreen.tsx:129:route: 'AudioPlayer',

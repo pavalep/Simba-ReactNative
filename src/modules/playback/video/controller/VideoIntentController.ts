@@ -1,12 +1,12 @@
 import type {
-  VideoV3CommandResult,
-  VideoV3Intent,
-  VideoV3IntentDispatcher,
-} from '../ports/VideoV3Commands';
-import type {VideoV3SessionPort} from '../ports/VideoV3SessionPort';
-import {VideoV3SeekCoordinator} from './VideoV3SeekCoordinator';
+  VideoCommandResult,
+  VideoIntent,
+  VideoIntentDispatcher,
+} from '../ports/VideoCommands';
+import type {VideoSessionPort} from '../ports/VideoSessionPort';
+import {VideoSeekCoordinator} from './VideoSeekCoordinator';
 
-function failure(message: string): VideoV3CommandResult {
+function failure(message: string): VideoCommandResult {
   return {ok: false, message};
 }
 
@@ -14,17 +14,17 @@ function failure(message: string): VideoV3CommandResult {
  * Serializes user intent before it reaches native mpv. The controller owns
  * command policy only; it has no React or presentation responsibilities.
  */
-export class VideoV3IntentController implements VideoV3IntentDispatcher {
+export class VideoIntentController implements VideoIntentDispatcher {
   private tail: Promise<void> = Promise.resolve();
-  private readonly seekCoordinator: VideoV3SeekCoordinator;
+  private readonly seekCoordinator: VideoSeekCoordinator;
   private disposed = false;
   private disposePromise: Promise<void> | null = null;
 
-  constructor(private readonly session: VideoV3SessionPort) {
-    this.seekCoordinator = new VideoV3SeekCoordinator(session);
+  constructor(private readonly session: VideoSessionPort) {
+    this.seekCoordinator = new VideoSeekCoordinator(session);
   }
 
-  dispatch(intent: VideoV3Intent): Promise<VideoV3CommandResult> {
+  dispatch(intent: VideoIntent): Promise<VideoCommandResult> {
     if (this.disposed) return Promise.resolve(failure('The video session is closed.'));
 
     const result = this.tail.then(() => this.execute(intent));
@@ -41,13 +41,28 @@ export class VideoV3IntentController implements VideoV3IntentDispatcher {
     if (this.disposePromise) return this.disposePromise;
     this.disposed = true;
     this.seekCoordinator.cancel();
-    this.disposePromise = this.tail
-      .then(() => this.seekCoordinator.dispose())
-      .then(() => this.session.release());
+    const queuedCommands = this.tail;
+    this.disposePromise = queuedCommands
+      .then(() => this.disposeResources());
     return this.disposePromise;
   }
 
-  private async execute(intent: VideoV3Intent): Promise<VideoV3CommandResult> {
+  private async disposeFromQueuedRelease(): Promise<void> {
+    if (this.disposePromise) return this.disposePromise;
+    this.disposed = true;
+    this.seekCoordinator.cancel();
+    // This method runs as the current queue item. It must not await `tail`,
+    // because `tail` already contains the current release command.
+    this.disposePromise = this.disposeResources();
+    return this.disposePromise;
+  }
+
+  private async disposeResources(): Promise<void> {
+    await this.seekCoordinator.dispose();
+    await this.session.release();
+  }
+
+  private async execute(intent: VideoIntent): Promise<VideoCommandResult> {
     switch (intent.type) {
       case 'load': {
         const generation = await this.session.load(intent.request);
@@ -93,7 +108,7 @@ export class VideoV3IntentController implements VideoV3IntentDispatcher {
         await this.session.setCaptionVisibility(intent.visible);
         return {ok: true};
       case 'release':
-        await this.dispose();
+        await this.disposeFromQueuedRelease();
         return {ok: true};
     }
   }

@@ -6,10 +6,10 @@ import {
   FlatList,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import {AppText} from '../../../../components/core/AppText/AppText';
-import {useTheme} from '../../../../theme';
-import {spacing, radius} from '../../../../theme/tokens';
-import {EQ_BANDS, EQ_PRESETS} from '../../../../services/audioSettingsService';
+import {AppText} from '../../core/AppText/AppText';
+import {useTheme} from '../../../theme';
+import {spacing, radius} from '../../../theme/tokens';
+import {EQ_BANDS, EQ_PRESETS} from '../../../services/audioSettingsService';
 
 // Re-export for consumers that historically imported from this panel.
 export {EQ_BANDS, EQ_PRESETS};

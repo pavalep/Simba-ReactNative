@@ -1,0 +1,29 @@
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:106:  // ── Core playback state ──
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:107:  const [isLoading, setIsLoading] = useState(true);
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:108:  const [volume, setVolume] = useState(65);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:109:  const [isReady, setIsReady] = useState(false);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:110:  const [error, setError] = useState<string | null>(null);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:111:  const [errorIsPermission, setErrorIsPermission] = useState(false);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:112:  const [refreshing, setRefreshing] = useState(false);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:392:        unsubVolume = MpvPlayer.on('onVolumeChanged', ({volume: nextVolume}) => {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:393:          logger.info('[PlaybackTrace][Controller][event:onVolumeChanged]', {volume: nextVolume, cancelled});
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:394:          if (!cancelled) setVolume(nextVolume);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:395:        });
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:396:        unsubSpeed = MpvPlayer.on('onSpeedChanged', ({speed: nextSpeed}) => {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:397:          logger.info('[PlaybackTrace][Controller][event:onSpeedChanged]', {speed: nextSpeed, cancelled});
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:398:          if (!cancelled) dispatch(setPlaybackSpeed(nextSpeed));
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1005:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1006:  const handleVolumeChange = useCallback((delta: number) => {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1007:    const current = MpvPlayer.getVolume?.() ?? volume;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1008:    const next = Math.max(0, Math.min(100, current + delta));
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1009:    try {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1010:      MpvPlayer.setVolume(next);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1011:      // Keep the visual thumb responsive even if the native property event is
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1012:      // delivered one polling cycle later.
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1013:      setVolume(next);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1014:    } catch {}
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1015:  }, [volume]);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1016:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1017:  const handleSeekToLyric = useCallback((time: number) => {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1018:    try {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1019:      MpvPlayer.seekTo(time);

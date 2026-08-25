@@ -1,11 +1,11 @@
-import type {VideoV3BufferRange} from './VideoV3Types';
+import type {VideoBufferRange} from './VideoTypes';
 
 const DEFAULT_ADJACENCY_EPSILON_SECONDS = 0.05;
 
-export interface VideoV3BufferPresentation {
-  readonly nativeRanges: readonly VideoV3BufferRange[];
-  readonly visibleRanges: readonly VideoV3BufferRange[];
-  readonly activeRange: VideoV3BufferRange | null;
+export interface VideoBufferPresentation {
+  readonly nativeRanges: readonly VideoBufferRange[];
+  readonly visibleRanges: readonly VideoBufferRange[];
+  readonly activeRange: VideoBufferRange | null;
   readonly fill: number;
 }
 
@@ -18,11 +18,11 @@ function finite(value: unknown): value is number {
  * islands. The complete normalized range set remains available for state and
  * diagnostics; presentation chooses a smaller truthful window.
  */
-export function normalizeVideoV3BufferedRanges(
-  ranges: readonly VideoV3BufferRange[],
+export function normalizeVideoBufferedRanges(
+  ranges: readonly VideoBufferRange[],
   duration: number | null,
   adjacencyEpsilonSeconds = DEFAULT_ADJACENCY_EPSILON_SECONDS,
-): VideoV3BufferRange[] {
+): VideoBufferRange[] {
   const maxDuration = finite(duration) && duration > 0 ? duration : Number.POSITIVE_INFINITY;
   const epsilon = finite(adjacencyEpsilonSeconds) && adjacencyEpsilonSeconds >= 0
     ? adjacencyEpsilonSeconds
@@ -36,7 +36,7 @@ export function normalizeVideoV3BufferedRanges(
     .filter(range => range.end > range.start)
     .sort((left, right) => left.start - right.start || left.end - right.end);
 
-  return validRanges.reduce<VideoV3BufferRange[]>((normalized, range) => {
+  return validRanges.reduce<VideoBufferRange[]>((normalized, range) => {
     const previous = normalized[normalized.length - 1];
     if (!previous || range.start > previous.end + epsilon) {
       normalized.push(range);
@@ -55,27 +55,27 @@ export function normalizeVideoV3BufferedRanges(
  * hides disconnected islands ahead of the current playback window so the seek
  * bar does not promise continuous playback that native cache does not have.
  */
-export function selectVideoV3ActiveBufferedRange(
-  ranges: readonly VideoV3BufferRange[],
+export function selectVideoActiveBufferedRange(
+  ranges: readonly VideoBufferRange[],
   position: number,
   duration: number | null,
-): VideoV3BufferRange | null {
+): VideoBufferRange | null {
   if (!finite(position)) return null;
-  const normalized = normalizeVideoV3BufferedRanges(ranges, duration);
+  const normalized = normalizeVideoBufferedRanges(ranges, duration);
   const active = normalized.find(
     range => position >= range.start && position <= range.end,
   );
   return active ?? null;
 }
 
-export function createVideoV3BufferPresentation(
-  ranges: readonly VideoV3BufferRange[],
+export function createVideoBufferPresentation(
+  ranges: readonly VideoBufferRange[],
   position: number,
   duration: number | null,
   fill: number,
-): VideoV3BufferPresentation {
-  const nativeRanges = normalizeVideoV3BufferedRanges(ranges, duration);
-  const activeRange = selectVideoV3ActiveBufferedRange(nativeRanges, position, duration);
+): VideoBufferPresentation {
+  const nativeRanges = normalizeVideoBufferedRanges(ranges, duration);
+  const activeRange = selectVideoActiveBufferedRange(nativeRanges, position, duration);
   return {
     nativeRanges,
     visibleRanges: activeRange ? [activeRange] : [],

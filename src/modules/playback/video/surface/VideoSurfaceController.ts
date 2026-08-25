@@ -1,18 +1,18 @@
 import type {
-  VideoV3SurfaceGeometry,
-  VideoV3SurfacePort,
-  VideoV3SurfacePresentation,
-} from '../ports/VideoV3SurfacePort';
+  VideoSurfaceGeometry,
+  VideoSurfacePort,
+  VideoSurfacePresentation,
+} from '../ports/VideoSurfacePort';
 
-export interface VideoV3SurfaceState {
+export interface VideoSurfaceState {
   readonly attached: boolean;
-  readonly presentation: VideoV3SurfacePresentation;
-  readonly geometry: VideoV3SurfaceGeometry | null;
+  readonly presentation: VideoSurfacePresentation;
+  readonly geometry: VideoSurfaceGeometry | null;
 }
 
-export type VideoV3SurfaceStateListener = (state: VideoV3SurfaceState) => void;
+export type VideoSurfaceStateListener = (state: VideoSurfaceState) => void;
 
-const initialState: VideoV3SurfaceState = {
+const initialState: VideoSurfaceState = {
   attached: false,
   presentation: 'full',
   geometry: null,
@@ -22,16 +22,16 @@ const initialState: VideoV3SurfaceState = {
  * Owns the JS-side lease for the one V3 native render surface. It never
  * creates a second native view for compact or system presentations.
  */
-export class VideoV3SurfaceController implements VideoV3SurfacePort {
-  private state: VideoV3SurfaceState = initialState;
-  private readonly listeners = new Set<VideoV3SurfaceStateListener>();
+export class VideoSurfaceController implements VideoSurfacePort {
+  private state: VideoSurfaceState = initialState;
+  private readonly listeners = new Set<VideoSurfaceStateListener>();
   private releasePromise: Promise<void> | null = null;
 
-  getState(): VideoV3SurfaceState {
+  getState(): VideoSurfaceState {
     return this.state;
   }
 
-  subscribe(listener: VideoV3SurfaceStateListener): () => void {
+  subscribe(listener: VideoSurfaceStateListener): () => void {
     this.listeners.add(listener);
     listener(this.state);
     return () => this.listeners.delete(listener);
@@ -44,8 +44,8 @@ export class VideoV3SurfaceController implements VideoV3SurfacePort {
   }
 
   async setPresentation(
-    presentation: VideoV3SurfacePresentation,
-    geometry?: VideoV3SurfaceGeometry,
+    presentation: VideoSurfacePresentation,
+    geometry?: VideoSurfaceGeometry,
   ): Promise<void> {
     if (this.releasePromise) return;
     if (!this.state.attached) await this.attach();
@@ -69,7 +69,7 @@ export class VideoV3SurfaceController implements VideoV3SurfacePort {
     return this.state.attached;
   }
 
-  private update(next: VideoV3SurfaceState): void {
+  private update(next: VideoSurfaceState): void {
     if (this.state === next) return;
     this.state = next;
     this.listeners.forEach(listener => listener(this.state));

@@ -1,34 +1,53 @@
-import {MpvPlayer} from '../../../../../native/player.api';
-import {getLocalPath} from '../../../../../services/downloadService';
+import {MpvPlayer} from '../../../../native/player.api';
+import {getLocalPath} from '../../../../services/downloadService';
 import type {
   MpvFileLoadedEvent,
   MpvPlaybackState,
-} from '../../../../../native/NativeMpvPlayer';
+} from '../../../../native/NativeMpvPlayer';
 import {
-  createVideoV3SourceFingerprint,
-  isSameVideoV3Source,
-} from '../domain/VideoV3Fingerprint';
+  createVideoSourceFingerprint,
+  isSameVideoSource,
+} from '../domain/VideoFingerprint';
 import {
-  emptyVideoV3Snapshot,
-  type VideoV3BufferRange,
-  type VideoV3Chapter,
-  type VideoV3SessionSnapshot,
-  type VideoV3Track,
-  type VideoV3VideoMetrics,
-} from '../domain/VideoV3Types';
+  emptyVideoSnapshot,
+  type VideoBufferRange,
+  type VideoChapter,
+  type VideoSessionSnapshot,
+  type VideoTrack,
+  type VideoVideoMetrics,
+} from '../domain/VideoTypes';
 import type {
-  VideoV3LoadRequest,
-  VideoV3SeekRequest,
-  VideoV3SessionEvent,
-  VideoV3SessionListener,
-  VideoV3SessionPort,
-  VideoV3Unsubscribe,
-} from '../ports/VideoV3SessionPort';
+  VideoLoadRequest,
+  VideoSeekRequest,
+  VideoSessionEvent,
+  VideoSessionListener,
+  VideoSessionPort,
+  VideoUnsubscribe,
+} from '../ports/VideoSessionPort';
+import {reduceVideoSessionEvent} from '../state/reduceVideoSessionEvent';
+import {
+  acquireVideoNativeLease,
+  ownsVideoNativeLease,
+  releaseVideoNativeLease,
+  type VideoNativeLease,
+} from './VideoNativeLease';
 
 const MAX_VOLUME = 100;
 const MIN_SPEED = 0.25;
 const MAX_SPEED = 4;
 const MIN_POSITION = 0;
+const VIDEO_POLL_INTERVAL_MS = 750;
+const FIRST_FRAME_WATCHDOG_MS = 12_000;
+const VIDEO_OBSERVED_PROPERTIES = [
+  'time-pos',
+  'duration',
+  'pause',
+  'paused-for-cache',
+  'cache-buffering-state',
+  'demuxer-cache-state',
+  'seekable',
+  'seeking',
+] as const;
 
 function finiteOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -46,7 +65,7 @@ function readNative<T>(reader: () => T, fallback: T): T {
   }
 }
 
-function normalizeRanges(ranges: readonly VideoV3BufferRange[]): VideoV3BufferRange[] {
+function normalizeRanges(ranges: readonly VideoBufferRange[]): VideoBufferRange[] {
   type MutableRange = {start: number; end: number};
   return ranges
     .map(range => ({
@@ -74,7 +93,7 @@ function mapTrack(track: {
   codec?: string;
   default: boolean;
   selected: boolean;
-}): VideoV3Track {
+}): VideoTrack {
   return {
     id: track.id,
     type: track.type,
@@ -91,7 +110,7 @@ function mapChapter(chapter: {
   title: string;
   startTime: number;
   endTime: number;
-}): VideoV3Chapter {
+}): VideoChapter {
   return {
     id: chapter.id,
     title: chapter.title,
@@ -106,16 +125,20 @@ function mapPlaybackState(state: MpvPlaybackState): 'playing' | 'paused' | 'idle
   return 'idle';
 }
 
+function normalizeDuration(value: number | null): number | null {
+  return value !== null && Number.isFinite(value) && value > 0 ? value : null;
+}
+
 /**
  * Presentation-neutral V3 session adapter.
  *
  * It owns native listeners, source generations, and the one mpv session. It
  * intentionally has no React, layout, icon, panel, or presentation concerns.
  */
-export class VideoV3MpvSession implements VideoV3SessionPort {
-  private snapshot: VideoV3SessionSnapshot = emptyVideoV3Snapshot();
-  private readonly listeners = new Set<VideoV3SessionListener>();
-  private nativeUnsubscribers: VideoV3Unsubscribe[] = [];
+export class VideoMpvSession implements VideoSessionPort {
+  private snapshot: VideoSessionSnapshot = emptyVideoSnapshot();
+  private readonly listeners = new Set<VideoSessionListener>();
+  private nativeUnsubscribers: VideoUnsubscribe[] = [];
   private surfaceSubscription: {remove: () => void} | null = null;
   private pendingStartPosition: number | undefined;
   private activeFileGeneration: number | null = null;
@@ -124,27 +147,31 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
   private loadRequestSequence = 0;
   private released = false;
   private releasePromise: Promise<void> | null = null;
+  private nativeLease: VideoNativeLease | null = null;
+  private observedProperties = new Set<string>();
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private firstFrameWatchdogTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.subscribeToNativeEvents();
   }
 
-  getSnapshot(): VideoV3SessionSnapshot {
+  getSnapshot(): VideoSessionSnapshot {
     return this.snapshot;
   }
 
-  subscribe(listener: VideoV3SessionListener): VideoV3Unsubscribe {
+  subscribe(listener: VideoSessionListener): VideoUnsubscribe {
     if (this.released) return () => undefined;
     this.listeners.add(listener);
     listener({type: 'snapshot', snapshot: this.snapshot});
     return () => this.listeners.delete(listener);
   }
 
-  async load(request: VideoV3LoadRequest): Promise<number> {
+  async load(request: VideoLoadRequest): Promise<number> {
     this.assertUsable();
-    const fingerprint = createVideoV3SourceFingerprint(request.source);
+    const fingerprint = createVideoSourceFingerprint(request.source);
 
-    if (isSameVideoV3Source(this.snapshot.sourceFingerprint, request.source)) {
+    if (isSameVideoSource(this.snapshot.sourceFingerprint, request.source) && this.snapshot.phase !== 'error') {
       if (request.startPosition !== undefined) {
         await this.seek({
           generation: this.snapshot.generation,
@@ -162,7 +189,7 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
     const requestToken = request.requestToken ?? `v3-${generation}-${++this.loadRequestSequence}`;
     this.expectedLoadRequestToken = requestToken;
     this.snapshot = {
-      ...emptyVideoV3Snapshot(),
+      ...emptyVideoSnapshot(),
       generation,
       hasSurfaceAttached: this.snapshot.hasSurfaceAttached,
       source: request.source,
@@ -174,6 +201,7 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
     this.emitSnapshot();
 
     try {
+      this.nativeLease = acquireVideoNativeLease();
       const initialized = MpvPlayer.initPlayer();
       if (!initialized) {
         throw new Error('The native video session could not be initialized.');
@@ -182,6 +210,9 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
         ...current,
         phase: 'connecting',
       }));
+      this.observeNativeProperties();
+      this.startPolling();
+      this.armFirstFrameWatchdog(generation);
       // Set intent before loadFile because a native test double or bridge may
       // emit file-loaded synchronously during the call.
       this.pendingAutoplay = request.autoplay;
@@ -209,31 +240,20 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
     const speed = finiteOrNull(readNative(() => MpvPlayer.getSpeed(), NaN));
 
     this.updateSnapshot(current => {
-      if (current.isEnded && nativeState !== 'playing') {
-        return {
-          ...current,
-          ...(position === null ? {} : {position}),
-          ...(duration === null ? {} : {duration}),
-        };
-      }
-      const mapped = nativeState ? mapPlaybackState(nativeState) : null;
-      return {
+      const refreshed = {
         ...current,
         ...(position === null ? {} : {position}),
-        ...(duration === null ? {} : {duration}),
+        ...(duration === null ? {} : {duration: normalizeDuration(duration)}),
         ...(volume === null ? {} : {volume: Math.max(0, Math.min(MAX_VOLUME, volume))}),
         ...(isMuted === null ? {} : {isMuted}),
         ...(speed === null ? {} : {speed: Math.max(MIN_SPEED, Math.min(MAX_SPEED, speed))}),
-        ...(mapped === null ? {} : {
-          isPlaying: mapped === 'playing',
-          phase:
-            current.isSeeking || current.isBuffering
-              ? current.phase
-              : mapped === 'playing'
-                ? current.hasFirstFrame ? 'playing' : 'first-frame'
-                : mapped === 'paused' ? 'paused' : current.phase,
-        }),
       };
+      if (!nativeState) return refreshed;
+      return reduceVideoSessionEvent(refreshed, {
+        type: 'playback-state-changed',
+        generation: refreshed.generation,
+        isPlaying: mapPlaybackState(nativeState) === 'playing',
+      });
     });
   }
 
@@ -247,7 +267,7 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
     MpvPlayer.pause();
   }
 
-  async seek(request: VideoV3SeekRequest): Promise<void> {
+  async seek(request: VideoSeekRequest): Promise<void> {
     this.assertUsable();
     if (request.generation !== this.snapshot.generation) return;
     if (!this.snapshot.isSeekable) return;
@@ -310,18 +330,43 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
   async release(): Promise<void> {
     if (this.releasePromise) return this.releasePromise;
     this.released = true;
-    this.releasePromise = Promise.resolve().then(() => {
-      this.pendingStartPosition = undefined;
-      this.pendingAutoplay = false;
-      this.activeFileGeneration = null;
-      this.expectedNativePath = null;
-      this.expectedLoadRequestToken = null;
-      const subscriptions = this.nativeUnsubscribers;
-      this.nativeUnsubscribers = [];
-      subscriptions.forEach(unsubscribe => unsubscribe());
-      this.surfaceSubscription?.remove();
-      this.surfaceSubscription = null;
-      this.listeners.clear();
+    this.releasePromise = Promise.resolve(this.teardownNativeSession());
+    return this.releasePromise;
+  }
+
+  private teardownNativeSession(): void {
+    this.clearFirstFrameWatchdog();
+    if (this.pollTimer !== null) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+
+    const ownsNativeSession =
+      this.nativeLease !== null && ownsVideoNativeLease(this.nativeLease);
+    if (ownsNativeSession) {
+      this.observedProperties.forEach(property => {
+        try {
+          MpvPlayer.unobserveProperty(property);
+        } catch {
+          // The native module may already be partially torn down.
+        }
+      });
+    }
+    this.observedProperties.clear();
+
+    this.pendingStartPosition = undefined;
+    this.pendingAutoplay = false;
+    this.activeFileGeneration = null;
+    this.expectedNativePath = null;
+    this.expectedLoadRequestToken = null;
+    const subscriptions = this.nativeUnsubscribers;
+    this.nativeUnsubscribers = [];
+    subscriptions.forEach(unsubscribe => unsubscribe());
+    this.surfaceSubscription?.remove();
+    this.surfaceSubscription = null;
+    this.listeners.clear();
+
+    if (ownsNativeSession) {
       try {
         MpvPlayer.stop();
       } catch {
@@ -332,8 +377,52 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
       } catch {
         // Release remains idempotent even when native teardown is partial.
       }
+      releaseVideoNativeLease(this.nativeLease!);
+    }
+    this.nativeLease = null;
+  }
+
+  private armFirstFrameWatchdog(generation: number): void {
+    this.clearFirstFrameWatchdog();
+    this.firstFrameWatchdogTimer = setTimeout(() => {
+      this.firstFrameWatchdogTimer = null;
+      if (
+        this.released ||
+        generation !== this.snapshot.generation ||
+        this.snapshot.hasFirstFrame ||
+        this.snapshot.phase === 'error'
+      ) return;
+      this.setError(
+        generation,
+        'Video did not produce a first frame. Check the connection and retry.',
+        true,
+      );
+    }, FIRST_FRAME_WATCHDOG_MS);
+  }
+
+  private clearFirstFrameWatchdog(): void {
+    if (this.firstFrameWatchdogTimer === null) return;
+    clearTimeout(this.firstFrameWatchdogTimer);
+    this.firstFrameWatchdogTimer = null;
+  }
+
+  private observeNativeProperties(): void {
+    VIDEO_OBSERVED_PROPERTIES.forEach(property => {
+      try {
+        MpvPlayer.observeProperty(property);
+        this.observedProperties.add(property);
+      } catch {
+        // Polling remains available if a property is unsupported by a build.
+      }
     });
-    return this.releasePromise;
+  }
+
+  private startPolling(): void {
+    if (this.pollTimer !== null) return;
+    this.pollTimer = setInterval(() => {
+      if (this.released || !this.hasActiveFile()) return;
+      this.refresh().catch(() => undefined);
+    }, VIDEO_POLL_INTERVAL_MS);
   }
 
   private subscribeToNativeEvents(): void {
@@ -350,127 +439,137 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
       MpvPlayer.on('onFileLoaded', payload => this.handleFileLoaded(payload)),
       MpvPlayer.on('onPlaybackStateChanged', ({state}) => {
         if (!this.hasActiveFile()) return;
-        this.updateSnapshot(current => {
-          if (current.isEnded && state !== 'playing') return current;
-          const mapped = mapPlaybackState(state);
-          return {
-            ...current,
-            isPlaying: mapped === 'playing',
-            phase:
-              current.isSeeking || current.isBuffering
-                ? current.phase
-                : mapped === 'playing'
-                  ? current.hasFirstFrame
-                    ? 'playing'
-                    : 'first-frame'
-                  : mapped === 'paused'
-                    ? 'paused'
-                    : current.phase,
-          };
+        this.applySessionEvent({
+          type: 'playback-state-changed',
+          generation: this.snapshot.generation,
+          isPlaying: mapPlaybackState(state) === 'playing',
         });
       }),
       MpvPlayer.on('onPositionChanged', ({position}) => {
         if (!this.hasActiveFile() || !Number.isFinite(position)) return;
-        this.updateSnapshot(current => ({...current, position}));
+        this.applySessionEvent({
+          type: 'position-changed',
+          generation: this.snapshot.generation,
+          position,
+        });
       }),
       MpvPlayer.on('onDurationChanged', ({duration}) => {
         if (!this.hasActiveFile()) return;
-        this.updateSnapshot(current => ({
-          ...current,
+        this.applySessionEvent({
+          type: 'duration-changed',
+          generation: this.snapshot.generation,
           duration: finiteOrNull(duration),
-        }));
+        });
       }),
-      MpvPlayer.on('onBuffering', ({percent}) => {
+      MpvPlayer.on('onBuffering', ({percent, isBuffering}) => {
         if (!this.hasActiveFile()) return;
         const fill = Math.max(0, Math.min(1, finiteOrZero(percent) / 100));
-        this.updateSnapshot(current => ({
-          ...current,
-          cacheFill: fill,
-          isBuffering: fill > 0 && fill < 1,
-          phase: fill > 0 && fill < 1 ? 'buffering' : current.phase,
-        }));
+        this.applySessionEvent({
+          type: 'buffering-changed',
+          generation: this.snapshot.generation,
+          isBuffering: isBuffering ?? (fill > 0 && fill < 1),
+          cacheFill: isBuffering === true && fill === 0 ? this.snapshot.cacheFill : fill,
+        });
       }),
       MpvPlayer.on('onCacheState', ({ranges, fill}) => {
         if (!this.hasActiveFile()) return;
-        this.updateSnapshot(current => ({
-          ...current,
-          bufferedRanges: normalizeRanges(ranges),
-          cacheFill: Math.max(0, Math.min(1, finiteOrZero(fill))),
-        }));
+        const generation = this.snapshot.generation;
+        this.applySessionEvent({
+          type: 'cache-changed',
+          generation,
+          ranges: normalizeRanges(ranges),
+        });
+        const normalizedFill = finiteOrNull(fill);
+        if (normalizedFill !== null) {
+          this.applySessionEvent({
+            type: 'buffering-changed',
+            generation,
+            isBuffering: this.snapshot.isBuffering,
+            cacheFill: Math.max(0, Math.min(1, normalizedFill)),
+          });
+        }
       }),
       MpvPlayer.on('onSeekable', ({seekable}) => {
         if (!this.hasActiveFile()) return;
-        this.updateSnapshot(current => ({
-          ...current,
+        this.applySessionEvent({
+          type: 'seekable-changed',
+          generation: this.snapshot.generation,
           isSeekable: seekable,
-          isLive: !seekable && current.source?.type === 'live-tv',
-        }));
+        });
       }),
       MpvPlayer.on('onSeeking', ({seeking}) => {
         if (!this.hasActiveFile()) return;
-        this.updateSnapshot(current => ({
-          ...current,
+        this.applySessionEvent({
+          type: 'seeking-changed',
+          generation: this.snapshot.generation,
           isSeeking: seeking,
-          phase: seeking ? 'seeking' : current.isPlaying ? 'playing' : 'paused',
-        }));
+        });
       }),
       MpvPlayer.on('onTracksChanged', ({tracks}) => {
         if (!this.hasActiveFile()) return;
-        this.updateSnapshot(current => ({
-          ...current,
+        this.applySessionEvent({
+          type: 'tracks-changed',
+          generation: this.snapshot.generation,
           tracks: tracks.map(mapTrack),
-        }));
+        });
       }),
       MpvPlayer.on('onChapterChanged', ({chapter}) => {
         if (!this.hasActiveFile()) return;
-        this.updateSnapshot(current => ({
-          ...current,
-          currentChapterId: chapter?.id ?? null,
-        }));
+        this.applySessionEvent({
+          type: 'chapter-changed',
+          generation: this.snapshot.generation,
+          chapterId: chapter?.id ?? null,
+        });
       }),
       MpvPlayer.on('onVideoParamsChanged', ({params}) => {
         if (!this.hasActiveFile()) return;
-        const metrics: VideoV3VideoMetrics = {
+        const metrics: VideoVideoMetrics = {
           width: finiteOrZero(params.videoWidth),
           height: finiteOrZero(params.videoHeight),
           aspectRatio: finiteOrZero(params.aspectRatio),
           fps: finiteOrZero(params.fps),
           codec: params.codec,
         };
-        this.updateSnapshot(current => ({...current, videoMetrics: metrics}));
+        this.applySessionEvent({
+          type: 'video-metrics-changed',
+          generation: this.snapshot.generation,
+          metrics,
+        });
       }),
       MpvPlayer.on('videoReconfig', () => {
         if (!this.hasActiveFile()) return;
-        this.updateSnapshot(current => ({
-          ...current,
-          hasFirstFrame: true,
-          phase: current.isPlaying ? 'playing' : 'paused',
-        }));
-        this.emit({type: 'first-frame', generation: this.snapshot.generation});
+        this.clearFirstFrameWatchdog();
+        const generation = this.snapshot.generation;
+        this.applySessionEvent({type: 'first-frame', generation});
+        this.emit({type: 'first-frame', generation});
         this.applyPendingStart();
       }),
-      MpvPlayer.on('onEndFile', ({reason}) => {
-        if (!this.hasActiveFile() || reason !== 0) return;
-        this.updateSnapshot(current => ({
-          ...current,
-          phase: 'finished',
-          isPlaying: false,
-          isEnded: true,
-          isBuffering: false,
-          isSeeking: false,
-        }));
-        this.emit({type: 'ended', generation: this.snapshot.generation});
+      MpvPlayer.on('onEndFile', ({reason, requestId}) => {
+        if (!this.isCurrentNativeEvent(requestId) || reason !== 0) return;
+        this.clearFirstFrameWatchdog();
+        const generation = this.snapshot.generation;
+        this.applySessionEvent({type: 'ended', generation});
+        this.emit({type: 'ended', generation});
       }),
-      MpvPlayer.on('onError', ({code, message}) => {
-        this.setError(this.snapshot.generation, message, true, code);
+      MpvPlayer.on('onError', ({code, message, requestId}) => {
+        if (!this.isCurrentNativeEvent(requestId)) return;
+        this.clearFirstFrameWatchdog();
+        this.applySessionEvent({
+          type: 'error',
+          generation: this.snapshot.generation,
+          code,
+          message,
+        });
       }),
       MpvPlayer.on('onVolumeChanged', ({volume}) => {
+        if (!this.hasActiveFile()) return;
         this.updateSnapshot(current => ({
           ...current,
           volume: Math.max(0, Math.min(MAX_VOLUME, finiteOrZero(volume))),
         }));
       }),
       MpvPlayer.on('onSpeedChanged', ({speed}) => {
+        if (!this.hasActiveFile()) return;
         this.updateSnapshot(current => ({
           ...current,
           speed: Math.max(MIN_SPEED, Math.min(MAX_SPEED, finiteOrZero(speed))),
@@ -496,8 +595,8 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
     }
     const generation = this.snapshot.generation;
     let duration: number | null = this.snapshot.duration;
-    let tracks: VideoV3Track[] = this.snapshot.tracks.slice();
-    let chapters: VideoV3Chapter[] = this.snapshot.chapters.slice();
+    let tracks: VideoTrack[] = this.snapshot.tracks.slice();
+    let chapters: VideoChapter[] = this.snapshot.chapters.slice();
     try {
       duration = finiteOrNull(MpvPlayer.getDuration());
     } catch {
@@ -514,19 +613,10 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
       chapters = [];
     }
     this.activeFileGeneration = generation;
-    this.updateSnapshot(current => ({
-      ...current,
-      phase: 'connecting',
-      duration,
-      tracks,
-      chapters,
-      isEnded: false,
-      isBuffering: false,
-      isSeeking: false,
-      isSeekable: current.source?.type !== 'live-tv',
-      hasFirstFrame: false,
-      error: null,
-    }));
+    this.applySessionEvent({type: 'file-loaded', generation});
+    this.applySessionEvent({type: 'duration-changed', generation, duration});
+    this.applySessionEvent({type: 'tracks-changed', generation, tracks});
+    this.applySessionEvent({type: 'chapters-changed', generation, chapters});
     this.emit({type: 'file-loaded', generation});
     this.applyPendingStart();
   }
@@ -555,8 +645,15 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
     return this.activeFileGeneration === this.snapshot.generation;
   }
 
+  private isCurrentNativeEvent(requestId?: string): boolean {
+    if (!this.hasActiveFile()) return false;
+    if (this.expectedLoadRequestToken === null) return true;
+    return requestId === this.expectedLoadRequestToken;
+  }
+
   private setError(generation: number, message: string, recoverable: boolean, code?: number): void {
     if (generation !== this.snapshot.generation || this.released) return;
+    this.clearFirstFrameWatchdog();
     const error = {
       ...(code === undefined ? {} : {code}),
       message,
@@ -575,7 +672,7 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
   }
 
   private updateSnapshot(
-    updater: (current: VideoV3SessionSnapshot) => VideoV3SessionSnapshot,
+    updater: (current: VideoSessionSnapshot) => VideoSessionSnapshot,
   ): void {
     if (this.released) return;
     this.snapshot = updater(this.snapshot);
@@ -586,7 +683,14 @@ export class VideoV3MpvSession implements VideoV3SessionPort {
     this.emit({type: 'snapshot', snapshot: this.snapshot});
   }
 
-  private emit(event: VideoV3SessionEvent): void {
+  private applySessionEvent(event: VideoSessionEvent): void {
+    if (event.type !== 'snapshot' && event.generation !== this.snapshot.generation) {
+      return;
+    }
+    this.updateSnapshot(current => reduceVideoSessionEvent(current, event));
+  }
+
+  private emit(event: VideoSessionEvent): void {
     this.listeners.forEach(listener => listener(event));
   }
 

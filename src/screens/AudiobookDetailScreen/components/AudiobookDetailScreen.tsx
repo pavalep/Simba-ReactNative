@@ -49,7 +49,7 @@ function formatTime(totalSeconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
+export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
   const {bookId, bookTitle: paramTitle} = route.params;
   const {book, chapters, isLoading, error, retry} =
     useAudiobookDetailScreen(bookId);
@@ -205,13 +205,10 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
         }
         case 'share':
           shareContent({
-            route: 'AudioPlayer',
+            route: 'AudiobookDetail',
             params: {
-              fileUri: chapter.url,
-              fileTitle: chapter.title,
-              source: 'api',
-              provider: 'librivox',
-              type: 'audiobook',
+              bookId,
+              bookTitle: title,
             },
             title: chapter.title,
             subtitle: book?.author,
@@ -221,7 +218,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({navigation, route}) => {
       setMenuChapter(null);
       haptics.light();
     },
-    [menuChapter, book, coverImage, dispatch, toast, addBookmark, haptics],
+    [menuChapter, book, bookId, title, coverImage, dispatch, toast, addBookmark, haptics],
   );
 
   const handleShare = useCallback(() => {

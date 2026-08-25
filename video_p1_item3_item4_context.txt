@@ -1,0 +1,124 @@
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoFingerprint.ts:6: */
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoFingerprint.ts:7:export function createVideoSourceFingerprint(source: VideoSourceIdentity): string {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoFingerprint.ts:8:  return [
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoFingerprint.ts:9:    source.uri,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoFingerprint.ts:23:): boolean {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoFingerprint.ts:24:  return current === createVideoSourceFingerprint(next);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoFingerprint.ts:25:}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoTypes.ts:59:  readonly source: VideoSourceIdentity | null;
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoTypes.ts:60:  readonly sourceFingerprint: string | null;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoTypes.ts:61:  readonly phase: VideoSessionPhase;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoTypes.ts:62:  readonly position: number;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoTypes.ts:116:    source: null,
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoTypes.ts:117:    sourceFingerprint: null,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoTypes.ts:118:    phase: 'idle',
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\domain\VideoTypes.ts:119:    position: 0,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\ports\VideoSessionPort.ts:33:  readonly source: VideoSourceIdentity;
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\ports\VideoSessionPort.ts:34:  readonly startPosition?: number;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\ports\VideoSessionPort.ts:35:  readonly autoplay: boolean;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\ports\VideoSessionPort.ts:36:  /** Correlates the native file-loaded callback with this V3 load generation. */
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\createVideoPlayback.ts:13: */
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\createVideoPlayback.ts:14:export function createVideoPlayback() {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\createVideoPlayback.ts:15:  const session = new VideoMpvSession();
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\createVideoPlayback.ts:16:  const commands = new VideoIntentController(session);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:7:import {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:8:  createVideoSourceFingerprint,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:9:  isSameVideoSource,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:10:} from '../domain/VideoFingerprint';
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:141:  private surfaceSubscription: {remove: () => void} | null = null;
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:142:  private pendingStartPosition: number | undefined;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:143:  private activeFileGeneration: number | null = null;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:144:  private expectedNativePath: string | null = null;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:169:    this.assertUsable();
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:170:    const fingerprint = createVideoSourceFingerprint(request.source);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:171:
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:172:    if (isSameVideoSource(this.snapshot.sourceFingerprint, request.source)) {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:173:      if (request.startPosition !== undefined) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:174:        await this.seek({
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:175:          generation: this.snapshot.generation,
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:176:          position: request.startPosition,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:177:        });
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:178:      }
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:183:    const generation = this.snapshot.generation + 1;
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:184:    this.pendingStartPosition = this.normalizeRequestedPosition(request.startPosition);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:185:    this.activeFileGeneration = null;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:186:    this.expectedNativePath = getLocalPath(request.source.uri) ?? request.source.uri;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:193:      source: request.source,
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:194:      sourceFingerprint: fingerprint,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:195:      phase: 'preparing',
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:196:      isLive: request.source.type === 'live-tv',
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:352:
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:353:    this.pendingStartPosition = undefined;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:354:    this.pendingAutoplay = false;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:355:    this.activeFileGeneration = null;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:574:    try {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:575:      tracks = MpvPlayer.getTracks().map(mapTrack);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:576:    } catch {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:577:      tracks = [];
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:579:    try {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:580:      chapters = MpvPlayer.getChapters().map(mapChapter);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:581:    } catch {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:582:      chapters = [];
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:593:  private applyPendingStart(): void {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:594:    const position = this.pendingStartPosition;
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:595:    this.pendingStartPosition = undefined;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:596:    if (position !== undefined && this.snapshot.isSeekable) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\session\VideoMpvSession.ts:597:      const target = this.snapshot.duration === null
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:2:import MpvPlayer from '../../../../native/player.api';
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:3:import {createVideoSourceFingerprint} from '../domain/VideoFingerprint';
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:4:import type {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:5:  VideoSourceIdentity,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:10:import {VideoSafeControlLayer} from '../presentation/VideoSafeControlLayer';
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:11:import {createVideoPlayback} from '../session/createVideoPlayback';
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:12:import {VideoNativeSurface} from '../surface/VideoNativeSurface';
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:13:import {usePlaybackCommands} from '../../PlaybackContext';
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:34:  const {expandPlayer, collapsePlayer, closePlayer} = usePlaybackCommands();
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:35:  const playback = useMemo(() => createVideoPlayback(), []);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:36:  const source = useMemo(() => toVideoSource(active), [active]);
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:37:  const sourceFingerprint = useMemo(() => createVideoSourceFingerprint(source), [source]);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:38:  const requestRef = useRef({
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:39:    source,
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:40:    startPosition: active.startPosition,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:41:    autoplay: active.entry.autoplay ?? true,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:42:  });
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:44:    source,
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:45:    startPosition: active.startPosition,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:46:    autoplay: active.entry.autoplay ?? true,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:47:  };
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:108:    };
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:109:  }, [playback, sourceFingerprint]);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:110:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:111:  useEffect(() => {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:118:        type: 'load',
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:119:        request: {source, startPosition: 0, autoplay: true},
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:120:      });
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:121:      return;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:125:        type: 'load',
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:126:        request: {source, startPosition: session.position, autoplay: true},
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:127:      });
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\video\host\VideoHost.tsx:128:      return;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:147:  // ── Tracks ──
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:148:  readonly getTracks: () => MpvTrack[];
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:149:  readonly selectTrack: (trackId: Double) => void;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:150:  readonly cycleTrack: (type: 'video' | 'audio' | 'sub') => void;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:154:  // ── Chapters ──
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:155:  readonly getChapters: () => MpvChapter[];
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:156:  readonly seekChapter: (direction: Double) => void; // 1 = next, -1 = prev
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:157:  readonly getCurrentChapter: () => MpvChapter | null;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:158:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\NativeMpvPlayer.ts:159:  // ── Volume / Audio ──
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:171:  // ── Tracks ──
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:172:  getTracks(): MpvTrack[] {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:173:    return ensureModule().getTracks();
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:174:  },
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:175:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:188:  // ── Chapters ──
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:189:  getChapters(): MpvChapter[] {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:190:    return ensureModule().getChapters();
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:191:  },
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:192:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:200:
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:201:  getCurrentChapter(): MpvChapter | null {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:202:    return ensureModule().getCurrentChapter();
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:203:  },
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:204:

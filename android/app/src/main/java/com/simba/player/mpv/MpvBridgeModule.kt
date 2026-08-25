@@ -96,25 +96,22 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
                     try {
                         val bufPayload = Arguments.createMap().apply {
                             putDouble("percent", percent)
+                            putBoolean("isBuffering", percent < 100.0)
                         }
                         eventEmitter.emit("onBuffering", bufPayload)
                     } catch (e: Exception) {
                         Log.w(TAG, "onBuffering emit failed: ${e.message}")
                     }
                 }
-                // `paused-for-cache` is the *universal* buffering signal —
-                // it's a flag that's true whenever MPV auto-paused because
-                // the network/cache can't keep up. Works for every stream
-                // type (HLS, DASH, progressive HTTP, local file during
-                // seek-back). Emits 50 when buffering, 100 when not — the
-                // same percent-based contract used for cache-buffering-state
-                // so the JS side can unify both into a single `isBuffering`
-                // boolean via `percent > 0 && percent < 100`.
+                // `paused-for-cache` is the universal stall signal. Do not
+                // encode it as a fabricated fill percentage; the JS layer gets
+                // the explicit boolean and preserves the last honest cache fill.
                 "paused-for-cache" -> {
                     val isBuffering = jsonValue.trim().equals("true", ignoreCase = true)
                     try {
                         val bufPayload = Arguments.createMap().apply {
-                            putDouble("percent", if (isBuffering) 50.0 else 100.0)
+                            putDouble("percent", if (isBuffering) 0.0 else 100.0)
+                            putBoolean("isBuffering", isBuffering)
                         }
                         eventEmitter.emit("onBuffering", bufPayload)
                     } catch (e: Exception) {
@@ -187,11 +184,12 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
             }
         }
 
-        override fun onMpvError(code: Int, message: String) {
-            Log.e(TAG, "[PlaybackTrace][Bridge][listener:error] code=$code message=$message")
+        override fun onMpvError(code: Int, message: String, requestId: String?) {
+            Log.e(TAG, "[PlaybackTrace][Bridge][listener:error] code=$code requestId=${requestId ?: "none"} message=$message")
             val payload = Arguments.createMap().apply {
                 putInt("code", code)
                 putString("message", message)
+                if (!requestId.isNullOrBlank()) putString("requestId", requestId)
             }
             eventEmitter.emit("onError", payload)
         }

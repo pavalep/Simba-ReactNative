@@ -1,21 +1,21 @@
-import type {VideoV3Capabilities, VideoV3ViewState} from '../domain/VideoV3Types';
+import type {VideoCapabilities, VideoViewState} from '../domain/VideoTypes';
 
-export type VideoV3PresentationMode = 'full' | 'mini';
-export type VideoV3ChromeVisibility = 'visible' | 'hidden';
+export type VideoPresentationMode = 'full' | 'mini';
+export type VideoChromeVisibility = 'visible' | 'hidden';
 
-export interface VideoV3SafeAreaInsets {
+export interface VideoSafeAreaInsets {
   readonly top: number;
   readonly right: number;
   readonly bottom: number;
   readonly left: number;
 }
 
-export interface VideoV3Viewport {
+export interface VideoViewport {
   readonly width: number;
   readonly height: number;
 }
 
-export interface VideoV3SafeGeometry {
+export interface VideoSafeGeometry {
   readonly topContentInset: number;
   readonly bottomContentInset: number;
   readonly horizontalContentInset: number;
@@ -25,26 +25,26 @@ export interface VideoV3SafeGeometry {
   readonly landscape: boolean;
 }
 
-export interface VideoV3PresentationState {
-  readonly mode: VideoV3PresentationMode;
-  readonly chrome: VideoV3ChromeVisibility;
-  readonly safeArea: VideoV3SafeAreaInsets;
-  readonly viewport: VideoV3Viewport;
-  readonly geometry: VideoV3SafeGeometry;
+export interface VideoPresentationState {
+  readonly mode: VideoPresentationMode;
+  readonly chrome: VideoChromeVisibility;
+  readonly safeArea: VideoSafeAreaInsets;
+  readonly viewport: VideoViewport;
+  readonly geometry: VideoSafeGeometry;
   readonly isLocked: boolean;
   readonly transitionGeneration: number;
 }
 
-export interface VideoV3ControlModel {
-  readonly session: VideoV3ViewState;
-  readonly presentation: VideoV3PresentationState;
-  readonly capabilities: VideoV3Capabilities;
+export interface VideoControlModel {
+  readonly session: VideoViewState;
+  readonly presentation: VideoPresentationState;
+  readonly capabilities: VideoCapabilities;
 }
 
-export function calculateVideoV3SafeGeometry(
-  insets: VideoV3SafeAreaInsets,
-  viewport: VideoV3Viewport,
-): VideoV3SafeGeometry {
+export function calculateVideoSafeGeometry(
+  insets: VideoSafeAreaInsets,
+  viewport: VideoViewport,
+): VideoSafeGeometry {
   const landscape = viewport.width > viewport.height;
   const compact = viewport.width < 390 || viewport.height < 640;
   const horizontalBase = landscape ? 24 : 16;

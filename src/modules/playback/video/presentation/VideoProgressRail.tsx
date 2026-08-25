@@ -8,12 +8,12 @@ import {
   type NativeSyntheticEvent,
   type NativeTouchEvent,
 } from 'react-native';
-import {darkColors as cinemaColors} from '../../../../../theme/tokens';
-import {createVideoV3BufferPresentation} from '../domain/VideoV3BufferPolicy';
-import type {VideoV3SessionSnapshot} from '../domain/VideoV3Types';
+import {darkColors as cinemaColors} from '../../../../theme/tokens';
+import {createVideoBufferPresentation} from '../domain/VideoBufferPolicy';
+import type {VideoSessionSnapshot} from '../domain/VideoTypes';
 
-export interface VideoV3ProgressRailProps {
-  readonly session: VideoV3SessionSnapshot;
+export interface VideoProgressRailProps {
+  readonly session: VideoSessionSnapshot;
   readonly onSeek: (position: number) => void;
 }
 
@@ -32,12 +32,12 @@ function formatTime(value: number | null): string {
     : `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-export function VideoV3ProgressRail({session, onSeek}: VideoV3ProgressRailProps) {
+export function VideoProgressRail({session, onSeek}: VideoProgressRailProps) {
   const [trackWidth, setTrackWidth] = useState(0);
   const duration = session.duration;
   const canSeek = session.isSeekable && duration !== null && duration > 0;
   const positionFraction = canSeek ? clampFraction(session.position / duration) : 0;
-  const buffer = createVideoV3BufferPresentation(
+  const buffer = createVideoBufferPresentation(
     session.bufferedRanges,
     session.position,
     duration,

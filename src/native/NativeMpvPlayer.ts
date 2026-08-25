@@ -77,8 +77,8 @@ export interface MpvEvents {
   onTracksChanged: {tracks: MpvTrack[]};
   onChapterChanged: {chapter: MpvChapter | null};
   onVideoParamsChanged: {params: MpvVideoParams};
-  onError: {code: Double; message: string};
-  onBuffering: {percent: Double};
+  onError: {code: Double; message: string; requestId?: string};
+  onBuffering: {percent: Double; isBuffering?: boolean};
   /**
    * Buffered ranges emitted from MPV's `demuxer-cache-state` property.
    * Each range is `[startSec, endSec]`. This is the data backing the
@@ -100,7 +100,7 @@ export interface MpvEvents {
   /** True while mpv is resolving a seek request, including a remote range fetch. */
   onSeeking: {seeking: boolean};
   /** Native MPV end-file notification. `reason=0` is natural EOF; other reasons include stop/reload. */
-  onEndFile: {reason: Double; error: Double};
+  onEndFile: {reason: Double; error: Double; requestId?: string};
   /** @deprecated Use onEndFile; retained for compatibility with older consumers. */
   onEndReached: {};
   onAudioDeviceChanged: {device: string};
@@ -145,16 +145,19 @@ export interface Spec extends TurboModule {
   readonly captureThumbnail: (uri: string) => string;
 
   // ── Tracks ──
-  readonly getTracks: () => MpvTrack[];
+  /** Native returns the mpv `track-list` as a JSON string. Parse in player.api. */
+  readonly getTracks: () => string;
   readonly selectTrack: (trackId: Double) => void;
   readonly cycleTrack: (type: 'video' | 'audio' | 'sub') => void;
   readonly setTrackVisibility: (trackType: string, visible: boolean) => void;
   readonly setTrack: (type: string, trackId: Double) => void;
 
   // ── Chapters ──
-  readonly getChapters: () => MpvChapter[];
+  /** Native returns the mpv `chapter-list` as a JSON string. Parse in player.api. */
+  readonly getChapters: () => string;
   readonly seekChapter: (direction: Double) => void; // 1 = next, -1 = prev
-  readonly getCurrentChapter: () => MpvChapter | null;
+  /** Native returns `chapter-metadata` as a JSON object string. */
+  readonly getCurrentChapter: () => string;
 
   // ── Volume / Audio ──
   readonly setVolume: (volume: Double) => void;

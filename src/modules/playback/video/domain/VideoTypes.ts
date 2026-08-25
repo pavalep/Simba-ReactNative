@@ -1,6 +1,6 @@
-import type {MediaKind, MediaLane, MediaSource} from '../../../../../types/media';
+import type {MediaKind, MediaLane, MediaSource} from '../../../../types/media';
 
-export interface VideoV3SourceIdentity {
+export interface VideoSourceIdentity {
   readonly uri: string;
   readonly title: string;
   readonly source: MediaSource;
@@ -10,7 +10,7 @@ export interface VideoV3SourceIdentity {
   readonly folderId?: string;
 }
 
-export type VideoV3SessionPhase =
+export type VideoSessionPhase =
   | 'idle'
   | 'preparing'
   | 'connecting'
@@ -24,12 +24,12 @@ export type VideoV3SessionPhase =
   | 'live'
   | 'error';
 
-export interface VideoV3BufferRange {
+export interface VideoBufferRange {
   readonly start: number;
   readonly end: number;
 }
 
-export interface VideoV3Track {
+export interface VideoTrack {
   readonly id: number;
   readonly type: 'video' | 'audio' | 'sub';
   readonly title?: string;
@@ -39,14 +39,14 @@ export interface VideoV3Track {
   readonly isSelected: boolean;
 }
 
-export interface VideoV3Chapter {
+export interface VideoChapter {
   readonly id: number;
   readonly title: string;
   readonly startTime: number;
   readonly endTime: number;
 }
 
-export interface VideoV3VideoMetrics {
+export interface VideoVideoMetrics {
   readonly width: number;
   readonly height: number;
   readonly aspectRatio: number;
@@ -54,11 +54,11 @@ export interface VideoV3VideoMetrics {
   readonly codec: string;
 }
 
-export interface VideoV3SessionSnapshot {
+export interface VideoSessionSnapshot {
   readonly generation: number;
-  readonly source: VideoV3SourceIdentity | null;
+  readonly source: VideoSourceIdentity | null;
   readonly sourceFingerprint: string | null;
-  readonly phase: VideoV3SessionPhase;
+  readonly phase: VideoSessionPhase;
   readonly position: number;
   readonly duration: number | null;
   readonly isPlaying: boolean;
@@ -67,34 +67,34 @@ export interface VideoV3SessionSnapshot {
   readonly isSeeking: boolean;
   readonly isSeekable: boolean;
   readonly isLive: boolean;
-  readonly bufferedRanges: readonly VideoV3BufferRange[];
+  readonly bufferedRanges: readonly VideoBufferRange[];
   readonly cacheFill: number;
-  readonly tracks: readonly VideoV3Track[];
-  readonly chapters: readonly VideoV3Chapter[];
+  readonly tracks: readonly VideoTrack[];
+  readonly chapters: readonly VideoChapter[];
   readonly currentChapterId: number | null;
   readonly volume: number;
   readonly isMuted: boolean;
   readonly speed: number;
   readonly hasFirstFrame: boolean;
   readonly hasSurfaceAttached: boolean;
-  readonly videoMetrics: VideoV3VideoMetrics | null;
-  readonly error: VideoV3Error | null;
+  readonly videoMetrics: VideoVideoMetrics | null;
+  readonly error: VideoError | null;
 }
 
-export interface VideoV3Error {
+export interface VideoError {
   readonly code?: number;
   readonly message: string;
   readonly recoverable: boolean;
   readonly generation: number;
 }
 
-export interface VideoV3PlatformCapabilities {
+export interface VideoPlatformCapabilities {
   readonly canPictureInPicture: boolean;
   readonly canFullscreen: boolean;
   readonly canChangeOrientation: boolean;
 }
 
-export interface VideoV3Capabilities extends VideoV3PlatformCapabilities {
+export interface VideoCapabilities extends VideoPlatformCapabilities {
   readonly canPlay: boolean;
   readonly canPause: boolean;
   readonly canSeek: boolean;
@@ -105,12 +105,12 @@ export interface VideoV3Capabilities extends VideoV3PlatformCapabilities {
   readonly canViewChapters: boolean;
 }
 
-export interface VideoV3ViewState {
-  readonly session: VideoV3SessionSnapshot;
-  readonly capabilities: VideoV3Capabilities;
+export interface VideoViewState {
+  readonly session: VideoSessionSnapshot;
+  readonly capabilities: VideoCapabilities;
 }
 
-export function emptyVideoV3Snapshot(): VideoV3SessionSnapshot {
+export function emptyVideoSnapshot(): VideoSessionSnapshot {
   return {
     generation: 0,
     source: null,

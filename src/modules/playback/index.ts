@@ -5,8 +5,7 @@ export {
   usePlaybackState,
 } from './PlaybackContext';
 export {PlaybackOverlayHost} from './PlaybackOverlayHost';
-export {VideoV2Module} from './video/v2/VideoV2Module';
-export type {VideoV2Model} from './video/v2/VideoV2Types';
+export {VideoHost, type VideoHostProps} from './video';
 export type {
   ActivePlayback,
   PlaybackCommands,

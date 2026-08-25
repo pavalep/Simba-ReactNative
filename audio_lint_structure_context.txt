@@ -1,0 +1,62 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:139:  const handleOpenBookmarkSheet = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:143:  const handleCloseBookmarkSheet = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:147:  const handleBookmarkAdd = useCallback(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:197:  const handleBookmarkDelete = useCallback(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:204:  const handleBookmarkJumpTo = useCallback((position: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:233:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:265:  useEffect(() => { fileUriRef.current = activeUri; }, [activeUri]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:266:  useEffect(() => { sessionRecentRef.current = sessionRecent; }, [sessionRecent]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:267:  useEffect(() => { activeTitleRef.current = activeTitle; }, [activeTitle]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:268:  useEffect(() => { chapterListRef.current = chapterList; }, [chapterList]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:269:  useEffect(() => { playlistRef.current = playlist; }, [playlist]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:270:  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:271:  useEffect(() => { loopModeRef.current = loopMode; }, [loopMode]);
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:276:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:282:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:308:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:556:  const loadAndResume = useCallback((uri: string, resumePosition?: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:586:  const handleResumeChoice = useCallback(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:603:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:629:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:723:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:767:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:781:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:795:  const onRefresh = useCallback(async () => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:807:  const handleGoBack = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:849:  const handlePlayPause = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:869:  const handlePrev = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:932:  const playNextChapter = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:948:  const transitionToNextAudio = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:983:  const handleNext = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:989:    const handleSeek = useCallback((pct: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:999:  const handleRewind = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1006:  const handleForward = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1013:  const handleVolumeChange = useCallback((delta: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1024:  const handleSeekToLyric = useCallback((time: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1031:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1039:  const handleToggleShuffle = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1044:  const handleToggleLoop = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1058:  const handleAddToPlaylist = useCallback(async () => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1078:  const handleRemoveFromPlaylist = useCallback((index: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1082:  const handlePlayFromPlaylist = useCallback((index: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1090:  const handleQueueMoveItem = useCallback((fromIndex: number, direction: 'up' | 'down') => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1096:  const handleQueueRemoveItem = useCallback((index: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1100:  const handleQueueSelectItem = useCallback((fileUri: string) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1112:  const handleSelectQueueItem = useCallback((idx: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1118:  const handlePlayQueueIndex = useCallback((index: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1126:  const handleSelectHistoryItem = useCallback((idx: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1132:  const handlePlayNext = useCallback((entry: PlaylistEntry) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1136:  const handleAddToQueue = useCallback((entry: PlaylistEntry) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1141:  const handleEnterMultiSelect = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1145:  const handleExitMultiSelect = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1150:  const handleToggleSelection = useCallback((index: number) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1160:  const handleRemoveSelected = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1164:  const handleMoveSelectedToTop = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1168:  const handleClearAll = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1173:  const handleInfoAddToPlaylist = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1178:  const handlePlayRelatedTrack = useCallback(
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1188:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1214:  const handleRetry = useCallback(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1232:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1255:  useEffect(() => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:1285:  return {

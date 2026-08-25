@@ -3,7 +3,7 @@ import {Pressable, StyleSheet, View} from 'react-native';
 
 type AudioRange = {start: number; end: number};
 
-interface AudioV2MiniProgressProps {
+interface AudioMiniProgressProps {
   position: number;
   duration: number;
   bufferedRanges: AudioRange[];
@@ -16,8 +16,8 @@ interface AudioV2MiniProgressProps {
   onSeek: (progress: number) => void;
 }
 
-/** Compact, independently interactive progress primitive for MiniAudioV2. */
-export const AudioV2MiniProgress: React.FC<AudioV2MiniProgressProps> = ({
+/** Compact, independently interactive progress primitive for MiniAudio. */
+export const AudioMiniProgress: React.FC<AudioMiniProgressProps> = ({
   position,
   duration,
   bufferedRanges,

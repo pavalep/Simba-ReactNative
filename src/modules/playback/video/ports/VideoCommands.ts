@@ -1,7 +1,7 @@
-import type {VideoV3LoadRequest, VideoV3SessionPort} from './VideoV3SessionPort';
+import type {VideoLoadRequest, VideoSessionPort} from './VideoSessionPort';
 
-export type VideoV3Intent =
-  | {type: 'load'; request: VideoV3LoadRequest}
+export type VideoIntent =
+  | {type: 'load'; request: VideoLoadRequest}
   | {type: 'refresh'}
   | {type: 'play'}
   | {type: 'pause'}
@@ -13,13 +13,13 @@ export type VideoV3Intent =
   | {type: 'set-caption-visibility'; visible: boolean}
   | {type: 'release'};
 
-export type VideoV3CommandResult =
+export type VideoCommandResult =
   | {ok: true; generation?: number}
   | {ok: false; message: string};
 
-export interface VideoV3IntentDispatcher {
-  dispatch(intent: VideoV3Intent): Promise<VideoV3CommandResult>;
+export interface VideoIntentDispatcher {
+  dispatch(intent: VideoIntent): Promise<VideoCommandResult>;
   dispose(): Promise<void>;
 }
 
-export type VideoV3SessionFactory = () => VideoV3SessionPort;
+export type VideoSessionFactory = () => VideoSessionPort;

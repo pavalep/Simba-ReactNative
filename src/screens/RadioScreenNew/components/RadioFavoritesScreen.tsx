@@ -32,7 +32,7 @@ import {usePlaybackCommands} from '../../../modules/playback';
 
 type Props = RootStackScreenProps<'RadioFavoritesScreen'>;
 
-export const RadioFavoritesScreen: React.FC<Props> = ({navigation}) => {
+export const RadioFavoritesScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -126,7 +126,7 @@ export const RadioFavoritesScreen: React.FC<Props> = ({navigation}) => {
         }
         case 'share':
           shareContent({
-            route: 'AudioPlayer',
+            route: 'RadioScreen',
             params: {fileUri: row.url, fileTitle: row.name, source: 'radio'},
             title: row.name,
             subtitle: row.subtitle,

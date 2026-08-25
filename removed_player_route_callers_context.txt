@@ -1,0 +1,154 @@
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\hooks\useAlbumScreen.ts:104 ---
+      dispatch(loadPlaylistToPlayer(entries));
+      if (indexInAlbum > 0) {
+        dispatch(playFromPlaylist(indexInAlbum));
+      }
+      (navigation as any).navigate('AudioPlayer', {
+        fileUri: entries[indexInAlbum].uri,
+        fileTitle: entries[indexInAlbum].title,
+      });
+    },
+    [sortedTracks, dispatch, navigation],
+  );
+
+  const handlePlayAll = useCallback(() => {
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\hooks\useAlbumScreen.ts:118 ---
+      ...t,
+    }));
+    if (entries.length === 0) return;
+    dispatch(loadPlaylistToPlayer(entries));
+    (navigation as any).navigate('AudioPlayer', {
+      fileUri: entries[0].uri,
+      fileTitle: entries[0].title,
+    });
+  }, [sortedTracks, dispatch, navigation]);
+
+  const handleShuffleAll = useCallback(() => {
+    const entries: PlaylistEntry[] = sortedTracks.map(t => ({
+      ...t,
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Album\hooks\useAlbumScreen.ts:134 ---
+      [entries[i], entries[j]] = [entries[j], entries[i]];
+    }
+    if (entries.length === 0) return;
+    dispatch(loadPlaylistToPlayer(entries));
+    (navigation as any).navigate('AudioPlayer', {
+      fileUri: entries[0].uri,
+      fileTitle: entries[0].title,
+    });
+  }, [sortedTracks, dispatch, navigation]);
+
+  const handleGoToArtist = useCallback(() => {
+    navigation.navigate('ArtistScreen', {artistName});
+  }, [navigation, artistName]);
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllAudio\hooks\useAllAudioScreen.ts:81 ---
+  }, [audioTracks, searchQuery, sortMode]);
+
+  const handlePlayTrack = useCallback(
+    (uri: string, title: string) => {
+      navigation.navigate('AudioPlayer', {fileUri: uri, fileTitle: title});
+    },
+    [navigation],
+  );
+
+  // 54.3: pull-to-refresh — force a full re-scan of linked folders
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await startScan(true);
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AllVideos\hooks\useAllVideosScreen.ts:81 ---
+  }, [videoTracks, searchQuery, sortMode]);
+
+  const handlePlayTrack = useCallback(
+    (uri: string, title: string) => {
+      navigation.navigate('VideoPlayer', {fileUri: uri, fileTitle: title});
+    },
+    [navigation],
+  );
+
+  // 54.3: pull-to-refresh — force a full re-scan of linked folders
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await startScan(true);
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\hooks\useArtistScreen.ts:86 ---
+
+  const handlePlayTrack = useCallback(
+    (item: PlaylistEntry) => {
+      dispatch(playFile(item));
+      (navigation as any).navigate('AudioPlayer', {
+        fileUri: item.uri,
+        fileTitle: item.title,
+      });
+    },
+    [dispatch, navigation],
+  );
+
+  const handlePlayAll = useCallback(() => {
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\hooks\useArtistScreen.ts:100 ---
+      ...t,
+    }));
+    if (entries.length === 0) return;
+    dispatch(loadPlaylistToPlayer(entries));
+    (navigation as any).navigate('AudioPlayer', {
+      fileUri: entries[0].uri,
+      fileTitle: entries[0].title,
+    });
+  }, [allTracks, dispatch, navigation]);
+
+  const handleShuffleAll = useCallback(() => {
+    const entries: PlaylistEntry[] = allTracks.map(t => ({
+      ...t,
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Artist\hooks\useArtistScreen.ts:117 ---
+      [entries[i], entries[j]] = [entries[j], entries[i]];
+    }
+    if (entries.length === 0) return;
+    dispatch(loadPlaylistToPlayer(entries));
+    (navigation as any).navigate('AudioPlayer', {
+      fileUri: entries[0].uri,
+      fileTitle: entries[0].title,
+    });
+  }, [allTracks, dispatch, navigation]);
+
+  const handleNavigateToAlbum = useCallback(
+    (albumName: string) => {
+      navigation.navigate('AlbumScreen', {albumName, artistName});
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\hooks\useGenreScreen.ts:177 ---
+  const retryRadio = useCallback(() => setRadioAttempt(n => n + 1), []);
+
+  const handlePlayTrack = useCallback(
+    (uri: string, title: string) => {
+      navigation.navigate('AudioPlayer', {fileUri: uri, fileTitle: title});
+    },
+    [navigation],
+  );
+
+  const handlePlayStreaming = useCallback(
+    (track: JamendoTrackResult) => {
+      navigation.navigate('AudioPlayer', {
+        fileUri: track.audioUrl,
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\hooks\useGenreScreen.ts:184 ---
+  );
+
+  const handlePlayStreaming = useCallback(
+    (track: JamendoTrackResult) => {
+      navigation.navigate('AudioPlayer', {
+        fileUri: track.audioUrl,
+        fileTitle: track.name,
+        artworkUri: track.imageUrl || undefined,
+        source: 'jamendo',
+      });
+    },
+    [navigation],
+  );
+--- X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Genre\hooks\useGenreScreen.ts:196 ---
+  );
+
+  const handlePlayStation = useCallback(
+    (station: RadioStationResult) => {
+      navigation.navigate('AudioPlayer', {
+        fileUri: station.urlResolved || station.url,
+        fileTitle: station.name,
+        artworkUri: station.favicon || undefined,
+        source: 'radio',
+      });
+    },
+    [navigation],
+  );

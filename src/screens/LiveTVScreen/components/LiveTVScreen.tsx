@@ -378,7 +378,7 @@ const LiveTVTabScene: React.FC<LiveTVTabSceneProps> = React.memo(
 
 // ─── Screen ─────────────────────────────────────────────────
 
-export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
+export const LiveTVScreen: React.FC<Props> = ({route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -488,7 +488,7 @@ export const LiveTVScreen: React.FC<Props> = ({navigation, route}) => {
           break;
         case 'share':
           shareContent({
-            route: 'VideoPlayer',
+            route: 'LiveTVScreen',
             params: {
               fileUri: row.url,
               fileTitle: row.name,

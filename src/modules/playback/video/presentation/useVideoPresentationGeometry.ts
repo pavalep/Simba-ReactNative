@@ -2,15 +2,15 @@ import {useMemo} from 'react';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useWindowDimensions} from 'react-native';
 import {
-  calculateVideoV3SafeGeometry,
-  type VideoV3SafeGeometry,
-} from './VideoV3PresentationTypes';
+  calculateVideoSafeGeometry,
+  type VideoSafeGeometry,
+} from './VideoPresentationTypes';
 
-export function useVideoV3PresentationGeometry(): VideoV3SafeGeometry {
+export function useVideoPresentationGeometry(): VideoSafeGeometry {
   const insets = useSafeAreaInsets();
   const {width, height} = useWindowDimensions();
   return useMemo(
-    () => calculateVideoV3SafeGeometry(
+    () => calculateVideoSafeGeometry(
       {
         top: insets.top,
         right: insets.right,

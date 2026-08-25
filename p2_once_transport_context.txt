@@ -1,0 +1,83 @@
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:447:    if (!eventEmitter) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:448:      logger.warn(`[MpvPlayer] EventEmitter not available for "${event}"`);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:449:      return;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:450:    }
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:451:    (eventEmitter as any).once(event, handler);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:452:  },
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:453:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:454:  removeAllListeners(event?: MpvEventName): void {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:455:    eventEmitter?.removeAllListeners(event as string);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:456:  },
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:457:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:458:  onSurfaceAttached(callback: () => void) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\native\player.api.ts:459:    return eventEmitter?.addListener('onSurfaceAttached', callback);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:285:    });
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:286:    // ── Buffering / cache-state observation ──────────────────────
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:287:    // We watch FOUR complementary MPV properties to drive buffering UX.
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:288:    //
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:289:    //   1. `cache-buffering-state`  (NODE → {percent})
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:290:    //      Granular fill percentage. Only fires for network streams.
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:291:    //
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:292:    //   2. `paused-for-cache`       (FLAG → bool)
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:293:    //      Universal "MP3 auto-paused because the cache can't keep up"
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:294:    //      signal. Fires for any stream type — HLS, DASH, progressive
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:295:    //      HTTP, even local files when you seek backwards past the
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:296:    //      cached region. Reliable.
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:297:    //
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:298:    //   3. `demuxer-cache-state`    (NODE → {ranges:[{start,end}], ...})
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:299:    //      The buffered ranges — what backs the grey "downloaded"
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:300:    //      overlay on the seek bar. Multiple ranges are possible
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:303:    //   4. `seekable`               (FLAG → bool)
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:304:    //      Whether seeking is supported at all (false for live and
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:305:    //      unknown-length sources). Used to dim the seek bar.
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:306:    //
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:307:    // The native bridge merges `cache-buffering-state` and
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:308:    // `paused-for-cache` into a single `onBuffering` event with a
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:309:    // `percent` payload so the consumer has one boolean to watch.
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:310:    const unsubBuffering = MpvPlayer.on('onBuffering', ({percent}: {percent: number}) => {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:311:      const normalized = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 100;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:312:      setCacheFill(normalized / 100);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:313:      setIsBuffering(normalized > 0 && normalized < 100);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:314:    });
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:315:    const unsubCacheState = MpvPlayer.on(
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:316:      'onCacheState',
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:317:      ({ranges}: {ranges: Array<{start: number; end: number}>; fill?: number}) => {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:318:        const rawRanges = ranges.map(range => ({start: range.start, end: range.end}));
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:319:        const normalizedRanges = normalizeBufferedRanges(
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:320:          rawRanges,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:321:          durationRef.current > 1 ? durationRef.current : undefined,
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:322:        );
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:323:        const signature = JSON.stringify(normalizedRanges);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:324:        if (signature !== lastCacheRangesSignatureRef.current) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:348:    // Begin receiving the four property streams from MPV.
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:349:    // observeProperty() is idempotent for the same property — calling it
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:350:    // twice is safe and only registers one observer.
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:351:    try {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:352:      MpvPlayer.observeProperty('cache-buffering-state');
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:353:    } catch {}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:354:    try {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:355:      MpvPlayer.observeProperty('paused-for-cache');
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:356:    } catch {}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:357:    try {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:358:      MpvPlayer.observeProperty('demuxer-cache-state');
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:359:    } catch {}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:360:    try {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:361:      MpvPlayer.observeProperty('seekable');
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:362:    } catch {}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:363:    try {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:402:      unsubSeeking();
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:403:      // Stop receiving buffer-state updates so this provider doesn't
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:404:      // leak listeners when the screen unmounts.
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:405:      try {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:406:        MpvPlayer.unobserveProperty('cache-buffering-state');
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:407:      } catch {}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:408:      try {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:409:        MpvPlayer.unobserveProperty('paused-for-cache');
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:410:      } catch {}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:411:      try {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:412:        MpvPlayer.unobserveProperty('demuxer-cache-state');
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:413:      } catch {}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:414:      try {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:415:        MpvPlayer.unobserveProperty('seekable');
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:416:      } catch {}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\contexts\TransportContext.tsx:417:      try {

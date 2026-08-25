@@ -1,0 +1,36 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx:24:showNowPlayingBadge?: boolean;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx:48:showNowPlayingBadge,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx:111:{showNowPlayingBadge && isCurrent && (
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx:112:<View style={[styles.nowPlayingBadge, {backgroundColor: colors.accent.gold}]}>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueItem.tsx:202:nowPlayingBadge: {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx:166:// In the "Now Playing" section with a single item, pass showNowPlayingBadge
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\components\sheets\QueueSheet\QueueSheet.tsx:182:showNowPlayingBadge={true}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:129:audioNowPlaying: 'Now Playing',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:156:queueNowPlaying: 'Now Playing',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\constants\strings.ts:224:a11yNowPlaying: 'Now playing {title} by {artist}',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\hooks\useAudioPlayerScreen.ts:58:import type {Chapter} from '../../../../components/player/NowPlayingInfo/ChapterList';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayer.tsx:101:<Text style={[styles.nowPlaying, {color: palette.primary}]}>Now playing</Text>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioPlayer.tsx:327:nowPlaying: {fontSize: 19, fontWeight: '700', marginTop: 2},
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\modules\playback\audio\AudioTypes.ts:5:import type {Chapter} from '../../../components/player/NowPlayingInfo/ChapterList';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\index.ts:17:NowPlayingScreenProps,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\linking.ts:110:NowPlaying: {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\RootNavigator.tsx:24:import {NowPlayingScreen} from '../screens/NowPlaying';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\RootNavigator.tsx:171:name="NowPlaying"
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\RootNavigator.tsx:172:component={NowPlayingScreen}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\types.ts:30:NowPlaying: {fileUri?: string; fileTitle?: string} | undefined;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\types.ts:150:export type NowPlayingScreenProps = RootStackScreenProps<'NowPlaying'>;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryAudioSegment.tsx:46:nowPlayingBanner: {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryAudioSegment.tsx:57:nowPlayingLabel: {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryAudioSegment.tsx:60:nowPlayingSpacer: {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryAudioSegment.tsx:159:<View style={styles.nowPlayingBanner}>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryAudioSegment.tsx:161:<AppText variant="body2" color="accent" style={styles.nowPlayingLabel}>
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\LibraryAudioSegment.tsx:164:<View style={styles.nowPlayingSpacer} />
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\components\NowPlayingScreen.tsx:21:import type {NowPlayingScreenProps} from '../types';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\components\NowPlayingScreen.tsx:30:type Props = NowPlayingScreenProps;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\components\NowPlayingScreen.tsx:34:export const NowPlayingScreen: React.FC<Props> = ({route}) => {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\related\textContent.ts:20:nowPlayingA11y: 'Now playing: {title}',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\types\index.ts:3:export type NowPlayingScreenProps = RootStackScreenProps<'NowPlaying'>;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\index.tsx:1:export {NowPlayingScreen as default, NowPlayingScreen} from './components/NowPlayingScreen';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\NowPlaying\index.tsx:2:export type {NowPlayingScreenProps} from './types';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\QueueScreen\components\QueueScreen.tsx:111:const NowPlayingRow: React.FC<{entry: PlaylistEntry; isPlaying: boolean}> =
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\QueueScreen\components\QueueScreen.tsx:428:return <NowPlayingRow entry={item} isPlaying={isPlaying} />;

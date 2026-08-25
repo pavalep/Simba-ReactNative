@@ -39,7 +39,7 @@ import {
 
 type Props = RootStackScreenProps<'LiveTVFavoritesScreen'>;
 
-export const LiveTVFavoritesScreen: React.FC<Props> = ({navigation}) => {
+export const LiveTVFavoritesScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
@@ -135,7 +135,7 @@ export const LiveTVFavoritesScreen: React.FC<Props> = ({navigation}) => {
         }
         case 'share':
           shareContent({
-            route: 'VideoPlayer',
+            route: 'LiveTVScreen',
             params: {
               fileUri: row.url,
               fileTitle: row.name,

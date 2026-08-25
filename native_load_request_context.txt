@@ -1,0 +1,74 @@
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:396:        LOGE("nativeLoadFile rejected: mpv is not the active initialized handle");
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:397:        return;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:398:    }
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:399:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:400:    mpv_handle *mpv = lease.get();
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:401:    const char *utfPath = env->GetStringUTFChars(path, nullptr);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:402:    const char *utfRequestId = requestId ? env->GetStringUTFChars(requestId, nullptr) : nullptr;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:403:    if (utfRequestId && utfRequestId[0] != '\0') {
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:404:        enqueueLoadRequest({utfRequestId, utfPath});
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:405:    }
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:406:    const char *cmd[] = {"loadfile", utfPath, nullptr};
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:407:    const int result = mpv_command(mpv, cmd);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:408:    if (result < 0 && utfRequestId && utfRequestId[0] != '\0') {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:409:        dropLoadRequest(utfRequestId);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:410:    }
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:411:    LOGI("[PlaybackTrace][Native][loadFile] result=%d pathLength=%zu token=%s",
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:412:         result, strlen(utfPath), utfRequestId && utfRequestId[0] != '\0' ? "present" : "none");
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:413:    if (utfRequestId) env->ReleaseStringUTFChars(requestId, utfRequestId);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:414:    env->ReleaseStringUTFChars(path, utfPath);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:415:}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:416:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:417:extern "C" JNIEXPORT void JNICALL
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:418:Java_com_simba_player_mpv_MPVLib_nativeLoadFile(
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:419:    JNIEnv *env, jclass, jlong nativePtr, jstring path) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:420:    nativeLoadFileInternal(env, nativePtr, path, nullptr);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:421:}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:422:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:423:extern "C" JNIEXPORT void JNICALL
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:424:Java_com_simba_player_mpv_MPVLib_nativeLoadFileWithRequestId(
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:425:    JNIEnv *env, jclass, jlong nativePtr, jstring path, jstring requestId) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:426:    nativeLoadFileInternal(env, nativePtr, path, requestId);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:427:}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:428:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:429:extern "C" JNIEXPORT void JNICALL
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:430:Java_com_simba_player_mpv_MPVLib_nativePlay(JNIEnv *env, jclass, jlong nativePtr) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:431:    NativeMpvReadLease lease(nativePtr);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:432:    if (!lease.valid()) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:433:        LOGE("[PlaybackTrace][Native][play] rejected inactive pointer");
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:434:        return;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:435:    }
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:436:    mpv_handle *mpv = lease.get();
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:437:    int result = mpv_set_property_string(mpv, "pause", "no");
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:438:    LOGI("[PlaybackTrace][Native][play] pause=no result=%d", result);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:439:    if (result < 0) LOGE("[PlaybackTrace][Native][play] error=%s", mpv_error_string(result));
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:440:}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:441:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\main.cpp:442:extern "C" JNIEXPORT void JNICALL
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:20:            default: result.push_back(static_cast<char>(character)); break;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:21:        }
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:22:    }
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:23:    result.push_back('"');
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:24:    return result;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:25:}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:26:}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:27:
+> X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:28:void enqueueLoadRequest(PendingLoadRequest request) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:29:    std::lock_guard<std::mutex> guard(g_loadQueueMutex);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:30:    for (auto iterator = g_pendingLoads.begin(); iterator != g_pendingLoads.end();) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:31:        if (!request.resolvedPath.empty() && iterator->resolvedPath == request.resolvedPath) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:32:            iterator = g_pendingLoads.erase(iterator);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:33:        } else {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:34:            ++iterator;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:35:        }
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:36:    }
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:37:    g_pendingLoads.push_back(std::move(request));
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:38:}
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:39:
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:40:void dropLoadRequest(const std::string &requestId) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:41:    if (requestId.empty()) return;
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:42:    std::lock_guard<std::mutex> guard(g_loadQueueMutex);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:43:    for (auto iterator = g_pendingLoads.begin(); iterator != g_pendingLoads.end(); ++iterator) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:44:        if (iterator->requestId == requestId) {
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:45:            g_pendingLoads.erase(iterator);
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\android\app\src\main\cpp\native_state.cpp:46:            return;

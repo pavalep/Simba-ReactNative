@@ -2,15 +2,17 @@ import React, {useEffect, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import {darkColors as cinemaColors} from '../../../../../theme/tokens';
-import type {VideoV3SessionSnapshot} from '../domain/VideoV3Types';
+import {darkColors as cinemaColors} from '../../../../theme/tokens';
+import type {VideoSessionSnapshot} from '../domain/VideoTypes';
 
-export interface VideoV3FirstFrameLoadingProps {
-  readonly session: VideoV3SessionSnapshot;
+export interface VideoFirstFrameLoadingProps {
+  readonly session: VideoSessionSnapshot;
+  readonly onRetry?: () => void;
 }
 
 const REVEAL_DELAY_MS = 180;
@@ -20,7 +22,7 @@ const FADE_DURATION_MS = 220;
  * First-frame gate for V3. The native surface remains mounted underneath; this
  * layer only controls what the user sees before mpv confirms the first frame.
  */
-export function VideoV3FirstFrameLoading({session}: VideoV3FirstFrameLoadingProps) {
+export function VideoFirstFrameLoading({session, onRetry}: VideoFirstFrameLoadingProps) {
   const [revealed, setRevealed] = useState(false);
   const opacity = useRef(new Animated.Value(1)).current;
   const generation = session.generation;
@@ -53,7 +55,7 @@ export function VideoV3FirstFrameLoading({session}: VideoV3FirstFrameLoadingProp
   if (!isActive || (!revealed && !hasFirstFrame)) return null;
 
   return (
-    <Animated.View pointerEvents="none" style={[styles.root, {opacity}]}>
+    <Animated.View pointerEvents={isError ? 'box-none' : 'none'} style={[styles.root, {opacity}]}>
       <View style={styles.center}>
         <View style={styles.brandMark}><View style={styles.brandMarkInner} /></View>
         <Text style={styles.title}>{isError ? 'Unable to start video' : 'Preparing video'}</Text>
@@ -61,6 +63,11 @@ export function VideoV3FirstFrameLoading({session}: VideoV3FirstFrameLoadingProp
           {isError ? session.error?.message ?? 'Try again from the player controls.' : 'Starting the first frame…'}
         </Text>
         {!isError ? <ActivityIndicator color={cinemaColors.accent.gold} size="small" /> : null}
+        {isError && onRetry ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Retry video" onPress={onRetry} style={({pressed}) => [styles.retryButton, pressed && styles.retryPressed]}>
+            <Text style={styles.retryLabel}>Retry</Text>
+          </Pressable>
+        ) : null}
       </View>
       {!isError && session.cacheFill > 0 ? (
         <View style={styles.progressTrack}>
@@ -123,5 +130,22 @@ const styles = StyleSheet.create({
   progressFill: {
     height: 3,
     backgroundColor: cinemaColors.accent.gold,
+  },
+  retryButton: {
+    marginTop: 4,
+    minWidth: 112,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: cinemaColors.accent.gold,
+  },
+  retryLabel: {
+    color: cinemaColors.accent.gold,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  retryPressed: {
+    opacity: 0.7,
   },
 });

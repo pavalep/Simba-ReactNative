@@ -38,6 +38,8 @@ struct PendingLoadRequest {
 };
 
 void enqueueLoadRequest(PendingLoadRequest request);
+void clearActiveLoadRequest();
 void dropLoadRequest(const std::string &requestId);
 std::string consumeFileLoadedPayload(const std::string &resolvedPath);
+std::string activeLoadRequestId(const std::string &resolvedPath);
 void clearPendingLoadRequests();

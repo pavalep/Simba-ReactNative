@@ -117,9 +117,9 @@ object MPVLib {
 
     /** Called from native on error. */
     @JvmStatic
-    fun onNativeError(code: Int, message: String) {
+    fun onNativeError(code: Int, message: String, requestId: String?) {
         listeners.forEach { listener ->
-            runCatching { listener.onMpvError(code, message) }
+            runCatching { listener.onMpvError(code, message, requestId) }
         }
     }
 
@@ -128,7 +128,7 @@ object MPVLib {
     interface MpvEventListener {
         fun onMpvEvent(event: String, jsonPayload: String) = Unit
         fun onMpvPropertyChanged(name: String, jsonValue: String) = Unit
-        fun onMpvError(code: Int, message: String) = Unit
+        fun onMpvError(code: Int, message: String, requestId: String?) = Unit
     }
 
     private val listeners = CopyOnWriteArrayList<MpvEventListener>()

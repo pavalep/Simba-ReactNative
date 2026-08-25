@@ -187,13 +187,26 @@ static void callJavaPropertyChanged(const char *name, const char *jsonValue) {
     if (jValue) env->DeleteLocalRef(jValue);
 }
 
-static void callJavaError(int code, const char *message) {
+static void callJavaError(int code, const char *message, const char *requestId) {
     JNIEnv *env = getEventEnv();
     if (!env || !g_cls_MPVLib || !g_mid_onError) return;
     jstring jMsg = env->NewStringUTF(message ? message : "mpv error");
-    env->CallStaticVoidMethod(g_cls_MPVLib, g_mid_onError, code, jMsg);
+    jstring jRequestId = env->NewStringUTF(requestId ? requestId : "");
+    env->CallStaticVoidMethod(g_cls_MPVLib, g_mid_onError, code, jMsg, jRequestId);
     clearJavaException(env);
     if (jMsg) env->DeleteLocalRef(jMsg);
+    if (jRequestId) env->DeleteLocalRef(jRequestId);
+}
+
+static std::string currentMpvPath() {
+    if (!g_mpv) return {};
+    char *path = nullptr;
+    std::string resolvedPath;
+    if (mpv_get_property(g_mpv, "path", MPV_FORMAT_STRING, &path) >= 0 && path) {
+        resolvedPath = path;
+        mpv_free(path);
+    }
+    return resolvedPath;
 }
 
 // ── Event Loop ──────────────────────────────────────────────────────────────
@@ -243,12 +256,14 @@ void eventLoop() {
             case MPV_EVENT_END_FILE: {
                 auto *prop = (mpv_event_end_file *)event->data;
                 LOGE("[PlaybackTrace][Native][eventLoop] MPV_EVENT_END_FILE reason=%d error=%d", prop ? prop->reason : -1, prop ? prop->error : -1);
-                char payload[128];
                 const int reason = prop ? prop->reason : -1;
                 const int error = prop ? prop->error : -1;
-                snprintf(payload, sizeof(payload), "{\"reason\":%d,\"error\":%d}",
-                         reason, error);
-                callJavaEvent("endFile", payload);
+                const std::string resolvedPath = currentMpvPath();
+                const std::string requestId = activeLoadRequestId(resolvedPath);
+                const std::string payload = "{\"reason\":" + std::to_string(reason)
+                    + ",\"error\":" + std::to_string(error)
+                    + ",\"requestId\":" + jsonQuote(requestId.c_str()) + "}";
+                callJavaEvent("endFile", payload.c_str());
                 // Only a non-zero end-file error is a terminal playback failure.
                 // MPV log lines at level `error` can be recoverable decoder noise
                 // (for example mjpeg overread warnings) and must not trigger a
@@ -257,7 +272,7 @@ void eventLoop() {
                     char errorMessage[160];
                     snprintf(errorMessage, sizeof(errorMessage),
                              "mpv end-file error=%d reason=%d", prop->error, prop->reason);
-                    callJavaError(prop->error, errorMessage);
+                    callJavaError(prop->error, errorMessage, requestId.c_str());
                 }
                 break;
             }
@@ -321,7 +336,8 @@ void eventLoop() {
                 // caused the JS controller to reload the stream mid-playback.
                 // Terminal failures are reported through MPV_EVENT_END_FILE.
                 if (log->level && strcmp(log->level, "fatal") == 0) {
-                    callJavaError(-1, log->text ? log->text : "mpv fatal error");
+                    const std::string requestId = activeLoadRequestId(currentMpvPath());
+                    callJavaError(-1, log->text ? log->text : "mpv fatal error", requestId.c_str());
                 }
                 break;
             }

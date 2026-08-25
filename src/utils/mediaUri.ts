@@ -55,8 +55,8 @@ export function cacheKeyFromUri(uri: string): string {
  *
  * We cannot know the true type from the URL alone — HLS playlists (.m3u8)
  * and DASH manifests (.mpd) can be either live or VOD. The `isLive` flag
- * is therefore derived at runtime from MPV once playback starts (see
- * useVideoPlayerScreen). This helper only provides a *hint* so the UI can
+ * is therefore derived at runtime from MPV once playback starts.
+ * This helper only provides a *hint* so the UI can
  * render the right affordances before the first frame.
  */
 export type StreamType = 'hls' | 'dash' | 'file' | 'other';

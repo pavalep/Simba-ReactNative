@@ -9,6 +9,7 @@ import {selectArtistDiscography} from '../../../store/slices/mediaSlice';
 import {loadPlaylistToPlayer, playFile, type PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ArtistScreen'>;
 type Route = RouteProp<RootStackParamList, 'ArtistScreen'>;
@@ -17,6 +18,7 @@ export function useArtistScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const dispatch = useAppDispatch();
+  const {openPlayer} = usePlaybackCommands();
 
   const {artistName} = route.params;
 
@@ -83,12 +85,9 @@ export function useArtistScreen() {
   const handlePlayTrack = useCallback(
     (item: PlaylistEntry) => {
       dispatch(playFile(item));
-      (navigation as any).navigate('AudioPlayer', {
-        fileUri: item.uri,
-        fileTitle: item.title,
-      });
+      openPlayer({...item, mediaLane: 'audio'});
     },
-    [dispatch, navigation],
+    [dispatch, openPlayer],
   );
 
   const handlePlayAll = useCallback(() => {
@@ -97,11 +96,8 @@ export function useArtistScreen() {
     }));
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
-    (navigation as any).navigate('AudioPlayer', {
-      fileUri: entries[0].uri,
-      fileTitle: entries[0].title,
-    });
-  }, [allTracks, dispatch, navigation]);
+    openPlayer({...entries[0], mediaLane: 'audio'});
+  }, [allTracks, dispatch, openPlayer]);
 
   const handleShuffleAll = useCallback(() => {
     const entries: PlaylistEntry[] = allTracks.map(t => ({
@@ -114,11 +110,8 @@ export function useArtistScreen() {
     }
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
-    (navigation as any).navigate('AudioPlayer', {
-      fileUri: entries[0].uri,
-      fileTitle: entries[0].title,
-    });
-  }, [allTracks, dispatch, navigation]);
+    openPlayer({...entries[0], mediaLane: 'audio'});
+  }, [allTracks, dispatch, openPlayer]);
 
   const handleNavigateToAlbum = useCallback(
     (albumName: string) => {

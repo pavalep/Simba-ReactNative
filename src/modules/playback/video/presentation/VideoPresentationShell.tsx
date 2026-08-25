@@ -1,10 +1,10 @@
 import React, {useEffect, useRef} from 'react';
 import {Animated, StyleSheet, useWindowDimensions} from 'react-native';
-import {darkColors as cinemaColors} from '../../../../../theme/tokens';
-import type {VideoV3PresentationMode} from './VideoV3PresentationTypes';
+import {darkColors as cinemaColors} from '../../../../theme/tokens';
+import type {VideoPresentationMode} from './VideoPresentationTypes';
 
-export interface VideoV3PresentationShellProps {
-  readonly presentation: VideoV3PresentationMode;
+export interface VideoPresentationShellProps {
+  readonly presentation: VideoPresentationMode;
   readonly children: React.ReactNode;
   readonly fullChrome: React.ReactNode;
   readonly miniChrome: React.ReactNode;
@@ -22,12 +22,12 @@ const TRANSITION_DURATION_MS = 280;
  * target projection receives pointer events. An interrupted transition starts
  * from the current animated value and invalidates the old completion callback.
  */
-export function VideoV3PresentationShell({
+export function VideoPresentationShell({
   presentation,
   children,
   fullChrome,
   miniChrome,
-}: VideoV3PresentationShellProps) {
+}: VideoPresentationShellProps) {
   const {width: viewportWidth, height: viewportHeight} = useWindowDimensions();
   const progress = useRef(new Animated.Value(presentation === 'full' ? 1 : 0)).current;
   const transitionGeneration = useRef(0);

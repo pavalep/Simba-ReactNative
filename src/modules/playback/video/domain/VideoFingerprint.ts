@@ -1,10 +1,10 @@
-import type {VideoV3SourceIdentity} from './VideoV3Types';
+import type {VideoSourceIdentity} from './VideoTypes';
 
 /**
  * Builds a deterministic identity for one video session.
  * Presentation changes must never alter this value.
  */
-export function createVideoV3SourceFingerprint(source: VideoV3SourceIdentity): string {
+export function createVideoSourceFingerprint(source: VideoSourceIdentity): string {
   return [
     source.uri,
     source.source,
@@ -17,9 +17,9 @@ export function createVideoV3SourceFingerprint(source: VideoV3SourceIdentity): s
     .join('|');
 }
 
-export function isSameVideoV3Source(
+export function isSameVideoSource(
   current: string | null,
-  next: VideoV3SourceIdentity,
+  next: VideoSourceIdentity,
 ): boolean {
-  return current === createVideoV3SourceFingerprint(next);
+  return current === createVideoSourceFingerprint(next);
 }

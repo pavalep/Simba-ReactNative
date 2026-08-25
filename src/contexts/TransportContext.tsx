@@ -249,11 +249,11 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       if (!isNaN(nextPosition)) setPosition(nextPosition);
       if (!hasPlaybackStateEventsRef.current) {
         const prev = lastPositionRef.current;
-        const now = Date.now();
+        const timestamp = Date.now();
         const moved = nextPosition > prev + 0.12;
         if (moved) {
-          moveStreakRef.current = now - lastMoveAtRef.current < 1200 ? moveStreakRef.current + 1 : 1;
-          lastMoveAtRef.current = now;
+          moveStreakRef.current = timestamp - lastMoveAtRef.current < 1200 ? moveStreakRef.current + 1 : 1;
+          lastMoveAtRef.current = timestamp;
           if (moveStreakRef.current >= 2 && !isPlayingRef.current) {
             setIsPlaying(true);
           }
@@ -307,10 +307,10 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     // The native bridge merges `cache-buffering-state` and
     // `paused-for-cache` into a single `onBuffering` event with a
     // `percent` payload so the consumer has one boolean to watch.
-    const unsubBuffering = MpvPlayer.on('onBuffering', ({percent}: {percent: number}) => {
+    const unsubBuffering = MpvPlayer.on('onBuffering', ({percent, isBuffering: buffering}: {percent: number; isBuffering?: boolean}) => {
       const normalized = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 100;
-      setCacheFill(normalized / 100);
-      setIsBuffering(normalized > 0 && normalized < 100);
+      if (normalized > 0 || buffering === false) setCacheFill(normalized / 100);
+      setIsBuffering(buffering ?? (normalized > 0 && normalized < 100));
     });
     const unsubCacheState = MpvPlayer.on(
       'onCacheState',
@@ -321,14 +321,13 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
           durationRef.current > 1 ? durationRef.current : undefined,
         );
         const signature = JSON.stringify(normalizedRanges);
-        if (signature !== lastCacheRangesSignatureRef.current) {
-          lastCacheRangesSignatureRef.current = signature;
-          logger.info('[PlaybackTrace][Transport][cache-ranges]', {
-            rawRanges,
-            normalizedRanges,
-            duration: durationRef.current,
-          });
-        }
+        if (signature === lastCacheRangesSignatureRef.current) return;
+        lastCacheRangesSignatureRef.current = signature;
+        logger.info('[PlaybackTrace][Transport][cache-ranges]', {
+          rawRanges,
+          normalizedRanges,
+          duration: durationRef.current,
+        });
         setBufferedRanges(normalizedRanges);
       },
     );
@@ -418,7 +417,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         MpvPlayer.unobserveProperty('seeking');
       } catch {}
     };
-  }, [isReady, enabled, pollInterval]);
+  }, [dispatch, isReady, enabled, pollInterval]);
 
   // ── Actions ──
   const seekTo = useCallback((fraction: number) => {

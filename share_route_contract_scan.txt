@@ -1,0 +1,40 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\components\ArchiveItemDetailScreen.tsx:30:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\components\ArchiveItemDetailScreen.tsx:193:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\components\ArchiveItemDetailScreen.tsx:194:route: 'AudioPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ArchiveItemDetailScreen\components\ArchiveItemDetailScreen.tsx:213:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\components\AudiobookDetailScreen.tsx:31:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\components\AudiobookDetailScreen.tsx:207:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\components\AudiobookDetailScreen.tsx:208:route: 'AudioPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\AudiobookDetailScreen\components\AudiobookDetailScreen.tsx:228:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\AlbumDetailScreen.tsx:28:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\AlbumDetailScreen.tsx:124:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\ArtistDetailScreen.tsx:29:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\Library\components\ArtistDetailScreen.tsx:204:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\components\LiveTVScreen.tsx:41:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\components\LiveTVScreen.tsx:490:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreen\components\LiveTVScreen.tsx:491:route: 'VideoPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:35:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:249:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVContent.tsx:250:route: 'VideoPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVFavoritesScreen.tsx:27:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVFavoritesScreen.tsx:137:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\LiveTVScreenNew\components\LiveTVFavoritesScreen.tsx:138:route: 'VideoPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MovieDetailScreen\components\MovieDetailScreen.tsx:27:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MovieDetailScreen\components\MovieDetailScreen.tsx:69:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicDetailScreen\components\MusicDetailScreen.tsx:23:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\MusicDetailScreen\components\MusicDetailScreen.tsx:87:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\components\PlaylistDetailScreen.tsx:41:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\components\PlaylistDetailScreen.tsx:196:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PlaylistDetail\components\PlaylistDetailScreen.tsx:439:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\hooks\useEpisodeActions.ts:13:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\hooks\useEpisodeActions.ts:130:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\index.tsx:18:import {shareContent} from '../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\PodcastDetailScreen\index.tsx:86:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:32:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioContent.tsx:244:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioFavoritesScreen.tsx:29:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioFavoritesScreen.tsx:128:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\RadioScreenNew\components\RadioFavoritesScreen.tsx:129:route: 'AudioPlayer',
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowDetailScreen\components\ShowDetailScreen.tsx:22:import {shareContent} from '../../../services/shareService';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\screens\ShowDetailScreen\components\ShowDetailScreen.tsx:79:shareContent({
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\services\shareService.ts:85:export async function shareContent(target: ShareTarget): Promise<void> {

@@ -1,23 +1,44 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
-import MpvPlayer from '../../../../../native/player.api';
-import {createVideoV3SourceFingerprint} from '../domain/VideoV3Fingerprint';
-import type {
-  VideoV3SourceIdentity,
-  VideoV3ViewState,
-} from '../domain/VideoV3Types';
-import {VideoV3FirstFrameLoading} from '../loading/VideoV3FirstFrameLoading';
-import {VideoV3PresentationShell} from '../presentation/VideoV3PresentationShell';
-import {VideoV3SafeControlLayer} from '../presentation/VideoV3SafeControlLayer';
-import {createVideoV3Playback} from '../session/createVideoV3Playback';
-import {VideoV3NativeSurface} from '../surface/VideoV3NativeSurface';
-import {usePlaybackCommands} from '../../../PlaybackContext';
-import type {ActivePlayback, PlaybackPresentation} from '../../../types';
+import React, {useEffect, useMemo, useState} from 'react';
+import MpvPlayer from '../../../../native/player.api';
+import {createVideoSourceFingerprint} from '../domain/VideoFingerprint';
+import {
+  emptyVideoSnapshot,
+  type VideoSourceIdentity,
+  type VideoViewState,
+} from '../domain/VideoTypes';
+import type {VideoPipState} from '../platform/VideoPipAdapter';
+import {VideoFirstFrameLoading} from '../loading/VideoFirstFrameLoading';
+import {VideoPresentationShell} from '../presentation/VideoPresentationShell';
+import {VideoSafeControlLayer} from '../presentation/VideoSafeControlLayer';
+import {createVideoPlayback} from '../session/createVideoPlayback';
+import {VideoNativeSurface} from '../surface/VideoNativeSurface';
+import {usePlaybackCommands} from '../../PlaybackContext';
+import type {ActivePlayback, PlaybackPresentation} from '../../types';
 
-export interface VideoV3HostProps {
+type VideoPlaybackUnit = ReturnType<typeof createVideoPlayback>;
+
+const EMPTY_VIDEO_VIEW_STATE: VideoViewState = {
+  session: emptyVideoSnapshot(),
+  capabilities: {
+    canPlay: false,
+    canPause: false,
+    canSeek: false,
+    canAdjustVolume: false,
+    canChangeSpeed: false,
+    canSelectAudioTrack: false,
+    canSelectCaptionTrack: false,
+    canViewChapters: false,
+    canPictureInPicture: false,
+    canFullscreen: false,
+    canChangeOrientation: false,
+  },
+};
+
+export interface VideoHostProps {
   readonly active: ActivePlayback;
 }
 
-function toVideoV3Source(active: ActivePlayback): VideoV3SourceIdentity {
+function toVideoSource(active: ActivePlayback): VideoSourceIdentity {
   const entry = active.entry;
   return {
     uri: entry.uri,
@@ -30,42 +51,46 @@ function toVideoV3Source(active: ActivePlayback): VideoV3SourceIdentity {
   };
 }
 
-export function VideoV3Host({active}: VideoV3HostProps) {
+export function VideoHost({active}: VideoHostProps) {
   const {expandPlayer, collapsePlayer, closePlayer} = usePlaybackCommands();
-  const playback = useMemo(() => createVideoV3Playback(), []);
-  const source = useMemo(() => toVideoV3Source(active), [active]);
-  const sourceFingerprint = useMemo(() => createVideoV3SourceFingerprint(source), [source]);
-  const requestRef = useRef({
-    source,
-    startPosition: active.startPosition,
-    autoplay: active.entry.autoplay ?? true,
-  });
-  requestRef.current = {
-    source,
-    startPosition: active.startPosition,
-    autoplay: active.entry.autoplay ?? true,
-  };
-  const [viewState, setViewState] = useState<VideoV3ViewState>(() => playback.state.getState());
+  const [playback, setPlayback] = useState<VideoPlaybackUnit | null>(null);
+  const source = useMemo(() => toVideoSource(active), [active]);
+  const sourceFingerprint = useMemo(() => createVideoSourceFingerprint(source), [source]);
+  const startPosition = active.startPosition;
+  const autoplay = active.entry.autoplay ?? true;
+  const requestIdentity = `${sourceFingerprint}|${startPosition ?? ''}|${autoplay ? 'autoplay' : 'paused'}`;
+  const [viewState, setViewState] = useState<VideoViewState>(EMPTY_VIDEO_VIEW_STATE);
   const [nativePtr, setNativePtr] = useState(0);
   const [chromeVisible, setChromeVisible] = useState(true);
-  const [pipState, setPipState] = useState(() => playback.pip.getState());
+  const [pipState, setPipState] = useState<VideoPipState | null>(null);
   const session = viewState.session;
   const presentation: PlaybackPresentation = active.presentation;
-  const isPipLike = pipState.mode === 'entering' || pipState.mode === 'pip' || pipState.mode === 'exiting';
+  const isPipLike = pipState?.mode === 'entering' || pipState?.mode === 'pip' || pipState?.mode === 'exiting';
   const shellPresentation = isPipLike || presentation === 'expanded' ? 'full' : 'mini';
   const surfacePresentation = isPipLike ? 'pip' : shellPresentation;
 
   useEffect(() => {
-    const unsubscribe = playback.state.subscribe(setViewState);
-    return unsubscribe;
+    if (!playback) return;
+    setViewState(playback.state.getState());
+    return playback.state.subscribe(setViewState);
   }, [playback]);
 
   useEffect(() => {
-    const unsubscribe = playback.pip.subscribe(setPipState);
-    return unsubscribe;
+    if (!playback) return;
+    setPipState(playback.pip.getState());
+    return playback.pip.subscribe(setPipState);
   }, [playback]);
 
   useEffect(() => {
+    const nextPlayback = createVideoPlayback();
+    setPlayback(nextPlayback);
+    return () => {
+      nextPlayback.release().catch(() => undefined);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!playback) return;
     const unsubscribe = playback.pip.subscribeToActions(action => {
       if (action === 'play-pause') {
         playback.commands.dispatch({type: session.isPlaying ? 'pause' : 'play'}).catch(() => undefined);
@@ -81,17 +106,16 @@ export function VideoV3Host({active}: VideoV3HostProps) {
   }, [closePlayer, expandPlayer, playback, session.isPlaying]);
 
   useEffect(() => {
+    if (!playback) return;
     playback.surface.attach().catch(() => undefined);
-    return () => {
-      playback.release().catch(() => undefined);
-    };
   }, [playback]);
 
   useEffect(() => {
+    if (!playback) return;
     let cancelled = false;
     const load = async () => {
       try {
-        await playback.session.load(requestRef.current);
+        await playback.session.load({source, startPosition, autoplay});
         if (cancelled) return;
         try {
           setNativePtr(MpvPlayer.getNativePtr());
@@ -106,13 +130,15 @@ export function VideoV3Host({active}: VideoV3HostProps) {
     return () => {
       cancelled = true;
     };
-  }, [playback, sourceFingerprint]);
+  }, [autoplay, playback, requestIdentity, source, startPosition]);
 
   useEffect(() => {
+    if (!playback) return;
     playback.surface.setPresentation(surfacePresentation).catch(() => undefined);
   }, [playback, surfacePresentation]);
 
   const dispatchPlayPause = async () => {
+    if (!playback) return;
     if (session.phase === 'finished') {
       await playback.commands.dispatch({
         type: 'load',
@@ -131,6 +157,7 @@ export function VideoV3Host({active}: VideoV3HostProps) {
   };
 
   const dispatchSeek = (position: number) => {
+    if (!playback) return;
     playback.commands.dispatch({
       type: 'seek',
       position,
@@ -146,10 +173,17 @@ export function VideoV3Host({active}: VideoV3HostProps) {
   const showFullChrome = !isPipLike && presentation === 'expanded';
   const showMiniChrome = !isPipLike && presentation === 'mini';
   const requestPip = () => {
-    playback.pip.enter(session).catch(() => undefined);
+    playback?.pip.enter(session).catch(() => undefined);
+  };
+  const retryVideo = () => {
+    if (!playback) return;
+    playback.commands.dispatch({
+      type: 'load',
+      request: {source, startPosition: 0, autoplay: true},
+    }).catch(() => undefined);
   };
   const fullChrome = showFullChrome ? (
-    <VideoV3SafeControlLayer
+    <VideoSafeControlLayer
       mode="full"
       session={session}
       capabilities={viewState.capabilities}
@@ -165,7 +199,7 @@ export function VideoV3Host({active}: VideoV3HostProps) {
     />
   ) : null;
   const miniChrome = showMiniChrome ? (
-    <VideoV3SafeControlLayer
+    <VideoSafeControlLayer
       mode="mini"
       session={session}
       capabilities={viewState.capabilities}
@@ -181,14 +215,14 @@ export function VideoV3Host({active}: VideoV3HostProps) {
   ) : null;
 
   return (
-    <VideoV3PresentationShell
+    <VideoPresentationShell
       presentation={shellPresentation}
       fullChrome={fullChrome}
       miniChrome={miniChrome}
     >
-      {nativePtr > 0 ? <VideoV3NativeSurface nativePtr={nativePtr} /> : null}
-      <VideoV3FirstFrameLoading session={session} />
-    </VideoV3PresentationShell>
+      {nativePtr > 0 ? <VideoNativeSurface nativePtr={nativePtr} /> : null}
+      <VideoFirstFrameLoading session={session} onRetry={retryVideo} />
+    </VideoPresentationShell>
   );
 }
 

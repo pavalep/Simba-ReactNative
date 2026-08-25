@@ -1,23 +1,23 @@
 import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
-import {darkColors as cinemaColors} from '../../../../../theme/tokens';
+import {darkColors as cinemaColors} from '../../../../theme/tokens';
 import type {
-  VideoV3Capabilities,
-  VideoV3SessionSnapshot,
-} from '../domain/VideoV3Types';
+  VideoCapabilities,
+  VideoSessionSnapshot,
+} from '../domain/VideoTypes';
 import type {
-  VideoV3PresentationMode,
-  VideoV3SafeGeometry,
-} from './VideoV3PresentationTypes';
-import {VideoV3ControlButton} from './VideoV3ControlButton';
-import {VideoV3Icon} from './VideoV3Icon';
-import {VideoV3ProgressRail} from './VideoV3ProgressRail';
+  VideoPresentationMode,
+  VideoSafeGeometry,
+} from './VideoPresentationTypes';
+import {VideoControlButton} from './VideoControlButton';
+import {VideoIcon} from './VideoIcon';
+import {VideoProgressRail} from './VideoProgressRail';
 
-export interface VideoV3ControlLayerProps {
-  readonly mode: VideoV3PresentationMode;
-  readonly session: VideoV3SessionSnapshot;
-  readonly capabilities: VideoV3Capabilities;
-  readonly geometry: VideoV3SafeGeometry;
+export interface VideoControlLayerProps {
+  readonly mode: VideoPresentationMode;
+  readonly session: VideoSessionSnapshot;
+  readonly capabilities: VideoCapabilities;
+  readonly geometry: VideoSafeGeometry;
   readonly chromeVisible: boolean;
   readonly title?: string;
   readonly onToggleChrome: () => void;
@@ -36,17 +36,17 @@ export interface VideoV3ControlLayerProps {
   readonly isLocked?: boolean;
 }
 
-function primaryLabel(session: VideoV3SessionSnapshot): string {
+function primaryLabel(session: VideoSessionSnapshot): string {
   if (session.phase === 'finished' || session.isEnded) return 'Play from beginning';
   if (session.isPlaying) return 'Pause';
   return 'Play';
 }
 
-function primaryIcon(session: VideoV3SessionSnapshot) {
+function primaryIcon(session: VideoSessionSnapshot) {
   return session.isPlaying ? 'pause' as const : 'play' as const;
 }
 
-function statusLabel(session: VideoV3SessionSnapshot): string | null {
+function statusLabel(session: VideoSessionSnapshot): string | null {
   switch (session.phase) {
     case 'preparing': return 'Preparing';
     case 'connecting': return 'Connecting';
@@ -58,7 +58,7 @@ function statusLabel(session: VideoV3SessionSnapshot): string | null {
   }
 }
 
-export function VideoV3ControlLayer(props: VideoV3ControlLayerProps) {
+export function VideoControlLayer(props: VideoControlLayerProps) {
   return props.mode === 'mini' ? <MiniControls {...props} /> : <FullControls {...props} />;
 }
 
@@ -82,7 +82,7 @@ function FullControls({
   onOpenMore,
   onToggleLock,
   isLocked = false,
-}: VideoV3ControlLayerProps) {
+}: VideoControlLayerProps) {
   const status = statusLabel(session);
   const showCenterAction = chromeVisible && (
     session.phase === 'paused' ||
@@ -95,11 +95,11 @@ function FullControls({
       {chromeVisible ? (
         <View style={[styles.topScrim, {paddingTop: geometry.topContentInset, paddingHorizontal: geometry.horizontalContentInset}]} pointerEvents="box-none">
           <View style={styles.topRow}>
-            <VideoV3ControlButton icon="back" label="Back" size="regular" onPress={onBack} />
+            <VideoControlButton icon="back" label="Back" size="regular" onPress={onBack} />
             <Text numberOfLines={1} style={styles.title}>{title ?? session.source?.title ?? ''}</Text>
             <View style={styles.topActions}>
-              {onToggleLock ? <VideoV3ControlButton icon={isLocked ? 'unlock' : 'lock'} label={isLocked ? 'Unlock controls' : 'Lock controls'} size="compact" onPress={onToggleLock} /> : null}
-              {onOpenMore ? <VideoV3ControlButton icon="more" label="More video options" size="compact" onPress={onOpenMore} /> : null}
+              {onToggleLock ? <VideoControlButton icon={isLocked ? 'unlock' : 'lock'} label={isLocked ? 'Unlock controls' : 'Lock controls'} size="compact" onPress={onToggleLock} /> : null}
+              {onOpenMore ? <VideoControlButton icon="more" label="More video options" size="compact" onPress={onOpenMore} /> : null}
             </View>
           </View>
         </View>
@@ -123,7 +123,7 @@ function FullControls({
 
       {showCenterAction ? (
         <View pointerEvents="box-none" style={styles.centerAction}>
-          <VideoV3ControlButton
+          <VideoControlButton
             icon={primaryIcon(session)}
             iconColor={cinemaColors.accent.gold}
             label={session.phase === 'error' ? 'Retry video' : primaryLabel(session)}
@@ -136,11 +136,11 @@ function FullControls({
 
       {chromeVisible ? (
         <View style={[styles.bottomScrim, {paddingBottom: geometry.bottomContentInset, paddingHorizontal: geometry.horizontalContentInset}]} pointerEvents="box-none">
-          <VideoV3ProgressRail session={session} onSeek={onSeek} />
+          <VideoProgressRail session={session} onSeek={onSeek} />
           <View style={[styles.transportRow, {gap: geometry.controlGap}]}>
-            {onPrevious ? <VideoV3ControlButton icon="previous" label="Previous video" size="regular" disabled={!capabilities.canPlay} onPress={onPrevious} /> : null}
-            {capabilities.canSeek ? <VideoV3ControlButton icon="rewind" label="Seek backward 10 seconds" size="regular" onPress={() => onSkip(-10)} /> : null}
-            <VideoV3ControlButton
+            {onPrevious ? <VideoControlButton icon="previous" label="Previous video" size="regular" disabled={!capabilities.canPlay} onPress={onPrevious} /> : null}
+            {capabilities.canSeek ? <VideoControlButton icon="rewind" label="Seek backward 10 seconds" size="regular" onPress={() => onSkip(-10)} /> : null}
+            <VideoControlButton
               icon={primaryIcon(session)}
               iconColor={cinemaColors.text.bright}
               label={primaryLabel(session)}
@@ -148,15 +148,15 @@ function FullControls({
               disabled={session.phase === 'connecting' || session.phase === 'preparing'}
               onPress={onPlayPause}
             />
-            {capabilities.canSeek ? <VideoV3ControlButton icon="forward" label="Seek forward 10 seconds" size="regular" onPress={() => onSkip(10)} /> : null}
-            {onNext ? <VideoV3ControlButton icon="next" label="Next video" size="regular" onPress={onNext} /> : null}
+            {capabilities.canSeek ? <VideoControlButton icon="forward" label="Seek forward 10 seconds" size="regular" onPress={() => onSkip(10)} /> : null}
+            {onNext ? <VideoControlButton icon="next" label="Next video" size="regular" onPress={onNext} /> : null}
           </View>
           <View style={[styles.utilityRow, {gap: geometry.utilityGap}]}>
-            {capabilities.canSelectCaptionTrack && onToggleCaptions ? <VideoV3ControlButton icon="captions" label="Captions" size="compact" onPress={onToggleCaptions} /> : null}
-            {capabilities.canFullscreen && onToggleFullscreen ? <VideoV3ControlButton icon="expand" label="Enter fullscreen" size="compact" onPress={onToggleFullscreen} /> : null}
-            {capabilities.canPictureInPicture && onEnterPictureInPicture ? <VideoV3ControlButton icon="collapse" label="Enter picture in picture" size="compact" onPress={onEnterPictureInPicture} /> : null}
+            {capabilities.canSelectCaptionTrack && onToggleCaptions ? <VideoControlButton icon="captions" label="Captions" size="compact" onPress={onToggleCaptions} /> : null}
+            {capabilities.canFullscreen && onToggleFullscreen ? <VideoControlButton icon="expand" label="Enter fullscreen" size="compact" onPress={onToggleFullscreen} /> : null}
+            {capabilities.canPictureInPicture && onEnterPictureInPicture ? <VideoControlButton icon="collapse" label="Enter picture in picture" size="compact" onPress={onEnterPictureInPicture} /> : null}
             <View style={styles.utilitySpacer} />
-            {onClose ? <VideoV3ControlButton icon="close" label="Close video player" size="compact" onPress={onClose} /> : null}
+            {onClose ? <VideoControlButton icon="close" label="Close video player" size="compact" onPress={onClose} /> : null}
           </View>
         </View>
       ) : null}
@@ -173,7 +173,7 @@ function MiniControls({
   onClose,
   onPlayPause,
   onSeek,
-}: VideoV3ControlLayerProps) {
+}: VideoControlLayerProps) {
   return (
     <View style={[styles.miniRoot, {paddingBottom: geometry.bottomContentInset, paddingLeft: geometry.horizontalContentInset, paddingRight: geometry.horizontalContentInset}]}>
       <Pressable
@@ -184,14 +184,14 @@ function MiniControls({
       />
       <View style={styles.miniText} pointerEvents="none">
         <Text numberOfLines={1} style={styles.miniTitle}>{title ?? session.source?.title ?? ''}</Text>
-        <VideoV3ProgressRail session={session} onSeek={onSeek} />
+        <VideoProgressRail session={session} onSeek={onSeek} />
       </View>
       <View style={styles.miniActions}>
-        <VideoV3ControlButton icon={primaryIcon(session)} label={primaryLabel(session)} size="compact" onPress={onPlayPause} />
-        <VideoV3ControlButton icon="expand" label="Expand video player" size="compact" onPress={onToggleChrome} />
-        <VideoV3ControlButton icon="close" label="Close video player" size="compact" onPress={onClose} />
+        <VideoControlButton icon={primaryIcon(session)} label={primaryLabel(session)} size="compact" onPress={onPlayPause} />
+        <VideoControlButton icon="expand" label="Expand video player" size="compact" onPress={onToggleChrome} />
+        <VideoControlButton icon="close" label="Close video player" size="compact" onPress={onClose} />
       </View>
-      <View style={styles.miniIconHint} pointerEvents="none"><VideoV3Icon name="expand" size={16} color={cinemaColors.text.onMediaMuted} /></View>
+      <View style={styles.miniIconHint} pointerEvents="none"><VideoIcon name="expand" size={16} color={cinemaColors.text.onMediaMuted} /></View>
     </View>
   );
 }

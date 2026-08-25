@@ -33,6 +33,10 @@ const ROUTE_PATHS: Record<string, string> = {
   AlbumDetail: 'library/album/:albumTitle/:artistName',
   
   SongScreen: 'song',
+  RadioScreen: 'radio/:initialTab?',
+  LiveTVScreen: 'tv/:categoryId?',
+  AudiobookDetail: 'audiobook/:bookId',
+  ArchiveItemDetail: 'archive-item/:identifier',
 };
 
 /** URL-encode a single segment/value. */

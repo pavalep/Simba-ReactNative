@@ -1,5 +1,5 @@
 import {useState, useEffect, useCallback, useRef, useMemo} from 'react';
-import {Alert, BackHandler} from 'react-native';
+import {BackHandler} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../../theme';
 import {useAppDispatch, useAppSelector} from '../../../../store';
@@ -16,6 +16,7 @@ import type {AudioPlaybackParams, PlaybackNavigation} from '../../types';
 import {useHaptics} from '../../../../hooks/useHaptics';
 import {useRecentHistory} from '../../../../features/recentHistory';
 import {useBookmarks} from '../../../../features/bookmarks';
+import {useConfirmDialog} from '../../../../components/core/Dialog';
 import {
   addToPlaylist,
   removeFromPlaylist,
@@ -74,6 +75,7 @@ export function useAudioPlayerScreen(
   const insets = useSafeAreaInsets();
   const haptics = useHaptics();
   const dispatch = useAppDispatch();
+  const {confirm, dialog: bookmarkConfirmDialog} = useConfirmDialog();
 
   // ── Route params ──
     const title = route.params?.fileTitle || (route.params?.fileUri ? getFileName(route.params.fileUri) : 'Unknown Track');
@@ -167,24 +169,20 @@ export function useAudioPlayerScreen(
       };
       const result = addAudioBookmark(input);
       if (result.status === 'requires-confirmation') {
-        Alert.alert(
-          'Bookmark limit reached',
-          `Adding “${title}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
-          [
-            {text: 'Cancel', style: 'cancel'},
-            {
-              text: 'Remove & Add',
-              style: 'destructive',
-              onPress: () => {
-                addAudioBookmark(result.requested, {evictId: result.candidate.id});
-              },
-            },
-          ],
-        );
+        confirm({
+          title: 'Bookmark limit reached',
+          message: `Adding “${title}” will remove the oldest bookmark “${result.candidate.title}”. Continue?`,
+          cancelLabel: 'Cancel',
+          confirmLabel: 'Remove & Add',
+          destructive: true,
+        }).then(confirmed => {
+          if (confirmed) addAudioBookmark(result.requested, {evictId: result.candidate.id});
+        }).catch(() => undefined);
       }
     },
     [
       addAudioBookmark,
+      confirm,
       title,
       sourceLabel,
       mediaLane,
@@ -364,12 +362,19 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
         const ok = MpvPlayer.initPlayer();
         logger.info('[PlaybackTrace][Controller][init:return]', {ok, cancelled});
         if (cancelled) return;
-                if (!ok) {
+        if (!ok) {
           setError('Failed to initialize audio player.');
-
+  
           setIsLoading(false);
           logError({code: 'ERR_INIT_FAIL', message: 'Failed to initialize audio player.', source: 'AudioPlayerScreen'});
           return;
+        }
+
+        try {
+          const nativeVolume = MpvPlayer.getVolume();
+          if (Number.isFinite(nativeVolume)) setVolume(Math.max(0, Math.min(100, nativeVolume)));
+        } catch (volumeError) {
+          logger.debug('[PlaybackTrace][Controller][volume-init:unavailable]', {volumeError});
         }
 
         // Repeat semantics are owned by this controller because the app has
@@ -378,8 +383,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
         try {
           MpvPlayer.setLoopMode(loopModeRef.current);
           logger.info('[PlaybackTrace][Controller][native-loop-sync]', {mode: loopModeRef.current});
-        } catch (error) {
-          logger.warn('[PlaybackTrace][Controller][native-loop-reset:error]', error);
+        } catch (loopSyncError) {
+          logger.warn('[PlaybackTrace][Controller][native-loop-reset:error]', loopSyncError);
         }
 
         logger.info('[PlaybackTrace][Controller][listeners:register]');
@@ -430,8 +435,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
             try {
               logger.info('[PlaybackTrace][Controller][onFileLoaded:resume]');
               MpvPlayer.resume();
-            } catch (error) {
-              logger.error('[PlaybackTrace][Controller][onFileLoaded:resume:error]', error);
+            } catch (resumeError) {
+              logger.error('[PlaybackTrace][Controller][onFileLoaded:resume:error]', resumeError);
             }
           }
         });
@@ -454,8 +459,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
               setResumePrompt(null);
               setIsPlaying(nativeState === 'playing');
             }
-          } catch (error) {
-            logger.warn('[PlaybackTrace][Controller][reuse-loaded-item:error]', {fileUri, error});
+          } catch (reuseError) {
+            logger.warn('[PlaybackTrace][Controller][reuse-loaded-item:error]', {fileUri, error: reuseError});
           }
         }
 
@@ -476,8 +481,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           logger.info('[PlaybackTrace][Controller][speed:before]', playbackSpeedRef.current);
           MpvPlayer.setSpeed(playbackSpeedRef.current);
           logger.info('[PlaybackTrace][Controller][speed:after]', playbackSpeedRef.current);
-        } catch (error) {
-          logger.error('[PlaybackTrace][Controller][speed:error]', error);
+        } catch (speedError) {
+          logger.error('[PlaybackTrace][Controller][speed:error]', speedError);
         }
 
         // Defensive fallback for native builds where the load event is delayed
@@ -492,8 +497,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
             try {
               logger.info('[PlaybackTrace][Controller][fallback-resume]');
               MpvPlayer.resume();
-            } catch (error) {
-              logger.error('[PlaybackTrace][Controller][fallback-resume:error]', error);
+            } catch (fallbackError) {
+              logger.error('[PlaybackTrace][Controller][fallback-resume:error]', fallbackError);
             }
           }, 700);
         }
@@ -541,7 +546,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
       unsubSpeed?.();
     };
 
-  }, [fileUri, title, dispatch, retryNonce, sourceLabel, startPosition]);
+  }, [artworkUri, currentFile?.uri, dispatch, fileUri, mediaKind, mediaLane, provider, retryNonce, routeFolderId, sourceLabel, startPosition, title]);
 
     // Load a new queue/chapter item and explicitly clear mpv's paused state.
   // Native loadFile() is intentionally separate from play(), so every
@@ -569,8 +574,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           }
         } catch {}
       }, 250);
-    } catch (error) {
-      logger.error('[PlaybackTrace][Controller][loadAndResume:error]', {uri, loadGeneration, error});
+    } catch (loadError) {
+      logger.error('[PlaybackTrace][Controller][loadAndResume:error]', {uri, loadGeneration, error: loadError});
     }
   }, []);
 
@@ -616,7 +621,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     return () => {
       cancelled = true;
     };
-  }, [artworkUri]);
+  }, [artworkUri, dispatch]);
 
   // ── Load metadata, chapters, and lyrics when file loads ──
   useEffect(() => {
@@ -710,7 +715,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     return () => {
       cancelled = true;
     };
-  }, [isReady, fileUri, activeTitle, activeUri]);
+  }, [activeTitle, activeUri, artworkUri, dispatch, fileUri, isReady, title]);
 
   // ── 51.3: keep the media notification in sync with playback ──
   useEffect(() => {
@@ -837,7 +842,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     });
     navigation.goBack();
 
-  }, [artworkUri, dispatch, getFileName, navigation, sourceLabel, mediaLane, mediaKind, provider, routeFolderId, title, updateCurrentFileMetadata]);
+  }, [addRecent, artworkUri, dispatch, navigation, sourceLabel, mediaLane, mediaKind, provider, routeFolderId, title]);
 
   const handlePlayPause = useCallback(() => {
     try {
@@ -853,8 +858,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
         MpvPlayer.resume();
         dispatch(setPlaybackState('playing'));
       }
-    } catch (error) {
-      logger.error('[PlaybackTrace][Controller][handlePlayPause:error]', error);
+    } catch (playPauseError) {
+      logger.error('[PlaybackTrace][Controller][handlePlayPause:error]', playPauseError);
     }
     haptics.medium();
   }, [dispatch, haptics]);
@@ -1041,8 +1046,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     try {
       MpvPlayer.setLoopMode(next);
       logger.info('[PlaybackTrace][Controller][loop-mode-applied]', {mode: next});
-    } catch (error) {
-      logger.warn('[PlaybackTrace][Controller][loop-mode-apply:error]', {mode: next, error});
+    } catch (loopApplyError) {
+      logger.warn('[PlaybackTrace][Controller][loop-mode-apply:error]', {mode: next, error: loopApplyError});
     }
     haptics.medium();
   }, [loopMode, dispatch, haptics]);
@@ -1090,8 +1095,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     dispatch(removeFromQueue(index));
   }, [dispatch]);
 
-  const handleQueueSelectItem = useCallback((fileUri: string) => {
-    const playlistIdx = playlist.findIndex(e => e.uri === fileUri);
+  const handleQueueSelectItem = useCallback((selectedFileUri: string) => {
+    const playlistIdx = playlist.findIndex(e => e.uri === selectedFileUri);
     if (playlistIdx >= 0 && playlistIdx !== currentIndex) {
       const entry = playlist[playlistIdx];
       if (entry) {
@@ -1246,8 +1251,8 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
 
     // ── P37.3: auto-advance only on natural EOF ──
   useEffect(() => {
-    const unsubEnd = MpvPlayer.on('onEndFile', ({reason, error}) => {
-      logger.info('[PlaybackTrace][Controller][event:onEndFile]', {reason, error});
+    const unsubEnd = MpvPlayer.on('onEndFile', ({reason, error: endError}) => {
+      logger.info('[PlaybackTrace][Controller][event:onEndFile]', {reason, error: endError});
 
       // MPV emits end-file for stop/reload as well as natural EOF. A reload
       // reports reason=2 and must never advance or restart the queue. Only
@@ -1374,6 +1379,7 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
     handleResumeChoice,
 
     // Bookmark handlers
+    bookmarkConfirmDialog,
     handleOpenBookmarkSheet,
     handleCloseBookmarkSheet,
     handleBookmarkAdd,

@@ -1,9 +1,9 @@
 import type {
-  VideoV3SeekRequest,
-  VideoV3SessionPort,
-} from '../ports/VideoV3SessionPort';
+  VideoSeekRequest,
+  VideoSessionPort,
+} from '../ports/VideoSessionPort';
 
-export type VideoV3SeekResult =
+export type VideoSeekResult =
   | {status: 'applied'; requestId: number}
   | {status: 'superseded'; requestId: number}
   | {status: 'cancelled'; requestId: number};
@@ -13,14 +13,14 @@ export type VideoV3SeekResult =
  * queued one. Native mpv receives only the latest request that reaches the
  * bridge; stale completions are never reported as the active seek result.
  */
-export class VideoV3SeekCoordinator {
+export class VideoSeekCoordinator {
   private latestRequestId = 0;
   private tail: Promise<void> = Promise.resolve();
   private disposed = false;
 
-  constructor(private readonly session: VideoV3SessionPort) {}
+  constructor(private readonly session: VideoSessionPort) {}
 
-  request(request: VideoV3SeekRequest): Promise<VideoV3SeekResult> {
+  request(request: VideoSeekRequest): Promise<VideoSeekResult> {
     const requestId = ++this.latestRequestId;
     if (this.disposed) {
       return Promise.resolve({status: 'cancelled', requestId});

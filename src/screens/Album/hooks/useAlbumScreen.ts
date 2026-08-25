@@ -13,6 +13,7 @@ import {
 } from '../../../store/slices/playerSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AlbumScreen'>;
 type Route = RouteProp<RootStackParamList, 'AlbumScreen'>;
@@ -21,6 +22,7 @@ export function useAlbumScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const dispatch = useAppDispatch();
+  const {openPlayer} = usePlaybackCommands();
 
   const {albumName, artistName} = route.params;
 
@@ -101,12 +103,11 @@ export function useAlbumScreen() {
       if (indexInAlbum > 0) {
         dispatch(playFromPlaylist(indexInAlbum));
       }
-      (navigation as any).navigate('AudioPlayer', {
-        fileUri: entries[indexInAlbum].uri,
-        fileTitle: entries[indexInAlbum].title,
-      });
+      const entry = entries[indexInAlbum];
+      if (!entry) return;
+      openPlayer({...entry, mediaLane: 'audio'});
     },
-    [sortedTracks, dispatch, navigation],
+    [sortedTracks, dispatch, openPlayer],
   );
 
   const handlePlayAll = useCallback(() => {
@@ -115,11 +116,8 @@ export function useAlbumScreen() {
     }));
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
-    (navigation as any).navigate('AudioPlayer', {
-      fileUri: entries[0].uri,
-      fileTitle: entries[0].title,
-    });
-  }, [sortedTracks, dispatch, navigation]);
+    openPlayer({...entries[0], mediaLane: 'audio'});
+  }, [sortedTracks, dispatch, openPlayer]);
 
   const handleShuffleAll = useCallback(() => {
     const entries: PlaylistEntry[] = sortedTracks.map(t => ({
@@ -131,11 +129,8 @@ export function useAlbumScreen() {
     }
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
-    (navigation as any).navigate('AudioPlayer', {
-      fileUri: entries[0].uri,
-      fileTitle: entries[0].title,
-    });
-  }, [sortedTracks, dispatch, navigation]);
+    openPlayer({...entries[0], mediaLane: 'audio'});
+  }, [sortedTracks, dispatch, openPlayer]);
 
   const handleGoToArtist = useCallback(() => {
     navigation.navigate('ArtistScreen', {artistName});

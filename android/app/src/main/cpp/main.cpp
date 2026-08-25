@@ -108,7 +108,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
 
     g_mid_onError = env->GetStaticMethodID(
         g_cls_MPVLib, "onNativeError",
-        "(ILjava/lang/String;)V");
+        "(ILjava/lang/String;Ljava/lang/String;)V");
     if (!g_mid_onError) {
         LOGE("Failed to find onNativeError");
         return JNI_ERR;
@@ -402,6 +402,8 @@ static void nativeLoadFileInternal(JNIEnv *env, jlong nativePtr, jstring path, j
     const char *utfRequestId = requestId ? env->GetStringUTFChars(requestId, nullptr) : nullptr;
     if (utfRequestId && utfRequestId[0] != '\0') {
         enqueueLoadRequest({utfRequestId, utfPath});
+    } else {
+        clearActiveLoadRequest();
     }
     const char *cmd[] = {"loadfile", utfPath, nullptr};
     const int result = mpv_command(mpv, cmd);

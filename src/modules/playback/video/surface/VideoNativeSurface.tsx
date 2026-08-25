@@ -6,12 +6,12 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-export interface VideoV3NativeSurfaceProps {
+export interface VideoNativeSurfaceProps {
   readonly nativePtr: number;
   readonly style?: StyleProp<ViewStyle>;
 }
 
-const NativeMpvRenderView = requireNativeComponent<VideoV3NativeSurfaceProps>(
+const NativeMpvRenderView = requireNativeComponent<VideoNativeSurfaceProps>(
   'MpvRenderView',
 );
 
@@ -20,10 +20,10 @@ const NativeMpvRenderView = requireNativeComponent<VideoV3NativeSurfaceProps>(
  * the session and change its geometry rather than replacing this component
  * during full/mini/PiP transitions.
  */
-export const VideoV3NativeSurface = React.memo(function VideoV3NativeSurfaceImpl({
+export const VideoNativeSurface = React.memo(function VideoNativeSurfaceImpl({
   nativePtr,
   style,
-}: VideoV3NativeSurfaceProps) {
+}: VideoNativeSurfaceProps) {
   const flattenedStyle = StyleSheet.flatten(style) ?? {};
   const supportedStyle = {...flattenedStyle};
   // Android TextureView rejects React Native background drawables. The

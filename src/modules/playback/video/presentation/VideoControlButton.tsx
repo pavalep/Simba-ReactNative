@@ -7,11 +7,11 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import {darkColors as cinemaColors} from '../../../../../theme/tokens';
-import {VideoV3Icon, type VideoV3IconName} from './VideoV3Icon';
+import {darkColors as cinemaColors} from '../../../../theme/tokens';
+import {VideoIcon, type VideoIconName} from './VideoIcon';
 
-export interface VideoV3ControlButtonProps extends Omit<PressableProps, 'style' | 'children'> {
-  readonly icon: VideoV3IconName;
+export interface VideoControlButtonProps extends Omit<PressableProps, 'style' | 'children'> {
+  readonly icon: VideoIconName;
   readonly label: string;
   readonly size?: 'compact' | 'regular' | 'primary';
   readonly hint?: string;
@@ -19,7 +19,7 @@ export interface VideoV3ControlButtonProps extends Omit<PressableProps, 'style' 
   readonly style?: StyleProp<ViewStyle>;
 }
 
-export function VideoV3ControlButton({
+export function VideoControlButton({
   icon,
   label,
   size = 'regular',
@@ -28,7 +28,7 @@ export function VideoV3ControlButton({
   style,
   disabled,
   ...props
-}: VideoV3ControlButtonProps) {
+}: VideoControlButtonProps) {
   const iconSize = size === 'primary' ? 31 : size === 'compact' ? 20 : 24;
   return (
     <Pressable
@@ -45,7 +45,7 @@ export function VideoV3ControlButton({
         style,
       ]}
     >
-      <VideoV3Icon name={icon} size={iconSize} color={size === 'primary' ? '#14532D' : iconColor} />
+      <VideoIcon name={icon} size={iconSize} color={size === 'primary' ? '#14532D' : iconColor} />
       {size === 'primary' ? <Text style={styles.hiddenText}>{label}</Text> : null}
     </Pressable>
   );

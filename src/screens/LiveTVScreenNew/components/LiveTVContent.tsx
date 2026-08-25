@@ -247,7 +247,7 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
           break;
         case 'share':
           shareContent({
-            route: 'VideoPlayer',
+            route: 'LiveTVScreen',
             params: {
               fileUri: row.url,
               fileTitle: row.name,

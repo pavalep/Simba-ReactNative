@@ -44,7 +44,7 @@ function formatTime(totalSeconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) => {
+export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
   const {identifier, title: routeTitle} = route.params;
   const {item, tracks, isLoading, error, retry} =
     useArchiveItemDetailScreen(identifier);
@@ -191,12 +191,10 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
         }
         case 'share':
           shareContent({
-            route: 'AudioPlayer',
+            route: 'ArchiveItemDetail',
             params: {
-              fileUri: track.url,
-              fileTitle: track.title,
-              source: 'api',
-            provider: 'internetArchive',
+              identifier,
+              title: track.title,
             },
             title: track.title,
             subtitle: item?.creator,
@@ -206,7 +204,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({navigation, route}) =>
       setMenuTrack(null);
       haptics.light();
     },
-    [menuTrack, item, imageUrl, dispatch, toast, addBookmark, haptics],
+    [menuTrack, item, imageUrl, identifier, dispatch, toast, addBookmark, haptics],
   );
 
   const handleShare = useCallback(() => {

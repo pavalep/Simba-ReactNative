@@ -1,0 +1,7 @@
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\index.ts:17:NowPlayingScreenProps,
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\linking.ts:110:NowPlaying: {
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\RootNavigator.tsx:24:import {NowPlayingScreen} from '../screens/NowPlaying';
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\RootNavigator.tsx:171:name="NowPlaying"
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\RootNavigator.tsx:172:component={NowPlayingScreen}
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\types.ts:30:NowPlaying: {fileUri?: string; fileTitle?: string} | undefined;
+X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\src\navigation\types.ts:150:export type NowPlayingScreenProps = RootStackScreenProps<'NowPlaying'>;

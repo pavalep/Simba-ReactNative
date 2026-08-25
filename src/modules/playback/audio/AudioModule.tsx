@@ -1,64 +1,38 @@
 import React, {useCallback, useMemo} from 'react';
-import {useTransport} from '../../../../contexts/TransportContext';
-import {usePlaybackCommands} from '../../PlaybackContext';
-import type {ActivePlayback, AudioPlaybackParams, PlaybackNavigation, PlaybackPresentation} from '../../types';
-import {useAudioPlayerScreen} from '../hooks/useAudioPlayerScreen';
-import {AudioV2Player} from './AudioV2Player';
-import {buildAudioV2ViewModel, type AudioV2ControllerState} from './AudioV2Types';
+import {useTransport} from '../../../contexts/TransportContext';
+import type {ActivePlayback, PlaybackPresentation} from '../types';
+import {useAudioPlaybackController} from './AudioPlaybackControllerContext';
+import {AudioPlayer} from './AudioPlayer';
+import {buildAudioViewModel, type AudioControllerState} from './AudioTypes';
 
-interface AudioV2ModuleProps {
+interface AudioModuleProps {
   active: ActivePlayback;
   presentation?: PlaybackPresentation;
 }
 
-export const AudioV2Module: React.FC<AudioV2ModuleProps> = ({active, presentation = 'expanded'}) => (
-  <AudioV2Content active={active} presentation={presentation} />
+export const AudioModule: React.FC<AudioModuleProps> = ({presentation = 'expanded'}) => (
+  <AudioContent presentation={presentation} />
 );
 
-const AudioV2Content: React.FC<AudioV2ModuleProps> = ({active, presentation = 'expanded'}) => {
-  const {collapsePlayer} = usePlaybackCommands();
+const AudioContent: React.FC<Pick<AudioModuleProps, 'presentation'>> = ({presentation = 'expanded'}) => {
   const transport = useTransport();
-
-  const overlayNavigation = useMemo<PlaybackNavigation>(
-    () => ({
-      canGoBack: () => true,
-      goBack: collapsePlayer,
-      navigateHome: collapsePlayer,
-    }),
-    [collapsePlayer],
-  );
-
-  const route = useMemo<{params?: AudioPlaybackParams}>(
-    () => ({
-      params: {
-        fileUri: active.entry.uri,
-        fileTitle: active.entry.title,
-        artworkUri: active.entry.artworkUri,
-        source: active.entry.source,
-        type: active.entry.type,
-        mediaType: active.entry.mediaType,
-        provider: active.entry.provider,
-        folderId: active.entry.folderId,
-        startPosition: active.startPosition,
-        chapterList: active.chapterList,
-        chapterIndex: active.chapterIndex,
-      },
-    }),
-    [active],
-  );
-
-  const controller = useAudioPlayerScreen(overlayNavigation, route);
+  const controller = useAudioPlaybackController();
+  const {
+    audioBookmarksForFile,
+    handleBookmarkAdd,
+    handleBookmarkDelete,
+  } = controller;
 
   const toggleBookmark = useCallback(() => {
-    const existing = controller.audioBookmarksForFile[0];
+    const existing = audioBookmarksForFile[0];
     if (existing) {
-      controller.handleBookmarkDelete(existing.id);
+      handleBookmarkDelete(existing.id);
       return;
     }
-    controller.handleBookmarkAdd();
-  }, [controller.audioBookmarksForFile, controller.handleBookmarkAdd, controller.handleBookmarkDelete]);
+    handleBookmarkAdd();
+  }, [audioBookmarksForFile, handleBookmarkAdd, handleBookmarkDelete]);
 
-  const controllerState = useMemo<AudioV2ControllerState>(
+  const controllerState = useMemo<AudioControllerState>(
     () => ({
       colors: controller.colors,
       insets: controller.insets,
@@ -118,11 +92,17 @@ const AudioV2Content: React.FC<AudioV2ModuleProps> = ({active, presentation = 'e
   );
 
   const model = useMemo(
-    () => buildAudioV2ViewModel(controllerState, transport.position, transport.duration),
+    () => buildAudioViewModel(controllerState, transport.position, transport.duration),
     [controllerState, transport.duration, transport.position],
   );
 
-  return presentation === 'expanded' ? <AudioV2Player model={model} /> : null;
+  if (presentation !== 'expanded') return controller.bookmarkConfirmDialog;
+  return (
+    <>
+      <AudioPlayer model={model} />
+      {controller.bookmarkConfirmDialog}
+    </>
+  );
 };
 
-export type {AudioV2ModuleProps};
+export type {AudioModuleProps};

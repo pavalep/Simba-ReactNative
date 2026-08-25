@@ -1,9 +1,9 @@
 import React from 'react';
 import {Pressable, StyleSheet, ViewStyle} from 'react-native';
-import {AudioV2Icon, AudioV2IconName} from './AudioV2Icon';
+import {AudioIcon, AudioIconName} from './AudioIcon';
 
-interface AudioV2ButtonProps {
-  icon: AudioV2IconName;
+interface AudioButtonProps {
+  icon: AudioIconName;
   label: string;
   onPress: () => void;
   color: string;
@@ -14,7 +14,7 @@ interface AudioV2ButtonProps {
   style?: ViewStyle;
 }
 
-export const AudioV2Button: React.FC<AudioV2ButtonProps> = ({
+export const AudioButton: React.FC<AudioButtonProps> = ({
   icon,
   label,
   onPress,
@@ -40,7 +40,7 @@ export const AudioV2Button: React.FC<AudioV2ButtonProps> = ({
       disabled && styles.disabled,
       style,
     ]}>
-    <AudioV2Icon name={icon} size={Math.max(18, Math.round(size * 0.45))} color={color} />
+    <AudioIcon name={icon} size={Math.max(18, Math.round(size * 0.45))} color={color} />
   </Pressable>
 );
 

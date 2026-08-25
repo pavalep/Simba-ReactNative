@@ -1,6 +1,6 @@
-export type VideoV3SurfacePresentation = 'full' | 'mini' | 'pip';
+export type VideoSurfacePresentation = 'full' | 'mini' | 'pip';
 
-export interface VideoV3SurfaceGeometry {
+export interface VideoSurfaceGeometry {
   readonly x: number;
   readonly y: number;
   readonly width: number;
@@ -12,11 +12,11 @@ export interface VideoV3SurfaceGeometry {
  * changes update geometry or system ownership; they never swap in a second
  * native render view while playback is active.
  */
-export interface VideoV3SurfacePort {
+export interface VideoSurfacePort {
   attach(): Promise<void>;
   setPresentation(
-    presentation: VideoV3SurfacePresentation,
-    geometry?: VideoV3SurfaceGeometry,
+    presentation: VideoSurfacePresentation,
+    geometry?: VideoSurfaceGeometry,
   ): Promise<void>;
   detach(): Promise<void>;
   isAttached(): boolean;

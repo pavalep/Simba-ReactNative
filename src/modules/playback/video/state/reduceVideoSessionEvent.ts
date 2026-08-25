@@ -1,13 +1,13 @@
 import type {
-  VideoV3Error,
-  VideoV3SessionPhase,
-  VideoV3SessionSnapshot,
-} from '../domain/VideoV3Types';
-import type {VideoV3SessionEvent} from '../ports/VideoV3SessionPort';
+  VideoError,
+  VideoSessionPhase,
+  VideoSessionSnapshot,
+} from '../domain/VideoTypes';
+import type {VideoSessionEvent} from '../ports/VideoSessionPort';
 
 function phaseAfterTransport(
-  snapshot: VideoV3SessionSnapshot,
-): VideoV3SessionPhase {
+  snapshot: VideoSessionSnapshot,
+): VideoSessionPhase {
   if (snapshot.isSeeking) return 'seeking';
   if (snapshot.isBuffering) return 'buffering';
   if (snapshot.isPlaying) return snapshot.hasFirstFrame ? 'playing' : 'first-frame';
@@ -24,10 +24,10 @@ function normalizeDuration(value: number | null): number | null {
  * Pure synchronization reducer for native V3 events. Events from an older
  * source generation are ignored before they can mutate the current snapshot.
  */
-export function reduceVideoV3SessionEvent(
-  snapshot: VideoV3SessionSnapshot,
-  event: VideoV3SessionEvent,
-): VideoV3SessionSnapshot {
+export function reduceVideoSessionEvent(
+  snapshot: VideoSessionSnapshot,
+  event: VideoSessionEvent,
+): VideoSessionSnapshot {
   if (event.type === 'snapshot') return event.snapshot;
   if (event.generation !== snapshot.generation) return snapshot;
 
@@ -97,7 +97,7 @@ export function reduceVideoV3SessionEvent(
         isSeeking: false,
       };
     case 'error': {
-      const error: VideoV3Error = {
+      const error: VideoError = {
         ...(event.code === undefined ? {} : {code: event.code}),
         message: event.message,
         recoverable: true,

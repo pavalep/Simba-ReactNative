@@ -1,7 +1,7 @@
 import React from 'react';
 import Svg, {Circle, Path, Rect, Text as SvgText} from 'react-native-svg';
 
-export type AudioV2IconName =
+export type AudioIconName =
   | 'back'
   | 'more'
   | 'play'
@@ -28,14 +28,14 @@ export type AudioV2IconName =
   | 'chevronDown'
   | 'chevronUp';
 
-interface AudioV2IconProps {
-  name: AudioV2IconName;
+interface AudioIconProps {
+  name: AudioIconName;
   size?: number;
   color?: string;
   strokeWidth?: number;
 }
 
-const paths: Record<AudioV2IconName, string> = {
+const paths: Record<AudioIconName, string> = {
   back: 'M15.5 4.5 8 12l7.5 7.5M9 12h11',
   more: 'M12 5.5h.01M12 12h.01M12 18.5h.01',
   play: 'M9 5.5v13l10-6.5-10-6.5Z',
@@ -63,7 +63,7 @@ const paths: Record<AudioV2IconName, string> = {
   chevronUp: 'm6 15 6-6 6 6',
 };
 
-export const AudioV2Icon: React.FC<AudioV2IconProps> = ({
+export const AudioIcon: React.FC<AudioIconProps> = ({
   name,
   size = 24,
   color = '#FFFFFF',

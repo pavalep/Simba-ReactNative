@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {Image, StyleSheet, Text, View} from 'react-native';
 
-interface AudioV2ArtworkProps {
+interface AudioArtworkProps {
   uri: string;
   title: string;
   size: number;
@@ -9,7 +9,7 @@ interface AudioV2ArtworkProps {
   borderRadius?: number;
 }
 
-export const AudioV2Artwork: React.FC<AudioV2ArtworkProps> = ({
+export const AudioArtwork: React.FC<AudioArtworkProps> = ({
   uri,
   title,
   size,
