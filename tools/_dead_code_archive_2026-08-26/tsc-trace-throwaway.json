@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": false,
+    "outDir": "./.tsc-trace-tmp",
+    "rootDir": "./",
+    "moduleResolution": "node",
+    "jsx": "react-native",
+    "isolatedModules": false
+  },
+  "include": ["scripts/trace-loading-state.ts", "src/modules/playback/video/domain/VideoTypes.ts", "src/modules/playback/video/domain/deriveLoadingState.ts", "src/modules/playback/video/ports/VideoSessionPort.ts", "src/modules/playback/video/state/reduceVideoSessionEvent.ts"]
+}

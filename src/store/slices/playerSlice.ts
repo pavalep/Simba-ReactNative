@@ -43,6 +43,10 @@ interface PlayerState {
   equalizerEnabled: boolean;
   /** Multi-select indices for queue batch operations (Phase 23) */
   selectedQueueIndices: number[];
+  /** A19: fileUri → liked flag. Persisted (player is in the persist
+   *  whitelist). Replaces the local `useState` in AudioPlayer so the
+   *  like state survives remount and matches across devices. */
+  liked: Record<string, boolean>;
 }
 
 function normalizeSingleLane(entries: PlaybackEntryInput[]): PlaylistEntry[] {
@@ -74,6 +78,7 @@ const initialState: PlayerState = {
   equalizerGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   equalizerEnabled: false,
   selectedQueueIndices: [],
+  liked: {},
 };
 
 const playerSlice = createSlice({
@@ -410,6 +415,15 @@ const playerSlice = createSlice({
       state.equalizerGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       state.equalizerEnabled = false;
       state.selectedQueueIndices = [];
+      state.liked = {};
+    },
+
+    /** A19: toggle the "like" flag for a single file. Idempotent. */
+    toggleLike(state, action: PayloadAction<string>) {
+      const fileUri = action.payload;
+      if (!fileUri) return;
+      const current = !!state.liked[fileUri];
+      state.liked[fileUri] = !current;
     },
   },
 });
@@ -446,6 +460,7 @@ export const {
   setSleepTimerMode,
   setEqualizerGains,
   toggleEqualizer,
+  toggleLike,
   addToPlaybackHistory,
   clearPlaybackHistory,
   setQueueSelection,

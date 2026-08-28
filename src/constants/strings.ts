@@ -150,6 +150,32 @@ const strings = {
   videoErrorPermission: 'Permission Denied',
   videoErrorPermissionHint: 'The app does not have permission to access this file.',
   videoLiveStream: 'Live',
+  videoClosePlayer: 'Close video player',
+  lockControls: 'Lock controls',
+  unlockControls: 'Unlock controls',
+
+  // ── Player — VideoStatusPill (v11) ──
+  // One loading surface, six copy keys. Routing through strings.ts so
+  // the pill component never embeds literal text (spec §8 copy table).
+  // The buffering label takes a single {pct} placeholder; the rest are
+  // verbatim.
+  videoPillPreparing: 'Preparing video',
+  videoPillBuffering: 'Buffering · {pct}%',
+  videoPillSeeking: 'Seeking',
+  videoPillReconnecting: 'Reconnecting',
+  videoPillErrorWatchdog: 'Video did not produce a first frame. Check the connection and retry.',
+  videoPillRetryLabel: 'Retry loading the video',
+  videoPillRetryHint: 'Retries loading the video from the current source.',
+
+  // ── Player — VideoCenterAction (v11) ──
+  // The 96×96 play/pause/replay button centred on the video rect.
+  // Hint copy lives in §4.3 and the copy table §8.
+  videoCenterActionPlay: 'Play',
+  videoCenterActionPause: 'Pause',
+  videoCenterActionReplay: 'Replay',
+  videoCenterActionRetry: 'Retry loading the video',
+  videoCenterHintEnded: 'Play from beginning',
+  videoCenterHintError: 'Try loading the video again',
 
   // ── Queue ──
   queueTitle: 'Queue',

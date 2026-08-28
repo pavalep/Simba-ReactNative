@@ -4,5 +4,15 @@
     "types": ["jest"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["**/node_modules", "**/Pods", "_reference_codes", "reference_codes"]
+  "exclude": [
+    "**/node_modules",
+    "**/Pods",
+    "_reference_codes",
+    "reference_codes",
+    "tools/_dead_code_archive_2026-08-26",
+    "**/graphify-out/**",
+    "**/.verification/**",
+    "**/maestro-baselines/**",
+    "**/_reference_codes/**"
+  ]
 }

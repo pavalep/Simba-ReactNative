@@ -108,7 +108,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *) {
 
     g_mid_onError = env->GetStaticMethodID(
         g_cls_MPVLib, "onNativeError",
-        "(ILjava/lang/String;Ljava/lang/String;)V");
+        "(IZLjava/lang/String;Ljava/lang/String;)V");
     if (!g_mid_onError) {
         LOGE("Failed to find onNativeError");
         return JNI_ERR;
@@ -376,6 +376,13 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
 // property doesn't exist in mpv's option table, so the call was a silent
 // no-op (and a misleading log message). Now we just log the resize and let
 // the surface update pipeline handle the rest.
+//
+// P5: a reviewer suggested re-triggering mpv's `videoReconfig` here. We
+// deliberately don't. `videoReconfig` would force a full video output
+// reconfigure — black flash + audio gap + subtitle re-render on every
+// rotation. The ANativeWindow resize pipeline handles the smooth layout
+// change without touching mpv's video chain, which is what the user
+// actually wants.
 extern "C" JNIEXPORT void JNICALL
 Java_com_simba_player_mpv_MPVLib_nativeSurfaceChanged(
     JNIEnv *env, jclass, jlong nativePtr, jint width, jint height) {

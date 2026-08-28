@@ -57,8 +57,14 @@ function oldestBookmark(items: Bookmark[]): Bookmark | undefined {
   }, undefined);
 }
 
-function buildStableBookmarkId(fileUri: string): string {
-  return `bookmark-${encodeURIComponent(fileUri)}`;
+/** A14: bookmark id is now `(fileUri, position)`-derived so multiple
+ *  bookmarks per file are allowed. Two saves at the same position
+ *  collapse to one id; saves at different positions get different ids.
+ *  Old persisted ids (fileUri-only) are still matched by the
+ *  `addBookmark` reducer's "same position" fallback. */
+function buildStableBookmarkId(fileUri: string, position: number): string {
+  const posBucket = Math.floor(Math.max(0, position));
+  return `bookmark-${encodeURIComponent(fileUri)}-${posBucket}`;
 }
 
 function dispatchAddBookmark(
@@ -67,7 +73,16 @@ function dispatchAddBookmark(
   input: BookmarkInput,
   options?: BookmarkAddOptions,
 ): BookmarkAddResult {
-  const existing = items.find(item => item.fileUri === input.fileUri);
+  // A14: "existing" is now the entry matching the position-scoped id,
+  // or the most recent per file at a near-identical position
+  // (within 1 second — keeps taps on the same frame idempotent).
+  const sameId = input.id ? items.findIndex(item => item.id === input.id) : -1;
+  const samePosition = sameId >= 0
+    ? items[sameId]
+    : items.find(
+        item => item.fileUri === input.fileUri && Math.abs(item.position - input.position) < 1,
+      );
+  const existing = sameId >= 0 ? items[sameId] : samePosition;
   if (!existing && items.length >= MAX_BOOKMARK_ENTRIES) {
     const candidate = oldestBookmark(items);
     if (candidate && options?.evictId !== candidate.id) {
@@ -76,7 +91,7 @@ function dispatchAddBookmark(
   }
 
   const bookmark: Bookmark = {
-    id: existing?.id ?? input.id ?? buildStableBookmarkId(input.fileUri),
+    id: existing?.id ?? input.id ?? buildStableBookmarkId(input.fileUri, input.position),
     fileUri: input.fileUri,
     title: input.title || existing?.title || 'Untitled',
     position: Math.max(0, Number(input.position) || 0),

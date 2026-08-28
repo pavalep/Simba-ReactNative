@@ -1,5 +1,6 @@
 import {Platform} from 'react-native';
 import MpvPlayer from '../../../../native/player.api';
+import {logger} from '../../../../lib/logger';
 import type {VideoSessionSnapshot} from '../domain/VideoTypes';
 
 export type VideoPipMode = 'inline' | 'entering' | 'pip' | 'exiting';
@@ -65,7 +66,12 @@ export class VideoPipAdapter implements VideoPipPort {
   subscribe(listener: VideoPipListener): () => void {
     if (this.disposed) return () => undefined;
     this.listeners.add(listener);
-    listener(this.state);
+    // E5: see VideoMpvSession for the rationale.
+    try {
+      listener(this.state);
+    } catch (error) {
+      logger.warn('[PlaybackTrace][V3][pip:subscribe:listener:threw]', error);
+    }
     return () => this.listeners.delete(listener);
   }
 
@@ -124,6 +130,16 @@ export class VideoPipAdapter implements VideoPipPort {
   dispose(): void {
     if (this.disposed) return;
     this.clearTransitionTimer();
+    // L4: if PiP is still active when the host is releasing, exit it so the
+    // activity does not stay stuck in PiP with no action listeners. Failures
+    // are swallowed — release must remain idempotent.
+    if (this.state.mode === 'pip' || this.state.mode === 'entering' || this.state.mode === 'exiting') {
+      try {
+        MpvPlayer.exitPip();
+      } catch {
+        // Native PiP bridge may already be torn down; release stays idempotent.
+      }
+    }
     this.disposed = true;
     this.unsubscribeEvents.splice(0).forEach(unsubscribe => unsubscribe());
     this.listeners.clear();

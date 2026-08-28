@@ -68,6 +68,11 @@ export interface ColorTokens {
      *  fixed across light/dark so the mark always reads as
      *  "engraved" on the brand surface. */
     brandInk: string;
+    /** W5.7: dark forest green used as the central primary-CTA
+     *  fill (the centre play/pause button in the video control
+     *  layer). Stays fixed across light/dark — it is the player's
+     *  high-contrast call to action, not a theme surface. */
+    primaryCTA: string;
   };
   /** 55.2: shadow color used with elevation/shadow styles */
   shadow: string;
@@ -124,6 +129,7 @@ export const darkColors: ColorTokens = {
     goldWash: 'rgba(201,168,76,0.18)',
     sky: 'rgba(100,181,246,0.15)',
     brandInk: '#5C3A1E',
+    primaryCTA: '#14532D',
   },
   semantic: {
     success: '#4CAF50',
@@ -178,6 +184,7 @@ export const lightColors: ColorTokens = {
     goldWash: 'rgba(184,146,46,0.12)',
     sky: 'rgba(66,133,244,0.12)',
     brandInk: '#5C3A1E',
+    primaryCTA: '#14532D',
   },
   semantic: {
     success: '#4CAF50',

@@ -31,6 +31,7 @@ export const PlaybackProvider: React.FC<PlaybackProviderProps> = ({children}) =>
       presentation: 'expanded',
       openRequestId: nextOpenRequestId,
       startPosition: request.startPosition ?? request.resumePosition,
+      ...(request.subtitleLanguage !== undefined ? {subtitleLanguage: request.subtitleLanguage} : {}),
       chapterList: request.chapterList,
       chapterIndex: request.chapterIndex,
       liveChannels: request.liveChannels,

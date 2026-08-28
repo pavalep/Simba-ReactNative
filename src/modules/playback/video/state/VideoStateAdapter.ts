@@ -10,6 +10,7 @@ import type {
   VideoSessionPort,
   VideoUnsubscribe,
 } from '../ports/VideoSessionPort';
+import {logger} from '../../../../lib/logger';
 import {reduceVideoSessionEvent} from './reduceVideoSessionEvent';
 
 export type VideoViewStateListener = (state: VideoViewState) => void;
@@ -60,7 +61,14 @@ export class VideoStateAdapter {
 
   subscribe(listener: VideoViewStateListener): VideoUnsubscribe {
     this.listeners.add(listener);
-    listener(this.getState());
+    // E5: see VideoMpvSession for the rationale. The view-state
+    // adapter sits between the session and the host; a throw here
+    // would freeze the host's render path otherwise.
+    try {
+      listener(this.getState());
+    } catch (error) {
+      logger.warn('[PlaybackTrace][V3][stateAdapter:subscribe:listener:threw]', error);
+    }
     return () => this.listeners.delete(listener);
   }
 
@@ -74,6 +82,13 @@ export class VideoStateAdapter {
     if (nextSnapshot === this.snapshot) return;
     this.snapshot = nextSnapshot;
     const state = this.getState();
-    this.listeners.forEach(listener => listener(state));
+    // E5: see VideoMpvSession.emit for the rationale.
+    this.listeners.forEach(listener => {
+      try {
+        listener(state);
+      } catch (error) {
+        logger.warn('[PlaybackTrace][V3][stateAdapter:emit:listener:threw]', error);
+      }
+    });
   }
 }

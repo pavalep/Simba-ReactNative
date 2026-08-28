@@ -13,6 +13,14 @@ import {
   View,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
+import {useAppDispatch, useAppSelector} from '../../../store';
+import {
+  setSleepTimer as setSleepTimerAction,
+  setSleepTimerMode as setSleepTimerModeAction,
+  setPlaybackSpeed,
+  toggleLike,
+} from '../../../store/slices/playerSlice';
+import {FilterSheet} from '../../../components/sheets/FilterSheet/FilterSheet';
 import {AudioArtwork} from './AudioArtwork';
 import {AudioButton} from './AudioButton';
 import {AudioPriorityActions} from './AudioPriorityActions';
@@ -24,13 +32,95 @@ import type {AudioViewModel} from './AudioTypes';
 
 interface AudioPlayerProps {
   model: AudioViewModel;
+  /** W5.8: opens the settings-level Equalizer screen. The
+   *  AudioModule wires this to `useNavigation().navigate(...)`. */
+  onOpenEqualizer?: () => void;
 }
 
-type Panel = 'queue' | 'lyrics' | 'info' | 'playlist' | 'more' | null;
+type Panel = 'queue' | 'lyrics' | 'info' | 'playlist' | 'more' | 'speed' | 'chapters' | null;
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({model}) => {
+export const AudioPlayer: React.FC<AudioPlayerProps> = ({model, onOpenEqualizer}) => {
   const [panel, setPanel] = useState<Panel>(null);
-  const [liked, setLiked] = useState(false);
+  // A19: "like" now lives in Redux (player.liked[fileUri]) so the flag
+  // survives remount and is shared across instances. Replaces the
+  // ephemeral `useState` that reset on every remount.
+  const dispatch = useAppDispatch();
+  const liked = useAppSelector(state => !!state.player.liked[model.fileUri ?? '']);
+  // A3: pull the current sleep-timer arm state from Redux. The
+  // TransportContext already counts down and pauses when the timer
+  // expires; the UI here just needs to render the choices and let the
+  // user arm / disarm.
+  const sleepTimerEndTime = useAppSelector(state => state.player.sleepTimerEndTime);
+  const sleepTimerMode = useAppSelector(state => state.player.sleepTimerMode);
+  const armSleepCountdown = (minutes: number) => {
+    dispatch(setSleepTimerAction(minutes * 60));
+  };
+  const armSleepEndOfTrack = () => {
+    // Mode-based expiry clears any in-flight countdown.
+    dispatch(setSleepTimerModeAction('track'));
+  };
+  // A15: playback speed. The Redux `playbackSpeed` is already applied
+  // to the native player by `useAudioPlayerScreen` (line 285). The
+  // picker just dispatches `setPlaybackSpeed` and the effect re-applies.
+  const playbackSpeed = useAppSelector(state => state.player.playbackSpeed) ?? 1;
+  const handleSpeedChange = (_groupId: string, keys: string[]) => {
+    const next = Number(keys[0]);
+    if (Number.isFinite(next) && next > 0) {
+      dispatch(setPlaybackSpeed(next));
+      setPanel(null);
+    }
+  };
+  const speedSheetGroups = [
+    {
+      id: 'speed',
+      title: 'Speed',
+      multiSelect: false,
+      rows: [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map(value => ({
+        key: String(value),
+        label: `${value}×`,
+      })),
+    },
+  ];
+  const speedSheetValue = {speed: [String(playbackSpeed)]};
+
+  // A16: chapter display. The model has `chapters` (parsed from the
+  // .lrc / chapter-list); we surface a "current chapter" label under
+  // the progress bar and a "Chapters" row in the MorePanel that opens
+  // a list sheet. Tapping a chapter seeks to its startTime via the
+  // existing `commands.onSeek` handler.
+  const chapters = model.chapters;
+  const currentChapter = chapters.find(
+    chapter => position >= chapter.startTime && position < chapter.endTime,
+  );
+  const chapterSheetGroups = [
+    {
+      id: 'chapter',
+      title: 'Chapters',
+      multiSelect: false,
+      rows: chapters.map((chapter, index) => ({
+        key: String(chapter.startTime),
+        label: `${chapter.title || `Chapter ${index + 1}`} · ${formatAudioTime(chapter.startTime)}`,
+      })),
+    },
+  ];
+  const chapterSheetValue = currentChapter
+    ? {chapter: [String(currentChapter.startTime)]}
+    : {chapter: []};
+  const handleChapterSelect = (_groupId: string, keys: string[]) => {
+    const raw = keys[0];
+    if (raw === undefined) return;
+    const startTime = Number(raw);
+    if (!Number.isFinite(startTime) || startTime < 0) return;
+    const dur = duration > 0 ? duration : 1;
+    commands.onSeek(startTime / dur);
+    setPanel(null);
+  };
+  const disarmSleepTimer = () => {
+    // `setSleepTimer(null)` clears the end time AND resets the mode to
+    // 'time' (see playerSlice.setSleepTimer). That is exactly what
+    // "cancel" should do for both countdown and mode-based timers.
+    dispatch(setSleepTimerAction(null));
+  };
   const {
     colors,
     insets,
@@ -58,6 +148,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({model}) => {
     isSeeking,
     isSeekable,
     bufferedRanges,
+    cacheFill,
     commands,
   } = model;
   const palette = useMemo(() => ({
@@ -123,7 +214,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({model}) => {
                 <Text style={[styles.artist, {color: palette.secondary}]} numberOfLines={1}>{artist}</Text>
                 <Text style={[styles.album, {color: palette.muted}]} numberOfLines={1}>{album}</Text>
               </View>
-              <AudioButton icon={liked ? 'heartFilled' : 'heart'} label={liked ? 'Unlike track' : 'Like track'} onPress={() => setLiked(value => !value)} color={liked ? palette.danger : palette.secondary} size={44} />
+              <AudioButton icon={liked ? 'heartFilled' : 'heart'} label={liked ? 'Unlike track' : 'Like track'} onPress={() => model.fileUri && dispatch(toggleLike(model.fileUri))} color={liked ? palette.danger : palette.secondary} size={44} />
             </View>
 
             <AudioProgress
@@ -137,6 +228,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({model}) => {
               accent={palette.accent}
               muted={palette.line}
               buffered={palette.buffered}
+              cacheFill={cacheFill}
             />
 
             <View style={styles.transportRow}>
@@ -224,7 +316,45 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({model}) => {
         </View>
       ) : null}
 
-      <AudioPanel panel={panel} model={model} palette={palette} onClose={closePanel} onPlayIndex={playIndex} onShare={openShare} />
+      <AudioPanel
+        panel={panel}
+        model={model}
+        palette={palette}
+        onClose={closePanel}
+        onPlayIndex={playIndex}
+        onShare={openShare}
+        onOpenPanel={openPanel}
+        onOpenEqualizer={onOpenEqualizer}
+        sleepTimerEndTime={sleepTimerEndTime}
+        sleepTimerMode={sleepTimerMode}
+        onArmSleepCountdown={armSleepCountdown}
+        onArmSleepEndOfTrack={armSleepEndOfTrack}
+        onDisarmSleepTimer={disarmSleepTimer}
+        playbackSpeed={playbackSpeed}
+        speedSheetGroups={speedSheetGroups}
+        speedSheetValue={speedSheetValue}
+        onSpeedChange={handleSpeedChange}
+        chapterCount={chapters.length}
+      />
+      {/* A15: speed picker sheet, mounted at the end so it overlays the
+          player regardless of full / mini / PiP / modal state. */}
+      <FilterSheet
+        visible={panel === 'speed'}
+        onClose={closePanel}
+        title="Playback speed"
+        groups={speedSheetGroups}
+        value={speedSheetValue}
+        onChange={handleSpeedChange}
+      />
+      {/* A16: chapter list sheet. */}
+      <FilterSheet
+        visible={panel === 'chapters'}
+        onClose={closePanel}
+        title="Chapters"
+        groups={chapterSheetGroups}
+        value={chapterSheetValue}
+        onChange={handleChapterSelect}
+      />
     </View>
   );
 };
@@ -236,9 +366,49 @@ interface AudioPanelProps {
   onClose: () => void;
   onPlayIndex: (index: number) => void;
   onShare: () => void;
+  // A8: MorePanel uses these to navigate to a sibling panel without
+  // closing the modal — tapping "Lyrics" inside More swaps the content
+  // to the Lyrics panel in the same modal.
+  onOpenPanel: (next: Exclude<Panel, null>) => void;
+  // Sleep-timer arming is hoisted to AudioPlayer so the MorePanel can
+  // dispatch the Redux action. The panel itself just renders the rows.
+  sleepTimerEndTime: number | null;
+  sleepTimerMode: 'time' | 'track' | 'chapter';
+  onArmSleepCountdown: (minutes: number) => void;
+  onArmSleepEndOfTrack: () => void;
+  onDisarmSleepTimer: () => void;
+  // A15: speed picker. Rendered by AudioPanel as a row in the MorePanel
+  // and as a FilterSheet mounted alongside.
+  playbackSpeed: number;
+  speedSheetGroups: ReadonlyArray<{id: string; title: string; multiSelect?: boolean; rows: ReadonlyArray<{key: string; label: string}>}>;
+  speedSheetValue: Record<string, string[]>;
+  onSpeedChange: (groupId: string, keys: string[]) => void;
+  // A16: chapter count for the "Chapters (N)" row.
+  chapterCount: number;
+  // W5.8: navigation hook to the settings-level Equalizer screen.
+  onOpenEqualizer?: () => void;
 }
 
-const AudioPanel: React.FC<AudioPanelProps> = ({panel, model, palette, onClose, onPlayIndex, onShare}) => {
+const AudioPanel: React.FC<AudioPanelProps> = ({
+  panel,
+  model,
+  palette,
+  onClose,
+  onPlayIndex,
+  onShare,
+  onOpenPanel,
+  sleepTimerEndTime,
+  sleepTimerMode,
+  onArmSleepCountdown,
+  onArmSleepEndOfTrack,
+  onDisarmSleepTimer,
+  playbackSpeed,
+  speedSheetGroups,
+  speedSheetValue,
+  onSpeedChange,
+  chapterCount,
+  onOpenEqualizer,
+}) => {
   if (!panel) return null;
   const title = panel === 'queue' ? 'Play queue' : panel === 'lyrics' ? 'Lyrics' : panel === 'info' ? 'Track details' : panel === 'playlist' ? 'Add to playlist' : 'More actions';
   return (
@@ -254,7 +424,7 @@ const AudioPanel: React.FC<AudioPanelProps> = ({panel, model, palette, onClose, 
           {panel === 'lyrics' ? <LyricsPanel model={model} palette={palette} /> : null}
           {panel === 'info' ? <InfoPanel model={model} palette={palette} /> : null}
           {panel === 'playlist' ? <PlaylistPanel model={model} palette={palette} /> : null}
-          {panel === 'more' ? <MorePanel model={model} palette={palette} onShare={onShare} /> : null}
+          {panel === 'more' ? <MorePanel model={model} palette={palette} onShare={onShare} onOpenPanel={onOpenPanel} onOpenEqualizer={onOpenEqualizer} sleepTimerEndTime={sleepTimerEndTime} sleepTimerMode={sleepTimerMode} onArmCountdown={onArmSleepCountdown} onArmEndOfTrack={onArmSleepEndOfTrack} onDisarm={onDisarmSleepTimer} playbackSpeed={playbackSpeed} onOpenSpeed={() => onOpenPanel('speed')} chapterCount={chapterCount} /> : null}
         </View>
       </View>
     </Modal>
@@ -308,14 +478,61 @@ const PlaylistPanel: React.FC<{model: AudioViewModel; palette: AudioPanelProps['
   </View>
 );
 
-const MorePanel: React.FC<{model: AudioViewModel; palette: AudioPanelProps['palette']; onShare: () => void}> = ({model, palette, onShare}) => {
-  const actions = [
-    {label: 'Share this track', icon: 'share' as const, onPress: onShare},
-    {label: 'Save a bookmark here', icon: 'bookmark' as const, onPress: model.commands.onBookmark},
-    {label: 'Open track information', icon: 'info' as const, onPress: model.commands.onOpenInfo},
-    {label: 'Open the queue', icon: 'queue' as const, onPress: model.commands.onOpenQueue},
-  ];
-  return <View>{actions.map(action => <Pressable key={action.label} accessibilityRole="button" accessibilityLabel={action.label} onPress={action.onPress} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name={action.icon} size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>{action.label}</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>)}</View>;
+const MorePanel: React.FC<{
+  model: AudioViewModel;
+  palette: AudioPanelProps['palette'];
+  onShare: () => void;
+  onOpenPanel: (next: Exclude<Panel, null>) => void;
+  sleepTimerEndTime: number | null;
+  sleepTimerMode: 'time' | 'track' | 'chapter';
+  onArmCountdown: (minutes: number) => void;
+  onArmEndOfTrack: () => void;
+  onDisarm: () => void;
+  playbackSpeed: number;
+  onOpenSpeed: () => void;
+  chapterCount: number;
+  onOpenEqualizer?: () => void;
+}> = ({model, palette, onShare, onOpenPanel, sleepTimerEndTime, sleepTimerMode, onArmCountdown, onArmEndOfTrack, onDisarm, playbackSpeed, onOpenSpeed, chapterCount, onOpenEqualizer}) => {
+  const countdownArmed = sleepTimerEndTime !== null && sleepTimerMode === 'time';
+  const remainingMin = countdownArmed && sleepTimerEndTime !== null
+    ? Math.max(0, Math.round((sleepTimerEndTime - Date.now()) / 60000))
+    : 0;
+  const sectionLabelStyle = [styles.moreText, {color: palette.secondary, fontSize: 11, letterSpacing: 1.4, marginTop: 14, marginBottom: 6}];
+  return (
+    <View>
+      <Text style={sectionLabelStyle}>SLEEP TIMER</Text>
+      {countdownArmed ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Cancel sleep timer (${remainingMin} minutes remaining)`}
+          onPress={onDisarm}
+          style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}>
+          <AudioIcon name="sleep" size={21} color={palette.accent} />
+          <Text style={[styles.moreText, {color: palette.primary}]}>Cancel timer ({remainingMin}m left)</Text>
+          <AudioIcon name="close" size={18} color={palette.muted} />
+        </Pressable>
+      ) : null}
+      <Pressable accessibilityRole="button" accessibilityLabel="Sleep timer 15 minutes" onPress={() => onArmCountdown(15)} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="sleep" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>15 minutes</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Sleep timer 30 minutes" onPress={() => onArmCountdown(30)} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="sleep" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>30 minutes</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Sleep timer 1 hour" onPress={() => onArmCountdown(60)} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="sleep" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>1 hour</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Sleep timer at end of current track" onPress={onArmEndOfTrack} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="sleep" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>End of track</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+
+      <Text style={sectionLabelStyle}>MORE</Text>
+      {chapterCount > 0 ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="View chapters" onPress={() => onOpenPanel('chapters')} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="playlist" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>Chapters ({chapterCount})</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      ) : null}
+      {onOpenEqualizer ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Open equalizer" onPress={onOpenEqualizer} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="more" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>Open equalizer</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      ) : null}
+      <Pressable accessibilityRole="button" accessibilityLabel={`Playback speed ${playbackSpeed}×. Tap to change.`} onPress={onOpenSpeed} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="playOnce" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>Playback speed · {playbackSpeed}×</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Share this track" onPress={onShare} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="share" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>Share this track</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Save a bookmark here" onPress={model.commands.onBookmark} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="bookmark" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>Save a bookmark here</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="View lyrics" onPress={() => onOpenPanel('lyrics')} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="lyrics" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>View lyrics</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="View track information" onPress={() => onOpenPanel('info')} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="info" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>View track information</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="View the queue" onPress={() => onOpenPanel('queue')} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="queue" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>View the queue</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Add to playlist" onPress={() => onOpenPanel('playlist')} style={({pressed}) => [styles.moreRow, pressed && styles.pressed]}><AudioIcon name="playlist" size={21} color={palette.accent} /><Text style={[styles.moreText, {color: palette.primary}]}>Add to playlist</Text><AudioIcon name="chevronDown" size={18} color={palette.muted} /></Pressable>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
@@ -331,6 +548,9 @@ const styles = StyleSheet.create({
   status: {fontSize: 11, fontWeight: '700', letterSpacing: 1.4},
   sourceBadge: {paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginLeft: 4},
   sourceText: {fontSize: 9, fontWeight: '800', letterSpacing: 1},
+  // A16: chapter caption directly under the progress bar. 1-line
+  // truncate so a long chapter name doesn't push the time labels.
+  chapterCaption: {fontSize: 12, fontWeight: '600', marginTop: 4, letterSpacing: 0.2},
   hero: {paddingHorizontal: 2, paddingVertical: 10},
   artworkShadow: {alignSelf: 'center', borderRadius: 28, shadowOpacity: 0.24, shadowRadius: 24, shadowOffset: {width: 0, height: 12}, elevation: 12},
   trackHeader: {flexDirection: 'row', alignItems: 'center', marginTop: 18},

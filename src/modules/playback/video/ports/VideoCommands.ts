@@ -11,6 +11,8 @@ export type VideoIntent =
   | {type: 'set-speed'; speed: number}
   | {type: 'select-track'; trackId: number}
   | {type: 'set-caption-visibility'; visible: boolean}
+  | {type: 'next'}
+  | {type: 'previous'}
   | {type: 'release'};
 
 export type VideoCommandResult =

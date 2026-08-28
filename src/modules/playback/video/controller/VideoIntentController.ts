@@ -107,6 +107,12 @@ export class VideoIntentController implements VideoIntentDispatcher {
       case 'set-caption-visibility':
         await this.session.setCaptionVisibility(intent.visible);
         return {ok: true};
+      case 'next':
+        await this.session.next();
+        return {ok: true};
+      case 'previous':
+        await this.session.previous();
+        return {ok: true};
       case 'release':
         await this.disposeFromQueuedRelease();
         return {ok: true};

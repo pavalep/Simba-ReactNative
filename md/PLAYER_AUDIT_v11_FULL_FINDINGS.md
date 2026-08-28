@@ -328,3 +328,32 @@ See §1.3 contrast box. Four observed properties, same-URI storm killed, reason-
 | UX | Major | Speed/quality/subtitle/queue/bookmark/chapters/fullscreen/lock/gestures/auto-hide missing |
 | A1–A23 | Various | Audio: triple play state, duplicate listeners, dead sleep timer, dead panels, missing speed UI |
 | X1–X3 | Major | Dead `'VideoPlayer'` route; dead components; EQ entry-point inconsistency |
+
+---
+
+## 7. Addendum — Closure of the v11.0 UI "Q-row" backlog (2026-08-25)
+
+The v11.0 UI spec (`VIDEO_UI_V11_SPECIFICATION.md` rev 11.0.0, §4.10) referenced a position-audit quality table **Q1–Q24**: Q1–Q10 were listed there; Q11–Q24 were marked "deferred to v11.1" and were **never enumerated in any deliverable** (the stale tracker in the typo folder `MOBILE_APP_RECT_NATIVE/` promised to list them and did not). The 11.1.0 revision closes the loop as follows — superseding both:
+
+**Q1–Q10 (v11.0 spec §4.10) → closed by spec 11.1.0 sections:**
+
+| Q-row | Regression | Closed by (11.1.0) |
+|---|---|---|
+| Q1 two retry buttons | independent overlay retry | §4.4 + §0.7 resolution note (single `onRetry` handler; legacy overlay deleted, T1) |
+| Q2 no fullscreen | manifest portrait pin | §3.3, §4.9, §9 (T8); pin at [AndroidManifest.xml:30,56](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/android/app/src/main/AndroidManifest.xml#L30) |
+| Q3 queue as route | queue kills session | §4.7 queue section (T4); current path [VideoHost.tsx:285-288](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/modules/playback/video/host/VideoHost.tsx#L285-L288) |
+| Q4 dead `more` | `onOpenMore` never passed | §4.1 + §4.7 (T2/T3); slot [VideoControlLayer.tsx:116](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/modules/playback/video/presentation/VideoControlLayer.tsx#L116) |
+| Q5 centre visible during loading | overlap | §4.12 rendering contract (T5) |
+| Q6 mini has no frame | text-only mini | §3.2 single-surface mini (T7) — replaces the abandoned base64 plan |
+| Q7 close at bottom-right | wrong placement | §4.1 top-right close (T2); current [VideoControlLayer.tsx:178](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/modules/playback/video/presentation/VideoControlLayer.tsx#L178) |
+| Q8 bookmark on top row | placement | §4.5 utility-row bookmark chip (T10); current wiring [VideoHost.tsx:527-552](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/modules/playback/video/host/VideoHost.tsx#L527-L552) |
+| Q9 no fullscreen indicator | chrome adaptation | §4.9 landscape chrome (T8) |
+| Q10 mini settings icon | removed deliberately | §4.8 mini layout (T7) — no closure work |
+
+**Q11–Q24 (the never-enumerated backlog):** since the individual rows were never written down, 11.1.0 absorbs them by rule instead of by row:
+
+- Identifiable items already covered: bookmark chip gold-fill state → spec §4.5 + §5 "bookmark tap" micro-interaction; section-header accessibility → spec §6 (labels + `accessibilityViewIsModal`).
+- Everything else the backlog could contain falls under **Rule 12** ("every visible control works — hide it if the capability is missing"), enforced by tracker **Phase 10.2 dead-control sweep**, which audits every rendered control in full/mini/landscape for a live handler.
+- If a future reviewer recovers a concrete Q11–Q24 list, each row must either map to a 11.1.0 section above or be added to the T10 sweep before merge.
+
+Engine-side findings (C/B/E/R/L/M/P of this audit) remain tracked by `PLAYER_FIX_TRACKER_v1.md`; several were already closed in source (observers + poll at [VideoMpvSession.ts:40-51,439-445](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/modules/playback/video/session/VideoMpvSession.ts#L40-L51), native lease via `VideoNativeLease.ts`, watchdog at [VideoMpvSession.ts:404-426](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/src/modules/playback/video/session/VideoMpvSession.ts#L404-L426)).

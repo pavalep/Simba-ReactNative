@@ -28,6 +28,22 @@ std::string jsonQuote(const std::string &value) {
 
 void enqueueLoadRequest(PendingLoadRequest request) {
     std::lock_guard<std::mutex> guard(g_loadQueueMutex);
+    // L3: reap the previously-active request if it's been superseded.
+    // Without this, a user navigating between files before FILE_LOADED
+    // fires for the first one leaves the old entry in the queue
+    // forever (it never matches the new file's resolvedPath and
+    // consumeFileLoadedPayload never pops it). Drop it here so the
+    // queue never holds more than one in-flight request at a time.
+    if (!g_activeLoad.requestId.empty() && g_activeLoad.requestId != request.requestId) {
+        for (auto iterator = g_pendingLoads.begin(); iterator != g_pendingLoads.end();) {
+            if (iterator->requestId == g_activeLoad.requestId) {
+                iterator = g_pendingLoads.erase(iterator);
+                break;
+            } else {
+                ++iterator;
+            }
+        }
+    }
     for (auto iterator = g_pendingLoads.begin(); iterator != g_pendingLoads.end();) {
         if (!request.resolvedPath.empty() && iterator->resolvedPath == request.resolvedPath) {
             iterator = g_pendingLoads.erase(iterator);

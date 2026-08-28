@@ -25,6 +25,7 @@ export type AudioIconName =
   | 'close'
   | 'expand'
   | 'volume'
+  | 'sleep'
   | 'chevronDown'
   | 'chevronUp';
 
@@ -59,6 +60,7 @@ const paths: Record<AudioIconName, string> = {
   close: 'm6 6 12 12M18 6 6 18',
   expand: 'm9 4H4v5m11-5h5v5M9 20H4v-5m16 0v5h-5',
   volume: 'M4 10v4h4l5 4V6l-5 4H4Zm12 1a3 3 0 0 1 0 2m2-4a6 6 0 0 1 0 6',
+  sleep: 'M19 14.5A7 7 0 0 1 9.5 5a7 7 0 1 0 9.5 9.5Z',
   chevronDown: 'm6 9 6 6 6-6',
   chevronUp: 'm6 15 6-6 6 6',
 };

@@ -23,8 +23,9 @@ export type VideoSessionEvent =
   | {type: 'video-metrics-changed'; generation: number; metrics: VideoVideoMetrics}
   | {type: 'first-frame'; generation: number}
   | {type: 'surface-attached'; generation: number}
+  | {type: 'playback-restart'; generation: number}
   | {type: 'ended'; generation: number}
-  | {type: 'error'; generation: number; code?: number; message: string};
+  | {type: 'error'; generation: number; code?: number; recoverable: boolean; message: string};
 
 export type VideoSessionListener = (event: VideoSessionEvent) => void;
 export type VideoUnsubscribe = () => void;
@@ -55,5 +56,10 @@ export interface VideoSessionPort {
   setSpeed(speed: number): Promise<void>;
   selectTrack(trackId: number): Promise<void>;
   setCaptionVisibility(visible: boolean): Promise<void>;
+  /** W2.4: advance to the next item in the mpv playlist (no-op on a
+   *  single-item playlist). */
+  next(): Promise<void>;
+  /** W2.4: jump to the previous item in the mpv playlist. */
+  previous(): Promise<void>;
   release(): Promise<void>;
 }

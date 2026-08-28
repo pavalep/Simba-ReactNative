@@ -6,11 +6,17 @@ import {normalizeMediaClassification} from '../../types/media';
 export const MAX_BOOKMARK_ENTRIES = 20;
 
 export interface Bookmark {
-  /** Stable identity for this bookmarked media item. */
+  /**
+   * A14: stable identity is now `(fileUri, position)`-derived so multiple
+   * bookmarks per file are allowed. Old persisted data with fileUri-only
+   * ids continues to work (one-per-file) until the user saves a new
+   * bookmark at a different position, which then creates a distinct
+   * entry.
+   */
   id: string;
   fileUri: string;
   title: string;
-  /** Current resume/bookmark position. Updated while the item is playing. */
+  /** Position in seconds at the time of save. */
   position: number;
   duration: number;
   /** Original explicit-bookmark creation time. Used for overflow eviction. */
@@ -30,7 +36,8 @@ export type BookmarkInput = Omit<Bookmark, 'id' | 'createdAt'> & {
 };
 
 export interface BookmarkPositionUpdate {
-  fileUri: string;
+  /** A14: identifies a single bookmark by id (no longer by fileUri). */
+  id: string;
   position: number;
   duration?: number;
 }
@@ -74,21 +81,25 @@ function buildBookmark(input: BookmarkInput, existing?: Bookmark): Bookmark {
   };
 }
 
-/** Normalize old persisted data and enforce one bookmark per media item. */
+/** Normalize persisted data. A14: dedup by `id` (not by `fileUri`), so
+ *  multiple bookmarks per file are preserved. */
 export function normalizeBookmarks(items: Bookmark[]): Bookmark[] {
-  const byFileUri = new Map<string, Bookmark>();
+  const byId = new Map<string, Bookmark>();
 
   for (const item of Array.isArray(items) ? items : []) {
-    if (!item || typeof item.fileUri !== 'string' || item.fileUri.length === 0) {
+    if (!item || typeof item.id !== 'string' || item.id.length === 0) {
       continue;
     }
-    const existing = byFileUri.get(item.fileUri);
+    if (typeof item.fileUri !== 'string' || item.fileUri.length === 0) {
+      continue;
+    }
+    const existing = byId.get(item.id);
     if (!existing || safeDate(item.createdAt) > safeDate(existing.createdAt)) {
-      byFileUri.set(item.fileUri, buildBookmark(item, existing));
+      byId.set(item.id, buildBookmark(item, existing));
     }
   }
 
-  return Array.from(byFileUri.values())
+  return Array.from(byId.values())
     .sort((a, b) => safeDate(b.createdAt) - safeDate(a.createdAt))
     .slice(0, MAX_BOOKMARK_ENTRIES);
 }
@@ -97,15 +108,26 @@ const bookmarkSlice = createSlice({
   name: 'bookmark',
   initialState,
   reducers: {
-    /** Explicit user action: create or reposition one media bookmark. */
+    /** A14: explicit user action — create or update a single bookmark
+     *  identified by `id`. Multiple bookmarks per file are allowed;
+     *  each id encodes `(fileUri, position)` so saving at a different
+     *  position creates a fresh entry. */
     addBookmark(
       state,
       action: PayloadAction<{bookmark: BookmarkInput; evictId?: string}>,
     ) {
       const {bookmark: input, evictId} = action.payload;
-      const existing = state.items.find(item => item.fileUri === input.fileUri);
+      // The id is now (fileUri, position)-derived; an existing entry
+      // with the same id is the same bookmark being repositioned.
+      const sameId = input.id ? state.items.findIndex(item => item.id === input.id) : -1;
+      const samePosition = sameId >= 0
+        ? state.items[sameId]
+        : state.items.find(
+            item => item.fileUri === input.fileUri && Math.abs(item.position - input.position) < 1,
+          );
+      const existing = sameId >= 0 ? state.items[sameId] : samePosition;
       const bookmark = buildBookmark(input, existing);
-      const existingIndex = state.items.findIndex(item => item.fileUri === input.fileUri);
+      const existingIndex = sameId >= 0 ? sameId : state.items.findIndex(item => item.id === bookmark.id);
       if (existingIndex >= 0) {
         state.items[existingIndex] = bookmark;
         return;
@@ -117,9 +139,10 @@ const bookmarkSlice = createSlice({
       state.items = [bookmark, ...state.items].slice(0, MAX_BOOKMARK_ENTRIES);
     },
 
-    /** Automatic player checkpoint: only an existing bookmark can be updated. */
+    /** A14: automatic player checkpoint now targets a single bookmark
+     *  by `id` (no longer by fileUri — multiple per file). */
     updateBookmarkPosition(state, action: PayloadAction<BookmarkPositionUpdate>) {
-      const bookmark = state.items.find(item => item.fileUri === action.payload.fileUri);
+      const bookmark = state.items.find(item => item.id === action.payload.id);
       if (!bookmark) return;
       bookmark.position = Math.max(0, Number(action.payload.position) || 0);
       if (typeof action.payload.duration === 'number' && action.payload.duration > 0) {

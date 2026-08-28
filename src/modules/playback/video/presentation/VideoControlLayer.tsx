@@ -1,5 +1,7 @@
-import React from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import React, {useCallback, useState} from 'react';
+import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
+import {Gesture, GestureDetector} from 'react-native-gesture-handler';
+import {runOnJS} from 'react-native-reanimated';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
 import type {
   VideoCapabilities,
@@ -12,6 +14,8 @@ import type {
 import {VideoControlButton} from './VideoControlButton';
 import {VideoIcon} from './VideoIcon';
 import {VideoProgressRail} from './VideoProgressRail';
+import {VideoTopBar} from './VideoTopBar';
+import {VideoCenterAction, type VideoCenterPhase} from './VideoCenterAction';
 
 export interface VideoControlLayerProps {
   readonly mode: VideoPresentationMode;
@@ -32,8 +36,14 @@ export interface VideoControlLayerProps {
   readonly onToggleFullscreen?: () => void;
   readonly onEnterPictureInPicture?: () => void;
   readonly onOpenMore?: () => void;
+  readonly onOpenSpeed?: () => void;
+  readonly onOpenTracks?: () => void;
+  readonly onOpenChapters?: () => void;
+  readonly onToggleBookmark?: () => void;
+  readonly isBookmarked?: boolean;
   readonly onToggleLock?: () => void;
   readonly isLocked?: boolean;
+  readonly onOpenQueue?: () => void;
 }
 
 function primaryLabel(session: VideoSessionSnapshot): string {
@@ -44,18 +54,6 @@ function primaryLabel(session: VideoSessionSnapshot): string {
 
 function primaryIcon(session: VideoSessionSnapshot) {
   return session.isPlaying ? 'pause' as const : 'play' as const;
-}
-
-function statusLabel(session: VideoSessionSnapshot): string | null {
-  switch (session.phase) {
-    case 'preparing': return 'Preparing';
-    case 'connecting': return 'Connecting';
-    case 'first-frame': return 'Starting';
-    case 'buffering': return 'Buffering';
-    case 'seeking': return 'Seeking';
-    case 'error': return session.error?.message ?? 'Playback error';
-    default: return null;
-  }
 }
 
 export function VideoControlLayer(props: VideoControlLayerProps) {
@@ -80,29 +78,45 @@ function FullControls({
   onToggleFullscreen,
   onEnterPictureInPicture,
   onOpenMore,
+  onOpenSpeed,
+  onOpenTracks,
+  onOpenChapters,
+  onToggleBookmark,
+  isBookmarked = false,
   onToggleLock,
   isLocked = false,
+  onOpenQueue,
 }: VideoControlLayerProps) {
-  const status = statusLabel(session);
-  const showCenterAction = chromeVisible && (
-    session.phase === 'paused' ||
-    session.phase === 'finished' ||
-    session.phase === 'error' ||
-    (session.phase === 'ready' && !session.isPlaying)
-  );
+  // v11 T5.2: FSM-driven visibility contract per spec §4.3 / §4.12.
+  // The centre action is visible when the session is paused / finished /
+  // error AND the loading FSM is idle (or error, so the retry button
+  // can sit alongside the pill's retry affordance per spec §0.7).
+  // During any other loading state (preparing / buffering / seeking /
+  // reconnecting) the centre stays hidden — the pill owns the moment.
+  const centerActionPhase: VideoCenterPhase | null =
+    session.phase === 'paused'
+      ? 'paused'
+      : session.phase === 'finished'
+        ? 'finished'
+        : session.phase === 'error'
+          ? 'error'
+          : null;
+  const centerActionVisible =
+    chromeVisible &&
+    centerActionPhase !== null &&
+    (session.loadingState.kind === 'idle' ||
+      session.loadingState.kind === 'error');
   return (
     <View style={styles.fullRoot} pointerEvents="box-none">
       {chromeVisible ? (
-        <View style={[styles.topScrim, {paddingTop: geometry.topContentInset, paddingHorizontal: geometry.horizontalContentInset}]} pointerEvents="box-none">
-          <View style={styles.topRow}>
-            <VideoControlButton icon="back" label="Back" size="regular" onPress={onBack} />
-            <Text numberOfLines={1} style={styles.title}>{title ?? session.source?.title ?? ''}</Text>
-            <View style={styles.topActions}>
-              {onToggleLock ? <VideoControlButton icon={isLocked ? 'unlock' : 'lock'} label={isLocked ? 'Unlock controls' : 'Lock controls'} size="compact" onPress={onToggleLock} /> : null}
-              {onOpenMore ? <VideoControlButton icon="more" label="More video options" size="compact" onPress={onOpenMore} /> : null}
-            </View>
-          </View>
-        </View>
+        <VideoTopBar
+          title={title ?? session.source?.title ?? ''}
+          onBack={onBack}
+          onClose={onClose}
+          onToggleLock={onToggleLock}
+          isLocked={isLocked}
+          onOpenMore={onOpenMore}
+        />
       ) : null}
 
       <Pressable
@@ -112,29 +126,15 @@ function FullControls({
         style={styles.frameTapTarget}
       />
 
-      {status ? (
-        <View pointerEvents="none" style={styles.statusWrap}>
-          <View style={styles.statusLine}>
-            <View style={styles.statusMark} />
-            <Text style={styles.statusText}>{status}</Text>
-          </View>
-        </View>
+      {centerActionPhase !== null ? (
+        <VideoCenterAction
+          phase={centerActionPhase}
+          onPress={onPlayPause}
+          visible={centerActionVisible}
+        />
       ) : null}
 
-      {showCenterAction ? (
-        <View pointerEvents="box-none" style={styles.centerAction}>
-          <VideoControlButton
-            icon={primaryIcon(session)}
-            iconColor={cinemaColors.accent.gold}
-            label={session.phase === 'error' ? 'Retry video' : primaryLabel(session)}
-            hint={session.phase === 'error' ? 'Try loading the video again' : undefined}
-            size="primary"
-            onPress={onPlayPause}
-          />
-        </View>
-      ) : null}
-
-      {chromeVisible ? (
+      {chromeVisible && !isLocked ? (
         <View style={[styles.bottomScrim, {paddingBottom: geometry.bottomContentInset, paddingHorizontal: geometry.horizontalContentInset}]} pointerEvents="box-none">
           <VideoProgressRail session={session} onSeek={onSeek} />
           <View style={[styles.transportRow, {gap: geometry.controlGap}]}>
@@ -153,10 +153,13 @@ function FullControls({
           </View>
           <View style={[styles.utilityRow, {gap: geometry.utilityGap}]}>
             {capabilities.canSelectCaptionTrack && onToggleCaptions ? <VideoControlButton icon="captions" label="Captions" size="compact" onPress={onToggleCaptions} /> : null}
+            {onOpenTracks ? <VideoControlButton icon="more" label="Tracks and quality" size="compact" onPress={onOpenTracks} /> : null}
+            {capabilities.canViewChapters && onOpenChapters ? <VideoControlButton icon="chapters" label="Chapters" size="compact" onPress={onOpenChapters} /> : null}
+            {onToggleBookmark ? <VideoControlButton icon={isBookmarked ? 'bookmarkFilled' : 'bookmark'} label={isBookmarked ? 'Remove bookmark' : 'Save bookmark'} size="compact" onPress={onToggleBookmark} /> : null}
+            {onOpenQueue ? <VideoControlButton icon="queue" label="Open queue" size="compact" onPress={onOpenQueue} /> : null}
             {capabilities.canFullscreen && onToggleFullscreen ? <VideoControlButton icon="expand" label="Enter fullscreen" size="compact" onPress={onToggleFullscreen} /> : null}
             {capabilities.canPictureInPicture && onEnterPictureInPicture ? <VideoControlButton icon="collapse" label="Enter picture in picture" size="compact" onPress={onEnterPictureInPicture} /> : null}
-            <View style={styles.utilitySpacer} />
-            {onClose ? <VideoControlButton icon="close" label="Close video player" size="compact" onPress={onClose} /> : null}
+            {capabilities.canChangeSpeed && onOpenSpeed ? <VideoSpeedChip speed={session.speed} onPress={onOpenSpeed} /> : null}
           </View>
         </View>
       ) : null}
@@ -174,8 +177,82 @@ function MiniControls({
   onPlayPause,
   onSeek,
 }: VideoControlLayerProps) {
+  // W5.5: swipe-down on the title strip dismisses the mini player.
+  // We render a thin "grab handle" above the title that owns the
+  // gesture so the buttons / progress / tap-to-expand areas stay
+  // untouched. A 60 px downward translation is the dismiss threshold.
+  const SWIPE_DOWN_THRESHOLD_PX = 60;
+  const dismissOffset = useState(() => new Animated.Value(0))[0];
+  const handleSwipeDismiss = useCallback(() => {
+    Animated.timing(dismissOffset, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(({finished}) => {
+      if (finished) onClose();
+    });
+  }, [dismissOffset, onClose]);
+  const handleSwipeUpdate = useCallback((translationY: number) => {
+    // Show the user a visual cue by translating the mini down. The
+    // ratio is the actual drag distance vs the threshold, capped to
+    // 1 so a long swipe doesn't fly off-screen.
+    const ratio = Math.min(1, Math.max(0, translationY / SWIPE_DOWN_THRESHOLD_PX));
+    Animated.timing(dismissOffset, {
+      toValue: ratio,
+      duration: 0,
+      useNativeDriver: true,
+    }).start();
+  }, [dismissOffset]);
+  const handleSwipeCancel = useCallback(() => {
+    Animated.spring(dismissOffset, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 6,
+    }).start();
+  }, [dismissOffset]);
+  const swipe = Gesture.Pan()
+    .activeOffsetY([12, 9999])
+    .failOffsetX([-12, 12])
+    .onUpdate(event => {
+      'worklet';
+      const ty = event.translationY ?? 0;
+      if (ty > 0) runOnJS(handleSwipeUpdate)(ty);
+    })
+    .onEnd(event => {
+      'worklet';
+      if ((event.translationY ?? 0) > SWIPE_DOWN_THRESHOLD_PX) {
+        runOnJS(handleSwipeDismiss)();
+      } else {
+        runOnJS(handleSwipeCancel)();
+      }
+    });
+  const translateY = dismissOffset.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 80],
+    extrapolate: 'clamp',
+  });
+  const opacity = dismissOffset.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
   return (
-    <View style={[styles.miniRoot, {paddingBottom: geometry.bottomContentInset, paddingLeft: geometry.horizontalContentInset, paddingRight: geometry.horizontalContentInset}]}>
+    <Animated.View
+      style={[
+        styles.miniRoot,
+        {
+          paddingBottom: geometry.bottomContentInset,
+          paddingLeft: geometry.horizontalContentInset,
+          paddingRight: geometry.horizontalContentInset,
+          opacity,
+          transform: [{translateY}],
+        },
+      ]}>
+      <GestureDetector gesture={swipe}>
+        <View style={styles.miniGrabHandle}>
+          <View style={styles.miniGrabBar} />
+        </View>
+      </GestureDetector>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Expand ${title ?? session.source?.title ?? 'video'}`}
@@ -191,9 +268,35 @@ function MiniControls({
         <VideoControlButton icon="expand" label="Expand video player" size="compact" onPress={onToggleChrome} />
         <VideoControlButton icon="close" label="Close video player" size="compact" onPress={onClose} />
       </View>
-      <View style={styles.miniIconHint} pointerEvents="none"><VideoIcon name="expand" size={16} color={cinemaColors.text.onMediaMuted} /></View>
-    </View>
+    </Animated.View>
   );
+}
+
+/**
+ * W2.1: speed chip — a small text pill that shows the current playback speed
+ * (e.g. "1×" / "1.5×") and opens the speed picker sheet on press. Text is
+ * used instead of an icon because the speed value IS the affordance; an icon
+ * would force a second step to learn what speed is active.
+ */
+function VideoSpeedChip({speed, onPress}: {speed: number; onPress: () => void}) {
+  const label = formatSpeedLabel(speed);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Playback speed ${label}. Tap to change.`}
+      onPress={onPress}
+      style={({pressed}) => [styles.speedChip, pressed && styles.speedChipPressed]}>
+      <Text style={styles.speedChipText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function formatSpeedLabel(speed: number): string {
+  if (!Number.isFinite(speed) || speed <= 0) return '1×';
+  // Strip trailing zeros from fixed precision (1.0 → 1, 0.50 → 0.5).
+  const rounded = Math.round(speed * 100) / 100;
+  const text = Number.isInteger(rounded) ? String(rounded) : String(rounded);
+  return `${text}×`;
 }
 
 const styles = StyleSheet.create({
@@ -201,68 +304,9 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     justifyContent: 'space-between',
   },
-  topScrim: {
-    zIndex: 2,
-    paddingTop: 12,
-    paddingBottom: 32,
-    backgroundColor: cinemaColors.background.scrimMid,
-  },
-  topRow: {
-    minHeight: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  title: {
-    flex: 1,
-    color: cinemaColors.text.bright,
-    fontSize: 17,
-    lineHeight: 23,
-    fontWeight: '700',
-    marginHorizontal: 10,
-  },
-  topActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   frameTapTarget: {
     ...StyleSheet.absoluteFill,
     zIndex: 1,
-  },
-  statusWrap: {
-    position: 'absolute',
-    top: '46%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  statusLine: {
-    minHeight: 34,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    backgroundColor: cinemaColors.background.scrim,
-  },
-  statusMark: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: cinemaColors.accent.gold,
-    marginRight: 9,
-  },
-  statusText: {
-    color: cinemaColors.text.bright,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '700',
-  },
-  centerAction: {
-    zIndex: 3,
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    marginTop: -34,
   },
   bottomScrim: {
     zIndex: 2,
@@ -280,8 +324,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  utilitySpacer: {
-    flex: 1,
+  speedChip: {
+    minWidth: 52,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  speedChipPressed: {
+    opacity: 0.68,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+  },
+  speedChipText: {
+    color: cinemaColors.text.bright,
+    fontSize: 13,
+    lineHeight: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   miniRoot: {
     minHeight: 86,
@@ -313,9 +376,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  miniIconHint: {
-    position: 'absolute',
-    left: 34,
-    top: 12,
+  // `miniIconHint` removed under W5.2 (see MiniControls).
+  // W5.5: grab handle — a thin strip at the top of the mini player
+  // that hosts the swipe-down-to-dismiss gesture. A subtle horizontal
+  // bar in the middle hints at the affordance.
+  miniGrabHandle: {
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniGrabBar: {
+    width: 36,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: cinemaColors.text.onMediaMuted,
+    opacity: 0.5,
   },
 });

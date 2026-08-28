@@ -12,7 +12,12 @@ export interface VideoPresentationShellProps {
 
 const MINI_WIDTH_MARGIN = 12;
 const MINI_BOTTOM_MARGIN = 12;
-const MINI_HEIGHT = 112;
+// W5.2: the mini player was 112 px tall but the actual mini chrome
+// (title + progress rail + play/expand/close buttons) only needs
+// ~86 px. The 26 px of slack was empty margin at the bottom. Bringing
+// the mini down to 86 px also makes the mini↔full animation more
+// graceful (smaller scale delta means less visual "pop").
+const MINI_HEIGHT = 86;
 const MINI_RADIUS = 14;
 const TRANSITION_DURATION_MS = 280;
 

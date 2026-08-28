@@ -57,6 +57,13 @@ export interface PlaybackOpenRequest extends PlaybackEntryInput {
   mediaLane?: PlaybackLane;
   /** Explicit resume position requested by the caller. */
   startPosition?: number;
+  /** W5.6: subtitle language to enable on load (matches the
+   *  `language` field of a `VideoTrack` on the loaded session).
+   *  The player matches by language because the Internet Archive
+   *  subtitle shape doesn't expose stable ids. When the caller
+   *  omits this, the player keeps its default behaviour (no
+   *  auto-select). */
+  subtitleLanguage?: string;
   /** Audio-book or chapter sequence metadata. */
   chapterList?: PlaybackChapterParam[];
   chapterIndex?: number;
@@ -74,6 +81,11 @@ export interface ActivePlayback {
   /** Monotonic identity for a new openPlayer intent; unchanged by collapse/expand. */
   openRequestId?: number;
   startPosition?: number;
+  /** W5.6: subtitle language to enable on load. Forwarded to the
+   *  session's track selection after the first `onTracksChanged`
+   *  event lands. Undefined leaves the player's default behaviour
+   *  (no auto-select). */
+  subtitleLanguage?: string;
   chapterList?: PlaybackChapterParam[];
   chapterIndex?: number;
   liveChannels?: PlaybackChannelParam[];

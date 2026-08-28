@@ -26,6 +26,10 @@ interface AudioProgressProps {
   accent: string;
   muted: string;
   buffered: string;
+  // A10: cache fill ratio (0..1) for the current buffered window.
+  // Rendered next to the BUFFERING status text so the user can see
+  // download progress.
+  cacheFill: number;
 }
 
 export const AudioProgress: React.FC<AudioProgressProps> = ({
@@ -39,6 +43,7 @@ export const AudioProgress: React.FC<AudioProgressProps> = ({
   accent,
   muted,
   buffered,
+  cacheFill,
 }) => {
   const [trackWidth, setTrackWidth] = useState(1);
   const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
@@ -88,6 +93,13 @@ export const AudioProgress: React.FC<AudioProgressProps> = ({
       </Pressable>
       <View style={styles.labels}>
         <Text style={[styles.time, {color: accent}]}>{formatAudioTime(safePosition)}</Text>
+        {/* A10: while buffering, show the cache fill % next to the time.
+            Clamped + rounded so we never display NaN or >100. */}
+        {isBuffering ? (
+          <Text style={[styles.time, {color: muted}]}>
+            {Math.round(Math.max(0, Math.min(1, cacheFill)) * 100)}% cached
+          </Text>
+        ) : null}
         <Text style={[styles.time, {color: muted}]}>{safeDuration > 0 ? formatAudioTime(safeDuration) : 'LIVE'}</Text>
       </View>
     </View>

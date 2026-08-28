@@ -1,4 +1,5 @@
 import {MpvPlayer} from '../../../../native/player.api';
+import {logger} from '../../../../lib/logger';
 import {getLocalPath} from '../../../../services/downloadService';
 import type {
   MpvFileLoadedEvent,
@@ -163,7 +164,15 @@ export class VideoMpvSession implements VideoSessionPort {
   subscribe(listener: VideoSessionListener): VideoUnsubscribe {
     if (this.released) return () => undefined;
     this.listeners.add(listener);
-    listener({type: 'snapshot', snapshot: this.snapshot});
+    // E5: wrap the synchronous initial emit in try/catch so a throwing
+    // listener can't prevent the unsubscribe lambda from being returned.
+    // The listener remains in the set; the caller can still unsubscribe
+    // via the returned function on the next render.
+    try {
+      listener({type: 'snapshot', snapshot: this.snapshot});
+    } catch (error) {
+      logger.warn('[PlaybackTrace][V3][subscribe:listener:threw]', error);
+    }
     return () => this.listeners.delete(listener);
   }
 
@@ -325,6 +334,16 @@ export class VideoMpvSession implements VideoSessionPort {
     } else {
       MpvPlayer.setTrack('sub', 'no');
     }
+  }
+
+  async next(): Promise<void> {
+    this.assertUsable();
+    MpvPlayer.next();
+  }
+
+  async previous(): Promise<void> {
+    this.assertUsable();
+    MpvPlayer.previous();
   }
 
   async release(): Promise<void> {
@@ -551,13 +570,26 @@ export class VideoMpvSession implements VideoSessionPort {
         this.applySessionEvent({type: 'ended', generation});
         this.emit({type: 'ended', generation});
       }),
-      MpvPlayer.on('onError', ({code, message, requestId}) => {
+      // B1: mpv emits `onPlaybackRestart` when playback resumes after a stall
+      // (cache refill, end-of-stream seek, etc.). If the reducer still has
+      // `isBuffering=true` because `onBuffering(percent:100)` arrived in a
+      // racy order, this event clears the spinner. The reducer guards
+      // against the no-op case so we don't force a phase recompute when
+      // the user is already in `playing`.
+      MpvPlayer.on('onPlaybackRestart', () => {
+        if (!this.hasActiveFile()) return;
+        const generation = this.snapshot.generation;
+        this.applySessionEvent({type: 'playback-restart', generation});
+        this.emit({type: 'playback-restart', generation});
+      }),
+      MpvPlayer.on('onError', ({code, recoverable, message, requestId}) => {
         if (!this.isCurrentNativeEvent(requestId)) return;
         this.clearFirstFrameWatchdog();
         this.applySessionEvent({
           type: 'error',
           generation: this.snapshot.generation,
           code,
+          recoverable,
           message,
         });
       }),
@@ -668,7 +700,7 @@ export class VideoMpvSession implements VideoSessionPort {
       isSeeking: false,
       error,
     }));
-    this.emit({type: 'error', generation, ...(code === undefined ? {} : {code}), message});
+    this.emit({type: 'error', generation, ...(code === undefined ? {} : {code}), recoverable, message});
   }
 
   private updateSnapshot(
@@ -691,7 +723,17 @@ export class VideoMpvSession implements VideoSessionPort {
   }
 
   private emit(event: VideoSessionEvent): void {
-    this.listeners.forEach(listener => listener(event));
+    // E5: per-listener try/catch so one bad listener doesn't stop the
+    // rest from receiving the event. We don't unsubscribe on throw —
+    // a single misbehaving event handler shouldn't drop the subscription
+    // for a structurally-valid listener.
+    this.listeners.forEach(listener => {
+      try {
+        listener(event);
+      } catch (error) {
+        logger.warn('[PlaybackTrace][V3][emit:listener:threw]', error);
+      }
+    });
   }
 
   private assertUsable(): void {

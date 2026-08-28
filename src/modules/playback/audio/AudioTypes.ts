@@ -2,8 +2,18 @@ import type {ColorTokens} from '../../../theme/tokens';
 import type {TrackMetadata} from '../../../services/metadataService';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
-import type {Chapter} from '../../../components/player/NowPlayingInfo/ChapterList';
 import type {LrcLine} from '../../../utils/lrcParser';
+
+// X2 fallout: the `Chapter` type used to live in the deleted
+// `components/player/NowPlayingInfo/ChapterList` UI component. Hoist a
+// minimal version here so the audio model and `useAudioPlayerScreen` can
+// keep the same shape without depending on a UI module.
+export interface Chapter {
+  title: string;
+  startTime: number;
+  endTime: number;
+  thumbnail?: string;
+}
 
 export interface AudioControllerState {
   colors: ColorTokens;

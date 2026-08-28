@@ -24,6 +24,12 @@ const FADE_DURATION_MS = 220;
  */
 export function VideoFirstFrameLoading({session, onRetry}: VideoFirstFrameLoadingProps) {
   const [revealed, setRevealed] = useState(false);
+  // W5.4: `dismissed` is set to `true` once the fade-out animation
+  // completes. Returning `null` for `dismissed` views removes them
+  // from the tree entirely instead of leaving an `opacity: 0` view
+  // permanently mounted (which would have kept the heavy styles
+  // resident and risked stray hit-tests in the layout).
+  const [dismissed, setDismissed] = useState(false);
   const opacity = useRef(new Animated.Value(1)).current;
   const generation = session.generation;
   const hasFirstFrame = session.hasFirstFrame;
@@ -33,6 +39,7 @@ export function VideoFirstFrameLoading({session, onRetry}: VideoFirstFrameLoadin
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     setRevealed(false);
+    setDismissed(false);
     opacity.stopAnimation();
     opacity.setValue(1);
     if (isActive && !hasFirstFrame) {
@@ -49,10 +56,13 @@ export function VideoFirstFrameLoading({session, onRetry}: VideoFirstFrameLoadin
       toValue: 0,
       duration: FADE_DURATION_MS,
       useNativeDriver: true,
-    }).start();
+    }).start(({finished}) => {
+      if (finished) setDismissed(true);
+    });
   }, [hasFirstFrame, opacity]);
 
   if (!isActive || (!revealed && !hasFirstFrame)) return null;
+  if (dismissed) return null;
 
   return (
     <Animated.View pointerEvents={isError ? 'box-none' : 'none'} style={[styles.root, {opacity}]}>
@@ -66,6 +76,22 @@ export function VideoFirstFrameLoading({session, onRetry}: VideoFirstFrameLoadin
         {isError && onRetry ? (
           <Pressable accessibilityRole="button" accessibilityLabel="Retry video" onPress={onRetry} style={({pressed}) => [styles.retryButton, pressed && styles.retryPressed]}>
             <Text style={styles.retryLabel}>Retry</Text>
+          </Pressable>
+        ) : null}
+        {/* W5.4: the inline "Retry" button is now also offered while
+            still preparing (not just after an error), so the user has
+            a way out if the first-frame gate stalls. Tapping it triggers
+            the same `onRetry` the error state uses — the parent's
+            retryVideo handler is the canonical "re-create the playback
+            unit" path. The watchdog arms at 12s but the user often
+            knows sooner. */}
+        {!isError && onRetry ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cancel preparing"
+            onPress={onRetry}
+            style={({pressed}) => [styles.retryButton, styles.retryButtonSecondary, pressed && styles.retryPressed]}>
+            <Text style={[styles.retryLabel, styles.retryLabelSecondary]}>Cancel</Text>
           </Pressable>
         ) : null}
       </View>
@@ -147,5 +173,14 @@ const styles = StyleSheet.create({
   },
   retryPressed: {
     opacity: 0.7,
+  },
+  retryButtonSecondary: {
+    marginTop: 12,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+  },
+  retryLabelSecondary: {
+    color: cinemaColors.text.onMediaMuted,
+    fontWeight: '600',
   },
 });

@@ -56,7 +56,7 @@ import {cacheArt} from '../../../../services/artCacheService';
 import type {LrcLine} from '../../../../utils/lrcParser';
 import {selectAllTracks} from '../../../../store/slices/mediaSlice';
 import type {ScannedTrack} from '../../../../store/slices/mediaSlice';
-import type {Chapter} from '../../../../components/player/NowPlayingInfo/ChapterList';
+import type {Chapter} from '../AudioTypes';
 import {
   resolveNextTransition,
   resolvePreviousTransition,
@@ -107,7 +107,19 @@ export function useAudioPlayerScreen(
 
   // ── Core playback state ──
   const [isLoading, setIsLoading] = useState(true);
-  const [volume, setVolume] = useState(65);
+  // A23: read the live native volume instead of defaulting to 65. The
+  // bridge's `getVolume()` is synchronous and returns the value the mpv
+  // core currently has, so the first paint shows the actual device /
+  // app level rather than a placeholder. Falls back to 65 if the
+  // bridge isn't ready yet.
+  const [volume, setVolume] = useState(() => {
+    try {
+      const native = Number(MpvPlayer.getVolume?.());
+      return Number.isFinite(native) ? Math.max(0, Math.min(100, native)) : 65;
+    } catch {
+      return 65;
+    }
+  });
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorIsPermission, setErrorIsPermission] = useState(false);
@@ -233,7 +245,9 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
   }, [notificationsEnabled]);
 
   // ── Refs ──
-  const isSeeking = useRef(false);
+  // A12: the local `isSeeking` ref was removed. `TransportContext`
+  // subscribes to mpv's `onSeeking` event and publishes to Redux
+  // (`state.isSeeking`); the model reads from there.
   const fileUriRef = useRef<string | null>(activeUri);
   const playbackSpeedRef = useRef(1.0);
   // P37.3: fresh values for the EOF auto-advance listener without
@@ -417,14 +431,19 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
           const resumePosition = saved?.position ?? 0;
           const explicitPosition = startPosition ?? 0;
           if (explicitPosition > 0) {
-            // 58.2: explicit navigation intent (Continue Listening) — silent seek
-            setTimeout(() => {
-              if (cancelled || loadGenerationRef.current !== loadGeneration) return;
-              try {
-                MpvPlayer.seekTo(explicitPosition);
-                MpvPlayer.resume();
-              } catch {}
-            }, 200);
+            // A22: 58.2 explicit navigation intent (Continue Listening).
+            // Seek + resume synchronously inside the onFileLoaded handler
+            // — the previous 200ms `setTimeout` was a defensive delay
+            // that assumed the player needed a moment to settle. mpv
+            // is ready to seek the moment onFileLoaded fires, so we
+            // skip the timer entirely.
+            try {
+              logger.info('[PlaybackTrace][Controller][onFileLoaded:explicit-seek]', {explicitPosition, fileUri});
+              MpvPlayer.seekTo(explicitPosition);
+              MpvPlayer.resume();
+            } catch (explicitResumeError) {
+              logger.error('[PlaybackTrace][Controller][onFileLoaded:explicit-seek:error]', explicitResumeError);
+            }
           } else if (resumePosition > 0) {
             // 58.2: implicit resume — ask the user instead of silent auto-seek
             try { MpvPlayer.pause(); } catch {}
@@ -565,15 +584,11 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
       logger.info('[PlaybackTrace][Controller][loadAndResume:loop-sync]', {mode: loopModeRef.current, uri});
       MpvPlayer.resume();
       logger.info('[PlaybackTrace][Controller][loadAndResume:resumed]', {uri, loadGeneration});
-      setTimeout(() => {
-        if (loadGenerationRef.current !== loadGeneration) return;
-        try {
-          MpvPlayer.resume();
-          if (resumePosition && resumePosition > 0) {
-            MpvPlayer.seekTo(resumePosition);
-          }
-        } catch {}
-      }, 250);
+      // A22: the previous 250ms "second resume" `setTimeout` was a
+      // defensive double-resume pattern. mpv's `loadFile` is reliable
+      // on every native build we ship; the first `resume()` is enough.
+      // If a particular build ever regresses, the 700ms fallback below
+      // (line ~520) still fires as a last-resort safety net.
     } catch (loadError) {
       logger.error('[PlaybackTrace][Controller][loadAndResume:error]', {uri, loadGeneration, error: loadError});
     }
@@ -724,11 +739,14 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
       const nativePosition = MpvPlayer.getPosition?.() ?? 0;
       const nativeDuration = MpvPlayer.getDuration?.() ?? 1;
 
-      // Position updates never create bookmarks; they only move an item the
-      // user explicitly created through the bookmark action.
-      if (audioBookmarksForFile.length > 0) {
+      // A14: position updates now target a single bookmark by id (no
+      // longer by fileUri — multiple per file). We update the most
+      // recently created bookmark for the file, which is what the
+      // user just hit "Save" on.
+      const target = audioBookmarksForFile[0];
+      if (target) {
         updateBookmarkPosition({
-          fileUri: activeUri,
+          id: target.id,
           position: nativePosition,
           duration: nativeDuration,
         });
@@ -985,13 +1003,16 @@ const {list: sessionRecent, addRecent} = useRecentHistory();
   }, [playNextChapter, transitionToNextAudio]);
 
     const handleSeek = useCallback((pct: number) => {
-    isSeeking.current = true;
+    // A12: the hook-local `isSeeking` ref was redundant. The
+    // `TransportContext` already subscribes to mpv's `onSeeking` event
+    // and publishes `isSeeking` to Redux; the model reads from there
+    // (AudioTypes.ts:145). The previous 200ms timeout guess is also
+    // brittle — the real seeking flag is event-driven.
     const dur = MpvPlayer.getDuration?.() ?? 1;
     const target = Math.max(0, Math.min(dur, pct * dur));
     try {
       MpvPlayer.seekTo(target);
     } catch {}
-    setTimeout(() => { isSeeking.current = false; }, 200);
   }, []);
 
   const handleRewind = useCallback(() => {

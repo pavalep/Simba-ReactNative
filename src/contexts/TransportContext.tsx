@@ -88,7 +88,11 @@ const END_TOLERANCE_S = 0.75;
 export const TransportProvider: React.FC<TransportProviderProps> = ({
   children,
   isReady = true,
-  pollInterval = 1000,
+  // A5: the JSDoc on line 71 says "(default 250)"; the previous default
+  // was 1000 (1s granularity was too coarse for the position rail and
+  // sleep-timer fade window). 250ms matches the 4 Hz refresh rate the
+  // audio side wants.
+  pollInterval = 250,
   enabled = true,
   chapters = [],
 }) => {

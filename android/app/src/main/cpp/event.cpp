@@ -187,12 +187,12 @@ static void callJavaPropertyChanged(const char *name, const char *jsonValue) {
     if (jValue) env->DeleteLocalRef(jValue);
 }
 
-static void callJavaError(int code, const char *message, const char *requestId) {
+static void callJavaError(int code, const char *message, const char *requestId, bool recoverable) {
     JNIEnv *env = getEventEnv();
     if (!env || !g_cls_MPVLib || !g_mid_onError) return;
     jstring jMsg = env->NewStringUTF(message ? message : "mpv error");
     jstring jRequestId = env->NewStringUTF(requestId ? requestId : "");
-    env->CallStaticVoidMethod(g_cls_MPVLib, g_mid_onError, code, jMsg, jRequestId);
+    env->CallStaticVoidMethod(g_cls_MPVLib, g_mid_onError, code, (jboolean)recoverable, jMsg, jRequestId);
     clearJavaException(env);
     if (jMsg) env->DeleteLocalRef(jMsg);
     if (jRequestId) env->DeleteLocalRef(jRequestId);
@@ -272,7 +272,12 @@ void eventLoop() {
                     char errorMessage[160];
                     snprintf(errorMessage, sizeof(errorMessage),
                              "mpv end-file error=%d reason=%d", prop->error, prop->reason);
-                    callJavaError(prop->error, errorMessage, requestId.c_str());
+                    // M5: a non-zero end-file error means the stream is broken
+                    // (corrupt file, network drop, unsupported codec). The user
+                    // cannot "retry" their way out of these without picking a
+                    // different file. Mark non-recoverable so the JS layer
+                    // shows the "Pick another" affordance instead of an auto-retry.
+                    callJavaError(prop->error, errorMessage, requestId.c_str(), /*recoverable=*/false);
                 }
                 break;
             }
@@ -337,7 +342,11 @@ void eventLoop() {
                 // Terminal failures are reported through MPV_EVENT_END_FILE.
                 if (log->level && strcmp(log->level, "fatal") == 0) {
                     const std::string requestId = activeLoadRequestId(currentMpvPath());
-                    callJavaError(-1, log->text ? log->text : "mpv fatal error", requestId.c_str());
+                    // M5: mpv only promotes "fatal"-level log lines to a JS
+                    // error. Fatal decoder/IO failures are not retryable
+                    // without a different source, so we mark them
+                    // non-recoverable.
+                    callJavaError(-1, log->text ? log->text : "mpv fatal error", requestId.c_str(), /*recoverable=*/false);
                 }
                 break;
             }

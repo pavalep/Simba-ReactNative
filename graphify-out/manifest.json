@@ -150,9 +150,9 @@
     "semantic_hash": "6061c65b1ca2f8cde1ee1f9765c45682"
   },
   "android/app/src/main/cpp/event.cpp": {
-    "mtime": 1787647098.4356983,
-    "ast_hash": "228fc7255ef38e761b166babc1130bd6",
-    "semantic_hash": "228fc7255ef38e761b166babc1130bd6"
+    "mtime": 1787659743.0330546,
+    "ast_hash": "063e5671aaf74ab39ea9a1a77ba7ff7f",
+    "semantic_hash": ""
   },
   "android/app/src/main/cpp/include/mpv/client.h": {
     "mtime": 1784013111.2183018,
@@ -170,9 +170,9 @@
     "semantic_hash": "83519bd766ed2f827ff734900a747bc7"
   },
   "android/app/src/main/cpp/main.cpp": {
-    "mtime": 1787649115.8240323,
-    "ast_hash": "b969a6874959d52f40cfe62c7e6e9c1d",
-    "semantic_hash": "b969a6874959d52f40cfe62c7e6e9c1d"
+    "mtime": 1787659343.5766807,
+    "ast_hash": "22802190feeedb90735d79c61c3ce7da",
+    "semantic_hash": ""
   },
   "android/app/src/main/cpp/property.cpp": {
     "mtime": 1787580458.3195593,
@@ -205,14 +205,14 @@
     "semantic_hash": "3d2e00651167b4a5d328439f38d8c2ad"
   },
   "android/app/src/main/java/com/simba/player/mpv/MPVLib.kt": {
-    "mtime": 1787580696.3273578,
-    "ast_hash": "9aa11bdf5a5ac5df5bb4ba7df7affd38",
-    "semantic_hash": "9aa11bdf5a5ac5df5bb4ba7df7affd38"
+    "mtime": 1787659368.9687095,
+    "ast_hash": "281c1a0e655372c6238134aaf95bd318",
+    "semantic_hash": ""
   },
   "android/app/src/main/java/com/simba/player/mpv/MpvBridgeModule.kt": {
-    "mtime": 1787649146.8423207,
-    "ast_hash": "667c14e1c906aad817fa29b93216dbde",
-    "semantic_hash": "667c14e1c906aad817fa29b93216dbde"
+    "mtime": 1787663580.9192483,
+    "ast_hash": "037ff262a446afbf8e8df26e1dade8e1",
+    "semantic_hash": ""
   },
   "android/app/src/main/java/com/simba/player/mpv/MpvPlayerPackage.kt": {
     "mtime": 1784012294.1710484,
@@ -534,45 +534,15 @@
     "ast_hash": "14bd8f0de764535ce13d547cddcab149",
     "semantic_hash": "14bd8f0de764535ce13d547cddcab149"
   },
-  "src/components/player/ChapterBrowser/ChapterBrowser.tsx": {
-    "mtime": 1785529126.4200234,
-    "ast_hash": "5cf17fa0aff0ca5a706e014d237336ba",
-    "semantic_hash": "5cf17fa0aff0ca5a706e014d237336ba"
-  },
-  "src/components/player/ChapterBrowser/index.ts": {
-    "mtime": 1785392004.7047772,
-    "ast_hash": "502f74348c77803a5d8a875ff21bd095",
-    "semantic_hash": "502f74348c77803a5d8a875ff21bd095"
-  },
-  "src/components/player/DoubleTapFeedback/DoubleTapFeedback.tsx": {
-    "mtime": 1787262088.707801,
-    "ast_hash": "224e4ccca537081ca10e9f16ee070582",
-    "semantic_hash": "224e4ccca537081ca10e9f16ee070582"
-  },
-  "src/components/player/MiniPlayer/MiniPlayer.tsx": {
-    "mtime": 1787256939.9406297,
-    "ast_hash": "2fc644bf22557da6aaaefe3fe5dc1fac",
-    "semantic_hash": "2fc644bf22557da6aaaefe3fe5dc1fac"
-  },
   "src/components/player/NowPlayingInfo/ChapterList.tsx": {
     "mtime": 1785528336.0542488,
     "ast_hash": "56f1437d18bec2e8b8f21c1a1b6cd567",
     "semantic_hash": "56f1437d18bec2e8b8f21c1a1b6cd567"
   },
-  "src/components/player/NowPlayingInfo/InfoSheet.tsx": {
-    "mtime": 1786611106.3909628,
-    "ast_hash": "3d7c7200b1b14c034a8516c335163254",
-    "semantic_hash": "3d7c7200b1b14c034a8516c335163254"
-  },
-  "src/components/player/NowPlayingInfo/TrackMetadata.tsx": {
-    "mtime": 1786610017.8276227,
-    "ast_hash": "4281ba28da7ffe102b809fd61efa746e",
-    "semantic_hash": "4281ba28da7ffe102b809fd61efa746e"
-  },
   "src/components/player/NowPlayingInfo/index.ts": {
-    "mtime": 1785138518.8342748,
-    "ast_hash": "b3d6189c40df41d5133c0cfd1de09ec4",
-    "semantic_hash": "b3d6189c40df41d5133c0cfd1de09ec4"
+    "mtime": 1787653344.699675,
+    "ast_hash": "f71bf20ad076f23cd1641ee97bdb7a7e",
+    "semantic_hash": ""
   },
   "src/components/player/PlaylistPreview/PlaylistPreviewSheet.tsx": {
     "mtime": 1786611123.9916189,
@@ -583,31 +553,6 @@
     "mtime": 1786611087.8774812,
     "ast_hash": "34f6865ffd7f8b18021c87c162313f7d",
     "semantic_hash": "34f6865ffd7f8b18021c87c162313f7d"
-  },
-  "src/components/player/ReplayButton/ReplayButton.tsx": {
-    "mtime": 1785772588.4625716,
-    "ast_hash": "87d14f723ab82ce08d50b168331c6801",
-    "semantic_hash": "87d14f723ab82ce08d50b168331c6801"
-  },
-  "src/components/player/SeekBar/SeekBar.tsx": {
-    "mtime": 1785832452.2582228,
-    "ast_hash": "7d570fafafef4eac860df94f93dc3b7d",
-    "semantic_hash": "7d570fafafef4eac860df94f93dc3b7d"
-  },
-  "src/components/player/SleepTimerSheet/SleepTimerSheet.tsx": {
-    "mtime": 1785501221.4853573,
-    "ast_hash": "bb75923dce7d4daa4da8dee503ea8621",
-    "semantic_hash": "bb75923dce7d4daa4da8dee503ea8621"
-  },
-  "src/components/player/VideoControlsOverlay/VideoControlsOverlay.tsx": {
-    "mtime": 1785503388.4081442,
-    "ast_hash": "778048fa8d40a3a2878f71c0bae45aad",
-    "semantic_hash": "778048fa8d40a3a2878f71c0bae45aad"
-  },
-  "src/components/player/VideoSeekBar/VideoSeekBar.tsx": {
-    "mtime": 1785350092.9973037,
-    "ast_hash": "773e3010765a7b9f1ea63ea91bb92cc3",
-    "semantic_hash": "773e3010765a7b9f1ea63ea91bb92cc3"
   },
   "src/components/playlist/PlaylistCard/PlaylistCard.tsx": {
     "mtime": 1787254133.4640906,
@@ -810,9 +755,9 @@
     "semantic_hash": "0244ca9a4471bf1fbf854a281550f462"
   },
   "src/contexts/TransportContext.tsx": {
-    "mtime": 1787464485.1622725,
-    "ast_hash": "945bddaf218c692cb5d2b3b821571a3a",
-    "semantic_hash": "945bddaf218c692cb5d2b3b821571a3a"
+    "mtime": 1787663769.3091805,
+    "ast_hash": "a2e79fe62f66e88ded81154ed0d3b597",
+    "semantic_hash": ""
   },
   "src/hooks/index.ts": {
     "mtime": 1786961863.250097,
@@ -940,9 +885,9 @@
     "semantic_hash": "b6accce4eb23bd32efeb81e95eb3e82c"
   },
   "src/native/NativeMpvPlayer.ts": {
-    "mtime": 1787580551.1728375,
-    "ast_hash": "6cfdfcee7ab5383a8e3a308500bd9b8d",
-    "semantic_hash": "6cfdfcee7ab5383a8e3a308500bd9b8d"
+    "mtime": 1787663556.4008598,
+    "ast_hash": "b8f3d27f8b9f79fa4d83c9614d32d66a",
+    "semantic_hash": ""
   },
   "src/native/index.ts": {
     "mtime": 1785137401.28553,
@@ -950,9 +895,9 @@
     "semantic_hash": "45cc7b0fb8168671202e15cf9ffb63d9"
   },
   "src/native/player.api.ts": {
-    "mtime": 1787580566.4381514,
-    "ast_hash": "a68b7c03fed77d5764683ebe2922404a",
-    "semantic_hash": "a68b7c03fed77d5764683ebe2922404a"
+    "mtime": 1787663755.7333386,
+    "ast_hash": "4552b9dd868242ba968ab73d215aa0ff",
+    "semantic_hash": ""
   },
   "src/navigation/HomeStack.tsx": {
     "mtime": 1787214468.767938,
@@ -1495,9 +1440,9 @@
     "semantic_hash": "61a78666e4142363ca43d00b34e23966"
   },
   "src/services/shareService.ts": {
-    "mtime": 1787310824.669686,
-    "ast_hash": "b84aeca8e33743f082db87b392cd0dc0",
-    "semantic_hash": "b84aeca8e33743f082db87b392cd0dc0"
+    "mtime": 1787657514.3135884,
+    "ast_hash": "891b1e5719bca07a16591bc94a0fea28",
+    "semantic_hash": ""
   },
   "src/services/storageService.ts": {
     "mtime": 1785412442.2261703,
@@ -1625,9 +1570,9 @@
     "semantic_hash": "9341f6d7be379322d816ed4d8cdcb4fb"
   },
   "src/utils/mediaUri.ts": {
-    "mtime": 1785779351.7476888,
-    "ast_hash": "34b7d1c6412f01f82aefeaab2329558d",
-    "semantic_hash": "34b7d1c6412f01f82aefeaab2329558d"
+    "mtime": 1787653371.0223842,
+    "ast_hash": "3d62c8ef72c16ba94aabe84b0575f392",
+    "semantic_hash": ""
   },
   "src/utils/orientation.ts": {
     "mtime": 1785779241.5763216,
@@ -1655,14 +1600,14 @@
     "semantic_hash": "c048546d184bed8202032a8bc9e5e4c9"
   },
   "android/app/src/main/cpp/native_state.cpp": {
-    "mtime": 1787646835.734571,
-    "ast_hash": "e95c442734117847df466643cc4f3f85",
-    "semantic_hash": "e95c442734117847df466643cc4f3f85"
+    "mtime": 1787659243.5422728,
+    "ast_hash": "d7f9997b88de8d9f8b7cbe73c0d1e7b9",
+    "semantic_hash": ""
   },
   "android/app/src/main/cpp/native_state.h": {
-    "mtime": 1787580959.1410284,
-    "ast_hash": "ac530f868fefd444f1d8bb0cfae28e44",
-    "semantic_hash": "ac530f868fefd444f1d8bb0cfae28e44"
+    "mtime": 1787659219.7991676,
+    "ast_hash": "48f23cd42706c1e96c1854b502a4cb09",
+    "semantic_hash": ""
   },
   "android/link-assets-manifest.json": {
     "mtime": 1786535503.3384514,
@@ -1809,16 +1754,6 @@
     "ast_hash": "49195c4985ef06f40193e28605ecfc48",
     "semantic_hash": "49195c4985ef06f40193e28605ecfc48"
   },
-  "src/components/player/VideoPlayerSettingsSheet/VideoPlayerSettingsSheet.tsx": {
-    "mtime": 1785823535.2252498,
-    "ast_hash": "e2b75cf0e20d2fc962a98936be603f31",
-    "semantic_hash": "e2b75cf0e20d2fc962a98936be603f31"
-  },
-  "src/components/player/VideoPlayerSettingsSheet/index.ts": {
-    "mtime": 1785823542.1505084,
-    "ast_hash": "be4762fe86ba44d6e3c2e772a161ac51",
-    "semantic_hash": "be4762fe86ba44d6e3c2e772a161ac51"
-  },
   "src/components/playlist/PlaylistManageModal/PlaylistManageModal.tsx": {
     "mtime": 1787255144.3364434,
     "ast_hash": "4935c182c2f8d0511cc47dd866cd6a85",
@@ -1950,424 +1885,34 @@
     "semantic_hash": "cd4a531161e28241d511d0ecfd650cde"
   },
   "src/modules/playback/PlaybackContext.tsx": {
-    "mtime": 1787465986.9486046,
-    "ast_hash": "3631b41c8f376756dbf9eb1b2f8c845c",
-    "semantic_hash": "3631b41c8f376756dbf9eb1b2f8c845c"
+    "mtime": 1787662389.0710573,
+    "ast_hash": "20e1a69c11b5f1d51aec344c80133ad4",
+    "semantic_hash": ""
   },
   "src/modules/playback/PlaybackOverlayHost.tsx": {
-    "mtime": 1787575616.4422512,
-    "ast_hash": "605e0002d0d5dae6b81fa5e9474bb6d3",
-    "semantic_hash": "605e0002d0d5dae6b81fa5e9474bb6d3"
+    "mtime": 1787662239.4542615,
+    "ast_hash": "36cbb68c17774a88361784e3a513e560",
+    "semantic_hash": ""
   },
   "src/modules/playback/audio/hooks/useAudioPlayerScreen.ts": {
-    "mtime": 1787470149.873701,
-    "ast_hash": "e91394e8ddb1b49e785fb926f63a540b",
-    "semantic_hash": "e91394e8ddb1b49e785fb926f63a540b"
+    "mtime": 1787666603.383651,
+    "ast_hash": "a0aed1a6dcd9079ad8e2efd2200cfb9f",
+    "semantic_hash": ""
   },
   "src/modules/playback/audio/rangeNormalization.ts": {
     "mtime": 1787463100.5791388,
     "ast_hash": "a5f476dbd0bdeafb4a9ff6807f1fe4d1",
     "semantic_hash": "a5f476dbd0bdeafb4a9ff6807f1fe4d1"
   },
-  "src/modules/playback/audio/v2/AudioV2ActionStrip.tsx": {
-    "mtime": 1787391682.408554,
-    "ast_hash": "0d77c12521d874124b881ecabe061f92",
-    "semantic_hash": "0d77c12521d874124b881ecabe061f92"
-  },
-  "src/modules/playback/audio/v2/AudioV2Artwork.tsx": {
-    "mtime": 1787391593.060644,
-    "ast_hash": "2da58231bd5c8bcb62961553aaf40b77",
-    "semantic_hash": "2da58231bd5c8bcb62961553aaf40b77"
-  },
-  "src/modules/playback/audio/v2/AudioV2Button.tsx": {
-    "mtime": 1787391511.7095456,
-    "ast_hash": "9d58ff409dc2272f10258f74b0dc6f85",
-    "semantic_hash": "9d58ff409dc2272f10258f74b0dc6f85"
-  },
-  "src/modules/playback/audio/v2/AudioV2Icon.tsx": {
-    "mtime": 1787470402.7301488,
-    "ast_hash": "949772a9c338d11006cc40c6ea7c9140",
-    "semantic_hash": "949772a9c338d11006cc40c6ea7c9140"
-  },
-  "src/modules/playback/audio/v2/AudioV2MiniProgress.tsx": {
-    "mtime": 1787468997.0581708,
-    "ast_hash": "1a5231b87a0ec150d85e26212981a9c5",
-    "semantic_hash": "1a5231b87a0ec150d85e26212981a9c5"
-  },
-  "src/modules/playback/audio/v2/AudioV2Module.tsx": {
-    "mtime": 1787469829.8159091,
-    "ast_hash": "f9aafabbeff92917da7e5be4379bcee6",
-    "semantic_hash": "f9aafabbeff92917da7e5be4379bcee6"
-  },
-  "src/modules/playback/audio/v2/AudioV2OutputControl.tsx": {
-    "mtime": 1787469111.420354,
-    "ast_hash": "b15b116913000fea814dfd6a958b3bc1",
-    "semantic_hash": "b15b116913000fea814dfd6a958b3bc1"
-  },
-  "src/modules/playback/audio/v2/AudioV2Player.tsx": {
-    "mtime": 1787470422.118217,
-    "ast_hash": "e46818415fb91f6d3b74229c2a732b8a",
-    "semantic_hash": "e46818415fb91f6d3b74229c2a732b8a"
-  },
-  "src/modules/playback/audio/v2/AudioV2PriorityActions.tsx": {
-    "mtime": 1787469030.731094,
-    "ast_hash": "bf70e9174f4407d3080e71e75683c8a5",
-    "semantic_hash": "bf70e9174f4407d3080e71e75683c8a5"
-  },
-  "src/modules/playback/audio/v2/AudioV2Progress.tsx": {
-    "mtime": 1787470130.5507143,
-    "ast_hash": "71bf5929cee63a51384d194bf524b718",
-    "semantic_hash": "71bf5929cee63a51384d194bf524b718"
-  },
-  "src/modules/playback/audio/v2/AudioV2TransportControls.tsx": {
-    "mtime": 1787467844.9804175,
-    "ast_hash": "ed8326aff74594bee6953fdaf9fbd02b",
-    "semantic_hash": "ed8326aff74594bee6953fdaf9fbd02b"
-  },
-  "src/modules/playback/audio/v2/AudioV2Types.ts": {
-    "mtime": 1787464503.7812586,
-    "ast_hash": "38845c5de3985dec66cbccbb493c0c1e",
-    "semantic_hash": "38845c5de3985dec66cbccbb493c0c1e"
-  },
-  "src/modules/playback/audio/v2/MiniAudioV2.tsx": {
-    "mtime": 1787469061.919033,
-    "ast_hash": "d591f1f256657233dc1ada89579931cf",
-    "semantic_hash": "d591f1f256657233dc1ada89579931cf"
-  },
-  "src/modules/playback/audio/v2/index.tsx": {
-    "mtime": 1787392966.3313222,
-    "ast_hash": "27f7295db3960be625c09ce1bab65941",
-    "semantic_hash": "27f7295db3960be625c09ce1bab65941"
-  },
   "src/modules/playback/index.ts": {
-    "mtime": 1787558545.2892244,
-    "ast_hash": "75f9d26b16d320c8d517be4edd7ef20a",
-    "semantic_hash": "75f9d26b16d320c8d517be4edd7ef20a"
+    "mtime": 1787653343.033369,
+    "ast_hash": "e8a7fd43ae22f68c472b7471959b8e93",
+    "semantic_hash": ""
   },
   "src/modules/playback/types.ts": {
-    "mtime": 1787260886.0932927,
-    "ast_hash": "281abdebe127d5443ad3b1d303d4d110",
-    "semantic_hash": "281abdebe127d5443ad3b1d303d4d110"
-  },
-  "src/modules/playback/video/VideoPlayerModule.tsx": {
-    "mtime": 1787260831.0498762,
-    "ast_hash": "446f17253c6a3a1f4340f2aafc3135d0",
-    "semantic_hash": "446f17253c6a3a1f4340f2aafc3135d0"
-  },
-  "src/modules/playback/video/components/PrimaryControls.tsx": {
-    "mtime": 1787305716.1303432,
-    "ast_hash": "f2e5a3eb1fa905a3bfbbb5eb21a9f917",
-    "semantic_hash": "f2e5a3eb1fa905a3bfbbb5eb21a9f917"
-  },
-  "src/modules/playback/video/components/SecondaryToolbar.tsx": {
-    "mtime": 1787304929.4924333,
-    "ast_hash": "c17b90bb5b2f12f7fb113ea607b2f60c",
-    "semantic_hash": "c17b90bb5b2f12f7fb113ea607b2f60c"
-  },
-  "src/modules/playback/video/components/SeekFeedbackOverlay.tsx": {
-    "mtime": 1787305168.696043,
-    "ast_hash": "23a31d4ef1cb2e5882c29c5141925ea6",
-    "semantic_hash": "23a31d4ef1cb2e5882c29c5141925ea6"
-  },
-  "src/modules/playback/video/components/VideoPlayerAudioPanel.tsx": {
-    "mtime": 1787260295.8084009,
-    "ast_hash": "0d241c3c4fd03d2d96c16f1c0c83d1f2",
-    "semantic_hash": "0d241c3c4fd03d2d96c16f1c0c83d1f2"
-  },
-  "src/modules/playback/video/components/VideoPlayerAutoAdvanceCard.tsx": {
-    "mtime": 1787305242.1742175,
-    "ast_hash": "640a7d2e60ec2e3f33fa60b29f21a2a9",
-    "semantic_hash": "640a7d2e60ec2e3f33fa60b29f21a2a9"
-  },
-  "src/modules/playback/video/components/VideoPlayerEqualizerPanel.tsx": {
-    "mtime": 1787260295.8120096,
-    "ast_hash": "1320acf50e0f310fb87c2393f5177437",
-    "semantic_hash": "1320acf50e0f310fb87c2393f5177437"
-  },
-  "src/modules/playback/video/components/VideoPlayerGestureLayer.tsx": {
-    "mtime": 1787260295.8135364,
-    "ast_hash": "5b7b3ef3560f4a1e28edfaf7efe774f2",
-    "semantic_hash": "5b7b3ef3560f4a1e28edfaf7efe774f2"
-  },
-  "src/modules/playback/video/components/VideoPlayerLoadingOverlay.tsx": {
-    "mtime": 1787305382.6705954,
-    "ast_hash": "95ce6e86b19a3da79b9a099fc25d97b8",
-    "semantic_hash": "95ce6e86b19a3da79b9a099fc25d97b8"
-  },
-  "src/modules/playback/video/components/VideoPlayerPlaylistPanel.tsx": {
-    "mtime": 1787260295.8176339,
-    "ast_hash": "f40cabf69caf56c4f1d327b7a67d2455",
-    "semantic_hash": "f40cabf69caf56c4f1d327b7a67d2455"
-  },
-  "src/modules/playback/video/components/VideoPlayerResumeOverlay.tsx": {
-    "mtime": 1787305299.8233657,
-    "ast_hash": "6cb4553b760fb06062f3d46dc5efb6a4",
-    "semantic_hash": "6cb4553b760fb06062f3d46dc5efb6a4"
-  },
-  "src/modules/playback/video/components/VideoPlayerSpeedPanel.tsx": {
-    "mtime": 1787260295.820179,
-    "ast_hash": "1484ccac865718eb81d6d674a2aedce2",
-    "semantic_hash": "1484ccac865718eb81d6d674a2aedce2"
-  },
-  "src/modules/playback/video/components/VideoPlayerSubtitlePanel.tsx": {
-    "mtime": 1787260295.8217041,
-    "ast_hash": "099c6715d8aaa1559665fefd4fdfef87",
-    "semantic_hash": "099c6715d8aaa1559665fefd4fdfef87"
-  },
-  "src/modules/playback/video/components/VideoPlayerSurfaceLayer.tsx": {
-    "mtime": 1787260295.822717,
-    "ast_hash": "4b62c8c344767120dabe2894c640e91f",
-    "semantic_hash": "4b62c8c344767120dabe2894c640e91f"
-  },
-  "src/modules/playback/video/components/VideoPlayerTopBar.tsx": {
-    "mtime": 1787304988.0600781,
-    "ast_hash": "5c13cbe221dbc36b2286f910ed01d75a",
-    "semantic_hash": "5c13cbe221dbc36b2286f910ed01d75a"
-  },
-  "src/modules/playback/video/components/VideoPlayerVideoSurface.tsx": {
-    "mtime": 1787305436.815195,
-    "ast_hash": "9f00328ea71dde1dde0dd6dd104326d8",
-    "semantic_hash": "9f00328ea71dde1dde0dd6dd104326d8"
-  },
-  "src/modules/playback/video/components/VideoPlayerVolumePanel.tsx": {
-    "mtime": 1787260295.8412168,
-    "ast_hash": "f81691151510daeec960a8ba51f68f2d",
-    "semantic_hash": "f81691151510daeec960a8ba51f68f2d"
-  },
-  "src/modules/playback/video/components/VolumeBrightnessOverlay.tsx": {
-    "mtime": 1787305499.402087,
-    "ast_hash": "5b360595836d711a9d635b442afced04",
-    "semantic_hash": "5b360595836d711a9d635b442afced04"
-  },
-  "src/modules/playback/video/hooks/useVideoPlayerScreen.ts": {
-    "mtime": 1787567587.4390376,
-    "ast_hash": "a6933b3c10918267b0104e1bba25f747",
-    "semantic_hash": "a6933b3c10918267b0104e1bba25f747"
-  },
-  "src/modules/playback/video/textContent.ts": {
-    "mtime": 1785349432.956837,
-    "ast_hash": "23c4dc87557ce5e8fe67f1362855c37c",
-    "semantic_hash": "23c4dc87557ce5e8fe67f1362855c37c"
-  },
-  "src/modules/playback/video/ui/VideoPlayer.tsx": {
-    "mtime": 1787305674.2656853,
-    "ast_hash": "0b8be0053416ef8f3e810610e701c9ce",
-    "semantic_hash": "0b8be0053416ef8f3e810610e701c9ce"
-  },
-  "src/modules/playback/video/v2/MiniVideoV2.tsx": {
-    "mtime": 1787565584.2773738,
-    "ast_hash": "52940c06d19d2a0db1f0cd21c0d36813",
-    "semantic_hash": "52940c06d19d2a0db1f0cd21c0d36813"
-  },
-  "src/modules/playback/video/v2/VideoV2Button.tsx": {
-    "mtime": 1787556503.3552272,
-    "ast_hash": "5fefc76c860a273cf209a6c1d26044d4",
-    "semantic_hash": "5fefc76c860a273cf209a6c1d26044d4"
-  },
-  "src/modules/playback/video/v2/VideoV2ContextSheet.tsx": {
-    "mtime": 1787562455.5169895,
-    "ast_hash": "26bc7fa42e9e2dfb7a9eb955c496eb99",
-    "semantic_hash": "26bc7fa42e9e2dfb7a9eb955c496eb99"
-  },
-  "src/modules/playback/video/v2/VideoV2Controls.tsx": {
-    "mtime": 1787569508.1567144,
-    "ast_hash": "79c3a77bb8257b384f9d3615130faed8",
-    "semantic_hash": "79c3a77bb8257b384f9d3615130faed8"
-  },
-  "src/modules/playback/video/v2/VideoV2Icon.tsx": {
-    "mtime": 1787561374.7973852,
-    "ast_hash": "5621870b33f305fcd993ad0f13b68d44",
-    "semantic_hash": "5621870b33f305fcd993ad0f13b68d44"
-  },
-  "src/modules/playback/video/v2/VideoV2Module.tsx": {
-    "mtime": 1787569305.7042985,
-    "ast_hash": "4eade8c0a929a1d132dfbd62b1f0e7a4",
-    "semantic_hash": "4eade8c0a929a1d132dfbd62b1f0e7a4"
-  },
-  "src/modules/playback/video/v2/VideoV2MoreSheet.tsx": {
-    "mtime": 1787562435.3723855,
-    "ast_hash": "18290838ae979166b60e0633fc46b417",
-    "semantic_hash": "18290838ae979166b60e0633fc46b417"
-  },
-  "src/modules/playback/video/v2/VideoV2Player.tsx": {
-    "mtime": 1787569486.771034,
-    "ast_hash": "9cadbd65f377dcb0ff56ca61abde702d",
-    "semantic_hash": "9cadbd65f377dcb0ff56ca61abde702d"
-  },
-  "src/modules/playback/video/v2/VideoV2PlaylistSheet.tsx": {
-    "mtime": 1787562477.714558,
-    "ast_hash": "f1cdb4ecb39b87fe92e49171d26727a6",
-    "semantic_hash": "f1cdb4ecb39b87fe92e49171d26727a6"
-  },
-  "src/modules/playback/video/v2/VideoV2SeekBar.tsx": {
-    "mtime": 1787560978.5562735,
-    "ast_hash": "7bc2a288a3ececf3c9e09f91fe232e39",
-    "semantic_hash": "7bc2a288a3ececf3c9e09f91fe232e39"
-  },
-  "src/modules/playback/video/v2/VideoV2Surface.tsx": {
-    "mtime": 1787565537.7131164,
-    "ast_hash": "ba9aa38bab8c3f4310628911e00f6863",
-    "semantic_hash": "ba9aa38bab8c3f4310628911e00f6863"
-  },
-  "src/modules/playback/video/v2/VideoV2Types.ts": {
-    "mtime": 1787561787.0431955,
-    "ast_hash": "3882daa9d6d9bb481d73ea05c15d0d94",
-    "semantic_hash": "3882daa9d6d9bb481d73ea05c15d0d94"
-  },
-  "src/modules/playback/video/v2/VideoV2VolumeControl.tsx": {
-    "mtime": 1787562200.8003733,
-    "ast_hash": "ef25006d97c236ccc5e1be85be5977d9",
-    "semantic_hash": "ef25006d97c236ccc5e1be85be5977d9"
-  },
-  "src/modules/playback/video/v2/index.ts": {
-    "mtime": 1787556868.3406305,
-    "ast_hash": "ed3fac4fa3bcdbe5de217f73171060db",
-    "semantic_hash": "ed3fac4fa3bcdbe5de217f73171060db"
-  },
-  "src/modules/playback/video/v2/useVideoV2Controller.ts": {
-    "mtime": 1787561812.1828866,
-    "ast_hash": "a99f53c9319a0c692ddf9715c4aa898f",
-    "semantic_hash": "a99f53c9319a0c692ddf9715c4aa898f"
-  },
-  "src/modules/playback/video/v3/controller/VideoV3IntentController.ts": {
-    "mtime": 1787572489.5687225,
-    "ast_hash": "d39d1445c3386f9ad334833fdac7c200",
-    "semantic_hash": "d39d1445c3386f9ad334833fdac7c200"
-  },
-  "src/modules/playback/video/v3/controller/VideoV3SeekCoordinator.ts": {
-    "mtime": 1787572334.3351026,
-    "ast_hash": "b35abfe55c60237f753daf017f6a3ef8",
-    "semantic_hash": "b35abfe55c60237f753daf017f6a3ef8"
-  },
-  "src/modules/playback/video/v3/domain/VideoV3BufferPolicy.ts": {
-    "mtime": 1787574104.9478154,
-    "ast_hash": "798d33ac050ae1868252083923dca591",
-    "semantic_hash": "798d33ac050ae1868252083923dca591"
-  },
-  "src/modules/playback/video/v3/domain/VideoV3Fingerprint.ts": {
-    "mtime": 1787570595.1805353,
-    "ast_hash": "0cdff4029639eca41f5a9e25950526f5",
-    "semantic_hash": "0cdff4029639eca41f5a9e25950526f5"
-  },
-  "src/modules/playback/video/v3/domain/VideoV3Types.ts": {
-    "mtime": 1787571453.738963,
-    "ast_hash": "27b45ee3ed45bf89cad3d8ce164acb31",
-    "semantic_hash": "27b45ee3ed45bf89cad3d8ce164acb31"
-  },
-  "src/modules/playback/video/v3/host/VideoV3Host.tsx": {
-    "mtime": 1787647942.9503896,
-    "ast_hash": "cc4e5ac9d4a4bc5b800f02b10b7db540",
-    "semantic_hash": "cc4e5ac9d4a4bc5b800f02b10b7db540"
-  },
-  "src/modules/playback/video/v3/index.ts": {
-    "mtime": 1787577859.7328935,
-    "ast_hash": "4f32f9a80f53af3c33ec54a606ce685f",
-    "semantic_hash": "4f32f9a80f53af3c33ec54a606ce685f"
-  },
-  "src/modules/playback/video/v3/infrastructure/VideoV3PlatformCapabilities.ts": {
-    "mtime": 1787577877.8010416,
-    "ast_hash": "31ea33b6caa837b1c2898b98ae5d3281",
-    "semantic_hash": "31ea33b6caa837b1c2898b98ae5d3281"
-  },
-  "src/modules/playback/video/v3/loading/VideoV3FirstFrameLoading.tsx": {
-    "mtime": 1787575456.9290595,
-    "ast_hash": "ec713712a2cd7a5482bf5b0714e56fc1",
-    "semantic_hash": "ec713712a2cd7a5482bf5b0714e56fc1"
-  },
-  "src/modules/playback/video/v3/platform/VideoV3PipAdapter.ts": {
-    "mtime": 1787577773.8399136,
-    "ast_hash": "54f4de856df296de793926b41e67e6c9",
-    "semantic_hash": "54f4de856df296de793926b41e67e6c9"
-  },
-  "src/modules/playback/video/v3/ports/VideoV3Commands.ts": {
-    "mtime": 1787571545.6054237,
-    "ast_hash": "cea3a18fb181129efc89833ab4e03e21",
-    "semantic_hash": "cea3a18fb181129efc89833ab4e03e21"
-  },
-  "src/modules/playback/video/v3/ports/VideoV3SessionPort.ts": {
-    "mtime": 1787580590.6827323,
-    "ast_hash": "0dc5c2b016dd069c4675bf69c20f5774",
-    "semantic_hash": "0dc5c2b016dd069c4675bf69c20f5774"
-  },
-  "src/modules/playback/video/v3/ports/VideoV3SurfacePort.ts": {
-    "mtime": 1787570885.9726675,
-    "ast_hash": "a735a337bd43abd068855f55197eef08",
-    "semantic_hash": "a735a337bd43abd068855f55197eef08"
-  },
-  "src/modules/playback/video/v3/presentation/VideoV3ControlButton.tsx": {
-    "mtime": 1787574812.2002,
-    "ast_hash": "e06598463cb9a2f29f5e2bb65f93c1be",
-    "semantic_hash": "e06598463cb9a2f29f5e2bb65f93c1be"
-  },
-  "src/modules/playback/video/v3/presentation/VideoV3ControlLayer.tsx": {
-    "mtime": 1787574848.2204483,
-    "ast_hash": "1f6f85471a66c3d52db7850b25111502",
-    "semantic_hash": "1f6f85471a66c3d52db7850b25111502"
-  },
-  "src/modules/playback/video/v3/presentation/VideoV3Icon.tsx": {
-    "mtime": 1787574829.9209507,
-    "ast_hash": "012c6b5c9e424844c07f455a48502f96",
-    "semantic_hash": "012c6b5c9e424844c07f455a48502f96"
-  },
-  "src/modules/playback/video/v3/presentation/VideoV3PresentationShell.tsx": {
-    "mtime": 1787578014.7724526,
-    "ast_hash": "cef7c31fbf86b796764137ed6920951d",
-    "semantic_hash": "cef7c31fbf86b796764137ed6920951d"
-  },
-  "src/modules/playback/video/v3/presentation/VideoV3PresentationTypes.ts": {
-    "mtime": 1787574139.2031157,
-    "ast_hash": "c9b84b538bad044ee4cb32566650c63a",
-    "semantic_hash": "c9b84b538bad044ee4cb32566650c63a"
-  },
-  "src/modules/playback/video/v3/presentation/VideoV3ProgressRail.tsx": {
-    "mtime": 1787574865.1300902,
-    "ast_hash": "a178ce455440af048ebe7a17ea71f00a",
-    "semantic_hash": "a178ce455440af048ebe7a17ea71f00a"
-  },
-  "src/modules/playback/video/v3/presentation/VideoV3SafeControlLayer.tsx": {
-    "mtime": 1787574483.514563,
-    "ast_hash": "8c42822a836bb56e2b033e79122981c9",
-    "semantic_hash": "8c42822a836bb56e2b033e79122981c9"
-  },
-  "src/modules/playback/video/v3/presentation/useVideoV3PresentationGeometry.ts": {
-    "mtime": 1787574352.5177453,
-    "ast_hash": "d3f50114d0cd1dddcab996998b5c20c5",
-    "semantic_hash": "d3f50114d0cd1dddcab996998b5c20c5"
-  },
-  "src/modules/playback/video/v3/session/VideoV3MpvSession.ts": {
-    "mtime": 1787580614.232047,
-    "ast_hash": "51b5497495c9d0f6959b582ada18c21d",
-    "semantic_hash": "51b5497495c9d0f6959b582ada18c21d"
-  },
-  "src/modules/playback/video/v3/session/createVideoV3Playback.ts": {
-    "mtime": 1787577900.4391248,
-    "ast_hash": "a5fb05d9037534a15c849434064f1bac",
-    "semantic_hash": "a5fb05d9037534a15c849434064f1bac"
-  },
-  "src/modules/playback/video/v3/state/VideoV3NativeStateSynchronizer.ts": {
-    "mtime": 1787571792.426453,
-    "ast_hash": "47fe8efe4f6063548b56ab8131cee613",
-    "semantic_hash": "47fe8efe4f6063548b56ab8131cee613"
-  },
-  "src/modules/playback/video/v3/state/VideoV3StateAdapter.ts": {
-    "mtime": 1787571621.527821,
-    "ast_hash": "553105108a432a2d08a92746cfd0a910",
-    "semantic_hash": "553105108a432a2d08a92746cfd0a910"
-  },
-  "src/modules/playback/video/v3/state/reduceVideoV3SessionEvent.ts": {
-    "mtime": 1787571600.6510394,
-    "ast_hash": "cca99b48ce657b17a92c5f6447bc0ecb",
-    "semantic_hash": "cca99b48ce657b17a92c5f6447bc0ecb"
-  },
-  "src/modules/playback/video/v3/surface/VideoV3NativeSurface.tsx": {
-    "mtime": 1787647921.3095279,
-    "ast_hash": "03a330f9979dcac32513306ea661e6fe",
-    "semantic_hash": "03a330f9979dcac32513306ea661e6fe"
-  },
-  "src/modules/playback/video/v3/surface/VideoV3SurfaceController.ts": {
-    "mtime": 1787572440.6022446,
-    "ast_hash": "c7a4cf531ed8df62df9bbc1351aad1ff",
-    "semantic_hash": "c7a4cf531ed8df62df9bbc1351aad1ff"
+    "mtime": 1787662402.3485305,
+    "ast_hash": "a5e314743e4f6ed4fd43d68969f2570b",
+    "semantic_hash": ""
   },
   "src/screens/About/components/AboutScreen.tsx": {
     "mtime": 1787311815.3629003,
@@ -2395,9 +1940,9 @@
     "semantic_hash": "f8c4bf58434f64c0cb1b70c46ec1d91a"
   },
   "src/screens/Album/hooks/useAlbumScreen.ts": {
-    "mtime": 1787308104.526817,
-    "ast_hash": "8a6eb10f9b14762bf924df617e555a53",
-    "semantic_hash": "8a6eb10f9b14762bf924df617e555a53"
+    "mtime": 1787658067.4909286,
+    "ast_hash": "0dafe197cbb64569f7b10ba02876622a",
+    "semantic_hash": ""
   },
   "src/screens/Album/index.tsx": {
     "mtime": 1787308120.9736295,
@@ -2415,9 +1960,9 @@
     "semantic_hash": "f6c5964bfc16f2580e3a244380d4ede1"
   },
   "src/screens/AllAudio/hooks/useAllAudioScreen.ts": {
-    "mtime": 1787311754.435214,
-    "ast_hash": "a74b589a963f2dcb2d5d626661b0d2cd",
-    "semantic_hash": "a74b589a963f2dcb2d5d626661b0d2cd"
+    "mtime": 1787657016.0795639,
+    "ast_hash": "dceffcfb078b2e9a71bb867583ccd8c5",
+    "semantic_hash": ""
   },
   "src/screens/AllAudio/index.tsx": {
     "mtime": 1787311754.4451928,
@@ -2455,9 +2000,9 @@
     "semantic_hash": "486aa27a3445ff5f7afedeb165ce55bd"
   },
   "src/screens/AllVideos/hooks/useAllVideosScreen.ts": {
-    "mtime": 1787311754.4553435,
-    "ast_hash": "ac859fe7d6f849788a1c27622b02a3cc",
-    "semantic_hash": "ac859fe7d6f849788a1c27622b02a3cc"
+    "mtime": 1787657033.4190054,
+    "ast_hash": "fa26f3ea379afe5babd473b6b33b0418",
+    "semantic_hash": ""
   },
   "src/screens/AllVideos/index.tsx": {
     "mtime": 1787311754.4563577,
@@ -2470,9 +2015,9 @@
     "semantic_hash": "0581e7d91a0ab329445ba55cdba8f033"
   },
   "src/screens/ArchiveItemDetailScreen/components/ArchiveItemDetailScreen.tsx": {
-    "mtime": 1787309266.3803947,
-    "ast_hash": "f830999520b59264fa3433f11d38fd0a",
-    "semantic_hash": "f830999520b59264fa3433f11d38fd0a"
+    "mtime": 1787658100.5583706,
+    "ast_hash": "19e54cab0d68cfe5507e015871188895",
+    "semantic_hash": ""
   },
   "src/screens/ArchiveItemDetailScreen/index.tsx": {
     "mtime": 1787309266.384026,
@@ -2520,9 +2065,9 @@
     "semantic_hash": "1e904c25353b2362532e1fa768f13399"
   },
   "src/screens/Artist/hooks/useArtistScreen.ts": {
-    "mtime": 1787308281.9380858,
-    "ast_hash": "e53f2d3cfb6112237dca282dbeef811e",
-    "semantic_hash": "e53f2d3cfb6112237dca282dbeef811e"
+    "mtime": 1787658082.7845726,
+    "ast_hash": "238259a0750958e44d770e9a620bcb6e",
+    "semantic_hash": ""
   },
   "src/screens/Artist/index.tsx": {
     "mtime": 1787308298.995237,
@@ -2555,9 +2100,9 @@
     "semantic_hash": "2074b36296c00dd75d6cf9160c1cfc94"
   },
   "src/screens/AudiobookDetailScreen/components/AudiobookDetailScreen.tsx": {
-    "mtime": 1787309266.38613,
-    "ast_hash": "dbaec7bc3f5edfa330e529f179080add",
-    "semantic_hash": "dbaec7bc3f5edfa330e529f179080add"
+    "mtime": 1787658116.1380992,
+    "ast_hash": "d31f9e6599a6abddca6f48b725639e29",
+    "semantic_hash": ""
   },
   "src/screens/AudiobookDetailScreen/index.tsx": {
     "mtime": 1787309266.3919356,
@@ -2670,9 +2215,9 @@
     "semantic_hash": "ba013160451841c01dedbeb9da30b9f3"
   },
   "src/screens/Equalizer/index.tsx": {
-    "mtime": 1787262110.3518603,
-    "ast_hash": "acfa0fe44c98e79b7edde4d43ad7dcaf",
-    "semantic_hash": "acfa0fe44c98e79b7edde4d43ad7dcaf"
+    "mtime": 1787653344.2847412,
+    "ast_hash": "e25a9a6a7292de8d254c97de64b5b260",
+    "semantic_hash": ""
   },
   "src/screens/FolderBrowser/components/FolderBrowserScreen.tsx": {
     "mtime": 1787311375.7183633,
@@ -2715,9 +2260,9 @@
     "semantic_hash": "a8488fd39a9ffb8310b73b7b5eff6a98"
   },
   "src/screens/Genre/hooks/useGenreScreen.ts": {
-    "mtime": 1787308483.6339262,
-    "ast_hash": "95c0d5c01952138d4628098daf4f37ba",
-    "semantic_hash": "95c0d5c01952138d4628098daf4f37ba"
+    "mtime": 1787657139.6240203,
+    "ast_hash": "3e17d60dafe42d4a486668a03c6d60f9",
+    "semantic_hash": ""
   },
   "src/screens/Genre/index.tsx": {
     "mtime": 1787308523.3965516,
@@ -2910,14 +2455,14 @@
     "semantic_hash": "05f548db4fda7c4fa6d0d9834d5d6b93"
   },
   "src/screens/LiveTVScreenNew/components/LiveTVContent.tsx": {
-    "mtime": 1787261644.09883,
-    "ast_hash": "9849e5a2716e9c8b1d4e605cb5bf3db4",
-    "semantic_hash": "9849e5a2716e9c8b1d4e605cb5bf3db4"
+    "mtime": 1787657439.6937332,
+    "ast_hash": "b815ea932cd3b00510a5c739a8a51bd0",
+    "semantic_hash": ""
   },
   "src/screens/LiveTVScreenNew/components/LiveTVFavoritesScreen.tsx": {
-    "mtime": 1787312911.0097935,
-    "ast_hash": "485454584b017a21bdf9439c91e7dd7e",
-    "semantic_hash": "485454584b017a21bdf9439c91e7dd7e"
+    "mtime": 1787658149.0233486,
+    "ast_hash": "b1f217931e6f0ebe412bda414ec83f4a",
+    "semantic_hash": ""
   },
   "src/screens/LiveTVScreenNew/hooks/useLiveTVBrowser.ts": {
     "mtime": 1786955218.999438,
@@ -2940,9 +2485,9 @@
     "semantic_hash": "48bd8858f7e8c30490bf02417ea97c3c"
   },
   "src/screens/LiveTVScreen/components/LiveTVScreen.tsx": {
-    "mtime": 1787313439.501856,
-    "ast_hash": "64d9d9f8cf5e61024c9d93c806b7a34f",
-    "semantic_hash": "64d9d9f8cf5e61024c9d93c806b7a34f"
+    "mtime": 1787658131.9639523,
+    "ast_hash": "57e98319a02031006c770e101e91aa3f",
+    "semantic_hash": ""
   },
   "src/screens/LiveTVScreen/index.tsx": {
     "mtime": 1787313454.5050595,
@@ -3455,9 +3000,9 @@
     "semantic_hash": "4800662b135ae89b562ccabaa1576b32"
   },
   "src/screens/RadioScreenNew/components/RadioFavoritesScreen.tsx": {
-    "mtime": 1787312911.004177,
-    "ast_hash": "6090cd41e8703eef300a18f11c2a57f7",
-    "semantic_hash": "6090cd41e8703eef300a18f11c2a57f7"
+    "mtime": 1787658163.925558,
+    "ast_hash": "e1495b726dcd088f497576bc9b301f96",
+    "semantic_hash": ""
   },
   "src/screens/RadioScreenNew/components/RadioStationCard.tsx": {
     "mtime": 1786954338.291384,
@@ -3844,11 +3389,6 @@
     "ast_hash": "32c3a9d40b31b8cb3a5ee341a5ad6a80",
     "semantic_hash": "32c3a9d40b31b8cb3a5ee341a5ad6a80"
   },
-  "src/modules/playback/video/v3/README.md": {
-    "mtime": 1787570967.7846477,
-    "ast_hash": "14b5cdba1371909758483407ddaf67a4",
-    "semantic_hash": "14b5cdba1371909758483407ddaf67a4"
-  },
   "v11_audio_playback_buffering_blueprint.md": {
     "mtime": 1787401026.1811347,
     "ast_hash": "d0f24687e938d9f68ab114437aa1aa13",
@@ -3933,5 +3473,245 @@
     "mtime": 1787649433.2580366,
     "ast_hash": "48edc78ce4dde974c1212afaa6fa4c4d",
     "semantic_hash": "48edc78ce4dde974c1212afaa6fa4c4d"
+  },
+  "src/components/player/VideoPlayerEqualizerPanel/VideoPlayerEqualizerPanel.tsx": {
+    "mtime": 1787654132.3448665,
+    "ast_hash": "d6c78df7424851d493ab2072f7275958",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioActionStrip.tsx": {
+    "mtime": 1787653781.831436,
+    "ast_hash": "e28b10436065ef83bd01aa6294f0e27f",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioArtwork.tsx": {
+    "mtime": 1787653302.2025728,
+    "ast_hash": "3c35c2b868a3375a1d4f1626516724ef",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioButton.tsx": {
+    "mtime": 1787653781.83904,
+    "ast_hash": "f9bf37c114fdafb968eefea98d1d34ec",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioIcon.tsx": {
+    "mtime": 1787653302.20769,
+    "ast_hash": "0c2e2e72c4538519094db70cd6bf54ba",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioMiniProgress.tsx": {
+    "mtime": 1787653302.2096891,
+    "ast_hash": "472ea92008f0480226b12d46d492c8d3",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioModule.tsx": {
+    "mtime": 1787665947.0813732,
+    "ast_hash": "512b2b4a8afb52c391324948103f5934",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioOutputControl.tsx": {
+    "mtime": 1787653781.8426218,
+    "ast_hash": "9606b85053897adfab338d99fd482636",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioPlaybackControllerContext.tsx": {
+    "mtime": 1787662613.5544481,
+    "ast_hash": "34359ba4e00d90f57a6a884531f9d796",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioPlayer.tsx": {
+    "mtime": 1787653781.8441427,
+    "ast_hash": "a540640b17a7dbb31d81a55dabc06db7",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioPriorityActions.tsx": {
+    "mtime": 1787653781.8456528,
+    "ast_hash": "48de96b845f54c00c7bfb1d8612a640e",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioProgress.tsx": {
+    "mtime": 1787653639.405047,
+    "ast_hash": "38329c14f621aeab28e553ab98e8a9d6",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioTransportControls.tsx": {
+    "mtime": 1787653781.8462586,
+    "ast_hash": "38bc1569c0c30455240dc3147679dcd7",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/AudioTypes.ts": {
+    "mtime": 1787653639.4075975,
+    "ast_hash": "584d7eb6dcf40ecc66bd8ec68236d7ed",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/MiniAudio.tsx": {
+    "mtime": 1787662723.9889624,
+    "ast_hash": "030104d63c0e7d38d7076ab66b0ca808",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/audio/index.tsx": {
+    "mtime": 1787653998.2886522,
+    "ast_hash": "2a900d102924f6e36c5134fa6a507993",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/controller/VideoIntentController.ts": {
+    "mtime": 1787656828.7665346,
+    "ast_hash": "b97493632a639ca9fc69e5621ea535a3",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/controller/VideoSeekCoordinator.ts": {
+    "mtime": 1787653302.1416266,
+    "ast_hash": "c3607f69d67a6693a0008a9d785f8f34",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/domain/VideoBufferPolicy.ts": {
+    "mtime": 1787653973.0407314,
+    "ast_hash": "ea169dc447cdbb9c83fa5bc5ece604c9",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/domain/VideoFingerprint.ts": {
+    "mtime": 1787653973.0422692,
+    "ast_hash": "767cfb1a065e8bf6f5256c8840dc44ca",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/domain/VideoTypes.ts": {
+    "mtime": 1787653639.3641346,
+    "ast_hash": "5aa9de375593b7b8f1c042e6d8ce9058",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/host/VideoHost.tsx": {
+    "mtime": 1787666290.0872192,
+    "ast_hash": "6d104c712a70967c1188ca4c6f03709f",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/index.ts": {
+    "mtime": 1787653302.1511278,
+    "ast_hash": "7685428425d69daa7afebbd4d23eaedb",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/infrastructure/VideoPlatformCapabilities.ts": {
+    "mtime": 1787653973.0448222,
+    "ast_hash": "1343b3b20a13bbfa1b9c528ca3ba8cf5",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/loading/VideoFirstFrameLoading.tsx": {
+    "mtime": 1787666253.3530252,
+    "ast_hash": "c82ea97b066f6c78e9732ef23a491b1b",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/platform/VideoPipAdapter.ts": {
+    "mtime": 1787666332.7371223,
+    "ast_hash": "059324285b1958e6820401518be6c6ca",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/ports/VideoCommands.ts": {
+    "mtime": 1787653973.047887,
+    "ast_hash": "6d408953452ae7eb42b0eff47b1148c8",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/ports/VideoSessionPort.ts": {
+    "mtime": 1787653302.1623344,
+    "ast_hash": "df8e946f1cb2abbd7d9ce8cb051afba6",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/ports/VideoSurfacePort.ts": {
+    "mtime": 1787653302.1623344,
+    "ast_hash": "917f48589cb071d9ba1a939158a6de9f",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/presentation/VideoControlButton.tsx": {
+    "mtime": 1787653973.0493977,
+    "ast_hash": "70cb310b79da88ad7b82e42f291341b7",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/presentation/VideoControlLayer.tsx": {
+    "mtime": 1787653973.0493977,
+    "ast_hash": "e9d58997a16bcc6b636f883a3dbecbf8",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/presentation/VideoIcon.tsx": {
+    "mtime": 1787653639.3804119,
+    "ast_hash": "d3527df488da873d0000da71e100628c",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/presentation/VideoPresentationShell.tsx": {
+    "mtime": 1787653973.0514746,
+    "ast_hash": "1d0652614295aaf21b6dbabac7bcf451",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/presentation/VideoPresentationTypes.ts": {
+    "mtime": 1787653973.0535219,
+    "ast_hash": "2ac6843fe5d6f02fc82b6079ef83c8ac",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/presentation/VideoProgressRail.tsx": {
+    "mtime": 1787653973.055566,
+    "ast_hash": "e6011abed56e1158b7fdcf7f57b03326",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/presentation/VideoSafeControlLayer.tsx": {
+    "mtime": 1787653973.0571115,
+    "ast_hash": "62af69c97012ca992630337116a4d5c6",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/presentation/useVideoPresentationGeometry.ts": {
+    "mtime": 1787653302.1664236,
+    "ast_hash": "80532ebd8a24186bf822846ec4ffc65c",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/session/VideoMpvSession.ts": {
+    "mtime": 1787666230.1268408,
+    "ast_hash": "d3cf4d5e4ea6d3aecca4f8ba6e0ba11a",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/session/VideoNativeLease.ts": {
+    "mtime": 1787656751.6913383,
+    "ast_hash": "8b62c0b68ebfdb89ea2584ea07719d26",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/session/createVideoPlayback.ts": {
+    "mtime": 1787653973.0581121,
+    "ast_hash": "a4308a297ce73dce9098d607d213167c",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/state/VideoNativeStateSynchronizer.ts": {
+    "mtime": 1787653302.1921027,
+    "ast_hash": "88d1a715ffd60e3bbc233b473c7291d4",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/state/VideoStateAdapter.ts": {
+    "mtime": 1787653973.0612664,
+    "ast_hash": "8b34677bb4d0c61e38ae7594572d350e",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/state/reduceVideoSessionEvent.ts": {
+    "mtime": 1787653973.0612664,
+    "ast_hash": "b6f4b01b41f9ebea1b56df2066a39968",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/surface/VideoNativeSurface.tsx": {
+    "mtime": 1787653302.196257,
+    "ast_hash": "e27e053865dca88d3bbcc74d0b04345f",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/surface/VideoSurfaceController.ts": {
+    "mtime": 1787653302.198272,
+    "ast_hash": "3a441ae4499774c19df835dcdef1119f",
+    "semantic_hash": ""
+  },
+  "md/PLAYER_AUDIT_v11_FULL_FINDINGS.md": {
+    "mtime": 1787655729.571429,
+    "ast_hash": "3f8073165a668adf7d0916dfe97ac81c",
+    "semantic_hash": ""
+  },
+  "md/PLAYER_REANALYSIS_CURRENT_STATE.md": {
+    "mtime": 1787656362.3839738,
+    "ast_hash": "c113f01ecab84bc85f942ebce1112202",
+    "semantic_hash": ""
+  },
+  "src/modules/playback/video/README.md": {
+    "mtime": 1787653302.1835232,
+    "ast_hash": "81e2852f543c209dd7f6dbf2977fa3d7",
+    "semantic_hash": ""
   }
 }

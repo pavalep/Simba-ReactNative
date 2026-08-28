@@ -198,7 +198,14 @@ export const MpvPlayer = {
 
   loadFileWithRequestId(path: string, requestId: string): void {
     const resolvedPath = getLocalPath(path) ?? path;
-    ensureModule().loadFileWithRequestId(resolvedPath, requestId);
+    tracePlayback('loadFileWithRequestId:call', {requestedPath: path, resolvedPath, requestId});
+    try {
+      ensureModule().loadFileWithRequestId(resolvedPath, requestId);
+      tracePlayback('loadFileWithRequestId:return', {resolvedPath, requestId});
+    } catch (error) {
+      logger.error('[PlaybackTrace][JS][loadFileWithRequestId:error]', {resolvedPath, requestId, error});
+      throw error;
+    }
   },
 
   loadPlaylist(paths: string[], startIndex?: number): void {
@@ -484,6 +491,23 @@ export const ScreenBrightness = {
       return NativeModules.MpvPlayerModule.getScreenBrightness();
     } catch {
       return 1.0;
+    }
+  },
+};
+
+// ── Keep Screen On (W2.12) ──
+// Toggles the Android WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+// flag on the current activity. Used by the video player to keep the
+// device awake during playback. Fails silently on platforms that
+// don't implement the bridge (e.g. iOS) — the player still works, the
+// device just follows the system sleep timer.
+export const KeepScreenOn = {
+  setEnabled(enabled: boolean): void {
+    if (!NativeModules.MpvPlayerModule?.setKeepScreenOn) return;
+    try {
+      NativeModules.MpvPlayerModule.setKeepScreenOn(enabled);
+    } catch {
+      // ignore — release remains best-effort
     }
   },
 };

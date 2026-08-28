@@ -24,6 +24,29 @@ export type VideoSessionPhase =
   | 'live'
   | 'error';
 
+/**
+ * v11 (UI revamp) discriminated union that collapses the player's
+ * loading surfaces into one FSM. The view layer (`VideoStatusPill` +
+ * the centre-action visibility contract) switches on `kind`; it never
+ * sees a boolean.
+ *
+ * `seeking` carries the seek destination. The current snapshot only
+ * tracks the boolean `isSeeking`, so for the initial T1.1 union we
+ * emit `to: 0` and treat the destination as "the position at which
+ * the seek committed"; future waves may plumb the destination
+ * through the session event if the rail scrub needs it.
+ *
+ * `reconnecting` is reserved for a future transport-reset wave; no
+ * derivation rule currently produces it.
+ */
+export type VideoLoadingState =
+  | {readonly kind: 'idle'}
+  | {readonly kind: 'preparing'}
+  | {readonly kind: 'buffering'; readonly cacheFill: number}
+  | {readonly kind: 'seeking'; readonly to: number}
+  | {readonly kind: 'reconnecting'}
+  | {readonly kind: 'error'; readonly message: string; readonly recoverable: boolean};
+
 export interface VideoBufferRange {
   readonly start: number;
   readonly end: number;
@@ -79,6 +102,19 @@ export interface VideoSessionSnapshot {
   readonly hasSurfaceAttached: boolean;
   readonly videoMetrics: VideoVideoMetrics | null;
   readonly error: VideoError | null;
+  /**
+   * v11 (UI revamp) canonical loading state. Always present. The
+   * reducer derives this on every event so the view layer can switch
+   * on `kind` without consulting multiple booleans.
+   */
+  readonly loadingState: VideoLoadingState;
+  /**
+   * v11 (UI revamp) derived alias for `loadingState.kind !== 'idle'`.
+   * Kept for one release so unmigrated consumers (the top bar's
+   * legacy `isLoading` prop, mini chrome, etc.) keep compiling.
+   * **Remove in v11.2.**
+   */
+  readonly isLoading: boolean;
 }
 
 export interface VideoError {
@@ -136,5 +172,7 @@ export function emptyVideoSnapshot(): VideoSessionSnapshot {
     hasSurfaceAttached: false,
     videoMetrics: null,
     error: null,
+    loadingState: {kind: 'idle'},
+    isLoading: false,
   };
 }

@@ -77,7 +77,7 @@ export interface MpvEvents {
   onTracksChanged: {tracks: MpvTrack[]};
   onChapterChanged: {chapter: MpvChapter | null};
   onVideoParamsChanged: {params: MpvVideoParams};
-  onError: {code: Double; message: string; requestId?: string};
+  onError: {code: Double; recoverable: boolean; message: string; requestId?: string};
   onBuffering: {percent: Double; isBuffering?: boolean};
   /**
    * Buffered ranges emitted from MPV's `demuxer-cache-state` property.
@@ -101,6 +101,13 @@ export interface MpvEvents {
   onSeeking: {seeking: boolean};
   /** Native MPV end-file notification. `reason=0` is natural EOF; other reasons include stop/reload. */
   onEndFile: {reason: Double; error: Double; requestId?: string};
+  /**
+   * Fires when mpv resumes after a stall (e.g. a cache refill from
+   * `paused-for-cache`). Use this to clear `isBuffering` on the JS
+   * side, since `onBuffering(percent:100)` may race with the resume
+   * and never reach the layer that owns the phase reducer.
+   */
+  onPlaybackRestart: {};
   /** @deprecated Use onEndFile; retained for compatibility with older consumers. */
   onEndReached: {};
   onAudioDeviceChanged: {device: string};
@@ -204,6 +211,9 @@ export interface Spec extends TurboModule {
   readonly initPlayer: () => boolean;
   readonly destroy: () => void;
   readonly getNativePtr: () => Double;
+
+  // ── Keep Screen On (W2.12) ──
+  readonly setKeepScreenOn?: (enabled: boolean) => void;
 
   // ── Picture in Picture ──
   readonly enterPip: (chapterTitle?: string, progressPct?: string) => void;

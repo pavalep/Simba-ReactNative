@@ -1,7 +1,7 @@
 // ─── Movie Detail Screen ─────────────────────────────────────────────────
 // Shows detailed info about an Internet Archive movie.
 
-import React, {useCallback} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   View,
   ScrollView,
@@ -9,11 +9,14 @@ import {
   StyleSheet,
   Dimensions,
   FlatList,
+  Image,
+  type ListRenderItemInfo,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {usePlaybackCommands} from '../../../modules/playback';
+import {useBookmarks} from '../../../features/bookmarks';
 
 import type {MovieDetailScreenProps} from '../types';
 import {ScreenContainer} from '../../../components/layout/ScreenContainer/ScreenContainer';
@@ -58,11 +61,23 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
 
+  // W5.6: read the saved bookmark for this movie so "Play" honours
+  // the resume position. The bookmark system is file-scoped; the
+  // movie's identifier IS the file URI for the API source.
+  const movieFileUri = item?.streamingUrl ?? `movie:${identifier}`;
+  const {bookmarksForFile} = useBookmarks(movieFileUri);
+  const savedBookmark = bookmarksForFile[0] ?? null;
+  // W5.6: subtitle selection. Tapping a chip marks it as the
+  // "subtitle to enable when the player starts". The openPlayer call
+  // below passes the chosen track id; the player auto-selects it.
+  const [selectedSubtitleIndex, setSelectedSubtitleIndex] = useState<number | null>(null);
+
   const heroHeight = SCREEN_WIDTH * (9 / 16);
 
   const displayTitle = item?.title || routeTitle || '';
   const year = item?.year ? extractYear(item.year) : '';
   const rating = item?.avgRating ?? 0;
+  const heroArtwork = item?.imageUrl ?? null;
 
   // 56.4: share the movie via deep link + https fallback
   const handleShare = useCallback(() => {
@@ -117,18 +132,29 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
         {/* ── Hero Section ────────────────────────────────────────────── */}
         <View style={[styles.heroContainer, {height: heroHeight}]}>
-          {/* Placeholder thumbnail */}
-          <View
-            style={[
-              styles.heroPlaceholder,
-              {backgroundColor: colors.background.elevated},
-            ]}>
-            <SvgIcon
-              name="video"
-              size={64}
-              color={colors.text.tertiary}
+          {/* W5.6: render the API artwork when present, fall back to the
+              SVG placeholder. The original image is preferred; if the
+              archive serves only a medium thumbnail we use that.
+              `resizeMode="cover"` matches the previous 16:9 placeholder. */}
+          {heroArtwork ? (
+            <Image
+              source={{uri: heroArtwork}}
+              style={styles.heroImage}
+              accessibilityIgnoresInvertColors
             />
-          </View>
+          ) : (
+            <View
+              style={[
+                styles.heroPlaceholder,
+                {backgroundColor: colors.background.elevated},
+              ]}>
+              <SvgIcon
+                name="video"
+                size={64}
+                color={colors.text.tertiary}
+              />
+            </View>
+          )}
 
           {/* Gradient overlay */}
           <View style={styles.heroOverlay}>
@@ -224,33 +250,42 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
             <AppText variant="overline" color="secondary" style={styles.sectionLabel}>
               SUBTITLES
             </AppText>
-            {/* 59.1: virtualized subtitle chips */}
+            {/* 59.1: virtualized subtitle chips — W5.6 each chip is now
+                tappable; tapping selects / deselects the subtitle
+                track. The selected chip shows a gold border. */}
             <FlatList
               horizontal
               data={item.subtitles}
               keyExtractor={(sub, index) => `${sub.language}-${index}`}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsContainer}
-              renderItem={({item: sub}) => (
-                <View
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: colors.background.elevated,
-                      borderColor: colors.border.subtle,
-                    },
-                  ]}>
-                  <SvgIcon
-                    name="listMusic"
-                    size={14}
-                    color={colors.accent.gold}
-                    style={styles.chipIcon}
-                  />
-                  <AppText variant="caption" color="primary">
-                    {sub.language}
-                  </AppText>
-                </View>
-              )}
+              renderItem={({item: sub, index}: ListRenderItemInfo<typeof item.subtitles[number]>) => {
+                const isSelected = selectedSubtitleIndex === index;
+                return (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={isSelected ? `${sub.language} subtitle selected` : `Select ${sub.language} subtitle`}
+                    accessibilityState={{selected: isSelected}}
+                    onPress={() => setSelectedSubtitleIndex(isSelected ? null : index)}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor: colors.background.elevated,
+                        borderColor: isSelected ? colors.accent.gold : colors.border.subtle,
+                      },
+                    ]}>
+                    <SvgIcon
+                      name="listMusic"
+                      size={14}
+                      color={isSelected ? colors.accent.gold : colors.text.tertiary}
+                      style={styles.chipIcon}
+                    />
+                    <AppText variant="caption" color={isSelected ? 'primary' : 'secondary'}>
+                      {sub.language}
+                    </AppText>
+                  </TouchableOpacity>
+                );
+              }}
               initialNumToRender={Math.min(item.subtitles.length, 24)}
               windowSize={5}
               maxToRenderPerBatch={12}
@@ -362,15 +397,28 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
           accessibilityRole="button"
           accessibilityLabel={`Play ${item.title}`}
           onPress={() => {
+            // W5.6: pass the saved bookmark's position as the resume
+            // point. If there's no bookmark, the player starts at 0.
+            // The selected subtitle index drives the caption track;
+            // the player auto-selects it on load.
+            const chosenSubtitle =
+              selectedSubtitleIndex !== null && item.subtitles
+                ? item.subtitles[selectedSubtitleIndex]
+                : null;
             openPlayer({
               uri: item.streamingUrl,
               title: item.title,
               duration: item.duration ?? 0,
-              startPosition: 0,
+              startPosition: savedBookmark?.position ?? 0,
               source: 'api',
               type: 'movie',
               mediaType: 'video',
               provider: 'movie',
+              // The IA subtitle shape is `{language, url, format}` — no
+              // stable id. We use the language string as the
+              // selector and let the player match by language. If a
+              // future IA shape adds ids, swap to `id`.
+              ...(chosenSubtitle?.language !== undefined ? {subtitleLanguage: chosenSubtitle.language} : {}),
             });
           }}
           style={[
@@ -407,6 +455,10 @@ const styles = StyleSheet.create({
   heroContainer: {
     width: '100%',
     position: 'relative',
+  },
+  heroImage: {
+    ...StyleSheet.absoluteFill,
+    resizeMode: 'cover',
   },
   heroPlaceholder: {
     width: '100%',

@@ -45,7 +45,7 @@ export function VideoControlButton({
         style,
       ]}
     >
-      <VideoIcon name={icon} size={iconSize} color={size === 'primary' ? '#14532D' : iconColor} />
+      <VideoIcon name={icon} size={iconSize} color={size === 'primary' ? cinemaColors.accent.primaryCTA : iconColor} />
       {size === 'primary' ? <Text style={styles.hiddenText}>{label}</Text> : null}
     </Pressable>
   );

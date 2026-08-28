@@ -66,7 +66,6 @@ export {
 } from './presentation/VideoPresentationTypes';
 export {useVideoPresentationGeometry} from './presentation/useVideoPresentationGeometry';
 export {VideoSafeControlLayer} from './presentation/VideoSafeControlLayer';
-export {VideoFirstFrameLoading, type VideoFirstFrameLoadingProps} from './loading/VideoFirstFrameLoading';
 export {VideoPresentationShell, type VideoPresentationShellProps} from './presentation/VideoPresentationShell';
 export {
   VideoPipAdapter,

@@ -3,6 +3,7 @@ import type {
   VideoSurfacePort,
   VideoSurfacePresentation,
 } from '../ports/VideoSurfacePort';
+import {logger} from '../../../../lib/logger';
 
 export interface VideoSurfaceState {
   readonly attached: boolean;
@@ -33,7 +34,12 @@ export class VideoSurfaceController implements VideoSurfacePort {
 
   subscribe(listener: VideoSurfaceStateListener): () => void {
     this.listeners.add(listener);
-    listener(this.state);
+    // E5: see VideoMpvSession for the rationale.
+    try {
+      listener(this.state);
+    } catch (error) {
+      logger.warn('[PlaybackTrace][V3][surface:subscribe:listener:threw]', error);
+    }
     return () => this.listeners.delete(listener);
   }
 

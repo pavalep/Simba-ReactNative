@@ -184,10 +184,11 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
             }
         }
 
-        override fun onMpvError(code: Int, message: String, requestId: String?) {
-            Log.e(TAG, "[PlaybackTrace][Bridge][listener:error] code=$code requestId=${requestId ?: "none"} message=$message")
+        override fun onMpvError(code: Int, recoverable: Boolean, message: String, requestId: String?) {
+            Log.e(TAG, "[PlaybackTrace][Bridge][listener:error] code=$code recoverable=$recoverable requestId=${requestId ?: "none"} message=$message")
             val payload = Arguments.createMap().apply {
                 putInt("code", code)
+                putBoolean("recoverable", recoverable)
                 putString("message", message)
                 if (!requestId.isNullOrBlank()) putString("requestId", requestId)
             }
@@ -233,6 +234,26 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         val activity = getCurrentActivity() ?: return 1.0
         val b = activity.window.attributes.screenBrightness
         return if (b < 0f) 1.0 else b.toDouble()
+    }
+
+    // ── Keep Screen On (W2.12) ──
+    // Toggles WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON on the
+    // current activity. The flag is window-level so the activity does
+    // not need to be the player activity; the FLAG_KEEP_SCREEN_ON keeps
+    // the device awake as long as the flag is set, regardless of which
+    // view is in the foreground. The JS caller (VideoHost) flips this
+    // on when entering 'playing' and off on pause/finish/close.
+
+    @ReactMethod
+    fun setKeepScreenOn(enabled: Boolean) {
+        val activity = getCurrentActivity() ?: return
+        activity.runOnUiThread {
+            if (enabled) {
+                activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
     }
 
     // ── Playback ──
@@ -888,8 +909,14 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
                 // API 24–25 support PiP but not PictureInPictureParams.
                 activity.enterPictureInPictureMode()
             }
-        } catch (_: IllegalStateException) {
-            // Activity not in foreground or PiP not supported
+        } catch (throwable: Throwable) {
+            // P1: the previous `catch (_: IllegalStateException)` was
+            // too narrow. `enterPictureInPictureMode` can also throw
+            // `IllegalArgumentException` (bad params), `RuntimeException`
+            // (OEM customisations), or `SecurityException` (PiP not
+            // permitted). We log the actual cause and let the JS-side
+            // 5 s recovery timer in `VideoPipAdapter` take over.
+            Log.w(TAG, "[PlaybackTrace][Bridge][enterPip:threw]", throwable)
         }
     }
 
@@ -901,8 +928,28 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     fun exitPip() {
         val activity = getCurrentActivity()
         if (activity == null || android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.N) return
-        if (activity.isInPictureInPictureMode) {
-            activity.finish()
+        if (!activity.isInPictureInPictureMode) return
+        // P2: the previous `activity.finish()` destroyed the
+        // singleTop activity every time the user expanded the PiP
+        // window — losing the navigation stack, the React tree state,
+        // and often the player session itself. The right primitive is
+        // `moveTaskToFront`, which brings the activity back into the
+        // foreground (which automatically closes the PiP window) without
+        // destroying the activity.
+        val bringToFront = android.content.Intent()
+        bringToFront.action = android.content.Intent.ACTION_MAIN
+        bringToFront.addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+        bringToFront.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+            android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+        try {
+            activity.startActivity(bringToFront)
+        } catch (throwable: Throwable) {
+            Log.w(TAG, "[PlaybackTrace][Bridge][exitPip:bringToFront:threw]", throwable)
+            // Last-resort fallback: if the bring-to-front intent fails
+            // for any reason, fall back to the old behavior. The user
+            // is left with an empty activity on next launch but the
+            // bridge hasn't crashed.
+            try { activity.finish() } catch (_: Throwable) {}
         }
     }
 
