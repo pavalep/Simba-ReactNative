@@ -769,6 +769,9 @@ export function VideoHost({active}: VideoHostProps) {
       isLocked={isLocked}
       onOpenQueue={openMoreSheet}
       onOpenMore={hasMoreSections ? openMoreSheet : undefined}
+      onRetry={retryVideo}
+      retryInFlight={retryInFlight}
+      bookmarks={bookmarksForFile.map(b => ({id: b.id, position: b.position}))}
     />
   ) : null;
   const miniChrome = showMiniChrome ? (
@@ -785,6 +788,7 @@ export function VideoHost({active}: VideoHostProps) {
       onSeek={dispatchSeek}
       onSkip={dispatchSkip}
       onOpenSpeed={openSpeedSheet}
+      bookmarks={bookmarksForFile.map(b => ({id: b.id, position: b.position}))}
     />
   ) : null;
 

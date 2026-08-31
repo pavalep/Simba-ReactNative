@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   Pressable,
   StyleSheet,
@@ -9,13 +9,27 @@ import {
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import {runOnJS} from 'react-native-reanimated';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
+import {FONT_FAMILY} from '../../../../constants/fontFamily';
 import {createVideoBufferPresentation} from '../domain/VideoBufferPolicy';
-import type {VideoSessionSnapshot} from '../domain/VideoTypes';
+import type {VideoChapter, VideoSessionSnapshot} from '../domain/VideoTypes';
+
+export interface VideoProgressBookmark {
+  readonly id: string;
+  readonly position: number;
+}
 
 export interface VideoProgressRailProps {
   readonly session: VideoSessionSnapshot;
   readonly onSeek: (position: number) => void;
+  /** T6.2: bookmark positions for the current source. The host
+   *  owns the data source (Redux / `useBookmarks`); the rail
+   *  receives a plain list of `{id, position}` to keep this
+   *  component decoupled from the bookmarks store. */
+  readonly bookmarks?: readonly VideoProgressBookmark[];
 }
+
+const RAIL_THROTTLE_MS = 1000;
+const TOOLTIP_HALF_WIDTH = 36;
 
 function clampFraction(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -32,33 +46,110 @@ function formatTime(value: number | null): string {
     : `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
-/** W5.3: remaining-time label (e.g. "−1:23"). Shows the distance
- *  from the current position to the end of the media. Empty if
- *  duration is unknown. */
 function formatRemaining(position: number | null, duration: number | null): string {
-  if (position === null || duration === null || !Number.isFinite(position) || !Number.isFinite(duration) || duration <= 0) return '';
+  if (
+    position === null ||
+    duration === null ||
+    !Number.isFinite(position) ||
+    !Number.isFinite(duration) ||
+    duration <= 0
+  ) {
+    return '';
+  }
   const remaining = duration - position;
   if (remaining <= 0) return '';
   return `−${formatTime(remaining)}`;
 }
 
-export function VideoProgressRail({session, onSeek}: VideoProgressRailProps) {
+interface ChapterHint {
+  readonly chapter: VideoChapter;
+  readonly fraction: number;
+}
+
+function findChapterAt(
+  chapters: readonly VideoChapter[],
+  duration: number | null,
+  fraction: number,
+): ChapterHint | null {
+  if (duration === null || duration <= 0 || chapters.length === 0) {
+    return null;
+  }
+  for (const chapter of chapters) {
+    if (chapter.endTime > 0) {
+      const startFrac = clampFraction(chapter.startTime / duration);
+      const endFrac = clampFraction(chapter.endTime / duration);
+      if (fraction >= startFrac && fraction <= endFrac) {
+        return {chapter, fraction};
+      }
+    } else {
+      // Fall back to "next chapter wins" when endTime is 0.
+      const startFrac = clampFraction(chapter.startTime / duration);
+      if (fraction < startFrac) {
+        return {chapter, fraction: startFrac};
+      }
+    }
+  }
+  return null;
+}
+
+export function VideoProgressRail({
+  session,
+  onSeek,
+  bookmarks,
+}: VideoProgressRailProps) {
   const [trackWidth, setTrackWidth] = useState(0);
-  // W5.3: drag-scrub preview. When the user is dragging, the
+  // v11 T6.1: drag-scrub preview. When the user is dragging, the
   // current position is replaced by the dragged fraction; on release
   // we dispatch a single seek. State is intentionally local — the
   // session's `position` keeps moving independently while the user
   // drags, so we only need the *scrub* fraction.
   const [scrubFraction, setScrubFraction] = useState<number | null>(null);
+  // v11 T6.3: tap the right time label to toggle remaining ↔ total.
+  // The toggle is local; the spec doesn't persist the choice.
+  const [showTotal, setShowTotal] = useState(false);
+  // v11 T6.3: position-driven re-render throttled to ≤ 1 Hz. The
+  // session's 750 ms poll produces ~1.3 Hz render triggers; this
+  // hook coalesces them to ≤ 1 Hz by only updating `displayedPosition`
+  // when either the throttle has expired or the user is scrubbing.
+  // The thumb + tick positions are derived from `displayedPosition`
+  // (not `session.position`) so the rail's own re-renders are
+  // decoupled from the session's re-render cycle.
+  const [displayedPosition, setDisplayedPosition] = useState<number>(0);
+  const lastDisplayedAt = useRef<number>(0);
   const duration = session.duration;
-  const isLive = duration === null || duration <= 0;
+  const isLive = session.isLive || duration === null || duration <= 0;
   const canSeek = session.isSeekable && !isLive;
-  // While dragging, show the scrub position; otherwise the live position.
+
+  // Bookmarks for the current source (T6.2). The host supplies
+  // them via the `bookmarks` prop; the rail just lays them out.
+  // The default `[]` keeps the component usable without bookmarks
+  // (e.g. when the source is live or there are no bookmarks).
+  const bookmarkList = bookmarks ?? [];
+
+  const isScrubbing = scrubFraction !== null;
+  useEffect(() => {
+    if (isScrubbing) {
+      // While dragging, follow the finger exactly — no throttle.
+      setDisplayedPosition((scrubFraction ?? 0) * (duration ?? 0));
+      return;
+    }
+    const now = Date.now();
+    if (now - lastDisplayedAt.current >= RAIL_THROTTLE_MS) {
+      setDisplayedPosition(session.position);
+      lastDisplayedAt.current = now;
+    }
+  }, [
+    session.position,
+    isScrubbing,
+    scrubFraction,
+    duration,
+  ]);
+
   const positionFraction = canSeek
     ? clampFraction(
         scrubFraction !== null
           ? scrubFraction
-          : session.position / (duration ?? 1),
+          : displayedPosition / (duration ?? 1),
       )
     : 0;
   const buffer = createVideoBufferPresentation(
@@ -81,10 +172,6 @@ export function VideoProgressRail({session, onSeek}: VideoProgressRailProps) {
     [canSeek, duration, onSeek, trackWidth],
   );
 
-  // W5.3: drag-scrub. `Gesture.Pan().minDistance(0)` starts the moment
-  // a touch lands (so a quick tap is still recognised as press), then
-  // the worklet updates the local `scrubFraction` for preview rendering.
-  // On end, we dispatch one seek and clear the scrub.
   const onScrub = useCallback((fraction: number) => {
     setScrubFraction(clampFraction(fraction));
   }, []);
@@ -127,6 +214,59 @@ export function VideoProgressRail({session, onSeek}: VideoProgressRailProps) {
   const activeStart = activeRange && duration ? clampFraction(activeRange.start / duration) : 0;
   const activeEnd = activeRange && duration ? clampFraction(activeRange.end / duration) : 0;
 
+  // T6.1: chapter hint for the tooltip. When the scrub position is
+  // inside a chapter, the tooltip shows the chapter title.
+  const scrubPosition =
+    scrubFraction !== null && duration !== null
+      ? scrubFraction * duration
+      : null;
+  const chapterHint = useMemo(() => {
+    if (scrubPosition === null) return null;
+    return findChapterAt(session.chapters, duration, scrubFraction ?? 0);
+  }, [scrubPosition, session.chapters, duration, scrubFraction]);
+
+  // T6.1: tooltip x-position is clamped to the rail ends so it
+  // never renders off-screen. We translate the tooltip by the
+  // minimum of (its own half-width) and (its pixel position within
+  // the rail), keeping the tooltip within the track.
+  const tooltipLeftPx =
+    trackWidth > 0 ? positionFraction * trackWidth : 0;
+  const tooltipTranslateX = Math.max(
+    -TOOLTIP_HALF_WIDTH,
+    Math.min(
+      tooltipLeftPx,
+      trackWidth > 0 ? trackWidth - TOOLTIP_HALF_WIDTH : 0,
+    ) - tooltipLeftPx,
+  );
+
+  // T6.3: tap the right time label to toggle remaining ↔ total.
+  const toggleTimeMode = useCallback(() => {
+    setShowTotal(current => !current);
+  }, []);
+
+  // T6.3: remaining label. Hidden when duration is unknown or when
+  // the remaining is ≤ 0 (live edge — no -0:00 flicker).
+  const remainingText = isLive
+    ? ''
+    : formatRemaining(
+        scrubPosition ?? session.position,
+        duration,
+      );
+  const totalText = isLive ? '' : formatTime(duration);
+  const rightText = showTotal ? totalText : remainingText;
+
+  // T6.2: bookmark marker positions. Render a 4 px gold diamond at
+  // each bookmark's position fraction.
+  const bookmarkMarkers =
+    canSeek && duration !== null && duration > 0
+      ? bookmarkList
+          .filter(b => b.position > 0 && b.position < duration)
+          .map(b => ({
+            id: b.id,
+            fraction: clampFraction(b.position / duration),
+          }))
+      : [];
+
   return (
     <View style={styles.wrapper}>
       <GestureDetector gesture={gesture}>
@@ -136,12 +276,14 @@ export function VideoProgressRail({session, onSeek}: VideoProgressRailProps) {
           accessibilityValue={{
             min: 0,
             max: duration ?? 0,
-            now: canSeek ? session.position : 0,
-            text: canSeek ? `${formatTime(session.position)} of ${formatTime(duration)}` : 'Not seekable',
+            now: canSeek ? displayedPosition : 0,
+            text: canSeek ? `${formatTime(displayedPosition)} of ${formatTime(duration)}` : 'Not seekable',
           }}
           accessibilityState={{disabled: !canSeek, busy: session.isSeeking}}
           onLayout={handleLayout}
-          style={styles.hitArea}>
+          style={styles.hitArea}
+          testID="videoProgressRail"
+        >
           <View style={styles.track}>
             {activeRange && duration !== null ? (
               <View
@@ -149,7 +291,11 @@ export function VideoProgressRail({session, onSeek}: VideoProgressRailProps) {
                 style={[styles.buffered, {left: `${activeStart * 100}%`, width: `${(activeEnd - activeStart) * 100}%`}]}
               />
             ) : null}
-            {session.chapters.length > 0 && duration !== null && duration > 0
+            {/* T6.2: chapter + bookmark markers sit under the thumb
+                layer. They re-derive from the current duration on
+                every render, so streams that resolve duration late
+                (error fix in step 4) reflow correctly. */}
+            {canSeek && duration !== null && duration > 0 && session.chapters.length > 1
               ? session.chapters.map(chapter => {
                   const fraction = clampFraction(chapter.startTime / duration);
                   const isActive = session.currentChapterId === chapter.id;
@@ -157,6 +303,7 @@ export function VideoProgressRail({session, onSeek}: VideoProgressRailProps) {
                     <View
                       key={`chapter-${chapter.id}`}
                       pointerEvents="none"
+                      testID={`videoProgressRail:chapter:${chapter.id}`}
                       style={[
                         styles.chapterMarker,
                         isActive && styles.chapterMarkerActive,
@@ -166,52 +313,105 @@ export function VideoProgressRail({session, onSeek}: VideoProgressRailProps) {
                   );
                 })
               : null}
+            {bookmarkMarkers.map(({id, fraction}) => (
+              <View
+                key={`bookmark-${id}`}
+                pointerEvents="none"
+                testID={`videoProgressRail:bookmark:${id}`}
+                style={[styles.bookmarkMarker, {left: `${fraction * 100}%`}]}
+              />
+            ))}
             <View pointerEvents="none" style={[styles.played, {width: `${positionFraction * 100}%`}]}/>
-            <View pointerEvents="none" style={[styles.thumb, {left: `${positionFraction * 100}%`}]}/>
-          </View>
-          {scrubFraction !== null ? (
+            {/* T6.1: thumb clamps inside the track via a transform
+                offset of half the thumb's width. The 12-px circle
+                used to hang 6 px over each end (marginLeft: -6);
+                the transform keeps the position math honest. */}
             <View
               pointerEvents="none"
-              style={[styles.previewTooltip, {left: `${positionFraction * 100}%`}]}>
+              testID="videoProgressRail:thumb"
+              style={[
+                styles.thumb,
+                {
+                  left: `${positionFraction * 100}%`,
+                  transform: [{translateX: -6}],
+                },
+              ]}
+            />
+          </View>
+          {isScrubbing && duration !== null ? (
+            <View
+              pointerEvents="none"
+              testID="videoProgressRail:tooltip"
+              style={[
+                styles.previewTooltip,
+                {
+                  left: `${positionFraction * 100}%`,
+                  transform: [{translateX: tooltipTranslateX}],
+                },
+              ]}
+            >
               <Text style={styles.previewText}>
-                {formatTime(scrubFraction * (duration ?? 0))}
+                {scrubPosition !== null
+                  ? formatTime(scrubPosition)
+                  : formatTime(0)}
               </Text>
+              {chapterHint ? (
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={styles.previewChapter}
+                >
+                  {chapterHint.chapter.title}
+                </Text>
+              ) : null}
             </View>
           ) : null}
         </View>
       </GestureDetector>
       <View style={styles.timeRow}>
-        <View style={styles.timeLabels}>
-          <View style={styles.timeTextSlot}>
-            {/* W5.3: position is followed by a "−remaining" label
-                in the same slot, so the row reads "1:23 −0:45". The
-                remaining is omitted if duration is unknown (live
-                streams). */}
-            <View style={styles.timeCluster}>
-              <TextTime value={formatTime(session.position)} />
-              <TextTime value={formatRemaining(session.position, duration)} muted />
-            </View>
+        {/* T6.3: elapsed on the left. Hidden in LIVE mode. */}
+        {isLive ? (
+          <View style={styles.timeTextSlotLeft}>
+            <Text style={styles.timeText}> </Text>
           </View>
-          <View style={styles.timeTextSlot}>
-            {/* W5.3: "LIVE" pill when duration is missing / invalid. */}
-            {isLive ? (
-              <View style={styles.livePill}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveText}>LIVE</Text>
-              </View>
-            ) : (
-              <TextTime value={formatTime(duration)} />
-            )}
+        ) : (
+          <View style={styles.timeTextSlotLeft}>
+            <Text style={styles.timeText}>
+              {formatTime(scrubPosition ?? session.position)}
+            </Text>
           </View>
-        </View>
+        )}
+        {/* T6.3: right slot — LIVE pill (when live) or
+            remaining/total (when not live). Tap the right label to
+            toggle remaining ↔ total. The LIVE pill is non-tappable
+            for now (live seek-to-edge is a future wave). */}
+        {isLive ? (
+          <View
+            style={styles.livePill}
+            testID="videoProgressRail:livePill"
+            accessibilityLabel="Live stream"
+          >
+            <View style={styles.liveDot} />
+            <Text style={styles.liveText}>LIVE</Text>
+          </View>
+        ) : (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={showTotal ? 'Total duration' : 'Remaining time'}
+            onPress={toggleTimeMode}
+            testID="videoProgressRail:timeToggle"
+            style={styles.timeTextSlotRight}
+          >
+            <Text
+              style={[styles.timeText, !rightText && styles.timeTextMuted]}
+            >
+              {rightText || '—'}
+            </Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
-}
-
-function TextTime({value, muted = false}: {value: string; muted?: boolean}) {
-  if (!value) return <Text style={styles.timeText} />;
-  return <Text style={[styles.timeText, muted && styles.timeTextMuted]}>{value}</Text>;
 }
 
 const styles = StyleSheet.create({
@@ -246,30 +446,45 @@ const styles = StyleSheet.create({
     top: -4,
     width: 12,
     height: 12,
-    marginLeft: -6,
+    // T6.1: removed the `marginLeft: -6` overhang. The thumb is
+    // now centred on the position fraction via a transform
+    // offset of half its own width (`translateX: -6`). This
+    // keeps the position math honest and never overhangs the
+    // track ends (clampFraction is the source of truth).
     borderRadius: 6,
     backgroundColor: cinemaColors.text.bright,
   },
   chapterMarker: {
+    // T6.2: 2×8 px tick at each chapter start (rendered as
+    // `width: 2, height: 8` with a centred translateX so the tick
+    // sits on the chapter start). Color: `text.onMediaMuted` so it
+    // reads as a guide, not an active affordance.
     position: 'absolute',
-    top: -3,
+    top: -2,
     width: 2,
-    height: 10,
-    marginLeft: -1,
-    backgroundColor: cinemaColors.accent.gold,
-    opacity: 0.7,
+    height: 8,
+    backgroundColor: cinemaColors.text.onMediaMuted,
+    transform: [{translateX: -1}],
   },
   chapterMarkerActive: {
-    opacity: 1,
+    // The active chapter's tick widens and brightens to make the
+    // current position visually obvious.
     width: 3,
-    marginLeft: -1.5,
     backgroundColor: cinemaColors.text.bright,
+    transform: [{translateX: -1.5}],
   },
-  // W5.3: preview tooltip that floats above the thumb during drag.
+  bookmarkMarker: {
+    // T6.2: 4 px gold diamond. Diamond = rotated 4×4 square.
+    position: 'absolute',
+    top: -2,
+    width: 6,
+    height: 6,
+    backgroundColor: cinemaColors.accent.gold,
+    transform: [{translateX: -3}, {rotate: '45deg'}],
+  },
   previewTooltip: {
     position: 'absolute',
-    top: -32,
-    transform: [{translateX: -28}],
+    top: -36,
     minWidth: 56,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -282,37 +497,43 @@ const styles = StyleSheet.create({
   previewText: {
     color: cinemaColors.text.bright,
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONT_FAMILY.inter.bold,
     fontVariant: ['tabular-nums'],
+  },
+  previewChapter: {
+    // Chapter name below the time when the scrub position is
+    // inside a chapter. Smaller and muted so the time stays the
+    // primary read.
+    color: cinemaColors.text.onMediaMuted,
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.inter.regular,
+    maxWidth: 160,
+    marginTop: 1,
   },
   timeRow: {
     minHeight: 25,
-    justifyContent: 'center',
-  },
-  timeLabels: {
-    width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  timeTextSlot: {
+  timeTextSlotLeft: {
     minWidth: 54,
   },
-  timeCluster: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
+  timeTextSlotRight: {
+    minWidth: 54,
+    alignItems: 'flex-end',
   },
   timeText: {
     color: cinemaColors.text.onMediaSoft,
     fontSize: 12,
     lineHeight: 16,
+    fontFamily: FONT_FAMILY.inter.regular,
     fontVariant: ['tabular-nums'],
   },
   timeTextMuted: {
     color: cinemaColors.text.onMediaMuted,
     fontSize: 11,
   },
-  // W5.3: "LIVE" pill for streams without a known duration.
   livePill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -331,7 +552,7 @@ const styles = StyleSheet.create({
   liveText: {
     color: cinemaColors.text.bright,
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: FONT_FAMILY.inter.bold,
     letterSpacing: 0.8,
   },
 });

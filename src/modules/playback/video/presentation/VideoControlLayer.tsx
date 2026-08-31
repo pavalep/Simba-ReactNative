@@ -13,7 +13,7 @@ import type {
 } from './VideoPresentationTypes';
 import {VideoControlButton} from './VideoControlButton';
 import {VideoIcon} from './VideoIcon';
-import {VideoProgressRail} from './VideoProgressRail';
+import {VideoProgressRail, type VideoProgressBookmark} from './VideoProgressRail';
 import {VideoTopBar} from './VideoTopBar';
 import {VideoCenterAction, type VideoCenterPhase} from './VideoCenterAction';
 
@@ -44,6 +44,21 @@ export interface VideoControlLayerProps {
   readonly onToggleLock?: () => void;
   readonly isLocked?: boolean;
   readonly onOpenQueue?: () => void;
+  /** v11 T5.3: single retry affordance — both the pill and the
+   *  centre action's "Retry" button call this handler. The host is
+   *  expected to guard against double-dispatch (see `retryInFlight`). */
+  readonly onRetry?: () => void;
+  /** v11 T5.3: true while a retry load is in flight. The centre
+   *  action's press handler short-circuits while this is true. The
+   *  pill also self-disables via the FSM (loadingState.kind flips
+   *  away from 'error' immediately after the load dispatches). */
+  readonly retryInFlight?: boolean;
+  /** v11 T6.2: bookmark positions for the current source. Forwarded
+   *  to `VideoProgressRail` so the rail can render gold diamond
+   *  markers at each saved position. The host owns the data source
+   *  (the `useBookmarks` hook), so the rail stays decoupled from
+   *  the bookmarks store. */
+  readonly bookmarks?: readonly VideoProgressBookmark[];
 }
 
 function primaryLabel(session: VideoSessionSnapshot): string {
@@ -86,7 +101,17 @@ function FullControls({
   onToggleLock,
   isLocked = false,
   onOpenQueue,
+  onRetry,
+  retryInFlight = false,
+  bookmarks,
 }: VideoControlLayerProps) {
+  // v11 T5.3: the centre action's onPress is "retry when in error,
+  // otherwise play/pause". This is the same handler the pill's
+  // "Try loading the video again" calls — one affordance, two entry
+  // points, per spec §0.7.
+  const centerActionPress = session.phase === 'error' && onRetry
+    ? onRetry
+    : onPlayPause;
   // v11 T5.2: FSM-driven visibility contract per spec §4.3 / §4.12.
   // The centre action is visible when the session is paused / finished /
   // error AND the loading FSM is idle (or error, so the retry button
@@ -129,14 +154,17 @@ function FullControls({
       {centerActionPhase !== null ? (
         <VideoCenterAction
           phase={centerActionPhase}
-          onPress={onPlayPause}
-          visible={centerActionVisible}
+          onPress={centerActionPress}
+          // When the host is mid-retry, both the pill and the centre
+          // self-disable via this flag (the FSM would hide them a
+          // frame later anyway; the flag closes the small race).
+          visible={centerActionVisible && !retryInFlight}
         />
       ) : null}
 
       {chromeVisible && !isLocked ? (
         <View style={[styles.bottomScrim, {paddingBottom: geometry.bottomContentInset, paddingHorizontal: geometry.horizontalContentInset}]} pointerEvents="box-none">
-          <VideoProgressRail session={session} onSeek={onSeek} />
+          <VideoProgressRail session={session} onSeek={onSeek} bookmarks={bookmarks} />
           <View style={[styles.transportRow, {gap: geometry.controlGap}]}>
             {onPrevious ? <VideoControlButton icon="previous" label="Previous video" size="regular" disabled={!capabilities.canPlay} onPress={onPrevious} /> : null}
             {capabilities.canSeek ? <VideoControlButton icon="rewind" label="Seek backward 10 seconds" size="regular" onPress={() => onSkip(-10)} /> : null}
@@ -176,6 +204,7 @@ function MiniControls({
   onClose,
   onPlayPause,
   onSeek,
+  bookmarks,
 }: VideoControlLayerProps) {
   // W5.5: swipe-down on the title strip dismisses the mini player.
   // We render a thin "grab handle" above the title that owns the
@@ -261,7 +290,7 @@ function MiniControls({
       />
       <View style={styles.miniText} pointerEvents="none">
         <Text numberOfLines={1} style={styles.miniTitle}>{title ?? session.source?.title ?? ''}</Text>
-        <VideoProgressRail session={session} onSeek={onSeek} />
+        <VideoProgressRail session={session} onSeek={onSeek} bookmarks={bookmarks} />
       </View>
       <View style={styles.miniActions}>
         <VideoControlButton icon={primaryIcon(session)} label={primaryLabel(session)} size="compact" onPress={onPlayPause} />
