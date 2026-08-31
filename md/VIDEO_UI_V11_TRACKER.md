@@ -274,8 +274,8 @@
 3. Replace the layout animation with `transform`/`opacity` (native driver) + `onLayout`-driven slot sizing (spec Rule 11).
 4. Damp size-change storm: size the surface slot to start/end values only during the 280 ms transition.
 5. **Error fix:** mini→full during active seek must not drop the seek — surface re-lay never touches session state.
-6. **Validation:** `npx tsc --noEmit` exit 0; transition ≥ 55 fps on mid-tier device; zero `useNativeDriver: false` in the shell.
-7. **Commit:** `refactor(video-ui): native-driver shell; single surface across modes`.
+6. **Validation:** `npx tsc --noEmit` exit 0; transition ≥ 55 fps on mid-tier device; zero `useNativeDriver: false` in the shell. ✅ `__tests__/videoPresentationShell.test.tsx` — 6 cases (full snap, mini snap, mini<full invariant, both chromes mounted, surface not remounted, pointer-events gate).
+7. **Commit:** `refactor(video-ui): native-driver shell; single surface across modes`. ✅
 
 ### PHASE 7.2 — Mini card layout
 
@@ -430,7 +430,7 @@
 | 4 | Queue as a sheet | ✅ done (3 phases) |
 | 5 | Centre action + single retry | ✅ done (3 phases) |
 | 6 | Progress rail upgrade | ✅ done (3 phases) |
-| 7 | Mini with live surface (+ flag) | ⬜ pending (3 phases) |
+| 7 | Mini with live surface (+ flag) | 🔵 in progress (1/3 phases) |
 | 8 | Fullscreen / landscape | ⬜ pending (3 phases) |
 | 9 | Lock + resume + auto-hide | ⬜ pending (3 phases) |
 | 10 | Consolidation + dead-control sweep | ⬜ pending (3 phases) |

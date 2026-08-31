@@ -9,6 +9,7 @@ import {
 } from '../domain/VideoTypes';
 import type {VideoPipState} from '../platform/VideoPipAdapter';
 import {VideoPresentationShell} from '../presentation/VideoPresentationShell';
+import {computeMiniSlot} from '../presentation/videoShellConstants';
 import {VideoStatusPill} from '../presentation/VideoStatusPill';
 import {VideoSafeControlLayer} from '../presentation/VideoSafeControlLayer';
 import {VideoSurfaceGestures} from '../presentation/VideoSurfaceGestures';
@@ -230,23 +231,18 @@ export function VideoHost({active}: VideoHostProps) {
     if (!playback) return;
     // P3: pass real screen geometry to the surface port so it can
     // forward the rectangle to the native side on future bridges.
-    // The numbers match the Animated.View shell: full = fullscreen,
-    // mini = bottom-right with margins, pip = same as full (PiP
-    // geometry is owned by the system overlay).
+    // The numbers match the shell: full = fullscreen, mini =
+    // bottom-right with margins, pip = same as full (PiP geometry
+    // is owned by the system overlay). v11 T7.1: the mini rectangle
+    // is now sourced from `computeMiniSlot` (single source of
+    // truth with the shell) so the native bridge and the shell
+    // can't drift apart.
     const {width: viewportWidth, height: viewportHeight} = windowDimensions;
-    const MINI_WIDTH_MARGIN = 12;
-    const MINI_HEIGHT = 86;
-    const MINI_BOTTOM_MARGIN = 12;
     const geometry =
       surfacePresentation === 'full'
         ? {x: 0, y: 0, width: viewportWidth, height: viewportHeight}
         : surfacePresentation === 'mini'
-        ? {
-            x: MINI_WIDTH_MARGIN,
-            y: viewportHeight - MINI_HEIGHT - MINI_BOTTOM_MARGIN,
-            width: Math.max(0, viewportWidth - MINI_WIDTH_MARGIN * 2),
-            height: MINI_HEIGHT,
-          }
+        ? computeMiniSlot(viewportWidth, viewportHeight)
         : {x: 0, y: 0, width: viewportWidth, height: viewportHeight};
     playback.surface.setPresentation(surfacePresentation, geometry).catch(() => undefined);
   }, [playback, surfacePresentation, windowDimensions.width, windowDimensions.height]);

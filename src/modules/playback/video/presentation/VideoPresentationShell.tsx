@@ -1,39 +1,58 @@
 import React, {useEffect, useRef} from 'react';
-import {Animated, StyleSheet, useWindowDimensions} from 'react-native';
+import {Animated, StyleSheet, useWindowDimensions, View} from 'react-native';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
 import type {VideoPresentationMode} from './VideoPresentationTypes';
+import {
+  computeMiniSlot,
+  MINI_RADIUS,
+  TRANSITION_DURATION_MS,
+} from './videoShellConstants';
 
 export interface VideoPresentationShellProps {
   readonly presentation: VideoPresentationMode;
   readonly children: React.ReactNode;
   readonly fullChrome: React.ReactNode;
   readonly miniChrome: React.ReactNode;
+  /** v11 T7.1: optional testID for the outer shell container. Useful
+   *  for instrumentation + tests; production hosts can omit it. */
+  readonly testID?: string;
 }
 
-const MINI_WIDTH_MARGIN = 12;
-const MINI_BOTTOM_MARGIN = 12;
-// W5.2: the mini player was 112 px tall but the actual mini chrome
-// (title + progress rail + play/expand/close buttons) only needs
-// ~86 px. The 26 px of slack was empty margin at the bottom. Bringing
-// the mini down to 86 px also makes the mini↔full animation more
-// graceful (smaller scale delta means less visual "pop").
-const MINI_HEIGHT = 86;
-const MINI_RADIUS = 14;
-const TRANSITION_DURATION_MS = 280;
-
 /**
- * Animates the projection container, never the native surface instance. Both
- * chrome projections remain mounted during the transition, while only the
- * target projection receives pointer events. An interrupted transition starts
- * from the current animated value and invalidates the old completion callback.
+ * v11 T7.1 — Animates the projection container, never the native
+ * surface instance. The outer shell is a STATIC `View` whose size
+ * matches the TARGET presentation immediately on every change. The
+ * transition between mini and full is a pure visual scale + opacity
+ * on an inner `Animated.View` "transform layer" (native driver).
+ *
+ * Why two layers:
+ *   - The outer shell's width/height/left/bottom change ONCE per
+ *     presentation flip, not on every progress tick. This damps
+ *     the size-change storm the v10 shell had (T7.1 error fix).
+ *   - The transform layer scales a single full-viewport "content
+ *     frame" down to mini proportions. The surface (mounted once
+ *     inside the content frame) is re-laid by the native bridge
+ *     exactly once per `surfacePresentation` change — never on
+ *     progress ticks. The mini→full during an active seek no
+ *     longer drops the seek because the surface's session is
+ *     read-only from the host's perspective.
+ *
+ * Both chrome projections stay mounted during the transition; one
+ * fades in via the transform layer's opacity, the other fades out.
+ * An interrupted transition starts from the current animated value
+ * and invalidates the old completion callback via the
+ * `transitionGeneration` ref.
  */
 export function VideoPresentationShell({
   presentation,
   children,
   fullChrome,
   miniChrome,
+  testID,
 }: VideoPresentationShellProps) {
   const {width: viewportWidth, height: viewportHeight} = useWindowDimensions();
+  // Native-driver `Animated.Value` (only transform + opacity go
+  // through the native driver; layout is decoupled and snaps).
   const progress = useRef(new Animated.Value(presentation === 'full' ? 1 : 0)).current;
   const transitionGeneration = useRef(0);
   const target = presentation === 'full' ? 1 : 0;
@@ -45,59 +64,114 @@ export function VideoPresentationShell({
     Animated.timing(progress, {
       toValue: target,
       duration: TRANSITION_DURATION_MS,
-      useNativeDriver: false,
+      useNativeDriver: true,
     }).start(({finished}) => {
       if (!finished || transitionGeneration.current !== generation) return;
     });
   }, [presentation, progress, target]);
 
-  useEffect(() => () => {
-    transitionGeneration.current += 1;
-    progress.stopAnimation();
-  }, [progress]);
+  useEffect(
+    () => () => {
+      transitionGeneration.current += 1;
+      progress.stopAnimation();
+    },
+    [progress],
+  );
 
-  const width = progress.interpolate({
+  // T7.1: outer shell snaps to the TARGET size on every presentation
+  // change (no animation). The transform layer inside handles the
+  // visual transition.
+  const miniSlot = computeMiniSlot(viewportWidth, viewportHeight);
+  const isFull = presentation === 'full';
+  const shellWidth = isFull ? viewportWidth : miniSlot.width;
+  const shellHeight = isFull ? viewportHeight : miniSlot.height;
+  const shellLeft = isFull ? 0 : miniSlot.x;
+  const shellTop = isFull ? 0 : miniSlot.y;
+  const shellRadius = isFull ? 0 : MINI_RADIUS;
+
+  // T7.1: transform math. The inner content is always rendered at
+  // FULL viewport size; the transform layer scales + translates it
+  // from mini-proportions to full-proportions as `progress` goes
+  // 0 → 1.
+  //
+  // At progress=0 the scaled content's box is (miniW × miniH) and
+  // its center sits at (fullW/2, fullH/2). We translate it so the
+  // box's top-left lands at (miniSlot.x, miniSlot.y).
+  const miniScaleX = miniSlot.width / Math.max(1, viewportWidth);
+  const miniScaleY = miniSlot.height / Math.max(1, viewportHeight);
+  const scaleX = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [Math.max(0, viewportWidth - (MINI_WIDTH_MARGIN * 2)), viewportWidth],
+    outputRange: [miniScaleX, 1],
   });
-  const height = progress.interpolate({
+  const scaleY = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [MINI_HEIGHT, viewportHeight],
+    outputRange: [miniScaleY, 1],
   });
-  const left = progress.interpolate({
+  // Translate the scaled content so its (miniW × miniH) box lands
+  // at (miniSlot.x, miniSlot.y). The transform origin is the
+  // content's center (default), so the math is:
+  //   translateX = miniSlot.x - ((fullW - miniW) / 2)
+  //   translateY = miniSlot.y - ((fullH - miniH) / 2)
+  const translateX = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [MINI_WIDTH_MARGIN, 0],
+    outputRange: [
+      miniSlot.x - (viewportWidth - miniSlot.width) / 2,
+      0,
+    ],
   });
-  const bottom = progress.interpolate({
+  const translateY = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [MINI_BOTTOM_MARGIN, 0],
+    outputRange: [
+      miniSlot.y - (viewportHeight - miniSlot.height) / 2,
+      0,
+    ],
   });
-  const radius = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [MINI_RADIUS, 0],
-  });
+  // Opacity is shared between the two chrome projections: full
+  // chrome fades in as progress → 1, mini chrome fades out.
   const fullOpacity = progress;
   const miniOpacity = progress.interpolate({inputRange: [0, 1], outputRange: [1, 0]});
 
   return (
-    <Animated.View
-      style={[styles.shell, {width, height, left, bottom, borderRadius: radius}]}
+    <View
+      testID={testID}
+      style={[
+        styles.shell,
+        {
+          width: shellWidth,
+          height: shellHeight,
+          left: shellLeft,
+          top: shellTop,
+          borderRadius: shellRadius,
+        },
+      ]}
       pointerEvents="box-none"
     >
-      {children}
       <Animated.View
-        pointerEvents={presentation === 'full' ? 'box-none' : 'none'}
-        style={[styles.chromeProjection, {opacity: fullOpacity}]}
+        style={[
+          styles.transformLayer,
+          {
+            width: viewportWidth,
+            height: viewportHeight,
+            transform: [{translateX}, {translateY}, {scaleX}, {scaleY}],
+          },
+        ]}
+        pointerEvents="box-none"
       >
-        {fullChrome}
+        {children}
+        <Animated.View
+          pointerEvents={isFull ? 'box-none' : 'none'}
+          style={[styles.chromeProjection, {opacity: fullOpacity}]}
+        >
+          {fullChrome}
+        </Animated.View>
+        <Animated.View
+          pointerEvents={!isFull ? 'box-none' : 'none'}
+          style={[styles.chromeProjection, styles.miniProjection, {opacity: miniOpacity}]}
+        >
+          {miniChrome}
+        </Animated.View>
       </Animated.View>
-      <Animated.View
-        pointerEvents={presentation === 'mini' ? 'box-none' : 'none'}
-        style={[styles.chromeProjection, styles.miniProjection, {opacity: miniOpacity}]}
-      >
-        {miniChrome}
-      </Animated.View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -106,6 +180,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     overflow: 'hidden',
     backgroundColor: cinemaColors.background.surfaceDark,
+  },
+  // T7.1: the transform layer is the "single full-viewport content
+  // frame" that the shell animates. The surface + both chrome
+  // projections live inside it. Its native-driver transform
+  // (translate + scale) is what produces the mini↔full visual
+  // transition.
+  transformLayer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
   },
   chromeProjection: {
     ...StyleSheet.absoluteFill,
