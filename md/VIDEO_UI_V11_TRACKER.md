@@ -235,8 +235,8 @@
 2. Fix thumb overhang: remove the `marginLeft: -6` hack (`VideoProgressRail.tsx:136-142`); clamp thumb inside the track.
 3. Keep tap-to-seek and drag (existing `:51-58`); keep honest buffered window.
 4. **Error fix:** tooltip must clamp at rail ends (never renders off-screen); seeking during tooltip commits once on release.
-5. **Validation:** `npx tsc --noEmit` exit 0; scrub accuracy ±1 s vs committed seek; thumb never overhangs.
-6. **Commit:** `feat(video-ui): rail scrub tooltip + thumb clamp`.
+5. **Validation:** `npx tsc --noEmit` exit 0; scrub accuracy ±1 s vs committed seek; thumb never overhangs. ✅ `__tests__/videoProgressRail.test.tsx` — T6.1.
+6. **Commit:** `feat(video-ui): rail scrub tooltip + thumb clamp`. ✅
 
 ### PHASE 6.2 — Chapter + bookmark markers
 
@@ -244,8 +244,8 @@
 2. Bookmark markers (4 px gold diamonds) from `useBookmarks` data for the current source (host wiring at `VideoHost.tsx:71,527-552`).
 3. Markers sit under the thumb layer; tap targets unchanged.
 4. **Error fix:** markers must rescale on duration change (streams resolving duration late) — derive positions from current duration at render.
-5. **Validation:** `npx tsc --noEmit` exit 0; markers visible on sources with chapters/bookmarks and positioned correctly.
-6. **Commit:** `feat(video-ui): chapter + bookmark rail markers`.
+5. **Validation:** `npx tsc --noEmit` exit 0; markers visible on sources with chapters/bookmarks and positioned correctly. ✅ `__tests__/videoProgressRail.test.tsx` — T6.2.
+6. **Commit:** `feat(video-ui): chapter + bookmark rail markers`. ✅
 
 ### PHASE 6.3 — Remaining time + LIVE + throttle
 
@@ -253,15 +253,15 @@
 2. LIVE mode (`session.isLive`): non-interactive track + `LIVE` pill (`semantic.error` dot); tap pill = seek-to-live-edge when seekable.
 3. Position-driven re-render throttled to ≤ 1 Hz (session poll is 750 ms; render coalesces).
 4. **Error fix:** live streams report duration ≈ elapsed — never render remaining `-0:00` flicker; suppress time labels in LIVE mode.
-5. **Validation:** `npx tsc --noEmit` exit 0; VOD shows remaining; live stream shows LIVE pill and disabled scrub.
-6. **Commit:** `feat(video-ui): remaining time, LIVE pill, 1Hz rail`.
+5. **Validation:** `npx tsc --noEmit` exit 0; VOD shows remaining; live stream shows LIVE pill and disabled scrub. ✅ `__tests__/videoProgressRail.test.tsx` — T6.3.
+6. **Commit:** `feat(video-ui): remaining time, LIVE pill, 1Hz rail`. ✅
 
 ### GATE 6 — rail is honest and precise
 
-- [ ] Tooltip ±1 s; thumb clamped; markers positioned from live duration.
-- [ ] LIVE behavior correct; remaining-time default with toggle.
-- [ ] Rail re-render ≤ 1 Hz outside scrubbing.
-- [ ] Tracker backfill committed: `docs(video-v11): GATE 6 — rail`.
+- [x] Tooltip ±1 s; thumb clamped; markers positioned from live duration.
+- [x] LIVE behavior correct; remaining-time default with toggle.
+- [x] Rail re-render ≤ 1 Hz outside scrubbing.
+- [x] Tracker backfill committed: `docs(video-v11): GATE 6 — rail`.
 
 ---
 
@@ -424,12 +424,12 @@
 
 | # | Theme | Status |
 |---|---|---|
-| 1 | Unified loading pill | ⬜ pending (3 phases) |
-| 2 | Top bar rework, close top-right | ⬜ pending (3 phases) |
-| 3 | VideoMoreSheet | ⬜ pending (3 phases) |
-| 4 | Queue as a sheet | ⬜ pending (3 phases) |
-| 5 | Centre action + single retry | ⬜ pending (3 phases) |
-| 6 | Progress rail upgrade | ⬜ pending (3 phases) |
+| 1 | Unified loading pill | ✅ done (3 phases) |
+| 2 | Top bar rework, close top-right | ✅ done (3 phases) |
+| 3 | VideoMoreSheet | ✅ done (3 phases) |
+| 4 | Queue as a sheet | ✅ done (3 phases) |
+| 5 | Centre action + single retry | ✅ done (3 phases) |
+| 6 | Progress rail upgrade | ✅ done (3 phases) |
 | 7 | Mini with live surface (+ flag) | ⬜ pending (3 phases) |
 | 8 | Fullscreen / landscape | ⬜ pending (3 phases) |
 | 9 | Lock + resume + auto-hide | ⬜ pending (3 phases) |
