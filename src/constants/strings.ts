@@ -163,6 +163,51 @@ const strings = {
   // player. Lives in the status-pill area; the fade animation
   // keeps the visual noise low.
   controlsUnlockedHint: 'Controls unlocked',
+  // v11 T10.3: transport-row copy. VoiceOver / TalkBack read
+  // these labels out loud when the user focuses a transport
+  // button. Keeping them in the copy table lets the spec
+  // reference them and lets us tune the wording in one place.
+  videoPreviousVideo: 'Previous video',
+  videoNextVideo: 'Next video',
+  videoSeekBackward10: 'Seek backward 10 seconds',
+  videoSeekForward10: 'Seek forward 10 seconds',
+  videoCaptions: 'Captions',
+  // Mini card actions. Both labels were hardcoded in the JSX
+  // before T10.3.
+  videoExpandPlayerFull: 'Expand video player',
+  // VideoMoreSheet copy. Section headers, dismiss chips, the
+  // track-off option, and the window / audio chip labels.
+  moreSheetSectionQueue: 'Queue',
+  moreSheetSectionTracks: 'Tracks',
+  moreSheetSectionChapters: 'Chapters',
+  moreSheetSectionWindow: 'Window',
+  moreSheetSectionAudio: 'Audio',
+  moreSheetTrackOff: 'Off',
+  moreSheetWindowFullscreen: 'Fullscreen',
+  moreSheetWindowPip: 'Picture in picture',
+  moreSheetAudioEqualizer: 'Equalizer',
+  moreSheetDismiss: 'Dismiss more sheet',
+  moreSheetReset: 'Reset more options',
+  moreSheetDone: 'Done',
+  moreSheetClearQueue: 'Clear queue',
+  moreSheetFeatureUnavailable: ' not available on this device',
+  // Chrome auto-hide + accessibility live region.
+  videoChromeShow: 'Show video controls',
+  videoChromeHide: 'Hide video controls',
+  // v11 T10.3: speed chip a11y label template. {speed} is
+  // replaced with the formatted "1×" / "1.5×" string.
+  videoSpeedChipLabel: 'Playback speed {speed}. Tap to change.',
+  // Mini frame.
+  videoExpandByName: 'Expand {title}',
+  // Top-bar close hint (a11y hint read by VoiceOver / TalkBack
+  // when the user focuses the close button).
+  videoClosePlayerHint:
+    'Closes the video player and returns to the previous screen',
+  // Progress rail a11y.
+  videoProgressRail: 'Video position',
+  videoProgressRailLive: 'Live stream',
+  videoProgressRailTotal: 'Total duration',
+  videoProgressRailRemaining: 'Remaining time',
   // v11 T9.2: resume prompt. The {time} placeholder is replaced
   // at render time with the saved bookmark position formatted
   // as H:MM:SS.

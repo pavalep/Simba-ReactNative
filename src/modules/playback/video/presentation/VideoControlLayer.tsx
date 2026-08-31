@@ -168,7 +168,7 @@ function FullControls({
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={chromeVisible ? 'Hide video controls' : 'Show video controls'}
+        accessibilityLabel={chromeVisible ? strings.videoChromeHide : strings.videoChromeShow}
         onPress={onToggleChrome}
         style={styles.frameTapTarget}
       />
@@ -188,8 +188,8 @@ function FullControls({
         <View style={[styles.bottomScrim, {paddingBottom: geometry.bottomContentInset, paddingHorizontal: geometry.horizontalContentInset}]} pointerEvents="box-none">
           <VideoProgressRail session={session} onSeek={onSeek} bookmarks={bookmarks} />
           <View style={[styles.transportRow, {gap: geometry.controlGap}]}>
-            {onPrevious ? <VideoControlButton icon="previous" label="Previous video" size="regular" disabled={!capabilities.canPlay} onPress={onPrevious} /> : null}
-            {capabilities.canSeek ? <VideoControlButton icon="rewind" label="Seek backward 10 seconds" size="regular" onPress={() => onSkip(-10)} /> : null}
+            {onPrevious ? <VideoControlButton icon="previous" label={strings.videoPreviousVideo} size="regular" disabled={!capabilities.canPlay} onPress={onPrevious} /> : null}
+            {capabilities.canSeek ? <VideoControlButton icon="rewind" label={strings.videoSeekBackward10} size="regular" onPress={() => onSkip(-10)} /> : null}
             <VideoControlButton
               icon={primaryIcon(session)}
               iconColor={cinemaColors.text.bright}
@@ -198,8 +198,8 @@ function FullControls({
               disabled={session.phase === 'connecting' || session.phase === 'preparing'}
               onPress={onPlayPause}
             />
-            {capabilities.canSeek ? <VideoControlButton icon="forward" label="Seek forward 10 seconds" size="regular" onPress={() => onSkip(10)} /> : null}
-            {onNext ? <VideoControlButton icon="next" label="Next video" size="regular" onPress={onNext} /> : null}
+            {capabilities.canSeek ? <VideoControlButton icon="forward" label={strings.videoSeekForward10} size="regular" onPress={() => onSkip(10)} /> : null}
+            {onNext ? <VideoControlButton icon="next" label={strings.videoNextVideo} size="regular" onPress={onNext} /> : null}
           </View>
           <View style={[styles.utilityRow, {gap: geometry.utilityGap}]}>
             {/*
@@ -214,7 +214,7 @@ function FullControls({
               chip's own styling tints gold when the speed \u2260 1.
             */}
             {capabilities.canSelectCaptionTrack && onToggleCaptions ? (
-              <VideoControlButton icon="captions" label="Captions" size="utility" onPress={onToggleCaptions} />
+              <VideoControlButton icon="captions" label={strings.videoCaptions} size="utility" onPress={onToggleCaptions} />
             ) : null}
             {onToggleBookmark ? (
               <VideoControlButton
@@ -318,7 +318,7 @@ function VideoSpeedChip({speed, onPress}: {speed: number; onPress: () => void}) 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Playback speed ${label}. Tap to change.`}
+      accessibilityLabel={strings.videoSpeedChipLabel.replace('{speed}', label)}
       onPress={onPress}
       style={({pressed}) => [styles.speedChip, pressed && styles.speedChipPressed]}>
       <Text style={styles.speedChipText}>{label}</Text>

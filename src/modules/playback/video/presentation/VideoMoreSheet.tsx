@@ -25,6 +25,7 @@ import {
 } from 'react-native';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
 import {FONT_FAMILY} from '../../../../constants/fontFamily';
+import strings from '../../../../constants/strings';
 
 const HANDLE_WIDTH = 36;
 const HANDLE_HEIGHT = 4;
@@ -378,7 +379,7 @@ export function VideoMoreSheet({
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Dismiss more sheet"
+            accessibilityLabel={strings.moreSheetDismiss}
             onPress={onClose}
             style={StyleSheet.absoluteFill}
           />
@@ -392,7 +393,7 @@ export function VideoMoreSheet({
         >
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Dismiss more sheet"
+            accessibilityLabel={strings.moreSheetDismiss}
             onPress={onClose}
             style={styles.handle}
           />
@@ -414,7 +415,7 @@ export function VideoMoreSheet({
           <View style={styles.footer}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Reset more options"
+              accessibilityLabel={strings.moreSheetReset}
               onPress={onClose}
               style={styles.footerAction}
             >
@@ -430,7 +431,7 @@ export function VideoMoreSheet({
             <View style={styles.footerSpacer} />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Done"
+              accessibilityLabel={strings.moreSheetDone}
               onPress={onClose}
               style={styles.footerAction}
             >
@@ -487,7 +488,7 @@ function QueueSection({section}: {section: VideoMoreSheetQueueSection}) {
       ) : null}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Clear queue"
+        accessibilityLabel={strings.moreSheetClearQueue}
         onPress={section.onClear}
         style={({pressed}) => [styles.queueClearRow, pressed && {opacity: 0.6}]}
         testID="moreQueue:clear"
@@ -569,7 +570,7 @@ function TracksSection({section}: {section: VideoMoreSheetTracksSection}) {
           <View style={styles.chipRow}>
             {group.allowOff ? (
               <Chip
-                label="Off"
+                label={strings.moreSheetTrackOff}
                 selected={!!group.offSelected}
                 onPress={() => section.onSelect(group.id, null)}
                 testID={`moreTrack:${group.id}:off`}
@@ -676,7 +677,7 @@ function CapabilityChip({
     <View
       testID={testID}
       accessibilityRole="text"
-      accessibilityLabel={`${label} not available on this device`}
+      accessibilityLabel={`${label}${strings.moreSheetFeatureUnavailable}`}
       style={[styles.chip, styles.chipMuted]}
     >
       <Text style={[styles.chipLabel, styles.chipLabelMuted]}>
@@ -692,13 +693,13 @@ function WindowSection({section}: {section: VideoMoreSheetWindowSection}) {
       <Text style={styles.sectionHeader}>Window</Text>
       <View style={styles.chipRow}>
         <CapabilityChip
-          label="Fullscreen"
+          label={strings.moreSheetWindowFullscreen}
           enabled={section.canFullscreen}
           onPress={section.onToggleFullscreen}
           testID="moreWindow:fullscreen"
         />
         <CapabilityChip
-          label="Picture in picture"
+          label={strings.moreSheetWindowPip}
           enabled={section.canPip}
           onPress={section.onPip}
           testID="moreWindow:pip"
@@ -714,7 +715,7 @@ function AudioSection({section}: {section: VideoMoreSheetAudioSection}) {
       <Text style={styles.sectionHeader}>Audio</Text>
       <View style={styles.chipRow}>
         <Chip
-          label="Equalizer"
+          label={strings.moreSheetAudioEqualizer}
           selected={false}
           onPress={section.onOpenEqualizer}
           testID="moreAudio:equalizer"

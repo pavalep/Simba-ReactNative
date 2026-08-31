@@ -1,6 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
+import strings from '../../../../constants/strings';
 import type {VideoSessionSnapshot} from '../domain/VideoTypes';
 
 /**
@@ -53,7 +54,7 @@ export function VideoMiniProgress({session, testID}: VideoMiniProgressProps) {
     <View
       testID={testID}
       accessibilityRole="progressbar"
-      accessibilityLabel="Video position"
+      accessibilityLabel={strings.videoProgressRail}
       accessibilityValue={{
         min: 0,
         max: duration ?? 0,

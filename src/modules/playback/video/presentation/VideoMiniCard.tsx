@@ -4,6 +4,7 @@ import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import {runOnJS} from 'react-native-reanimated';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
 import {FONT_FAMILY} from '../../../../constants/fontFamily';
+import strings from '../../../../constants/strings';
 import type {
   VideoSessionSnapshot,
 } from '../domain/VideoTypes';
@@ -203,14 +204,14 @@ export function VideoMiniCard({
           />
           <VideoControlButton
             icon="expand"
-            label="Expand video player"
+            label={strings.videoExpandPlayerFull}
             size="mini"
             onPress={onExpand}
             testID="videoMiniCard:expand"
           />
           <VideoControlButton
             icon="close"
-            label="Close video player"
+            label={strings.videoClosePlayer}
             size="mini"
             onPress={onClose}
             testID="videoMiniCard:close"
@@ -223,7 +224,7 @@ export function VideoMiniCard({
           still wired (see VideoMiniFrame). */}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Expand ${title}`}
+        accessibilityLabel={strings.videoExpandByName.replace('{title}', title)}
         onPress={onExpand}
         style={StyleSheet.absoluteFill}
         pointerEvents="box-none"

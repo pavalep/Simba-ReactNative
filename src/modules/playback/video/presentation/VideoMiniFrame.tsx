@@ -2,6 +2,7 @@ import React from 'react';
 import {Image, StyleSheet, Text, View} from 'react-native';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
 import {FONT_FAMILY} from '../../../../constants/fontFamily';
+import strings from '../../../../constants/strings';
 import {VideoNativeSurface} from '../surface/VideoNativeSurface';
 
 /**
@@ -108,7 +109,11 @@ export function VideoMiniFrame({
       <View
         testID={testID}
         style={styles.frame}
-        accessibilityLabel={tappable ? `Expand ${title}` : undefined}
+        accessibilityLabel={
+          tappable
+            ? strings.videoExpandByName.replace('{title}', title)
+            : undefined
+        }
       >
         {content}
       </View>
@@ -116,7 +121,11 @@ export function VideoMiniFrame({
   }
 
   return (
-    <View testID={testID} style={styles.frame} accessibilityLabel={`Expand ${title}`}>
+    <View
+      testID={testID}
+      style={styles.frame}
+      accessibilityLabel={strings.videoExpandByName.replace('{title}', title)}
+    >
       {content}
       {/* T7.2: the parent (VideoMiniCard) owns the tap target \u2014 the
           frame itself is a press surface here. The Pressable is

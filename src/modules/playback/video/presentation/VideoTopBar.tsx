@@ -116,7 +116,7 @@ export function VideoTopBar({
           <VideoControlButton
             icon="close"
             label={strings.videoClosePlayer}
-            hint="Closes the video player and returns to the previous screen"
+            hint={strings.videoClosePlayerHint}
             size="compact"
             onPress={onClose}
           />

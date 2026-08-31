@@ -10,6 +10,7 @@ import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import {runOnJS} from 'react-native-reanimated';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
 import {FONT_FAMILY} from '../../../../constants/fontFamily';
+import strings from '../../../../constants/strings';
 import {createVideoBufferPresentation} from '../domain/VideoBufferPolicy';
 import type {VideoChapter, VideoSessionSnapshot} from '../domain/VideoTypes';
 
@@ -272,7 +273,7 @@ export function VideoProgressRail({
       <GestureDetector gesture={gesture}>
         <View
           accessibilityRole="adjustable"
-          accessibilityLabel="Video position"
+          accessibilityLabel={strings.videoProgressRail}
           accessibilityValue={{
             min: 0,
             max: duration ?? 0,
@@ -389,7 +390,7 @@ export function VideoProgressRail({
           <View
             style={styles.livePill}
             testID="videoProgressRail:livePill"
-            accessibilityLabel="Live stream"
+            accessibilityLabel={strings.videoProgressRailLive}
           >
             <View style={styles.liveDot} />
             <Text style={styles.liveText}>LIVE</Text>
@@ -397,7 +398,7 @@ export function VideoProgressRail({
         ) : (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={showTotal ? 'Total duration' : 'Remaining time'}
+            accessibilityLabel={showTotal ? strings.videoProgressRailTotal : strings.videoProgressRailRemaining}
             onPress={toggleTimeMode}
             testID="videoProgressRail:timeToggle"
             style={styles.timeTextSlotRight}
