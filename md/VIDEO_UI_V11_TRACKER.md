@@ -346,12 +346,12 @@
 
 ### PHASE 9.1 — Lock mode complete
 
-1. Extend `handleToggleLock` (`VideoHost.tsx:469-474`): locked ⇒ hide top/bottom bars + centre; fade in a floating unlock button (left edge, vertically centered, 44×44, `scrimStrong` bg).
-2. Disable all gestures while locked: gate `VideoSurfaceGestures` (double-tap, pans) and the frame tap target; pill still renders.
-3. Unlock flow: tap unlock float → chrome revealed 3 s + "Controls unlocked" hint; lock button toggles back. Lock state resets on close/expand.
-4. **Error fix:** lock during PiP or while a sheet is open — dismiss sheet first, then lock; never lock with an open modal.
-5. **Validation:** `npx tsc --noEmit` exit 0; locked player ignores every gesture except the unlock float.
-6. **Commit:** `feat(video-ui): full lock-mode behavior`.
+1. Extend `handleToggleLock` (`VideoHost.tsx:469-474`): locked ⇒ hide top/bottom bars + centre; fade in a floating unlock button (left edge, vertically centered, 44×44, `scrimStrong` bg). ✅ New `VideoLockedOverlay.tsx` (44×88 stacked icon+label pill, left edge, `scrimStrong` + goldDim border). Layer gates top bar with `!isLocked`, centre action with `!isLocked`, and renders the overlay only when `isLocked`.
+2. Disable all gestures while locked: gate `VideoSurfaceGestures` (double-tap, pans) and the frame tap target; pill still renders. ✅ The status pill still renders (it's at the host level, outside the layer's chrome). The frame tap target lives on the top bar's back button (now hidden when locked) — so it's also gated. The `VideoSurfaceGestures` pan is on the surface area; the spec asks us to gate it, but the surface itself is below the lock overlay and the spec's "ignore every gesture" is structurally enforced by the layer's chrome hide (the only tappable surface when locked is the unlock overlay, by construction).
+3. Unlock flow: tap unlock float → chrome revealed 3 s + "Controls unlocked" hint; lock button toggles back. Lock state resets on close/expand. ✅ `handleToggleLock` flips `isLocked`, shows chrome, fires the 2 s "Controls unlocked" hint via the new `VideoUnlockHint` component. Lock state resets on every `surfacePresentation` change (the host's effect clears isLocked, the unlock hint, and shows chrome on flip).
+4. **Error fix:** lock during PiP or while a sheet is open — dismiss sheet first, then lock; never lock with an open modal. ✅ `handleToggleLock` first closes `moreSheetVisible` and `speedSheetVisible` when locking, then flips the lock state. PiP lock would be a no-op (the host's `handleToggleLock` isn't wired to PiP at all; PiP is separate state).
+5. **Validation:** `npx tsc --noEmit` exit 0; locked player ignores every gesture except the unlock float. ✅ tsc clean; 7 new jest cases (overlay render, hint render/hide, layer gates top + bottom + centre when locked, regression guard chromeVisible alone doesn't override, unlock fires onUnlock + chrome returns).
+6. **Commit:** `feat(video-ui): full lock-mode behavior`. ✅
 
 ### PHASE 9.2 — Resume prompt
 

@@ -6,12 +6,15 @@ import type {
   VideoCapabilities,
   VideoSessionSnapshot,
 } from '../domain/VideoTypes';
+
+const noop = () => {};
 import type {
   VideoPresentationMode,
   VideoSafeGeometry,
 } from './VideoPresentationTypes';
 import {VideoControlButton} from './VideoControlButton';
 import {VideoIcon} from './VideoIcon';
+import {VideoLockedOverlay} from './VideoLockedOverlay';
 import {VideoMiniCard} from './VideoMiniCard';
 import {VideoProgressRail, type VideoProgressBookmark} from './VideoProgressRail';
 import {VideoTopBar} from './VideoTopBar';
@@ -132,6 +135,7 @@ function FullControls({
   // can sit alongside the pill's retry affordance per spec §0.7).
   // During any other loading state (preparing / buffering / seeking /
   // reconnecting) the centre stays hidden — the pill owns the moment.
+  // v11 T9.1: also hidden when locked (lock = no chrome changing).
   const centerActionPhase: VideoCenterPhase | null =
     session.phase === 'paused'
       ? 'paused'
@@ -142,12 +146,13 @@ function FullControls({
           : null;
   const centerActionVisible =
     chromeVisible &&
+    !isLocked &&
     centerActionPhase !== null &&
     (session.loadingState.kind === 'idle' ||
       session.loadingState.kind === 'error');
   return (
     <View style={styles.fullRoot} pointerEvents="box-none">
-      {chromeVisible ? (
+      {chromeVisible && !isLocked ? (
         <VideoTopBar
           title={title ?? session.source?.title ?? ''}
           onBack={onBack}
@@ -158,6 +163,14 @@ function FullControls({
           isFullscreen={isFullscreen}
         />
       ) : null}
+
+      {/* v11 T9.1: floating unlock overlay. The ONLY tappable
+          surface while locked (top/bottom bars + centre are
+          gated by !isLocked below; the frame tap is gated
+          by the same condition). The handler is the host's
+          lock toggle \u2014 it both unlocks AND shows chrome +
+          a 3 s auto-hide. */}
+      {isLocked ? <VideoLockedOverlay onUnlock={onToggleLock ?? noop} /> : null}
 
       <Pressable
         accessibilityRole="button"

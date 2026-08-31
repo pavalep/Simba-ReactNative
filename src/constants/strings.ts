@@ -153,6 +153,10 @@ const strings = {
   videoEnterFullscreen: 'Enter fullscreen',
   videoExitFullscreen: 'Exit fullscreen',
   videoFullscreenFailed: 'Could not enter fullscreen',
+  // v11 T9.1: 2 s auto-clear hint after the user unlocks the
+  // player. Lives in the status-pill area; the fade animation
+  // keeps the visual noise low.
+  controlsUnlockedHint: 'Controls unlocked',
   videoErrorTitle: 'Playback Error',
   videoErrorMessage: 'Failed to play this video.',
   videoErrorPermission: 'Permission Denied',

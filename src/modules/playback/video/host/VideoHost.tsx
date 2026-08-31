@@ -12,6 +12,7 @@ import {VideoPresentationShell} from '../presentation/VideoPresentationShell';
 import {computeMiniSlot, TRANSITION_DURATION_MS} from '../presentation/videoShellConstants';
 import {createSurfaceChangeCounter, VIDEO_UI_FLAGS} from '../presentation/videoUiFlags';
 import {VideoStatusPill} from '../presentation/VideoStatusPill';
+import {VideoUnlockHint} from '../presentation/VideoUnlockHint';
 import {VideoSafeControlLayer} from '../presentation/VideoSafeControlLayer';
 import {VideoSurfaceGestures} from '../presentation/VideoSurfaceGestures';
 import {VideoMoreSheet, type VideoMoreSheetRow} from '../presentation/VideoMoreSheet';
@@ -250,6 +251,22 @@ export function VideoHost({active}: VideoHostProps) {
     surfaceChangeCounter.current.reset();
   }, [surfacePresentation]);
 
+  // v11 T9.1: lock state resets on every presentation flip.
+  // When the user collapses to mini, the next session starts
+  // unlocked (the lock was for the previous full session).
+  // When the user re-expands to full, same story \u2014 the lock
+  // is per-session, not per-app. Also clears the unlock hint
+  // so a stale hint doesn't bleed into the new session.
+  useEffect(() => {
+    setIsLocked(false);
+    setChromeVisible(true);
+    if (unlockHintTimer.current) {
+      clearTimeout(unlockHintTimer.current);
+      unlockHintTimer.current = null;
+    }
+    setUnlockHint(false);
+  }, [surfacePresentation]);
+
   useEffect(() => {
     if (!playback) return;
     // P3: pass real screen geometry to the surface port so it can
@@ -447,18 +464,66 @@ export function VideoHost({active}: VideoHostProps) {
       .catch(() => undefined);
   }, [playback]);
 
-  // W2.8: lock screen. When `isLocked` is true the chrome hides the
-  // seek + transport + utility rows — only the center play/pause tap
-  // target is still active (large button). Any tap on the surface also
-  // re-shows the chrome for 3 s (auto-hide still applies). Tapping the
-  // lock icon in the top row toggles the state. Useful for kids /
-  // accidental touches; the play/pause is still reachable.
+  // v11 T9.1: full lock-mode behavior. When `isLocked` is true,
+  // the top/bottom bars + centre all hide (the layer gates them
+  // with `!isLocked`). The only tappable surface is the floating
+  // `VideoLockedOverlay` (44×44 button on the left edge, 88 px
+  // tall to accommodate a stacked icon + label). Tapping the
+  // unlock overlay re-shows the chrome for 3 s, plays a
+  // transient hint, and resumes normal auto-hide behavior.
+  //
+  // T9.1 step 4 (error fix): if the MoreSheet is open when the
+  // user taps the lock button, dismiss the sheet first. Locking
+  // with a modal open is a state-machine trap — the sheet
+  // dismisses to a locked player, leaving the user unable to
+  // reach the chip that re-opens it.
+  //
+  // Lock state resets on close / expand so the next session
+  // starts unlocked (the lock is per-session, not per-app).
   const [isLocked, setIsLocked] = useState(false);
+  const [unlockHint, setUnlockHint] = useState(false);
+  const unlockHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleToggleLock = useCallback(() => {
-    setIsLocked(current => !current);
-    // Show chrome on unlock so the user can see the new state.
-    setChromeVisible(true);
-  }, []);
+    setIsLocked(current => {
+      const next = !current;
+      if (next) {
+        // Entering lock: dismiss any open sheet first, then hide
+        // chrome. The floating unlock overlay takes over as the
+        // only tappable surface.
+        if (moreSheetVisible) {
+          setMoreSheetVisible(false);
+        }
+        if (speedSheetVisible) {
+          setSpeedSheetVisible(false);
+        }
+        setChromeVisible(false);
+        // Clear any pending unlock hint.
+        if (unlockHintTimer.current) {
+          clearTimeout(unlockHintTimer.current);
+          unlockHintTimer.current = null;
+        }
+        setUnlockHint(false);
+      } else {
+        // Exiting lock: show chrome immediately, schedule a
+        // 3 s auto-hide (the layer's auto-hide timer takes over
+        // after the next session.position tick), and fire a
+        // 2 s transient "Controls unlocked" hint via the pill
+        // area. (The hint piggybacks on the status-pill surface
+        // because we don't have a dedicated snackbar in v11; the
+        // 2 s auto-clear keeps the visual noise low.)
+        setChromeVisible(true);
+        setUnlockHint(true);
+        if (unlockHintTimer.current) {
+          clearTimeout(unlockHintTimer.current);
+        }
+        unlockHintTimer.current = setTimeout(() => {
+          setUnlockHint(false);
+          unlockHintTimer.current = null;
+        }, 2000);
+      }
+      return next;
+    });
+  }, [moreSheetVisible, speedSheetVisible]);
 
   // v11 T2.3: more-sheet open/close. The `more` button in the top bar
   // is only rendered when the host detects at least one MoreSheet
@@ -940,6 +1005,11 @@ export function VideoHost({active}: VideoHostProps) {
         />
       ) : null}
       <VideoStatusPill loadingState={session.loadingState} onRetry={retryVideo} />
+      {/* v11 T9.1: 2 s auto-clear hint after unlock. Fades in/out
+          (180 ms native driver). Positioned at the bottom-center
+          so it sits in the status-pill area without overlapping
+          the bottom scrim when the chrome re-shows. */}
+      <VideoUnlockHint visible={unlockHint} />
       {/* W2.1: speed picker sheet. Mounted above the surface so it always
           appears on top, regardless of full / mini / PiP state. */}
       <FilterSheet
