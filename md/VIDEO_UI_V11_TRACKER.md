@@ -355,12 +355,12 @@
 
 ### PHASE 9.2 — Resume prompt
 
-1. Trigger: saved position > 30 s AND < duration − 60 s AND no explicit `startPosition` in the open request.
-2. Card in the pill region: "Continue from {time}?" + `[Resume]` (gold) / `[Start over]` (ghost); auto-"Start over" after 8 s.
-3. During prompt: load paused at 0, first frame visible behind the card; reuse existing bookmark/history resume plumbing (`VideoHost.tsx:71-73,527-552`).
-4. **Error fix:** explicit deep-link `startPosition` must bypass the prompt entirely; prompt never appears on live sources.
-5. **Validation:** `npx tsc --noEmit` exit 0; reopen a partially watched video → prompt; 8 s default works; Resume seeks correctly.
-6. **Commit:** `feat(video-ui): resume prompt`.
+1. Trigger: saved position > 30 s AND < duration − 60 s AND no explicit `startPosition` in the open request. ✅ Host's `useMemo` (`VideoHost.tsx:159-178`) evaluates all six conditions: no explicit `startPosition` (treats `undefined` AND `null` as bypass; explicit 0 also bypasses), bookmark exists, position > 30 s, duration known, position < duration − 60, not live.
+2. Card in the pill region: "Continue from {time}?" + `[Resume]` (gold) / `[Start over]` (ghost); auto-"Start over" after 8 s. ✅ New `VideoResumePrompt.tsx` (card with title, formatted subtitle via `{time}` placeholder, primary gold button + ghost button). 8 s auto-"Start over" timer in the host's useEffect.
+3. During prompt: load paused at 0, first frame visible behind the card; reuse existing bookmark/history resume plumbing (`VideoHost.tsx:71-73,527-552`). ✅ When `resumePromptEligible` is true, the host forces `startPosition = 0` and `autoplay = false` so the first frame is visible behind the card. The host's `handleResume` calls `dispatchSeek(savedBookmark.position)` (reusing the existing seek plumbing) + `playback.commands.dispatch({type: 'play'})`.
+4. **Error fix:** explicit deep-link `startPosition` must bypass the prompt entirely; prompt never appears on live sources. ✅ `useMemo` uses `=== undefined` (not `!value`) so explicit 0 also bypasses — a deep-link to "start at 0" is an explicit choice and the prompt would be redundant. `session.isLive` check excluded in the same `useMemo`.
+5. **Validation:** `npx tsc --noEmit` exit 0; reopen a partially watched video → prompt; 8 s default works; Resume seeks correctly. ✅ tsc clean; 11 new jest cases (4 component + 7 trigger-logic mirror).
+6. **Commit:** `feat(video-ui): resume prompt`. ✅
 
 ### PHASE 9.3 — Auto-hide trigger contract
 

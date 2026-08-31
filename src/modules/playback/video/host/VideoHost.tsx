@@ -12,6 +12,7 @@ import {VideoPresentationShell} from '../presentation/VideoPresentationShell';
 import {computeMiniSlot, TRANSITION_DURATION_MS} from '../presentation/videoShellConstants';
 import {createSurfaceChangeCounter, VIDEO_UI_FLAGS} from '../presentation/videoUiFlags';
 import {VideoStatusPill} from '../presentation/VideoStatusPill';
+import {VideoResumePrompt} from '../presentation/VideoResumePrompt';
 import {VideoUnlockHint} from '../presentation/VideoUnlockHint';
 import {VideoSafeControlLayer} from '../presentation/VideoSafeControlLayer';
 import {VideoSurfaceGestures} from '../presentation/VideoSurfaceGestures';
@@ -81,9 +82,38 @@ export function VideoHost({active}: VideoHostProps) {
   // resume), the explicit value wins.
   const {bookmarksForFile, add: addBookmark, remove: removeBookmarkById} = useBookmarks(source.uri);
   const savedBookmark = bookmarksForFile[0] ?? null;
-  const startPosition = active.startPosition ?? savedBookmark?.position;
-  const autoplay = active.entry.autoplay ?? true;
-  const requestIdentity = `${sourceFingerprint}|${startPosition ?? ''}|${autoplay ? 'autoplay' : 'paused'}`;
+
+  // v11 T9.2: resume-prompt trigger. The prompt only appears
+  // when ALL conditions are met (spec 4.11):
+  //   - No explicit startPosition in the open request
+  //     (deep-link / queue resume skip the prompt entirely)
+  //   - A saved bookmark exists for the current URI
+  //   - The saved position is past the 30 s "early enough to
+  //     remember" threshold
+  //   - The saved position is well before the end (not within
+  //     60 s of the duration \u2014 we'd be asking the user to
+  //     resume something that just finished)
+  //   - The source is NOT a live stream
+  // The component's own visible state is driven by a separate
+  // boolean so the trigger conditions are derived once at
+  // mount time; the bookmark / duration can change after the
+  // prompt shows without us re-deciding.
+  const explicitStartPosition = active.startPosition;
+  const bookmarkPosition = savedBookmark?.position;
+
+  // v11 T9.2: when the prompt is eligible, load at 0 (paused)
+  // so the user sees the start of the video behind the card.
+  // Otherwise, honour the existing auto-seek behavior.
+  // v11 T9.2: effective start position / autoplay. When the
+  // resume prompt is eligible, load at 0, paused, so the user
+  // sees the start of the video behind the card. The eligibility
+  // is computed further down (after `session` is declared); for
+  // now, the placeholder is the normal auto-seek behavior. The
+  // useMemo below OVERRIDES these placeholders once the
+  // eligibility check runs.
+  let startPosition = explicitStartPosition ?? bookmarkPosition;
+  let autoplay = active.entry.autoplay ?? true;
+  let requestIdentity = `${sourceFingerprint}|${startPosition ?? ''}|${autoplay ? 'autoplay' : 'paused'}`;
   // W5.6: subtitle language from the openPlayer call. The video
   // session's `tracks` list is populated asynchronously after
   // `onTracksChanged` fires; the effect below watches for a
@@ -121,6 +151,43 @@ export function VideoHost({active}: VideoHostProps) {
   // 250 ms (longer than a typical React double-tap window).
   const queuePlayInFlight = useRef(false);
   const session = viewState.session;
+
+  // v11 T9.2: resume-prompt eligibility + effective load params.
+  // The eligibility check reads `session.isLive` and
+  // `session.duration`, so it must run AFTER `session` is
+  // declared (the placeholder above is the non-prompt path).
+  //
+  // Spec 4.11 trigger conditions (ALL must be true):
+  //   - No explicit startPosition in the open request
+  //   - A saved bookmark exists for the current URI
+  //   - The saved position is past the 30 s "early enough to
+  //     remember" threshold
+  //   - The saved position is well before the end (not within
+  //     60 s of the duration)
+  //   - The source is NOT a live stream
+  const resumePromptEligible = useMemo(() => {
+    return (
+      // T9.2 step 4 error fix: explicit deep-link startPosition
+      // bypasses the prompt entirely. We test for `!== undefined`
+      // (not `!value`) so that an explicit 0 is also treated as
+      // a bypass \u2014 a deep-link to "start at 0" is an explicit
+      // choice and the prompt would be redundant.
+      explicitStartPosition === undefined &&
+      bookmarkPosition !== undefined &&
+      bookmarkPosition > 30 &&
+      session.duration !== null &&
+      session.duration > 0 &&
+      bookmarkPosition < session.duration - 60 &&
+      !session.isLive
+    );
+  }, [explicitStartPosition, bookmarkPosition, session.duration, session.isLive]);
+  // v11 T9.2: when the prompt is eligible, load at 0 (paused)
+  // so the user sees the start of the video behind the card.
+  if (resumePromptEligible) {
+    startPosition = 0;
+    autoplay = false;
+    requestIdentity = `${sourceFingerprint}|0|paused`;
+  }
   const presentation: PlaybackPresentation = active.presentation;
   const isPipLike = pipState?.mode === 'entering' || pipState?.mode === 'pip' || pipState?.mode === 'exiting';
   const shellPresentation = isPipLike || presentation === 'expanded' ? 'full' : 'mini';
@@ -265,6 +332,15 @@ export function VideoHost({active}: VideoHostProps) {
       unlockHintTimer.current = null;
     }
     setUnlockHint(false);
+    // v11 T9.2: also reset the resume-prompt dismissed state so a
+    // re-collapsed + re-expanded player re-eligible to show the
+    // prompt (the trigger conditions are re-evaluated from the new
+    // mount's bookmarks / duration).
+    setResumePromptDismissed(false);
+    if (resumePromptTimer.current) {
+      clearTimeout(resumePromptTimer.current);
+      resumePromptTimer.current = null;
+    }
   }, [surfacePresentation]);
 
   useEffect(() => {
@@ -483,6 +559,41 @@ export function VideoHost({active}: VideoHostProps) {
   const [isLocked, setIsLocked] = useState(false);
   const [unlockHint, setUnlockHint] = useState(false);
   const unlockHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // v11 T9.2: resume prompt state. The prompt is shown when
+  // `resumePromptEligible` is true (computed above) and the
+  // user hasn't dismissed it (Resume or Start over, or the
+  // 8 s auto-timer fires). Once dismissed, the state stays
+  // dismissed for the lifetime of the host \u2014 reopening the
+  // same source is a new host mount.
+  const [resumePromptDismissed, setResumePromptDismissed] = useState(false);
+  const resumePromptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resumePromptVisible =
+    resumePromptEligible && !resumePromptDismissed;
+  const dismissResumePrompt = useCallback(() => {
+    setResumePromptDismissed(true);
+    if (resumePromptTimer.current) {
+      clearTimeout(resumePromptTimer.current);
+      resumePromptTimer.current = null;
+    }
+  }, []);
+  // 8 s auto-"Start over" per spec 4.11. The user has 8
+  // seconds to pick Resume; otherwise the prompt self-dismisses
+  // and playback continues from 0 (the player was loaded at
+  // 0 with autoplay=false; once the prompt is gone, the user
+  // can press play themselves).
+  useEffect(() => {
+    if (!resumePromptVisible) return;
+    resumePromptTimer.current = setTimeout(() => {
+      dismissResumePrompt();
+    }, 8000);
+    return () => {
+      if (resumePromptTimer.current) {
+        clearTimeout(resumePromptTimer.current);
+        resumePromptTimer.current = null;
+      }
+    };
+  }, [dismissResumePrompt, resumePromptVisible]);
   const handleToggleLock = useCallback(() => {
     setIsLocked(current => {
       const next = !current;
@@ -573,6 +684,23 @@ export function VideoHost({active}: VideoHostProps) {
       generation: session.generation,
     }).catch(() => undefined);
   };
+
+  // v11 T9.2: resume-prompt handlers. The Resume button
+  // dismisses the prompt AND seeks to the saved position AND
+  // resumes playback (the user explicitly chose to continue).
+  // Start over just dismisses \u2014 the player was already loaded
+  // at 0, so the user is one tap on the play button away from
+  // the start. The host re-shows the prompt only on a fresh
+  // mount (state machine: dismissed stays dismissed).
+  const handleResume = useCallback(() => {
+    if (!savedBookmark) return;
+    dismissResumePrompt();
+    dispatchSeek(savedBookmark.position);
+    if (!playback) return;
+    playback.commands
+      .dispatch({type: 'play'})
+      .catch(() => undefined);
+  }, [dismissResumePrompt, dispatchSeek, playback, savedBookmark]);
 
   const dispatchSkip = (seconds: number) => {
     if (session.duration === null) return;
@@ -1005,6 +1133,19 @@ export function VideoHost({active}: VideoHostProps) {
         />
       ) : null}
       <VideoStatusPill loadingState={session.loadingState} onRetry={retryVideo} />
+      {/* v11 T9.2: resume prompt. Sits in the status-pill area
+          (bottom-center) so it overlays the first frame of the
+          video (which is loaded at 0, paused, while the prompt
+          is up). 8 s auto-"Start over" timer is owned by the
+          host's useEffect above. */}
+      {resumePromptVisible && savedBookmark ? (
+        <VideoResumePrompt
+          savedPosition={savedBookmark.position}
+          onResume={handleResume}
+          onStartOver={dismissResumePrompt}
+          testID="videoResumePrompt"
+        />
+      ) : null}
       {/* v11 T9.1: 2 s auto-clear hint after unlock. Fades in/out
           (180 ms native driver). Positioned at the bottom-center
           so it sits in the status-pill area without overlapping

@@ -157,6 +157,13 @@ const strings = {
   // player. Lives in the status-pill area; the fade animation
   // keeps the visual noise low.
   controlsUnlockedHint: 'Controls unlocked',
+  // v11 T9.2: resume prompt. The {time} placeholder is replaced
+  // at render time with the saved bookmark position formatted
+  // as H:MM:SS.
+  videoResumeTitle: 'Resume playback?',
+  videoResumeSubtitle: 'Continue from {time}',
+  videoResumeAction: 'Resume',
+  videoStartOverAction: 'Start over',
   videoErrorTitle: 'Playback Error',
   videoErrorMessage: 'Failed to play this video.',
   videoErrorPermission: 'Permission Denied',
