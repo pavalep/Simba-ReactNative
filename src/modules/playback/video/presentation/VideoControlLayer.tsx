@@ -208,21 +208,56 @@ function FullControls({
             {onNext ? <VideoControlButton icon="next" label="Next video" size="regular" onPress={onNext} /> : null}
           </View>
           <View style={[styles.utilityRow, {gap: geometry.utilityGap}]}>
-            {capabilities.canSelectCaptionTrack && onToggleCaptions ? <VideoControlButton icon="captions" label="Captions" size="compact" onPress={onToggleCaptions} /> : null}
-            {onOpenTracks ? <VideoControlButton icon="more" label="Tracks and quality" size="compact" onPress={onOpenTracks} /> : null}
-            {capabilities.canViewChapters && onOpenChapters ? <VideoControlButton icon="chapters" label="Chapters" size="compact" onPress={onOpenChapters} /> : null}
-            {onToggleBookmark ? <VideoControlButton icon={isBookmarked ? 'bookmarkFilled' : 'bookmark'} label={isBookmarked ? 'Remove bookmark' : 'Save bookmark'} size="compact" onPress={onToggleBookmark} /> : null}
-            {onOpenQueue ? <VideoControlButton icon="queue" label="Open queue" size="compact" onPress={onOpenQueue} /> : null}
+            {/*
+              v11 T10.1: utility row order per spec 4.5:
+                captions \u00b7 bookmark \u00b7 speed chip \u00b7 PiP \u00b7 spacer \u00b7 rotate \u00b7 more
+              Each chip uses the new `utility` size (36\u00d736
+              visual + 44 px hit slop). The `spacer` is a flex-1
+              View that pushes the right-cluster (rotate + more)
+              to the right edge \u2014 a standard utility-bar layout
+              pattern. The bookmark chip swaps to `bookmarkFilled`
+              when the current position is bookmarked; the speed
+              chip's own styling tints gold when the speed \u2260 1.
+            */}
+            {capabilities.canSelectCaptionTrack && onToggleCaptions ? (
+              <VideoControlButton icon="captions" label="Captions" size="utility" onPress={onToggleCaptions} />
+            ) : null}
+            {onToggleBookmark ? (
+              <VideoControlButton
+                icon={isBookmarked ? 'bookmarkFilled' : 'bookmark'}
+                label={isBookmarked ? strings.videoBookmarkRemove : strings.videoBookmarkAdd}
+                size="utility"
+                onPress={onToggleBookmark}
+              />
+            ) : null}
+            {capabilities.canChangeSpeed && onOpenSpeed ? (
+              <VideoSpeedChip speed={session.speed} onPress={onOpenSpeed} />
+            ) : null}
+            {capabilities.canPictureInPicture && onEnterPictureInPicture ? (
+              <VideoControlButton
+                icon="collapse"
+                label={strings.videoEnterPip}
+                size="utility"
+                onPress={onEnterPictureInPicture}
+              />
+            ) : null}
+            <View style={styles.utilitySpacer} />
             {capabilities.canFullscreen && !isLocked && onToggleFullscreen ? (
               <VideoControlButton
                 icon={isFullscreen ? 'collapse' : 'expand'}
                 label={isFullscreen ? strings.videoExitFullscreen : strings.videoEnterFullscreen}
-                size="compact"
+                size="utility"
                 onPress={onToggleFullscreen}
               />
             ) : null}
-            {capabilities.canPictureInPicture && onEnterPictureInPicture ? <VideoControlButton icon="collapse" label="Enter picture in picture" size="compact" onPress={onEnterPictureInPicture} /> : null}
-            {capabilities.canChangeSpeed && onOpenSpeed ? <VideoSpeedChip speed={session.speed} onPress={onOpenSpeed} /> : null}
+            {onOpenMore ? (
+              <VideoControlButton
+                icon="more"
+                label={strings.videoMoreOptions}
+                size="utility"
+                onPress={onOpenMore}
+              />
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -329,6 +364,15 @@ const styles = StyleSheet.create({
     minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  // v11 T10.1: the spacer between the left cluster (captions /
+  // bookmark / speed / PiP) and the right cluster (rotate / more).
+  // flex: 1 + 0 width pushes the right cluster to the end of
+  // the row. The same pattern the iOS apps use for the
+  // toolbars in the Photos / Music apps.
+  utilitySpacer: {
+    flex: 1,
+    minWidth: 8,
   },
   speedChip: {
     minWidth: 52,

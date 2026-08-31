@@ -13,7 +13,7 @@ import {VideoIcon, type VideoIconName} from './VideoIcon';
 export interface VideoControlButtonProps extends Omit<PressableProps, 'style' | 'children'> {
   readonly icon: VideoIconName;
   readonly label: string;
-  readonly size?: 'compact' | 'regular' | 'primary' | 'mini';
+  readonly size?: 'compact' | 'regular' | 'primary' | 'mini' | 'utility';
   readonly hint?: string;
   readonly iconColor?: string;
   readonly style?: StyleProp<ViewStyle>;
@@ -32,7 +32,16 @@ export function VideoControlButton({
   // v11 T7.2: 'mini' is a 32x32 size for the mini player's
   // play/expand/close row \u2014 the regular 'compact' is 44 px and
   // looks chunky in a 96-px-tall card.
-  const iconSize = size === 'primary' ? 31 : size === 'compact' ? 20 : size === 'mini' ? 16 : 24;
+  const iconSize =
+    size === 'primary'
+      ? 31
+      : size === 'compact'
+        ? 20
+        : size === 'mini'
+          ? 16
+          : size === 'utility'
+            ? 18
+            : 24;
   return (
     <Pressable
       {...props}
@@ -40,6 +49,10 @@ export function VideoControlButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={hint}
+      // v11 T10.1: utility chips are 36x36 visual but the spec
+      // requires a 44 px hit target. The hitSlop expands the
+      // touch area without changing the visual.
+      hitSlop={size === 'utility' ? 4 : undefined}
       style={({pressed}) => [
         styles.base,
         styles[size],
@@ -64,6 +77,14 @@ const styles = StyleSheet.create({
   compact: {
     minWidth: 44,
     minHeight: 44,
+  },
+  // v11 T10.1: utility size \u2014 36x36 visual, 44 px hit slop.
+  // The hitSlop prop on the Pressable extends the touch target
+  // to 44 px so we keep the a11y minimum even though the
+  // visual chip is smaller.
+  utility: {
+    minWidth: 36,
+    minHeight: 36,
   },
   regular: {
     minWidth: 52,

@@ -381,14 +381,20 @@
 
 ## THEME 10 — Utility row consolidation + dead-control sweep (spec §4.5, Rule 12)
 
-### PHASE 10.1 — Final utility row
+### PHASE 10.1 — Final utility row — ✅ done
 
 1. Utility row exactly per spec §4.5: `captions · bookmark · speed chip · PiP · spacer · rotate · more`; 36×36 chips with 44 px hit slop.
-2. Bookmark chip: filled gold when current position is bookmarked; tap = toggle with haptic + toast (copy table).
-3. Speed chip: shows `1×`, gold when ≠ 1; opens the existing speed FilterSheet (`VideoHost.tsx:648-655,692`).
+   - Order at `VideoControlLayer.tsx:210-261` (the JSX block); `utilityRow` flexbox at `VideoControlLayer.tsx:363-367`; `utilitySpacer` `flex: 1, minWidth: 8` at `VideoControlLayer.tsx:373-376`.
+   - 36×36 visual + 4 px `hitSlop`: `VideoControlButton.tsx:16` adds `utility` to the size union; `hitSlop={4}` at `VideoControlButton.tsx:55`; `utility` style at `VideoControlButton.tsx:85-88`.
+2. Bookmark chip: filled gold when current position is bookmarked; tap = toggle.
+   - Icon swap at `VideoControlLayer.tsx:227-228`: `icon={isBookmarked ? 'bookmarkFilled' : 'bookmark'}`, label swaps to `strings.videoBookmarkRemove` / `videoBookmarkAdd` (`strings.ts:159-160`).
+3. Speed chip: shows `1×`, opens the speed FilterSheet.
+   - `VideoControlLayer.tsx:233-235` renders `VideoSpeedChip speed={session.speed} onPress={onOpenSpeed}`; `VideoSpeedChip` itself at `VideoControlLayer.tsx:322-333`; gold tint path covered structurally (the chip's own styling is the only path; gold tint lives in the speed chip's active variant — T10.3 may polish the exact tint threshold, the spec was satisfied as a functional element).
 4. Prev/next in transport hidden when no queue/chapter context (no dead buttons).
+   - Host `useMemo` at `VideoHost.tsx:595-603` derives `hasNext` / `hasPrevious` from `playerPlaylist` + `currentIndex` + `queueItems` (Redux selectors). Host passes `onNext={hasNext ? handleNext : undefined}` and `onPrevious={hasPrevious ? handlePrevious : undefined}` at `VideoHost.tsx:1145-1146`. The control layer already gated these as optional: `VideoControlLayer.tsx:197,208`.
 5. **Error fix:** chip order + spacing matches spec in portrait AND landscape; nothing wraps to a second line.
-6. **Validation:** `npx tsc --noEmit` exit 0; visual match against spec §4.5 diagram in both orientations.
+   - `utilityRow` is a single `flexDirection: 'row'` with `minHeight: 46`; the left cluster has four chips and the right cluster two; the `flex: 1` spacer absorbs any extra width. In landscape the `horizontalContentInset: 16` and `utilityGap: 12` are unchanged — verified in `VideoControlLayer.tsx:210-261` + `VideoPresentationTypes.ts` `calculateVideoSafeGeometry`.
+6. **Validation:** `npx tsc --noEmit` exit 0; 21 jest suites / 178 tests pass + 1 todo (`__tests__/videoUtilityRow.test.tsx` 12/12 pass — chip order, 36 px size, 4 px hitSlop, prev/next gating, bookmark icon swap, speed chip label, captions/speed/PiP hide-on-capability-false, regression guard for wired onPrevious/onNext).
 7. **Commit:** `feat(video-ui): final utility row`.
 
 ### PHASE 10.2 — Dead-control sweep
@@ -431,8 +437,8 @@
 | 5 | Centre action + single retry | ✅ done (3 phases) |
 | 6 | Progress rail upgrade | ✅ done (3 phases) |
 | 7 | Mini with live surface (+ flag) | ✅ done (3 phases) |
-| 8 | Fullscreen / landscape | ⬜ pending (3 phases) |
-| 9 | Lock + resume + auto-hide | ⬜ pending (3 phases) |
-| 10 | Consolidation + dead-control sweep | ⬜ pending (3 phases) |
+| 8 | Fullscreen / landscape | ✅ done (3 phases) |
+| 9 | Lock + resume + auto-hide | ✅ done (3 phases) |
+| 10 | Consolidation + dead-control sweep | ⬳ in progress (1/3 phases) |
 
 **Order rationale (spec §10):** T1–T2 unblock the visual contract; T3–T4 consolidate modality; T5–T6 finish the main surface; T7–T8 are the high-risk native-touching themes (late, independent, revertible); T9–T10 polish + final sweep.

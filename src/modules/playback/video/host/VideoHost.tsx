@@ -565,9 +565,15 @@ export function VideoHost({active}: VideoHostProps) {
 
   // W2.4: prev/next playlist navigation. The mpv playlist is separate
   // from `session.tracks` (media tracks); `MpvPlayer.next/previous`
-  // call into `playlistNext/playlistPrev` on the native side. We don't
-  // guard with `hasNext` / `hasPrevious` — mpv no-ops at the boundaries
-  // (start/end of playlist), so a tap on << at the start is harmless.
+  // call into `playlistNext/playlistPrev` on the native side.
+  //
+  // v11 T10.1 (step 4 — "no dead buttons"): when there is no
+  // playlist / queue context (i.e. the user opened a single file
+  // directly and the queue is empty), the transport row's prev /
+  // next buttons are HIDDEN. mpv no-ops at the boundaries, but a
+  // visible-but-inert button is a UX trap — the spec says hide
+  // them entirely. The buttons re-appear as soon as a playlist
+  // or queue has more than one item.
   const handleNext = useCallback(() => {
     playback?.commands
       .dispatch({type: 'next'})
@@ -578,6 +584,23 @@ export function VideoHost({active}: VideoHostProps) {
       .dispatch({type: 'previous'})
       .catch(() => undefined);
   }, [playback]);
+  // T10.1: gate prev/next on actual playlist context.
+  //   hasNext     = there's something after the current item in
+  //                 the playlist OR the Redux queue has at least
+  //                 one video item.
+  //   hasPrevious = there's something before the current item
+  //                 in the playlist. The queue is append-only
+  //                 (no "previous queue item" semantics), so it
+  //                 doesn't enable hasPrevious on its own.
+  const {hasNext, hasPrevious} = useMemo(() => {
+    const hasPlaylistNext =
+      playerPlaylist.length > 0 && currentIndex < playerPlaylist.length - 1;
+    const hasQueueNext = queueItems.some(e => e.mediaType === 'video');
+    return {
+      hasNext: hasPlaylistNext || hasQueueNext,
+      hasPrevious: playerPlaylist.length > 0 && currentIndex > 0,
+    };
+  }, [playerPlaylist, currentIndex, queueItems]);
 
   // v11 T9.1: full lock-mode behavior. The `isLocked` state is
   // declared above (next to `isFullscreen`) so the auto-hide
@@ -1115,8 +1138,12 @@ export function VideoHost({active}: VideoHostProps) {
       onToggleCaptions={handleToggleCaptions}
       onToggleBookmark={handleToggleBookmark}
       isBookmarked={isBookmarked}
-      onNext={handleNext}
-      onPrevious={handlePrevious}
+      // T10.1: hide prev/next in the transport row when there's no
+      // queue / playlist context (spec step 4 — "no dead buttons").
+      // The control layer treats both as optional and renders
+      // nothing when undefined.
+      onNext={hasNext ? handleNext : undefined}
+      onPrevious={hasPrevious ? handlePrevious : undefined}
       onToggleLock={handleToggleLock}
       isFullscreen={isFullscreen}
       isLocked={isLocked}

@@ -153,6 +153,12 @@ const strings = {
   videoEnterFullscreen: 'Enter fullscreen',
   videoExitFullscreen: 'Exit fullscreen',
   videoFullscreenFailed: 'Could not enter fullscreen',
+  // v11 T10.1: utility-row copy keys. The bookmark chip flips
+  // between Add / Remove based on whether the current position
+  // is bookmarked.
+  videoBookmarkAdd: 'Save bookmark',
+  videoBookmarkRemove: 'Remove bookmark',
+  videoEnterPip: 'Enter picture in picture',
   // v11 T9.1: 2 s auto-clear hint after the user unlocks the
   // player. Lives in the status-pill area; the fade animation
   // keeps the visual noise low.
