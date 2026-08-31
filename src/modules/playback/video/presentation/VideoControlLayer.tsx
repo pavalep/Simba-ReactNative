@@ -40,13 +40,10 @@ export interface VideoControlLayerProps {
   readonly onEnterPictureInPicture?: () => void;
   readonly onOpenMore?: () => void;
   readonly onOpenSpeed?: () => void;
-  readonly onOpenTracks?: () => void;
-  readonly onOpenChapters?: () => void;
   readonly onToggleBookmark?: () => void;
   readonly isBookmarked?: boolean;
   readonly onToggleLock?: () => void;
   readonly isLocked?: boolean;
-  readonly onOpenQueue?: () => void;
   /** v11 T5.3: single retry affordance — both the pill and the
    *  centre action's "Retry" button call this handler. The host is
    *  expected to guard against double-dispatch (see `retryInFlight`). */
@@ -110,13 +107,10 @@ function FullControls({
   onEnterPictureInPicture,
   onOpenMore,
   onOpenSpeed,
-  onOpenTracks,
-  onOpenChapters,
   onToggleBookmark,
   isBookmarked = false,
   onToggleLock,
   isLocked = false,
-  onOpenQueue,
   onRetry,
   retryInFlight = false,
   bookmarks,

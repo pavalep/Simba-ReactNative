@@ -13,17 +13,13 @@ export type VideoIconName =
   | 'previous'
   | 'next'
   | 'captions'
-  | 'chapters'
   | 'bookmark'
   | 'bookmarkFilled'
   | 'expand'
   | 'collapse'
   | 'close'
   | 'lock'
-  | 'unlock'
-  | 'volume'
-  | 'mute'
-  | 'queue';
+  | 'unlock';
 
 export interface VideoIconProps {
   readonly name: VideoIconName;
@@ -87,10 +83,6 @@ export function VideoIcon({
       return <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="m6 6 8 6-8 6V6Z" fill={color} stroke={color} strokeWidth={1.2} /><Line x1="18" y1="5" x2="18" y2="19" {...common} /></Svg>;
     case 'captions':
       return <Svg width={size} height={size} viewBox="0 0 24 24"><Rect x="3.5" y="6" width="17" height="12" rx="2" {...common} /><Path d="M7 11.2h3.4M7 14.4h2.2M13.6 11.2H17M13.6 14.4h3.4" {...common} /></Svg>;
-    case 'chapters':
-      // List-with-marker icon (3 lines + bullet): reads as "table of
-      // contents" / "chapter list" without crowding the utility row.
-      return <Svg width={size} height={size} viewBox="0 0 24 24"><Circle cx="5" cy="6.5" r="1.2" fill={color} /><Circle cx="5" cy="12" r="1.2" fill={color} /><Circle cx="5" cy="17.5" r="1.2" fill={color} /><Path d="M9 6.5h10M9 12h10M9 17.5h10" {...common} /></Svg>;
     case 'bookmark':
       // Outline bookmark — a ribbon/notch shape, unfilled.
       return <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M6.5 4.5h11a1 1 0 0 1 1 1V20l-6.5-3.6L5.5 20V5.5a1 1 0 0 1 1-1Z" {...common} /></Svg>;
@@ -107,12 +99,5 @@ export function VideoIcon({
       return <Svg width={size} height={size} viewBox="0 0 24 24"><Rect x="5.5" y="10" width="13" height="9" rx="2" {...common} /><Path d="M8 10V7.8a4 4 0 0 1 8 0V10" {...common} /></Svg>;
     case 'unlock':
       return <Svg width={size} height={size} viewBox="0 0 24 24"><Rect x="5.5" y="10" width="13" height="9" rx="2" {...common} /><Path d="M8 10V7.8a4 4 0 0 1 7-2.5" {...common} /></Svg>;
-    case 'volume':
-      return <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M4 10h3l4-3.5v11L7 14H4v-4Z" {...common} /><Path d="M15 9a4.2 4.2 0 0 1 0 6M17.2 6.8a7.3 7.3 0 0 1 0 10.4" {...common} /></Svg>;
-    case 'mute':
-      return <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M4 10h3l4-3.5v11L7 14H4v-4Z" {...common} /><Path d="m16 9 5 6M21 9l-5 6" {...common} /></Svg>;
-    case 'queue':
-      // Stacked-line list icon — a queue is "what's next in line".
-      return <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M4 6h12M4 11h12M4 16h8M18 14v6M15 17h6" {...common} /></Svg>;
   }
 }

@@ -1147,7 +1147,6 @@ export function VideoHost({active}: VideoHostProps) {
       onToggleLock={handleToggleLock}
       isFullscreen={isFullscreen}
       isLocked={isLocked}
-      onOpenQueue={openMoreSheet}
       onOpenMore={hasMoreSections ? openMoreSheet : undefined}
       onRetry={retryVideo}
       retryInFlight={retryInFlight}

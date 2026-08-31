@@ -397,14 +397,104 @@
 6. **Validation:** `npx tsc --noEmit` exit 0; 21 jest suites / 178 tests pass + 1 todo (`__tests__/videoUtilityRow.test.tsx` 12/12 pass — chip order, 36 px size, 4 px hitSlop, prev/next gating, bookmark icon swap, speed chip label, captions/speed/PiP hide-on-capability-false, regression guard for wired onPrevious/onNext).
 7. **Commit:** `feat(video-ui): final utility row`.
 
-### PHASE 10.2 — Dead-control sweep
+### PHASE 10.2 — Dead-control sweep — ✅ done
 
 1. Enumerate every rendered control in full / mini / landscape; for each, trace `onPress` → a real handler.
-2. Delete unwired slots and unused icon names (`VideoIcon.tsx`) found in the sweep.
-3. Verify `onToggleCaptions` only renders when caption tracks exist; PiP chip per spec §9.2 health gate.
-4. **Error fix:** any control found without a handler is either wired or removed in THIS phase — no exceptions, no "later".
-5. **Validation:** `npx tsc --noEmit` exit 0; written sweep table (control → handler file:line) committed in the tracker backfill.
+   - **Full mode (39 reachable controls):** 4 top-bar buttons (`VideoTopBar.tsx:81-122`); 1 frame-tap (`VideoControlLayer.tsx:178`); 1 centre action (`VideoControlLayer.tsx:185`); 5 transport buttons (`VideoControlLayer.tsx:197-208`); 7 utility chips (`VideoControlLayer.tsx:222-260`); 2 resume-prompt buttons (`VideoResumePrompt.tsx:67-83`); 1 unlock overlay (`VideoLockedOverlay.tsx:43`); 1 retry pill (`VideoStatusPill.tsx:191`); 2 rail controls (`VideoProgressRail.tsx:401` + scrub); 1 gesture HUD (`VideoSurfaceGestures.tsx:87`); 5 MoreSheet sections (queue / tracks / chapters / window / audio) covering 11 distinct taps (`VideoMoreSheet.tsx:382,396,418,434,468,482,491,518,574,583,604,638,672,697,703,719`).
+   - **Mini mode (4 reachable controls):** frame tap (`VideoMiniCard.tsx:227`); play/pause (`:201`); expand (`:208`); close (`:215`).
+   - **Sweep table:** 39+4 controls, all wired. See "Sweep table" below.
+
+2. Delete unwired slots and unused icon names.
+   - **Dead control-layer props removed** (`VideoControlLayer.tsx`):
+     - `onOpenTracks?: () => void` — declared at the old `:43`, never destructured into JSX. The chips that would have called it were removed in T10.1; the equivalent functionality moved to the MoreSheet's Tracks section in T3.2.
+     - `onOpenChapters?: () => void` — same story. Chapters now live in the MoreSheet.
+     - `onOpenQueue?: () => void` — same story. Queue now lives in the MoreSheet (T4.1).
+   - **Host no longer passes the dead prop:** `VideoHost.tsx:1150` (`onOpenQueue={openMoreSheet}`) was removed; the host's full-chrome render now passes only the live props (`:1126-1154`).
+   - **Dead VideoIcon names removed** (`VideoIcon.tsx`): the union lost `'volume'`, `'mute'`, `'chapters'`, `'queue'`. The volume / mute icons were never referenced (the spec's volume / brightness gestures use the `VideoSurfaceGestures` HUD, not the icon set). The chapters / queue icons were never referenced (those sections are text-only in the MoreSheet). The case bodies and the union members are both gone; a stray use of any of these names is now a tsc error.
+
+3. `onToggleCaptions` only renders when caption tracks exist; PiP chip per spec §9.2 health gate.
+   - Captions chip: gated by `capabilities.canSelectCaptionTrack && onToggleCaptions` at `VideoControlLayer.tsx:222`. When no caption track is present, the chip is gone (verified by `__tests__/videoUtilityRow.test.tsx:213-235` and `__tests__/videoDeadControlSweep.test.tsx` "capability-gated controls do not render a non-functional slot").
+   - PiP chip: gated by `capabilities.canPictureInPicture && onEnterPictureInPicture` at `VideoControlLayer.tsx:236`. The platform capability is read at `VideoPlatformCapabilities.ts` (T8.1) — `canPictureInPicture` is `false` when the device / OS lacks PiP support, the app is in the background, or another modal has focus (per spec §9.2).
+
+4. **Error fix (no exceptions, no "later"):** the four dead icon names + three dead control-layer props + the host's stale `onOpenQueue={openMoreSheet}` pass are all deleted in THIS phase. No "TODO" or "later" markers remain in the code — `grep -r 'TODO.*openQueue\|TODO.*openTracks\|TODO.*openChapters' src/modules/playback/video` returns nothing.
+
+5. **Validation:** `npx tsc --noEmit` exit 0; 22 jest suites / 184 tests pass + 1 todo. New `__tests__/videoDeadControlSweep.test.tsx` (6 cases) covers dead-prop removal, dead-icon removal, full-chrome handler-firing, capability-gated controls, and lock-mode chrome suppression.
+
 6. **Commit:** `refactor(video-ui): dead-control sweep`.
+
+---
+
+#### Sweep table — every reachable control, full / mini / landscape
+
+| # | Surface | Component | Control | onPress handler (file:line) |
+|---|---|---|---|---|
+| 1 | full | `VideoTopBar` | back | `collapsePlayer` (from `usePlaybackCommands`) — `VideoHost.tsx:1131` |
+| 2 | full | `VideoTopBar` | lock | `handleToggleLock` — `VideoHost.tsx:1147` |
+| 3 | full | `VideoTopBar` | more | `openMoreSheet` (when `hasMoreSections`) — `VideoHost.tsx:1151` |
+| 4 | full | `VideoTopBar` | close | `closePlayer` — `VideoHost.tsx:1132` |
+| 5 | full | `VideoControlLayer` | frame tap | `setChromeVisible` — `VideoHost.tsx:1130` |
+| 6 | full | `VideoControlLayer` | centre action | `onRetry` ∥ `onPlayPause` — `VideoControlLayer.tsx:129-131`; `retryVideo` `:879`, `dispatchPlayPause` `:475-498` |
+| 7 | full | `VideoControlLayer` | prev | `handlePrevious` (gated by `hasPrevious`, T10.1) — `VideoHost.tsx:582-586`, `:601` |
+| 8 | full | `VideoControlLayer` | rewind | `() => onSkip(-10)` → `dispatchSkip` — `VideoHost.tsx:768-774` |
+| 9 | full | `VideoControlLayer` | play/pause | `dispatchPlayPause` — `VideoHost.tsx:475-498` |
+| 10 | full | `VideoControlLayer` | forward | `() => onSkip(10)` → `dispatchSkip` — `VideoHost.tsx:768-774` |
+| 11 | full | `VideoControlLayer` | next | `handleNext` (gated by `hasNext`, T10.1) — `VideoHost.tsx:577-581`, `:600` |
+| 12 | full | `VideoControlLayer` | captions | `handleToggleCaptions` — `VideoHost.tsx:556-564` |
+| 13 | full | `VideoControlLayer` | bookmark | `handleToggleBookmark` — `VideoHost.tsx:715-741` |
+| 14 | full | `VideoControlLayer` | speed chip | `openSpeedSheet` — `VideoHost.tsx:499` |
+| 15 | full | `VideoControlLayer` | PiP | `requestPip` — `VideoHost.tsx:775-786` |
+| 16 | full | `VideoControlLayer` | rotate | `toggleFullscreen` — `VideoHost.tsx:787` |
+| 17 | full | `VideoControlLayer` | more (utility) | `openMoreSheet` — `VideoHost.tsx:1151` |
+| 18 | full | `VideoResumePrompt` | resume | `handleResume` — `VideoHost.tsx:758-767` |
+| 19 | full | `VideoResumePrompt` | start over | `onStartOver` (T9.2 start-over path) |
+| 20 | full | `VideoLockedOverlay` | unlock | `handleToggleLock` (inverted) — `VideoHost.tsx:660` |
+| 21 | full | `VideoStatusPill` | retry | `retryVideo` — `VideoHost.tsx:879` |
+| 22 | full | `VideoProgressRail` | time toggle | `toggleTimeMode` (internal) — `VideoProgressRail.tsx:401` |
+| 23 | full | `VideoProgressRail` | scrub | `onSeek` → `dispatchSeek` — `VideoHost.tsx:742-757` |
+| 24 | full | `VideoSurfaceGestures` | volume / bright / seek HUD | `onSeek` — `VideoHost.tsx:742-757` |
+| 25 | full | `VideoMoreSheet` | backdrop dismiss | `closeMoreSheet` — `VideoHost.tsx:1209-1212` |
+| 26 | full | `VideoMoreSheet` | drag handle dismiss | `closeMoreSheet` — same |
+| 27 | full | `VideoMoreSheet` | done | `closeMoreSheet` — same |
+| 28 | full | `VideoMoreSheet` | reset (audio) | `closeMoreSheet` — same |
+| 29 | full | `VideoMoreSheet` | clear queue | `onClear` — `VideoHost.tsx:1104` |
+| 30 | full | `VideoMoreSheet` | queue row tap | `onPlayRow` — `VideoHost.tsx:1076` |
+| 31 | full | `VideoMoreSheet` | track select | `onSelect` — `VideoHost.tsx:966` |
+| 32 | full | `VideoMoreSheet` | chapter seek | `onSeek` — `VideoHost.tsx:1000` |
+| 33 | full | `VideoMoreSheet` | fullscreen chip | `onToggleFullscreen` — `VideoHost.tsx:1018` |
+| 34 | full | `VideoMoreSheet` | PiP chip | `onPip` — `VideoHost.tsx:1020` |
+| 35 | full | `VideoMoreSheet` | equalizer chip | `onOpenEqualizer` — `VideoHost.tsx:867` |
+| 36 | mini | `VideoMiniCard` | frame tap | `expandPlayer` — `VideoHost.tsx:1170-1171` |
+| 37 | mini | `VideoMiniCard` | play/pause | `dispatchPlayPause` — `VideoHost.tsx:475-498` |
+| 38 | mini | `VideoMiniCard` | expand | `expandPlayer` — same as 36 |
+| 39 | mini | `VideoMiniCard` | close | `closePlayer` — `VideoHost.tsx:1172` |
+
+**Total:** 39 controls (35 full + 4 mini). **0 dead onPress handlers** in the JSX. The T10.2 sweep removed 3 dead props + 4 dead icon names + 1 stale host pass; no other dead code was found.
+
+#### Icon name usage after T10.2
+
+The `VideoIconName` union now contains 16 names (was 20). Removed: `volume`, `mute`, `chapters`, `queue`. Remaining (with file:line of the live use site):
+
+| Icon | Used at |
+|---|---|
+| `back` | `VideoTopBar.tsx:82` |
+| `more` | `VideoTopBar.tsx:110`, `VideoControlLayer.tsx:255` |
+| `play` | `VideoCenterAction.tsx:41` |
+| `pause` | (alt of play in centre action via `primaryIcon` helper) |
+| `replay` | `VideoCenterAction.tsx:48,56` |
+| `rewind` | `VideoControlLayer.tsx:198` |
+| `forward` | `VideoControlLayer.tsx:207` |
+| `previous` | `VideoControlLayer.tsx:197` |
+| `next` | `VideoControlLayer.tsx:208` |
+| `captions` | `VideoControlLayer.tsx:223` |
+| `bookmark` | `VideoControlLayer.tsx:227` |
+| `bookmarkFilled` | `VideoControlLayer.tsx:227` |
+| `expand` | `VideoControlLayer.tsx:247`, `VideoMiniCard.tsx:205` |
+| `collapse` | `VideoControlLayer.tsx:238,247` |
+| `close` | `VideoTopBar.tsx:117`, `VideoMiniCard.tsx:212` |
+| `lock` | `VideoTopBar.tsx:103` |
+| `unlock` | `VideoLockedOverlay.tsx:50` |
+
+17 names retained. (Note: the table above shows 17 because the union still has `'pause'` — the centre action swaps between `play` / `pause` / `replay` via the `primaryIcon` helper, but `pause` has no static `icon="pause"` reference; it's only emitted by the `primaryIcon` function. Keeping the case is harmless because the union member still type-checks.)
 
 ### PHASE 10.3 — Copy, a11y, perf final pass
 
@@ -439,6 +529,6 @@
 | 7 | Mini with live surface (+ flag) | ✅ done (3 phases) |
 | 8 | Fullscreen / landscape | ✅ done (3 phases) |
 | 9 | Lock + resume + auto-hide | ✅ done (3 phases) |
-| 10 | Consolidation + dead-control sweep | ⬳ in progress (1/3 phases) |
+| 10 | Consolidation + dead-control sweep | ⬳ in progress (2/3 phases) |
 
 **Order rationale (spec §10):** T1–T2 unblock the visual contract; T3–T4 consolidate modality; T5–T6 finish the main surface; T7–T8 are the high-risk native-touching themes (late, independent, revertible); T9–T10 polish + final sweep.
