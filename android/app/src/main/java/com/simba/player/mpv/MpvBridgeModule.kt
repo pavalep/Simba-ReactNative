@@ -256,6 +256,63 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
         }
     }
 
+    // ── Orientation / Immersive (v11 T8.1) ──────────────────────────────
+    // setOrientation pins the activity to a fixed orientation; the
+    // JS caller toggles between 'portrait' / 'landscape' when the
+    // user taps the fullscreen chip. We use the user-locked
+    // variants (USER_PORTRAIT / USER_LANDSCAPE) so the user can
+    // still rotate the device within the locked axis but the
+    // activity does not flip on a pocket-grab during playback.
+    // 'sensor' is the un-locked mode for the optional
+    // device-tilt-follows-orientation case.
+    //
+    // setImmersive drives the system bars via
+    // WindowInsetsControllerCompat (the modern replacement for
+    // the deprecated setSystemUiVisibility). The behaviour is
+    // BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE so the user can
+    // still recover the bars with an edge swipe, and the immersive
+    // flag auto-clears when the activity loses foreground.
+    //
+    // v11 T8.1 error fix: setImmersive(false) is called from BOTH
+    // exit paths (the fullscreen chip + the close button) so the
+    // bars re-show on every tested OEM, even if the user backs
+    // out via the system back button or a swipe-down dismiss
+    // before the chip is reached.
+
+    @ReactMethod
+    fun setOrientation(mode: String) {
+        val activity = getCurrentActivity() ?: return
+        activity.runOnUiThread {
+            val requested = when (mode.lowercase()) {
+                "portrait"  -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+                "landscape" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+                "sensor"    -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                else        -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+            activity.requestedOrientation = requested
+        }
+    }
+
+    @ReactMethod
+    fun setImmersive(enabled: Boolean) {
+        val activity = getCurrentActivity() ?: return
+        activity.runOnUiThread {
+            val window = activity.window
+            val controller = androidx.core.view.WindowInsetsControllerCompat(window, window.decorView)
+            if (enabled) {
+                androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+                controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior =
+                    androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            } else {
+                androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, true)
+                controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior =
+                    androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+            }
+        }
+    }
+
     // ── Playback ──
 
     @ReactMethod

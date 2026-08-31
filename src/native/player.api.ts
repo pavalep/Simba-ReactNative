@@ -421,6 +421,33 @@ export const MpvPlayer = {
     ensureModule().exitPipAndFinish();
   },
 
+  // ── Orientation / Immersive (v11 T8.1) ──────────────────────────────
+  // Feature-detect: older native builds don't expose these. When
+  // the method is missing the call is a no-op and the JS caller
+  // is expected to have already gated the affordance via
+  // `VideoPlatformCapabilities.canFullscreen`. We do NOT throw —
+  // a missing method is a normal "this build doesn't support
+  // fullscreen" state, not an error.
+  setOrientation(mode: 'portrait' | 'landscape' | 'sensor'): void {
+    const fn = NativeModule?.setOrientation;
+    if (typeof fn !== 'function') return;
+    try {
+      fn(mode);
+    } catch (error) {
+      logger.warn('[MpvPlayer] setOrientation failed', {mode, error});
+    }
+  },
+
+  setImmersive(enabled: boolean): void {
+    const fn = NativeModule?.setImmersive;
+    if (typeof fn !== 'function') return;
+    try {
+      fn(enabled);
+    } catch (error) {
+      logger.warn('[MpvPlayer] setImmersive failed', {enabled, error});
+    }
+  },
+
   // ── State ──
   getPosition(): number {
     return ensureModule().getPosition();

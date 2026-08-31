@@ -308,10 +308,10 @@
 
 ### PHASE 8.1 — Native bridge: setOrientation / setImmersive
 
-1. `MpvBridgeModule.kt`: `@ReactMethod setOrientation(mode)` → `requestedOrientation` (`USER_LANDSCAPE` / `PORTRAIT` / `FULL_SENSOR`) + emit `onOrientationChanged(mode)`; `@ReactMethod setImmersive(enabled)` → `WindowInsetsController` with `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`.
-2. Expose both in `src/native/NativeMpvPlayer.ts` spec + `src/native/player.api.ts` wrappers.
-3. `VideoPlatformCapabilities.ts`: `canFullscreen = typeof MpvPlayer.setOrientation === 'function' && typeof MpvPlayer.setImmersive === 'function'` (replaces the hardcoded `false` at `:14-15`).
-4. **Error fix:** `setImmersive(false)` must reliably re-show bars on every tested OEM — call it from both exit paths (button + close).
+1. `MpvBridgeModule.kt`: `@ReactMethod setOrientation(mode)` → `requestedOrientation` (`USER_LANDSCAPE` / `PORTRAIT` / `FULL_SENSOR`) + emit `onOrientationChanged(mode)`; `@ReactMethod setImmersive(enabled)` → `WindowInsetsController` with `BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`. ✅
+2. Expose both in `src/native/NativeMpvPlayer.ts` spec + `src/native/player.api.ts` wrappers. ✅ Both methods added to the Spec (optional `?`), with `player.api.ts` wrappers that feature-detect the bridge and log on failure.
+3. `VideoPlatformCapabilities.ts`: `canFullscreen = typeof MpvPlayer.setOrientation === 'function' && typeof MpvPlayer.setImmersive === 'function'` (replaces the hardcoded `false` at `:14-15`). ✅
+4. **Error fix:** `setImmersive(false)` must reliably re-show bars on every tested OEM — call it from both exit paths (button + close). ✅ The host's toggle path (`toggleFullscreen`) AND the unmount cleanup both call `setImmersive(false) + setOrientation('portrait')`. The chip in `VideoMoreSheet` only renders the fullscreen row when the capability is true (Rule 12).
 5. **Validation:** `npx tsc --noEmit` exit 0; Gradle build green; manual rotate on device.
 6. **Commit:** `feat(video-native): setOrientation + setImmersive bridge`.
 

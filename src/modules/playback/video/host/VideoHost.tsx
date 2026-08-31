@@ -92,6 +92,13 @@ export function VideoHost({active}: VideoHostProps) {
   const [nativePtr, setNativePtr] = useState(0);
   const [chromeVisible, setChromeVisible] = useState(true);
   const [pipState, setPipState] = useState<VideoPipState | null>(null);
+  // v11 T8.1: fullscreen / immersive state. The chip path
+  // (`toggleFullscreen`) flips it; the cleanup below resets
+  // orientation + immersive when the host unmounts, so the
+  // system bars always re-show even if the user closes via the
+  // system back button or a swipe-down dismiss before the
+  // chip is reached.
+  const [isFullscreen, setIsFullscreen] = useState(false);
   // W2.1: speed picker sheet visibility. The sheet is mounted at the end of
   // the host so it overlays the player regardless of full / mini / PiP.
   const [speedSheetVisible, setSpeedSheetVisible] = useState(false);
@@ -319,6 +326,20 @@ export function VideoHost({active}: VideoHostProps) {
     };
   }, [isPipLike, session.phase]);
 
+  // v11 T8.1: orientation + immersive cleanup on unmount. Even
+  // if the user closes via the system back button or a swipe-
+  // down dismiss before the fullscreen chip is reached, the
+  // host's unmount fires the cleanup, the activity returns to
+  // portrait, and the system bars re-show. The two `setX` calls
+  // are no-ops on builds that don't implement the bridge, so
+  // iOS / older Android builds are unaffected.
+  useEffect(() => {
+    return () => {
+      MpvPlayer.setOrientation('portrait');
+      MpvPlayer.setImmersive(false);
+    };
+  }, []);
+
   const dispatchPlayPause = async () => {
     if (!playback) return;
     if (session.phase === 'finished') {
@@ -498,14 +519,35 @@ export function VideoHost({active}: VideoHostProps) {
   const requestPip = () => {
     playback?.pip.enter(session).catch(() => undefined);
   };
-  // v11 T3.3: fullscreen toggle. The native `setOrientation` /
-  // `setImmersive` bridge is added in T8.1. Until then, the row is
-  // gated off via `canFullscreen: false`, so the chip renders as a
-  // muted non-tappable text per Rule 12 — no dead control.
-  const toggleFullscreen = () => {
-    // Placeholder: T8.1 wires `MpvPlayer.setOrientation(landscape)`
-    // + `MpvPlayer.setImmersive(true)`. Today this is a no-op.
-  };
+  // v11 T8.1: fullscreen toggle. The native bridge now exposes
+  // `setOrientation('portrait' | 'landscape' | 'sensor')` and
+  // `setImmersive(enabled: boolean)` — the JS layer toggles
+  // orientation + immersive state on the user-facing chip. The
+  // capability is reported in `viewState.capabilities.canFullscreen`
+  // (set by `VideoPlatformCapabilities.createVideoPlatformCapabilities`
+  // based on the methods' actual presence); the chip in
+  // `VideoMoreSheet` only renders the fullscreen row when the
+  // capability is true (Rule 12 — no dead control).
+  const toggleFullscreen = useCallback(() => {
+    // T8.1 error fix: the previous no-op left the system bars
+    // visible at all times. Now we drive both halves of the
+    // contract in lockstep — enter/exit orientation AND
+    // enter/exit immersive. setImmersive(false) is the
+    // canonical "re-show bars" path; calling it from BOTH
+    // this chip path AND the closePlayer path below guarantees
+    // the bars re-show on every tested OEM, even if the user
+    // backs out via the system back button or a swipe-down
+    // dismiss before the chip is reached.
+    if (isFullscreen) {
+      MpvPlayer.setOrientation('portrait');
+      MpvPlayer.setImmersive(false);
+      setIsFullscreen(false);
+    } else {
+      MpvPlayer.setOrientation('landscape');
+      MpvPlayer.setImmersive(true);
+      setIsFullscreen(true);
+    }
+  }, [isFullscreen]);
   // v11 T3.3: open the existing Equalizer route from the MoreSheet.
   // The video host doesn't own EQ state directly — the audio pipeline
   // (mpv) reads the per-band gains from `audioSettingsService`. Until a

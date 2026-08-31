@@ -219,6 +219,16 @@ export interface Spec extends TurboModule {
   readonly enterPip: (chapterTitle?: string, progressPct?: string) => void;
   readonly exitPip: () => void;
   readonly exitPipAndFinish: () => void;
+
+  // ── Orientation / Immersive (v11 T8.1) ──────────────────────────────
+  // Both methods are optional in the Spec: they are added by the
+  // T8.1 native bridge on Android. Older builds (or iOS) that
+  // don't implement them report `undefined` from the TurboModule
+  // registry, and `player.api.ts` feature-detects the presence
+  // before invoking. The JS layer (`VideoPlatformCapabilities`)
+  // uses the same presence check to gate the fullscreen chip.
+  readonly setOrientation?: (mode: 'portrait' | 'landscape' | 'sensor') => void;
+  readonly setImmersive?: (enabled: boolean) => void;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('MpvPlayerModule');

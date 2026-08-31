@@ -7,24 +7,24 @@ import type {VideoPlatformCapabilities} from '../domain/VideoTypes';
  *
  *   • Android PiP: exposed via `MpvPlayer.enterPip` (activity / module
  *     contract). Available since the V3 surface landed.
- *   • Fullscreen / orientation: W2.7 is intentionally deferred. The
- *     native bridge needs an Android `setRequestedOrientation` call
- *     and a `WindowInsetsController`-driven immersive mode hook
- *     (replaces the deprecated `setSystemUiVisibility`). Both live in
- *     `MpvBridgeModule` once the team decides to own them — until
- *     then `canFullscreen` and `canChangeOrientation` stay false so
- *     the UI doesn't show a button that does nothing.
- *
- * To enable later: add a `setOrientation(mode: 'portrait' | 'landscape' | 'sensor')`
- * and `setImmersive(enabled: boolean)` `@ReactMethod` to
- * `MpvBridgeModule.kt`, expose them via `player.api.ts`, and flip
- * the two booleans below based on the new methods' presence.
+ *   • Fullscreen / orientation (v11 T8.1): both `MpvPlayer.setOrientation`
+ *     and `MpvPlayer.setImmersive` are added by the T8.1 native
+ *     bridge on Android. When both are present the chip renders
+ *     as a tappable control; otherwise it renders as a muted
+ *     non-tappable chip per the v11 spec Rule 12.
+ *   • canChangeOrientation tracks the same pair (orientation is
+ *     a prerequisite for fullscreen on Android).
  */
 export function createVideoPlatformCapabilities(): VideoPlatformCapabilities {
-  const canPictureInPicture = Platform.OS === 'android' && typeof MpvPlayer.enterPip === 'function';
+  const isAndroid = Platform.OS === 'android';
+  const hasSetOrientation = typeof MpvPlayer.setOrientation === 'function';
+  const hasSetImmersive = typeof MpvPlayer.setImmersive === 'function';
+  const canPictureInPicture = isAndroid && typeof MpvPlayer.enterPip === 'function';
+  const canFullscreen = isAndroid && hasSetOrientation && hasSetImmersive;
+  const canChangeOrientation = canFullscreen;
   return {
     canPictureInPicture,
-    canFullscreen: false,
-    canChangeOrientation: false,
+    canFullscreen,
+    canChangeOrientation,
   };
 }
