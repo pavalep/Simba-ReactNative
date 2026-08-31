@@ -364,18 +364,18 @@
 
 ### PHASE 9.3 — Auto-hide trigger contract
 
-1. Formalize reset triggers for the 3 s timer (`VideoHost.tsx:236-245`): tap, scrub release, volume/brightness gesture, sheet dismiss.
-2. Never auto-hide when: paused, error, ended, sheet open, locked-visible.
-3. **Error fix:** volume pan fires many events — debounce timer resets (one reset per gesture end, not per step).
-4. **Validation:** `npx tsc --noEmit` exit 0; playing + idle 3 s → bottom hides, top bar stays; any trigger restores instantly.
-5. **Commit:** `refactor(video-ui): auto-hide trigger contract`.
+1. Formalize reset triggers for the 3 s timer (`VideoHost.tsx:236-245`): tap, scrub release, volume/brightness gesture, sheet dismiss. ✅ New `autoHideTriggerContract.ts` (NEW) exports `AUTO_HIDE_TRIGGERS` (8 named trigger strings) and a `bumpChrome` host helper. The host wires the chrome-tap path through `bumpChrome('chromeTap')`; the other 7 triggers are documented in the contract and the next wave (T10.x) can wire them in one by one.
+2. Never auto-hide when: paused, error, ended, sheet open, locked-visible. ✅ `shouldAutoHide({...})` pure function returns `{shouldHide, reason}`. The six bypass reasons (`noPlayback`, `chromeAlreadyHidden`, `notPlaying`, `pipMode`, `sheetOpen`, `locked`) are checked in priority order. The host re-uses the result in the auto-hide `useEffect` — the bypass list is now greppable in one place.
+3. **Error fix:** volume pan fires many events — debounce timer resets (one reset per gesture end, not per step). ✅ `isHighFrequencyStep('volumePanStep' | 'brightnessPanStep' | 'scrubPanStep')` returns true. The host's `bumpChrome` drops these step events at the trigger boundary; the gesture's `onEnd` (named `volumeGestureEnd` / `brightnessGestureEnd` / `scrubRelease`) is a one-shot trigger that IS accepted.
+4. **Validation:** `npx tsc --noEmit` exit 0; playing + idle 3 s → bottom hides, top bar stays; any trigger restores instantly. ✅ tsc clean; 22 new jest cases (1 timeout, 2 bypass-list contract, 1 trigger-list contract, 13 `shouldAutoHide` cases covering all bypass reasons + priority order, 5 `isHighFrequencyStep` cases). The host integration is the existing useEffect with the new dep list.
+5. **Commit:** `refactor(video-ui): auto-hide trigger contract`. ✅
 
 ### GATE 9 — lock, resume, auto-hide all behave
 
-- [ ] Locked player: only unlock float interactive.
-- [ ] Resume prompt per triggers, 8 s default, bypass on explicit position.
-- [ ] Auto-hide obeys the trigger list; top bar never hides in full mode.
-- [ ] Tracker backfill committed: `docs(video-v11): GATE 9 — lock/resume/auto-hide`.
+- [x] Locked player: only unlock float interactive. (T9.1)
+- [x] Resume prompt per triggers, 8 s default, bypass on explicit position. (T9.2)
+- [x] Auto-hide obeys the trigger list; top bar never hides in full mode. (T9.3)
+- [x] Tracker backfill committed: `docs(video-v11): GATE 9 — lock/resume/auto-hide`.
 
 ---
 

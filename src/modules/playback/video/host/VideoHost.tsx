@@ -15,6 +15,12 @@ import {VideoStatusPill} from '../presentation/VideoStatusPill';
 import {VideoResumePrompt} from '../presentation/VideoResumePrompt';
 import {VideoUnlockHint} from '../presentation/VideoUnlockHint';
 import {VideoSafeControlLayer} from '../presentation/VideoSafeControlLayer';
+import {
+  AUTO_HIDE_TIMEOUT_MS,
+  type AutoHideTrigger,
+  isHighFrequencyStep,
+  shouldAutoHide,
+} from '../presentation/autoHideTriggerContract';
 import {VideoSurfaceGestures} from '../presentation/VideoSurfaceGestures';
 import {VideoMoreSheet, type VideoMoreSheetRow} from '../presentation/VideoMoreSheet';
 import {useAppDispatch, useAppSelector} from '../../../../store';
@@ -130,6 +136,10 @@ export function VideoHost({active}: VideoHostProps) {
   // system back button or a swipe-down dismiss before the
   // chip is reached.
   const [isFullscreen, setIsFullscreen] = useState(false);
+  // v11 T9.1: lock state. Hoisted here (next to isFullscreen)
+  // so the auto-hide effect (T9.3) can read it in its dep
+  // array without a temporal-dep error.
+  const [isLocked, setIsLocked] = useState(false);
   // W2.1: speed picker sheet visibility. The sheet is mounted at the end of
   // the host so it overlays the player regardless of full / mini / PiP.
   const [speedSheetVisible, setSpeedSheetVisible] = useState(false);
@@ -375,27 +385,34 @@ export function VideoHost({active}: VideoHostProps) {
     playback.surface.setPresentation(surfacePresentation, geometry).catch(() => undefined);
   }, [playback, surfacePresentation, windowDimensions.width, windowDimensions.height]);
 
-  // W2.11: chrome auto-hide. After 3 s of inactivity while playing, the
-  // chrome fades to controls-off. Any user activity (the chrome tap
-  // handler below) re-shows it and resets the timer. Pausing / finishing
-  // / entering PiP / erroring also keeps the chrome visible — the user
-  // needs the controls at those moments. v11 T2.3: opening any modal
-  // (the more-sheet for now; the speed / tracks / chapters sheets
-  // already had this in W2.1) pauses the timer so the chrome stays
-  // visible while the user is interacting with the sheet.
+  // v11 T9.3: chrome auto-hide. The decision is now
+  // `shouldAutoHide({...})` (a pure function in
+  // `autoHideTriggerContract.ts`). The host re-runs this effect
+  // each time the trigger list's deps change; the function
+  // returns whether the timer should start (or a bypass
+  // reason if not).
   useEffect(() => {
-    if (!playback) return;
-    if (!chromeVisible) return;
-    if (session.phase !== 'playing') return;
-    if (isPipLike) return;
-    if (speedSheetVisible) return;
-    if (moreSheetVisible) return;
+    const decision = shouldAutoHide({
+      hasPlayback: playback !== null,
+      chromeAlreadyHidden: !chromeVisible,
+      phase: session.phase,
+      isPipLike,
+      sheetOpen: speedSheetVisible || moreSheetVisible,
+      isLocked,
+    });
+    if (!decision.shouldHide) {
+      // Bypass reason active \u2014 the cleanup function clears
+      // any pending timer. The timer is no-op while a reason
+      // is active.
+      return;
+    }
     const timer = setTimeout(() => {
       setChromeVisible(false);
-    }, 3000);
+    }, AUTO_HIDE_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [
     chromeVisible,
+    isLocked,
     isPipLike,
     moreSheetVisible,
     playback,
@@ -403,6 +420,28 @@ export function VideoHost({active}: VideoHostProps) {
     session.position,
     speedSheetVisible,
   ]);
+
+  // v11 T9.3: one-shot chrome trigger. Most user activity
+  // (tap, sheet dismiss, lock-unlock, fullscreen toggle, etc.)
+  // calls this and re-shows the chrome. The auto-hide effect
+  // above then schedules the 3 s timer.
+  //
+  // The `triggerName` argument is currently unused at runtime
+  // (it's diagnostic / future-tunable), but the
+  // `isHighFrequencyStep` gate IS checked: volume/brightness
+  // pan STEP events and scrub-drag STEP events are dropped
+  // here so the timer isn't constantly reset during a gesture.
+  // The gesture's `onEnd` fires the actual trigger with a
+  // different name (`volumeGestureEnd`, etc.) and IS accepted.
+  const lastTriggerRef = useRef<AutoHideTrigger | null>(null);
+  const bumpChrome = useCallback(
+    (triggerName: AutoHideTrigger) => {
+      if (isHighFrequencyStep(triggerName)) return;
+      lastTriggerRef.current = triggerName;
+      setChromeVisible(true);
+    },
+    [],
+  );
 
   // W2.12: keep-awake. While the player is actively playing, set the
   // window-level FLAG_KEEP_SCREEN_ON so the device does not dim or
@@ -540,9 +579,11 @@ export function VideoHost({active}: VideoHostProps) {
       .catch(() => undefined);
   }, [playback]);
 
-  // v11 T9.1: full lock-mode behavior. When `isLocked` is true,
-  // the top/bottom bars + centre all hide (the layer gates them
-  // with `!isLocked`). The only tappable surface is the floating
+  // v11 T9.1: full lock-mode behavior. The `isLocked` state is
+  // declared above (next to `isFullscreen`) so the auto-hide
+  // effect can read it. When `isLocked` is true, the top/bottom
+  // bars + centre all hide (the layer gates them with
+  // `!isLocked`). The only tappable surface is the floating
   // `VideoLockedOverlay` (44×44 button on the left edge, 88 px
   // tall to accommodate a stacked icon + label). Tapping the
   // unlock overlay re-shows the chrome for 3 s, plays a
@@ -556,7 +597,6 @@ export function VideoHost({active}: VideoHostProps) {
   //
   // Lock state resets on close / expand so the next session
   // starts unlocked (the lock is per-session, not per-app).
-  const [isLocked, setIsLocked] = useState(false);
   const [unlockHint, setUnlockHint] = useState(false);
   const unlockHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
