@@ -21,6 +21,13 @@ class MainActivity : ReactActivity() {
     // Switch from splash theme to app theme before RN renders
     setTheme(R.style.AppTheme)
     super.onCreate(savedInstanceState)
+    // v11 T8.2: pin to USER_PORTRAIT so the rest of the app
+    // (Home / Library / Sheets / modals) stays portrait-locked
+    // even though the manifest no longer has the
+    // `android:screenOrientation="portrait"` attribute. The
+    // player (MpvBridgeModule.setOrientation) is the only
+    // authority that can change it during a session.
+    requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
     // Register PiP action broadcast receiver (API 33+ requires flag)
     pipReceiver = PipActionReceiver()
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -31,6 +38,20 @@ class MainActivity : ReactActivity() {
     // NOTE: Auto PiP removed intentionally. PiP entry is now explicit only —
     // triggered by JS swipe-down gesture or programmatic enterPip() call.
     // This prevents the full activity (including UI chrome) from rendering in PiP.
+  }
+
+  override fun onResume() {
+    super.onResume()
+    // v11 T8.2: re-pin to USER_PORTRAIT on every resume. This
+    // catches the "user went to home screen in landscape, then
+    // returned to the app" case — the manifest pin no longer
+    // exists, so the activity would otherwise stay in whatever
+    // orientation the user left it in. The JS layer's unmount
+    // cleanup (T8.1) also calls setOrientation('portrait') on
+    // close, but the resume path is the safety net for any
+    // other backgrounding flow (notification panel, recent
+    // apps, in-app modal that pauses the activity).
+    requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
   }
 
   override fun onDestroy() {

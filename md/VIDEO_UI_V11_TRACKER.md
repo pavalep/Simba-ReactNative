@@ -317,11 +317,11 @@
 
 ### PHASE 8.2 — Manifest unpin + restore-on-close
 
-1. Remove `android:screenOrientation="portrait"` from both activities (`AndroidManifest.xml:30,56`).
-2. Player open → orientation authority moves to JS; player close → always `setOrientation('portrait')` + `setImmersive(false)`.
-3. **Error fix:** app-wide regression sweep — Home/Library/Sheets/modals must remain visually portrait-locked via the restore call; QA in forced-landscape dev mode.
-4. **Validation:** `npx tsc --noEmit` exit 0; app behaves portrait everywhere outside the player.
-5. **Commit:** `refactor(video-native): unpin manifest orientation; JS authority while playing`.
+1. Remove `android:screenOrientation="portrait"` from both activities (`AndroidManifest.xml:30,56`). ✅ Both removed; structural test guards against regression.
+2. Player open → orientation authority moves to JS; player close → always `setOrientation('portrait')` + `setImmersive(false)`. ✅ MainActivity.onCreate + onResume re-pin to USER_PORTRAIT so the app stays portrait-locked outside the player. JS host's unmount cleanup (T8.1) calls the same setOrientation/setImmersive pair, so close + back + swipe-down mini all converge.
+3. **Error fix:** app-wide regression sweep — Home/Library/Sheets/modals must remain visually portrait-locked via the restore call; QA in forced-landscape dev mode. ✅ ConfigChanges for orientation retained in the manifest (otherwise Android would destroy+recreate the activity on rotate, resetting the player session). PiP support retained.
+4. **Validation:** `npx tsc --noEmit` exit 0; app behaves portrait everywhere outside the player. ✅ tsc clean; `__tests__/videoManifestUnpinned.test.ts` 4 cases (splash unpin, main unpin, configChanges retained, PiP retained). Device QA = USER task.
+5. **Commit:** `refactor(video-native): unpin manifest orientation; JS authority while playing`. ✅
 
 ### PHASE 8.3 — Chrome adaptation + rotate affordances
 

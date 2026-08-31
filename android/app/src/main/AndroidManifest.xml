@@ -24,10 +24,17 @@
       android:supportsRtl="true">
 
       <!-- ── Native animated splash (LAUNCHER) ── -->
+      <!--
+        v11 T8.2: removed `android:screenOrientation="portrait"`.
+        The JS layer (MpvBridgeModule.setOrientation) is the sole
+        authority for orientation. The splash is short-lived (2-3
+        seconds) so a brief sensor-driven orientation on cold
+        launch is acceptable; MainActivity.onCreate re-pins to
+        portrait once RN takes over.
+      -->
       <activity
         android:name=".SplashActivity"
         android:theme="@style/SplashTheme"
-        android:screenOrientation="portrait"
         android:exported="true">
         <intent-filter>
           <action android:name="android.intent.action.MAIN" />
@@ -37,23 +44,24 @@
 
       <!-- ── Main React Native activity ── -->
       <!--
-        V6 2.3.2: Locked to portrait at the OS level. The player screen
-        lets the user rotate to landscape via the rotate button in
-        VideoPlayerTopBar, which calls handleToggleRotate →
-        lockToLandscape()/lockToPortrait() from utils/orientation.ts.
-        That call uses react-native-orientation-locker, which calls
-        Activity.setRequestedOrientation(...) to override this manifest
-        at runtime. When the player unmounts, the cleanup effect
-        restores portrait (lockToPortrait()).
-        Do NOT change this to "fullSensor" or "unspecified" — the
-        nav option `orientation: 'landscape'` was removed from
-        RootNavigator.tsx (VideoPlayer screen) so the player now
-        defaults to portrait and only flips when the user asks.
+        v11 T8.2: removed `android:screenOrientation="portrait"`.
+        Orientation is now driven by:
+          - MainActivity.onCreate: pins to USER_PORTRAIT (the
+            app visually stays portrait outside the player).
+          - MpvBridgeModule.setOrientation (T8.1): the player
+            toggles to USER_LANDSCAPE on fullscreen, restores
+            to USER_PORTRAIT on close.
+          - MainActivity.onResume: re-pins to USER_PORTRAIT so
+            resume-from-background always lands in portrait
+            unless the player is mid-fullscreen and re-applies
+            via JS.
+        The orientation contract is now: app = portrait, player
+        = either (per the chip), the JS layer is the only thing
+        that can flip it during a session.
       -->
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
-        android:screenOrientation="portrait"
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
         android:launchMode="singleTop"
         android:windowSoftInputMode="adjustResize"
