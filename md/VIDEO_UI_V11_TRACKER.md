@@ -279,10 +279,10 @@
 
 ### PHASE 7.2 — Mini card layout
 
-1. Mini per spec §4.8: card (`background.floating`, radius 12, elevation) above bottom inset; 96×54 live frame slot (radius 8, tap = expand); title + time; 32×32 play/expand/close; 2 px hairline progress.
-2. Fallback chain for the frame slot: live surface → entry `image` → `thumbnailUrl` → gold placeholder. Never black.
-3. Keep swipe-down-to-dismiss (`VideoControlLayer.tsx:200,229-244`) and tap-to-expand.
-4. Replace the legacy mini chrome block (`VideoControlLayer.tsx:186-289`) after parity.
+1. Mini per spec §4.8: card (`background.floating`, radius 12, elevation) above bottom inset; 96×54 live frame slot (radius 8, tap = expand); title + time; 32×32 play/expand/close; 2 px hairline progress. ✅ Implemented as `VideoMiniCard.tsx` + `VideoMiniFrame.tsx` + `VideoMiniProgress.tsx`.
+2. Fallback chain for the frame slot: live surface → entry `image` → `thumbnailUrl` → gold placeholder. Never black. ✅ `VideoMiniFrame` renders live surface when `nativePtr > 0`, `Image` from `fallbackUri` next, gold placeholder with title initial last. Test coverage for all 3 levels.
+3. Keep swipe-down-to-dismiss (`VideoControlLayer.tsx:200,229-244`) and tap-to-expand. ✅ Swipe-down gesture on the grab handle is now owned by `VideoMiniCard`; tap-the-frame = expand via `VideoMiniFrame`'s `onPress`.
+4. Replace the legacy mini chrome block (`VideoControlLayer.tsx:186-289`) after parity. ✅ `MiniControls` is now a thin wrapper around `VideoMiniCard`; legacy styles (`miniRoot`, `miniFrameTarget`, `miniText`, `miniTitle`, `miniActions`, `miniGrabHandle`, `miniGrabBar`) and the swipe-gesture state machine are gone.
 5. **Error fix:** card drag rubber-band must not fight the surface's touch handling — gestures attach to the card container, not the frame slot.
 6. **Validation:** `npx tsc --noEmit` exit 0; mini shows live video while playing; poster before first frame.
 7. **Commit:** `feat(video-ui): mini card with live frame`.
@@ -430,7 +430,7 @@
 | 4 | Queue as a sheet | ✅ done (3 phases) |
 | 5 | Centre action + single retry | ✅ done (3 phases) |
 | 6 | Progress rail upgrade | ✅ done (3 phases) |
-| 7 | Mini with live surface (+ flag) | 🔵 in progress (1/3 phases) |
+| 7 | Mini with live surface (+ flag) | 🔵 in progress (2/3 phases) |
 | 8 | Fullscreen / landscape | ⬜ pending (3 phases) |
 | 9 | Lock + resume + auto-hide | ⬜ pending (3 phases) |
 | 10 | Consolidation + dead-control sweep | ⬜ pending (3 phases) |

@@ -1,7 +1,5 @@
-import React, {useCallback, useState} from 'react';
-import {Animated, Pressable, StyleSheet, Text, View} from 'react-native';
-import {Gesture, GestureDetector} from 'react-native-gesture-handler';
-import {runOnJS} from 'react-native-reanimated';
+import React from 'react';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
 import type {
   VideoCapabilities,
@@ -13,6 +11,7 @@ import type {
 } from './VideoPresentationTypes';
 import {VideoControlButton} from './VideoControlButton';
 import {VideoIcon} from './VideoIcon';
+import {VideoMiniCard} from './VideoMiniCard';
 import {VideoProgressRail, type VideoProgressBookmark} from './VideoProgressRail';
 import {VideoTopBar} from './VideoTopBar';
 import {VideoCenterAction, type VideoCenterPhase} from './VideoCenterAction';
@@ -59,6 +58,14 @@ export interface VideoControlLayerProps {
    *  (the `useBookmarks` hook), so the rail stays decoupled from
    *  the bookmarks store. */
   readonly bookmarks?: readonly VideoProgressBookmark[];
+  /** v11 T7.2: active native pointer, passed through to the mini
+   *  card's frame so the live surface renders in the 96\u00d754 slot.
+   *  When 0, the frame falls back to the entry image / gold
+   *  placeholder. */
+  readonly nativePtr?: number;
+  /** v11 T7.2: entry's poster / artwork URI. Second step of the
+   *  mini-frame fallback chain (after the live surface). */
+  readonly fallbackUri?: string;
 }
 
 function primaryLabel(session: VideoSessionSnapshot): string {
@@ -204,100 +211,42 @@ function MiniControls({
   onClose,
   onPlayPause,
   onSeek,
-  bookmarks,
+  nativePtr = 0,
+  fallbackUri,
 }: VideoControlLayerProps) {
-  // W5.5: swipe-down on the title strip dismisses the mini player.
-  // We render a thin "grab handle" above the title that owns the
-  // gesture so the buttons / progress / tap-to-expand areas stay
-  // untouched. A 60 px downward translation is the dismiss threshold.
-  const SWIPE_DOWN_THRESHOLD_PX = 60;
-  const dismissOffset = useState(() => new Animated.Value(0))[0];
-  const handleSwipeDismiss = useCallback(() => {
-    Animated.timing(dismissOffset, {
-      toValue: 1,
-      duration: 180,
-      useNativeDriver: true,
-    }).start(({finished}) => {
-      if (finished) onClose();
-    });
-  }, [dismissOffset, onClose]);
-  const handleSwipeUpdate = useCallback((translationY: number) => {
-    // Show the user a visual cue by translating the mini down. The
-    // ratio is the actual drag distance vs the threshold, capped to
-    // 1 so a long swipe doesn't fly off-screen.
-    const ratio = Math.min(1, Math.max(0, translationY / SWIPE_DOWN_THRESHOLD_PX));
-    Animated.timing(dismissOffset, {
-      toValue: ratio,
-      duration: 0,
-      useNativeDriver: true,
-    }).start();
-  }, [dismissOffset]);
-  const handleSwipeCancel = useCallback(() => {
-    Animated.spring(dismissOffset, {
-      toValue: 0,
-      useNativeDriver: true,
-      bounciness: 6,
-    }).start();
-  }, [dismissOffset]);
-  const swipe = Gesture.Pan()
-    .activeOffsetY([12, 9999])
-    .failOffsetX([-12, 12])
-    .onUpdate(event => {
-      'worklet';
-      const ty = event.translationY ?? 0;
-      if (ty > 0) runOnJS(handleSwipeUpdate)(ty);
-    })
-    .onEnd(event => {
-      'worklet';
-      if ((event.translationY ?? 0) > SWIPE_DOWN_THRESHOLD_PX) {
-        runOnJS(handleSwipeDismiss)();
-      } else {
-        runOnJS(handleSwipeCancel)();
-      }
-    });
-  const translateY = dismissOffset.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 80],
-    extrapolate: 'clamp',
-  });
-  const opacity = dismissOffset.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
+  // v11 T7.2: the mini player is now a `VideoMiniCard` — card on
+  // `background.floating` (translucent), 96×54 frame slot with the
+  // live surface / entry image / gold placeholder fallback chain,
+  // title + time + 2 px hairline progress, 32×32 play/expand/close.
+  // The legacy inline mini chrome (the `miniRoot` row + grab
+  // handle + 44 px buttons + chunky rail) was deleted in T7.2 in
+  // favour of the card.
   return (
-    <Animated.View
-      style={[
-        styles.miniRoot,
-        {
-          paddingBottom: geometry.bottomContentInset,
-          paddingLeft: geometry.horizontalContentInset,
-          paddingRight: geometry.horizontalContentInset,
-          opacity,
-          transform: [{translateY}],
-        },
-      ]}>
-      <GestureDetector gesture={swipe}>
-        <View style={styles.miniGrabHandle}>
-          <View style={styles.miniGrabBar} />
-        </View>
-      </GestureDetector>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Expand ${title ?? session.source?.title ?? 'video'}`}
-        onPress={onBack}
-        style={styles.miniFrameTarget}
+    <View
+      style={{
+        paddingBottom: geometry.bottomContentInset,
+        paddingLeft: geometry.horizontalContentInset,
+        paddingRight: geometry.horizontalContentInset,
+      }}
+    >
+      <VideoMiniCard
+        session={session}
+        title={title ?? session.source?.title ?? ''}
+        nativePtr={nativePtr}
+        fallbackUri={fallbackUri}
+        onPlayPause={onPlayPause}
+        // T7.2: both `onToggleChrome` (legacy "expand from the
+        // expand button") and `onBack` (legacy "expand by tapping
+        // the frame") map to the same expand intent — the host's
+        // `expandPlayer` handler.
+        onExpand={onBack}
+        onClose={onClose}
+        // The mini doesn't expose scrubbing (the spec keeps it a
+        // glanceable surface). Pass `onSeek` through to satisfy
+        // the type; the rail / hairline don't call it in mini mode.
+        onSeek={onSeek}
       />
-      <View style={styles.miniText} pointerEvents="none">
-        <Text numberOfLines={1} style={styles.miniTitle}>{title ?? session.source?.title ?? ''}</Text>
-        <VideoProgressRail session={session} onSeek={onSeek} bookmarks={bookmarks} />
-      </View>
-      <View style={styles.miniActions}>
-        <VideoControlButton icon={primaryIcon(session)} label={primaryLabel(session)} size="compact" onPress={onPlayPause} />
-        <VideoControlButton icon="expand" label="Expand video player" size="compact" onPress={onToggleChrome} />
-        <VideoControlButton icon="close" label="Close video player" size="compact" onPress={onClose} />
-      </View>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -375,50 +324,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  miniRoot: {
-    minHeight: 86,
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: cinemaColors.background.surfaceDark,
-    borderTopWidth: 1,
-    borderTopColor: cinemaColors.border.emphasis,
-    paddingTop: 8,
-  },
-  miniFrameTarget: {
-    width: 52,
-    height: 58,
-    backgroundColor: cinemaColors.background.elevated,
-  },
-  miniText: {
-    flex: 1,
-    paddingHorizontal: 12,
-  },
-  miniTitle: {
-    color: cinemaColors.text.bright,
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  miniActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  // `miniIconHint` removed under W5.2 (see MiniControls).
-  // W5.5: grab handle — a thin strip at the top of the mini player
-  // that hosts the swipe-down-to-dismiss gesture. A subtle horizontal
-  // bar in the middle hints at the affordance.
-  miniGrabHandle: {
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  miniGrabBar: {
-    width: 36,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: cinemaColors.text.onMediaMuted,
-    opacity: 0.5,
-  },
+  // v11 T7.2: the legacy mini styles (miniRoot, miniFrameTarget,
+  // miniText, miniTitle, miniActions, miniGrabHandle, miniGrabBar)
+  // are gone — `VideoMiniCard` owns its own styles now.
 });

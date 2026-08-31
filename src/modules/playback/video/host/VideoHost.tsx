@@ -777,6 +777,12 @@ export function VideoHost({active}: VideoHostProps) {
       capabilities={viewState.capabilities}
       chromeVisible
       title={source.title}
+      // v11 T7.2: pass the active native pointer and the entry's
+      // artworkUri so the mini card's 96×54 frame slot can show
+      // the live surface (when ready) or fall back to the entry
+      // image / gold placeholder.
+      nativePtr={nativePtr}
+      fallbackUri={active.entry.artworkUri}
       onToggleChrome={expandPlayer}
       onBack={expandPlayer}
       onClose={closePlayer}
