@@ -1,0 +1,85 @@
+refactor(video-ui): dead-control sweep
+
+v11 T10.2 — enumerate every reachable control, trace each
+onPress to a real handler, then delete the dead props and
+the dead icon names that T3.x / T10.1 left behind.
+
+Sweep result
+============
+39 reachable controls in the player surface (35 full + 4 mini).
+All 39 onPress handlers trace to real handlers in VideoHost.tsx
+or to internal component state (e.g. VideoProgressRail's
+toggleTimeMode). No dead onPress slots in the JSX.
+
+The full sweep table — control, surface, component, handler
+file:line — is committed in the tracker at
+md/VIDEO_UI_V11_TRACKER.md "Sweep table" subsection under
+PHASE 10.2.
+
+Dead props removed
+==================
+VideoControlLayer.tsx:
+  - onOpenTracks?:  () => void  (was at old :43)
+  - onOpenChapters?: () => void (was at old :44)
+  - onOpenQueue?:   () => void  (was at old :49)
+These three props were leftover from before the T3.1
+MoreSheet consolidation. The utility-row chips that would
+have called them were removed in T10.1; the equivalent
+functionality moved into the MoreSheet (T3.2 / T3.3 / T4.1).
+
+VideoHost.tsx:
+  - The host's full-chrome render no longer passes
+    onOpenQueue={openMoreSheet} (was at :1150). The
+    onOpenMore prop is the only MoreSheet entry point now.
+
+Dead icon names removed
+=======================
+VideoIcon.tsx (VideoIconName union + switch cases):
+  - 'volume' — never referenced. Volume / brightness
+    gestures use VideoSurfaceGestures' HUD, not the icon set.
+  - 'mute' — never referenced. Same as volume.
+  - 'chapters' — never referenced. The chapters section is
+    text-only in the MoreSheet (T3.2).
+  - 'queue' — never referenced. The queue section is
+    text-only in the MoreSheet (T4.1).
+A stray use of any of these names is now a tsc error.
+
+The union went from 20 names to 16. A live-use table
+mapping the remaining 17 names to their use sites is
+committed in the tracker under the same phase.
+
+Capability gating (spec §9.2)
+============================
+Verified that the captions chip hides when no caption track
+exists and the PiP chip hides when canPictureInPicture is
+false. Both gates live in VideoControlLayer.tsx:222 / :236
+and rely on VideoPlatformCapabilities.ts (T8.1) for the
+platform-level PiP health check.
+
+Tests
+=====
+New __tests__/videoDeadControlSweep.test.tsx (6 cases):
+  - dead-prop removal: VideoControlLayerProps no longer
+    accepts onOpenTracks / onOpenChapters / onOpenQueue;
+    the full chrome still renders without them
+  - dead-icon removal: VideoIcon module still exports a
+    working function (regression guard: deleting cases
+    didn't break the live names)
+  - full chrome: every utility chip / transport button /
+    top bar button fires its handler on press
+  - capability-gated controls do not render a non-functional
+    slot (captions chip hidden when canSelectCaptionTrack
+    is false)
+  - lock-mode chrome suppression: top/bottom bars + centre
+    all hide, leaving the lock overlay as the only surface
+
+Full suite: 22/22 suites, 184 tests pass + 1 todo. tsc
+--noEmit exit 0. No regressions vs the T10.1 baseline.
+
+Tracker
+=======
+md/VIDEO_UI_V11_TRACKER.md PHASE 10.2 block updated with:
+  - file:line evidence for each removed prop / icon
+  - the full sweep table (39 controls → handlers)
+  - the icon-use table for the remaining 16 names
+Theme 10 progress row → "2/3 phases".

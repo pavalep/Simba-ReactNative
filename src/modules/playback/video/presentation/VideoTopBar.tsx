@@ -133,6 +133,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: TOP_BAR_HEIGHT,
+    // FIX (v11 hotfix): the frame tap target is an absoluteFill with
+    // zIndex 1 rendered AFTER the top bar in the tree — without a higher
+    // zIndex it sits on top of the header and swallows every tap
+    // (back / lock / more / close). Bottom bar already uses zIndex 2.
+    zIndex: 3,
     // The gradient owns the scrim; we sit on top of the surface, not
     // behind it. `box-none` lets taps pass through the empty middle
     // of the bar to the frame tap target below.

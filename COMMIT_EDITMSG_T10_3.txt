@@ -1,0 +1,119 @@
+chore(video-ui): copy/a11y/perf final pass
+
+v11 T10.3 — final consolidation pass before GATE 10.
+
+Copy audit (spec §8)
+====================
+Added 25 new string keys to constants/strings.ts:
+
+  Transport row
+    - videoPreviousVideo
+    - videoNextVideo
+    - videoSeekBackward10
+    - videoSeekForward10
+    - videoCaptions
+
+  Mini card / top bar
+    - videoExpandPlayerFull
+    - videoClosePlayerHint
+    - videoExpandByName (template {title})
+
+  Progress rail
+    - videoProgressRail
+    - videoProgressRailLive
+    - videoProgressRailTotal
+    - videoProgressRailRemaining
+
+  MoreSheet (10 keys)
+    - moreSheetSectionQueue / Tracks / Chapters / Window / Audio
+    - moreSheetTrackOff
+    - moreSheetWindowFullscreen
+    - moreSheetWindowPip
+    - moreSheetAudioEqualizer
+    - moreSheetFeatureUnavailable (template suffix)
+    - moreSheetDismiss / Reset / Done / ClearQueue
+
+  Chrome + speed chip
+    - videoChromeShow / videoChromeHide
+    - videoSpeedChipLabel (template {speed})
+
+Routed 16 hardcoded labels out of JSX into the new keys.
+Files touched:
+  - VideoControlLayer.tsx (transport row, frame tap, captions
+    chip, speed chip a11y label)
+  - VideoMiniCard.tsx (expand / close / title-strip expand)
+  - VideoMiniFrame.tsx (frame expand by title)
+  - VideoProgressRail.tsx (rail a11y labels)
+  - VideoMiniProgress.tsx (mini rail a11y label)
+  - VideoMoreSheet.tsx (every dismiss / reset / done / clear-
+    queue / track-off / window / audio / unavailable label)
+  - VideoTopBar.tsx (close-player hint)
+
+The English copy is unchanged — the keys are the new
+affordance, not the words. A future translation pass can
+replace the right-hand side of each key without touching JSX.
+
+A11y (spec §6)
+==============
+- Labels: every interactive control in the player surface
+  has an accessibilityLabel (39 full + 4 mini, per the
+  T10.2 sweep table).
+- 44 px targets: transport (52), top bar (44), utility
+  (36 + 4 hitSlop = 44 effective), mini (32 + grab handle).
+- Live region: VideoStatusPill.tsx:187 already carries
+  accessibilityLiveRegion="polite" — VoiceOver / TalkBack
+  announce phase changes without stealing focus.
+- Modal focus: VideoMoreSheet is rendered inside RN's
+  <Modal>; focus is OS-managed.
+- Reduced-motion: all animations are 180-240 ms with
+  Easing.out/inOut cubics; no animation exceeds 300 ms.
+
+Perf (spec §7)
+==============
+- Native-driver enforcement: 12 animation sites in the
+  player source, all useNativeDriver: true (verified by a
+  source-level sweep test that flags any useNativeDriver:
+  false within 800 chars of an Animated.timing/spring/
+  decay/parallel call).
+- Rail throttle: RAIL_THROTTLE_MS = 1000 (≤ 1 Hz update).
+- Single subscription: the host reads useVideoViewState
+  once; the component tree is pure functions of the
+  snapshot.
+
+Spec §0 regression pass
+=======================
+- Observers: MpvBridgeModule.kt still exports
+  setOrientation / setImmersive; host's toggleFullscreen
+  re-issues on demand.
+- Lease: unchanged; nativePtr flows through VideoHost.tsx
+  :1141 to the mini card.
+- Watchdog: T5.3 single retry path still wired.
+- Gestures: VideoSurfaceGestures unchanged; volume /
+  brightness never touched the icon set (T10.2 removed the
+  dead volume / mute icons).
+- Keep-awake: unchanged.
+
+Tests
+=====
+New __tests__/videoCopyA11yPerfFinal.test.tsx (13 cases):
+  - copy registry: every new key is present and non-empty
+  - copy in JSX: transport row labels render with the new
+    keys; speed chip uses the templated {speed} label
+  - a11y live region: VideoStatusPill source contains
+    accessibilityLiveRegion="polite" (structural check)
+  - a11y frame-tap: chrome show / hide labels render
+  - a11y pill retry: VideoStatusPill retry button label
+    matches strings.videoPillRetryLabel
+  - perf rail throttle: RAIL_THROTTLE_MS >= 1000
+  - perf native driver: 0 offenders in the player source
+  - regression guard: all 25 new keys are non-empty
+
+Full suite: 23/23 suites, 197 tests pass + 1 todo. tsc
+--noEmit exit 0.
+
+Tracker
+=======
+md/VIDEO_UI_V11_TRACKER.md PHASE 10.3 block updated with
+file:line evidence for every change. Theme 10 progress
+row → "3/3 phases". GATE 10 marked ready for user sign-off
+(4/5 boxes ticked; the device-test box is a USER task).

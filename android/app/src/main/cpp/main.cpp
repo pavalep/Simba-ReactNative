@@ -25,7 +25,14 @@ std::atomic<bool> g_running{false};
 std::atomic<bool> g_initialized{false};
 std::shared_mutex g_mpvLifecycleMutex;
 static pthread_t g_eventThread = 0;
-ANativeWindow *g_window = nullptr;
+// FIX (crash hotfix): this mpv build's Android VO consumes `wid` as a JNI
+// GLOBAL REFERENCE to an android.view.Surface and calls
+// ANativeWindow_fromSurface() on its own VO thread. An earlier revision
+// stored a raw ANativeWindow* here and passed that as wid; the VO thread
+// then dereferenced the pointer as a jobject and aborted with
+// "JNI ERROR: jobject is an invalid JNI transition frame reference".
+// Keep the global ref alive until the VO is stopped (vo=null) + detached.
+jobject g_surface = nullptr;
 
 // Cached Java references
 jclass g_cls_MPVLib = nullptr;
@@ -152,6 +159,21 @@ static JNIEnv *getEnv() {
     return nullptr;
 }
 
+// ── Helper: flush queued mpv core work ──────────────────────────────────
+// Property writes (vo=null / wid=...) from other threads are processed
+// asynchronously on the mpv core thread. `mpv_command` blocks until the
+// command has been executed, so a trailing no-op guarantees every earlier
+// queued change has been APPLIED. We need that before DeleteGlobalRef:
+// if we dropped the ref while the old VO teardown was still in flight,
+// this mpv build's android GPU context could touch a stale jobject (the
+// "invalid JNI transition frame reference" abort from the old crash log —
+// and, in the non-crashing case, rendering into a defunct window).
+static void flushMpvCore(mpv_handle *mpv) {
+    if (!mpv) return;
+    const char *cmd[] = {"ignore", nullptr};
+    mpv_command(mpv, cmd);
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -272,9 +294,9 @@ Java_com_simba_player_mpv_MPVLib_nativeDestroy(JNIEnv *env, jclass) {
         g_eventThread = 0;
     }
 
-    if (g_window) {
-        ANativeWindow_release(g_window);
-        g_window = nullptr;
+    if (g_surface) {
+        env->DeleteGlobalRef(g_surface);
+        g_surface = nullptr;
     }
     clearPendingLoadRequests();
     mpv_destroy(handle);
@@ -310,38 +332,40 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
 
     if (surface) {
         // ── Attach surface ──────────────────────────────────────────────
-        // mpv's Android wid contract requires an ANativeWindow pointer, not
-        // a JNI jobject/global-reference address. Passing the latter can
-        // corrupt Android file-descriptor ownership during surface churn.
-        ANativeWindow *newWindow = ANativeWindow_fromSurface(env, surface);
-        if (!newWindow) {
-            LOGE("Surface attach rejected: ANativeWindow_fromSurface returned null");
+        // wid = JNI global ref to the Surface (mpv derives its own
+        // ANativeWindow on the VO thread). Never pass a raw ANativeWindow*
+        // here — see the g_surface comment at the top of this file.
+        jobject newSurface = env->NewGlobalRef(surface);
+        if (!newSurface) {
+            LOGE("Failed to create GlobalRef for surface");
             return;
         }
 
-        if (g_window) {
-            ANativeWindow_release(g_window);
-            g_window = nullptr;
-        }
-        g_window = newWindow;
-
         if (!g_initialized.load()) {
             LOGE("Surface attach rejected because mpv is not initialized");
-            ANativeWindow_release(g_window);
-            g_window = nullptr;
+            env->DeleteGlobalRef(newSurface);
             return;
         }
 
         // mpv was told to set vo=null before this call, so the VO is not
-        // actively using the previous window. Store the real native window
-        // pointer; Java restores vo=gpu after this JNI call returns.
-        int64_t wid = reinterpret_cast<intptr_t>(g_window);
+        // actively using the previous wid value; the option is simply
+        // stored and picked up when Java restores vo=gpu.
+        int64_t wid = reinterpret_cast<intptr_t>(newSurface);
         int result = mpv_set_property(mpv, "wid", MPV_FORMAT_INT64, &wid);
         if (result < 0) {
             LOGW("mpv_set_property(wid) on attach failed: %s", mpv_error_string(result));
         }
 
-        LOGI("Surface attached with ANativeWindow wid");
+        // Flush the queued vo=null + wid updates so the old ref below is
+        // guaranteed no longer referenced by mpv before we drop it.
+        flushMpvCore(mpv);
+        if (g_surface) {
+            env->DeleteGlobalRef(g_surface);
+            g_surface = nullptr;
+        }
+        g_surface = newSurface;
+
+        LOGI("Surface attached with global-ref wid");
 
         // Emit surfaceAttached event
         JNIEnv* jniEnv = getEnv();
@@ -354,14 +378,16 @@ Java_com_simba_player_mpv_MPVLib_nativeAttachSurface(
         }
     } else {
         // ── Detach surface ─────────────────────────────────────────────
-        // NOTE: The caller (MpvRenderView) sets vo=null BEFORE calling this.
-        // That forces mpv's gpu VO to release its reference before we release
-        // the ANativeWindow acquired by ANativeWindow_fromSurface().
-        if (g_window) {
-            ANativeWindow_release(g_window);
-            g_window = nullptr;
+        // NOTE: The caller (MpvRenderView) sets vo=null BEFORE calling this,
+        // but the vo change is processed asynchronously on the mpv core
+        // thread. Flush it so the VO teardown has finished consuming the wid
+        // jobject before we drop the ref.
+        flushMpvCore(mpv);
+        if (g_surface) {
+            env->DeleteGlobalRef(g_surface);
+            g_surface = nullptr;
         }
-        LOGI("Surface detached (ANativeWindow ref released)");
+        LOGI("Surface detached (global ref released)");
     }
 }
 

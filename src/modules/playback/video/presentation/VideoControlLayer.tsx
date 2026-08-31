@@ -130,13 +130,19 @@ function FullControls({
   // During any other loading state (preparing / buffering / seeking /
   // reconnecting) the centre stays hidden — the pill owns the moment.
   // v11 T9.1: also hidden when locked (lock = no chrome changing).
+  // FIX (v11 hotfix): the session can sit in `ready` with the transport
+  // stopped (autoplay denied, stall cleared, first-frame race) — the old
+  // mapping only showed the centre action for a literal `paused` phase,
+  // leaving a dead-looking player. Loaded-but-not-playing IS the paused
+  // presentation; the loadingState gate below still hides it during any
+  // loading kind.
   const centerActionPhase: VideoCenterPhase | null =
-    session.phase === 'paused'
-      ? 'paused'
-      : session.phase === 'finished'
-        ? 'finished'
-        : session.phase === 'error'
-          ? 'error'
+    session.phase === 'finished' || session.isEnded
+      ? 'finished'
+      : session.phase === 'error'
+        ? 'error'
+        : !session.isPlaying
+          ? 'paused'
           : null;
   const centerActionVisible =
     chromeVisible &&
@@ -337,13 +343,20 @@ function formatSpeedLabel(speed: number): string {
 const styles = StyleSheet.create({
   fullRoot: {
     ...StyleSheet.absoluteFill,
-    justifyContent: 'space-between',
   },
   frameTapTarget: {
     ...StyleSheet.absoluteFill,
     zIndex: 1,
   },
   bottomScrim: {
+    // FIX (v11 hotfix): was an in-flow child of a `space-between` root
+    // whose other children are absolute — a single in-flow child lands at
+    // flex-START, which rendered the whole bottom bar at the TOP of the
+    // player. The bottom bar must be anchored to the bottom explicitly.
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 2,
     paddingTop: 34,
     backgroundColor: cinemaColors.background.scrimStrong,

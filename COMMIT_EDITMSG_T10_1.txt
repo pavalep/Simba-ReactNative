@@ -1,0 +1,55 @@
+feat(video-ui): final utility row
+
+v11 T10.1 — apply the spec 4.5 utility row consolidation and
+eliminate dead transport buttons.
+
+Utility row (VideoControlLayer.tsx:210-261): the seven chips
+now render in the canonical order
+
+  captions · bookmark · speed · PiP · spacer · rotate · more
+
+The left cluster is the four control chips; the flex: 1 spacer
+absorbs the slack and pushes the right cluster (rotate + more)
+to the right edge. The old onOpenTracks / onOpenChapters /
+onOpenQueue chips are gone from the utility row — they live
+inside the MoreSheet instead (T3).
+
+Utility size (VideoControlButton.tsx:16,55,85-88): a new
+size="utility" renders 36x36 visuals with iconSize 18, plus
+a 4 px hitSlop on the Pressable so the effective touch
+target is 44 px (a11y minimum). The chunky 52 px regular
+size is no longer used in the utility row.
+
+Bookmark chip (VideoControlLayer.tsx:225-232): the icon
+swaps to bookmarkFilled when isBookmarked is true, and the
+accessibility label flips to strings.videoBookmarkRemove
+("Remove bookmark"). When unbookmarked it is bookmark +
+strings.videoBookmarkAdd ("Save bookmark"). New string keys
+at strings.ts:159-161.
+
+Speed chip (VideoControlLayer.tsx:233-235): the existing
+VideoSpeedChip is now wired into the utility row, fed
+session.speed and onOpenSpeed. Its accessibility label
+("Playback speed 1x. Tap to change.") carries the active
+speed value into screen readers.
+
+PiP chip (VideoControlLayer.tsx:236-243): label is
+strings.videoEnterPip ("Enter picture in picture"). Hidden
+when canPictureInPicture is false.
+
+Prev/next gating (VideoHost.tsx:566-603, 1145-1146): the
+host now derives hasNext / hasPrevious from the Redux
+player playlist + queue selectors and passes the prev/next
+handlers as undefined when there is no queue / playlist
+context. The control layer treats both as optional and
+renders nothing — no dead buttons. Rule 12 satisfied.
+
+Tests: new __tests__/videoUtilityRow.test.tsx (12 cases)
+covers chip order, 36 px size style, 4 px hitSlop, prev/next
+gating (both hidden / both shown / one-sided), bookmark
+icon swap, speed chip label format, and capability-driven
+hiding for captions / speed / PiP. Full suite: 21/21
+suites, 178 tests + 1 todo, all pass. tsc --noEmit exit 0.
+
+Tracker: md/VIDEO_UI_V11_TRACKER.md T10.1 block updated with
+file:line evidence; theme 10 row updated to "1/3 phases".

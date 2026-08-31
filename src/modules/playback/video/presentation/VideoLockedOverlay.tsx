@@ -66,6 +66,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: 56,
+    // FIX (v11 hotfix): must sit above the frame tap target
+    // (zIndex 1) or the unlock button is untappable while locked.
+    zIndex: 4,
     // Center the button vertically inside the host column.
     justifyContent: 'center',
     alignItems: 'center',

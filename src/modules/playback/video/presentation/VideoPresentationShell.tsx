@@ -1,6 +1,5 @@
 import React, {useEffect, useRef} from 'react';
 import {Animated, StyleSheet, useWindowDimensions, View} from 'react-native';
-import {darkColors as cinemaColors} from '../../../../theme/tokens';
 import type {VideoPresentationMode} from './VideoPresentationTypes';
 import {
   computeMiniSlot,
@@ -175,11 +174,16 @@ export function VideoPresentationShell({
   );
 }
 
+// FIX (v11 hotfix): `background.surfaceDark` is rgba(18,18,22,0.92) — the
+// 8% alpha let the home screen bleed through the player. The shell must be
+// an opaque cinema surface; same rgb, alpha 1.
+const SHELL_BACKGROUND = '#121216';
+
 const styles = StyleSheet.create({
   shell: {
     position: 'absolute',
     overflow: 'hidden',
-    backgroundColor: cinemaColors.background.surfaceDark,
+    backgroundColor: SHELL_BACKGROUND,
   },
   // T7.1: the transform layer is the "single full-viewport content
   // frame" that the shell animates. The surface + both chrome

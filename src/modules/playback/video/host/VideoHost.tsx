@@ -252,7 +252,7 @@ export function VideoHost({active}: VideoHostProps) {
       if (cancelled) {
         // The effect was already cleaned up; release the unit and
         // return without setting state.
-        built.release.catch(() => undefined);
+        built.release().catch(() => undefined);
         return;
       }
       nextPlayback = built;
@@ -261,7 +261,9 @@ export function VideoHost({active}: VideoHostProps) {
     return () => {
       cancelled = true;
       if (nextPlayback) {
-        nextPlayback.release.catch(() => undefined);
+        // FIX (v11 hotfix): release is a function now — the previous
+        // code only OBSERVED a promise that had already run at birth.
+        nextPlayback.release().catch(() => undefined);
       }
     };
   }, []);
@@ -327,6 +329,17 @@ export function VideoHost({active}: VideoHostProps) {
   useEffect(() => {
     surfaceChangeCounter.current.reset();
   }, [surfacePresentation]);
+
+  // FIX (PiP hotfix): entering PiP with a sheet open left the modal's
+  // dark scrim as the only visible surface in the tiny PiP window —
+  // "blank PiP" even though playback continued. PiP owns the chrome;
+  // dismiss every sheet on entry.
+  useEffect(() => {
+    if (isPipLike) {
+      setMoreSheetVisible(false);
+      setSpeedSheetVisible(false);
+    }
+  }, [isPipLike]);
 
   // v11 T9.1: lock state resets on every presentation flip.
   // When the user collapses to mini, the next session starts
@@ -1017,7 +1030,12 @@ export function VideoHost({active}: VideoHostProps) {
       canFullscreen: viewState.capabilities.canFullscreen,
       onToggleFullscreen: toggleFullscreen,
       canPip: viewState.capabilities.canPictureInPicture,
-      onPip: requestPip,
+      // PiP hotfix: dismiss the sheet BEFORE entering PiP, otherwise its
+      // scrim is the only surface visible in the PiP window.
+      onPip: () => {
+        setMoreSheetVisible(false);
+        requestPip();
+      },
     }),
     [
       requestPip,

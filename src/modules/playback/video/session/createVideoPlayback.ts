@@ -30,17 +30,26 @@ export async function createVideoPlayback() {
   const surface = new VideoSurfaceController();
   const pip = new VideoPipAdapter();
 
-  const releasePromise = (async () => {
-    synchronizer.dispose();
-    state.dispose();
-    pip.dispose();
-    await surface.detach();
-    await commands.dispose();
-  })();
-  // Register the release promise with the lease system so the next
-  // `createVideoPlayback()` (in StrictMode or rapid remount) waits
-  // for this teardown to finish.
-  chainVideoNativeRelease(releasePromise);
+  // FIX (v11 hotfix): the teardown used to be an immediately-invoked
+  // async IIFE, which disposed the unit (state subscription, surface,
+  // commands) at BIRTH — the player never loaded anything. Teardown
+  // must be lazy and idempotent: it starts when the host calls
+  // `release()` from cleanup, and only then is it chained into the
+  // lease system so the next mount waits for it.
+  let releasePromise: Promise<void> | null = null;
+  const release = (): Promise<void> => {
+    if (!releasePromise) {
+      releasePromise = (async () => {
+        synchronizer.dispose();
+        state.dispose();
+        pip.dispose();
+        await surface.detach();
+        await commands.dispose();
+      })();
+      chainVideoNativeRelease(releasePromise);
+    }
+    return releasePromise;
+  };
 
   return {
     session,
@@ -49,6 +58,6 @@ export async function createVideoPlayback() {
     synchronizer,
     surface,
     pip,
-    release: releasePromise,
+    release,
   };
 }

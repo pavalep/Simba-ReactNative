@@ -21,6 +21,14 @@ class MpvRenderView(context: ThemedReactContext) : TextureView(context),
 
     private var surface: Surface? = null
     private var nativePtr: Long = 0L
+    // Crash hotfix: attach/detach must be atomic (vo=null → wid swap → vo=gpu).
+    // Idempotency is keyed on the SURFACE identity, not the ptr: a re-applied
+    // nativePtr prop (view recycling, same texture) is a no-op, but a genuinely
+    // new texture (PiP window surface churn) ALWAYS rebinds — the old wid would
+    // otherwise keep rendering into a defunct window, leaving the PiP frame
+    // black.
+    private var attachedSurface: Surface? = null
+    private val surfaceLock = Any()
 
     companion object {
         private const val TAG = "MpvRenderView"
@@ -65,31 +73,48 @@ class MpvRenderView(context: ThemedReactContext) : TextureView(context),
      * Call when the native mpv handle is available.
      */
     fun setNativePtr(ptr: Long) {
-        nativePtr = ptr
-        if (surface != null && surface!!.isValid) {
-            attachSurface()
+        synchronized(surfaceLock) {
+            nativePtr = ptr
+            // New handle — any previously attached surface must be rebound
+            // (wid still points at the old handle's surface).
+            attachedSurface = null
+            if (surface != null && surface!!.isValid) {
+                attachSurfaceLocked()
+            }
         }
     }
 
     private fun attachSurface() {
+        synchronized(surfaceLock) { attachSurfaceLocked() }
+    }
+
+    private fun attachSurfaceLocked() {
         if (nativePtr == 0L || surface == null) return
         if (!surface!!.isValid) return
+        if (attachedSurface === surface) return // same texture → nothing to do
         Log.d(TAG, "Attaching surface to mpv")
+        // Stop the gpu VO FIRST so nothing is using the previous wid value
+        // while the native side swaps the Surface global ref.
+        MPVLib.setPropertyString(nativePtr, "vo", "null")
         MPVLib.nativeAttachSurface(nativePtr, surface)
-        // Restore the gpu video output so mpv creates a new ANativeWindow
-        // from the fresh Surface. The native side already updated wid,
-        // so the VO re-init will pick up the new surface.
+        // Restore the gpu video output; the VO re-init picks up the new wid
+        // (a global ref to the Surface — mpv derives its own ANativeWindow).
         MPVLib.setPropertyString(nativePtr, "vo", "gpu")
+        attachedSurface = surface
     }
 
     private fun detachSurface() {
-        if (nativePtr == 0L) return
-        Log.d(TAG, "Detaching surface from mpv")
-        // Kill the gpu video output FIRST so mpv releases its ANativeWindow
-        // reference before we delete the JNI global ref to the Surface.
-        // If we delete the ref first, mpv still holds a stale pointer → crash.
-        MPVLib.setPropertyString(nativePtr, "vo", "null")
-        MPVLib.nativeAttachSurface(nativePtr, null)
+        synchronized(surfaceLock) {
+            if (nativePtr == 0L) return@synchronized
+            Log.d(TAG, "Detaching surface from mpv")
+            // Kill the gpu video output FIRST so mpv releases the
+            // ANativeWindow it derived from the global ref before the native
+            // side deletes the ref. If we delete the ref first, mpv still
+            // holds a stale jobject → JNI abort.
+            MPVLib.setPropertyString(nativePtr, "vo", "null")
+            MPVLib.nativeAttachSurface(nativePtr, null)
+            attachedSurface = null
+        }
     }
 
     /**

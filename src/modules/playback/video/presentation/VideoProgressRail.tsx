@@ -118,8 +118,11 @@ export function VideoProgressRail({
   const [displayedPosition, setDisplayedPosition] = useState<number>(0);
   const lastDisplayedAt = useRef<number>(0);
   const duration = session.duration;
-  const isLive = session.isLive || duration === null || duration <= 0;
-  const canSeek = session.isSeekable && !isLive;
+  // FIX (v11 hotfix): treating "duration not resolved yet" as LIVE put a
+  // red LIVE pill on every VOD for the first seconds and disabled seeking.
+  // LIVE is a source property; an unresolved duration only disables seek.
+  const isLive = session.isLive;
+  const canSeek = session.isSeekable && !isLive && duration !== null && duration > 0;
 
   // Bookmarks for the current source (T6.2). The host supplies
   // them via the `bookmarks` prop; the rail just lays them out.

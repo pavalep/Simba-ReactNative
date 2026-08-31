@@ -26,7 +26,6 @@
  *                          template still works.
  */
 import React from 'react';
-import {readFileSync} from 'react-native';
 import fs from 'fs';
 import path from 'path';
 import {render, screen} from '@testing-library/react-native';
