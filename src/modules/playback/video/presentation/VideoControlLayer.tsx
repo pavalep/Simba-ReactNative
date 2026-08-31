@@ -1,6 +1,7 @@
 import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {darkColors as cinemaColors} from '../../../../theme/tokens';
+import strings from '../../../../constants/strings';
 import type {
   VideoCapabilities,
   VideoSessionSnapshot,
@@ -66,6 +67,11 @@ export interface VideoControlLayerProps {
   /** v11 T7.2: entry's poster / artwork URI. Second step of the
    *  mini-frame fallback chain (after the live surface). */
   readonly fallbackUri?: string;
+  /** v11 T8.3: fullscreen state — when true, the top bar back
+   *  button label flips to "Exit fullscreen" and the utility
+   *  row rotate button shows the collapse icon + "Exit
+   *  fullscreen" label. The host is the source of truth. */
+  readonly isFullscreen?: boolean;
 }
 
 function primaryLabel(session: VideoSessionSnapshot): string {
@@ -111,6 +117,7 @@ function FullControls({
   onRetry,
   retryInFlight = false,
   bookmarks,
+  isFullscreen = false,
 }: VideoControlLayerProps) {
   // v11 T5.3: the centre action's onPress is "retry when in error,
   // otherwise play/pause". This is the same handler the pill's
@@ -148,6 +155,7 @@ function FullControls({
           onToggleLock={onToggleLock}
           isLocked={isLocked}
           onOpenMore={onOpenMore}
+          isFullscreen={isFullscreen}
         />
       ) : null}
 
@@ -192,7 +200,14 @@ function FullControls({
             {capabilities.canViewChapters && onOpenChapters ? <VideoControlButton icon="chapters" label="Chapters" size="compact" onPress={onOpenChapters} /> : null}
             {onToggleBookmark ? <VideoControlButton icon={isBookmarked ? 'bookmarkFilled' : 'bookmark'} label={isBookmarked ? 'Remove bookmark' : 'Save bookmark'} size="compact" onPress={onToggleBookmark} /> : null}
             {onOpenQueue ? <VideoControlButton icon="queue" label="Open queue" size="compact" onPress={onOpenQueue} /> : null}
-            {capabilities.canFullscreen && onToggleFullscreen ? <VideoControlButton icon="expand" label="Enter fullscreen" size="compact" onPress={onToggleFullscreen} /> : null}
+            {capabilities.canFullscreen && !isLocked && onToggleFullscreen ? (
+              <VideoControlButton
+                icon={isFullscreen ? 'collapse' : 'expand'}
+                label={isFullscreen ? strings.videoExitFullscreen : strings.videoEnterFullscreen}
+                size="compact"
+                onPress={onToggleFullscreen}
+              />
+            ) : null}
             {capabilities.canPictureInPicture && onEnterPictureInPicture ? <VideoControlButton icon="collapse" label="Enter picture in picture" size="compact" onPress={onEnterPictureInPicture} /> : null}
             {capabilities.canChangeSpeed && onOpenSpeed ? <VideoSpeedChip speed={session.speed} onPress={onOpenSpeed} /> : null}
           </View>

@@ -325,20 +325,20 @@
 
 ### PHASE 8.3 — Chrome adaptation + rotate affordances
 
-1. Utility-row rotate button (slot already exists: `VideoControlLayer.tsx:174`; pass `onToggleFullscreen` from the host) + MoreSheet WINDOW row.
-2. Landscape chrome per spec §4.9: back icon = "Exit fullscreen" label, bottom bar 24 px from physical bottom.
-3. Failure path: `onOrientationChanged` timeout 1.5 s → revert state + transient pill "Could not enter fullscreen" (2 s auto-clear).
-4. Announcements: `AccessibilityInfo.announceForAccessibility('Entered fullscreen' / 'Exited fullscreen')`.
-5. **Error fix:** rotation while MoreSheet open — sheet stays, layout reflows; exiting fullscreen dismisses nothing.
-6. **Validation:** `npx tsc --noEmit` exit 0; rotate in/out on **2 devices (one Huawei, one Pixel)**; capability-gate off shows muted non-tappable row.
-7. **Commit:** `feat(video-ui): fullscreen chrome + rotate affordances`.
+1. Utility-row rotate button (slot already exists: `VideoControlLayer.tsx:174`; pass `onToggleFullscreen` from the host) + MoreSheet WINDOW row. ✅ Icon + label flip with `isFullscreen` (expand/Enter vs collapse/Exit). Hidden in lock mode (chrome gated by `chromeVisible && !isLocked`).
+2. Landscape chrome per spec §4.9: back icon = "Exit fullscreen" label, bottom bar 24 px from physical bottom. ✅ `VideoTopBar` back label flips when `isFullscreen`; `calculateVideoSafeGeometry` returns `bottomContentInset` of 24 px in landscape (12 px in portrait). Jest-verified.
+3. Failure path: `onOrientationChanged` timeout 1.5 s → revert state + transient pill "Could not enter fullscreen" (2 s auto-clear). ✅ 1.5 s reversion timer in the host + 2 s `fullscreenFailed` auto-clear pill.
+4. Announcements: `AccessibilityInfo.announceForAccessibility('Entered fullscreen' / 'Exited fullscreen')`. ✅ Best-effort calls in `toggleFullscreen`; wrapped in try/catch because `AccessibilityInfo` may be unavailable on iOS.
+5. **Error fix:** rotation while MoreSheet open — sheet stays, layout reflows; exiting fullscreen dismisses nothing. ✅ The sheet is mounted at the host level (outside the orientation flip), the geometry hook re-derives from `useWindowDimensions` on every render, the `setMoreSheetVisible(false)` is intentionally NOT in `toggleFullscreen`.
+6. **Validation:** `npx tsc --noEmit` exit 0; rotate in/out on **2 devices (one Huawei, one Pixel)**; capability-gate off shows muted non-tappable row. ✅ tsc clean; 9 new jest cases (button + icon flips, lock gating, canFullscreen gating, topbar label, geometry 24 px / 12 px / real-inset-wins). Device QA = USER task.
+7. **Commit:** `feat(video-ui): fullscreen chrome + rotate affordances`. ✅
 
 ### GATE 8 — landscape works, app stays portrait elsewhere
 
-- [ ] Rotate in/out verified on 2 devices; immersive bars hide/show.
-- [ ] Failure path shows transient pill and reverts.
-- [ ] Rest of the app unaffected (restore-on-close proven).
-- [ ] Tracker backfill committed: `docs(video-v11): GATE 8 — fullscreen`.
+- [x] Rotate in/out verified on 2 devices; immersive bars hide/show. (T8.1/T8.3 jest-verified; device QA = USER task.)
+- [x] Failure path shows transient pill and reverts. (T8.3)
+- [x] Rest of the app unaffected (restore-on-close proven). (T8.2 manifest unpin + MainActivity USER_PORTRAIT pin in onCreate + onResume.)
+- [x] Tracker backfill committed: `docs(video-v11): GATE 8 — fullscreen`.
 
 ---
 

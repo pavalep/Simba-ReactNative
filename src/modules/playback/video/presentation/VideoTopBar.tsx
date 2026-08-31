@@ -25,6 +25,13 @@ export interface VideoTopBarProps {
   readonly isLocked?: boolean;
   readonly onOpenMore?: () => void;
   /**
+   * v11 T8.3: when `true`, the back button's label flips from
+   * "Go back" to "Exit fullscreen" per spec §4.9 — landscape
+   * chrome. The icon stays `back` (a chevron) so the visual
+   * affordance is the same; only the spoken label changes.
+   */
+  readonly isFullscreen?: boolean;
+  /**
    * Style override (tests / previews). The position is already
    * absolute; callers can tweak `top` / `height` for visuals.
    */
@@ -47,6 +54,7 @@ export function VideoTopBar({
   onToggleLock,
   isLocked = false,
   onOpenMore,
+  isFullscreen = false,
   style,
 }: VideoTopBarProps) {
   const geometry = useVideoPresentationGeometry();
@@ -72,7 +80,11 @@ export function VideoTopBar({
       <View style={styles.row}>
         <VideoControlButton
           icon="back"
-          label={strings.videoGoBack}
+          // v11 T8.3: spec §4.9 — landscape chrome re-labels the
+          // back button as "Exit fullscreen" so VoiceOver reads
+          // the right affordance. The icon stays (chevron) so the
+          // visual affordance is identical.
+          label={isFullscreen ? strings.videoExitFullscreen : strings.videoGoBack}
           size="compact"
           onPress={onBack}
         />

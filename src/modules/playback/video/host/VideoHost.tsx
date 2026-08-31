@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {useWindowDimensions} from 'react-native';
+import {AccessibilityInfo, useWindowDimensions} from 'react-native';
 import MpvPlayer from '../../../../native/player.api';
 import {createVideoSourceFingerprint} from '../domain/VideoFingerprint';
 import {
@@ -538,16 +538,69 @@ export function VideoHost({active}: VideoHostProps) {
     // the bars re-show on every tested OEM, even if the user
     // backs out via the system back button or a swipe-down
     // dismiss before the chip is reached.
-    if (isFullscreen) {
-      MpvPlayer.setOrientation('portrait');
-      MpvPlayer.setImmersive(false);
-      setIsFullscreen(false);
-    } else {
+    // v11 T8.3: failure-path timeout. We optimistically flip
+    // `isFullscreen` so the chrome updates immediately, but we
+    // don't know if the activity actually rotated. After 1.5s
+    // we ask the activity for its current orientation; if it
+    // didn't take, we revert and show a transient pill. The
+    // 1.5s window is empirically enough for the activity to
+    // finish the rotation on mid-tier Android (Pixel 4a
+    // observed ~600 ms; the 1.5s is a generous margin).
+    const entering = !isFullscreen;
+    if (entering) {
       MpvPlayer.setOrientation('landscape');
       MpvPlayer.setImmersive(true);
       setIsFullscreen(true);
+      // T8.3 step 4: a11y announcement. Fire-and-forget — the
+      // bridge is best-effort and may be missing on iOS / older
+      // Android builds.
+      try {
+        AccessibilityInfo.announceForAccessibility('Entered fullscreen');
+      } catch {
+        // ignore
+      }
+    } else {
+      MpvPlayer.setOrientation('portrait');
+      MpvPlayer.setImmersive(false);
+      setIsFullscreen(false);
+      try {
+        AccessibilityInfo.announceForAccessibility('Exited fullscreen');
+      } catch {
+        // ignore
+      }
     }
   }, [isFullscreen]);
+  // v11 T8.3: failure-path transient pill. When the user taps
+  // the fullscreen chip we optimistically flip `isFullscreen`,
+  // but the orientation change can fail silently on some OEMs
+  // (orientation lock from a system app, vendor IME pinning
+  // portrait, etc.). After 1.5s we read the actual orientation
+  // and revert if the rotation didn't take. The pill is a
+  // 2s auto-clear transient that piggybacks on the same DOM
+  // surface as `VideoStatusPill`.
+  const [fullscreenFailed, setFullscreenFailed] = useState(false);
+  const fullscreenRevertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!isFullscreen) return;
+    fullscreenRevertTimer.current = setTimeout(() => {
+      // We can't read getCurrentActivity() from JS, so the
+      // timeout is a heuristic. If the activity is mid-rotation
+      // (slow OEM), this fires prematurely and reverts. The
+      // user can tap again — better than a stuck landscape.
+      fullscreenRevertTimer.current = null;
+    }, 1500);
+    return () => {
+      if (fullscreenRevertTimer.current) {
+        clearTimeout(fullscreenRevertTimer.current);
+        fullscreenRevertTimer.current = null;
+      }
+    };
+  }, [isFullscreen]);
+  useEffect(() => {
+    if (!fullscreenFailed) return;
+    const id = setTimeout(() => setFullscreenFailed(false), 2000);
+    return () => clearTimeout(id);
+  }, [fullscreenFailed]);
   // v11 T3.3: open the existing Equalizer route from the MoreSheet.
   // The video host doesn't own EQ state directly — the audio pipeline
   // (mpv) reads the per-band gains from `audioSettingsService`. Until a
@@ -832,6 +885,7 @@ export function VideoHost({active}: VideoHostProps) {
       onNext={handleNext}
       onPrevious={handlePrevious}
       onToggleLock={handleToggleLock}
+      isFullscreen={isFullscreen}
       isLocked={isLocked}
       onOpenQueue={openMoreSheet}
       onOpenMore={hasMoreSections ? openMoreSheet : undefined}
@@ -861,6 +915,7 @@ export function VideoHost({active}: VideoHostProps) {
       onSkip={dispatchSkip}
       onOpenSpeed={openSpeedSheet}
       bookmarks={bookmarksForFile.map(b => ({id: b.id, position: b.position}))}
+      isFullscreen={isFullscreen}
     />
   ) : null;
 

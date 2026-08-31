@@ -145,6 +145,14 @@ const strings = {
   videoSubtitles: 'Subtitles',
   videoAudioTrack: 'Audio track',
   videoExpandPlayer: 'Expand player',
+  // v11 T8.3: fullscreen rotate affordance — two labels for
+  // the same button depending on the current state. Toggling
+  // the button swaps both the icon (expand / collapse) AND
+  // the label so VoiceOver / TalkBack read the right
+  // affordance in each state.
+  videoEnterFullscreen: 'Enter fullscreen',
+  videoExitFullscreen: 'Exit fullscreen',
+  videoFullscreenFailed: 'Could not enter fullscreen',
   videoErrorTitle: 'Playback Error',
   videoErrorMessage: 'Failed to play this video.',
   videoErrorPermission: 'Permission Denied',
