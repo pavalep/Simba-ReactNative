@@ -37,6 +37,17 @@ export interface VideoMiniFrameProps {
   readonly onPress?: () => void;
   /** testID for instrumentation. */
   readonly testID?: string;
+  /**
+   * v11 T7.3 \u2014 master switch for the live surface in the mini.
+   * When `false`, the frame skips the live-surface branch and
+   * renders the poster chain (entry image > gold placeholder)
+   * only. The pre-T7.2 behavior.
+   *
+   * The card reads `VIDEO_UI_FLAGS.miniLiveSurface` and
+   * forwards the resolved boolean; tests can also pass the
+   * prop directly to exercise the flag-off path.
+   */
+  readonly liveSurfaceEnabled?: boolean;
 }
 
 const FRAME_WIDTH = 96;
@@ -57,11 +68,16 @@ export function VideoMiniFrame({
   tappable = false,
   onPress,
   testID,
+  liveSurfaceEnabled = true,
 }: VideoMiniFrameProps) {
   // T7.2 fallback chain:
   //   live surface > entry image > gold placeholder
+  // v11 T7.3: when the `miniLiveSurface` flag is off, the
+  // live surface branch is skipped entirely. The frame
+  // becomes a static poster slot \u2014 same visual contract,
+  // zero surface mount cost. This is the pre-T7.2 behavior.
   let content: React.ReactNode;
-  if (nativePtr > 0) {
+  if (liveSurfaceEnabled && nativePtr > 0) {
     content = (
       <VideoNativeSurface
         nativePtr={nativePtr}

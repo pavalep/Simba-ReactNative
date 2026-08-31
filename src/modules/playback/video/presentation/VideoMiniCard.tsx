@@ -10,6 +10,7 @@ import type {
 import {VideoControlButton} from './VideoControlButton';
 import {VideoMiniFrame} from './VideoMiniFrame';
 import {VideoMiniProgress} from './VideoMiniProgress';
+import {VIDEO_UI_FLAGS} from './videoUiFlags';
 
 /**
  * v11 T7.2 \u2014 Mini player card.
@@ -166,6 +167,11 @@ export function VideoMiniCard({
           tappable
           onPress={onExpand}
           testID="videoMiniCard:frame"
+          // v11 T7.3: the master switch is read from the env-
+          // backed flag. The card doesn't re-read the flag per
+          // render \u2014 it captures the value at module load. To
+          // override at runtime, set the env var and rebuild.
+          liveSurfaceEnabled={VIDEO_UI_FLAGS.miniLiveSurface}
         />
         <View style={styles.meta} pointerEvents="none">
           <Text numberOfLines={1} style={styles.title}>

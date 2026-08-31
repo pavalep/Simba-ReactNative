@@ -9,7 +9,8 @@ import {
 } from '../domain/VideoTypes';
 import type {VideoPipState} from '../platform/VideoPipAdapter';
 import {VideoPresentationShell} from '../presentation/VideoPresentationShell';
-import {computeMiniSlot} from '../presentation/videoShellConstants';
+import {computeMiniSlot, TRANSITION_DURATION_MS} from '../presentation/videoShellConstants';
+import {createSurfaceChangeCounter, VIDEO_UI_FLAGS} from '../presentation/videoUiFlags';
 import {VideoStatusPill} from '../presentation/VideoStatusPill';
 import {VideoSafeControlLayer} from '../presentation/VideoSafeControlLayer';
 import {VideoSurfaceGestures} from '../presentation/VideoSurfaceGestures';
@@ -227,6 +228,21 @@ export function VideoHost({active}: VideoHostProps) {
     };
   }, [autoplay, playback, requestIdentity, source, startPosition]);
 
+  // v11 T7.3: surface-change counter. Resets at the start of
+  // every new transition (surfacePresentation flips). Records
+  // every setPresentation call. If the count exceeds the warn
+  // threshold inside the transition window, log a one-shot
+  // diagnostic recommending the user flip
+  // `SIMBA_VIDEO_MINI_LIVE_SURFACE=false` (the auto-degrade
+  // hook per spec T7.3 step 3). The flag is NEVER auto-toggled.
+  const surfaceChangeCounter = useRef(
+    createSurfaceChangeCounter(TRANSITION_DURATION_MS),
+  );
+
+  useEffect(() => {
+    surfaceChangeCounter.current.reset();
+  }, [surfacePresentation]);
+
   useEffect(() => {
     if (!playback) return;
     // P3: pass real screen geometry to the surface port so it can
@@ -244,6 +260,18 @@ export function VideoHost({active}: VideoHostProps) {
         : surfacePresentation === 'mini'
         ? computeMiniSlot(viewportWidth, viewportHeight)
         : {x: 0, y: 0, width: viewportWidth, height: viewportHeight};
+    // v11 T7.3: count this re-lay against the auto-degrade hook.
+    const count = surfaceChangeCounter.current.record();
+    if (count > VIDEO_UI_FLAGS.surfaceChangeWarnThreshold) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[video-ui] ${count} surface size changes within one ` +
+          `${TRANSITION_DURATION_MS} ms transition. If this device ` +
+          'shows dropped frames during mini<->full, set ' +
+          '`SIMBA_VIDEO_MINI_LIVE_SURFACE=false` to disable the ' +
+          'mini live surface.',
+      );
+    }
     playback.surface.setPresentation(surfacePresentation, geometry).catch(() => undefined);
   }, [playback, surfacePresentation, windowDimensions.width, windowDimensions.height]);
 
