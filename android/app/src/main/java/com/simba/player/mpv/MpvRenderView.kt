@@ -1,36 +1,59 @@
 package com.simba.player.mpv
 
 import android.util.Log
-import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.ViewGroup
 import com.facebook.react.uimanager.ThemedReactContext
 
 /**
- * A Surface-backed view that attaches an Android Surface to the native
- * mpv handle for video rendering.
+ * SurfaceView-backed video renderer that hands an Android Surface to libmpv
+ * for video output.
  *
- * Uses SurfaceView (not TextureView) so the rendering surface lives on
- * its own composition layer, which Android's Picture-in-Picture compositor
- * handles correctly out of the box. The previous TextureView-based
- * implementation re-used the same SurfaceTexture identity when the
- * activity shrank into PiP, causing mpv to keep pushing frames into the
- * pre-PiP ANativeWindow while the PiP overlay showed an empty composition.
- * SurfaceView's surface is on a separate layer from the activity's view
- * hierarchy, so PiP entry/exit doesn't leave a stale wid behind.
+ * Implementation is a deliberate clone of heritage mpv-android's BaseMPVView
+ * (https://github.com/mpv-android/mpv-android/blob/master/app/src/main/java/is/xyz/mpv/BaseMPVView.kt)
+ * which is the proven reference: mpvKt — a maintained Android media player
+ * based on mpv-android that advertises "Smoother PiP" as a headline feature —
+ * extends BaseMPVView unchanged and PiP works without any extra hooks.
+ *
+ * Why SurfaceView and not TextureView (tested both):
+ *  - TextureView depends on the activity's view-tree draw pass. When the
+ *    Activity pauses for PiP, HWUI suspends draw passes for paused activities
+ *    and the TextureView's display layer becomes stale even though the
+ *    SurfaceTexture keeps receiving producer buffers. PiP shows black.
+ *  - SurfaceView with default z-order (BELOW the activity window) is on a
+ *    separate SurfaceFlinger layer that SurfaceFlinger composites directly,
+ *    independent of the activity's view-tree draw state. PiP captures it
+ *    correctly even while the activity is paused.
+ *
+ * Why default z-order (NOT setZOrderOnTop / setZOrderMediaOverlay):
+ *  - setZOrderOnTop puts the SurfaceView ABOVE the activity window on its
+ *    own layer. PiP's VRI compositor samples the activity window content
+ *    and does not include this overlay layer.
+ *  - setZOrderMediaOverlay places the SurfaceView in the media overlay
+ *    layer, also outside the VRI.
+ *  - With default z-order, the SurfaceView is composited INTO the activity
+ *    window's drawing output, which the VRI samples. This is what mpvKt
+ *    uses and is the only configuration that works.
+ *
+ * Lifecycle:
+ *  - surfaceCreated → attachSurface() (force-window=yes)
+ *  - surfaceChanged → notify mpv of new size
+ *  - surfaceDestroyed → detachSurface() (force-window=no)
+ *
+ * force-window is sticky-on / sticky-off matched to surface availability —
+ * exactly as in BaseMPVView. The view does NOT manually toggle force-window
+ * on PiP entry/exit; that is correct because PiP does NOT destroy/recreate
+ * the SurfaceHolder for a SurfaceView that remains visible.
  */
 class MpvRenderView(context: ThemedReactContext) : SurfaceView(context),
     SurfaceHolder.Callback {
 
-    private var surface: Surface? = null
     private var nativePtr: Long = 0L
-    // Idempotency is keyed on the SURFACE identity, not the ptr: a re-applied
-    // nativePtr prop (view recycling, same surface) is a no-op, but a genuinely
-    // new surface (PiP transition, view re-layout) ALWAYS rebinds — the old
-    // wid would otherwise keep rendering into a defunct window.
-    private var attachedSurface: Surface? = null
-    private val surfaceLock = Any()
+    // Surface identity guard — only re-attach if the Surface is new.
+    // SurfaceView reuses the same Surface across config changes and PiP
+    // transitions, so this is normally a no-op after first attach.
+    private var attachedSurface: android.view.Surface? = null
 
     companion object {
         private const val TAG = "MpvRenderView"
@@ -38,44 +61,33 @@ class MpvRenderView(context: ThemedReactContext) : SurfaceView(context),
 
     init {
         holder.addCallback(this)
-        // setZOrderOnTop(true) is REQUIRED for PiP. Verified empirically
-        // from `adb shell dumpsys SurfaceFlinger`: the SurfaceView BLAST
-        // layer (where mpv pushes frames) is composited at z=11 BELOW
-        // the activity's VRI at z=12. The PiP compositor samples the
-        // VRI, so without setZOrderOnTop the SurfaceView's separate
-        // layer is invisible in PiP (renders black).
-        //
-        // setZOrderMediaOverlay(true) is NOT sufficient — that puts the
-        // SurfaceView above the activity window's view hierarchy but
-        // still BELOW the VRI on the SurfaceFlinger z-axis. Only
-        // setZOrderOnTop promotes the SurfaceView above the VRI so the
-        // PiP compositor captures its content.
-        setZOrderOnTop(true)
         layoutParams = ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
         )
+        // Default z-order (BELOW the activity window) is intentional and
+        // required for PiP. Do NOT call setZOrderOnTop or setZOrderMediaOverlay.
+        isFocusable = false
+        isClickable = false
     }
 
     // ── SurfaceHolder.Callback ─────────────────────────────────────────────
 
     override fun surfaceCreated(holder: SurfaceHolder) {
-        surface = holder.surface
-        attachSurface()
+        Log.d(TAG, "surfaceCreated")
+        attachSurfaceLocked(holder.surface)
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-        // Notify mpv of new surface size (orientation / PiP / view re-layout).
+        Log.d(TAG, "surfaceChanged: ${width}x$height")
         if (nativePtr != 0L) {
-            MPVLib.nativeSurfaceChanged(nativePtr, width, height)
+            MPVLib.setPropertyString(nativePtr, "android-surface-size", "${width}x$height")
         }
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
-        detachSurface()
-        // SurfaceView contract: return true tells the framework we have
-        // finished using the surface and it's safe to destroy.
-        surface = null
+        Log.d(TAG, "surfaceDestroyed")
+        detachSurfaceLocked()
     }
 
     // ── Surface attachment ─────────────────────────────────────────────────
@@ -84,55 +96,49 @@ class MpvRenderView(context: ThemedReactContext) : SurfaceView(context),
      * Call when the native mpv handle is available.
      */
     fun setNativePtr(ptr: Long) {
-        synchronized(surfaceLock) {
-            nativePtr = ptr
-            // New handle — any previously attached surface must be rebound
-            // (wid still points at the old handle's surface).
-            attachedSurface = null
-            if (surface != null && surface!!.isValid) {
-                attachSurfaceLocked()
-            }
+        nativePtr = ptr
+        // New handle — any previously attached surface must be rebound
+        // (mpv's wid still points at the previous handle's surface).
+        attachedSurface = null
+        if (holder.surface != null && holder.surface.isValid) {
+            attachSurfaceLocked(holder.surface)
         }
     }
 
-    private fun attachSurface() {
-        synchronized(surfaceLock) { attachSurfaceLocked() }
-    }
-
-    private fun attachSurfaceLocked() {
-        if (nativePtr == 0L || surface == null) return
-        if (!surface!!.isValid) return
-        if (attachedSurface === surface) return // same surface → nothing to do
-        Log.d(TAG, "Attaching surface to mpv")
-        // Mirror mpv-android BaseMPVView's attach sequence: bind the
-        // Surface to mpv's wid FIRST, then force the gpu VO to render
-        // into it. force-window=yes tells mpv to keep rendering into the
-        // window even when its internal state would otherwise stop
-        // (idle, after a hide-window event, during a PiP transition).
+    private fun attachSurfaceLocked(surface: android.view.Surface) {
+        if (nativePtr == 0L) return
+        if (!surface.isValid) return
+        if (attachedSurface === surface) return // same Surface → no-op
+        Log.d(TAG, "Attaching Surface to mpv")
         MPVLib.nativeAttachSurface(nativePtr, surface)
+        // Sticky: keep force-window=yes whenever the surface is available.
+        // Do NOT toggle on PiP entry — PiP does not destroy the surface for
+        // a visible SurfaceView, and toggling force-window can interfere
+        // with mpv's render decision mid-frame.
         MPVLib.setPropertyString(nativePtr, "force-window", "yes")
         MPVLib.setPropertyString(nativePtr, "vo", "gpu")
         attachedSurface = surface
     }
 
-    private fun detachSurface() {
-        synchronized(surfaceLock) {
-            if (nativePtr == 0L) return@synchronized
-            Log.d(TAG, "Detaching surface from mpv")
-            // Stop the gpu VO first so any in-flight render command does
-            // not access the ANativeWindow after we release the global ref.
-            MPVLib.setPropertyString(nativePtr, "vo", "null")
-            MPVLib.setPropertyString(nativePtr, "force-window", "no")
-            MPVLib.nativeAttachSurface(nativePtr, null)
-            attachedSurface = null
-        }
+    private fun detachSurfaceLocked() {
+        if (nativePtr == 0L) return
+        if (attachedSurface == null) return
+        Log.d(TAG, "Detaching Surface from mpv")
+        // Disable the gpu VO first so any in-flight render command does
+        // not access the ANativeWindow after we release the global ref.
+        // Match BaseMPVView: turn off force-window here so that an mpv
+        // instance with no surface does not try to render.
+        MPVLib.setPropertyString(nativePtr, "vo", "null")
+        MPVLib.setPropertyString(nativePtr, "force-window", "no")
+        MPVLib.nativeAttachSurface(nativePtr, null)
+        attachedSurface = null
     }
 
     /**
      * Must be called when the mpv instance is destroyed.
      */
     fun cleanup() {
-        detachSurface()
+        detachSurfaceLocked()
         nativePtr = 0L
     }
 }

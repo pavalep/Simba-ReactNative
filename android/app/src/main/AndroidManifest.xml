@@ -66,6 +66,7 @@
         android:launchMode="singleTop"
         android:windowSoftInputMode="adjustResize"
         android:supportsPictureInPicture="true"
+        android:resizeableActivity="true"
         android:exported="true">
         <!-- Accept shared video/audio files from other apps -->
         <intent-filter>
