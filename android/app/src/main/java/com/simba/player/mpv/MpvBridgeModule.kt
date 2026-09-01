@@ -27,6 +27,52 @@ class MpvBridgeModule(reactContext: ReactApplicationContext) :
     companion object {
         const val NAME = "MpvPlayerModule"
         private const val TAG = "MpvBridgeModule"
+
+        // Holds the ReactApplicationContext from RN init time so non-module
+        // call sites (e.g. MainActivity.onPictureInPictureModeChanged) can
+        // emit DeviceEventManagerModule events. Bridgeless RN: MainActivity's
+        // reactInstanceManager getter throws, and reactHost.currentReactContext
+        // can be null when PiP fires before RN fully initializes, so we cannot
+        // safely resolve the context from MainActivity itself.
+        @Volatile
+        private var instance: ReactApplicationContext? = null
+
+        /**
+         * Called from [com.simba.player.MainActivity.onPictureInPictureModeChanged].
+         * Uses the ReactApplicationContext captured at module construction
+         * (well before any PiP lifecycle event can fire) to emit the event.
+         * Mirrors the companion sendEvent pattern from
+         * https://yor-dev.com/react-native-picture-in-picture-native-in-android/
+         */
+        fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
+            Log.i(TAG, "companion.onPictureInPictureModeChanged: isInPip=$isInPictureInPictureMode instance=${instance != null}")
+            val ctx = instance ?: run {
+                Log.w(TAG, "onPictureInPictureModeChanged: module instance not initialized yet")
+                return
+            }
+            // Do NOT cycle the surface binding here. Cycling detaches →
+            // re-attaches → triggers a mpv VO reinit → kills MediaCodec
+            // (decoder falls back to software, ~1s render gap, PiP
+            // shows black). Instead, the SurfaceView with
+            // setZOrderMediaOverlay(true) and force-window=yes keeps the
+            // gpu video output rendering into the attached surface, and
+            // the PiP compositor samples that surface layer directly.
+            val params = Arguments.createMap().apply {
+                putBoolean("isInPip", isInPictureInPictureMode)
+            }
+            try {
+                ctx.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                    .emit("onPipModeChanged", params)
+                Log.i(TAG, "companion.onPictureInPictureModeChanged: emit succeeded")
+            } catch (e: Exception) {
+                Log.w(TAG, "onPictureInPictureModeChanged: emit threw", e)
+            }
+        }
+    }
+
+    init {
+        // Capture the ReactApplicationContext for the companion sendEvent path.
+        instance = reactContext
     }
 
     override fun getName(): String = NAME

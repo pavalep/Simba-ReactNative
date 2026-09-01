@@ -1,0 +1,15 @@
+From PowerShell, run ONE of these (in any working directory):
+
+  # Option A - use the wrapper I just created (recommended):
+  X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\run-capture-pip-logs.bat
+
+  # Option B - cd first, then run the script:
+  cd X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE
+  powershell -ExecutionPolicy Bypass -File .\capture-pip-logs.ps1
+
+  # Option C - paste this from anywhere (single line, no cd):
+  powershell -NoProfile -ExecutionPolicy Bypass -File "X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\capture-pip-logs.ps1"
+
+When the script prints the yellow banner, you are recording.
+In the app: open a video, tap PiP, screenshot, expand back, then Ctrl-C to stop.
+The dated log file is written into X:\Development\SIMBA\MOBILE_APP_REACT_NATIVE\.

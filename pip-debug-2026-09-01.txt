@@ -1,0 +1,1502 @@
+--------- beginning of main
+09-01 15:17:34.753 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=24.958292
+09-01 15:17:34.761 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=24.991658
+09-01 15:17:34.768   691  2066 W libbinder.Binder: Binder transaction to android.content.pm.IPackageManager, function: UNKNOWN_FUNCTION_NAME, code: 1598311760, took 1282ms. Data bytes: 80 Reply bytes: 4 Flags: 16
+09-01 15:17:34.789 17395 17852 D PipelineWatcher: onInputBufferReleased: frameIndex not found (841); ignored
+09-01 15:17:34.792 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.025025
+09-01 15:17:34.800   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.803   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.813 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.058392
+09-01 15:17:34.824 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.091758
+09-01 15:17:34.829   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.829   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.838 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.125125
+09-01 15:17:34.844 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.158492
+09-01 15:17:34.875 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.191859
+09-01 15:17:34.882 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.225225
+09-01 15:17:34.899   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.900   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.902   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.902   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.902   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.908 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.258592
+09-01 15:17:34.913 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.291959
+09-01 15:17:34.932 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.325325
+09-01 15:17:34.937   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.937   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:34.945 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.358692
+09-01 15:17:34.958 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.392059
+09-01 15:17:34.964 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.425425
+09-01 15:17:34.994 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.458792
+09-01 15:17:35.001 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.492159
+09-01 15:17:35.013   691   864 E WifiDataStall: Ignore this poll. newStats: null txLinkSpeedMbps: 1 rxLinkSpeedMbps: 2 rssi: -50 connectionCapabilities: com.android.server.wifi.WifiNative$ConnectionCapabilities@6f97744
+--------- beginning of system
+09-01 15:17:35.018   691   893 I AdbWifiNetworkMonitor: Wi-Fi network available
+09-01 15:17:35.018   691   893 I AdbWifiNetworkMonitor: Received the same Wi-Fi SSID. Ignoring.
+09-01 15:17:35.034   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.036   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.037   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.037   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.037   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.037   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.043 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.525526
+09-01 15:17:35.048   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.048   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.062 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.558892
+09-01 15:17:35.069  7837  7956 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+09-01 15:17:35.071 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.592259
+09-01 15:17:35.082  7790  7839 I BugleRcsEngine: handleMessage processing message:[NOTIFY_UPTIME_IGNORE_STATE_CHANGED] with [non-null]:RcsEngineImpl reference [CONTEXT log_prefix="RcsEngineImpl[DUAL_REG]:[b552fc64-f9a3]>Handler" thread_id=72 ]
+09-01 15:17:35.094 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.625626
+09-01 15:17:35.095  7790  7831 I BugleRcsEngine: Connected state: [1], networkType: [WIFI] [CONTEXT thread_id=69 ]
+09-01 15:17:35.099 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.658992
+09-01 15:17:35.100   691   870 D ConnectivityService: NetReassign [no changes] [c 1] [a 18] [i 0]
+09-01 15:17:35.103  1307 17702 I NearbyMediums: Wifi changed new SSID: "AndroidWifi"
+09-01 15:17:35.104  1307 17702 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+09-01 15:17:35.120  7790  7839 I BugleRcsEngine: No RCS Configuration was found in Bugle for simID: redacted-pii:sim_id[chars:20,last3:897] [CONTEXT log_prefix="ProvisioningEngineDataRetriever" thread_id=72 ]
+09-01 15:17:35.121 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.692359
+09-01 15:17:35.127  1307  1396 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+09-01 15:17:35.130  1307  1396 W libbinder.Binder: Large reply transaction of 1056768 bytes, interface descriptor , function: UNKNOWN_FUNCTION_NAME, code: 1, flags: 17
+09-01 15:17:35.144 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.759092
+09-01 15:17:35.144 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.792459
+09-01 15:17:35.159 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.825826
+09-01 15:17:35.176 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.859193
+09-01 15:17:35.177 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.892559
+09-01 15:17:35.182   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.184   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.184   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.185   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.185   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.185   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.187 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.925926
+09-01 15:17:35.188 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":147.236219,"reader-pts":27.236219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":37043040,"fw-bytes":29712208,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":147.236219,"ts-per-stream":[{"type":"video","cache-duration":121.521522,"reader-pts":25.959293,"cache-end":147.480814},{"type":"audio","cache-duration":120.000000,"reader-pts":27.236219,"cache-end":147.236219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.204219}]}
+09-01 15:17:35.189   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.190   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.208 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.959293
+09-01 15:17:35.210 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=25.992659
+09-01 15:17:35.221 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.026026
+09-01 15:17:35.224 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.059393
+09-01 15:17:35.246 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.092759
+09-01 15:17:35.249 17395 17829 D AidlBufferPool: bufferpool2 0x7b7e278bb3c8 : 5(31457280 size) total buffers - 4(25165824 size) used buffers - 882/887 (recycle/alloc) - 9/875 (fetch/transfer)
+09-01 15:17:35.253 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.126126
+09-01 15:17:35.282 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.159493
+09-01 15:17:35.283   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.291   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.291   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.294 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.192860
+09-01 15:17:35.300 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.226226
+09-01 15:17:35.333 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.259593
+09-01 15:17:35.337 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.292960
+09-01 15:17:35.358 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.326326
+09-01 15:17:35.362 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.359693
+09-01 15:17:35.368 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.393060
+09-01 15:17:35.381 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.426426
+09-01 15:17:35.390 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.459793
+09-01 15:17:35.402 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.493160
+09-01 15:17:35.411 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.526527
+09-01 15:17:35.416   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.417   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.418   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.418   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.418   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.418   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.425 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.559893
+09-01 15:17:35.426   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.426   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.434 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.593260
+09-01 15:17:35.436 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":147.396219,"reader-pts":27.396219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":37046464,"fw-bytes":29570160,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":147.396219,"ts-per-stream":[{"type":"video","cache-duration":120.820821,"reader-pts":26.659993,"cache-end":147.480814},{"type":"audio","cache-duration":120.000000,"reader-pts":27.396219,"cache-end":147.396219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:35.444 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.626627
+09-01 15:17:35.448 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.659993
+09-01 15:17:35.462 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.693360
+09-01 15:17:35.475 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.726727
+09-01 15:17:35.513 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.760093
+09-01 15:17:35.515 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.793460
+09-01 15:17:35.517   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.518   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.519   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.519   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.519   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.519   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.527   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.528   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.535 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.826827
+09-01 15:17:35.552 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.860194
+09-01 15:17:35.569 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.893560
+09-01 15:17:35.576  1307 17702 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+09-01 15:17:35.594 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.926927
+09-01 15:17:35.598 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.960294
+09-01 15:17:35.628 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=26.993660
+09-01 15:17:35.632 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.027027
+09-01 15:17:35.632   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.639   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.640   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.660 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.060394
+09-01 15:17:35.664 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.093760
+09-01 15:17:35.686 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.127127
+09-01 15:17:35.689 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.160494
+09-01 15:17:35.750 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.193861
+09-01 15:17:35.789 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.227227
+09-01 15:17:35.791 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.260594
+09-01 15:17:35.796 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.293961
+09-01 15:17:35.799   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.800 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.327327
+09-01 15:17:35.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.807   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.807   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.845 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.360694
+09-01 15:17:35.846 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.394061
+09-01 15:17:35.850   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.852   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.852   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.852   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.852   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.852   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.883 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.427427
+09-01 15:17:35.892 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.460794
+09-01 15:17:35.909   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.911   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.917   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.920   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.921   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.921   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.921   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.921   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.932 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.494161
+09-01 15:17:35.933   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.934   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.934   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.934   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.934   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.935   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.937 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.527528
+09-01 15:17:35.951   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.952   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.953   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.953   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.953   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.953   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.978 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.560894
+09-01 15:17:35.985   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.986   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.987   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.987   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.987   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.987   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:35.997 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.594261
+09-01 15:17:35.999   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.000 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":148.004219,"reader-pts":28.004219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":37322224,"fw-bytes":29565392,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":148.004219,"ts-per-stream":[{"type":"video","cache-duration":120.820821,"reader-pts":27.660994,"cache-end":148.481815},{"type":"audio","cache-duration":120.000000,"reader-pts":28.004219,"cache-end":148.004219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:36.000   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.001   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.001   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.001   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.001   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.012   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.012   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.035 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.627628
+09-01 15:17:36.049   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.052   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.053   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.053   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.053   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.053   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.081 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.660994
+09-01 15:17:36.083   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.085   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.085   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.085   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.085   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.085   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.100   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.102   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.102   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.102   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.102   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.102   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.117   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.117   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.121 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.694361
+09-01 15:17:36.145 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.727728
+09-01 15:17:36.166   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.169   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.169   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.170   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.170   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.170   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.182   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.185   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.185   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.185   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.185   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.185   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.188 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.761094
+09-01 15:17:36.196 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.794461
+09-01 15:17:36.200   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.203   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.203   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.203   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.203   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.203   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.219   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.219   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.238 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.827828
+09-01 15:17:36.239 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":148.324219,"reader-pts":28.292219,"cache-duration":120.032000,"eof":false,"underrun":false,"idle":true,"total-bytes":37328976,"fw-bytes":29513264,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":148.324219,"ts-per-stream":[{"type":"video","cache-duration":120.587254,"reader-pts":27.894561,"cache-end":148.481815},{"type":"audio","cache-duration":120.032000,"reader-pts":28.292219,"cache-end":148.324219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:36.249   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.251   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.251   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.251   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.251   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.251   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.283   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.284 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.861195
+09-01 15:17:36.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.285   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.299   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.301   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.301   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.301   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.301   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.301   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.313  1097  1286 E SatelliteController: isSatelliteEnabled: mIsSatelliteEnabled=null
+09-01 15:17:36.313  1097  1286 D SatelliteController: isInCarrierRoamingNbIotNtn: satellite is disabled
+09-01 15:17:36.313  1097  1286 D SatelliteController: getCarrierRoamingNtnConnectType: Checking connect type from PLMN config for subId: 1
+09-01 15:17:36.313  1097  1286 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+09-01 15:17:36.314  1097  1286 V SatelliteController: satelliteConfigParser is not ready
+09-01 15:17:36.314  1097  1286 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+09-01 15:17:36.316 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.894561
+09-01 15:17:36.320  1097  1286 D SatelliteController: getConfigForSubId: subId= 1, config= PersistableBundle[{satellite_esos_supported_bool=false, satellite_connection_hysteresis_sec_int=180, satellite_supported_disaster_plmn_string_array=[], regional_satellite_earfcn_bundle=PersistableBundle[{}], satellite_entitlement_supported_bool=false, satellite_supported_emergency_plmn_string_array=[], satellite_configs_per_plmn_bundle=PersistableBundle[{}], satellite_sos_max_datagram_size_bytes_int=255, satellite_supported_msg_apps_string_array=[com.google.android.apps.messaging], satellite_connected_notification_throttle_millis_int=604800000, satellite_display_name_string=, satellite_roaming_p2p_sms_inactivity_timeout_sec_int=180, satellite_roaming_turn_off_session_for_emergency_call_bool=true, emergency_messaging_supported_bool=false, carrier_roaming_satellite_emergency_messaging_provider_per_country_bundle=PersistableBundle[{}], satellite_data_support_mode_int=0, carrier_roaming_ntn_connect_type_int=0, satellite_attach_supported_bool=false, carrier_roaming_satellite_emergency_messaging_redirection_destination_string=, satellite_nidd_apn_name_string=, carrier_supported_satellite_services_per_provider_bundle=PersistableBundle[{310830=[2, 3, 6]}], satellite_roaming_esos_inactivity_timeout_sec_int=300, carrier_supported_satellite_notification_hysteresis_sec_int=180, carrier_config_applied_bool=true, carrier_roaming_ntn_emergency_call_to_satellite_handover_type_int=2, carrier_roaming_satellite_default_services_int_array=[2, 3, 6], imsserviceentitlement.entitlement_server_url_string=, emergency_call_to_satellite_t911_handover_timeout_millis_int=30000, satellite_roaming_p2p_sms_supported_bool=false, carrier_config_version_string=, satellite_roaming_screen_off_inactivity_timeout_sec_int=30}]
+09-01 15:17:36.320  1097  1286 D SatelliteController: isSatelliteSupportedViaCarrier: using CarrierConfig for subId=1, isAttachSupported=false
+09-01 15:17:36.320  1097  1286 D SatelliteController: getSatellitePerPlmnConfiguration: invalid subId or not supported via carrier.
+09-01 15:17:36.320  1097  1286 D SatelliteController: getCarrierRoamingNtnConnectType: config: null
+09-01 15:17:36.320  1097  1286 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+09-01 15:17:36.320   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.320   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.323  1097  1286 V SatelliteController: satelliteConfigParser is not ready
+09-01 15:17:36.323  1097  1286 D SatelliteController: getCarrierRoamingNtnConnectTypeViaConfigUpdater: return null (satelliteConfig is null)
+09-01 15:17:36.324  1097  1286 D SatelliteController: getConfigForSubId: subId= 1, config= PersistableBundle[{satellite_esos_supported_bool=false, satellite_connection_hysteresis_sec_int=180, satellite_supported_disaster_plmn_string_array=[], regional_satellite_earfcn_bundle=PersistableBundle[{}], satellite_entitlement_supported_bool=false, satellite_supported_emergency_plmn_string_array=[], satellite_configs_per_plmn_bundle=PersistableBundle[{}], satellite_sos_max_datagram_size_bytes_int=255, satellite_supported_msg_apps_string_array=[com.google.android.apps.messaging], satellite_connected_notification_throttle_millis_int=604800000, satellite_display_name_string=, satellite_roaming_p2p_sms_inactivity_timeout_sec_int=180, satellite_roaming_turn_off_session_for_emergency_call_bool=true, emergency_messaging_supported_bool=false, carrier_roaming_satellite_emergency_messaging_provider_per_country_bundle=PersistableBundle[{}], satellite_data_support_mode_int=0, carrier_roaming_ntn_connect_type_int=0, satellite_attach_supported_bool=false, carrier_roaming_satellite_emergency_messaging_redirection_destination_string=, satellite_nidd_apn_name_string=, carrier_supported_satellite_services_per_provider_bundle=PersistableBundle[{310830=[2, 3, 6]}], satellite_roaming_esos_inactivity_timeout_sec_int=300, carrier_supported_satellite_notification_hysteresis_sec_int=180, carrier_config_applied_bool=true, carrier_roaming_ntn_emergency_call_to_satellite_handover_type_int=2, carrier_roaming_satellite_default_services_int_array=[2, 3, 6], imsserviceentitlement.entitlement_server_url_string=, emergency_call_to_satellite_t911_handover_timeout_millis_int=30000, satellite_roaming_p2p_sms_supported_bool=false, carrier_config_version_string=, satellite_roaming_screen_off_inactivity_timeout_sec_int=30}]
+09-01 15:17:36.324  1097  1286 D SatelliteController: getCarrierRoamingNtnConnectType: Falling back to global carrier config connect type: 0
+09-01 15:17:36.324  1097  1286 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+09-01 15:17:36.324  1097  1286 V SatelliteController: satelliteConfigParser is not ready
+09-01 15:17:36.324  1097  1286 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+09-01 15:17:36.325  1097  1286 D SatelliteController: getConfigForSubId: subId= 1, config= PersistableBundle[{satellite_esos_supported_bool=false, satellite_connection_hysteresis_sec_int=180, satellite_supported_disaster_plmn_string_array=[], regional_satellite_earfcn_bundle=PersistableBundle[{}], satellite_entitlement_supported_bool=false, satellite_supported_emergency_plmn_string_array=[], satellite_configs_per_plmn_bundle=PersistableBundle[{}], satellite_sos_max_datagram_size_bytes_int=255, satellite_supported_msg_apps_string_array=[com.google.android.apps.messaging], satellite_connected_notification_throttle_millis_int=604800000, satellite_display_name_string=, satellite_roaming_p2p_sms_inactivity_timeout_sec_int=180, satellite_roaming_turn_off_session_for_emergency_call_bool=true, emergency_messaging_supported_bool=false, carrier_roaming_satellite_emergency_messaging_provider_per_country_bundle=PersistableBundle[{}], satellite_data_support_mode_int=0, carrier_roaming_ntn_connect_type_int=0, satellite_attach_supported_bool=false, carrier_roaming_satellite_emergency_messaging_redirection_destination_string=, satellite_nidd_apn_name_string=, carrier_supported_satellite_services_per_provider_bundle=PersistableBundle[{310830=[2, 3, 6]}], satellite_roaming_esos_inactivity_timeout_sec_int=300, carrier_supported_satellite_notification_hysteresis_sec_int=180, carrier_config_applied_bool=true, carrier_roaming_ntn_emergency_call_to_satellite_handover_type_int=2, carrier_roaming_satellite_default_services_int_array=[2, 3, 6], imsserviceentitlement.entitlement_server_url_string=, emergency_call_to_satellite_t911_handover_timeout_millis_int=30000, satellite_roaming_p2p_sms_supported_bool=false, carrier_config_version_string=, satellite_roaming_screen_off_inactivity_timeout_sec_int=30}]
+09-01 15:17:36.325  1097  1286 D SatelliteController: isSatelliteSupportedViaCarrier: using CarrierConfig for subId=1, isAttachSupported=false
+09-01 15:17:36.325  1097  1286 D SatelliteController: isInSatelliteModeForCarrierRoaming: subId=1, connectType=0, result=false
+09-01 15:17:36.325  1097  1286 D SatelliteController: getCarrierRoamingNtnConnectType: Checking connect type from PLMN config for subId: 1
+09-01 15:17:36.325  1097  1286 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+09-01 15:17:36.325  1097  1286 V SatelliteController: satelliteConfigParser is not ready
+09-01 15:17:36.325  1097  1286 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+09-01 15:17:36.326  1097  1286 D SatelliteController: getConfigForSubId: subId= 1, config= PersistableBundle[{satellite_esos_supported_bool=false, satellite_connection_hysteresis_sec_int=180, satellite_supported_disaster_plmn_string_array=[], regional_satellite_earfcn_bundle=PersistableBundle[{}], satellite_entitlement_supported_bool=false, satellite_supported_emergency_plmn_string_array=[], satellite_configs_per_plmn_bundle=PersistableBundle[{}], satellite_sos_max_datagram_size_bytes_int=255, satellite_supported_msg_apps_string_array=[com.google.android.apps.messaging], satellite_connected_notification_throttle_millis_int=604800000, satellite_display_name_string=, satellite_roaming_p2p_sms_inactivity_timeout_sec_int=180, satellite_roaming_turn_off_session_for_emergency_call_bool=true, emergency_messaging_supported_bool=false, carrier_roaming_satellite_emergency_messaging_provider_per_country_bundle=PersistableBundle[{}], satellite_data_support_mode_int=0, carrier_roaming_ntn_connect_type_int=0, satellite_attach_supported_bool=false, carrier_roaming_satellite_emergency_messaging_redirection_destination_string=, satellite_nidd_apn_name_string=, carrier_supported_satellite_services_per_provider_bundle=PersistableBundle[{310830=[2, 3, 6]}], satellite_roaming_esos_inactivity_timeout_sec_int=300, carrier_supported_satellite_notification_hysteresis_sec_int=180, carrier_config_applied_bool=true, carrier_roaming_ntn_emergency_call_to_satellite_handover_type_int=2, carrier_roaming_satellite_default_services_int_array=[2, 3, 6], imsserviceentitlement.entitlement_server_url_string=, emergency_call_to_satellite_t911_handover_timeout_millis_int=30000, satellite_roaming_p2p_sms_supported_bool=false, carrier_config_version_string=, satellite_roaming_screen_off_inactivity_timeout_sec_int=30}]
+09-01 15:17:36.326  1097  1286 D SatelliteController: isSatelliteSupportedViaCarrier: using CarrierConfig for subId=1, isAttachSupported=false
+09-01 15:17:36.326  1097  1286 D SatelliteController: getSatellitePerPlmnConfiguration: invalid subId or not supported via carrier.
+09-01 15:17:36.326  1097  1286 D SatelliteController: getCarrierRoamingNtnConnectType: config: null
+09-01 15:17:36.326  1097  1286 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+09-01 15:17:36.326  1097  1286 V SatelliteController: satelliteConfigParser is not ready
+09-01 15:17:36.326  1097  1286 D SatelliteController: getCarrierRoamingNtnConnectTypeViaConfigUpdater: return null (satelliteConfig is null)
+09-01 15:17:36.327  1097  1286 D SatelliteController: getConfigForSubId: subId= 1, config= PersistableBundle[{satellite_esos_supported_bool=false, satellite_connection_hysteresis_sec_int=180, satellite_supported_disaster_plmn_string_array=[], regional_satellite_earfcn_bundle=PersistableBundle[{}], satellite_entitlement_supported_bool=false, satellite_supported_emergency_plmn_string_array=[], satellite_configs_per_plmn_bundle=PersistableBundle[{}], satellite_sos_max_datagram_size_bytes_int=255, satellite_supported_msg_apps_string_array=[com.google.android.apps.messaging], satellite_connected_notification_throttle_millis_int=604800000, satellite_display_name_string=, satellite_roaming_p2p_sms_inactivity_timeout_sec_int=180, satellite_roaming_turn_off_session_for_emergency_call_bool=true, emergency_messaging_supported_bool=false, carrier_roaming_satellite_emergency_messaging_provider_per_country_bundle=PersistableBundle[{}], satellite_data_support_mode_int=0, carrier_roaming_ntn_connect_type_int=0, satellite_attach_supported_bool=false, carrier_roaming_satellite_emergency_messaging_redirection_destination_string=, satellite_nidd_apn_name_string=, carrier_supported_satellite_services_per_provider_bundle=PersistableBundle[{310830=[2, 3, 6]}], satellite_roaming_esos_inactivity_timeout_sec_int=300, carrier_supported_satellite_notification_hysteresis_sec_int=180, carrier_config_applied_bool=true, carrier_roaming_ntn_emergency_call_to_satellite_handover_type_int=2, carrier_roaming_satellite_default_services_int_array=[2, 3, 6], imsserviceentitlement.entitlement_server_url_string=, emergency_call_to_satellite_t911_handover_timeout_millis_int=30000, satellite_roaming_p2p_sms_supported_bool=false, carrier_config_version_string=, satellite_roaming_screen_off_inactivity_timeout_sec_int=30}]
+09-01 15:17:36.327  1097  1286 D SatelliteController: getCarrierRoamingNtnConnectType: Falling back to global carrier config connect type: 0
+09-01 15:17:36.327  1097  1286 D TelephonyConfigUpdateInstallReceiver: getConfigParser: domain=satellite
+09-01 15:17:36.327  1097  1286 V SatelliteController: satelliteConfigParser is not ready
+09-01 15:17:36.327  1097  1286 D SatelliteController: isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+09-01 15:17:36.328  1097  1286 D SatelliteController: getConfigForSubId: subId= 1, config= PersistableBundle[{satellite_esos_supported_bool=false, satellite_connection_hysteresis_sec_int=180, satellite_supported_disaster_plmn_string_array=[], regional_satellite_earfcn_bundle=PersistableBundle[{}], satellite_entitlement_supported_bool=false, satellite_supported_emergency_plmn_string_array=[], satellite_configs_per_plmn_bundle=PersistableBundle[{}], satellite_sos_max_datagram_size_bytes_int=255, satellite_supported_msg_apps_string_array=[com.google.android.apps.messaging], satellite_connected_notification_throttle_millis_int=604800000, satellite_display_name_string=, satellite_roaming_p2p_sms_inactivity_timeout_sec_int=180, satellite_roaming_turn_off_session_for_emergency_call_bool=true, emergency_messaging_supported_bool=false, carrier_roaming_satellite_emergency_messaging_provider_per_country_bundle=PersistableBundle[{}], satellite_data_support_mode_int=0, carrier_roaming_ntn_connect_type_int=0, satellite_attach_supported_bool=false, carrier_roaming_satellite_emergency_messaging_redirection_destination_string=, satellite_nidd_apn_name_string=, carrier_supported_satellite_services_per_provider_bundle=PersistableBundle[{310830=[2, 3, 6]}], satellite_roaming_esos_inactivity_timeout_sec_int=300, carrier_supported_satellite_notification_hysteresis_sec_int=180, carrier_config_applied_bool=true, carrier_roaming_ntn_emergency_call_to_satellite_handover_type_int=2, carrier_roaming_satellite_default_services_int_array=[2, 3, 6], imsserviceentitlement.entitlement_server_url_string=, emergency_call_to_satellite_t911_handover_timeout_millis_int=30000, satellite_roaming_p2p_sms_supported_bool=false, carrier_config_version_string=, satellite_roaming_screen_off_inactivity_timeout_sec_int=30}]
+09-01 15:17:36.328  1097  1286 D SatelliteController: isSatelliteSupportedViaCarrier: using CarrierConfig for subId=1, isAttachSupported=false
+09-01 15:17:36.328  1097  1286 D SatelliteController: isInSatelliteModeForCarrierRoaming: subId=1, connectType=0, result=false
+09-01 15:17:36.332   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.334   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.334   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.334   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.334   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.334   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.349 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.927928
+09-01 15:17:36.364 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.961295
+09-01 15:17:36.366   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.367   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.367   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.368   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.368   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.368   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.399   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.403 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=27.994661
+09-01 15:17:36.420   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.420   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.434   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.449 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.028028
+09-01 15:17:36.467   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.470   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.471   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.471   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.471   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.471   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.475 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.061395
+09-01 15:17:36.507 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.094761
+09-01 15:17:36.517   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.521   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.521   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.521   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.521   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.521   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.530   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.530   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.551   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.554   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.554   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.554   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.554   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.554   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.555 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.128128
+09-01 15:17:36.589 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.161495
+09-01 15:17:36.600   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.602   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.602   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.603   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.603   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.603   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.604 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.194862
+09-01 15:17:36.633   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.635   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.635   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.635   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.635   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.635   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.641   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.641   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.653 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.228228
+09-01 15:17:36.681 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.261595
+09-01 15:17:36.684   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.687   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.688   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.688   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.688   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.688   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.701 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.294962
+09-01 15:17:36.709  1057  1185 D IpClient/wlan0: addressUpdated: fec0::a73e:85ee:4aa6:b6d0/64 on ifindex 16 flags 0x00000900 scope 200 deprecationTime 26051106 expirationTime 98051106
+09-01 15:17:36.710  1057  1185 D IpClient/wlan0: addressUpdated: fec0::a554:d7d6:a1d3:bbc7/64 on ifindex 16 flags 0x00000001 scope 200 deprecationTime 26051108 expirationTime 98051108
+09-01 15:17:36.711  1057  1185 W AlarmManager: Unrecognized alarm listener com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@cf43b48
+09-01 15:17:36.713  1057  1185 D ApfFilter: (wlan0): Adding RA fe80::2 -> ff02::1 1800s fec0::/64 86400s/14400s 
+09-01 15:17:36.733   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.735   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.736   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.736   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.736   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.736   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.744   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.744   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.749 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.328328
+09-01 15:17:36.765   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.768   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.789 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.361695
+09-01 15:17:36.810 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.395062
+09-01 15:17:36.817   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.818   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.819   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.820   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.820   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.820   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.832   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.834   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.834   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.834   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.835   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.835   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.843   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.843   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.850 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.428428
+09-01 15:17:36.871 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.461795
+09-01 15:17:36.882   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.884   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.884   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.885   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.885   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.885   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.901   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.902   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.902   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.902   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.902   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.903   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.916 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.495162
+09-01 15:17:36.933   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.934   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.935   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.935   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.935   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.936   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.946   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.946   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.955 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.528529
+09-01 15:17:36.956 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":149.092219,"reader-pts":29.060219,"cache-duration":120.032000,"eof":false,"underrun":false,"idle":true,"total-bytes":37609696,"fw-bytes":29623840,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":149.092219,"ts-per-stream":[{"type":"video","cache-duration":120.854188,"reader-pts":28.628629,"cache-end":149.482816},{"type":"audio","cache-duration":120.032000,"reader-pts":29.060219,"cache-end":149.092219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:36.966   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.966   535   535 D SurfaceFlinger: setDesiredMode 4619827259835644672 {mode={fps=30.00 Hz, modePtr={id=0, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+09-01 15:17:36.968   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:36.969   691   715 I DisplayDeviceRepository: Display device changed render timings: "Built-in Screen", renderFrameRate=30.000002, presentationDeadlineNanos=33333332, appVsyncOffsetNanos=1000000, frameRateOverrides=[]
+09-01 15:17:36.981 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.561895
+09-01 15:17:37.015 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.595262
+09-01 15:17:37.032   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.031 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.628629
+09-01 15:17:37.034   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.034   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.034   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.035   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.035   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.047   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.047   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.066   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.067   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.067   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.067   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.067   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.068   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.082 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.661995
+09-01 15:17:37.100   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.104   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.105   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.105   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.105   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.105   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.126 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.695362
+09-01 15:17:37.129 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.728729
+09-01 15:17:37.133   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.135   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.135   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.153   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.153   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.166   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.167   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.167   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.167   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.167   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.167   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.181 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.762095
+09-01 15:17:37.195 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.795462
+09-01 15:17:37.199   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.200   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.228 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":149.348219,"reader-pts":29.348219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":37615120,"fw-bytes":29572240,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":149.348219,"ts-per-stream":[{"type":"video","cache-duration":120.587254,"reader-pts":28.895562,"cache-end":149.482816},{"type":"audio","cache-duration":120.000000,"reader-pts":29.348219,"cache-end":149.348219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:37.229 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.828829
+09-01 15:17:37.232   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.254   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.254   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.265   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.267   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.267   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.268   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.268   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.268   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.282 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.862196
+09-01 15:17:37.299   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.303   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.303   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.303   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.303   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.303   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.309 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.895562
+09-01 15:17:37.332   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.335   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.335   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.335   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.335   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.335   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.348 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.928929
+09-01 15:17:37.361   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.361   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.366   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.369   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.369   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.369   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.369   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.369   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.380 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.962296
+09-01 15:17:37.395 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":149.508219,"reader-pts":29.508219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":37763968,"fw-bytes":29682224,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":149.508219,"ts-per-stream":[{"type":"video","cache-duration":120.954288,"reader-pts":29.029029,"cache-end":149.983317},{"type":"audio","cache-duration":120.000000,"reader-pts":29.508219,"cache-end":149.508219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:37.399   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.419 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=28.995662
+09-01 15:17:37.434   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.440 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.029029
+09-01 15:17:37.467   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.470   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.470   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.470   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.470   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.470   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.472 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.062396
+09-01 15:17:37.477   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.477   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.499 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.095762
+09-01 15:17:37.500   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.533   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.535   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.535   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.535   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.535   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.535   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.549 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.129129
+09-01 15:17:37.566 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.162496
+09-01 15:17:37.566   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.584   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.585   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.599   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.600   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.601   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.601   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.601   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.601   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.618 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.195863
+09-01 15:17:37.634   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.635   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.636   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.636   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.637   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.637   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.645 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.229229
+09-01 15:17:37.647 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":149.636219,"reader-pts":29.636219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":37766688,"fw-bytes":29598208,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":149.636219,"ts-per-stream":[{"type":"video","cache-duration":120.687354,"reader-pts":29.295963,"cache-end":149.983317},{"type":"audio","cache-duration":120.000000,"reader-pts":29.636219,"cache-end":149.636219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:37.666   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.667   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.676 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.262596
+09-01 15:17:37.685   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.685   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.697 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.295963
+09-01 15:17:37.699   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.701   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.701   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.701   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.701   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.701   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.735   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.740   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.740   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.740   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.740   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.740   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.751 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.329329
+09-01 15:17:37.766   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.768   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.768   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.768   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.768   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.784 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.362696
+09-01 15:17:37.789   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.790   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.797 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.396063
+09-01 15:17:37.799   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.834   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.836   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.836   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.836   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.836   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.836   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.851 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.429429
+09-01 15:17:37.866   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.869   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.869   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.869   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.869   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.869   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.882 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.462796
+09-01 15:17:37.894   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.894   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.899   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.902   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.902   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.906 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.496163
+09-01 15:17:37.932   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.933   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.933   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.933   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.933   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.933   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.950 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.529530
+09-01 15:17:37.966   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.970   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.970   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.981 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.562896
+09-01 15:17:37.995   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.995   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:37.999   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.001   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.001   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.001   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.001   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.001   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.017 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.596263
+09-01 15:17:38.019   691   864 E WifiDataStall: Ignore this poll. newStats: null txLinkSpeedMbps: 1 rxLinkSpeedMbps: 2 rssi: -50 connectionCapabilities: com.android.server.wifi.WifiNative$ConnectionCapabilities@6f97744
+09-01 15:17:38.033   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.038   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.039   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.039   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.039   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.039   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.047  1057  1185 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+09-01 15:17:38.059 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.629630
+09-01 15:17:38.060  1057  1185 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+09-01 15:17:38.060  1057  1185 D IpClient/wlan0: interfaceLinkStateChanged: ifindex 16 up
+09-01 15:17:38.063 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.662996
+09-01 15:17:38.066   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.069   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.069   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.069   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.069   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.070   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.100   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.112 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.696363
+09-01 15:17:38.112   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.112   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.135   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.152 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.729730
+09-01 15:17:38.165   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.166   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.167   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.167   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.167   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.167   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.185 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.763096
+09-01 15:17:38.200   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.202   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.202   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.210   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.210   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.218 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.796463
+09-01 15:17:38.232   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.235   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.235   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.235   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.235   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.235   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.244 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.829830
+09-01 15:17:38.254  1307  1307 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.presencemanager.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+09-01 15:17:38.260  1307  1307 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.presencemanager.service.INTERNAL_IDENTITY dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+09-01 15:17:38.266   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.267   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.268   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.268   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.268   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.268   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.284 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.863197
+09-01 15:17:38.299   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.301   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.302   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.302   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.302   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.302   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.312   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.312   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.315 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.896563
+09-01 15:17:38.331 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.929930
+09-01 15:17:38.333   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.335   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.336   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.336   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.336   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.336   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.366   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.368   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.368   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.368   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.368   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.368   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.382 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.963297
+09-01 15:17:38.396 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=29.996663
+09-01 15:17:38.399   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.400   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.400   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.400   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.414   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.414   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.434   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.436   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.437 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.030030
+09-01 15:17:38.465 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.063397
+09-01 15:17:38.467   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.469   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.469   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.469   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.469   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.469   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.501   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.503   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.503   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.504   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.504   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.504   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.508 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.096763
+09-01 15:17:38.517   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.517   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.534   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.536   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.536   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.551 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.130130
+09-01 15:17:38.566   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.578 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.163497
+09-01 15:17:38.600   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.602   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.602   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.602   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.602   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.602   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.619   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.618 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.196864
+09-01 15:17:38.619   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.626 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":150.692219,"reader-pts":30.692219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":38105408,"fw-bytes":29610656,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":150.692219,"ts-per-stream":[{"type":"video","cache-duration":120.720721,"reader-pts":30.263597,"cache-end":150.984318},{"type":"audio","cache-duration":120.000000,"reader-pts":30.692219,"cache-end":150.692219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:38.634   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.636   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.637   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.637   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.637   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.637   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.651 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.230230
+09-01 15:17:38.666   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.669   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.677 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.263597
+09-01 15:17:38.699   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.700   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.700   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.700   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.701   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.701   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.718 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.296964
+09-01 15:17:38.720   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.720   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.732 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.330330
+09-01 15:17:38.732   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.734   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.735   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.735   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.735   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.736   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.766   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.768   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.768   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.769   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.780 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.363697
+09-01 15:17:38.800   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.818 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.397064
+09-01 15:17:38.821   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.821   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.833   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.834   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.835   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.836   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.836   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.836   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.850 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.430430
+09-01 15:17:38.864 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.463797
+09-01 15:17:38.866   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.866   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.867   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.867   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.867   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.867   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.896 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":150.884219,"reader-pts":30.852219,"cache-duration":120.032000,"eof":false,"underrun":false,"idle":true,"total-bytes":38109520,"fw-bytes":29544240,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":150.884219,"ts-per-stream":[{"type":"video","cache-duration":120.420420,"reader-pts":30.563897,"cache-end":150.984318},{"type":"audio","cache-duration":120.032000,"reader-pts":30.852219,"cache-end":150.884219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:38.899   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.900   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.916 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.497164
+09-01 15:17:38.924   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.924   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.933   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.936   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.936   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.937   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.937   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.937   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.940 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.530531
+09-01 15:17:38.960 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":150.980219,"reader-pts":30.980219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":38111584,"fw-bytes":29531424,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":150.980219,"ts-per-stream":[{"type":"video","cache-duration":120.353687,"reader-pts":30.630631,"cache-end":150.984318},{"type":"audio","cache-duration":120.000000,"reader-pts":30.980219,"cache-end":150.980219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:38.966   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.968   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.969   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.970   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:38.984 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.563897
+09-01 15:17:39.000   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.002   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.002   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.003   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.003   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.003   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.025   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.026   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.034   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.036   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.037   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.037   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.037   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.037   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.038 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.597264
+09-01 15:17:39.047 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.630631
+09-01 15:17:39.065 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.663997
+09-01 15:17:39.067   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.069   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.069   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.069   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.070   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.070   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.099   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.100   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.100   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.117 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.697364
+09-01 15:17:39.131 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.730731
+09-01 15:17:39.133   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.134   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.135   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.142   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.143   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.166   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.168   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.168   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.168 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.764097
+09-01 15:17:39.168   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.168   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.168   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.198 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.797464
+09-01 15:17:39.199   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.200 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":151.140219,"reader-pts":31.140219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":38306784,"fw-bytes":29682336,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":151.140219,"ts-per-stream":[{"type":"video","cache-duration":120.653987,"reader-pts":30.830831,"cache-end":151.484818},{"type":"audio","cache-duration":120.000000,"reader-pts":31.140219,"cache-end":151.140219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:39.200   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.200   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.200   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.200   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.200   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.233   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.235   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.245   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.245   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.252 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.830831
+09-01 15:17:39.266   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.269   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.269   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.269   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.269   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.270   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.283 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.864198
+09-01 15:17:39.299   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.300   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.300   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.300   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.301   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.301   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.318 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.897564
+09-01 15:17:39.333   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.334   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.334   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.335   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.335   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.335   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.348   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.348   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.357 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.930931
+09-01 15:17:39.366   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.371   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.371   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.371   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.371   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.371   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.381 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.964298
+09-01 15:17:39.399   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.402   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.424 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=30.997664
+09-01 15:17:39.433   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.434   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.435   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.435   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.435   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.435   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.451   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.451   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.453 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.031031
+09-01 15:17:39.466   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.467   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.468   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.468   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.468   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.468   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.533   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.541 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.064398
+09-01 15:17:39.544 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":151.556219,"reader-pts":31.588219,"cache-duration":119.968000,"eof":false,"underrun":false,"idle":false,"total-bytes":38499088,"fw-bytes":29794240,"raw-input-rate":734348,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":151.556219,"ts-per-stream":[{"type":"video","cache-duration":120.820821,"reader-pts":31.164498,"cache-end":151.985319},{"type":"audio","cache-duration":119.968000,"reader-pts":31.588219,"cache-end":151.556219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:39.552   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.552   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.553 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.097764
+09-01 15:17:39.568   531   557 D AF::Track: interceptBuffer: took 1747us to intercept 0 tracks
+09-01 15:17:39.573 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.131131
+09-01 15:17:39.602   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.604   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.605   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.605   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.605   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.605 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.164498
+09-01 15:17:39.605   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.614 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.197865
+09-01 15:17:39.634   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.639   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.640   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.641   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.641   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.641   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.654 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.231231
+09-01 15:17:39.656   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.656   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.666   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.668   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.698 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.264598
+09-01 15:17:39.700   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.701   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.702   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.702   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.702   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.702   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.711 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.297965
+09-01 15:17:39.733   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.734   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.734   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.734   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.734   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.734   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.735 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.331331
+09-01 15:17:39.758   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.758   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.765   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.766   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.767   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.786 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.364698
+09-01 15:17:39.799   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.801   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.802   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.810 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.398065
+09-01 15:17:39.811 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":151.748219,"reader-pts":31.748219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":38503168,"fw-bytes":29732304,"raw-input-rate":734348,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":151.748219,"ts-per-stream":[{"type":"video","cache-duration":120.520521,"reader-pts":31.464798,"cache-end":151.985319},{"type":"audio","cache-duration":120.000000,"reader-pts":31.748219,"cache-end":151.748219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":147.313981}]}
+09-01 15:17:39.833   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.835   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.835   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.835   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.835   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.835   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.852 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.431431
+09-01 15:17:39.861   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.861   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.866   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.868   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.868   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.868   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.868   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.868   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.887 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.464798
+09-01 15:17:39.899   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.900   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.901   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.920 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.498165
+09-01 15:17:39.932   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.934   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.934   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.934   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.935   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.935   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.955 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.531532
+09-01 15:17:39.965   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.967   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.967   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.967   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.967   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.968   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.974   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.976   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:39.986 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.564898
+09-01 15:17:40.001   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.004   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.004   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.005   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.005   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.005   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.015 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.598265
+09-01 15:17:40.033   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.035   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.035   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.035   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.035   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.035   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.044 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.631632
+09-01 15:17:40.066   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.068   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.068   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.068   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.068   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.068   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.077   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.077   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.086 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.664998
+09-01 15:17:40.099   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.101   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.125 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.698365
+09-01 15:17:40.133   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.134   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.134   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.135   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.152 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.731732
+09-01 15:17:40.165   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.169   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.169   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.169   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.170   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.170   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.180   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.181   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.188 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.765098
+09-01 15:17:40.199   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.200   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.200   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.201   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.212 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.798465
+09-01 15:17:40.232   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.234   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.238 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.831832
+09-01 15:17:40.266   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.268   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.268   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.269   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.269   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.269   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.282   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.283   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.291 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.865199
+09-01 15:17:40.299   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.302   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.304   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.304   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.305   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.305   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.314 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.898565
+09-01 15:17:40.333   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.336   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.336   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.336   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.337   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.337   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.355 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.931932
+09-01 15:17:40.368   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.370   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.371   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.371   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.371   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.371   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.383 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.965299
+09-01 15:17:40.386   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.386   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.400   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.401   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.402   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.402   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.402   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.419 17395 17823 D AidlBufferPool: bufferpool2 0x7b7e278bb3c8 : 5(31457280 size) total buffers - 4(25165824 size) used buffers - 1057/1062 (recycle/alloc) - 9/1051 (fetch/transfer)
+09-01 15:17:40.433   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.438   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.440   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.440   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.440   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.440   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.446 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=31.998665
+09-01 15:17:40.451 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":152.484219,"reader-pts":32.484219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":false,"total-bytes":38656192,"fw-bytes":29729360,"raw-input-rate":734348,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":152.484219,"ts-per-stream":[{"type":"video","cache-duration":120.387054,"reader-pts":32.098765,"cache-end":152.485819},{"type":"audio","cache-duration":120.000000,"reader-pts":32.484219,"cache-end":152.484219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":152.318986}]}
+09-01 15:17:40.459 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.032032
+09-01 15:17:40.483   950   950 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS 
+09-01 15:17:40.489   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.490   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.499   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.503   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.503   531   557 D AF::Track: interceptBuffer: took 7068us to intercept 0 tracks
+09-01 15:17:40.505   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.505   531   557 D AF::Track: interceptBuffer: took 1753us to intercept 0 tracks
+09-01 15:17:40.505   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.506   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.506   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.525 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.065399
+09-01 15:17:40.533   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.533 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.098765
+09-01 15:17:40.534   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.536   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.536   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.537   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.568   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.569   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.585 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.132132
+09-01 15:17:40.596   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.597   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.601   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.607   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.608   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.608   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.608   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.609   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.632   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.635   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.635   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.635   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.636   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.636   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.663 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.165499
+09-01 15:17:40.667 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.198866
+09-01 15:17:40.697   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.698   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.733   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.734   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.735   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.736   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.736   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.737   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.749 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.232232
+09-01 15:17:40.750 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":152.836219,"reader-pts":32.804219,"cache-duration":120.032000,"eof":false,"underrun":false,"idle":true,"total-bytes":38760736,"fw-bytes":29772848,"raw-input-rate":734348,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":152.836219,"ts-per-stream":[{"type":"video","cache-duration":120.653987,"reader-pts":32.332332,"cache-end":152.986320},{"type":"audio","cache-duration":120.032000,"reader-pts":32.804219,"cache-end":152.836219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":152.318986}]}
+09-01 15:17:40.753 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.265599
+09-01 15:17:40.755 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.298966
+09-01 15:17:40.799   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.800   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.800 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.332332
+09-01 15:17:40.806 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.365699
+09-01 15:17:40.833   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.837   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.837   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.837   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.838   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.842   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.879 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.399066
+09-01 15:17:40.901   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.907   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.908   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.908   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.908   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.909   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.920   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.921   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.938 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.432432
+09-01 15:17:40.946 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.465799
+09-01 15:17:40.966   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.970   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.970   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.971   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.971   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.971   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:40.981 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.499166
+09-01 15:17:41.003 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.532533
+09-01 15:17:41.024   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.025   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.030   691   864 E WifiDataStall: Ignore this poll. newStats: null txLinkSpeedMbps: 1 rxLinkSpeedMbps: 2 rssi: -50 connectionCapabilities: com.android.server.wifi.WifiNative$ConnectionCapabilities@6f97744
+09-01 15:17:41.033 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.565899
+09-01 15:17:41.037 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.599266
+09-01 15:17:41.069   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.072   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.072   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.072   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.072   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.072   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.095 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.632633
+09-01 15:17:41.107 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.665999
+09-01 15:17:41.126   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.127   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.134   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.136   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.150 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.699366
+09-01 15:17:41.157 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.732733
+09-01 15:17:41.169   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.170   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.170   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.171   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.171   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.173   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.196 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.766099
+09-01 15:17:41.201   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.201   535   535 D SurfaceFlinger: setDesiredMode 4619827259835644672 {mode={fps=60.00 Hz, modePtr={id=0, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+09-01 15:17:41.203   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.203   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.203   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.204   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.204   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.205   691   715 I DisplayDeviceRepository: Display device changed render timings: "Built-in Screen", renderFrameRate=60.000004, presentationDeadlineNanos=16666666, appVsyncOffsetNanos=1000000, frameRateOverrides=[]
+09-01 15:17:41.208 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.799466
+09-01 15:17:41.235   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.235   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.252   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.254   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.255   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.255   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.256   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.257   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.258 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.832833
+09-01 15:17:41.272 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.866200
+09-01 15:17:41.284   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.287   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.287   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.288   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.288   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.288   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.318   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.324   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.324   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.325   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.325   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.325   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.336   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.337   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.372 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.899566
+09-01 15:17:41.384   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.385 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.932933
+09-01 15:17:41.386   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.386   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.386   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.386   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.386   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.399 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.966300
+09-01 15:17:41.416   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.418   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.419   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.419 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=32.999666
+09-01 15:17:41.419   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.419   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.419   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.435   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.435   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.485   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.488   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.488   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.488   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.488   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.489   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.496 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.033033
+09-01 15:17:41.500   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.502 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":153.508219,"reader-pts":33.540219,"cache-duration":119.968000,"eof":false,"underrun":false,"idle":false,"total-bytes":38970032,"fw-bytes":29796720,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":153.508219,"ts-per-stream":[{"type":"video","cache-duration":120.854188,"reader-pts":33.133133,"cache-end":153.987321},{"type":"audio","cache-duration":119.968000,"reader-pts":33.540219,"cache-end":153.508219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":152.318986}]}
+09-01 15:17:41.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.502   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.528 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.066400
+09-01 15:17:41.533 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.099766
+09-01 15:17:41.539   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.542   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.566   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.570   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.571   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.572   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.572   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.572   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.588 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.133133
+09-01 15:17:41.602   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.604   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.604   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.604   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.604   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.604   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.624 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.166500
+09-01 15:17:41.632   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.634   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.637 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.199867
+09-01 15:17:41.644   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.644   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.651   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.653   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.655   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.655   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.656   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.656   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.673   531   557 D AF::Track: interceptBuffer: took 511us to intercept 0 tracks
+09-01 15:17:41.677 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.233233
+09-01 15:17:41.684   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.686   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.687   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.687   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.687   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.688   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.706 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.266600
+09-01 15:17:41.712 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.299967
+09-01 15:17:41.715   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.717   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.717   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.717   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.717   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.717   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.740   558   558 I adbd    : adbd service requested 'shell,v2:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-t' '1500''
+09-01 15:17:41.745   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.744 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.333333
+09-01 15:17:41.745   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.768   535   535 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.769   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.770   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.770   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.770   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.770   535   567 W skia    : AGTM parsing failed flags.readFromStream(s) at 159
+09-01 15:17:41.779 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=time-pos value=33.366700
+09-01 15:17:41.780 17395 17804 I MpvBridgeModule: [PlaybackTrace][Bridge][listener:property] name=demuxer-cache-state value={"cache-end":153.860219,"reader-pts":33.860219,"cache-duration":120.000000,"eof":false,"underrun":false,"idle":true,"total-bytes":38977472,"fw-bytes":29734224,"debug-low-level-seeks":0,"debug-byte-level-seeks":0,"debug-ts-last":153.860219,"ts-per-stream":[{"type":"video","cache-duration":120.553887,"reader-pts":33.433433,"cache-end":153.987321},{"type":"audio","cache-duration":120.000000,"reader-pts":33.860219,"cache-end":153.860219}],"bof-cached":true,"eof-cached":false,"seekable-ranges":[{"start":-2.802803,"end":152.318986}]}

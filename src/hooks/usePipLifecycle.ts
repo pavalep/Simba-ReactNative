@@ -111,7 +111,11 @@ export function usePipLifecycle(options: UsePipLifecycleOptions) {
       'onPipModeChanged',
       (params: {isInPip: boolean}) => {
         if (params.isInPip) {
-          // Entering PiP — save state with chapter/progress info
+          // Entering PiP — save state with chapter/progress info.
+          // CRITICAL: do NOT call MpvPlayer.pause() here. Video playback
+          // must continue rendering in the PiP window. Pausing mpv freezes
+          // the gpu VO on the last frame and the PiP compositor shows an
+          // empty/black surface.
           const {chapterTitle, chapterIndex} = getChapterInfo();
           const progressPct = getProgressPct();
           dispatch(
@@ -123,22 +127,11 @@ export function usePipLifecycle(options: UsePipLifecycleOptions) {
               progressPercentage: progressPct,
             }),
           );
-          // Pause playback while in PiP
-          try {
-            MpvPlayer.pause();
-          } catch {
-            // player may already be idle
-          }
         } else {
-          // Exiting PiP — restore full UI and resume
+          // Exiting PiP — restore full UI. Playback was never paused on
+          // entry, so no resume call needed.
           onShowUiRef.current();
           dispatch(exitPip());
-          // Resume playback
-          try {
-            MpvPlayer.resume();
-          } catch {
-            // player may already be destroyed
-          }
         }
       },
     );

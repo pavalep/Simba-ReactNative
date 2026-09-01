@@ -9,9 +9,12 @@ import android.os.Bundle
 import android.util.Rational
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
+import com.facebook.react.ReactApplication
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.simba.player.mpv.MpvBridgeModule
 
 class MainActivity : ReactActivity() {
 
@@ -71,16 +74,12 @@ class MainActivity : ReactActivity() {
     newConfig: Configuration,
   ) {
     super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-    val params = Bundle().apply {
-      putBoolean("isInPip", isInPictureInPictureMode)
-    }
-    try {
-      reactInstanceManager?.currentReactContext
-        ?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-        ?.emit("onPipModeChanged", params)
-    } catch (_: Exception) {
-      // React context not yet available
-    }
+    android.util.Log.i("MainActivity", "onPictureInPictureModeChanged: isInPip=$isInPictureInPictureMode")
+    // Delegate to MpvBridgeModule which holds the ReactApplicationContext
+    // captured at module construction. Bridgeless RN: MainActivity cannot
+    // resolve the ReactContext reliably at PiP entry time, so the actual
+    // DeviceEventManagerModule emit happens in the module companion.
+    MpvBridgeModule.onPictureInPictureModeChanged(isInPictureInPictureMode)
   }
 
   // ── Back button while in PiP: exit PiP mode to return to app ──
