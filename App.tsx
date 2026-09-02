@@ -22,7 +22,7 @@ import {hydrateDownloads} from './src/store/slices/downloadsSlice';
 import {mark} from './src/utils/startupPerf';
 import {configureGoogleSignin} from './src/services/authService';
 import {getMediaType} from './src/services/fileService';
-import {PlaybackProvider, PlaybackOverlayHost, usePlaybackCommands} from './src/modules/playback';
+import {PlaybackProvider, PlaybackOverlayHost, usePlayback, usePlaybackCommands} from './src/modules/playback';
 
 // Initialize GoogleSignin once at app startup — calling configure() every
 // time on the sign-in path was breaking the post-revoke flow (the account
@@ -84,9 +84,34 @@ function waitForAuthSettle(timeoutMs = 10000): Promise<void> {
 const AppContent: React.FC = () => {
   const {colors} = useTheme();
   const {openPlayer} = usePlaybackCommands();
+  // V12 Phase 13: pull the full playback context (not just the
+  // commands) so we can call `loadLaunchParams()` on mount. The
+  // command variant is too narrow — `loadLaunchParams` is a new
+  // Phase 13 command and isn't in `usePlaybackCommands`.
+  const {loadLaunchParams} = usePlayback();
 
   // 43.1/43.2: cold-start silent restore + foreground session expiry
   useAuthSession();
+
+  // V12 Phase 13.3.2: on mount, attempt to rebuild the playback
+  // context from the bridge. In PlayerActivity this finds the
+  // launch params that `openPlayer` cached and rebuilds `active`
+  // + `currentPlaybackType` + `inPlayerActivity`. In MainActivity
+  // the call returns false (no recent `openPlayer` invocation)
+  // and the existing V11 inline path runs.
+  //
+  // One-shot: `getLaunchParams` clears its own state on the native
+  // side after the first read, so a re-render that re-runs this
+  // effect is a no-op. We use a `useEffect` with empty deps so
+  // it runs exactly once.
+  useEffect(() => {
+    const applied = loadLaunchParams();
+    if (applied) {
+      // Mirror the trace on the JS side so a `logcat` snapshot
+      // shows the activity's intent reaching the JS context.
+      // (Native side already logs in `getLaunchParams`.)
+    }
+  }, [loadLaunchParams]);
 
   // 49.1: hydrate downloads once at boot — the service owns the manifest, the
   // slice mirrors it so badges/buttons/Downloads screen render instantly.

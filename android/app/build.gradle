@@ -105,32 +105,13 @@ android {
     }
 
     packagingOptions {
-        // Pick first when duplicates are found across dependent modules
-        pickFirst "lib/arm64-v8a/libmpv.so"
-        pickFirst "lib/armeabi-v7a/libmpv.so"
-        pickFirst "lib/x86_64/libmpv.so"
-        pickFirst "lib/arm64-v8a/libavcodec.so"
-        pickFirst "lib/armeabi-v7a/libavcodec.so"
-        pickFirst "lib/x86_64/libavcodec.so"
-        pickFirst "lib/arm64-v8a/libavformat.so"
-        pickFirst "lib/armeabi-v7a/libavformat.so"
-        pickFirst "lib/x86_64/libavformat.so"
-        pickFirst "lib/arm64-v8a/libavutil.so"
-        pickFirst "lib/armeabi-v7a/libavutil.so"
-        pickFirst "lib/x86_64/libavutil.so"
-        pickFirst "lib/arm64-v8a/libavfilter.so"
-        pickFirst "lib/armeabi-v7a/libavfilter.so"
-        pickFirst "lib/x86_64/libavfilter.so"
-        pickFirst "lib/arm64-v8a/libavdevice.so"
-        pickFirst "lib/armeabi-v7a/libavdevice.so"
-        pickFirst "lib/x86_64/libavdevice.so"
-        pickFirst "lib/arm64-v8a/libswresample.so"
-        pickFirst "lib/armeabi-v7a/libswresample.so"
-        pickFirst "lib/x86_64/libswresample.so"
-        pickFirst "lib/arm64-v8a/libswscale.so"
-        pickFirst "lib/armeabi-v7a/libswscale.so"
-        pickFirst "lib/x86_64/libswscale.so"
-        pickFirst "**/libc++_shared.so"
+        // Phase 28: libmpv + libav* + libplayer + libc++_shared packaging
+        // moved to react-native-media-player/android/build.gradle (the
+        // module's AAR now packages these .so files). The consumer app
+        // receives them transitively via `implementation project(':react-native-media-player')`.
+        //
+        // No pickFirst needed here — the module handles all the
+        // duplicate-handling for the .so files it ships.
     }
 
     signingConfigs {
@@ -163,6 +144,11 @@ android {
 }
 
 dependencies {
+    // @simba/react-native-media-player — sibling Android library (mpv engine,
+    // PlayerActivity, SurfaceView renderer, PiP, MediaSession). Lives in
+    // ../react-native-media-player/android/ — wired up in settings.gradle.
+    implementation project(':react-native-media-player')
+
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 

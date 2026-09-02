@@ -403,9 +403,100 @@ export const MpvPlayer = {
     ensureModule().playlistClear();
   },
 
-  // ── Native Pointer (for MpvRenderView) ──
+  // ── Native Pointer (for MpvRenderView) ──────────────────────────────
   getNativePtr(): number {
     return ensureModule().getNativePtr();
+  },
+
+  // ── Activity Launch (V12 Phase 3 / Phase 5) ───────────────────────
+  // Hands off to the dedicated `PlayerActivity` in the
+  // @simba/react-native-media-player library module. Phase 5 routes
+  // file taps through this method when the
+  // `USE_DEDICATED_PLAYER_ACTIVITY` feature flag is true; Phase 11+
+  // will wire the React-side of the launched activity to actually
+  // drive playback. Today, calling this just starts the activity,
+  // which logs the launch extras and mounts an empty React root.
+
+  /**
+   * Launch the dedicated player activity.
+   *
+   * @param opts.uri              Path / http(s) URL / `content://` URI to play.
+   * @param opts.title            Display title. Falls back to `uri` if omitted.
+   * @param opts.type             `"video"` or `"audio"`. Invalid values are
+   *                              rejected with `E_INVALID_TYPE`.
+   * @param opts.startPositionMs  Resume position in milliseconds (default 0).
+   * @returns Promise resolving to `true` on successful `startActivity`.
+   */
+  async openPlayer(opts: {
+    uri: string;
+    title?: string;
+    type: 'video' | 'audio';
+    startPositionMs?: number;
+  }): Promise<boolean> {
+    const startPositionMs = opts.startPositionMs ?? 0;
+    tracePlayback('openPlayer:call', {
+      uri: opts.uri,
+      title: opts.title,
+      type: opts.type,
+      startPositionMs,
+    });
+    try {
+      const result = await ensureModule().openPlayer(
+        opts.uri,
+        opts.title ?? null,
+        opts.type,
+        startPositionMs,
+      );
+      tracePlayback('openPlayer:return', {result});
+      return result;
+    } catch (error) {
+      logger.error('[PlaybackTrace][JS][openPlayer:error]', {
+        uri: opts.uri,
+        type: opts.type,
+        error,
+      });
+      throw error;
+    }
+  },
+
+  // ── Launch Params (V12 Phase 13) ─────────────────────────────────
+  // One-shot accessor for the launch params the most recent
+  // `openPlayer` call handed to `PlayerActivity`. Called from
+  // `App.tsx`'s mount effect to rebuild the launched activity's
+  // PlaybackContext state (the launched activity's JS context is
+  // fresh — no inherited MainActivity state).
+  //
+  // Returns `null` when called from MainActivity (no recent
+  // `openPlayer` invocation) or after the first read has already
+  // consumed the value. Feature-detected: missing on older native
+  // builds (returns null).
+  getLaunchParams(): {
+    uri: string;
+    title: string;
+    type: 'video' | 'audio';
+    startPositionMs: number;
+  } | null {
+    const fn = NativeModule?.getLaunchParams;
+    if (typeof fn !== 'function') return null;
+    try {
+      const result = fn();
+      if (result == null) return null;
+      // Defensive normalisation: the TS Spec already types the
+      // result, but a stale bundle could pass through. Treat
+      // anything other than 'video' or 'audio' as 'video' so the
+      // host never tries to render with a nonsense lane.
+      const type: 'video' | 'audio' =
+        result.type === 'audio' ? 'audio' : 'video';
+      return {
+        uri: String(result.uri ?? ''),
+        title: String(result.title ?? ''),
+        type,
+        startPositionMs: Number(result.startPositionMs ?? 0),
+      };
+    } catch (error) {
+      logger.warn('[MpvPlayer] getLaunchParams failed', {error});
+      return null;
+    }
   },
 
   // ── Picture in Picture ──

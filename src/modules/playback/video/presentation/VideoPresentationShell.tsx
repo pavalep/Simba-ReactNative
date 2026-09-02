@@ -15,6 +15,19 @@ export interface VideoPresentationShellProps {
   /** v11 T7.1: optional testID for the outer shell container. Useful
    *  for instrumentation + tests; production hosts can omit it. */
   readonly testID?: string;
+  /**
+   * V12 Phase 8: when `true`, the shell's background is transparent
+   * so the underlying native SurfaceView (mounted at the activity
+   * root in `PlayerActivity`) shows through the React tree.
+   *
+   * Production hosts should set this `true` only when the shell is
+   * rendering inside `PlayerActivity`; the mini-player host on the
+   * home screen MUST stay opaque (its opaque background is what hides
+   * the home-screen content beneath it).
+   *
+   * Default: `false` (opaque `SHELL_BACKGROUND`).
+   */
+  readonly transparentRoot?: boolean;
 }
 
 /**
@@ -48,6 +61,7 @@ export function VideoPresentationShell({
   fullChrome,
   miniChrome,
   testID,
+  transparentRoot = false,
 }: VideoPresentationShellProps) {
   const {width: viewportWidth, height: viewportHeight} = useWindowDimensions();
   // Native-driver `Animated.Value` (only transform + opacity go
@@ -142,6 +156,12 @@ export function VideoPresentationShell({
           top: shellTop,
           borderRadius: shellRadius,
         },
+        // V12 Phase 8: when the shell is rendering inside
+        // `PlayerActivity`, drop the opaque background so the
+        // SurfaceView mounted at content-root index 0 shows
+        // through. Mini-player hosts (on the home screen) keep the
+        // opaque `SHELL_BACKGROUND` to mask home-screen bleed.
+        transparentRoot ? styles.shellTransparent : styles.shellOpaque,
       ]}
       pointerEvents="box-none"
     >
@@ -183,7 +203,20 @@ const styles = StyleSheet.create({
   shell: {
     position: 'absolute',
     overflow: 'hidden',
+  },
+  // V12 Phase 8: opaque (default) — masks home-screen content beneath
+  // the mini player (v11 hotfix behaviour). Used by the inline
+  // MainActivity host.
+  shellOpaque: {
     backgroundColor: SHELL_BACKGROUND,
+  },
+  // V12 Phase 8: transparent — used by the PlayerActivity host so the
+  // SurfaceView at content-root index 0 (mounted by `PlayerActivity`)
+  // shows through. `overflow: 'hidden'` (in `shell`) still clips the
+  // transform layer so the mini/full chrome projections can't paint
+  // outside the shell box.
+  shellTransparent: {
+    backgroundColor: 'transparent',
   },
   // T7.1: the transform layer is the "single full-viewport content
   // frame" that the shell animates. The surface + both chrome

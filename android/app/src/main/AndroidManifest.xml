@@ -84,6 +84,38 @@
         </intent-filter>
       </activity>
 
+      <!-- ── V12: PlayerActivity (lives in @simba/react-native-media-player module) ── -->
+      <!--
+        Registered here in the APP's manifest because the library module
+        doesn't have an <application> block of its own — manifest merger
+        will pull in this activity declaration when building the AAR.
+        Fully-qualified because the activity class lives in the library's
+        com.simba.player package, not the app's.
+
+        Attributes mirror the mpvKt reference PlayerActivity:
+          - configChanges includes `navigation` so we don't recreate the
+            activity when a Bluetooth headset connects/disconnects.
+          - launchMode=singleTask so re-opening a video from a deep
+            notification reuses the existing instance instead of stacking.
+          - supportsPictureInPicture + resizeableActivity are mandatory for
+            Android 12+ PiP. Missing resizeableActivity in V11 was a root
+            cause of the PiP black-screen bug.
+          - autoRemoveFromRecents keeps the recents tray clean when the
+            user finishes playback (avoids stale thumbnails).
+          - exported=false: launched only via explicit Intent from inside
+            the app (MpvBridgeModule.openPlayer, Phase 3). No deep links
+            yet — those will come via an additional filter if needed.
+      -->
+      <activity
+        android:name="com.simba.player.PlayerActivity"
+        android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|uiMode|screenSize|smallestScreenSize"
+        android:launchMode="singleTask"
+        android:supportsPictureInPicture="true"
+        android:resizeableActivity="true"
+        android:autoRemoveFromRecents="true"
+        android:theme="@style/AppTheme"
+        android:exported="false" />
+
       <!-- ── Foreground media notification service ── -->
       <service
         android:name=".MediaNotificationService"

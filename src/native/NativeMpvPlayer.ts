@@ -212,6 +212,33 @@ export interface Spec extends TurboModule {
   readonly destroy: () => void;
   readonly getNativePtr: () => Double;
 
+  // ── Activity Launch (V12 Phase 3) ────────────────────────────────
+  // Hands off to the dedicated PlayerActivity (in the
+  // @simba/react-native-media-player library module). Resolves true
+  // when the activity starts; rejects with `E_INVALID_TYPE`,
+  // `E_NO_ACTIVITY`, `E_ACTIVITY_NOT_FOUND`, `E_SECURITY`, or
+  // `E_OPEN_PLAYER_FAILED` on failure.
+  readonly openPlayer: (
+    uri: string,
+    title: string | null,
+    type: 'video' | 'audio',
+    startPositionMs: Double,
+  ) => Promise<boolean>;
+
+  // ── Launch Params (V12 Phase 13) ─────────────────────────────────
+  // One-shot read of the launch params the most recent `openPlayer`
+  // call set on `PlayerActivity`. Returns `null` when called from
+  // MainActivity (no recent `openPlayer` invocation) or after the
+  // first read has already consumed the value. Used by
+  // `PlaybackContext.loadLaunchParams()` to rebuild `active` in the
+  // launched activity's fresh JS context.
+  readonly getLaunchParams: () => {
+    uri: string;
+    title: string;
+    type: 'video' | 'audio';
+    startPositionMs: Double;
+  } | null;
+
   // ── Keep Screen On (W2.12) ──
   readonly setKeepScreenOn?: (enabled: boolean) => void;
 

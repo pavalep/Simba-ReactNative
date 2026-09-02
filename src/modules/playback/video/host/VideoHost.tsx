@@ -32,7 +32,7 @@ import {
 } from '../../../../store/slices/playerSlice';
 import {createVideoPlayback} from '../session/createVideoPlayback';
 import {VideoNativeSurface} from '../surface/VideoNativeSurface';
-import {usePlaybackCommands} from '../../PlaybackContext';
+import {usePlaybackCommands, usePlayback} from '../../PlaybackContext';
 import type {ActivePlayback, PlaybackPresentation} from '../../types';
 import {FilterSheet} from '../../../../components/sheets/FilterSheet/FilterSheet';
 import {useBookmarks} from '../../../../features/bookmarks';
@@ -77,6 +77,13 @@ function toVideoSource(active: ActivePlayback): VideoSourceIdentity {
 
 export function VideoHost({active}: VideoHostProps) {
   const {expandPlayer, collapsePlayer, closePlayer} = usePlaybackCommands();
+  // V12 Phase 8: read `inPlayerActivity` from the playback state
+  // so the host can make the presentation shell transparent when
+  // mounted inside `PlayerActivity`. `inPlayerActivity` is `true`
+  // when `PlaybackProvider.openPlayer` launched the dedicated
+  // activity (gated by `USE_DEDICATED_PLAYER_ACTIVITY`); cleared
+  // by `closePlayer` when the activity tears down.
+  const {inPlayerActivity} = usePlayback();
   const [playback, setPlayback] = useState<VideoPlaybackUnit | null>(null);
   const windowDimensions = useWindowDimensions();
   const source = useMemo(() => toVideoSource(active), [active]);
@@ -1201,6 +1208,12 @@ export function VideoHost({active}: VideoHostProps) {
       presentation={shellPresentation}
       fullChrome={fullChrome}
       miniChrome={miniChrome}
+      // V12 Phase 8: drop the opaque shell background when the
+      // host is mounted inside `PlayerActivity` (so the SurfaceView
+      // mounted at the activity content root shows through). Mini-
+      // player hosts (MainActivity) keep the v11 hotfix opaque
+      // background.
+      transparentRoot={inPlayerActivity}
     >
       {nativePtr > 0 ? (
         <VideoSurfaceGestures

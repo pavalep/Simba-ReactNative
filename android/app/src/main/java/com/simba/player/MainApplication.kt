@@ -6,7 +6,6 @@ import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
-import com.simba.player.mpv.MpvPlayerPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -15,8 +14,12 @@ class MainApplication : Application(), ReactApplication {
       context = applicationContext,
       packageList =
         PackageList(this).packages.apply {
-          // Packages that cannot be autolinked yet can be added manually here, for example:
-          add(MpvPlayerPackage())
+          // Phase 31: the V12 module ships its own `PlayerPackage`
+          // (a `TurboReactPackage` in the `com.simba.player` root
+          // package). It registers `MpvBridgeModule` as a TurboModule
+          // and supersedes the V11 `com.simba.player.mpv.MpvPlayerPackage`
+          // (which was deleted in Phase 31).
+          add(PlayerPackage())
         },
     )
   }

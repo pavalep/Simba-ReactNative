@@ -4,3 +4,11 @@ extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autoli
 rootProject.name = 'SimbaPlayer'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
+
+// @simba/react-native-media-player — sibling Android library module.
+// The module lives at <repo-root>/react-native-media-player/android/,
+// which is TWO levels up from this settings.gradle (MOBILE_APP_REACT_NATIVE/android/).
+// Hence '../../react-native-media-player/android', not '../'.
+include ':react-native-media-player'
+project(':react-native-media-player').projectDir =
+        new File(rootProject.projectDir, '../../react-native-media-player/android')
