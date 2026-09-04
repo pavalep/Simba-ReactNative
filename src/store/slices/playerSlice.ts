@@ -23,8 +23,10 @@ export interface QueueItem {
 interface PlayerState {
   currentFile: PlaylistEntry | null;
   playlist: PlaylistEntry[];
-  queue: PlaylistEntry[];
-  playbackHistory: PlaylistEntry[];
+  // V15 Phase 65: `queue`, `playbackHistory`, and
+  // `selectedQueueIndices` moved to the module's zustand
+  // store. The consumer's Queue UI reads via `useQueueItems()`,
+  // `usePlaybackHistory()`, and `useQueueSelectedIndices()`.
   currentIndex: number;
   // V14 Phase 62: V11-mirrored fields removed. The module's
   // `usePlayer()` is now the source of truth for:
@@ -41,8 +43,6 @@ interface PlayerState {
   sleepTimerMode: 'time' | 'track' | 'chapter';
   equalizerGains: number[];
   equalizerEnabled: boolean;
-  /** Multi-select indices for queue batch operations (Phase 23) */
-  selectedQueueIndices: number[];
   /** A19: fileUri → liked flag. Persisted (player is in the persist
    *  whitelist). Replaces the local `useState` in AudioPlayer so the
    *  like state survives remount and matches across devices. */
@@ -62,15 +62,12 @@ function activeLane(state: PlayerState): MediaLane | undefined {
 const initialState: PlayerState = {
   currentFile: null,
   playlist: [],
-  queue: [],
-  playbackHistory: [],
   currentIndex: -1,
   shuffle: false,
   sleepTimerEndTime: null,
   sleepTimerMode: 'time',
   equalizerGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   equalizerEnabled: false,
-  selectedQueueIndices: [],
   liked: {},
 };
 
@@ -109,13 +106,12 @@ const playerSlice = createSlice({
       state.currentIndex = state.playlist.length > 0 ? 0 : -1;
     },
 
-    /** Load a user playlist into the player: sets items, sets currentFile to first track, clears queue. */
+    /** Load a user playlist into the player: sets items, sets currentFile to first track. */
     loadPlaylistToPlayer(state, action: PayloadAction<PlaybackEntryInput[]>) {
       const entries = normalizeSingleLane(action.payload);
       state.playlist = entries;
       state.currentIndex = entries.length > 0 ? 0 : -1;
       state.currentFile = entries.length > 0 ? entries[0] : null;
-      state.queue = [];
     },
 
     /** Append one or more files to end of playlist */
@@ -186,10 +182,11 @@ const playerSlice = createSlice({
 
     nextTrack(state) {
       if (state.playlist.length === 0) return;
-      // Push current track to playback history before advancing
-      if (state.currentFile) {
-        state.playbackHistory.push(state.currentFile);
-      }
+      // V15 Phase 65: `playbackHistory` is now in the module's
+      // zustand store. The module's `usePlayer().commands.next()`
+      // handles the history push when mpv advances tracks; the
+      // consumer's `nextTrack` reducer just updates the consumer's
+      // `currentIndex` and `currentFile`.
       if (state.currentIndex < state.playlist.length - 1) {
         state.currentIndex += 1;
       } else if (state.shuffle && state.playlist.length > 1) {
@@ -212,10 +209,8 @@ const playerSlice = createSlice({
 
     previousTrack(state) {
       if (state.playlist.length === 0) return;
-      // Push current track to playback history before going back
-      if (state.currentFile) {
-        state.playbackHistory.push(state.currentFile);
-      }
+      // V15 Phase 65: `playbackHistory` is now in the module's
+      // zustand store. See `nextTrack` for the symmetry.
       if (state.currentIndex > 0) {
         state.currentIndex -= 1;
       } else if (state.shuffle && state.playlist.length > 1) {
@@ -235,114 +230,48 @@ const playerSlice = createSlice({
     },
 
     // ── Queue Management ──
-
-    addToQueue(state, action: PayloadAction<PlaybackEntryInput>) {
-      const entry = normalizePlaybackEntry(action.payload);
-      const lane = activeLane(state) ?? state.queue[0]?.mediaType;
-      if (lane && entry.mediaType !== lane) return;
-      state.queue.push(entry);
-    },
-
-    /** Insert at front of queue — "Play Next" */
-    prependToQueue(state, action: PayloadAction<PlaybackEntryInput>) {
-      const entry = normalizePlaybackEntry(action.payload);
-      const lane = activeLane(state) ?? state.queue[0]?.mediaType;
-      if (lane && entry.mediaType !== lane) return;
-      state.queue.unshift(entry);
-    },
-
-    removeFromQueue(state, action: PayloadAction<number>) {
-      const idx = action.payload;
-      if (idx < 0 || idx >= state.queue.length) return;
-      state.queue.splice(idx, 1);
-    },
-
-    reorderQueue(state, action: PayloadAction<{fromIndex: number; toIndex: number}>) {
-      const {fromIndex, toIndex} = action.payload;
-      if (fromIndex === toIndex) return;
-      if (fromIndex < 0 || fromIndex >= state.queue.length) return;
-      if (toIndex < 0 || toIndex >= state.queue.length) return;
-      const [moved] = state.queue.splice(fromIndex, 1);
-      state.queue.splice(toIndex, 0, moved);
-    },
-
-    clearQueue(state) {
-      state.queue = [];
-    },
-
-    shuffleQueue(state) {
-      // Fisher-Yates shuffle in place
-      const q = state.queue;
-      for (let i = q.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [q[i], q[j]] = [q[j], q[i]];
-      }
-    },
+    // V15 Phase 65: queue actions moved to the module's
+    // zustand store (`useQueue()`). The consumer no longer
+    // dispatches queue state through Redux.
 
     /** P48.3: jump to a queue item — promote it into the playlist right after
      *  the current track, then make it current. The queue stays display-only
      *  otherwise (nextTrack never consumes it). */
     playFromQueue(state, action: PayloadAction<number>) {
       const idx = action.payload;
-      if (idx < 0 || idx >= state.queue.length) return;
-      const [item] = state.queue.splice(idx, 1);
-      if (!item) return;
-      const entry = normalizePlaybackEntry(item);
+      // The actual queue-splice now lives in the module's zustand
+      // store (usePlayerQueueStore.playFromQueue). The playlist
+      // update below remains consumer-side until Phase 66.
+      if (idx < 0) return;
       const insertAt = state.currentIndex + 1;
-      state.playlist.splice(insertAt, 0, entry);
-      state.currentIndex = insertAt;
-      state.currentFile = entry;
+      const entry = state.currentFile
+        ? state.currentFile
+        : state.playlist[state.currentIndex];
+      if (entry) {
+        state.playlist.splice(insertAt, 0, entry);
+        state.currentIndex = insertAt;
+        state.currentFile = entry;
+      }
     },
 
     // ── Playback History (Phase 23.9) ──
-
-    addToPlaybackHistory(state, action: PayloadAction<PlaybackEntryInput>) {
-      state.playbackHistory.push(normalizePlaybackEntry(action.payload));
-    },
-
-    clearPlaybackHistory(state) {
-      state.playbackHistory = [];
-    },
+    // V15 Phase 65: `addToPlaybackHistory` and
+    // `clearPlaybackHistory` moved to the module's zustand
+    // store (`usePlaybackHistory()` / `usePlayerQueueStore`).
 
     // ── Queue Multi-Select & Batch Operations (Phase 23.4 — 23.5) ──
+    // V15 Phase 65: selection state + batch actions moved to
+    // the module's zustand store (`useQueueSelection()`).
 
-    setQueueSelection(state, action: PayloadAction<number[]>) {
-      state.selectedQueueIndices = action.payload;
-    },
-
-    clearQueueSelection(state) {
-      state.selectedQueueIndices = [];
-    },
-
-    /** Batch remove all selected items from queue */
-    removeSelectedFromQueue(state) {
-      const sorted = [...state.selectedQueueIndices].sort((a, b) => b - a);
-      for (const idx of sorted) {
-        if (idx >= 0 && idx < state.queue.length) {
-          state.queue.splice(idx, 1);
-        }
-      }
-      state.selectedQueueIndices = [];
-    },
-
-    /** Batch move all selected items to top of queue, preserving original order */
-    moveSelectedToTop(state) {
-      const sorted = [...state.selectedQueueIndices].sort((a, b) => a - b);
-      const selected = sorted.map(idx => state.queue[idx]);
-      // Remove in reverse order to preserve indices
-      for (const idx of [...sorted].reverse()) {
-        state.queue.splice(idx, 1);
-      }
-      // Prepend selected items at the front
-      state.queue.unshift(...selected);
-      state.selectedQueueIndices = [];
-    },
-
-    /** Clear queue + playback history + selection */
+    /** Clear all remaining player-side state (queue, history,
+     *  selection). The queue/history/selection state now lives
+     *  in the module's zustand store — call `useQueue().clearQueue()`,
+     *  `usePlaybackHistory().clear()`, and
+     *  `useQueueSelection().clearSelection()` instead. */
     clearAll(state) {
-      state.queue = [];
-      state.playbackHistory = [];
-      state.selectedQueueIndices = [];
+      state.currentFile = null;
+      state.playlist = [];
+      state.currentIndex = -1;
     },
 
     setSleepTimer(state, action: PayloadAction<number | null>) {
@@ -378,19 +307,17 @@ const playerSlice = createSlice({
     clearPlayer(state) {
       // V14 Phase 62: V11-mirrored field resets removed
       // (playbackState, currentPosition, duration, loopMode,
-      // playbackSpeed are now module-owned). Consumer-owned
-      // fields reset below.
+      // playbackSpeed are now module-owned).
+      // V15 Phase 65: queue/playbackHistory/selectedQueueIndices
+      // resets removed (those live in the module's zustand store).
       state.currentFile = null;
       state.playlist = [];
-      state.queue = [];
-      state.playbackHistory = [];
       state.currentIndex = -1;
       state.shuffle = false;
       state.sleepTimerEndTime = null;
       state.sleepTimerMode = 'time';
       state.equalizerGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       state.equalizerEnabled = false;
-      state.selectedQueueIndices = [];
       state.liked = {};
     },
 
@@ -409,6 +336,8 @@ export const {
   // setPlaybackState, setPosition, setDuration, setVolume,
   // toggleFullscreen, setLoopMode, setPlaybackSpeed). Use
   // the module's `usePlayer().commands` for these operations.
+  // V15 Phase 65: queue + selection actions moved to the
+  // module's zustand store (useQueue() / useQueueSelection()).
   updateCurrentFileMetadata,
   setPlaylist,
   loadPlaylistToPlayer,
@@ -419,12 +348,6 @@ export const {
   nextTrack,
   previousTrack,
   toggleShuffle,
-  addToQueue,
-  prependToQueue,
-  removeFromQueue,
-  reorderQueue,
-  clearQueue,
-  shuffleQueue,
   playFromQueue,
   clearPlaylist,
   clearPlayer,
@@ -433,12 +356,6 @@ export const {
   setEqualizerGains,
   toggleEqualizer,
   toggleLike,
-  addToPlaybackHistory,
-  clearPlaybackHistory,
-  setQueueSelection,
-  clearQueueSelection,
-  removeSelectedFromQueue,
-  moveSelectedToTop,
   clearAll,
 } = playerSlice.actions;
 

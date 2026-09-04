@@ -11,26 +11,32 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {useAppSelector, useAppDispatch} from '../../../store';
 import {
   addToPlaylist,
-  addToQueue,
   playFromPlaylist,
-  playFromQueue,
-  prependToQueue,
   removeFromPlaylist,
-  removeFromQueue,
   reorderPlaylist,
-  reorderQueue,
 } from '../../../store/slices/playerSlice';
 import {playlistActions} from '../../../features/playlists';
 import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {useHaptics} from '../../../hooks/useHaptics';
+import type {PlayerQueueItem} from '@simba-dev/react-native-media-player';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {PlaylistItem} from '../../../types/playlist';
 import type {MediaLane} from '../../../types/media';
 import type {RootStackScreenProps} from '../../../navigation/types';
-import { resolveStreamType, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import {
+  resolveStreamType,
+  usePlayer,
+  usePlayerActivity,
+  useQueue,
+  useQueueItems,
+  usePlaybackHistory,
+} from '@simba-dev/react-native-media-player';
 
 interface QueueDisplayRow {
-  entry: PlaylistEntry;
+  /** V15 Phase 65: a row may come from the module's zustand
+   *  queue (PlayerQueueItem) or the consumer's `state.player.playlist`
+   *  (PlaylistEntry, which is structurally a superset). */
+  entry: PlayerQueueItem;
   origin: 'queue' | 'playlist';
   rawIndex: number;
 }
@@ -69,11 +75,24 @@ export function useQueueScreen(): UseQueueScreenResult {
 
   const currentTrack = useAppSelector(state => state.player.currentFile);
   const playlist = useAppSelector(state => state.player.playlist);
-  const queue = useAppSelector(state => state.player.queue);
-  const playbackHistory = useAppSelector(state => state.player.playbackHistory);
+  // V15 Phase 65: queue + playbackHistory move to the module's
+  // zustand store. The component reads via `useQueueItems()` /
+  // `usePlaybackHistory()` and dispatches via the `useQueue()`
+  // hook's actions.
+  const queue = useQueueItems();
+  const playbackHistory = usePlaybackHistory();
   const currentIndex = useAppSelector(state => state.player.currentIndex);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
+  // V15 Phase 65: queue actions now come from the module's
+  // zustand store, not from Redux.
+  const {
+    addToQueue: addToQueueAction,
+    prependToQueue: prependToQueueAction,
+    playFromQueue: playFromQueueAction,
+    reorderQueue: reorderQueueAction,
+    removeFromQueue: removeFromQueueAction,
+  } = useQueue();
   const routeLane = route.params?.from === 'video' ? 'video' : 'audio';
   const activeLane: MediaLane = currentTrack?.mediaType ?? routeLane;
 
@@ -87,11 +106,18 @@ export function useQueueScreen(): UseQueueScreenResult {
     return [...queuedRows, ...playlistRows];
   }, [activeLane, currentIndex, playlist, queue]);
 
-  const upNext = useMemo(() => upNextRows.map(row => row.entry), [upNextRows]);
+  const upNext = useMemo(
+    () => upNextRows.map(row => row.entry as unknown as PlaylistEntry),
+    [upNextRows],
+  );
   const queueCount = upNextRows.filter(row => row.origin === 'queue').length;
 
   const history = useMemo(
-    () => playbackHistory.filter(entry => entry.mediaType === activeLane).reverse(),
+    () =>
+      playbackHistory
+        .filter(entry => entry.mediaType === activeLane)
+        .reverse()
+        .map(entry => entry as unknown as PlaylistEntry),
     [activeLane, playbackHistory],
   );
 
@@ -99,8 +125,10 @@ export function useQueueScreen(): UseQueueScreenResult {
 
   const handleJumpTo = useCallback(
     (entry: PlaylistEntry) => {
-      const sameEntry = (candidate: PlaylistEntry) =>
-        candidate === entry ||
+      const sameEntry = (
+        candidate: {uri: string; source?: string; type?: string; mediaType?: string; provider?: string; folderId?: string},
+      ) =>
+        candidate === (entry as unknown as typeof candidate) ||
         (candidate.uri === entry.uri &&
           candidate.source === entry.source &&
           candidate.type === entry.type &&
@@ -113,7 +141,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       if (playlistIdx >= 0) {
         dispatch(playFromPlaylist(playlistIdx));
       } else if (queueIdx >= 0) {
-        dispatch(playFromQueue(queueIdx));
+        playFromQueueAction(queueIdx);
       } else {
         // History-only item: append to the playlist, then play it.
         dispatch(addToPlaylist(entry));
@@ -139,7 +167,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       }
 
     },
-    [dispatch, openPlayer, playlist, queue, route.params?.from],
+    [dispatch, openPlayer, playlist, queue, route.params?.from, playFromQueueAction],
   );
 
   const handleReorder = useCallback(
@@ -162,13 +190,13 @@ export function useQueueScreen(): UseQueueScreenResult {
       if (!destination || destination.rawIndex === source.rawIndex) return;
 
       if (source.origin === 'queue') {
-        dispatch(reorderQueue({fromIndex: source.rawIndex, toIndex: destination.rawIndex}));
+        reorderQueueAction({fromIndex: source.rawIndex, toIndex: destination.rawIndex});
       } else {
         dispatch(reorderPlaylist({fromIndex: source.rawIndex, toIndex: destination.rawIndex}));
       }
       haptics.medium();
     },
-    [dispatch, haptics, upNextRows],
+    [dispatch, haptics, upNextRows, reorderQueueAction],
   );
 
   const handleRemove = useCallback(
@@ -176,29 +204,29 @@ export function useQueueScreen(): UseQueueScreenResult {
       const row = upNextRows[index];
       if (!row) return;
       if (row.origin === 'queue') {
-        dispatch(removeFromQueue(row.rawIndex));
+        removeFromQueueAction(row.rawIndex);
       } else {
         dispatch(removeFromPlaylist(row.rawIndex));
       }
       haptics.light();
     },
-    [dispatch, haptics, upNextRows],
+    [dispatch, haptics, upNextRows, removeFromQueueAction],
   );
 
   const handlePlayNext = useCallback(
     (entry: PlaylistEntry) => {
-      dispatch(prependToQueue(entry));
+      prependToQueueAction(entry);
       haptics.light();
     },
-    [dispatch, haptics],
+    [haptics, prependToQueueAction],
   );
 
   const handleAddToQueue = useCallback(
     (entry: PlaylistEntry) => {
-      dispatch(addToQueue(entry));
+      addToQueueAction(entry);
       haptics.light();
     },
-    [dispatch, haptics],
+    [haptics, addToQueueAction],
   );
 
   const handleSaveAsPlaylist = useCallback(

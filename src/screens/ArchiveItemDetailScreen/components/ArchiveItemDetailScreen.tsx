@@ -19,11 +19,9 @@ import {Placeholder} from '../../../components/feedback/Placeholder';
 import FastImage from 'react-native-fast-image';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
-import {useAppDispatch} from '../../../store';
 import {useRecentHistory} from '../../../features/recentHistory';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity, useQueue } from '@simba-dev/react-native-media-player';
 
-import {prependToQueue, addToQueue} from '../../../store/slices/playerSlice';
 import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
@@ -49,7 +47,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
   const {item, tracks, isLoading, error, retry} =
     useArchiveItemDetailScreen(identifier);
   const {colors} = useTheme();
-  const dispatch = useAppDispatch();
+  const {addToQueue, prependToQueue} = useQueue();
   const toast = useToast();
   const haptics = useHaptics();
     const {add: addBookmark} = useBookmarks();
@@ -113,29 +111,25 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
       if (!track) return;
       switch (value) {
         case 'play-next':
-          dispatch(
-            prependToQueue({
-              uri: track.url,
-              title: track.title,
-              duration: track.lengthSeconds,
-              source: 'api',
+          prependToQueue({
+            uri: track.url,
+            title: track.title,
+            duration: track.lengthSeconds,
+            source: 'api',
             provider: 'internetArchive',
-              mediaType: 'audio',
-            }),
-          );
+            mediaType: 'audio',
+          });
           toast.show('Playing next');
           break;
         case 'add-queue':
-          dispatch(
-            addToQueue({
-              uri: track.url,
-              title: track.title,
-              duration: track.lengthSeconds,
-              source: 'api',
+          addToQueue({
+            uri: track.url,
+            title: track.title,
+            duration: track.lengthSeconds,
+            source: 'api',
             provider: 'internetArchive',
-              mediaType: 'audio',
-            }),
-          );
+            mediaType: 'audio',
+          });
           toast.show('Added to queue');
           break;
         case 'add-playlist':
@@ -197,7 +191,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
       setMenuTrack(null);
       haptics.light();
     },
-    [menuTrack, item, imageUrl, identifier, dispatch, toast, addBookmark, haptics],
+    [menuTrack, item, imageUrl, identifier, toast, addBookmark, haptics, addToQueue, prependToQueue],
   );
 
   const handleShare = useCallback(() => {

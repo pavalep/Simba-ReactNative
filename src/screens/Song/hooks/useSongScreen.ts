@@ -7,16 +7,15 @@ import {Alert, Share} from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useAppSelector, useAppDispatch} from '../../../store';
+import {useAppSelector} from '../../../store';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
-import {addToQueue} from '../../../store/slices/playerSlice';
 import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {loadLrc} from '../../../services/lrcService';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {LrcLine} from '../../../utils/lrcParser';
 import {isRemoteUri} from '../../../utils/mediaUri';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity, useQueue } from '@simba-dev/react-native-media-player';
 
 type SongRoute = RouteProp<RootStackParamList, 'SongScreen'>;
 type SongNav = NativeStackNavigationProp<RootStackParamList, 'SongScreen'>;
@@ -40,7 +39,7 @@ function formatDuration(sec: number): string {
 export function useSongScreen() {
   const route = useRoute<SongRoute>();
   const navigation = useNavigation<SongNav>();
-  const dispatch = useAppDispatch();
+  const {addToQueue} = useQueue();
   const {show: showToast} = useToast();
   const {openPlayer} = usePlayerActivity();
 
@@ -211,9 +210,9 @@ export function useSongScreen() {
   }, [displayTitle, displayArtist, displayAlbum, displayDuration, displayPath]);
 
   const handleAddToQueue = useCallback(() => {
-    dispatch(addToQueue({uri: fileUri, title: displayTitle, duration: displayDuration}));
+    addToQueue({uri: fileUri, title: displayTitle, duration: displayDuration});
     showToast('Added to queue', 'success');
-  }, [dispatch, fileUri, displayTitle, displayDuration, showToast]);
+  }, [addToQueue, fileUri, displayTitle, displayDuration, showToast]);
 
   const handleCopyPath = useCallback(() => {
     Clipboard.setString(displayPath);

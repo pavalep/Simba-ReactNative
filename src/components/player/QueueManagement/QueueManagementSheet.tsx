@@ -12,7 +12,7 @@ import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
-import type {QueueItem} from '../../../store/slices/playerSlice';
+import type {PlayerQueueItem} from '@simba-dev/react-native-media-player';
 
 const SHEET_HEIGHT = Dimensions.get('window').height * 0.70;
 const ITEM_HEIGHT = 76;
@@ -20,7 +20,7 @@ const ITEM_HEIGHT = 76;
 interface QueueManagementSheetProps {
   visible: boolean;
   onClose: () => void;
-  queue: QueueItem[];
+  queue: PlayerQueueItem[];
   currentIndex: number;
   onSelectItem: (index: number) => void;
   onMoveUp: (index: number) => void;
@@ -93,7 +93,7 @@ export const QueueManagementSheet: React.FC<QueueManagementSheetProps> = ({
           {/* Queue list */}
           <FlatList
             data={queue}
-            keyExtractor={(item, i) => `${item.fileUri}-${i}`}
+            keyExtractor={(item, i) => `${item.uri}-${i}`}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             getItemLayout={(_, index) => ({length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index})}

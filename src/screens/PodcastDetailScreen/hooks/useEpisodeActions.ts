@@ -6,13 +6,11 @@
 import {useState, useCallback} from 'react';
 import type {PodcastResult, PodcastEpisodeResult} from '../../../types/api';
 import type {PodcastDetailScreenProps} from '../../../navigation/types';
-import {useAppDispatch} from '../../../store';
-import {addToQueue, prependToQueue} from '../../../store/slices/playerSlice';
 import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {shareContent} from '../../../services/shareService';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity, useQueue } from '@simba-dev/react-native-media-player';
 import text from '../related/textContent.json';
 
 type Navigation = PodcastDetailScreenProps['navigation'];
@@ -24,7 +22,7 @@ interface Options {
 }
 
 export function useEpisodeActions({podcast, navigation}: Options) {
-  const dispatch = useAppDispatch();
+  const {addToQueue, prependToQueue} = useQueue();
   const toast = useToast();
   const {add: addBookmark} = useBookmarks();
   const {openPlayer} = usePlayerActivity();
@@ -66,31 +64,27 @@ export function useEpisodeActions({podcast, navigation}: Options) {
       const provider = 'podcastIndex' as const;
       switch (value) {
         case 'play-next':
-          dispatch(
-            prependToQueue({
-              uri: ep.enclosureUrl,
-              title: ep.title,
-              duration: ep.duration,
-              source,
-              provider,
-              type: 'podcast',
-              mediaType: 'audio',
-            }),
-          );
+          prependToQueue({
+            uri: ep.enclosureUrl,
+            title: ep.title,
+            duration: ep.duration,
+            source,
+            provider,
+            type: 'audio',
+            mediaType: 'audio',
+          });
           toast.show(text.actions.playingNext);
           break;
         case 'add-queue':
-          dispatch(
-            addToQueue({
-              uri: ep.enclosureUrl,
-              title: ep.title,
-              duration: ep.duration,
-              source,
-              provider,
-              type: 'podcast',
-              mediaType: 'audio',
-            }),
-          );
+          addToQueue({
+            uri: ep.enclosureUrl,
+            title: ep.title,
+            duration: ep.duration,
+            source,
+            provider,
+            type: 'audio',
+            mediaType: 'audio',
+          });
           toast.show(text.actions.addedToQueue);
           break;
         case 'add-playlist':
@@ -139,7 +133,7 @@ export function useEpisodeActions({podcast, navigation}: Options) {
       }
       setMenuEpisode(null);
     },
-    [menuEpisode, podcast, dispatch, toast, addBookmark],
+    [menuEpisode, podcast, toast, addBookmark, addToQueue, prependToQueue],
   );
 
   return {

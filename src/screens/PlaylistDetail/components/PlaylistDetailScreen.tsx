@@ -20,8 +20,6 @@ import {
   type PlaylistKind,
 } from '../../../features/playlists';
 import {
-  addToQueue,
-  prependToQueue,
   loadPlaylistToPlayer,
   playlistItemsToEntries,
 } from '../../../store/slices/playerSlice';
@@ -47,7 +45,7 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {isRemoteUri} from '../../../utils/mediaUri';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import { resolveStreamType, useOpenPlaylist, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, useOpenPlaylist, usePlayerActivity, useQueue } from '@simba-dev/react-native-media-player';
 
 type Props = PlaylistDetailScreenProps;
 
@@ -115,6 +113,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const insets = useSafeAreaInsets();
   const {playlistId, playlistName} = route.params;
   const dispatch = useAppDispatch();
+  const {addToQueue: addToQueueStore, prependToQueue: prependToQueueStore} = useQueue();
   const {renamePlaylist, deletePlaylist, removeItem, reorderItems, clearPlaylist, importPlaylist} = usePlaylists();
   const playlist = usePlaylist(playlistId);
   const toast = useToast();
@@ -401,16 +400,14 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             toast.show('Offline — stream unavailable');
             break;
           }
-          dispatch(
-            prependToQueue({
-              uri: menuItem.fileUri,
-              title: menuItem.title,
-              duration: menuItem.duration,
-              // P34.7: keep source + media type so the queue routes correctly
-              source: menuItem.source,
-              mediaType: menuItem.mediaType,
-            }),
-          );
+          prependToQueueStore({
+            uri: menuItem.fileUri,
+            title: menuItem.title,
+            duration: menuItem.duration,
+            // P34.7: keep source + media type so the queue routes correctly
+            source: menuItem.source,
+            mediaType: menuItem.mediaType,
+          });
           toast.show('Playing next');
           break;
         case 'add-queue':
@@ -418,15 +415,13 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
             toast.show('Offline — stream unavailable');
             break;
           }
-          dispatch(
-            addToQueue({
-              uri: menuItem.fileUri,
-              title: menuItem.title,
-              duration: menuItem.duration,
-              source: menuItem.source,
-              mediaType: menuItem.mediaType,
-            }),
-          );
+          addToQueueStore({
+            uri: menuItem.fileUri,
+            title: menuItem.title,
+            duration: menuItem.duration,
+            source: menuItem.source,
+            mediaType: menuItem.mediaType,
+          });
           toast.show('Added to queue');
           break;
         case 'share-item': {
@@ -459,7 +454,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       }
       setMenuItem(null);
     },
-    [menuItem, dispatch, toast, isOnline],
+    [menuItem, dispatch, toast, isOnline, addToQueueStore, prependToQueueStore],
   );
 
   const handleMoveItem = useCallback(
