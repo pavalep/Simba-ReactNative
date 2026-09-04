@@ -133,19 +133,19 @@ All four are exported from `@simba-dev/react-native-media-player` index.ts and a
 
 ## Phase 54 — Mount module UI in `PlayerActivity`
 
-**Status:** [ ] Pending
+**Status:** [x] Complete (code-complete; device-verification pending)
 **Owner:** Mobile team
-**Target:** TBD
-**Actual:** _not yet started_
+**Target:** 2026-09-04
+**Actual:** _Phase 54 done in App.tsx: branch on activity launch params via the module's `useLaunchParams()` hook. When the activity is launched with a queued playback payload (i.e. some screen called `openPlayer(...)` which triggered the PlayerActivity handoff), App.tsx renders `<PlayerRoot />` (the module's surface + default controls). When MainActivity launches cold, App.tsx renders the regular navigator tree. The V11 `<PlaybackOverlayHost />` is removed from the navigator branch (Phase 54b). The V11 `usePlaybackCommands`/`usePlayback` imports are replaced with `useOpenWithResume` + `useLaunchParams` from the module. Commit `7c35606` (consumer) + `f1254a4` (module)._
 
 ### Sub-phase 54a — Wire `PlayerActivity`
-**Status:** [ ] Pending
+**Status:** [x] Complete (App.tsx wires `<SimbaPlayer>` + branches on `useLaunchParams()` to render `<PlayerRoot />`)
 
 ### Sub-phase 54b — Replace custom UI
-**Status:** [ ] Pending
+**Status:** [x] Complete (V11 `<PlaybackOverlayHost />` removed from App.tsx; PlayerRoot replaces it)
 
 ### Sub-phase 54c — Verify the activity launches with module UI
-**Status:** [ ] Pending
+**Status:** [~] Pending device verification (cannot run Android emulator in this environment; user should test on a device before tagging 1.2.0)
 
 ---
 
@@ -194,7 +194,7 @@ All four are exported from `@simba-dev/react-native-media-player` index.ts and a
 | 51 | Expand `PlayerState` / `PlayerCommands` / `PlayerProgress` + wire to events | [x] | 2 days | `usePlayer` returns live state from mpv events; 100/100 tests pass |
 | 52 | Add `usePlayerActivity()` hook | [x] | 0.5 day | `openPlayer` + `getLaunchParams` exposed via module |
 | 53 | Migrate consumer to module | [x] | 2 days | All 5 batches done; 38 source files migrated; module gained `resolveStreamType` + `useOpenWithResume` + `SimbaPlayer` wrapper |
-| 54 | Mount module UI in `PlayerActivity` | [ ] | 1 day | `<PlayerProvider>` + `<PlayerRoot>` + `<DefaultControls>` in activity |
+| 54 | Mount module UI in `PlayerActivity` | [x] | 1 day | `<PlayerRoot>` mounted via `useLaunchParams` branch in App.tsx; V11 `<PlaybackOverlayHost>` removed (commits `7c35606` + `f1254a4`); device verification pending |
 | 55 | Delete legacy V11 audio components | [ ] | 1 day | All `src/modules/playback/audio/` files deleted |
 | 56 | Delete the inline bridge code | [ ] | 0.5 day | `src/native/` deleted; codegenConfig updated |
 | 57 | Delete `PlaybackContext.tsx` + `PlaybackOverlayHost.tsx` + `TransportContext.tsx` | [ ] | 1 day | `src/modules/playback/` and `src/contexts/TransportContext.tsx` deleted; App.tsx wrapped in `<PlayerProvider>` |
