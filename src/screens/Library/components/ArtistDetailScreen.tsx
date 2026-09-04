@@ -27,7 +27,7 @@ import type {JamendoTrackResult} from '../../../types/api';
 import type {RootStackScreenProps} from '../types';
 type ArtistDetailScreenProps = RootStackScreenProps<'ArtistDetail'>;
 import {shareContent} from '../../../services/shareService';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 type Props = ArtistDetailScreenProps;
 
@@ -114,7 +114,8 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
   const currentFile = useAppSelector(state => state.player.currentFile);
-  const playbackState = useAppSelector(state => state.player.playbackState);
+  // V14 Phase 62: source of truth for isPlaying moves to the module.
+  const {state: playerState} = usePlayer();
   const tracks = useAppSelector(state =>
     selectArtistDiscography(state, artistName),
   );
@@ -558,7 +559,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           keyExtractor={track => track.uri}
           renderItem={({item: track, index: idx}) => {
           const isCurrentTrack = currentFile?.uri === track.uri;
-          const isTrackPlaying = isCurrentTrack && playbackState === 'playing';
+          const isTrackPlaying = isCurrentTrack && playerState.isPlaying;
           return (
           <TouchableOpacity
             style={[

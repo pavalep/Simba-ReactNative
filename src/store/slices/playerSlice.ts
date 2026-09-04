@@ -1,5 +1,4 @@
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
-import {PlaybackState} from '../../types';
 import {
   normalizePlaybackEntry,
   type PlaybackEntry,
@@ -27,15 +26,16 @@ interface PlayerState {
   queue: PlaylistEntry[];
   playbackHistory: PlaylistEntry[];
   currentIndex: number;
-  playbackState: PlaybackState;
-  currentPosition: number;
-  duration: number;
-  volume: number;
-  isFullscreen: boolean;
-  /** 'none' | 'file' | 'playlist' — mirrors MpvLoopMode */
-  loopMode: 'none' | 'file' | 'playlist';
+  // V14 Phase 62: V11-mirrored fields removed. The module's
+  // `usePlayer()` is now the source of truth for:
+  //   - playbackState -> state.isPlaying
+  //   - currentPosition -> progress.positionMs
+  //   - duration -> progress.durationMs
+  //   - volume -> state.volume
+  //   - isFullscreen (was unused)
+  //   - loopMode -> state.loopMode
+  //   - playbackSpeed -> state.speed
   shuffle: boolean;
-  playbackSpeed: number;
   sleepTimerEndTime: number | null;
   /** 50.1: sleep timer expiry trigger — fixed time, end of track, or end of chapter */
   sleepTimerMode: 'time' | 'track' | 'chapter';
@@ -65,14 +65,7 @@ const initialState: PlayerState = {
   queue: [],
   playbackHistory: [],
   currentIndex: -1,
-  playbackState: 'idle',
-  currentPosition: 0,
-  duration: 0,
-  volume: 1.0,
-  isFullscreen: false,
-  loopMode: 'none',
   shuffle: false,
-  playbackSpeed: 1.0,
   sleepTimerEndTime: null,
   sleepTimerMode: 'time',
   equalizerGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -85,11 +78,13 @@ const playerSlice = createSlice({
   name: 'player',
   initialState,
   reducers: {
-    playFile(state, action: PayloadAction<PlaybackEntryInput>) {
-      state.currentFile = normalizePlaybackEntry(action.payload);
-      state.playbackState = 'playing';
-      state.currentPosition = 0;
-    },
+    // V14 Phase 62: `playFile` reducer removed. Use
+    // `useOpenWithResume().openPlayer({...})` from the module
+    // instead — the module's PlayerState is the source of truth
+    // for playback. The consumer's `currentFile` is still
+    // tracked for the playlist/queue UI, but it's updated by
+    // the `loadPlaylistToPlayer` / `playFromPlaylist` reducers
+    // when the consumer wants to bookmark a file as "current".
 
     /**
      * Enrich the active entry after native metadata/artwork resolution.
@@ -114,14 +109,12 @@ const playerSlice = createSlice({
       state.currentIndex = state.playlist.length > 0 ? 0 : -1;
     },
 
-    /** Load a user playlist into the player: sets items, starts playback from index 0, clears queue */
+    /** Load a user playlist into the player: sets items, sets currentFile to first track, clears queue. */
     loadPlaylistToPlayer(state, action: PayloadAction<PlaybackEntryInput[]>) {
       const entries = normalizeSingleLane(action.payload);
       state.playlist = entries;
       state.currentIndex = entries.length > 0 ? 0 : -1;
       state.currentFile = entries.length > 0 ? entries[0] : null;
-      state.currentPosition = 0;
-      state.playbackState = entries.length > 0 ? 'playing' : 'idle';
       state.queue = [];
     },
 
@@ -181,30 +174,15 @@ const playerSlice = createSlice({
       if (index >= 0 && index < state.playlist.length) {
         state.currentIndex = index;
         state.currentFile = state.playlist[index];
-        state.playbackState = 'playing';
-        state.currentPosition = 0;
       }
     },
 
-    setPlaybackState(state, action: PayloadAction<PlaybackState>) {
-      state.playbackState = action.payload;
-    },
-
-    setPosition(state, action: PayloadAction<number>) {
-      state.currentPosition = action.payload;
-    },
-
-    setDuration(state, action: PayloadAction<number>) {
-      state.duration = action.payload;
-    },
-
-    setVolume(state, action: PayloadAction<number>) {
-      state.volume = Math.max(0, Math.min(1, action.payload));
-    },
-
-    toggleFullscreen(state) {
-      state.isFullscreen = !state.isFullscreen;
-    },
+    // V14 Phase 62: V11-only reducers removed.
+    //   setPlaybackState, setPosition, setDuration, setVolume,
+    //   toggleFullscreen, setLoopMode, setPlaybackSpeed — the
+    //   module's `usePlayer()` is the source of truth. Use
+    //   `usePlayer().commands.play() / pause() / seek() /
+    //   setVolume() / setSpeed() / setLoopMode()` instead.
 
     nextTrack(state) {
       if (state.playlist.length === 0) return;
@@ -214,14 +192,22 @@ const playerSlice = createSlice({
       }
       if (state.currentIndex < state.playlist.length - 1) {
         state.currentIndex += 1;
-      } else if (state.loopMode === 'playlist') {
-        state.currentIndex = 0; // wrap around
+      } else if (state.shuffle && state.playlist.length > 1) {
+        // V14 Phase 62: original V11 wrap behavior was
+        // `loopMode === 'playlist'`, but `loopMode` is now
+        // owned by the module. The consumer's `shuffle` flag
+        // is the only consumer-side state that affects
+        // navigation, so we use it as the wrap trigger when
+        // the playlist ends.
+        let next = state.currentIndex;
+        while (next === state.currentIndex) {
+          next = Math.floor(Math.random() * state.playlist.length);
+        }
+        state.currentIndex = next;
       } else {
-        return; // stop at end
+        return; // stop at end (default V14 behavior)
       }
       state.currentFile = state.playlist[state.currentIndex];
-      state.currentPosition = 0;
-      state.playbackState = 'playing';
     },
 
     previousTrack(state) {
@@ -232,18 +218,16 @@ const playerSlice = createSlice({
       }
       if (state.currentIndex > 0) {
         state.currentIndex -= 1;
-      } else if (state.loopMode === 'playlist') {
-        state.currentIndex = state.playlist.length - 1; // wrap around
+      } else if (state.shuffle && state.playlist.length > 1) {
+        let prev = state.currentIndex;
+        while (prev === state.currentIndex) {
+          prev = Math.floor(Math.random() * state.playlist.length);
+        }
+        state.currentIndex = prev;
       } else {
-        return; // stay at start
+        return; // stay at start (default V14 behavior)
       }
       state.currentFile = state.playlist[state.currentIndex];
-      state.currentPosition = 0;
-      state.playbackState = 'playing';
-    },
-
-    setLoopMode(state, action: PayloadAction<'none' | 'file' | 'playlist'>) {
-      state.loopMode = action.payload;
     },
 
     toggleShuffle(state) {
@@ -308,8 +292,6 @@ const playerSlice = createSlice({
       state.playlist.splice(insertAt, 0, entry);
       state.currentIndex = insertAt;
       state.currentFile = entry;
-      state.currentPosition = 0;
-      state.playbackState = 'playing';
     },
 
     // ── Playback History (Phase 23.9) ──
@@ -363,10 +345,6 @@ const playerSlice = createSlice({
       state.selectedQueueIndices = [];
     },
 
-    setPlaybackSpeed(state, action: PayloadAction<number>) {
-      state.playbackSpeed = Math.max(0.25, Math.min(3.0, action.payload));
-    },
-
     setSleepTimer(state, action: PayloadAction<number | null>) {
       state.sleepTimerEndTime =
         action.payload !== null ? Date.now() + action.payload * 1000 : null;
@@ -395,21 +373,19 @@ const playerSlice = createSlice({
       state.playlist = [];
       state.currentIndex = -1;
       state.currentFile = null;
-      state.currentPosition = 0;
     },
 
     clearPlayer(state) {
+      // V14 Phase 62: V11-mirrored field resets removed
+      // (playbackState, currentPosition, duration, loopMode,
+      // playbackSpeed are now module-owned). Consumer-owned
+      // fields reset below.
       state.currentFile = null;
       state.playlist = [];
       state.queue = [];
       state.playbackHistory = [];
       state.currentIndex = -1;
-      state.playbackState = 'idle';
-      state.currentPosition = 0;
-      state.duration = 0;
-      state.loopMode = 'none';
       state.shuffle = false;
-      state.playbackSpeed = 1.0;
       state.sleepTimerEndTime = null;
       state.sleepTimerMode = 'time';
       state.equalizerGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
@@ -429,7 +405,10 @@ const playerSlice = createSlice({
 });
 
 export const {
-  playFile,
+  // V14 Phase 62: V11-mirrored actions removed (playFile,
+  // setPlaybackState, setPosition, setDuration, setVolume,
+  // toggleFullscreen, setLoopMode, setPlaybackSpeed). Use
+  // the module's `usePlayer().commands` for these operations.
   updateCurrentFileMetadata,
   setPlaylist,
   loadPlaylistToPlayer,
@@ -437,14 +416,8 @@ export const {
   removeFromPlaylist,
   reorderPlaylist,
   playFromPlaylist,
-  setPlaybackState,
-  setPosition,
-  setDuration,
-  setVolume,
-  toggleFullscreen,
   nextTrack,
   previousTrack,
-  setLoopMode,
   toggleShuffle,
   addToQueue,
   prependToQueue,
@@ -455,7 +428,6 @@ export const {
   playFromQueue,
   clearPlaylist,
   clearPlayer,
-  setPlaybackSpeed,
   setSleepTimer,
   setSleepTimerMode,
   setEqualizerGains,

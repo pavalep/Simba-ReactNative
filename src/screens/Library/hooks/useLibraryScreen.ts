@@ -13,7 +13,7 @@ import {ViewMode} from '../components/ViewToggle';
 import type {PlaylistKind} from '../../../types/playlist';
 import type {LibraryScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import type {
   ContentMode,
   FilterType,
@@ -91,8 +91,9 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
 
   // ── Player Selectors (for AudioWaveform) ──
   const currentFile = useAppSelector(s => s.player.currentFile);
-  const playbackState = useAppSelector(s => s.player.playbackState);
-  const isAudioPlaying = playbackState === 'playing';
+  // V14 Phase 62: source of truth for isPlaying moves to the module.
+  const {state: playerState} = usePlayer();
+  const isAudioPlaying = playerState.isPlaying;
   const currentAudioUri = currentFile?.uri ?? null;
 
   // ── Media Scanner ──

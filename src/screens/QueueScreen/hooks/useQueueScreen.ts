@@ -27,7 +27,7 @@ import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {PlaylistItem} from '../../../types/playlist';
 import type {MediaLane} from '../../../types/media';
 import type {RootStackScreenProps} from '../../../navigation/types';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 interface QueueDisplayRow {
   entry: PlaylistEntry;
@@ -72,7 +72,8 @@ export function useQueueScreen(): UseQueueScreenResult {
   const queue = useAppSelector(state => state.player.queue);
   const playbackHistory = useAppSelector(state => state.player.playbackHistory);
   const currentIndex = useAppSelector(state => state.player.currentIndex);
-  const playbackState = useAppSelector(state => state.player.playbackState);
+  // V14 Phase 62: source of truth for isPlaying moves to the module.
+  const {state: playerState} = usePlayer();
   const routeLane = route.params?.from === 'video' ? 'video' : 'audio';
   const activeLane: MediaLane = currentTrack?.mediaType ?? routeLane;
 
@@ -230,7 +231,7 @@ export function useQueueScreen(): UseQueueScreenResult {
     upNext,
     queueCount,
     history,
-    isPlaying: playbackState === 'playing',
+    isPlaying: playerState.isPlaying,
     hasContent,
     handleJumpTo,
     handleReorder,

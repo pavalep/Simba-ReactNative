@@ -13,7 +13,7 @@ import {
 } from '../../../store/slices/playerSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AlbumScreen'>;
 type Route = RouteProp<RootStackParamList, 'AlbumScreen'>;
@@ -30,8 +30,9 @@ export function useAlbumScreen() {
     selectAlbumTracks(state, albumName, artistName),
   );
   const currentFile = useAppSelector(state => state.player.currentFile);
-  const playbackState = useAppSelector(state => state.player.playbackState);
-  const isPlaying = playbackState === 'playing';
+  // V14 Phase 62: source of truth for isPlaying moves to the module.
+  const {state: playerState} = usePlayer();
+  const isPlaying = playerState.isPlaying;
 
   // ── Derive sorted tracks ──
   const sortedTracks = useMemo(

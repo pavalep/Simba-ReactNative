@@ -6,10 +6,10 @@ import {useMemo, useCallback} from 'react';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {useAppSelector, useAppDispatch} from '../../../store';
 import {selectArtistDiscography} from '../../../store/slices/mediaSlice';
-import {loadPlaylistToPlayer, playFile, type PlaylistEntry} from '../../../store/slices/playerSlice';
+import {loadPlaylistToPlayer, type PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ArtistScreen'>;
 type Route = RouteProp<RootStackParamList, 'ArtistScreen'>;
@@ -27,7 +27,10 @@ export function useArtistScreen() {
   );
 
   const currentFile = useAppSelector(state => state.player.currentFile);
-  const playbackState = useAppSelector(state => state.player.playbackState);
+  // V14 Phase 62: `state.player.playbackState` (V11-mirror) is gone.
+  // The module's `usePlayer()` is the source of truth for
+  // isPlaying.
+  const {state: playerState} = usePlayer();
 
   // ── Derive discography (unique albums sorted by year desc) ──
   const discography = useMemo(() => {
@@ -84,14 +87,20 @@ export function useArtistScreen() {
 
   const handlePlayTrack = useCallback(
     (item: PlaylistEntry) => {
-      dispatch(playFile(item));
+      // V14 Phase 62: removed `dispatch(playFile(item))` — the
+      // V11 mirror dispatch is gone. The module's `openPlayer`
+      // call below is the single source of truth for triggering
+      // playback. The consumer's `currentFile` is updated
+      // separately via the playlist-loading reducers when
+      // needed; for single-track play, the activity launches
+      // and the module's PlayerState tracks everything.
       openPlayer({
         uri: item.uri,
         title: item.title,
         type: 'audio',
       });
     },
-    [dispatch, openPlayer],
+    [openPlayer],
   );
 
   const handlePlayAll = useCallback(() => {
@@ -146,10 +155,7 @@ export function useArtistScreen() {
     [currentFile],
   );
 
-  const isPlaying = useMemo(
-    () => playbackState === 'playing',
-    [playbackState],
-  );
+  const isPlaying = playerState.isPlaying;
 
   return {
     artistName,
