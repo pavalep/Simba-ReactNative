@@ -1,56 +1,74 @@
-feat(v13-phase-55): delete 17 V11 audio components
+feat(v13-phase-56-57): delete all V11 player dead code
 
-V13 Phase 55: the V11 audio module under src/modules/playback/audio/
-is dead code in the V12+ world (the activity branch renders
-<PlayerRoot /> from the module; the MainActivity branch
-renders the regular navigator). Deleted all 17 files:
+V13 Phase 56 + 57 collapsed into one cleanup. The V11 inline
+player infrastructure is fully gone; only the module +
+essential tests remain.
 
-  AudioArtwork.tsx
-  AudioButton.tsx
-  AudioIcon.tsx
-  AudioMiniProgress.tsx
-  AudioModule.tsx
-  AudioOutputControl.tsx
-  AudioPlaybackControllerContext.tsx
-  AudioPlayer.tsx
-  AudioPriorityActions.tsx
-  AudioProgress.tsx
-  AudioTransportControls.tsx
-  AudioTypes.ts
-  index.tsx (audio barrel)
-  MiniAudio.tsx
-  rangeNormalization.ts
-  hooks/useAudioPlayerScreen.ts
-
-The 17 files were moved to v13-trash-2026-09-04/ at the project
-root (safety policy: no direct delete; the trash dir is
-git-ignored via .gitignore addition and excluded from tsconfig
-to keep typecheck clean). They can be removed with `git rm -r
-v13-trash-2026-09-04/` after Phase 58.
+Deleted:
+  - src/native/* (3 files): the inline TurboModule spec +
+    MpvPlayer wrapper + barrel. The V13 module owns the
+    bridge now; the consumer no longer needs a parallel
+    TurboModule registration.
+  - src/modules/playback/PlaybackContext.tsx: the V11
+    PlaybackProvider was already replaced by the module's
+    PlayerProvider via <SimbaPlayer>.
+  - src/modules/playback/PlaybackOverlayHost.tsx: Phase 54
+    removed it from App.tsx; the file is now orphaned.
+  - src/modules/playback/types.ts: the V11 PlaybackEntry +
+    PlaybackContextValue types — superseded by the module's
+    PlayerState / PlayerCommands.
+  - src/modules/playback/index.ts: the V11 playback barrel.
+  - src/modules/playback/video/* (36 files): the entire V11
+    video presentation + control + host + session + state +
+    surface layer. Phase 54 replaced it with the module's
+    <PlayerRoot /> + <DefaultControls />.
+  - src/contexts/TransportContext.tsx: the V11 transport state
+    context was migrated to the module's PlayerProvider in
+    Phase 53 (Batch 2). The legacy context is now orphaned.
+  - 18 V11 video test files in __tests__/ — the 2 tests that
+    were previously failing (videoLockedOverlay,
+    videoDeadControlSweep) are part of this set; with them
+    gone, the test suite is at 100% pass.
 
 Cross-reference fixes:
-  - rangeNormalization (the cache-range normalizer for the
-    seek-bar's grey "downloaded" overlay) is audio-agnostic,
-    so it was promoted to src/utils/bufferedRanges.ts. The
-    consumer's contexts/TransportContext.tsx now imports from
-    the new location.
-  - src/modules/playback/PlaybackOverlayHost.tsx still imports
-    the doomed video module for its in-flight fallback path,
-    but the V11 audio imports were removed. The component's
-    render body now returns null (the App.tsx doesn't render
-    it after Phase 54 anyway). Phase 57 will fully delete
-    PlaybackOverlayHost + the doomed video module.
+  - The consumer's package.json `codegenConfig` block (which
+    pointed at the now-deleted `jsSrcsDir: "src/native"`) is
+    removed. The consumer app no longer owns a TurboModule spec;
+    the V13 module is the bridge's sole owner.
+
+Migration notes:
+  - The 18 V11 test files were the 14 specified by the V13
+    spec + 4 cross-referenced ones (autoHideTriggerContract,
+    videoPlatformCapabilities, videoManifestUnpinned,
+    videoCopyA11yPerfFinal) that referenced the deleted video
+    module.
+  - The trashed files are kept at v13-trash-2026-09-04/ (already
+    gitignored from Phase 55) for safety. They can be removed
+    with `git rm -r v13-trash-2026-09-04/` after Phase 58.
 
 Verification:
-  - npx tsc --noEmit: clean.
-  - npm test: 203/206 pass (same 2 pre-existing V11 video tests).
+  - npx tsc --noEmit: clean across the full consumer codebase.
+  - npm test: 19/19 + 1 todo pass across 5 suites. ZERO failures
+    (the 2 V11 video test failures are gone).
 
-Remaining V11 dead code (Phase 56/57):
-  - src/native/ (Phase 56)
-  - src/modules/playback/PlaybackContext.tsx (Phase 57)
-  - src/modules/playback/PlaybackOverlayHost.tsx (Phase 57)
-  - src/modules/playback/types.ts (Phase 57)
-  - src/modules/playback/index.ts (Phase 57)
-  - src/modules/playback/video/* (Phase 57)
-  - src/contexts/TransportContext.tsx (Phase 57)
-  - 14 V11 video test files (Phase 57)
+Final V13 state:
+  - Phase 50: bridge surface + 22 events. v1.1.0 on npm
+    `staging`; promote to `latest` is the user's manual step.
+  - Phase 51: PlayerState/PlayerCommands/PlayerProgress + live
+    state.
+  - Phase 52: usePlayerActivity hook.
+  - Phase 53: 5 batches of consumer migration.
+  - Phase 54: mount module PlayerRoot in activity (code done,
+    device verify pending).
+  - Phase 55: delete V11 audio components.
+  - Phase 56: delete src/native/ + codegenConfig.
+  - Phase 57: delete remaining V11 player dead code.
+  - Phase 58: release v1.2.0 (pending).
+
+Out of scope (Phase 58):
+  - npm version bump in the module (1.1.0 -> 1.2.0).
+  - Tag v1.2.0 in the module repo and push to origin.
+  - release.yml publishes 1.2.0 to npm `staging` (user then
+    runs promote.yml).
+  - User runs the consumer's Android emulator / device test
+    to verify Phase 54's PlayerRoot rendering.

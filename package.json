@@ -80,11 +80,6 @@
     "test-renderer": "^1.2.0",
     "typescript": "^5.8.3"
   },
-  "codegenConfig": {
-    "name": "SimbaPlayer",
-    "type": "app",
-    "jsSrcsDir": "src/native"
-  },
   "engines": {
     "node": ">= 22.11.0"
   }
