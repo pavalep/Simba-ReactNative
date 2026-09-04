@@ -351,21 +351,21 @@ The V12 spec used 8 waves / 49 phases. V13 collapses to a single wave because th
 
 ### Phase 58 — V13.0.0 release
 
-**Status:** [ ] Pending
+**Status:** [~] In Progress (v1.2.0 tagged + pushed; release.yml running; on-device smoke test + promote to `latest` are user steps)
 **Estimated effort:** 1 day
 **Deliverable:** Module published as `1.2.0` (V13 minor; the bridge expansion + new hooks are backward-compatible consumer-facing changes). Final QA report + cross-reference updates.
 
-- [ ] 58.1 Bump module `package.json` to `1.2.0`
-- [ ] 58.2 Update `CHANGELOG.md`
-- [ ] 58.3 Final QA: `npm test` + `npm run typecheck` from the module repo must pass
-- [ ] 58.4 Final QA: `npm run typecheck` + `npm test` from the consumer repo must pass
+- [x] 58.1 Bump module `package.json` to `1.2.0` (commit `9ea0456`)
+- [x] 58.2 Update `CHANGELOG.md` (commit `9ea0456`)
+- [x] 58.3 Final QA: `npm test` + `npm run typecheck` from the module repo must pass (100/100 pass, typecheck clean)
+- [x] 58.4 Final QA: `npm run typecheck` + `npm test` from the consumer repo must pass (19/19 + 1 todo pass, typecheck clean)
 - [ ] 58.5 Build consumer APK + install on a test device: `MOBILE_APP_REACT_NATIVE/android/gradlew.bat :app:assembleDebug`
 - [ ] 58.6 Smoke test: play a video, play an audio file, seek, pause, skip, PiP, lock-screen controls, Bluetooth controls, exit PiP, exit app + relaunch + resume
-- [ ] 58.7 `git tag v1.2.0 && git push origin v1.2.0` — release.yml publishes to npm `staging`
-- [ ] 58.8 Trigger `promote.yml` → flips `1.2.0` to `latest`
-- [ ] 58.9 Write `md/SIMBA_PLAYER_MODULE_V13_FINAL_QA_REPORT.md` (sign-off)
-- [ ] 58.10 Update V13 planning doc's status note (link to the V13 spec + tracker)
-- [ ] 58.11 Update `X:\Development\SIMBA\secrets\RELEASE_FLOW.md` if any release flow steps changed
+- [x] 58.7 `git tag v1.2.0 && git push origin v1.2.0` (tag pushed; release.yml is running in CI)
+- [ ] 58.8 Trigger `promote.yml` → flips `1.2.0` to `latest` ([run workflow](https://github.com/pavalep/react-native-media-player/actions/workflows/promote.yml))
+- [x] 58.9 Write `md/SIMBA_PLAYER_MODULE_V13_FINAL_QA_REPORT.md` (sign-off)
+- [x] 58.10 Update V13 planning doc's status note (link to the V13 spec + tracker)
+- [x] 58.11 Update `X:\Development\SIMBA\secrets\RELEASE_FLOW.md` if any release flow steps changed (added V13.0.0 release notes section)
 
 ---
 
