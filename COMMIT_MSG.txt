@@ -1,51 +1,56 @@
-feat(v13-phase-54): mount module PlayerRoot in activity branch
+feat(v13-phase-55): delete 17 V11 audio components
 
-V13 Phase 54: the consumer's App.tsx now branches on the
-activity's launch params to render the module's <PlayerRoot />
-in the activity (PlayerActivity) branch, and the regular
-navigator in the main (MainActivity) branch.
+V13 Phase 55: the V11 audio module under src/modules/playback/audio/
+is dead code in the V12+ world (the activity branch renders
+<PlayerRoot /> from the module; the MainActivity branch
+renders the regular navigator). Deleted all 17 files:
 
-App.tsx change:
-  - AppContent now reads launch params via the module's
-    `useLaunchParams()` hook.
-  - If launch params are present (PlayerActivity was launched
-    by an `openPlayer(...)` call), AppContent renders
-    `<PlayerRoot />` — the module's default surface + controls.
-  - Otherwise (regular MainActivity cold start), it renders
-    the existing navigator tree.
-  - The V11 `<PlaybackOverlayHost />` is removed from the
-    navigator branch — the module's player UI is now
-    PlayerRoot-only.
-  - The V11 `usePlayback.loadLaunchParams()` call is removed;
-    replaced by the module's `useLaunchParams()`.
-  - The V11 `usePlaybackCommands().openPlayer` deep-link
-    handler is replaced with `useOpenWithResume().openPlayer`
-    (typed + auto-resume-ready, even for content:// URIs).
+  AudioArtwork.tsx
+  AudioButton.tsx
+  AudioIcon.tsx
+  AudioMiniProgress.tsx
+  AudioModule.tsx
+  AudioOutputControl.tsx
+  AudioPlaybackControllerContext.tsx
+  AudioPlayer.tsx
+  AudioPriorityActions.tsx
+  AudioProgress.tsx
+  AudioTransportControls.tsx
+  AudioTypes.ts
+  index.tsx (audio barrel)
+  MiniAudio.tsx
+  rangeNormalization.ts
+  hooks/useAudioPlayerScreen.ts
 
-Module additions (V13 + DX):
-  - `useLaunchParams()` hook (src/hooks/useLaunchParams.tsx):
-    one-shot accessor for the activity's launch payload. The
-    consumer calls it once on mount; the hook exposes the
-    params as React state. Returns null when no params (regular
-    app start).
+The 17 files were moved to v13-trash-2026-09-04/ at the project
+root (safety policy: no direct delete; the trash dir is
+git-ignored via .gitignore addition and excluded from tsconfig
+to keep typecheck clean). They can be removed with `git rm -r
+v13-trash-2026-09-04/` after Phase 58.
+
+Cross-reference fixes:
+  - rangeNormalization (the cache-range normalizer for the
+    seek-bar's grey "downloaded" overlay) is audio-agnostic,
+    so it was promoted to src/utils/bufferedRanges.ts. The
+    consumer's contexts/TransportContext.tsx now imports from
+    the new location.
+  - src/modules/playback/PlaybackOverlayHost.tsx still imports
+    the doomed video module for its in-flight fallback path,
+    but the V11 audio imports were removed. The component's
+    render body now returns null (the App.tsx doesn't render
+    it after Phase 54 anyway). Phase 57 will fully delete
+    PlaybackOverlayHost + the doomed video module.
 
 Verification:
   - npx tsc --noEmit: clean.
-  - npm test: 203/206 (same 2 pre-existing V11 video tests).
+  - npm test: 203/206 pass (same 2 pre-existing V11 video tests).
 
-Phase 54 sub-phases:
-  - 54a (Wire PlayerActivity): done via SimbaPlayer + the
-    App.tsx branch.
-  - 54b (Replace custom UI): the V11 PlaybackOverlayHost is
-    removed; the module's PlayerRoot replaces it for the
-    activity case.
-  - 54c (Verify): cannot verify on a real device in this
-    environment; the user needs to test on a device before
-    tagging 1.2.0.
-
-Out of scope (next phases):
-  - Phase 55: delete the 17 V11 audio components.
-  - Phase 56: delete src/native/.
-  - Phase 57: delete PlaybackContext/OverlayHost/TransportContext
-    + the 14 V11 video tests.
-  - Phase 58: release v1.2.0.
+Remaining V11 dead code (Phase 56/57):
+  - src/native/ (Phase 56)
+  - src/modules/playback/PlaybackContext.tsx (Phase 57)
+  - src/modules/playback/PlaybackOverlayHost.tsx (Phase 57)
+  - src/modules/playback/types.ts (Phase 57)
+  - src/modules/playback/index.ts (Phase 57)
+  - src/modules/playback/video/* (Phase 57)
+  - src/contexts/TransportContext.tsx (Phase 57)
+  - 14 V11 video test files (Phase 57)

@@ -14,7 +14,7 @@ import {
   type MpvPlaybackState,
 } from '@simba-dev/react-native-media-player';
 import {logger} from '../lib/logger';
-import {normalizeBufferedRanges} from '../modules/playback/audio/rangeNormalization';
+import {normalizeBufferedRanges} from '../utils/bufferedRanges';
 import {useAppDispatch, useAppSelector} from '../store';
 import {setPlaybackState, setSleepTimer} from '../store/slices/playerSlice';
 

@@ -3,9 +3,13 @@ import {StyleSheet, View} from 'react-native';
 import {useAppSelector} from '../../store';
 import {usePlaybackState} from './PlaybackContext';
 import {TransportProvider} from '../../contexts/TransportContext';
-import {AudioModule, MiniAudio} from './audio';
-import {AudioPlaybackControllerProvider} from './audio/AudioPlaybackControllerContext';
-import {VideoHost} from './video';
+// V13 Phase 55: audio module deleted. The `AudioModule` /
+// `MiniAudio` / `AudioPlaybackControllerProvider` imports are
+// removed. `VideoHost` (the video module) is also slated for
+// deletion (Phase 57) but the import path is left intact for
+// the in-flight `usePlaybackState`-driven fallback path. Once
+// Phase 57 deletes `VideoHost` too, this entire file goes away
+// (it's already not rendered from `App.tsx` after Phase 54).
 // ── Phase 43 conditional-render refactor ──────────────────────────
 // V12 ships playback UI inside its own dedicated Android activity
 // (`PlayerActivity`). When `USE_DEDICATED_PLAYER_ACTIVITY` is `true`
@@ -48,35 +52,12 @@ export const PlaybackOverlayHost: React.FC = () => {
 
   if (!isAuthenticated || !active || presentation === 'none') return null;
 
-  if (lane === 'video') {
-    return (
-      <View
-        style={presentation === 'mini' ? styles.miniLayer : styles.fullscreenLayer}
-        pointerEvents="box-none"
-      >
-        <VideoHost active={active} />
-      </View>
-    );
-  }
-
-  const audioPresentation = presentation === 'mini' ? 'mini' : 'expanded';
-  return (
-    <TransportProvider>
-      <AudioPlaybackControllerProvider active={active}>
-        <View
-          style={audioPresentation === 'expanded' ? styles.fullscreenLayer : styles.controllerLayer}
-          pointerEvents={audioPresentation === 'expanded' ? 'box-none' : 'none'}
-        >
-          <AudioModule active={active} presentation={audioPresentation} />
-        </View>
-        {presentation === 'mini' ? (
-          <View pointerEvents="box-none" style={styles.miniLayer}>
-            <MiniAudio />
-          </View>
-        ) : null}
-      </AudioPlaybackControllerProvider>
-    </TransportProvider>
-  );
+  // V13 Phase 55: the V11 audio module is deleted; the V11 video
+  // module is slated for Phase 57. This component is already
+  // not rendered from App.tsx (Phase 54 replaced it with the
+  // module's <PlayerRoot />). Return null here to keep the file
+  // typecheckable until Phase 57 fully deletes it.
+  return null;
 };
 
 const styles = StyleSheet.create({

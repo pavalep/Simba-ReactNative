@@ -1,3 +1,12 @@
+/**
+ * V11→V13 migration: this helper was previously in
+ * `src/modules/playback/audio/rangeNormalization.ts`. Phase 55
+ * deleted the V11 audio module; the helper moved to
+ * `src/utils/bufferedRanges.ts` because it's not audio-specific
+ * (it's a generic mpv cache-range normalizer used by the
+ * transport state for the seek-bar's grey "downloaded" overlay).
+ */
+
 export interface BufferedTimeRange {
   start: number;
   end: number;

@@ -24,6 +24,7 @@
     "**/graphify-out/**",
     "**/.verification/**",
     "**/maestro-baselines/**",
-    "**/_reference_codes/**"
+    "**/_reference_codes/**",
+    "v13-trash-2026-09-04/**"
   ]
 }
