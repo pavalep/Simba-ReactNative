@@ -1,42 +1,56 @@
-feat(v13-phase-53b): migrate 3 simple services to module bridge
+feat(v13-phase-53b-53c): migrate notificationService + TransportContext to module bridge
 
-V13 Phase 53 Batch 1: migrate fileService, audioSettingsService,
-metadataService from the legacy src/native/player.api MpvPlayer wrapper
-to the module's getMpvPlayerModule() typed bridge. The 3 files all
-imported MpvPlayer from '../native/player.api' or '../native' and
-called a small number of methods (grantPersistablePermission,
-verifyContentUri, setProperty, getProperty) which are now reachable
-via getMpvPlayerModule().
+V13 Phase 53 Batch 2: the two "complex" services that use the event
+subscription API.
 
-Other consumer-side changes in this commit:
-- tsconfig.json: added `paths` mapping for @simba-dev/react-native-media-player
-  pointing to ../react-native-media-player/src/index.ts. This lets the
-  consumer typecheck against the module source without a real npm
-  install. Runtime resolution still needs the file: dep + npm install.
-- package.json: added @simba-dev/react-native-media-player as a
-  `file:../react-native-media-player` dev dep. Sibling-folder dev
-  pattern; user can swap to ^1.1.0 after the promote step.
-- src/hooks/index.ts: fixed pre-existing parse error in a markdown
-  link that was broken across two lines (collateral fix, blocks typecheck).
+notificationService.ts (53b.6 + 53c.1):
+- Routes `isNotificationActive` and `requestNotificationPermission`
+  through `getMpvPlayerModule()` (the typed V13 bridge has both
+  methods).
+- The four V11-only methods (`startNotification`, `updateNotification`,
+  `stopNotification`) stay on `NativeModules.MpvPlayerModule` directly
+  with a local typed cast. They're NOT in the V13 module bridge because
+  V12's MediaPlaybackService handles the foreground notification
+  natively — these calls are dead code in the default V12+ flow and
+  only kept for the V11 emergency rollback path.
+- The V11 notification event channel (`onNotificationPlay`,
+  `onNotificationPause`, etc.) is NOT part of the module's typed
+  `PlayerEventName` union, so `notificationEmitter` stays as-is. The
+  module's `subscribePlayerEvent` handles the 22 mpv events; the V11
+  notification events live on a separate native channel.
 
-Coverage:
-- fileService.ts: 2 method calls migrated (grantPersistablePermission,
-  verifyContentUri). No other imports from native/player.api remain.
-- audioSettingsService.ts: 7 setProperty call sites migrated; bridge
-  resolved once at function start for the multi-call form.
-- metadataService.ts: 2 getProperty call sites migrated; bridge
-  resolved once at function start.
+TransportContext.tsx (53b.7 + 53c.2):
+- Resolves `const bridge = useMemo(() => getMpvPlayerModule(), [])`
+  once at provider mount.
+- Replaces 8 `MpvPlayer.on(event, handler)` calls with
+  `subscribePlayerEvent(event, handler)` from the module. The event
+  names + payload shapes are identical to the V11 ones; only the call
+  site moved into the module.
+- Replaces `MpvPlayer.setProperty`, `getProperty`, `pause`, `resume`
+  (mapped to `play`), `getPosition`, `getDuration`, `getPlaybackState`,
+  `seekTo` (mapped to `seekAbsolute`), `observeProperty`,
+  `unobserveProperty` with their `bridge.X()` equivalents.
+- `MpvPlayer.resume()` -> `bridge.play()` (the module consolidates
+  resume into the canonical `play` RPC; semantically identical).
+- `MpvPlayer.seekTo(secs)` -> `bridge.seekAbsolute(secs)` (both take
+  seconds, semantically identical).
+- The 1Hz position/duration poll now uses `bridge.getPosition` /
+  `bridge.getDuration` / `bridge.getPlaybackState`.
+- The sleep-timer volume-fade logic now uses `bridge.setProperty('volume', ...)`
+  and `bridge.getProperty('volume')`.
+- Cleanup `unsubPosition()` etc. unchanged — the module's
+  `subscribePlayerEvent` returns the same `() => void` unsubscribe
+  shape as the V11 `MpvPlayer.on`.
+- `MpvPlaybackState` is re-exported from the module for downstream
+  consumers that dispatch Redux actions based on the typed state.
 
 Verification:
-- npx tsc --noEmit: clean across the whole consumer codebase.
-- npm test: 203/206 pass. The 2 failures are pre-existing V11 video
-  tests (videoLockedOverlay.test.tsx, videoDeadControlSweep.test.tsx)
-  that the V13 spec schedules for deletion in Phase 57.7. Confirmed
-  by stashing this commit and re-running — the same 2 fail.
+- npx tsc --noEmit: clean across the full consumer codebase.
+- npm test: 203/206 pass. The 2 failures are the same pre-existing V11
+  video tests (videoLockedOverlay, videoDeadControlSweep) that Phase 57
+  schedules for deletion. No new failures from this batch.
 
 Out of scope (next batches):
-- Batch 2: notificationService + TransportContext (53b.6 + 53b.7 + 53c).
-- Batch 3: 32 screen files (53a — usePlaybackCommands -> usePlayerActivity).
-- Batch 4: src/screens/QueueScreen/hooks/useQueueScreen.ts (extra
-  MpvPlayer import not in the spec).
-- Batch 5: typecheck + jest for the full consumer after migration.
+- Batch 3: 32 screen files (usePlaybackCommands -> usePlayerActivity).
+- Batch 4: useQueueScreen.ts (extra MpvPlayer import).
+- Batch 5: final typecheck + jest for the full consumer.

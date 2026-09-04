@@ -5,9 +5,14 @@ import React, {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react';
-import {MpvPlayer} from '../native';
+import {
+  getMpvPlayerModule,
+  subscribePlayerEvent,
+  type MpvPlaybackState,
+} from '@simba-dev/react-native-media-player';
 import {logger} from '../lib/logger';
 import {normalizeBufferedRanges} from '../modules/playback/audio/rangeNormalization';
 import {useAppDispatch, useAppSelector} from '../store';
@@ -96,6 +101,11 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   enabled = true,
   chapters = [],
 }) => {
+  // V13 Phase 53b: resolve the module bridge once. The bridge is a
+  // module-scope singleton inside the module; the no-op fallback kicks
+  // in when the native module is absent (jest, web previews).
+  const bridge = useMemo(() => getMpvPlayerModule(), []);
+
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -149,12 +159,12 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     // Restore the volume that was faded out during the final 10s
     if (fadeStartedRef.current && baseVolumeRef.current !== null) {
       try {
-        MpvPlayer.setProperty('volume', baseVolumeRef.current);
+        bridge.setProperty('volume', baseVolumeRef.current);
       } catch {}
     }
     fadeStartedRef.current = false;
     baseVolumeRef.current = null;
-  }, [dispatch]);
+  }, [dispatch, bridge]);
 
   // ── Sleep timer countdown ───────────────────────────────
   // Ticks with the polling interval; pauses playback when the timer expires.
@@ -183,7 +193,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         if (remaining <= FADE_WINDOW_MS && remaining > 0 && !fadeStartedRef.current) {
           fadeStartedRef.current = true;
           try {
-            const cur = Number(MpvPlayer.getProperty?.('volume') ?? 100);
+            const cur = Number(bridge.getProperty('volume') ?? 100);
             baseVolumeRef.current = Number.isFinite(cur) ? cur : 100;
           } catch {
             baseVolumeRef.current = 100;
@@ -193,13 +203,13 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         if (fadeStartedRef.current && baseVolumeRef.current !== null) {
           const factor = Math.max(0, remaining / FADE_WINDOW_MS);
           try {
-            MpvPlayer.setProperty('volume', Math.max(1, baseVolumeRef.current * factor));
+            bridge.setProperty('volume', Math.max(1, baseVolumeRef.current * factor));
           } catch {}
         }
 
         if (remaining <= 0) {
           try {
-            MpvPlayer.pause();
+            bridge.pause();
           } catch {}
           dispatch(setPlaybackState('paused'));
           disarmTimer();
@@ -232,7 +242,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         segmentEnd - curPos <= END_TOLERANCE_S
       ) {
         try {
-          MpvPlayer.pause();
+          bridge.pause();
         } catch {}
         dispatch(setPlaybackState('paused'));
         disarmTimer();
@@ -240,7 +250,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     }, pollInterval);
 
     return () => clearInterval(interval);
-  }, [sleepTimerEndTime, sleepTimerMode, enabled, pollInterval, dispatch, disarmTimer]);
+  }, [sleepTimerEndTime, sleepTimerMode, enabled, pollInterval, dispatch, disarmTimer, bridge]);
 
   // The native bridge may not emit dedicated position/state events on every
   // build. Keep the event subscriptions for low-latency updates, but also poll
@@ -249,7 +259,13 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
   useEffect(() => {
     if (!isReady || !enabled) return;
 
-    const unsubPosition = MpvPlayer.on('onPositionChanged', ({position: nextPosition}) => {
+    // V13 Phase 53b: `MpvPlayer.on(event, handler)` becomes
+    // `subscribePlayerEvent(event, handler)`. The event names and
+    // payload shapes are the same — only the call site moved into the
+    // module. The unsubscribe function returned by `subscribePlayerEvent`
+    // is structurally identical to the V11 one (both `() => void`),
+    // so the cleanup logic is unchanged.
+    const unsubPosition = subscribePlayerEvent('onPositionChanged', ({position: nextPosition}) => {
       if (!isNaN(nextPosition)) setPosition(nextPosition);
       if (!hasPlaybackStateEventsRef.current) {
         const prev = lastPositionRef.current;
@@ -265,19 +281,19 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         lastPositionRef.current = nextPosition;
       }
     });
-    const unsubState = MpvPlayer.on('onPlaybackStateChanged', ({state}: {state: string}) => {
+    const unsubState = subscribePlayerEvent('onPlaybackStateChanged', ({state}) => {
       hasPlaybackStateEventsRef.current = true;
       setIsPlaying(state === 'playing');
       if (state === 'playing') setIsEnded(false);
     });
-    const unsubEndFile = MpvPlayer.on('onEndFile', ({reason}: {reason: number}) => {
+    const unsubEndFile = subscribePlayerEvent('onEndFile', ({reason}) => {
       if (reason !== 0) return;
       setIsPlaying(false);
       setIsEnded(true);
       dispatch(setPlaybackState('stopped'));
       logger.info('[PlaybackTrace][Transport][ended]', {position: positionRef.current, duration: durationRef.current});
     });
-    const unsubFileLoaded = MpvPlayer.on('onFileLoaded', () => {
+    const unsubFileLoaded = subscribePlayerEvent('onFileLoaded', () => {
       lastCacheRangesSignatureRef.current = '';
       setBufferedRanges([]);
       setCacheFill(0);
@@ -311,14 +327,14 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     // The native bridge merges `cache-buffering-state` and
     // `paused-for-cache` into a single `onBuffering` event with a
     // `percent` payload so the consumer has one boolean to watch.
-    const unsubBuffering = MpvPlayer.on('onBuffering', ({percent, isBuffering: buffering}: {percent: number; isBuffering?: boolean}) => {
+    const unsubBuffering = subscribePlayerEvent('onBuffering', ({percent, isBuffering: buffering}) => {
       const normalized = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 100;
       if (normalized > 0 || buffering === false) setCacheFill(normalized / 100);
       setIsBuffering(buffering ?? (normalized > 0 && normalized < 100));
     });
-    const unsubCacheState = MpvPlayer.on(
+    const unsubCacheState = subscribePlayerEvent(
       'onCacheState',
-      ({ranges}: {ranges: Array<{start: number; end: number}>; fill?: number}) => {
+      ({ranges}) => {
         const rawRanges = ranges.map(range => ({start: range.start, end: range.end}));
         const normalizedRanges = normalizeBufferedRanges(
           rawRanges,
@@ -335,10 +351,10 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         setBufferedRanges(normalizedRanges);
       },
     );
-    const unsubSeekable = MpvPlayer.on('onSeekable', ({seekable}: {seekable: boolean}) => {
+    const unsubSeekable = subscribePlayerEvent('onSeekable', ({seekable}) => {
       setIsSeekable(seekable);
     });
-    const unsubSeeking = MpvPlayer.on('onSeeking', ({seeking}: {seeking: boolean}) => {
+    const unsubSeeking = subscribePlayerEvent('onSeeking', ({seeking}) => {
       setIsSeeking(seeking);
       if (seeking) setIsEnded(false);
       logger.info('[PlaybackTrace][Transport][seeking]', {
@@ -352,27 +368,27 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
     // observeProperty() is idempotent for the same property — calling it
     // twice is safe and only registers one observer.
     try {
-      MpvPlayer.observeProperty('cache-buffering-state');
+      bridge.observeProperty('cache-buffering-state');
     } catch {}
     try {
-      MpvPlayer.observeProperty('paused-for-cache');
+      bridge.observeProperty('paused-for-cache');
     } catch {}
     try {
-      MpvPlayer.observeProperty('demuxer-cache-state');
+      bridge.observeProperty('demuxer-cache-state');
     } catch {}
     try {
-      MpvPlayer.observeProperty('seekable');
+      bridge.observeProperty('seekable');
     } catch {}
     try {
-      MpvPlayer.observeProperty('seeking');
+      bridge.observeProperty('seeking');
     } catch {}
 
     const interval = setInterval(() => {
       if (!isReadyRef.current) return;
       try {
-        const nextPosition = MpvPlayer.getPosition();
-        const dur = MpvPlayer.getDuration();
-        const nativeState = MpvPlayer.getPlaybackState();
+        const nextPosition = bridge.getPosition();
+        const dur = bridge.getDuration();
+        const nativeState = bridge.getPlaybackState();
 
         if (Number.isFinite(nextPosition) && nextPosition >= 0) {
           if (nextPosition > lastPositionRef.current + 0.12) {
@@ -384,7 +400,7 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
         }
         if (Number.isFinite(dur) && dur > 0) setDuration(dur);
 
-        const nativeIsPlaying = nativeState === 'playing';
+        const nativeIsPlaying: boolean = nativeState === 'playing';
         if (nativeIsPlaying !== isPlayingRef.current) {
           setIsPlaying(nativeIsPlaying);
         }
@@ -406,50 +422,55 @@ export const TransportProvider: React.FC<TransportProviderProps> = ({
       // Stop receiving buffer-state updates so this provider doesn't
       // leak listeners when the screen unmounts.
       try {
-        MpvPlayer.unobserveProperty('cache-buffering-state');
+        bridge.unobserveProperty('cache-buffering-state');
       } catch {}
       try {
-        MpvPlayer.unobserveProperty('paused-for-cache');
+        bridge.unobserveProperty('paused-for-cache');
       } catch {}
       try {
-        MpvPlayer.unobserveProperty('demuxer-cache-state');
+        bridge.unobserveProperty('demuxer-cache-state');
       } catch {}
       try {
-        MpvPlayer.unobserveProperty('seekable');
+        bridge.unobserveProperty('seekable');
       } catch {}
       try {
-        MpvPlayer.unobserveProperty('seeking');
+        bridge.unobserveProperty('seeking');
       } catch {}
     };
-  }, [dispatch, isReady, enabled, pollInterval]);
+  }, [dispatch, isReady, enabled, pollInterval, bridge]);
 
   // ── Actions ──
   const seekTo = useCallback((fraction: number) => {
     try {
-      const dur = MpvPlayer.getDuration();
+      const dur = bridge.getDuration();
       if (!isNaN(dur)) {
-        MpvPlayer.seekTo(fraction * dur);
+        // V13: the module's seekAbsolute takes seconds (same as V11's
+        // seekTo). The two are semantically identical.
+        bridge.seekAbsolute(fraction * dur);
       }
     } catch {}
-  }, []);
+  }, [bridge]);
 
   const play = useCallback(() => {
-    try { MpvPlayer.resume(); } catch {}
-  }, []);
+    // V13: the module exposes `play()` as the canonical "resume / start"
+    // command. V11 had a separate `resume()` alias; the module
+    // consolidates them.
+    try { bridge.play(); } catch {}
+  }, [bridge]);
 
   const pause = useCallback(() => {
-    try { MpvPlayer.pause(); } catch {}
-  }, []);
+    try { bridge.pause(); } catch {}
+  }, [bridge]);
 
   const togglePlayPause = useCallback(() => {
     try {
-      if (MpvPlayer.getPlaybackState() === 'playing') {
-        MpvPlayer.pause();
+      if (bridge.getPlaybackState() === 'playing') {
+        bridge.pause();
       } else {
-        MpvPlayer.resume();
+        bridge.play();
       }
     } catch {}
-  }, []);
+  }, [bridge]);
 
   const pushPosition = useCallback((pos: number) => {
     if (!isNaN(pos)) setPosition(pos);
@@ -490,3 +511,10 @@ export function useTransport(): TransportContextValue {
   }
   return ctx;
 }
+
+// Suppress unused-import warning for the type-only re-export below.
+// `MpvPlaybackState` is re-exported from this module for downstream
+// consumers (e.g. audio screens) that need the bridge's playback-state
+// union when dispatching Redux actions. Keeping the import in the type
+// position so the re-export survives any future refactor.
+export type {MpvPlaybackState};

@@ -176,7 +176,7 @@ Committed as `3d6c3da` (same commit as Phase 51) on 2026-09-04. `usePlayerActivi
 | 50 | Expand `MpvPlayerModuleBridge` typed surface | [~] | 1.5 days | Bridge covers all 78 native methods + 22 events; v1.1.0 on `staging` (promote pending) |
 | 51 | Expand `PlayerState` / `PlayerCommands` / `PlayerProgress` + wire to events | [x] | 2 days | `usePlayer` returns live state from mpv events; 100/100 tests pass |
 | 52 | Add `usePlayerActivity()` hook | [x] | 0.5 day | `openPlayer` + `getLaunchParams` exposed via module |
-| 53 | Migrate consumer to module | [ ] | 2 days | All 33+ call sites import from module; typecheck passes |
+| 53 | Migrate consumer to module | [~] | 2 days | Batch 1 (3 services) done; 4 batches remaining |
 | 54 | Mount module UI in `PlayerActivity` | [ ] | 1 day | `<PlayerProvider>` + `<PlayerRoot>` + `<DefaultControls>` in activity |
 | 55 | Delete legacy V11 audio components | [ ] | 1 day | All `src/modules/playback/audio/` files deleted |
 | 56 | Delete the inline bridge code | [ ] | 0.5 day | `src/native/` deleted; codegenConfig updated |
