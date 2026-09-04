@@ -202,8 +202,8 @@ All four are exported from `@simba-dev/react-native-media-player` index.ts and a
 | 53 | Migrate consumer to module | [x] | 2 days | All 5 batches done; 38 source files migrated; module gained `resolveStreamType` + `useOpenWithResume` + `SimbaPlayer` wrapper |
 | 54 | Mount module UI in `PlayerActivity` | [x] | 1 day | `<PlayerRoot>` mounted via `useLaunchParams` branch in App.tsx; V11 `<PlaybackOverlayHost>` removed (commits `7c35606` + `f1254a4`); device verification pending |
 | 55 | Delete legacy V11 audio components | [x] | 1 day | All 17 audio files deleted (commit `bae551a`); `rangeNormalization` promoted to `src/utils/bufferedRanges.ts` |
-| 56 | Delete the inline bridge code | [ ] | 0.5 day | `src/native/` deleted; codegenConfig updated |
-| 57 | Delete `PlaybackContext.tsx` + `PlaybackOverlayHost.tsx` + `TransportContext.tsx` | [ ] | 1 day | `src/modules/playback/` and `src/contexts/TransportContext.tsx` deleted; App.tsx wrapped in `<PlayerProvider>` |
+| 56 | Delete the inline bridge code | [x] | 0.5 day | `src/native/` deleted; `codegenConfig` removed; `tsc` clean (commit `9c6c81c`) |
+| 57 | Delete `PlaybackContext.tsx` + `PlaybackOverlayHost.tsx` + `TransportContext.tsx` | [x] | 1 day | All V11 dead code + 18 V11 tests deleted; 0 jest failures; `tsc` clean (commit `9c6c81c`) |
 | 58 | V13.0.0 release | [ ] | 1 day | Module published as v1.2.0 via CI/CD; final QA report |
 
 **Total estimated V13 effort:** ~10 working days (~2 weeks).
