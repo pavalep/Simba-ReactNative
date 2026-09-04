@@ -9,11 +9,10 @@ import {selectAlbumTracks} from '../../../store/slices/mediaSlice';
 import {
   loadPlaylistToPlayer,
   playFromPlaylist,
-  type PlaylistEntry,
 } from '../../../store/slices/playerSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {useOpenPlaylist, usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AlbumScreen'>;
 type Route = RouteProp<RootStackParamList, 'AlbumScreen'>;
@@ -23,6 +22,9 @@ export function useAlbumScreen() {
   const route = useRoute<Route>();
   const dispatch = useAppDispatch();
   const {openPlayer} = usePlayerActivity();
+  // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
+  // pattern (entries extraction + start-track dispatch + openPlayer).
+  const {openPlaylist} = useOpenPlaylist();
 
   const {albumName, artistName} = route.params;
 
@@ -96,54 +98,27 @@ export function useAlbumScreen() {
 
   const handlePlayTrack = useCallback(
     (indexInAlbum: number) => {
-      const entries: PlaylistEntry[] = sortedTracks.map(t => ({
-        ...t,
-      }));
-      if (entries.length === 0) return;
-      dispatch(loadPlaylistToPlayer(entries));
+      if (sortedTracks.length === 0) return;
+      dispatch(loadPlaylistToPlayer(sortedTracks));
       if (indexInAlbum > 0) {
         dispatch(playFromPlaylist(indexInAlbum));
       }
-      const entry = entries[indexInAlbum];
-      if (!entry) return;
-      openPlayer({
-        uri: entry.uri,
-        title: entry.title,
-        type: 'audio',
-      });
+      openPlaylist(sortedTracks, {type: 'audio', startIndex: indexInAlbum});
     },
-    [sortedTracks, dispatch, openPlayer],
+    [sortedTracks, dispatch, openPlaylist],
   );
 
   const handlePlayAll = useCallback(() => {
-    const entries: PlaylistEntry[] = sortedTracks.map(t => ({
-      ...t,
-    }));
-    if (entries.length === 0) return;
-    dispatch(loadPlaylistToPlayer(entries));
-    openPlayer({
-      uri: entries[0].uri,
-      title: entries[0].title,
-      type: 'audio',
-    });
-  }, [sortedTracks, dispatch, openPlayer]);
+    if (sortedTracks.length === 0) return;
+    dispatch(loadPlaylistToPlayer(sortedTracks));
+    openPlaylist(sortedTracks, {type: 'audio'});
+  }, [sortedTracks, dispatch, openPlaylist]);
 
   const handleShuffleAll = useCallback(() => {
-    const entries: PlaylistEntry[] = sortedTracks.map(t => ({
-      ...t,
-    }));
-    for (let i = entries.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [entries[i], entries[j]] = [entries[j], entries[i]];
-    }
-    if (entries.length === 0) return;
-    dispatch(loadPlaylistToPlayer(entries));
-    openPlayer({
-      uri: entries[0].uri,
-      title: entries[0].title,
-      type: 'audio',
-    });
-  }, [sortedTracks, dispatch, openPlayer]);
+    if (sortedTracks.length === 0) return;
+    dispatch(loadPlaylistToPlayer(sortedTracks));
+    openPlaylist(sortedTracks, {type: 'audio', shuffle: true});
+  }, [sortedTracks, dispatch, openPlaylist]);
 
   const handleGoToArtist = useCallback(() => {
     navigation.navigate('ArtistScreen', {artistName});

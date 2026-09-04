@@ -47,7 +47,7 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {isRemoteUri} from '../../../utils/mediaUri';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, useOpenPlaylist, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 type Props = PlaylistDetailScreenProps;
 
@@ -122,6 +122,9 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   // P34.5: offline guard for remote/streaming playlist items
   const {isOnline} = useNetworkStatus();
   const {openPlayer} = usePlayerActivity();
+  // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
+  // pattern (entries extraction + start-track dispatch + openPlayer).
+  const {openPlaylist} = useOpenPlaylist();
 
   // ── Isolated playlist data ──
   const items = useMemo(() => playlist?.items ?? [], [playlist]);
@@ -156,15 +159,16 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     const entries = playlistItemsToEntries(playable);
     dispatch(loadPlaylistToPlayer(entries));
     const first = playable[0];
-    openPlayer({
-      uri: first.fileUri,
-      title: first.title,
-      type: resolveStreamType(resolveStreamType(first.type)),
-      ...(first.provider ? {provider: first.provider} : {}),
-      ...(first.folderId ? {folderId: first.folderId} : {}),
-      ...(first.thumbnailPath ? {artworkUri: first.thumbnailPath} : {}),
+    if (!first) return;
+    openPlaylist(entries, {
+      type: resolveStreamType(first.type),
+      startExtras: {
+        ...(first.provider ? {provider: first.provider} : {}),
+        ...(first.folderId ? {folderId: first.folderId} : {}),
+        ...(first.thumbnailPath ? {artworkUri: first.thumbnailPath} : {}),
+      },
     });
-  }, [items, dispatch, isOnline, openPlayer, toast]);
+  }, [items, dispatch, isOnline, openPlaylist, toast]);
 
   // ── Header: Options menu (52.1) ──
   const handleMore = useCallback(() => {

@@ -9,7 +9,7 @@ import {selectArtistDiscography} from '../../../store/slices/mediaSlice';
 import {loadPlaylistToPlayer, type PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {useOpenPlaylist, usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ArtistScreen'>;
 type Route = RouteProp<RootStackParamList, 'ArtistScreen'>;
@@ -19,6 +19,9 @@ export function useArtistScreen() {
   const route = useRoute<Route>();
   const dispatch = useAppDispatch();
   const {openPlayer} = usePlayerActivity();
+  // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
+  // pattern (entries extraction + start-track dispatch + openPlayer).
+  const {openPlaylist} = useOpenPlaylist();
 
   const {artistName} = route.params;
 
@@ -104,35 +107,16 @@ export function useArtistScreen() {
   );
 
   const handlePlayAll = useCallback(() => {
-    const entries: PlaylistEntry[] = allTracks.map(t => ({
-      ...t,
-    }));
-    if (entries.length === 0) return;
-    dispatch(loadPlaylistToPlayer(entries));
-    openPlayer({
-      uri: entries[0].uri,
-      title: entries[0].title,
-      type: 'audio',
-    });
-  }, [allTracks, dispatch, openPlayer]);
+    if (allTracks.length === 0) return;
+    dispatch(loadPlaylistToPlayer(allTracks));
+    openPlaylist(allTracks, {type: 'audio'});
+  }, [allTracks, dispatch, openPlaylist]);
 
   const handleShuffleAll = useCallback(() => {
-    const entries: PlaylistEntry[] = allTracks.map(t => ({
-      ...t,
-    }));
-    // Fisher-Yates shuffle
-    for (let i = entries.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [entries[i], entries[j]] = [entries[j], entries[i]];
-    }
-    if (entries.length === 0) return;
-    dispatch(loadPlaylistToPlayer(entries));
-    openPlayer({
-      uri: entries[0].uri,
-      title: entries[0].title,
-      type: 'audio',
-    });
-  }, [allTracks, dispatch, openPlayer]);
+    if (allTracks.length === 0) return;
+    dispatch(loadPlaylistToPlayer(allTracks));
+    openPlaylist(allTracks, {type: 'audio', shuffle: true});
+  }, [allTracks, dispatch, openPlaylist]);
 
   const handleNavigateToAlbum = useCallback(
     (albumName: string) => {

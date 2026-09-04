@@ -13,7 +13,7 @@ import {ViewMode} from '../components/ViewToggle';
 import type {PlaylistKind} from '../../../types/playlist';
 import type {LibraryScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
-import { resolveStreamType, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, useOpenPlaylist, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import type {
   ContentMode,
   FilterType,
@@ -61,6 +61,9 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const bottomChromeInset = insets.bottom + 104;
   const dispatch = useAppDispatch();
   const {openPlayer} = usePlayerActivity();
+  // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
+  // pattern (entries extraction + start-track dispatch + openPlayer).
+  const {openPlaylist} = useOpenPlaylist();
 
   // ── Library State ──
   const [activeSegment, setActiveSegment] = useState<Segment>('folders');
@@ -217,15 +220,13 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
         dispatch(loadPlaylistToPlayer(entries));
         const first = entries[0];
         if (!first) return;
-        openPlayer({
-          uri: first.uri,
-          title: first.title,
+        openPlaylist(entries, {
+          type: resolveStreamType(first.type),
           startPositionMs: first.resumePosition,
-          type: resolveStreamType(resolveStreamType(first.type)),
         });
       }
     },
-    [allPlaylists, dispatch, openPlayer],
+    [allPlaylists, dispatch, openPlaylist],
   );
 
   const handleShufflePlaylist = useCallback(
@@ -233,22 +234,17 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
       const pl = allPlaylists.find(p => p.id === playlistId);
       if (pl && pl.items.length > 0) {
         const entries = playlistItemsToEntries(pl.items);
-        for (let i = entries.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [entries[i], entries[j]] = [entries[j], entries[i]];
-        }
         dispatch(loadPlaylistToPlayer(entries));
         const first = entries[0];
         if (!first) return;
-        openPlayer({
-          uri: first.uri,
-          title: first.title,
+        openPlaylist(entries, {
+          type: resolveStreamType(first.type),
           startPositionMs: first.resumePosition,
-          type: resolveStreamType(resolveStreamType(first.type)),
+          shuffle: true,
         });
       }
     },
-    [allPlaylists, dispatch, openPlayer],
+    [allPlaylists, dispatch, openPlaylist],
   );
 
   const handlePlaylistCardPress = useCallback(
