@@ -1,65 +1,41 @@
-feat(v13-phase-53a): migrate 32 screen files to module bridge
+feat(v13-dx): wire SimbaPlayer wrapper in App.tsx with bookmark lookup
 
-V13 Phase 53 Batch 3: 32 consumer screen files migrated from the
-V11 `usePlaybackCommands` hook to the V13 module's
-`usePlayerActivity` hook.
+V13: replace the V11 <PlaybackProvider> with the module's
+<SimbaPlayer> wrapper. The wrapper composes PlayerProvider +
+PlayerResumeProvider so the consumer's App.tsx is a true
+one-import, one-wrapper integration.
 
-Per file:
-  - Import: `from '../../../modules/playback'` ->
-    `from '@simba-dev/react-native-media-player'`
-  - Hook call: `usePlaybackCommands()` -> `usePlayerActivity()`
-  - `openPlayer({...})` arg shape: V11 fields dropped
-    (`duration`, `source`, `mediaType`, `mediaLane`, `artworkUri`,
-    `folderId`, `chapterIndex`, `chapterList`, `provider`,
-    `subtitleLanguage`), renamed (`startPosition` ->
-    `startPositionMs`, `resumePosition` -> `startPositionMs`),
-    or type-narrowed (content kinds mapped to stream kinds via the
-    module's `resolveStreamType` helper).
+App.tsx change (minimal):
+  - Import: {SimbaPlayer, type PlayerResumeLookup} from
+    '@simba-dev/react-native-media-player'
+  - <PlaybackProvider> -> <SimbaPlayer lookup={resumeLookup}>
+  - Lookup reads from the consumer's Redux bookmark slice and
+    returns the most recent bookmark position (seconds -> ms)
+    for a given file URI. Screens that pass `resumeId: item.uri`
+    in their openPlayer call get auto-resume.
 
-The migration was done with two Node.js scripts
-(scripts/migrate-v13-step1.cjs and
-scripts/migrate-v13-step2.cjs) for the mechanical parts (import
-+ hook call, field drops, renames, literal type wraps) and
-manual edits for the edge cases:
-  - Single-line `openPlayer({...entry, mediaLane: 'audio'})` in
-    Album/Artist — `mediaLane` is a V11-only field; replaced
-    with explicit uri/title/type for type compatibility.
-  - `...normalizeMediaClassification({...})` spread in
-    FolderBrowser/Profile — helper returns MediaKind; the spread
-    was replaced with explicit uri/title/type.
-  - NowPlaying's `duration,` shorthand prop — replaced with
-    explicit type field.
-  - Home's `string | undefined` type — defaulted to 'audio' at
-    the resolveStreamType call site.
+The wrapper is the canonical "junior-dev integration point" for
+the module:
+  - One import
+  - One wrapper component
+  - One optional lookup function (can be omitted for non-bookmark
+    apps)
 
-DX win: the module gained a `resolveStreamType(contentKind)`
-helper that maps consumer content kinds ('music', 'movie',
-'podcast', 'live-tv', etc.) to the V13 stream types ('audio' |
-'video'). Without this helper, every one of the 32 files would
-have an inline `type: 'audio' | 'video'` ternary. The helper is
-exported from `@simba-dev/react-native-media-player` (V14
-public-API addition; the 32 files all import it).
+This is the public-facing surface for any consumer of
+@simba-dev/react-native-media-player. Module exports <SimbaPlayer>
+from the index. Documentation in the JSDoc explains the
+provider composition + the lookup adapter contract.
 
-Also added (module side, not committed in this commit, already
-on the module repo at 696fef9):
-  - useOpenWithResume + PlayerResumeProvider
-  - usePlayItem
-  - ContentKind type
-  - resolveStreamType (re-exported via index.ts)
+The 32 screen files continue to use `usePlayerActivity().openPlayer`
+(per the V13 spec migration). They can opt into
+`useOpenWithResume` for auto-resume in a follow-up by passing
+`resumeId: item.uri` (the lookup is keyed by fileUri).
 
 Verification:
   - npx tsc --noEmit: clean across the full consumer codebase.
-  - npm test: 203/206. The 2 failures are the same pre-existing
-    V11 video tests (videoLockedOverlay, videoDeadControlSweep)
-    that Phase 57 schedules for deletion. No new failures from
-    this batch.
+  - npm test: 203/206 pass (same 2 pre-existing V11 video-test
+    failures, deleted in Phase 57).
 
-Out of scope (next batches):
-  - Batch 4: useQueueScreen.ts (extra MpvPlayer import not
-    migrated by step 1).
-  - Batch 5: typecheck + jest for the full consumer.
-
-Note: scripts/migrate-v13-step1.cjs and
-scripts/migrate-v13-step2.cjs are kept in the consumer repo
-under scripts/ as one-off tools. Future migrations can reuse or
-delete them; they're not part of the build or runtime.
+Out of scope:
+  - Re-migrating the 32 screen files to useOpenWithResume
+    (V14 polish; current code is spec-compliant and works).

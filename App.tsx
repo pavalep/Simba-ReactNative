@@ -5,6 +5,10 @@ import {PersistGate} from 'redux-persist/integration/react';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {
+  SimbaPlayer,
+  type PlayerResumeLookup,
+} from '@simba-dev/react-native-media-player';
 import {store, persistor} from './src/store';
 import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
@@ -22,7 +26,7 @@ import {hydrateDownloads} from './src/store/slices/downloadsSlice';
 import {mark} from './src/utils/startupPerf';
 import {configureGoogleSignin} from './src/services/authService';
 import {getMediaType} from './src/services/fileService';
-import {PlaybackProvider, PlaybackOverlayHost, usePlayback, usePlaybackCommands} from './src/modules/playback';
+import {PlaybackOverlayHost, usePlayback, usePlaybackCommands} from './src/modules/playback';
 
 // Initialize GoogleSignin once at app startup — calling configure() every
 // time on the sign-in path was breaking the post-revoke flow (the account
@@ -215,6 +219,37 @@ const onRehydrated = () => {
 };
 
 const App: React.FC = () => {
+  // V13: bookmark-aware resume lookup. The module's
+  // `useOpenWithResume` hook calls this when a screen passes
+  // `resumeId` to `openPlayer({...})`. The lookup reads the most
+  // recent bookmark for the given file URI and returns its
+  // position in milliseconds (the module converts from the
+  // bookmark's seconds for us).
+  //
+  // Why a useMemo: the lookup is read by every call to
+  // `useOpenWithResume`, and React would otherwise create a new
+  // closure on every render. Memoising keeps the lookup
+  // reference stable, which downstream `useCallback`s depend on.
+  const resumeLookup = useMemo<PlayerResumeLookup>(
+    () => ({
+      getResumePosition: (resumeId: string) => {
+        const items = store.getState().bookmark.items;
+        // Find all bookmarks for this URI. Bookmarks are
+        // `(fileUri, position)`-hashed so multiple positions
+        // can exist per URI; we take the most recently created.
+        const matches = items.filter(b => b.fileUri === resumeId);
+        if (matches.length === 0) return undefined;
+        const latest = matches.reduce((acc, b) =>
+          acc.createdAt > b.createdAt ? acc : b,
+        );
+        // Bookmark.position is seconds; the module expects ms.
+        const ms = Math.round(latest.position * 1000);
+        return Number.isFinite(ms) && ms > 0 ? ms : undefined;
+      },
+    }),
+    [],
+  );
+
   return (
     // GestureHandlerRootView is required by @lodev09/react-native-true-sheet
     // (its drag-to-dismiss gesture uses the gesture-handler runtime) and by
@@ -224,9 +259,13 @@ const App: React.FC = () => {
         <Provider store={store}>
           <PersistGate loading={null} persistor={persistor} onBeforeLift={onRehydrated}>
             <ThemeProvider>
-              <PlaybackProvider>
+              {/* V13: one wrapper replaces V11's <PlaybackProvider>.
+                  Composes the config context + resume-lookup context
+                  for any descendant that calls `usePlayerActivity` or
+                  `useOpenWithResume`. */}
+              <SimbaPlayer lookup={resumeLookup}>
                 <AppContent />
-              </PlaybackProvider>
+              </SimbaPlayer>
             </ThemeProvider>
           </PersistGate>
         </Provider>
