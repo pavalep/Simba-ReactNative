@@ -1,6 +1,6 @@
 # SIMBA Player Module — V14 Tracker
 
-**Document Version:** 1.2
+**Document Version:** 1.3
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V14_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V14_SPECIFICATION.md)
@@ -47,22 +47,22 @@
 
 ## Phase 61 — `<SimbaPlayer>` with built-in default lookup helpers
 
-**Status:** [ ] Pending
+**Status:** [x] Complete
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** Shipped 2026-09-04. Module commit `4d8f73c` adds the `getResumePosition` function prop to `<SimbaPlayer>` (backward-compatible with the `lookup` object prop; if both are passed, `getResumePosition` wins), and ships a new `useSimbaPlayerLookup(selector?)` helper hook that wraps a selector in a memoized `PlayerResumeLookup` (no-op when no selector is passed). The internal `useMemo` on the effective lookup keeps the `PlayerResumeContext` value stable across renders. Consumer commit `73d6e21` deletes the 17-line `useMemo<PlayerResumeLookup>(...)` in `App.tsx` and replaces it with a `useSimbaPlayerLookup(selector)` call. Module typecheck clean, 100/100 tests pass. Consumer typecheck clean, 19/19 + 1 todo.
 
 ### Sub-phase 61.1 — Refine `<SimbaPlayer>` API (function reference prop)
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 61.2 — `useSimbaPlayerLookup()` helper
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 61.3 — Re-export
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 61.4 — Consumer migration
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ---
 
@@ -114,7 +114,7 @@
 |---|---|---|---|---|
 | 59 | `<SimbaPlayerRoot>` activity-branch wrapper | [x] | 0.5 day | `useLaunchParams` + `<PlayerRoot>` rendering absorbed into a single component |
 | 60 | `useOpenFromUrl` deep-link helper | [x] | 0.25 day | URI → title + type → openPlayer, all in one hook |
-| 61 | `<SimbaPlayer>` with `getResumePosition` function prop | [ ] | 0.5 day | 20-line resume-lookup function in App.tsx → 1-line function reference |
+| 61 | `<SimbaPlayer>` with `getResumePosition` function prop | [x] | 0.5 day | 20-line resume-lookup function in App.tsx → 1-line function reference |
 | 62 | Deprecate V11 playerSlice mirror | [ ] | 1 day | 17 files use `usePlayer()` from the module; playerSlice shrinks from 16KB → ~6KB |
 | 63 | Release v1.3.0 | [ ] | 0.25 day | Module published as v1.3.0 via CI/CD; final QA report |
 
