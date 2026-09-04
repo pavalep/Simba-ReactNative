@@ -114,12 +114,20 @@ Committed as `3d6c3da` (same commit as Phase 51) on 2026-09-04. `usePlayerActivi
 
 ### DX additions (during migration)
 
-The user's directive during Batch 3 — "as we progress, reduce mobile-app complexity by offsetting it to the module" — surfaced two module APIs that absorbed the repeated patterns across the 32 screen files:
+The user's directive during Batch 3 — "as we progress, reduce mobile-app complexity by offsetting it to the module" — surfaced multiple module APIs that absorbed the repeated patterns across the 32 screen files. Per the user's "junior-dev level integration" principle, the **canonical integration point is now `<SimbaPlayer>`** — a single wrapper component that composes all the V13 provider layers.
 
 - **`resolveStreamType(contentKind: ContentKind): 'video' | 'audio'`** — maps consumer content types ('music', 'movie', 'podcast', 'live-tv', 'radio', 'audiobook', 'archive-audio', 'episode', 'video-file') to V13 stream types. Without this, every one of the 32 files would have an inline `type: 'audio' | 'video'` ternary. Module commit `696fef9`.
-- **`useOpenWithResume` + `PlayerResumeProvider` + `usePlayItem`** — deferred to V14 (the consumer's bookmark lookup shape needs an audit before App.tsx wiring). Module commit `696fef9`.
+- **`useOpenWithResume` + `PlayerResumeProvider` + `usePlayItem`** — wired in App.tsx (commits `696fef9` and `de9e373`). The 32 screen files continue to use `usePlayerActivity` per the V13 spec; they can opt into auto-resume in a V14 follow-up by passing `resumeId: item.uri` to `useOpenWithResume`.
+- **`<SimbaPlayer>`** — the one-import, one-wrapper integration point. Composes `PlayerProvider` + `PlayerResumeProvider` so consumer-side App.tsx wiring is:
+  ```tsx
+  import { SimbaPlayer } from '@simba-dev/react-native-media-player';
+  <SimbaPlayer lookup={bookmarkLookup}>
+    <RootNavigator />
+  </SimbaPlayer>
+  ```
+  Optional `config` + `lookup` props. Lookup is optional — omit it for non-bookmark apps and the inner provider becomes a no-op. Module commit `99d4456`.
 
-Both are exported from `@simba-dev/react-native-media-player` index.ts and are available for any future consumer of the module.
+All four are exported from `@simba-dev/react-native-media-player` index.ts and are available for any future consumer of the module.
 
 ---
 
@@ -185,7 +193,7 @@ Both are exported from `@simba-dev/react-native-media-player` index.ts and are a
 | 50 | Expand `MpvPlayerModuleBridge` typed surface | [~] | 1.5 days | Bridge covers all 78 native methods + 22 events; v1.1.0 on `staging` (promote pending) |
 | 51 | Expand `PlayerState` / `PlayerCommands` / `PlayerProgress` + wire to events | [x] | 2 days | `usePlayer` returns live state from mpv events; 100/100 tests pass |
 | 52 | Add `usePlayerActivity()` hook | [x] | 0.5 day | `openPlayer` + `getLaunchParams` exposed via module |
-| 53 | Migrate consumer to module | [x] | 2 days | All 5 batches done; 38 source files migrated; module gained `resolveStreamType` + `useOpenWithResume` DX APIs |
+| 53 | Migrate consumer to module | [x] | 2 days | All 5 batches done; 38 source files migrated; module gained `resolveStreamType` + `useOpenWithResume` + `SimbaPlayer` wrapper |
 | 54 | Mount module UI in `PlayerActivity` | [ ] | 1 day | `<PlayerProvider>` + `<PlayerRoot>` + `<DefaultControls>` in activity |
 | 55 | Delete legacy V11 audio components | [ ] | 1 day | All `src/modules/playback/audio/` files deleted |
 | 56 | Delete the inline bridge code | [ ] | 0.5 day | `src/native/` deleted; codegenConfig updated |
