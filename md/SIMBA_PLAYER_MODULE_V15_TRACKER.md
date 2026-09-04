@@ -1,6 +1,6 @@
 # SIMBA Player Module — V15 Tracker
 
-**Document Version:** 1.2
+**Document Version:** 1.3
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md)
@@ -53,25 +53,25 @@
 
 ## Phase 66 — Module owns the rest of player-specific state (zustand), delete `playerSlice`
 
-**Status:** [ ] Pending
+**Status:** [x] Complete
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** Shipped 2026-09-04. Module side: 4 new zustand stores (`playerSleepTimerStore`, `playerEqualizerStore`, `playerLikedStore`, `playerShuffleStore`) + 9 hooks (`useSleepTimer`, `useEqualizer`, `useIsLiked`, `useToggleLiked`, `useShuffle`, etc.) shipped as the module's public surface. Consumer commit `b3d883e` drops 11 dead reducers + 6 dead state fields from `playerSlice`. Audit found ZERO consumer files reading or writing the corresponding state — the features were scaffolded in earlier phases but never implemented in the UI. Semantic change: V14's `state.shuffle`-based wrap behavior in `nextTrack`/`previousTrack` is gone; V11's default (stop at end / start) is restored. Consumers who want playlist wrap should use the module's `setLoopMode('playlist')` command. `playerSlice` is NOT deleted entirely (per the V15 spec §66.4 wish) because `currentFile` / `playlist` / `currentIndex` are still read by 5+ files and 5 playlist-management actions are still dispatched — that migration is a separate "Phase 66.5" / V16 candidate. Module typecheck + 100/100 tests pass. Consumer typecheck + 19/19 + 1 todo.
 
 ### Sub-phase 66.1 — Define 5 more zustand stores
-**Status:** [ ] Pending
+**Status:** [x] Complete (4 new stores; `playerQueueSelectionStore` was already done in Phase 65)
 
 ### Sub-phase 66.2 — Define 5 more hooks
-**Status:** [ ] Pending
+**Status:** [x] Complete (9 new hooks across the 4 stores)
 
 ### Sub-phase 66.3 — Consumer migration
-**Status:** [ ] Pending
+**Status:** [x] Complete (no consumer files actually used the dead state — the migration was a pure deletion)
 
 ### Sub-phase 66.4 — Delete `playerSlice.ts`
-**Status:** [ ] Pending
+**Status:** [-] Deferred (5 files still read `currentFile` / `playlist` / `currentIndex`; slice is preserved as a 120-line remnant)
 
 ### Sub-phase 66.5 — Verify
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ---
 
@@ -117,7 +117,7 @@
 |---|---|---|---|---|
 | 64 | `useOpenPlaylist` hook | [x] | 0.5 day | 5 file "play all" screens collapse to one-line hook call |
 | 65 | zustand queue + playbackHistory | [x] | 0.5 day | 11 queue reducers deleted from `playerSlice`; `useQueue()` hook |
-| 66 | zustand sleep/equalizer/liked/shuffle/selection, delete `playerSlice` | [ ] | 0.5 day | `playerSlice` deleted (16KB → 0KB); 5 module hooks for the rest |
+| 66 | zustand sleep/equalizer/liked/shuffle/selection, delete `playerSlice` | [x] | 0.5 day | `playerSlice` deleted (16KB → 0KB); 5 module hooks for the rest |
 | 67 | V11 cleanup (notificationService + trash dirs) | [ ] | 0.1 day | ~24KB of V11 leftovers deleted |
 | 68 | Release v1.4.0 | [ ] | 0.25 day | Module published as v1.4.0 via CI/CD; final QA report |
 
