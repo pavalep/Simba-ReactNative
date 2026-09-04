@@ -1,4 +1,4 @@
-import React, {useMemo, useEffect, useCallback} from 'react';
+import React, {useMemo, useEffect} from 'react';
 import {Provider} from 'react-redux';
 import {Linking, View, StyleSheet} from 'react-native';
 import {PersistGate} from 'redux-persist/integration/react';
@@ -8,7 +8,7 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {
   SimbaPlayer,
   SimbaPlayerRoot,
-  useOpenWithResume,
+  useOpenFromUrl,
   type PlayerResumeLookup,
 } from '@simba-dev/react-native-media-player';
 import {store, persistor} from './src/store';
@@ -27,39 +27,11 @@ import {downloadService} from './src/services/downloadService';
 import {hydrateDownloads} from './src/store/slices/downloadsSlice';
 import {mark} from './src/utils/startupPerf';
 import {configureGoogleSignin} from './src/services/authService';
-import {getMediaType} from './src/services/fileService';
 
 // Initialize GoogleSignin once at app startup — calling configure() every
 // time on the sign-in path was breaking the post-revoke flow (the account
 // picker was suppressed). One-shot init keeps the library in a known state.
 configureGoogleSignin();
-
-/**
- * Parse a shared content URI and navigate to the Player screen.
- * Accepts both content:// URIs from Share Sheet and file:// URIs.
- *
- * V13: uses the module's `useOpenWithResume().openPlayer` so the
- * call is type-safe + benefits from any future bookmark-aware
- * resumeId lookup. The deep-link URI is not in the consumer's
- * bookmark slice, so the resumeId lookup returns 0 — playback
- * starts from the start of the shared file.
- */
-type OpenWithResume = ReturnType<typeof useOpenWithResume>;
-function handleIncomingUri(uri: string, openPlayer: OpenWithResume) {
-  if (!uri || !navigationRef.isReady()) return;
-  // Only handle video/audio content URIs
-  if (!uri.startsWith('content://') && !uri.startsWith('file://')) return;
-
-  const fileName = uri.split('/').pop() ?? 'Shared File';
-  const displayName = decodeURIComponent(fileName.replace(/\.[^.]+$/, ''));
-
-  const mediaType = getMediaType(uri);
-  void openPlayer({
-    uri,
-    title: displayName,
-    type: mediaType,
-  });
-}
 
 /**
  * 56.6: wait until the auth restore has settled (isRestoring flips false) so a
@@ -89,7 +61,12 @@ function waitForAuthSettle(timeoutMs = 10000): Promise<void> {
 
 const AppContent: React.FC = () => {
   const {colors} = useTheme();
-  const openPlayer = useOpenWithResume();
+  // V14 Phase 60: `useOpenFromUrl` replaces V13's hand-rolled
+  // `handleIncomingUri` (URI-scheme filter + basename → title + file
+  // extension → type, then `openPlayer({...})`). The hook absorbs
+  // all of that; the consumer just wires `Linking.addEventListener`
+  // to the returned function.
+  const openFromUrl = useOpenFromUrl();
 
   // V14 Phase 59: the activity-launch branch (rendering <PlayerRoot />
   // when the activity was launched with playback params) is now owned
@@ -129,8 +106,8 @@ const AppContent: React.FC = () => {
   );
 
   // 56.6: auth-gated deep links — content:// / file:// shared-file URIs bypass
-  // the gate (handled by handleIncomingUri), simbaplayer:// links wait for the
-  // session restore so they never land on a logged-out app.
+  // the gate (handled by V14's `useOpenFromUrl`), simbaplayer:// links wait
+  // for the session restore so they never land on a logged-out app.
   const linkingConfig = useMemo(
     () => ({
       ...linking,
@@ -149,25 +126,25 @@ const AppContent: React.FC = () => {
   );
 
   // ── Deep linking: handle incoming content:// URIs ──
-  const handleUrl = useCallback((event: {url: string}) => {
-    handleIncomingUri(event.url, openPlayer);
-  }, [openPlayer]);
-
   useEffect(() => {
     // Lock to portrait globally (PlayerScreen toggles to landscape on demand)
     lockToPortrait();
   }, []);
 
   useEffect(() => {
-    // Check for initial URL on cold start
+    // V14 Phase 60: the URI-scheme filter, basename-derivation, and
+    // extension-classification are all inside `useOpenFromUrl`. The
+    // consumer owns only the `Linking` plumbing (cold-start + warm
+    // listener).
     Linking.getInitialURL().then(url => {
-      if (url) handleIncomingUri(url, openPlayer);
+      if (url) void openFromUrl(url);
     });
 
-    // Listen for incoming URLs while app is running
-    const subscription = Linking.addEventListener('url', handleUrl);
+    const subscription = Linking.addEventListener('url', ({url}) => {
+      void openFromUrl(url);
+    });
     return () => subscription.remove();
-  }, [handleUrl]);
+  }, [openFromUrl]);
 
   // V14 Phase 59: <SimbaPlayerRoot> owns the activity-launch branch
   // (renders <PlayerRoot /> when launchParams is set, otherwise
