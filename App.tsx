@@ -7,8 +7,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {
   SimbaPlayer,
-  PlayerRoot,
-  useLaunchParams,
+  SimbaPlayerRoot,
   useOpenWithResume,
   type PlayerResumeLookup,
 } from '@simba-dev/react-native-media-player';
@@ -92,17 +91,11 @@ const AppContent: React.FC = () => {
   const {colors} = useTheme();
   const openPlayer = useOpenWithResume();
 
-  // V13 Phase 54: read the activity's launch params. When the
-  // PlayerActivity launches (because a screen called openPlayer
-  // and triggered the activity handoff), this returns the queued
-  // `{uri, title, type, startPositionMs}` payload and we render
-  // <PlayerRoot /> so the activity shows the player surface +
-  // controls. When MainActivity launches (regular app start),
-  // this returns null and we render the regular navigator.
-  //
-  // One-shot: getLaunchParams clears its own state on the native
-  // side after the first read, so subsequent reads return null.
-  const launchParams = useLaunchParams();
+  // V14 Phase 59: the activity-launch branch (rendering <PlayerRoot />
+  // when the activity was launched with playback params) is now owned
+  // by <SimbaPlayerRoot> below. The 12-line `if (launchParams) ...`
+  // branch in V13's App.tsx is gone — `<SimbaPlayerRoot>` calls
+  // `useLaunchParams()` internally and switches between the two.
 
   // 43.1/43.2: cold-start silent restore + foreground session expiry
   useAuthSession();
@@ -176,39 +169,31 @@ const AppContent: React.FC = () => {
     return () => subscription.remove();
   }, [handleUrl]);
 
-  // V13 Phase 54: the activity launched with playback params —
-  // render the module's <PlayerRoot /> (surface + default
-  // controls). The provider's auto-hydration has already loaded
-  // the position/title from the launch params; the player
-  // surface + controls just need to be visible.
-  if (launchParams) {
-    return (
-      <ErrorBoundary fallbackColors={fallbackColors}>
-        <PlayerRoot />
-      </ErrorBoundary>
-    );
-  }
-
+  // V14 Phase 59: <SimbaPlayerRoot> owns the activity-launch branch
+  // (renders <PlayerRoot /> when launchParams is set, otherwise
+  // children). The ErrorBoundary wraps both branches.
   return (
     <ErrorBoundary fallbackColors={fallbackColors}>
-      <ToastProvider>
-        <SimbaStatusBar variant="home" />
-        <View style={styles.root}>
-          <NavigationContainer
-            ref={navigationRef}
-            linking={linkingConfig}>
-            <RootNavigator />
-            {/* V13: V11 <PlaybackOverlayHost /> removed in Phase 54.
-                The module's player surface is rendered by PlayerRoot
-                in the activity-launch branch above. The MainActivity
-                no longer needs an inline player overlay. */}
-          </NavigationContainer>
-          {/* 54.1: global offline banner overlays every screen */}
-          <OfflineBanner />
-          {/* 54.5: global long-operation progress (media scan) */}
-          <GlobalOperationProgress />
-        </View>
-      </ToastProvider>
+      <SimbaPlayerRoot>
+        <ToastProvider>
+          <SimbaStatusBar variant="home" />
+          <View style={styles.root}>
+            <NavigationContainer
+              ref={navigationRef}
+              linking={linkingConfig}>
+              <RootNavigator />
+              {/* V13: V11 <PlaybackOverlayHost /> removed in Phase 54.
+                  The module's player surface is rendered by PlayerRoot
+                  via <SimbaPlayerRoot> in the activity branch. The
+                  MainActivity no longer needs an inline player overlay. */}
+            </NavigationContainer>
+            {/* 54.1: global offline banner overlays every screen */}
+            <OfflineBanner />
+            {/* 54.5: global long-operation progress (media scan) */}
+            <GlobalOperationProgress />
+          </View>
+        </ToastProvider>
+      </SimbaPlayerRoot>
     </ErrorBoundary>
   );
 };
