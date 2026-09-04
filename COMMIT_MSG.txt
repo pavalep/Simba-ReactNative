@@ -1,41 +1,51 @@
-feat(v13-dx): wire SimbaPlayer wrapper in App.tsx with bookmark lookup
+feat(v13-phase-54): mount module PlayerRoot in activity branch
 
-V13: replace the V11 <PlaybackProvider> with the module's
-<SimbaPlayer> wrapper. The wrapper composes PlayerProvider +
-PlayerResumeProvider so the consumer's App.tsx is a true
-one-import, one-wrapper integration.
+V13 Phase 54: the consumer's App.tsx now branches on the
+activity's launch params to render the module's <PlayerRoot />
+in the activity (PlayerActivity) branch, and the regular
+navigator in the main (MainActivity) branch.
 
-App.tsx change (minimal):
-  - Import: {SimbaPlayer, type PlayerResumeLookup} from
-    '@simba-dev/react-native-media-player'
-  - <PlaybackProvider> -> <SimbaPlayer lookup={resumeLookup}>
-  - Lookup reads from the consumer's Redux bookmark slice and
-    returns the most recent bookmark position (seconds -> ms)
-    for a given file URI. Screens that pass `resumeId: item.uri`
-    in their openPlayer call get auto-resume.
+App.tsx change:
+  - AppContent now reads launch params via the module's
+    `useLaunchParams()` hook.
+  - If launch params are present (PlayerActivity was launched
+    by an `openPlayer(...)` call), AppContent renders
+    `<PlayerRoot />` — the module's default surface + controls.
+  - Otherwise (regular MainActivity cold start), it renders
+    the existing navigator tree.
+  - The V11 `<PlaybackOverlayHost />` is removed from the
+    navigator branch — the module's player UI is now
+    PlayerRoot-only.
+  - The V11 `usePlayback.loadLaunchParams()` call is removed;
+    replaced by the module's `useLaunchParams()`.
+  - The V11 `usePlaybackCommands().openPlayer` deep-link
+    handler is replaced with `useOpenWithResume().openPlayer`
+    (typed + auto-resume-ready, even for content:// URIs).
 
-The wrapper is the canonical "junior-dev integration point" for
-the module:
-  - One import
-  - One wrapper component
-  - One optional lookup function (can be omitted for non-bookmark
-    apps)
-
-This is the public-facing surface for any consumer of
-@simba-dev/react-native-media-player. Module exports <SimbaPlayer>
-from the index. Documentation in the JSDoc explains the
-provider composition + the lookup adapter contract.
-
-The 32 screen files continue to use `usePlayerActivity().openPlayer`
-(per the V13 spec migration). They can opt into
-`useOpenWithResume` for auto-resume in a follow-up by passing
-`resumeId: item.uri` (the lookup is keyed by fileUri).
+Module additions (V13 + DX):
+  - `useLaunchParams()` hook (src/hooks/useLaunchParams.tsx):
+    one-shot accessor for the activity's launch payload. The
+    consumer calls it once on mount; the hook exposes the
+    params as React state. Returns null when no params (regular
+    app start).
 
 Verification:
-  - npx tsc --noEmit: clean across the full consumer codebase.
-  - npm test: 203/206 pass (same 2 pre-existing V11 video-test
-    failures, deleted in Phase 57).
+  - npx tsc --noEmit: clean.
+  - npm test: 203/206 (same 2 pre-existing V11 video tests).
 
-Out of scope:
-  - Re-migrating the 32 screen files to useOpenWithResume
-    (V14 polish; current code is spec-compliant and works).
+Phase 54 sub-phases:
+  - 54a (Wire PlayerActivity): done via SimbaPlayer + the
+    App.tsx branch.
+  - 54b (Replace custom UI): the V11 PlaybackOverlayHost is
+    removed; the module's PlayerRoot replaces it for the
+    activity case.
+  - 54c (Verify): cannot verify on a real device in this
+    environment; the user needs to test on a device before
+    tagging 1.2.0.
+
+Out of scope (next phases):
+  - Phase 55: delete the 17 V11 audio components.
+  - Phase 56: delete src/native/.
+  - Phase 57: delete PlaybackContext/OverlayHost/TransportContext
+    + the 14 V11 video tests.
+  - Phase 58: release v1.2.0.

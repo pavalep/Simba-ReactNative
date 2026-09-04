@@ -7,6 +7,9 @@ import {NavigationContainer} from '@react-navigation/native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {
   SimbaPlayer,
+  PlayerRoot,
+  useLaunchParams,
+  useOpenWithResume,
   type PlayerResumeLookup,
 } from '@simba-dev/react-native-media-player';
 import {store, persistor} from './src/store';
@@ -26,7 +29,6 @@ import {hydrateDownloads} from './src/store/slices/downloadsSlice';
 import {mark} from './src/utils/startupPerf';
 import {configureGoogleSignin} from './src/services/authService';
 import {getMediaType} from './src/services/fileService';
-import {PlaybackOverlayHost, usePlayback, usePlaybackCommands} from './src/modules/playback';
 
 // Initialize GoogleSignin once at app startup — calling configure() every
 // time on the sign-in path was breaking the post-revoke flow (the account
@@ -36,11 +38,15 @@ configureGoogleSignin();
 /**
  * Parse a shared content URI and navigate to the Player screen.
  * Accepts both content:// URIs from Share Sheet and file:// URIs.
+ *
+ * V13: uses the module's `useOpenWithResume().openPlayer` so the
+ * call is type-safe + benefits from any future bookmark-aware
+ * resumeId lookup. The deep-link URI is not in the consumer's
+ * bookmark slice, so the resumeId lookup returns 0 — playback
+ * starts from the start of the shared file.
  */
-function handleIncomingUri(
-  uri: string,
-  openPlayer: ReturnType<typeof usePlaybackCommands>['openPlayer'],
-) {
+type OpenWithResume = ReturnType<typeof useOpenWithResume>;
+function handleIncomingUri(uri: string, openPlayer: OpenWithResume) {
   if (!uri || !navigationRef.isReady()) return;
   // Only handle video/audio content URIs
   if (!uri.startsWith('content://') && !uri.startsWith('file://')) return;
@@ -49,13 +55,10 @@ function handleIncomingUri(
   const displayName = decodeURIComponent(fileName.replace(/\.[^.]+$/, ''));
 
   const mediaType = getMediaType(uri);
-  openPlayer({
+  void openPlayer({
     uri,
     title: displayName,
-    duration: 0,
-    source: 'local',
     type: mediaType,
-    mediaType,
   });
 }
 
@@ -87,35 +90,22 @@ function waitForAuthSettle(timeoutMs = 10000): Promise<void> {
 
 const AppContent: React.FC = () => {
   const {colors} = useTheme();
-  const {openPlayer} = usePlaybackCommands();
-  // V12 Phase 13: pull the full playback context (not just the
-  // commands) so we can call `loadLaunchParams()` on mount. The
-  // command variant is too narrow — `loadLaunchParams` is a new
-  // Phase 13 command and isn't in `usePlaybackCommands`.
-  const {loadLaunchParams} = usePlayback();
+  const openPlayer = useOpenWithResume();
+
+  // V13 Phase 54: read the activity's launch params. When the
+  // PlayerActivity launches (because a screen called openPlayer
+  // and triggered the activity handoff), this returns the queued
+  // `{uri, title, type, startPositionMs}` payload and we render
+  // <PlayerRoot /> so the activity shows the player surface +
+  // controls. When MainActivity launches (regular app start),
+  // this returns null and we render the regular navigator.
+  //
+  // One-shot: getLaunchParams clears its own state on the native
+  // side after the first read, so subsequent reads return null.
+  const launchParams = useLaunchParams();
 
   // 43.1/43.2: cold-start silent restore + foreground session expiry
   useAuthSession();
-
-  // V12 Phase 13.3.2: on mount, attempt to rebuild the playback
-  // context from the bridge. In PlayerActivity this finds the
-  // launch params that `openPlayer` cached and rebuilds `active`
-  // + `currentPlaybackType` + `inPlayerActivity`. In MainActivity
-  // the call returns false (no recent `openPlayer` invocation)
-  // and the existing V11 inline path runs.
-  //
-  // One-shot: `getLaunchParams` clears its own state on the native
-  // side after the first read, so a re-render that re-runs this
-  // effect is a no-op. We use a `useEffect` with empty deps so
-  // it runs exactly once.
-  useEffect(() => {
-    const applied = loadLaunchParams();
-    if (applied) {
-      // Mirror the trace on the JS side so a `logcat` snapshot
-      // shows the activity's intent reaching the JS context.
-      // (Native side already logs in `getLaunchParams`.)
-    }
-  }, [loadLaunchParams]);
 
   // 49.1: hydrate downloads once at boot — the service owns the manifest, the
   // slice mirrors it so badges/buttons/Downloads screen render instantly.
@@ -186,6 +176,19 @@ const AppContent: React.FC = () => {
     return () => subscription.remove();
   }, [handleUrl]);
 
+  // V13 Phase 54: the activity launched with playback params —
+  // render the module's <PlayerRoot /> (surface + default
+  // controls). The provider's auto-hydration has already loaded
+  // the position/title from the launch params; the player
+  // surface + controls just need to be visible.
+  if (launchParams) {
+    return (
+      <ErrorBoundary fallbackColors={fallbackColors}>
+        <PlayerRoot />
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary fallbackColors={fallbackColors}>
       <ToastProvider>
@@ -195,7 +198,10 @@ const AppContent: React.FC = () => {
             ref={navigationRef}
             linking={linkingConfig}>
             <RootNavigator />
-            <PlaybackOverlayHost />
+            {/* V13: V11 <PlaybackOverlayHost /> removed in Phase 54.
+                The module's player surface is rendered by PlayerRoot
+                in the activity-launch branch above. The MainActivity
+                no longer needs an inline player overlay. */}
           </NavigationContainer>
           {/* 54.1: global offline banner overlays every screen */}
           <OfflineBanner />
