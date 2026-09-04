@@ -85,10 +85,10 @@ Committed as `3d6c3da` (same commit as Phase 51) on 2026-09-04. `usePlayerActivi
 
 ## Phase 53 — Migrate consumer to module
 
-**Status:** [~] In Progress (Batch 1 done, 4 batches remaining)
+**Status:** [x] Complete (all 5 batches done as of 2026-09-04)
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _Phase 53 split into 5 batches; Batch 1 (53b simple services) complete as of 2026-09-04 (commit ece60c5). 203/206 jest pass; 2 pre-existing V11 video-test failures are out of V13 scope (Phase 57 deletes them)._
+**Actual:** _Phase 53 split into 5 batches; all complete. The 32-screen-file sweep used two Node.js migration scripts (migrate-v13-step1.cjs, migrate-v13-step2.cjs) for the mechanical parts and manual edits for edge cases. The module also gained two V14-ready DX APIs (`useOpenWithResume`/`PlayerResumeProvider`, `resolveStreamType`) during the migration — see "DX additions" below._
 
 ### Migration batches
 
@@ -96,21 +96,30 @@ Committed as `3d6c3da` (same commit as Phase 51) on 2026-09-04. `usePlayerActivi
 |---|---|---|---|---|
 | 1 | 53b (simple) | fileService, audioSettingsService, metadataService | [x] | 3 |
 | 2 | 53b/53c (complex) | notificationService, TransportContext | [x] | 2 |
-| 3 | 53a | 32 screen files (usePlaybackCommands → usePlayerActivity) | [ ] | 32 |
-| 4 | 53b (extra) | useQueueScreen.ts (MpvPlayer import not in spec) | [ ] | 1 |
-| 5 | 53d | Verify typecheck + jest for the full consumer | [ ] | — |
+| 3 | 53a | 32 screen files (usePlaybackCommands → usePlayerActivity) | [x] | 32 |
+| 4 | 53b (extra) | useQueueScreen.ts (MpvPlayer import not in spec) | [x] | 1 |
+| 5 | 53d | Verify typecheck + jest for the full consumer | [x] | — |
 
 ### Sub-phase 53a — `usePlaybackCommands` → `usePlayerActivity`
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 53b — `MpvPlayer` (player.api.ts) → `getMpvPlayerModule()`
-**Status:** [x] Complete (Batches 1 + 2 done)
+**Status:** [x] Complete
 
 ### Sub-phase 53c — Direct `NativeModules.MpvPlayerModule` → module bridge
-**Status:** [x] Complete (Batch 2: notificationService + TransportContext)
+**Status:** [x] Complete (notificationService + TransportContext; 4 V11-only methods kept on `NativeModules.MpvPlayerModule` for the V11 rollback path)
 
 ### Sub-phase 53d — Verify typecheck + jest
-**Status:** [ ] Pending
+**Status:** [x] Complete — `npx tsc --noEmit` clean, 203/206 jest pass (2 pre-existing V11 video-test failures are out of V13 scope, deleted in Phase 57).
+
+### DX additions (during migration)
+
+The user's directive during Batch 3 — "as we progress, reduce mobile-app complexity by offsetting it to the module" — surfaced two module APIs that absorbed the repeated patterns across the 32 screen files:
+
+- **`resolveStreamType(contentKind: ContentKind): 'video' | 'audio'`** — maps consumer content types ('music', 'movie', 'podcast', 'live-tv', 'radio', 'audiobook', 'archive-audio', 'episode', 'video-file') to V13 stream types. Without this, every one of the 32 files would have an inline `type: 'audio' | 'video'` ternary. Module commit `696fef9`.
+- **`useOpenWithResume` + `PlayerResumeProvider` + `usePlayItem`** — deferred to V14 (the consumer's bookmark lookup shape needs an audit before App.tsx wiring). Module commit `696fef9`.
+
+Both are exported from `@simba-dev/react-native-media-player` index.ts and are available for any future consumer of the module.
 
 ---
 
@@ -176,7 +185,7 @@ Committed as `3d6c3da` (same commit as Phase 51) on 2026-09-04. `usePlayerActivi
 | 50 | Expand `MpvPlayerModuleBridge` typed surface | [~] | 1.5 days | Bridge covers all 78 native methods + 22 events; v1.1.0 on `staging` (promote pending) |
 | 51 | Expand `PlayerState` / `PlayerCommands` / `PlayerProgress` + wire to events | [x] | 2 days | `usePlayer` returns live state from mpv events; 100/100 tests pass |
 | 52 | Add `usePlayerActivity()` hook | [x] | 0.5 day | `openPlayer` + `getLaunchParams` exposed via module |
-| 53 | Migrate consumer to module | [~] | 2 days | Batches 1 + 2 done (5 service files); 3 batches remaining |
+| 53 | Migrate consumer to module | [x] | 2 days | All 5 batches done; 38 source files migrated; module gained `resolveStreamType` + `useOpenWithResume` DX APIs |
 | 54 | Mount module UI in `PlayerActivity` | [ ] | 1 day | `<PlayerProvider>` + `<PlayerRoot>` + `<DefaultControls>` in activity |
 | 55 | Delete legacy V11 audio components | [ ] | 1 day | All `src/modules/playback/audio/` files deleted |
 | 56 | Delete the inline bridge code | [ ] | 0.5 day | `src/native/` deleted; codegenConfig updated |

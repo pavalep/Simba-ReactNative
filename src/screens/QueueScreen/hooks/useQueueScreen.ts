@@ -21,7 +21,7 @@ import {
   reorderQueue,
 } from '../../../store/slices/playerSlice';
 import {playlistActions} from '../../../features/playlists';
-import {MpvPlayer} from '../../../native';
+import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {useHaptics} from '../../../hooks/useHaptics';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {PlaylistItem} from '../../../types/playlist';
@@ -119,7 +119,7 @@ export function useQueueScreen(): UseQueueScreenResult {
         dispatch(playFromPlaylist(playlist.length));
       }
       try {
-        MpvPlayer.loadFile(entry.uri);
+        getMpvPlayerModule().loadFile(entry.uri);
       } catch {}
 
       // Open the matching player unless we are already inside that lane.
