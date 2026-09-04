@@ -1,6 +1,6 @@
 # SIMBA Player Module — V14 Specification
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Target Release:** V14.0.0
@@ -301,6 +301,8 @@ For consumers that don't need bookmarks or deep links, the integration is even s
 ```
 
 That's the entire integration. The "junior-dev-level" goal.
+
+**Shipped in 1.3.0.**
 
 ---
 

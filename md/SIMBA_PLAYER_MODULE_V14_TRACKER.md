@@ -1,6 +1,6 @@
 # SIMBA Player Module — V14 Tracker
 
-**Document Version:** 1.4
+**Document Version:** 1.5
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V14_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V14_SPECIFICATION.md)
@@ -92,19 +92,19 @@
 
 ## Phase 63 — Release v1.3.0
 
-**Status:** [ ] Pending
+**Status:** [x] Complete
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** Shipped 2026-09-04. Module `package.json` bumped to `1.3.0`. CHANGELOG.md has a new V14.0.0 entry. README.md updated: the "Basic usage" example now shows the V14 target surface; the API reference table marks the 4 new exports in **bold** (`<SimbaPlayerRoot>`, `useOpenFromUrl`, `useSimbaPlayerLookup`, `GetResumePosition`, `SimbaPlayerRootProps`); the `<SimbaPlayer>` prop table now documents the new `getResumePosition` function prop alongside the legacy `lookup` object prop. V14 spec doc marked "Shipped in 1.3.0". Module typecheck clean, 100/100 tests pass. Consumer typecheck clean, 19/19 + 1 todo. V14 spec doc version bumped to 1.1.
 
 ### Sub-phase 63.1 — Bump version
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 63.2 — Tag + push
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 63.3 — Final QA
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ---
 
@@ -116,7 +116,7 @@
 | 60 | `useOpenFromUrl` deep-link helper | [x] | 0.25 day | URI → title + type → openPlayer, all in one hook |
 | 61 | `<SimbaPlayer>` with `getResumePosition` function prop | [x] | 0.5 day | 20-line resume-lookup function in App.tsx → 1-line function reference |
 | 62 | Deprecate V11 playerSlice mirror | [x] | 1 day | 17 files use `usePlayer()` from the module; playerSlice shrinks from 16KB → ~6KB |
-| 63 | Release v1.3.0 | [ ] | 0.25 day | Module published as v1.3.0 via CI/CD; final QA report |
+| 63 | Release v1.3.0 | [x] | 0.25 day | Module published as v1.3.0 via CI/CD; final QA report |
 
 **Total estimated V14 effort:** ~2.5 working days.
 
