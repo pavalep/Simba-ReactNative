@@ -1,6 +1,6 @@
 # SIMBA Player Module — V15 Tracker
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md)
@@ -11,19 +11,19 @@
 
 ## Phase 64 — `useOpenPlaylist` hook
 
-**Status:** [ ] Pending
+**Status:** [x] Complete
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** Shipped 2026-09-04. Module commit `07a3015` adds `src/hooks/useOpenPlaylist.tsx` (the 12-30 line two-step absorption hook). Consumer commit `d3cfb15` migrates 4 list-style screens (`useArtistScreen`, `useAlbumScreen`, `useLibraryScreen`, `PlaylistDetailScreen`) to use the new hook. Net deletion in consumer: 41 lines (52 added, 93 deleted). The 5th file (`useHomeScreen`) does not have a "play all" handler — only direct `openPlayer` calls for single-track play — so 4 files (not 5) needed migration. Phase 64 keeps the `dispatch(loadPlaylistToPlayer(...))` call in the consumer because the consumer's Queue UI still reads from `playerSlice`; Phase 65 will absorb that dispatch. Module typecheck clean, 100/100 tests pass. Consumer typecheck clean, 19/19 + 1 todo.
 
 ### Sub-phase 64.1 — Define `useOpenPlaylist`
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 64.2 — Re-export from index
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
-### Sub-phase 64.3 — Consumer migration (5 files)
-**Status:** [ ] Pending
+### Sub-phase 64.3 — Consumer migration (4 files, not 5)
+**Status:** [x] Complete
 
 ---
 
@@ -115,7 +115,7 @@
 
 | Phase | Description | Status | Effort | Deliverable |
 |---|---|---|---|---|
-| 64 | `useOpenPlaylist` hook | [ ] | 0.5 day | 5 file "play all" screens collapse to one-line hook call |
+| 64 | `useOpenPlaylist` hook | [x] | 0.5 day | 5 file "play all" screens collapse to one-line hook call |
 | 65 | zustand queue + playbackHistory | [ ] | 0.5 day | 11 queue reducers deleted from `playerSlice`; `useQueue()` hook |
 | 66 | zustand sleep/equalizer/liked/shuffle/selection, delete `playerSlice` | [ ] | 0.5 day | `playerSlice` deleted (16KB → 0KB); 5 module hooks for the rest |
 | 67 | V11 cleanup (notificationService + trash dirs) | [ ] | 0.1 day | ~24KB of V11 leftovers deleted |
