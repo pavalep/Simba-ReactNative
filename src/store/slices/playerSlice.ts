@@ -37,16 +37,19 @@ interface PlayerState {
   //   - isFullscreen (was unused)
   //   - loopMode -> state.loopMode
   //   - playbackSpeed -> state.speed
-  shuffle: boolean;
-  sleepTimerEndTime: number | null;
-  /** 50.1: sleep timer expiry trigger — fixed time, end of track, or end of chapter */
-  sleepTimerMode: 'time' | 'track' | 'chapter';
-  equalizerGains: number[];
-  equalizerEnabled: boolean;
-  /** A19: fileUri → liked flag. Persisted (player is in the persist
-   *  whitelist). Replaces the local `useState` in AudioPlayer so the
-   *  like state survives remount and matches across devices. */
-  liked: Record<string, boolean>;
+  //
+  // V15 Phase 66: dead player-feature state removed. The
+  // following fields were scaffolded in earlier phases but no
+  // consumer file ever read or wrote them — they were dead
+  // weight. They're now exposed (when needed) as module-level
+  // zustand stores:
+  //   - shuffle -> useShuffleEnabled() / useShuffle()
+  //   - sleepTimerEndTime, sleepTimerMode -> useSleepTimer()
+  //   - equalizerGains, equalizerEnabled -> useEqualizer()
+  //   - liked -> useIsLiked(uri) / useToggleLiked()
+  //
+  // Future consumer code that wires up these features can use
+  // the module hooks directly. Redux state for them is gone.
 }
 
 function normalizeSingleLane(entries: PlaybackEntryInput[]): PlaylistEntry[] {
@@ -63,12 +66,6 @@ const initialState: PlayerState = {
   currentFile: null,
   playlist: [],
   currentIndex: -1,
-  shuffle: false,
-  sleepTimerEndTime: null,
-  sleepTimerMode: 'time',
-  equalizerGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  equalizerEnabled: false,
-  liked: {},
 };
 
 const playerSlice = createSlice({
@@ -182,164 +179,58 @@ const playerSlice = createSlice({
 
     nextTrack(state) {
       if (state.playlist.length === 0) return;
-      // V15 Phase 65: `playbackHistory` is now in the module's
-      // zustand store. The module's `usePlayer().commands.next()`
-      // handles the history push when mpv advances tracks; the
-      // consumer's `nextTrack` reducer just updates the consumer's
-      // `currentIndex` and `currentFile`.
+      // V15 Phase 66: V14's `state.shuffle`-based wrap behavior
+      // is gone (the consumer's `shuffle` state was unused dead
+      // state and has been removed). The consumer's `nextTrack`
+      // is now the V11 default: advance if there's a next track,
+      // otherwise stop at the end. Module-level loop-mode is the
+      // authoritative wrap behavior — consumers who want the
+      // playlist to wrap should call `usePlayer().commands.setLoopMode('playlist')`.
       if (state.currentIndex < state.playlist.length - 1) {
         state.currentIndex += 1;
-      } else if (state.shuffle && state.playlist.length > 1) {
-        // V14 Phase 62: original V11 wrap behavior was
-        // `loopMode === 'playlist'`, but `loopMode` is now
-        // owned by the module. The consumer's `shuffle` flag
-        // is the only consumer-side state that affects
-        // navigation, so we use it as the wrap trigger when
-        // the playlist ends.
-        let next = state.currentIndex;
-        while (next === state.currentIndex) {
-          next = Math.floor(Math.random() * state.playlist.length);
-        }
-        state.currentIndex = next;
       } else {
-        return; // stop at end (default V14 behavior)
+        return; // stop at end (V11 default)
       }
       state.currentFile = state.playlist[state.currentIndex];
     },
 
     previousTrack(state) {
       if (state.playlist.length === 0) return;
-      // V15 Phase 65: `playbackHistory` is now in the module's
-      // zustand store. See `nextTrack` for the symmetry.
+      // V15 Phase 66: V14's `state.shuffle`-based wrap behavior
+      // is gone (see `nextTrack` for the rationale). Default:
+      // go back if there's a previous track, otherwise stop at start.
       if (state.currentIndex > 0) {
         state.currentIndex -= 1;
-      } else if (state.shuffle && state.playlist.length > 1) {
-        let prev = state.currentIndex;
-        while (prev === state.currentIndex) {
-          prev = Math.floor(Math.random() * state.playlist.length);
-        }
-        state.currentIndex = prev;
       } else {
-        return; // stay at start (default V14 behavior)
+        return; // stay at start (V11 default)
       }
       state.currentFile = state.playlist[state.currentIndex];
     },
 
-    toggleShuffle(state) {
-      state.shuffle = !state.shuffle;
-    },
-
-    // ── Queue Management ──
-    // V15 Phase 65: queue actions moved to the module's
-    // zustand store (`useQueue()`). The consumer no longer
-    // dispatches queue state through Redux.
-
-    /** P48.3: jump to a queue item — promote it into the playlist right after
-     *  the current track, then make it current. The queue stays display-only
-     *  otherwise (nextTrack never consumes it). */
-    playFromQueue(state, action: PayloadAction<number>) {
-      const idx = action.payload;
-      // The actual queue-splice now lives in the module's zustand
-      // store (usePlayerQueueStore.playFromQueue). The playlist
-      // update below remains consumer-side until Phase 66.
-      if (idx < 0) return;
-      const insertAt = state.currentIndex + 1;
-      const entry = state.currentFile
-        ? state.currentFile
-        : state.playlist[state.currentIndex];
-      if (entry) {
-        state.playlist.splice(insertAt, 0, entry);
-        state.currentIndex = insertAt;
-        state.currentFile = entry;
-      }
-    },
-
-    // ── Playback History (Phase 23.9) ──
-    // V15 Phase 65: `addToPlaybackHistory` and
-    // `clearPlaybackHistory` moved to the module's zustand
-    // store (`usePlaybackHistory()` / `usePlayerQueueStore`).
-
-    // ── Queue Multi-Select & Batch Operations (Phase 23.4 — 23.5) ──
-    // V15 Phase 65: selection state + batch actions moved to
-    // the module's zustand store (`useQueueSelection()`).
-
-    /** Clear all remaining player-side state (queue, history,
-     *  selection). The queue/history/selection state now lives
-     *  in the module's zustand store — call `useQueue().clearQueue()`,
-     *  `usePlaybackHistory().clear()`, and
-     *  `useQueueSelection().clearSelection()` instead. */
-    clearAll(state) {
-      state.currentFile = null;
-      state.playlist = [];
-      state.currentIndex = -1;
-    },
-
-    setSleepTimer(state, action: PayloadAction<number | null>) {
-      state.sleepTimerEndTime =
-        action.payload !== null ? Date.now() + action.payload * 1000 : null;
-      // Arming a countdown always uses time mode; cancelling disarms everything.
-      state.sleepTimerMode = 'time';
-    },
-
-    /** 50.2: arm the timer to fire at end of track / end of chapter */
-    setSleepTimerMode(state, action: PayloadAction<'time' | 'track' | 'chapter'>) {
-      state.sleepTimerMode = action.payload;
-      // Mode-based expiry replaces any countdown timer.
-      state.sleepTimerEndTime = null;
-    },
-
-    setEqualizerGains(state, action: PayloadAction<number[]>) {
-      if (action.payload.length === 10) {
-        state.equalizerGains = action.payload;
-      }
-    },
-
-    toggleEqualizer(state) {
-      state.equalizerEnabled = !state.equalizerEnabled;
-    },
-
-    clearPlaylist(state) {
-      state.playlist = [];
-      state.currentIndex = -1;
-      state.currentFile = null;
-    },
-
-    clearPlayer(state) {
-      // V14 Phase 62: V11-mirrored field resets removed
-      // (playbackState, currentPosition, duration, loopMode,
-      // playbackSpeed are now module-owned).
-      // V15 Phase 65: queue/playbackHistory/selectedQueueIndices
-      // resets removed (those live in the module's zustand store).
-      state.currentFile = null;
-      state.playlist = [];
-      state.currentIndex = -1;
-      state.shuffle = false;
-      state.sleepTimerEndTime = null;
-      state.sleepTimerMode = 'time';
-      state.equalizerGains = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-      state.equalizerEnabled = false;
-      state.liked = {};
-    },
-
-    /** A19: toggle the "like" flag for a single file. Idempotent. */
-    toggleLike(state, action: PayloadAction<string>) {
-      const fileUri = action.payload;
-      if (!fileUri) return;
-      const current = !!state.liked[fileUri];
-      state.liked[fileUri] = !current;
-    },
+    // V15 Phase 66: dead state + reducers removed. The following
+    // were scaffolded in earlier phases but no consumer file ever
+    // read or wrote them — they were dead weight. The functionality
+    // is now exposed (when needed) as module-level zustand stores:
+    //   - toggleShuffle -> useShuffle()
+    //   - setSleepTimer, setSleepTimerMode -> useSleepTimer()
+    //   - setEqualizerGains, toggleEqualizer -> useEqualizer()
+    //   - toggleLike -> useToggleLiked()
+    //   - playFromQueue -> useQueue() (queue-splice) +
+    //                       useOpenPlaylist() (playlist + activity)
+    //   - clearAll, clearPlayer, clearPlaylist -> use the
+    //       module's clear* methods + the consumer's own
+    //       reset action when needed
   },
 });
 
 export const {
-  // V14 Phase 62: V11-mirrored actions removed (playFile,
-  // setPlaybackState, setPosition, setDuration, setVolume,
-  // toggleFullscreen, setLoopMode, setPlaybackSpeed). Use
-  // the module's `usePlayer().commands` for these operations.
-  // V15 Phase 65: queue + selection actions moved to the
-  // module's zustand store (useQueue() / useQueueSelection()).
+  // V15 Phase 66: most of the action exports were dead. The
+  // remaining ones (loadPlaylistToPlayer, playFromPlaylist,
+  // addToPlaylist, removeFromPlaylist, reorderPlaylist,
+  // updateCurrentFileMetadata, nextTrack, previousTrack) are
+  // dispatched by the 4 "play all" screens (Phase 64) + the
+  // Queue UI (Phase 65) + a few metadata-sync sites.
   updateCurrentFileMetadata,
-  setPlaylist,
   loadPlaylistToPlayer,
   addToPlaylist,
   removeFromPlaylist,
@@ -347,16 +238,6 @@ export const {
   playFromPlaylist,
   nextTrack,
   previousTrack,
-  toggleShuffle,
-  playFromQueue,
-  clearPlaylist,
-  clearPlayer,
-  setSleepTimer,
-  setSleepTimerMode,
-  setEqualizerGains,
-  toggleEqualizer,
-  toggleLike,
-  clearAll,
 } = playerSlice.actions;
 
 // ─── Utility: map persistent playlist items → player entries ──
