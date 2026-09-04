@@ -84,24 +84,9 @@ const playerSlice = createSlice({
      * Enrich the active entry after native metadata/artwork resolution.
      * This intentionally does not reset playback state or position.
      */
-    updateCurrentFileMetadata(state, action: PayloadAction<Partial<PlaylistEntry>>) {
-      if (!state.currentFile) return;
-      state.currentFile = {...state.currentFile, ...action.payload};
-      const currentUri = state.currentFile.uri;
-      const playlistIndex = state.playlist.findIndex(entry => entry.uri === currentUri);
-      if (playlistIndex >= 0) {
-        state.playlist[playlistIndex] = {
-          ...state.playlist[playlistIndex],
-          ...action.payload,
-        };
-      }
-    },
-
-    /** Replace entire playlist */
-    setPlaylist(state, action: PayloadAction<PlaybackEntryInput[]>) {
-      state.playlist = normalizeSingleLane(action.payload);
-      state.currentIndex = state.playlist.length > 0 ? 0 : -1;
-    },
+    // V15 Phase 68 sweep: `updateCurrentFileMetadata` and
+    // `setPlaylist` were never dispatched by any consumer
+    // file. Removed in the V15 sweep.
 
     /** Load a user playlist into the player: sets items, sets currentFile to first track. */
     loadPlaylistToPlayer(state, action: PayloadAction<PlaybackEntryInput[]>) {
@@ -177,35 +162,10 @@ const playerSlice = createSlice({
     //   `usePlayer().commands.play() / pause() / seek() /
     //   setVolume() / setSpeed() / setLoopMode()` instead.
 
-    nextTrack(state) {
-      if (state.playlist.length === 0) return;
-      // V15 Phase 66: V14's `state.shuffle`-based wrap behavior
-      // is gone (the consumer's `shuffle` state was unused dead
-      // state and has been removed). The consumer's `nextTrack`
-      // is now the V11 default: advance if there's a next track,
-      // otherwise stop at the end. Module-level loop-mode is the
-      // authoritative wrap behavior — consumers who want the
-      // playlist to wrap should call `usePlayer().commands.setLoopMode('playlist')`.
-      if (state.currentIndex < state.playlist.length - 1) {
-        state.currentIndex += 1;
-      } else {
-        return; // stop at end (V11 default)
-      }
-      state.currentFile = state.playlist[state.currentIndex];
-    },
-
-    previousTrack(state) {
-      if (state.playlist.length === 0) return;
-      // V15 Phase 66: V14's `state.shuffle`-based wrap behavior
-      // is gone (see `nextTrack` for the rationale). Default:
-      // go back if there's a previous track, otherwise stop at start.
-      if (state.currentIndex > 0) {
-        state.currentIndex -= 1;
-      } else {
-        return; // stay at start (V11 default)
-      }
-      state.currentFile = state.playlist[state.currentIndex];
-    },
+    // V15 Phase 68 sweep: `nextTrack` / `previousTrack` were
+    // never dispatched by any consumer file (the Queue UI
+    // calls the module's `usePlayer().commands.next()` directly
+    // via the activity). Removed in the V15 sweep.
 
     // V15 Phase 66: dead state + reducers removed. The following
     // were scaffolded in earlier phases but no consumer file ever
@@ -224,20 +184,16 @@ const playerSlice = createSlice({
 });
 
 export const {
-  // V15 Phase 66: most of the action exports were dead. The
-  // remaining ones (loadPlaylistToPlayer, playFromPlaylist,
-  // addToPlaylist, removeFromPlaylist, reorderPlaylist,
-  // updateCurrentFileMetadata, nextTrack, previousTrack) are
+  // V15 Phase 68 sweep: removed `updateCurrentFileMetadata`,
+  // `setPlaylist`, `nextTrack`, `previousTrack` — none were
+  // dispatched by any consumer file. Remaining actions are
   // dispatched by the 4 "play all" screens (Phase 64) + the
-  // Queue UI (Phase 65) + a few metadata-sync sites.
-  updateCurrentFileMetadata,
+  // Queue UI (Phase 65).
   loadPlaylistToPlayer,
   addToPlaylist,
   removeFromPlaylist,
   reorderPlaylist,
   playFromPlaylist,
-  nextTrack,
-  previousTrack,
 } = playerSlice.actions;
 
 // ─── Utility: map persistent playlist items → player entries ──
