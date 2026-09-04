@@ -1,6 +1,6 @@
 # SIMBA Player Module — V14 Tracker
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V14_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V14_SPECIFICATION.md)
@@ -11,19 +11,19 @@
 
 ## Phase 59 — `<SimbaPlayerRoot>` activity-branch wrapper
 
-**Status:** [ ] Pending
+**Status:** [x] Complete
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** Shipped 2026-09-04. Module repo commit `d359352` adds `src/hooks/SimbaPlayerRoot.tsx` (a thin switch that calls `useLaunchParams()` internally and renders `<PlayerRoot />` or its children). Module `index.ts` re-exports `SimbaPlayerRoot` + `SimbaPlayerRootProps`. Consumer commit `75b21de` deletes the 12-line `if (launchParams)` branch from `App.tsx` and wraps the navigator children in `<SimbaPlayerRoot>`. The `ErrorBoundary` was hoisted to wrap `<SimbaPlayerRoot>` so both branches share it. Module typecheck clean, 100/100 tests pass. Consumer typecheck clean, 19/19 + 1 todo.
 
 ### Sub-phase 59.1 — Define `<SimbaPlayerRoot>`
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 59.2 — Re-export from index
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 59.3 — Consumer migration
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ---
 
@@ -112,7 +112,7 @@
 
 | Phase | Description | Status | Effort | Deliverable |
 |---|---|---|---|---|
-| 59 | `<SimbaPlayerRoot>` activity-branch wrapper | [ ] | 0.5 day | `useLaunchParams` + `<PlayerRoot>` rendering absorbed into a single component |
+| 59 | `<SimbaPlayerRoot>` activity-branch wrapper | [x] | 0.5 day | `useLaunchParams` + `<PlayerRoot>` rendering absorbed into a single component |
 | 60 | `useOpenFromUrl` deep-link helper | [ ] | 0.25 day | URI → title + type → openPlayer, all in one hook |
 | 61 | `<SimbaPlayer>` with `getResumePosition` function prop | [ ] | 0.5 day | 20-line resume-lookup function in App.tsx → 1-line function reference |
 | 62 | Deprecate V11 playerSlice mirror | [ ] | 1 day | 17 files use `usePlayer()` from the module; playerSlice shrinks from 16KB → ~6KB |
