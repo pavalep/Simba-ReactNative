@@ -151,10 +151,16 @@ All four are exported from `@simba-dev/react-native-media-player` index.ts and a
 
 ## Phase 55 — Delete legacy V11 audio components
 
-**Status:** [ ] Pending
+**Status:** [x] Complete (commit `bae551a`)
 **Owner:** Mobile team
-**Target:** TBD
-**Actual:** _not yet started_
+**Target:** 2026-09-04
+**Actual:** _All 17 V11 audio files in `src/modules/playback/audio/` deleted. The `rangeNormalization` helper promoted to `src/utils/bufferedRanges.ts` (audio-agnostic). The trashed files are kept at `v13-trash-2026-09-04/` (gitignored) for safety. PlaybackOverlayHost now returns null (its audio imports are gone; full delete is Phase 57)._
+
+### Sub-phase 55.1-55.16 — Delete 17 audio files
+**Status:** [x] Complete
+
+### Sub-phase 55.17 — Replace MiniAudio references
+**Status:** [x] Complete (MiniAudio file deleted; no remaining references in the live source)
 
 ---
 
@@ -195,7 +201,7 @@ All four are exported from `@simba-dev/react-native-media-player` index.ts and a
 | 52 | Add `usePlayerActivity()` hook | [x] | 0.5 day | `openPlayer` + `getLaunchParams` exposed via module |
 | 53 | Migrate consumer to module | [x] | 2 days | All 5 batches done; 38 source files migrated; module gained `resolveStreamType` + `useOpenWithResume` + `SimbaPlayer` wrapper |
 | 54 | Mount module UI in `PlayerActivity` | [x] | 1 day | `<PlayerRoot>` mounted via `useLaunchParams` branch in App.tsx; V11 `<PlaybackOverlayHost>` removed (commits `7c35606` + `f1254a4`); device verification pending |
-| 55 | Delete legacy V11 audio components | [ ] | 1 day | All `src/modules/playback/audio/` files deleted |
+| 55 | Delete legacy V11 audio components | [x] | 1 day | All 17 audio files deleted (commit `bae551a`); `rangeNormalization` promoted to `src/utils/bufferedRanges.ts` |
 | 56 | Delete the inline bridge code | [ ] | 0.5 day | `src/native/` deleted; codegenConfig updated |
 | 57 | Delete `PlaybackContext.tsx` + `PlaybackOverlayHost.tsx` + `TransportContext.tsx` | [ ] | 1 day | `src/modules/playback/` and `src/contexts/TransportContext.tsx` deleted; App.tsx wrapped in `<PlayerProvider>` |
 | 58 | V13.0.0 release | [ ] | 1 day | Module published as v1.2.0 via CI/CD; final QA report |
