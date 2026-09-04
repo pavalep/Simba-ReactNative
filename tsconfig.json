@@ -1,7 +1,18 @@
 {
   "extends": "@react-native/typescript-config",
   "compilerOptions": {
-    "types": ["jest"]
+    "types": ["jest"],
+    "baseUrl": ".",
+    "paths": {
+      // V13: the @simba-dev/react-native-media-player module is a sibling
+      // directory. We map its `src/index.ts` directly so the typecheck
+      // works without `npm install` in the consumer (the user adds a
+      // real `file:../react-native-media-player` dep in package.json
+      // for runtime + metro resolution). The path is relative to the
+      // consumer's tsconfig location.
+      "@simba-dev/react-native-media-player": ["../react-native-media-player/src/index.ts"],
+      "@simba-dev/react-native-media-player/*": ["../react-native-media-player/src/*"]
+    }
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": [

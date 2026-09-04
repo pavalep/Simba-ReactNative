@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@lodev09/react-native-true-sheet": "^3.11.11",
+    "@simba-dev/react-native-media-player": "file:../react-native-media-player",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native-community/blur": "^4.4.1",

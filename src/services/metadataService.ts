@@ -1,5 +1,5 @@
 import RNFS from 'react-native-fs';
-import MpvPlayer from '../native/player.api';
+import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {LrcParseResult, parseLrc} from '../utils/lrcParser';
 import type {ScannedTrack} from '../store/slices/mediaSlice';
 import {linkedMediaFolderIdFromPath} from '../types/media';
@@ -107,10 +107,15 @@ export async function readTrackMetadata(
   artistOverride?: string,
   albumOverride?: string,
 ): Promise<TrackMetadata> {
+  // V13 Phase 53: resolve the module bridge once per call instead of
+  // importing the legacy `MpvPlayer` wrapper (which is being deleted
+  // in Phase 56).
+  const bridge = getMpvPlayerModule();
+
   // 1. Read mpv metadata property
   let rawJson = '{}';
   try {
-    rawJson = String(MpvPlayer.getProperty('metadata') ?? '{}');
+    rawJson = String(bridge.getProperty('metadata') ?? '{}');
   } catch {
     // player not initialised
   }
@@ -119,7 +124,7 @@ export async function readTrackMetadata(
   // 2. Read media-title (mpv's best-guess title)
   let mediaTitle = '';
   try {
-    mediaTitle = String(MpvPlayer.getProperty('media-title') ?? '');
+    mediaTitle = String(bridge.getProperty('media-title') ?? '');
   } catch {
     // ignore
   }

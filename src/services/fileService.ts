@@ -1,7 +1,7 @@
 import {pick, types} from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
 
-import {MpvPlayer} from '../native/player.api';
+import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 
 import {isRemoteUri} from '../utils/mediaUri';
 
@@ -191,7 +191,7 @@ export async function pickMediaFile(): Promise<PickedFile | null> {
 
     // Grant persistable permission so the content:// URI survives restarts
     if (result.uri.startsWith('content://')) {
-      MpvPlayer.grantPersistablePermission(result.uri);
+      getMpvPlayerModule().grantPersistablePermission(result.uri);
     }
 
     return {
@@ -261,7 +261,7 @@ export async function checkFileExists(uri: string): Promise<boolean> {
         if (stat.isFile() && stat.size > 0) return true;
       } catch {}
       // RNFS.stat may not support content:// URIs — fall back to native check
-      return MpvPlayer.verifyContentUri(uri);
+      return getMpvPlayerModule().verifyContentUri(uri);
     }
     const exists = await RNFS.exists(uri);
     if (!exists) return false;

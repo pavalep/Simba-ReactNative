@@ -1,0 +1,42 @@
+feat(v13-phase-53b): migrate 3 simple services to module bridge
+
+V13 Phase 53 Batch 1: migrate fileService, audioSettingsService,
+metadataService from the legacy src/native/player.api MpvPlayer wrapper
+to the module's getMpvPlayerModule() typed bridge. The 3 files all
+imported MpvPlayer from '../native/player.api' or '../native' and
+called a small number of methods (grantPersistablePermission,
+verifyContentUri, setProperty, getProperty) which are now reachable
+via getMpvPlayerModule().
+
+Other consumer-side changes in this commit:
+- tsconfig.json: added `paths` mapping for @simba-dev/react-native-media-player
+  pointing to ../react-native-media-player/src/index.ts. This lets the
+  consumer typecheck against the module source without a real npm
+  install. Runtime resolution still needs the file: dep + npm install.
+- package.json: added @simba-dev/react-native-media-player as a
+  `file:../react-native-media-player` dev dep. Sibling-folder dev
+  pattern; user can swap to ^1.1.0 after the promote step.
+- src/hooks/index.ts: fixed pre-existing parse error in a markdown
+  link that was broken across two lines (collateral fix, blocks typecheck).
+
+Coverage:
+- fileService.ts: 2 method calls migrated (grantPersistablePermission,
+  verifyContentUri). No other imports from native/player.api remain.
+- audioSettingsService.ts: 7 setProperty call sites migrated; bridge
+  resolved once at function start for the multi-call form.
+- metadataService.ts: 2 getProperty call sites migrated; bridge
+  resolved once at function start.
+
+Verification:
+- npx tsc --noEmit: clean across the whole consumer codebase.
+- npm test: 203/206 pass. The 2 failures are pre-existing V11 video
+  tests (videoLockedOverlay.test.tsx, videoDeadControlSweep.test.tsx)
+  that the V13 spec schedules for deletion in Phase 57.7. Confirmed
+  by stashing this commit and re-running — the same 2 fail.
+
+Out of scope (next batches):
+- Batch 2: notificationService + TransportContext (53b.6 + 53b.7 + 53c).
+- Batch 3: 32 screen files (53a — usePlaybackCommands -> usePlayerActivity).
+- Batch 4: src/screens/QueueScreen/hooks/useQueueScreen.ts (extra
+  MpvPlayer import not in the spec).
+- Batch 5: typecheck + jest for the full consumer after migration.

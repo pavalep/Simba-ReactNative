@@ -1,4 +1,4 @@
-import {MpvPlayer} from '../native';
+import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {store} from '../store';
 
 // ─── EQ constants (shared by player panels + Equalizer screen) ───
@@ -63,7 +63,7 @@ export function applyPlaybackSettingsToMpv(): void {
   ];
   for (const [name, value] of properties) {
     try {
-      MpvPlayer.setProperty(name, value);
+      getMpvPlayerModule().setProperty(name, value);
     } catch {
       // Ignore unsupported properties; the player remains usable.
     }
@@ -78,26 +78,27 @@ export function applyPlaybackSettingsToMpv(): void {
  */
 export function applyAudioSettingsToMpv(): void {
   const s = store.getState().settings;
+  const bridge = getMpvPlayerModule();
   try {
-    MpvPlayer.setProperty(
+    bridge.setProperty(
       'volume-max',
       s.isAudioNormalizationEnabled ? 100 : 130,
     );
   } catch {}
   try {
-    MpvPlayer.setProperty('replaygain', s.replayGain);
+    bridge.setProperty('replaygain', s.replayGain);
   } catch {}
   try {
-    MpvPlayer.setProperty('gapless-audio', s.gaplessPlayback ? 'yes' : 'no');
+    bridge.setProperty('gapless-audio', s.gaplessPlayback ? 'yes' : 'no');
   } catch {}
   try {
-    MpvPlayer.setProperty('audio-delay', s.audioDelay);
+    bridge.setProperty('audio-delay', s.audioDelay);
   } catch {}
   try {
-    MpvPlayer.setProperty('audio-samplerate', s.sampleRate);
+    bridge.setProperty('audio-samplerate', s.sampleRate);
   } catch {}
   try {
     const gains = s.eqEnabled ? s.eqGains : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    MpvPlayer.setProperty('af', buildAfFilter(gains, s.isDialogueBoostEnabled));
+    bridge.setProperty('af', buildAfFilter(gains, s.isDialogueBoostEnabled));
   } catch {}
 }
