@@ -26,7 +26,7 @@ import {PlaylistCreateModal} from '../../../components/playlist/PlaylistCreateMo
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {logger} from '../../../lib/logger';
 import {usePlaylists} from '../../../features/playlists';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 import type {PlaylistItem, PlaylistKind} from '../../../types/playlist';
 
@@ -60,7 +60,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {playlists, addItem, createPlaylist} = usePlaylists();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   // Initialize breadcrumbs from initialPath param
   const initialPath = route.params?.initialPath ?? '';
@@ -187,13 +187,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: `file://${filePath}`,
         title: fileName,
-        duration: 0,
-        ...normalizeMediaClassification({
-          source: 'local',
-          type: mediaType === 'audio' ? 'audio' : 'video',
-          mediaType,
-          folderId: linkedMediaFolderIdFromPath(currentPath),
-        }),
+        type: mediaType,
       });
     },
     [openPlayer, isSelecting, currentPath],

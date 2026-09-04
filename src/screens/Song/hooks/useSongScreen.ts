@@ -16,7 +16,7 @@ import {loadLrc} from '../../../services/lrcService';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {LrcLine} from '../../../utils/lrcParser';
 import {isRemoteUri} from '../../../utils/mediaUri';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 type SongRoute = RouteProp<RootStackParamList, 'SongScreen'>;
 type SongNav = NativeStackNavigationProp<RootStackParamList, 'SongScreen'>;
@@ -42,7 +42,7 @@ export function useSongScreen() {
   const navigation = useNavigation<SongNav>();
   const dispatch = useAppDispatch();
   const {show: showToast} = useToast();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const {fileUri, title: titleParam, artist: artistParam, album: albumParam} = route.params;
 
@@ -129,11 +129,8 @@ export function useSongScreen() {
       openPlayer({
         uri: fileUri,
         title: displayTitle,
-        duration: displayDuration,
-        startPosition: position,
-        source: isRemoteUri(fileUri) ? 'api' : 'local',
-        type: 'music',
-        mediaType: 'audio',
+        startPositionMs: position,
+        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
       });
     },
     [openPlayer, fileUri, displayTitle, displayDuration],
@@ -183,10 +180,7 @@ export function useSongScreen() {
     openPlayer({
       uri: fileUri,
       title: displayTitle,
-      duration: displayDuration,
-      source: isRemoteUri(fileUri) ? 'api' : 'local',
-      type: 'music',
-      mediaType: 'audio',
+      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
     });
   }, [openPlayer, fileUri, displayTitle, displayDuration]);
 
@@ -230,10 +224,7 @@ export function useSongScreen() {
     openPlayer({
       uri: fileUri,
       title: displayTitle,
-      duration: displayDuration,
-      source: isRemoteUri(fileUri) ? 'api' : 'local',
-      type: 'music',
-      mediaType: 'audio',
+      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
     });
   }, [openPlayer, fileUri, displayTitle, displayDuration]);
 

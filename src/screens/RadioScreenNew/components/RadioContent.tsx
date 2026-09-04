@@ -33,7 +33,7 @@ import {shareContent} from '../../../services/shareService';
 import {useBookmarks} from '../../../hooks/useBookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {styles} from '../styles';
@@ -111,7 +111,7 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const haptics = useHaptics();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   const {add: addBookmark} = useBookmarks();
 
   const {
@@ -180,12 +180,7 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: row.url,
         title: row.name,
-        duration: 0,
-        artworkUri: row.image || undefined,
-        source: 'api',
-        type: 'radio',
-        mediaType: 'audio',
-        provider: 'radio',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('radio'))),
       });
     },
     [openPlayer],

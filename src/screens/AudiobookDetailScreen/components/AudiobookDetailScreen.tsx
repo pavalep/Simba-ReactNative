@@ -22,7 +22,7 @@ import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSh
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useAppDispatch} from '../../../store';
 import {useRecentHistory} from '../../../features/recentHistory';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 import {prependToQueue, addToQueue} from '../../../store/slices/playerSlice';
 import {useBookmarks} from '../../../features/bookmarks';
@@ -58,7 +58,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
   const toast = useToast();
   const haptics = useHaptics();
     const {add: addBookmark} = useBookmarks();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [menuChapter, setMenuChapter] = useState<ArchiveTrack | null>(null);
@@ -106,14 +106,7 @@ export const AudiobookDetailScreen: React.FC<Props> = ({route}) => {
       openPlayer({
         uri: chapter.url,
         title: chapter.title,
-        duration: chapter.lengthSeconds || 0,
-        artworkUri: coverImage || undefined,
-        source: 'api',
-        provider: 'librivox',
-        type: 'audiobook',
-        mediaType: 'audio',
-        chapterList: list,
-        chapterIndex: index,
+        type: 'audio',
       });
     },
     [openPlayer, book, chapters, coverImage],

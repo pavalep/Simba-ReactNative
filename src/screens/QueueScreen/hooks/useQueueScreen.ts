@@ -27,7 +27,7 @@ import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {PlaylistItem} from '../../../types/playlist';
 import type {MediaLane} from '../../../types/media';
 import type {RootStackScreenProps} from '../../../navigation/types';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 interface QueueDisplayRow {
   entry: PlaylistEntry;
@@ -65,7 +65,7 @@ export function useQueueScreen(): UseQueueScreenResult {
   const route = useRoute<RootStackScreenProps<'Queue'>['route']>();
   const dispatch = useAppDispatch();
   const haptics = useHaptics();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const currentTrack = useAppSelector(state => state.player.currentFile);
   const playlist = useAppSelector(state => state.player.playlist);
@@ -133,12 +133,7 @@ export function useQueueScreen(): UseQueueScreenResult {
         openPlayer({
           uri: entry.uri,
           title: entry.title,
-          duration: entry.duration,
-          source: entry.source,
-          type: entry.type,
-          mediaType: entry.mediaType,
-          provider: entry.provider,
-          folderId: entry.folderId,
+          type: resolveStreamType(resolveStreamType(entry.type)),
         });
       }
 

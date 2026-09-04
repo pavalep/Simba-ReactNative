@@ -28,7 +28,7 @@ import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSh
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {shareContent} from '../../../services/shareService';
 import {useBookmarks} from '../../../features/bookmarks';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 type Props = RootStackScreenProps<'RadioFavoritesScreen'>;
 
@@ -37,7 +37,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const haptics = useHaptics();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   const {add: addBookmark} = useBookmarks();
   const dispatch = useAppDispatch();
 
@@ -55,12 +55,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
       openPlayer({
         uri: row.url,
         title: row.name,
-        duration: 0,
-        artworkUri: row.image || undefined,
-        source: 'api',
-        type: 'radio',
-        mediaType: 'audio',
-        provider: 'radio',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('radio'))),
       });
     },
     [openPlayer],

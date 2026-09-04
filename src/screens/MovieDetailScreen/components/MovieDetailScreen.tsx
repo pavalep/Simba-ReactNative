@@ -15,7 +15,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {useBookmarks} from '../../../features/bookmarks';
 
 import type {MovieDetailScreenProps} from '../types';
@@ -55,7 +55,7 @@ const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 // ─── Component ──────────────────────────────────────────────────────────
 export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   const {identifier, title: routeTitle} = route.params;
   const {item, isLoading, error, retry} = useMovieDetailScreen(identifier);
   const {colors} = useTheme();
@@ -408,12 +408,8 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
             openPlayer({
               uri: item.streamingUrl,
               title: item.title,
-              duration: item.duration ?? 0,
-              startPosition: savedBookmark?.position ?? 0,
-              source: 'api',
-              type: 'movie',
-              mediaType: 'video',
-              provider: 'movie',
+              startPositionMs: savedBookmark?.position ?? 0,
+              type: resolveStreamType(resolveStreamType(resolveStreamType('movie'))),
               // The IA subtitle shape is `{language, url, format}` — no
               // stable id. We use the language string as the
               // selector and let the player match by language. If a

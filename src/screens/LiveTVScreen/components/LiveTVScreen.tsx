@@ -43,7 +43,7 @@ import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import {usePlaybackCommands} from '../../../modules/playback';
+import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
@@ -412,7 +412,7 @@ export const LiveTVScreen: React.FC<Props> = ({route}) => {
   const [sheetItem, setSheetItem] = useState<
     React.ComponentProps<typeof PlaylistSheet>['currentItem'] | null
   >(null);
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   // ── Channel press / long-press ──
   const handleChannelPress = useCallback(
@@ -420,11 +420,7 @@ export const LiveTVScreen: React.FC<Props> = ({route}) => {
       openPlayer({
         uri: row.url,
         title: row.name,
-        duration: 0,
-        source: 'api',
         type: 'video',
-        mediaType: 'video',
-        provider: 'iptv',
       });
     },
     [openPlayer],

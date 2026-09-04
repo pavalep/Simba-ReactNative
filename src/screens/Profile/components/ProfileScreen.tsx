@@ -35,7 +35,7 @@ import {formatDuration} from '../../../utils/timeAgo';
 import {clearCache} from '../../../services/cacheService';
 import type {RootStackScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
-import {usePlaybackCommands} from '../../../modules/playback';
+import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 type Props = RootStackScreenProps<'Profile'>;
 
@@ -56,7 +56,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const insets = useSafeAreaInsets();
   const toast = useToast();
     const dispatch = useAppDispatch();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const {user, isLoading, signIn, signOut, revokeAccess} =
     useAuth();
@@ -146,9 +146,8 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
       openPlayer({
         uri: entry.fileUri,
         title: entry.title,
-        duration: entry.duration,
-        startPosition: entry.position,
-        ...normalizeMediaClassification(entry),
+        startPositionMs: entry.position,
+        type: entry.mediaType === 'video' ? 'video' : 'audio',
       });
     },
     [openPlayer],

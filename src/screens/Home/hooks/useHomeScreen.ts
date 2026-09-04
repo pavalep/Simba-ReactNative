@@ -13,7 +13,7 @@ import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
-import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import {useAuth} from '../../../hooks/useAuth';
 import {useWeather} from '../../../hooks/useWeather';
@@ -103,7 +103,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const [isSettled, setIsSettled] = useState(false);
   const [hasError, setHasError] = useState(false);
   const dispatch = useAppDispatch();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   const {user} = useAuth();
   const {snapshot: weatherSnapshot, isFirstLoad: weatherFirstLoad} = useWeather();
 
@@ -145,10 +145,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       openPlayer({
         uri: file.uri,
         title: file.title || 'Untitled',
-        duration: 0,
-        source: 'local',
-        type: mediaType === 'audio' ? 'music' : 'video',
-        mediaType,
+        type: resolveStreamType(mediaType),
       });
     } catch {}
   }, [openPlayer]);
@@ -169,14 +166,8 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       openPlayer({
         uri: item.fileUri,
         title: item.title,
-        duration: 0,
-        artworkUri: item.thumbnailPath || undefined,
-        startPosition: item.startPosition ?? item.position,
-        source: item.source,
-        type: item.type,
-        mediaType: item.mediaType,
-        provider: item.provider,
-        folderId: item.folderId,
+        startPositionMs: item.startPosition ?? item.position,
+        type: resolveStreamType(item.type ?? 'audio'),
       });
     },
     [openPlayer],

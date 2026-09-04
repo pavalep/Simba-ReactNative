@@ -18,7 +18,7 @@ import {Placeholder} from '../../../components/feedback/Placeholder';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {useAppSelector} from '../../../store';
 import {useRecentHistory} from '../../../features/recentHistory';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 import {useSearch} from '../../../hooks/useSearch';
 import type {SearchScreenProps} from '../types';
@@ -67,7 +67,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const {width: screenWidth} = useWindowDimensions();
 
     const {list: recentFiles} = useRecentHistory();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const playlist = useAppSelector(state => state.player.playlist);
   const videoFolders = useAppSelector(state => state.settings.videoFolders);
@@ -255,10 +255,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       openPlayer({
         uri: fileUri,
         title: fileTitle,
-        duration: 0,
-        source: 'local',
-        type: mediaType,
-        mediaType,
+        type: resolveStreamType(mediaType),
       });
     },
     [openPlayer],
@@ -279,12 +276,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       openPlayer({
         uri: track.audioUrl,
         title: track.name,
-        duration: 0,
-        artworkUri: track.imageUrl || undefined,
-        source: 'api',
-        type: 'music',
-        mediaType: 'audio',
-        provider: 'jamendo',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
       });
     },
         [openPlayer],
@@ -295,12 +287,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       openPlayer({
         uri: track.streamUrl,
         title: track.title,
-        duration: 0,
-        artworkUri: track.artworkUrl || undefined,
-        source: 'api',
-        type: 'music',
-        mediaType: 'audio',
-        provider: 'audius',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
             });
     },
     [openPlayer],
@@ -331,11 +318,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       openPlayer({
         uri: channel.url,
         title: channel.name,
-        duration: 0,
-        source: 'api',
-        type: 'live-tv',
-        mediaType: 'video',
-        provider: 'iptv',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('live-tv'))),
       });
     },
         [openPlayer],

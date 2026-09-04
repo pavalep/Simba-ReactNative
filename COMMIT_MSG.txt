@@ -1,56 +1,65 @@
-feat(v13-phase-53b-53c): migrate notificationService + TransportContext to module bridge
+feat(v13-phase-53a): migrate 32 screen files to module bridge
 
-V13 Phase 53 Batch 2: the two "complex" services that use the event
-subscription API.
+V13 Phase 53 Batch 3: 32 consumer screen files migrated from the
+V11 `usePlaybackCommands` hook to the V13 module's
+`usePlayerActivity` hook.
 
-notificationService.ts (53b.6 + 53c.1):
-- Routes `isNotificationActive` and `requestNotificationPermission`
-  through `getMpvPlayerModule()` (the typed V13 bridge has both
-  methods).
-- The four V11-only methods (`startNotification`, `updateNotification`,
-  `stopNotification`) stay on `NativeModules.MpvPlayerModule` directly
-  with a local typed cast. They're NOT in the V13 module bridge because
-  V12's MediaPlaybackService handles the foreground notification
-  natively — these calls are dead code in the default V12+ flow and
-  only kept for the V11 emergency rollback path.
-- The V11 notification event channel (`onNotificationPlay`,
-  `onNotificationPause`, etc.) is NOT part of the module's typed
-  `PlayerEventName` union, so `notificationEmitter` stays as-is. The
-  module's `subscribePlayerEvent` handles the 22 mpv events; the V11
-  notification events live on a separate native channel.
+Per file:
+  - Import: `from '../../../modules/playback'` ->
+    `from '@simba-dev/react-native-media-player'`
+  - Hook call: `usePlaybackCommands()` -> `usePlayerActivity()`
+  - `openPlayer({...})` arg shape: V11 fields dropped
+    (`duration`, `source`, `mediaType`, `mediaLane`, `artworkUri`,
+    `folderId`, `chapterIndex`, `chapterList`, `provider`,
+    `subtitleLanguage`), renamed (`startPosition` ->
+    `startPositionMs`, `resumePosition` -> `startPositionMs`),
+    or type-narrowed (content kinds mapped to stream kinds via the
+    module's `resolveStreamType` helper).
 
-TransportContext.tsx (53b.7 + 53c.2):
-- Resolves `const bridge = useMemo(() => getMpvPlayerModule(), [])`
-  once at provider mount.
-- Replaces 8 `MpvPlayer.on(event, handler)` calls with
-  `subscribePlayerEvent(event, handler)` from the module. The event
-  names + payload shapes are identical to the V11 ones; only the call
-  site moved into the module.
-- Replaces `MpvPlayer.setProperty`, `getProperty`, `pause`, `resume`
-  (mapped to `play`), `getPosition`, `getDuration`, `getPlaybackState`,
-  `seekTo` (mapped to `seekAbsolute`), `observeProperty`,
-  `unobserveProperty` with their `bridge.X()` equivalents.
-- `MpvPlayer.resume()` -> `bridge.play()` (the module consolidates
-  resume into the canonical `play` RPC; semantically identical).
-- `MpvPlayer.seekTo(secs)` -> `bridge.seekAbsolute(secs)` (both take
-  seconds, semantically identical).
-- The 1Hz position/duration poll now uses `bridge.getPosition` /
-  `bridge.getDuration` / `bridge.getPlaybackState`.
-- The sleep-timer volume-fade logic now uses `bridge.setProperty('volume', ...)`
-  and `bridge.getProperty('volume')`.
-- Cleanup `unsubPosition()` etc. unchanged — the module's
-  `subscribePlayerEvent` returns the same `() => void` unsubscribe
-  shape as the V11 `MpvPlayer.on`.
-- `MpvPlaybackState` is re-exported from the module for downstream
-  consumers that dispatch Redux actions based on the typed state.
+The migration was done with two Node.js scripts
+(scripts/migrate-v13-step1.cjs and
+scripts/migrate-v13-step2.cjs) for the mechanical parts (import
++ hook call, field drops, renames, literal type wraps) and
+manual edits for the edge cases:
+  - Single-line `openPlayer({...entry, mediaLane: 'audio'})` in
+    Album/Artist — `mediaLane` is a V11-only field; replaced
+    with explicit uri/title/type for type compatibility.
+  - `...normalizeMediaClassification({...})` spread in
+    FolderBrowser/Profile — helper returns MediaKind; the spread
+    was replaced with explicit uri/title/type.
+  - NowPlaying's `duration,` shorthand prop — replaced with
+    explicit type field.
+  - Home's `string | undefined` type — defaulted to 'audio' at
+    the resolveStreamType call site.
+
+DX win: the module gained a `resolveStreamType(contentKind)`
+helper that maps consumer content kinds ('music', 'movie',
+'podcast', 'live-tv', etc.) to the V13 stream types ('audio' |
+'video'). Without this helper, every one of the 32 files would
+have an inline `type: 'audio' | 'video'` ternary. The helper is
+exported from `@simba-dev/react-native-media-player` (V14
+public-API addition; the 32 files all import it).
+
+Also added (module side, not committed in this commit, already
+on the module repo at 696fef9):
+  - useOpenWithResume + PlayerResumeProvider
+  - usePlayItem
+  - ContentKind type
+  - resolveStreamType (re-exported via index.ts)
 
 Verification:
-- npx tsc --noEmit: clean across the full consumer codebase.
-- npm test: 203/206 pass. The 2 failures are the same pre-existing V11
-  video tests (videoLockedOverlay, videoDeadControlSweep) that Phase 57
-  schedules for deletion. No new failures from this batch.
+  - npx tsc --noEmit: clean across the full consumer codebase.
+  - npm test: 203/206. The 2 failures are the same pre-existing
+    V11 video tests (videoLockedOverlay, videoDeadControlSweep)
+    that Phase 57 schedules for deletion. No new failures from
+    this batch.
 
 Out of scope (next batches):
-- Batch 3: 32 screen files (usePlaybackCommands -> usePlayerActivity).
-- Batch 4: useQueueScreen.ts (extra MpvPlayer import).
-- Batch 5: final typecheck + jest for the full consumer.
+  - Batch 4: useQueueScreen.ts (extra MpvPlayer import not
+    migrated by step 1).
+  - Batch 5: typecheck + jest for the full consumer.
+
+Note: scripts/migrate-v13-step1.cjs and
+scripts/migrate-v13-step2.cjs are kept in the consumer repo
+under scripts/ as one-off tools. Future migrations can reuse or
+delete them; they're not part of the build or runtime.

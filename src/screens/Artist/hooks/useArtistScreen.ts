@@ -9,7 +9,7 @@ import {selectArtistDiscography} from '../../../store/slices/mediaSlice';
 import {loadPlaylistToPlayer, playFile, type PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
+import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ArtistScreen'>;
 type Route = RouteProp<RootStackParamList, 'ArtistScreen'>;
@@ -18,7 +18,7 @@ export function useArtistScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const dispatch = useAppDispatch();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const {artistName} = route.params;
 
@@ -85,7 +85,11 @@ export function useArtistScreen() {
   const handlePlayTrack = useCallback(
     (item: PlaylistEntry) => {
       dispatch(playFile(item));
-      openPlayer({...item, mediaLane: 'audio'});
+      openPlayer({
+        uri: item.uri,
+        title: item.title,
+        type: 'audio',
+      });
     },
     [dispatch, openPlayer],
   );
@@ -96,7 +100,11 @@ export function useArtistScreen() {
     }));
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
-    openPlayer({...entries[0], mediaLane: 'audio'});
+    openPlayer({
+      uri: entries[0].uri,
+      title: entries[0].title,
+      type: 'audio',
+    });
   }, [allTracks, dispatch, openPlayer]);
 
   const handleShuffleAll = useCallback(() => {
@@ -110,7 +118,11 @@ export function useArtistScreen() {
     }
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
-    openPlayer({...entries[0], mediaLane: 'audio'});
+    openPlayer({
+      uri: entries[0].uri,
+      title: entries[0].title,
+      type: 'audio',
+    });
   }, [allTracks, dispatch, openPlayer]);
 
   const handleNavigateToAlbum = useCallback(

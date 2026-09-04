@@ -1,5 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {useBookmarks} from '../../../features/bookmarks';
 import type {Bookmark} from '../../../features/bookmarks';
 
@@ -17,7 +17,7 @@ export interface UseBookmarksScreenResult {
 }
 
 export function useBookmarksScreen(): UseBookmarksScreenResult {
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   const {allBookmarks, bookmarkCount, remove, clearAll} = useBookmarks();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,14 +37,7 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
       openPlayer({
         uri: item.fileUri,
         title: item.title,
-        duration: item.duration,
-        resumePosition: item.position,
-        artworkUri: item.thumbnailPath,
-        source: item.source,
-        type: item.type,
-        mediaType: item.mediaType,
-        provider: item.provider,
-        folderId: item.folderId,
+        type: resolveStreamType(resolveStreamType(item.type)),
       });
     },
     [openPlayer],

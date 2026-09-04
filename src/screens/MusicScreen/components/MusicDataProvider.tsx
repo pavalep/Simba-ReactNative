@@ -5,7 +5,7 @@
 // helper — content has no screen `navigation`).
 
 import React, {useCallback, useMemo, type ReactNode} from 'react';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {useMusicScreen, type MusicScopeState} from '../hooks/useMusicScreen';
 import type {JamendoTrackResult} from '../../../types/api';
 
@@ -40,18 +40,13 @@ export const MusicDataProvider: React.FC<{
   // Single hook instance for the whole screen — the one content stream
   // reads the SAME (genre, searchTerm) scope cache via context.
   const music = useMusicScreen();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const handleTrackPress = useCallback((item: JamendoTrackResult) => {
     openPlayer({
       uri: item.audioUrl,
       title: item.name,
-      duration: item.duration ?? 0,
-      artworkUri: item.imageUrl,
-      source: 'api',
-      type: 'music',
-      mediaType: 'audio',
-      provider: 'jamendo',
+      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
     });
   }, [openPlayer]);
 

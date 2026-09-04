@@ -8,7 +8,7 @@ import {createSelector} from '@reduxjs/toolkit';
 import {useAppSelector} from '../../../store';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
-import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
+import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 
 // 59.2: stable selector — inline filters re-ran on EVERY store dispatch
@@ -36,7 +36,7 @@ export interface UseAllVideosScreenResult {
 }
 
 export function useAllVideosScreen(): UseAllVideosScreenResult {
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('title');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -81,10 +81,7 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
       openPlayer({
         uri,
         title,
-        duration: 0,
-        source: 'local',
         type: 'video',
-        mediaType: 'video',
       });
     },
     [openPlayer],

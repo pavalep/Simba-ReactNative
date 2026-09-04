@@ -12,7 +12,7 @@ import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {shareContent} from '../../../services/shareService';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import text from '../related/textContent.json';
 
 type Navigation = PodcastDetailScreenProps['navigation'];
@@ -27,7 +27,7 @@ export function useEpisodeActions({podcast, navigation}: Options) {
   const dispatch = useAppDispatch();
   const toast = useToast();
   const {add: addBookmark} = useBookmarks();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   // 35.6: episode long-press actions
   const [menuEpisode, setMenuEpisode] = useState<PodcastEpisodeResult | null>(
@@ -42,12 +42,7 @@ export function useEpisodeActions({podcast, navigation}: Options) {
       openPlayer({
         uri: episode.enclosureUrl,
         title: episode.title,
-        duration: episode.duration || 0,
-        artworkUri: episode.image || podcast?.image || undefined,
-        source: 'api',
-        provider: 'podcastIndex',
-        type: 'podcast',
-        mediaType: 'audio',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('podcast'))),
       });
     },
     [openPlayer, podcast],

@@ -22,7 +22,7 @@ import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
 import {formatDuration} from '../../../utils/timeAgo';
@@ -50,7 +50,7 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   const toast = useToast();
   const {confirm, dialog} = useConfirmDialog();
   const {list: recentFiles, removeRecent, clearRecent} = useRecentHistory();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [query, setQuery] = useState('');
   // 58.4/58.5: standard long-press menu (Play Next / Queue / Remove)
@@ -86,11 +86,8 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
       openPlayer({
         uri: fileUri,
         title: title ?? 'Untitled',
-        duration: 0,
-        startPosition: position,
-        source: isStreamingUri(fileUri) ? 'api' : 'local',
-        type: lane === 'audio' ? 'audio' : 'video',
-        mediaType: lane,
+        startPositionMs: position,
+        type: resolveStreamType(resolveStreamType(lane === 'audio' ? 'audio' : 'video')),
       });
     },
     [openPlayer],

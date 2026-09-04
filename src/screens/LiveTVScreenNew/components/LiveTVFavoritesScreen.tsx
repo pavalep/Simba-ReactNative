@@ -30,7 +30,7 @@ import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {
   ChannelCard,
   favToRow,
@@ -46,7 +46,7 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
   const toast = useToast();
   const haptics = useHaptics();
   const {add: addBookmark} = useBookmarks();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const favorites = useAppSelector(s =>
     selectLiveFavoritesByKind(s, 'tv'),
@@ -64,11 +64,7 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
       openPlayer({
         uri: row.url,
         title: row.name,
-        duration: 0,
-        source: 'api',
-        type: 'live-tv',
-        mediaType: 'video',
-        provider: 'iptv',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('live-tv'))),
       });
     },
     [openPlayer],

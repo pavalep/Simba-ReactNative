@@ -12,7 +12,7 @@ import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {JamendoTrackResult, RadioStationResult} from '../../../types/api';
-import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {getJamendoTracksByGenre} from '../../../services/api/jamendoService';
 import {getStationsByGenre} from '../../../services/api/radioBrowserService';
 import {
@@ -49,7 +49,7 @@ export interface UseGenreScreenResult {
 }
 
 export function useGenreScreen(): UseGenreScreenResult {
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   const route = useRoute<RouteProp<RootStackParamList, 'GenreScreen'>>();
   const {genre, initialTab} = route.params;
 
@@ -178,10 +178,7 @@ export function useGenreScreen(): UseGenreScreenResult {
       openPlayer({
         uri,
         title,
-        duration: 0,
-        source: 'local',
-        type: 'music',
-        mediaType: 'audio',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
       });
     },
     [openPlayer],
@@ -192,12 +189,7 @@ export function useGenreScreen(): UseGenreScreenResult {
       openPlayer({
         uri: track.audioUrl,
         title: track.name,
-        duration: 0,
-        artworkUri: track.imageUrl || undefined,
-        source: 'api',
-        type: 'music',
-        mediaType: 'audio',
-        provider: 'jamendo',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
       });
     },
     [openPlayer],
@@ -208,12 +200,7 @@ export function useGenreScreen(): UseGenreScreenResult {
       openPlayer({
         uri: station.urlResolved || station.url,
         title: station.name,
-        duration: 0,
-        artworkUri: station.favicon || undefined,
-        source: 'api',
-        type: 'radio',
-        mediaType: 'audio',
-        provider: 'radio-browser',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('radio'))),
       });
     },
     [openPlayer],

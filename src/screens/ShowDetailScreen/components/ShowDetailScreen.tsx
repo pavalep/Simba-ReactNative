@@ -20,7 +20,7 @@ import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {shareContent} from '../../../services/shareService';
-import {usePlaybackCommands} from '../../../modules/playback';
+import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 type Props = ShowDetailScreenProps;
 
@@ -83,7 +83,7 @@ export const ShowDetailScreen: React.FC<Props> = ({navigation, route}) => {
     });
   }, [show]);
 
-    const {openPlayer} = usePlaybackCommands();
+    const {openPlayer} = usePlayerActivity();
 
   const handleEpisodePress = useCallback(
 
@@ -91,10 +91,7 @@ export const ShowDetailScreen: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: localUri,
         title: `${show?.name ?? showName ?? ''} S${String(episode.season).padStart(2, '0')}E${String(episode.number).padStart(2, '0')} — ${episode.name}`,
-        duration: 0,
-        source: 'local',
         type: 'video',
-        mediaType: 'video',
       });
     },
     [openPlayer, show?.name, showName],

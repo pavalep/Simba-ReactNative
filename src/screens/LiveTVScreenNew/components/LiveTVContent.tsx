@@ -35,7 +35,7 @@ import {Placeholder} from '../../../components/feedback/Placeholder';
 import {shareContent} from '../../../services/shareService';
 import {useBookmarks} from '../../../hooks/useBookmarks';
 import {useToast} from '../../../components/feedback/Toast';
-import {usePlaybackCommands} from '../../../modules/playback';
+import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
@@ -175,18 +175,14 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasLoaded, isLoading, error, isOnline]);
 
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const handleChannelPress = useCallback(
     (row: ChannelRow) => {
       openPlayer({
         uri: row.url,
         title: row.name,
-        duration: 0,
-        source: 'api',
         type: 'video',
-        mediaType: 'video',
-        provider: 'iptv',
       });
     },
     [openPlayer],

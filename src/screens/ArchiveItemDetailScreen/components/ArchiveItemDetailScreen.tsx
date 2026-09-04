@@ -21,7 +21,7 @@ import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSh
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useAppDispatch} from '../../../store';
 import {useRecentHistory} from '../../../features/recentHistory';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 import {prependToQueue, addToQueue} from '../../../store/slices/playerSlice';
 import {useBookmarks} from '../../../features/bookmarks';
@@ -53,7 +53,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
   const toast = useToast();
   const haptics = useHaptics();
     const {add: addBookmark} = useBookmarks();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [menuTrack, setMenuTrack] = useState<ArchiveTrack | null>(null);
@@ -95,14 +95,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
       openPlayer({
         uri: track.url,
         title: track.title,
-        duration: track.lengthSeconds || 0,
-        artworkUri: imageUrl || undefined,
-        source: 'api',
-        type: 'archive-audio',
-        mediaType: 'audio',
-        provider: 'internet-archive',
-        chapterList: list,
-        chapterIndex: index,
+        type: 'audio',
       });
     },
     [openPlayer, tracks, imageUrl],

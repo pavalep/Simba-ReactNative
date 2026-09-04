@@ -13,7 +13,7 @@ import {ViewMode} from '../components/ViewToggle';
 import type {PlaylistKind} from '../../../types/playlist';
 import type {LibraryScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import type {
   ContentMode,
   FilterType,
@@ -60,7 +60,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const insets = useSafeAreaInsets();
   const bottomChromeInset = insets.bottom + 104;
   const dispatch = useAppDispatch();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   // ── Library State ──
   const [activeSegment, setActiveSegment] = useState<Segment>('folders');
@@ -189,14 +189,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
       openPlayer({
         uri: track.uri,
         title: track.title,
-        duration: track.duration ?? 0,
-        ...normalizeMediaClassification({
-          ...track,
-          mediaType:
-            track.mediaType === 'video' || isVideoFile(track.uri)
-              ? 'video'
-              : 'audio',
-        }),
+        type: resolveStreamType(track.mediaType),
       });
     },
     [openPlayer],
@@ -226,14 +219,8 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
         openPlayer({
           uri: first.uri,
           title: first.title,
-          duration: first.duration,
-          artworkUri: first.artworkUri,
-          startPosition: first.resumePosition,
-          source: first.source,
-          type: first.type,
-          mediaType: first.mediaType,
-          provider: first.provider,
-          folderId: first.folderId,
+          startPositionMs: first.resumePosition,
+          type: resolveStreamType(resolveStreamType(first.type)),
         });
       }
     },
@@ -255,14 +242,8 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
         openPlayer({
           uri: first.uri,
           title: first.title,
-          duration: first.duration,
-          artworkUri: first.artworkUri,
-          startPosition: first.resumePosition,
-          source: first.source,
-          type: first.type,
-          mediaType: first.mediaType,
-          provider: first.provider,
-          folderId: first.folderId,
+          startPositionMs: first.resumePosition,
+          type: resolveStreamType(resolveStreamType(first.type)),
         });
       }
     },

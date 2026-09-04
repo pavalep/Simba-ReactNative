@@ -13,7 +13,7 @@ import {
 } from '../../../store/slices/playerSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {usePlaybackCommands} from '../../../modules/playback/PlaybackContext';
+import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AlbumScreen'>;
 type Route = RouteProp<RootStackParamList, 'AlbumScreen'>;
@@ -22,7 +22,7 @@ export function useAlbumScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const dispatch = useAppDispatch();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const {albumName, artistName} = route.params;
 
@@ -105,7 +105,11 @@ export function useAlbumScreen() {
       }
       const entry = entries[indexInAlbum];
       if (!entry) return;
-      openPlayer({...entry, mediaLane: 'audio'});
+      openPlayer({
+        uri: entry.uri,
+        title: entry.title,
+        type: 'audio',
+      });
     },
     [sortedTracks, dispatch, openPlayer],
   );
@@ -116,7 +120,11 @@ export function useAlbumScreen() {
     }));
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
-    openPlayer({...entries[0], mediaLane: 'audio'});
+    openPlayer({
+      uri: entries[0].uri,
+      title: entries[0].title,
+      type: 'audio',
+    });
   }, [sortedTracks, dispatch, openPlayer]);
 
   const handleShuffleAll = useCallback(() => {
@@ -129,7 +137,11 @@ export function useAlbumScreen() {
     }
     if (entries.length === 0) return;
     dispatch(loadPlaylistToPlayer(entries));
-    openPlayer({...entries[0], mediaLane: 'audio'});
+    openPlayer({
+      uri: entries[0].uri,
+      title: entries[0].title,
+      type: 'audio',
+    });
   }, [sortedTracks, dispatch, openPlayer]);
 
   const handleGoToArtist = useCallback(() => {

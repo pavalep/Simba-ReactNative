@@ -16,7 +16,7 @@ import {useAppSelector} from '../../../store';
 import {useRecentHistory} from '../../../features/recentHistory';
 import {formatDuration} from '../../../utils/timeAgo';
 import type {StatsScreenProps} from '../types';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 type Props = StatsScreenProps;
 
@@ -28,7 +28,7 @@ function dayKey(d: Date): string {
 export const StatsScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
     const insets = useSafeAreaInsets();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const {list: recentFiles} = useRecentHistory();
   const mediaLibrary = useAppSelector(state => state.session.mediaLibrary);
@@ -190,13 +190,8 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
                         openPlayer({
                           uri: entry.fileUri,
                           title: entry.title,
-                          duration: entry.duration,
-                          startPosition: entry.position,
-                          source: entry.source,
-                          type: entry.type,
-                          mediaType: entry.mediaType,
-                          provider: entry.provider,
-                          folderId: entry.folderId,
+                          startPositionMs: entry.position,
+                          type: resolveStreamType(resolveStreamType(entry.type)),
                         });
                       }}
                       activeOpacity={0.7}

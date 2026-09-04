@@ -47,7 +47,7 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {isRemoteUri} from '../../../utils/mediaUri';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 type Props = PlaylistDetailScreenProps;
 
@@ -121,7 +121,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {confirm, dialog} = useConfirmDialog();
   // P34.5: offline guard for remote/streaming playlist items
   const {isOnline} = useNetworkStatus();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   // ── Isolated playlist data ──
   const items = useMemo(() => playlist?.items ?? [], [playlist]);
@@ -159,10 +159,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     openPlayer({
       uri: first.fileUri,
       title: first.title,
-      duration: first.duration,
-      source: first.source,
-      type: first.type,
-      mediaType: first.mediaType,
+      type: resolveStreamType(resolveStreamType(first.type)),
       ...(first.provider ? {provider: first.provider} : {}),
       ...(first.folderId ? {folderId: first.folderId} : {}),
       ...(first.thumbnailPath ? {artworkUri: first.thumbnailPath} : {}),
@@ -362,10 +359,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: item.fileUri,
         title: item.title,
-        duration: item.duration,
-        source: item.source,
-        type: item.type,
-        mediaType: item.mediaType,
+        type: resolveStreamType(resolveStreamType(item.type)),
         ...(item.provider ? {provider: item.provider} : {}),
         ...(item.folderId ? {folderId: item.folderId} : {}),
         ...(item.thumbnailPath ? {artworkUri: item.thumbnailPath} : {}),

@@ -27,7 +27,7 @@ import type {JamendoTrackResult} from '../../../types/api';
 import type {RootStackScreenProps} from '../types';
 type ArtistDetailScreenProps = RootStackScreenProps<'ArtistDetail'>;
 import {shareContent} from '../../../services/shareService';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 type Props = ArtistDetailScreenProps;
 
@@ -155,16 +155,13 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     [tracks],
   );
 
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const handlePlayTrack = (uri: string, title: string) => {
     openPlayer({
       uri,
       title,
-      duration: 0,
-      source: 'local',
-      type: 'music',
-      mediaType: 'audio',
+      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
     });
   };
 
@@ -174,12 +171,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: track.audioUrl,
         title: track.name,
-        duration: 0,
-        artworkUri: track.imageUrl || undefined,
-        source: 'api',
-        type: 'music',
-        mediaType: 'audio',
-        provider: 'jamendo',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
       });
     },
     [openPlayer],

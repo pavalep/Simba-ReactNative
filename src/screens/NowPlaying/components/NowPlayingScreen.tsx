@@ -32,7 +32,7 @@ import {spacing, radius} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useToast} from '../../../components/feedback/Toast';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import type {NowPlayingScreenProps} from '../types';
 
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
@@ -50,7 +50,7 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   // ── Edge case states ──
   const [isLoading, _setIsLoading] = useState(false);
@@ -136,9 +136,7 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
     openPlayer({
       uri: fileUri,
       title: fileTitle ?? 'Now Playing',
-      duration,
-      mediaType: 'audio',
-      type: 'music',
+      type: 'audio',
     });
   }, [duration, fileTitle, fileUri, openPlayer, toast]);
 

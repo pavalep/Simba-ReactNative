@@ -9,7 +9,7 @@
 
 import React, {useCallback, useMemo, useState, type ReactNode} from 'react';
 import {useToast} from '../../../components/feedback/Toast';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {resolveInternetArchiveVideoDetails} from '../../../services/api/internetArchiveService';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 import {
@@ -51,7 +51,7 @@ export const MoviesDataProvider: React.FC<{
   sortKey?: string;
 }> = ({children, sortKey}) => {
   const toast = useToast();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   // Single hook instance for the whole screen — the one content stream
   // reads the SAME (categoryIds, searchTerm, sortKey) scope cache via
   // context.
@@ -90,12 +90,8 @@ export const MoviesDataProvider: React.FC<{
         openPlayer({
           uri: details.streamingUrl,
           title: item.title,
-          duration: item.duration ?? 0,
-          startPosition: 0,
-          source: 'api',
-          type: 'movie',
-          mediaType: 'video',
-          provider: 'internetarchive',
+          startPositionMs: 0,
+          type: resolveStreamType(resolveStreamType(resolveStreamType('movie'))),
         });
       } catch (err) {
         const detail =

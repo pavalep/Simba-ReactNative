@@ -26,7 +26,7 @@ import type {JamendoTrackResult} from '../../../types/api';
 import type {RootStackScreenProps} from '../types';
 type AlbumDetailScreenProps = RootStackScreenProps<'AlbumDetail'>;
 import {shareContent} from '../../../services/shareService';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 type Props = AlbumDetailScreenProps;
 
@@ -50,7 +50,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
 
   const tracks = useAppSelector(state =>
     selectAlbumTracks(state, albumTitle, artistName),
@@ -83,10 +83,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: firstTrack.uri,
         title: firstTrack.title,
-        duration: firstTrack.duration,
-        source: 'local',
-        type: 'music',
-        mediaType: 'audio',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
       });
     }
   };
@@ -95,10 +92,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
     openPlayer({
       uri,
       title,
-      duration: 0,
-      source: 'local',
-      type: 'music',
-      mediaType: 'audio',
+      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
     });
   };
 
@@ -108,12 +102,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: track.audioUrl,
         title: track.name,
-        duration: 0,
-        artworkUri: track.imageUrl || undefined,
-        source: 'api',
-        type: 'music',
-        mediaType: 'audio',
-        provider: 'jamendo',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
       });
     },
     [openPlayer],

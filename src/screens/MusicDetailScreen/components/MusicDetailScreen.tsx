@@ -22,7 +22,7 @@ import {StreamingRow} from '../../../components/media/StreamingRow/StreamingRow'
 import type {JamendoTrackResult, AudiusTrackResult} from '../../../types/api';
 import {shareContent} from '../../../services/shareService';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import {usePlaybackCommands} from '../../../modules/playback';
+import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
 type Props = MusicDetailScreenProps;
 
@@ -37,7 +37,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {trackId, source} = route.params;
   const {track, isLoading, error} = useMusicDetailScreen(trackId, source);
   const {colors} = useTheme();
-  const {openPlayer} = usePlaybackCommands();
+  const {openPlayer} = usePlayerActivity();
   // P34.1: add-to-playlist sheet for streaming tracks
   const [sheetVisible, setSheetVisible] = useState(false);
 
@@ -53,12 +53,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
     openPlayer({
       uri: fileUri,
       title: fileTitle,
-      duration: 0,
-      artworkUri: artwork ?? undefined,
-      source: 'api',
-      type: 'music',
-      mediaType: 'audio',
-      provider: source,
+      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
     });
   }, [track, openPlayer, source]);
 
@@ -68,12 +63,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: t.audioUrl,
         title: t.name,
-        duration: 0,
-        artworkUri: t.imageUrl || undefined,
-        source: 'api',
-        type: 'music',
-        mediaType: 'audio',
-        provider: 'jamendo',
+        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
       });
     },
     [openPlayer],
