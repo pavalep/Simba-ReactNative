@@ -7,7 +7,7 @@
 **Package Name:** `@simba-dev/react-native-media-player` (renamed from `@simba/react-native-media-player` in V12.0.0 release)
 **Folder Name:** `react-native-media-player/` (sibling of consumer app)
 **NPM Org:** `@simba-dev` (admin: `pavalep`)
-**Status:** Wave 9 kickoff · **Phases 49-58 (8 phases, ~16 working days)**
+**Status:** V13.0.0 cut at v1.2.0 (tag pushed, release.yml running) · **Phases 49-58 complete in code** (8 phases) · **User steps pending**: promote v1.2.0 to latest + on-device smoke test
 **Owners:** Mobile team
 **Replaces:** V11 inline RN player (deprecated V12) + V12 partial extraction (V13 completes the extraction)
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V12_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V12_SPECIFICATION.md)
