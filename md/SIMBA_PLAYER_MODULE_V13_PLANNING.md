@@ -1,10 +1,11 @@
 # SIMBA Player Module — V13 Planning (Wave 9 kickoff)
 
-> **Status:** Wave 9 kickoff · **Author:** V12 refactor team · **Created:** 2026-09-03 (alongside the V12.0.0 release)
-> **Linked spec:** [`SIMBA_PLAYER_MODULE_V12_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V12_SPECIFICATION.md) (will become the V12 contract; V13 spec is forthcoming)
-> **Linked tracker:** [`SIMBA_PLAYER_MODULE_V12_TRACKER.md`](./SIMBA_PLAYER_MODULE_V12_TRACKER.md) (V12 release line; V13 tracker will fork from this)
-> **Linked V12 release runbook:** [`SIMBA_PLAYER_MODULE_V12_RELEASE_RUNBOOK.md`](./SIMBA_PLAYER_MODULE_V12_RELEASE_RUNBOOK.md) (§7.2 = V13 transition)
-> **Release gating V12.0.0 → V13 planning:** see [final QA report §4](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_FINAL_QA_REPORT.md) for the sign-off rules that gate this transition
+> **Status:** V13 work shipped as 1.2.0 — see [`SIMBA_PLAYER_MODULE_V13_FINAL_QA_REPORT.md`](./SIMBA_PLAYER_MODULE_V13_FINAL_QA_REPORT.md) and [`SIMBA_PLAYER_MODULE_V13_TRACKER.md`](./SIMBA_PLAYER_MODULE_V13_TRACKER.md) for the canonical record. **The V13 spec ([`SIMBA_PLAYER_MODULE_V13_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V13_SPECIFICATION.md)) overrode the original 4-theme plan in this document — V13 became "complete the extraction" (Phases 49-58), not DRM/Casting/iOS/Cleanup.** DRM, Casting, and iOS are deferred to V14.
+> **Author:** V12 refactor team · **Created:** 2026-09-03 (alongside the V12.0.0 release)
+> **Linked V13 spec:** [`SIMBA_PLAYER_MODULE_V13_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V13_SPECIFICATION.md)
+> **Linked V13 tracker:** [`SIMBA_PLAYER_MODULE_V13_TRACKER.md`](./SIMBA_PLAYER_MODULE_V13_TRACKER.md)
+> **Linked V13 final QA report:** [`SIMBA_PLAYER_MODULE_V13_FINAL_QA_REPORT.md`](./SIMBA_PLAYER_MODULE_V13_FINAL_QA_REPORT.md)
+> **Release gating V12.0.0 → V13 planning:** superseded — V13 was scoped by the V13 spec, not this planning doc.
 
 ---
 
