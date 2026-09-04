@@ -166,19 +166,37 @@ All four are exported from `@simba-dev/react-native-media-player` index.ts and a
 
 ## Phase 56 — Delete the inline bridge code
 
-**Status:** [ ] Pending
+**Status:** [x] Complete (consolidated with Phase 57 in commit `9c6c81c`)
 **Owner:** Mobile team
-**Target:** TBD
-**Actual:** _not yet started_
+**Target:** 2026-09-04
+**Actual:** _`src/native/` deleted (3 files). `codegenConfig` block removed from `package.json`. The V13 module is the bridge's sole owner._
+
+### Sub-phase 56.1-56.3 — Delete `src/native/*`
+**Status:** [x] Complete
+
+### Sub-phase 56.4 — Remove `codegenConfig` from `package.json`
+**Status:** [x] Complete
+
+### Sub-phase 56.5 — Verify typecheck
+**Status:** [x] Complete (`tsc --noEmit` clean)
 
 ---
 
 ## Phase 57 — Delete `PlaybackContext.tsx` + `PlaybackOverlayHost.tsx` + `TransportContext.tsx`
 
-**Status:** [ ] Pending
+**Status:** [x] Complete (consolidated with Phase 56 in commit `9c6c81c`)
 **Owner:** Mobile team
-**Target:** TBD
-**Actual:** _not yet started_
+**Target:** 2026-09-04
+**Actual:** _All 9 doomed V11 files deleted (PlaybackContext, PlaybackOverlayHost, types, index, the 36 video module files, TransportContext). 18 V11 test files deleted (14 specified + 4 cross-referenced). The 2 pre-existing V11 test failures are now gone. Test suite is 5/5 pass, 19/19 tests pass + 1 todo._
+
+### Sub-phase 57.1-57.6 — Delete `modules/playback/*`
+**Status:** [x] Complete
+
+### Sub-phase 57.7 — Delete `contexts/TransportContext.tsx`
+**Status:** [x] Complete (was migrated to the module's PlayerProvider in Phase 53 Batch 2)
+
+### Sub-phase 57.8-57.9 — Delete 18 V11 test files
+**Status:** [x] Complete (the 2 previously-failing tests are gone)
 
 ---
 
