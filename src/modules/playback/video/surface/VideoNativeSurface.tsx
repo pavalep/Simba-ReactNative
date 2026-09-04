@@ -1,3 +1,15 @@
+/**
+ * @deprecated V11 inline-mount surface (Phase 47 deletion target).
+ * Phase 41 flipped `USE_DEDICATED_PLAYER_ACTIVITY` to `true`; V12's
+ * `PlayerActivity` mounts its own native `MpvRenderView` (in
+ * `com.simba.player.mpv.MpvRenderView`) and exposes it via the
+ * module's `PlayerSurface` TS component. Consumers should NOT use
+ * `VideoNativeSurface` directly anymore — use `<PlayerSurface />` from
+ * `@simba/react-native-media-player` instead.
+ *
+ * This file is kept for the emergency V11 rollback path
+ * (`USE_DEDICATED_PLAYER_ACTIVITY = false`). Phase 47 deletes it.
+ */
 import React from 'react';
 import {
   requireNativeComponent,

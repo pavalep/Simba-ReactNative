@@ -1,3 +1,19 @@
+// ─── Wave 8 / Phase 45 — V11 debug-log cleanup ─────────────────
+//
+// This is the V11 consumer-app MainActivity — kept around as the
+// emergency rollback path when `USE_DEDICATED_PLAYER_ACTIVITY = false`
+// (see [`SIMBA_PLAYER_MODULE_V12_DEPRECATION_AUDIT.md`](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_DEPRECATION_AUDIT.md)
+// + [`SIMBA_PLAYER_MODULE_V12_CUTOVER_RUNBOOK.md`](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_CUTOVER_RUNBOOK.md) §5).
+//
+// **Phase 45 changes:**
+//   • `onPictureInPictureModeChanged` PiP log gated behind `BuildConfig.DEBUG`
+//     (the V11-era diagnostic from the PiP black-screen investigation)
+//   • Documented in [`SIMBA_PLAYER_MODULE_V12_DEBUG_LOG_CLEANUP.md`](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_DEBUG_LOG_CLEANUP.md) §3.1
+//
+// **Phase 47 deletion:** this file is scheduled for removal in Phase 47's
+// sweep (along with `MediaNotificationService.kt` + the rest of the
+// `com.simba.player.*` V11 native surface). The V12 equivalent lives in
+// `react-native-media-player/android/src/main/java/com/simba/player/PlayerActivity.kt`.
 package com.simba.player
 
 import android.app.PictureInPictureParams
@@ -74,7 +90,24 @@ class MainActivity : ReactActivity() {
     newConfig: Configuration,
   ) {
     super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
-    android.util.Log.i("MainActivity", "onPictureInPictureModeChanged: isInPip=$isInPictureInPictureMode")
+    // ── Phase 45 (Wave 8) cleanup ──
+    // V11-era diagnostic log from the PiP black-screen investigation
+    // (see `debug-pip-black-screen.md` — Hypothesis D + capture 2).
+    // Gated behind `BuildConfig.DEBUG` so production users see no log
+    // spam; release builds preserve the diagnostic locally for dev runs.
+    //
+    // The V12 active path logs the equivalent event at
+    // `react-native-media-player/android/.../PlayerActivity.kt:1210`
+    // (`Log.i(TAG, "onPictureInPictureModeChanged: isInPip=...")`).
+    // When `USE_DEDICATED_PLAYER_ACTIVITY = true` (Phase 41 cutover),
+    // the V12 `PlayerActivity` is the activity that enters PiP — this
+    // V11 log only fires under the emergency rollback path
+    // (`USE_DEDICATED_PLAYER_ACTIVITY = false`). Phase 47 deletes the
+    // whole V11 MainActivity PiP path; see
+    // [`SIMBA_PLAYER_MODULE_V12_DEBUG_LOG_CLEANUP.md`](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_DEBUG_LOG_CLEANUP.md) §3.1.
+    if (BuildConfig.DEBUG) {
+      android.util.Log.i("MainActivity", "onPictureInPictureModeChanged: isInPip=$isInPictureInPictureMode")
+    }
     // Delegate to MpvBridgeModule which holds the ReactApplicationContext
     // captured at module construction. Bridgeless RN: MainActivity cannot
     // resolve the ReactContext reliably at PiP entry time, so the actual

@@ -15,6 +15,23 @@
 // A small HUD at the top of the surface briefly shows the new
 // volume / brightness / seek-delta so the user gets feedback.
 
+/**
+ * @deprecated V11 inline-mount surface gesture handler. Phase 41 flipped
+ * `USE_DEDICATED_PLAYER_ACTIVITY` to `true`; V12's `PlayerActivity` mounts
+ * the surface natively in a dedicated Android activity and the gesture
+ * handling (double-tap seek, vertical pan for volume / brightness) is done
+ * by the system / native module — not the JS layer. This file is dead code
+ * in the default flow but is kept around for the emergency V11 rollback
+ * path (flip `USE_DEDICATED_PLAYER_ACTIVITY = false` to restore it).
+ *
+ * Phase 47 (V11 deprecation & cleanup) will delete this file. The
+ * `@simba/react-native-media-player` package replaces it with
+ * `DefaultControls` (double-tap seek + on-screen HUD) inside `PlayerActivity`.
+ * See [`SIMBA_PLAYER_MODULE_V12_SPECIFICATION.md`](
+ * ../../../../../md/SIMBA_PLAYER_MODULE_V12_SPECIFICATION.md) §10 +
+ * `SIMBA_PLAYER_MODULE_V12_DEPRECATION_AUDIT` Phase 42.
+ */
+
 import React, {useCallback, useRef, useState} from 'react';
 import {StyleSheet, Text, View, type LayoutChangeEvent, type StyleProp, type ViewStyle} from 'react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';

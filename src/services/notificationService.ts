@@ -15,6 +15,17 @@
  *   NotificationService.update({position, duration});
  *   // ... on unmount / back:
  *   NotificationService.stop();
+ *
+ * @deprecated V11 inline-mount path. Phase 41 flipped `USE_DEDICATED_PLAYER_ACTIVITY` to `true`,
+ * which means V12's `PlayerActivity` is now the default — and V12 brings its own
+ * `MediaPlaybackService` for the foreground notification. This V11 service is
+ * now dead code in the default flow but is kept around for the emergency
+ * rollback path (set `USE_DEDICATED_PLAYER_ACTIVITY = false` to restore V11).
+ *
+ * Phase 47 (V11 deprecation & cleanup) will delete this file entirely. The
+ * module's `@simba/react-native-media-player` package replaces this with
+ * `MediaPlaybackService` + `onAudioFocusChange` + `onPipModeChanged` events
+ * documented in [`SIMBA_PLAYER_MODULE_V12_ERROR_CONTRACT.md`](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_ERROR_CONTRACT.md).
  */
 
 import {NativeModules, NativeEventEmitter, Platform} from 'react-native';

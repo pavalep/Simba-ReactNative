@@ -1,3 +1,18 @@
+// ─── W2.x — NowPlaying screen (Phase 43 launch pad) ────────────
+//
+// **Phase 43 update (Wave 8):** The V11 inline-mount player has been
+// replaced by V12's dedicated Android `PlayerActivity`. This screen
+// no longer hosts a V11 inline playback surface — it is a *launch pad*
+// that surfaces the legacy "Now Playing" route (kept for the
+// `simbaplayer://now-playing?fileUri=...&fileTitle=...` deep link
+// and the Phase 47 deletion list). All playback now flows through
+// `openPlayer()`, which delegates to `PlayerActivity` whenever
+// `USE_DEDICATED_PLAYER_ACTIVITY` is `true` (the V12 default since
+// Phase 41).
+//
+// Phase 47 deletes this screen + the route + the deep link. See
+// [`SIMBA_PLAYER_MODULE_V12_DEPRECATION_AUDIT.md`](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_DEPRECATION_AUDIT.md) + §43.
+
 import React, {useMemo, useState, useCallback, useEffect} from 'react';
 import {
   View,
