@@ -9,7 +9,7 @@ import {
   SimbaPlayer,
   SimbaPlayerRoot,
   useOpenFromUrl,
-  type PlayerResumeLookup,
+  useSimbaPlayerLookup,
 } from '@simba-dev/react-native-media-player';
 import {store, persistor} from './src/store';
 import {ThemeProvider, useTheme} from './src/theme';
@@ -187,36 +187,29 @@ const onRehydrated = () => {
 };
 
 const App: React.FC = () => {
-  // V13: bookmark-aware resume lookup. The module's
-  // `useOpenWithResume` hook calls this when a screen passes
-  // `resumeId` to `openPlayer({...})`. The lookup reads the most
-  // recent bookmark for the given file URI and returns its
-  // position in milliseconds (the module converts from the
-  // bookmark's seconds for us).
-  //
-  // Why a useMemo: the lookup is read by every call to
-  // `useOpenWithResume`, and React would otherwise create a new
-  // closure on every render. Memoising keeps the lookup
-  // reference stable, which downstream `useCallback`s depend on.
-  const resumeLookup = useMemo<PlayerResumeLookup>(
-    () => ({
-      getResumePosition: (resumeId: string) => {
-        const items = store.getState().bookmark.items;
-        // Find all bookmarks for this URI. Bookmarks are
-        // `(fileUri, position)`-hashed so multiple positions
-        // can exist per URI; we take the most recently created.
-        const matches = items.filter(b => b.fileUri === resumeId);
-        if (matches.length === 0) return undefined;
-        const latest = matches.reduce((acc, b) =>
-          acc.createdAt > b.createdAt ? acc : b,
-        );
-        // Bookmark.position is seconds; the module expects ms.
-        const ms = Math.round(latest.position * 1000);
-        return Number.isFinite(ms) && ms > 0 ? ms : undefined;
-      },
-    }),
-    [],
-  );
+  // V14 Phase 61: bookmark-aware resume lookup, now a single
+  // hook call. The module's `useSimbaPlayerLookup(selector)`
+  // wraps the selector in a memoized `PlayerResumeLookup` so
+  // the reference stays stable across renders (the useMemo
+  // boilerplate is now hidden in the module). The selector
+  // body is unchanged from V13: it reads the most recent
+  // bookmark for the given file URI and returns its position
+  // in milliseconds (the module expects ms; bookmarks store
+  // seconds).
+  const resumeLookup = useSimbaPlayerLookup((resumeId: string) => {
+    const items = store.getState().bookmark.items;
+    // Bookmarks are `(fileUri, position)`-hashed so multiple
+    // positions can exist per URI; we take the most recently
+    // created.
+    const matches = items.filter(b => b.fileUri === resumeId);
+    if (matches.length === 0) return undefined;
+    const latest = matches.reduce((acc, b) =>
+      acc.createdAt > b.createdAt ? acc : b,
+    );
+    // Bookmark.position is seconds; the module expects ms.
+    const ms = Math.round(latest.position * 1000);
+    return Number.isFinite(ms) && ms > 0 ? ms : undefined;
+  });
 
   return (
     // GestureHandlerRootView is required by @lodev09/react-native-true-sheet
