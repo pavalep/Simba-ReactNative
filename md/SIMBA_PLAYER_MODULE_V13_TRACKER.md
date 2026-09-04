@@ -85,16 +85,26 @@ Committed as `3d6c3da` (same commit as Phase 51) on 2026-09-04. `usePlayerActivi
 
 ## Phase 53 — Migrate consumer to module
 
-**Status:** [ ] Pending
+**Status:** [~] In Progress (Batch 1 done, 4 batches remaining)
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** _Phase 53 split into 5 batches; Batch 1 (53b simple services) complete as of 2026-09-04 (commit ece60c5). 203/206 jest pass; 2 pre-existing V11 video-test failures are out of V13 scope (Phase 57 deletes them)._
+
+### Migration batches
+
+| Batch | Sub-phase | Scope | Status | Files |
+|---|---|---|---|---|
+| 1 | 53b (simple) | fileService, audioSettingsService, metadataService | [x] | 3 |
+| 2 | 53b/53c (complex) | notificationService, TransportContext | [ ] | 2 |
+| 3 | 53a | 32 screen files (usePlaybackCommands → usePlayerActivity) | [ ] | 32 |
+| 4 | 53b (extra) | useQueueScreen.ts (MpvPlayer import not in spec) | [ ] | 1 |
+| 5 | 53d | Verify typecheck + jest for the full consumer | [ ] | — |
 
 ### Sub-phase 53a — `usePlaybackCommands` → `usePlayerActivity`
 **Status:** [ ] Pending
 
 ### Sub-phase 53b — `MpvPlayer` (player.api.ts) → `getMpvPlayerModule()`
-**Status:** [ ] Pending
+**Status:** [~] In Progress (fileService + audioSettingsService + metadataService done)
 
 ### Sub-phase 53c — Direct `NativeModules.MpvPlayerModule` → module bridge
 **Status:** [ ] Pending
