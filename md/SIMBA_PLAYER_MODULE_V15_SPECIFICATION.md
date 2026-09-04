@@ -1,9 +1,9 @@
 # SIMBA Player Module — V15 Specification
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
-**Target Release:** V15.0.0
+**Target Release:** V15.0.0 (shipped in 1.4.0)
 **Package Name:** `@simba-dev/react-native-media-player`
 **Folder Name:** `react-native-media-player/`
 **NPM Org:** `@simba-dev`

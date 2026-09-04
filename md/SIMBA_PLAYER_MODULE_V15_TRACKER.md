@@ -1,6 +1,6 @@
 # SIMBA Player Module — V15 Tracker
 
-**Document Version:** 1.4
+**Document Version:** 1.5
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md)
@@ -95,19 +95,19 @@
 
 ## Phase 68 — Release v1.4.0
 
-**Status:** [ ] Pending
+**Status:** [x] Complete
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** Shipped 2026-09-04. Module `package.json` bumped to `1.4.0`. CHANGELOG.md has a new V15.0.0 entry documenting all V15 hooks/types + the consumer migration. README.md updated: "Per-screen usage (V15+)" section + API reference table marks V15 hooks in __bold-italic__. `v1.4.0` annotated tag pushed to origin. V15 spec doc marked "Shipped in 1.4.0". V15 final QA report at `md/SIMBA_PLAYER_MODULE_V15_FINAL_QA_REPORT.md`. Module typecheck + 100/100 tests pass. Consumer typecheck + 19/19 + 1 todo.
 
 ### Sub-phase 68.1 — Bump version
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 68.2 — Tag + push
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 68.3 — Final QA
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ---
 
@@ -119,7 +119,7 @@
 | 65 | zustand queue + playbackHistory | [x] | 0.5 day | 11 queue reducers deleted from `playerSlice`; `useQueue()` hook |
 | 66 | zustand sleep/equalizer/liked/shuffle/selection, delete `playerSlice` | [x] | 0.5 day | `playerSlice` deleted (16KB → 0KB); 5 module hooks for the rest |
 | 67 | V11 cleanup (notificationService + trash dirs) | [x] | 0.1 day | ~24KB of V11 leftovers deleted |
-| 68 | Release v1.4.0 | [ ] | 0.25 day | Module published as v1.4.0 via CI/CD; final QA report |
+| 68 | Release v1.4.0 | [x] | 0.25 day | Module published as v1.4.0 via CI/CD; final QA report |
 
 **Total estimated V15 effort:** ~1.85 working days.
 
