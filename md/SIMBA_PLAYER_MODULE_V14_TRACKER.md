@@ -1,6 +1,6 @@
 # SIMBA Player Module — V14 Tracker
 
-**Document Version:** 1.1
+**Document Version:** 1.2
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V14_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V14_SPECIFICATION.md)
@@ -29,19 +29,19 @@
 
 ## Phase 60 — `useOpenFromUrl` / `openFromUrl` deep-link helper
 
-**Status:** [ ] Pending
+**Status:** [x] Complete
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** Shipped 2026-09-04. Module repo commit `c4f4779` adds `src/hooks/useOpenFromUrl.tsx` (a hook returning a stable callback that filters `content://` + `file://` URIs, derives a display title from the basename, classifies as audio/video by extension, and forwards to `useOpenWithResume().openPlayer({uri, title, type, resumeId: uri})`). Consumer commit `e080e3a` deletes the 16-line `handleIncomingUri` function, the `OpenWithResume` type alias, the `getMediaType` + `useOpenWithResume` + `useCallback` imports, and shrinks the deep-link useEffect to a 6-line `Linking` listener. The hook passes `resumeId: uri` so the consumer's bookmark lookup runs (typically returns 0 for shared content URIs, but resumes if the user previously bookmarked the same URI). Module typecheck clean, 100/100 tests pass. Consumer typecheck clean, 19/19 + 1 todo.
 
 ### Sub-phase 60.1 — Define `useOpenFromUrl`
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 60.2 — Re-export from index
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 60.3 — Consumer migration
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ---
 
@@ -113,7 +113,7 @@
 | Phase | Description | Status | Effort | Deliverable |
 |---|---|---|---|---|
 | 59 | `<SimbaPlayerRoot>` activity-branch wrapper | [x] | 0.5 day | `useLaunchParams` + `<PlayerRoot>` rendering absorbed into a single component |
-| 60 | `useOpenFromUrl` deep-link helper | [ ] | 0.25 day | URI → title + type → openPlayer, all in one hook |
+| 60 | `useOpenFromUrl` deep-link helper | [x] | 0.25 day | URI → title + type → openPlayer, all in one hook |
 | 61 | `<SimbaPlayer>` with `getResumePosition` function prop | [ ] | 0.5 day | 20-line resume-lookup function in App.tsx → 1-line function reference |
 | 62 | Deprecate V11 playerSlice mirror | [ ] | 1 day | 17 files use `usePlayer()` from the module; playerSlice shrinks from 16KB → ~6KB |
 | 63 | Release v1.3.0 | [ ] | 0.25 day | Module published as v1.3.0 via CI/CD; final QA report |
