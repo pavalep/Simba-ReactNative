@@ -202,8 +202,34 @@ All four are exported from `@simba-dev/react-native-media-player` index.ts and a
 
 ## Phase 58 — V13.0.0 release
 
-**Status:** [ ] Pending
+**Status:** [~] In Progress (v1.2.0 tagged + pushed; release.yml running; promote to `latest` pending user action)
 **Owner:** Mobile team
+**Target:** 2026-09-04
+**Actual:** _V13.0.0 cut at v1.2.0. Module version bumped, CHANGELOG updated, tag pushed to origin, release.yml triggered. `npm run typecheck` + `npm test` (100/100) clean in module. Consumer `tsc --noEmit` clean, `npm test` 19/19 + 1 todo pass. Final QA report at `md/SIMBA_PLAYER_MODULE_V13_FINAL_QA_REPORT.md`. V13_PLANNING.md status note updated to point at the V13 spec + tracker (not the 4-theme plan)._
+
+### Sub-phase 58.1-58.2 — Bump version + CHANGELOG
+**Status:** [x] Complete (module commit `9ea0456`)
+
+### Sub-phase 58.3-58.4 — Final QA
+**Status:** [x] Complete (module 100/100, consumer 19/19 + 1 todo, both `tsc` clean)
+
+### Sub-phase 58.5-58.6 — APK build + on-device smoke test
+**Status:** [ ] Pending (user step — needs Android emulator or device)
+
+### Sub-phase 58.7 — Tag v1.2.0 + push
+**Status:** [x] Complete (tag pushed; release.yml running in CI)
+
+### Sub-phase 58.8 — Promote v1.2.0 staging → latest
+**Status:** [ ] Pending (user step — run `promote.yml` workflow from GitHub UI with `version=1.2.0`)
+
+### Sub-phase 58.9 — Final QA report
+**Status:** [x] Complete (`md/SIMBA_PLAYER_MODULE_V13_FINAL_QA_REPORT.md`)
+
+### Sub-phase 58.10 — Update V13 planning doc
+**Status:** [x] Complete (planning doc now points at the V13 spec + tracker, not the original 4-theme plan)
+
+### Sub-phase 58.11 — Update `X:\Development\SIMBA\secrets\RELEASE_FLOW.md`
+**Status:** [x] Complete (added V13.0.0 release notes section)
 **Target:** TBD
 **Actual:** _not yet started_
 
@@ -222,7 +248,7 @@ All four are exported from `@simba-dev/react-native-media-player` index.ts and a
 | 55 | Delete legacy V11 audio components | [x] | 1 day | All 17 audio files deleted (commit `bae551a`); `rangeNormalization` promoted to `src/utils/bufferedRanges.ts` |
 | 56 | Delete the inline bridge code | [x] | 0.5 day | `src/native/` deleted; `codegenConfig` removed; `tsc` clean (commit `9c6c81c`) |
 | 57 | Delete `PlaybackContext.tsx` + `PlaybackOverlayHost.tsx` + `TransportContext.tsx` | [x] | 1 day | All V11 dead code + 18 V11 tests deleted; 0 jest failures; `tsc` clean (commit `9c6c81c`) |
-| 58 | V13.0.0 release | [ ] | 1 day | Module published as v1.2.0 via CI/CD; final QA report |
+| 58 | V13.0.0 release | [~] | 1 day | v1.2.0 tagged + pushed (commit `9ea0456`); release.yml running; promote to `latest` + on-device smoke test pending (user steps) |
 
 **Total estimated V13 effort:** ~10 working days (~2 weeks).
 
