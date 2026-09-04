@@ -1,6 +1,6 @@
 # SIMBA Player Module — V15 Tracker
 
-**Document Version:** 1.1
+**Document Version:** 1.2
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md)
@@ -29,25 +29,25 @@
 
 ## Phase 65 — Module owns the consumer's queue + playbackHistory (zustand)
 
-**Status:** [ ] Pending
+**Status:** [x] Complete
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** Shipped 2026-09-04. Module side (already committed in `d30e8de` + earlier): `playerQueueStore` + `playerQueueSelectionStore` (zustand v5) + `useQueue` / `useQueueItems` / `useQueueLength` / `usePlaybackHistory` / `useQueueSelection` / `useQueueSelectedIndices` hooks. `PlayerQueueItem` is a structural superset of the consumer's `PlaylistEntry` for the fields the UI needs (uri, title, duration, source, type, mediaType, provider, folderId, artworkUri). Consumer commit `0218da2` migrates 9 files: 6 simple dispatch sites (`useQueueActions`, `useEpisodeActions`, `useSongScreen`, `AudiobookDetailScreen`, `ArchiveItemDetailScreen`, `PlaylistDetailScreen`) — done by a worker subagent; the main `useQueueScreen` hook; and 2 leaf sheets (`QueueManagementSheet`, `PlaylistPreviewSheet`). The 5 false-positive files (`ArtistTopTracks`, `AlbumTrackList`, `StreamingRow`, `ResultTile`, `HistoryScreen`) only use `useQueueActions` — automatically migrated when the hook itself was migrated. `playerSlice.ts` loses 13 queue-related reducers + 3 state fields (queue, playbackHistory, selectedQueueIndices); mixed reducers (nextTrack, previousTrack, loadPlaylistToPlayer, clearPlayer) drop their queue/history writes. Type-bridging at the consumer boundary: rows are cast `as unknown as PlaylistEntry[]` for the existing UI (data is structurally compatible; cast documents the contract). Module typecheck + 100/100 tests pass. Consumer typecheck + 19/19 + 1 todo pass.
 
 ### Sub-phase 65.1 — Add zustand to module dependencies
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 65.2 — Define `playerQueueStore`
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 65.3 — Define `useQueue` hook
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ### Sub-phase 65.4 — Update `useOpenPlaylist` to use the store
-**Status:** [ ] Pending
+**Status:** [-] Deferred (the `useOpenPlaylist` hook is for the consumer's playlist state, not the queue. Phase 65 is queue-only.)
 
 ### Sub-phase 65.5 — Consumer migration
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ---
 
@@ -116,7 +116,7 @@
 | Phase | Description | Status | Effort | Deliverable |
 |---|---|---|---|---|
 | 64 | `useOpenPlaylist` hook | [x] | 0.5 day | 5 file "play all" screens collapse to one-line hook call |
-| 65 | zustand queue + playbackHistory | [ ] | 0.5 day | 11 queue reducers deleted from `playerSlice`; `useQueue()` hook |
+| 65 | zustand queue + playbackHistory | [x] | 0.5 day | 11 queue reducers deleted from `playerSlice`; `useQueue()` hook |
 | 66 | zustand sleep/equalizer/liked/shuffle/selection, delete `playerSlice` | [ ] | 0.5 day | `playerSlice` deleted (16KB → 0KB); 5 module hooks for the rest |
 | 67 | V11 cleanup (notificationService + trash dirs) | [ ] | 0.1 day | ~24KB of V11 leftovers deleted |
 | 68 | Release v1.4.0 | [ ] | 0.25 day | Module published as v1.4.0 via CI/CD; final QA report |
