@@ -95,7 +95,7 @@ Committed as `3d6c3da` (same commit as Phase 51) on 2026-09-04. `usePlayerActivi
 | Batch | Sub-phase | Scope | Status | Files |
 |---|---|---|---|---|
 | 1 | 53b (simple) | fileService, audioSettingsService, metadataService | [x] | 3 |
-| 2 | 53b/53c (complex) | notificationService, TransportContext | [ ] | 2 |
+| 2 | 53b/53c (complex) | notificationService, TransportContext | [x] | 2 |
 | 3 | 53a | 32 screen files (usePlaybackCommands → usePlayerActivity) | [ ] | 32 |
 | 4 | 53b (extra) | useQueueScreen.ts (MpvPlayer import not in spec) | [ ] | 1 |
 | 5 | 53d | Verify typecheck + jest for the full consumer | [ ] | — |
@@ -104,10 +104,10 @@ Committed as `3d6c3da` (same commit as Phase 51) on 2026-09-04. `usePlayerActivi
 **Status:** [ ] Pending
 
 ### Sub-phase 53b — `MpvPlayer` (player.api.ts) → `getMpvPlayerModule()`
-**Status:** [~] In Progress (fileService + audioSettingsService + metadataService done)
+**Status:** [x] Complete (Batches 1 + 2 done)
 
 ### Sub-phase 53c — Direct `NativeModules.MpvPlayerModule` → module bridge
-**Status:** [ ] Pending
+**Status:** [x] Complete (Batch 2: notificationService + TransportContext)
 
 ### Sub-phase 53d — Verify typecheck + jest
 **Status:** [ ] Pending
@@ -176,7 +176,7 @@ Committed as `3d6c3da` (same commit as Phase 51) on 2026-09-04. `usePlayerActivi
 | 50 | Expand `MpvPlayerModuleBridge` typed surface | [~] | 1.5 days | Bridge covers all 78 native methods + 22 events; v1.1.0 on `staging` (promote pending) |
 | 51 | Expand `PlayerState` / `PlayerCommands` / `PlayerProgress` + wire to events | [x] | 2 days | `usePlayer` returns live state from mpv events; 100/100 tests pass |
 | 52 | Add `usePlayerActivity()` hook | [x] | 0.5 day | `openPlayer` + `getLaunchParams` exposed via module |
-| 53 | Migrate consumer to module | [~] | 2 days | Batch 1 (3 services) done; 4 batches remaining |
+| 53 | Migrate consumer to module | [~] | 2 days | Batches 1 + 2 done (5 service files); 3 batches remaining |
 | 54 | Mount module UI in `PlayerActivity` | [ ] | 1 day | `<PlayerProvider>` + `<PlayerRoot>` + `<DefaultControls>` in activity |
 | 55 | Delete legacy V11 audio components | [ ] | 1 day | All `src/modules/playback/audio/` files deleted |
 | 56 | Delete the inline bridge code | [ ] | 0.5 day | `src/native/` deleted; codegenConfig updated |
