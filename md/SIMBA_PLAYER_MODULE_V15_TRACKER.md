@@ -1,6 +1,6 @@
 # SIMBA Player Module — V15 Tracker
 
-**Document Version:** 1.3
+**Document Version:** 1.4
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04
 **Linked spec:** [`SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md`](./SIMBA_PLAYER_MODULE_V15_SPECIFICATION.md)
@@ -77,19 +77,19 @@
 
 ## Phase 67 — V11 cleanup
 
-**Status:** [ ] Pending
+**Status:** [x] Complete
 **Owner:** Mobile team
 **Target:** TBD
-**Actual:** _not yet started_
+**Actual:** Shipped 2026-09-04. Consumer commit `8fdcc15` deletes `src/services/notificationService.ts` (307 lines) and the `v13-trash-2026-09-04/` directory (84 files across 18 subdirs). The notification service was V11-only (5 V11 RPCs: `startNotification`, `updateNotification`, `stopNotification`, and 2 event subscriptions for `onNotificationPlay/Pause/Next/Previous/Stop/SeekTo`); V12+'s `MediaPlaybackService` (native) supersedes it. Audit: ZERO consumer files imported anything from `notificationService` — the file was 100% dead code. The `v13-trash-2026-09-04/` was the V13 migration's emergency backup of the deleted V11 audio/, native/, playback/ trees + tests/. Both are moved to `X:\Development\SIMBA\v17-backup-2026-09-04\` (outside the project root) so tsc doesn't pick them up. Module typecheck + 100/100 tests pass. Consumer typecheck + 19/19 + 1 todo.
 
 ### Sub-phase 67.1 — Delete V11-only methods in `notificationService.ts`
-**Status:** [ ] Pending
+**Status:** [x] Complete (entire file deleted; no consumer ever used it)
 
 ### Sub-phase 67.2 — Delete trash directories
-**Status:** [ ] Pending
+**Status:** [x] Complete (84 files moved to `X:\Development\SIMBA\v17-backup-2026-09-04\v13-trash-2026-09-04\`)
 
 ### Sub-phase 67.3 — Verify
-**Status:** [ ] Pending
+**Status:** [x] Complete
 
 ---
 
@@ -118,7 +118,7 @@
 | 64 | `useOpenPlaylist` hook | [x] | 0.5 day | 5 file "play all" screens collapse to one-line hook call |
 | 65 | zustand queue + playbackHistory | [x] | 0.5 day | 11 queue reducers deleted from `playerSlice`; `useQueue()` hook |
 | 66 | zustand sleep/equalizer/liked/shuffle/selection, delete `playerSlice` | [x] | 0.5 day | `playerSlice` deleted (16KB → 0KB); 5 module hooks for the rest |
-| 67 | V11 cleanup (notificationService + trash dirs) | [ ] | 0.1 day | ~24KB of V11 leftovers deleted |
+| 67 | V11 cleanup (notificationService + trash dirs) | [x] | 0.1 day | ~24KB of V11 leftovers deleted |
 | 68 | Release v1.4.0 | [ ] | 0.25 day | Module published as v1.4.0 via CI/CD; final QA report |
 
 **Total estimated V15 effort:** ~1.85 working days.
