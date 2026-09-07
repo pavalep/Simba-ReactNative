@@ -1,5 +1,5 @@
 import {Platform} from 'react-native';
-import type {AuthUser, AuthErrorKind} from '../store/slices/authSlice';
+import type {AuthUser, AuthErrorKind} from '../state';
 import {ENV} from '../constants/env';
 
 /**

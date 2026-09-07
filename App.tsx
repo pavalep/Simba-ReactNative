@@ -11,6 +11,7 @@ import {
   useOpenFromUrl,
 } from '@simba-dev/react-native-media-player';
 import {store, persistor} from './src/store';
+import {useAuthStore} from './src/state';
 import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
@@ -39,7 +40,10 @@ configureGoogleSignin();
  */
 function waitForAuthSettle(timeoutMs = 10000): Promise<void> {
   return new Promise(resolve => {
-    if (!store.getState().auth.isRestoring) {
+    // V17 Phase 78: auth.isRestoring moved to `useAuthStore`. The
+    // subscription API is the same shape as zustand's `subscribe`
+    // (called on every state change, returns an unsubscribe fn).
+    if (!useAuthStore.getState().isRestoring) {
       resolve();
       return;
     }
@@ -52,8 +56,8 @@ function waitForAuthSettle(timeoutMs = 10000): Promise<void> {
       resolve();
     };
     const timer = setTimeout(finish, timeoutMs);
-    const unsubscribe = store.subscribe(() => {
-      if (!store.getState().auth.isRestoring) finish();
+    const unsubscribe = useAuthStore.subscribe(() => {
+      if (!useAuthStore.getState().isRestoring) finish();
     });
   });
 }
@@ -118,7 +122,8 @@ const AppContent: React.FC = () => {
           url.startsWith('https://simbaplayer.app');
         if (!isAppLink) return url;
         await waitForAuthSettle();
-        return store.getState().auth.isAuthenticated ? url : null;
+        // V17 Phase 78: auth.isAuthenticated moved to useAuthStore.
+        return useAuthStore.getState().isAuthenticated ? url : null;
       },
     }),
     [],

@@ -39,7 +39,7 @@ import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 import {useAppSelector} from '../../../store';
-import {selectAuthUser} from '../../../store/slices/authSlice';
+import {useAuthStore} from '../../../state';
 import {BRAND} from '../../../constants/brand';
 
 interface HomeHeaderProps {
@@ -60,7 +60,8 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   const {colors} = useTheme();
   const {reduceMotion} = useAccessibility();
   const navigation = useNavigation<any>();
-  const authUser = useAppSelector(selectAuthUser);
+  // V17 Phase 78: selectAuthUser moved to `useAuthStore`.
+  const authUser = useAuthStore(s => s.user);
   const scanAnim = useRef(new Animated.Value(1)).current;
   const {width} = useWindowDimensions();
 

@@ -1,17 +1,16 @@
 /**
- * V17 Phase 77: re-exports for the consumer's new Zustand state
- * layer. One-import convenience (mirrors the module's
- * `src/index.ts`).
+ * V17 re-exports for the consumer's new Zustand state layer.
+ * One-import convenience (mirrors the module's `src/index.ts`).
  *
  * Pattern: each store exports a `useFooStore(selector?)` hook + the
  * action types. Consumers import the hook + the action types from
  * here:
  *
- *   import {useSessionStore} from '../state';
- *   const playCounts = useSessionStore(s => s.playCounts);
+ *   import {useAuthStore} from '../state';
+ *   const user = useAuthStore(s => s.user);
  *
  * For non-React write paths (services that already own a
- * store instance), use `useSessionStore.getState().recordPlaybackStats(...)`.
+ * store instance), use `useAuthStore.getState().signOut()`.
  */
 export {
   useSessionStore,
@@ -19,3 +18,15 @@ export {
   type SessionState,
   type SessionActions,
 } from './sessionStore';
+
+export {
+  useAuthStore,
+  SESSION_TTL_MS,
+  type AuthUser,
+  type AuthErrorKind,
+  type AuthState,
+  type AuthActions,
+} from './authStore';
+
+export {RESET_APP_STATE, resetAppState} from './resetAction';
+

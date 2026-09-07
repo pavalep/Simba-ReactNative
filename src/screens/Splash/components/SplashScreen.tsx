@@ -40,7 +40,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, {Circle, Defs, LinearGradient, Stop} from 'react-native-svg';
 import {useAppDispatch, useAppSelector} from '../../../store';
 import {markLaunched} from '../../../store/slices/settingsSlice';
-import {selectIsAuthenticated, selectIsRestoring} from '../../../store/slices/authSlice';
+import {useAuthStore} from '../../../state';
 import type {RootStackParamList} from '../../../navigation/types';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {useTheme} from '../../../theme';
@@ -74,8 +74,10 @@ export const SplashScreen: React.FC = () => {
   const {colors} = useTheme();
   const dispatch = useAppDispatch();
   const navigation = useNavigation<NavigationProp>();
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const isRestoring = useAppSelector(selectIsRestoring);
+  // V17 Phase 78: auth selectors moved to the `useAuthStore`
+  // Zustand store.
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  const isRestoring = useAuthStore(s => s.isRestoring);
   const {reduceMotion} = useAccessibility();
   const insets = useSafeAreaInsets();
   const {width} = useWindowDimensions();

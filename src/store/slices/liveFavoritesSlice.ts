@@ -5,7 +5,7 @@
 
 import {createSlice, createSelector, PayloadAction} from '@reduxjs/toolkit';
 import type {RootState} from '../index';
-import {resetAppState} from './authSlice';
+import {resetAppState} from '../../state';
 
 export interface LiveFavoriteItem {
   kind: 'radio' | 'tv';

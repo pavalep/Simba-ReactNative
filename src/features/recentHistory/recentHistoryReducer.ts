@@ -1,5 +1,5 @@
 import {createSelector, createSlice, type PayloadAction} from '@reduxjs/toolkit';
-import {resetAppState} from '../../store/slices/authSlice';
+import {resetAppState} from '../../state';
 import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
 import {normalizeMediaClassification} from '../../types/media';
 

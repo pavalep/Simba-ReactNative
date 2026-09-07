@@ -1,7 +1,7 @@
 import {createSelector, createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {REHYDRATE} from 'redux-persist';
 import type {RootState} from '../../store';
-import {resetAppState} from '../../store/slices/authSlice';
+import {resetAppState} from '../../state';
 import {
   isPlaylistMediaKindAllowed,
   type Playlist,

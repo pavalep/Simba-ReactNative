@@ -14,7 +14,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {GoogleSignInButton} from '../../../components/core/GoogleSignInButton/GoogleSignInButton';
 import {useLoginScreen} from '../hooks/useLoginScreen';
-import type {AuthErrorKind} from '../../../store/slices/authSlice';
+import type {AuthErrorKind} from '../../../state';
 import type {LoginScreenProps} from '../types';
 import {navigationRef} from '../../../navigation/navigationHelper';
 import {BRAND} from '../../../constants/brand';

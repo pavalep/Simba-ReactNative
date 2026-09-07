@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useAppSelector} from '../store';
+import {useAuthStore} from '../state';
 import {RootStackParamList} from './types';
 import HomeScreen from '../screens/Home';
 import {LibraryScreen} from '../screens/Library';
@@ -52,7 +53,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
   const hasLaunched = useAppSelector(state => state.settings.hasLaunched);
-  const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated);
+  // V17 Phase 78: auth.isAuthenticated moved to `useAuthStore`.
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
 
   const initialRoute = !hasLaunched
     ? 'Splash'

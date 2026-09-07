@@ -1,6 +1,6 @@
 import {createSelector, createSlice, PayloadAction} from '@reduxjs/toolkit';
 import type {RootState} from '../index';
-import {resetAppState} from './authSlice';
+import {resetAppState} from '../../state';
 import type {
   DownloadRecord,
   DownloadStatus,

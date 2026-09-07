@@ -1,7 +1,6 @@
 import {useEffect} from 'react';
 import {AppState} from 'react-native';
-import {useAppSelector} from '../store';
-import {store} from '../store';
+import {useAuthStore} from '../state';
 import {useAuth} from './useAuth';
 
 /**
@@ -9,12 +8,14 @@ import {useAuth} from './useAuth';
  * - On cold start: silently restore the persisted session (kept when offline).
  * - On foreground: drop the session when it has passed `sessionExpiresAt`.
  *
- * Must be mounted once, inside the Redux Provider (AppContent).
+ * V17 Phase 78: reads `isAuthenticated` + `sessionExpiresAt` from
+ * the new `useAuthStore` Zustand store. The lifecycle manager no
+ * longer needs to read from the redux store.
+ *
+ * Must be mounted once, inside the app tree.
  */
 export function useAuthSession() {
-  const isAuthenticated = useAppSelector(
-    state => state.auth.isAuthenticated,
-  );
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
   const {restoreSession, clearExpiredSession} = useAuth();
 
   // ── Cold start: expiry check + silent restore ──
@@ -22,7 +23,7 @@ export function useAuthSession() {
     if (!isAuthenticated) {
       return;
     }
-    const {sessionExpiresAt} = store.getState().auth;
+    const {sessionExpiresAt} = useAuthStore.getState();
     if (sessionExpiresAt !== null && Date.now() > sessionExpiresAt) {
       clearExpiredSession();
       return;
@@ -37,7 +38,7 @@ export function useAuthSession() {
       if (nextState !== 'active') {
         return;
       }
-      const {sessionExpiresAt, isAuthenticated: authed} = store.getState().auth;
+      const {sessionExpiresAt, isAuthenticated: authed} = useAuthStore.getState();
       if (authed && sessionExpiresAt !== null && Date.now() > sessionExpiresAt) {
         clearExpiredSession();
       }

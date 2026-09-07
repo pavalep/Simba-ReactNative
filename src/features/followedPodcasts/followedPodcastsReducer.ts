@@ -1,5 +1,5 @@
 import {createSelector, createSlice, type PayloadAction} from '@reduxjs/toolkit';
-import {resetAppState} from '../../store/slices/authSlice';
+import {resetAppState} from '../../state';
 
 export interface FollowedPodcast {
   id: number;
