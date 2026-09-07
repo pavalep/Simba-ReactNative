@@ -104,4 +104,14 @@ export {
   type RecentHistoryActions,
 } from './recentHistoryStore';
 
+export {
+  usePlayerStore,
+  playlistItemsToEntries,
+  toPlaylistEntry,
+  type PlaylistEntry,
+  type QueueItem,
+  type PlayerState,
+  type PlayerActions,
+} from './playerStore';
+
 export {RESET_APP_STATE, resetAppState} from './resetAction';

@@ -9,22 +9,17 @@
 import {useCallback, useMemo} from 'react';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useAppSelector, useAppDispatch} from '../../../store';
-import {
-  addToPlaylist,
-  playFromPlaylist,
-  removeFromPlaylist,
-  reorderPlaylist,
-  toPlaylistEntry,
-} from '../../../store/slices/playerSlice';
+
 import {playlistActions} from '../../../features/playlists';
 import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {logger} from '../../../lib/logger';
 import type {PlayerQueueItem} from '@simba-dev/react-native-media-player';
-import type {PlaylistEntry} from '../../../store/slices/playerSlice';
+
 import type {PlaylistItem} from '../../../types/playlist';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import type {RootStackScreenProps} from '../../../navigation/types';
+import {usePlayerStore, toPlaylistEntry} from '../../../state';
 import {
   resolveStreamType,
   usePlayer,
@@ -79,15 +74,15 @@ export function useQueueScreen(): UseQueueScreenResult {
   const haptics = useHaptics();
   const {openPlayer} = usePlayerActivity();
 
-  const currentTrack = useAppSelector(state => state.player.currentFile);
-  const playlist = useAppSelector(state => state.player.playlist);
+  const currentTrack = usePlayerStore(state => state.currentFile);
+  const playlist = usePlayerStore(state => state.playlist);
   // V15 Phase 65: queue + playbackHistory move to the module's
   // zustand store. The component reads via `useQueueItems()` /
   // `usePlaybackHistory()` and dispatches via the `useQueue()`
   // hook's actions.
   const queue = useQueueItemsAs<PlayerQueueItem<MediaSource, MediaKind, MediaLane>>();
   const playbackHistory = usePlaybackHistoryAs<PlayerQueueItem<MediaSource, MediaKind, MediaLane>>();
-  const currentIndex = useAppSelector(state => state.player.currentIndex);
+  const currentIndex = usePlayerStore(state => state.currentIndex);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
   // V15 Phase 65: queue actions now come from the module's
@@ -161,13 +156,13 @@ export function useQueueScreen(): UseQueueScreenResult {
       const queueIdx = queue.findIndex(sameEntry);
 
       if (playlistIdx >= 0) {
-        dispatch(playFromPlaylist(playlistIdx));
+        usePlayerStore.getState().playFromPlaylist(playlistIdx);
       } else if (queueIdx >= 0) {
         removeFromQueueByIndex(queueIdx);
       } else {
         // History-only item: append to the playlist, then play it.
-        dispatch(addToPlaylist(entry));
-        dispatch(playFromPlaylist(playlist.length));
+        usePlayerStore.getState().addToPlaylist(entry);
+        usePlayerStore.getState().playFromPlaylist(playlist.length);
       }
       try {
         getMpvPlayerModule().loadFile(entry.uri);
@@ -220,7 +215,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       if (source.origin === 'queue') {
         reorderQueueAction({fromIndex: source.rawIndex, toIndex: destination.rawIndex});
       } else {
-        dispatch(reorderPlaylist({fromIndex: source.rawIndex, toIndex: destination.rawIndex}));
+        usePlayerStore.getState().reorderPlaylist({fromIndex: source.rawIndex, toIndex: destination.rawIndex});
       }
       haptics.medium();
     },
@@ -234,7 +229,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       if (row.origin === 'queue') {
         removeFromQueueAction(row.rawIndex);
       } else {
-        dispatch(removeFromPlaylist(row.rawIndex));
+        usePlayerStore.getState().removeFromPlaylist(row.rawIndex);
       }
       haptics.light();
     },
@@ -297,3 +292,5 @@ export function useQueueScreen(): UseQueueScreenResult {
     handleSaveAsPlaylist,
   };
 }
+
+import type {PlaylistEntry} from '../../../state';

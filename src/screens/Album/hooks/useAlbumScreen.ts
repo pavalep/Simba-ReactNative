@@ -6,14 +6,12 @@ import {useMemo, useCallback} from 'react';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {useAppSelector, useAppDispatch} from '../../../store';
 
-import {
-  loadPlaylistToPlayer,
-  playFromPlaylist,
-} from '../../../store/slices/playerSlice';
+
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useOpenPlaylist, usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
 import {useMediaStore} from '../../../state';
+import {usePlayerStore} from '../../../state';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AlbumScreen'>;
 type Route = RouteProp<RootStackParamList, 'AlbumScreen'>;
@@ -38,7 +36,7 @@ export function useAlbumScreen() {
       )
       .sort((a, b) => a.trackNumber - b.trackNumber),
   );
-  const currentFile = useAppSelector(state => state.player.currentFile);
+  const currentFile = usePlayerStore(state => state.currentFile);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
   const isPlaying = playerState.isPlaying;
@@ -106,9 +104,9 @@ export function useAlbumScreen() {
   const handlePlayTrack = useCallback(
     (indexInAlbum: number) => {
       if (sortedTracks.length === 0) return;
-      dispatch(loadPlaylistToPlayer(sortedTracks));
+      usePlayerStore.getState().loadPlaylistToPlayer(sortedTracks);
       if (indexInAlbum > 0) {
-        dispatch(playFromPlaylist(indexInAlbum));
+        usePlayerStore.getState().playFromPlaylist(indexInAlbum);
       }
       openPlaylist(sortedTracks, {type: 'audio', startIndex: indexInAlbum});
     },
@@ -117,13 +115,13 @@ export function useAlbumScreen() {
 
   const handlePlayAll = useCallback(() => {
     if (sortedTracks.length === 0) return;
-    dispatch(loadPlaylistToPlayer(sortedTracks));
+    usePlayerStore.getState().loadPlaylistToPlayer(sortedTracks);
     openPlaylist(sortedTracks, {type: 'audio'});
   }, [sortedTracks, dispatch, openPlaylist]);
 
   const handleShuffleAll = useCallback(() => {
     if (sortedTracks.length === 0) return;
-    dispatch(loadPlaylistToPlayer(sortedTracks));
+    usePlayerStore.getState().loadPlaylistToPlayer(sortedTracks);
     openPlaylist(sortedTracks, {type: 'audio', shuffle: true});
   }, [sortedTracks, dispatch, openPlaylist]);
 

@@ -10,9 +10,10 @@ import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import AudioWaveform from '../../../components/player/AudioWaveform/AudioWaveform';
-import type {PlaylistEntry} from '../../../store/slices/playerSlice';
+
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
+import {usePlayerStore} from '../../../state';
 
 interface TrackRowItem {
   uri: string;
@@ -264,3 +265,5 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+import type {PlaylistEntry} from '../../../state';

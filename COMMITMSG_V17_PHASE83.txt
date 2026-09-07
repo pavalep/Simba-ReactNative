@@ -1,0 +1,68 @@
+V17 Phase 83: playerStore (persist, the last & most-touched slice)
+
+`playerSlice` -> `usePlayerStore` (Zustand + persist, key
+'player' to match the redux-persist whitelist).
+
+After V14 Phase 62 + V15 Phase 66, the player slice is
+intentionally small: the real playback source of truth is
+the module's `usePlayer()` (isPlaying, positionMs,
+durationMs, volume, loopMode, speed, fullscreen). The
+consumer-side `usePlayerStore` only tracks what the Queue /
+Home / NowPlaying UI needs:
+  - `currentFile: PlaylistEntry | null` - bookmarked-as-current
+  - `playlist: PlaylistEntry[]` - the consumer's local playlist
+    (NOT the module's queue)
+  - `currentIndex: number` - index into `playlist`
+
+V16 Phase 70: `PlaylistEntry` is the consumer's typed view of
+an item that lives in the player pipeline. The three
+classification fields are required, and `origin` is
+consumer-only. The boundary cast `toPlaylistEntry(item)`
+lives in the store module so consumers can `import {toPlaylistEntry,
+playlistItemsToEntries}` from one place.
+
+Actions preserved from the old slice:
+  - `loadPlaylistToPlayer(entries)` - replaces items, sets
+    currentFile to first track
+  - `addToPlaylist(input)` - appends one or more items
+  - `removeFromPlaylist(idx)` - splice + currentIndex adjustment
+  - `reorderPlaylist({fromIndex, toIndex})` - move + currentIndex
+  - `playFromPlaylist(index)` - set currentFile + currentIndex
+  - `clearPlaylist()` - V15 Phase 66: the queue / playback
+    state is not affected; use the module's `usePlayer().commands.clear()`
+    for that
+  - `setCurrentFile(file)` - V13 origin-aware bookmark
+
+Migrated
+- src/screens/Artist/{components/ArtistTopTracks,hooks/useArtistScreen}.tsx
+- src/screens/Library/hooks/useLibraryScreen.ts
+- src/screens/PlaylistDetail/components/PlaylistDetailScreen.tsx
+- src/screens/QueueScreen/{components/QueueScreen,hooks/useQueueScreen}.tsx
+- src/screens/Album/hooks/useAlbumScreen.ts
+- src/screens/Library/components/ArtistDetailScreen.tsx
+- src/screens/Search/components/SearchScreen.tsx: 2 inline
+  `state.player.X` reads -> `usePlayerStore(s => s.X)`.
+
+Deleted
+- src/store/slices/playerSlice.ts
+
+Updated
+- src/store/rootReducer.ts: only `downloads` entry left
+  (the slice still exists for Phase 84).
+- src/state/index.ts: 6 new exports from `./playerStore`:
+  `usePlayerStore`, `playlistItemsToEntries`,
+  `toPlaylistEntry`, and the 3 type exports (`PlaylistEntry`,
+  `QueueItem`, `PlayerState`, `PlayerActions`).
+- scripts/migrate-selector-to-store.cjs: added entry for the
+  player slice + 5 dispatch action names.
+
+Verification
+- `npx tsc --noEmit`: 0 errors.
+- `npx jest`: 4 suites, 12 passed, 1 todo. No regressions.
+
+Junior-dev rule honored: each consumer imports just
+`usePlayerStore` (or `toPlaylistEntry` / `playlistItemsToEntries`)
+from `../state`. The store is the single integration point for
+the consumer-side playlist UI; the module's `usePlayer()` and
+`useOpenWithResume()` remain the source of truth for actual
+playback.

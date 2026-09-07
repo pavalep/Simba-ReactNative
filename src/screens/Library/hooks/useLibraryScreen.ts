@@ -5,7 +5,7 @@ import {useAppSelector, useAppDispatch} from '../../../store';
 import {useSettingsStore} from '../../../state';
 
 import {usePlaylists} from '../../../features/playlists';
-import {loadPlaylistToPlayer, playlistItemsToEntries} from '../../../store/slices/playerSlice';
+
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
 import {isVideoFile} from '../../../utils/timeAgo';
 import {useToast} from '../../../components/feedback/Toast';
@@ -14,7 +14,7 @@ import type {PlaylistKind} from '../../../types/playlist';
 import type {LibraryScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
 import { resolveStreamType, useOpenPlaylist, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
-import {useMediaStore} from '../../../state';
+import {useMediaStore, usePlayerStore, playlistItemsToEntries, type ScannedTrack} from '../../../state';
 import type {
   ContentMode,
   FilterType,
@@ -94,7 +94,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const {list: allPlaylists, createPlaylist} = usePlaylists();
 
   // ── Player Selectors (for AudioWaveform) ──
-  const currentFile = useAppSelector(s => s.player.currentFile);
+  const currentFile = usePlayerStore(s => s.currentFile);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
   const isAudioPlaying = playerState.isPlaying;
@@ -244,7 +244,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
       const pl = allPlaylists.find(p => p.id === playlistId);
       if (pl && pl.items.length > 0) {
         const entries = playlistItemsToEntries(pl.items);
-        dispatch(loadPlaylistToPlayer(entries));
+        usePlayerStore.getState().loadPlaylistToPlayer(entries);
         const first = entries[0];
         if (!first) return;
         openPlaylist(entries, {
@@ -261,7 +261,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
       const pl = allPlaylists.find(p => p.id === playlistId);
       if (pl && pl.items.length > 0) {
         const entries = playlistItemsToEntries(pl.items);
-        dispatch(loadPlaylistToPlayer(entries));
+        usePlayerStore.getState().loadPlaylistToPlayer(entries);
         const first = entries[0];
         if (!first) return;
         openPlaylist(entries, {
@@ -310,5 +310,3 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
     handlePlaylistCardPress,
   };
 }
-
-import type {ScannedTrack} from '../../../state';

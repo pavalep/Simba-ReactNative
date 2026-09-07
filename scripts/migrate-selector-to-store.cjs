@@ -66,6 +66,21 @@ const SLICES = [
     store: 'useBookmarksStore',
     importPathRe: /bookmarkReducer/,
   },
+  {
+    redux: 'playlists',
+    store: 'usePlaylistsStore',
+    importPathRe: /playlistReducer/,
+  },
+  {
+    redux: 'recentHistory',
+    store: 'useRecentHistoryStore',
+    importPathRe: /recentHistoryReducer/,
+  },
+  {
+    redux: 'player',
+    store: 'usePlayerStore',
+    importPathRe: /playerSlice/,
+  },
 ];
 
 const ACTION_NAMES = {
@@ -111,6 +126,30 @@ const ACTION_NAMES = {
     'updateBookmarkLabel',
     'clearAllBookmarks',
     'setBookmarks',
+  ]),
+  playlists: new Set([
+    'createPlaylist',
+    'renamePlaylist',
+    'deletePlaylist',
+    'addItemToPlaylist',
+    'removeItemFromPlaylist',
+    'reorderPlaylistItems',
+    'clearPlaylist',
+    'importPlaylist',
+    'updatePlaylistItemPosition',
+    'resetPlaylists',
+  ]),
+  recentHistory: new Set([
+    'upsertRecentHistoryEntry',
+    'removeRecentHistoryEntry',
+    'clearRecentHistory',
+  ]),
+  player: new Set([
+    'loadPlaylistToPlayer',
+    'addToPlaylist',
+    'removeFromPlaylist',
+    'reorderPlaylist',
+    'playFromPlaylist',
   ]),
 };
 

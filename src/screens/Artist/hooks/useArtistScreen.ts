@@ -6,11 +6,12 @@ import {useMemo, useCallback} from 'react';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {useAppSelector, useAppDispatch} from '../../../store';
 
-import {loadPlaylistToPlayer, type PlaylistEntry} from '../../../store/slices/playerSlice';
+
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useOpenPlaylist, usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
 import {useMediaStore} from '../../../state';
+import {usePlayerStore, type PlaylistEntry} from '../../../state';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ArtistScreen'>;
 type Route = RouteProp<RootStackParamList, 'ArtistScreen'>;
@@ -32,7 +33,7 @@ export function useArtistScreen() {
     ),
   );
 
-  const currentFile = useAppSelector(state => state.player.currentFile);
+  const currentFile = usePlayerStore(state => state.currentFile);
   // V14 Phase 62: `state.player.playbackState` (V11-mirror) is gone.
   // The module's `usePlayer()` is the source of truth for
   // isPlaying.
@@ -111,13 +112,13 @@ export function useArtistScreen() {
 
   const handlePlayAll = useCallback(() => {
     if (allTracks.length === 0) return;
-    dispatch(loadPlaylistToPlayer(allTracks));
+    usePlayerStore.getState().loadPlaylistToPlayer(allTracks);
     openPlaylist(allTracks, {type: 'audio'});
   }, [allTracks, dispatch, openPlaylist]);
 
   const handleShuffleAll = useCallback(() => {
     if (allTracks.length === 0) return;
-    dispatch(loadPlaylistToPlayer(allTracks));
+    usePlayerStore.getState().loadPlaylistToPlayer(allTracks);
     openPlaylist(allTracks, {type: 'audio', shuffle: true});
   }, [allTracks, dispatch, openPlaylist]);
 

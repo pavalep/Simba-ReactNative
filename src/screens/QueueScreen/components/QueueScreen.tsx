@@ -32,7 +32,7 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {useQueueScreen} from '../hooks/useQueueScreen';
 import type {QueueScreenProps} from '../types';
-import type {PlaylistEntry} from '../../../store/slices/playerSlice';
+import {usePlayerStore} from '../../../state';
 
 // ─── Constants ──────────────────────────────────────────
 
@@ -709,3 +709,5 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+import type {PlaylistEntry} from '../../../state';

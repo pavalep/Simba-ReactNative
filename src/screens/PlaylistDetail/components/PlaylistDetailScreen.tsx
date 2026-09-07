@@ -19,10 +19,7 @@ import {
   usePlaylists,
   type PlaylistKind,
 } from '../../../features/playlists';
-import {
-  loadPlaylistToPlayer,
-  playlistItemsToEntries,
-} from '../../../store/slices/playerSlice';
+
 import {AppText} from '../../../components/core/AppText/AppText';
 import type {PlaylistDetailScreenProps} from '../types';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
@@ -46,6 +43,7 @@ import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {isRemoteUri} from '../../../utils/mediaUri';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import { resolveStreamType, useOpenPlaylist, usePlayerActivity, useQueue } from '@simba-dev/react-native-media-player';
+import {usePlayerStore, playlistItemsToEntries} from '../../../state';
 
 type Props = PlaylistDetailScreenProps;
 
@@ -156,7 +154,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       return;
     }
     const entries = playlistItemsToEntries(playable);
-    dispatch(loadPlaylistToPlayer(entries));
+    usePlayerStore.getState().loadPlaylistToPlayer(entries);
     const first = playable[0];
     if (!first) return;
     openPlaylist(entries, {

@@ -28,7 +28,7 @@ import type {RootStackScreenProps} from '../types';
 type ArtistDetailScreenProps = RootStackScreenProps<'ArtistDetail'>;
 import {shareContent} from '../../../services/shareService';
 import { resolveStreamType, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
-import {useMediaStore} from '../../../state';
+import {useMediaStore, usePlayerStore} from '../../../state';
 
 type Props = ArtistDetailScreenProps;
 
@@ -114,7 +114,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
-  const currentFile = useAppSelector(state => state.player.currentFile);
+  const currentFile = usePlayerStore(s => s.currentFile);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
   const tracks = useMediaStore(s =>
