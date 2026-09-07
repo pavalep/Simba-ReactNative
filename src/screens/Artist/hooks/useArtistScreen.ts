@@ -4,9 +4,6 @@
 
 import {useMemo, useCallback} from 'react';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
-import {useAppSelector, useAppDispatch} from '../../../store';
-
-
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useOpenPlaylist, usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
@@ -19,7 +16,6 @@ type Route = RouteProp<RootStackParamList, 'ArtistScreen'>;
 export function useArtistScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const dispatch = useAppDispatch();
   const {openPlayer} = usePlayerActivity();
   // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
   // pattern (entries extraction + start-track dispatch + openPlayer).
@@ -114,13 +110,13 @@ export function useArtistScreen() {
     if (allTracks.length === 0) return;
     usePlayerStore.getState().loadPlaylistToPlayer(allTracks);
     openPlaylist(allTracks, {type: 'audio'});
-  }, [allTracks, dispatch, openPlaylist]);
+  }, [allTracks, openPlaylist]);
 
   const handleShuffleAll = useCallback(() => {
     if (allTracks.length === 0) return;
     usePlayerStore.getState().loadPlaylistToPlayer(allTracks);
     openPlaylist(allTracks, {type: 'audio', shuffle: true});
-  }, [allTracks, dispatch, openPlaylist]);
+  }, [allTracks, openPlaylist]);
 
   const handleNavigateToAlbum = useCallback(
     (albumName: string) => {

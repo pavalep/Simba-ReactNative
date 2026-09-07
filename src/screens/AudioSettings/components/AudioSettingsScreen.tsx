@@ -17,8 +17,6 @@ import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHe
 import {SettingsRow} from '../../../components/utility/SettingsRow/SettingsRow';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {OptionSheetDialog, OptionSheetOption} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import {applyAudioSettingsToMpv} from '../../../services/audioSettingsService';
 import {useSettingsStore} from '../../../state';
 
@@ -50,7 +48,6 @@ type PickerKind = 'sampleRate' | 'replayGain' | 'audioDelay' | null;
 export const AudioSettingsScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const dispatch = useAppDispatch();
   const nav = useNavigation<any>();
 
   // ── Slice state (Phase 45: all controls live in settingsSlice) ──
@@ -90,7 +87,7 @@ export const AudioSettingsScreen: React.FC<Props> = () => {
       setPicker(null);
       setTimeout(applyAudioSettingsToMpv, 0);
     },
-    [dispatch, picker],
+    [, picker],
   );
 
   const sampleRateLabel =

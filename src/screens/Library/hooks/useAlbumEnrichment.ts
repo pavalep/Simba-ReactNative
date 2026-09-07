@@ -6,7 +6,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {getReleaseGroupDetail} from '../../../services/api/musicbrainzService';
 
-import {useAppSelector} from '../../../store';
 import type {MusicBrainzReleaseGroupDetail} from '../../../types/api';
 import {useMediaStore} from '../../../state';
 

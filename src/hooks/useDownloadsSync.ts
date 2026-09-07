@@ -1,6 +1,4 @@
 import {useEffect} from 'react';
-import {useAppDispatch} from '../store';
-
 import {downloadService} from '../services/downloadService';
 import {useDownloadsStore} from '../state';
 
@@ -11,7 +9,6 @@ import {useDownloadsStore} from '../state';
  * DownloadButton and the Downloads screen so state is always live.
  */
 export function useDownloadsSync(): void {
-  const dispatch = useAppDispatch();
 
   useEffect(() => {
     let active = true;
@@ -25,5 +22,5 @@ export function useDownloadsSync(): void {
       active = false;
       unsubscribe();
     };
-  }, [dispatch]);
+  }, []);
 }

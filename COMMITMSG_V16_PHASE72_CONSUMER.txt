@@ -1,0 +1,22 @@
+V16 Phase 72 (consumer): playFromQueue -> removeFromQueueByIndex
+
+Mirrors the module-side rename. The destructured action
+in useQueueScreen is now `removeFromQueueByIndex` and the
+call site in handleJumpTo is updated.
+
+Also updates the dead-code-documentation comment in
+playerSlice.ts to reflect V16 reality (the 4 dead-feature
+stores were removed entirely; the playFromQueue -> rename
+naming + useOpenPlaylist() promotion path is documented).
+
+Verification:
+- tsc --noEmit: clean
+- jest: 19/19 + 1 todo across 5 suites
+- grep 'playFromQueue' in src/: 0 matches in production
+  code (the only remaining match was the
+  `onPlayFromQueue` prop on AudioLyricsView, a UI prop
+  with a different concept - left alone)
+- No other consumer file imported the deleted hooks
+  (sleep/equalizer/liked/shuffle) or the deleted factory
+  hook. The dead-feature drop is transparent to the
+  consumer.

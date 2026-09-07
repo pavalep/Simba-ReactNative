@@ -7,8 +7,6 @@
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useRoute, RouteProp} from '@react-navigation/native';
-import {useAppSelector} from '../../../store';
-
 import type {RootStackParamList} from '../../../navigation/types';
 import type {JamendoTrackResult, RadioStationResult} from '../../../types/api';
 import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';

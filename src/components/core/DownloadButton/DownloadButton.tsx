@@ -3,8 +3,6 @@ import React, {useCallback, useMemo} from 'react';
 import {StyleSheet, TouchableOpacity, View, ViewStyle} from 'react-native';
 
 import {useTheme} from '../../../theme';
-import {useAppSelector} from '../../../store';
-
 import {downloadService} from '../../../services/downloadService';
 import {navigate} from '../../../navigation/navigationHelper';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';

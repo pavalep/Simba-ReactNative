@@ -1,7 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {View, StyleSheet} from 'react-native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useAppSelector} from '../store';
 import {useAuthStore, useSettingsStore} from '../state';
 import {RootStackParamList} from './types';
 import HomeScreen from '../screens/Home';

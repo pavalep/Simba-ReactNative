@@ -1,0 +1,42 @@
+V17 Phase 86: package.json cleanup (drop @reduxjs/toolkit + react-redux + redux-persist + redux-logger)
+
+Redux is fully out of the consumer. The `src/store/` directory
+is gone; the 4 redux-related npm deps are gone. The codebase
+now has a single state primitive: `zustand`.
+
+Removed
+- `package.json`:
+  - `@reduxjs/toolkit`
+  - `react-redux`
+  - `redux-persist`
+  - `redux-logger` (dev)
+  - `@types/redux-logger` (dev)
+- `src/store/index.ts` — the redux store + logger setup
+- `src/store/rootReducer.ts` — `combineReducers({})`
+- `src/store/persistConfig.ts` — redux-persist whitelist
+- `src/store/slices/` directory (now empty after Phases
+  77-84 deleted each slice individually)
+
+Cleanup helpers (one-time migration scripts, kept in
+`scripts/` for replay)
+- `scripts/remove-stale-store-imports.cjs`: removed 39
+  `import { ... } from '../store'` lines that were left
+  behind by the per-phase migration. Each was an unused
+  import after Phase 79-84 deleted the slices.
+- `scripts/remove-stale-useappdispatch.cjs`: removed 64
+  `const dispatch = useAppDispatch();` declarations + the
+  `dispatch` references in useEffect/useCallback dep arrays.
+  Same story: the variables became dead weight after the
+  dispatchers were removed.
+
+Verification
+- `npx tsc --noEmit`: 0 errors.
+- `npx jest`: 4 suites, 12 passed, 1 todo. No regressions.
+
+Junior-dev rule honored: a junior dev can now read any
+component and find at most two kinds of state — local
+`useState` for UI and `useFooStore` (zustand) for shared.
+The `useFooStore` import path is always `../state` (or
+`../../../state` for screens) and the per-store module
+file is the only place that knows the persist key, the
+schema, or the action set.

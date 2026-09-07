@@ -10,8 +10,6 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
-import {useAppSelector} from '../../../store';
-
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';

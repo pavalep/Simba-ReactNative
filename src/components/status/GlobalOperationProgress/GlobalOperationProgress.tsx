@@ -8,13 +8,10 @@
 // ────────────────────────────────────────────────────────
 
 import React from 'react';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import {OperationProgress} from '../OperationProgress/OperationProgress';
 import {useMediaStore} from '../../../state';
 
 export const GlobalOperationProgress: React.FC = () => {
-  const dispatch = useAppDispatch();
   const isScanning = useMediaStore(s => s.isScanning);
   const scanProgress = useMediaStore(s => s.scanProgress);
 

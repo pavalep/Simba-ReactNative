@@ -16,8 +16,6 @@ import {
   getIPTVCategories,
 } from '../../../services/api/iptvService';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
 import {useLiveFavoritesStore} from '../../../state';
 
@@ -62,7 +60,6 @@ function scopeCacheKey(category: string | null, term: string): string {
 
 export function useLiveTVBrowser(initialCategory?: string) {
   const {isOnline} = useNetworkStatus();
-  const dispatch = useAppDispatch();
 
   const [filters, setFilters] = useState<LiveTVFilters>({
     category: initialCategory ?? null,
@@ -317,14 +314,14 @@ export function useLiveTVBrowser(initialCategory?: string) {
           addedAt: new Date().toISOString(),
         });
     },
-    [favorites, dispatch],
+    [favorites],
   );
 
   const removeFavorite = useCallback(
     (id: string) => {
       useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id});
     },
-    [dispatch],
+    [],
   );
 
   return {

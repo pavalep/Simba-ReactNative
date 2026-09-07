@@ -1,0 +1,3 @@
+const r = /useAppSelector\(\s*([a-zA-Z_$][\w$]*)\s*=>\s*\1\.settings\./g;
+const t = "  const hardwareAcceleration = useAppSelector(s => s.settings.isHardwareAccelerationEnabled);";
+console.log('match:', t.match(r));

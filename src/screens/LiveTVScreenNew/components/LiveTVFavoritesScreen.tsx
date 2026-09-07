@@ -15,8 +15,6 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import type {RootStackScreenProps} from '../types';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -40,7 +38,6 @@ type Props = RootStackScreenProps<'LiveTVFavoritesScreen'>;
 export const LiveTVFavoritesScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const dispatch = useAppDispatch();
   const toast = useToast();
   const haptics = useHaptics();
   const {add: addBookmark} = useBookmarks();
@@ -146,7 +143,6 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
     },
     [
       menuRow,
-      dispatch,
       addBookmark,
       toast,
       haptics,

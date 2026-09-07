@@ -1,0 +1,72 @@
+V17 Phase 78: authStore migration (persist, the most-flowed-through)
+
+Migrates `authSlice` (Redux) -> `authStore` (Zustand + persist).
+State shape + action semantics + persist key (`'auth'`) are
+preserved so the cold-start session restore works identically
+after the migration.
+
+A. New `src/state/authStore.ts` + `src/state/persistence.ts`.
+
+   - `useAuthStore` — zustand v5 store with `persist` middleware.
+     Persist key `auth`, version 1. State fields: `user`,
+     `isAuthenticated`, `isLoading`, `isRestoring`, `error`,
+     `errorKind`, `lastSignedInAt`, `sessionExpiresAt`. Actions:
+     `setLoading`, `setUser`, `setError`, `restoreStart`,
+     `signOut`, `expireSession`, `reset` (the V17 replacement
+     for the old `resetAppState` action's auth-side effect).
+   - `SESSION_TTL_MS` constant re-exported (used by the cold-
+     start expiry check in `useAuthSession`).
+   - `persistence.ts` — shared `sharedAsyncStorage` factory +
+     `CURRENT_PERSIST_VERSION` constant. All persisted stores
+     import from here so the backing storage is swappable in
+     one place (future: MMKV).
+
+B. Consumer migrations (8 files).
+
+   - `src/hooks/useAuth.ts` — all 7 reads + 5 writes for auth
+     state now go through `useAuthStore`. The `resetAppState`
+     dispatch + `persistor.purge()` calls stay for now (they
+     affect the non-auth redux stores that are still on redux);
+     Phase 85 replaces them with per-store `reset()` calls.
+   - `src/hooks/useAuthSession.ts` — cold-start + foreground
+     expiry checks now read from `useAuthStore.getState()` /
+     `useAuthStore.subscribe()` instead of the redux store.
+   - `src/navigation/RootNavigator.tsx` — `state.auth.isAuthenticated`
+     -> `useAuthStore(s => s.isAuthenticated)`.
+   - `src/screens/Splash/components/SplashScreen.tsx` — same.
+   - `src/components/layout/HomeHeader/HomeHeader.tsx` —
+     `selectAuthUser` -> `useAuthStore(s => s.user)`.
+   - `App.tsx` — `waitForAuthSettle` + the deep-link gate now
+     read from `useAuthStore`.
+   - `src/services/authService.ts` + `src/screens/Login/components/
+     LoginScreen.tsx` — `AuthUser` + `AuthErrorKind` type
+     imports now come from `../state`.
+
+C. Cross-store reset shim.
+
+   The old `resetAppState` redux action was exported from
+   `authSlice` and dispatched on signOut to reset every
+   whitelisted slice. The action is now exported from
+   `src/state/resetAction.ts` so the 7 feature reducers
+   (`bookmark`, `playlist`, `followedPodcasts`, `recentHistory`,
+   `downloads`, `liveFavorites`, `media`) can still listen via
+   `extraReducers(builder.addCase(resetAppState, ...))` until
+   Phase 85 migrates them to per-store `reset()` actions.
+
+D. Old slice + test deleted.
+
+   - `src/store/slices/authSlice.ts` — deleted.
+   - `__tests__/authSlice.test.ts` — deleted (the old redux
+     reducer is gone). The new `authStore` will get a fresh
+     test in a later phase.
+
+Verification:
+- tsc --noEmit: clean
+- jest: 12/12 + 1 todo + 4 suites (down from 5; the
+  authSlice.test.ts is gone; authService.test.ts still
+  passes since it tests the service, not the slice)
+- Zero `from '.../store/slices/authSlice'` imports remain in
+  the codebase
+- The `auth` persist key still maps to AsyncStorage
+  `'auth'`; on-device install of 1.5.0 + a 1.5.0 source build
+  reads the same key (no shape change)

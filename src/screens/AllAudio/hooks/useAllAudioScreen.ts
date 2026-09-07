@@ -5,8 +5,6 @@
 
 import {useCallback, useMemo, useState} from 'react';
 import {createSelector} from '@reduxjs/toolkit';
-import {useAppSelector} from '../../../store';
-
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
 import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 import {useMediaAudioTracks} from '../../../state';

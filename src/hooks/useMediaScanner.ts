@@ -1,5 +1,4 @@
 import {useCallback, useEffect, useRef} from 'react';
-import {useAppDispatch, useAppSelector} from '../store';
 import {useSettingsStore} from '../state';
 import {useMediaStore, type ScanHistory} from '../state';
 
@@ -23,7 +22,6 @@ import {
 let scanInFlight = false;
 
 export function useMediaScanner() {
-  const dispatch = useAppDispatch();
 
   // ── Selectors ──
   const allTracks = useMediaStore(s => s.tracks);
@@ -50,7 +48,7 @@ export function useMediaScanner() {
   const cancelScan = useCallback(() => {
     cancelRef.current = true;
     useMediaStore.getState().requestCancelScan();
-  }, [dispatch]);
+  }, []);
 
   // ── Start scan ──
   const startScan = useCallback(
@@ -146,7 +144,7 @@ export function useMediaScanner() {
         cancelRef.current = false;
       }
     },
-    [dispatch, videoFolders, audioFolders, settingsLastScan, allTracks],
+    [, videoFolders, audioFolders, settingsLastScan, allTracks],
   );
 
   // ── Auto-scan on app launch if linked folders changed ──
@@ -171,7 +169,7 @@ export function useMediaScanner() {
       startScan();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, videoFolders, audioFolders]);
+  }, [, videoFolders, audioFolders]);
 
   return {
     /** Start scanning all linked folders. Pass true to force a full re-scan. */

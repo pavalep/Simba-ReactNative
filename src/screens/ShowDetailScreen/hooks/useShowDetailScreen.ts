@@ -5,7 +5,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {getShowById, getEpisodeList} from '../../../services/api/tvmazeService';
 
-import {useAppSelector} from '../../../store';
 import {
   fileNameMatchesShow,
   fileNameMatchesEpisode,

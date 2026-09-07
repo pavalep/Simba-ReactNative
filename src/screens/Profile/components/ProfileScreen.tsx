@@ -23,8 +23,6 @@ import {InternalHeader} from '../../../components/layout/InternalHeader/Internal
 import {ConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {useAuth} from '../../../hooks/useAuth';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import {usePlaylists} from '../../../features/playlists';
 import {useBookmarks} from '../../../features/bookmarks';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
@@ -58,7 +56,6 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-    const dispatch = useAppDispatch();
   const {openPlayer} = usePlayerActivity();
 
   const {user, isLoading, signIn, signOut, revokeAccess} =
@@ -122,7 +119,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
     const next = THEME_ORDER[(THEME_ORDER.indexOf(themeMode) + 1) % THEME_ORDER.length];
     useSettingsStore.getState().setThemeMode(next);
     toast.show(`Theme: ${THEME_LABEL[next]}`);
-  }, [themeMode, dispatch, toast]);
+  }, [themeMode, toast]);
 
   const handleConfirmSignOut = useCallback(async () => {
     setSignOutVisible(false);

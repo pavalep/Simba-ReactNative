@@ -22,8 +22,6 @@ import {
   type RadioBrowseTag,
 } from '../../../services/api/radioBrowserService';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import type {RadioStationResult} from '../../../types/api';
 import {useLiveFavoritesStore} from '../../../state';
 
@@ -86,7 +84,6 @@ function dedupe(items: RadioStationResult[]): RadioStationResult[] {
 
 export function useRadioBrowser(initialTag?: string) {
   const {isOnline} = useNetworkStatus();
-  const dispatch = useAppDispatch();
 
   // ── Filters ──
   // P53: a Home rail tile can deep-link straight into a genre; seed the
@@ -327,14 +324,14 @@ export function useRadioBrowser(initialTag?: string) {
           });
       }
     },
-    [favorites, dispatch],
+    [favorites],
   );
 
   const removeFavorite = useCallback(
     (id: string) => {
       useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'radio', id});
     },
-    [dispatch],
+    [],
   );
 
   const activeFilterCount =

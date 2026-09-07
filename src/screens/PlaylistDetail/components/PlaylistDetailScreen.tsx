@@ -13,7 +13,6 @@ import FastImage from 'react-native-fast-image';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
-import {useAppDispatch} from '../../../store';
 import {
   usePlaylist,
   usePlaylists,
@@ -110,7 +109,6 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
   const {playlistId, playlistName} = route.params;
-  const dispatch = useAppDispatch();
   const {addToQueue: addToQueueStore, prependToQueue: prependToQueueStore} = useQueue();
   const {renamePlaylist, deletePlaylist, removeItem, reorderItems, clearPlaylist, importPlaylist} = usePlaylists();
   const playlist = usePlaylist(playlistId);
@@ -165,7 +163,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         ...(first.thumbnailPath ? {artworkUri: first.thumbnailPath} : {}),
       },
     });
-  }, [items, dispatch, isOnline, openPlaylist, toast]);
+  }, [items, isOnline, openPlaylist, toast]);
 
   // ── Header: Options menu (52.1) ──
   const handleMore = useCallback(() => {
@@ -452,7 +450,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       }
       setMenuItem(null);
     },
-    [menuItem, dispatch, toast, isOnline, addToQueueStore, prependToQueueStore],
+    [menuItem, toast, isOnline, addToQueueStore, prependToQueueStore],
   );
 
   const handleMoveItem = useCallback(

@@ -38,7 +38,6 @@ import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {useAccessibility} from '../../../hooks/useAccessibility';
-import {useAppSelector} from '../../../store';
 import {useAuthStore} from '../../../state';
 import {BRAND} from '../../../constants/brand';
 

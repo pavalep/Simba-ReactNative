@@ -1,0 +1,67 @@
+V16 Phase 73: type-safety sweep (media-player only)
+
+Media-player-only cleanup of silent error swallowing + typed
+navigation. Out-of-scope items (non-player `as any`,
+non-player console.log, non-player silent catches in
+metadataService / downloadService) deferred to V17.
+
+A. Silent `catch {}` -> `logger.warn(...)`. Every silent
+   failure was hiding real bugs. The mpv bridge may be
+   uninitialized when the user picks a file from the home
+   screen; the file service stat may fail on content:// URIs;
+   the cache eviction may fail per-file. Each path now logs
+   the property name + the error so support can diagnose.
+
+   7 catches in 5 files:
+     - src/services/audioSettingsService.ts:87-103 (6
+       catches) -> 1 helper `setProp(name, value)` that logs
+       on failure. The 6 try/catch blocks were a copy-paste
+       pattern; the helper makes the next new property a
+       one-liner.
+     - src/services/artCacheService.ts:100, 102 -> log
+       per-file unlink failure + log the outer scan failure.
+     - src/services/cacheService.ts:54 -> log the
+       cache-clear failure.
+     - src/services/fileService.ts:262 -> log the
+       RNFS.stat content:// URI failure.
+     - src/screens/Home/hooks/useHomeScreen.ts:150 -> log
+       the pickMediaFile() + openPlayer() sequence failure.
+   (useQueueScreen.ts:152 was already converted in Phase 70.)
+
+B. Typed navigation. 6 `(navigation as any).navigate(...)`
+   casts in useLibraryScreen.ts + 1 in useArtistScreen.ts
+   removed. The `as any` was hiding 3 real type issues:
+
+   1. `navigate('Settings')` and `navigate('Settings', {params})`
+      need the object form (`{name, params?}`) for the
+      discriminated union to resolve. The typed v7
+      `navigate` no longer accepts a bare string for the
+      Settings root route.
+   2. `navigate('FolderLinkingWizard')` needs to go through
+      the Settings nested stack (`{name: 'Settings',
+      params: {screen: 'FolderLinkingWizard', params: {}}}`).
+   3. **`navigate('AlbumScreen', {artistName, albumTitle})`**
+      had the wrong param key. The route's typed param is
+      `albumName`, not `albumTitle`. The previous `as any`
+      was silently dropping the album name on navigation,
+      leaving the AlbumScreen to render with an empty title.
+      This is a real bug fix.
+
+   The 6 useLibraryScreen.ts navigation handlers were
+   converted to the typed object form. The 1
+   useArtistScreen.ts `navigate('AllAudioScreen', ...)` was
+   a single cast; the typed equivalent is identical.
+
+   3 `(navigation as any)` casts remain in non-media-player
+   files (AboutScreen, SearchScreen, navigationHelper) -
+   documented in the V16 tracker as V17 scope.
+
+Verification:
+- tsc --noEmit: clean
+- jest: 19/19 + 1 todo across 5 suites
+- grep 'catch\s*\{\s*\}|catch\s*(\s*\)\s*\{\s*\}' in src/:
+  zero matches (all 7 sites in scope converted)
+- grep '(navigation as any)' in src/screens/Library + src/
+  screens/Artist: zero matches (7 sites in scope converted)
+- grep '(navigation as any)' in src/ (whole): 3 matches
+  (non-player; V17)

@@ -1,7 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
 import RNFS from 'react-native-fs';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import {downloadService} from '../../../services/downloadService';
 
 import {useDownloadsSync} from '../../../hooks/useDownloadsSync';
@@ -19,7 +17,6 @@ export interface StorageInfo {
 }
 
 export function useDownloadsScreen() {
-  const dispatch = useAppDispatch();
   useDownloadsSync();
 
   const records = useDownloadsStore(s => s.records);
@@ -64,7 +61,7 @@ export function useDownloadsScreen() {
     (n: number) => {
       useSettingsStore.getState().setAutoDeleteDownloads(n);
     },
-    [dispatch],
+    [],
   );
 
   const handlePauseResume = useCallback((uri: string, status: string) => {

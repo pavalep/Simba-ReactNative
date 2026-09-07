@@ -18,8 +18,6 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {ConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
-import {useAppDispatch} from '../../../store';
-
 import {AboutScreenProps} from '../types';
 import {svgPaths} from '../../../constants/svgPaths';
 import {SimbaStatusBar} from '../../../components/StatusBar';
@@ -111,7 +109,6 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
   const {colors, isDark} = useTheme();
   const {reduceMotion} = useAccessibility();
   const insets = useSafeAreaInsets();
-  const dispatch = useAppDispatch();
   const [resetVisible, setResetVisible] = useState(false);
 
   // ── Animations ───────────────────────────────────────────
@@ -267,7 +264,7 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
   const handleConfirmReset = useCallback(() => {
     setResetVisible(false);
     useSettingsStore.getState().reset();
-  }, [dispatch]);
+  }, []);
 
   return (
     <View style={styles.root}>

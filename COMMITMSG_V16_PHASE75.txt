@@ -1,0 +1,34 @@
+V16 Phase 75: consumer switches to npm ^1.5.0 (final state)
+
+The dev-cycle `file:../react-native-media-player` is replaced
+with the published `^1.5.0`. node_modules now has a real
+directory (no junction) holding the npm tarball of 1.5.0.
+
+Verification:
+- node_modules/@simba-dev/react-native-media-player/package.json
+  version = 1.5.0 (real npm install, no file: link)
+- tsc --noEmit: clean
+- jest: 19/19 + 1 todo across 5 suites
+
+This is the final V16 state. The V16 charter is fully
+shipped:
+- Phase 69 (module type-bridge + remove 'as unknown as')
+- Phase 69.5 (typed read hooks useQueueItemsAs /
+  usePlaybackHistoryAs)
+- Phase 70 (consumer type-bridge + resolveStreamType sweep
+  + V15 dev-cycle cleanup)
+- Phase 71 (<SimbaPlayer> v2: fold 4 paths into 1
+  resumePolicy)
+- Phase 72 (playFromQueue rename + drop 4 dead-feature
+  stores)
+- Phase 73 (type-safety sweep: 7 silent catches + 7
+  navigate as any removed in media-player-touching files)
+- Phase 74 (module release v1.5.0 + release.yml green)
+- Phase 75 (this commit: consumer on npm ^1.5.0)
+
+Remaining user-driven step:
+- Trigger promote.yml at
+  https://github.com/pavalep/react-native-media-player/
+  actions/workflows/promote.yml with version=1.5.0 to
+  flip npm dist-tag latest=1.5.0 (currently staging=1.5.0
+  is set; latest is still the stale 1.4.0).

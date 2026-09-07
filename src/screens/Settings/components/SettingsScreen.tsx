@@ -60,7 +60,6 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
     appVersion,
     buildNumber,
     THEME_LABELS,
-    dispatch,
     setError,
     setMpvEditorVisible,
     setLinkedFoldersDialogVisible,

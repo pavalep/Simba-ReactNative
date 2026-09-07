@@ -38,8 +38,6 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, {Circle, Defs, LinearGradient, Stop} from 'react-native-svg';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import {useAuthStore} from '../../../state';
 import type {RootStackParamList} from '../../../navigation/types';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
@@ -73,7 +71,6 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export const SplashScreen: React.FC = () => {
   const {colors} = useTheme();
-  const dispatch = useAppDispatch();
   const navigation = useNavigation<NavigationProp>();
   // V17 Phase 78: auth selectors moved to the `useAuthStore`
   // Zustand store.
@@ -326,7 +323,7 @@ export const SplashScreen: React.FC = () => {
     }, minMs);
 
     return () => clearTimeout(t);
-  }, [dispatch, isAuthenticated, navigation]);
+  }, [, isAuthenticated, navigation]);
 
   // Stroke offset for the progress ring. When `progress` is 0
   // the ring is fully hidden; when 1, fully drawn.

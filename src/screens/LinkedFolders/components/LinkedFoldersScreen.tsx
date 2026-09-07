@@ -14,9 +14,6 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
-
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {ScanProgressBanner} from '../../../components/feedback/ScanProgressBanner/ScanProgressBanner';
@@ -271,7 +268,6 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
   const {type} = route.params;
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const dispatch = useAppDispatch();
   const nav = useNavigation<any>();
   const isVideo = type === 'video';
 
@@ -304,7 +300,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
         useSettingsStore.getState().removeAudioFolder(folder);
       }
     },
-    [dispatch, isVideo],
+    [, isVideo],
   );
 
   const handleRescanFolder = useCallback(

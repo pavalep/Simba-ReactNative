@@ -1,0 +1,97 @@
+V16 Phase 70: type-bridge adoption + resolveStreamType sweep
+
+Consumer-side adoption of the V16 module changes (Phase 69 +
+69.5) plus the production noise sweep. Single coherent change
+across ~25 files.
+
+A. Type-bridge adoption (PlayerQueueItem<MediaSource,
+   MediaKind, MediaLane>):
+
+   - `src/store/slices/playerSlice.ts`:
+     - `PlaylistEntry` now `extends
+       Omit<PlayerQueueItem<MediaSource, MediaKind, MediaLane>,
+       'source' | 'type' | 'mediaType'>` and re-adds the
+       three fields as required + `origin?: PlaybackOrigin`.
+       Documents the structural contract with the module.
+     - New `toPlaylistEntry(item)` helper: the single,
+       documented boundary cast (wide -> narrow). Used at
+       the consumer's read sites.
+
+   - `src/screens/QueueScreen/hooks/useQueueScreen.ts`:
+     - Imports `useQueueItemsAs<...>` and
+       `usePlaybackHistoryAs<...>` from the module (Phase 69.5).
+     - `QueueDisplayRow.entry` is now `PlaylistEntry` (was
+       `PlayerQueueItem`); the `upNextRows.map(...)` calls
+       `toPlaylistEntry()` on every queue item.
+     - 3 `as unknown as PlaylistEntry` casts removed (lines
+       110, 120 of the old file). All 3 are gone.
+     - `useQueueScreen.ts:131` tautological identity-check
+       removed (`candidate === entry` was always false for
+       distinct objects). The field-wise equality is the real
+       check.
+     - Silent `catch {}` in `handleJumpTo` (mpv bridge may
+       be uninitialised) -> `logger.warn(...)` with the
+       `entry.uri` + error.
+     - `resolveStreamType(resolveStreamType(entry.type))` ->
+       `resolveStreamType(entry.type)` (the double-nest was
+       idempotent noise).
+
+   - `src/components/sheets/MediaActionsSheet/useQueueActions.ts`:
+     - `toEntry` builder now derives `type` (MediaKind) and
+       `mediaType` (MediaLane) from one of the caller-provided
+       fields with consistent defaults via
+       `mediaKindToLane()`. The previous code set BOTH
+       `type` and `mediaType` to the same `MediaLane` value,
+       which violated the type contract (a `MediaLane` was
+       being stored in a `MediaKind` field). This is a real
+       type-bug fix.
+     - `PlayerQueueItem<MediaSource, MediaKind, MediaLane>`
+       return type added (so the entry is structurally a
+       `PlaylistEntry`).
+     - No more spreading `undefined` values into the entry
+       (the previous `provider: item.provider` and
+       `folderId: item.folderId` would write `undefined`
+       keys when missing; the new spread uses
+       `...(value ? {value} : {})`).
+
+B. resolveStreamType triple-nest collapse (20 files, 27 sites):
+   - Script: `scripts/collapse-resolveStreamType.cjs`. A
+     small Node.js CLI that finds
+     `resolveStreamType(resolveStreamType(X))` and
+     `resolveStreamType(resolveStreamType(resolveStreamType(X)))`
+     and collapses them to `resolveStreamType(X)`. Defensive:
+     the inner expression must not contain parens (any
+     non-trivial inner gets left for manual review).
+   - 23 triple-nests + 4 double-nests collapsed. Zero
+     remaining `resolveStreamType(resolveStreamType(...))`
+     in the consumer src.
+   - Files swept:
+     - useBookmarksScreen, useGenreScreen, HistoryScreen,
+       useHomeScreen (no change, single calls), AlbumDetail,
+       ArtistDetail, useLibraryScreen (no change), LiveTVFavorites,
+       MovieDetail, MoviesDataProvider, MusicDetail,
+       MusicDataProvider, PlaylistDetail, useEpisodeActions,
+       useQueueScreen, RadioContent, RadioFavorites,
+       SearchScreen, useSongScreen, StatsScreen.
+
+C. V15 dev-cycle cleanup (residual from the V15 release):
+   - `tsconfig.json`: removed the V13-era `paths` mapping
+     that pointed to the sibling module dir (it was a
+     workaround for the `file:` dep, no longer needed
+     because the consumer now uses a real install + the
+     module is published to npm).
+   - `.npmrc`: `legacy-peer-deps=true` (works around
+     `react-native-fast-image` peer-dep wall on React 19).
+   - `package.json`: back at `file:../react-native-media-player`
+     for the V16 dev cycle. Will be flipped to `^1.5.0` in
+     Phase 75 (after the 1.5.0 publish).
+
+Verification:
+- tsc --noEmit: clean
+- jest: 19/19 + 1 todo across 5 suites
+- grep -P 'resolveStreamType\\(resolveStreamType\\(' in src/:
+  zero matches (all 27 nested sites collapsed)
+- grep -P 'as unknown as PlaylistEntry' in src/: zero matches
+  (3 sites removed in useQueueScreen.ts)
+- Scripts: `scripts/collapse-resolveStreamType.cjs` is the
+  only new tool. Idempotent (rerun is a no-op).

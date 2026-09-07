@@ -9,8 +9,6 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import type {RootStackScreenProps} from '../types';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import {
   RadioStationCard,
   favToRow,
@@ -37,7 +35,6 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
   const haptics = useHaptics();
   const {openPlayer} = usePlayerActivity();
   const {add: addBookmark} = useBookmarks();
-  const dispatch = useAppDispatch();
 
   const favorites = useLiveFavoritesStore(s =>
     s.items.filter(f => f.kind === 'radio'),
@@ -130,7 +127,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
       }
       setMenuRow(null);
     },
-    [menuRow, dispatch, toast, haptics, addBookmark],
+    [menuRow, toast, haptics, addBookmark],
   );
 
   return (

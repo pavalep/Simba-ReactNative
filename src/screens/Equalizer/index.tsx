@@ -8,7 +8,6 @@ import {SimbaStatusBar} from '../../components/StatusBar';
 import {InternalHeader} from '../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../components/core/AppText/AppText';
 import {VideoPlayerEqualizerPanel} from '../../components/player/VideoPlayerEqualizerPanel/VideoPlayerEqualizerPanel';
-import {useAppDispatch, useAppSelector} from '../../store';
 import {useSettingsStore} from '../../state';
 
 import {
@@ -24,7 +23,6 @@ type Props = EqualizerScreenProps;
  */
 export const EqualizerScreen: React.FC<Props> = ({navigation: _navigation}) => {
   const {colors} = useTheme();
-  const dispatch = useAppDispatch();
 
   const eqGains = useSettingsStore(s => s.eqGains);
   const eqEnabled = useSettingsStore(s => s.eqEnabled);
@@ -41,13 +39,13 @@ export const EqualizerScreen: React.FC<Props> = ({navigation: _navigation}) => {
       useSettingsStore.getState().setEqGains(next);
       setTimeout(applyAudioSettingsToMpv, 0);
     },
-    [eqGains, dispatch],
+    [eqGains],
   );
 
   const handleToggle = useCallback(() => {
     useSettingsStore.getState().setEqEnabled(!eqEnabled);
     setTimeout(applyAudioSettingsToMpv, 0);
-  }, [eqEnabled, dispatch]);
+  }, [eqEnabled]);
 
   const handleApplyPreset = useCallback(
     (name: string) => {
@@ -57,7 +55,7 @@ export const EqualizerScreen: React.FC<Props> = ({navigation: _navigation}) => {
       useSettingsStore.getState().setEqGains([...preset]);
       setTimeout(applyAudioSettingsToMpv, 0);
     },
-    [dispatch],
+    [],
   );
 
   const handleReset = useCallback(() => {
@@ -65,7 +63,7 @@ export const EqualizerScreen: React.FC<Props> = ({navigation: _navigation}) => {
     useSettingsStore.getState().setEqPreset('Flat');
     useSettingsStore.getState().setEqEnabled(false);
     setTimeout(applyAudioSettingsToMpv, 0);
-  }, [dispatch]);
+  }, []);
 
   return (
     <SafeAreaView style={styles.root}>

@@ -1,0 +1,47 @@
+V16 charter: API hardening + type-safety sweep (target 1.5.0)
+
+Adds V16 spec + tracker under md/. V16 is a 7-phase public-API
+de-baking pass on top of the V15 state-consolidation layer:
+
+- Phase 69 (module): PlayerQueueItem becomes generic over
+  TSource/TKind/TLane (defaults to string). Removes the 2 module
+  `as unknown as` casts in useQueue.tsx + useQueueSelection.tsx.
+
+- Phase 70 (consumer): PlaylistEntry specializes
+  PlayerQueueItem<MediaSource, MediaKind, MediaLane>; the 3
+  `as unknown as PlaylistEntry` casts in useQueueScreen.ts
+  collapse. resolveStreamType triple-nesting collapse
+  (18 sites, 14 files). Plus the useQueueScreen.ts:131
+  tautological identity-check (always false) and the
+  useQueueActions.ts:34-35 `type: lane, mediaType: lane` type
+  contract bug.
+
+- Phase 71 (module + App.tsx): <SimbaPlayer> v2 collapses
+  4 wiring paths (lookup / getResumePosition / useSimbaPlayerLookup
+  / PlayerResumeProvider) into a single `resumePolicy` function
+  prop. useSimbaPlayerLookup deleted; PlayerResumeProvider
+  marked @deprecated.
+
+- Phase 72 (module): playFromQueue renamed to
+  removeFromQueueByIndex (honest about the splice-only no-op).
+  4 dead zustand stores + 9 hooks (sleep/equalizer/liked/shuffle)
+  deleted from the public surface — no consumer UI wires them.
+
+- Phase 73 (consumer): media-player-only type-safety sweep.
+  12 silent `catch {}` -> logger.warn in 6 service/hook files.
+  7 `navigate as any` -> typed NavigationProp<RootStackParamList>
+  in useLibraryScreen + useArtistScreen. MoviesCard
+  `placeholderImage as unknown as number` -> ImageSourcePropType.
+  SearchScreen + SearchResults `items: any[]` -> typed
+  SearchItem union.
+
+- Phase 74: tag v1.5.0, release.yml, promote.yml.
+
+- Phase 75: consumer switches to ^1.5.0 (file:../ removed).
+
+Out of scope (V17+): non-player `as any` (Dialog/Skeleton/
+authService/AboutScreen/navigationHelper), non-player silent
+catches (metadataService/downloadService), non-player
+console.log (useAuth/weatherSlice/geolocation), the N+1 in
+mediaSlice.buildSearchIndex, and feature UIs (equalizer/sleep/
+like/shuffle).

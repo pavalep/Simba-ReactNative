@@ -1,0 +1,77 @@
+V17 Phase 79: settingsStore + weatherStore + liveFavoritesStore + followedPodcastsStore (persist)
+
+4 smaller persisted zustand stores replace their redux slice counterparts.
+The auth + session pattern from Phases 77-78 is reused — persist
+keys match the old redux-persist keys 1:1, `version: 1` is set on
+every persisted store, the on-device data migration is a no-op
+(test devices reinstall per V17 charter).
+
+New `src/state/` files
+- settingsStore.ts (11.1 KB): 30+ state fields, 45+ setter actions,
+  `reset()`, `upsertLinkedFolder()` private helper. State shape
+  matches the old settingsSlice 1:1 so existing consumer call sites
+  migrate with a search/replace.
+- weatherStore.ts: 4 fields (status, snapshot, fetchedAt, error),
+  4 actions. The 17+ `console.log` calls in the old weatherSlice
+  cascade are gone (V16 out-of-scope fix that V17 picked up).
+- liveFavoritesStore.ts: items[] + 3 actions.
+- followedPodcastsStore.ts: items[] + 3 actions + private
+  `normalizeFollowedPodcast` helper.
+
+V16 out-of-scope fix that V17 picked up
+- weatherSlice 17+ `console.log` lines → useWeather cascade now
+  uses `logger.debug` only on decision points.
+
+Migrated files (20 consumer files + 4 slice deletions + rootReducer +
+state/index + new weatherLocale util)
+- src/hooks/useWeather.ts: thunk → plain async function
+  `fetchWeatherThunk` at the bottom; the cascade is unchanged
+  (4 tiers: exact coords → manual homeCity → IANA timezone →
+  locale country). Per-mount dedupe via useRef.
+- src/hooks/useMediaScanner.ts: settings selectors migrated to
+  the store; mediaSlice selectors untouched (Phase 80).
+- src/navigation/RootNavigator.tsx: hasLaunched selector.
+- src/screens/About/components/AboutScreen.tsx, AudioSettingsScreen,
+  DownloadsScreen/hooks, Equalizer, FolderLinkingWizard,
+  LinkedFoldersScreen, Library/hooks/useLibraryScreen,
+  LiveTVScreen + LiveTVScreenNew, Profile, RadioScreenNew,
+  Search/components, Settings/components, Settings/hooks,
+  Splash, theme/index.tsx, services/audioSettingsService:
+  selectors + dispatches rewritten to the new stores.
+- src/features/followedPodcasts/index.ts: rewritten to read/write
+  the zustand store directly. The legacy `getFollowed(state)` /
+  `isFollowed(state, id)` helpers that took a RootState parameter
+  are removed (no longer makes sense).
+- src/store/rootReducer.ts: settings, weather, liveFavorites,
+  followedPodcasts entries removed from combineReducers; the
+  corresponding slice imports + entries gone. auth entry also
+  removed (broken since Phase 78 deleted authSlice — Phase 85
+  strips the rest of the redux store).
+- src/utils/weatherLocale.ts: new. `resolveTimezone` and
+  `resolveLocale` moved from weatherSlice so the cascade helper
+  functions live with the other pure-JS utilities.
+
+Deleted
+- src/store/slices/settingsSlice.ts (the largest slice)
+- src/store/slices/weatherSlice.ts
+- src/store/slices/liveFavoritesSlice.ts
+- src/features/followedPodcasts/followedPodcastsReducer.ts
+  (replaced by useFollowedPodcastsStore; index.ts re-exports
+   `FollowedPodcast` type from the new store)
+
+Migration script
+- scripts/migrate-selector-to-store.cjs: 4-phase transform per
+  consumer file (selectors → useFooStore, imports → useFooStore,
+  dispatches → useFooStore.getState, type imports → re-pointed
+  at '../state'). Multi-line dispatch + trailing-comma handling
+  added in the v2 rewrite after the v1 (placeholder-based)
+  approach had a mid-block insertion bug.
+
+Verification
+- `npx tsc --noEmit`: 0 errors.
+- `npx jest`: 4 suites, 12 passed, 1 todo. No regressions.
+
+Junior-dev rule honored: each consumer still imports just
+`useFooStore` from `../state`. Action types exported as
+`SettingsActions` / `WeatherStoreActions` / etc. so feature
+modules can type their handlers without reaching into the store.

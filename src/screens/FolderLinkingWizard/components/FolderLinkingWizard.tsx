@@ -13,8 +13,6 @@ import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import {
   scanFoldersIncremental,
   fileEntriesToTracks,
@@ -52,7 +50,6 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const nav = useNavigation<any>();
-  const dispatch = useAppDispatch();
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -531,7 +528,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
     }
     // Jump straight to Library so scanned media is immediately visible
     nav.navigate('Library');
-  }, [folderType, selectedPath, dispatch, nav]);
+  }, [folderType, selectedPath, nav]);
 
   const handleAddAnother = useCallback(() => {
     setSelectedPath('');

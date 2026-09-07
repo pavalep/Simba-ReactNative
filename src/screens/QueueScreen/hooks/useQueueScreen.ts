@@ -8,8 +8,6 @@
 
 import {useCallback, useMemo} from 'react';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {useAppSelector, useAppDispatch} from '../../../store';
-
 import {playlistActions} from '../../../features/playlists';
 import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {useHaptics} from '../../../hooks/useHaptics';
@@ -70,7 +68,6 @@ export function useQueueScreen(): UseQueueScreenResult {
   const navigation =
     useNavigation<RootStackScreenProps<'Queue'>['navigation']>();
   const route = useRoute<RootStackScreenProps<'Queue'>['route']>();
-  const dispatch = useAppDispatch();
   const haptics = useHaptics();
   const {openPlayer} = usePlayerActivity();
 
@@ -190,7 +187,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       }
 
     },
-    [dispatch, openPlayer, playlist, queue, route.params?.from, removeFromQueueByIndex],
+    [, openPlayer, playlist, queue, route.params?.from, removeFromQueueByIndex],
   );
 
   const handleReorder = useCallback(
@@ -219,7 +216,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       }
       haptics.medium();
     },
-    [dispatch, haptics, upNextRows, reorderQueueAction],
+    [, haptics, upNextRows, reorderQueueAction],
   );
 
   const handleRemove = useCallback(
@@ -233,7 +230,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       }
       haptics.light();
     },
-    [dispatch, haptics, upNextRows, removeFromQueueAction],
+    [, haptics, upNextRows, removeFromQueueAction],
   );
 
   const handlePlayNext = useCallback(

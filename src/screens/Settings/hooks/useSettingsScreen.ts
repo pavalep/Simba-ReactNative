@@ -1,7 +1,6 @@
 import {useCallback, useMemo, useState} from 'react';
 import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useAppDispatch, useAppSelector} from '../../../store';
 import {useSettingsStore} from '../../../state';
 
 import {spacing} from '../../../theme/tokens';
@@ -41,7 +40,6 @@ export function useSettingsScreen() {
   const {theme, colors} = useTheme();
   const insets = useSafeAreaInsets();
   const isDark = theme === 'dark';
-  const dispatch = useAppDispatch();
   const bottomChromeInset = insets.bottom + 104;
 
   const entrance = useAnimatedEntrance(SECTION_COUNT, {staggerDelay: 80});
@@ -212,7 +210,6 @@ export function useSettingsScreen() {
     // Misc
     THEME_LABELS,
     SECTION_COUNT,
-    dispatch,
     setError,
     mpvEditorVisible,
     linkedFoldersDialogVisible,

@@ -13,8 +13,6 @@ import {DownloadButton} from '../../core/DownloadButton/DownloadButton';
 import {MediaActionsSheet} from '../../sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../sheets/MediaActionsSheet/useQueueActions';
 import {startDownload} from '../../../services/downloadService';
-import {useAppSelector} from '../../../store';
-
 import {useToast} from '../../feedback/Toast/Toast';
 import type {JamendoTrackResult} from '../../../types/api';
 import {useDownloadsStore, useDownloadedUriSet} from '../../../state';

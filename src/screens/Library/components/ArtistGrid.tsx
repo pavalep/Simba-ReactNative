@@ -1,8 +1,6 @@
 import React from 'react';
 import {View, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
-import {useAppSelector} from '../../../store';
-
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppCard} from '../../../components/core/AppCard/AppCard';
 import {radius} from '../../../theme/tokens';

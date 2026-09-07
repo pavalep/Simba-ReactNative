@@ -12,8 +12,6 @@ import {
   getIPTVCategories,
 } from '../../../services/api/iptvService';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import {useAppDispatch, useAppSelector} from '../../../store';
-
 import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
 import {useLiveFavoritesStore} from '../../../state';
 
@@ -72,7 +70,6 @@ function dedupe(items: IPTVChannelResult[]): IPTVChannelResult[] {
 
 export function useLiveTVScreen(initialCategoryId?: string) {
   const {isOnline} = useNetworkStatus();
-  const dispatch = useAppDispatch();
 
   // ── Tab / category ──
   // The synthetic 'all' category id (from the Home shelf's "All" tile)
@@ -361,14 +358,14 @@ export function useLiveTVScreen(initialCategoryId?: string) {
           });
       }
     },
-    [favorites, dispatch],
+    [favorites],
   );
 
   const removeFavorite = useCallback(
     (id: string) => {
       useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id});
     },
-    [dispatch],
+    [],
   );
 
   // ── Public API ────────────────────────────────────────────

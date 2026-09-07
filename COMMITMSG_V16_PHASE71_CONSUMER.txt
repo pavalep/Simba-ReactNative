@@ -1,0 +1,35 @@
+V16 Phase 71 (consumer): App.tsx uses <SimbaPlayer resumePolicy={...}>
+
+Migrates the consumer's App.tsx to the V16 <SimbaPlayer> v2
+shape. The 4-path V13/V14 wiring is replaced with a single
+`resumePolicy` function prop on `<SimbaPlayer>`.
+
+Before (V14):
+  - import useSimbaPlayerLookup from module
+  - `const resumeLookup = useSimbaPlayerLookup(selector)`
+  - `<SimbaPlayer lookup={resumeLookup}>`
+
+After (V16):
+  - useSimbaPlayerLookup no longer imported
+  - `const resumePolicy = (resumeId) => ...` (plain function)
+  - `<SimbaPlayer resumePolicy={resumePolicy}>`
+
+The function body is identical (bookmark lookup, position
+ms conversion, most-recent-of-multiple). The 16-line
+`useSimbaPlayerLookup(...)` factory call + the JSDoc
+boilerplate collapse to a 12-line plain function.
+
+Net: -19 lines + 1 fewer import. The 4-path V13/V14
+`useSimbaPlayerLookup` factory hook is no longer needed
+in the consumer.
+
+The V14 export `PlayerResumeProvider` is still available
+in the module's public surface (in case the consumer needs
+a manual wrap), but the consumer no longer imports it.
+
+Verification:
+- tsc --noEmit: clean
+- jest: 19/19 + 1 todo across 5 suites
+- The 4 paths (`lookup`, `getResumePosition`,
+  `useSimbaPlayerLookup`, `PlayerResumeProvider`) are no
+  longer referenced anywhere in the consumer.

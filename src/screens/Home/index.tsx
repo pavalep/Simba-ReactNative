@@ -40,7 +40,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     sections,
     greeting,
     userFirstName,
-    dispatch,
     removeBookmark,
     user,
     handleOpenMedia,
@@ -169,7 +168,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
       // and the section structure are doing the visual work now.
       return sectionContent;
     },
-    [dispatch, greeting, userFirstName, handleItemPress, handlePlaylistPress, handleGenrePress, handleSeeAll, handleFollowedPodcastPress, handleFollowedPodcastsSeeAll, handlePlaylistsSeeAll],
+    [, greeting, userFirstName, handleItemPress, handlePlaylistPress, handleGenrePress, handleSeeAll, handleFollowedPodcastPress, handleFollowedPodcastsSeeAll, handlePlaylistsSeeAll],
   );
 
   if (hasError) {

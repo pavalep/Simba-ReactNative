@@ -1,0 +1,73 @@
+V17 Phase 77: sessionStore migration (pattern-prover)
+
+Migrates `sessionSlice` (Redux) -> `sessionStore` (Zustand).
+`pipSlice` was dead state (no UI consumer; the exported
+`selectIsInPipMode` etc. were never imported anywhere) so
+it's deleted without a replacement, per the "no half-baked"
+charter.
+
+A. New `src/state/` folder + re-export barrel.
+
+   - `src/state/sessionStore.ts` — zustand v5 store, transient
+     (NOT persisted). State shape preserved: `playCounts`
+     (`Record<fileUri, count>`) + `mediaLibrary` (`MediaLibraryEntry[]`,
+     capped at MAX_MEDIA_LIBRARY = 200, oldest-trimmed).
+     Actions: `recordPlaybackStats`, `incrementPlayCount`,
+     `resetSession`. The `recordPlaybackStats` reducer is the
+     non-React equivalent of the old `dispatch(recordPlaybackStats(...))`.
+   - `src/state/index.ts` — re-exports for the public store
+     surface, mirroring the module's `src/index.ts` pattern.
+
+B. Consumer migrations.
+
+   - `src/screens/Profile/components/ProfileScreen.tsx`:
+     `useAppSelector(state => state.session.playCounts)` ->
+     `useSessionStore(state => state.playCounts)`. The other
+     `useAppSelector` calls in the file (settings.themeMode,
+     media.tracks) stay until their respective phases.
+   - `src/screens/Stats/components/StatsScreen.tsx`:
+     same for both `state.session.mediaLibrary` and
+     `state.session.playCounts`.
+   - `src/features/recentHistory/index.ts`:
+     `dispatch(recordPlaybackStats(...))` is replaced with
+     a direct `useSessionStore.getState().recordPlaybackStats(...)`
+     call. The recentHistory feature's own reducers (which
+     manage the recentHistory store) are still on redux until
+     Phase 82.
+
+C. Dead-code removal.
+
+   - `src/services/recentHistoryService.ts` — the
+     `recordPlaybackCheckpoint(dispatch, payload)` bridge was
+     never called by any consumer. Replaced with an empty
+     module that documents the cleanup; the function will be
+     re-introduced by Phase 82 if a non-React write path needs
+     it.
+   - `src/store/slices/sessionSlice.ts` — deleted.
+   - `src/store/slices/pipSlice.ts` — deleted (dead state).
+
+D. Refactor fallout.
+
+   - `src/store/rootReducer.ts` — `session` + `pip` slices
+     removed from `combineReducers`. The `RootState` type is
+     now smaller; consumer selectors that referenced
+     `state.session.*` or `state.pip.*` had to migrate (done
+     in B above).
+   - `src/screens/Home/components/HomeBookmarksList.tsx` —
+     the `BookmarkEntry` type alias was previously imported
+     from `sessionSlice`. The alias was a compatibility
+     re-export for the `Bookmark` type from the bookmarks
+     feature; the import now goes directly to
+     `'../../../features/bookmarks'`, and the local `type
+     BookmarkEntry = Bookmark` line is preserved for any
+     call sites that still use the alias.
+
+Verification:
+- tsc --noEmit: clean
+- jest: 19/19 + 1 todo + 5 suites
+- package.json: zustand added as a direct consumer dep
+  (was previously transitive via the module)
+- Zero useAppSelector / useAppDispatch / dispatch references
+  to `state.session.*` or `state.pip.*` remain
+- Zero `from '../../../store/slices/sessionSlice'` or
+  `from '../../../store/slices/pipSlice'` imports remain

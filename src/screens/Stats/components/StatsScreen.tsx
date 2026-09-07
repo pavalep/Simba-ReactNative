@@ -12,7 +12,6 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
-import {useAppSelector} from '../../../store';
 import {useSessionStore} from '../../../state';
 import {useRecentHistory} from '../../../features/recentHistory';
 import {formatDuration} from '../../../utils/timeAgo';

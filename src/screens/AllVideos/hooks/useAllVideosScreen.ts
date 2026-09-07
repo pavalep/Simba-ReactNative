@@ -4,8 +4,6 @@
 // ────────────────────────────────────────────────────────
 
 import {useCallback, useMemo, useState} from 'react';
-import {useAppSelector} from '../../../store';
-
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
 import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 import {useMediaVideoTracks} from '../../../state';

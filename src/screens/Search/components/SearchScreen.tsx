@@ -16,7 +16,6 @@ import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb'
 import {AppText} from '../../../components/core/AppText/AppText';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
-import {useAppSelector} from '../../../store';
 import {useSettingsStore, usePlayerStore} from '../../../state';
 import {useRecentHistory} from '../../../features/recentHistory';
 import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';

@@ -1,7 +1,6 @@
 import {useState, useMemo, useCallback, useRef, useEffect} from 'react';
 import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useAppSelector, useAppDispatch} from '../../../store';
 import {useSettingsStore} from '../../../state';
 
 import {usePlaylists} from '../../../features/playlists';
@@ -60,7 +59,6 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
   const bottomChromeInset = insets.bottom + 104;
-  const dispatch = useAppDispatch();
   const {openPlayer} = usePlayerActivity();
   // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
   // pattern (entries extraction + start-track dispatch + openPlayer).
@@ -253,7 +251,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
         });
       }
     },
-    [allPlaylists, dispatch, openPlaylist],
+    [allPlaylists, openPlaylist],
   );
 
   const handleShufflePlaylist = useCallback(
@@ -271,7 +269,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
         });
       }
     },
-    [allPlaylists, dispatch, openPlaylist],
+    [allPlaylists, openPlaylist],
   );
 
   const handlePlaylistCardPress = useCallback(
@@ -285,7 +283,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   );
 
   return {
-    theme, colors, isDark, insets, bottomChromeInset, dispatch,
+    theme, colors, isDark, insets, bottomChromeInset,
     activeSegment, setActiveSegment,
     contentMode, setContentMode, showDropdown, setShowDropdown,
     viewMode, setViewMode,

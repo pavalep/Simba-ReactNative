@@ -1,7 +1,6 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {useAppDispatch, useAppSelector} from '../../../store';
 import {CommonActions} from '@react-navigation/native';
 import {type HomeScreenProps} from '../../../navigation/types';
 import type {RootStackParamList} from '../../../navigation/types';
@@ -104,7 +103,6 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const [refreshing, setRefreshing] = useState(false);
   const [isSettled, setIsSettled] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const dispatch = useAppDispatch();
   const {openPlayer} = usePlayerActivity();
   const {user} = useAuth();
   const {snapshot: weatherSnapshot, isFirstLoad: weatherFirstLoad} = useWeather();
@@ -305,7 +303,6 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
      * either way ("Good afternoon, there").
      */
     userFirstName: deriveFirstName(user),
-    dispatch,
     removeBookmark,
     user: user ? user : null,
     genres,
