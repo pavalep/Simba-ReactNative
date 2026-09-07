@@ -4,7 +4,7 @@ import {StyleSheet, TouchableOpacity, View, ViewStyle} from 'react-native';
 
 import {useTheme} from '../../../theme';
 import {useAppSelector} from '../../../store';
-import {selectDownloadByUri} from '../../../store/slices/downloadsSlice';
+
 import {downloadService} from '../../../services/downloadService';
 import {navigate} from '../../../navigation/navigationHelper';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
@@ -13,6 +13,7 @@ import {useDownloadsSync} from '../../../hooks/useDownloadsSync';
 
 import {useHaptics} from '../../../hooks/useHaptics';
 import {SvgIcon, SvgIconName} from '../../utility/SvgIcon';
+import {useDownloadsStore, useDownloadByUri} from '../../../state';
 
 /**
  * 49.2: core download action button (idle / downloading / paused / done /
@@ -50,7 +51,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
   style,
 }) => {
   const {colors} = useTheme();
-  const record = useAppSelector(selectDownloadByUri(uri));
+  const record = useDownloadByUri(uri);
   useDownloadsSync();
   const {medium} = useHaptics();
 

@@ -1,9 +1,6 @@
 import {combineReducers} from '@reduxjs/toolkit';
-import downloadsReducer from './slices/downloadsSlice';
 
-const rootReducer = combineReducers({
-  downloads: downloadsReducer,
-});
+const rootReducer = combineReducers({});
 
 export type RootState = ReturnType<typeof rootReducer>;
 export default rootReducer;

@@ -1,12 +1,12 @@
 import {useCallback, useEffect, useState} from 'react';
 import RNFS from 'react-native-fs';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {selectDownloads, selectDownloadsTotalBytes} from '../../../store/slices/downloadsSlice';
 
 import {downloadService} from '../../../services/downloadService';
 
 import {useDownloadsSync} from '../../../hooks/useDownloadsSync';
 import {useSettingsStore} from '../../../state';
+import {useDownloadsStore, useDownloadsTotalBytes} from '../../../state';
 
 /**
  * 49.3/49.6: Downloads screen state — live records (via service sync),
@@ -22,8 +22,8 @@ export function useDownloadsScreen() {
   const dispatch = useAppDispatch();
   useDownloadsSync();
 
-  const records = useAppSelector(selectDownloads);
-  const downloadsBytes = useAppSelector(selectDownloadsTotalBytes);
+  const records = useDownloadsStore(s => s.records);
+  const downloadsBytes = useDownloadsTotalBytes();
   const autoDeleteDownloads = useSettingsStore(s => s.autoDeleteDownloads,
   );
 

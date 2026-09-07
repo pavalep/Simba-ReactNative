@@ -1,7 +1,8 @@
 import {useEffect} from 'react';
 import {useAppDispatch} from '../store';
-import {hydrateDownloads} from '../store/slices/downloadsSlice';
+
 import {downloadService} from '../services/downloadService';
+import {useDownloadsStore} from '../state';
 
 /**
  * 49.1/49.3: keeps the downloads slice in sync with the service manifest.
@@ -15,10 +16,10 @@ export function useDownloadsSync(): void {
   useEffect(() => {
     let active = true;
     downloadService.ensureLoaded().then(records => {
-      if (active) dispatch(hydrateDownloads(records));
+      if (active) useDownloadsStore.getState().hydrateDownloads(records);
     });
     const unsubscribe = downloadService.subscribe(records => {
-      dispatch(hydrateDownloads(records));
+      useDownloadsStore.getState().hydrateDownloads(records);
     });
     return () => {
       active = false;

@@ -24,7 +24,7 @@ import {GlobalOperationProgress} from './src/components/status/GlobalOperationPr
 import {lockToPortrait} from './src/utils/orientation';
 import {useAuthSession} from './src/hooks/useAuthSession';
 import {downloadService} from './src/services/downloadService';
-import {hydrateDownloads} from './src/store/slices/downloadsSlice';
+import {useDownloadsStore} from './src/state';
 import {mark} from './src/utils/startupPerf';
 import {configureGoogleSignin} from './src/services/authService';
 
@@ -84,7 +84,7 @@ const AppContent: React.FC = () => {
   // slice mirrors it so badges/buttons/Downloads screen render instantly.
   useEffect(() => {
     downloadService.ensureLoaded().then(records => {
-      store.dispatch(hydrateDownloads(records));
+      useDownloadsStore.getState().hydrateDownloads(records);
     });
   }, []);
 

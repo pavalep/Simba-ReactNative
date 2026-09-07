@@ -114,4 +114,13 @@ export {
   type PlayerActions,
 } from './playerStore';
 
+export {
+  useDownloadsStore,
+  useDownloadByUri,
+  useDownloadedUriSet,
+  useDownloadsTotalBytes,
+  type DownloadsState,
+  type DownloadsActions,
+} from './downloadsStore';
+
 export {RESET_APP_STATE, resetAppState} from './resetAction';

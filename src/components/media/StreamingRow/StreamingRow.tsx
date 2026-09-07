@@ -14,9 +14,10 @@ import {MediaActionsSheet} from '../../sheets/MediaActionsSheet/MediaActionsShee
 import {useQueueActions} from '../../sheets/MediaActionsSheet/useQueueActions';
 import {startDownload} from '../../../services/downloadService';
 import {useAppSelector} from '../../../store';
-import {selectDownloadedUriSet} from '../../../store/slices/downloadsSlice';
+
 import {useToast} from '../../feedback/Toast/Toast';
 import type {JamendoTrackResult} from '../../../types/api';
+import {useDownloadsStore, useDownloadedUriSet} from '../../../state';
 
 interface StreamingRowProps {
   track: JamendoTrackResult;
@@ -30,7 +31,7 @@ export const StreamingRow: React.FC<StreamingRowProps> = React.memo(
     const {colors} = useTheme();
     const toast = useToast();
     const {playNext, addToQueue} = useQueueActions();
-    const downloadedUris = useAppSelector(selectDownloadedUriSet);
+    const downloadedUris = useDownloadedUriSet();
     const isDownloaded = downloadedUris.has(track.audioUrl);
     // 58.4/58.5: uniform long-press menu (Play Next / Add to Queue / Download)
     const [menuVisible, setMenuVisible] = useState(false);

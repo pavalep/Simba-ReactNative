@@ -81,6 +81,11 @@ const SLICES = [
     store: 'usePlayerStore',
     importPathRe: /playerSlice/,
   },
+  {
+    redux: 'downloads',
+    store: 'useDownloadsStore',
+    importPathRe: /downloadsSlice/,
+  },
 ];
 
 const ACTION_NAMES = {
@@ -150,6 +155,12 @@ const ACTION_NAMES = {
     'removeFromPlaylist',
     'reorderPlaylist',
     'playFromPlaylist',
+  ]),
+  downloads: new Set([
+    'hydrateDownloads',
+    'upsertDownload',
+    'setDownloadStatus',
+    'removeDownload',
   ]),
 };
 

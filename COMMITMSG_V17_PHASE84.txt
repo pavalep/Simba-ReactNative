@@ -1,0 +1,63 @@
+V17 Phase 84: downloadsStore (persist, the last redux slice)
+
+`downloadsSlice` -> `useDownloadsStore` (Zustand + persist, key
+'downloads' to match the redux-persist whitelist). This is the
+**last** redux slice. The Phase 85 sweep is now mechanical.
+
+Reactive UI mirror of `downloadService` (the service's
+AsyncStorage manifest remains the source of truth; this store
+feeds badges, buttons, the Downloads screen). The 4 actions
+(`hydrateDownloads`, `upsertDownload`, `setDownloadStatus`,
+`removeDownload`) are preserved 1:1.
+
+The 3 derived selectors (record-by-URI, downloaded-URI set,
+total bytes) become hooks with the same name pattern as the
+media store:
+  - `useDownloadByUri(uri)` -> DownloadRecord | null
+  - `useDownloadedUriSet()` -> Set<string>
+  - `useDownloadsTotalBytes()` -> number
+
+Each memoizes on the `records` reference, so re-renders are
+contained to the records themselves, not to the source of
+truth in the service.
+
+Migrated
+- App.tsx: `store.dispatch(hydrateDownloads(records))` ->
+  `useDownloadsStore.getState().hydrateDownloads(records)`. The
+  cold-start hydration useEffect now uses the zustand store
+  directly.
+- src/components/core/DownloadButton/DownloadButton.tsx:
+  `useAppSelector(selectDownloadByUri(uri))` ->
+  `useDownloadByUri(uri)`.
+- src/components/media/StreamingRow/StreamingRow.tsx:
+  `useAppSelector(selectDownloadedUriSet)` ->
+  `useDownloadedUriSet()`.
+- src/hooks/useDownloadsSync.ts: 3 `store.dispatch(...)` calls
+  -> `useDownloadsStore.getState().setX(...)`.
+- src/screens/DownloadsScreen/hooks/useDownloadsScreen.ts:
+  `useAppSelector(selectDownloads)` -> `useDownloadsStore(s =>
+  s.records)`, `useAppSelector(selectDownloadsTotalBytes)` ->
+  `useDownloadsTotalBytes()`.
+
+Deleted
+- src/store/slices/downloadsSlice.ts
+
+Updated
+- src/store/rootReducer.ts: `combineReducers({})` - all redux
+  state has been migrated. The file + the `@reduxjs/toolkit`
+  dependency itself will be removed in Phase 86.
+- src/state/index.ts: 6 new exports from `./downloadsStore`:
+  `useDownloadsStore`, `useDownloadByUri`,
+  `useDownloadedUriSet`, `useDownloadsTotalBytes`, and the
+  2 type exports (`DownloadsState`, `DownloadsActions`).
+- scripts/migrate-selector-to-store.cjs: added the downloads
+  entry + 4 dispatch action names.
+
+Verification
+- `npx tsc --noEmit`: 0 errors.
+- `npx jest`: 4 suites, 12 passed, 1 todo. No regressions.
+
+Junior-dev rule honored: each consumer imports just
+`useDownloadsStore` (or one of the 3 derived hooks) from
+`../state`. `downloadService` is still the source of truth for
+the AsyncStorage manifest; the store is a pure UI mirror.
