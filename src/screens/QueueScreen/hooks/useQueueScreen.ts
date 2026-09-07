@@ -95,7 +95,7 @@ export function useQueueScreen(): UseQueueScreenResult {
   const {
     addToQueue: addToQueueAction,
     prependToQueue: prependToQueueAction,
-    playFromQueue: playFromQueueAction,
+    removeFromQueueByIndex,
     reorderQueue: reorderQueueAction,
     removeFromQueue: removeFromQueueAction,
   } = useQueue();
@@ -163,7 +163,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       if (playlistIdx >= 0) {
         dispatch(playFromPlaylist(playlistIdx));
       } else if (queueIdx >= 0) {
-        playFromQueueAction(queueIdx);
+        removeFromQueueByIndex(queueIdx);
       } else {
         // History-only item: append to the playlist, then play it.
         dispatch(addToPlaylist(entry));
@@ -195,7 +195,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       }
 
     },
-    [dispatch, openPlayer, playlist, queue, route.params?.from, playFromQueueAction],
+    [dispatch, openPlayer, playlist, queue, route.params?.from, removeFromQueueByIndex],
   );
 
   const handleReorder = useCallback(

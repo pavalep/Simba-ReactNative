@@ -215,15 +215,17 @@ const playerSlice = createSlice({
     // calls the module's `usePlayer().commands.next()` directly
     // via the activity). Removed in the V15 sweep.
 
+    // V16 Phase 72: the dead-feature zustand stores (sleep timer,
+    // equalizer, liked, shuffle) were removed from the module's
+    // public surface entirely. They were never wired to a UI.
+    // The functionality can be re-introduced as a V17+ feature
+    // by copying the store from git history.
+    //
     // V15 Phase 66: dead state + reducers removed. The following
     // were scaffolded in earlier phases but no consumer file ever
     // read or wrote them — they were dead weight. The functionality
     // is now exposed (when needed) as module-level zustand stores:
-    //   - toggleShuffle -> useShuffle()
-    //   - setSleepTimer, setSleepTimerMode -> useSleepTimer()
-    //   - setEqualizerGains, toggleEqualizer -> useEqualizer()
-    //   - toggleLike -> useToggleLiked()
-    //   - playFromQueue -> useQueue() (queue-splice) +
+    //   - playFromQueue (renamed to removeFromQueueByIndex) +
     //                       useOpenPlaylist() (playlist + activity)
     //   - clearAll, clearPlayer, clearPlaylist -> use the
     //       module's clear* methods + the consumer's own
