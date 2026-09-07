@@ -14,29 +14,35 @@ import {
   playFromPlaylist,
   removeFromPlaylist,
   reorderPlaylist,
+  toPlaylistEntry,
 } from '../../../store/slices/playerSlice';
 import {playlistActions} from '../../../features/playlists';
 import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {useHaptics} from '../../../hooks/useHaptics';
+import {logger} from '../../../lib/logger';
 import type {PlayerQueueItem} from '@simba-dev/react-native-media-player';
 import type {PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {PlaylistItem} from '../../../types/playlist';
-import type {MediaLane} from '../../../types/media';
+import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import type {RootStackScreenProps} from '../../../navigation/types';
 import {
   resolveStreamType,
   usePlayer,
   usePlayerActivity,
   useQueue,
-  useQueueItems,
-  usePlaybackHistory,
+  useQueueItemsAs,
+  usePlaybackHistoryAs,
 } from '@simba-dev/react-native-media-player';
 
 interface QueueDisplayRow {
-  /** V15 Phase 65: a row may come from the module's zustand
-   *  queue (PlayerQueueItem) or the consumer's `state.player.playlist`
-   *  (PlaylistEntry, which is structurally a superset). */
-  entry: PlayerQueueItem;
+  /**
+   * V15 Phase 65: a row may come from the module's zustand queue
+   * (PlayerQueueItem) or the consumer's `state.player.playlist`
+   * (PlaylistEntry). V16 Phase 70: both are normalized to
+   * `PlaylistEntry` at the boundary via `toPlaylistEntry()`, so
+   * the rest of this file no longer needs `as unknown as` casts.
+   */
+  entry: PlaylistEntry;
   origin: 'queue' | 'playlist';
   rawIndex: number;
 }
@@ -79,8 +85,8 @@ export function useQueueScreen(): UseQueueScreenResult {
   // zustand store. The component reads via `useQueueItems()` /
   // `usePlaybackHistory()` and dispatches via the `useQueue()`
   // hook's actions.
-  const queue = useQueueItems();
-  const playbackHistory = usePlaybackHistory();
+  const queue = useQueueItemsAs<PlayerQueueItem<MediaSource, MediaKind, MediaLane>>();
+  const playbackHistory = usePlaybackHistoryAs<PlayerQueueItem<MediaSource, MediaKind, MediaLane>>();
   const currentIndex = useAppSelector(state => state.player.currentIndex);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
@@ -98,7 +104,11 @@ export function useQueueScreen(): UseQueueScreenResult {
 
   const upNextRows = useMemo<QueueDisplayRow[]>(() => {
     const queuedRows = queue
-      .map((entry, rawIndex) => ({entry, origin: 'queue' as const, rawIndex}))
+      .map((entry: PlayerQueueItem<MediaSource, MediaKind, MediaLane>, rawIndex) => ({
+        entry: toPlaylistEntry(entry),
+        origin: 'queue' as const,
+        rawIndex,
+      }))
       .filter(row => row.entry.mediaType === activeLane);
     const playlistRows = playlist
       .map((entry, rawIndex) => ({entry, origin: 'playlist' as const, rawIndex}))
@@ -107,7 +117,7 @@ export function useQueueScreen(): UseQueueScreenResult {
   }, [activeLane, currentIndex, playlist, queue]);
 
   const upNext = useMemo(
-    () => upNextRows.map(row => row.entry as unknown as PlaylistEntry),
+    () => upNextRows.map(row => row.entry),
     [upNextRows],
   );
   const queueCount = upNextRows.filter(row => row.origin === 'queue').length;
@@ -117,7 +127,7 @@ export function useQueueScreen(): UseQueueScreenResult {
       playbackHistory
         .filter(entry => entry.mediaType === activeLane)
         .reverse()
-        .map(entry => entry as unknown as PlaylistEntry),
+        .map(entry => toPlaylistEntry(entry)),
     [activeLane, playbackHistory],
   );
 
@@ -125,16 +135,28 @@ export function useQueueScreen(): UseQueueScreenResult {
 
   const handleJumpTo = useCallback(
     (entry: PlaylistEntry) => {
+      // V16 Phase 70: dropped the `candidate === entry` reference-equality
+      // tautology (always false for distinct objects) and the
+      // `as unknown as typeof candidate` cast. Field-wise equality is
+      // the real identity check. The wide `candidate` shape lets us
+      // compare against both `PlayerQueueItem[]` (module queue) and
+      // `PlaylistEntry[]` (consumer playlist) with the same function.
       const sameEntry = (
-        candidate: {uri: string; source?: string; type?: string; mediaType?: string; provider?: string; folderId?: string},
+        candidate: {
+          uri: string;
+          source?: string;
+          type?: string;
+          mediaType?: string;
+          provider?: string;
+          folderId?: string;
+        },
       ) =>
-        candidate === (entry as unknown as typeof candidate) ||
-        (candidate.uri === entry.uri &&
-          candidate.source === entry.source &&
-          candidate.type === entry.type &&
-          candidate.mediaType === entry.mediaType &&
-          candidate.provider === entry.provider &&
-          candidate.folderId === entry.folderId);
+        candidate.uri === entry.uri &&
+        candidate.source === entry.source &&
+        candidate.type === entry.type &&
+        candidate.mediaType === entry.mediaType &&
+        candidate.provider === entry.provider &&
+        candidate.folderId === entry.folderId;
       const playlistIdx = playlist.findIndex(sameEntry);
       const queueIdx = queue.findIndex(sameEntry);
 
@@ -149,7 +171,13 @@ export function useQueueScreen(): UseQueueScreenResult {
       }
       try {
         getMpvPlayerModule().loadFile(entry.uri);
-      } catch {}
+      } catch (e) {
+        // V16 Phase 73: mpv bridge may be uninitialised when the user
+        // taps a history item before the player has been mounted.
+        // log + carry on — the openPlayer() call below opens the
+        // activity which re-initialises the bridge.
+        logger.warn('[useQueueScreen] mpv loadFile failed for', entry.uri, e);
+      }
 
       // Open the matching player unless we are already inside that lane.
       // Forward the complete classification so resume, badges, and local-folder
@@ -162,7 +190,7 @@ export function useQueueScreen(): UseQueueScreenResult {
         openPlayer({
           uri: entry.uri,
           title: entry.title,
-          type: resolveStreamType(resolveStreamType(entry.type)),
+          type: resolveStreamType(entry.type),
         });
       }
 

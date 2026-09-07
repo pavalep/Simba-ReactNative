@@ -362,7 +362,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: item.fileUri,
         title: item.title,
-        type: resolveStreamType(resolveStreamType(item.type)),
+        type: resolveStreamType(item.type),
         ...(item.provider ? {provider: item.provider} : {}),
         ...(item.folderId ? {folderId: item.folderId} : {}),
         ...(item.thumbnailPath ? {artworkUri: item.thumbnailPath} : {}),

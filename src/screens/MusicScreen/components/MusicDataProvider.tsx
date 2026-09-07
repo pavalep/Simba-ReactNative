@@ -46,7 +46,7 @@ export const MusicDataProvider: React.FC<{
     openPlayer({
       uri: item.audioUrl,
       title: item.name,
-      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+      type: resolveStreamType('music'),
     });
   }, [openPlayer]);
 

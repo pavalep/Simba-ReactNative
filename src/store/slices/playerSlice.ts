@@ -3,11 +3,59 @@ import {
   normalizePlaybackEntry,
   type PlaybackEntry,
   type PlaybackEntryInput,
+  type PlaybackOrigin,
 } from '../../types/playback';
 import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
+import type {PlayerQueueItem} from '@simba-dev/react-native-media-player';
 
-/** Playlist entries are the queue-ready subset of the shared playback record. */
-export interface PlaylistEntry extends PlaybackEntry {}
+/**
+ * V16 Phase 70: a `PlaylistEntry` is the consumer's typed view of an
+ * item that lives in the player pipeline.
+ *
+ * Structurally a `PlayerQueueItem<MediaSource, MediaKind, MediaLane>`
+ * (the module's queue-store item shape) with the three classification
+ * fields promoted to **required** and a consumer-only `origin` field
+ * added. The promotion matches the existing `PlaybackEntry` contract
+ * — the consumer always knew these fields were required.
+ *
+ * Why a separate type instead of `extends PlaybackEntry`:
+ *  - `PlaybackEntry` is a consumer-internal record type (from
+ *    `types/playback.ts`) with normalization helpers around it.
+ *  - `PlaylistEntry` is the boundary shape that round-trips
+ *    through the module's zustand queue. Extending the module's
+ *    `PlayerQueueItem` directly documents the contract.
+ */
+export interface PlaylistEntry
+  extends Omit<
+    PlayerQueueItem<MediaSource, MediaKind, MediaLane>,
+    'source' | 'type' | 'mediaType'
+  > {
+  source: MediaSource;
+  type: MediaKind;
+  mediaType: MediaLane;
+  /** V13: the route context retained when the item entered playback. */
+  origin?: PlaybackOrigin;
+}
+
+/**
+ * V16 Phase 70: normalize a module-side `PlayerQueueItem` to the
+ * consumer's `PlaylistEntry` shape.
+ *
+ * The module's `PlayerQueueItem.source`/`type`/`mediaType` are
+ * optional (the queue store doesn't require them at the type level).
+ * The consumer knows items in the queue always carry the three
+ * fields (every consumer write path passes them). This is the
+ * single, documented boundary cast.
+ *
+ * At runtime this is an identity-spread — no data transformation.
+ * The cast lives in one place instead of 3 `as unknown as` sites
+ * in `useQueueScreen.ts`.
+ */
+export function toPlaylistEntry(
+  item: PlayerQueueItem<MediaSource, MediaKind, MediaLane>,
+): PlaylistEntry {
+  return item as PlaylistEntry;
+}
 
 export interface QueueItem {
   fileUri: string;

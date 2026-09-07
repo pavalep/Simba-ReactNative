@@ -37,7 +37,7 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
       openPlayer({
         uri: item.fileUri,
         title: item.title,
-        type: resolveStreamType(resolveStreamType(item.type)),
+        type: resolveStreamType(item.type),
       });
     },
     [openPlayer],

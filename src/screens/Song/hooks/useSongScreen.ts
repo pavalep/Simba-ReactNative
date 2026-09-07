@@ -129,7 +129,7 @@ export function useSongScreen() {
         uri: fileUri,
         title: displayTitle,
         startPositionMs: position,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+        type: resolveStreamType('music'),
       });
     },
     [openPlayer, fileUri, displayTitle, displayDuration],
@@ -179,7 +179,7 @@ export function useSongScreen() {
     openPlayer({
       uri: fileUri,
       title: displayTitle,
-      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+      type: resolveStreamType('music'),
     });
   }, [openPlayer, fileUri, displayTitle, displayDuration]);
 
@@ -223,7 +223,7 @@ export function useSongScreen() {
     openPlayer({
       uri: fileUri,
       title: displayTitle,
-      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+      type: resolveStreamType('music'),
     });
   }, [openPlayer, fileUri, displayTitle, displayDuration]);
 

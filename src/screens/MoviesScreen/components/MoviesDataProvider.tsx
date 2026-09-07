@@ -91,7 +91,7 @@ export const MoviesDataProvider: React.FC<{
           uri: details.streamingUrl,
           title: item.title,
           startPositionMs: 0,
-          type: resolveStreamType(resolveStreamType(resolveStreamType('movie'))),
+          type: resolveStreamType('movie'),
         });
       } catch (err) {
         const detail =

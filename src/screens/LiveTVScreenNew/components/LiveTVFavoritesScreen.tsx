@@ -64,7 +64,7 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
       openPlayer({
         uri: row.url,
         title: row.name,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('live-tv'))),
+        type: resolveStreamType('live-tv'),
       });
     },
     [openPlayer],

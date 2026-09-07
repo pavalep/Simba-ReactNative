@@ -40,7 +40,7 @@ export function useEpisodeActions({podcast, navigation}: Options) {
       openPlayer({
         uri: episode.enclosureUrl,
         title: episode.title,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('podcast'))),
+        type: resolveStreamType('podcast'),
       });
     },
     [openPlayer, podcast],

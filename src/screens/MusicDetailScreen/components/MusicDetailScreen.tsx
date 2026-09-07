@@ -53,7 +53,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
     openPlayer({
       uri: fileUri,
       title: fileTitle,
-      type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+      type: resolveStreamType('music'),
     });
   }, [track, openPlayer, source]);
 
@@ -63,7 +63,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
       openPlayer({
         uri: t.audioUrl,
         title: t.name,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+        type: resolveStreamType('music'),
       });
     },
     [openPlayer],

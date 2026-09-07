@@ -55,7 +55,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
       openPlayer({
         uri: row.url,
         title: row.name,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('radio'))),
+        type: resolveStreamType('radio'),
       });
     },
     [openPlayer],

@@ -276,7 +276,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       openPlayer({
         uri: track.audioUrl,
         title: track.name,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+        type: resolveStreamType('music'),
       });
     },
         [openPlayer],
@@ -287,7 +287,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       openPlayer({
         uri: track.streamUrl,
         title: track.title,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+        type: resolveStreamType('music'),
             });
     },
     [openPlayer],
@@ -318,7 +318,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
       openPlayer({
         uri: channel.url,
         title: channel.name,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('live-tv'))),
+        type: resolveStreamType('live-tv'),
       });
     },
         [openPlayer],

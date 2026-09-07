@@ -178,7 +178,7 @@ export function useGenreScreen(): UseGenreScreenResult {
       openPlayer({
         uri,
         title,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+        type: resolveStreamType('music'),
       });
     },
     [openPlayer],
@@ -189,7 +189,7 @@ export function useGenreScreen(): UseGenreScreenResult {
       openPlayer({
         uri: track.audioUrl,
         title: track.name,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('music'))),
+        type: resolveStreamType('music'),
       });
     },
     [openPlayer],
@@ -200,7 +200,7 @@ export function useGenreScreen(): UseGenreScreenResult {
       openPlayer({
         uri: station.urlResolved || station.url,
         title: station.name,
-        type: resolveStreamType(resolveStreamType(resolveStreamType('radio'))),
+        type: resolveStreamType('radio'),
       });
     },
     [openPlayer],

@@ -409,7 +409,7 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
               uri: item.streamingUrl,
               title: item.title,
               startPositionMs: savedBookmark?.position ?? 0,
-              type: resolveStreamType(resolveStreamType(resolveStreamType('movie'))),
+              type: resolveStreamType('movie'),
               // The IA subtitle shape is `{language, url, format}` — no
               // stable id. We use the language string as the
               // selector and let the player match by language. If a

@@ -191,7 +191,7 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
                           uri: entry.fileUri,
                           title: entry.title,
                           startPositionMs: entry.position,
-                          type: resolveStreamType(resolveStreamType(entry.type)),
+                          type: resolveStreamType(entry.type),
                         });
                       }}
                       activeOpacity={0.7}

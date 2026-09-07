@@ -87,7 +87,7 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
         uri: fileUri,
         title: title ?? 'Untitled',
         startPositionMs: position,
-        type: resolveStreamType(resolveStreamType(lane === 'audio' ? 'audio' : 'video')),
+        type: resolveStreamType(lane === 'audio' ? 'audio' : 'video'),
       });
     },
     [openPlayer],
