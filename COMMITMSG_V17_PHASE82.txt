@@ -1,0 +1,77 @@
+V17 Phase 82: playlistsStore + recentHistoryStore (persist, batched)
+
+Two more persisted zustand stores replace their redux-feature
+counterparts. The slice files are at the same level as the
+auth/session ones from Phases 77-78, so the same persist-key +
+version=1 contract applies.
+
+`playlistReducer` (Redux + redux-persist whitelist +
+`REHYDRATE` extraReducer) -> `usePlaylistsStore` (Zustand +
+persist, key='playlists' to match the whitelist). The legacy
+`MIXED` playlist kind is split into `AUDIO_ONLY` +
+`VIDEO_ONLY` siblings by `splitLegacyMixed`, and the new
+`onRehydrateStorage` callback runs `normalizePersistedPlaylists`
+on the rehydrated state so old persisted shapes fold in cleanly.
+
+`recentHistoryReducer` (Redux + redux-persist whitelist) ->
+`useRecentHistoryStore` (Zustand + persist, key='recentHistory').
+The 20-entry cap and per-fileUri dedup behavior is preserved.
+
+Both feature modules (`features/playlists/index.ts` and
+`features/recentHistory/index.ts`) keep their public API
+(`usePlaylists`, `usePlaylists + useRecentHistory`, the
+`playlistActions` namespace, the standalone
+`createPlaylist`/`addItemToPlaylist`/`importPlaylist`/
+`updatePlaylistItemPosition`/`addRecent`/`removeRecent`/
+`clearRecent` helpers). They now read/write the zustand stores
+directly; the old `dispatch` + `getState` `PlaylistStoreAccess`
+parameter is gone.
+
+Migrated
+- src/features/playlists/index.ts: rewritten. `useAppDispatch`
+  + `useAppSelector` removed; the standalone helpers no longer
+  take a `dispatch` parameter; `usePlaylist(id)` returns
+  `Playlist | undefined` (was a `useAppSelector(selectPlaylistById(id))`
+  wrapper).
+- src/features/recentHistory/index.ts: rewritten. The
+  `useAppDispatch` + `useAppSelector` pair is gone; the
+  `addRecent` / `removeRecent` / `clearRecent` standalone
+  helpers dropped their `dispatch` arg.
+- src/screens/QueueScreen/hooks/useQueueScreen.ts:
+  `playlistActions.importPlaylistAction({...})` (the redux
+  action) -> `playlistActions.importPlaylist({...})` (the
+  new store call). 1 call site.
+- src/store/rootReducer.ts: `playlists` and `recentHistory`
+  entries + their imports removed.
+
+Deleted
+- src/features/playlists/playlistReducer.ts
+- src/features/playlists/playlistPersistence.ts (no
+  side-channel AsyncStorage mirror for playlists; zustand
+  persist owns IO)
+- src/features/recentHistory/recentHistoryReducer.ts
+
+Updated
+- src/state/index.ts: 4 new exports from `./playlistsStore`:
+  `usePlaylistsStore`, `MAX_PLAYLISTS`,
+  `MAX_ITEMS_PER_PLAYLIST`, `normalizePersistedPlaylists`,
+  `PlaylistsState`, `PlaylistsActions`. 5 from
+  `./recentHistoryStore`: `useRecentHistoryStore`,
+  `MAX_RECENT_HISTORY_ENTRIES`, `RecentHistoryEntry`,
+  `RecentHistoryEntryInput`, `RecentHistoryState`,
+  `RecentHistoryActions`.
+- scripts/migrate-selector-to-store.cjs: added entries for the
+  two new redux names (`playlists` -> `usePlaylistsStore`,
+  `recentHistory` -> `useRecentHistoryStore`) and their
+  dispatch action names.
+
+Verification
+- `npx tsc --noEmit`: 0 errors.
+- `npx jest`: 4 suites, 12 passed, 1 todo. No regressions.
+
+Junior-dev rule honored: each consumer imports just
+`usePlaylistsStore` / `useRecentHistoryStore` (or the type
+aliases) from `../state`. The feature module
+(`features/playlists/index.ts`) is the single integration
+point for everything else; downstream code (Player sheet,
+queue screen, archive, etc.) never touches the store directly.

@@ -1,31 +1,14 @@
-import {useCallback, useImperativeHandle, useMemo} from 'react';
-import type {Ref} from 'react';
-import {useStore} from 'react-redux';
-import {useAppDispatch, useAppSelector} from '../../store';
-import type {AppDispatch, RootState} from '../../store';
+import {useCallback, useImperativeHandle, useMemo, type Ref} from 'react';
 import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
-import {
-  isPlaylistMediaKindAllowed,
-  type Playlist,
-  type PlaylistItem,
-  type PlaylistKind,
-} from '../../types/playlist';
+import {isPlaylistMediaKindAllowed, type Playlist, type PlaylistItem, type PlaylistKind} from '../../types/playlist';
 import {
   MAX_ITEMS_PER_PLAYLIST,
   MAX_PLAYLISTS,
-  addItemToPlaylist as addItemToPlaylistAction,
-  clearPlaylist as clearPlaylistAction,
-  createPlaylist as createPlaylistAction,
-  deletePlaylist as deletePlaylistAction,
-  importPlaylist as importPlaylistAction,
   normalizePersistedPlaylists,
-  removeItemFromPlaylist as removeItemFromPlaylistAction,
-  renamePlaylist as renamePlaylistAction,
-  reorderPlaylistItems as reorderPlaylistItemsAction,
-  selectAllPlaylists,
-  selectPlaylistById,
-  updatePlaylistItemPosition as updatePlaylistItemPositionAction,
-} from './playlistReducer';
+  usePlaylistsStore,
+} from '../../state';
+
+export {MAX_PLAYLISTS, MAX_ITEMS_PER_PLAYLIST, normalizePersistedPlaylists};
 
 export type PlaylistItemInput = Omit<PlaylistItem, 'id' | 'addedAt'> & {
   id?: string;
@@ -58,11 +41,6 @@ export interface PlaylistController {
   updateItemPosition: (playlistId: string, fileUri: string, position: number) => void;
 }
 
-export interface PlaylistStoreAccess {
-  dispatch: AppDispatch;
-  getState: () => RootState;
-}
-
 const createItem = (input: PlaylistItemInput): PlaylistItem => ({
   ...input,
   id: input.id || `pli_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
@@ -83,22 +61,20 @@ const makePlaylist = (input: {name: string; info?: string; kind: PlaylistKind}):
 };
 
 export function createPlaylist(
-  access: PlaylistStoreAccess,
   input: {name: string; info?: string; kind: PlaylistKind},
 ): CreatePlaylistResult {
-  const playlists = selectAllPlaylists(access.getState());
+  const playlists = usePlaylistsStore.getState().playlists;
   if (playlists.length >= MAX_PLAYLISTS) return {status: 'limit-reached', max: MAX_PLAYLISTS};
   const playlist = makePlaylist(input);
-  access.dispatch(createPlaylistAction(playlist));
+  usePlaylistsStore.getState().createPlaylist(playlist);
   return {status: 'created', playlist};
 }
 
 export function addItemToPlaylist(
-  access: PlaylistStoreAccess,
   playlistId: string,
   input: PlaylistItemInput,
 ): AddPlaylistItemResult {
-  const playlist = selectAllPlaylists(access.getState()).find(item => item.id === playlistId);
+  const playlist = usePlaylistsStore.getState().playlists.find(item => item.id === playlistId);
   if (!playlist) return {status: 'playlist-not-found'};
   const item = createItem(input);
   const existing = playlist.items.find(entry => entry.fileUri === item.fileUri);
@@ -110,65 +86,73 @@ export function addItemToPlaylist(
   if (!isPlaylistMediaKindAllowed(playlist.kind, item.type, item.mediaType)) {
     return {status: 'unsupported-media-kind', playlist, item};
   }
-  access.dispatch(addItemToPlaylistAction({playlistId, item}));
+  usePlaylistsStore.getState().addItemToPlaylist({playlistId, item});
   return {status: 'added', playlist: {...playlist, items: [...playlist.items, item]}, item};
 }
 
 export function importPlaylist(
-  access: PlaylistStoreAccess,
   input: {name: string; info?: string; kind: PlaylistKind; items: PlaylistItemInput[]},
 ): void {
-  access.dispatch(importPlaylistAction({
+  usePlaylistsStore.getState().importPlaylist({
     name: input.name,
     info: input.info,
     kind: input.kind,
     items: input.items.map(createItem),
-  }));
+  });
 }
 
 export function updatePlaylistItemPosition(
-  access: PlaylistStoreAccess,
   playlistId: string,
   fileUri: string,
   position: number,
 ): void {
-  access.dispatch(updatePlaylistItemPositionAction({playlistId, fileUri, position}));
-}
-
-export function normalizePlaylistStorage(raw: unknown): Playlist[] {
-  return normalizePersistedPlaylists(raw);
+  usePlaylistsStore.getState().updatePlaylistItemPosition({playlistId, fileUri, position});
 }
 
 export function usePlaylists(ref?: Ref<PlaylistController>) {
-  const dispatch = useAppDispatch();
-  const store = useStore<RootState>();
-  const list = useAppSelector(selectAllPlaylists);
+  const list = usePlaylistsStore(s => s.playlists);
 
   const getPlaylist = useCallback(
     (playlistId: string) => list.find(item => item.id === playlistId),
     [list],
   );
 
-  const access = useMemo<PlaylistStoreAccess>(() => ({
-    dispatch,
-    getState: store.getState,
-  }), [dispatch, store]);
-
   const create = useCallback(
-    (input: {name: string; info?: string; kind: PlaylistKind}) => createPlaylist(access, input),
-    [access],
+    (input: {name: string; info?: string; kind: PlaylistKind}) => createPlaylist(input),
+    [],
   );
   const rename = useCallback(
-    (playlistId: string, newName: string, info?: string) => dispatch(renamePlaylistAction({id: playlistId, newName, info})),
-    [dispatch],
+    (playlistId: string, newName: string, info?: string) => {
+      usePlaylistsStore.getState().renamePlaylist({id: playlistId, newName, info});
+    },
+    [],
   );
-  const remove = useCallback((playlistId: string) => dispatch(deletePlaylistAction(playlistId)), [dispatch]);
-  const add = useCallback((playlistId: string, input: PlaylistItemInput) => addItemToPlaylist(access, playlistId, input), [access]);
-  const removeItem = useCallback((playlistId: string, itemId: string) => dispatch(removeItemFromPlaylistAction({playlistId, itemId})), [dispatch]);
-  const reorder = useCallback((playlistId: string, fromIndex: number, toIndex: number) => dispatch(reorderPlaylistItemsAction({playlistId, fromIndex, toIndex})), [dispatch]);
-  const clear = useCallback((playlistId: string) => dispatch(clearPlaylistAction(playlistId)), [dispatch]);
-  const importItems = useCallback((input: {name: string; info?: string; kind: PlaylistKind; items: PlaylistItemInput[]}) => importPlaylist(access, input), [access]);
-  const updatePosition = useCallback((playlistId: string, fileUri: string, position: number) => updatePlaylistItemPosition(access, playlistId, fileUri, position), [access]);
+  const remove = useCallback((playlistId: string) => {
+    usePlaylistsStore.getState().deletePlaylist(playlistId);
+  }, []);
+  const add = useCallback(
+    (playlistId: string, input: PlaylistItemInput) => addItemToPlaylist(playlistId, input),
+    [],
+  );
+  const removeItem = useCallback((playlistId: string, itemId: string) => {
+    usePlaylistsStore.getState().removeItemFromPlaylist({playlistId, itemId});
+  }, []);
+  const reorder = useCallback((playlistId: string, fromIndex: number, toIndex: number) => {
+    usePlaylistsStore.getState().reorderPlaylistItems({playlistId, fromIndex, toIndex});
+  }, []);
+  const clear = useCallback((playlistId: string) => {
+    usePlaylistsStore.getState().clearPlaylist(playlistId);
+  }, []);
+  const importItems = useCallback(
+    (input: {name: string; info?: string; kind: PlaylistKind; items: PlaylistItemInput[]}) =>
+      importPlaylist(input),
+    [],
+  );
+  const updatePosition = useCallback(
+    (playlistId: string, fileUri: string, position: number) =>
+      updatePlaylistItemPosition(playlistId, fileUri, position),
+    [],
+  );
 
   const controller = useMemo<PlaylistController>(() => ({
     list,
@@ -194,20 +178,39 @@ export function usePlaylists(ref?: Ref<PlaylistController>) {
   };
 }
 
-export function usePlaylist(playlistId: string) {
-  return useAppSelector(selectPlaylistById(playlistId));
+export function usePlaylist(playlistId: string): Playlist | undefined {
+  const list = usePlaylistsStore(s => s.playlists);
+  return useMemo(() => list.find(item => item.id === playlistId), [list, playlistId]);
 }
 
 export const playlistActions = {
-  addItemToPlaylistAction,
-  clearPlaylistAction,
-  createPlaylistAction,
-  deletePlaylistAction,
-  importPlaylistAction,
-  removeItemFromPlaylistAction,
-  renamePlaylistAction,
-  reorderPlaylistItemsAction,
-  updatePlaylistItemPositionAction,
+  addItemToPlaylist: (playlistId: string, item: PlaylistItem) =>
+    usePlaylistsStore.getState().addItemToPlaylist({playlistId, item}),
+  clearPlaylist: (playlistId: string) =>
+    usePlaylistsStore.getState().clearPlaylist(playlistId),
+  createPlaylist: (playlist: Playlist) =>
+    usePlaylistsStore.getState().createPlaylist(playlist),
+  deletePlaylist: (playlistId: string) =>
+    usePlaylistsStore.getState().deletePlaylist(playlistId),
+  importPlaylist: (input: {
+    name: string;
+    info?: string;
+    kind: 'MIXED' | PlaylistKind;
+    items: PlaylistItem[];
+  }) => usePlaylistsStore.getState().importPlaylist({
+    name: input.name,
+    info: input.info,
+    kind: input.kind,
+    items: input.items,
+  }),
+  removeItemFromPlaylist: (playlistId: string, itemId: string) =>
+    usePlaylistsStore.getState().removeItemFromPlaylist({playlistId, itemId}),
+  renamePlaylist: (id: string, newName: string, info?: string) =>
+    usePlaylistsStore.getState().renamePlaylist({id, newName, info}),
+  reorderPlaylistItems: (playlistId: string, fromIndex: number, toIndex: number) =>
+    usePlaylistsStore.getState().reorderPlaylistItems({playlistId, fromIndex, toIndex}),
+  updatePlaylistItemPosition: (playlistId: string, fileUri: string, position: number) =>
+    usePlaylistsStore.getState().updatePlaylistItemPosition({playlistId, fileUri, position}),
 };
 
 export type {Playlist, PlaylistItem, PlaylistKind, MediaKind, MediaLane, MediaSource};

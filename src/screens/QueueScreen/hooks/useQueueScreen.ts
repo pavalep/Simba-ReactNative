@@ -275,11 +275,11 @@ export function useQueueScreen(): UseQueueScreenResult {
         addedAt: now,
       }));
       const kind = activeLane === 'video' ? 'VIDEO_ONLY' : 'AUDIO_ONLY';
-      dispatch(playlistActions.importPlaylistAction({name: trimmed, items, kind}));
+      playlistActions.importPlaylist({name: trimmed, items, kind});
       haptics.medium();
       return true;
     },
-    [activeLane, upNext, dispatch, haptics],
+    [activeLane, upNext, haptics],
   );
 
   return {

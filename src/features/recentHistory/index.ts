@@ -1,21 +1,14 @@
-import {
-  useCallback,
-  useImperativeHandle,
-  type ForwardedRef,
-} from 'react';
-import {useAppDispatch, useAppSelector, type AppDispatch} from '../../store';
+import {useCallback, useImperativeHandle, type ForwardedRef} from 'react';
 import {useSessionStore} from '../../state';
 import {
-  selectRecentHistoryForDisplay,
-  upsertRecentHistoryEntry,
-  removeRecentHistoryEntry,
-  clearRecentHistory,
+  useRecentHistoryStore,
+  MAX_RECENT_HISTORY_ENTRIES,
   type RecentHistoryEntryInput,
   type RecentHistoryEntry,
-} from './recentHistoryReducer';
+} from '../../state';
 
-export type {RecentHistoryEntry, RecentHistoryEntryInput} from './recentHistoryReducer';
-export {MAX_RECENT_HISTORY_ENTRIES} from './recentHistoryReducer';
+export type {RecentHistoryEntry, RecentHistoryEntryInput} from '../../state';
+export {MAX_RECENT_HISTORY_ENTRIES} from '../../state';
 
 export interface RecentHistoryHandle {
   getRecent: () => RecentHistoryEntry[];
@@ -27,10 +20,7 @@ export interface RecentHistoryHandle {
 function addRecentEntry(entry: RecentHistoryEntryInput): void {
   // V17 Phase 77: the play-count + library roll-up moved to
   // `useSessionStore` (zustand). The `recordPlaybackStats` call
-  // is now non-React and goes through `useSessionStore.getState()`,
-  // not the redux dispatch. The recentHistory entry itself is
-  // still updated through the redux dispatch (that part of the
-  // refactor is Phase 82).
+  // is non-React and goes through `useSessionStore.getState()`.
   useSessionStore.getState().recordPlaybackStats({
     fileUri: entry.fileUri,
     title: entry.title,
@@ -45,31 +35,25 @@ function addRecentEntry(entry: RecentHistoryEntryInput): void {
 
 /**
  * Public read/write façade for playback history.
- * Consumers do not know that the implementation is Redux-backed.
+ * Consumers do not know that the implementation is zustand-backed.
  */
 export function useRecentHistory(
   ref?: ForwardedRef<RecentHistoryHandle>,
 ): RecentHistoryHandle & {list: RecentHistoryEntry[]} {
-  const dispatch = useAppDispatch();
-  const list = useAppSelector(selectRecentHistoryForDisplay);
+  const list = useRecentHistoryStore(s => s.entries);
 
-  const addRecent = useCallback(
-    (entry: RecentHistoryEntryInput) => {
-      addRecentEntry(entry);
-      dispatch(upsertRecentHistoryEntry(entry));
-    },
-    [dispatch],
-  );
+  const addRecent = useCallback((entry: RecentHistoryEntryInput) => {
+    addRecentEntry(entry);
+    useRecentHistoryStore.getState().upsertRecentHistoryEntry(entry);
+  }, []);
 
   const getRecent = useCallback(() => list, [list]);
-  const removeRecent = useCallback(
-    (fileUri: string) => dispatch(removeRecentHistoryEntry(fileUri)),
-    [dispatch],
-  );
-  const clearRecent = useCallback(
-    () => dispatch(clearRecentHistory()),
-    [dispatch],
-  );
+  const removeRecent = useCallback((fileUri: string) => {
+    useRecentHistoryStore.getState().removeRecentHistoryEntry(fileUri);
+  }, []);
+  const clearRecent = useCallback(() => {
+    useRecentHistoryStore.getState().clearRecentHistory();
+  }, []);
 
   useImperativeHandle(
     ref,
@@ -86,18 +70,18 @@ export function useRecentHistory(
 }
 
 /**
- * Non-React write façade for services that already own a dispatch instance.
- * The reducer, normalization, and retention policy remain private to this feature.
+ * Non-React write façade for services that already own a store handle.
+ * The retention policy remains private to this feature.
  */
-export function addRecent(dispatch: AppDispatch, entry: RecentHistoryEntryInput): void {
+export function addRecent(entry: RecentHistoryEntryInput): void {
   addRecentEntry(entry);
-  dispatch(upsertRecentHistoryEntry(entry));
+  useRecentHistoryStore.getState().upsertRecentHistoryEntry(entry);
 }
 
-export function removeRecent(dispatch: AppDispatch, fileUri: string): void {
-  dispatch(removeRecentHistoryEntry(fileUri));
+export function removeRecent(fileUri: string): void {
+  useRecentHistoryStore.getState().removeRecentHistoryEntry(fileUri);
 }
 
-export function clearRecent(dispatch: AppDispatch): void {
-  dispatch(clearRecentHistory());
+export function clearRecent(): void {
+  useRecentHistoryStore.getState().clearRecentHistory();
 }

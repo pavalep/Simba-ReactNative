@@ -86,4 +86,22 @@ export {
   type BookmarksActions,
 } from './bookmarksStore';
 
+export {
+  usePlaylistsStore,
+  MAX_PLAYLISTS,
+  MAX_ITEMS_PER_PLAYLIST,
+  normalizePersistedPlaylists,
+  type PlaylistsState,
+  type PlaylistsActions,
+} from './playlistsStore';
+
+export {
+  useRecentHistoryStore,
+  MAX_RECENT_HISTORY_ENTRIES,
+  type RecentHistoryEntry,
+  type RecentHistoryEntryInput,
+  type RecentHistoryState,
+  type RecentHistoryActions,
+} from './recentHistoryStore';
+
 export {RESET_APP_STATE, resetAppState} from './resetAction';
