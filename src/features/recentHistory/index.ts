@@ -4,7 +4,7 @@ import {
   type ForwardedRef,
 } from 'react';
 import {useAppDispatch, useAppSelector, type AppDispatch} from '../../store';
-import {recordPlaybackStats} from '../../store/slices/sessionSlice';
+import {useSessionStore} from '../../state';
 import {
   selectRecentHistoryForDisplay,
   upsertRecentHistoryEntry,
@@ -24,20 +24,23 @@ export interface RecentHistoryHandle {
   clearRecent: () => void;
 }
 
-function dispatchRecent(dispatch: AppDispatch, entry: RecentHistoryEntryInput): void {
-  dispatch(upsertRecentHistoryEntry(entry));
-  dispatch(
-    recordPlaybackStats({
-      fileUri: entry.fileUri,
-      title: entry.title,
-      duration: entry.duration,
-      mediaType: entry.mediaType,
-      type: entry.type,
-      source: entry.source,
-      provider: entry.provider,
-      folderId: entry.folderId,
-    }),
-  );
+function addRecentEntry(entry: RecentHistoryEntryInput): void {
+  // V17 Phase 77: the play-count + library roll-up moved to
+  // `useSessionStore` (zustand). The `recordPlaybackStats` call
+  // is now non-React and goes through `useSessionStore.getState()`,
+  // not the redux dispatch. The recentHistory entry itself is
+  // still updated through the redux dispatch (that part of the
+  // refactor is Phase 82).
+  useSessionStore.getState().recordPlaybackStats({
+    fileUri: entry.fileUri,
+    title: entry.title,
+    duration: entry.duration,
+    mediaType: entry.mediaType,
+    type: entry.type,
+    source: entry.source,
+    provider: entry.provider,
+    folderId: entry.folderId,
+  });
 }
 
 /**
@@ -52,7 +55,8 @@ export function useRecentHistory(
 
   const addRecent = useCallback(
     (entry: RecentHistoryEntryInput) => {
-      dispatchRecent(dispatch, entry);
+      addRecentEntry(entry);
+      dispatch(upsertRecentHistoryEntry(entry));
     },
     [dispatch],
   );
@@ -86,7 +90,8 @@ export function useRecentHistory(
  * The reducer, normalization, and retention policy remain private to this feature.
  */
 export function addRecent(dispatch: AppDispatch, entry: RecentHistoryEntryInput): void {
-  dispatchRecent(dispatch, entry);
+  addRecentEntry(entry);
+  dispatch(upsertRecentHistoryEntry(entry));
 }
 
 export function removeRecent(dispatch: AppDispatch, fileUri: string): void {

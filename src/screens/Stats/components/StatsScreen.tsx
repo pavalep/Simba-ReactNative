@@ -13,6 +13,7 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {useAppSelector} from '../../../store';
+import {useSessionStore} from '../../../state';
 import {useRecentHistory} from '../../../features/recentHistory';
 import {formatDuration} from '../../../utils/timeAgo';
 import type {StatsScreenProps} from '../types';
@@ -31,8 +32,13 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
   const {openPlayer} = usePlayerActivity();
 
   const {list: recentFiles} = useRecentHistory();
-  const mediaLibrary = useAppSelector(state => state.session.mediaLibrary);
-  const playCounts = useAppSelector(state => state.session.playCounts);
+  // V17 Phase 77: session.mediaLibrary + session.playCounts moved
+  // to the new `useSessionStore` Zustand store. The Redux
+  // `useAppSelector` calls are removed for these two fields; the
+  // other selectors in this file (settings) will move to
+  // `useSettingsStore` in Phase 79.
+  const mediaLibrary = useSessionStore(state => state.mediaLibrary);
+  const playCounts = useSessionStore(state => state.playCounts);
 
   // ── Totals (50.4 — every number below comes from the session store) ──
   const totalPlays = useMemo(

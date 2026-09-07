@@ -31,6 +31,7 @@ import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 
 import {useRecentHistory} from '../../../features/recentHistory';
 import {setThemeMode} from '../../../store/slices/settingsSlice';
+import {useSessionStore} from '../../../state';
 import {formatDuration} from '../../../utils/timeAgo';
 import {clearCache} from '../../../services/cacheService';
 import type {RootStackScreenProps} from '../../../navigation/types';
@@ -70,7 +71,12 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const {count: followedPodcastCount} = useFollowedPodcasts();
 
   const {list: recentFiles, clearRecent} = useRecentHistory();
-  const playCounts = useAppSelector(state => state.session.playCounts);
+  // V17 Phase 77: session.playCounts moved to the new
+  // `useSessionStore` Zustand store. The Redux `useAppSelector`
+  // call is removed for this field; the other selectors on this
+  // line (settings.themeMode) will move to `useSettingsStore` in
+  // Phase 79.
+  const playCounts = useSessionStore(state => state.playCounts);
   const themeMode = useAppSelector(state => state.settings.themeMode);
 
   const videoCount = useMemo(

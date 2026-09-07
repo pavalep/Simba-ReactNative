@@ -19,7 +19,12 @@ import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {EmptyState} from '../../../components/utility/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import type {BookmarkEntry} from '../../../store/slices/sessionSlice';
+import type {Bookmark} from '../../../features/bookmarks';
+// V17 Phase 77: `BookmarkEntry` was previously a re-export alias
+// for `Bookmark` from the bookmarks feature. The alias is
+// removed; consumers now use the canonical `Bookmark` type
+// directly.
+type BookmarkEntry = Bookmark;
 
 interface Props {
   items: BookmarkEntry[];
