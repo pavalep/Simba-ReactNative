@@ -10,9 +10,8 @@ import React, {
   ReactNode,
 } from 'react';
 import {useColorScheme} from 'react-native';
-import {useSelector, useDispatch} from 'react-redux';
-import type {RootState} from '../store';
-import {setThemeMode as setThemeModeAction} from '../store/slices/settingsSlice';
+import {useSettingsStore} from '../state';
+
 import {
   darkTokens,
   lightTokens,
@@ -67,10 +66,7 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({children}) => {
-  const dispatch = useDispatch();
-  const themeMode = useSelector(
-    (state: RootState) => state.settings.themeMode,
-  );
+  const themeMode = useSettingsStore(s => s.themeMode);
   const systemScheme = useColorScheme();
 
   const resolvedTheme: 'dark' | 'light' = useMemo(() => {
@@ -85,9 +81,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({children}) => {
 
   const setTheme = useCallback(
     (mode: ThemeMode) => {
-      dispatch(setThemeModeAction(mode));
+      useSettingsStore.getState().setThemeMode(mode);
     },
-    [dispatch],
+    [],
   );
 
   const value = useMemo<ThemeContextValue>(

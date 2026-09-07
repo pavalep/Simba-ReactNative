@@ -10,10 +10,7 @@ import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import type {RootStackScreenProps} from '../types';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {
-  removeLiveFavorite,
-  selectLiveFavoritesByKind,
-} from '../../../store/slices/liveFavoritesSlice';
+
 import {
   RadioStationCard,
   favToRow,
@@ -29,6 +26,7 @@ import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/Opti
 import {shareContent} from '../../../services/shareService';
 import {useBookmarks} from '../../../features/bookmarks';
 import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import {useLiveFavoritesStore} from '../../../state';
 
 type Props = RootStackScreenProps<'RadioFavoritesScreen'>;
 
@@ -41,7 +39,9 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
   const {add: addBookmark} = useBookmarks();
   const dispatch = useAppDispatch();
 
-  const favorites = useAppSelector(s => selectLiveFavoritesByKind(s, 'radio'));
+  const favorites = useLiveFavoritesStore(s =>
+    s.items.filter(f => f.kind === 'radio'),
+  );
   const rows = useMemo<StationRow[]>(() => favorites.map(favToRow), [favorites]);
 
   const [menuRow, setMenuRow] = useState<StationRow | null>(null);
@@ -72,7 +72,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
       if (!row) return;
       switch (value) {
         case 'favorite':
-          dispatch(removeLiveFavorite({kind: 'radio', id: row.id}));
+          useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'radio', id: row.id});
           toast.show('Removed from favorites');
           haptics.light();
           break;

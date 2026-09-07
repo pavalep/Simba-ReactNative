@@ -1,5 +1,5 @@
 import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
-import {store} from '../store';
+import {useSettingsStore} from '../state';
 import {logger} from '../lib/logger';
 
 // ─── EQ constants (shared by player panels + Equalizer screen) ───
@@ -56,7 +56,7 @@ export function buildAfFilter(
  * may not yet be initialized when a preference changes.
  */
 export function applyPlaybackSettingsToMpv(): void {
-  const s = store.getState().settings;
+  const s = useSettingsStore.getState();
   const properties: Array<[string, string | number]> = [
     ['hwdec', s.isHardwareAccelerationEnabled ? 'auto' : 'no'],
     ['sub-auto', s.isAutoLoadSubtitlesEnabled ? 'fuzzy' : 'no'],
@@ -78,7 +78,7 @@ export function applyPlaybackSettingsToMpv(): void {
  * unsupported properties must never crash the app.
  */
 export function applyAudioSettingsToMpv(): void {
-  const s = store.getState().settings;
+  const s = useSettingsStore.getState();
   const bridge = getMpvPlayerModule();
   // V16 Phase 73: every property is individually guarded AND
   // logged if it fails. mpv may be uninitialized, and unsupported

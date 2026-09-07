@@ -25,22 +25,9 @@ import {MpvConfigEditor, LinkedFoldersDialog, ThemePickerDialog, SubtitleLanguag
 import type {MpvOption} from '../components/MpvConfigEditor';
 import {SettingsScreenProps} from '../types';
 import {AccountSection} from '../../../components/sections/AccountSection/AccountSection';
-import {
-  setHardwareAcceleration,
-  setAudioNormalization,
-  setDialogueBoost,
-  setThemeMode,
-  setMpvOptions,
-  setSkipSilence,
-  setAutoLoadSubtitles,
-  setSubtitleFontSize,
-  setSubtitleTextColor,
-  setSubtitleBackgroundOpacity,
-  setPreferredLanguages,
-  resetPreferencesToDefaults,
-} from '../../../store/slices/settingsSlice';
 
 import {useSettingsScreen} from '../hooks/useSettingsScreen';
+import {useSettingsStore} from '../../../state';
 
 type Props = SettingsScreenProps;
 
@@ -195,7 +182,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
                 <Switch
                   value={hardwareAcceleration}
                   onValueChange={val => {
-                    dispatch(setHardwareAcceleration(val));
+                    useSettingsStore.getState().setHardwareAcceleration(val);
                   }}
                   trackColor={{
                     false: colors.border.subtle,
@@ -216,7 +203,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
                 <Switch
                   value={audioNormalization}
                   onValueChange={val => {
-                    dispatch(setAudioNormalization(val));
+                    useSettingsStore.getState().setAudioNormalization(val);
                   }}
                   trackColor={{
                     false: colors.border.subtle,
@@ -237,7 +224,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
                 <Switch
                   value={dialogueBoost}
                   onValueChange={val => {
-                    dispatch(setDialogueBoost(val));
+                    useSettingsStore.getState().setDialogueBoost(val);
                   }}
                   trackColor={{
                     false: colors.border.subtle,
@@ -257,7 +244,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
                 <Switch
                   value={skipSilenceEnabled}
                   onValueChange={val => {
-                    dispatch(setSkipSilence(val));
+                    useSettingsStore.getState().setSkipSilence(val);
                   }}
                   trackColor={{
                     false: colors.border.subtle,
@@ -327,7 +314,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
                 <Switch
                   value={autoLoadSubtitles}
                   onValueChange={val => {
-                    dispatch(setAutoLoadSubtitles(val));
+                    useSettingsStore.getState().setAutoLoadSubtitles(val);
                   }}
                   trackColor={{
                     false: colors.border.subtle,
@@ -384,7 +371,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
                       text: 'Reset',
                       style: 'destructive',
                       onPress: () => {
-                        dispatch(resetPreferencesToDefaults());
+                        useSettingsStore.getState().reset();
                         toast.show('Preferences reset');
                       },
                     },
@@ -408,7 +395,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
         visible={mpvEditorVisible}
         onClose={() => setMpvEditorVisible(false)}
         options={mpvOptions}
-        onSave={(options: MpvOption[]) => dispatch(setMpvOptions(options))}
+        onSave={(options: MpvOption[]) => useSettingsStore.getState().setMpvOptions(options)}
       />
 
       <LinkedFoldersDialog
@@ -422,7 +409,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
         visible={themeDialogVisible}
         onClose={() => setThemeDialogVisible(false)}
         themeMode={themeMode}
-        onSelectTheme={mode => dispatch(setThemeMode(mode))}
+        onSelectTheme={mode => useSettingsStore.getState().setThemeMode(mode)}
         colors={colors}
       />
 
@@ -430,7 +417,7 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
         visible={subtitleLanguageDialogVisible}
         onClose={() => setSubtitleLanguageDialogVisible(false)}
         preferredLanguages={preferredLanguages}
-        onSelect={codes => dispatch(setPreferredLanguages(codes))}
+        onSelect={codes => useSettingsStore.getState().setPreferredLanguages(codes)}
         colors={colors}
       />
 
@@ -440,9 +427,9 @@ export const SettingsScreen: React.FC<Props> = ({navigation: _nav}) => {
         fontSize={subtitleFontSize}
         textColor={subtitleTextColor}
         bgOpacity={subtitleBackgroundOpacity}
-        onFontSize={px => dispatch(setSubtitleFontSize(px))}
-        onTextColor={c => dispatch(setSubtitleTextColor(c))}
-        onBgOpacity={o => dispatch(setSubtitleBackgroundOpacity(o))}
+        onFontSize={px => useSettingsStore.getState().setSubtitleFontSize(px)}
+        onTextColor={c => useSettingsStore.getState().setSubtitleTextColor(c)}
+        onBgOpacity={o => useSettingsStore.getState().setSubtitleBackgroundOpacity(o)}
         colors={colors}
       />
     </SafeAreaView>

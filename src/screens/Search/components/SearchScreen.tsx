@@ -17,6 +17,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {useAppSelector} from '../../../store';
+import {useSettingsStore} from '../../../state';
 import {useRecentHistory} from '../../../features/recentHistory';
 import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 
@@ -70,8 +71,8 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const {openPlayer} = usePlayerActivity();
 
   const playlist = useAppSelector(state => state.player.playlist);
-  const videoFolders = useAppSelector(state => state.settings.videoFolders);
-  const audioFolders = useAppSelector(state => state.settings.audioFolders);
+  const videoFolders = useSettingsStore(state => state.videoFolders);
+  const audioFolders = useSettingsStore(state => state.audioFolders);
 
   const [error, setError] = useState<string | null>(null);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);

@@ -23,12 +23,9 @@ import {
 } from '../../../services/api/radioBrowserService';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {
-  addLiveFavorite,
-  removeLiveFavorite,
-  selectLiveFavoritesByKind,
-} from '../../../store/slices/liveFavoritesSlice';
+
 import type {RadioStationResult} from '../../../types/api';
+import {useLiveFavoritesStore} from '../../../state';
 
 export type RadioFilterId = 'genre' | 'country' | 'language';
 
@@ -125,7 +122,9 @@ export function useRadioBrowser(initialTag?: string) {
   const wasOnlineRef = useRef(isOnline);
 
   // ── Redux favorites ──
-  const favorites = useAppSelector(s => selectLiveFavoritesByKind(s, 'radio'));
+  const favorites = useLiveFavoritesStore(s =>
+    s.items.filter(f => f.kind === 'radio'),
+  );
 
   const isFavoriteId = useCallback(
     (id: string) => favorites.some(f => f.id === id),
@@ -313,10 +312,9 @@ export function useRadioBrowser(initialTag?: string) {
     (station: RadioStationResult) => {
       const existing = favorites.find(f => f.id === station.stationuuid);
       if (existing) {
-        dispatch(removeLiveFavorite({kind: 'radio', id: station.stationuuid}));
+        useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'radio', id: station.stationuuid});
       } else {
-        dispatch(
-          addLiveFavorite({
+        useLiveFavoritesStore.getState().addLiveFavorite({
             kind: 'radio',
             id: station.stationuuid,
             name: station.name,
@@ -326,8 +324,7 @@ export function useRadioBrowser(initialTag?: string) {
             codec: station.codec,
             bitrate: station.bitrate,
             addedAt: new Date().toISOString(),
-          }),
-        );
+          });
       }
     },
     [favorites, dispatch],
@@ -335,7 +332,7 @@ export function useRadioBrowser(initialTag?: string) {
 
   const removeFavorite = useCallback(
     (id: string) => {
-      dispatch(removeLiveFavorite({kind: 'radio', id}));
+      useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'radio', id});
     },
     [dispatch],
   );

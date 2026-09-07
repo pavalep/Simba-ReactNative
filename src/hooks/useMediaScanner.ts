@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef} from 'react';
 import {useAppDispatch, useAppSelector} from '../store';
+import {useSettingsStore} from '../state';
 import {
   setScanning,
   setTracks,
@@ -13,11 +14,7 @@ import {
   selectCancelRequested,
   type ScanHistory,
 } from '../store/slices/mediaSlice';
-import {
-  setLastScanTimestamp,
-  setLinkedFoldersLastScan,
-  syncLinkedFolders,
-} from '../store/slices/settingsSlice';
+
 import {
   scanFoldersIncremental,
   fileEntriesToTracks,
@@ -45,9 +42,9 @@ export function useMediaScanner() {
   const scanProgress = useAppSelector(selectScanProgress);
   const scanHistory = useAppSelector(selectScanHistory);
   const cancelRequested = useAppSelector(selectCancelRequested);
-  const videoFolders = useAppSelector(s => s.settings?.videoFolders ?? []);
-  const audioFolders = useAppSelector(s => s.settings?.audioFolders ?? []);
-  const settingsLastScan = useAppSelector(s => s.settings?.lastScanTimestamp ?? null);
+  const videoFolders = useSettingsStore(s => s.videoFolders ?? []);
+  const audioFolders = useSettingsStore(s => s.audioFolders ?? []);
+  const settingsLastScan = useSettingsStore(s => s.lastScanTimestamp ?? null);
   const isMediaScanning = useAppSelector(s => s.media?.isScanning ?? false);
 
   // ── Refs ──
@@ -78,7 +75,7 @@ export function useMediaScanner() {
 
       scanInFlight = true;
       cancelRef.current = false;
-      dispatch(setScanning(true));
+      useSettingsStore.getState().setScanning(true);
 
       // Determine last scan timestamp for incremental scanning
       const lastScanTimestamp =
@@ -146,18 +143,16 @@ export function useMediaScanner() {
         dispatch(setScanHistory(newHistory));
 
         // Also update settingsSlice's lastScanTimestamp for banner display
-        dispatch(setLastScanTimestamp(result.scanTimestamp));
-        dispatch(
-          setLinkedFoldersLastScan({
+        useSettingsStore.getState().setLastScanTimestamp(result.scanTimestamp);
+        useSettingsStore.getState().setLinkedFoldersLastScan({
             timestamp: result.scanTimestamp,
             paths: allFolders,
-          }),
-        );
+          });
       } catch {
         // Silently fail — user can retry
       } finally {
         scanInFlight = false;
-        dispatch(setScanning(false));
+        useSettingsStore.getState().setScanning(false);
         dispatch(
           setScanProgress({
             currentFolder: null,
@@ -174,7 +169,7 @@ export function useMediaScanner() {
 
   // ── Auto-scan on app launch if linked folders changed ──
   useEffect(() => {
-    dispatch(syncLinkedFolders({videoFolders, audioFolders}));
+    useSettingsStore.getState().syncLinkedFolders({videoFolders, audioFolders});
     // Build a hash of current folder list
     const currentHash = [...videoFolders, ...audioFolders].sort().join('|');
     const prevHash = prevFolderHashRef.current;

@@ -2,6 +2,7 @@ import {useState, useMemo, useCallback, useRef, useEffect} from 'react';
 import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAppSelector, useAppDispatch} from '../../../store';
+import {useSettingsStore} from '../../../state';
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import type {ScannedTrack} from '../../../store/slices/mediaSlice';
 import {usePlaylists} from '../../../features/playlists';
@@ -85,9 +86,9 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const [hasAnimated, setHasAnimated] = useState(false);
 
   // ── Redux Selectors ──
-  const videoFolders = useAppSelector(s => s.settings?.videoFolders ?? []);
-  const audioFolders = useAppSelector(s => s.settings?.audioFolders ?? []);
-  const lastScanTimestamp = useAppSelector(s => s.settings?.lastScanTimestamp ?? null);
+  const videoFolders = useSettingsStore(s => s.videoFolders ?? []);
+  const audioFolders = useSettingsStore(s => s.audioFolders ?? []);
+  const lastScanTimestamp = useSettingsStore(s => s.lastScanTimestamp ?? null);
   const scannedTracks = useAppSelector(selectAllTracks);
   const scannedTrackCount = scannedTracks.length;
   const {list: allPlaylists, createPlaylist} = usePlaylists();

@@ -15,10 +15,6 @@ import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {
-  removeVideoFolder,
-  removeAudioFolder,
-} from '../../../store/slices/settingsSlice';
 
 import {selectAllTracks, selectTrackCount} from '../../../store/slices/mediaSlice';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -30,6 +26,7 @@ import {useAccessibility} from '../../../hooks/useAccessibility';
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
 
 import type {LinkedFoldersScreenProps} from '../types';
+import {useSettingsStore} from '../../../state';
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -277,12 +274,12 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
   const nav = useNavigation<any>();
   const isVideo = type === 'video';
 
-  const folders = useAppSelector(s =>
-    isVideo ? s.settings.videoFolders : s.settings.audioFolders,
+  const folders = useSettingsStore(s =>
+    isVideo ? s.videoFolders : s.audioFolders,
   );
   const {startScan, isScanning} = useMediaScanner();
 
-  const lastScanTimestamp = useAppSelector(s => s.settings.lastScanTimestamp);
+  const lastScanTimestamp = useSettingsStore(s => s.lastScanTimestamp);
   const allTracks = useAppSelector(selectAllTracks);
   const totalTrackCount = useAppSelector(selectTrackCount);
 
@@ -301,9 +298,9 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
   const handleRemoveFolder = useCallback(
     (folder: string) => {
       if (isVideo) {
-        dispatch(removeVideoFolder(folder));
+        useSettingsStore.getState().removeVideoFolder(folder);
       } else {
-        dispatch(removeAudioFolder(folder));
+        useSettingsStore.getState().removeAudioFolder(folder);
       }
     },
     [dispatch, isVideo],

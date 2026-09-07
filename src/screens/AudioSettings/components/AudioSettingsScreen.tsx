@@ -18,16 +18,9 @@ import {SettingsRow} from '../../../components/utility/SettingsRow/SettingsRow';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {OptionSheetDialog, OptionSheetOption} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {
-  setSampleRate,
-  setReplayGain,
-  setGaplessPlayback,
-  setAudioDelay,
-  setEqEnabled,
-  setAudioNormalization,
-  setDialogueBoost,
-} from '../../../store/slices/settingsSlice';
+
 import {applyAudioSettingsToMpv} from '../../../services/audioSettingsService';
+import {useSettingsStore} from '../../../state';
 
 type Props = AudioSettingsScreenProps;
 
@@ -61,14 +54,14 @@ export const AudioSettingsScreen: React.FC<Props> = () => {
   const nav = useNavigation<any>();
 
   // ── Slice state (Phase 45: all controls live in settingsSlice) ──
-  const sampleRate = useAppSelector(s => s.settings.sampleRate);
-  const replayGain = useAppSelector(s => s.settings.replayGain);
-  const gaplessPlayback = useAppSelector(s => s.settings.gaplessPlayback);
-  const audioDelay = useAppSelector(s => s.settings.audioDelay);
-  const eqEnabled = useAppSelector(s => s.settings.eqEnabled);
-  const eqPreset = useAppSelector(s => s.settings.eqPreset);
-  const normalizeVolume = useAppSelector(s => s.settings.isAudioNormalizationEnabled);
-  const dialogueBoost = useAppSelector(s => s.settings.isDialogueBoostEnabled);
+  const sampleRate = useSettingsStore(s => s.sampleRate);
+  const replayGain = useSettingsStore(s => s.replayGain);
+  const gaplessPlayback = useSettingsStore(s => s.gaplessPlayback);
+  const audioDelay = useSettingsStore(s => s.audioDelay);
+  const eqEnabled = useSettingsStore(s => s.eqEnabled);
+  const eqPreset = useSettingsStore(s => s.eqPreset);
+  const normalizeVolume = useSettingsStore(s => s.isAudioNormalizationEnabled);
+  const dialogueBoost = useSettingsStore(s => s.isDialogueBoostEnabled);
 
   const [picker, setPicker] = useState<PickerKind>(null);
 
@@ -78,21 +71,21 @@ export const AudioSettingsScreen: React.FC<Props> = () => {
   }, []);
 
   const toggleAndApply = useCallback(
-    (next: boolean, createAction: (val: boolean) => {type: string; payload: boolean}) => {
-      dispatch(createAction(next));
+    (next: boolean, apply: (val: boolean) => void) => {
+      apply(next);
       setTimeout(applyAudioSettingsToMpv, 0);
     },
-    [dispatch],
+    [],
   );
 
   const selectAndApply = useCallback(
     (value: string | number) => {
       if (picker === 'sampleRate') {
-        dispatch(setSampleRate(Number(value)));
+        useSettingsStore.getState().setSampleRate(Number(value));
       } else if (picker === 'replayGain') {
-        dispatch(setReplayGain(value as 'no' | 'track' | 'album'));
+        useSettingsStore.getState().setReplayGain(value as 'no' | 'track' | 'album');
       } else if (picker === 'audioDelay') {
-        dispatch(setAudioDelay(Number(value)));
+        useSettingsStore.getState().setAudioDelay(Number(value));
       }
       setPicker(null);
       setTimeout(applyAudioSettingsToMpv, 0);
@@ -169,7 +162,7 @@ export const AudioSettingsScreen: React.FC<Props> = () => {
               <Switch
                 value={normalizeVolume}
                 onValueChange={val =>
-                  toggleAndApply(val, setAudioNormalization)
+                  toggleAndApply(val, useSettingsStore.getState().setAudioNormalization)
                 }
                 trackColor={{
                   false: colors.border.subtle,
@@ -188,7 +181,7 @@ export const AudioSettingsScreen: React.FC<Props> = () => {
               <Switch
                 value={dialogueBoost}
                 onValueChange={val =>
-                  toggleAndApply(val, setDialogueBoost)
+                  toggleAndApply(val, useSettingsStore.getState().setDialogueBoost)
                 }
                 trackColor={{
                   false: colors.border.subtle,
@@ -222,7 +215,7 @@ export const AudioSettingsScreen: React.FC<Props> = () => {
               <Switch
                 value={eqEnabled}
                 onValueChange={val =>
-                  toggleAndApply(val, setEqEnabled)
+                  toggleAndApply(val, useSettingsStore.getState().setEqEnabled)
                 }
                 trackColor={{
                   false: colors.border.subtle,
@@ -254,7 +247,7 @@ export const AudioSettingsScreen: React.FC<Props> = () => {
               <Switch
                 value={gaplessPlayback}
                 onValueChange={val =>
-                  toggleAndApply(val, setGaplessPlayback)
+                  toggleAndApply(val, useSettingsStore.getState().setGaplessPlayback)
                 }
                 trackColor={{
                   false: colors.border.subtle,

@@ -14,11 +14,7 @@ import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import type {ColorTokens} from '../../../theme/tokens';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {
-  addVideoFolder,
-  addAudioFolder,
-  setLastScanTimestamp,
-} from '../../../store/slices/settingsSlice';
+
 import {
   setScanning,
   setTracks,
@@ -36,6 +32,7 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import type {FolderLinkingWizardScreenProps} from '../types';
+import {useSettingsStore} from '../../../state';
 
 type Props = FolderLinkingWizardScreenProps;
 type FolderType = 'video' | 'audio' | 'mixed';
@@ -402,7 +399,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
       setScanProgress(0);
       setScanComplete(false);
       setError(null);
-      dispatch(setScanning(true));
+      useSettingsStore.getState().setScanning(true);
 
       try {
         const result = await scanFoldersIncremental(
@@ -436,7 +433,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
           unsupportedCount: result.unsupportedCount,
         };
         dispatch(setScanHistory(history));
-        dispatch(setLastScanTimestamp(result.scanTimestamp));
+        useSettingsStore.getState().setLastScanTimestamp(result.scanTimestamp);
 
         setFileCount(result.files.length);
         setScanProgress(100);
@@ -445,7 +442,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
         setError('Scan failed. Please try again.');
         setScanComplete(false);
       } finally {
-        dispatch(setScanning(false));
+        useSettingsStore.getState().setScanning(false);
       }
     };
 
@@ -453,7 +450,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
 
     return () => {
       cancelled = true;
-      dispatch(setScanning(false));
+      useSettingsStore.getState().setScanning(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, selectedPath]);
@@ -534,10 +531,10 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
   const handleGoToLibrary = useCallback(() => {
     if (!folderType || !selectedPath) return;
     if (folderType === 'video' || folderType === 'mixed') {
-      dispatch(addVideoFolder(selectedPath));
+      useSettingsStore.getState().addVideoFolder(selectedPath);
     }
     if (folderType === 'audio' || folderType === 'mixed') {
-      dispatch(addAudioFolder(selectedPath));
+      useSettingsStore.getState().addAudioFolder(selectedPath);
     }
     // Jump straight to Library so scanned media is immediately visible
     nav.navigate('Library');

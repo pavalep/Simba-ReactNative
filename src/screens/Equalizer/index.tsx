@@ -9,11 +9,8 @@ import {InternalHeader} from '../../components/layout/InternalHeader/InternalHea
 import {AppText} from '../../components/core/AppText/AppText';
 import {VideoPlayerEqualizerPanel} from '../../components/player/VideoPlayerEqualizerPanel/VideoPlayerEqualizerPanel';
 import {useAppDispatch, useAppSelector} from '../../store';
-import {
-  setEqEnabled,
-  setEqGains,
-  setEqPreset,
-} from '../../store/slices/settingsSlice';
+import {useSettingsStore} from '../../state';
+
 import {
   EQ_PRESETS,
   applyAudioSettingsToMpv,
@@ -29,8 +26,8 @@ export const EqualizerScreen: React.FC<Props> = ({navigation: _navigation}) => {
   const {colors} = useTheme();
   const dispatch = useAppDispatch();
 
-  const eqGains = useAppSelector(s => s.settings.eqGains);
-  const eqEnabled = useAppSelector(s => s.settings.eqEnabled);
+  const eqGains = useSettingsStore(s => s.eqGains);
+  const eqEnabled = useSettingsStore(s => s.eqEnabled);
 
   // Push current EQ state to mpv on open (covers audio playback too)
   useEffect(() => {
@@ -41,14 +38,14 @@ export const EqualizerScreen: React.FC<Props> = ({navigation: _navigation}) => {
     (index: number, value: number) => {
       const next = [...eqGains];
       next[index] = value;
-      dispatch(setEqGains(next));
+      useSettingsStore.getState().setEqGains(next);
       setTimeout(applyAudioSettingsToMpv, 0);
     },
     [eqGains, dispatch],
   );
 
   const handleToggle = useCallback(() => {
-    dispatch(setEqEnabled(!eqEnabled));
+    useSettingsStore.getState().setEqEnabled(!eqEnabled);
     setTimeout(applyAudioSettingsToMpv, 0);
   }, [eqEnabled, dispatch]);
 
@@ -56,17 +53,17 @@ export const EqualizerScreen: React.FC<Props> = ({navigation: _navigation}) => {
     (name: string) => {
       const preset = EQ_PRESETS[name];
       if (!preset) return;
-      dispatch(setEqPreset(name));
-      dispatch(setEqGains([...preset]));
+      useSettingsStore.getState().setEqPreset(name);
+      useSettingsStore.getState().setEqGains([...preset]);
       setTimeout(applyAudioSettingsToMpv, 0);
     },
     [dispatch],
   );
 
   const handleReset = useCallback(() => {
-    dispatch(setEqGains([...EQ_PRESETS.Flat]));
-    dispatch(setEqPreset('Flat'));
-    dispatch(setEqEnabled(false));
+    useSettingsStore.getState().setEqGains([...EQ_PRESETS.Flat]);
+    useSettingsStore.getState().setEqPreset('Flat');
+    useSettingsStore.getState().setEqEnabled(false);
     setTimeout(applyAudioSettingsToMpv, 0);
   }, [dispatch]);
 

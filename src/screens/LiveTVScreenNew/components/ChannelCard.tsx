@@ -15,7 +15,7 @@ import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import type {IPTVChannelResult} from '../../../types/api';
-import type {LiveFavoriteItem} from '../../../store/slices/liveFavoritesSlice';
+import {useLiveFavoritesStore} from '../../../state';
 
 export interface ChannelRow {
   id: string;
@@ -145,3 +145,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+import type {LiveFavoriteItem} from '../../../state';

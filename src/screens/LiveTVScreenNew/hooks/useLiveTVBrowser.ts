@@ -17,12 +17,9 @@ import {
 } from '../../../services/api/iptvService';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {
-  addLiveFavorite,
-  removeLiveFavorite,
-  selectLiveFavoritesByKind,
-} from '../../../store/slices/liveFavoritesSlice';
+
 import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
+import {useLiveFavoritesStore} from '../../../state';
 
 // ─── Public types ────────────────────────────────────────────
 
@@ -89,8 +86,8 @@ export function useLiveTVBrowser(initialCategory?: string) {
   const wasOnlineRef = useRef(isOnline);
 
   // ── Redux favorites ──
-  const favorites = useAppSelector(s =>
-    selectLiveFavoritesByKind(s, 'tv'),
+  const favorites = useLiveFavoritesStore(s =>
+    s.items.filter(f => f.kind === 'tv'),
   );
   const isFavoriteId = useCallback(
     (id: string) => favorites.some(f => f.id === id),
@@ -305,11 +302,10 @@ export function useLiveTVBrowser(initialCategory?: string) {
     (channel: IPTVChannelResult) => {
       const existing = favorites.find(f => f.id === channel.id);
       if (existing) {
-        dispatch(removeLiveFavorite({kind: 'tv', id: channel.id}));
+        useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id: channel.id});
         return;
       }
-      dispatch(
-        addLiveFavorite({
+      useLiveFavoritesStore.getState().addLiveFavorite({
           kind: 'tv',
           id: channel.id,
           name: channel.name,
@@ -319,15 +315,14 @@ export function useLiveTVBrowser(initialCategory?: string) {
             .filter(Boolean)
             .join(' · '),
           addedAt: new Date().toISOString(),
-        }),
-      );
+        });
     },
     [favorites, dispatch],
   );
 
   const removeFavorite = useCallback(
     (id: string) => {
-      dispatch(removeLiveFavorite({kind: 'tv', id}));
+      useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id});
     },
     [dispatch],
   );

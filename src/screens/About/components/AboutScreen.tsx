@@ -19,12 +19,13 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {ConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 import {useAppDispatch} from '../../../store';
-import {resetToDefaults} from '../../../store/slices/settingsSlice';
+
 import {AboutScreenProps} from '../types';
 import {svgPaths} from '../../../constants/svgPaths';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import textContent from '../related/textContent';
+import {useSettingsStore} from '../../../state';
 
 type Props = AboutScreenProps;
 
@@ -265,7 +266,7 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
 
   const handleConfirmReset = useCallback(() => {
     setResetVisible(false);
-    dispatch(resetToDefaults());
+    useSettingsStore.getState().reset();
   }, [dispatch]);
 
   return (

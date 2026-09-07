@@ -39,7 +39,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Svg, {Circle, Defs, LinearGradient, Stop} from 'react-native-svg';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {markLaunched} from '../../../store/slices/settingsSlice';
+
 import {useAuthStore} from '../../../state';
 import type {RootStackParamList} from '../../../navigation/types';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
@@ -47,6 +47,7 @@ import {useTheme} from '../../../theme';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {BRAND} from '../../../constants/brand';
+import {useSettingsStore} from '../../../state';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -317,7 +318,7 @@ export const SplashScreen: React.FC = () => {
       : MIN_SPLASH_MS;
 
     const t = setTimeout(() => {
-      dispatch(markLaunched());
+      useSettingsStore.getState().markLaunched();
       navigation.reset({
         index: 0,
         routes: [{name: isAuthenticated ? 'Home' : 'Login'}],

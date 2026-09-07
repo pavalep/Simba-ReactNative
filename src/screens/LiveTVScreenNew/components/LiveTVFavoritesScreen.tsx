@@ -16,10 +16,7 @@ import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import type {RootStackScreenProps} from '../types';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {
-  removeLiveFavorite,
-  selectLiveFavoritesByKind,
-} from '../../../store/slices/liveFavoritesSlice';
+
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -31,6 +28,7 @@ import {useHaptics} from '../../../hooks/useHaptics';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import {useLiveFavoritesStore} from '../../../state';
 import {
   ChannelCard,
   favToRow,
@@ -48,8 +46,8 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
   const {add: addBookmark} = useBookmarks();
   const {openPlayer} = usePlayerActivity();
 
-  const favorites = useAppSelector(s =>
-    selectLiveFavoritesByKind(s, 'tv'),
+  const favorites = useLiveFavoritesStore(s =>
+    s.items.filter(f => f.kind === 'tv'),
   );
   const rows: ChannelRow[] = favorites.map(favToRow);
 
@@ -81,7 +79,7 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
       if (!row) return;
       switch (value) {
         case 'favorite':
-          dispatch(removeLiveFavorite({kind: 'tv', id: row.id}));
+          useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id: row.id});
           toast.show('Removed from favorites');
           haptics.light();
           break;

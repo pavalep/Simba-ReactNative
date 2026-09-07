@@ -47,7 +47,7 @@ import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
-import type {LiveFavoriteItem} from '../../../store/slices/liveFavoritesSlice';
+import {useLiveFavoritesStore} from '../../../state';
 
 type Props = RootStackScreenProps<'LiveTVScreen'>;
 
@@ -762,3 +762,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
 });
+
+import type {LiveFavoriteItem} from '../../../state';

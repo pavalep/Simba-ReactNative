@@ -2,6 +2,7 @@ import {useCallback, useMemo, useState} from 'react';
 import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAppDispatch, useAppSelector} from '../../../store';
+import {useSettingsStore} from '../../../state';
 
 import {spacing} from '../../../theme/tokens';
 
@@ -46,27 +47,27 @@ export function useSettingsScreen() {
   const entrance = useAnimatedEntrance(SECTION_COUNT, {staggerDelay: 80});
   const {startScan, isScanning} = useMediaScanner();
 
-  // ── Redux State ──
+  // ── Settings State (V17) ──
 
-  const hardwareAcceleration = useAppSelector(s => s.settings.isHardwareAccelerationEnabled);
-  const audioNormalization = useAppSelector(s => s.settings.isAudioNormalizationEnabled);
-  const dialogueBoost = useAppSelector(s => s.settings.isDialogueBoostEnabled);
-  const themeMode = useAppSelector(s => s.settings.themeMode);
-  const mpvOptions = useAppSelector(s => s.settings.mpvOptions) ?? [];
+  const hardwareAcceleration = useSettingsStore(s => s.isHardwareAccelerationEnabled);
+  const audioNormalization = useSettingsStore(s => s.isAudioNormalizationEnabled);
+  const dialogueBoost = useSettingsStore(s => s.isDialogueBoostEnabled);
+  const themeMode = useSettingsStore(s => s.themeMode);
+  const mpvOptions = useSettingsStore(s => s.mpvOptions) ?? [];
 
   // Subtitle (Phase 22)
-  const subtitleFontSize = useAppSelector(s => s.settings.subtitleFontSize);
-  const subtitleTextColor = useAppSelector(s => s.settings.subtitleTextColor);
-  const subtitleBackgroundOpacity = useAppSelector(s => s.settings.subtitleBackgroundOpacity);
-  const autoLoadSubtitles = useAppSelector(s => s.settings.isAutoLoadSubtitlesEnabled);
-  const preferredLanguages = useAppSelector(s => s.settings.preferredLanguages);
+  const subtitleFontSize = useSettingsStore(s => s.subtitleFontSize);
+  const subtitleTextColor = useSettingsStore(s => s.subtitleTextColor);
+  const subtitleBackgroundOpacity = useSettingsStore(s => s.subtitleBackgroundOpacity);
+  const autoLoadSubtitles = useSettingsStore(s => s.isAutoLoadSubtitlesEnabled);
+  const preferredLanguages = useSettingsStore(s => s.preferredLanguages);
 
   // Playback extras
-  const skipSilenceEnabled = useAppSelector(s => s.settings.skipSilenceEnabled);
+  const skipSilenceEnabled = useSettingsStore(s => s.skipSilenceEnabled);
 
   // Library
-  const videoFolders = useAppSelector(s => s.settings.videoFolders) ?? [];
-  const audioFolders = useAppSelector(s => s.settings.audioFolders) ?? [];
+  const videoFolders = useSettingsStore(s => s.videoFolders) ?? [];
+  const audioFolders = useSettingsStore(s => s.audioFolders) ?? [];
   const linkedFolderCount = videoFolders.length + audioFolders.length;
 
   // ── Local State ──

@@ -30,13 +30,14 @@ import {useBookmarks} from '../../../features/bookmarks';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 
 import {useRecentHistory} from '../../../features/recentHistory';
-import {setThemeMode} from '../../../store/slices/settingsSlice';
+
 import {useSessionStore} from '../../../state';
 import {formatDuration} from '../../../utils/timeAgo';
 import {clearCache} from '../../../services/cacheService';
 import type {RootStackScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
 import {usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {useSettingsStore} from '../../../state';
 
 type Props = RootStackScreenProps<'Profile'>;
 
@@ -77,7 +78,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   // line (settings.themeMode) will move to `useSettingsStore` in
   // Phase 79.
   const playCounts = useSessionStore(state => state.playCounts);
-  const themeMode = useAppSelector(state => state.settings.themeMode);
+  const themeMode = useSettingsStore(state => state.themeMode);
 
   const videoCount = useMemo(
     () => allTracks.filter(t => t.mediaType === 'video').length,
@@ -118,7 +119,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   // ── Theme quick toggle (42.5) ──
   const handleThemeToggle = useCallback(() => {
     const next = THEME_ORDER[(THEME_ORDER.indexOf(themeMode) + 1) % THEME_ORDER.length];
-    dispatch(setThemeMode(next));
+    useSettingsStore.getState().setThemeMode(next);
     toast.show(`Theme: ${THEME_LABEL[next]}`);
   }, [themeMode, dispatch, toast]);
 

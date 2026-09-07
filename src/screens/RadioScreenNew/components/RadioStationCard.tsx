@@ -12,7 +12,7 @@ import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import type {RadioStationResult} from '../../../types/api';
-import type {LiveFavoriteItem} from '../../../store/slices/liveFavoritesSlice';
+import {useLiveFavoritesStore} from '../../../state';
 
 // ─── Normalized row ───────────────────────────────────────────────────
 
@@ -156,3 +156,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+import type {LiveFavoriteItem} from '../../../state';
