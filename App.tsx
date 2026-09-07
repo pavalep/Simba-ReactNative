@@ -14,6 +14,7 @@ import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
 import {linking} from './src/navigation/linking';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
+import {QueryProvider} from './src/app/QueryProvider';
 import {SimbaStatusBar} from './src/components/StatusBar';
 import {ToastProvider} from './src/components/feedback/Toast';
 import {OfflineBanner} from './src/components/status/OfflineBanner/OfflineBanner';
@@ -221,11 +222,11 @@ const App: React.FC = () => {
     // any nested navigation gesture support.
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        {/* V17 Phase 85: Provider + PersistGate wrappers removed. Every
-            persisted store hydrates itself through zustand's
-            `persist` middleware at module-load. The 4 wrappers
-            (redux Provider, redux PersistGate, ThemeProvider,
-            SimbaPlayerRoot) collapse to 3. */}
+        {/* V18.1.2: QueryProvider wraps the data layer. Placed
+            inside SafeAreaProvider (consistent with other global
+            providers) and outside ThemeProvider (data layer is
+            a sibling of UI; no dependency on theme). */}
+        <QueryProvider>
         <ThemeProvider>
           {/* V16: one wrapper, one prop. Replaces the V13
               `<PlayerProvider>` + `<PlayerResumeProvider>` pair
@@ -235,6 +236,7 @@ const App: React.FC = () => {
             <AppContent />
           </SimbaPlayer>
         </ThemeProvider>
+        </QueryProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

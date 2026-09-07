@@ -1,27 +1,12 @@
 import React from 'react';
 import {render, screen} from '@testing-library/react-native';
-import {Provider} from 'react-redux';
-import {configureStore} from '@reduxjs/toolkit';
 import {ThemeProvider} from '../../src/theme';
 import {AppText} from '../../src/components/core/AppText/AppText';
 
-function createMockStore() {
-  return configureStore({
-    reducer: {
-      settings: () => ({
-        themeMode: 'dark',
-      }),
-    },
-  });
-}
-
 async function renderWithProviders(ui: React.ReactElement) {
-  const store = createMockStore();
-  return render(
-    <Provider store={store}>
-      <ThemeProvider>{ui}</ThemeProvider>
-    </Provider>,
-  );
+  // V17 removed the redux Provider; AppText needs only ThemeProvider
+  // (for useTheme). The pre-V17 mockStore / Provider wrapper was a leftover.
+  return render(<ThemeProvider>{ui}</ThemeProvider>);
 }
 
 describe('AppText', () => {
