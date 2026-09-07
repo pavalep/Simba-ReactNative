@@ -53,9 +53,11 @@ applies the same pattern to state (`useFooStore(selector?)`).
 | 87    | V17 release (consumer-only, git tag `v17.0.0`) | 1 | OK |
 | 88    | This QA report + tracker closeout             | 1            | OK     |
 
-12 commits on top of V16's `58f9734`:
+13 commits on top of V16's `58f9734`:
 
 ```
+efa4fdc V17 Phase 86.1: actually drop the redux deps + resetAction shim
+231e2e1 V17 Phase 87: V17 release v1.6.0 (consumer-only)
 e5ceec1 V17 Phase 86: package.json cleanup
 7e905e3 V17 Phase 85: App.tsx strip
 8b7f6cf V17 Phase 84: downloadsStore
@@ -69,6 +71,17 @@ f8bb948 V17 Phase 77: sessionStore
 7fc2ca7 V17 spec update
 4d2e6d2 V17 charter
 ```
+
+Note: the Phase 86 commit (e5ceec1) is the **intended** state
+described in its commit message. The actual package.json
+cleanup was missed in that commit (the file was restored by
+a `git restore .` between the edit and the commit, and the
+edit was never re-applied). Phase 86.1 (efa4fdc) is the
+correction commit: it actually drops the 5 redux deps,
+removes the `resetAction.ts` shim (the only file still
+importing from `@reduxjs/toolkit`), and adds
+`scripts/_verify_no_redux.cjs` for replay. The final state
+described in section 2 above is the post-86.1 state.
 
 ---
 
@@ -236,7 +249,22 @@ PASS __tests__/components/AppButton.test.tsx
 
 Test Suites: 4 passed, 4 total
 Tests:       1 todo, 12 passed, 13 total
+
+$ node scripts/_verify_no_redux.cjs
+code matches: 0
 ```
+
+`scripts/_verify_no_redux.cjs` is the formal "no redux left"
+check. It scans `src/` + `App.tsx` for 17 patterns covering
+every redux import + API surface (imports from
+`@reduxjs/toolkit` / `react-redux` / `redux-persist` /
+`redux-logger`; calls to `createSlice`, `createAsyncThunk`,
+`createAction`, `useAppSelector`, `useAppDispatch`,
+`combineReducers`, `useSelector`, `useDispatch`,
+`persistReducer`, `persistStore`; JSX `<Provider store=`,
+`<PersistGate`). Only the historical comment markers
+describing what was removed remain in comments; zero code
+matches.
 
 No new tests added in V17. The test suite that was green at
 V16's end is still green. (V17 was a refactor; behavior
