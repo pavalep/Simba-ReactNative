@@ -115,3 +115,8 @@ graphify-out/cache/
 graphify-out/.graphify_*
 graphify-out/20*/
 v13-trash-2026-09-04/
+
+# Local scratch folder — temporary debug logs, scan outputs, throwaway
+# scripts, debug images, and commit-message drafts moved here from root
+# to keep the project root clean. Safe to delete in bulk at any time.
+scratch/

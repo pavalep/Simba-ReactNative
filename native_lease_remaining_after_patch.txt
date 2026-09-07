@@ -1,1 +1,0 @@
-307:if (!nativePtr || nativePtr != reinterpret_cast<jlong>(g_mpv) || !g_initialized.load()) return;
