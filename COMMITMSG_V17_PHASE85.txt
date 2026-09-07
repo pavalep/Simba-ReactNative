@@ -1,0 +1,55 @@
+V17 Phase 85: App.tsx strip — <Provider> + <PersistGate> removed
+
+The redux store no longer backs any consumer state, so the
+`<Provider store={store}>` + `<PersistGate loading={null}
+persistor={persistor} onBeforeLift={onRehydrated}>` wrappers
+around the app tree are gone. 4 wrappers collapse to 3
+(GestureHandlerRootView, SafeAreaProvider, ThemeProvider +
+SimbaPlayer + AppContent).
+
+`onRehydrated` callback (which called `mark('rehydrated')`)
+moves to a one-shot `useEffect` in `AppContent`. Zustand's
+`persist` middleware hydrates each store synchronously at
+module-load — the first React render is consistent, so
+`mark('rehydrated')` fires there.
+
+Cross-store reset orchestration (formerly `persistor.purge()`)
+is now a sequence of per-store `reset()` calls in
+`useAuth.signOut` and `useAuth.revokeAccess`. The 10 persisted
+stores (auth, settings, weather, liveFavorites,
+followedPodcasts, media, bookmark, playlists, recentHistory,
+player, downloads) are cleared independently. The
+`sessionStore` is transient and needs no explicit reset.
+
+Migrated
+- App.tsx: `<Provider>` + `<PersistGate>` + `onRehydrated`
+  callback removed. 5 imports dropped (react-redux Provider,
+  redux-persist/integration/react PersistGate, the `store`
+  + `persistor` exports from `./src/store`, the
+  `onRehydrated` handler). `mark('rehydrated')` now lives in
+  an `AppContent` useEffect.
+- src/hooks/useAuth.ts: `useAppDispatch` + `persistor` imports
+  removed. `signOut` and `revokeAccess` now call 10 per-store
+  `reset()` actions in sequence (the same set of persisted
+  stores that the old `persistor.purge()` wiped).
+
+Added
+- `reset` action on `usePlaylistsStore` (was missing; the
+  slice had `resetPlaylists` which the V17 store also keeps
+  for backwards-compat).
+
+Updated
+- src/state/index.ts (no change beyond what was already in).
+
+Verification
+- `npx tsc --noEmit`: 0 errors.
+- `npx jest`: 4 suites, 12 passed, 1 todo. No regressions.
+
+Note
+- `src/store/index.ts` still exists (with `store`,
+  `persistor`, `useAppSelector`, `useAppDispatch` exports)
+  and `src/store/persistConfig.ts` still exists. These are
+  deleted in Phase 86 along with the `@reduxjs/toolkit`,
+  `react-redux`, `redux-persist`, `redux-logger` deps. For
+  Phase 85 the file is dormant: the only consumer of `store`
+  + `persistor` was `App.tsx`, which is now empty.

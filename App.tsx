@@ -1,7 +1,5 @@
 import React, {useMemo, useEffect} from 'react';
-import {Provider} from 'react-redux';
 import {Linking, View, StyleSheet} from 'react-native';
-import {PersistGate} from 'redux-persist/integration/react';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
@@ -10,8 +8,7 @@ import {
   SimbaPlayerRoot,
   useOpenFromUrl,
 } from '@simba-dev/react-native-media-player';
-import {store, persistor} from './src/store';
-import {useAuthStore, useBookmarksStore} from './src/state';
+import {useAuthStore, useBookmarksStore, useDownloadsStore} from './src/state';
 import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
@@ -24,7 +21,6 @@ import {GlobalOperationProgress} from './src/components/status/GlobalOperationPr
 import {lockToPortrait} from './src/utils/orientation';
 import {useAuthSession} from './src/hooks/useAuthSession';
 import {downloadService} from './src/services/downloadService';
-import {useDownloadsStore} from './src/state';
 import {mark} from './src/utils/startupPerf';
 import {configureGoogleSignin} from './src/services/authService';
 
@@ -81,11 +77,20 @@ const AppContent: React.FC = () => {
   useAuthSession();
 
   // 49.1: hydrate downloads once at boot — the service owns the manifest, the
-  // slice mirrors it so badges/buttons/Downloads screen render instantly.
+  // store mirrors it so badges/buttons/Downloads screen render instantly.
   useEffect(() => {
     downloadService.ensureLoaded().then(records => {
       useDownloadsStore.getState().hydrateDownloads(records);
     });
+  }, []);
+
+  // V17 Phase 85: redux-persist is gone. Zustand persist hydrates each
+  // store synchronously at module-load (the AsyncStorage read happens
+  // lazily but the default state is available immediately, so the
+  // first render is consistent). We mark 'rehydrated' on the first
+  // paint so the cold-start timing chain stays meaningful.
+  useEffect(() => {
+    mark('rehydrated');
   }, []);
 
   // P64: removed navigation-state persistence. The auth gate in
@@ -185,11 +190,6 @@ const styles = StyleSheet.create({
   },
 });
 
-const onRehydrated = () => {
-  // 59.3: redux-persist rehydration complete — cold-start gate until here
-  mark('rehydrated');
-};
-
 const App: React.FC = () => {
   // V16 Phase 71: bookmark-aware resume lookup is now a single
   // `resumePolicy` function prop on `<SimbaPlayer>`. Replaces the
@@ -221,19 +221,20 @@ const App: React.FC = () => {
     // any nested navigation gesture support.
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <Provider store={store}>
-          <PersistGate loading={null} persistor={persistor} onBeforeLift={onRehydrated}>
-            <ThemeProvider>
-              {/* V16: one wrapper, one prop. Replaces the V13
-                  `<PlayerProvider>` + `<PlayerResumeProvider>` pair
-                  and the V14 `<SimbaPlayer lookup={...}>` shape with
-                  a single `<SimbaPlayer resumePolicy={...}>`. */}
-              <SimbaPlayer resumePolicy={resumePolicy}>
-                <AppContent />
-              </SimbaPlayer>
-            </ThemeProvider>
-          </PersistGate>
-        </Provider>
+        {/* V17 Phase 85: <Provider> + <PersistGate> removed. Every
+            persisted store hydrates itself through zustand's
+            `persist` middleware at module-load. The 4 wrappers
+            (Provider, PersistGate, ThemeProvider, SimbaPlayerRoot)
+            collapse to 3. */}
+        <ThemeProvider>
+          {/* V16: one wrapper, one prop. Replaces the V13
+              `<PlayerProvider>` + `<PlayerResumeProvider>` pair
+              and the V14 `<SimbaPlayer lookup={...}>` shape with
+              a single `<SimbaPlayer resumePolicy={...}>`. */}
+          <SimbaPlayer resumePolicy={resumePolicy}>
+            <AppContent />
+          </SimbaPlayer>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

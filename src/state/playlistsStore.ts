@@ -41,6 +41,7 @@ export interface PlaylistsActions {
   }) => void;
   updatePlaylistItemPosition: (input: {playlistId: string; fileUri: string; position: number}) => void;
   resetPlaylists: () => void;
+  reset: () => void;
   setPlaylists: (playlists: Playlist[]) => void;
 }
 
@@ -255,6 +256,8 @@ export const usePlaylistsStore = create<PlaylistsState & PlaylistsActions>()(
         })),
 
       resetPlaylists: () => set({playlists: []}),
+
+      reset: () => set({playlists: []}),
 
       setPlaylists: (playlists) => set({playlists: normalizePersistedPlaylists(playlists)}),
     }),

@@ -1,7 +1,18 @@
 import {useCallback} from 'react';
-import {useAppDispatch, persistor} from '../store';
 import {navigationRef} from '../navigation/navigationHelper';
-import {useAuthStore} from '../state';
+import {
+  useAuthStore,
+  useBookmarksStore,
+  useSettingsStore,
+  useWeatherStore,
+  useLiveFavoritesStore,
+  useFollowedPodcastsStore,
+  useMediaStore,
+  usePlaylistsStore,
+  useRecentHistoryStore,
+  usePlayerStore,
+  useDownloadsStore,
+} from '../state';
 import {
   signInWithGoogle,
   signInSilently,
@@ -17,13 +28,11 @@ import {
  *
  * V17 Phase 78: the auth state is now in the `useAuthStore`
  * Zustand store (replaces the old `authSlice` redux slice).
- * The auth-related reads + writes go through the new store;
- * the cross-store `resetAppState` dispatch + `persistor.purge()`
- * stay for now (Phase 85 replaces them with per-store `reset()`
- * calls + the `useAuth.signOut` orchestration).
+ * V17 Phase 85: the cross-store reset orchestration (formerly
+ * `persistor.purge()`) is now a sequence of per-store `reset()`
+ * calls so each store's persist key is cleared independently.
  */
 export function useAuth() {
-  const dispatch = useAppDispatch();
   const user = useAuthStore(s => s.user);
   const isAuthenticated = useAuthStore(s => s.isAuthenticated);
   const isLoading = useAuthStore(s => s.isLoading);
@@ -128,12 +137,22 @@ export function useAuth() {
     } catch {
       // Proceed with local sign-out regardless
     }
-    // 49.5: purge ALL persisted state — wipe AsyncStorage and reset all slices
-    // V17 Phase 78: keep the redux-persist purge for now (Phase 85
-    // replaces it with per-store `reset()` calls + the useAuth.signOut
-    // orchestration).
-    persistor.purge();
+    // V17 Phase 85: per-store reset. The persisted keys (auth,
+    // settings, weather, liveFavorites, followedPodcasts, media,
+    // bookmark, playlists, recentHistory, player, downloads) are
+    // cleared independently. The sessionStore is transient and
+    // doesn't need a reset (it auto-clears on next mount).
     useAuthStore.getState().reset();
+    useSettingsStore.getState().reset();
+    useWeatherStore.getState().reset();
+    useLiveFavoritesStore.getState().reset();
+    useFollowedPodcastsStore.getState().reset();
+    useMediaStore.getState().reset();
+    useBookmarksStore.getState().reset();
+    usePlaylistsStore.getState().reset();
+    useRecentHistoryStore.getState().reset();
+    usePlayerStore.getState().reset();
+    useDownloadsStore.getState().reset();
     // Immediately force navigation to Login
     if (navigationRef.isReady()) {
       navigationRef.reset({index: 0, routes: [{name: 'Login'}]});
@@ -153,9 +172,18 @@ export function useAuth() {
       // Revocation failed — still clear the local session (user asked to leave)
       return false;
     } finally {
-      // 49.5: purge ALL persisted state after revocation
-      persistor.purge();
+      // V17 Phase 85: per-store reset (same set as `signOut`).
       useAuthStore.getState().reset();
+      useSettingsStore.getState().reset();
+      useWeatherStore.getState().reset();
+      useLiveFavoritesStore.getState().reset();
+      useFollowedPodcastsStore.getState().reset();
+      useMediaStore.getState().reset();
+      useBookmarksStore.getState().reset();
+      usePlaylistsStore.getState().reset();
+      useRecentHistoryStore.getState().reset();
+      usePlayerStore.getState().reset();
+      useDownloadsStore.getState().reset();
       // Immediately force navigation to Login
       if (navigationRef.isReady()) {
         navigationRef.reset({index: 0, routes: [{name: 'Login'}]});
