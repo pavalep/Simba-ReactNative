@@ -1,0 +1,25 @@
+V17 Phase 87: V17 release v1.6.0 (consumer-only)
+
+V17 is shipped. The 13 phases of state migration are done:
+- 11 persisted zustand stores replace the redux slice
+  hierarchy (1:1 persist-key mapping, version: 1 on each)
+- 2 transient stores (session, plus the pre-existing auth
+  sessionExpiresAt) keep the no-persist patterns
+- `<Provider>` + `<PersistGate>` are out of `App.tsx`
+- `@reduxjs/toolkit` + `react-redux` + `redux-persist` +
+  `redux-logger` are out of `package.json`
+- `src/store/` is gone
+
+Tagged `v17.0.0` (consumer-only — `package.json` is
+`"private": true`, so there's no npm publish; the release
+is a git tag + this changelog + the final QA report).
+
+Final QA report at `md/SIMBA_PLAYER_MODULE_V17_FINAL_QA_REPORT.md`
+covers the per-phase outcomes, the public-surface delta, the
+V16 out-of-scope fixes that V17 picked up, and the V18+
+candidates.
+
+Verification (end of V17):
+- `npx tsc --noEmit`: 0 errors
+- `npx jest`: 4 suites, 12 passed, 1 todo, no regressions
+- `git grep -r 'useAppSelector\\|useAppDispatch\\|combineReducers\\|@reduxjs/toolkit' src`: 0 matches
