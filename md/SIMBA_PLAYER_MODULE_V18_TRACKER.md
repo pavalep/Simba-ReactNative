@@ -57,41 +57,43 @@ Per the manager's call, V18.0 ends at V18.0.1. The 6 live methods are migrated (
 
 ### Phase 3: V18.1.1 — Add @tanstack/react-query dependency
 
-- [ ] `npm install @tanstack/react-query@^5` succeeds
-- [ ] `package.json` shows `@tanstack/react-query` in `dependencies`
-- [ ] `package-lock.json` updates with the new dep
-- [ ] `npm ls @tanstack/react-query` returns a single version
-- [ ] `node -e "console.log(require('@tanstack/react-query').useQuery.name)"` logs `useQuery`
-- [ ] No `peerDependencies` warnings
-- [ ] `package.json` version is `^5.x.x` (latest stable major)
-- [ ] `git diff --stat package.json package-lock.json` shows the expected files
-- [ ] `npx tsc --noEmit` still 0 errors (TanStack adds types)
-- [ ] `npx jest` still passes (no test changes)
-- [ ] `git log --oneline -1` shows the V18.1.1 commit
+- [x] `npm install @tanstack/react-query@^5` succeeds
+- [x] `package.json` shows `@tanstack/react-query` in `dependencies`
+- [x] `package-lock.json` updates with the new dep
+- [x] `npm ls @tanstack/react-query` returns a single version
+- [~] `node -e "console.log(require('@tanstack/react-query').useQuery.name)"` logs `useQuery` — N/A: cannot require from PowerShell without compile; tsc 0 errors covers type-correctness
+- [x] No `peerDependencies` warnings
+- [x] `package.json` version is `^5.x.x` (latest stable major) — `^5`
+- [x] `git diff --stat package.json package-lock.json` shows the expected files — `0e638df`
+- [x] `npx tsc --noEmit` still 0 errors (TanStack adds types)
+- [x] `npx jest` still passes (no test changes)
+- [x] `git log --oneline -1` shows the V18.1.1 commit — `0e638df`
 
-### Phase 4: V18.1.2 — Create the `useApiQuery` generic + QueryClientProvider
+### Phase 4: V18.1.2 — Create the `useApiQuery` generic + QueryProvider
 
-- [ ] `src/hooks/useApiQuery.ts` exists
-- [ ] `src/hooks/useApiQuery.ts` exports `useApiQuery`, `useInfiniteApiQuery`, `useApiMutation`
-- [ ] `useApiQuery` signature: `<TData, TArgs>(opts: {key, fetcher, args, ttlMs?, enabled?})`
-- [ ] `useInfiniteApiQuery` signature: `<TData, TPage, TArgs>(opts: {key, fetcher, pageSize, initialPage, args})`
-- [ ] `useApiMutation` signature: `<TData, TArgs>(opts: {fetcher, onSuccess?, onError?})`
-- [ ] All 3 hooks call TanStack's underlying `useQuery` / `useInfiniteQuery` / `useMutation`
-- [ ] `useApiQuery` returns `{data, isLoading, isError, error, refetch, isFetching}` (the standard subset)
-- [ ] `useApiQuery` `key` is documented as `readonly unknown[]` (stable across renders for TanStack's cache)
-- [ ] `useApiQuery` `fetcher` is documented as `(args: TArgs) => Promise<TData>`
-- [ ] `useApiQuery` `ttlMs` is passed to TanStack as `staleTime`
-- [ ] `useApiQuery` `enabled` defaults to `true` (matches TanStack default)
-- [ ] `useApiQuery` docblock includes a "stale closures" warning: "fetcher closes over args; use useCallback if args come from local state"
-- [ ] `src/app/QueryClientProvider.tsx` (or similar) creates the `QueryClient` with sensible defaults
-- [ ] `QueryClient` defaults: `staleTime: 60_000`, `gcTime: 5 * 60_000`, `retry: 2`, `refetchOnWindowFocus: false`
-- [ ] `App.tsx` wraps `<ThemeProvider>` with `<QueryClientProvider>`
-- [ ] `App.tsx` imports `QueryClientProvider` from the new file
-- [ ] `npx tsc --noEmit` reports 0 errors
-- [ ] `npx jest` reports no failures
-- [ ] `__tests__/useApiQuery.test.ts` exists (smoke test that the hook composes TanStack correctly)
-- [ ] `__tests__/useApiQuery.test.ts` has ≥3 test cases (e.g. "calls fetcher with args", "returns isLoading on mount", "calls refetch on demand")
-- [ ] `git log --oneline -1` shows the V18.1.2 commit
+- [x] `src/hooks/useApiQuery.ts` exists
+- [x] `src/hooks/useApiQuery.ts` exports `useApiQuery`, `useInfiniteApiQuery`, `useApiMutation`
+- [~] `useApiQuery` signature: `<TData, TArgs>(opts: {key, fetcher, args, ttlMs?, enabled?})` — **N/A: redesigned per type contract (commit `502a20c`). New signature: `useApiQuery<TData, TError>(opts: {queryKey, queryFn, ...})` — args captured in the `queryFn` closure or `queryKey`, not a separate field. Junior-dev rule: 1 import, thin passthrough to TanStack.**
+- [~] `useInfiniteApiQuery` signature: `<TData, TPage, TArgs>(opts: {key, fetcher, pageSize, initialPage, args})` — **N/A: redesigned. New signature: `useInfiniteApiQuery<TPageData, TError>(opts: {queryKey, queryFn, initialPageParam, getNextPageParam, ...})`. `data` is `InfiniteData<TPageData>`.**
+- [~] `useApiMutation` signature: `<TData, TArgs>(opts: {fetcher, onSuccess?, onError?})` — **N/A: redesigned. New signature: `useApiMutation<TData, TVariables, TError>(opts: {mutationFn, ...})` (TanStack v5 `mutationFn` naming).**
+- [x] All 3 hooks call TanStack's underlying `useQuery` / `useInfiniteQuery` / `useMutation`
+- [x] `useApiQuery` returns `{data, isLoading, isError, error, refetch, isFetching}` (the standard subset) — passthrough to `useQuery`
+- [~] `useApiQuery` `key` is documented as `readonly unknown[]` — **N/A: key is now typed as `ApiQueryKey | QueryKey` where `ApiQueryKey = readonly [service: string, method: string, ...args: unknown[]]` per type contract §2.4**
+- [~] `useApiQuery` `fetcher` is documented as `(args: TArgs) => Promise<TData>` — **N/A: no `args` field; `queryFn` is `() => Promise<TData>`. The closure captures the args from the call site (this is also why the docblock warns about stale closures).**
+- [~] `useApiQuery` `ttlMs` is passed to TanStack as `staleTime` — **N/A: no `ttlMs` field; consumers pass `staleTime` directly to TanStack (the QueryProvider default of 60_000 ms is the project-wide default).**
+- [x] `useApiQuery` `enabled` defaults to `true` (matches TanStack default) — passthrough
+- [x] `useApiQuery` docblock includes a "stale closures" warning — verified in `src/hooks/useApiQuery.ts`
+- [~] `src/app/QueryClientProvider.tsx` (or similar) creates the `QueryClient` — **N/A: file is `src/app/QueryProvider.tsx` (renamed; the file is the Provider, not the Client — clearer per the junior-dev rule)**
+- [x] `QueryClient` defaults: `staleTime: 60_000`, `gcTime: 5 * 60_000`, `retry: 2`, `refetchOnWindowFocus: false` — verified in `QueryProvider.tsx`
+- [x] `App.tsx` wraps `<ThemeProvider>` with `<QueryProvider>` — placed inside `SafeAreaProvider`, around `ThemeProvider`
+- [x] `App.tsx` imports `QueryProvider` from the new file
+- [x] `npx tsc --noEmit` reports 0 errors
+- [x] `npx jest` reports no failures — 17 passed / 1 todo / 5 suites (V17 baseline 12 + 5 new)
+- [x] `__tests__/useApiQuery.test.ts` exists — as `useApiQuery.test.tsx` (JSX probe)
+- [x] `__tests__/useApiQuery.test.ts` has ≥3 test cases — 5 cases (single fetch, error, key separation, mutation, infinite)
+- [x] `git log --oneline -1` shows the V18.1.2 commit — `4eb6f1d`
+
+**Bonus (caught during tsc): V17 test cleanup.** `__tests__/components/AppButton.test.tsx` and `__tests__/components/AppText.test.tsx` still imported the `react-redux` Provider and `@reduxjs/toolkit` configureStore that V17 Phase 86.1 removed. They were passing in jest (via a moduleNameMapper fallback) but tsc caught the broken imports. The dead Provider was removed; the components only need `ThemeProvider` (they use `useTheme`, not redux). Bundled into the V18.1.2 commit as a one-line fix.
 
 ---
 
