@@ -5,11 +5,12 @@
 import {useMemo, useCallback} from 'react';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {useAppSelector, useAppDispatch} from '../../../store';
-import {selectArtistDiscography} from '../../../store/slices/mediaSlice';
+
 import {loadPlaylistToPlayer, type PlaylistEntry} from '../../../store/slices/playerSlice';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useOpenPlaylist, usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {useMediaStore} from '../../../state';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'ArtistScreen'>;
 type Route = RouteProp<RootStackParamList, 'ArtistScreen'>;
@@ -25,8 +26,10 @@ export function useArtistScreen() {
 
   const {artistName} = route.params;
 
-  const tracks = useAppSelector(state =>
-    selectArtistDiscography(state, artistName),
+  const tracks = useMediaStore(s =>
+    s.tracks.filter(
+      t => (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
+    ),
   );
 
   const currentFile = useAppSelector(state => state.player.currentFile);

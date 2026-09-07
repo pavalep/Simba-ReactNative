@@ -5,10 +5,11 @@ import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {WaveformBars} from '../../../components/feedback/WaveformBars/WaveformBars';
 import {radius, ColorTokens} from '../../../theme/tokens';
-import type {ScannedTrack} from '../../../store/slices/mediaSlice';
+
 import {linkedMediaFolderId} from '../../../types/media';
 import type {LocalMediaFilter, SortOption} from '../types';
 import MediaListItem from './MediaListItem';
+import {useMediaStore} from '../../../state';
 
 interface LibraryAudioSegmentProps {
   audioFolders: string[];
@@ -234,3 +235,5 @@ export const LibraryAudioSegment: React.FC<LibraryAudioSegmentProps> = React.mem
   );
 },
 );
+
+import type {ScannedTrack} from '../../../state';

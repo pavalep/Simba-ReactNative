@@ -1,19 +1,7 @@
 import {useCallback, useEffect, useRef} from 'react';
 import {useAppDispatch, useAppSelector} from '../store';
 import {useSettingsStore} from '../state';
-import {
-  setScanning,
-  setTracks,
-  setScanProgress,
-  setScanHistory,
-  requestCancelScan,
-  resetScanState,
-  selectAllTracks,
-  selectScanProgress,
-  selectScanHistory,
-  selectCancelRequested,
-  type ScanHistory,
-} from '../store/slices/mediaSlice';
+import {useMediaStore, type ScanHistory} from '../state';
 
 import {
   scanFoldersIncremental,
@@ -38,14 +26,14 @@ export function useMediaScanner() {
   const dispatch = useAppDispatch();
 
   // ── Selectors ──
-  const allTracks = useAppSelector(selectAllTracks);
-  const scanProgress = useAppSelector(selectScanProgress);
-  const scanHistory = useAppSelector(selectScanHistory);
-  const cancelRequested = useAppSelector(selectCancelRequested);
+  const allTracks = useMediaStore(s => s.tracks);
+  const scanProgress = useMediaStore(s => s.scanProgress);
+  const scanHistory = useMediaStore(s => s.scanHistory);
+  const cancelRequested = useMediaStore(s => s.cancelRequested);
   const videoFolders = useSettingsStore(s => s.videoFolders ?? []);
   const audioFolders = useSettingsStore(s => s.audioFolders ?? []);
   const settingsLastScan = useSettingsStore(s => s.lastScanTimestamp ?? null);
-  const isMediaScanning = useAppSelector(s => s.media?.isScanning ?? false);
+  const isMediaScanning = useMediaStore(s => s.isScanning);
 
   // ── Refs ──
   const cancelRef = useRef(false);
@@ -61,7 +49,7 @@ export function useMediaScanner() {
   // ── Cancel ──
   const cancelScan = useCallback(() => {
     cancelRef.current = true;
-    dispatch(requestCancelScan());
+    useMediaStore.getState().requestCancelScan();
   }, [dispatch]);
 
   // ── Start scan ──
@@ -91,14 +79,12 @@ export function useMediaScanner() {
           lastScanTimestamp,
           progress => {
             // Map progress callback to Redux
-            dispatch(
-              setScanProgress({
+            useMediaStore.getState().setScanProgress({
                 currentFolder: progress.currentFolder,
                 filesFound: progress.filesFound,
                 totalFiles: progress.totalFiles,
                 percentComplete: progress.percentComplete,
-              }),
-            );
+              });
             return cancelRef.current;
           },
           cancelRef,
@@ -106,7 +92,7 @@ export function useMediaScanner() {
 
         // If cancelled, preserve already-found files
         if (cancelRef.current) {
-          dispatch(resetScanState());
+          useMediaStore.getState().resetScanState();
           return;
         }
 
@@ -123,13 +109,11 @@ export function useMediaScanner() {
         if (newTracks.length > 0 || allTracks.length === 0) {
           // Incremental scans refresh changed records and append new records.
           // Existing records outside the incremental result remain intact.
-          dispatch(
-            setTracks(
+          useMediaStore.getState().setTracks(
               allTracks.length === 0
                 ? newTracks
                 : [...refreshedExisting, ...trulyNew],
-            ),
-          );
+            );
         }
 
         // Phase 4: Update scan history
@@ -140,7 +124,7 @@ export function useMediaScanner() {
           errorsCount: result.errorsCount,
           unsupportedCount: result.unsupportedCount,
         };
-        dispatch(setScanHistory(newHistory));
+        useMediaStore.getState().setScanHistory(newHistory);
 
         // Also update settingsSlice's lastScanTimestamp for banner display
         useSettingsStore.getState().setLastScanTimestamp(result.scanTimestamp);
@@ -153,14 +137,12 @@ export function useMediaScanner() {
       } finally {
         scanInFlight = false;
         useSettingsStore.getState().setScanning(false);
-        dispatch(
-          setScanProgress({
+        useMediaStore.getState().setScanProgress({
             currentFolder: null,
             filesFound: 0,
             totalFiles: 0,
             percentComplete: 100,
-          }),
-        );
+          });
         cancelRef.current = false;
       }
     },

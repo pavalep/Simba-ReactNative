@@ -56,6 +56,11 @@ const SLICES = [
     store: 'useFollowedPodcastsStore',
     importPathRe: /followedPodcastsReducer/,
   },
+  {
+    redux: 'media',
+    store: 'useMediaStore',
+    importPathRe: /mediaSlice/,
+  },
 ];
 
 const ACTION_NAMES = {
@@ -81,6 +86,19 @@ const ACTION_NAMES = {
   liveFavorites: new Set(['addLiveFavorite','removeLiveFavorite','setLiveFavorites']),
   followedPodcasts: new Set(['addFollowedPodcast','removeFollowedPodcast','setFollowedPodcasts']),
   weather: new Set(),
+  media: new Set([
+    'setScanning',
+    'setScanProgress',
+    'setScanHistory',
+    'requestCancelScan',
+    'clearCancelScan',
+    'resetScanState',
+    'setTracks',
+    'addTracks',
+    'removeTrack',
+    'clearTracks',
+    'rebuildSearchIndex',
+  ]),
 };
 
 const RESET_ACTIONS = new Set(['resetToDefaults', 'resetPreferencesToDefaults']);
@@ -124,6 +142,43 @@ function transformSelectors(content, redux, store) {
     count++;
     return `${store}(${name} => ${name}.`;
   });
+  return {content: out, count};
+}
+
+/** 1b) For the media slice, also handle `useAppSelector(selectX)` where
+ *      `selectX` is a known imported selector. Maps to either a
+ *      direct store read or a derived hook. */
+const MEDIA_DIRECT_SELECTORS = {
+  selectAllTracks: 's => s.tracks',
+  selectScanProgress: 's => s.scanProgress',
+  selectScanHistory: 's => s.scanHistory',
+  selectCancelRequested: 's => s.cancelRequested',
+  selectIsMediaScanning: 's => s.isScanning',
+  selectTrackCount: 's => s.tracks.length',
+};
+const MEDIA_DERIVED_SELECTORS = {
+  selectSearchIndex: 'useMediaSearchIndex',
+  selectArtists: 'useMediaArtists',
+  selectAlbums: 'useMediaAlbums',
+};
+
+function transformMediaSelectorRefs(content) {
+  let count = 0;
+  let out = content;
+  for (const [selector, body] of Object.entries(MEDIA_DIRECT_SELECTORS)) {
+    const re = new RegExp(`useAppSelector\\(${selector}\\)`, 'g');
+    out = out.replace(re, (m) => {
+      count++;
+      return `useMediaStore(${body})`;
+    });
+  }
+  for (const [selector, hook] of Object.entries(MEDIA_DERIVED_SELECTORS)) {
+    const re = new RegExp(`useAppSelector\\(${selector}\\)`, 'g');
+    out = out.replace(re, (m) => {
+      count++;
+      return `${hook}()`;
+    });
+  }
   return {content: out, count};
 }
 
@@ -288,6 +343,13 @@ for (const file of walk(SRC_ROOT)) {
     const sel = transformSelectors(content, redux, store);
     content = sel.content;
     fileReplacements += sel.count;
+    if (redux === 'media') {
+      // Also transform `useAppSelector(selectX)` where selectX is a
+      // known imported media selector.
+      const msr = transformMediaSelectorRefs(content);
+      content = msr.content;
+      fileReplacements += msr.count;
+    }
     const imp = transformImports(content, redux, importPathRe);
     content = imp.content;
     fileReplacements += imp.count;

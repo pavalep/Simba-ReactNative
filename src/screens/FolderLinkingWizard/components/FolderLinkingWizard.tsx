@@ -16,14 +16,6 @@ import type {ColorTokens} from '../../../theme/tokens';
 import {useAppDispatch, useAppSelector} from '../../../store';
 
 import {
-  setScanning,
-  setTracks,
-  addTracks,
-  setScanHistory,
-  selectAllTracks,
-  type ScanHistory,
-} from '../../../store/slices/mediaSlice';
-import {
   scanFoldersIncremental,
   fileEntriesToTracks,
 } from '../../../services/fileService';
@@ -33,6 +25,7 @@ import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import type {FolderLinkingWizardScreenProps} from '../types';
 import {useSettingsStore} from '../../../state';
+import {useMediaStore, type ScanHistory} from '../../../state';
 
 type Props = FolderLinkingWizardScreenProps;
 type FolderType = 'video' | 'audio' | 'mixed';
@@ -73,7 +66,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
   const [scanComplete, setScanComplete] = useState(false);
   const [fileCount, setFileCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const existingTracks = useAppSelector(selectAllTracks);
+  const existingTracks = useMediaStore(s => s.tracks);
   /** Guards against re-running the scan when tracks/folders change mid-step */
   const scanStartedRef = useRef(false);
 
@@ -420,9 +413,9 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
         const newTracks = scannedTracks.filter(t => !existingUris.has(t.uri));
 
         if (existingTracks.length === 0) {
-          dispatch(setTracks(newTracks));
+          useMediaStore.getState().setTracks(newTracks);
         } else if (newTracks.length > 0) {
-          dispatch(addTracks(newTracks));
+          useMediaStore.getState().addTracks(newTracks);
         }
 
         const history: ScanHistory = {
@@ -432,7 +425,7 @@ export const FolderLinkingWizard: React.FC<Props> = () => {
           errorsCount: result.errorsCount,
           unsupportedCount: result.unsupportedCount,
         };
-        dispatch(setScanHistory(history));
+        useMediaStore.getState().setScanHistory(history);
         useSettingsStore.getState().setLastScanTimestamp(result.scanTimestamp);
 
         setFileCount(result.files.length);

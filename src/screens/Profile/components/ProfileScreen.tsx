@@ -24,7 +24,7 @@ import {ConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {useAuth} from '../../../hooks/useAuth';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {selectTrackCount, selectAllTracks} from '../../../store/slices/mediaSlice';
+
 import {usePlaylists} from '../../../features/playlists';
 import {useBookmarks} from '../../../features/bookmarks';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
@@ -38,6 +38,7 @@ import type {RootStackScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
 import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 import {useSettingsStore} from '../../../state';
+import {useMediaStore} from '../../../state';
 
 type Props = RootStackScreenProps<'Profile'>;
 
@@ -64,8 +65,8 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
     useAuth();
 
   // ── Real store stats (42.3 — no fabricated numbers) ──
-  const trackCount = useAppSelector(selectTrackCount);
-  const allTracks = useAppSelector(selectAllTracks);
+  const trackCount = useMediaStore(s => s.tracks.length);
+  const allTracks = useMediaStore(s => s.tracks);
   const {playlists} = usePlaylists();
   const playlistCount = playlists.length;
   const {bookmarkCount, clearAll: clearAllBookmarks} = useBookmarks();

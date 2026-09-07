@@ -2,10 +2,11 @@ import React from 'react';
 import {View, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {useAppSelector} from '../../../store';
-import {selectArtists} from '../../../store/slices/mediaSlice';
+
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppCard} from '../../../components/core/AppCard/AppCard';
 import {radius} from '../../../theme/tokens';
+import {useMediaArtists} from '../../../state';
 
 interface ArtistGridProps {
   onArtistPress: (artistName: string) => void;
@@ -13,7 +14,7 @@ interface ArtistGridProps {
 
 export const ArtistGrid: React.FC<ArtistGridProps> = ({onArtistPress}) => {
   const {colors} = useTheme();
-  const artists = useAppSelector(selectArtists);
+  const artists = useMediaArtists();
 
   return (
     /* 59.1: virtualized artist rows (linear column) */

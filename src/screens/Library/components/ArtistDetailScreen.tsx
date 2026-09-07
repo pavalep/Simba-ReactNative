@@ -11,7 +11,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {useAppSelector} from '../../../store';
-import {selectArtistDiscography} from '../../../store/slices/mediaSlice';
+
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
@@ -28,6 +28,7 @@ import type {RootStackScreenProps} from '../types';
 type ArtistDetailScreenProps = RootStackScreenProps<'ArtistDetail'>;
 import {shareContent} from '../../../services/shareService';
 import { resolveStreamType, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import {useMediaStore} from '../../../state';
 
 type Props = ArtistDetailScreenProps;
 
@@ -116,8 +117,10 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const currentFile = useAppSelector(state => state.player.currentFile);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
-  const tracks = useAppSelector(state =>
-    selectArtistDiscography(state, artistName),
+  const tracks = useMediaStore(s =>
+    s.tracks.filter(
+      t => (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
+    ),
   );
 
   // P39.1/39.2: MusicBrainz artist + discography (CAA covers), silent fail

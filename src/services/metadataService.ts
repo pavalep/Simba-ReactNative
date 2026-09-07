@@ -1,8 +1,9 @@
 import RNFS from 'react-native-fs';
 import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {LrcParseResult, parseLrc} from '../utils/lrcParser';
-import type {ScannedTrack} from '../store/slices/mediaSlice';
+
 import {linkedMediaFolderIdFromPath} from '../types/media';
+import {useMediaStore} from '../state';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -439,3 +440,5 @@ export function estimateAudioDuration(
   // duration (seconds) = fileSize (bytes) * 8 / (bitrate * 1000)
   return Math.round((fileSizeBytes * 8) / (bitrate * 1000));
 }
+
+import type {ScannedTrack} from '../state';

@@ -11,7 +11,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {useAppSelector} from '../../../store';
-import {selectAlbumTracks} from '../../../store/slices/mediaSlice';
+
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
@@ -27,6 +27,7 @@ import type {RootStackScreenProps} from '../types';
 type AlbumDetailScreenProps = RootStackScreenProps<'AlbumDetail'>;
 import {shareContent} from '../../../services/shareService';
 import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import {useMediaStore} from '../../../state';
 
 type Props = AlbumDetailScreenProps;
 
@@ -52,8 +53,14 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const insets = useSafeAreaInsets();
   const {openPlayer} = usePlayerActivity();
 
-  const tracks = useAppSelector(state =>
-    selectAlbumTracks(state, albumTitle, artistName),
+  const tracks = useMediaStore(s =>
+    s.tracks
+      .filter(
+        t =>
+          (t.album || 'Unknown Album').toLowerCase() === albumTitle.toLowerCase() &&
+          (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
+      )
+      .sort((a, b) => a.trackNumber - b.trackNumber),
   );
 
   const totalDuration = useMemo(

@@ -8,13 +8,13 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useRoute, RouteProp} from '@react-navigation/native';
 import {useAppSelector} from '../../../store';
-import {selectAllTracks} from '../../../store/slices/mediaSlice';
-import type {ScannedTrack} from '../../../store/slices/mediaSlice';
+
 import type {RootStackParamList} from '../../../navigation/types';
 import type {JamendoTrackResult, RadioStationResult} from '../../../types/api';
 import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {getJamendoTracksByGenre} from '../../../services/api/jamendoService';
 import {getStationsByGenre} from '../../../services/api/radioBrowserService';
+import {useMediaStore} from '../../../state';
 import {
   MOOD_COLLECTIONS,
   type MoodCollection,
@@ -53,7 +53,7 @@ export function useGenreScreen(): UseGenreScreenResult {
   const route = useRoute<RouteProp<RootStackParamList, 'GenreScreen'>>();
   const {genre, initialTab} = route.params;
 
-  const allTracks = useAppSelector(selectAllTracks);
+  const allTracks = useMediaStore(s => s.tracks);
 
   // P41.1: browse tabs — library / streaming / moods / radio
   const [tab, setTab] = useState<GenreBrowseTab>(initialTab ?? 'local');
@@ -229,3 +229,5 @@ export function useGenreScreen(): UseGenreScreenResult {
     handlePlayStation,
   };
 }
+
+import type {ScannedTrack} from '../../../state';

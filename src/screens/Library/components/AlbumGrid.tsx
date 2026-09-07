@@ -2,11 +2,12 @@ import React from 'react';
 import {View, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {useAppSelector} from '../../../store';
-import {selectAlbums} from '../../../store/slices/mediaSlice';
+
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppCard} from '../../../components/core/AppCard/AppCard';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {radius} from '../../../theme/tokens';
+import {useMediaAlbums} from '../../../state';
 
 interface AlbumGridProps {
   onAlbumPress: (albumTitle: string, artistName: string) => void;
@@ -22,7 +23,7 @@ function formatTotalDuration(seconds: number): string {
 
 export const AlbumGrid: React.FC<AlbumGridProps> = ({onAlbumPress}) => {
   const {colors} = useTheme();
-  const albums = useAppSelector(selectAlbums);
+  const albums = useMediaAlbums();
 
   return (
     /* 59.1: virtualized album rows (linear column) */

@@ -6,16 +6,10 @@
 import {useCallback, useMemo, useState} from 'react';
 import {createSelector} from '@reduxjs/toolkit';
 import {useAppSelector} from '../../../store';
-import {selectAllTracks} from '../../../store/slices/mediaSlice';
+
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
 import {usePlayerActivity} from '@simba-dev/react-native-media-player';
-import type {ScannedTrack} from '../../../store/slices/mediaSlice';
-
-// 59.2: stable selector — inline filters re-ran on EVERY store dispatch
-// (incl. mpv position ticks) and re-rendered the whole screen.
-const selectAudioTracks = createSelector([selectAllTracks], tracks =>
-  tracks.filter(t => t.mediaType === 'audio'),
-);
+import {useMediaAudioTracks} from '../../../state';
 
 export type SortMode = 'title' | 'artist';
 export type ViewMode = 'grid' | 'list';
@@ -43,7 +37,7 @@ export function useAllAudioScreen(): UseAllAudioScreenResult {
   const [refreshing, setRefreshing] = useState(false);
   const {startScan} = useMediaScanner();
 
-  const audioTracks = useAppSelector(selectAudioTracks);
+  const audioTracks = useMediaAudioTracks();
 
   const toggleSort = useCallback(() => {
     setSortMode(s => (s === 'title' ? 'artist' : 'title'));
@@ -108,3 +102,5 @@ export function useAllAudioScreen(): UseAllAudioScreenResult {
     handleRefresh,
   };
 }
+
+import type {ScannedTrack} from '../../../state';

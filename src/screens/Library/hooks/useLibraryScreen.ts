@@ -3,8 +3,7 @@ import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAppSelector, useAppDispatch} from '../../../store';
 import {useSettingsStore} from '../../../state';
-import {selectAllTracks} from '../../../store/slices/mediaSlice';
-import type {ScannedTrack} from '../../../store/slices/mediaSlice';
+
 import {usePlaylists} from '../../../features/playlists';
 import {loadPlaylistToPlayer, playlistItemsToEntries} from '../../../store/slices/playerSlice';
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
@@ -15,6 +14,7 @@ import type {PlaylistKind} from '../../../types/playlist';
 import type {LibraryScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
 import { resolveStreamType, useOpenPlaylist, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import {useMediaStore} from '../../../state';
 import type {
   ContentMode,
   FilterType,
@@ -89,7 +89,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const videoFolders = useSettingsStore(s => s.videoFolders ?? []);
   const audioFolders = useSettingsStore(s => s.audioFolders ?? []);
   const lastScanTimestamp = useSettingsStore(s => s.lastScanTimestamp ?? null);
-  const scannedTracks = useAppSelector(selectAllTracks);
+  const scannedTracks = useMediaStore(s => s.tracks);
   const scannedTrackCount = scannedTracks.length;
   const {list: allPlaylists, createPlaylist} = usePlaylists();
 
@@ -310,3 +310,5 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
     handlePlaylistCardPress,
   };
 }
+
+import type {ScannedTrack} from '../../../state';

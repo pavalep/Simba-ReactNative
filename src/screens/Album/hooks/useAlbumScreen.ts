@@ -5,7 +5,7 @@
 import {useMemo, useCallback} from 'react';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {useAppSelector, useAppDispatch} from '../../../store';
-import {selectAlbumTracks} from '../../../store/slices/mediaSlice';
+
 import {
   loadPlaylistToPlayer,
   playFromPlaylist,
@@ -13,6 +13,7 @@ import {
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useOpenPlaylist, usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {useMediaStore} from '../../../state';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'AlbumScreen'>;
 type Route = RouteProp<RootStackParamList, 'AlbumScreen'>;
@@ -28,8 +29,14 @@ export function useAlbumScreen() {
 
   const {albumName, artistName} = route.params;
 
-  const tracks = useAppSelector(state =>
-    selectAlbumTracks(state, albumName, artistName),
+  const tracks = useMediaStore(s =>
+    s.tracks
+      .filter(
+        t =>
+          (t.album || 'Unknown Album').toLowerCase() === albumName.toLowerCase() &&
+          (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
+      )
+      .sort((a, b) => a.trackNumber - b.trackNumber),
   );
   const currentFile = useAppSelector(state => state.player.currentFile);
   // V14 Phase 62: source of truth for isPlaying moves to the module.

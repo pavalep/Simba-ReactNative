@@ -4,8 +4,9 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {radius, ColorTokens} from '../../../theme/tokens';
-import type {ScannedTrack} from '../../../store/slices/mediaSlice';
+
 import textContent from '../related/textContent';
+import {useMediaStore} from '../../../state';
 
 interface LibraryFoldersSegmentProps {
   videoFolders: string[];
@@ -234,3 +235,5 @@ export const LibraryFoldersSegment: React.FC<LibraryFoldersSegmentProps> = React
   );
 },
 );
+
+import type {ScannedTrack} from '../../../state';

@@ -1,12 +1,11 @@
 import {useMemo, useState, useEffect} from 'react';
-import {useAppSelector} from '../store';
-import {
-  selectAllTracks,
-  selectArtists,
-  selectAlbums,
-  selectSearchIndex,
-} from '../store/slices/mediaSlice';
 import {usePlaylists} from '../features/playlists';
+import {
+  useMediaStore,
+  useMediaSearchIndex,
+  useMediaArtists,
+  useMediaAlbums,
+} from '../state';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -90,10 +89,10 @@ export function useSearch(
   }, [searchText]);
 
   // Redux data
-  const tracks = useAppSelector(selectAllTracks);
-  const searchIndex = useAppSelector(selectSearchIndex);
-  const artists = useAppSelector(selectArtists);
-  const albums = useAppSelector(selectAlbums);
+  const tracks = useMediaStore(s => s.tracks);
+  const searchIndex = useMediaSearchIndex();
+  const artists = useMediaArtists();
+  const albums = useMediaAlbums();
   const {playlists: allPlaylists} = usePlaylists();
 
   const query = debouncedQuery.toLowerCase();

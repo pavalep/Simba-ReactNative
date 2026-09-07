@@ -9,13 +9,14 @@
 
 import React from 'react';
 import {useAppDispatch, useAppSelector} from '../../../store';
-import {selectScanProgress, requestCancelScan} from '../../../store/slices/mediaSlice';
+
 import {OperationProgress} from '../OperationProgress/OperationProgress';
+import {useMediaStore} from '../../../state';
 
 export const GlobalOperationProgress: React.FC = () => {
   const dispatch = useAppDispatch();
-  const isScanning = useAppSelector(s => s.media?.isScanning ?? false);
-  const scanProgress = useAppSelector(selectScanProgress);
+  const isScanning = useMediaStore(s => s.isScanning);
+  const scanProgress = useMediaStore(s => s.scanProgress);
 
   if (!isScanning) return null;
 
@@ -35,7 +36,7 @@ export const GlobalOperationProgress: React.FC = () => {
       title="Scanning library…"
       detail={detailParts.join('  ·  ') || undefined}
       percent={scanProgress?.percentComplete ?? 0}
-      onCancel={() => dispatch(requestCancelScan())}
+      onCancel={() => useMediaStore.getState().requestCancelScan()}
       cancelLabel="Cancel"
     />
   );

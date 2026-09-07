@@ -6,8 +6,9 @@ import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {isRemoteUri} from '../utils/mediaUri';
 import {logger} from '../lib/logger';
 
-import type {ScannedTrack} from '../store/slices/mediaSlice';
+
 import {linkedMediaFolderId} from '../types/media';
+import {useMediaStore} from '../state';
 
 /** Subtitle file types for document picker */
 const SUBTITLE_TYPES = [
@@ -664,3 +665,5 @@ export function fileEntriesToTracks(files: FileEntry[]): ScannedTrack[] {
 
   return Array.from(map.values());
 }
+
+import type {ScannedTrack} from '../state';

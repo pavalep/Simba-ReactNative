@@ -55,4 +55,24 @@ export {
   type FollowedPodcastsActions,
 } from './followedPodcastsStore';
 
+export {
+  useMediaStore,
+  useMediaSearchIndex,
+  useMediaArtists,
+  useMediaAlbums,
+  useMediaAudioTracks,
+  useMediaVideoTracks,
+  useMediaLocalVideos,
+  buildSearchIndex,
+  EMPTY_SCAN_HISTORY,
+  type ScannedTrack,
+  type ArtistEntry,
+  type AlbumEntry,
+  type SearchIndex,
+  type ScanProgress,
+  type ScanHistory,
+  type MediaState,
+  type MediaActions,
+} from './mediaStore';
+
 export {RESET_APP_STATE, resetAppState} from './resetAction';

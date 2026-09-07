@@ -6,7 +6,7 @@ import {
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
-import type {ScanProgress, ScanHistory} from '../../../store/slices/mediaSlice';
+import {useMediaStore} from '../../../state';
 
 interface ScanProgressBannerProps {
   /** Whether a scan is currently in progress */
@@ -228,3 +228,5 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
 });
+
+import type {ScanProgress, ScanHistory} from '../../../state';

@@ -16,7 +16,7 @@ import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {useAppDispatch, useAppSelector} from '../../../store';
 
-import {selectAllTracks, selectTrackCount} from '../../../store/slices/mediaSlice';
+
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {ScanProgressBanner} from '../../../components/feedback/ScanProgressBanner/ScanProgressBanner';
@@ -27,6 +27,7 @@ import {useMediaScanner} from '../../../hooks/useMediaScanner';
 
 import type {LinkedFoldersScreenProps} from '../types';
 import {useSettingsStore} from '../../../state';
+import {useMediaStore} from '../../../state';
 
 // ─── Constants ──────────────────────────────────────────────
 
@@ -280,8 +281,8 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
   const {startScan, isScanning} = useMediaScanner();
 
   const lastScanTimestamp = useSettingsStore(s => s.lastScanTimestamp);
-  const allTracks = useAppSelector(selectAllTracks);
-  const totalTrackCount = useAppSelector(selectTrackCount);
+  const allTracks = useMediaStore(s => s.tracks);
+  const totalTrackCount = useMediaStore(s => s.tracks.length);
 
   // Edge case states
   const [error, setError] = useState<string | null>(null);

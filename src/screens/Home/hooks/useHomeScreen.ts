@@ -10,7 +10,7 @@ import {useBookmarks} from '../../../features/bookmarks';
 import {usePlaylists} from '../../../features/playlists';
 import {logger} from '../../../lib/logger';
 
-import {selectAllTracks} from '../../../store/slices/mediaSlice';
+
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
@@ -21,6 +21,7 @@ import {useWeather} from '../../../hooks/useWeather';
 import type {WeatherCondition} from '../../../components/utility/WeatherIcon';
 import type {WeatherSnapshot} from '../../../services/api/weatherService';
 import type {HomeSection} from '../types';
+import {useMediaStore} from '../../../state';
 
 // ── Helpers ──
 
@@ -118,9 +119,9 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const {allBookmarks: bookmarks, remove: removeBookmark} = useBookmarks();
   
   const {list: playlists} = usePlaylists();
-  const allTracks = useAppSelector(selectAllTracks);
+  const allTracks = useMediaStore(s => s.tracks);
   const {list: followedPodcasts} = useFollowedPodcasts();
-  const isScanning = useAppSelector(s => s.media?.isScanning ?? false);
+  const isScanning = useMediaStore(s => s.isScanning);
 
   // ── Derived Data ──
   const genres = useMemo(() => {

@@ -4,18 +4,11 @@
 // ────────────────────────────────────────────────────────
 
 import {useCallback, useMemo, useState} from 'react';
-import {createSelector} from '@reduxjs/toolkit';
 import {useAppSelector} from '../../../store';
-import {selectAllTracks} from '../../../store/slices/mediaSlice';
+
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
 import {usePlayerActivity} from '@simba-dev/react-native-media-player';
-import type {ScannedTrack} from '../../../store/slices/mediaSlice';
-
-// 59.2: stable selector — inline filters re-ran on EVERY store dispatch
-// (incl. mpv position ticks) and re-rendered the whole screen.
-const selectVideoTracks = createSelector([selectAllTracks], tracks =>
-  tracks.filter(t => t.mediaType === 'video'),
-);
+import {useMediaVideoTracks} from '../../../state';
 
 export type SortMode = 'title' | 'date';
 export type ViewMode = 'grid' | 'list';
@@ -43,7 +36,7 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
   const [refreshing, setRefreshing] = useState(false);
   const {startScan} = useMediaScanner();
 
-  const videoTracks = useAppSelector(selectVideoTracks);
+  const videoTracks = useMediaVideoTracks();
 
   const toggleSort = useCallback(() => {
     setSortMode(s => (s === 'title' ? 'date' : 'title'));
@@ -108,3 +101,5 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
     handleRefresh,
   };
 }
+
+import type {ScannedTrack} from '../../../state';

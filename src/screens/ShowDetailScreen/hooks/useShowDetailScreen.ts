@@ -3,21 +3,15 @@
 // matched to episodes by filename (S01E02 patterns) for enrichment.
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {createSelector} from '@reduxjs/toolkit';
 import {getShowById, getEpisodeList} from '../../../services/api/tvmazeService';
-import {selectAllTracks} from '../../../store/slices/mediaSlice';
+
 import {useAppSelector} from '../../../store';
 import {
   fileNameMatchesShow,
   fileNameMatchesEpisode,
 } from '../../../services/episodeMatcher';
 import type {TVMazeShow, TVMazeEpisode} from '../../../types/api';
-
-// 59.2: stable selector — inline filters re-ran on EVERY store dispatch
-// (incl. mpv position ticks) and re-rendered the whole screen.
-const selectLocalVideos = createSelector([selectAllTracks], tracks =>
-  tracks.filter(t => t.mediaType === 'video'),
-);
+import {useMediaStore, useMediaVideoTracks} from '../../../state';
 
 export interface MatchedEpisode {
   episode: TVMazeEpisode;
@@ -26,7 +20,7 @@ export interface MatchedEpisode {
 }
 
 export function useShowDetailScreen(showId: number) {
-  const localVideos = useAppSelector(selectLocalVideos);
+  const localVideos = useMediaVideoTracks();
   const [show, setShow] = useState<TVMazeShow | null>(null);
   const [episodes, setEpisodes] = useState<TVMazeEpisode[]>([]);
   const [isLoading, setIsLoading] = useState(true);

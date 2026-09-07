@@ -1,0 +1,90 @@
+V17 Phase 80: mediaStore (persist, fix N+1 buildSearchIndex)
+
+`mediaSlice` → `useMediaStore` (zustand + persist, key='media',
+version=1, same persist key as the redux-persist whitelist).
+
+V16 out-of-scope fix that V17 picked up: the `searchIndex` is
+no longer stored in slice state. The old slice rebuilt the entire
+inverted index on every `setTracks` / `addTracks` / `removeTrack`
+/ `clearTracks` action (N+1: 1 track change = re-index all
+tracks). The new store has `buildSearchIndex` as a pure function
+plus `useMediaSearchIndex()` as a hook that memoizes on the
+`tracks` reference — the same index is returned as long as
+`tracks` is unchanged. `useSearch` and other search-heavy
+consumers re-render only when `tracks` actually changes.
+
+The old `rebuildSearchIndex` action is now a no-op (kept as a
+function so existing dispatch call sites don't crash; new code
+should just leave it out).
+
+New derived hooks (all `useMemo` on `tracks`):
+- `useMediaSearchIndex()` → SearchIndex
+- `useMediaArtists()` → ArtistEntry[] (was `selectArtists`)
+- `useMediaAlbums()` → AlbumEntry[] (was `selectAlbums`)
+- `useMediaAudioTracks()` → ScannedTrack[] (was `selectAudioTracks`)
+- `useMediaVideoTracks()` → ScannedTrack[] (was `selectVideoTracks`)
+- `useMediaLocalVideos()` → ScannedTrack[] (was `selectLocalVideos`)
+
+Migrated files (25 consumer files + slice deletion + rootReducer)
+- src/hooks/useMediaScanner.ts: scanner state selectors + scan
+  actions.
+- src/hooks/useSearch.ts: `selectAllTracks` → `useMediaStore(s =>
+  s.tracks)`, `selectSearchIndex` → `useMediaSearchIndex()`,
+  `selectArtists` → `useMediaArtists()`, `selectAlbums` →
+  `useMediaAlbums()`.
+- src/components/feedback/ScanProgressBanner/ScanProgressBanner.tsx
+- src/components/status/GlobalOperationProgress/GlobalOperationProgress.tsx
+- src/screens/Album/hooks/useAlbumScreen.ts: parameterized
+  `selectAlbumTracks(state, album, artist)` inlined to a
+  `useMediaStore(s => s.tracks.filter(...).sort(...))` closure
+  (single hook call; the createSelector wrapper is unnecessary
+  because zustand's selector identity check handles referential
+  stability).
+- src/screens/AllAudio/hooks/useAllAudioScreen.ts: local
+  `selectAudioTracks = createSelector(...)` removed; calls
+  `useMediaAudioTracks()` directly.
+- src/screens/AllVideos/hooks/useAllVideosScreen.ts: same, with
+  `useMediaVideoTracks()`.
+- src/screens/Artist/hooks/useArtistScreen.ts:
+  `selectArtistDiscography` inlined.
+- src/screens/FolderLinkingWizard: 5 sites.
+- src/screens/Genre/hooks/useGenreScreen.ts
+- src/screens/Home/hooks/useHomeScreen.ts: `s => s.media?.isScanning`
+  → `useMediaStore(s => s.isScanning)`.
+- src/screens/Library/{AlbumDetailScreen,AlbumGrid,ArtistDetailScreen,ArtistGrid}.tsx
+- src/screens/Library/{hooks/useAlbumEnrichment,hooks/useLibraryScreen}.ts
+- src/screens/Library/components/{LibraryAudioSegment,LibraryFoldersSegment}.tsx
+- src/screens/LinkedFolders/components/LinkedFoldersScreen.tsx
+- src/screens/Profile/components/ProfileScreen.tsx
+- src/screens/ShowDetailScreen/hooks/useShowDetailScreen.ts:
+  local `selectLocalVideos` removed; uses `useMediaVideoTracks()`.
+- src/screens/Song/hooks/useSongScreen.ts
+- src/services/fileService.ts, src/services/metadataService.ts
+
+Deleted
+- src/store/slices/mediaSlice.ts
+
+Updated
+- src/store/rootReducer.ts: `media` entry removed.
+- src/state/index.ts: 4 new hook + type exports
+  (`useMediaStore`, `useMediaSearchIndex`, `useMediaArtists`,
+  `useMediaAlbums`, `useMediaAudioTracks`, `useMediaVideoTracks`,
+  `useMediaLocalVideos`, `buildSearchIndex`, `EMPTY_SCAN_HISTORY`,
+  `ScannedTrack`, `ArtistEntry`, `AlbumEntry`, `SearchIndex`,
+  `ScanProgress`, `ScanHistory`, `MediaState`, `MediaActions`).
+
+Migration script
+- `transformMediaSelectorRefs` added to migrate the
+  `useAppSelector(selectX)` function-reference form for known
+  media selectors (Phase 80's specific contribution: 6 direct
+  selectors + 3 derived hooks).
+
+Verification
+- `npx tsc --noEmit`: 0 errors.
+- `npx jest`: 4 suites, 12 passed, 1 todo. No regressions.
+
+Junior-dev rule honored: each consumer still imports just
+`useMediaStore` (or a single derived hook like `useMediaAlbums`)
+from `../state`. The `buildSearchIndex` function is exported
+alongside the store so search-related code can re-derive the
+index if needed (e.g. for tests).

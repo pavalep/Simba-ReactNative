@@ -8,7 +8,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import {useNavigation, useRoute, type RouteProp} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAppSelector} from '../../../store';
-import {selectAllTracks} from '../../../store/slices/mediaSlice';
+
 import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {loadLrc} from '../../../services/lrcService';
@@ -16,6 +16,7 @@ import type {RootStackParamList} from '../../../navigation/types';
 import type {LrcLine} from '../../../utils/lrcParser';
 import {isRemoteUri} from '../../../utils/mediaUri';
 import { resolveStreamType, usePlayerActivity, useQueue } from '@simba-dev/react-native-media-player';
+import {useMediaStore} from '../../../state';
 
 type SongRoute = RouteProp<RootStackParamList, 'SongScreen'>;
 type SongNav = NativeStackNavigationProp<RootStackParamList, 'SongScreen'>;
@@ -46,7 +47,7 @@ export function useSongScreen() {
   const {fileUri, title: titleParam, artist: artistParam, album: albumParam} = route.params;
 
   // Find the full track from store
-  const allTracks = useAppSelector(selectAllTracks);
+  const allTracks = useMediaStore(s => s.tracks);
   const track = useMemo(
     () => allTracks.find(t => t.uri === fileUri) ?? null,
     [allTracks, fileUri],

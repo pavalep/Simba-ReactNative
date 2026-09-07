@@ -5,9 +5,10 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {getReleaseGroupDetail} from '../../../services/api/musicbrainzService';
-import {selectAlbumTracks} from '../../../store/slices/mediaSlice';
+
 import {useAppSelector} from '../../../store';
 import type {MusicBrainzReleaseGroupDetail} from '../../../types/api';
+import {useMediaStore} from '../../../state';
 
 /** Lowercase, punctuation-collapsed title for fuzzy match (P39.3). */
 function normalizeTitle(input: string): string {
@@ -25,8 +26,14 @@ export function useAlbumEnrichment(
   albumTitle: string,
   artistName: string,
 ): AlbumEnrichment {
-  const localTracks = useAppSelector(state =>
-    selectAlbumTracks(state, albumTitle, artistName),
+  const localTracks = useMediaStore(s =>
+    s.tracks
+      .filter(
+        t =>
+          (t.album || 'Unknown Album').toLowerCase() === albumTitle.toLowerCase() &&
+          (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
+      )
+      .sort((a, b) => a.trackNumber - b.trackNumber),
   );
   const [releaseGroup, setReleaseGroup] =
     useState<MusicBrainzReleaseGroupDetail | null>(null);
