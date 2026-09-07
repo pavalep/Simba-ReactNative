@@ -141,19 +141,3 @@ export async function getAudiusTrackById(
   }
 }
 
-/**
- * Get tracks by genre on Audius.
- * Uses tagged/feed endpoint filtered by genre tag.
- */
-export async function getAudiusTracksByGenre(
-  genre: string,
-  limit: number = 10,
-): Promise<AudiusTrackResult[]> {
-  // Audius doesn't have a direct genre filter on search, so use trending
-  // with genre filtering applied client-side from search results
-  const allTrending = await getTrendingAudiusTracks(50);
-  const q = genre.toLowerCase();
-  return allTrending
-    .filter(t => t.genre.toLowerCase().includes(q))
-    .slice(0, limit);
-}
