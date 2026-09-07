@@ -126,7 +126,10 @@ export function useArtistScreen() {
   );
 
   const handleSeeAllTracks = useCallback(() => {
-    (navigation as any).navigate('AllAudioScreen', {filter: artistName});
+    // V16 Phase 73: drop `(navigation as any)` — the typed
+    // `navigate` already accepts the registered route name
+    // and its param shape.
+    navigation.navigate('AllAudioScreen', {filter: artistName});
   }, [navigation, artistName]);
 
   const handleGoBack = useCallback(() => {

@@ -148,38 +148,64 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   }, [startScan]);
 
   // ── Navigation Handlers ──
+  // V16 Phase 73: removed 6 `(navigation as any).navigate(...)` casts.
+  // The `as any` was hiding 3 real type issues:
+  //   1. `navigate('Settings')` needs the object form (no params)
+  //      for the discriminated union to resolve.
+  //   2. `navigate('FolderLinkingWizard')` had no string-form
+  //      overload available in this composite.
+  //   3. `navigate('AlbumScreen', {artistName, albumTitle})` had
+  //      the wrong param key: the route's typed param is
+  //      `albumName`, not `albumTitle`. The previous code was
+  //      silently dropping the album name on navigation, leaving
+  //      the AlbumScreen to render with `albumName === ''`.
+  // Each call uses the typed `{name, params?}` object form.
   const navigateToSettings = useCallback(() => {
-    (navigation as any).navigate('Settings');
+    // Settings is a nested-stack route on the root stack; the
+    // typed `navigate` requires the inner screen shape.
+    navigation.navigate({name: 'Settings', params: {screen: 'Settings', params: undefined}});
   }, [navigation]);
 
   const navigateToLinkedFolders = useCallback(
     (type: 'video' | 'audio') => {
-      (navigation as any).navigate('Settings', {screen: 'LinkedFolders', params: {type}});
+      navigation.navigate({
+        name: 'Settings',
+        params: {screen: 'LinkedFolders', params: {type}},
+      });
     },
     [navigation],
   );
 
   const navigateToFolderBrowser = useCallback(
     (folderPath: string) => {
-      (navigation as any).navigate('FolderBrowser', {initialPath: folderPath});
+      navigation.navigate({name: 'FolderBrowser', params: {initialPath: folderPath}});
     },
     [navigation],
   );
 
   const handleLinkFolder = useCallback(() => {
-    (navigation as any).navigate('FolderLinkingWizard');
+    // FolderLinkingWizard is inside the Settings nested stack;
+    // its typed `params` object is required even though its
+    // inner `type` is optional.
+    navigation.navigate({name: 'Settings', params: {screen: 'FolderLinkingWizard', params: {}}});
   }, [navigation]);
 
   const handleArtistPress = useCallback(
     (artistName: string) => {
-      (navigation as any).navigate('ArtistScreen', {artistName});
+      navigation.navigate({name: 'ArtistScreen', params: {artistName}});
     },
     [navigation],
   );
 
   const handleAlbumPress = useCallback(
     (albumTitle: string, artistName: string) => {
-      (navigation as any).navigate('AlbumScreen', {artistName, albumTitle});
+      // Real bug fix: the route's typed param is `albumName`, not
+      // `albumTitle`. The previous `(navigation as any).navigate(...)`
+      // was silently dropping the album name on navigation.
+      navigation.navigate({
+        name: 'AlbumScreen',
+        params: {albumName: albumTitle, artistName},
+      });
     },
     [navigation],
   );

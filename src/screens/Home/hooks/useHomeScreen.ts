@@ -8,6 +8,7 @@ import type {RootStackParamList} from '../../../navigation/types';
 import {pickMediaFile, getMediaType} from '../../../services/fileService';
 import {useBookmarks} from '../../../features/bookmarks';
 import {usePlaylists} from '../../../features/playlists';
+import {logger} from '../../../lib/logger';
 
 import {selectAllTracks} from '../../../store/slices/mediaSlice';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
@@ -147,7 +148,12 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
         title: file.title || 'Untitled',
         type: resolveStreamType(mediaType),
       });
-    } catch {}
+    } catch (e) {
+      // V16 Phase 73: the pickMediaFile()/openPlayer() sequence
+      // was the most common entry point. The silent swallow was
+      // hiding "user picked a file but nothing happened" reports.
+      logger.warn('[useHomeScreen] pick+play failed', e);
+    }
   }, [openPlayer]);
 
   const handleItemPress = useCallback(

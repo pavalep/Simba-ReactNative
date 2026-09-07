@@ -4,6 +4,7 @@ import RNFS from 'react-native-fs';
 import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 
 import {isRemoteUri} from '../utils/mediaUri';
+import {logger} from '../lib/logger';
 
 import type {ScannedTrack} from '../store/slices/mediaSlice';
 import {linkedMediaFolderId} from '../types/media';
@@ -259,7 +260,13 @@ export async function checkFileExists(uri: string): Promise<boolean> {
       try {
         const stat = await RNFS.stat(uri);
         if (stat.isFile() && stat.size > 0) return true;
-      } catch {}
+      } catch (e) {
+        // V16 Phase 73: log so a stat-failure on a content:// URI
+        // is visible. The function falls through to the native
+        // verifyContentUri() call below, so the user-facing
+        // behavior is unchanged.
+        logger.warn('[fileService] RNFS.stat failed for', uri, e);
+      }
       // RNFS.stat may not support content:// URIs — fall back to native check
       return getMpvPlayerModule().verifyContentUri(uri);
     }

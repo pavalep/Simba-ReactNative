@@ -1,6 +1,7 @@
 import RNFS from 'react-native-fs';
 
 import {isRemoteUri, cacheKeyFromUri} from '../utils/mediaUri';
+import {logger} from '../lib/logger';
 
 /**
  * Remote artwork disk LRU cache (P33.7).
@@ -97,7 +98,14 @@ export async function pruneArtCache(maxFiles: number = MAX_FILES): Promise<void>
     for (const f of oldest) {
       try {
         await RNFS.unlink(f.path);
-      } catch {}
+      } catch (e) {
+        // V16 Phase 73: log the unlink failure so a stuck cache
+        // eviction is visible. The outer catch handles broader
+        // scan failures; this catches per-file unlink errors.
+        logger.warn('[artCacheService] failed to unlink', f.path, e);
+      }
     }
-  } catch {}
+  } catch (e) {
+    logger.warn('[artCacheService] eviction scan failed', e);
+  }
 }

@@ -1,4 +1,5 @@
 import RNFS from 'react-native-fs';
+import {logger} from '../lib/logger';
 
 /**
  * Storage management helpers (Phase 46.4).
@@ -51,5 +52,11 @@ export async function clearCache(): Promise<void> {
           : RNFS.unlink(item.path),
       ),
     );
-  } catch {}
+  } catch (e) {
+    // V16 Phase 73: log so a silent cache-clear failure is
+    // visible. The original behavior (swallow + return 0) is
+    // preserved at the function boundary; this just makes
+    // the failure observable for diagnostics.
+    logger.warn('[cacheService] failed to clear cache entries', e);
+  }
 }

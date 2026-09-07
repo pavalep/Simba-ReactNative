@@ -1,5 +1,6 @@
 import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {store} from '../store';
+import {logger} from '../lib/logger';
 
 // ─── EQ constants (shared by player panels + Equalizer screen) ───
 
@@ -79,26 +80,29 @@ export function applyPlaybackSettingsToMpv(): void {
 export function applyAudioSettingsToMpv(): void {
   const s = store.getState().settings;
   const bridge = getMpvPlayerModule();
-  try {
-    bridge.setProperty(
-      'volume-max',
-      s.isAudioNormalizationEnabled ? 100 : 130,
-    );
-  } catch {}
-  try {
-    bridge.setProperty('replaygain', s.replayGain);
-  } catch {}
-  try {
-    bridge.setProperty('gapless-audio', s.gaplessPlayback ? 'yes' : 'no');
-  } catch {}
-  try {
-    bridge.setProperty('audio-delay', s.audioDelay);
-  } catch {}
-  try {
-    bridge.setProperty('audio-samplerate', s.sampleRate);
-  } catch {}
-  try {
-    const gains = s.eqEnabled ? s.eqGains : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    bridge.setProperty('af', buildAfFilter(gains, s.isDialogueBoostEnabled));
-  } catch {}
+  // V16 Phase 73: every property is individually guarded AND
+  // logged if it fails. mpv may be uninitialized, and unsupported
+  // properties must never crash the app - but the silent failure
+  // was hiding real configuration problems. Each `logger.warn`
+  // includes the property name so support can diagnose the
+  // settings-not-sticking bug.
+  const setProp = (name: string, value: string | number) => {
+    try {
+      bridge.setProperty(name, value);
+    } catch (e) {
+      logger.warn('[audioSettingsService] setProperty failed:', name, e);
+    }
+  };
+  setProp('volume-max', s.isAudioNormalizationEnabled ? 100 : 130);
+  setProp('replaygain', s.replayGain);
+  setProp('gapless-audio', s.gaplessPlayback ? 'yes' : 'no');
+  setProp('audio-delay', s.audioDelay);
+  setProp('audio-samplerate', s.sampleRate);
+  setProp(
+    'af',
+    buildAfFilter(
+      s.eqEnabled ? s.eqGains : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      s.isDialogueBoostEnabled,
+    ),
+  );
 }
