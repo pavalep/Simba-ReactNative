@@ -21,17 +21,17 @@
 
 The SIMBA app carries **two state-management paradigms** today:
 
-- **Zustand** (5 stores) inside `@simba-dev/react-native-media-player` for everything player-pipeline.
-- **Redux Toolkit** (8 slices, 1 persisted store, 1 Provider) at the app root for everything else: auth, media, settings, weather, bookmarks, playlists, recent history, session.
+- **Zustand** (2 stores that survived V16) inside `@simba-dev/react-native-media-player` for everything player-pipeline.
+- **Redux Toolkit** (13 reducers: 9 slices + 4 feature reducers, 1 persisted store, 1 Provider) at the app root for everything else: auth, pip, downloads, media, liveFavorites, player, session, settings, weather, bookmarks, followedPodcasts, playlists, recentHistory.
 
 The module proved V14/V15/V16 that Zustand works for player state. Redux was kept for everything else because the migration scope was unclear. V17 closes that loop.
 
-V17 unifies the consumer on **Zustand only**. The 8 Redux slices move to 8 zustand stores under `src/state/`. The `<Provider store={store}>` + `<PersistGate loading={null}>` in `App.tsx` go away. `useAppSelector` / `useAppDispatch` go away. `@reduxjs/toolkit` + `react-redux` + `redux-persist` come out of `package.json`.
+V17 unifies the consumer on **Zustand only**. The 13 Redux reducers move to 13 zustand stores under `src/state/`. The `<Provider store={store}>` + `<PersistGate loading={null}>` in `App.tsx` go away. The 48 `useAppSelector` / `useAppDispatch` call sites across 47 files go away. `@reduxjs/toolkit` + `react-redux` + `redux-persist` (and `redux-logger` for dev) come out of `package.json`.
 
 The motivation is the same "no half-baked" charter that drove V16:
 - **One paradigm, not two.** A junior dev reading the codebase today has to learn Redux patterns + Zustand patterns. V17 collapses to Zustand.
-- **Less code.** Redux boilerplate (action types, action creators, reducer switch, Provider wiring, PersistGate) goes away. Each slice shrinks to a single zustand `create<T>()((set, get) => ({ ...state, ...actions }))` call.
-- **Smaller dependency footprint.** Three packages removed: `@reduxjs/toolkit`, `react-redux`, `redux-persist`. ~150 KB uninstalled.
+- **Less code.** Redux boilerplate (action types, action creators, reducer switch, Provider wiring, PersistGate, dev-only middleware) goes away. Each slice shrinks to a single zustand `create<T>()((set, get) => ({ ...state, ...actions }))` call.
+- **Smaller dependency footprint.** Four packages removed: `@reduxjs/toolkit`, `react-redux`, `redux-persist`, `redux-logger`. ~200 KB uninstalled.
 - **V16's junior-dev principle extends to state.** `<SimbaPlayer resumePolicy={fn}>` is one prop. The state is one `useFooStore(selector)` call. Same shape.
 
 V17 also bundles two V16 out-of-scope fixes that fall out naturally:
@@ -44,21 +44,25 @@ V17 also bundles two V16 out-of-scope fixes that fall out naturally:
 
 ### In scope (this V17)
 
-- **8 zustand stores** under `src/state/`:
+- **13 zustand stores** under `src/state/` (12 persisted + 1 transient):
   - `authStore` (persisted) — replaces `authSlice`
+  - `pipStore` (NOT persisted, transient) — replaces `pipSlice` (PiP on/off + restore on activity)
+  - `downloadsStore` (persisted) — replaces `downloadsSlice`
+  - `liveFavoritesStore` (persisted) — replaces `liveFavoritesSlice`
+  - `followedPodcastsStore` (persisted) — replaces `followedPodcastsReducer` (from `src/features/followedPodcasts/`)
   - `playerStore` (persisted) — replaces `playerSlice`
   - `mediaStore` (persisted) — replaces `mediaSlice` (with the N+1 fix)
   - `bookmarksStore` (persisted) — replaces `bookmarkReducer` (feeds the V16 `resumePolicy`)
   - `playlistsStore` (persisted) — replaces `playlistReducer`
   - `recentHistoryStore` (persisted) — replaces `recentHistoryReducer`
   - `settingsStore` (persisted) — replaces `settingsSlice`
-  - `sessionStore` (NOT persisted, transient) — replaces `sessionSlice`
+  - `sessionStore` (NOT persisted, transient) — replaces `sessionSlice` (small `playCounts` + `mediaLibrary` tracking)
   - `weatherStore` (persisted) — replaces `weatherSlice` (with the console.log cleanup)
 - **`src/state/persistence.ts`** — shared `createJSONStorage(() => AsyncStorage)` factory + rehydration helper. One place to configure persistence so each store's `name` / `partialize` / `version` are co-located.
 - **`src/state/index.ts`** — re-exports for one-import convenience (mirrors the module's `src/index.ts`).
 - **App.tsx strip** — `<Provider store={store}>` + `<PersistGate loading={null}>` removed. The `<SimbaPlayer>` integration is unchanged (it doesn't depend on Redux).
-- **`package.json`** — drop `@reduxjs/toolkit`, `react-redux`, `redux-persist`. Add nothing (zustand is already in the module's deps; the consumer's own deps don't include it yet — see Phase 85).
-- **V17 release** — bump consumer's `package.json` (no code dep changes for the module) and tag `1.6.0` for the consumer's sake. The module stays at `1.5.0` (no changes).
+- **`package.json`** — drop `@reduxjs/toolkit`, `react-redux`, `redux-persist`, `redux-logger`. Add `zustand` (consumer-side dep, separate from the module's bundled copy).
+- **V17 release** — bump consumer's `package.json` and tag for the consumer's sake. The module stays at `1.5.0` (no changes).
 
 ### Out of scope (deferred)
 
@@ -74,17 +78,21 @@ V17 also bundles two V16 out-of-scope fixes that fall out naturally:
 ```
 src/
   state/
-    index.ts              # re-exports: useAuthStore, usePlayerStore, ...
+    index.ts              # re-exports: useAuthStore, usePipStore, ...
     authStore.ts
+    pipStore.ts           # no persist
+    downloadsStore.ts
+    liveFavoritesStore.ts
+    followedPodcastsStore.ts
     playerStore.ts
     mediaStore.ts
     bookmarksStore.ts
     playlistsStore.ts
     recentHistoryStore.ts
     settingsStore.ts
-    sessionStore.ts        # no persist
+    sessionStore.ts       # no persist
     weatherStore.ts
-    persistence.ts         # createJSONStorage(() => AsyncStorage) factory + helpers
+    persistence.ts        # createJSONStorage(() => AsyncStorage) factory + helpers
 ```
 
 Mirrors the module's `src/stores/` convention. One folder per store. Each file is self-contained: types + store creation + per-feature action hooks at the top, with the persisted state shape + the per-store `partialize` at the bottom.
@@ -94,20 +102,23 @@ Old structure (deleted at end of V17):
 src/
   store/
     index.ts
+    persistConfig.ts
+    rootReducer.ts
     slices/
+      authSlice.ts
+      pipSlice.ts
+      downloadsSlice.ts
+      liveFavoritesSlice.ts
       playerSlice.ts
       mediaSlice.ts
-      authSlice.ts
-      settingsSlice.ts
       sessionSlice.ts
+      settingsSlice.ts
       weatherSlice.ts
   features/
     bookmarks/bookmarkReducer.ts
+    followedPodcasts/followedPodcastsReducer.ts
     playlists/playlistReducer.ts
     recentHistory/recentHistoryReducer.ts
-  hooks/
-    useAppSelector.ts
-    useAppDispatch.ts
 ```
 
 ---
@@ -116,19 +127,19 @@ src/
 
 ### Phase 76 — V17 charter + audit (already shipped with this doc)
 
-This document + the tracker. The "audit" is a `grep` of every `useAppSelector` / `useAppDispatch` / `dispatch(...)` site to lock the per-slice migration mapping. (See section 6 for the count.)
+This document + the tracker. The "audit" is a `grep` of every `useAppSelector` / `useAppDispatch` / `dispatch(...)` site to lock the per-slice migration mapping. The audit found **13 reducers** (not the 8 I originally listed in the charter) and **48 useAppSelector / useAppDispatch call sites** across **47 files**. The 5 stores added after the initial charter: `pipStore` (transient), `downloadsStore`, `liveFavoritesStore`, `followedPodcastsStore` (the 4 I missed in the original 8-store count). The `redux-logger` dev-only middleware also comes out (it shipped with `redux-toolkit` indirectly via `redux-persist`). Section 6 has the corrected count.
 
-### Phase 77 — `sessionStore` (no persist)
+### Phase 77 — `sessionStore` (no persist) + `pipStore` (no persist)
 
-Smallest slice; no persistence; pattern-prover for the folder + naming + the typed-hook pattern that the rest of V17 will follow. Replaces `src/store/slices/sessionSlice.ts` and the `useAppSelector(state => state.session.*)` consumers (a small handful: App.tsx splash gate, deep-link auth gate).
+Two transient slices, batched. `sessionStore` replaces `sessionSlice` (`playCounts` + `mediaLibrary` tracking). `pipStore` replaces `pipSlice` (PiP on/off + restore on activity). Both have small consumer graphs. No persistence — proves the new folder + naming + typed-hook pattern that the rest of V17 will follow.
 
 ### Phase 78 — `authStore` (persisted)
 
 The most-flowed-through persisted slice. Splash gate, deep-link auth gate, login/logout flow. Replaces `authSlice`. The V16 on-device smoke test will exercise this store.
 
-### Phase 79 — `settingsStore` + `weatherStore` (persisted)
+### Phase 79 — `settingsStore` + `weatherStore` + `liveFavoritesStore` + `followedPodcastsStore` (persisted)
 
-Two smaller persisted stores. `settingsStore` is consumed by the audio service (the V16 logger.warn work in `audioSettingsService.ts` already reads from this state) and the home / equalizer screens. `weatherStore` drops the 17+ `console.log` calls and replaces them with `logger.debug(...)` — the first `weatherSlice` audit item from the V16 charter.
+Four smaller persisted stores, batched. `settingsStore` is consumed by the audio service (the V16 logger.warn work in `audioSettingsService.ts` already reads from this state) and the home / equalizer screens. `weatherStore` drops the 17+ `console.log` calls and replaces them with `logger.debug(...)` — the first `weatherSlice` audit item from the V16 charter. `liveFavoritesStore` tracks the user's starred live TV channels. `followedPodcastsStore` tracks followed podcast feeds.
 
 ### Phase 80 — `mediaStore` (persisted, fixes the N+1)
 
@@ -146,15 +157,19 @@ Two small stores. `playlistsStore` is consumed by `useQueueScreen.handleSaveAsPl
 
 The largest remaining slice. `currentFile` / `playlist` / `currentIndex` + 5 actions (`loadPlaylistToPlayer`, `addToPlaylist`, `removeFromPlaylist`, `reorderPlaylist`, `playFromPlaylist`). Consumers: `useQueueScreen` + 4 "play all" screens + `MediaActionsSheet`. The player pipeline (queue + history) already lives in the module's zustand, so this slice is just the consumer UI's mirror.
 
-### Phase 84 — App.tsx strip
+### Phase 84 — `downloadsStore` (persisted)
+
+The download queue / completed-downloads state. Consumed by the download button component, the downloads screen, and the downloads sync hook.
+
+### Phase 85 — App.tsx strip
 
 `<Provider store={store}>` + `<PersistGate loading={null} persistor={persistor} onBeforeLift={onRehydrated}>` + the `useAppSelector` / `useAppDispatch` imports removed. The `<SimbaPlayer resumePolicy={...}>` integration is unchanged. The `onRehydrated` callback (used to mark the cold-start `mark('rehydrated')` for perf) moves to a per-store rehydration `onRehydrateStorage` callback.
 
-### Phase 85 — `package.json` cleanup
+### Phase 86 — `package.json` cleanup
 
-Remove `@reduxjs/toolkit`, `react-redux`, `redux-persist`. Add `zustand` (the consumer's own dep, separate from the module's bundled copy). `npm install` (with the project `.npmrc` `legacy-peer-deps=true`). tsc + jest green.
+Remove `@reduxjs/toolkit`, `react-redux`, `redux-persist`, `redux-logger`. Add `zustand` (the consumer's own dep, separate from the module's bundled copy). `npm install` (with the project `.npmrc` `legacy-peer-deps=true`). tsc + jest green.
 
-### Phase 86 — V17 release
+### Phase 87 — V17 release
 
 This is a **consumer-only release**. The module is unchanged. But to keep the consumer's release number in sync with the module's:
 
@@ -164,7 +179,7 @@ This is a **consumer-only release**. The module is unchanged. But to keep the co
 
 The V17 spec deliberately does NOT ship an npm publish for the module. V16's `1.5.0` is the latest module release; the module's V17-equivalent work is V16 itself (the type-bridge + SimbaPlayer v2 + the dead-feature drop already unblocked the player integration). Future module work (V17.1+) will resume normal module releases.
 
-### Phase 87 — V17 final QA report + tracker closeout
+### Phase 88 — V17 final QA report + tracker closeout
 
 The `md/SIMBA_PLAYER_MODULE_V17_FINAL_QA_REPORT.md` + tracker closeout. Records: per-phase outcomes, public-surface delta (consumer-side), the file-by-file migration map, the V16 out-of-scope items that V17 picked up, the remaining V18+ candidates.
 
