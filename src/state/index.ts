@@ -123,4 +123,11 @@ export {
   type DownloadsActions,
 } from './downloadsStore';
 
-export {RESET_APP_STATE, resetAppState} from './resetAction';
+// V17 Phase 86.1: the `resetAppState` redux action shim is gone
+// (every redux slice was deleted in Phases 77-84; the
+// extraReducers that listened for it are also gone). The
+// per-store `reset()` actions are the single source of truth
+// for cross-store reset orchestration (see `useAuth.signOut`).
+// (Removed in the same commit as the package.json cleanup
+// because the shim was the last file that imported from
+// @reduxjs/toolkit.)

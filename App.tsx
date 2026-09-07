@@ -221,11 +221,11 @@ const App: React.FC = () => {
     // any nested navigation gesture support.
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        {/* V17 Phase 85: <Provider> + <PersistGate> removed. Every
+        {/* V17 Phase 85: Provider + PersistGate wrappers removed. Every
             persisted store hydrates itself through zustand's
             `persist` middleware at module-load. The 4 wrappers
-            (Provider, PersistGate, ThemeProvider, SimbaPlayerRoot)
-            collapse to 3. */}
+            (redux Provider, redux PersistGate, ThemeProvider,
+            SimbaPlayerRoot) collapse to 3. */}
         <ThemeProvider>
           {/* V16: one wrapper, one prop. Replaces the V13
               `<PlayerProvider>` + `<PlayerResumeProvider>` pair

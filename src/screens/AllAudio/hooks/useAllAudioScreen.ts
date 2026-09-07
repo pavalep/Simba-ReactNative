@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────
 
 import {useCallback, useMemo, useState} from 'react';
-import {createSelector} from '@reduxjs/toolkit';
+// V17 Phase 86: `createSelector` from `@reduxjs/toolkit` removed.
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
 import {usePlayerActivity} from '@simba-dev/react-native-media-player';
 import {useMediaAudioTracks} from '../../../state';
