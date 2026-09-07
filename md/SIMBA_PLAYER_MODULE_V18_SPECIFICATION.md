@@ -1,7 +1,7 @@
 # V18 — API Adapter + TanStack Query: Specification
 
 **Author:** Senior dev review · **Date:** 2026-09-07
-**Status:** Proposal — pending manager sign-off
+**Status:** In execution — Wave 1 (Foundation) in progress
 **Builds on:** V17 (zustand state layer; the redux → zustand migration is done)
 
 ---
@@ -21,27 +21,125 @@ axios-layer bridge), **(2) TanStack Query for cache/retry/
 pagination/dedup** (the query layer), **(3) the screen only
 ever sees the domain type, never the wire shape**.
 
-## 2. The architecture (3 layers, 2 files per service, 1 mental model per layer)
+## 2. The type contract (the keystone)
+
+V18's correctness depends on a clean type contract at the
+adapter boundary. **The convertor is the only function
+allowed to cross from "raw" to "domain"; everything else
+is type-checked.** Without this, the adapter layer becomes
+a hand-wavy "trust me, the data looks like this" layer;
+with it, the convertor's signature IS the contract.
+
+### 2.1 Two type families per service
+
+| Family | Naming | Purpose | Lives in |
+|---|---|---|---|
+| **Raw** | `XxxRaw`, `XxxSearchRaw`, `XxxSingleRaw` | Matches the upstream API's JSON shape; the `T` passed to `apiFetch<T>` | File-local (or exported alongside the convertor that consumes it) |
+| **Domain** | `XxxResult`, `XxxSnapshot`, `XxxList` | What the screen consumes; always non-null, fully populated, app-flavored names | Exported from the adapter file |
+
+### 2.2 Convertor signatures (the contract)
+
+```ts
+// Single item — null on undefined input
+export function trackResultFromRaw(
+  raw: AudiusSingleRaw | undefined,
+): AudiusTrackResult | null;
+
+// List — empty array on undefined input
+export function trackResultsFromRaw(
+  raw: AudiusSearchRaw | undefined,
+): AudiusTrackResult[];
+```
+
+- **Pure** — no I/O, no state, no side effects.
+- **Exported** — importable in isolation for unit tests.
+- **Named** — `<noun>FromRaw` (single) or `<noun>sFromRaw` (list, plural Results).
+- **Inputs accept `undefined`** — covers the "transport failed before we got a shape" case without coupling to HTTP status codes.
+- **Output is `null` for single, `[]` for list** — never throws.
+
+### 2.3 Service functions always return `Promise<DomainType>`
+
+The convertor runs INSIDE the service. A consumer who wants
+the raw type is doing it wrong; the only escape hatch is a
+`_raw` variant we don't define unless there's a real need.
+
+```ts
+export async function searchAudiusTracks(
+  q: string,
+  page: number = 1,
+): Promise<AudiusTrackResult[]> {
+  const response = await apiFetch<AudiusSearchRaw>({...});
+  return trackResultsFromRaw(response?.data);
+}
+
+export async function getAudiusTrackById(
+  id: string,
+): Promise<AudiusTrackResult | null> {
+  const response = await apiFetch<AudiusSingleRaw>({...});
+  return response?.data ? trackResultFromRaw(response.data) : null;
+}
+```
+
+### 2.4 `useApiQuery<TResult>` is generic over the domain type
+
+The screen's `data` is typed as `TResult | undefined`, never
+as the raw type. A wrong response shape becomes a TypeScript
+error at the convertor, not a runtime error at the screen.
+
+```ts
+const {data} = useApiQuery<AudiusTrackResult[]>({
+  queryKey: ['audius', 'search', query, page],
+  queryFn: () => searchAudiusTracks(query, page),
+});
+//    ^? AudiusTrackResult[] | undefined
+```
+
+The generic is usually inferred from `queryFn`'s return type
+— the explicit `<AudiusTrackResult[]>` is for the rare case
+where the fetcher returns `any` or a union.
+
+### 2.5 File organization (per service)
+
+- **Small services** (≤4 methods): one file `xxxAdapter.ts`
+  with types, convertors, and service functions in that order.
+- **Large services** (5+ methods, e.g. Internet Archive): split
+  into `xxxTypes.ts` + `xxxAdapter.ts`. Types and convertors
+  become independently importable for tests.
+
+### 2.6 Tests are the proof
+
+A wrong convertor is a TypeScript error before it's a test
+failure, but the tests still exist: every convertor gets a
+unit test with at least 3 cases (happy path, missing fields,
+undefined input). This is what makes the convertor pattern
+debuggable — when a screen shows wrong data, the convertor's
+test is the first place to look.
+
+## 3. The architecture (3 layers, 1 mental model per layer)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ WIRE LAYER  (axios + adapter + convertors)                    │
 │ ──────────────────────────────                               │
-│   *Raw DTOs  →  file-local interfaces (never exported)       │
-│   convertors  →  EXPORTED named pure functions                │
-│   adapter object  →  thin: `await apiFetch` + `convertor`    │
+│   *Raw DTOs  →  XxxRaw (raw wire shape)                     │
+│   *Result    →  XxxResult (domain shape)                    │
+│   convertors  →  EXPORTED named pure functions               │
+│                 (xResultFromRaw, xResultsFromRaw)            │
+│   service fns →  Promise<XResult> — never Promise<Raw>     │
 │                                                             │
-│   Returns the app's domain type, NOT the wire shape.       │
+│   Per service: 1 file (small) or 2 (types + adapter)       │
 └─────────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ QUERY LAYER  (TanStack Query)                                │
 │ ──────────────────────────────                               │
-│   useApiQuery({key, fetcher, args, ttlMs})   →  single      │
-│   useInfiniteApiQuery({...})                 →  load-more    │
-│   useQueries([{...}])                       →  parallel fan │
-│   useApiMutation({fetcher, onSuccess})      →  user action  │
+│   useApiQuery({key, fetcher})                →  single      │
+│   useInfiniteApiQuery({key, fetcher, page})  →  load-more   │
+│   useQueries([{...}])                        →  parallel   │
+│   useApiMutation({fetcher, onSuccess})       →  user action │
+│                                                             │
+│   Thin wrapper around TanStack — project defaults baked in  │
 └─────────────────────────────────────────────────────────────┘
                           │
                           ▼
@@ -53,43 +151,34 @@ ever sees the domain type, never the wire shape**.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 3. The convertor pattern (the key design decision)
+## 4. The convertor pattern (per method)
 
-Each adapter method is **two lines**:
+Each adapter method is **two lines** of work:
 
 ```ts
-async search(args) {
-  const response = await apiFetch<RawResponse>({...});
-  return searchResultFromAudiusListResponse(response);
+async search(q, page) {
+  const response = await apiFetch<XxxSearchRaw>({...});
+  return xxxResultsFromRaw(response?.data);
 }
 ```
 
-The convertor is an **exported, named, pure function** that
-takes the raw wire shape (or `undefined`) and returns the
-domain shape. Trivially testable. Trivially mockable. Trivially
-replaceable when the API ships a v2.
+The convertor is the only place the raw shape is consumed.
+The rest of the codebase never sees it.
 
-**Naming convention:**
-- `xxxResultFromYyyRaw(raw)` — per-item conversion
-- `xxxResultFromYyyResponse(raw)` — whole-response conversion
-- Inputs accept `undefined` to handle the "transport failed
-  before we got a shape" case without coupling to HTTP status
-  codes
-
-## 4. The scale (data from the codebase)
+## 5. The scale (data from the codebase)
 
 | Surface | Count |
 |---|---:|
 | Service methods exported | **55** |
 | Service methods **actually used** | **47** (85%) |
-| Dead methods (zero call sites) | **8** (free win in V18.0) |
+| Dead methods (zero call sites) | **1** (only `getAudiusTracksByGenre`; the V18 brief's "8 dead" claim was wrong — see §9) |
 | Call sites across `src/` | **188** |
 | Hottest method | `getAllIPTVChannels` — **11 call sites** |
 | Hottest service | `internetArchiveService` — **32 call sites** |
 | Net `src/` LOC | 67,715 |
 | Net V18 LOC delta (estimated) | **-3,500 net** (+250 TanStack add) |
 
-## 5. The 10-wave / 40-phase plan (see TRACKER for the 800+ step checklist)
+## 6. The 10-wave / 40-phase plan (see TRACKER for the 800+ step checklist)
 
 | Wave | Theme | Phases | LOC delta |
 |---|---|---:|---:|
@@ -105,7 +194,7 @@ replaceable when the API ships a v2.
 | 10 | **Final QA + closeout** (tsc + jest + tag v18.0.0) | 4 | -50 |
 | **Total** | | **40** | **~3,500 net removed** |
 
-## 6. The 5 TanStack shape mappings
+## 7. The 5 TanStack shape mappings
 
 | API shape | TanStack hook | Key shape |
 |---|---|---|
@@ -118,33 +207,17 @@ replaceable when the API ships a v2.
 | Multi-source aggregate | `useQueries` | one query per source |
 | User mutation | `useApiMutation` | n/a (invalidation-driven) |
 
-## 7. The naming convention (the team's contribution)
+## 8. The naming convention
 
 | Layer | Naming |
 |---|---|
-| Adapter file | `src/services/api/<name>Adapter.ts` (default export: the adapter object) |
-| Wire DTO | `<Name>Raw`, `<Name>Response` — file-local, never exported |
-| Per-item convertor | `<name>ResultFrom<Source>Raw(raw): <DomainType>` — exported |
-| Response convertor | `<method>ResultFrom<Source>Response(raw): <DomainType>` — exported |
-| Domain type | re-exported from `src/types/api.ts` (or co-located in the adapter file) |
-| Cache key prefix | `<serviceName>.<methodName>` (e.g. `audius.search`, `jamendo.byId`) |
-
-## 8. The 8 dead methods (V18.0 free win)
-
-These have **zero call sites** in `src/` and can be deleted
-in the V18.0 prep commit with zero behavior change:
-
-1. `audiusService.getAudiusTracksByGenre`
-2. `jamendoService.getJamendoTracksByGenre`
-3. `librivoxService.searchByAuthor`
-4. `librivoxService.searchByGenre`
-5. `librivoxService.getRecentAudiobooks`
-6. `radioBrowserService.getGenres`
-7. `radioBrowserService.getCountries`
-8. `radioBrowserService.getLanguages`
-
-Each is a `~10-line` exported function with a `*Raw` DTO and
-a `map*()` body. ~80 lines of pure dead code.
+| Adapter file | `src/services/api/<name>Adapter.ts` (small service) or `src/services/api/<name>Types.ts` + `src/services/api/<name>Adapter.ts` (large service) |
+| Wire DTO | `XxxRaw`, `XxxSearchRaw`, `XxxSingleRaw` — file-local unless split, in which case exported from `xxxTypes.ts` |
+| Domain DTO | `XxxResult`, `XxxSnapshot` — always exported from the adapter file |
+| Per-item convertor | `xxxResultFromRaw(raw): XxxResult \| null` — exported |
+| List convertor | `xxxResultsFromRaw(raw): XxxResult[]` — exported |
+| Service function | `searchXxx`, `getXxxById`, `fetchXxxByCity` — exported; returns `Promise<XResult>` |
+| Cache key prefix | `[<serviceName>, <methodName>, ...args]` (e.g. `['audius', 'search', q, page]`) |
 
 ## 9. The risk surface (called out for the pilot phase)
 
@@ -152,7 +225,7 @@ a `map*()` body. ~80 lines of pure dead code.
 2. **Aggregation regression** (5 parallel sources with per-source error isolation)
 3. **Cache-key collisions** (188 call sites is a lot of new `key: [...]` arrays)
 4. **Stale closures** in fetcher (needs `useCallback` discipline)
-5. **Dead methods might not actually be dead** (V18.0 must include a runtime check)
+5. **~~Dead methods might not actually be dead~~ — REALIZED**: the V18 brief claimed 8 dead methods; `grep` across `src/` proved only 1 was actually dead. The other 7 had active call sites in mounted screens. **V18.0.2 was therefore skipped** per the manager's "skip V18.0 entirely" call. The remaining 6 live methods are migrated (not deleted) as part of the per-service waves (V18.3+).
 
 The pilot phase (V18.2, weather) is the risk isolator. If the
 design doesn't feel right after the weather migration, the
@@ -180,7 +253,7 @@ A phase is "done" when:
 
 | Layer | Junior dev's job | Lines | New file? |
 |---|---|---:|---|
-| **Add a new service** (adapter author) | 1 file: `*Adapter.ts` with `*Raw` + `map*()` + the adapter object | ~120 | yes |
+| **Add a new service** (adapter author) | 1 file: `*Adapter.ts` with `*Raw` + `*Result` + `xResultFromRaw` + `xResultsFromRaw` + the service function | ~120 | yes |
 | **Add a new screen call** (screen author) | 1 line: `useApiQuery({key, fetcher})` | ~4 | no |
 | **Add a new mutation** (screen author) | 1 line: `useApiMutation({fetcher, onSuccess})` | ~5 | no |
 | **Add a new infinite scroll** (screen author) | 1 line: `useInfiniteApiQuery({key, fetcher, pageSize})` | ~5 | no |

@@ -39,29 +39,21 @@
 - [x] `wc -l src/services/api/audiusService.ts` is lower than before — 143 → 127
 - [x] Behavior preserved: no code path in the app references the deleted method
 
-### Phase 2: V18.0.2 — Delete dead code in jamendo + librivox + radioBrowser
+### Phase 2: V18.0.2 — **SUPERSEDED** (skipped per Option-2 decision)
 
-- [ ] `getJamendoTracksByGenre` removed from `jamendoService.ts`
-- [ ] `searchByAuthor` removed from `librivoxService.ts`
-- [ ] `searchByGenre` removed from `librivoxService.ts`
-- [ ] `getRecentAudiobooks` removed from `librivoxService.ts`
-- [ ] `getGenres` removed from `radioBrowserService.ts`
-- [ ] `getCountries` removed from `radioBrowserService.ts`
-- [ ] `getLanguages` removed from `radioBrowserService.ts`
-- [ ] Each service has its corresponding `*Raw` DTO cleaned (if unique to the deleted method)
-- [ ] Each service has its corresponding `map*()` cleaned (if unique)
-- [ ] `grep -rn "getJamendoTracksByGenre" src/` returns 0 matches
-- [ ] `grep -rn "searchByAuthor" src/` returns 0 matches
-- [ ] `grep -rn "searchByGenre" src/` returns 0 matches
-- [ ] `grep -rn "getRecentAudiobooks" src/` returns 0 matches
-- [ ] `grep -rn "getGenres" src/` returns 0 matches
-- [ ] `grep -rn "getCountries" src/` returns 0 matches
-- [ ] `grep -rn "getLanguages" src/` returns 0 matches
-- [ ] `npx tsc --noEmit` reports 0 errors
-- [ ] `npx jest` reports no failures
-- [ ] `git diff --stat` shows NET reduction across the 3 files
-- [ ] No test file imports any of the deleted methods
-- [ ] `git log --oneline -1` shows the V18.0.2 commit
+The V18 brief claimed 8 dead methods. `grep` across `src/` proved only 1 was actually dead (`getAudiusTracksByGenre`, removed in V18.0.1). The other 7 are LIVE in mounted screens:
+
+- `getJamendoTracksByGenre` — `useGenreScreen.ts:79,118`, `useMusicScreen.ts:156`
+- `searchByAuthor` — only re-exported in `services/api/index.ts:30`, 0 consumers (effectively dead, but tiny)
+- `searchByGenre` — `useAudiobooksScreen.ts:120`
+- `getRecentAudiobooks` — `useAudiobooksScreen.ts:122`
+- `getGenres` — `useRadioBrowser.ts:270`
+- `getCountries` — `useRadioBrowser.ts:271`
+- `getLanguages` — `useRadioBrowser.ts:272`
+
+Per the manager's call, V18.0 ends at V18.0.1. The 6 live methods are migrated (not deleted) as part of the per-service waves (V18.3+). The re-export of `searchByAuthor` can be removed as a 1-line cleanup at any time but is not blocking.
+
+- [~] All items in this section — **skipped**; phase superseded
 
 ### Phase 3: V18.1.1 — Add @tanstack/react-query dependency
 
