@@ -11,7 +11,7 @@ import {
   useOpenFromUrl,
 } from '@simba-dev/react-native-media-player';
 import {store, persistor} from './src/store';
-import {useAuthStore} from './src/state';
+import {useAuthStore, useBookmarksStore} from './src/state';
 import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
@@ -199,15 +199,17 @@ const App: React.FC = () => {
   // returns its position in milliseconds (the module expects ms;
   // bookmarks store seconds).
   const resumePolicy = (resumeId: string) => {
-    const items = store.getState().bookmark.items;
+    const items = useBookmarksStore.getState().items;
     // Bookmarks are `(fileUri, position)`-hashed so multiple
     // positions can exist per URI; we take the most recently
     // created.
     const matches = items.filter(b => b.fileUri === resumeId);
     if (matches.length === 0) return undefined;
-    const latest = matches.reduce((acc, b) =>
-      acc.createdAt > b.createdAt ? acc : b,
+    const latest = matches.reduce<typeof matches[number] | null>((acc, b) =>
+      acc && acc.createdAt > b.createdAt ? acc : b,
+      null,
     );
+    if (!latest) return undefined;
     // Bookmark.position is seconds; the module expects ms.
     const ms = Math.round(latest.position * 1000);
     return Number.isFinite(ms) && ms > 0 ? ms : undefined;

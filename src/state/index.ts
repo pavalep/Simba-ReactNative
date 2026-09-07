@@ -75,4 +75,15 @@ export {
   type MediaActions,
 } from './mediaStore';
 
+export {
+  useBookmarksStore,
+  MAX_BOOKMARK_ENTRIES,
+  normalizeBookmarks,
+  type Bookmark,
+  type BookmarkInput,
+  type BookmarkPositionUpdate,
+  type BookmarksState,
+  type BookmarksActions,
+} from './bookmarksStore';
+
 export {RESET_APP_STATE, resetAppState} from './resetAction';

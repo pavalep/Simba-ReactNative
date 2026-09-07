@@ -1,29 +1,17 @@
-import {useCallback, useEffect, useImperativeHandle, useMemo, useRef, type ForwardedRef} from 'react';
-import {useAppDispatch, useAppSelector, type AppDispatch} from '../../store';
-import {
-  addBookmark as addBookmarkAction,
-  clearAllBookmarks as clearAllBookmarksAction,
-  removeBookmark as removeBookmarkAction,
-  selectAllBookmarks,
-  selectBookmarkCount,
-  selectBookmarkCountForFile,
-  selectBookmarksForFile,
-  setBookmarks,
-  updateBookmarkLabel as updateBookmarkLabelAction,
-  updateBookmarkPosition as updateBookmarkPositionAction,
-  type Bookmark,
-  type BookmarkInput,
-  type BookmarkPositionUpdate,
-} from './bookmarkReducer';
-import {MAX_BOOKMARK_ENTRIES} from './bookmarkReducer';
-import {clearPersistedBookmarks, loadPersistedBookmarks, persistBookmarks} from './bookmarkPersistence';
+import {useCallback, useImperativeHandle, useMemo, type ForwardedRef} from 'react';
+import {useBookmarksStore, MAX_BOOKMARK_ENTRIES} from '../../state';
+import type {
+  Bookmark,
+  BookmarkInput,
+  BookmarkPositionUpdate,
+} from '../../state';
 
 export type {
   Bookmark,
   BookmarkInput,
   BookmarkPositionUpdate,
-} from './bookmarkReducer';
-export {MAX_BOOKMARK_ENTRIES} from './bookmarkReducer';
+} from '../../state';
+export {MAX_BOOKMARK_ENTRIES} from '../../state';
 
 export type BookmarkAddResult =
   | {status: 'added'; bookmark: Bookmark}
@@ -68,7 +56,6 @@ function buildStableBookmarkId(fileUri: string, position: number): string {
 }
 
 function dispatchAddBookmark(
-  dispatch: AppDispatch,
   items: Bookmark[],
   input: BookmarkInput,
   options?: BookmarkAddOptions,
@@ -106,7 +93,7 @@ function dispatchAddBookmark(
     folderId: input.folderId ?? existing?.folderId,
   };
 
-  dispatch(addBookmarkAction({bookmark, evictId: options?.evictId}));
+  useBookmarksStore.getState().addBookmark({bookmark, evictId: options?.evictId});
   return {status: existing ? 'updated' : 'added', bookmark};
 }
 
@@ -128,54 +115,32 @@ export function useBookmarks(
   updateLabel: (id: string, label: string) => void;
   clearAll: () => void;
 } {
-  const dispatch = useAppDispatch();
-  const allBookmarks = useAppSelector(selectAllBookmarks);
-  const bookmarksForFile = useAppSelector(state =>
-    fileUri ? selectBookmarksForFile(state, fileUri) : [],
+  const allBookmarks = useBookmarksStore(s => s.items);
+  const bookmarksForFile = useMemo(
+    () => (fileUri ? allBookmarks.filter(b => b.fileUri === fileUri) : []),
+    [allBookmarks, fileUri],
   );
-  const bookmarkCount = useAppSelector(selectBookmarkCount);
-  const bookmarkCountForFile = useAppSelector(state =>
-    fileUri ? selectBookmarkCountForFile(state, fileUri) : 0,
-  );
-  const hydratedRef = useRef(false);
-
-  useEffect(() => {
-    let mounted = true;
-    void loadPersistedBookmarks().then(stored => {
-      if (!mounted) return;
-      if (stored.length > 0) dispatch(setBookmarks(stored));
-      hydratedRef.current = true;
-    });
-    return () => {
-      mounted = false;
-    };
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (hydratedRef.current) void persistBookmarks(allBookmarks);
-  }, [allBookmarks]);
+  const bookmarkCount = allBookmarks.length;
+  const bookmarkCountForFile = bookmarksForFile.length;
 
   const getBookmarks = useCallback(() => allBookmarks, [allBookmarks]);
   const add = useCallback(
     (input: BookmarkInput, options?: BookmarkAddOptions) =>
-      dispatchAddBookmark(dispatch, allBookmarks, input, options),
-    [allBookmarks, dispatch],
+      dispatchAddBookmark(allBookmarks, input, options),
+    [allBookmarks],
   );
-  const updatePosition = useCallback(
-    (update: BookmarkPositionUpdate) => {
-      dispatch(updateBookmarkPositionAction(update));
-    },
-    [dispatch],
-  );
-  const remove = useCallback((id: string) => dispatch(removeBookmarkAction(id)), [dispatch]);
-  const updateLabel = useCallback(
-    (id: string, label: string) => dispatch(updateBookmarkLabelAction({id, label})),
-    [dispatch],
-  );
+  const updatePosition = useCallback((update: BookmarkPositionUpdate) => {
+    useBookmarksStore.getState().updateBookmarkPosition(update);
+  }, []);
+  const remove = useCallback((id: string) => {
+    useBookmarksStore.getState().removeBookmark(id);
+  }, []);
+  const updateLabel = useCallback((id: string, label: string) => {
+    useBookmarksStore.getState().updateBookmarkLabel({id, label});
+  }, []);
   const clearAll = useCallback(() => {
-    dispatch(clearAllBookmarksAction());
-    void clearPersistedBookmarks();
-  }, [dispatch]);
+    useBookmarksStore.getState().clearAllBookmarks();
+  }, []);
 
   const handle = useMemo<BookmarkHandle>(
     () => ({
@@ -205,26 +170,21 @@ export function useBookmarks(
 }
 
 export function addBookmark(
-  dispatch: AppDispatch,
   input: BookmarkInput,
   items: Bookmark[],
   options?: BookmarkAddOptions,
 ): BookmarkAddResult {
-  return dispatchAddBookmark(dispatch, items, input, options);
+  return dispatchAddBookmark(items, input, options);
 }
 
-export function updateBookmarkPosition(
-  dispatch: AppDispatch,
-  update: BookmarkPositionUpdate,
-): void {
-  dispatch(updateBookmarkPositionAction(update));
+export function updateBookmarkPosition(update: BookmarkPositionUpdate): void {
+  useBookmarksStore.getState().updateBookmarkPosition(update);
 }
 
-export function removeBookmark(dispatch: AppDispatch, id: string): void {
-  dispatch(removeBookmarkAction(id));
+export function removeBookmark(id: string): void {
+  useBookmarksStore.getState().removeBookmark(id);
 }
 
-export function clearBookmarks(dispatch: AppDispatch): void {
-  dispatch(clearAllBookmarksAction());
-  void clearPersistedBookmarks();
+export function clearBookmarks(): void {
+  useBookmarksStore.getState().clearAllBookmarks();
 }

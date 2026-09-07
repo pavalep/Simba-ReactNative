@@ -61,6 +61,11 @@ const SLICES = [
     store: 'useMediaStore',
     importPathRe: /mediaSlice/,
   },
+  {
+    redux: 'bookmark',
+    store: 'useBookmarksStore',
+    importPathRe: /bookmarkReducer/,
+  },
 ];
 
 const ACTION_NAMES = {
@@ -98,6 +103,14 @@ const ACTION_NAMES = {
     'removeTrack',
     'clearTracks',
     'rebuildSearchIndex',
+  ]),
+  bookmark: new Set([
+    'addBookmark',
+    'updateBookmarkPosition',
+    'removeBookmark',
+    'updateBookmarkLabel',
+    'clearAllBookmarks',
+    'setBookmarks',
   ]),
 };
 

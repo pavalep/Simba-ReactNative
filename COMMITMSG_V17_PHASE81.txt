@@ -1,0 +1,54 @@
+V17 Phase 81: bookmarksStore (persist, feeds resumePolicy)
+
+`bookmarkReducer` + side-channel `bookmarkPersistence.ts` (a manual
+AsyncStorage mirror under key `simba_bookmarks`) →
+`useBookmarksStore` (Zustand + persist, key='bookmark' to match
+the old redux-persist whitelist). One persist path instead of
+two.
+
+The bookmark `addBookmark` action still returns a
+`BookmarkAddResult` discriminated union (added/updated/
+requires-confirmation) so the UI's overflow-eviction flow is
+unchanged. `resumePolicy` in `App.tsx` now reads from the
+zustand store directly via `useBookmarksStore.getState().items`.
+
+Migrated files
+- src/features/bookmarks/index.ts: rewritten to read/write the
+  zustand store. The `useEffect` hydration + `persistBookmarks`
+  side-effect is gone (zustand persist handles rehydration).
+  The exports `addBookmark` / `updateBookmarkPosition` /
+  `removeBookmark` / `clearBookmarks` are simplified to direct
+  store calls (no `dispatch` parameter — they were already a
+  compatibility shim for legacy code; this phase drops the
+  `dispatch` arg).
+- App.tsx: `resumePolicy` now reads from
+  `useBookmarksStore.getState().items` instead of
+  `store.getState().bookmark.items`.
+- src/services/bookmarkService.ts: deleted. Was a compatibility
+  bridge for legacy service imports; no consumer in the
+  codebase (only a comment reference in recentSearchService).
+
+Deleted
+- src/features/bookmarks/bookmarkReducer.ts
+- src/features/bookmarks/bookmarkPersistence.ts (side-channel
+  AsyncStorage mirror, key `simba_bookmarks`, no longer needed
+  because zustand persist owns the AsyncStorage IO)
+- src/services/bookmarkService.ts (no consumers)
+
+Updated
+- src/store/rootReducer.ts: `bookmark` entry removed.
+- src/state/index.ts: 4 new exports from `./bookmarksStore`:
+  `useBookmarksStore`, `MAX_BOOKMARK_ENTRIES`, `normalizeBookmarks`,
+  and the 4 type exports (`Bookmark`, `BookmarkInput`,
+  `BookmarkPositionUpdate`, `BookmarksState`, `BookmarksActions`).
+
+Verification
+- `npx tsc --noEmit`: 0 errors.
+- `npx jest`: 4 suites, 12 passed, 1 todo. No regressions.
+
+Junior-dev rule honored: each consumer imports just
+`useBookmarksStore` (or the type aliases) from `../state`. The
+`useBookmarks` hook is the single integration point — bookmark
+callers don't need to know about the persist middleware, the
+MAX_BOOKMARK_ENTRIES cap, or the `requires-confirmation`
+overflow flow.
