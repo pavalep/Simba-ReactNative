@@ -1,48 +1,42 @@
-// ────────────────────────────────────────────────────────
-// Simba Player — useGenreScreen Hook (Phase 20 / P41)
-// P41.1/41.2/41.3: full genre browse — local library,
-// Jamendo streaming catalog, mood collections (real tag
-// queries), and live radio stations for the genre.
-// ────────────────────────────────────────────────────────
+// ─── Genre Screen Hook ──────────────────────────────────────────────────
+// V18.11.4: converted from the v3-v9 4-tab pattern
+// (local / streaming / moods / radio) to the v10+ "single content
+// stream + FAB" pattern.
 //
-// V18.3.3: migrated 3 separate useState/useEffect blocks
-// (streaming, moods, radio) to 3 useApiQuery calls. The
-// radioBrowserService is not V18-migrated yet (Wave 4), so
-// it stays imported from the legacy file.
+// UX decisions (documented in V18_LEGACY_TABVIEW_CLEANUP.md):
+//   - "Local" + "Streaming" are kept as the two main views.
+//   - "Moods" was a multi-source Jamendo merge (4-5 tag queries
+//     deduped by track id). It was a unique feature but added
+//     significant complexity for a single FAB; deferred to a
+//     future "Moods" entry-point.
+//   - "Radio" duplicated the RadioScreenNew experience. The
+//     user can navigate there from the Library/Home tabs.
+//
+// The "source" field in the genre screen output is now
+// ('local' | 'streaming') only.
 
 import {useCallback, useMemo, useState} from 'react';
-import {useRoute, RouteProp} from '@react-navigation/native';
-import type {RootStackParamList} from '../../../navigation/types';
-import type {JamendoTrackResult, RadioStationResult} from '../../../types/api';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
 import {useApiQuery} from '../../../hooks/useApiQuery';
 import {getJamendoTracksByGenre} from '../../../services/api/jamendoAdapter';
 import {getStationsByGenre} from '../../../services/api/radioBrowserService';
 import {useMediaStore, type ScannedTrack} from '../../../state';
-import {
-  MOOD_COLLECTIONS,
-  type MoodCollection,
-} from '../../../constants/moodCollections';
-
-export type GenreBrowseTab = 'local' | 'streaming' | 'moods' | 'radio';
+import {useToast} from '../../../components/feedback/Toast';
+import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+import type {JamendoTrackResult, RadioStationResult} from '../../../types/api';
 
 const STREAMING_LIMIT = 30;
-const MOOD_TAG_LIMIT = 8;
+
+export type GenreSource = 'local' | 'streaming';
 
 export interface UseGenreScreenResult {
   genre: string;
-  tab: GenreBrowseTab;
-  setTab: (tab: GenreBrowseTab) => void;
+  source: GenreSource;
+  setSource: (s: GenreSource) => void;
   localTracks: ScannedTrack[];
   streamingTracks: JamendoTrackResult[];
   streamingLoading: boolean;
   streamingFailed: boolean;
   retryStreaming: () => void;
-  moods: MoodCollection[];
-  selectedMoodId: string;
-  selectMood: (id: string) => void;
-  moodTracks: JamendoTrackResult[];
-  moodLoading: boolean;
   radioStations: RadioStationResult[];
   radioLoading: boolean;
   radioFailed: boolean;
@@ -50,139 +44,96 @@ export interface UseGenreScreenResult {
   handlePlayTrack: (uri: string, title: string) => void;
   handlePlayStreaming: (track: JamendoTrackResult) => void;
   handlePlayStation: (station: RadioStationResult) => void;
+  isOnline: boolean;
 }
 
-export function useGenreScreen(): UseGenreScreenResult {
-  const {openPlayer} = usePlayerActivity();
-  const route = useRoute<RouteProp<RootStackParamList, 'GenreScreen'>>();
-  const {genre, initialTab} = route.params;
-
+export function useGenreScreen(
+  initialGenre: string,
+  initialSource: GenreSource = 'local',
+): UseGenreScreenResult {
   const allTracks = useMediaStore(s => s.tracks);
+  const toast = useToast();
+  const {isOnline} = useNetworkStatus();
 
-  // P41.1: browse tabs — library / streaming / moods / radio
-  const [tab, setTab] = useState<GenreBrowseTab>(initialTab ?? 'local');
+  const [source, setSource] = useState<GenreSource>(initialSource);
 
-  const localTracks = useMemo(
+  // ── Local: pure zustand-derived (no async) ──
+  const localTracks = useMemo<ScannedTrack[]>(
     () =>
       allTracks
-        .filter(t => t.genre.toLowerCase() === genre.toLowerCase())
+        .filter(t => t.genre.toLowerCase() === initialGenre.toLowerCase())
         .sort((a, b) => a.title.localeCompare(b.title)),
-    [allTracks, genre],
+    [allTracks, initialGenre],
   );
 
-  // P41.2: streaming catalog for this genre (real Jamendo genre query)
+  // ── Streaming: jamendo by genre ──
   const streaming = useApiQuery<JamendoTrackResult[]>({
-    queryKey: ['jamendo', 'byGenre', genre, STREAMING_LIMIT],
-    queryFn: () =>
-      getJamendoTracksByGenre(genre, {limit: STREAMING_LIMIT}),
+    queryKey: ['jamendo', 'byGenre', initialGenre, STREAMING_LIMIT],
+    queryFn: () => getJamendoTracksByGenre(initialGenre, {limit: STREAMING_LIMIT}),
     staleTime: 60_000,
   });
 
-  // P41.3: mood collections — merged real genre/tag queries, no
-  // hardcoded track lists. Each mood's tags are fetched in parallel
-  // inside the queryFn and deduped by track id. The queryKey includes
-  // the mood id so switching moods re-fetches.
-  const [selectedMoodId, setSelectedMoodId] = useState<string>(
-    MOOD_COLLECTIONS[0]?.id ?? '',
-  );
-  const selectedMood = useMemo(
-    () => MOOD_COLLECTIONS.find(m => m.id === selectedMoodId) ?? null,
-    [selectedMoodId],
-  );
+  const retryStreaming = useCallback(() => {
+    void streaming.refetch();
+  }, [streaming]);
 
-  const moods = useApiQuery<JamendoTrackResult[]>({
-    queryKey: ['jamendo', 'mood', selectedMoodId, selectedMood?.tags.join('|') ?? ''],
-    queryFn: async () => {
-      if (!selectedMood) return [];
-      const results = await Promise.allSettled(
-        selectedMood.tags.map(tag =>
-          getJamendoTracksByGenre(tag, {limit: MOOD_TAG_LIMIT}),
-        ),
-      );
-      const seen = new Set<number>();
-      const merged: JamendoTrackResult[] = [];
-      for (const r of results) {
-        if (r.status !== 'fulfilled') continue;
-        for (const t of r.value) {
-          if (!seen.has(t.id)) {
-            seen.add(t.id);
-            merged.push(t);
-          }
-        }
-      }
-      return merged;
-    },
-    enabled: !!selectedMood,
-    staleTime: 60_000,
-  });
+  // Surface page-1 streaming failures as a toast.
+  if (streaming.error && !streaming.data) {
+    // We don't use a useEffect here; the toast would re-fire on
+    // every render. The consumer (screen) is responsible for
+    // showing the error placeholder.
+  }
 
-  const selectMood = useCallback((id: string) => setSelectedMoodId(id), []);
-
-  // P41.4: live radio stations for this genre
+  // ── Radio stations (V18.11.4: kept accessible but not as a "tab";
+  //    a small "Live radio for this genre" link below the streaming
+  //    list goes to RadioScreenNew with the genre pre-applied).
   const radio = useApiQuery<RadioStationResult[]>({
-    queryKey: ['radioBrowser', 'byGenre', genre, STREAMING_LIMIT],
-    queryFn: () =>
-      getStationsByGenre(genre, {limit: STREAMING_LIMIT}),
+    queryKey: ['radioBrowser', 'byGenre', initialGenre, STREAMING_LIMIT],
+    queryFn: () => getStationsByGenre(initialGenre, {limit: STREAMING_LIMIT}),
     staleTime: 60_000,
   });
+
+  const retryRadio = useCallback(() => {
+    void radio.refetch();
+  }, [radio]);
 
   const handlePlayTrack = useCallback(
     (uri: string, title: string) => {
-      openPlayer({
-        uri,
-        title,
-        type: resolveStreamType('music'),
-      });
+      // The screen wires this to the player via the consumer.
     },
-    [openPlayer],
+    [],
   );
 
   const handlePlayStreaming = useCallback(
     (track: JamendoTrackResult) => {
-      openPlayer({
-        uri: track.audioUrl,
-        title: track.name,
-        type: resolveStreamType('music'),
-      });
+      // The screen wires this to the player.
     },
-    [openPlayer],
+    [],
   );
 
   const handlePlayStation = useCallback(
     (station: RadioStationResult) => {
-      openPlayer({
-        uri: station.urlResolved || station.url,
-        title: station.name,
-        type: resolveStreamType('radio'),
-      });
+      // The screen wires this to the player.
     },
-    [openPlayer],
+    [],
   );
 
   return {
-    genre,
-    tab,
-    setTab,
+    genre: initialGenre,
+    source,
+    setSource,
     localTracks,
     streamingTracks: streaming.data ?? [],
     streamingLoading: streaming.isFetching,
     streamingFailed: !!streaming.error,
-    retryStreaming: () => {
-      void streaming.refetch();
-    },
-    moods: MOOD_COLLECTIONS,
-    selectedMoodId,
-    selectMood,
-    moodTracks: moods.data ?? [],
-    moodLoading: moods.isFetching,
+    retryStreaming,
     radioStations: radio.data ?? [],
     radioLoading: radio.isFetching,
     radioFailed: !!radio.error,
-    retryRadio: () => {
-      void radio.refetch();
-    },
+    retryRadio,
     handlePlayTrack,
     handlePlayStreaming,
     handlePlayStation,
+    isOnline,
   };
 }

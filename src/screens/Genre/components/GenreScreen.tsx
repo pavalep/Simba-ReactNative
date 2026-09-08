@@ -1,10 +1,13 @@
 // Simba Player — GenreScreen (Phase 20 / P41)
-// P41.1/41.2/41.3: full genre browse — local library tracks,
-// Jamendo streaming catalog, mood collections (real tag queries),
-// and live radio stations for the genre.
-// ────────────────────────────────────────────────────────
+// P41.1/41.2: local library + Jamendo streaming for the genre.
+// V18.11.4: converted from the v3-v9 4-tab pattern
+// (local / streaming / moods / radio) to the v10+ "single content
+// stream + FAB" pattern. The Moods tab was a unique feature but
+// added significant complexity for a single FAB; deferred to a
+// future Moods entry point. The Radio tab duplicates
+// RadioScreenNew; the user can navigate there from the Library tab.
 
-import React from 'react';
+import React, {useCallback} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -14,7 +17,6 @@ import {
   FlatList,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import FastImage from 'react-native-fast-image';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
@@ -24,14 +26,13 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {ErrorState} from '../../../components/feedback/ErrorState/ErrorState';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {SimbaStatusBar} from '../../../components/StatusBar';
-import {MediaTile} from '../../../components/utility/MediaTile/MediaTile';
 import {StreamingRow} from '../../../components/media/StreamingRow/StreamingRow';
+import {resolveStreamType, usePlayerActivity} from '@simba-dev/react-native-media-player';
 import type {GenreScreenProps} from '../types';
-import type {RadioStationResult} from '../../../types/api';
-import {useGenreScreen, type GenreBrowseTab} from '../hooks/useGenreScreen';
+import type {JamendoTrackResult} from '../../../types/api';
+import {useGenreScreen} from '../hooks/useGenreScreen';
 
 function formatDuration(sec: number): string {
   if (sec <= 0) return '--:--';
@@ -40,111 +41,57 @@ function formatDuration(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-// ── Browse tabs ──
+// ── Source toggle (replaces the 4-tab chip row) ──
 
-const TABS: Array<{id: GenreBrowseTab; label: string}> = [
+const SOURCE_TOGGLE: Array<{id: 'local' | 'streaming'; label: string}> = [
   {id: 'local', label: 'My Library'},
   {id: 'streaming', label: 'Streaming'},
-  {id: 'moods', label: 'Moods'},
-  {id: 'radio', label: 'Radio'},
 ];
 
-// ── Radio station row (P41.4: genre detail keeps radio-by-genre) ──
-
-const StationRow: React.FC<{
-  station: RadioStationResult;
-  onPlay: (station: RadioStationResult) => void;
-}> = React.memo(({station, onPlay}) => {
-  const {colors} = useTheme();
-  return (
-    <TouchableOpacity
-      style={[
-        styles.stationRow,
-        {backgroundColor: colors.background.elevated},
-      ]}
-      activeOpacity={0.7}
-      onPress={() => onPlay(station)}
-      accessibilityRole="button">
-      <View style={[styles.stationThumb, {backgroundColor: colors.accent.goldDim}]}>
-        {station.favicon ? (
-          <FastImage
-            source={{uri: station.favicon}}
-            style={styles.stationThumb}
-            resizeMode={FastImage.resizeMode.cover}
-          />
-        ) : (
-          <SvgIcon name="headphones" size={20} color={colors.accent.gold} />
-        )}
-      </View>
-      <View style={styles.stationInfo}>
-        <AppText variant="body2" color="primary" numberOfLines={1}>
-          {station.name}
-        </AppText>
-        <AppText variant="caption" color="tertiary" numberOfLines={1}>
-          {[station.country, station.tags].filter(Boolean).join(' · ')}
-        </AppText>
-      </View>
-      <View style={[styles.stationPlay, {backgroundColor: colors.accent.goldDim}]}>
-        <SvgIcon name="play" size={14} color={colors.accent.gold} />
-      </View>
-    </TouchableOpacity>
-  );
-});
-
-// ── Screen ──
-
-export const GenreScreen: React.FC<GenreScreenProps> = ({navigation}) => {
+export const GenreScreen: React.FC<GenreScreenProps> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  const {openPlayer} = usePlayerActivity();
+  const {genre: routeGenre, initialTab} = route.params ?? {};
+  const genre = routeGenre ?? '';
+
   const {
-    genre,
-    tab,
-    setTab,
+    source,
+    setSource,
     localTracks,
     streamingTracks,
     streamingLoading,
     streamingFailed,
     retryStreaming,
-    moods,
-    selectedMoodId,
-    selectMood,
-    moodTracks,
-    moodLoading,
-    radioStations,
-    radioLoading,
-    radioFailed,
-    retryRadio,
-    handlePlayTrack,
-    handlePlayStreaming,
-    handlePlayStation,
-  } = useGenreScreen();
+  } = useGenreScreen(genre, initialTab === 'streaming' ? 'streaming' : 'local');
+
   const {styles: animStyles} = useAnimatedEntrance(
     Math.min(localTracks.length, 20),
-    {
-      staggerDelay: 40,
-      direction: 'up',
-      duration: 300,
+    {staggerDelay: 40, direction: 'up', duration: 300},
+  );
+
+  const handlePlayTrack = useCallback(
+    (uri: string, title: string) => {
+      openPlayer({uri, title, type: resolveStreamType('music')});
     },
+    [openPlayer],
+  );
+
+  const handlePlayStreaming = useCallback(
+    (track: JamendoTrackResult) => {
+      openPlayer({uri: track.audioUrl, title: track.name, type: resolveStreamType('music')});
+    },
+    [openPlayer],
   );
 
   const heroCaption: string =
-    tab === 'local'
+    source === 'local'
       ? `${localTracks.length} ${localTracks.length === 1 ? 'track' : 'tracks'} in your library`
-      : tab === 'streaming'
-      ? streamingLoading
-        ? 'Loading streaming catalog…'
-        : streamingFailed
-        ? 'Streaming catalog unavailable'
-        : `${streamingTracks.length} tracks on Jamendo`
-      : tab === 'moods'
-      ? 'Mood collections from live Jamendo genre queries'
-      : radioLoading
-      ? 'Loading stations…'
-      : radioFailed
-      ? 'Radio unavailable'
-      : `${radioStations.length} live stations`;
-
-  const selectedMood = moods.find(m => m.id === selectedMoodId) ?? null;
+      : streamingLoading
+      ? 'Loading streaming catalog…'
+      : streamingFailed
+      ? 'Streaming catalog unavailable'
+      : `${streamingTracks.length} tracks on Jamendo`;
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -154,7 +101,6 @@ export const GenreScreen: React.FC<GenreScreenProps> = ({navigation}) => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* ── Header ── */}
       <View style={styles.header}>
         <BackButton />
         <AppText variant="displaySans" color="primary" style={styles.headerTitle} numberOfLines={1}>
@@ -168,7 +114,6 @@ export const GenreScreen: React.FC<GenreScreenProps> = ({navigation}) => {
           paddingHorizontal: spacing.lg,
           paddingBottom: insets.bottom + 40,
         }}>
-        {/* ── Genre Hero ── */}
         <View style={styles.hero}>
           <View style={[styles.genreIcon, {backgroundColor: colors.accent.goldDim}]}>
             <SvgIcon name="music" size={36} color={colors.accent.gold} />
@@ -181,26 +126,22 @@ export const GenreScreen: React.FC<GenreScreenProps> = ({navigation}) => {
           </AppText>
         </View>
 
-        {/* ── Tab chips (P41.1) ── */}
+        {/* Source toggle (replaces 4-tab chip row) */}
         <FlatList
           horizontal
-          data={TABS}
+          data={SOURCE_TOGGLE}
           keyExtractor={t => t.id}
           renderItem={({item: t}) => {
-            const isActive = tab === t.id;
+            const isActive = source === t.id;
             return (
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => setTab(t.id)}
+                onPress={() => setSource(t.id)}
                 style={[
                   styles.chip,
                   {
-                    backgroundColor: isActive
-                      ? colors.accent.gold
-                      : colors.background.elevated,
-                    borderColor: isActive
-                      ? colors.accent.gold
-                      : colors.border.subtle,
+                    backgroundColor: isActive ? colors.accent.gold : colors.background.elevated,
+                    borderColor: isActive ? colors.accent.gold : colors.border.subtle,
                   },
                 ]}
                 accessibilityRole="button"
@@ -210,9 +151,7 @@ export const GenreScreen: React.FC<GenreScreenProps> = ({navigation}) => {
                   style={[
                     styles.chipText,
                     {
-                      color: isActive
-                        ? colors.text.inverse
-                        : colors.text.secondary,
+                      color: isActive ? colors.text.inverse : colors.text.secondary,
                     },
                   ]}>
                   {t.label}
@@ -222,13 +161,12 @@ export const GenreScreen: React.FC<GenreScreenProps> = ({navigation}) => {
           }}
           contentContainerStyle={styles.tabScroll}
           showsHorizontalScrollIndicator={false}
-          initialNumToRender={TABS.length}
+          initialNumToRender={SOURCE_TOGGLE.length}
           windowSize={5}
           maxToRenderPerBatch={12}
         />
 
-        {/* ── Tab content ── */}
-        {tab === 'local' ? (
+        {source === 'local' ? (
           localTracks.length === 0 ? (
             <EmptyState
               icon="music"
@@ -274,117 +212,34 @@ export const GenreScreen: React.FC<GenreScreenProps> = ({navigation}) => {
               initialNumToRender={localTracks.length}
             />
           )
-        ) : tab === 'streaming' ? (
-          streamingLoading ? (
-            <Placeholder
-              variant="loading"
-              anchor="top-third"
-              title="Loading streaming catalog…"
-            />
-          ) : streamingFailed ? (
-            <ErrorState
-              title="Couldn't load streaming tracks"
-              message={`Jamendo is unreachable for "${genre}". Check your connection and retry.`}
-              onRetry={retryStreaming}
-              retryLabel="Retry"
-            />
-          ) : streamingTracks.length === 0 ? (
-            <EmptyState
-              icon="music"
-              title="No Streaming Tracks"
-              description={`No Jamendo tracks found for the "${genre}" tag.`}
-            />
-          ) : (
-            <FlatList
-              data={streamingTracks}
-              keyExtractor={t => String(t.id)}
-              renderItem={({item: t}) => (
-                <StreamingRow track={t} onPlay={handlePlayStreaming} />
-              )}
-              scrollEnabled={false}
-              initialNumToRender={streamingTracks.length}
-            />
-          )
-        ) : tab === 'moods' ? (
-          <>
-            <FlatList
-              horizontal
-              data={moods}
-              keyExtractor={m => m.id}
-              renderItem={({item: m}) => (
-                <View style={styles.moodTileWrap}>
-                  <MediaTile
-                    title={m.name}
-                    icon={m.icon}
-                    size={104}
-                    selected={m.id === selectedMoodId}
-                    onPress={() => selectMood(m.id)}
-                  />
-                </View>
-              )}
-              contentContainerStyle={styles.moodRail}
-              showsHorizontalScrollIndicator={false}
-              initialNumToRender={moods.length}
-              windowSize={5}
-              maxToRenderPerBatch={12}
-            />
-            <AppText variant="overline" color="accent" style={styles.moodSectionTitle}>
-              {selectedMood
-                ? `${selectedMood.name} · ${moodTracks.length} tracks from Jamendo`
-                : 'Pick a mood'}
-            </AppText>
-            {moodLoading ? (
-              <Placeholder
-                variant="loading"
-                anchor="top-third"
-                title="Curating mood tracks…"
-              />
-            ) : moodTracks.length === 0 ? (
-              <EmptyState
-                icon="music"
-                title="No Tracks for This Mood"
-                description="The genre tags behind this mood returned nothing — try another mood."
-              />
-            ) : (
-              <FlatList
-                data={moodTracks}
-                keyExtractor={t => String(t.id)}
-                renderItem={({item: t}) => (
-                  <StreamingRow track={t} onPlay={handlePlayStreaming} />
-                )}
-                scrollEnabled={false}
-                initialNumToRender={moodTracks.length}
-              />
-            )}
-          </>
-        ) : radioLoading ? (
+        ) : streamingLoading ? (
           <Placeholder
             variant="loading"
             anchor="top-third"
-            title="Loading stations…"
+            title="Loading streaming catalog…"
           />
-        ) : radioFailed ? (
+        ) : streamingFailed ? (
           <ErrorState
-            title="Couldn't load stations"
-            message={`Radio Browser is unreachable for "${genre}". Check your connection and retry.`}
-            onRetry={retryRadio}
+            title="Couldn't load streaming tracks"
+            message={`Jamendo is unreachable for "${genre}". Check your connection and retry.`}
+            onRetry={retryStreaming}
             retryLabel="Retry"
           />
-        ) : radioStations.length === 0 ? (
+        ) : streamingTracks.length === 0 ? (
           <EmptyState
-            icon="headphones"
-            title="No Stations Found"
-            description={`No live radio stations tagged "${genre}".`}
+            icon="music"
+            title="No Streaming Tracks"
+            description={`No Jamendo tracks found for the "${genre}" tag.`}
           />
         ) : (
           <FlatList
-            data={radioStations}
-            keyExtractor={s => s.stationuuid}
-            renderItem={({item: s}) => (
-              <StationRow station={s} onPlay={handlePlayStation} />
+            data={streamingTracks}
+            keyExtractor={t => String(t.id)}
+            renderItem={({item: t}) => (
+              <StreamingRow track={t} onPlay={handlePlayStreaming} />
             )}
             scrollEnabled={false}
-            initialNumToRender={radioStations.length}
+            initialNumToRender={streamingTracks.length}
           />
         )}
       </ScrollView>
@@ -402,9 +257,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     gap: spacing.md,
   },
-  headerTitle: {
-    flex: 1,
-  },
+  headerTitle: {flex: 1},
   hero: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
@@ -418,24 +271,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  genreName: {
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  tabScroll: {
-    gap: spacing.sm,
-    paddingBottom: spacing.md,
-  },
+  genreName: {fontWeight: '700', textAlign: 'center'},
+  tabScroll: {gap: spacing.sm, paddingBottom: spacing.md},
   chip: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
     borderWidth: 1,
   },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  chipText: {fontSize: 13, fontWeight: '700'},
   trackItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -452,45 +296,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  trackInfo: {
-    flex: 1,
-  },
-  // (Replaced by the shared <Placeholder> component.)
-  moodRail: {
-    gap: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  moodTileWrap: {
-    marginRight: spacing.md,
-  },
-  moodSectionTitle: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  stationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: radius.md,
-    marginBottom: spacing.xs,
-    gap: spacing.md,
-  },
-  stationThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  stationInfo: {
-    flex: 1,
-  },
-  stationPlay: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  trackInfo: {flex: 1},
 });
