@@ -176,23 +176,32 @@ The rest of the codebase never sees it.
 | Hottest method | `getAllIPTVChannels` — **11 call sites** |
 | Hottest service | `internetArchiveService` — **32 call sites** |
 | Net `src/` LOC | 67,715 |
-| Net V18 LOC delta (estimated) | **-3,500 net** (+250 TanStack add) |
+| Net V18 LOC delta (actual) | **-2,657 src/** (3,296 insertions, 5,953 deletions; spec's original -3,500 estimate was 24% high) |
 
-## 6. The 10-wave / 40-phase plan (see TRACKER for the 800+ step checklist)
+## 6. The 11-wave / 46-phase plan (see TRACKER for the 800+ step checklist)
 
-| Wave | Theme | Phases | LOC delta |
+| Wave | Theme | Phases | LOC delta (actual `src/`) |
 |---|---|---:|---:|
 | 1 | **Foundation** (delete dead code + add TanStack + useApiQuery) | 4 | +170 |
 | 2 | **Pilot** (weatherAdapter end-to-end) | 4 | -100 |
 | 3 | **Simple search services** (audius, jamendo, librivox, musicbrainz, tvmaze) | 4 | -550 |
 | 4 | **Paginated services** (iptv, radioBrowser, podcastIndex) | 4 | -700 |
-| 5 | **Internet Archive** (the biggest single surface — 32 calls, 8 methods) | 4 | -600 |
-| 6 | **Aggregated search** (the multi-source query) | 4 | -200 |
-| 7 | **Per-screen data hooks** (useMoreFromArtist, useArtistEnrichment, useDownloadsSync) | 4 | -400 |
-| 8 | **Glue cleanup** (cache + rate-limit + DTO types) | 4 | -700 |
-| 9 | **Local-state cleanup** (useState triples + useRef guards + page machines) | 4 | -650 |
+| 5 | **Internet Archive** (the biggest single surface — 32 calls, 8 methods) | 4 | — *deferred to V19* |
+| 6 | **Aggregated search** (the multi-source query, `useQueries`) | 4 | — *deferred to V19* |
+| 7 | **Per-screen data hooks** (useMoreFromArtist, useArtistEnrichment, useDownloadsSync) | 4 | — *absorbed into Wave 3* (active-scope pattern) |
+| 8 | **Glue cleanup** (cache + rate-limit + DTO types) | 4 | — *deferred to V19* |
+| 9 | **Local-state cleanup** (useState triples + useRef guards + page machines) | 4 | — *absorbed into Wave 3* (active-scope pattern) |
 | 10 | **Final QA + closeout** (tsc + jest + tag v18.0.0) | 4 | -50 |
-| **Total** | | **40** | **~3,500 net removed** |
+| 11 | **Legacy TabView cleanup** (5 screens → FAB / `FilterChips`; drop `@react-native-tab-view`) | 6 | **-2,386** |
+| **Total** | | **46** | **-2,657 net `src/`** |
+
+> Waves 5, 6, 8 are deferred to V19. Waves 7 and 9 were
+> never done as separate waves — the active-scope pattern in
+> Wave 3 (single `useApiQuery` + `useState` for the active
+> scope + TanStack's queryKey cache for the rest) subsumed
+> both. Wave 11 was added after the V18 manager brief as a
+> UI-consistency closeout; the spec's original 10-wave / 40-phase
+> scope didn't include it.
 
 ## 7. The 5 TanStack shape mappings
 
@@ -241,45 +250,61 @@ plan stops there. The codebase is in a good state from V17.
 
 ---
 
-## 13. Legacy TabView cleanup (post-V18, drives UI consistency)
+## 13. Legacy TabView cleanup (post-V18, drives UI consistency) — ADDED 2026-09-08
 
-**Status:** Planned — see `md/V18_LEGACY_TABVIEW_CLEANUP.md` for the full plan.
+**Status:** Implemented — see `md/V18_LEGACY_TABVIEW_CLEANUP.md` for the full plan and
+`md/SIMBA_PLAYER_MODULE_V18_TRACKER.md` Wave 11 for the 6-phase checklist.
 
-The V18 data-layer refactor (Waves 1-9) preserves the v3-v9
-"TabView" pattern in 5 screens (Audiobooks, Shows, Genre,
-Archive, LiveTV legacy). The v10+ "FAB-only" pattern
-(Movies, Podcasts, Music, Radio, LiveTVNew) is the intended
-shape. After Wave 10, the plan is to convert the 5 legacy
-screens to the FAB pattern and remove the
+> Section ordering note: §13 was appended after V18.1, so the doc
+> has §10, §13, §11, §12 in physical order. The numbered content
+> is correct; only the file ordering is off. Reading order: §1
+> through §12, then this §13.
+
+V18 (Waves 1-4) refactors the data layer. The v3-v9
+"TabView" pattern was preserved in 5 screens (Audiobooks,
+Shows, Genre, Archive, LiveTV legacy). The v10+
+"`<BrowseLayout>` + FAB / FilterChips" pattern (Movies,
+Podcasts, Music, Radio, LiveTVNew) was the intended shape.
+Wave 11 converts the 5 legacy screens and removes the
 `@react-native-tab-view` dependency.
 
-### The 5 legacy screens (post-V18.10)
+### The 5 legacy screens (Wave 11)
 
-| Screen | Tabs | Target |
-|---|---|---|
-| `AudiobooksScreen` | search / genres / recent | single stream + genre chip filter; "recent" re-thought |
-| `ShowsScreen` | search / today / browse | search + browse via FAB; "today" as a hero rail |
-| `GenreScreen` | local / streaming / moods / radio | 4-way split into filter + sections |
-| `ArchiveScreen` | audio / video | single IA query + `mediatype` FAB filter |
-| `LiveTVScreen` (legacy) | all / categories / favorites | delete in favor of `LiveTVScreenNew` |
+| Screen | Old tabs | New shape (landed) | Net src/ LOC |
+|---|---|---|---:|
+| `ArchiveScreen` | audio / video (2) | 2 `useApiQuery` (audio + video), `mediatype` FAB filter toggles between them | -394 |
+| `LiveTVScreen` (legacy) | all / categories / favorites (3) | Directory deleted; `LiveTVScreenNew` is the single source of truth | -1,171 |
+| `AudiobooksScreen` | search / genres / recent (3) | 2 `useInfiniteApiQuery` (search + genres); "Recent" dropped (overlaps with Home "Recently Added" rail) | -150 |
+| `GenreScreen` | local / streaming / moods / radio (4) | 1 `useApiQuery` (streaming) + zustand selector (local); "Moods" and "Radio" both dropped (Moods deferred, Radio lives in `RadioScreenNew`) | -245 |
+| `ShowsScreen` | search / today / browse (3) | 1 `useApiQuery` (search) + 1 `useInfiniteApiQuery` (browse) + 1 `useApiQuery` (todayRail); "Airing Today" rail at the top | -426 |
+| **Total** |  |  | **-2,386** |
 
-### Phasing (post-V18.10)
+### Wave 11 phasing (landed)
 
-1. `ArchiveScreen` — lowest cost; sets the pattern
-2. `LiveTVScreen` (legacy) — confirm-and-delete or migrate
-3. `AudiobooksScreen` — search is the primary; genres → FAB
-4. `GenreScreen` — biggest refactor; "Moods" is a unique feature
-5. `ShowsScreen` — "Today" is a date query, doesn't fit a filter
-6. **Remove `@react-native-tab-view` from `package.json`** once all 5 are converted
+1. `ArchiveScreen` — lowest cost; sets the pattern (V18.11.1)
+2. `LiveTVScreen` (legacy) — confirm-and-delete (V18.11.2; route already pointed to `LiveTVScreenNew`)
+3. `AudiobooksScreen` — search is the primary; genres → `FilterChips` (V18.11.3)
+4. `GenreScreen` — biggest refactor; "Moods" + "Radio" both dropped (V18.11.4)
+5. `ShowsScreen` — "Today" as a "Airing Today" rail (V18.11.5)
+6. **Remove `@react-native-tab-view` from `package.json`** (V18.11.6)
 
 ### What this achieves
 
-- Every browse screen in the app uses the same `BrowseLayout` shell + FAB pattern.
+- Every browse screen in the app uses the same `BrowseLayout` shell + FAB / `FilterChips` pattern.
 - The 5 legacy hooks' state-machine code (`Map<key, ScopeState>` + `seqRef` + `guardRef` + `hasMoreRef`) is gone.
 - The `SectionTabBar` + per-screen `TabBar.tsx` copies are deleted.
-- ~1,500 LOC removed (state machine + TabView wiring).
+- 2,386 `src/` LOC removed (well over the ≥1,000 target; the spec's "~1,500" estimate was low — actual was 60% higher).
 
-See `md/V18_LEGACY_TABVIEW_CLEANUP.md` for the full plan, open questions per phase, and the dependency-removal step.
+### Deviations from the original plan (`md/V18_LEGACY_TABVIEW_CLEANUP.md`)
+
+- **ArchiveScreen** — the plan said "single IA query + mediatype FAB filter". The actual implementation has **2 `useApiQuery` calls** (one for audio, one for video) with the `mediatype` switching between them. Same end result, but the "single query" wording was wrong.
+- **AudiobooksScreen "Recent"** — the plan offered "drop OR keep as a hero row". We dropped (Home "Recently Added" rail covers it).
+- **GenreScreen "Moods"** — the plan offered "own screen OR section of GenreScreen". We deferred entirely; the data plumbing is removed from both hook and screen.
+- **GenreScreen "Radio"** — the plan offered "FAB filter". We dropped; `RadioScreenNew` is the entry point.
+- **ShowsScreen** — the plan said "FAB filter for genre/country". We used `FilterChips` for **source** (search|browse), not for genre/country. Cleaner than the plan's design.
+
+See `md/V18_LEGACY_TABVIEW_CLEANUP.md` for the original plan and
+`md/SIMBA_PLAYER_MODULE_V18_TRACKER.md` Wave 11 for the 6-phase checklist.
 
 ## 11. Definition of done (per phase)
 

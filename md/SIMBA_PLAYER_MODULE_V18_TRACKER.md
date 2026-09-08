@@ -7,7 +7,7 @@
 
 ## How to use this tracker
 
-- Each wave has **4 phases** (40 phases total)
+- Each wave has **4 phases** (46 phases total — 4 phases × 10 waves in the original plan, plus 6 in Wave 11)
 - Each phase has **≥20 checkable steps** (≥800 total)
 - The "Files" / "Commits" columns are placeholders; fill in as you go
 - A phase is **done** when ALL its checkable steps are `[x]`, plus the 5 Definition-of-Done items in SPEC §11
@@ -564,7 +564,7 @@ Per the manager's call, V18.0 ends at V18.0.1. The 6 live methods are migrated (
 ### Phase 40: V18.10.4 — Tag v18.0.0 + closeout
 
 - [ ] `git tag -d v18.0.0 2>/dev/null` (idempotent — clears any prior tag)
-- [ ] `git tag -a v18.0.0 -m "V18: API adapter + TanStack Query (10 waves, 40 phases)"`
+- [x] `git tag -a v18.0.0 -F md/V18_TAG_MSG.txt` — tagged at `c4fadce`
 - [ ] `git tag --list 'v18*'` shows `v18.0.0`
 - [ ] `git log --oneline -1` shows the closeout commit (e.g. "V18 release: tag v18.0.0")
 - [ ] `git log --oneline v17.0.0..v18.0.0 | wc -l` reports ≥40 commits
@@ -579,17 +579,20 @@ Per the manager's call, V18.0 ends at V18.0.1. The 6 live methods are migrated (
 
 **Plan:** `md/V18_LEGACY_TABVIEW_CLEANUP.md`
 
-V18 (Waves 1-10) refactors the data layer. The UI for 5 screens
-(Audiobooks, Shows, Genre, Archive, LiveTV legacy) still uses the
-v3-v9 `<TabView>` pattern. Wave 11 converts them to the v10+
-"`<BrowseLayout>` + FAB" pattern that Movies / Podcasts /
-Music / Radio / LiveTVNew already use. After Wave 11, every
-browse screen in the app has the same shell, and the
-`@react-native-tab-view` dependency is removed.
+V18 (Waves 1-4) refactors the data layer. Waves 5-8 were
+deferred to V19; waves 7 and 9 were absorbed into Wave 3
+via the active-scope pattern (single `useApiQuery` + TanStack
+queryKey cache subsumes the per-scope Maps). The UI for
+5 screens (Audiobooks, Shows, Genre, Archive, LiveTV legacy)
+still uses the v3-v9 `<TabView>` pattern. Wave 11 converts
+them to the v10+ "`<BrowseLayout>` + FAB" pattern that
+Movies / Podcasts / Music / Radio / LiveTVNew already use.
+After Wave 11, every browse screen in the app has the same
+shell, and the `@react-native-tab-view` dependency is removed.
 
 ### Phase 41: V18.11.1 — Convert `ArchiveScreen` to FAB pattern (pilot for Wave 11)
 
-- [x] `src/screens/ArchiveScreen/hooks/useArchiveScreen.ts` is rewritten to a single `useApiQuery` (no tabs)
+- [x] `src/screens/ArchiveScreen/hooks/useArchiveScreen.ts` is rewritten to **2 `useApiQuery` calls** (one per mediatype: `audioQ` + `videoQ`); the `mediatype` FAB toggles between them. The plan's "single IA query" wording was off — the actual impl is one query per mediatype, which is more cache-friendly (per-mediatype re-fetch on toggle, no wasted work)
 - [x] `src/screens/ArchiveScreen/components/ArchiveContent.tsx` is rewritten to use `<BrowseLayout>` + a `mediatype` FAB filter (audio / video / all)
 - [x] `src/screens/ArchiveScreen/browse/TabBar.tsx` is deleted
 - [x] The hook no longer exports `ArchiveTab` / `AudioScopeState` / `VideoScopeState`
@@ -609,7 +612,7 @@ browse screen in the app has the same shell, and the
 ### Phase 43: V18.11.3 — Convert `AudiobooksScreen` to FAB pattern
 
 - [x] "Recent" tab decision: `drop` — documented in V18.11.3 commit (overlaps with Home "Recently Added" rail)
-- [x] `useAudiobooksScreen` is rewritten — 2 `useInfiniteApiQuery` calls (search + genres) plus search/genres/recent
+- [x] `useAudiobooksScreen` is rewritten — **2 `useInfiniteApiQuery` calls** (search + genres); the prior 3-tab design's "recent" query is removed (Home "Recently Added" rail covers it)
 - [x] `AudiobooksContent` uses search bar + genre `FilterChips` (FAB-triggered) — `-150 LOC`
 - [x] The 3 useApiQuery calls collapse to 2 (search + genres), recent dropped
 - [x] `npx tsc --noEmit` reports 0 errors
@@ -620,7 +623,7 @@ browse screen in the app has the same shell, and the
 
 - [x] "Moods" tab decision: `drop` — documented in V18.11.4 commit (Moods deferred; redundant with Genre browse)
 - [x] "Radio" tab decision: `drop` — documented in V18.11.4 commit (duplicates `RadioScreenNew`)
-- [x] `useGenreScreen` is rewritten to a single `useApiQuery` for streaming + a zustand selector for local
+- [x] `useGenreScreen` is rewritten — **1 `useApiQuery`** (streaming) + a zustand selector (local). The original V18.11.4 commit also kept a `radio` `useApiQuery` for data the screen never consumed; the post-audit pass (this V18.11.6+post-audit commit) **removed the dead `radio` query** so the hook now matches the spec's "single async call per source" rule
 - [x] The local-tracks tab stays as a zustand-selector view (no async data)
 - [x] Radio tab is replaced by a "Streaming" toggle target (links to `RadioScreenNew` future work)
 - [x] `GenreScreen.tsx` uses a 2-state Local|Streaming toggle (no `<BrowseLayout>` needed at this size) — `-245 LOC`
@@ -669,8 +672,8 @@ browse screen in the app has the same shell, and the
 
 ## Summary (V18 + Wave 11)
 
-- **V18 (10 waves, 40 phases)** — data layer refactor; ~3,500 LOC net removed
-- **Wave 11 (5 screens, 6 phases)** — UI consistency; ~1,500 additional LOC removed; the legacy TabView pattern is fully retired
+- **V18 + Wave 11 (11 waves, 46 phases)** — data layer refactor + UI consistency closeout; **-2,657 src/** net
+- **Wave 11 (5 screens, 6 phases)** — UI consistency; **-2,386 additional src/ LOC** removed; the legacy TabView pattern is fully retired
 - **Final state:** every browse screen in the app uses the same `BrowseLayout` shell + FAB pattern. The data plumbing is one `useApiQuery` per screen. The convertor pattern (per-service) is the only HTTP-layer abstraction.
 - **Junior-dev rule holds for both layers:** adapter author (1 file, ~120 LOC) and screen author (1 hook call, ~5 LOC).
 
@@ -678,7 +681,7 @@ browse screen in the app has the same shell, and the
 
 ## Summary
 
-- **10 waves** · **40 phases** · **~800 checkable steps** · **~3,500 LOC net removed**
+- **11 waves** · **46 phases** · **~800 checkable steps** · **-2,657 src/ LOC net removed**
 - **Pilot phase (V18.2) is the risk isolator** — if the design doesn't feel right after the weather migration, the plan stops there
 - **V18.0 is a 30-minute free win** (8 dead methods, ~80 LOC removed with zero behavior change)
 - **The architecture**: 1 mental model for data (TanStack) + 1 mental model for state (zustand, from V17) + 1 mental model for HTTP (adapter + exported convertors)

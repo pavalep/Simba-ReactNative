@@ -21,6 +21,16 @@ plan addresses the UI and the lingering state-machine complexity.
 | `ArchiveScreen` | audio / video (2) | collapses to a single IA query with a `mediatype` FAB filter | **Low** — 2 tabs that are already semantically a filter |
 | `LiveTVScreen` (legacy) | all / categories / favorites (3) | `LiveTVScreenNew` already has the FAB pattern; legacy is kept for the route `LiveTVScreen` which might still be navigated to. The cleanest fix: delete the legacy screen and rename the route to point to New. | **Low** if the New screen is feature-complete |
 
+### 1a. What actually landed (Wave 11 outcomes)
+
+| Screen | Landed shape | Plan deviation |
+|---|---|---|
+| `ArchiveScreen` | **2 `useApiQuery`** (audio + video), `mediatype` FAB filter toggles between them | The plan said "single IA query + mediatype FAB filter". Two-queries-per-mediaype was clearer; same UX, more cache-friendly (per-mediatype re-fetch on toggle). |
+| `LiveTVScreen` (legacy) | Directory **deleted**; `LiveTVScreenNew` is the single source of truth | None. Route already pointed to New. |
+| `AudiobooksScreen` | 2 `useInfiniteApiQuery` (search + genres); "Recent" **dropped** (overlaps with Home "Recently Added" rail) | The plan offered "drop OR keep as a hero row". We dropped. |
+| `GenreScreen` | 1 `useApiQuery` (streaming) + zustand selector (local); "Moods" **dropped entirely** (deferred to a future Moods entry point); "Radio" **dropped** (lives in `RadioScreenNew`) | The plan offered "Moods as own screen OR section". We deferred both Moods and Radio. A post-V18 audit pass (V18.11.6+post-audit) also removed the dead `radio` `useApiQuery` from the hook — the screen never consumed it. |
+| `ShowsScreen` | 1 `useApiQuery` (search) + 1 `useInfiniteApiQuery` (browse) + 1 `useApiQuery` (todayRail); "Airing Today" rail at the top | The plan said "FAB filter for genre/country". We used `FilterChips` for **source** (search\|browse), not for genre/country. Cleaner than the plan's design. |
+
 ---
 
 ## 2. Phasing
@@ -71,7 +81,7 @@ plan addresses the UI and the lingering state-machine complexity.
 - 5 screen `index.tsx` files (UI rewrite to use `BrowseLayout` + a single data stream + FAB filter).
 - 5 hook files (simplified to one `useApiQuery` + tab-state-via-`BrowseLayout` if needed).
 - 1 dependency removed from `package.json`.
-- ~1,500 lines of state-machine + TabView wiring removed (estimate).
+- **2,386 `src/` LOC** removed (actual, from `git diff 869aa4e..HEAD --stat -- src/`). The plan's "~1,500" estimate was 60% low; the LiveTVScreen legacy directory alone was -1,171.
 
 ---
 
