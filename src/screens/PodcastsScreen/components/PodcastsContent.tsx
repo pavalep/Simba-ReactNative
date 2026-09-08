@@ -4,7 +4,6 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import type {PodcastCategory} from '../../../constants/podcastCategories';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
-import {MAX_RESULTS_PER_QUERY} from '../related/constants';
 import {createPodcastsScreenStyles} from '../styles';
 import type {SectionBrowseConfig, SectionRenderContext} from '../types';
 import {ListStates} from './ListStates';
@@ -27,7 +26,6 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
   const insets = useSafeAreaInsets();
   const {
     items,
-    maxRequested,
     isLoading,
     isLoadingMore,
     error,
@@ -35,7 +33,7 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
     isSearchActive,
     searchTerm,
     setSearchTerm,
-    load,
+    setActiveCategoryId,
     loadMore,
     retry,
     handlePodcastPress,
@@ -56,9 +54,14 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
     setSearchTerm(ctx.query);
   }, [ctx.query, setSearchTerm]);
 
+  // V20.2: TanStack owns the "wipe + refetch on scope change"
+  // pattern. The active categoryId is part of the queryKey; the
+  // setter triggers a fresh fetch automatically. No need to
+  // also pass `searchTerm` in the deps array — `setSearchTerm`
+  // (above) triggers the same refetch via the queryKey change.
   useEffect(() => {
-    load(categoryId);
-  }, [categoryId, searchTerm, load]);
+    setActiveCategoryId(categoryId);
+  }, [categoryId, setActiveCategoryId]);
 
   const state: 'loading' | 'error' | 'empty' | 'ready' =
     !hasLoaded && isLoading
@@ -68,10 +71,7 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
       : hasLoaded && !error && items.length === 0
       ? 'empty'
       : 'ready';
-  const reachedEnd =
-    hasLoaded &&
-    !error &&
-    (items.length < maxRequested || maxRequested >= MAX_RESULTS_PER_QUERY);
+  const reachedEnd = !hasMore;
   const userDraggedRef = useRef(false);
   const isEmptySlot = state === 'empty' || state === 'error';
 
@@ -111,7 +111,7 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
                 isSearchActive={isSearchActive}
                 categoryLabel={categoryLabel}
                 categoryId={categoryId}
-                onRetry={() => retry(categoryId)}
+                onRetry={() => retry()}
               />
             }
             ListFooterComponent={
@@ -120,14 +120,14 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
                 hasLoaded={hasLoaded}
                 error={error}
                 reachedEnd={reachedEnd}
-                onLoadMore={() => loadMore(categoryId)}
+                onLoadMore={() => loadMore()}
               />
             }
             onScrollBeginDrag={() => {
               userDraggedRef.current = true;
             }}
             onEndReached={() => {
-              if (userDraggedRef.current) loadMore(categoryId);
+              if (userDraggedRef.current) loadMore();
             }}
             onEndReachedThreshold={0.4}
             removeClippedSubviews={false}
@@ -135,7 +135,7 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
             refreshControl={
               <RefreshControl
                 refreshing={isLoading && hasLoaded}
-                onRefresh={() => load(categoryId)}
+                onRefresh={() => setActiveCategoryId(categoryId)}
                 tintColor={colors.accent.gold}
                 colors={[colors.accent.gold]}
               />

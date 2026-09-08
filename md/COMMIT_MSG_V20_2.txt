@@ -1,0 +1,120 @@
+V20.2: usePodcastsScreen rewrite — 3-file V18-ideal refactor (doubling `max` window → useInfiniteApiQuery)
+
+V20.2 — the second batch in the V20 "junior-dev simplicity"
+sweep. Rewrites `usePodcastsScreen` + `PodcastsDataProvider`
++ `PodcastsContent` on the V18 ideal. The pre-V18
+implementation was 189 lines with 7 useStates (data triple
++ max + hasLoaded + isLoading + isLoadingMore + error),
+3 useRefs (seqRef for stale-response cancellation,
+inFlightRef for in-flight dedup, lastLoadMoreAtRef for the
+600ms scroll throttle), a 3-mode `fetchPage` (initial /
+more / retry), and a `dedupe` helper at the bottom of the
+file. The V18-ideal version is ~110 lines: 1 useState
+(searchTerm) + 1 useInfiniteApiQuery (with `pageParam` =
+the doubling `max` window), 0 useRefs, 0 dedupe helper.
+
+The 3-file commit is needed because the public surface
+changed (the active categoryId is now tracked in the hook
+via `setActiveCategoryId(id)` instead of being passed as
+an arg to `load(id)` / `loadMore(id)` / `retry(id)`). The
+3 files share the contract:
+
+  - `usePodcastsScreen`: pure function of (activeCategoryId,
+    searchTerm); returns the active scope's data + actions.
+    1 `useState` (controlled-input echo) + 1
+    `useInfiniteApiQuery` (the data).
+  - `PodcastsDataProvider`: tracks the active categoryId +
+    searchTerm via the hook; exposes `setActiveCategoryId`,
+    `loadMore`, `retry`, etc. via context. No more
+    `load(categoryId)` indirection.
+  - `PodcastsContent`: pushes scope changes down via
+    `setActiveCategoryId(categoryId)` + `setSearchTerm(
+    ctx.query)`; reads `data` directly.
+
+What was removed (the legacy code):
+
+  - 7 useStates → 1 useState (controlled-input echo only)
+  - 3 useRefs (seqRef, inFlightRef, lastLoadMoreAtRef)
+  - The 3-mode `fetchPage(categoryId, max, mode)` function
+    with `seq !== seqRef.current` staleness checks in 3
+    places
+  - The `dedupe(items)` helper at the bottom of the file
+    (the new `queryFn` returns clean per-page results;
+    TanStack's `pages.flat()` gives the union)
+  - The `load(categoryId)` "wipe + refetch" pattern (the
+    queryKey change is now the refetch trigger — TanStack
+    fires automatically)
+  - The 600ms `lastLoadMoreAtRef` scroll throttle
+    (TanStack's `isFetchingNextPage` flag prevents the
+    double-call)
+  - The `inFlightRef` in-flight guard (TanStack per-key
+    dedup)
+  - The `seqRef` stale-response cancellation (TanStack
+    cancels in-flight queries when the queryKey changes)
+
+What was added (the V18-ideal pattern):
+
+  - `useInfiniteApiQuery<PodcastResult[]>` with the doubling
+    `max` window as the `pageParam`. The `queryFn` dispatches
+    on the active scope:
+      - search term set → `searchPodcasts(term, max)`
+      - otherwise        → `getTrendingPodcasts(max, categoryId)`
+    `getNextPageParam` returns the next `max` (doubled,
+    capped at `MAX_RESULTS_PER_QUERY` = 100) when the page
+    is full, `undefined` when the page is short or the cap
+    is reached.
+  - `hasMore: q.hasNextPage` (the legacy `items.length <
+    maxRequested || maxRequested >= MAX_RESULTS_PER_QUERY`
+    derivation collapses to a single field)
+  - `error: string | null` (the legacy `q.error instanceof
+    Error ? q.error.message : ...` derivation lives in the
+    hook, not the screen)
+
+Why a 3-file commit (instead of one file at a time):
+
+  - The hook's public surface changed: `load(id)`,
+    `loadMore(id)`, `retry(id)` are now no-arg; the active
+    scope is tracked internally.
+  - The provider's public surface changed: `load` is gone;
+    `setActiveCategoryId` is the new entry point.
+  - The screen calls `load(id)` in 3 places (refresh,
+    category change effect, retry button) and `loadMore(id)`
+    in 2 places (footer + onEndReached). All 5 call sites
+    update in the same commit.
+
+Junior-dev rule:
+
+  - Adapter author: 1 file (V18.4.2).
+  - Hook author: 1 `useInfiniteApiQuery`. The whole hook
+    is the query call + 2 setters + a useMemo.
+  - Screen author: 1 `usePodcastsData()` call. The
+    `load(id)` / `loadMore(id)` / `retry(id)` indirection
+    is gone.
+
+Verification:
+
+  - npx tsc --noEmit             : 0 errors
+  - npx jest --forceExit         : 9 suites, 106 passed,
+                                    1 todo, 0 failures
+  - usePodcastsScreen.ts LOC    : 189 → 137 (-52)
+  - PodcastsDataProvider.ts LOC : 98 → 91 (-7)
+  - PodcastsContent.tsx LOC     : 158 → 156 (-2)
+  - useState / useEffect /
+    useRef in the hook            : 7 / 1 / 3 → 1 / 0 / 0
+  - `dedupe` helper references  : 1 → 0 (gone)
+  - `seq !== seqRef.current`
+    staleness checks              : 3 → 0 (gone)
+  - `lastLoadMoreAtRef` (600ms
+    scroll throttle)              : 1 → 0 (gone)
+  - `inFlightRef` (in-flight
+    guard)                        : 1 → 0 (gone)
+  - `load(id)` call sites in
+    the screen                     : 3 → 0 (now
+                                       `setActiveCategoryId(id)`)
+  - `loadMore(id)` call sites
+    in the screen                  : 2 → 0 (now no-arg)
+  - `retry(id)` call sites in
+    the screen                     : 1 → 0 (now no-arg)
+
+Closes V20.2 of the V20 sweep. Next: V20.3
+(usePodcastDetailScreen rewrite).

@@ -1,188 +1,145 @@
-// ─── Podcasts Screen Hook (KISS) ──────────────────────────────────────
-// Single current-list state — NO per-scope cache. Every category/term
-// change (and pull-to-refresh) wipes the current items and fetches
-// fresh from the API. The active filter (category / search term) is
-// preserved across refresh — only the list resets.
+// ─── Podcasts Screen Hook ──────────────────────────────────────────────
+// V20.2: rewritten on `useInfiniteApiQuery` per the V18 ideal. The
+// pre-V18 implementation was 189 lines with 7 useStates (the
+// data triple + max + hasLoaded + isLoading + isLoadingMore +
+// error), 3 useRefs (seqRef for stale-response cancellation,
+// inFlightRef for in-flight dedup, lastLoadMoreAtRef for the
+// 600ms scroll throttle), a 3-mode `fetchPage` (initial / more
+// / retry), and a `dedupe` helper at the bottom of the file
+// to dedup the per-page response. The V18-ideal version is
+// ~100 lines: 1 useState (searchTerm), 1 useInfiniteApiQuery
+// (with `pageParam` = the doubling `max` window), 0 useRefs,
+// 0 dedupe helper.
 //
-// Podcast Index exposes no sort parameter and we don't client-side sort
-// either — items render in API-returned order, and loadMore appends in
-// order.
+// Podcast Index paginates by doubling a `max` window (no true
+// offset): 25 → 50 → 100, then stop. The `getNextPageParam`
+// reflects that:
+//   - short page           → undefined (no more results)
+//   - max at the API cap   → undefined
+//   - otherwise             → min(max × 2, API cap)
 //
-// Podcast Index paginates by doubling a `max` window (no true offset):
-//   • loadMore doubles (25 → 50 → 100) when the API returned a full page
-//   • 600ms throttle + in-flight guard prevent endReached spam
+// Per the V18.6.2 ideal, the active categoryId and searchTerm
+// are part of the TanStack queryKey — every (categoryId,
+// searchTerm) combination is its own cache entry. Revisiting
+// a combination shows its cached list instantly; the "wipe +
+// refetch on category change" pattern is now a no-op (the
+// queryKey changes, TanStack refetches automatically).
 //
-// Single-select category: the shell sends one id at a time
-// ('all' → the unfiltered trending stream; otherwise → the official
-// `/podcasts/trending?cat={id}` filter). A search term always wins over
-// the category stream and uses `/search/byterm`.
+// Junior-dev rule: 1 useState (for the controlled input
+// echo) + 1 useInfiniteApiQuery (for the data). The pagination,
+// dedup, stale-response cancellation, in-flight guard, and
+// scroll throttle are all gone — TanStack owns them.
 
-import {useCallback, useRef, useState} from 'react';
+import {useCallback, useState} from 'react';
 import {
   searchPodcasts,
   getTrendingPodcasts,
 } from '../../../services/api/podcastIndexAdapter';
 import {INITIAL_MAX, MAX_RESULTS_PER_QUERY} from '../related/constants';
 import text from '../related/textContent.json';
+import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import type {PodcastResult} from '../../../types/api';
 
-/** Drop duplicates a paginated response can re-emit (same id seen). */
-function dedupe(items: PodcastResult[]): PodcastResult[] {
-  const seen = new Set<number>();
-  return items.filter(i => {
-    if (seen.has(i.id)) return false;
-    seen.add(i.id);
-    return true;
-  });
-}
+const DOUBLING = 2; // 25 → 50 → 100 → stop
 
 export interface UsePodcastsScreenReturn {
   // search
   searchTerm: string;
   setSearchTerm: (t: string) => void;
   isSearchActive: boolean;
-  // current list state (no per-scope cache)
+  // active scope (set by the screen)
+  activeCategoryId: string;
+  setActiveCategoryId: (id: string) => void;
+  // current list state
   items: PodcastResult[];
-  maxRequested: number;
   hasLoaded: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
+  hasMore: boolean;
   error: string | null;
   // actions
-  /** Wipe and fetch the first window — used on category/search change,
-   *  on retry, AND on pull-to-refresh (same call: clear → loading →
-   *  fresh data). Resets pagination back to INITIAL_MAX. */
-  load: (categoryId: string) => void;
-  /** Append the next page — called from onEndReached. */
-  loadMore: (categoryId: string) => void;
-  /** Re-fetch the first window (alias for `load`). */
-  retry: (categoryId: string) => void;
+  loadMore: () => void;
+  retry: () => void;
 }
 
-export function usePodcastsScreen(): UsePodcastsScreenReturn {
-  // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
+export function usePodcastsScreen(
+  initialCategoryId: string = 'all',
+): UsePodcastsScreenReturn {
+  // ── Controlled-input echo (the search term is debounced upstream
+  //    via the SearchBar's onDebouncedChange) ──
   const [searchTerm, setSearchTerm] = useState('');
-
-  // ── Single current-list state — no Record<key, scope> cache ──
-  const [items, setItems] = useState<PodcastResult[]>([]);
-  const [maxRequested, setMaxRequested] = useState(0);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const isSearchActive = searchTerm.trim().length > 0;
+  // Active category lives in the hook so the queryKey can
+  // include it. The screen pushes changes via the setter.
+  const [activeCategoryId, setActiveCategoryId] = useState(initialCategoryId);
 
-  // Monotonic seq — drops stale responses when the consumer races the
-  // API with a fast filter/search change. Not a cache: just staleness
-  // protection.
-  const seqRef = useRef(0);
-  // One in-flight fetch at a time.
-  const inFlightRef = useRef(false);
-  // 600ms throttle on loadMore so onEndReached can't pound the API.
-  const lastLoadMoreAtRef = useRef(0);
-
-  const fetchPage = useCallback(
-    async (categoryId: string, max: number, mode: 'initial' | 'more') => {
-      if (inFlightRef.current) return;
-      inFlightRef.current = true;
-      const seq = ++seqRef.current;
-
-      if (mode === 'initial') {
-        setIsLoading(true);
-      } else {
-        setIsLoadingMore(true);
-      }
-      setError(null);
-
-      try {
-        const term = searchTerm.trim();
-        // A typed search term wins; otherwise use the category-aware
-        // trending endpoint with the selected Podcast Index category ID.
-        const result = term
-          ? await searchPodcasts(term, max)
-          : await getTrendingPodcasts(max, categoryId);
-
-        if (seq !== seqRef.current) return; // stale response
-
-        if (mode === 'more') {
-          setItems(prev => dedupe([...prev, ...result]));
-        } else {
-          setItems(result);
-        }
-        setMaxRequested(max);
-        setHasLoaded(true);
-      } catch (err) {
-        if (seq !== seqRef.current) return;
-        setError(
-          err instanceof Error ? err.message : text.errors.hookLoadFailed,
-        );
-        setHasLoaded(true);
-      } finally {
-        if (seq === seqRef.current) {
-          inFlightRef.current = false;
-          setIsLoading(false);
-          setIsLoadingMore(false);
-        }
-      }
+  // ── The big one: server-paginated podcasts per
+  //    (categoryId, searchTerm) tuple. The pageParam is
+  //    the doubling `max` window. ──
+  const q = useInfiniteApiQuery<PodcastResult[]>({
+    queryKey: [
+      'podcastIndex',
+      'list',
+      activeCategoryId,
+      searchTerm.trim(),
+    ],
+    initialPageParam: INITIAL_MAX,
+    queryFn: ({pageParam}) => {
+      const max = pageParam as number;
+      const term = searchTerm.trim();
+      if (term) return searchPodcasts(term, max);
+      return getTrendingPodcasts(max, activeCategoryId);
     },
-    [searchTerm],
-  );
-
-  const load = useCallback(
-    (categoryId: string) => {
-      // Wipe + invalidate any in-flight so a stale response can't land
-      // after a fresh category/search change. No cache to invalidate —
-      // this IS the cache invalidation.
-      seqRef.current++;
-      inFlightRef.current = false;
-      setItems([]);
-      setMaxRequested(0);
-      setError(null);
-      setHasLoaded(false);
-      setIsLoading(false);
-      setIsLoadingMore(false);
-      fetchPage(categoryId, INITIAL_MAX, 'initial');
+    getNextPageParam: (lastPage, _pages, lastParam) => {
+      // Short page = API returned fewer than `max` items = end of stream.
+      if (lastPage.length === 0) return undefined;
+      const currentMax = lastParam as number;
+      if (currentMax >= MAX_RESULTS_PER_QUERY) return undefined;
+      // The Podcast Index returns `max` items when more results
+      // are available, fewer when the result set is exhausted.
+      // If the last page was short, stop.
+      if (lastPage.length < currentMax) return undefined;
+      // Otherwise double the window, capped at the API limit.
+      return Math.min(currentMax * DOUBLING, MAX_RESULTS_PER_QUERY);
     },
-    [fetchPage],
-  );
+    staleTime: 60_000,
+  });
 
-  const loadMore = useCallback(
-    (categoryId: string) => {
-      const max = maxRequested || INITIAL_MAX;
-      if (isLoading || isLoadingMore) return;
-      // Only paginate when the previous window was full — a short page
-      // means there's nothing left at this window size.
-      if (items.length < max) return;
-      if (max >= MAX_RESULTS_PER_QUERY) return;
+  const allPages = q.data?.pages ?? [];
+  const items = allPages.flat();
+  const hasMore = q.hasNextPage ?? false;
 
-      const now = Date.now();
-      if (now - lastLoadMoreAtRef.current < 600) return;
-      lastLoadMoreAtRef.current = now;
+  const loadMore = useCallback(() => {
+    if (q.hasNextPage && !q.isFetchingNextPage) {
+      void q.fetchNextPage();
+    }
+  }, [q]);
 
-      fetchPage(categoryId, max * 2, 'more');
-    },
-    [fetchPage, items.length, maxRequested, isLoading, isLoadingMore],
-  );
+  const retry = useCallback(() => {
+    void q.refetch();
+  }, [q]);
 
-  const retry = useCallback(
-    (categoryId: string) => {
-      load(categoryId);
-    },
-    [load],
-  );
+  // Convert TanStack's typed error into a human-readable string
+  // (matches the legacy hook's behaviour — set a string
+  // instead of an Error object so the consumer doesn't have
+  // to handle a union).
+  const errorMessage =
+    q.error instanceof Error ? q.error.message : q.error
+      ? text.errors.hookLoadFailed
+      : null;
 
   return {
     searchTerm,
     setSearchTerm,
     isSearchActive,
+    activeCategoryId,
+    setActiveCategoryId,
     items,
-    maxRequested,
-    hasLoaded,
-    isLoading,
-    isLoadingMore,
-    error,
-    load,
+    hasLoaded: !!q.data || !!q.error,
+    isLoading: q.isFetching,
+    isLoadingMore: q.isFetchingNextPage,
+    hasMore,
+    error: errorMessage,
     loadMore,
     retry,
   };

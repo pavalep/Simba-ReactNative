@@ -1,9 +1,15 @@
 // ─── Podcasts — Data Provider ─────────────────────────────────────────
-// One `usePodcastsScreen()` instance, mounted ABOVE the shell so the
-// single content stream reads from the SAME hook state (no per-scope
-// cache — see the hook header for the rationale). Also owns the podcast
-// press handler (uses the global `navigate` helper — the content has no
+// V20.2: rewritten on the V18-ideal `usePodcastsScreen` (single
+// `useInfiniteApiQuery` with `pageParam` = the doubling `max`
+// window). The provider still owns the podcast press handler
+// (uses the global `navigate` helper — the content has no
 // screen `navigation`).
+//
+// The active categoryId is tracked in the hook as part of the
+// TanStack queryKey. The screen pushes scope changes via
+// `setActiveCategoryId(id)`; the hook refetches automatically.
+// This replaces the legacy `load(id)` "wipe + refetch" pattern
+// with a one-liner setter.
 
 import React, {useCallback, useMemo, type ReactNode} from 'react';
 import {usePodcastsScreen} from '../hooks/usePodcastsScreen';
@@ -14,15 +20,15 @@ interface PodcastsDataContextValue {
   isSearchActive: boolean;
   searchTerm: string;
   items: PodcastResult[];
-  maxRequested: number;
   hasLoaded: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
+  hasMore: boolean;
   error: string | null;
   setSearchTerm: (term: string) => void;
-  load: (categoryId: string) => void;
-  loadMore: (categoryId: string) => void;
-  retry: (categoryId: string) => void;
+  setActiveCategoryId: (id: string) => void;
+  loadMore: () => void;
+  retry: () => void;
   handlePodcastPress: (item: PodcastResult) => void;
 }
 
@@ -57,32 +63,28 @@ export const PodcastsDataProvider: React.FC<{
       isSearchActive: podcasts.isSearchActive,
       searchTerm: podcasts.searchTerm,
       items: podcasts.items,
-      maxRequested: podcasts.maxRequested,
       hasLoaded: podcasts.hasLoaded,
       isLoading: podcasts.isLoading,
       isLoadingMore: podcasts.isLoadingMore,
+      hasMore: podcasts.hasMore,
       error: podcasts.error,
       setSearchTerm: podcasts.setSearchTerm,
-      load: podcasts.load,
+      setActiveCategoryId: podcasts.setActiveCategoryId,
       loadMore: podcasts.loadMore,
       retry: podcasts.retry,
       handlePodcastPress,
     }),
-    // Stabilize the context value — depend on each property individually
-    // so the memo only invalidates when one of them actually changes,
-    // not every render (`podcasts` is a fresh object each time) — the
-    // Phase 5.2b fix that prevented re-render loops.
     [
       podcasts.isSearchActive,
       podcasts.searchTerm,
       podcasts.items,
-      podcasts.maxRequested,
       podcasts.hasLoaded,
       podcasts.isLoading,
       podcasts.isLoadingMore,
+      podcasts.hasMore,
       podcasts.error,
       podcasts.setSearchTerm,
-      podcasts.load,
+      podcasts.setActiveCategoryId,
       podcasts.loadMore,
       podcasts.retry,
       handlePodcastPress,
