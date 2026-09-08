@@ -31,7 +31,6 @@ import {
   type UseQueryOptions,
   type UseInfiniteQueryOptions,
   type UseMutationOptions,
-  type QueriesOptions,
   type QueryKey,
   type InfiniteData,
 } from '@tanstack/react-query';
@@ -112,19 +111,22 @@ export function useApiMutation<TData, TVariables, TError = Error>(
  * mapper from the per-source results to the combined shape.
  * If `combine` is omitted, the raw array is returned.
  *
- * V18.6 design constraint: the type parameter ordering is
- *   `TResults extends readonly unknown[]` → individual result
- *   types, in the same order as the `queries` array.
+ * V18.6 type note: TanStack v5's `useQueries` has rich
+ * inference (`T extends Array<any>` for both the input
+ * tuple and the result tuple) but exposing those generics
+ * through a wrapper is brittle. We take a permissive input
+ * type and let the consumer use the `combine` callback to
+ * type-assert the per-source result shape. The wrapper
+ * returns the raw result array when `combine` is omitted
+ * and `TCombined` when it's present.
  */
-export function useApiQueries<
-  TResults extends readonly unknown[],
-  TCombined = TResults,
->(
-  options: QueriesOptions<TResults> & {
-    combine?: (results: TResults) => TCombined;
+export function useApiQueries<TCombined = unknown>(
+  options: {
+    queries: ReadonlyArray<Parameters<typeof useQueries>[0]['queries'][number]>;
+    combine?: (results: ReadonlyArray<unknown>) => TCombined;
   },
-): TCombined {
-  const {combine, ...queriesOptions} = options;
-  const results = useQueries(queriesOptions) as unknown as TResults;
-  return combine ? combine(results) : (results as unknown as TCombined);
+): TCombined | ReadonlyArray<unknown> {
+  const {combine, queries} = options;
+  const result = useQueries({queries});
+  return combine ? combine(result as ReadonlyArray<unknown>) : result;
 }
