@@ -1,19 +1,18 @@
-// ─── Audiobooks Browse Screen ────────────────────────────────────────
-// Phase 3 formula: search bar above a react-native-tab-view tab bar.
-//   • Search / Genres / New Releases are lazily-mounted scenes (native pager)
-//   • each (tab, searchTerm, genre) scope is cached independently —
-//     toggling tabs never refetches or clears already-loaded data
-//   • every list paginates via onEndReached (infinite scroll)
-// Tap a book → AudiobookDetail (chapter list + playback).
+// ─── Audiobooks Browse Screen ───────────────────────────────────────
+// V18.11.3: converted from the v3-v9 3-tab pattern to the v10+
+// "single content stream + FAB" pattern. The "Recent" tab was
+// dropped (its feed overlaps with the Home rail). The screen now
+// has a SearchBar at the top + a single FilterChips row for genre
+// + one FlatList. The "audiobook/genre" filter acts as a secondary
+// input — if a genre is selected AND a search term is set, the
+// term wins (matches the pre-V18 behavior).
 
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {
   View,
   FlatList,
-    TouchableOpacity,
-
+  TouchableOpacity,
 } from 'react-native';
-
 import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
@@ -25,7 +24,7 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
+import {SvgIcon, type SvgIconName} from '../../../components/utility/SvgIcon';
 import {FilterChips} from '../../../components/utility/FilterChips';
 import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
@@ -33,27 +32,15 @@ import {useToast} from '../../../components/feedback/Toast';
 import {LIBRIVOX_GENRES} from '../../../constants/audiobookCategories';
 import {archiveImageUrl, archiveIdentifierFromUrl} from '../../../services/api/internetArchiveService';
 import type {AudiobookResult} from '../../../types/api';
-import {AUDIOBOOK_SCOPE_CHIPS} from '../related/scopeConfig';
 import {styles} from '../styles';
-import type {
-  AudiobooksTab,
-  AudiobookScope,
-  BookRow,
-  BookCardProps,
-  AudiobookTabSceneProps,
-} from '../types';
+import type {BookRow, BookCardProps} from '../types';
 
 type Props = AudiobooksScreenProps;
 
-// v10 Wave 4: genre chips run through the shared FilterChips primitive (wrap mode)
 const GENRE_CHIP_ITEMS = LIBRIVOX_GENRES.map(genre => ({
   key: genre,
   label: genre,
 }));
-
-// ─── Normalized row ────────────────────────────────────────────────────
-
-
 
 function toRow(book: AudiobookResult): BookRow {
   const identifier = archiveIdentifierFromUrl(book.urlIArchive);
@@ -76,10 +63,6 @@ function formatTime(totalSeconds: number): string {
   return `${m}m`;
 }
 
-// ─── Book Card ─────────────────────────────────────────────────────────
-
-
-
 const BookCard: React.FC<BookCardProps> = React.memo(({row, onPress}) => {
   const {colors} = useTheme();
   return (
@@ -100,16 +83,18 @@ const BookCard: React.FC<BookCardProps> = React.memo(({row, onPress}) => {
           <SvgIcon name="headphones" size={22} color={colors.accent.gold} />
         )}
       </View>
-      <View style={styles.info}>
+      <View style={[styles.info, {paddingHorizontal: 12}]}>
         <AppText variant="bodySmall" numberOfLines={1} style={styles.name}>
           {row.title}
         </AppText>
-        <AppText variant="caption" color="secondary" numberOfLines={1}>
-          {row.author}
-        </AppText>
-        {row.subtitle || row.totalTime > 0 ? (
+        {row.author ? (
+          <AppText variant="caption" color="secondary" numberOfLines={1}>
+            {row.author}
+          </AppText>
+        ) : null}
+        {row.subtitle ? (
           <AppText variant="caption" color="tertiary" numberOfLines={1}>
-            {[formatTime(row.totalTime), row.subtitle].filter(Boolean).join(' · ')}
+            {`${row.subtitle}${formatTime(row.totalTime) ? ` · ${formatTime(row.totalTime)}` : ''}`}
           </AppText>
         ) : null}
       </View>
@@ -122,177 +107,45 @@ const BookCard: React.FC<BookCardProps> = React.memo(({row, onPress}) => {
   );
 });
 
-// ─── Tab Scene ─────────────────────────────────────────────────────────
-
-
-
-const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
-  ({
-    tab,
-    scope,
-    isSearchActive,
-    selectedGenre,
-    selectGenre,
-    onPressBook,
-  }) => {
-    const {colors} = useTheme();
-    const toast = useToast();
-    const {items, hasLoaded, isLoading, isLoadingMore, error, fetchNextPage, refetch} = scope;
-
-    // Surface page-1 load failures as a toast with a Retry action.
-    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs).
-    const lastShownErrorRef = React.useRef<string | null>(null);
-    React.useEffect(() => {
-      const shouldShow = !hasLoaded && !isLoading && !!error;
-      const currentError = shouldShow ? 'Could not load results.' : null;
-      if (currentError && currentError !== lastShownErrorRef.current) {
-        lastShownErrorRef.current = currentError;
-        toast.show(currentError, 'error', {
-          duration: 8000,
-          action: {
-            label: 'Retry',
-            onPress: () => {
-              lastShownErrorRef.current = null;
-              refetch();
-            },
-          },
-        });
-      } else if (!currentError) {
-        lastShownErrorRef.current = null;
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasLoaded, isLoading, error, refetch]);
-
-    const rows = useMemo<BookRow[]>(() => items.map(toRow), [items]);
-
-    // ── Page-1 loader ──
-    if (!hasLoaded && isLoading) {
-      return (
-        <Placeholder
-          variant="loading"
-          anchor="top-third"
-          title="Loading audiobooks…"
-        />
-      );
-    }
-
-    // ── Page-1 error ── toast surfaces Retry; placeholder keeps the
-    //    screen from looking blank.
-    if (!hasLoaded && !isLoading && error && rows.length === 0) {
-      return (
-        <Placeholder
-          variant="empty"
-          anchor="top-third"
-          icon="alertCircle"
-          title="Couldn't load audiobooks."
-          message="Use Retry at the bottom of the screen to try again."
-        />
-      );
-    }
-
-    // ── Empty (cached or fresh) ──
-    if (hasLoaded && !error && rows.length === 0) {
-      return (
-        <Placeholder
-          variant="empty"
-          anchor="top-third"
-          icon={tab === 'genres' ? 'layoutGrid' : 'headphones'}
-          title={
-            tab === 'search'
-              ? isSearchActive
-                ? 'No audiobooks match your search.'
-                : 'Search for audiobooks by title or author.'
-              : tab === 'genres'
-              ? 'Select a genre to browse.'
-              : 'No recent audiobooks found.'
-          } />
-      );
-    }
-
-    // ── Genre chips above the list (Genres tab, already loaded) ──
-    const genreChipsHeader =
-      tab === 'genres' ? (
-        <FilterChips
-          wrap
-          items={GENRE_CHIP_ITEMS}
-          selectedKey={selectedGenre}
-          onSelect={selectGenre}
-        />
-      ) : null;
-
-    // ── Loaded list with infinite scroll ──
-    return (
-      <FlatList
-        data={rows}
-        keyExtractor={item => String(item.id)}
-        renderItem={({item}) => (
-          <BookCard row={item} onPress={onPressBook} />
-        )}
-        ListHeaderComponent={genreChipsHeader}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={ItemSeparator}
-        onEndReached={() => fetchNextPage()}
-        onEndReachedThreshold={0.4}
-        ListFooterComponent={
-          isLoadingMore || error ? (
-            <View style={styles.footer}>
-              {isLoadingMore ? (
-                <ActivityOrb size={22} />
-              ) : (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => fetchNextPage()}
-                  style={[
-                    styles.loadMoreRetry,
-                    {borderColor: colors.border.subtle},
-                  ]}
-                  accessibilityRole="button">
-                  <AppText variant="caption" color="secondary">
-                    Could not load more — tap to retry
-                  </AppText>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : null
-        }
-        windowSize={5}
-        maxToRenderPerBatch={10}
-      />
-    );
-  },
-);
-
-// ─── Screen ────────────────────────────────────────────────────────────
-
 export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const {initialTab, initialGenre: genre} = route.params ?? {};
+  const {initialGenre: genre} = route.params ?? {};
+
   const {
     searchTerm,
     setSearchTerm,
     isSearchActive,
     selectedGenre,
     setSelectedGenre,
-    search: searchScope,
-    genres: genresScope,
-    recent: recentScope,
-  } = useAudiobooksScreen(initialTab, genre);
+    items,
+    hasLoaded,
+    isLoading,
+    isLoadingMore,
+    hasNextPage,
+    error,
+    fetchNextPage,
+    refetch,
+    isOnline,
+    refreshing,
+    handleRefresh,
+  } = useAudiobooksScreen(genre);
 
-  // Active tab is owned by the screen now (the per-scope cache
-  // lives in TanStack, not in the hook). The default falls back to
-  // 'search' when no initial tab is given.
-  const [selectedTab, setSelectedTab] = useState<AudiobooksTab>(
-    (initialTab as AudiobooksTab) || 'search',
-  );
+  const toast = useToast();
 
-  const currentScope =
-    selectedTab === 'search'
-      ? searchScope
-      : selectedTab === 'genres'
-      ? genresScope
-      : recentScope;
+  React.useEffect(() => {
+    if (!hasLoaded && !isLoading && !!error) {
+      toast.show(
+        isOnline ? 'Could not load audiobooks.' : 'You are offline.',
+        'error',
+        {
+          duration: 8000,
+          action: {label: 'Retry', onPress: () => refetch()},
+        },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLoaded, isLoading, error, isOnline]);
 
   const handleBookPress = useCallback(
     (row: BookRow) => {
@@ -304,6 +157,12 @@ export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
     [navigation],
   );
 
+  const rows = useMemo(() => items.map(toRow), [items]);
+
+  const showEmpty =
+    hasLoaded && !error && rows.length === 0;
+  const showError = !hasLoaded && !isLoading && error;
+
   return (
     <View
       style={[
@@ -313,36 +172,78 @@ export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Audiobooks" />
 
-      {/* ── Search (stays put while tabs change) ── */}
       <View style={styles.searchSection}>
         <SearchBar
           value={searchTerm}
           onChangeText={setSearchTerm}
           placeholder="Search titles or authors…"
         />
-      </View>
-
-      <View style={styles.scopeSection}>
         <FilterChips
           wrap
-          items={AUDIOBOOK_SCOPE_CHIPS}
-          selectedKey={selectedTab}
-          onSelect={key => setSelectedTab(key as AudiobooksTab)}
+          items={GENRE_CHIP_ITEMS}
+          selectedKey={selectedGenre}
+          onSelect={setSelectedGenre}
         />
       </View>
 
-      <AudiobookTabScene
-        tab={selectedTab}
-        scope={currentScope}
-        isSearchActive={isSearchActive}
-        selectedGenre={selectedGenre}
-        selectGenre={setSelectedGenre}
-        onPressBook={handleBookPress}
-      />
+      {!hasLoaded && isLoading ? (
+        <Placeholder
+          variant="loading"
+          anchor="top-third"
+          title="Loading audiobooks…"
+        />
+      ) : showError ? (
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="alertCircle"
+          title={isOnline ? "Couldn't load audiobooks." : "You're offline."}
+          message="Use Retry at the bottom of the screen to try again."
+        />
+      ) : showEmpty ? (
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="search"
+          title={
+            isSearchActive
+              ? 'No audiobooks match your search.'
+              : selectedGenre
+              ? 'No audiobooks in this genre.'
+              : 'Search for audiobooks by title or author.'
+          }
+        />
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={item => String(item.id)}
+          renderItem={({item}) => <BookCard row={item} onPress={handleBookPress} />}
+          contentContainerStyle={[
+            styles.listContent,
+            {paddingBottom: insets.bottom + 56 + 12},
+          ]}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={ItemSeparator}
+          onEndReached={() => {
+            if (hasNextPage && !isLoadingMore) fetchNextPage();
+          }}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={{padding: 16, alignItems: 'center'}}>
+                <ActivityOrb size={22} />
+              </View>
+            ) : null
+          }
+          refreshControl={
+            <View>
+              {/* Refresh control: trigger via header pull-equivalent. */}
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };
-
-// ─── List helpers ───────────────────────────────────────────────────────
 
 const ItemSeparator = () => <View style={styles.separator} />;

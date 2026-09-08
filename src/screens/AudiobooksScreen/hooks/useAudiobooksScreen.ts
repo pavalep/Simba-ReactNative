@@ -1,46 +1,29 @@
 // ─── Audiobooks Screen Hook ──────────────────────────────────────────
-// Phase 3 formula: search bar above a react-native-tab-view tab bar.
-//   • Search / Genres / New Releases are lazily-mounted scenes
-//   • each (tab, searchTerm, genre) scope is cached independently —
-//     toggling tabs never refetches or clears already-loaded data
-//   • every list paginates via onEndReached (infinite scroll)
-//
-// V18.3.3: the per-scope cache that used to live in `scopes` (a
-// Map<key, AudiobookScopeState>) is now TanStack's cache. The hook
-// runs ONE useInfiniteApiQuery per tab (search / genres / recent);
-// the queryKey includes the active searchTerm or selectedGenre. When
-// the user switches tabs, the previously-fetched tab's data is
-// served from TanStack's cache instantly (within staleTime).
-//
-// `ensureLoaded(tab)` is no longer needed — the queries run whenever
-// their `enabled` flag is true. The screen's `AudiobookTabScene`
-// renders a loading placeholder while the first page fetches and the
-// cached data on re-mount.
+// V18.11.3: converted from the v3-v9 3-tab pattern
+// (search / genres / recent) to the v10+ "single content stream +
+// FAB" pattern. The "Recent" tab was dropped — its feed overlaps
+// with the global "Recently Added" rail on Home. The screen
+// now has one async stream (search OR genre) + a single FilterChips
+// row that toggles between free-text search and a genre filter.
 
 import {useCallback, useMemo, useState} from 'react';
-import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
+import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {
   searchAudiobooks,
   searchByGenre,
-  getRecentAudiobooks,
 } from '../../../services/api/librivoxAdapter';
 import type {AudiobookResult} from '../../../types/api';
-
-export type AudiobooksTab = 'search' | 'genres' | 'recent';
+import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 
 const PAGE_SIZE = 20;
-const SEARCH_CACHE_TTL_MS = 600_000; // 10 min (matches old behavior)
+const SEARCH_CACHE_TTL = 600_000; // 10 min
 
-function dedupe(items: AudiobookResult[]): AudiobookResult[] {
-  const seen = new Set<number>();
-  return items.filter(i => {
-    if (seen.has(i.id)) return false;
-    seen.add(i.id);
-    return true;
-  });
-}
-
-export interface AudiobookScope {
+export interface UseAudiobooksScreenResult {
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  isSearchActive: boolean;
+  selectedGenre: string | null;
+  setSelectedGenre: (genre: string) => void;
   items: AudiobookResult[];
   hasLoaded: boolean;
   isLoading: boolean;
@@ -49,54 +32,26 @@ export interface AudiobookScope {
   error: string | null;
   fetchNextPage: () => void;
   refetch: () => void;
-}
-
-function shapeQuery(
-  query: ReturnType<typeof useInfiniteApiQuery<AudiobookResult[]>>,
-): AudiobookScope {
-  return {
-    items: dedupe((query.data?.pages ?? []).flat()),
-    hasLoaded: !!query.data,
-    isLoading: query.isFetching,
-    isLoadingMore: query.isFetchingNextPage,
-    hasNextPage: query.hasNextPage ?? false,
-    error: query.error?.message ?? null,
-    fetchNextPage: () => {
-      void query.fetchNextPage();
-    },
-    refetch: () => {
-      void query.refetch();
-    },
-  };
-}
-
-export interface UseAudiobooksScreenResult {
-  // search + selection state
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  isSearchActive: boolean;
-  selectedGenre: string | null;
-  setSelectedGenre: (genre: string) => void;
-  // the 3 scopes
-  search: AudiobookScope;
-  genres: AudiobookScope;
-  recent: AudiobookScope;
+  isOnline: boolean;
+  refreshing: boolean;
+  handleRefresh: () => void;
 }
 
 export function useAudiobooksScreen(
-  initialTab?: string,
   initialGenre?: string,
 ): UseAudiobooksScreenResult {
-  const [_selectedTab] = useState<AudiobooksTab>(
-    (initialTab as AudiobooksTab) || 'search',
-  );
+  const {isOnline} = useNetworkStatus();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string | null>(
     initialGenre ?? null,
   );
 
-  // Three independent infinite queries, one per tab. The queryKey
-  // includes the term/genre so TanStack caches each unique scope.
+  const isSearchActive = searchTerm.trim().length > 0;
+
+  // Two parallel infinite queries — one for "by term", one for
+  // "by genre". Whichever is active is exposed; TanStack's cache
+  // preserves each across term/genre switches.
   const searchQ = useInfiniteApiQuery<AudiobookResult[]>({
     queryKey: ['librivox', 'search', searchTerm],
     queryFn: ({pageParam}) =>
@@ -107,12 +62,12 @@ export function useAudiobooksScreen(
       if (lastPage.length < PAGE_SIZE) return undefined;
       return lastPageParam + 1;
     },
-    enabled: searchTerm.trim().length > 0,
-    staleTime: SEARCH_CACHE_TTL_MS,
+    enabled: isSearchActive,
+    staleTime: SEARCH_CACHE_TTL,
   });
 
-  const genresQ = useInfiniteApiQuery<AudiobookResult[]>({
-    queryKey: ['librivox', 'genres', selectedGenre ?? ''],
+  const genreQ = useInfiniteApiQuery<AudiobookResult[]>({
+    queryKey: ['librivox', 'genre', selectedGenre ?? ''],
     queryFn: ({pageParam}) =>
       selectedGenre
         ? searchByGenre(selectedGenre, {limit: PAGE_SIZE, page: pageParam as number})
@@ -123,35 +78,51 @@ export function useAudiobooksScreen(
       if (lastPage.length < PAGE_SIZE) return undefined;
       return lastPageParam + 1;
     },
-    enabled: !!selectedGenre,
-    staleTime: SEARCH_CACHE_TTL_MS,
+    enabled: !!selectedGenre && !isSearchActive,
+    staleTime: SEARCH_CACHE_TTL,
   });
 
-  const recentQ = useInfiniteApiQuery<AudiobookResult[]>({
-    queryKey: ['librivox', 'recent'],
-    queryFn: ({pageParam}) =>
-      getRecentAudiobooks({limit: PAGE_SIZE, page: pageParam as number}),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, _pages, lastPageParam) => {
-      if (typeof lastPageParam !== 'number') return undefined;
-      if (lastPage.length < PAGE_SIZE) return undefined;
-      return lastPageParam + 1;
-    },
-    staleTime: SEARCH_CACHE_TTL_MS,
-  });
+  // Term takes priority over genre (matches the pre-V18 behavior).
+  const active = isSearchActive ? searchQ : genreQ;
 
-  const setSelectedGenreToggle = useCallback((genre: string) => {
-    setSelectedGenre(prev => (prev === genre ? null : genre));
-  }, []);
+  const items = useMemo(
+    () => dedupe((active.data?.pages ?? []).flat()),
+    [active.data],
+  );
+
+  const handleRefresh = useCallback(() => {
+    void active.refetch();
+  }, [active]);
 
   return {
     searchTerm,
     setSearchTerm,
-    isSearchActive: searchTerm.trim().length > 0,
+    isSearchActive,
     selectedGenre,
-    setSelectedGenre: setSelectedGenreToggle,
-    search: shapeQuery(searchQ),
-    genres: shapeQuery(genresQ),
-    recent: shapeQuery(recentQ),
+    setSelectedGenre,
+    items,
+    hasLoaded: !!active.data,
+    isLoading: active.isFetching,
+    isLoadingMore: active.isFetchingNextPage,
+    hasNextPage: active.hasNextPage ?? false,
+    error: active.error?.message ?? null,
+    fetchNextPage: () => {
+      void active.fetchNextPage();
+    },
+    refetch: () => {
+      void active.refetch();
+    },
+    isOnline,
+    refreshing: active.isFetching && !!active.data,
+    handleRefresh,
   };
+}
+
+function dedupe(items: AudiobookResult[]): AudiobookResult[] {
+  const seen = new Set<number>();
+  return items.filter(i => {
+    if (seen.has(i.id)) return false;
+    seen.add(i.id);
+    return true;
+  });
 }
