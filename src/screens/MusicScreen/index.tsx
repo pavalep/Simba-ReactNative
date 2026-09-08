@@ -3,7 +3,7 @@ import type {RootStackScreenProps} from '../../navigation/types';
 import {BrowseLayout} from './components/BrowseLayout';
 import {MusicDataProvider} from './components/MusicDataProvider';
 import {MusicContent} from './components/MusicContent';
-import {useSectionOptions} from './hooks/useOptions';
+import {useSectionOptions} from '../../hooks/useSectionOptions';
 import {MUSIC_SECTION_CONFIG} from './related/browseConfig';
 import type {SectionBrowseConfig, SectionRenderContext} from './types';
 

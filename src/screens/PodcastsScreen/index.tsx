@@ -6,7 +6,7 @@ import {
   PodcastsDataProvider,
 } from './components/PodcastsContent';
 import {usePodcastCategories} from './hooks/usePodcastCategories';
-import {useSectionOptions} from './hooks/useOptions';
+import {useSectionOptions} from '../../hooks/useSectionOptions';
 import {createPodcastsSectionConfig} from './related/browseConfig';
 import type {SectionBrowseConfig} from './types';
 

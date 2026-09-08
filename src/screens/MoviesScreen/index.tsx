@@ -3,7 +3,7 @@ import type {RootStackScreenProps} from '../../navigation/types';
 import {BrowseLayout} from './components/BrowseLayout';
 import {MoviesDataProvider} from './components/MoviesDataProvider';
 import {renderMoviesContent} from './components/MoviesContent';
-import {useSectionOptions} from './hooks/useOptions';
+import {useSectionOptions} from '../../hooks/useSectionOptions';
 import {MOVIES_SECTION_CONFIG} from './related/browseConfig';
 import type {SectionBrowseConfig} from './types';
 
