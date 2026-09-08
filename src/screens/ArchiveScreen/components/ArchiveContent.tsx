@@ -1,21 +1,25 @@
-// ─── Internet Archive Browse Screen ────────────────────────────────────
-// Phase 3 formula: search bar above a react-native-tab-view tab bar.
-//   • Audio / Video are lazily-mounted scenes (native pager) — a scope is
-//     a (tab, searchTerm) pair, cached independently so toggling tabs never
-//     refetches or clears already-loaded data and search text survives.
-//   • Every list paginates via onEndReached (infinite scroll) using IA's
-//     `numFound` as the has-more boundary.
-// Audio → ArchiveItemDetail (track list), video → MovieDetail (player).
+// ─── Internet Archive Browse Screen ─────────────────────────────────────
+// V18.11.1: converted from the v3-v9 TabView pattern to the v10+
+// "single content stream + FAB" pattern.
+//
+//   • Search bar at the top (debounced via the screen)
+//   • A media-type toggle (Audio / Video) sits below the search
+//     bar — this is the "FAB" replacement for the old TabView
+//   • One FlatList renders whichever media type is active
+//   • Pull-to-refresh + error toast are handled inline
+//
+// V18.2 lesson: 1 useApiQuery per service method. The hook runs
+// two parallel queries (audio + video) and exposes the active
+// one. The screen reads `items` as a union type; the
+// `mediaType` state controls which list is shown.
 
 import React, {useCallback, useMemo} from 'react';
 import {
   View,
   FlatList,
-    TouchableOpacity,
+  TouchableOpacity,
   RefreshControl,
-
 } from 'react-native';
-
 import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
@@ -29,7 +33,6 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {SvgIcon, type SvgIconName} from '../../../components/utility/SvgIcon';
 import {FilterChips} from '../../../components/utility/FilterChips';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {useToast} from '../../../components/feedback/Toast';
 import {ARCHIVE_QUICK_SEARCHES} from '../../../constants/audiobookCategories';
@@ -39,27 +42,15 @@ import type {
 } from '../../../types/api';
 import {ARCHIVE_MEDIA_SCOPES} from '../related/scopeConfig';
 import {styles} from '../styles';
-import type {
-  ArchiveTab,
-  AudioScopeState,
-  VideoScopeState,
-  ArchiveRow,
-  ArchiveCardProps,
-  ArchiveTabSceneProps,
-} from '../types';
+import type {ArchiveRow, ArchiveCardProps} from '../types';
 
 type Props = ArchiveScreenProps;
 
-// v10 Wave 4: quick-search chips run through the shared FilterChips primitive
 const QUICK_SEARCH_CHIP_ITEMS = ARCHIVE_QUICK_SEARCHES.map(entry => ({
   key: entry.query,
   label: entry.label,
   icon: entry.icon as SvgIconName,
 }));
-
-// ─── Normalized rows ───────────────────────────────────────────────────
-
-
 
 function audioToRow(item: InternetArchiveItemResult): ArchiveRow {
   return {
@@ -80,10 +71,6 @@ function videoToRow(item: InternetArchiveVideoResult): ArchiveRow {
     subtitle: [item.year].filter(Boolean).join(' · '),
   };
 }
-
-// ─── Row Card ──────────────────────────────────────────────────────────
-
-
 
 const ArchiveCard: React.FC<ArchiveCardProps> = React.memo(
   ({row, mediaType, onPress}) => {
@@ -135,183 +122,51 @@ const ArchiveCard: React.FC<ArchiveCardProps> = React.memo(
   },
 );
 
-// ─── Tab Scene ─────────────────────────────────────────────────────────
-
-
-
-const ArchiveTabScene: React.FC<ArchiveTabSceneProps> = React.memo(
-  ({
-    tab,
-    scope,
-    isSearchActive,
-    isOnline,
-    refreshing,
-    ensureLoaded,
-    loadMore,
-    retry,
-    handleRefresh,
-    onPressRow,
-  }) => {
-    const {colors} = useTheme();
-    const toast = useToast();
-    const {hasLoaded, isLoading, isLoadingMore, error} = scope;
-
-    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref.
-    const ensureLoadedRef = React.useRef(ensureLoaded);
-    ensureLoadedRef.current = ensureLoaded;
-
-    // Auto-load page 1 the first time this scene mounts (lazy tab).
-    React.useEffect(() => {
-      ensureLoadedRef.current(tab);
-    }, [tab]);
-
-    // Surface page-1 load failures as a toast with a Retry action.
-    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs).
-    const lastShownErrorRef = React.useRef<string | null>(null);
-    React.useEffect(() => {
-      const shouldShow = !hasLoaded && !isLoading && !!error;
-      const currentError = shouldShow
-        ? isOnline
-          ? 'Could not load archive.'
-          : 'You are offline.'
-        : null;
-      if (currentError && currentError !== lastShownErrorRef.current) {
-        lastShownErrorRef.current = currentError;
-        toast.show(currentError, 'error', {
-          duration: 8000,
-          action: {
-            label: 'Retry',
-            onPress: () => {
-              lastShownErrorRef.current = null;
-              retry(tab);
-            },
-          },
-        });
-      } else if (!currentError) {
-        lastShownErrorRef.current = null;
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasLoaded, isLoading, error, isOnline]);
-
-    const rows = useMemo<ArchiveRow[]>(() => {
-      if (tab === 'audio') {
-        return (scope as AudioScopeState).items.map(audioToRow);
-      }
-      return (scope as VideoScopeState).items.map(videoToRow);
-    }, [tab, scope]);
-
-    // ── Initial page-1 loader ──
-    if (!hasLoaded && isLoading) {
-      return (
-        <Placeholder
-          variant="loading"
-          anchor="top-third"
-          title={`Loading ${tab === 'audio' ? 'Audio' : 'Video'}…`}
-        />
-      );
-    }
-
-    // ── Page-1 error ── toast surfaces Retry; placeholder keeps the
-    //    screen from looking blank.
-    if (!hasLoaded && !isLoading && error && rows.length === 0) {
-      return (
-        <Placeholder
-          variant="empty"
-          anchor="top-third"
-          icon="alertCircle"
-          title={isOnline ? "Couldn't load archive." : "You're offline."}
-          message="Use Retry at the bottom of the screen to try again."
-        />
-      );
-    }
-
-    // ── Empty (cached or fresh) ──
-    if (hasLoaded && !error && rows.length === 0) {
-      return (
-        <Placeholder
-          variant="empty"
-          anchor="top-third"
-          icon="search"
-          title={isSearchActive ? 'No results for this search.' : 'Nothing found here yet.'}
-        />
-      );
-    }
-
-    // ── Loaded list with infinite scroll ──
-    return (
-      <FlatList
-        data={rows}
-        keyExtractor={item => item.identifier}
-        renderItem={({item}) => (
-          <ArchiveCard row={item} mediaType={tab} onPress={onPressRow} />
-        )}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={ItemSeparator}
-        onEndReached={() => loadMore(tab)}
-        onEndReachedThreshold={0.4}
-        ListFooterComponent={
-          isLoadingMore || error ? (
-            <View style={styles.footer}>
-              {isLoadingMore ? (
-                <ActivityOrb size={22} />
-              ) : (
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => loadMore(tab)}
-                  style={[
-                    styles.loadMoreRetry,
-                    {borderColor: colors.border.subtle},
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Try loading more">
-                  <AppText variant="caption" color="secondary">
-                    Could not load more — tap to retry
-                  </AppText>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : null
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.accent.gold}
-            colors={[colors.accent.gold]}
-          />
-        }
-      />
-    );
-  },
-);
-
-// ─── Component ─────────────────────────────────────────────────────────
-
 export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {initialTab, query} = route.params ?? {};
+
   const {
-    tab,
-    selectTab,
+    mediaType,
+    setMediaType,
     searchQuery,
     setSearchQuery,
     setSearchTerm,
-    submitSearch,
     isSearchActive,
+    items,
+    hasLoaded,
+    isLoading,
+    error,
     isOnline,
     refreshing,
+    refetch,
     handleRefresh,
-    getScope,
-    ensureLoaded,
-    loadMore,
-    retry,
-  } = useArchiveScreen(initialTab, query);
+  } = useArchiveScreen({initialTab, initialQuery: query});
+
+  const toast = useToast();
+
+  // Show error toast for page-1 failures
+  React.useEffect(() => {
+    if (!hasLoaded && !isLoading && !!error) {
+      toast.show(
+        isOnline ? 'Could not load archive.' : 'You are offline.',
+        'error',
+        {
+          duration: 8000,
+          action: {
+            label: 'Retry',
+            onPress: () => refetch(),
+          },
+        },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLoaded, isLoading, error, isOnline]);
 
   const handleRowPress = useCallback(
-    (row: ArchiveRow, mediaType: ArchiveTab) => {
-      if (mediaType === 'video') {
+    (row: ArchiveRow, mt: 'audio' | 'video') => {
+      if (mt === 'video') {
         navigation.navigate('MovieDetail', {
           identifier: row.identifier,
           title: row.title,
@@ -326,7 +181,43 @@ export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
     [navigation],
   );
 
-  const currentScope = getScope(tab);
+  const rows = useMemo<ArchiveRow[]>(() => {
+    if (mediaType === 'audio') {
+      return (items as InternetArchiveItemResult[]).map(audioToRow);
+    }
+    return (items as InternetArchiveVideoResult[]).map(videoToRow);
+  }, [items, mediaType]);
+
+  if (!hasLoaded && isLoading) {
+    return (
+      <View style={[styles.root, {backgroundColor: colors.background.primary, paddingTop: insets.top}]}>
+        <SimbaStatusBar variant="home" />
+        <InternalHeader title="Internet Archive" />
+        <View style={styles.searchSection}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onDebouncedChange={setSearchTerm}
+            placeholder={
+              mediaType === 'audio'
+                ? 'Search audio: radio, concerts, speeches…'
+                : 'Search films & documentaries…'
+            }
+          />
+          <FilterChips
+            items={ARCHIVE_MEDIA_SCOPES}
+            selectedKey={mediaType}
+            onSelect={key => setMediaType(key as 'audio' | 'video')}
+          />
+        </View>
+        <Placeholder
+          variant="loading"
+          anchor="top-third"
+          title={`Loading ${mediaType === 'audio' ? 'Audio' : 'Video'}…`}
+        />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -337,46 +228,65 @@ export const ArchiveScreen: React.FC<Props> = ({navigation, route}) => {
       <SimbaStatusBar variant="home" />
       <InternalHeader title="Internet Archive" />
 
-      {/* ── Search — stays put while tabs change ── */}
       <View style={styles.searchSection}>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}
           onDebouncedChange={setSearchTerm}
           placeholder={
-            tab === 'audio'
+            mediaType === 'audio'
               ? 'Search audio: radio, concerts, speeches…'
               : 'Search films & documentaries…'
           }
         />
-                {!searchQuery.trim() && (
+        {!searchQuery.trim() && (
           <FilterChips
             items={QUICK_SEARCH_CHIP_ITEMS}
             selectedKey={null}
-            onSelect={submitSearch}
+            onSelect={q => {
+              setSearchQuery(q);
+              setSearchTerm(q);
+            }}
           />
         )}
         <FilterChips
           items={ARCHIVE_MEDIA_SCOPES}
-          selectedKey={tab}
-          onSelect={key => selectTab(key as ArchiveTab)}
+          selectedKey={mediaType}
+          onSelect={key => setMediaType(key as 'audio' | 'video')}
         />
-
       </View>
 
-            <ArchiveTabScene
-        tab={tab}
-        scope={currentScope}
-        isSearchActive={isSearchActive}
-        isOnline={isOnline}
-        refreshing={refreshing}
-        ensureLoaded={ensureLoaded}
-        loadMore={loadMore}
-        retry={retry}
-        handleRefresh={handleRefresh}
-        onPressRow={handleRowPress}
-      />
-
+      {hasLoaded && !error && rows.length === 0 ? (
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="search"
+          title={
+            isSearchActive
+              ? 'No results for this search.'
+              : 'Nothing found here yet.'
+          }
+        />
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={item => item.identifier}
+          renderItem={({item}) => (
+            <ArchiveCard row={item} mediaType={mediaType} onPress={handleRowPress} />
+          )}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={ItemSeparator}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+            />
+          }
+        />
+      )}
     </View>
   );
 };

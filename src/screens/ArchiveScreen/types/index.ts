@@ -1,10 +1,6 @@
-import type {
-  ArchiveTab,
-  AudioScopeState,
-  VideoScopeState,
-} from '../hooks/useArchiveScreen';
+import type {ArchiveMediaType} from '../hooks/useArchiveScreen';
 
-export type {ArchiveTab, AudioScopeState, VideoScopeState};
+export type {ArchiveMediaType};
 
 export interface ArchiveRow {
   identifier: string;
@@ -16,21 +12,8 @@ export interface ArchiveRow {
 
 export interface ArchiveCardProps {
   row: ArchiveRow;
-  mediaType: ArchiveTab;
-  onPress: (row: ArchiveRow, mediaType: ArchiveTab) => void;
-}
-
-export interface ArchiveTabSceneProps {
-  tab: ArchiveTab;
-  scope: AudioScopeState | VideoScopeState;
-  isSearchActive: boolean;
-  isOnline: boolean;
-  refreshing: boolean;
-  ensureLoaded: (tab: ArchiveTab) => void;
-  loadMore: (tab: ArchiveTab) => void;
-  retry: (tab: ArchiveTab) => void;
-  handleRefresh: () => void;
-  onPressRow: (row: ArchiveRow, mediaType: ArchiveTab) => void;
+  mediaType: ArchiveMediaType;
+  onPress: (row: ArchiveRow, mediaType: ArchiveMediaType) => void;
 }
 
 export type ArchiveScreenProps = import('../../../navigation/types').ArchiveScreenProps;

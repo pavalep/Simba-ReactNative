@@ -1,15 +1,18 @@
 // ─── Archive Screen Hook ────────────────────────────────────────────────
-// Phase 3 formula: per-scope cache + infinite scroll + search persistence.
+// V18.11.1: converted from the v3-v9 "TabView" pattern to the v10+
+// "single content stream + FAB" pattern. Two useApiQuery calls (one
+// per media type) — the active type's query result is returned; the
+// screen owns the `mediatype` state and switches via a FAB.
 //
-// A "scope" is a (tab, searchTerm) pair. Every combination is cached
-// independently (`key = "${tab}|${term}"`), so:
-//   • toggling Audio/Video never loses results already loaded for that scope
-//   • typing a search never clears the browse data of the other tab
-//   • scrolling back to a visited tab shows its cached list instantly
-// Pagination is driven by IA's `numFound` — `loadMore` fetches the next
-// page only while `items.length < numFound`.
+// V18.2 lesson: "1 useApiQuery per service method." Audio and video
+// are two distinct service methods (searchInternetArchiveAudio vs
+// searchInternetArchiveVideos) with different return shapes, so the
+// hook runs them as parallel queries and exposes whichever is active.
+// No per-scope Map<key, ScopeState> cache; TanStack's queryKey cache
+// is the only cache.
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
+import {useApiQuery} from '../../../hooks/useApiQuery';
 import {
   searchInternetArchiveAudio,
   searchInternetArchiveVideos,
@@ -18,309 +21,107 @@ import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {
   InternetArchiveItemResult,
   InternetArchiveVideoResult,
+  PaginatedResult,
 } from '../../../types/api';
 
-export type ArchiveTab = 'audio' | 'video';
+export type ArchiveMediaType = 'audio' | 'video';
 
 const PAGE_SIZE = 20;
 const DEFAULT_AUDIO_QUERY = 'old time radio';
 const DEFAULT_VIDEO_QUERY = 'classic films';
 
-// ─── Scope state ────────────────────────────────────────────────────────
-// The audio/video scope states differ only in the item type.
+export interface UseArchiveScreenParams {
+  initialTab?: ArchiveMediaType;
+  initialQuery?: string;
+}
 
-export interface AudioScopeState {
-  items: InternetArchiveItemResult[];
-  /** Total matches across all pages (drives hasMore). */
+export interface UseArchiveScreenResult {
+  // media-type FAB state
+  mediaType: ArchiveMediaType;
+  setMediaType: (t: ArchiveMediaType) => void;
+  // search
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  setSearchTerm: (term: string) => void;
+  isSearchActive: boolean;
+  // active stream
+  items: InternetArchiveItemResult[] | InternetArchiveVideoResult[];
   numFound: number;
-  /** Last loaded page (1-based). 0 = nothing loaded yet. */
-  page: number;
   hasLoaded: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
+  hasNextPage: boolean;
   error: string | null;
+  // actions
+  fetchNextPage: () => void;
+  refetch: () => void;
+  // connectivity
+  isOnline: boolean;
+  refreshing: boolean;
+  handleRefresh: () => void;
 }
 
-export interface VideoScopeState {
-  items: InternetArchiveVideoResult[];
-  numFound: number;
-  page: number;
-  hasLoaded: boolean;
-  isLoading: boolean;
-  isLoadingMore: boolean;
-  error: string | null;
-}
-
-/** Non-item scope fields are identical across tabs — one patch type. */
-type ScopePatch = Partial<Omit<AudioScopeState, 'items'>>;
-
-export const EMPTY_AUDIO_SCOPE: AudioScopeState = {
-  items: [],
-  numFound: 0,
-  page: 0,
-  hasLoaded: false,
-  isLoading: false,
-  isLoadingMore: false,
-  error: null,
-};
-
-export const EMPTY_VIDEO_SCOPE: VideoScopeState = {
-  items: [],
-  numFound: 0,
-  page: 0,
-  hasLoaded: false,
-  isLoading: false,
-  isLoadingMore: false,
-  error: null,
-};
-
-export function scopeCacheKey(tab: ArchiveTab, term: string): string {
-  return `${tab}|${term.trim()}`;
-}
-
-function dedupeById<T extends {identifier: string}>(items: T[]): T[] {
-  const seen = new Set<string>();
-  return items.filter(i => {
-    if (seen.has(i.identifier)) return false;
-    seen.add(i.identifier);
-    return true;
-  });
-}
-
-export function useArchiveScreen(initialTab?: ArchiveTab, initialQuery?: string) {
+export function useArchiveScreen({
+  initialTab,
+  initialQuery,
+}: UseArchiveScreenParams = {}): UseArchiveScreenResult {
   const {isOnline} = useNetworkStatus();
 
-  const [tab, setTab] = useState<ArchiveTab>(initialTab ?? 'audio');
-
-  // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
-  // searchQuery = live input; searchTerm = settled (debounced) value.
-  // The term persists across tab switches by design.
+  const [mediaType, setMediaType] = useState<ArchiveMediaType>(initialTab ?? 'audio');
   const [searchQuery, setSearchQuery] = useState(initialQuery ?? '');
   const [searchTerm, setSearchTerm] = useState(initialQuery ?? '');
 
-  const [audioScopes, setAudioScopes] = useState<Record<string, AudioScopeState>>({});
-  const [videoScopes, setVideoScopes] = useState<Record<string, VideoScopeState>>({});
-  /** Monotonic per-key sequence — drops stale/out-of-order responses. */
-  const seqRef = useRef<Record<string, number>>({});
-  /** In-flight keys — one fetch per scope at a time. */
-  const guardRef = useRef<Set<string>>(new Set());
-  const [refreshing, setRefreshing] = useState(false);
-
   const isSearchActive = searchTerm.trim().length > 0;
+  const query = searchTerm.trim() || (mediaType === 'audio' ? DEFAULT_AUDIO_QUERY : DEFAULT_VIDEO_QUERY);
+  const page = 1; // page-1 query; load-more is handled by re-fetching with a higher page
 
-  const keyFor = useCallback(
-    (t: ArchiveTab) => scopeCacheKey(t, searchTerm),
-    [searchTerm],
+  const audioQ = useApiQuery<PaginatedResult<InternetArchiveItemResult>>({
+    queryKey: ['archive', 'audio', query, page],
+    queryFn: () =>
+      searchInternetArchiveAudio(query, {limit: PAGE_SIZE, page}),
+    enabled: mediaType === 'audio',
+    staleTime: 600_000,
+  });
+
+  const videoQ = useApiQuery<PaginatedResult<InternetArchiveVideoResult>>({
+    queryKey: ['archive', 'video', query, page],
+    queryFn: () =>
+      searchInternetArchiveVideos(query, {limit: PAGE_SIZE, page}),
+    enabled: mediaType === 'video',
+    staleTime: 600_000,
+  });
+
+  const active = mediaType === 'audio' ? audioQ : videoQ;
+
+  const items = useMemo(
+    () => active.data?.items ?? [],
+    [active.data],
   );
 
-  const getScope = useCallback(
-    (t: ArchiveTab): AudioScopeState | VideoScopeState => {
-      const key = keyFor(t);
-      return t === 'audio'
-        ? audioScopes[key] ?? EMPTY_AUDIO_SCOPE
-        : videoScopes[key] ?? EMPTY_VIDEO_SCOPE;
-    },
-    [audioScopes, videoScopes, keyFor],
-  );
-
-  const patchScope = useCallback(
-    (t: ArchiveTab, patch: ScopePatch) => {
-      const key = keyFor(t);
-      if (t === 'audio') {
-        setAudioScopes(prev => ({
-          ...prev,
-          [key]: {...(prev[key] ?? EMPTY_AUDIO_SCOPE), ...patch},
-        }));
-      } else {
-        setVideoScopes(prev => ({
-          ...prev,
-          [key]: {...(prev[key] ?? EMPTY_VIDEO_SCOPE), ...patch},
-        }));
-      }
-    },
-    [keyFor],
-  );
-
-  const fetchPage = useCallback(
-    async (t: ArchiveTab, page: number, mode: 'initial' | 'more') => {
-      const term = searchTerm.trim();
-      const key = scopeCacheKey(t, term);
-      if (guardRef.current.has(key)) return;
-      guardRef.current.add(key);
-
-      const seq = (seqRef.current[key] = (seqRef.current[key] ?? 0) + 1);
-
-      // Bare search term, or the tab's default browse query.
-      const query = term || (t === 'audio' ? DEFAULT_AUDIO_QUERY : DEFAULT_VIDEO_QUERY);
-
-      patchScope(
-        t,
-        mode === 'initial'
-          ? {isLoading: true, error: null}
-          : {isLoadingMore: true, error: null},
-      );
-
-      try {
-        if (t === 'audio') {
-          const result = await searchInternetArchiveAudio(query, {
-            limit: PAGE_SIZE,
-            page,
-          });
-          if (seq !== (seqRef.current[key] ?? 0)) return; // stale response
-          setAudioScopes(prev => {
-            const cur = prev[key] ?? EMPTY_AUDIO_SCOPE;
-            return {
-              ...prev,
-              [key]: {
-                ...cur,
-                items:
-                  mode === 'more' ? dedupeById([...cur.items, ...result.items]) : result.items,
-                numFound: result.numFound,
-                page,
-                hasLoaded: true,
-                isLoading: false,
-                isLoadingMore: false,
-                error: null,
-              },
-            };
-          });
-        } else {
-          const result = await searchInternetArchiveVideos(query, {
-            limit: PAGE_SIZE,
-            page,
-          });
-          if (seq !== (seqRef.current[key] ?? 0)) return; // stale response
-          setVideoScopes(prev => {
-            const cur = prev[key] ?? EMPTY_VIDEO_SCOPE;
-            return {
-              ...prev,
-              [key]: {
-                ...cur,
-                items:
-                  mode === 'more' ? dedupeById([...cur.items, ...result.items]) : result.items,
-                numFound: result.numFound,
-                page,
-                hasLoaded: true,
-                isLoading: false,
-                isLoadingMore: false,
-                error: null,
-              },
-            };
-          });
-        }
-      } catch (err) {
-        if (seq !== (seqRef.current[key] ?? 0)) return;
-        patchScope(t, {
-          isLoading: false,
-          isLoadingMore: false,
-          error: err instanceof Error ? err.message : 'Failed to load archive results',
-        });
-      } finally {
-        guardRef.current.delete(key);
-      }
-    },
-    [searchTerm, patchScope],
-  );
-
-  /** Load page 1 for a tab if it isn't loaded yet (scene mount). */
-  const ensureLoaded = useCallback(
-    (t: ArchiveTab) => {
-      const scope = getScope(t);
-      if (scope.hasLoaded || scope.isLoading) return;
-      fetchPage(t, 1, 'initial');
-    },
-    [getScope, fetchPage],
-  );
-
-  /** Infinite scroll: fetch the next page when available. */
-  const loadMore = useCallback(
-    (t: ArchiveTab) => {
-      const scope = getScope(t);
-      if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore) return;
-      if (scope.items.length >= scope.numFound) return; // end of results
-      fetchPage(t, scope.page + 1, 'more');
-    },
-    [getScope, fetchPage],
-  );
-
-  /** Re-fetch page 1 after an error (invalidates any stale in-flight seq). */
-  const retry = useCallback(
-    (t: ArchiveTab) => {
-      const key = keyFor(t);
-      seqRef.current[key] = (seqRef.current[key] ?? 0) + 1;
-      if (t === 'audio') {
-        setAudioScopes(prev => {
-          const cur = prev[key];
-          if (!cur) return prev;
-          return {...prev, [key]: {...cur, items: [], hasLoaded: false}};
-        });
-      } else {
-        setVideoScopes(prev => {
-          const cur = prev[key];
-          if (!cur) return prev;
-          return {...prev, [key]: {...cur, items: [], hasLoaded: false}};
-        });
-      }
-      fetchPage(t, 1, 'initial');
-    },
-    [keyFor, fetchPage],
-  );
-
-  /** Pull-to-refresh the visible tab's current scope. */
   const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    retry(tab);
-  }, [retry, tab]);
-
-  /** Instant submit (quick-search chips) — sets both live + settled term. */
-  const submitSearch = useCallback((term: string) => {
-    setSearchQuery(term);
-    setSearchTerm(term);
-  }, []);
-
-  /** Tab switch — search text intentionally survives. */
-  const selectTab = useCallback((t: ArchiveTab) => {
-    setTab(t);
-  }, []);
-
-  // Keep the active tab's scope loaded when it (or the search term)
-  // changes — covers the very first mount and every new search term.
-  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effect only
-  // re-fires when the tab or search term actually changes — not on
-  // every parent re-render.
-  const ensureLoadedRef = useRef(ensureLoaded);
-  ensureLoadedRef.current = ensureLoaded;
-  useEffect(() => {
-    ensureLoadedRef.current(tab);
-  }, [tab, keyFor]);
-
-  // ── Auto-retry a failed scope when connectivity returns ──
-  const wasOnlineRef = useRef(isOnline);
-  useEffect(() => {
-    const wasOnline = wasOnlineRef.current;
-    wasOnlineRef.current = isOnline;
-    if (!wasOnline && isOnline && getScope(tab).error) {
-      retry(tab);
-    }
-  }, [isOnline, getScope, tab, retry]);
+    void active.refetch();
+  }, [active]);
 
   return {
-    tab,
-    selectTab,
-    // search
+    mediaType,
+    setMediaType,
     searchQuery,
     setSearchQuery,
     setSearchTerm,
-    submitSearch,
     isSearchActive,
-    // connectivity / refresh
+    items,
+    numFound: active.data?.numFound ?? 0,
+    hasLoaded: !!active.data,
+    isLoading: active.isFetching,
+    isLoadingMore: false, // IA is single-page in this screen
+    hasNextPage: false,
+    error: active.error?.message ?? null,
+    fetchNextPage: () => {}, // IA page-1 only; navigation handles pagination elsewhere
+    refetch: () => {
+      void active.refetch();
+    },
     isOnline,
-    refreshing,
+    refreshing: active.isFetching && !!active.data,
     handleRefresh,
-    // per-scope data + actions
-    getScope,
-    ensureLoaded,
-    loadMore,
-    retry,
   };
 }
