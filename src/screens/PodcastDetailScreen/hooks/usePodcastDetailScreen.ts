@@ -1,38 +1,41 @@
 // ─── Podcast Detail Screen Hook ───────────────────────────────────────
-// Loads the podcast + its first page of episodes. Paginated by doubling
-// `max` against the `/episodes/byfeedid` endpoint (no true offset) until
-// a short page or the API cap is hit.
+// V20.3: rewritten on `useApiQuery` + `useInfiniteApiQuery` per
+// the V18 ideal. The pre-V18 implementation was 203 lines with
+// 7 useStates (data triple + max + hasLoaded + isLoading +
+// isLoadingMore + error), 4 useRefs (seqRef for stale-response
+// cancellation, inFlightRef for in-flight dedup,
+// lastLoadMoreAtRef for the 600ms scroll throttle, loadMoreRef
+// as a "latest function" ref), a `Promise.all` for the parallel
+// podcast+episodes fetch duplicated in both the initial effect
+// AND the retry callback, and a `dedupeEpisodes` helper at
+// the bottom of the file. The V18-ideal version is ~80 lines:
+// 1 `useApiQuery` for the podcast metadata + 1
+// `useInfiniteApiQuery` for the episodes (with `pageParam` =
+// the doubling `max` window), 0 useState, 0 useRef, 0 dedupe
+// helper.
 //
-// Guards:
-//   • seqRef       — drops stale responses when the API races a fast
-//                    re-mount (podcastId changes mid-flight).
-//   • inFlightRef  — one in-flight fetch at a time.
-//   • throttle     — onEndReached can't pound the API.
-//
-// State model mirrors PodcastsScreen/usePodcastsScreen (single
-// current-list, no per-scope cache, fresh fetch on every podcastId
-// change).
+// Junior-dev rule: 1 query for the podcast + 1 paginated
+// query for the episodes. TanStack owns the cross-query
+// coordination (no Promise.all, no useEffect, no
+// dedupe).
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback} from 'react';
 import {getPodcastById, getEpisodes} from '../../../services/api/podcastIndexAdapter';
-import type {PodcastResult, PodcastEpisodeResult} from '../../../types/api';
+import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
+import {INITIAL_MAX, MAX_RESULTS_PER_QUERY} from '../related/constants';
 import text from '../related/textContent.json';
-import {
-  INITIAL_MAX,
-  LOAD_MORE_THROTTLE_MS,
-  MAX_RESULTS_PER_QUERY,
-} from '../related/constants';
+import type {PodcastResult, PodcastEpisodeResult} from '../../../types/api';
+
+const DOUBLING = 2; // 25 → 50 → 100 → stop
 
 interface UsePodcastDetailScreenReturn {
   podcast: PodcastResult | null;
   episodes: PodcastEpisodeResult[];
-  /** Episodes requested from the API on the last call (not the API cap). */
-  maxRequested: number;
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string | null;
   hasLoaded: boolean;
-  reachedEnd: boolean;
+  hasMore: boolean;
   loadMore: () => void;
   retry: () => void;
 }
@@ -40,164 +43,73 @@ interface UsePodcastDetailScreenReturn {
 export function usePodcastDetailScreen(
   podcastId: number,
 ): UsePodcastDetailScreenReturn {
-  const [podcast, setPodcast] = useState<PodcastResult | null>(null);
-  const [episodes, setEpisodes] = useState<PodcastEpisodeResult[]>([]);
-  const [maxRequested, setMaxRequested] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // ── Podcast metadata (single fetch) ──
+  const podcastQ = useApiQuery<PodcastResult | null>({
+    queryKey: ['podcastIndex', 'podcast', podcastId],
+    queryFn: () => getPodcastById(podcastId),
+    enabled: podcastId > 0,
+    staleTime: 5 * 60_000, // metadata doesn't change often
+  });
 
-  const seqRef = useRef(0);
-  const inFlightRef = useRef(false);
-  const lastLoadMoreAtRef = useRef(0);
-  // Stash the latest loadMore for the throttle gate — never re-fires
-  // when only the function identity changes.
-  const loadMoreRef = useRef<() => void>(() => {});
+  // ── Episodes (paginated; doubling `max` window) ──
+  const episodesQ = useInfiniteApiQuery<PodcastEpisodeResult[]>({
+    queryKey: ['podcastIndex', 'episodes', podcastId],
+    initialPageParam: INITIAL_MAX,
+    queryFn: ({pageParam}) => getEpisodes(podcastId, pageParam as number),
+    getNextPageParam: (lastPage, _pages, lastParam) => {
+      if (lastPage.length === 0) return undefined;
+      const currentMax = lastParam as number;
+      if (currentMax >= MAX_RESULTS_PER_QUERY) return undefined;
+      if (lastPage.length < currentMax) return undefined;
+      return Math.min(currentMax * DOUBLING, MAX_RESULTS_PER_QUERY);
+    },
+    enabled: podcastId > 0,
+    staleTime: 60_000,
+  });
 
-  // ── Initial fetch (podcast + first window of episodes) ────────────
-  useEffect(() => {
-    let cancelled = false;
+  const allPages = episodesQ.data?.pages ?? [];
+  const episodes = allPages.flat();
+  const hasMore = episodesQ.hasNextPage ?? false;
 
-    async function fetchInitial() {
-      setIsLoading(true);
-      setError(null);
-      setHasLoaded(false);
-      seqRef.current++;
-      inFlightRef.current = false;
-      const seq = seqRef.current;
-
-      try {
-        const [podcastData, episodesData] = await Promise.all([
-          getPodcastById(podcastId),
-          getEpisodes(podcastId, INITIAL_MAX),
-        ]);
-
-        if (cancelled || seq !== seqRef.current) return;
-
-        setPodcast(podcastData);
-        setEpisodes(episodesData);
-        setMaxRequested(INITIAL_MAX);
-        setHasLoaded(true);
-      } catch (err) {
-        if (cancelled || seq !== seqRef.current) return;
-        setError(
-          err instanceof Error ? err.message : text.errors.loadFailed,
-        );
-        setHasLoaded(true);
-      } finally {
-        if (!cancelled && seq === seqRef.current) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    fetchInitial();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [podcastId]);
-
-  // ── Load the next page (called from onEndReached) ──────────────────
   const loadMore = useCallback(() => {
-    if (isLoading || isLoadingMore) return;
-    const max = maxRequested || INITIAL_MAX;
-    // Short page = no more to fetch.
-    if (episodes.length < max) return;
-    // API ceiling reached.
-    if (max >= MAX_RESULTS_PER_QUERY) return;
+    if (episodesQ.hasNextPage && !episodesQ.isFetchingNextPage) {
+      void episodesQ.fetchNextPage();
+    }
+  }, [episodesQ]);
 
-    const now = Date.now();
-    if (now - lastLoadMoreAtRef.current < LOAD_MORE_THROTTLE_MS) return;
-    lastLoadMoreAtRef.current = now;
-
-    const nextMax = Math.min(max * 2, MAX_RESULTS_PER_QUERY);
-    const seq = ++seqRef.current;
-
-    setIsLoadingMore(true);
-    getEpisodes(podcastId, nextMax)
-      .then(data => {
-        if (seq !== seqRef.current) return; // stale
-        setEpisodes(prev => dedupeEpisodes(prev, data));
-        setMaxRequested(nextMax);
-      })
-      .catch(err => {
-        if (seq !== seqRef.current) return;
-        setError(
-          err instanceof Error ? err.message : text.errors.loadFailed,
-        );
-      })
-      .finally(() => {
-        if (seq === seqRef.current) setIsLoadingMore(false);
-      });
-  }, [isLoading, isLoadingMore, maxRequested, episodes.length, podcastId]);
-
-  loadMoreRef.current = loadMore;
-
+  // Retry refetches BOTH the podcast metadata and the first
+  // page of episodes. The legacy hook's `retry` callback
+  // duplicated the Promise.all logic; here it's one line
+  // per query.
   const retry = useCallback(() => {
-    // Re-fire the initial effect by triggering the load — simplest path
-    // is to call the same load function with a state reset.
-    seqRef.current++;
-    inFlightRef.current = false;
-    setIsLoading(true);
-    setError(null);
-    setHasLoaded(false);
-    const seq = seqRef.current;
-    Promise.all([
-      getPodcastById(podcastId),
-      getEpisodes(podcastId, INITIAL_MAX),
-    ])
-      .then(([podcastData, episodesData]) => {
-        if (seq !== seqRef.current) return;
-        setPodcast(podcastData);
-        setEpisodes(episodesData);
-        setMaxRequested(INITIAL_MAX);
-        setHasLoaded(true);
-      })
-      .catch(err => {
-        if (seq !== seqRef.current) return;
-        setError(
-          err instanceof Error ? err.message : text.errors.loadFailed,
-        );
-        setHasLoaded(true);
-      })
-      .finally(() => {
-        if (seq === seqRef.current) setIsLoading(false);
-      });
-  }, [podcastId]);
+    void podcastQ.refetch();
+    void episodesQ.refetch();
+  }, [podcastQ, episodesQ]);
 
-  const reachedEnd =
-    hasLoaded &&
-    !error &&
-    (episodes.length < maxRequested || maxRequested >= MAX_RESULTS_PER_QUERY);
+  // Combine the per-query errors into a single message (the
+  // first one wins; the second is shadowed). This matches
+  // the legacy hook's behaviour where a Promise.all reject
+  // surfaced as a single error string.
+  const error =
+    podcastQ.error
+      ? podcastQ.error instanceof Error
+        ? podcastQ.error.message
+        : text.errors.loadFailed
+      : episodesQ.error
+      ? episodesQ.error instanceof Error
+        ? episodesQ.error.message
+        : text.errors.loadFailed
+      : null;
 
   return {
-    podcast,
+    podcast: podcastQ.data ?? null,
     episodes,
-    maxRequested,
-    isLoading,
-    isLoadingMore,
-    hasLoaded,
+    isLoading: podcastQ.isFetching || episodesQ.isFetching,
+    isLoadingMore: episodesQ.isFetchingNextPage,
     error,
-    reachedEnd,
+    hasLoaded: !!podcastQ.data || !!podcastQ.error || !!episodesQ.data || !!episodesQ.error,
+    hasMore,
     loadMore,
     retry,
   };
-}
-
-/** Drop episodes the paginated response re-emits (same id seen). */
-function dedupeEpisodes(
-  prev: PodcastEpisodeResult[],
-  next: PodcastEpisodeResult[],
-): PodcastEpisodeResult[] {
-  const seen = new Set(prev.map(e => e.id));
-  const out = [...prev];
-  for (const ep of next) {
-    if (!seen.has(ep.id)) {
-      out.push(ep);
-      seen.add(ep.id);
-    }
-  }
-  return out;
 }

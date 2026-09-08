@@ -46,7 +46,7 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
     isLoadingMore,
     error,
     hasLoaded,
-    reachedEnd,
+    hasMore,
     loadMore,
     retry,
   } = usePodcastDetailScreen(podcastId);
@@ -171,7 +171,7 @@ export const PodcastDetailScreen: React.FC<Props> = ({navigation, route}) => {
             {text.footer.loadMoreRetry}
           </AppText>
         </TouchableOpacity>
-      ) : reachedEnd && hasLoaded && episodes.length > 0 ? (
+      ) : !hasMore && hasLoaded && episodes.length > 0 ? (
         <AppText variant="caption" color="secondary" style={styles.footerText}>
           {text.footer.caughtUp}
         </AppText>
