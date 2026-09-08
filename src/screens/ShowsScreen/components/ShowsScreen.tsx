@@ -1,345 +1,99 @@
 // ─── TV Shows Browser Screen ───────────────────────────────────────────
-// Phase 3 formula: search above a react-native-tab-view tab bar.
-//   • each tab is a lazily-mounted TabView scene (native pager)
-//   • every (tab, searchTerm) scope is cached independently —
-//     toggling tabs never refetches or clears already-loaded data
-//   • browse tab paginates via onEndReached (infinite scroll)
-// Tap a tab → see single-column list → tap a show → detail.
+// V18.11.5: converted from the v3-v9 3-tab pattern
+// (search / today / browse) to the v10+ "single content stream +
+// FAB" pattern.
+//
+// - Search: a single FlatList of TVMaze search results.
+// - "Today" rail: TVMaze's `/schedule` deduped by show id,
+//   surfaced as a small rail at the top (or as the only content
+//     when no search/browse is active).
+// - Browse: TVMaze's paginated `/shows`.
+//
+// UX decision (V18.11.5): the "Today" data IS fetched (so a future
+// "Airing Today" rail can land in this same screen) but the
+// source toggle is just search/browse for now. The rail is shown
+// above the search/browse list when both are populated.
 
-import React, {useCallback, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo} from 'react';
 import {
   View,
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  StyleSheet,
 } from 'react-native';
-import {
-  TabView,
-  type SceneRendererProps,
-  type Route,
-} from 'react-native-tab-view';
-import {SectionTabBar} from '../browse/TabBar';
-import FastImage from 'react-native-fast-image';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
-import {radius, spacing} from '../../../theme/tokens';
-import type {RootStackScreenProps} from '../types';
-import {
-  useShowsScreen,
-  type ShowTab,
-  type ShowScope,
-} from '../hooks/useShowsScreen';
+
+import type {RootStackScreenProps} from '../../../navigation/types';
+import {useShowsScreen} from '../hooks/useShowsScreen';
+
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
+import {FilterChips} from '../../../components/utility/FilterChips';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {useToast} from '../../../components/feedback/Toast';
 import type {TVMazeShow} from '../../../types/api';
 
-// ─── Constants ──────────────────────────────────────────────────────────
+type Props = RootStackScreenProps<'ShowsScreen'>;
 
-const TABS: {key: ShowTab; title: string}[] = [
-  {key: 'search', title: 'Search'},
-  {key: 'today', title: 'Today'},
-  {key: 'browse', title: 'Browse'},
+const SOURCE_TOGGLE: Array<{key: 'search' | 'browse'; label: string}> = [
+  {key: 'search', label: 'Search'},
+  {key: 'browse', label: 'Browse'},
 ];
 
-const THUMB_SIZE = 72;
-
-// ─── Helpers ────────────────────────────────────────────────────────────
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-}
-
-// ─── Show Card ──────────────────────────────────────────────────────────
-
-interface ShowCardProps {
-  item: TVMazeShow;
-  onPress: (item: TVMazeShow) => void;
-}
-
-const ShowCard: React.FC<ShowCardProps> = React.memo(({item, onPress}) => {
-  const {colors} = useTheme();
-  const imageUrl = item.image?.medium || item.image?.original || '';
-  const genresText =
-    item.genres && item.genres.length > 0 ? item.genres.join(', ') : null;
-  const summaryText = item.summary ? stripHtml(item.summary) : null;
-  const rating = item.rating?.average;
-  const hasImage = !!imageUrl;
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => onPress(item)}
-      accessibilityRole="button"
-      style={styles.card}>
-      {/* Thumbnail */}
-      <View
-        style={[
-          styles.thumb,
-          {backgroundColor: colors.background.elevated},
-        ]}>
-        {hasImage ? (
-          <FastImage
-            source={{uri: imageUrl, priority: FastImage.priority.normal}}
-            style={styles.thumbImage}
-            resizeMode={FastImage.resizeMode.cover}
-            accessibilityIgnoresInvertColors
-          />
-        ) : (
-          <SvgIcon name="video" size={22} color={colors.accent.goldDim} />
-        )}
-        {/* Rating badge on thumb */}
-        {rating != null && rating > 0 && (
-          <View style={[styles.ratingBadge, {backgroundColor: colors.background.scrimMid}]}>
-            <AppText
-              variant="caption"
-              style={[styles.ratingText, {color: colors.accent.gold}]}>
-              ★ {rating.toFixed(1)}
-            </AppText>
-          </View>
-        )}
-      </View>
-
-      {/* Info */}
-      <View style={styles.cardInfo}>
-        <AppText
-          variant="bodySmall"
-          numberOfLines={1}
-          style={styles.showName}>
-          {item.name}
-        </AppText>
-        {genresText && (
-          <AppText
-            variant="caption"
-            numberOfLines={1}
-            style={{color: colors.accent.gold}}>
-            {genresText}
-          </AppText>
-        )}
-        {summaryText && (
-          <AppText
-            variant="caption"
-            color="secondary"
-            numberOfLines={2}>
-            {summaryText}
-          </AppText>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-});
-
-// ─── Tab Scene ──────────────────────────────────────────────────────────
-// One lazily-mounted scene per tab. Owns its FlatList so each tab
-// paginates independently; reads per-scope state from the screen hook.
-
-interface ShowTabSceneProps {
-  tab: ShowTab;
-  scope: ShowScope;
-  isSearchActive: boolean;
-  isOnline: boolean;
-  onPressShow: (item: TVMazeShow) => void;
-}
-
-const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
-  ({
-    tab,
-    scope,
-    isSearchActive,
-    isOnline,
-    onPressShow,
-  }) => {
-    const {colors} = useTheme();
-    const toast = useToast();
-    const {items, hasLoaded, isLoading, isLoadingMore, error, fetchNextPage, refetch} = scope;
-
-    // Surface page-1 load failures as a toast with a Retry action.
-    const lastShownErrorRef = React.useRef<string | null>(null);
-    React.useEffect(() => {
-      const shouldShow = !hasLoaded && !isLoading && !!error;
-      const currentError = shouldShow
-        ? isOnline
-          ? error
-          : 'No internet connection.'
-        : null;
-      if (currentError && currentError !== lastShownErrorRef.current) {
-        lastShownErrorRef.current = currentError;
-        toast.show(currentError, 'error', {
-          duration: 8000,
-          action: {
-            label: 'Retry',
-            onPress: () => {
-              lastShownErrorRef.current = null;
-              refetch();
-            },
-          },
-        });
-      } else if (!currentError) {
-        lastShownErrorRef.current = null;
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasLoaded, isLoading, error, isOnline, refetch]);
-
-    const renderItem = useCallback(
-      ({item}: {item: TVMazeShow}) => (
-        <ShowCard item={item} onPress={onPressShow} />
-      ),
-      [onPressShow],
-    );
-
-    const keyExtractor = useCallback(
-      (item: TVMazeShow) => `show-${item.id}`,
-      [],
-    );
-
-    // Only browse tab triggers infinite scroll
-    const handleEndReached = useCallback(() => {
-      if (tab === 'browse') fetchNextPage();
-    }, [tab, fetchNextPage]);
-
-    // ── "Empty when no search term" state for search tab ──
-    if (tab === 'search' && !isSearchActive && !isLoading) {
-      return (
-        <Placeholder
-          variant="empty"
-          anchor="top-third"
-          icon="search"
-          title="Type a show name to search TVMaze."
-        />
-      );
-    }
-
-    return (
-      <View style={styles.scene}>
-        {/* Page-1 loader */}
-        {!hasLoaded && isLoading && (
-          <Placeholder
-            variant="loading"
-            anchor="top-third"
-            title="Loading shows…"
-          />
-        )}
-
-        {/* Page-1 error — toast surfaces Retry; placeholder keeps the
-            screen from looking blank. */}
-        {!hasLoaded && !isLoading && error && items.length === 0 && (
-          <Placeholder
-            variant="empty"
-            anchor="top-third"
-            icon="alertCircle"
-            title={isOnline ? "Couldn't load shows." : "You're offline."}
-            message="Use Retry at the bottom of the screen to try again."
-          />
-        )}
-
-        {/* Empty scope (loaded, zero results) */}
-        {hasLoaded && !error && items.length === 0 && (
-          <Placeholder
-            variant="empty"
-            anchor="top-third"
-            icon="video"
-            title={
-              tab === 'search'
-                ? 'No shows match your search.'
-                : tab === 'today'
-                  ? 'No shows airing today.'
-                  : 'No shows found.'
-            }
-          />
-        )}
-
-        {/* Single-column list + infinite scroll */}
-        {items.length > 0 && (
-          <FlatList
-            data={items}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isLoading && hasLoaded}
-                onRefresh={refetch}
-                tintColor={colors.accent.gold}
-                colors={[colors.accent.gold]}
-              />
-            }
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.4}
-            ListFooterComponent={
-              isLoadingMore || (error && hasLoaded && items.length > 0) ? (
-                <View style={styles.listFooter}>
-                  {isLoadingMore ? (
-                    <View style={styles.footerRow}>
-                      <ActivityOrb size={22} />
-                      <AppText variant="caption" color="tertiary">
-                        Loading more…
-                      </AppText>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => fetchNextPage()}
-                      style={[
-                        styles.loadMoreRetry,
-                        {borderColor: colors.background.highlight},
-                      ]}
-                      accessibilityRole="button">
-                      <AppText variant="caption" color="secondary">
-                        Couldn't load more — tap to retry
-                      </AppText>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ) : null
-            }
-            windowSize={5}
-            maxToRenderPerBatch={10}
-          />
-        )}
-      </View>
-    );
-  },
-);
-
-// ─── Screen ─────────────────────────────────────────────────────────────
-
-export const ShowsScreen: React.FC<RootStackScreenProps<'ShowsScreen'>> = ({
-  navigation,
-  route,
-}) => {
+export const ShowsScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
+  const {initialTab, initialGenre} = route.params ?? {};
+
   const {
-    selectedTab,
-    selectTab,
     searchTerm,
     setSearchTerm,
     isSearchActive,
-    search: searchScope,
-    today: todayScope,
-    browse: browseScope,
+    source,
+    setSource,
+    items,
+    hasLoaded,
+    isLoading,
+    isLoadingMore,
+    hasNextPage,
+    error,
+    fetchNextPage,
+    refetch,
+    todaysItems,
+    todaysLoading,
+    todaysError,
+    retryTodays,
     isOnline,
-  } = useShowsScreen(route.params?.initialTab, route.params?.initialGenre);
+    refreshing,
+    handleRefresh,
+  } = useShowsScreen(initialTab, initialGenre);
 
-  const currentScope =
-    selectedTab === 'search'
-      ? searchScope
-      : selectedTab === 'today'
-      ? todayScope
-      : browseScope;
+  // Toast on page-1 failure
+  useEffect(() => {
+    if (!hasLoaded && !isLoading && !!error) {
+      toast.show(
+        isOnline ? "Couldn't load shows." : 'You are offline.',
+        'error',
+        {
+          duration: 8000,
+          action: {label: 'Retry', onPress: () => refetch()},
+        },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLoaded, isLoading, error, isOnline]);
+
+  // Toast on today's rail failure
+  useEffect(() => {
+    if (todaysItems.length === 0 && !todaysLoading && !!todaysError) {
+      // Silent — today's rail is non-critical; the empty state
+      // is just a missing rail, not an error.
+    }
+  }, [todaysItems.length, todaysLoading, todaysError]);
 
   const handleShowPress = useCallback(
     (show: TVMazeShow) => {
@@ -351,162 +105,120 @@ export const ShowsScreen: React.FC<RootStackScreenProps<'ShowsScreen'>> = ({
     [navigation],
   );
 
-  // ── TabView wiring ──
-  const routes = useMemo(
-    () => TABS.map(t => ({key: t.key, title: t.title})),
-    [],
-  );
-  const tabIndex = Math.max(
-    0,
-    TABS.findIndex(t => t.key === selectedTab),
-  );
+  const rows = items;
 
-  const renderTabBar = useCallback(
-    (
-      props: SceneRendererProps & {
-        navigationState: {index: number; routes: Route[]};
-      },
-    ) => <SectionTabBar {...props} />,
-    [],
-  );
-
-  const renderScene = useCallback(
-    ({route: tabRoute}: {route: Route}) => {
-      const tab = TABS.find(t => t.key === tabRoute.key);
-      if (!tab) return null;
-      return (
-        <ShowTabScene
-          tab={tab.key}
-          scope={currentScope}
-          isSearchActive={isSearchActive}
-          isOnline={isOnline}
-          onPressShow={handleShowPress}
-        />
-      );
-    },
-    [
-      currentScope,
-      isSearchActive,
-      isOnline,
-      handleShowPress,
-    ],
-  );
-
-  const renderLazyPlaceholder = useCallback(
-    ({route: tabRoute}: {route: Route}) => (
-      <Placeholder
-        variant="loading"
-        anchor="top-third"
-        title={`${TABS.find(t => t.key === tabRoute.key)?.title ?? 'Shows'}…`}
-      />
-    ),
-    [],
-  );
+  const showEmpty = hasLoaded && !error && rows.length === 0 && !isSearchActive && source === 'browse';
+  const showSearchEmpty = hasLoaded && !error && rows.length === 0 && isSearchActive;
 
   return (
     <View
-      style={[
-        styles.root,
-        {backgroundColor: colors.background.primary, paddingTop: insets.top},
-      ]}>
+      style={{
+        flex: 1,
+        backgroundColor: colors.background.primary,
+        paddingTop: insets.top,
+      }}>
       <SimbaStatusBar variant="home" />
       <InternalHeader title="TV Shows" />
 
-      {/* ── Search (stays put while tabs change) ── */}
-      <View style={styles.searchSection}>
+      <View style={{paddingHorizontal: 16, paddingVertical: 12}}>
         <SearchBar
           value={searchTerm}
           onChangeText={setSearchTerm}
           placeholder="Search shows…"
         />
+        <FilterChips
+          items={SOURCE_TOGGLE}
+          selectedKey={source}
+          onSelect={key => {
+            // When toggling to "search" via the chip, the term is
+            // already the source of truth. Toggling to "browse" is
+            // allowed even with a term set (term still wins).
+            setSource(key as 'search' | 'browse');
+          }}
+        />
+        {todaysItems.length > 0 && !isSearchActive ? (
+          <View style={{marginTop: 8}}>
+            <AppText variant="overline" color="accent" style={{marginBottom: 4}}>
+              Airing Today
+            </AppText>
+            <FlatList
+              data={todaysItems}
+              keyExtractor={item => `today-${item.id}`}
+              renderItem={({item}) => (
+                <TouchableOpacity
+                  onPress={() => handleShowPress(item)}
+                  style={{
+                    padding: 12,
+                    backgroundColor: colors.background.elevated,
+                    borderRadius: 8,
+                    marginBottom: 6,
+                  }}>
+                  <AppText variant="bodySmall" color="primary" numberOfLines={1}>
+                    {item.name}
+                  </AppText>
+                </TouchableOpacity>
+              )}
+              scrollEnabled={false}
+            />
+          </View>
+        ) : null}
       </View>
 
-      {/* ── TabView (lazy scenes) ── */}
-      <TabView
-        navigationState={{index: tabIndex, routes}}
-        onIndexChange={index => selectTab(TABS[index].key)}
-        renderTabBar={renderTabBar}
-        renderScene={renderScene}
-        renderLazyPlaceholder={renderLazyPlaceholder}
-        lazy
-        style={styles.scene}
-      />
+      {!hasLoaded && isLoading ? (
+        <Placeholder
+          variant="loading"
+          anchor="top-third"
+          title="Loading shows…"
+        />
+      ) : showSearchEmpty ? (
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="search"
+          title="No shows match your search."
+        />
+      ) : showEmpty ? (
+        <Placeholder
+          variant="empty"
+          anchor="top-third"
+          icon="video"
+          title="No shows found."
+        />
+      ) : (
+        <FlatList
+          data={rows}
+          keyExtractor={item => `show-${item.id}`}
+          renderItem={({item}) => (
+            <TouchableOpacity
+              onPress={() => handleShowPress(item)}
+              style={{
+                padding: 12,
+                backgroundColor: colors.background.elevated,
+                borderRadius: 8,
+                marginHorizontal: 16,
+                marginBottom: 6,
+              }}>
+              <AppText variant="bodySmall" color="primary" numberOfLines={1}>
+                {item.name}
+              </AppText>
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={{paddingBottom: insets.bottom + 56 + 12}}
+          showsVerticalScrollIndicator={false}
+          onEndReached={() => {
+            if (hasNextPage && !isLoadingMore) fetchNextPage();
+          }}
+          onEndReachedThreshold={0.4}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.accent.gold}
+              colors={[colors.accent.gold]}
+            />
+          }
+        />
+      )}
     </View>
   );
 };
-
-// ─── Styles ─────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  searchSection: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  // ── TabView ──
-  scene: {
-    flex: 1,
-  },
-  // (Replaced by the shared <Placeholder> component.)
-  listContent: {
-    padding: spacing.md,
-    paddingBottom: spacing.xxl + 80,
-  },
-  listFooter: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  loadMoreRetry: {
-    borderWidth: 1,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  // ── Show Card ──
-  card: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.md,
-  },
-  thumb: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  thumbImage: {
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderBottomLeftRadius: radius.sm,
-  },
-  ratingText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  cardInfo: {
-    flex: 1,
-    gap: 2,
-    paddingTop: 2,
-  },
-  showName: {
-    fontWeight: '700',
-  },
-});

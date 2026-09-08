@@ -1,46 +1,44 @@
 // ─── Shows Screen Hook ──────────────────────────────────────────────────
-// Phase 3 formula: per-scope cache + TabView scenes + infinite scroll.
+// V18.11.5: converted from the v3-v9 3-tab pattern
+// (search / today / browse) to the v10+ "single content stream +
+// FAB" pattern.
 //
-// A "scope" is a (tab, searchTerm, selectedGenre) tuple. Previously
-// cached in a Map<key, ShowScopeState>. V18.3.3: three independent
-// useInfiniteApiQuery calls (one per tab); TanStack's cache provides
-// the per-scope data preservation when the user toggles tabs.
+// UX decision:
+//   - "Today" tab dropped (was a date query to TVMaze `/schedule`).
+//     Surfacing it as a "Airing Today" rail at the top of the
+//     search/browse list is a follow-up; the data hook is in
+//     place (the today query still exists in this hook) so the
+//     screen can add a hero rail later without re-architecting
+//     the data flow.
+//   - "Search" is the primary stream when a term is set.
+//   - "Browse" is the primary stream when no term is set —
+//     uses TVMaze's paginated `/shows` endpoint.
 //
-// Tab semantics:
-//   - 'search'  → searchShows(term), single page, enabled when term is set
-//   - 'today'   → getSchedule() with dedupe-by-show, single page
-//   - 'browse'  → getPopularShows(page, genre?), multi-page (TVMaze
-//                  returns 250 per page; infinite until partial)
-//
-// P53: when `initialGenre` is set, the screen jumps to 'browse' with
-// the genre pre-selected so the show list is populated on first paint.
+// Single useApiQuery for the active stream. The other query
+// is suspended via `enabled`.
 
 import {useCallback, useMemo, useState} from 'react';
+import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {
   searchShows,
   getSchedule,
   getPopularShows,
+  type TVMazeScheduleItem,
 } from '../../../services/api/tvmazeAdapter';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import {useApiQuery} from '../../../hooks/useApiQuery';
-import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import type {TVMazeShow} from '../../../types/api';
-import type {TVMazeScheduleItem} from '../../../services/api/tvmazeAdapter';
 
 const PAGE_SIZE = 250;
+const SEARCH_CACHE_TTL = 600_000;
 
-export type ShowTab = 'search' | 'today' | 'browse';
+export type ShowSource = 'search' | 'browse';
 
-function dedupe(items: TVMazeShow[]): TVMazeShow[] {
-  const seen = new Set<number>();
-  return items.filter(i => {
-    if (seen.has(i.id)) return false;
-    seen.add(i.id);
-    return true;
-  });
-}
-
-export interface ShowScope {
+export interface UseShowsScreenResult {
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  isSearchActive: boolean;
+  source: ShowSource;
+  setSource: (s: ShowSource) => void;
   items: TVMazeShow[];
   hasLoaded: boolean;
   isLoading: boolean;
@@ -49,90 +47,39 @@ export interface ShowScope {
   error: string | null;
   fetchNextPage: () => void;
   refetch: () => void;
-}
-
-function shapePaginated(
-  query: ReturnType<typeof useInfiniteApiQuery<TVMazeShow[]>>,
-): ShowScope {
-  return {
-    items: dedupe((query.data?.pages ?? []).flat()),
-    hasLoaded: !!query.data,
-    isLoading: query.isFetching,
-    isLoadingMore: query.isFetchingNextPage,
-    hasNextPage: query.hasNextPage ?? false,
-    error: query.error?.message ?? null,
-    fetchNextPage: () => {
-      void query.fetchNextPage();
-    },
-    refetch: () => {
-      void query.refetch();
-    },
-  };
-}
-
-export interface UseShowsScreenResult {
-  // tab + selection state
-  selectedTab: ShowTab;
-  selectTab: (tab: ShowTab) => void;
-  selectedGenre: string | null;
-  setSelectedGenre: (genre: string) => void;
-  // search state
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  isSearchActive: boolean;
-  // the 3 scopes
-  search: ShowScope;
-  today: ShowScope;
-  browse: ShowScope;
-  // network status (for pull-to-refresh retry-on-reconnect)
+  // Today's schedule (for a future "Airing Today" rail — kept
+  // available so the screen can add a hero rail without a hook
+  // refactor).
+  todaysItems: TVMazeShow[];
+  todaysLoading: boolean;
+  todaysError: string | null;
+  retryTodays: () => void;
   isOnline: boolean;
-  // action
-  handleRefresh: () => void;
   refreshing: boolean;
+  handleRefresh: () => void;
 }
 
-export function useShowsScreen(initialTab?: string, initialGenre?: string): UseShowsScreenResult {
+export function useShowsScreen(
+  initialTab?: string,
+  initialGenre?: string,
+): UseShowsScreenResult {
   const {isOnline} = useNetworkStatus();
-  const [selectedTab, setSelectedTab] = useState<ShowTab>(
-    initialGenre ? 'browse' : (initialTab as ShowTab) || 'search',
-  );
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(
-    initialGenre ?? null,
-  );
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
+  const [source, setSource] = useState<ShowSource>(
+    initialTab === 'search' ? 'search' : 'browse',
+  );
 
   const isSearchActive = searchTerm.trim().length > 0;
 
-  // ── Search tab: single page, enabled when term is set ──
-  const searchQ = useApiQuery<TVMazeShow[]>({
-    queryKey: ['tvmaze', 'search', searchTerm],
-    queryFn: () => searchShows(searchTerm),
-    enabled: isSearchActive,
-    staleTime: 600_000, // 10 min
-  });
-  const searchScope: ShowScope = useMemo(
-    () => ({
-      items: searchQ.data ?? [],
-      hasLoaded: !isSearchActive || !!searchQ.data,
-      isLoading: searchQ.isFetching,
-      isLoadingMore: false,
-      hasNextPage: false,
-      error: searchQ.error?.message ?? null,
-      fetchNextPage: () => {},
-      refetch: () => {
-        void searchQ.refetch();
-      },
-    }),
-    [searchQ, isSearchActive],
-  );
-
-  // ── Today tab: single page, always refetch on mount (short server cache) ──
-  const todayQ = useApiQuery<TVMazeShow[]>({
-    queryKey: ['tvmaze', 'today'],
+  // Today's schedule — fetched once on mount. Independent of the
+  // active search/browse query; designed to surface as a hero
+  // rail. The list is unique by show id (deduped at the API
+  // boundary).
+  const todaysQ = useApiQuery<TVMazeShow[]>({
+    queryKey: ['tvmaze', 'todayRail'],
     queryFn: async () => {
       const schedule = await getSchedule();
-      // Dedupe by show id — one card per show airing today
       const unique = new Map<number, TVMazeShow>();
       for (const entry of schedule as TVMazeScheduleItem[]) {
         if (!unique.has(entry.show.id)) {
@@ -143,72 +90,76 @@ export function useShowsScreen(initialTab?: string, initialGenre?: string): UseS
     },
     staleTime: 1_800_000, // 30 min
   });
-  const todayScope: ShowScope = useMemo(
-    () => ({
-      items: todayQ.data ?? [],
-      hasLoaded: !!todayQ.data,
-      isLoading: todayQ.isFetching,
-      isLoadingMore: false,
-      hasNextPage: false,
-      error: todayQ.error?.message ?? null,
-      fetchNextPage: () => {},
-      refetch: () => {
-        void todayQ.refetch();
-      },
-    }),
-    [todayQ],
-  );
 
-  // ── Browse tab: multi-page (TVMaze 250 per page) ──
+  // The active stream — search or browse, dispatched by the
+  // current source + term.
+  const searchQ = useApiQuery<TVMazeShow[]>({
+    queryKey: ['tvmaze', 'search', searchTerm],
+    queryFn: () => searchShows(searchTerm),
+    enabled: isSearchActive,
+    staleTime: SEARCH_CACHE_TTL,
+  });
+
   const browseQ = useInfiniteApiQuery<TVMazeShow[]>({
-    queryKey: ['tvmaze', 'browse', selectedGenre ?? ''],
+    queryKey: ['tvmaze', 'browse', initialGenre ?? ''],
     queryFn: ({pageParam}) =>
-      getPopularShows(pageParam as number, selectedGenre ?? undefined),
+      getPopularShows(pageParam as number, initialGenre ?? undefined),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _pages, lastPageParam) => {
       if (typeof lastPageParam !== 'number') return undefined;
       if (lastPage.length < PAGE_SIZE) return undefined;
       return lastPageParam + 1;
     },
-    staleTime: 3_600_000, // 1 hour
+    enabled: !isSearchActive,
+    staleTime: 3_600_000,
   });
-  const browseScope: ShowScope = shapePaginated(browseQ);
 
-  // Tab switch
-  const selectTab = useCallback((tab: ShowTab) => {
-    setSelectedTab(tab);
-  }, []);
+  const active = isSearchActive ? searchQ : browseQ;
 
-  const setSelectedGenreToggle = useCallback((genre: string) => {
-    setSelectedGenre(prev => (prev === genre ? null : genre));
-  }, []);
+  const items = useMemo(
+    () => dedupe((active.data && 'pages' in active.data ? active.data.pages : [])?.flat() ?? []),
+    [active.data],
+  );
 
-  // Pull-to-refresh: re-fetch the active tab's data
   const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    if (selectedTab === 'search') {
-      void searchQ.refetch();
-    } else if (selectedTab === 'today') {
-      void todayQ.refetch();
-    } else {
-      void browseQ.refetch();
-    }
-    setRefreshing(false);
-  }, [selectedTab, searchQ, todayQ, browseQ]);
+    void active.refetch();
+  }, [active]);
 
   return {
-    selectedTab,
-    selectTab,
-    selectedGenre,
-    setSelectedGenre: setSelectedGenreToggle,
     searchTerm,
     setSearchTerm,
     isSearchActive,
-    search: searchScope,
-    today: todayScope,
-    browse: browseScope,
+    source,
+    setSource,
+    items,
+    hasLoaded: !!active.data,
+    isLoading: active.isFetching,
+    isLoadingMore: 'isFetchingNextPage' in active ? active.isFetchingNextPage : false,
+    hasNextPage: 'hasNextPage' in active ? active.hasNextPage ?? false : false,
+    error: 'error' in active ? active.error?.message ?? null : null,
+    fetchNextPage: () => {
+      if ('fetchNextPage' in active) void active.fetchNextPage();
+    },
+    refetch: () => {
+      void active.refetch();
+    },
+    todaysItems: todaysQ.data ?? [],
+    todaysLoading: todaysQ.isFetching,
+    todaysError: todaysQ.error?.message ?? null,
+    retryTodays: () => {
+      void todaysQ.refetch();
+    },
     isOnline,
+    refreshing: active.isFetching && !!active.data,
     handleRefresh,
-    refreshing,
   };
+}
+
+function dedupe(items: TVMazeShow[]): TVMazeShow[] {
+  const seen = new Set<number>();
+  return items.filter(i => {
+    if (seen.has(i.id)) return false;
+    seen.add(i.id);
+    return true;
+  });
 }
