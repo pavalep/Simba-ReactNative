@@ -30,16 +30,6 @@ import type {
   JamendoTrackResult,
 } from '../../../types/api';
 
-const EMPTY: AggregatedSearchResults = {
-  podcasts: [],
-  radioStations: [],
-  audiobooks: [],
-  iptvChannels: [],
-  jamendoTracks: [],
-  internetArchiveItems: [],
-  audiusTracks: [],
-};
-
 export interface AggregatedSearch {
   results: AggregatedSearchResults;
   isLoading: boolean;
@@ -79,8 +69,12 @@ export function useAggregatedSearch(
 
   // ── 5 parallel queries (one per free-content source) ──
   // The 5th (Internet Archive) returns PaginatedResult — we map
-  // to the inner `.items` array at the boundary.
-  const results = useApiQueries({
+  // to the inner `.items` array at the boundary. The combine
+  // returns both the per-source data (the `results` shape the
+  // consumer wants) and a per-source `isFetching` OR (so the
+  // "is any source still loading?" flag is a one-liner, not
+  // a 3-tier array-by-reference comparison).
+  const combined = useApiQueries({
     queries: [
       {
         queryKey: ['librivox', 'search', debouncedQuery, 6] as const,
@@ -126,15 +120,23 @@ export function useAggregatedSearch(
       jamendoTracks,
       internetArchiveItems,
       audiusTracks,
-    ]): AggregatedSearchResults => ({
-      podcasts: [], // Podcast Index uses SHA1 auth; excluded from raw aggregator
-      radioStations: [], // Radio Browser needs name-based query; skipped here
-      audiobooks: (audiobooks.data as AudiobookResult[] | undefined) ?? [],
-      iptvChannels: (iptvChannels.data as IPTVChannelResult[] | undefined) ?? [],
-      jamendoTracks: (jamendoTracks.data as JamendoTrackResult[] | undefined) ?? [],
-      internetArchiveItems:
-        (internetArchiveItems.data as InternetArchiveItemResult[] | undefined) ?? [],
-      audiusTracks: (audiusTracks.data as AudiusTrackResult[] | undefined) ?? [],
+    ]) => ({
+      results: {
+        podcasts: [], // Podcast Index uses SHA1 auth; excluded from raw aggregator
+        radioStations: [], // Radio Browser needs name-based query; skipped here
+        audiobooks: (audiobooks.data as AudiobookResult[] | undefined) ?? [],
+        iptvChannels: (iptvChannels.data as IPTVChannelResult[] | undefined) ?? [],
+        jamendoTracks: (jamendoTracks.data as JamendoTrackResult[] | undefined) ?? [],
+        internetArchiveItems:
+          (internetArchiveItems.data as InternetArchiveItemResult[] | undefined) ?? [],
+        audiusTracks: (audiusTracks.data as AudiusTrackResult[] | undefined) ?? [],
+      },
+      isLoading:
+        audiobooks.isFetching ||
+        iptvChannels.isFetching ||
+        jamendoTracks.isFetching ||
+        internetArchiveItems.isFetching ||
+        audiusTracks.isFetching,
     }),
   });
 
@@ -158,20 +160,14 @@ export function useAggregatedSearch(
     };
   }, [enabled]);
 
-  // Loading is "any of the 5 sources is fetching" — the per-source
-  // error isolation lives inside `combine` (a failed source returns
-  // `[]`, the others still render).
-  const isLoading = results.audiobooks === EMPTY.audiobooks &&
-    results.jamendoTracks === EMPTY.jamendoTracks &&
-    results.iptvChannels === EMPTY.iptvChannels
-    ? false
-    : (results.audiobooks.length === 0 &&
-        results.jamendoTracks.length === 0 &&
-        results.iptvChannels.length === 0 &&
-        results.internetArchiveItems.length === 0 &&
-        results.audiusTracks.length === 0)
-    ? enabled
-    : false;
-
-  return {results, isLoading, trending};
+  // Loading is "any of the 5 sources is fetching, and we asked
+  // them to fetch" — the per-source error isolation lives inside
+  // `combine` (a failed source returns `[]`, the others still
+  // render). The legacy 3-tier array-by-reference check against
+  // a module-level `EMPTY` is gone.
+  return {
+    results: combined.results,
+    isLoading: enabled && combined.isLoading,
+    trending,
+  };
 }

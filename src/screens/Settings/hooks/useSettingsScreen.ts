@@ -69,7 +69,6 @@ export function useSettingsScreen() {
   const linkedFolderCount = videoFolders.length + audioFolders.length;
 
   // ── Local State ──
-  const [isLoading, _setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [mpvEditorVisible, setMpvEditorVisible] = useState(false);
@@ -181,7 +180,7 @@ export function useSettingsScreen() {
     isDark,
     styles,
     entrance,
-    isLoading,
+    isLoading: isScanning,
     error,
     refreshing: refreshing || isScanning,
     // Redux state

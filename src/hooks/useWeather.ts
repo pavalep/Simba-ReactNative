@@ -122,6 +122,13 @@ export function useWeather(): UseWeatherResult {
   // into the persisted store. The store remains the UI's source
   // of truth (the Home screen reads `useWeatherStore`, not the
   // hook's local query state).
+  //
+  // V20.6 note: TanStack v5 removed the `onSuccess` / `onError`
+  // callbacks from `useQuery` (they only exist on `useMutation`
+  // now). The "react to query state changes" pattern is a
+  // useEffect that watches `data` / `error`. This 4-branch mirror
+  // is the canonical v5 shape — there's no shorter form to
+  // compress it to.
   useEffect(() => {
     if (isLoading) {
       useWeatherStore.getState().setStatus('loading');

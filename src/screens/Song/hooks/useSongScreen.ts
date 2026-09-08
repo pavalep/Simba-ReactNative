@@ -10,6 +10,7 @@ import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {loadLrc} from '../../../services/lrcService';
+import {useApiQuery} from '../../../hooks/useApiQuery';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {LrcLine} from '../../../utils/lrcParser';
 import {isRemoteUri} from '../../../utils/mediaUri';
@@ -18,6 +19,8 @@ import {useMediaStore} from '../../../state';
 
 type SongRoute = RouteProp<RootStackParamList, 'SongScreen'>;
 type SongNav = NativeStackNavigationProp<RootStackParamList, 'SongScreen'>;
+
+const EMPTY_LINES: LrcLine[] = [];
 
 /** Derive file format from URI extension. */
 function getFormat(uri: string): string {
@@ -134,22 +137,19 @@ export function useSongScreen() {
     [openPlayer, fileUri, displayTitle, displayDuration],
   );
 
-  // Lyrics
-  const [lyrics, setLyrics] = useState<LrcLine[]>([]);
-  const [lyricsLoading, setLyricsLoading] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    setLyricsLoading(true);
-    loadLrc(fileUri).then(result => {
-      if (!mounted) return;
-      setLyricsLoading(false);
-      if (result && result.lines.length > 0) {
-        setLyrics(result.lines);
-      }
-    });
-    return () => { mounted = false; };
-  }, [fileUri]);
+  // Lyrics — TanStack owns the fetch / cancel / dedup. The LRC
+  // file for a given `fileUri` never changes, so we cache it
+  // for the lifetime of the app (`staleTime: Infinity`). The
+  // legacy `useState` + `useEffect` + `mounted` flag is gone.
+  const {data: lyricsResult, isFetching: lyricsLoading} = useApiQuery({
+    queryKey: ['lrc', fileUri] as const,
+    queryFn: () => loadLrc(fileUri),
+    staleTime: Infinity,
+  });
+  const lyrics = useMemo<LrcLine[]>(
+    () => lyricsResult?.lines ?? EMPTY_LINES,
+    [lyricsResult],
+  );
 
   const lyricsPreview = useMemo(() => {
     if (lyrics.length === 0) return null;

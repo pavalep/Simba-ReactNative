@@ -1,13 +1,11 @@
-import {useState, useEffect, useRef} from 'react';
+import {useState, useEffect} from 'react';
 
 interface NetworkStatus {
   isOnline: boolean;
-  wasEverOffline: boolean;
 }
 
 export function useNetworkStatus(): NetworkStatus {
   const [isOnline, setIsOnline] = useState(true);
-  const wasEverOffline = useRef(false);
 
   useEffect(() => {
     // Try @react-native-community/netinfo first
@@ -16,9 +14,7 @@ export function useNetworkStatus(): NetworkStatus {
     try {
       const NetInfo = require('@react-native-community/netinfo');
       unsubscribe = NetInfo.addEventListener((state: {isConnected: boolean}) => {
-        const online = state.isConnected ?? true;
-        setIsOnline(online);
-        if (!online) wasEverOffline.current = true;
+        setIsOnline(state.isConnected ?? true);
       });
     } catch {
       // React Native doesn't have navigator/window — assume online
@@ -30,5 +26,5 @@ export function useNetworkStatus(): NetworkStatus {
     };
   }, []);
 
-  return {isOnline, wasEverOffline: wasEverOffline.current};
+  return {isOnline};
 }

@@ -25,7 +25,7 @@
 // The public surface (UseMoviesScreenReturn) is preserved as
 // much as possible so MoviesDataProvider can keep its API.
 
-import {useCallback, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useApiQuery} from '../../../hooks/useApiQuery';
 import {MOVIE_CATEGORIES, withJunkFilter} from '../../../constants/movieCategories';
 import {searchInternetArchiveVideos} from '../../../services/api/internetArchiveAdapter';
@@ -155,8 +155,8 @@ export function useMoviesScreen({
 
   // Reset the display count when the scope changes.
   // (Done in render via useState's initializer is hard with
-  // dynamic inputs; use a memo side-effect to reset.)
-  useMemo(() => {
+  // dynamic inputs; use an effect to reset on key change.)
+  useEffect(() => {
     setDisplayCount(PAGE_SIZE);
   }, [cacheKey, trimmed, sortKey]);
 
