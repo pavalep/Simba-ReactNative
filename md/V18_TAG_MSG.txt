@@ -1,0 +1,35 @@
+v18.0.0 — V18 + Wave 11 closeout
+
+The data layer is unified on TanStack Query (via useApiQuery)
+and the legacy <TabView> pattern is fully retired.
+
+Scope:
+  - 11 waves, 46 phases, 26 commits on top of v17.0.0
+  - 9 API adapters (weather + 5 simple + 3 paginated) with
+    file-local *Raw DTOs and EXPORTED pure convertors
+  - 3-hook family: useApiQuery / useInfiniteApiQuery /
+    useApiMutation (plus useQueries in V18.6 deferred)
+  - 56 new tests (5 + 19 + 18 + 14), 0 failures
+  - Wave 11: 5 screens converted, -2,386 src/ LOC
+  - @react-native-tab-view dependency removed
+
+Verification (final):
+  - tsc --noEmit                    : 0 errors
+  - jest                            : 8 suites, 68 passed,
+                                       1 todo, 0 failures
+  - grep tab-view (anywhere in repo): 0 matches
+
+For the manager review, see:
+  - md/SIMBA_PLAYER_MODULE_V18_FINAL_QA_REPORT.md (this tag)
+  - md/SIMBA_PLAYER_MODULE_V18_SPECIFICATION.md
+  - md/SIMBA_PLAYER_MODULE_V18_TRACKER.md
+  - md/V18_LEGACY_TABVIEW_CLEANUP.md
+
+Deferred to V19 (post-tag):
+  - V18.5  Internet Archive adapter
+  - V18.6  useQueries for useAggregatedSearch
+  - V18.7  Cross-store selectors
+  - V18.8  Library consumer integration patterns
+
+Junior-dev rule holds at every layer: 1 file (~120 LOC) for
+adapter authors, 1 hook call (~5 LOC) for screen authors.
