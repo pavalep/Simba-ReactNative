@@ -2,10 +2,18 @@
 // P39.3: release-group detail (recordings + CAA cover flag) for an album
 // opened from a MusicBrainz discography row; recordings are matched
 // against local tracks to count "matched to your library".
+//
+// V18.3.3: migrated from useState/useEffect/useRef to useApiQuery.
+// The zustand-derived `localTracks` selector stays as-is (it's
+// a read-only snapshot, not async data). The `matchedCount`
+// memo stays as-is (it's a pure derivation over the query data
+// + zustand state). The `enabled: !!releaseGroupId` guard
+// replaces the original `if (!releaseGroupId) return` early
+// exit — TanStack skips the query entirely.
 
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {getReleaseGroupDetail} from '../../../services/api/musicbrainzService';
-
+import {useMemo} from 'react';
+import {useApiQuery} from '../../../hooks/useApiQuery';
+import {getReleaseGroupDetail} from '../../../services/api/musicbrainzAdapter';
 import type {MusicBrainzReleaseGroupDetail} from '../../../types/api';
 import {useMediaStore} from '../../../state';
 
@@ -34,29 +42,16 @@ export function useAlbumEnrichment(
       )
       .sort((a, b) => a.trackNumber - b.trackNumber),
   );
-  const [releaseGroup, setReleaseGroup] =
-    useState<MusicBrainzReleaseGroupDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(!!releaseGroupId);
-  const fetchingRef = useRef(false);
 
-  const load = useCallback(async () => {
-    if (!releaseGroupId || fetchingRef.current) return;
-    fetchingRef.current = true;
-    setIsLoading(true);
-    try {
-      const detail = await getReleaseGroupDetail(releaseGroupId);
-      setReleaseGroup(detail);
-    } catch {
-      setReleaseGroup(null);
-    } finally {
-      fetchingRef.current = false;
-      setIsLoading(false);
-    }
-  }, [releaseGroupId]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const {data: releaseGroup, isFetching} = useApiQuery<MusicBrainzReleaseGroupDetail | null>({
+    queryKey: ['musicbrainz', 'releaseGroup', releaseGroupId ?? ''],
+    queryFn: () =>
+      releaseGroupId
+        ? getReleaseGroupDetail(releaseGroupId)
+        : Promise.resolve(null),
+    enabled: !!releaseGroupId,
+    staleTime: 60 * 60 * 1000, // 1 hour
+  });
 
   const matchedCount = useMemo(() => {
     if (!releaseGroup || localTracks.length === 0) return 0;
@@ -66,5 +61,5 @@ export function useAlbumEnrichment(
     ).length;
   }, [releaseGroup, localTracks]);
 
-  return {releaseGroup, isLoading, matchedCount};
+  return {releaseGroup: releaseGroup ?? null, isLoading: isFetching, matchedCount};
 }
