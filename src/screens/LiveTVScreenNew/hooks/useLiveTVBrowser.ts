@@ -182,7 +182,7 @@ export function useLiveTVBrowser(initialCategory?: string) {
       id: channel.id,
       name: channel.name,
       url: channel.url,
-      image: channel.logo || '',
+      image: channel.image || '',
       subtitle: [channel.category, channel.country]
         .filter(Boolean)
         .join(' · '),

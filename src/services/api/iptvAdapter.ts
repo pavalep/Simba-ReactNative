@@ -45,7 +45,7 @@ export function channelResultFromRaw(
     id: raw.id,
     name: raw.name,
     url: raw.url,
-    logo: raw.logo || '',
+    image: raw.logo || '',
     country: raw.country || '',
     countryCode: raw.country_code || '',
     language: raw.languages?.[0] || '',

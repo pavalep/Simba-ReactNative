@@ -310,7 +310,7 @@ export const RemoteResults: React.FC<RemoteResultsProps> = React.memo(
                   <MediaRow
                     title={item.name}
                     subtitle={`${item.country} · ${item.category}`}
-                    imageUrl={item.logo}
+                    imageUrl={item.image}
                     icon="video"
                     trailing="play"
                     onPress={() => handlers.onOpenChannel(item)}

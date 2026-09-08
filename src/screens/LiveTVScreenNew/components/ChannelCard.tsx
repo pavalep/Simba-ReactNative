@@ -30,7 +30,7 @@ export function toRow(channel: IPTVChannelResult): ChannelRow {
     id: channel.id,
     name: channel.name,
     url: channel.url,
-    image: channel.logo || '',
+    image: channel.image || '',
     subtitle: [channel.category, channel.country]
       .filter(Boolean)
       .join(' · '),

@@ -40,7 +40,7 @@ describe('iptvAdapter', () => {
       id: 'c1',
       name: 'CNN',
       url: 'http://x/stream',
-      logo: 'http://x/logo',
+      image: 'http://x/logo',
       country: 'United States',
       countryCode: 'US',
       language: 'en',
