@@ -1,12 +1,17 @@
 // ─── Archive Item Detail Screen Hook ───────────────────────────────────
 // Phase 37.5: fetch an Internet Archive audio item + its ordered track
 // list. Tracks stream straight into the AudioPlayer (with auto-advance).
+//
+// V18.5.3: migrated to `useApiQuery` per V18 ideal — 2 parallel
+// queries (item + tracks) with `enabled: !!identifier` instead of
+// a useState/useEffect/useCallback fetchData pair. The shape of
+// the returned object is unchanged so the consumer doesn't move.
 
-import {useState, useEffect, useCallback} from 'react';
+import {useApiQuery} from '../../../hooks/useApiQuery';
 import {
   getInternetArchiveItemDetails,
   getArchiveTracks,
-} from '../../../services/api/internetArchiveService';
+} from '../../../services/api/internetArchiveAdapter';
 import type {
   InternetArchiveItemResult,
   ArchiveTrack,
@@ -23,35 +28,29 @@ interface UseArchiveItemDetailScreenReturn {
 export function useArchiveItemDetailScreen(
   identifier: string,
 ): UseArchiveItemDetailScreenReturn {
-  const [item, setItem] = useState<InternetArchiveItemResult | null>(null);
-  const [tracks, setTracks] = useState<ArchiveTrack[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const itemQ = useApiQuery<InternetArchiveItemResult | null>({
+    queryKey: ['internetArchive', 'item', identifier],
+    queryFn: () => getInternetArchiveItemDetails(identifier),
+    enabled: !!identifier,
+  });
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const [itemData, trackData] = await Promise.all([
-        getInternetArchiveItemDetails(identifier),
-        getArchiveTracks(identifier),
-      ]);
-      if (!itemData) {
-        setError('Item not found');
-        return;
-      }
-      setItem(itemData);
-      setTracks(trackData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load item');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [identifier]);
+  const tracksQ = useApiQuery<ArchiveTrack[]>({
+    queryKey: ['internetArchive', 'tracks', identifier],
+    queryFn: () => getArchiveTracks(identifier),
+    enabled: !!identifier,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  return {item, tracks, isLoading, error, retry: fetchData};
+  return {
+    item: itemQ.data ?? null,
+    tracks: tracksQ.data ?? [],
+    isLoading: itemQ.isFetching || tracksQ.isFetching,
+    error:
+      (itemQ.error as Error | null)?.message ??
+      (tracksQ.error as Error | null)?.message ??
+      null,
+    retry: () => {
+      void itemQ.refetch();
+      void tracksQ.refetch();
+    },
+  };
 }

@@ -30,7 +30,7 @@ import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb'
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {useToast} from '../../../components/feedback/Toast';
 import {LIBRIVOX_GENRES} from '../../../constants/audiobookCategories';
-import {archiveImageUrl, archiveIdentifierFromUrl} from '../../../services/api/internetArchiveService';
+import {archiveImageUrl, archiveIdentifierFromUrl} from '../../../services/api/internetArchiveAdapter';
 import type {AudiobookResult} from '../../../types/api';
 import {styles} from '../styles';
 import type {BookRow, BookCardProps} from '../types';

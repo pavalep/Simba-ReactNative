@@ -20,7 +20,7 @@
 
 import {useCallback, useRef, useState} from 'react';
 import {MOVIE_CATEGORIES, withJunkFilter} from '../../../constants/movieCategories';
-import {searchInternetArchiveVideos} from '../../../services/api/internetArchiveService';
+import {searchInternetArchiveVideos} from '../../../services/api/internetArchiveAdapter';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 
 const PAGE_SIZE = 20;

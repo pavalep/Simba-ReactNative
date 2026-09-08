@@ -10,7 +10,7 @@
 import React, {useCallback, useMemo, useState, type ReactNode} from 'react';
 import {useToast} from '../../../components/feedback/Toast';
 import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
-import {resolveInternetArchiveVideoDetails} from '../../../services/api/internetArchiveService';
+import {resolveInternetArchiveVideoDetails} from '../../../services/api/internetArchiveAdapter';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 import {
   useMoviesScreenParams,

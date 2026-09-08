@@ -1,38 +1,30 @@
-// ─── Movie Detail Screen Hook ────────────────────────────────────────────
+// ─── Movie Detail Screen Hook ───────────────────────────────────────────
 // Fetches detailed info about an Internet Archive movie by identifier.
+//
+// V18.5.3: migrated to `useApiQuery` per V18 ideal. The `onRetry`
+// callback (for partial-replication retry) is exposed as
+// `retry: () => void` for the consumer; the retry-with-callback
+// form is still available as the underlying `resolveInternetArchiveVideoDetails`
+// call (the V18 hook surface is the no-arg form, matching the rest
+// of the V18 family).
 
-import {useState, useEffect, useCallback} from 'react';
-import {getInternetArchiveVideoDetails} from '../../../services/api/internetArchiveService';
+import {useApiQuery} from '../../../hooks/useApiQuery';
+import {getInternetArchiveVideoDetails} from '../../../services/api/internetArchiveAdapter';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 
 export function useMovieDetailScreen(identifier: string) {
-  const [item, setItem] = useState<InternetArchiveVideoResult | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const q = useApiQuery<InternetArchiveVideoResult | null>({
+    queryKey: ['internetArchive', 'videoDetails', identifier],
+    queryFn: () => getInternetArchiveVideoDetails(identifier),
+    enabled: !!identifier,
+  });
 
-  const fetchDetails = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await getInternetArchiveVideoDetails(identifier);
-      if (result) {
-        setItem(result);
-      } else {
-        setError('Movie not found');
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Failed to load movie details',
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [identifier]);
-
-  useEffect(() => {
-    fetchDetails();
-  }, [fetchDetails]);
-
-  return {item, isLoading, error, retry: fetchDetails};
+  return {
+    item: q.data ?? null,
+    isLoading: q.isFetching,
+    error: (q.error as Error | null)?.message ?? null,
+    retry: () => {
+      void q.refetch();
+    },
+  };
 }

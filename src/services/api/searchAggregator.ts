@@ -8,7 +8,7 @@
 import {searchAudiobooks} from './librivoxAdapter';
 import {getAllIPTVChannels} from './iptvService';
 import {searchJamendoTracks} from './jamendoAdapter';
-import {searchInternetArchiveAudio} from './internetArchiveService';
+import {searchInternetArchiveAudio} from './internetArchiveAdapter';
 import {searchAudiusTracks} from './audiusAdapter';
 import type {AggregatedSearchResults, ApiSearchOptions} from '../../types/api';
 

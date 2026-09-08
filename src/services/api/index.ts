@@ -57,7 +57,7 @@ export {
   type JamendoTrackResult,
 } from './jamendoAdapter';
 
-export * from './internetArchiveService';
+export * from './internetArchiveAdapter';
 
 export {
   searchAudiusTracks,

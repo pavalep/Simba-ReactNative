@@ -13,7 +13,7 @@ import {getAudiobookById} from '../../../services/api/librivoxAdapter';
 import {
   getArchiveTracks,
   archiveIdentifierFromUrl,
-} from '../../../services/api/internetArchiveService';
+} from '../../../services/api/internetArchiveAdapter';
 import type {AudiobookResult, ArchiveTrack} from '../../../types/api';
 
 interface UseAudiobookDetailScreenReturn {
