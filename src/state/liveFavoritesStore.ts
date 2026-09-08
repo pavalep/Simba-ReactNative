@@ -11,12 +11,12 @@ import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './
 
 export interface LiveFavoriteItem {
   kind: 'radio' | 'tv';
-  /** stationuuid (radio) or channel id (tv) */
+  /** Per-station / per-channel id (`RadioStationResult.id` or `IPTVChannelResult.id`) */
   id: string;
   name: string;
   /** Playable stream URL */
   url: string;
-  /** favicon (radio) or logo (tv) URL — may be empty */
+  /** Station / channel image URL — may be empty */
   image: string;
   /** One-line context, e.g. "Germany · pop" or "News · US" */
   subtitle: string;

@@ -1,12 +1,13 @@
 /**
  * V18 — radioBrowserAdapter
  *
- * Replaces `radioBrowserService.ts`. Radio-Browser returns stations
- * as an array whose wire shape IS the domain shape — the
- * `RadioStationResult` type is field-for-field compatible. The
- * only convertor needed is for the metadata endpoints (genres,
- * countries, languages) where the wire uses `stationcount` (one
- * word) and the domain uses `stationCount` (camelCase).
+ * V20.11a — completed the *Raw / *FromRaw pattern. The pre-V20.11
+ * adapter was missing `stationFromRaw`; the wire shape (with
+ * `stationuuid`, `favicon`, `url_resolved`) leaked into the
+ * domain type and the screen layer had to rename those fields
+ * back to `id` / `image` / `url` in a `toRow` function. The
+ * adapter now does the rename once, in the convertor, and
+ * the public service functions return the domain shape.
  *
  * Pagination: the API uses `limit` + `offset`. The client derives
  * `hasNextPage` by checking whether the response was a full page
@@ -23,6 +24,25 @@ import {API_CONFIG} from '../../constants/api';
 import type {RadioStationResult, ApiSearchOptions} from '../../types/api';
 
 export type {RadioStationResult};
+
+/**
+ * Wire shape from radio-browser.info. The API returns these
+ * snake_case / lowercase keys; the `*Result` domain type
+ * normalizes them to camelCase UI-friendly names.
+ */
+interface RadioStationResultRaw {
+  stationuuid?: string;
+  name?: string;
+  url?: string;
+  url_resolved?: string;
+  favicon?: string;
+  tags?: string;
+  country?: string;
+  language?: string;
+  codec?: string;
+  bitrate?: number;
+  clickcount?: number;
+}
 
 const CACHE = {
   search: 10 * 60 * 1000,
@@ -58,48 +78,87 @@ export function browseTagsFromRaw(raw: RadioBrowseTagRaw[] | undefined): RadioBr
     .filter((t): t is RadioBrowseTag => t !== null);
 }
 
+/**
+ * Wire → domain convertor. The radio-browser API returns
+ *   `stationuuid` (the per-station UUID),
+ *   `favicon` (the small station logo),
+ *   `url_resolved` (the actually-playable URL after redirects).
+ * The domain type carries them as `id` / `image` / `url` so the
+ * screen layer never sees the wire keys. The `url` is resolved
+ * to the playable one (falling back to the user-submitted URL).
+ */
+export function stationFromRaw(
+  raw: RadioStationResultRaw | undefined,
+): RadioStationResult | null {
+  if (!raw || !raw.stationuuid || !raw.name) return null;
+  return {
+    id: raw.stationuuid,
+    name: raw.name,
+    url: raw.url_resolved || raw.url || '',
+    image: raw.favicon || '',
+    tags: raw.tags || '',
+    country: raw.country || '',
+    language: raw.language || '',
+    codec: raw.codec || '',
+    bitrate: raw.bitrate ?? 0,
+    clickCount: raw.clickcount ?? 0,
+  };
+}
+
+export function stationsFromRaw(
+  raw: RadioStationResultRaw[] | undefined,
+): RadioStationResult[] {
+  return (raw ?? [])
+    .map(stationFromRaw)
+    .filter((s): s is RadioStationResult => s !== null);
+}
+
 export async function searchStations(
   query: string,
   options?: ApiSearchOptions,
 ): Promise<RadioStationResult[]> {
-  return apiFetch<RadioStationResult[]>({
+  const raw = await apiFetch<RadioStationResultRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: '/json/stations/search',
     params: {name: query, ...buildParams(options)},
   });
+  return stationsFromRaw(raw);
 }
 
 export async function getStationsByCountry(
   country: string,
   options?: ApiSearchOptions,
 ): Promise<RadioStationResult[]> {
-  return apiFetch<RadioStationResult[]>({
+  const raw = await apiFetch<RadioStationResultRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: `/json/stations/bycountry/${encodeURIComponent(country)}`,
     params: buildParams(options),
   });
+  return stationsFromRaw(raw);
 }
 
 export async function getStationsByGenre(
   genre: string,
   options?: ApiSearchOptions,
 ): Promise<RadioStationResult[]> {
-  return apiFetch<RadioStationResult[]>({
+  const raw = await apiFetch<RadioStationResultRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: `/json/stations/bytag/${encodeURIComponent(genre)}`,
     params: buildParams(options),
   });
+  return stationsFromRaw(raw);
 }
 
 export async function getStationsByLanguage(
   language: string,
   options?: ApiSearchOptions,
 ): Promise<RadioStationResult[]> {
-  return apiFetch<RadioStationResult[]>({
+  const raw = await apiFetch<RadioStationResultRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: `/json/stations/bylanguage/${encodeURIComponent(language)}`,
     params: buildParams(options),
   });
+  return stationsFromRaw(raw);
 }
 
 export interface RadioFilterSet {
@@ -121,31 +180,33 @@ export async function getStationsByFilters(
   if (filters.genre) params.tag = filters.genre;
   if (filters.country) params.country = filters.country;
   if (filters.language) params.language = filters.language;
-  return apiFetch<RadioStationResult[]>({
+  const raw = await apiFetch<RadioStationResultRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: '/json/stations/search',
     params,
   });
+  return stationsFromRaw(raw);
 }
 
 export async function getTopStations(
   options?: ApiSearchOptions,
 ): Promise<RadioStationResult[]> {
-  return apiFetch<RadioStationResult[]>({
+  const raw = await apiFetch<RadioStationResultRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: '/json/stations/topclick',
     params: buildParams(options),
   });
+  return stationsFromRaw(raw);
 }
 
 export async function getStationById(
   uuid: string,
 ): Promise<RadioStationResult | null> {
-  const stations = await apiFetch<RadioStationResult[]>({
+  const raw = await apiFetch<RadioStationResultRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: `/json/stations/${encodeURIComponent(uuid)}`,
   });
-  return stations.length > 0 ? stations[0] : null;
+  return stationsFromRaw(raw)[0] ?? null;
 }
 
 export async function getGenres(limit = 40): Promise<RadioBrowseTag[]> {

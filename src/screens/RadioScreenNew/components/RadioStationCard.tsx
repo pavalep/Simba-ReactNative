@@ -28,10 +28,10 @@ export interface StationRow {
 
 export function toRow(station: RadioStationResult): StationRow {
   return {
-    id: station.stationuuid,
+    id: station.id,
     name: station.name,
-    url: station.urlResolved || station.url,
-    image: station.favicon || '',
+    url: station.url,
+    image: station.image,
     subtitle: [station.country, station.tags].filter(Boolean).join(' · '),
     codec: station.codec,
     bitrate: station.bitrate,

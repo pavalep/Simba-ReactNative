@@ -197,7 +197,7 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
       if (!row) return;
       switch (value) {
         case 'favorite': {
-          const station = items.find(s => s.stationuuid === row.id);
+          const station = items.find(s => s.id === row.id);
           if (station) {
             const wasFavorite = isFavoriteId(row.id);
             toggleFavorite(station);

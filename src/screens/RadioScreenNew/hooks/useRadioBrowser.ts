@@ -245,20 +245,20 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
   );
   const toggleFavorite = useCallback(
     (station: RadioStationResult) => {
-      const existing = favorites.find(f => f.id === station.stationuuid);
+      const existing = favorites.find(f => f.id === station.id);
       if (existing) {
         useLiveFavoritesStore.getState().removeLiveFavorite({
           kind: 'radio',
-          id: station.stationuuid,
+          id: station.id,
         });
         return;
       }
       useLiveFavoritesStore.getState().addLiveFavorite({
         kind: 'radio',
-        id: station.stationuuid,
+        id: station.id,
         name: station.name,
-        url: station.urlResolved || station.url,
-        image: station.favicon || '',
+        url: station.url,
+        image: station.image,
         subtitle: [station.country, station.tags?.split(',')[0]?.trim()]
           .filter(Boolean)
           .join(' · '),

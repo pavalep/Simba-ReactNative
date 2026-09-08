@@ -144,11 +144,16 @@ export interface PodcastEpisodeResult extends ApiMediaClassification {
 // ─── Radio Browser ──────────────────────────────────────────────────────
 
 export interface RadioStationResult extends ApiMediaClassification {
-  stationuuid: string;
+  id: string;
   name: string;
+  /**
+   * The resolved stream URL. The radio-browser API returns both
+   * `url` (user-submitted) and `url_resolved` (the actually-playable
+   * URL after redirects). The adapter resolves the two into this
+   * single `url` field so the screen layer never has to pick.
+   */
   url: string;
-  urlResolved: string;
-  favicon: string;
+  image: string;
   tags: string;
   country: string;
   language: string;
@@ -191,7 +196,7 @@ export interface IPTVChannelResult extends ApiMediaClassification {
   id: string;
   name: string;
   url: string;
-  logo: string;
+  image: string;
   country: string;
   countryCode: string;
   language: string;
