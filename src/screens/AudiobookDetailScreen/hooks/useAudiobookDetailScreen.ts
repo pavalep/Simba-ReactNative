@@ -1,9 +1,15 @@
 // ─── Audiobook Detail Screen Hook ──────────────────────────────────────
 // Phase 37.2/37.3: fetch a LibriVox book + its chapter list from the
 // Internet Archive metadata (the same item backs LibriVox streaming).
+//
+// V18.3.3: migrated to a single useApiQuery. The book lookup + the
+// archive-track lookup stay sequential (the second fetch depends on
+// the first) but happen inside one queryFn so the consumer still
+// sees one loading state. The Internet Archive service is not yet
+// V18-migrated (Wave 5), so it stays imported from the legacy file.
 
-import {useState, useEffect, useCallback} from 'react';
-import {getAudiobookById} from '../../../services/api/librivoxService';
+import {useApiQuery} from '../../../hooks/useApiQuery';
+import {getAudiobookById} from '../../../services/api/librivoxAdapter';
 import {
   getArchiveTracks,
   archiveIdentifierFromUrl,
@@ -21,38 +27,28 @@ interface UseAudiobookDetailScreenReturn {
 export function useAudiobookDetailScreen(
   bookId: number,
 ): UseAudiobookDetailScreenReturn {
-  const [book, setBook] = useState<AudiobookResult | null>(null);
-  const [chapters, setChapters] = useState<ArchiveTrack[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
+  const {data, isFetching, error, refetch} = useApiQuery<{
+    book: AudiobookResult;
+    chapters: ArchiveTrack[];
+  } | null>({
+    queryKey: ['librivox', 'byId', bookId],
+    queryFn: async () => {
       const bookData = await getAudiobookById(bookId);
-      if (!bookData) {
-        setError('Audiobook not found');
-        return;
-      }
-      setBook(bookData);
+      if (!bookData) throw new Error('Audiobook not found');
       const identifier = archiveIdentifierFromUrl(bookData.urlIArchive);
-      if (identifier) {
-        const tracks = await getArchiveTracks(identifier);
-        setChapters(tracks);
-      } else {
-        setChapters([]);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load audiobook');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [bookId]);
+      const chapters = identifier ? await getArchiveTracks(identifier) : [];
+      return {book: bookData, chapters};
+    },
+    staleTime: 60 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  return {book, chapters, isLoading, error, retry: fetchData};
+  return {
+    book: data?.book ?? null,
+    chapters: data?.chapters ?? [],
+    isLoading: isFetching,
+    error: error?.message ?? null,
+    retry: () => {
+      void refetch();
+    },
+  };
 }

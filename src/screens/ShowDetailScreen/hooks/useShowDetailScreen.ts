@@ -1,10 +1,15 @@
 // ─── TV Show Detail Hook ───────────────────────────────────────────────
 // Phase 38.2/38.4: show + episode list from TVMaze; local video files are
 // matched to episodes by filename (S01E02 patterns) for enrichment.
+//
+// V18.3.3: migrated to useApiQuery. The two parallel fetches
+// (`Promise.all([getShowById, getEpisodeList])`) stay parallel —
+// they happen inside the queryFn. The `seasons` and `matchedCount`
+// derivations stay as `useMemo` (pure data transforms).
 
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {getShowById, getEpisodeList} from '../../../services/api/tvmazeService';
-
+import {useMemo} from 'react';
+import {useApiQuery} from '../../../hooks/useApiQuery';
+import {getShowById, getEpisodeList} from '../../../services/api/tvmazeAdapter';
 import {
   fileNameMatchesShow,
   fileNameMatchesEpisode,
@@ -20,35 +25,21 @@ export interface MatchedEpisode {
 
 export function useShowDetailScreen(showId: number) {
   const localVideos = useMediaVideoTracks();
-  const [show, setShow] = useState<TVMazeShow | null>(null);
-  const [episodes, setEpisodes] = useState<TVMazeEpisode[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const fetchingRef = useRef(false);
 
-  const load = useCallback(async () => {
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const [showData, episodeData] = await Promise.all([
-        getShowById(showId),
-        getEpisodeList(showId),
-      ]);
-      setShow(showData);
-      setEpisodes(episodeData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load show');
-    } finally {
-      fetchingRef.current = false;
-      setIsLoading(false);
-    }
-  }, [showId]);
+  const {data, isFetching, error, refetch} = useApiQuery<{
+    show: TVMazeShow;
+    episodes: TVMazeEpisode[];
+  }>({
+    queryKey: ['tvmaze', 'show', showId],
+    queryFn: () =>
+      Promise.all([getShowById(showId), getEpisodeList(showId)]).then(
+        ([show, episodes]) => ({show, episodes}),
+      ),
+    staleTime: 60 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const show = data?.show ?? null;
+  const episodes = data?.episodes ?? [];
 
   // ── Group episodes by season, each matched to a local file ──
   const seasons = useMemo((): {season: number; items: MatchedEpisode[]}[] => {
@@ -90,16 +81,14 @@ export function useShowDetailScreen(showId: number) {
     [seasons],
   );
 
-  const retry = useCallback(() => {
-    load();
-  }, [load]);
-
   return {
     show,
     seasons,
     matchedCount,
-    isLoading,
-    error,
-    retry,
+    isLoading: isFetching,
+    error: error?.message ?? null,
+    retry: () => {
+      void refetch();
+    },
   };
 }

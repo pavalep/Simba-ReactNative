@@ -1,6 +1,12 @@
-import {useState, useEffect} from 'react';
-import {getJamendoTrackById} from '../../../services/api/jamendoService';
-import {getAudiusTrackById} from '../../../services/api/audiusService';
+// ─── Music Detail Screen Hook ──────────────────────────────────────────
+// V18.3.3: migrated to useApiQuery. The discriminated `source`
+// (jamendo vs audius) is captured in the queryKey so the cache
+// separates the two. The queryFn selects the right adapter based
+// on `source` and returns the union type `TrackResult`.
+
+import {useApiQuery} from '../../../hooks/useApiQuery';
+import {getJamendoTrackById} from '../../../services/api/jamendoAdapter';
+import {getAudiusTrackById} from '../../../services/api/audiusAdapter';
 import type {JamendoTrackResult, AudiusTrackResult} from '../../../types/api';
 
 type TrackResult = JamendoTrackResult | AudiusTrackResult | null;
@@ -9,51 +15,21 @@ export function useMusicDetailScreen(
   trackId: string,
   source: 'jamendo' | 'audius',
 ): {track: TrackResult; isLoading: boolean; error: string | null} {
-  const [track, setTrack] = useState<TrackResult>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setIsLoading(true);
-    setError(null);
-
-    const fetchTrack = async () => {
-      try {
-        let result: TrackResult = null;
-
-        if (source === 'jamendo') {
-          const jamendoId = parseInt(trackId, 10);
-          if (isNaN(jamendoId)) {
-            throw new Error('Invalid track ID');
-          }
-          result = (await getJamendoTrackById(jamendoId)) ?? null;
-        } else if (source === 'audius') {
-          result = (await getAudiusTrackById(trackId)) ?? null;
-        }
-
-        if (!cancelled) {
-          setTrack(result);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(
-            e instanceof Error ? e.message : 'Failed to load track details',
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+  const {data, isFetching, error} = useApiQuery<TrackResult>({
+    queryKey: ['music', 'detail', source, trackId],
+    queryFn: async (): Promise<TrackResult> => {
+      if (source === 'jamendo') {
+        const id = parseInt(trackId, 10);
+        if (Number.isNaN(id)) throw new Error('Invalid track ID');
+        return (await getJamendoTrackById(id)) ?? null;
       }
-    };
+      return (await getAudiusTrackById(trackId)) ?? null;
+    },
+  });
 
-    fetchTrack();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [trackId, source]);
-
-  return {track, isLoading, error};
+  return {
+    track: data ?? null,
+    isLoading: isFetching,
+    error: error?.message ?? null,
+  };
 }
