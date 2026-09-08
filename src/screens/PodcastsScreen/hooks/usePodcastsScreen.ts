@@ -21,7 +21,7 @@ import {useCallback, useRef, useState} from 'react';
 import {
   searchPodcasts,
   getTrendingPodcasts,
-} from '../../../services/api/podcastIndexService';
+} from '../../../services/api/podcastIndexAdapter';
 import {INITIAL_MAX, MAX_RESULTS_PER_QUERY} from '../related/constants';
 import text from '../related/textContent.json';
 import type {PodcastResult} from '../../../types/api';

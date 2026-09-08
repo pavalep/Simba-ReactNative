@@ -14,7 +14,7 @@
 // change).
 
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {getPodcastById, getEpisodes} from '../../../services/api/podcastIndexService';
+import {getPodcastById, getEpisodes} from '../../../services/api/podcastIndexAdapter';
 import type {PodcastResult, PodcastEpisodeResult} from '../../../types/api';
 import text from '../related/textContent.json';
 import {

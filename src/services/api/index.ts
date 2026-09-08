@@ -36,7 +36,7 @@ export {
   type MusicBrainzRecording,
 } from './musicbrainzAdapter';
 
-export * from './radioBrowserService';
+export * from './radioBrowserAdapter';
 
 export {
   searchAudiobooks,
@@ -47,7 +47,7 @@ export {
   type AudiobookResult,
 } from './librivoxAdapter';
 
-export * from './iptvService';
+export * from './iptvAdapter';
 
 export {
   searchJamendoTracks,

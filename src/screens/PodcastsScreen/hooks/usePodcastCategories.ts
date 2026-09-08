@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {PODCAST_CATEGORIES, type PodcastCategory} from '../../../constants/podcastCategories';
-import {getPodcastCategories} from '../../../services/api/podcastIndexService';
+import {getPodcastCategories} from '../../../services/api/podcastIndexAdapter';
 
 interface PodcastCategoriesState {
   categories: PodcastCategory[];

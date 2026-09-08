@@ -6,7 +6,7 @@
 // 30-second previews, no paid commercial plans.
 
 import {searchAudiobooks} from './librivoxAdapter';
-import {getAllIPTVChannels} from './iptvService';
+import {getAllIPTVChannels} from './iptvAdapter';
 import {searchJamendoTracks} from './jamendoAdapter';
 import {searchInternetArchiveAudio} from './internetArchiveAdapter';
 import {searchAudiusTracks} from './audiusAdapter';

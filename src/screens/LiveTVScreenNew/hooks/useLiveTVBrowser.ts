@@ -14,7 +14,7 @@ import {
   searchIPTVChannels,
   getChannelsByCategory,
   getIPTVCategories,
-} from '../../../services/api/iptvService';
+} from '../../../services/api/iptvAdapter';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
 import {useLiveFavoritesStore} from '../../../state';

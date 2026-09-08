@@ -20,7 +20,7 @@ import {
   getCountries,
   getLanguages,
   type RadioBrowseTag,
-} from '../../../services/api/radioBrowserService';
+} from '../../../services/api/radioBrowserAdapter';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {RadioStationResult} from '../../../types/api';
 import {useLiveFavoritesStore} from '../../../state';
