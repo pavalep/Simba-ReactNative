@@ -102,7 +102,10 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
     isSearching,
   } = useSearch(recentFiles, playlist, videoFolders, audioFolders);
 
-  // P40.1: remote sources via searchAggregator (debounced + cancelled)
+  // V18.6.2a: remote sources via 5 parallel useApiQuery calls inside
+  // useAggregatedSearch (debounced + per-source error isolation). The
+  // pre-V18.6 searchAggregator was deleted in V18.6.2d; the hook is
+  // now the only aggregation entry point.
   const {
     results: remoteResults,
     isLoading: remoteLoading,

@@ -31,7 +31,7 @@ import {
   type UseQueryOptions,
   type UseInfiniteQueryOptions,
   type UseMutationOptions,
-  type UseQueriesOptions,
+  type QueriesOptions,
   type QueryKey,
   type InfiniteData,
 } from '@tanstack/react-query';
@@ -120,7 +120,7 @@ export function useApiQueries<
   TResults extends readonly unknown[],
   TCombined = TResults,
 >(
-  options: UseQueriesOptions<TResults> & {
+  options: QueriesOptions<TResults> & {
     combine?: (results: TResults) => TCombined;
   },
 ): TCombined {
