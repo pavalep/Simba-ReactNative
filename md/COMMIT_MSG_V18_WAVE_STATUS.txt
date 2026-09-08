@@ -1,0 +1,80 @@
+V18 tracker: per-wave status pass — mark each wave done/partial/deferred/absorbed
+
+The user asked for an honest per-wave audit of the V18 tracker
+("check wave 3 and iterate each waves, mark completion as
+we finished or is finished"). This commit walks all 11 waves
+and marks each phase with the truth of what landed vs what
+was deferred, absorbed, or partially done.
+
+Status at a glance (the new "Wave status at a glance"
+table at the top of the tracker):
+
+  Wave 1 (Foundation)         ✓ DONE         3 commits
+  Wave 2 (Pilot)              ✓ DONE         4 commits
+  Wave 3 (Simple search)      ✓ DONE         9 commits
+  Wave 4 (Paginated)          ⚠ PARTIAL      1 commit  ← only adapters; consumer migration NOT done
+  Wave 5 (Internet Archive)   ⚠ DEFERRED     0 commits  ← V19 batch
+  Wave 6 (Aggregated search)  ⚠ DEFERRED     0 commits  ← V19 batch
+  Wave 7 (Per-screen hooks)   ↪ ABSORBED     —         ← done as part of V18.3.3
+  Wave 8 (Glue cleanup)       ⚠ PARTIAL      —         ← index.ts partial; apiClient + types/api NOT done
+  Wave 9 (Local-state)        ↪ ABSORBED     —         ← active-scope pattern in V18.3 subsumed the per-scope shims
+  Wave 10 (Final QA)          ✓ DONE         1 commit
+  Wave 11 (Legacy TabView)    ✓ DONE         9 commits
+
+Honest findings from the audit:
+  - Wave 4 is genuinely partial: the 3 paginated `*Service.ts`
+    files (`iptvService`, `podcastIndexService`, `radioBrowserService`)
+    are still imported by 7 consumer files plus `searchAggregator.ts`.
+    The adapters exist; the migration didn't land.
+  - Wave 8 is partial for the same reason: `index.ts` was
+    partially cleaned (5 simple-service re-exports removed in
+    V18.3.4) but the 3 paginated re-exports + `internetArchiveService`
+    are still in the barrel. `apiClient.ts` cache + rate-limit
+    cleanup + `types/api.ts` `*Raw`/`*Response` cleanup are
+    entirely untouched.
+  - Wave 6 deferred as expected: `useAggregatedSearch` still
+    uses the old `Promise.allSettled` pattern; the
+    `useQueries` migration is a 1-commit job.
+  - Wave 10 has 3 deferred items at the end of Phase 40
+    (package version bump, CHANGELOG, manager-review signal)
+    because the package is `private: true` and git-tagged
+    only — no npm version bump needed.
+
+Per-phase changes:
+  - Wave 3 (all 4 phases): [ ] → [x] with commit hashes and
+    spec-wording notes where the original text used the V18.0
+    "default-exported adapter" pattern instead of the V18.1
+    type contract's named-exports pattern.
+  - Wave 4 (4 phases): V18.4.1 + V18.4.2 marked [x] with
+    commit hashes; V18.4.3 + V18.4.4 marked [ ] with
+    "PENDING (V19)" annotations + a list of the 7 consumer
+    files that still need migration.
+  - Wave 5 (4 phases): all marked [ ] with "PENDING (V19)"
+    annotations and the migration scope (Archive screen +
+    Movies screen + 32 call sites).
+  - Wave 6 (4 phases): Phase 21 marked [x] (the aggregator
+    file exists and works, just not on the new pattern);
+    Phases 22-24 marked [ ] with "PENDING (V19)".
+  - Wave 7 (4 phases): all marked [x] with the V18.3.3
+    commit hashes that delivered the work; Phase 27 marked
+    [~] N/A (useDownloadsSync is not a network query;
+    no migration needed).
+  - Wave 8 (4 phases): Phase 31 marked [x] (partial — the
+    5 simple-service re-exports were removed); Phases 29, 30,
+    32 marked [ ] with PENDING annotations + the specific
+    files that need cleanup.
+  - Wave 9 (4 phases): all marked [x] with "absorbed into
+    Wave 3" notes pointing at the active-scope pattern.
+  - Wave 10 (4 phases): all marked [x] with verification
+    details; the package-version/CHANGELOG items deferred.
+  - Wave 11 (6 phases): already [x] from the V18.11.6 commit
+    (`5b01e58`); added a status header to the wave section.
+
+New "V19 carryover" list at the top: 7 items in order of
+size, starting with the V18.5 Internet Archive adapter
+(largest single deferred surface, ~-600 src/ LOC) and
+ending with the V18.7.3 useDownloadsSync audit
+(likely a "no change needed" commit).
+
+This is a docs-only commit — no code changes; tsc/jest
+state is unchanged (8 suites, 68 passed, 1 todo, 0 failures).
