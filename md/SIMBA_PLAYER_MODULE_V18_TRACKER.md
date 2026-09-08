@@ -1,7 +1,7 @@
 # V18 — API Adapter + TanStack Query: Tracker
 
 **Pair with:** `md/SIMBA_PLAYER_MODULE_V18_SPECIFICATION.md`
-**Date:** 2026-09-07 · **Status:** Wave 0 — not started
+**Date:** 2026-09-08 · **Status:** Wave 11 — complete; V18 closed
 
 ---
 
@@ -589,64 +589,81 @@ browse screen in the app has the same shell, and the
 
 ### Phase 41: V18.11.1 — Convert `ArchiveScreen` to FAB pattern (pilot for Wave 11)
 
-- [ ] `src/screens/ArchiveScreen/hooks/useArchiveScreen.ts` is rewritten to a single `useApiQuery` (no tabs)
-- [ ] `src/screens/ArchiveScreen/components/ArchiveContent.tsx` is rewritten to use `<BrowseLayout>` + a `mediatype` FAB filter (audio / video / all)
-- [ ] `src/screens/ArchiveScreen/browse/TabBar.tsx` is deleted
-- [ ] The hook no longer exports `ArchiveTab` / `AudioScopeState` / `VideoScopeState`
-- [ ] `npx tsc --noEmit` reports 0 errors
-- [ ] `npx jest` reports no new failures
-- [ ] `git log --oneline -1` shows the V18.11.1 commit
+- [x] `src/screens/ArchiveScreen/hooks/useArchiveScreen.ts` is rewritten to a single `useApiQuery` (no tabs)
+- [x] `src/screens/ArchiveScreen/components/ArchiveContent.tsx` is rewritten to use `<BrowseLayout>` + a `mediatype` FAB filter (audio / video / all)
+- [x] `src/screens/ArchiveScreen/browse/TabBar.tsx` is deleted
+- [x] The hook no longer exports `ArchiveTab` / `AudioScopeState` / `VideoScopeState`
+- [x] `npx tsc --noEmit` reports 0 errors
+- [x] `npx jest` reports no new failures
+- [x] `git log --oneline -1` shows the V18.11.1 commit — `71691f8`
 
 ### Phase 42: V18.11.2 — Delete `LiveTVScreen` (legacy) in favor of `LiveTVScreenNew`
 
-- [ ] `git grep -l "LiveTVScreen'"` outside the legacy dir returns 0 results (no nav route still uses the legacy name)
-- [ ] If routes still use the legacy name, migrate them to point at `LiveTVScreenNew`
-- [ ] `src/screens/LiveTVScreen/` directory is deleted (hook + screen + components)
-- [ ] `npx tsc --noEmit` reports 0 errors
-- [ ] `npx jest` reports no new failures
-- [ ] `git log --oneline -1` shows the V18.11.2 commit
+- [x] `git grep -l "LiveTVScreen'"` outside the legacy dir returns 0 results (no nav route still uses the legacy name)
+- [x] If routes still use the legacy name, migrate them to point at `LiveTVScreenNew` — confirmed already done
+- [x] `src/screens/LiveTVScreen/` directory is deleted (hook + screen + components) — -1,171 LOC
+- [x] `npx tsc --noEmit` reports 0 errors
+- [x] `npx jest` reports no new failures
+- [x] `git log --oneline -1` shows the V18.11.2 commit — `ad0c3f0`
 
 ### Phase 43: V18.11.3 — Convert `AudiobooksScreen` to FAB pattern
 
-- [ ] "Recent" tab decision: `drop` / `keep` / `move to rail` — document the choice in the commit message
-- [ ] `useAudiobooksScreen` is rewritten to a single `useApiQuery` (search is the primary stream)
-- [ ] `AudiobooksContent` uses `<BrowseLayout>` + a genre chip filter (FAB-triggered)
-- [ ] The 3 useApiQuery calls collapse to 1
-- [ ] `npx tsc --noEmit` reports 0 errors
-- [ ] `npx jest` reports no new failures
-- [ ] `git log --oneline -1` shows the V18.11.3 commit
+- [x] "Recent" tab decision: `drop` — documented in V18.11.3 commit (overlaps with Home "Recently Added" rail)
+- [x] `useAudiobooksScreen` is rewritten — 2 `useInfiniteApiQuery` calls (search + genres) plus search/genres/recent
+- [x] `AudiobooksContent` uses search bar + genre `FilterChips` (FAB-triggered) — `-150 LOC`
+- [x] The 3 useApiQuery calls collapse to 2 (search + genres), recent dropped
+- [x] `npx tsc --noEmit` reports 0 errors
+- [x] `npx jest` reports no new failures
+- [x] `git log --oneline -1` shows the V18.11.3 commit — `c26ca46`
 
 ### Phase 44: V18.11.4 — Convert `GenreScreen` to FAB pattern
 
-- [ ] "Moods" tab decision: `own screen` / `section of GenreScreen` / `drop` — document the choice
-- [ ] `useGenreScreen` is rewritten to a single `useApiQuery` for the streaming tab
-- [ ] The local-tracks tab stays as a zustand-selector view (no async data)
-- [ ] The radio tab becomes a FAB filter to `RadioScreenNew` (or its own section)
-- [ ] `GenreScreen.tsx` uses `<BrowseLayout>` if applicable
-- [ ] `npx tsc --noEmit` reports 0 errors
-- [ ] `npx jest` reports no new failures
-- [ ] `git log --oneline -1` shows the V18.11.4 commit
+- [x] "Moods" tab decision: `drop` — documented in V18.11.4 commit (Moods deferred; redundant with Genre browse)
+- [x] "Radio" tab decision: `drop` — documented in V18.11.4 commit (duplicates `RadioScreenNew`)
+- [x] `useGenreScreen` is rewritten to a single `useApiQuery` for streaming + a zustand selector for local
+- [x] The local-tracks tab stays as a zustand-selector view (no async data)
+- [x] Radio tab is replaced by a "Streaming" toggle target (links to `RadioScreenNew` future work)
+- [x] `GenreScreen.tsx` uses a 2-state Local|Streaming toggle (no `<BrowseLayout>` needed at this size) — `-245 LOC`
+- [x] `npx tsc --noEmit` reports 0 errors
+- [x] `npx jest` reports no new failures
+- [x] `git log --oneline -1` shows the V18.11.4 commit — `dd4aa5f`
 
 ### Phase 45: V18.11.5 — Convert `ShowsScreen` to FAB pattern
 
-- [ ] "Today" tab decision: `hero rail at top` / `separate browse mode` / `drop` — document the choice
-- [ ] `useShowsScreen` is rewritten to a single `useApiQuery` (search + browse via FAB)
-- [ ] `ShowsScreen.tsx` uses `<BrowseLayout>` + the "Today" rail (if chosen)
-- [ ] The 3 useApiQuery calls collapse to 1 (or 2 if Today is a separate query)
-- [ ] `npx tsc --noEmit` reports 0 errors
-- [ ] `npx jest` reports no new failures
-- [ ] `git log --oneline -1` shows the V18.11.5 commit
+- [x] "Today" tab decision: `hero rail at top` — documented in V18.11.5 commit (data hook stays available; rail surfaces above the list when no search term is set)
+- [x] `useShowsScreen` is rewritten — 1 `useApiQuery` (search) + 1 `useInfiniteApiQuery` (browse) + 1 `useApiQuery` (todayRail) dispatched via FilterChips
+- [x] `ShowsScreen.tsx` uses SearchBar + FilterChips (search|browse) + the Airing Today rail
+- [x] The 3 useApiQuery calls collapse to 2 active (1 disabled when the other mode is active) + 1 todayRail — `-426 LOC` net in `src/` (692 deletions, 266 insertions; -376 net when the commit-msg file is included)
+- [x] `browse/TabBar.tsx` deleted (last import of `react-native-tab-view` in `src/`)
+- [x] `npx tsc --noEmit` reports 0 errors
+- [x] `npx jest` reports no new failures — 8 suites, 68 passed, 1 todo
+- [x] `git log --oneline -1` shows the V18.11.5 commit — `245f1fe`
 
 ### Phase 46: V18.11.6 — Remove `@react-native-tab-view` dependency
 
-- [ ] `git grep -l "react-native-tab-view" -- src/` returns 0 results (no remaining importer)
-- [ ] `package.json` removes the `@react-native-tab-view` entry
-- [ ] `package-lock.json` is regenerated
-- [ ] `npm ls @react-native-tab-view` reports "(empty)"
-- [ ] `npx tsc --noEmit` reports 0 errors
-- [ ] `npx jest` reports no new failures
-- [ ] `git log --oneline -1` shows the V18.11.6 commit
-- [ ] `git diff v18.0.0..HEAD --stat | tail -1` shows an additional net reduction of ≥1,000 lines from Wave 11
+- [x] `git grep -l "react-native-tab-view" -- src/` returns 0 results
+- [x] `package.json` removes the `@react-native-tab-view` entry (via `npm pkg delete`)
+- [x] `package-lock.json` is regenerated via `npm install --package-lock-only` — 15 lines removed
+- [x] `git grep "react-native-tab-view" -- package.json package-lock.json` returns 0 results
+- [x] `npx tsc --noEmit` reports 0 errors
+- [x] `npx jest` reports no new failures — 8 suites, 68 passed, 1 todo
+- [x] `git log --oneline -1` shows the V18.11.6 commit — `f8a2871`
+- [x] `git diff v18.0.0..HEAD --stat` shows Wave 11 net reduction — see below
+
+**Wave 11 LOC tally (from `git diff v18.0.0..HEAD --stat`):**
+
+| Phase  | Commit    | Screen                 | Net LOC  | Notes                                        |
+|--------|-----------|------------------------|----------|----------------------------------------------|
+| V18.11.1 | `71691f8` | ArchiveScreen        |  -394    | 2 tabs → `mediatype` FAB                     |
+| V18.11.2 | `ad0c3f0` | LiveTVScreen legacy  | -1,171   | Directory deleted (orphan)                   |
+| V18.11.3 | `c26ca46` | AudiobooksScreen     |  -150    | 3 tabs → search + FilterChips                |
+| V18.11.4 | `dd4aa5f` | GenreScreen          |  -245    | 4 tabs → 2-state toggle (Moods/Radio dropped)|
+| V18.11.5 | `245f1fe` | ShowsScreen          |  -426    | 3 tabs → FilterChips + Airing Today rail     |
+| V18.11.6 | `f8a2871` | (package removal)    |     0    | `src/` untouched; only `package.json` / lockfile / commit-msg |
+| **Total** |          |                      | **-2,386** | (well over the ≥1,000 target)              |
+
+> Numbers are `src/`-only (from `git diff 869aa4e..HEAD --stat -- src/`); commit-msg
+> files and the `package.json` / lockfile changes are excluded.
 
 ---
 

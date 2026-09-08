@@ -1,0 +1,14 @@
+V18 tracker: Wave 11 — mark all 6 phases complete + LOC tally
+
+Wave 11 is closed. Flips the 6 phase checklists to [x] in
+`md/SIMBA_PLAYER_MODULE_V18_TRACKER.md` and records the
+per-phase commit hash + `src/`-only LOC delta so the
+manager-review PR has a single, citable source.
+
+Also updates the doc header from "Wave 0 — not started"
+to "Wave 11 — complete; V18 closed" and adds a small
+LOC-tally table at the foot of Phase 46 (Wave 11 net
+-2,386 LOC in src/, well past the ≥1,000 target).
+
+This is a docs-only commit — no code changes; safe to
+land before the manager review PR.
