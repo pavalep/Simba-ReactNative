@@ -1,0 +1,85 @@
+V18.7.3: useDownloadsSync audit — confirmed out of scope (no change to logic)
+
+V18.7.3 — the last V18.6 carryover item. Audits
+`useDownloadsSync` per the V19 carryover list ("likely
+no change needed — AsyncStorage hydration, not a network
+query").
+
+The audit conclusion (no code changes; the file gets a
+doc-comment update that documents the "why"):
+
+  - `downloadService.ensureLoaded()` reads from AsyncStorage
+    (the offline-first manifest of completed downloads).
+    This is NOT a network call. AsyncStorage is a local
+    key-value store, not a wire protocol.
+  - `downloadService.subscribe(records => ...)` is a
+    pub-sub for progress events (a download in progress
+    publishes its updated record; the store hydrates on
+    each event). This is NOT a TanStack cache concern.
+  - Neither maps to the V18 wire / query / screen 3-layer
+    architecture. The hook is correctly outside V18's data
+    layer refactor.
+
+The V18 wire/query/screen layers are for HTTP adapters
+that fetch from a network and cache the result. The
+downloads slice is for the offline-first manifest: it's
+the local state that mirrors what AsyncStorage already
+has. TanStack's `useQuery` would be a downgrade here —
+AsyncStorage is the source of truth, not a cache; the
+hook's job is to load it once on mount and subscribe to
+progress events thereafter.
+
+V18.7.3 doc-comment update (in the file, not in this
+commit message): the hook now has a paragraph that
+documents this — "this hook is **not a network query**.
+downloadService.ensureLoaded() reads from AsyncStorage
+... neither maps to the V18 wire / query / screen 3-layer
+architecture; the hook is correctly outside V18's data
+layer refactor."
+
+This makes the "no change needed" decision explicit so
+the next person who looks at this file knows not to try
+to migrate it to `useApiQuery`.
+
+Verification:
+
+  - npx tsc --noEmit                 : 0 errors
+  - npx jest --forceExit             : 9 suites, 106 passed,
+                                       1 todo, 0 failures
+  - git grep "useDownloadsSync" -- src/ : 2 references
+    (DownloadButton + DownloadsScreen); both correct
+    consumers
+  - useDownloadsSync.ts LOC         : 25 → 36 (the +11
+                                       lines are the
+                                       doc-comment update;
+                                       no logic change)
+  - V18.6 + V19 carryover complete   : 7 waves done,
+                                       1 wave partial
+                                       (deferred to V19),
+                                       1 wave confirmed
+                                       out of scope (this
+                                       audit)
+
+Cumulative V18 + V19 effect (entire session):
+
+  - V18.5: Internet Archive adapter (e7c6e61)
+  - V18.4.3: paginated consumer migration (e2e3c09)
+  - V18.8.1: apiClient cache + rate-limit cleanup (12b9407)
+  - V18.8.2: types/api.ts cleanup (d079302)
+  - V18.8.3: index.ts barrel deleted (595ae2d)
+  - V18.6.2a: useAggregatedSearch → useQueries (111ac45)
+  - V18.6.2b: useLiveTVBrowser rewrite (0f5f1bb)
+  - V18.6.2c: useMoviesScreen 3-file refactor (37a64c9)
+  - V18.6.2d: searchAggregator deleted (168ac0a)
+  - V18.6.2d fix: useApiQueries type signature (this + next)
+  - V18.7.3: useDownloadsSync audit (this)
+
+  10 commits total in this session. V18 + V19 carryover
+  is complete: every tracked V18.x phase is either done,
+  deferred, or confirmed out of scope. The V18.5 + V18.6
+  series (the two largest deferred workstreams) shipped;
+  the V18.8 series (the glue cleanup) shipped; the
+  legacy state-machine pattern is retired from the
+  consumer layer (useLiveTVBrowser, useMoviesScreen);
+  the searchAggregator dead code is gone; the apiClient
+  is V18-ideal.
