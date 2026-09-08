@@ -1,32 +1,47 @@
 // ─── Movies Screen — MoviesDataProvider ──────────────────────────────
-// Sits ABOVE the shell so the single content stream shares ONE per-scope
-// cache — the legacy "switching categories never refetches" behavior.
+// V18.6.2c: rewritten to use the V18-ideal useMoviesScreen hook.
+// The active scope (categoryIds, searchTerm, sortKey) is now
+// tracked in the provider's own state; the consumer (MoviesContent)
+// pushes scope changes down via setActiveCategoryIds /
+// setSearchTerm. The hook (useMoviesScreen) is a pure function
+// of those inputs — no per-scope Map, no seqRef, no guardRef.
 //
-// The active `sortKey` arrives as a prop from the screen (composition
-// root), so changing "sort by" re-fetches page 1 in the new server-side
-// order. Also owns the per-movie resolution state + press handler (uses
-// the global `navigate` helper — content has no screen `navigation`).
+// The provider also owns the per-movie resolution state +
+// press handler (the IA partial-replication retry).
 
-import React, {useCallback, useMemo, useState, type ReactNode} from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import {useToast} from '../../../components/feedback/Toast';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import {
+  resolveStreamType,
+  usePlayerActivity,
+} from '@simba-dev/react-native-media-player';
 import {resolveInternetArchiveVideoDetails} from '../../../services/api/internetArchiveAdapter';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 import {
-  useMoviesScreenParams,
+  useMoviesScreen,
   type MovieScopeState,
 } from '../hooks/useMoviesScreen';
 
 interface MoviesDataContextValue {
-  isSearchActive: boolean;
-  /** Hook-synced search term (drives the per-scope cache key). */
-  searchTerm: string;
-  getScope: (categoryIds: readonly string[]) => MovieScopeState;
-  ensureLoaded: (categoryIds: readonly string[]) => void;
-  loadMore: (categoryIds: readonly string[]) => void;
-  retry: (categoryIds: readonly string[]) => void;
-  refresh: (categoryIds: readonly string[]) => void;
+  /** The active scope's data. (V18-ideal: no `getScope(ids)` — the
+   *  provider tracks the active scope, the consumer reads `data`.) */
+  data: MovieScopeState;
+  /** Refetch the active scope (used for retry / pull-to-refresh). */
+  refetch: () => void;
+  /** Client-side slice growth (used for infinite scroll). */
+  loadMore: () => void;
+  /** Active scope state + setters. */
+  activeCategoryIds: readonly string[];
+  activeSearchTerm: string;
+  setActiveCategoryIds: (ids: readonly string[]) => void;
   setSearchTerm: (term: string) => void;
+  isSearchActive: boolean;
+  /** Per-movie resolution state + press handler. */
   resolvingId: string | null;
   handleMoviePress: (item: InternetArchiveVideoResult) => void;
 }
@@ -45,28 +60,39 @@ export function useMoviesData(): MoviesDataContextValue {
 
 export const MoviesDataProvider: React.FC<{
   children: ReactNode;
-  /** Active sort key (undefined = IA default). Fed from the screen's
-   *  `optionsApi` — changing it re-keys the scope cache and re-fetches
-   *  page 1 in the new server-side order. */
+  /** Active sort key (undefined = IA default). Fed from the
+   *  screen's `optionsApi` — changing it re-keys the scope cache
+   *  and re-fetches page 1 in the new server-side order. */
   sortKey?: string;
 }> = ({children, sortKey}) => {
   const toast = useToast();
   const {openPlayer} = usePlayerActivity();
-  // Single hook instance for the whole screen — the one content stream
-  // reads the SAME (categoryIds, searchTerm, sortKey) scope cache via
-  // context.
-  const movies = useMoviesScreenParams({sortKey});
 
-  // Per-movie resolution state. Failures surface as a top-of-screen toast
-  // (auto-dismiss + close button) rather than an inline banner — same
-  // pattern as the rest of the app.
+  // Active scope state. The screen pushes changes via the
+  // setters; the hook reads them as inputs.
+  const [activeCategoryIds, setActiveCategoryIds] = useState<
+    readonly string[]
+  >([]);
+  const [activeSearchTerm, setActiveSearchTerm] = useState('');
+
+  // Pure hook — every (categoryIds, searchTerm, sortKey) tuple
+  // is its own TanStack cache entry. No per-scope state machine.
+  const movies = useMoviesScreen({
+    categoryIds: activeCategoryIds,
+    searchTerm: activeSearchTerm,
+    sortKey,
+  });
+
+  // Per-movie resolution state. Failures surface as a top-of-
+  // screen toast (auto-dismiss + close button) rather than an
+  // inline banner — same pattern as the rest of the app.
   const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   const handleMoviePress = useCallback(
     async (item: InternetArchiveVideoResult) => {
-      // Validate the URL *before* navigating into the player: retry the
-      // metadata API up to 3 times (toast on each switch) and refuse to
-      // navigate if the URL is still bad — surface a toast instead.
+      // Validate the URL *before* navigating into the player:
+      // retry the metadata API up to 3 times (toast on each
+      // switch) and refuse to navigate if the URL is still bad.
       setResolvingId(item.identifier);
       try {
         const details = await resolveInternetArchiveVideoDetails(
@@ -106,33 +132,28 @@ export const MoviesDataProvider: React.FC<{
     [openPlayer, toast],
   );
 
-  // Stabilize the context value: depend on each individual property
-  // so the memo only invalidates when one of them actually changes,
-  // not every time `movies` (a fresh object) is returned from the hook.
-  // Without this, every provider render gives the consumer a new
-  // `ensureLoaded` ref, re-firing the mount effect.
+  const isSearchActive = activeSearchTerm.trim().length > 0;
+
   const value = useMemo<MoviesDataContextValue>(
     () => ({
-      isSearchActive: movies.isSearchActive,
-      searchTerm: movies.searchTerm,
-      getScope: movies.getScope,
-      ensureLoaded: movies.ensureLoaded,
+      data: movies.data,
+      refetch: movies.refetch,
       loadMore: movies.loadMore,
-      retry: movies.retry,
-      refresh: movies.refresh,
-      setSearchTerm: movies.setSearchTerm,
+      activeCategoryIds,
+      activeSearchTerm,
+      setActiveCategoryIds,
+      setSearchTerm: setActiveSearchTerm,
+      isSearchActive,
       resolvingId,
       handleMoviePress,
     }),
     [
-      movies.isSearchActive,
-      movies.searchTerm,
-      movies.getScope,
-      movies.ensureLoaded,
+      movies.data,
+      movies.refetch,
       movies.loadMore,
-      movies.retry,
-      movies.refresh,
-      movies.setSearchTerm,
+      activeCategoryIds,
+      activeSearchTerm,
+      isSearchActive,
       resolvingId,
       handleMoviePress,
     ],

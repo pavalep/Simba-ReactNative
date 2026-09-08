@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {MOVIE_CATEGORIES} from '../../../constants/movieCategories';
@@ -16,49 +16,44 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const styles = useMemo(() => createMoviesScreenStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const {
-    getScope,
-    ensureLoaded,
+    data,
+    refetch,
     loadMore,
-    retry,
-    refresh,
-    isSearchActive,
-    searchTerm,
+    activeCategoryIds,
+    activeSearchTerm,
+    setActiveCategoryIds,
     setSearchTerm,
+    isSearchActive,
     resolvingId,
     handleMoviePress,
   } = useMoviesData();
   const {offline} = ctx;
 
-  const categoryIds = useMemo<readonly string[]>(() => {
-    const selected = ctx.options.filter;
-    return selected && selected.length > 0 ? selected : ['all'];
-  }, [ctx.options.filter]);
-  const sortKey = ctx.options.sort;
+  // The active category selection comes from `ctx.options.filter`.
+  // An empty selection means "All".
+  const categoryIds = useMemo<readonly string[]>(
+    () =>
+      ctx.options.filter && ctx.options.filter.length > 0
+        ? ctx.options.filter
+        : ['all'],
+    [ctx.options.filter],
+  );
+
+  // Push the active scope down to the provider whenever the
+  // screen's category selection or search term changes. The
+  // provider passes them to useMoviesScreen, which builds the
+  // TanStack queryKey from them.
+  useEffect(() => {
+    setActiveCategoryIds(categoryIds);
+  }, [categoryIds, setActiveCategoryIds]);
 
   useEffect(() => {
     setSearchTerm(ctx.query);
   }, [ctx.query, setSearchTerm]);
 
-  const ensureLoadedRef = useRef(ensureLoaded);
-  ensureLoadedRef.current = ensureLoaded;
-  useEffect(() => {
-    ensureLoadedRef.current(categoryIds);
-  }, [categoryIds, searchTerm, sortKey]);
-
-  const scope = getScope(categoryIds);
-  const {items, numFound, hasLoaded, isLoading, isLoadingMore, error} = scope;
+  const {items, numFound, hasLoaded, isLoading, isLoadingMore, error} = data;
   const reachedEnd =
     hasLoaded && !error && numFound > 0 && items.length >= numFound;
-
-  const userDraggedRef = useRef(false);
-  const listState: 'loading' | 'error' | 'empty' | undefined =
-    !hasLoaded && isLoading
-      ? 'loading'
-      : !!error && items.length === 0
-      ? 'error'
-      : !error && items.length === 0
-      ? 'empty'
-      : undefined;
 
   const category = MOVIE_CATEGORIES.find(c => c.id === categoryIds[0]);
   const [hasMounted, setHasMounted] = useState(false);
@@ -100,17 +95,18 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
         contentContainerStyle={[
           styles.listContent,
           {paddingBottom: insets.bottom + spacing.md},
-          listState ? styles.listSlotGrow : null,
         ]}
         ListEmptyComponent={
-          listState ? (
-            <ListStates
-              state={listState}
-              offline={offline}
-              isSearchActive={isSearchActive}
-              onRetry={() => retry(categoryIds)}
-            />
-          ) : null
+          !hasLoaded
+            ? null
+            : (
+              <ListStates
+                state={error ? 'error' : 'empty'}
+                offline={offline}
+                isSearchActive={isSearchActive}
+                onRetry={refetch}
+              />
+            )
         }
         ListFooterComponent={
           <MoviesFooter
@@ -118,22 +114,17 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
             hasLoaded={hasLoaded}
             error={error}
             reachedEnd={reachedEnd}
-            onLoadMore={() => loadMore(categoryIds)}
+            onLoadMore={loadMore}
           />
         }
-        onScrollBeginDrag={() => {
-          userDraggedRef.current = true;
-        }}
-        onEndReached={() => {
-          if (userDraggedRef.current) loadMore(categoryIds);
-        }}
+        onEndReached={loadMore}
         onEndReachedThreshold={0.35}
         removeClippedSubviews={false}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={isLoading && hasLoaded}
-            onRefresh={() => refresh(categoryIds)}
+            onRefresh={refetch}
             tintColor={colors.accent.gold}
             colors={[colors.accent.gold]}
           />

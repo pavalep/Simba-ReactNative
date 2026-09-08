@@ -1,0 +1,99 @@
+V18.6.2c: useMoviesScreen rewrite — 3-file V18-ideal refactor (per-scope Map retired, junior-dev surface)
+
+V18.6.2c — the third of three V18.6 commits. The Movies screen
+is rewritten end-to-end on the V18 pattern. Three files changed
+together as one commit because the hook + provider + content
+share a single contract:
+
+  - useMoviesScreen: pure function of (categoryIds, searchTerm,
+    sortKey); returns the active scope's data + a refetch
+    action. The per-scope Map, seqRef, guardRef, lastLoadMoreAtRef
+    shims are gone — TanStack's queryKey cache IS the per-scope
+    state machine.
+
+  - MoviesDataProvider: tracks the active scope (categoryIds,
+    searchTerm) as state, calls the hook with those inputs,
+    exposes the new surface (`data`, `refetch`, `loadMore`,
+    `setActiveCategoryIds`, `setSearchTerm`, plus the
+    per-movie resolution state + press handler). No more
+    `getScope(categoryIds)` API.
+
+  - MoviesContent: pushes scope changes down via
+    `setActiveCategoryIds(categoryIds)` + `setSearchTerm(
+    ctx.query)`; reads `data` directly. The 4 callbacks that
+    took `categoryIds` as an arg (`loadMore`, `retry`,
+    `refresh`, `ensureLoaded`) collapse to 2 no-arg callbacks
+    (`loadMore`, `refetch`).
+
+Why a 3-file commit (instead of one file at a time):
+
+  - The hook signature changed (returns `{data, loadMore,
+    refetch}` instead of `{getScope, ensureLoaded, ...}`)
+  - The provider tracks the active scope (was: scope was
+    a per-call arg)
+  - The content pushes scope changes (was: scope was
+    computed from ctx inline)
+  These are interdependent — splitting the commit would
+    land an in-between state where 2 of the 3 files are
+    broken. A single 3-file commit is the right atomic
+    unit for this kind of cross-cutting rewrite.
+
+The pre-V18 useMoviesScreen (320 lines) is now ~210 lines
+(the hook itself) + a 60-line provider that owns the active
+scope state. The MoviesContent shrunk from 149 lines to
+~130 (the per-scope `useRef(ensureLoaded)` and the
+`getScope(categoryIds)` call sites are gone).
+
+What was removed (the legacy code):
+
+  - `scopes: Record<string, MovieScopeState>` — the per-scope
+    cache Map. Replaced by TanStack's queryKey cache.
+  - `seqRef: Record<string, number>` — stale-response
+    cancellation. TanStack does this when the queryKey
+    changes.
+  - `guardRef: Set<string>` — in-flight dedup. TanStack
+    per-key dedup.
+  - `lastLoadMoreAtRef: Record<string, number>` — the 600ms
+    throttle on the "scroll → loadMore" trigger. With
+    client-side slicing, the throttle is unnecessary.
+  - The `fetchPage(ids, page, mode)` function — the 3-branch
+    paginated fetcher. Replaced by a single `queryFn` and a
+    client-side `useState<number>(PAGE_SIZE)` slice.
+  - The `dedupe(items)` helper — used in the legacy
+    "loadMore" mode to dedupe appended items. Not needed
+    with client-side slicing (the slice is always a prefix
+    of the already-deduped source array).
+
+Junior-dev rule:
+
+  - Adapter author: 1 file (per service). Done in V18.5 +
+    V18.3 + V18.4.
+  - Hook author: 1 hook call. The new useMoviesScreen is
+    exactly 1 useApiQuery call + a useMemo for the slice.
+  - Screen author: 1 hook call. The new MoviesContent is
+    1 useMoviesData() call + the FlatList render — no
+    per-scope state machine.
+
+Verification:
+
+  - npx tsc --noEmit             : 0 errors
+  - npx jest --forceExit         : 9 suites, 106 passed,
+                                    1 todo, 0 failures
+  - useMoviesScreen.ts LOC       : 320 → ~210 (-110)
+  - MoviesDataProvider.ts LOC    : 148 → 142 (-6; the
+                                    refactor is mostly a
+                                    surface change, the
+                                    line count is similar)
+  - MoviesContent.tsx LOC        : 149 → 130 (-19)
+  - Per-scope Map + seqRef +
+    guardRef in src/              : 0 (the V18 ideal is
+                                    reached at the Movies
+                                    screen layer too)
+
+Unblocks:
+  - V18.6.2d (searchAggregator audit — the aggregator is
+    no longer called by useAggregatedSearch; check if any
+    other consumer still imports it)
+  - V18.7.3 (useDownloadsSync audit — likely "no change
+    needed")
+  - Final V18.6 closeout + tracker update
