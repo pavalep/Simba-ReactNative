@@ -27,9 +27,11 @@ import {
   useQuery,
   useInfiniteQuery,
   useMutation,
+  useQueries,
   type UseQueryOptions,
   type UseInfiniteQueryOptions,
   type UseMutationOptions,
+  type UseQueriesOptions,
   type QueryKey,
   type InfiniteData,
 } from '@tanstack/react-query';
@@ -86,4 +88,43 @@ export function useApiMutation<TData, TVariables, TError = Error>(
   options: UseMutationOptions<TData, TError, TVariables>,
 ) {
   return useMutation<TData, TError, TVariables>(options);
+}
+
+/**
+ * Parallel queries (V18.6 — `useAggregatedSearch`).
+ *
+ * The "5 parallel `Promise.allSettled` calls collapsed into
+ * 5 TanStack `useQuery` calls" pattern. Each entry in the
+ * `queries` array is its own query with its own `queryKey`,
+ * its own `queryFn`, and its own `enabled` flag — TanStack
+ * tracks the loading / error / data state for each
+ * independently.
+ *
+ * Per-source error isolation: if a single source fails, its
+ * `error` is set; the others still render with their data.
+ * The consumer is responsible for translating `error` to
+ * `[]` at the data-assembly boundary (this is the same
+ * pattern `Promise.allSettled` gave us, but TanStack now
+ * owns the cancellation / dedup / retry logic).
+ *
+ * The generic `TCombined` is the shape the consumer wants
+ * back (e.g. `AggregatedSearchResults`); `combine` is the
+ * mapper from the per-source results to the combined shape.
+ * If `combine` is omitted, the raw array is returned.
+ *
+ * V18.6 design constraint: the type parameter ordering is
+ *   `TResults extends readonly unknown[]` → individual result
+ *   types, in the same order as the `queries` array.
+ */
+export function useApiQueries<
+  TResults extends readonly unknown[],
+  TCombined = TResults,
+>(
+  options: UseQueriesOptions<TResults> & {
+    combine?: (results: TResults) => TCombined;
+  },
+): TCombined {
+  const {combine, ...queriesOptions} = options;
+  const results = useQueries(queriesOptions) as unknown as TResults;
+  return combine ? combine(results) : (results as unknown as TCombined);
 }

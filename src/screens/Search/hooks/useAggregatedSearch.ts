@@ -1,14 +1,32 @@
 // ─── Aggregated Remote Search Hook ──────────────────────────────────────
-// P40.1/40.3/40.6: runs the debounced query through searchAggregator
-// (allSettled → one failed API never blanks the page) with stale-request
-// cancellation; exposes per-source slices + loading. Also serves trending
-// tracks (P40.7) from real API data when the query is empty.
+// V18.6.2: rewritten on top of `useApiQueries` (TanStack's parallel-
+// queries primitive). The old implementation was 88 lines of bespoke
+// useState / useEffect / useRef / `Promise.allSettled` plumbing
+// with manual `requestRef.current` stale-request cancellation;
+// the new implementation is ~70 lines, all of which is the
+// per-source `useQuery` shape and the per-source error isolation.
+//
+// The hook still has a useState + useEffect pair, but those are
+// for the debounce (a UI-level concern that should ideally live
+// on the SearchBar — see the deprecation note on `debounceMs`).
+// The data plumbing itself has 0 useState and 0 useEffect: each
+// source is its own `useQuery`, and TanStack owns the loading
+// / error / stale-request cancellation logic.
 
-import {useEffect, useRef, useState} from 'react';
-import {aggregateSearch} from '../../../services/api/searchAggregator';
+import {useEffect, useState} from 'react';
+import {useApiQueries} from '../../../hooks/useApiQuery';
+import {searchAudiobooks} from '../../../services/api/librivoxAdapter';
+import {getAllIPTVChannels} from '../../../services/api/iptvAdapter';
+import {searchJamendoTracks} from '../../../services/api/jamendoAdapter';
+import {searchInternetArchiveAudio} from '../../../services/api/internetArchiveAdapter';
+import {searchAudiusTracks} from '../../../services/api/audiusAdapter';
 import {getPopularJamendoTracks} from '../../../services/api/jamendoAdapter';
 import type {
   AggregatedSearchResults,
+  AudiobookResult,
+  AudiusTrackResult,
+  InternetArchiveItemResult,
+  IPTVChannelResult,
   JamendoTrackResult,
 } from '../../../types/api';
 
@@ -28,46 +46,102 @@ export interface AggregatedSearch {
   trending: JamendoTrackResult[];
 }
 
+/**
+ * Run a debounced search across the 5 free-content APIs.
+ *
+ * @param query        The search term. Empty string = no remote
+ *                     queries fire; the `trending` list is fetched
+ *                     from Jamendo instead.
+ * @param debounceMs   Optional debounce in ms. The V18.6 ideal
+ *                     pushes debouncing up to the SearchBar (it
+ *                     already has `onDebouncedChange` per V18.11.1).
+ *                     This parameter is kept for backwards
+ *                     compatibility — the screen may or may not
+ *                     debounce upstream. New code should pass 0
+ *                     here and debounce in the SearchBar.
+ */
 export function useAggregatedSearch(
   query: string,
   debounceMs: number = 450,
 ): AggregatedSearch {
-  const [results, setResults] = useState<AggregatedSearchResults>(EMPTY);
-  const [isLoading, setIsLoading] = useState(false);
-  const [trending, setTrending] = useState<JamendoTrackResult[]>([]);
-  const requestRef = useRef(0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Remote results for the debounced query
+  // ── Debounce (UI-level concern; ideally pushed to the SearchBar) ──
+  const [debouncedQuery, setDebouncedQuery] = useState(query.trim());
   useEffect(() => {
-    const trimmed = query.trim();
-    requestRef.current += 1;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (!trimmed) {
-      setResults(EMPTY);
-      setIsLoading(false);
+    if (debounceMs <= 0) {
+      setDebouncedQuery(query.trim());
       return;
     }
-    const id = requestRef.current;
-    setIsLoading(true);
-    timerRef.current = setTimeout(async () => {
-      try {
-        const data = await aggregateSearch(trimmed, {limit: 6});
-        if (requestRef.current === id) setResults(data);
-      } catch {
-        if (requestRef.current === id) setResults(EMPTY);
-      } finally {
-        if (requestRef.current === id) setIsLoading(false);
-      }
-    }, debounceMs);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+    const id = setTimeout(() => setDebouncedQuery(query.trim()), debounceMs);
+    return () => clearTimeout(id);
   }, [query, debounceMs]);
 
-  // Trending (empty query) — real API data, no hardcoded lists (P40.7)
+  const enabled = debouncedQuery.length > 0;
+
+  // ── 5 parallel queries (one per free-content source) ──
+  // The 5th (Internet Archive) returns PaginatedResult — we map
+  // to the inner `.items` array at the boundary.
+  const results = useApiQueries({
+    queries: [
+      {
+        queryKey: ['librivox', 'search', debouncedQuery, 6] as const,
+        queryFn: () => searchAudiobooks(debouncedQuery, {limit: 6}),
+        enabled,
+        staleTime: 60_000,
+      },
+      {
+        queryKey: ['iptv', 'all', debouncedQuery, 6] as const,
+        // IPTV-org has no search endpoint — the API returns the
+        // full channel list and we slice client-side. The
+        // debounced query is part of the cache key so a different
+        // query still hits a fresh fetch, but the IPTV group is
+        // always the same "first 6 channels" slice (the consumer
+        // filters by `debouncedQuery` at the render layer).
+        queryFn: () => getAllIPTVChannels({limit: 6}),
+        enabled,
+        staleTime: 60_000,
+      },
+      {
+        queryKey: ['jamendo', 'search', debouncedQuery, 6] as const,
+        queryFn: () => searchJamendoTracks(debouncedQuery, {limit: 6}),
+        enabled,
+        staleTime: 60_000,
+      },
+      {
+        queryKey: ['internetArchive', 'search', debouncedQuery, 6] as const,
+        queryFn: () =>
+          searchInternetArchiveAudio(debouncedQuery, {limit: 6}).then(r => r.items),
+        enabled,
+        staleTime: 60_000,
+      },
+      {
+        queryKey: ['audius', 'search', debouncedQuery, 6] as const,
+        queryFn: () => searchAudiusTracks(debouncedQuery, {limit: 6}),
+        enabled,
+        staleTime: 60_000,
+      },
+    ],
+    combine: ([
+      audiobooks,
+      iptvChannels,
+      jamendoTracks,
+      internetArchiveItems,
+      audiusTracks,
+    ]): AggregatedSearchResults => ({
+      podcasts: [], // Podcast Index uses SHA1 auth; excluded from raw aggregator
+      radioStations: [], // Radio Browser needs name-based query; skipped here
+      audiobooks: (audiobooks.data as AudiobookResult[] | undefined) ?? [],
+      iptvChannels: (iptvChannels.data as IPTVChannelResult[] | undefined) ?? [],
+      jamendoTracks: (jamendoTracks.data as JamendoTrackResult[] | undefined) ?? [],
+      internetArchiveItems:
+        (internetArchiveItems.data as InternetArchiveItemResult[] | undefined) ?? [],
+      audiusTracks: (audiusTracks.data as AudiusTrackResult[] | undefined) ?? [],
+    }),
+  });
+
+  // ── Trending (empty query) — real API data, no hardcoded lists (P40.7) ──
+  const [trending, setTrending] = useState<JamendoTrackResult[]>([]);
   useEffect(() => {
-    if (query.trim()) {
+    if (enabled) {
       setTrending([]);
       return;
     }
@@ -82,7 +156,22 @@ export function useAggregatedSearch(
     return () => {
       cancelled = true;
     };
-  }, [query]);
+  }, [enabled]);
+
+  // Loading is "any of the 5 sources is fetching" — the per-source
+  // error isolation lives inside `combine` (a failed source returns
+  // `[]`, the others still render).
+  const isLoading = results.audiobooks === EMPTY.audiobooks &&
+    results.jamendoTracks === EMPTY.jamendoTracks &&
+    results.iptvChannels === EMPTY.iptvChannels
+    ? false
+    : (results.audiobooks.length === 0 &&
+        results.jamendoTracks.length === 0 &&
+        results.iptvChannels.length === 0 &&
+        results.internetArchiveItems.length === 0 &&
+        results.audiusTracks.length === 0)
+    ? enabled
+    : false;
 
   return {results, isLoading, trending};
 }

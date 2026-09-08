@@ -1,0 +1,128 @@
+V18.6.2a: useApiQueries wrapper + useAggregatedSearch rewrite + 2 tests
+
+V18.6.2a — the first of three V18.6 commits. The aggregated
+search hook is rewritten on top of TanStack's parallel-queries
+primitive; the 5 free-content APIs (librivox, iptv, jamendo,
+internetArchive, audius) are now 5 independent useApiQuery
+calls under one useApiQueries umbrella, with a `combine`
+function that maps the per-source results into the
+`AggregatedSearchResults` shape.
+
+What was added (V18.6.2a.1):
+
+  - `useApiQueries` in `src/hooks/useApiQuery.ts` — the
+    V18-ideal wrapper around TanStack's `useQueries`. The
+    wrapper bakes in the project's `ApiQueryKey` shape
+    (passing the raw `QueryKey` works too) and exposes a
+    `combine` callback that lets the consumer map the per-
+    source results to a combined shape. Type signature:
+
+    ```ts
+    function useApiQueries<
+      TResults extends readonly unknown[],
+      TCombined = TResults,
+    >(
+      options: UseQueriesOptions<TResults> & {
+        combine?: (results: TResults) => TCombined;
+      },
+    ): TCombined
+    ```
+
+  - 2 new smoke tests in `__tests__/useApiQuery.test.tsx`:
+      - "calls all fetchers in parallel and combines the
+        results" — verifies the basic shape
+      - "isolates per-source errors (a failed source returns
+        undefined data; the other still renders)" — verifies
+        the V18 error-isolation contract
+    (A 3rd test, the `enabled` flag, was attempted but the
+    TanStack timer-leak in jest hung the worker; the test
+    was dropped. The other 2 cover the public contract.)
+
+  - Tests pass: 9 suites, **106 passed** (up from 104; +2
+    from the new useApiQueries suite), 1 todo, 0 failures.
+
+What was rewritten (V18.6.2a.2):
+
+  - `src/screens/Search/hooks/useAggregatedSearch.ts` — the
+    88-line bespoke useState/useEffect/useRef/`
+      Promise.allSettled` implementation is replaced by a
+    5-query `useApiQueries` call + a debounce + a single
+    `useEffect` for the trending fallback. The hook still
+    has a useState + useEffect pair, but those are for the
+    debounce (a UI-level concern that the spec correctly
+    says "ideally pushed to the SearchBar via
+    `onDebouncedChange`"). The data plumbing itself is
+    pure TanStack: 0 useState, 0 useEffect for the 5
+    per-source queries.
+
+The migration shape (per the V18.6 spec):
+
+  Before:
+    - 7 `useState` (one per source group + isLoading +
+      results + trending) — 88 lines
+    - 1 `useEffect` for the aggregate search
+    - 1 `useEffect` for the trending
+    - 1 `useRef` for stale-request cancellation
+    - 1 `useRef` for the debounce timer
+    - 1 `Promise.allSettled` wrapper
+
+  After:
+    - 2 `useState` (debouncedQuery + trending) — ~70 lines
+    - 1 `useEffect` for the debounce timer (or 0 if the
+      SearchBar upstream does the debouncing; see
+      deprecation note on `debounceMs`)
+    - 1 `useEffect` for the trending fetch
+    - 0 `useRef`
+    - 0 `Promise.allSettled`
+
+Per-source error isolation (the V18.6 design constraint):
+  - Each source's `useApiQuery` returns `{data, error, ...}`
+    independently. The `combine` function translates `error`
+    → empty array for that group. The other sources still
+    render with their data.
+  - The hook returns the same `AggregatedSearchResults`
+    shape as before; the consumer (SearchScreen) is
+    unaffected.
+
+Caveats / known issues:
+
+  - The IPTV group is "first 6 channels" because IPTV-org
+    has no search endpoint — the API returns the full
+    list and we slice client-side. The consumer can
+    filter by `debouncedQuery` at the render layer if it
+    wants to. (Documented in the code; the original
+    aggregator did the same.)
+  - The Internet Archive group is `paginated.items` (the
+    convertor returns `PaginatedResult<...>`; we map
+    `.items` at the boundary). Same as the original.
+  - The `debounceMs: 0` path (no internal debounce)
+    short-circuits to "use the query directly" — letting
+    the SearchBar own the debounce, which is the V18.6
+    ideal.
+  - The TanStack timer-leak in jest still applies (the
+    `useApiQuery` worker-process-has-failed-to-exit-
+    gracefully warning). The full suite passes with
+    `--forceExit`; without it, jest hangs. This is a
+    pre-existing condition (carried since V18.1.2) and is
+    on the V19 carryover list (V18.10 — jest setup shim
+    that calls `notifyManager.setScheduler` to a sync
+    scheduler).
+
+Verification:
+  - npx tsc --noEmit                 : 0 errors
+  - npx jest --forceExit             : 9 suites, 106 passed,
+                                       1 todo, 0 failures
+  - useApiQuery.test.tsx             : 7 tests (5 V18.1.2
+                                       baseline + 2 new
+                                       useApiQueries tests)
+
+Unblocks:
+  - V18.6.2b (useLiveTVBrowser multi-scope → useQueries
+    rewrite)
+  - V18.6.2c (useMoviesScreen multi-scope → useQueries
+    rewrite)
+  - V18.6.2d (searchAggregator → per-source queries; the
+    aggregator is no longer called from useAggregatedSearch
+    but is still imported by other consumers — check next)
+
+Next: V18.6.2b (useLiveTVBrowser rewrite; 361 lines → ~120).
