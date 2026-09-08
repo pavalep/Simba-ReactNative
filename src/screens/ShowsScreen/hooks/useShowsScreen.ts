@@ -1,50 +1,35 @@
 // ─── Shows Screen Hook ──────────────────────────────────────────────────
 // Phase 3 formula: per-scope cache + TabView scenes + infinite scroll.
 //
-// A "scope" is a (tab, searchTerm) pair. Every combination is cached
-// independently (`key = "${tab}|${term}"`), so:
-//   • toggling tabs never loses results already loaded for that scope
-//   • typing a search never clears the browse or today data
-//   • scrolling back to a visited tab shows its cached list instantly
-// Pagination for browse is driven by TVMaze's 250-per-page response —
-// `loadMore` fetches the next page only while the last page was full.
+// A "scope" is a (tab, searchTerm, selectedGenre) tuple. Previously
+// cached in a Map<key, ShowScopeState>. V18.3.3: three independent
+// useInfiniteApiQuery calls (one per tab); TanStack's cache provides
+// the per-scope data preservation when the user toggles tabs.
+//
+// Tab semantics:
+//   - 'search'  → searchShows(term), single page, enabled when term is set
+//   - 'today'   → getSchedule() with dedupe-by-show, single page
+//   - 'browse'  → getPopularShows(page, genre?), multi-page (TVMaze
+//                  returns 250 per page; infinite until partial)
+//
+// P53: when `initialGenre` is set, the screen jumps to 'browse' with
+// the genre pre-selected so the show list is populated on first paint.
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {
   searchShows,
   getSchedule,
   getPopularShows,
-} from '../../../services/api/tvmazeService';
+} from '../../../services/api/tvmazeAdapter';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
+import {useApiQuery} from '../../../hooks/useApiQuery';
+import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import type {TVMazeShow} from '../../../types/api';
+import type {TVMazeScheduleItem} from '../../../services/api/tvmazeAdapter';
 
 const PAGE_SIZE = 250;
 
 export type ShowTab = 'search' | 'today' | 'browse';
-
-export interface ShowScopeState {
-  items: TVMazeShow[];
-  /** Last loaded page (1-based). 0 = nothing loaded yet. */
-  page: number;
-  hasLoaded: boolean;
-  isLoading: boolean;
-  isLoadingMore: boolean;
-  error: string | null;
-}
-
-/** Shared immutable empty state — keeps memoized scenes stable. */
-export const EMPTY_SCOPE: ShowScopeState = {
-  items: [],
-  page: 0,
-  hasLoaded: false,
-  isLoading: false,
-  isLoadingMore: false,
-  error: null,
-};
-
-export function scopeCacheKey(tab: ShowTab, term: string): string {
-  return `${tab}|${term.trim()}`;
-}
 
 function dedupe(items: TVMazeShow[]): TVMazeShow[] {
   const seen = new Set<number>();
@@ -55,264 +40,175 @@ function dedupe(items: TVMazeShow[]): TVMazeShow[] {
   });
 }
 
-export function useShowsScreen(initialTab?: string, initialGenre?: string) {
+export interface ShowScope {
+  items: TVMazeShow[];
+  hasLoaded: boolean;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  hasNextPage: boolean;
+  error: string | null;
+  fetchNextPage: () => void;
+  refetch: () => void;
+}
+
+function shapePaginated(
+  query: ReturnType<typeof useInfiniteApiQuery<TVMazeShow[]>>,
+): ShowScope {
+  return {
+    items: dedupe((query.data?.pages ?? []).flat()),
+    hasLoaded: !!query.data,
+    isLoading: query.isFetching,
+    isLoadingMore: query.isFetchingNextPage,
+    hasNextPage: query.hasNextPage ?? false,
+    error: query.error?.message ?? null,
+    fetchNextPage: () => {
+      void query.fetchNextPage();
+    },
+    refetch: () => {
+      void query.refetch();
+    },
+  };
+}
+
+export interface UseShowsScreenResult {
+  // tab + selection state
+  selectedTab: ShowTab;
+  selectTab: (tab: ShowTab) => void;
+  selectedGenre: string | null;
+  setSelectedGenre: (genre: string) => void;
+  // search state
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  isSearchActive: boolean;
+  // the 3 scopes
+  search: ShowScope;
+  today: ShowScope;
+  browse: ShowScope;
+  // network status (for pull-to-refresh retry-on-reconnect)
+  isOnline: boolean;
+  // action
+  handleRefresh: () => void;
+  refreshing: boolean;
+}
+
+export function useShowsScreen(initialTab?: string, initialGenre?: string): UseShowsScreenResult {
   const {isOnline} = useNetworkStatus();
-  // P53: when an initial genre is supplied from a Home rail tile, jump
-  // straight to the Browse tab with the genre pre-selected so the
-  // show list is populated on first paint.
   const [selectedTab, setSelectedTab] = useState<ShowTab>(
     initialGenre ? 'browse' : (initialTab as ShowTab) || 'search',
   );
   const [selectedGenre, setSelectedGenre] = useState<string | null>(
     initialGenre ?? null,
   );
-
-  // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
-  // searchQuery = live input; searchTerm = settled (debounced) value.
-  // The term persists across tab switches by design.
-  const [searchQuery, setSearchQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-
-  const [scopes, setScopes] = useState<Record<string, ShowScopeState>>({});
   const [refreshing, setRefreshing] = useState(false);
-
-  /** Monotonic per-key sequence — drops stale/out-of-order responses. */
-  const seqRef = useRef<Record<string, number>>({});
-  /** In-flight keys — one fetch per scope at a time. */
-  const guardRef = useRef<Set<string>>(new Set());
-  /** Per-scope hasMore flag — true when the last browse page was full. */
-  const hasMoreRef = useRef<Record<string, boolean>>({});
-  /** Was the last fetch a failure? Reset on success, set on error. */
-  const failedRef = useRef(false);
 
   const isSearchActive = searchTerm.trim().length > 0;
 
-  const keyFor = useCallback(
-    (tab: ShowTab) => scopeCacheKey(tab, searchTerm),
-    [searchTerm],
+  // ── Search tab: single page, enabled when term is set ──
+  const searchQ = useApiQuery<TVMazeShow[]>({
+    queryKey: ['tvmaze', 'search', searchTerm],
+    queryFn: () => searchShows(searchTerm),
+    enabled: isSearchActive,
+    staleTime: 600_000, // 10 min
+  });
+  const searchScope: ShowScope = useMemo(
+    () => ({
+      items: searchQ.data ?? [],
+      hasLoaded: !isSearchActive || !!searchQ.data,
+      isLoading: searchQ.isFetching,
+      isLoadingMore: false,
+      hasNextPage: false,
+      error: searchQ.error?.message ?? null,
+      fetchNextPage: () => {},
+      refetch: () => {
+        void searchQ.refetch();
+      },
+    }),
+    [searchQ, isSearchActive],
   );
 
-  const getScope = useCallback(
-    (tab: ShowTab): ShowScopeState =>
-      scopes[keyFor(tab)] ?? EMPTY_SCOPE,
-    [scopes, keyFor],
-  );
-
-  const patchScope = useCallback(
-    (tab: ShowTab, patch: Partial<ShowScopeState>) => {
-      const key = keyFor(tab);
-      setScopes(prev => ({
-        ...prev,
-        [key]: {...(prev[key] ?? EMPTY_SCOPE), ...patch},
-      }));
-    },
-    [keyFor],
-  );
-
-  // ── Core fetcher ────────────────────────────────────────────────────
-
-  const fetchPage = useCallback(
-    async (tab: ShowTab, page: number, mode: 'initial' | 'more') => {
-      const term = searchTerm.trim();
-      const key = scopeCacheKey(tab, term);
-
-      if (guardRef.current.has(key)) return;
-      guardRef.current.add(key);
-
-      const seq = (seqRef.current[key] = (seqRef.current[key] ?? 0) + 1);
-
-      if (mode === 'initial') {
-        patchScope(tab, {isLoading: true, error: null});
-      } else {
-        patchScope(tab, {isLoadingMore: true, error: null});
-      }
-
-      try {
-        let items: TVMazeShow[] = [];
-        let scopeHasMore = false;
-
-        if (tab === 'search') {
-          if (!term) {
-            // Stay empty/ready when no search term
-            setScopes(prev => {
-              const cur = prev[key] ?? EMPTY_SCOPE;
-              return {
-                ...prev,
-                [key]: {
-                  ...cur,
-                  items: [],
-                  page: 0,
-                  hasLoaded: true,
-                  isLoading: false,
-                  isLoadingMore: false,
-                  error: null,
-                },
-              };
-            });
-            failedRef.current = false;
-            return;
-          }
-          items = await searchShows(term);
-          scopeHasMore = false;
-        } else if (tab === 'today') {
-          const schedule = await getSchedule();
-          // Deduplicate by show id — one card per show airing today
-          const unique = new Map<number, TVMazeShow>();
-          for (const entry of schedule) {
-            if (!unique.has(entry.show.id)) {
-              unique.set(entry.show.id, entry.show);
-            }
-          }
-          items = Array.from(unique.values());
-          scopeHasMore = false;
-        } else {
-          // browse — real pagination via page param; P53 adds genre filter
-          items = await getPopularShows(page, selectedGenre ?? undefined);
-          scopeHasMore = items.length === PAGE_SIZE;
+  // ── Today tab: single page, always refetch on mount (short server cache) ──
+  const todayQ = useApiQuery<TVMazeShow[]>({
+    queryKey: ['tvmaze', 'today'],
+    queryFn: async () => {
+      const schedule = await getSchedule();
+      // Dedupe by show id — one card per show airing today
+      const unique = new Map<number, TVMazeShow>();
+      for (const entry of schedule as TVMazeScheduleItem[]) {
+        if (!unique.has(entry.show.id)) {
+          unique.set(entry.show.id, entry.show);
         }
-
-        if (seq !== (seqRef.current[key] ?? 0)) return; // stale response
-
-        failedRef.current = false;
-        hasMoreRef.current[key] = scopeHasMore;
-
-        setScopes(prev => {
-          const cur = prev[key] ?? EMPTY_SCOPE;
-          return {
-            ...prev,
-            [key]: {
-              ...cur,
-              items:
-                mode === 'more'
-                  ? dedupe([...cur.items, ...items])
-                  : items,
-              page,
-              hasLoaded: true,
-              isLoading: false,
-              isLoadingMore: false,
-              error: null,
-            },
-          };
-        });
-      } catch (err) {
-        if (seq !== (seqRef.current[key] ?? 0)) return;
-        failedRef.current = true;
-        patchScope(tab, {
-          isLoading: false,
-          isLoadingMore: false,
-          error: err instanceof Error ? err.message : 'Failed to load shows',
-        });
-      } finally {
-        guardRef.current.delete(key);
-        if (mode === 'initial') setRefreshing(false);
       }
+      return Array.from(unique.values());
     },
-    [searchTerm, selectedGenre, patchScope],
+    staleTime: 1_800_000, // 30 min
+  });
+  const todayScope: ShowScope = useMemo(
+    () => ({
+      items: todayQ.data ?? [],
+      hasLoaded: !!todayQ.data,
+      isLoading: todayQ.isFetching,
+      isLoadingMore: false,
+      hasNextPage: false,
+      error: todayQ.error?.message ?? null,
+      fetchNextPage: () => {},
+      refetch: () => {
+        void todayQ.refetch();
+      },
+    }),
+    [todayQ],
   );
 
-  // ── Public actions ──────────────────────────────────────────────────
-
-  /** Load page 1 for a tab if it isn't loaded yet (scene mount).
-   *  The 'today' tab always reloads fresh (short server-side cache). */
-  const ensureLoaded = useCallback(
-    (tab: ShowTab) => {
-      const scope = getScope(tab);
-      // 'today' tab always reloads fresh; other tabs skip if already loaded
-      if (tab !== 'today' && (scope.hasLoaded || scope.isLoading)) return;
-      fetchPage(tab, 1, 'initial');
+  // ── Browse tab: multi-page (TVMaze 250 per page) ──
+  const browseQ = useInfiniteApiQuery<TVMazeShow[]>({
+    queryKey: ['tvmaze', 'browse', selectedGenre ?? ''],
+    queryFn: ({pageParam}) =>
+      getPopularShows(pageParam as number, selectedGenre ?? undefined),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, lastPageParam) => {
+      if (typeof lastPageParam !== 'number') return undefined;
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      return lastPageParam + 1;
     },
-    [getScope, fetchPage],
-  );
+    staleTime: 3_600_000, // 1 hour
+  });
+  const browseScope: ShowScope = shapePaginated(browseQ);
 
-  /** Infinite scroll: fetch the next page. Only the browse tab paginates. */
-  const loadMore = useCallback(
-    (tab: ShowTab) => {
-      if (tab !== 'browse') return;
-      const scope = getScope(tab);
-      if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore) return;
-      if (!hasMoreRef.current[keyFor(tab)]) return;
-      fetchPage(tab, scope.page + 1, 'more');
-    },
-    [getScope, fetchPage, keyFor],
-  );
-
-  /** Re-fetch page 1 after an error (invalidates any stale in-flight seq). */
-  const retry = useCallback(
-    (tab: ShowTab) => {
-      const key = keyFor(tab);
-      seqRef.current[key] = (seqRef.current[key] ?? 0) + 1;
-      setScopes(prev => {
-        const cur = prev[key];
-        if (!cur) return prev;
-        return {...prev, [key]: {...cur, items: [], hasLoaded: false}};
-      });
-      fetchPage(tab, 1, 'initial');
-    },
-    [keyFor, fetchPage],
-  );
-
-  /** Pull-to-refresh: invalidate and re-fetch page 1. */
-  const handleRefresh = useCallback(
-    (tab: ShowTab) => {
-      setRefreshing(true);
-      retry(tab);
-    },
-    [retry],
-  );
-
-  /** Tab switch — search text intentionally survives. */
+  // Tab switch
   const selectTab = useCallback((tab: ShowTab) => {
     setSelectedTab(tab);
   }, []);
 
-  // ── Auto-load on tab change / search term change ────────────────────
+  const setSelectedGenreToggle = useCallback((genre: string) => {
+    setSelectedGenre(prev => (prev === genre ? null : genre));
+  }, []);
 
-  // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref so the effect only
-  // re-fires when the selected tab actually changes — not on every
-  // parent re-render (getScope / fetchPage change ref every render).
-  const ensureLoadedRef = useRef(ensureLoaded);
-  ensureLoadedRef.current = ensureLoaded;
-
-  useEffect(() => {
-    if (selectedTab) {
-      ensureLoadedRef.current(selectedTab);
+  // Pull-to-refresh: re-fetch the active tab's data
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    if (selectedTab === 'search') {
+      void searchQ.refetch();
+    } else if (selectedTab === 'today') {
+      void todayQ.refetch();
+    } else {
+      void browseQ.refetch();
     }
-  }, [selectedTab]);
-
-  // ── Auto-retry when connectivity returns ────────────────────────────
-
-  // Keep stable refs so the effect can read latest values without
-  // re-registering on every state change.
-  const fetchPageRef = useRef(fetchPage);
-  fetchPageRef.current = fetchPage;
-  const selectedTabRef = useRef(selectedTab);
-  selectedTabRef.current = selectedTab;
-
-  const wasOnlineRef = useRef(isOnline);
-  useEffect(() => {
-    const wasOnline = wasOnlineRef.current;
-    wasOnlineRef.current = isOnline;
-    if (!wasOnline && isOnline && failedRef.current) {
-      fetchPageRef.current(selectedTabRef.current, 1, 'initial');
-    }
-  }, [isOnline]);
+    setRefreshing(false);
+  }, [selectedTab, searchQ, todayQ, browseQ]);
 
   return {
     selectedTab,
     selectTab,
-    // search
-    searchQuery,
-    setSearchQuery,
+    selectedGenre,
+    setSelectedGenre: setSelectedGenreToggle,
+    searchTerm,
     setSearchTerm,
     isSearchActive,
-    // per-scope data + actions
-    getScope,
-    ensureLoaded,
-    loadMore,
-    retry,
-    // pull-to-refresh
-    refreshing,
-    handleRefresh,
+    search: searchScope,
+    today: todayScope,
+    browse: browseScope,
     isOnline,
+    handleRefresh,
+    refreshing,
   };
 }

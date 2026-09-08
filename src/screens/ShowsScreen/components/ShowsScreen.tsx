@@ -28,7 +28,7 @@ import type {RootStackScreenProps} from '../types';
 import {
   useShowsScreen,
   type ShowTab,
-  type ShowScopeState,
+  type ShowScope,
 } from '../hooks/useShowsScreen';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
@@ -147,14 +147,9 @@ const ShowCard: React.FC<ShowCardProps> = React.memo(({item, onPress}) => {
 
 interface ShowTabSceneProps {
   tab: ShowTab;
-  scope: ShowScopeState;
+  scope: ShowScope;
   isSearchActive: boolean;
   isOnline: boolean;
-  refreshing: boolean;
-  ensureLoaded: (tab: ShowTab) => void;
-  loadMore: (tab: ShowTab) => void;
-  retry: (tab: ShowTab) => void;
-  handleRefresh: (tab: ShowTab) => void;
   onPressShow: (item: TVMazeShow) => void;
 }
 
@@ -164,29 +159,13 @@ const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
     scope,
     isSearchActive,
     isOnline,
-    refreshing,
-    ensureLoaded,
-    loadMore,
-    retry,
-    handleRefresh,
     onPressShow,
   }) => {
     const {colors} = useTheme();
     const toast = useToast();
-    const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
-
-    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref.
-    const ensureLoadedRef = React.useRef(ensureLoaded);
-    ensureLoadedRef.current = ensureLoaded;
-
-    // Load page 1 for this scope on mount / whenever the scope key
-    // changes (e.g. a new search term).
-    React.useEffect(() => {
-      ensureLoadedRef.current(tab);
-    }, [tab]);
+    const {items, hasLoaded, isLoading, isLoadingMore, error, fetchNextPage, refetch} = scope;
 
     // Surface page-1 load failures as a toast with a Retry action.
-    // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs).
     const lastShownErrorRef = React.useRef<string | null>(null);
     React.useEffect(() => {
       const shouldShow = !hasLoaded && !isLoading && !!error;
@@ -203,7 +182,7 @@ const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
             label: 'Retry',
             onPress: () => {
               lastShownErrorRef.current = null;
-              retry(tab);
+              refetch();
             },
           },
         });
@@ -211,7 +190,7 @@ const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
         lastShownErrorRef.current = null;
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasLoaded, isLoading, error, isOnline]);
+    }, [hasLoaded, isLoading, error, isOnline, refetch]);
 
     const renderItem = useCallback(
       ({item}: {item: TVMazeShow}) => (
@@ -227,8 +206,8 @@ const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
 
     // Only browse tab triggers infinite scroll
     const handleEndReached = useCallback(() => {
-      if (tab === 'browse') loadMore(tab);
-    }, [tab, loadMore]);
+      if (tab === 'browse') fetchNextPage();
+    }, [tab, fetchNextPage]);
 
     // ── "Empty when no search term" state for search tab ──
     if (tab === 'search' && !isSearchActive && !isLoading) {
@@ -291,8 +270,8 @@ const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
             showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
-                refreshing={refreshing}
-                onRefresh={() => handleRefresh(tab)}
+                refreshing={isLoading && hasLoaded}
+                onRefresh={refetch}
                 tintColor={colors.accent.gold}
                 colors={[colors.accent.gold]}
               />
@@ -312,7 +291,7 @@ const ShowTabScene: React.FC<ShowTabSceneProps> = React.memo(
                   ) : (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      onPress={() => loadMore(tab)}
+                      onPress={() => fetchNextPage()}
                       style={[
                         styles.loadMoreRetry,
                         {borderColor: colors.background.highlight},
@@ -346,18 +325,21 @@ export const ShowsScreen: React.FC<RootStackScreenProps<'ShowsScreen'>> = ({
   const {
     selectedTab,
     selectTab,
-    searchQuery,
-    setSearchQuery,
+    searchTerm,
     setSearchTerm,
     isSearchActive,
-    getScope,
-    ensureLoaded,
-    loadMore,
-    retry,
-    refreshing,
-    handleRefresh,
+    search: searchScope,
+    today: todayScope,
+    browse: browseScope,
     isOnline,
   } = useShowsScreen(route.params?.initialTab, route.params?.initialGenre);
+
+  const currentScope =
+    selectedTab === 'search'
+      ? searchScope
+      : selectedTab === 'today'
+      ? todayScope
+      : browseScope;
 
   const handleShowPress = useCallback(
     (show: TVMazeShow) => {
@@ -395,27 +377,17 @@ export const ShowsScreen: React.FC<RootStackScreenProps<'ShowsScreen'>> = ({
       return (
         <ShowTabScene
           tab={tab.key}
-          scope={getScope(tab.key)}
+          scope={currentScope}
           isSearchActive={isSearchActive}
           isOnline={isOnline}
-          refreshing={refreshing}
-          ensureLoaded={ensureLoaded}
-          loadMore={loadMore}
-          retry={retry}
-          handleRefresh={handleRefresh}
           onPressShow={handleShowPress}
         />
       );
     },
     [
-      getScope,
+      currentScope,
       isSearchActive,
       isOnline,
-      refreshing,
-      ensureLoaded,
-      loadMore,
-      retry,
-      handleRefresh,
       handleShowPress,
     ],
   );
@@ -443,9 +415,8 @@ export const ShowsScreen: React.FC<RootStackScreenProps<'ShowsScreen'>> = ({
       {/* ── Search (stays put while tabs change) ── */}
       <View style={styles.searchSection}>
         <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onDebouncedChange={setSearchTerm}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
           placeholder="Search shows…"
         />
       </View>
