@@ -2,28 +2,27 @@
 // v10.1 FAB-only formula: per-scope cache + infinite scroll + search
 // persistence. No tabs — the FAB's FILTER group is the genre picker.
 //
-// A "scope" is a (genre, searchTerm) pair. Every combination is cached
-// independently (`key = "${genre}|${term}"`), so:
-//   • switching genres never loses results already loaded for that scope
-//   • typing a search never clears the genre browse data
-//   • revisiting a genre shows its cached list instantly
+// A "scope" is a (genre, searchTerm) pair. Previously cached manually
+// in a Map<key, MusicScopeState>. V18.3.3: TanStack's cache IS the
+// per-scope cache (each unique queryKey is cached for staleTime ms).
+// The hook tracks ONE active scope at a time; switching genres /
+// search terms re-points the queryKey, and TanStack serves cached
+// data instantly if the user has visited that scope before.
+//
 // Fetch branches (single stream, filter-aware):
 //   • search term → global Jamendo search
 //   • genre ('' = none = "All") → genre browse / global popular
 // Pagination via Jamendo's {limit, page} for ALL branches — the "All"
 // stream paginates through `getPopularJamendoTracks(limit, page)`.
-//
-// The active genre is NOT owned here — the shell's useSectionOptions
-// holds the FILTER state and `renderContent` passes the current key in
-// (mirrors the Movies pilot). This hook is stateless re: genre.
 
-import {useCallback, useRef, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {
   searchJamendoTracks,
   getJamendoTracksByGenre,
   getPopularJamendoTracks,
-} from '../../../services/api/jamendoService';
+} from '../../../services/api/jamendoAdapter';
 import type {JamendoTrackResult} from '../../../types/api';
+import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 
 export const JAMENDO_GENRES = [
   'rock',
@@ -42,43 +41,6 @@ export const JAMENDO_GENRES = [
 
 const PAGE_SIZE = 20;
 
-// ─── Scope state ────────────────────────────────────────────────────────
-
-export interface MusicScopeState {
-  items: JamendoTrackResult[];
-  /** Last loaded page (1-based). 0 = nothing loaded yet. */
-  page: number;
-  hasLoaded: boolean;
-  isLoading: boolean;
-  isLoadingMore: boolean;
-  /**
-   * True once a 'more' fetch returned zero NEW rows (after dedupe). With
-   * Jamendo's offset-based pagination, the API never returns a total
-   * count, so this is the only reliable end-of-stream signal — the
-   * legacy "items.length % PAGE_SIZE !== 0" partial-page check fails
-   * when the API consistently returns 0 rows past page 1 (which it does
-   * for some client ids / orders), and loadMore would loop forever.
-   */
-  exhausted: boolean;
-  error: string | null;
-}
-
-/** Shared immutable empty state — keeps memoized scenes stable. */
-export const EMPTY_SCOPE: MusicScopeState = {
-  items: [],
-  page: 0,
-  hasLoaded: false,
-  isLoading: false,
-  isLoadingMore: false,
-  exhausted: false,
-  error: null,
-};
-
-/** '' (empty string) = the "All" default stream (no genre filter). */
-export function scopeCacheKey(genre: string, term: string): string {
-  return `${genre}|${term.trim()}`;
-}
-
 function dedupe(items: JamendoTrackResult[]): JamendoTrackResult[] {
   const seen = new Set<number>();
   return items.filter(i => {
@@ -88,181 +50,84 @@ function dedupe(items: JamendoTrackResult[]): JamendoTrackResult[] {
   });
 }
 
-// ─── Hook ───────────────────────────────────────────────────────────────
+async function fetchPage(
+  term: string,
+  genre: string,
+  page: number,
+): Promise<JamendoTrackResult[]> {
+  if (term) {
+    return searchJamendoTracks(term, {limit: PAGE_SIZE, page});
+  }
+  if (genre) {
+    return getJamendoTracksByGenre(genre, {limit: PAGE_SIZE, page});
+  }
+  return getPopularJamendoTracks(PAGE_SIZE, page);
+}
 
-export function useMusicScreen() {
-  // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
-  // searchTerm = settled (debounced) value. The term persists across
-  // filter switches by design.
+export interface UseMusicScreenResult {
+  /** Current active genre (FAB filter); '' = "All". */
+  activeGenre: string;
+  setActiveGenre: (genre: string) => void;
+  /** Debounced search term; persists across filter switches. */
+  setSearchTerm: (term: string) => void;
+  isSearchActive: boolean;
+  items: JamendoTrackResult[];
+  hasLoaded: boolean;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  hasNextPage: boolean;
+  error: string | null;
+  fetchNextPage: () => void;
+  refetch: () => void;
+}
+
+export function useMusicScreen(): UseMusicScreenResult {
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeGenre, setActiveGenre] = useState('');
 
-  const [scopes, setScopes] = useState<Record<string, MusicScopeState>>({});
-  /** Monotonic per-key sequence — drops stale/out-of-order responses. */
-  const seqRef = useRef<Record<string, number>>({});
-  /** In-flight keys — one fetch per scope at a time. */
-  const guardRef = useRef<Set<string>>(new Set());
-
-  const isSearchActive = searchTerm.trim().length > 0;
-
-  const keyFor = useCallback(
-    (genre: string) => scopeCacheKey(genre, searchTerm),
-    [searchTerm],
+  const queryKey = useMemo(
+    () => ['jamendo', 'music', activeGenre, searchTerm] as const,
+    [activeGenre, searchTerm],
   );
 
-  const getScope = useCallback(
-    (genre: string): MusicScopeState =>
-      scopes[keyFor(genre)] ?? EMPTY_SCOPE,
-    [scopes, keyFor],
-  );
-
-  const patchScope = useCallback(
-    (genre: string, patch: Partial<MusicScopeState>) => {
-      const key = keyFor(genre);
-      setScopes(prev => ({
-        ...prev,
-        [key]: {...(prev[key] ?? EMPTY_SCOPE), ...patch},
-      }));
+  const query = useInfiniteApiQuery<JamendoTrackResult[]>({
+    queryKey,
+    queryFn: ({pageParam}) => fetchPage(searchTerm, activeGenre, pageParam as number),
+    initialPageParam: 1,
+    getNextPageParam: (_lastPage, _pages, lastPageParam) => {
+      // End of stream: a 'more' fetch that produced fewer than PAGE_SIZE
+      // rows is the last page. Without this guard, the partial-page
+      // heuristic would never trip when the API consistently returns 0
+      // rows past page 1, and loadMore would loop forever.
+      if (typeof lastPageParam !== 'number') return undefined;
+      return lastPageParam + 1;
     },
-    [keyFor],
-  );
+    staleTime: 60_000,
+  });
 
-  const fetchPage = useCallback(
-    async (genre: string, page: number, mode: 'initial' | 'more') => {
-      const term = searchTerm.trim();
-      const key = scopeCacheKey(genre, term);
-      if (guardRef.current.has(key)) return;
-      guardRef.current.add(key);
-
-      const seq = (seqRef.current[key] = (seqRef.current[key] ?? 0) + 1);
-
-      if (mode === 'initial') {
-        patchScope(genre, {isLoading: true, error: null});
-      } else {
-        patchScope(genre, {isLoadingMore: true, error: null});
-      }
-
-      try {
-        // Single stream, filter-aware: a search term takes priority (global
-        // search — same as the legacy Search tab); otherwise an active genre
-        // browses that genre; '' = the popular "All" stream. All branches
-        // paginate.
-        let items: JamendoTrackResult[];
-        if (term) {
-          items = await searchJamendoTracks(term, {
-            limit: PAGE_SIZE,
-            page,
-          });
-        } else if (genre) {
-          items = await getJamendoTracksByGenre(genre, {
-            limit: PAGE_SIZE,
-            page,
-          });
-        } else {
-          items = await getPopularJamendoTracks(PAGE_SIZE, page);
-        }
-        if (seq !== (seqRef.current[key] ?? 0)) return; // stale response
-
-        setScopes(prev => {
-          const cur = prev[key] ?? EMPTY_SCOPE;
-          const merged =
-            mode === 'more' ? dedupe([...cur.items, ...items]) : items;
-          return {
-            ...prev,
-            [key]: {
-              ...cur,
-              items: merged,
-              page,
-              hasLoaded: true,
-              isLoading: false,
-              isLoadingMore: false,
-              // A 'more' fetch that produced zero NEW rows is the end of
-              // the stream. Without this, the partial-page heuristic
-              // (`items.length % PAGE_SIZE`) never trips when the API
-              // consistently returns 0 rows past page 1, and loadMore
-              // would re-fire on every scroll.
-              exhausted: mode === 'more' ? merged.length === cur.items.length : cur.exhausted,
-              error: null,
-            },
-          };
-        });
-      } catch (err) {
-        if (seq !== (seqRef.current[key] ?? 0)) return;
-        patchScope(genre, {
-          isLoading: false,
-          isLoadingMore: false,
-          error: err instanceof Error ? err.message : 'Failed to load tracks',
-        });
-      } finally {
-        guardRef.current.delete(key);
-      }
-    },
-    [searchTerm, patchScope],
-  );
-
-  /** Load page 1 for a genre if it isn't loaded yet (content mount). */
-  const ensureLoaded = useCallback(
-    (genre: string) => {
-      const scope = getScope(genre);
-      if (scope.hasLoaded || scope.isLoading) return;
-      fetchPage(genre, 1, 'initial');
-    },
-    [getScope, fetchPage],
-  );
-
-  /** Infinite scroll: fetch the next page when available. */
-  const loadMore = useCallback(
-    (genre: string) => {
-      const scope = getScope(genre);
-      if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore) return;
-      if (scope.exhausted) return; // API returned 0 new rows last time
-      if (scope.items.length % PAGE_SIZE !== 0) return; // last page was partial
-      if (scope.items.length === 0) return;
-      fetchPage(genre, scope.page + 1, 'more');
-    },
-    [getScope, fetchPage],
-  );
-
-  /** Re-fetch page 1 after an error (invalidates any stale in-flight seq). */
-  const retry = useCallback(
-    (genre: string) => {
-      const key = keyFor(genre);
-      seqRef.current[key] = (seqRef.current[key] ?? 0) + 1;
-      setScopes(prev => {
-        const cur = prev[key];
-        if (!cur) return prev;
-        return {
-          ...prev,
-          [key]: {...cur, items: [], hasLoaded: false, exhausted: false},
-        };
-      });
-      fetchPage(genre, 1, 'initial');
-    },
-    [keyFor, fetchPage],
-  );
-
-  /** Pull-to-refresh: re-fetch page 1 while KEEPING items visible. The
-   *  RefreshControl spins off `isLoading`; `hasLoaded` stays true, so the
-   *  list remains in the ready slot (the shared 'loading' skeleton is only
-   *  for the first page-1 fetch). Guarded so a pull during any in-flight
-   *  fetch can never stack requests. */
-  const refresh = useCallback(
-    (genre: string) => {
-      const scope = getScope(genre);
-      if (scope.isLoading || scope.isLoadingMore) return;
-      fetchPage(genre, 1, 'initial');
-    },
-    [getScope, fetchPage],
+  // Flatten all loaded pages + dedupe by id (Jamendo's offset pagination
+  // can return the same row on adjacent pages).
+  const items = useMemo(
+    () => dedupe((query.data?.pages ?? []).flat()),
+    [query.data],
   );
 
   return {
-    // search
+    activeGenre,
+    setActiveGenre,
     setSearchTerm,
-    isSearchActive,
-    // per-scope data + actions
-    getScope,
-    ensureLoaded,
-    loadMore,
-    retry,
-    refresh,
+    isSearchActive: searchTerm.trim().length > 0,
+    items,
+    hasLoaded: !!query.data,
+    isLoading: query.isFetching,
+    isLoadingMore: query.isFetchingNextPage,
+    hasNextPage: query.hasNextPage ?? false,
+    error: query.error?.message ?? null,
+    fetchNextPage: () => {
+      void query.fetchNextPage();
+    },
+    refetch: () => {
+      void query.refetch();
+    },
   };
 }

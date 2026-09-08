@@ -4,7 +4,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {MUSIC_CATEGORIES} from '../../../constants/musicCategories';
-import {JAMENDO_GENRES, type MusicScopeState} from '../hooks/useMusicScreen';
+import {JAMENDO_GENRES} from '../hooks/useMusicScreen';
 import {useMusicData} from './MusicDataProvider';
 import {TrackCard} from './TrackCard';
 import {MusicFooter} from './MusicFooter';
@@ -21,19 +21,28 @@ function genreLabel(genre: string): string {
 /**
  * Owns the Music data stream and its single virtualized list. The screen
  * entry point remains responsible only for route/config/provider composition.
+ *
+ * V18.3.3: this component used to call `getScope(genre)`, `ensureLoaded
+ * (genre)`, `loadMore(genre)`, etc. on the per-scope cache. The V18 hook
+ * returns a single active scope's data; switching scope = setActiveGenre,
+ * the queryKey changes, TanStack re-fetches or returns cache.
  */
 export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const {colors} = useTheme();
   const styles = useMemo(() => createMusicScreenStyles(), []);
   const insets = useSafeAreaInsets();
   const {
-    getScope,
-    ensureLoaded,
-    loadMore,
-    retry,
-    refresh,
-    isSearchActive,
+    items,
+    hasLoaded,
+    isLoading,
+    isLoadingMore,
+    hasNextPage,
+    error,
+    setActiveGenre,
     setSearchTerm,
+    fetchNextPage,
+    refetch,
+    isSearchActive,
     handleTrackPress,
   } = useMusicData();
   const {offline} = ctx;
@@ -49,16 +58,13 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
     setSearchTerm(ctx.query);
   }, [ctx.query, setSearchTerm]);
 
-  const ensureLoadedRef = useRef(ensureLoaded);
-  ensureLoadedRef.current = ensureLoaded;
+  // Sync the FAB filter → the hook's active scope. The queryKey
+  // includes `activeGenre`, so changing it re-points the query (or
+  // returns the cached result if the user has visited this scope).
   useEffect(() => {
-    ensureLoadedRef.current(genre);
-  }, [genre]);
+    setActiveGenre(genre);
+  }, [genre, setActiveGenre]);
 
-  const scope: MusicScopeState = getScope(genre);
-  const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
-
-  // Avoid an initial onEndReached call before the list has been measured.
   const userDraggedRef = useRef(false);
   const listState: 'loading' | 'error' | 'empty' | undefined =
     !hasLoaded && isLoading
@@ -116,7 +122,7 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
               isSearchActive={isSearchActive}
               genreLabel={emptyGenreLabel}
               error={error}
-              onRetry={() => retry(genre)}
+              onRetry={refetch}
             />
           ) : null
         }
@@ -125,7 +131,7 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
             isLoadingMore={isLoadingMore}
             hasLoaded={hasLoaded}
             error={error}
-            onLoadMore={() => loadMore(genre)}
+            onLoadMore={fetchNextPage}
           />
         }
         onScrollBeginDrag={() => {
@@ -133,7 +139,7 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
         }}
         onEndReached={() => {
           if (!userDraggedRef.current) return;
-          loadMore(genre);
+          if (hasNextPage && !isLoadingMore) fetchNextPage();
         }}
         onEndReachedThreshold={0.4}
         removeClippedSubviews={false}
@@ -141,7 +147,7 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
         refreshControl={
           <RefreshControl
             refreshing={isLoading && hasLoaded}
-            onRefresh={() => refresh(genre)}
+            onRefresh={refetch}
             tintColor={colors.accent.gold}
             colors={[colors.accent.gold]}
           />
