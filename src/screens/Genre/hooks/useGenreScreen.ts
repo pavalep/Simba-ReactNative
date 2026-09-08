@@ -4,15 +4,21 @@
 // Jamendo streaming catalog, mood collections (real tag
 // queries), and live radio stations for the genre.
 // ────────────────────────────────────────────────────────
+//
+// V18.3.3: migrated 3 separate useState/useEffect blocks
+// (streaming, moods, radio) to 3 useApiQuery calls. The
+// radioBrowserService is not V18-migrated yet (Wave 4), so
+// it stays imported from the legacy file.
 
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {useRoute, RouteProp} from '@react-navigation/native';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {JamendoTrackResult, RadioStationResult} from '../../../types/api';
 import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
-import {getJamendoTracksByGenre} from '../../../services/api/jamendoService';
+import {useApiQuery} from '../../../hooks/useApiQuery';
+import {getJamendoTracksByGenre} from '../../../services/api/jamendoAdapter';
 import {getStationsByGenre} from '../../../services/api/radioBrowserService';
-import {useMediaStore} from '../../../state';
+import {useMediaStore, type ScannedTrack} from '../../../state';
 import {
   MOOD_COLLECTIONS,
   type MoodCollection,
@@ -65,111 +71,60 @@ export function useGenreScreen(): UseGenreScreenResult {
   );
 
   // P41.2: streaming catalog for this genre (real Jamendo genre query)
-  const [streamingTracks, setStreamingTracks] = useState<JamendoTrackResult[]>(
-    [],
-  );
-  const [streamingLoading, setStreamingLoading] = useState(true);
-  const [streamingFailed, setStreamingFailed] = useState(false);
-  const [streamingAttempt, setStreamingAttempt] = useState(0);
+  const streaming = useApiQuery<JamendoTrackResult[]>({
+    queryKey: ['jamendo', 'byGenre', genre, STREAMING_LIMIT],
+    queryFn: () =>
+      getJamendoTracksByGenre(genre, {limit: STREAMING_LIMIT}),
+    staleTime: 60_000,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    setStreamingLoading(true);
-    setStreamingFailed(false);
-    getJamendoTracksByGenre(genre, {limit: STREAMING_LIMIT})
-      .then(list => {
-        if (!cancelled) setStreamingTracks(list);
-      })
-      .catch(() => {
-        if (!cancelled) setStreamingFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setStreamingLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [genre, streamingAttempt]);
-
-  const retryStreaming = useCallback(
-    () => setStreamingAttempt(n => n + 1),
-    [],
-  );
-
-  // P41.3: mood collections — merged real genre/tag queries, no hardcoded
-  // track lists. Each mood's tags are fetched and deduped by track id.
+  // P41.3: mood collections — merged real genre/tag queries, no
+  // hardcoded track lists. Each mood's tags are fetched in parallel
+  // inside the queryFn and deduped by track id. The queryKey includes
+  // the mood id so switching moods re-fetches.
   const [selectedMoodId, setSelectedMoodId] = useState<string>(
     MOOD_COLLECTIONS[0]?.id ?? '',
   );
-  const [moodTracks, setMoodTracks] = useState<JamendoTrackResult[]>([]);
-  const [moodLoading, setMoodLoading] = useState(false);
-
   const selectedMood = useMemo(
     () => MOOD_COLLECTIONS.find(m => m.id === selectedMoodId) ?? null,
     [selectedMoodId],
   );
 
-  useEffect(() => {
-    if (!selectedMood) return;
-    let cancelled = false;
-    setMoodLoading(true);
-    Promise.allSettled(
-      selectedMood.tags.map(tag =>
-        getJamendoTracksByGenre(tag, {limit: MOOD_TAG_LIMIT}),
-      ),
-    )
-      .then(results => {
-        if (cancelled) return;
-        const seen = new Set<number>();
-        const merged: JamendoTrackResult[] = [];
-        for (const r of results) {
-          if (r.status !== 'fulfilled') continue;
-          for (const t of r.value) {
-            if (!seen.has(t.id)) {
-              seen.add(t.id);
-              merged.push(t);
-            }
+  const moods = useApiQuery<JamendoTrackResult[]>({
+    queryKey: ['jamendo', 'mood', selectedMoodId, selectedMood?.tags.join('|') ?? ''],
+    queryFn: async () => {
+      if (!selectedMood) return [];
+      const results = await Promise.allSettled(
+        selectedMood.tags.map(tag =>
+          getJamendoTracksByGenre(tag, {limit: MOOD_TAG_LIMIT}),
+        ),
+      );
+      const seen = new Set<number>();
+      const merged: JamendoTrackResult[] = [];
+      for (const r of results) {
+        if (r.status !== 'fulfilled') continue;
+        for (const t of r.value) {
+          if (!seen.has(t.id)) {
+            seen.add(t.id);
+            merged.push(t);
           }
         }
-        setMoodTracks(merged);
-      })
-      .finally(() => {
-        if (!cancelled) setMoodLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedMood]);
+      }
+      return merged;
+    },
+    enabled: !!selectedMood,
+    staleTime: 60_000,
+  });
 
   const selectMood = useCallback((id: string) => setSelectedMoodId(id), []);
 
-  // P41.4: live radio stations for this genre (keeps RadioScreen's
-  // genre browsing reachable from the genre detail hub).
-  const [radioStations, setRadioStations] = useState<RadioStationResult[]>([]);
-  const [radioLoading, setRadioLoading] = useState(true);
-  const [radioFailed, setRadioFailed] = useState(false);
-  const [radioAttempt, setRadioAttempt] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    setRadioLoading(true);
-    setRadioFailed(false);
-    getStationsByGenre(genre, {limit: STREAMING_LIMIT})
-      .then(list => {
-        if (!cancelled) setRadioStations(list);
-      })
-      .catch(() => {
-        if (!cancelled) setRadioFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setRadioLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [genre, radioAttempt]);
-
-  const retryRadio = useCallback(() => setRadioAttempt(n => n + 1), []);
+  // P41.4: live radio stations for this genre
+  const radio = useApiQuery<RadioStationResult[]>({
+    queryKey: ['radioBrowser', 'byGenre', genre, STREAMING_LIMIT],
+    queryFn: () =>
+      getStationsByGenre(genre, {limit: STREAMING_LIMIT}),
+    staleTime: 60_000,
+  });
 
   const handlePlayTrack = useCallback(
     (uri: string, title: string) => {
@@ -209,23 +164,25 @@ export function useGenreScreen(): UseGenreScreenResult {
     tab,
     setTab,
     localTracks,
-    streamingTracks,
-    streamingLoading,
-    streamingFailed,
-    retryStreaming,
+    streamingTracks: streaming.data ?? [],
+    streamingLoading: streaming.isFetching,
+    streamingFailed: !!streaming.error,
+    retryStreaming: () => {
+      void streaming.refetch();
+    },
     moods: MOOD_COLLECTIONS,
     selectedMoodId,
     selectMood,
-    moodTracks,
-    moodLoading,
-    radioStations,
-    radioLoading,
-    radioFailed,
-    retryRadio,
+    moodTracks: moods.data ?? [],
+    moodLoading: moods.isFetching,
+    radioStations: radio.data ?? [],
+    radioLoading: radio.isFetching,
+    radioFailed: !!radio.error,
+    retryRadio: () => {
+      void radio.refetch();
+    },
     handlePlayTrack,
     handlePlayStreaming,
     handlePlayStation,
   };
 }
-
-import type {ScannedTrack} from '../../../state';
