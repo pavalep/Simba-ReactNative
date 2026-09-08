@@ -19,7 +19,7 @@ import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {FilterChips, type FilterChipItem} from '../../../components/utility/FilterChips';
 import {BrowseFab} from './BrowseFab';
 import {FilterSheet, type FilterSheetGroup} from '../../../components/sheets/FilterSheet/FilterSheet';
-import {useSectionSearch} from '../hooks/useSearch';
+import {useSectionSearch} from '../../../hooks/useSectionSearch';
 import type {SectionOptionsApi} from '../hooks/useOptions';
 import type {
   SectionBrowseConfig,
