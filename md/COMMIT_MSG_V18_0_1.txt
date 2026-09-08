@@ -1,0 +1,17 @@
+V18.0.1: dead code removal - getAudiusTracksByGenre (zero call sites)
+
+Confirmed via grep across src/ that no caller imports or invokes
+this helper. The client-side genre filter over trending tracks is
+never used; Audius does not expose a server-side genre filter, and
+the rest of the codebase has settled on direct track-id and search
+flows. Pure dead-code removal - no behavior change.
+
+Verification:
+- grep "getAudiusTracksByGenre" src/  -> No matches
+- npx tsc --noEmit                   -> 0 errors
+- npx jest                           -> 4 suites / 12 passed / 1 todo (V17 baseline)
+
+V18 is the API adapter + TanStack Query refactor (see
+md/SIMBA_PLAYER_MODULE_V18_SPECIFICATION.md). V18.0 is the
+preflight cleanup wave: prune 8 unused service methods before
+adding the new infrastructure.

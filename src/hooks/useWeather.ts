@@ -1,31 +1,40 @@
-// ─── useWeather hook (Phase 61 + P66 + V17) ──────────────────────
-// Thin wrapper around the weather store. Enforces a 1-hour TTL so
-// repeated mounts (Home tab focus) don't hammer ip-api / Open-Meteo.
+// ─── useWeather hook (V18.2.3) ────────────────────────────────────
+// The Home greeting card's data hook. Reads the persisted
+// `useWeatherStore` for the cached snapshot, and uses
+// `useApiQuery` to refresh it on mount and on the 1-hour TTL.
 //
-// P66: the store is now persisted (last successful snapshot is in
+// The 4-tier cascade (coords → manual homeCity → IANA timezone →
+// locale country) is the `queryFn` for a single `useApiQuery`.
+// TanStack handles loading state, retries, and the
+// fetchedAt-driven re-fetch; the cascade's only job is to
+// produce a `WeatherSnapshot | null`.
+//
+// V18.2.3: replaces the pre-V18 hook (which had a `useRef` dedupe
+// guard, a `useEffect` that fired the cascade on mount, and a
+// lazy-imported `fetchWeatherThunk` at the bottom of the file).
+// All of that is gone — TanStack IS the state machine now.
+//
+// P66: the store is persisted (last successful snapshot is in
 // AsyncStorage). On cold start:
-//   - if no snapshot ever → status='idle', snapshot=null → the
-//     greeting shows the "Fetching weather…" placeholder while the
-//     cascade runs.
-//   - if snapshot is fresh (fetchedAt < 1h ago) → no fetch fires.
-//     The cached chip + caption render immediately.
-//   - if snapshot is stale (>1h) → run the cascade. The store
-//     keeps the old snapshot until the new one arrives, so the UI
-//     does not flicker.
-//
-// V17 Phase 79: the redux `fetchWeather` thunk (and the 17+
-// `console.log` lines it carried) is replaced by a plain async
-// function `fetchWeatherThunk` at the bottom of this file. The
-// store is the only state owner; the cascade is the only writer.
-//
-// The hook is intentionally a one-shot (no polling). The greeting
-// re-renders whenever the user navigates back to Home because the
-// Home screen unmounts/remounts; if that doesn't work for the user's
-// flow, we'd add a foreground listener.
+//   - if no snapshot ever → fetchedAt=0 → cascade fires
+//   - if snapshot is fresh (< 1h ago) → shouldFetch=false → no fetch
+//   - if snapshot is stale (> 1h) → shouldFetch=true → cascade runs
+//     The store keeps the old snapshot until the new one arrives
+//     (setSnapshot is called only when the new data is in hand),
+//     so the UI does not flicker.
 
-import {useEffect, useRef} from 'react';
-import {useWeatherStore} from '../state';
-import type {WeatherSnapshot} from '../services/api/weatherService';
+import {useCallback, useEffect} from 'react';
+import {useApiQuery} from './useApiQuery';
+import {useWeatherStore, useSettingsStore} from '../state';
+import {
+  fetchWeatherByCity,
+  fetchWeatherByCoords,
+  type WeatherSnapshot,
+} from '../services/api/weatherAdapter';
+import {getCurrentCoords, reverseGeocodeCity} from '../services/device/geolocation';
+import {cityFromTimezone, cityFromLocale} from '../utils/timezoneToCity';
+import {resolveTimezone, resolveLocale} from '../utils/weatherLocale';
+import {logger} from '../lib/logger';
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -38,106 +47,105 @@ export interface UseWeatherResult {
   isFirstLoad: boolean;
 }
 
+/**
+ * 4-tier cascade. Pure async function: tries the most specific
+ * source first, falls through to the most general. Returns the
+ * first snapshot it can build, or `null` if every source failed.
+ *
+ * Called by TanStack as the `queryFn` — TanStack handles retry /
+ * dedup / staleTime, the cascade just decides WHAT to fetch.
+ */
+async function weatherCascade(): Promise<WeatherSnapshot | null> {
+  // 1. Exact coords (asks for permission on first call).
+  const coords = await getCurrentCoords().catch(() => null);
+  if (coords) {
+    const hint = await reverseGeocodeCity(coords.lat, coords.lon).catch(
+      () => null,
+    );
+    const snap = await fetchWeatherByCoords(
+      coords.lat,
+      coords.lon,
+      hint ?? undefined,
+    );
+    if (snap) return snap;
+  }
+  // 2. Manual homeCity from settings.
+  const homeCity = useSettingsStore.getState().homeCity;
+  if (homeCity) {
+    const snap = await fetchWeatherByCity(homeCity);
+    if (snap) return snap;
+  }
+  // 3. IANA timezone.
+  const tz = resolveTimezone();
+  if (tz) {
+    const city = cityFromTimezone(tz);
+    if (city) {
+      const snap = await fetchWeatherByCity(city);
+      if (snap) return snap;
+    }
+  }
+  // 4. Locale country (true last resort).
+  const locale = resolveLocale();
+  const city = cityFromLocale(locale);
+  if (city) {
+    const snap = await fetchWeatherByCity(city);
+    if (snap) return snap;
+  }
+  return null;
+}
+
 export function useWeather(): UseWeatherResult {
   const snapshot = useWeatherStore(s => s.snapshot);
   const status = useWeatherStore(s => s.status);
   const fetchedAt = useWeatherStore(s => s.fetchedAt);
 
-  // Per-mount guard: only fetch once even if StrictMode double-invokes
-  // the effect. The store itself doesn't dedupe, so we dedupe here.
-  const didFetch = useRef(false);
+  // 1-hour TTL. The hook enables the query only when the cached
+  // snapshot is missing or stale. `staleTime: ONE_HOUR_MS` makes
+  // TanStack consider a fresh fetch "good" for the same window.
+  const isStale = fetchedAt > 0 && Date.now() - fetchedAt > ONE_HOUR_MS;
+  const shouldFetch = fetchedAt === 0 || isStale;
 
+  const queryFn = useCallback(weatherCascade, []);
+
+  const {data, isLoading, error} = useApiQuery<WeatherSnapshot | null>({
+    queryKey: ['weather', 'cascade'],
+    queryFn,
+    enabled: shouldFetch,
+    staleTime: ONE_HOUR_MS,
+    // Don't surface a network blip as a hard error — the cascade
+    // catches its own throws and returns null. The store then
+    // records the soft "no location source" message.
+    retry: false,
+  });
+
+  // Single sync point: when the query settles, mirror its result
+  // into the persisted store. The store remains the UI's source
+  // of truth (the Home screen reads `useWeatherStore`, not the
+  // hook's local query state).
   useEffect(() => {
-    if (didFetch.current) {
+    if (isLoading) {
+      useWeatherStore.getState().setStatus('loading');
       return;
     }
-    didFetch.current = true;
-
-    const isStale = Date.now() - fetchedAt > ONE_HOUR_MS;
-    if (fetchedAt === 0 || isStale) {
-      void fetchWeatherThunk();
+    if (data) {
+      useWeatherStore
+        .getState()
+        .setSnapshot({snapshot: data, fetchedAt: Date.now()});
+      return;
     }
-  }, [fetchedAt]);
+    if (error) {
+      logger.warn('[useWeather] cascade threw', error);
+      useWeatherStore
+        .getState()
+        .setError(error instanceof Error ? error.message : String(error));
+      return;
+    }
+    // No error, no data, not loading — the cascade completed and
+    // every branch returned null. This is a soft "no location"
+    // state, not a network error.
+    useWeatherStore.getState().setError('No location source available');
+  }, [data, error, isLoading]);
 
   const isFirstLoad = status === 'loading' && snapshot === null;
   return {snapshot, status, isFirstLoad};
-}
-
-/**
- * V17 Phase 79: the old redux `fetchWeather` thunk (with its
- * `console.log` noise and the 4-tier cascade: exact coords ->
- * manual homeCity -> IANA timezone -> locale country) becomes a
- * plain async function. The store's `setStatus` / `setSnapshot` /
- * `setError` actions are called directly.
- */
-async function fetchWeatherThunk(): Promise<void> {
-  const {useSettingsStore} = await import('../state');
-  const {fetchWeatherByCity, fetchWeatherByCoords} = await import(
-    '../services/api/weatherService'
-  );
-  const {getCurrentCoords, reverseGeocodeCity} = await import(
-    '../services/device/geolocation'
-  );
-  const {cityFromTimezone, cityFromLocale} = await import(
-    '../utils/timezoneToCity'
-  );
-  const {resolveTimezone, resolveLocale} = await import(
-    '../utils/weatherLocale'
-  );
-  const {logger} = await import('../lib/logger');
-
-  useWeatherStore.getState().setStatus('loading');
-  try {
-    // 1. Exact coords (asks for permission on first call).
-    const coords = await getCurrentCoords().catch(() => null);
-    if (coords) {
-      const hint = await reverseGeocodeCity(coords.lat, coords.lon).catch(
-        () => null,
-      );
-      const snap = await fetchWeatherByCoords(
-        coords.lat,
-        coords.lon,
-        hint ?? undefined,
-      );
-      if (snap) {
-        useWeatherStore.getState().setSnapshot({snapshot: snap, fetchedAt: Date.now()});
-        return;
-      }
-    }
-    // 2. Manual homeCity from settings.
-    const homeCity = useSettingsStore.getState().homeCity;
-    if (homeCity) {
-      const snap = await fetchWeatherByCity(homeCity);
-      if (snap) {
-        useWeatherStore.getState().setSnapshot({snapshot: snap, fetchedAt: Date.now()});
-        return;
-      }
-    }
-    // 3. IANA timezone.
-    const tz = resolveTimezone();
-    if (tz) {
-      const city = cityFromTimezone(tz);
-      if (city) {
-        const snap = await fetchWeatherByCity(city);
-        if (snap) {
-          useWeatherStore.getState().setSnapshot({snapshot: snap, fetchedAt: Date.now()});
-          return;
-        }
-      }
-    }
-    // 4. Locale country (true last resort).
-    const locale = resolveLocale();
-    const city = cityFromLocale(locale);
-    if (city) {
-      const snap = await fetchWeatherByCity(city);
-      if (snap) {
-        useWeatherStore.getState().setSnapshot({snapshot: snap, fetchedAt: Date.now()});
-        return;
-      }
-    }
-    useWeatherStore.getState().setError('No location source available');
-  } catch (e) {
-    logger.warn('[useWeather] fetch failed', e);
-    useWeatherStore.getState().setError(e instanceof Error ? e.message : String(e));
-  }
 }

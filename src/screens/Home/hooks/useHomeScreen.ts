@@ -18,7 +18,7 @@ import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import {useAuth} from '../../../hooks/useAuth';
 import {useWeather} from '../../../hooks/useWeather';
 import type {WeatherCondition} from '../../../components/utility/WeatherIcon';
-import type {WeatherSnapshot} from '../../../services/api/weatherService';
+import type {WeatherSnapshot} from '../../../services/api/weatherAdapter';
 import type {HomeSection} from '../types';
 import {useMediaStore} from '../../../state';
 

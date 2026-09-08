@@ -1,0 +1,13 @@
+V18.1.1: add @tanstack/react-query@^5 dependency
+
+Adds @tanstack/react-query@^5 to package.json. Required by the
+V18 architecture for cache + retry + pagination + dedup at the
+query layer (see SIMBA_PLAYER_MODULE_V18_SPECIFICATION Section 3).
+
+V18.1.2 (next commit) wires it into App.tsx via the new
+QueryProvider + useApiQuery hook family.
+
+Verification:
+- npm ls @tanstack/react-query  -> single version
+- npx tsc --noEmit              -> 0 errors (types included)
+- npx jest                      -> 17 passed / 1 todo / 5 suites
