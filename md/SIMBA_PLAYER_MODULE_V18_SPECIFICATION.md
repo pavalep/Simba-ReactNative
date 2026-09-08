@@ -239,6 +239,48 @@ plan stops there. The codebase is in a good state from V17.
 - **The player's own zustand stores** in the `@simba-dev/react-native-media-player` module.
 - **The local-derivation selectors in `mediaStore.ts`** — these are pure derivations, not API calls.
 
+---
+
+## 13. Legacy TabView cleanup (post-V18, drives UI consistency)
+
+**Status:** Planned — see `md/V18_LEGACY_TABVIEW_CLEANUP.md` for the full plan.
+
+The V18 data-layer refactor (Waves 1-9) preserves the v3-v9
+"TabView" pattern in 5 screens (Audiobooks, Shows, Genre,
+Archive, LiveTV legacy). The v10+ "FAB-only" pattern
+(Movies, Podcasts, Music, Radio, LiveTVNew) is the intended
+shape. After Wave 10, the plan is to convert the 5 legacy
+screens to the FAB pattern and remove the
+`@react-native-tab-view` dependency.
+
+### The 5 legacy screens (post-V18.10)
+
+| Screen | Tabs | Target |
+|---|---|---|
+| `AudiobooksScreen` | search / genres / recent | single stream + genre chip filter; "recent" re-thought |
+| `ShowsScreen` | search / today / browse | search + browse via FAB; "today" as a hero rail |
+| `GenreScreen` | local / streaming / moods / radio | 4-way split into filter + sections |
+| `ArchiveScreen` | audio / video | single IA query + `mediatype` FAB filter |
+| `LiveTVScreen` (legacy) | all / categories / favorites | delete in favor of `LiveTVScreenNew` |
+
+### Phasing (post-V18.10)
+
+1. `ArchiveScreen` — lowest cost; sets the pattern
+2. `LiveTVScreen` (legacy) — confirm-and-delete or migrate
+3. `AudiobooksScreen` — search is the primary; genres → FAB
+4. `GenreScreen` — biggest refactor; "Moods" is a unique feature
+5. `ShowsScreen` — "Today" is a date query, doesn't fit a filter
+6. **Remove `@react-native-tab-view` from `package.json`** once all 5 are converted
+
+### What this achieves
+
+- Every browse screen in the app uses the same `BrowseLayout` shell + FAB pattern.
+- The 5 legacy hooks' state-machine code (`Map<key, ScopeState>` + `seqRef` + `guardRef` + `hasMoreRef`) is gone.
+- The `SectionTabBar` + per-screen `TabBar.tsx` copies are deleted.
+- ~1,500 LOC removed (state machine + TabView wiring).
+
+See `md/V18_LEGACY_TABVIEW_CLEANUP.md` for the full plan, open questions per phase, and the dependency-removal step.
+
 ## 11. Definition of done (per phase)
 
 A phase is "done" when:

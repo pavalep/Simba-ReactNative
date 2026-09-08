@@ -575,6 +575,90 @@ Per the manager's call, V18.0 ends at V18.0.1. The 6 live methods are migrated (
 
 ---
 
+## Wave 11 — Legacy TabView cleanup (post-V18, drives UI consistency)
+
+**Plan:** `md/V18_LEGACY_TABVIEW_CLEANUP.md`
+
+V18 (Waves 1-10) refactors the data layer. The UI for 5 screens
+(Audiobooks, Shows, Genre, Archive, LiveTV legacy) still uses the
+v3-v9 `<TabView>` pattern. Wave 11 converts them to the v10+
+"`<BrowseLayout>` + FAB" pattern that Movies / Podcasts /
+Music / Radio / LiveTVNew already use. After Wave 11, every
+browse screen in the app has the same shell, and the
+`@react-native-tab-view` dependency is removed.
+
+### Phase 41: V18.11.1 — Convert `ArchiveScreen` to FAB pattern (pilot for Wave 11)
+
+- [ ] `src/screens/ArchiveScreen/hooks/useArchiveScreen.ts` is rewritten to a single `useApiQuery` (no tabs)
+- [ ] `src/screens/ArchiveScreen/components/ArchiveContent.tsx` is rewritten to use `<BrowseLayout>` + a `mediatype` FAB filter (audio / video / all)
+- [ ] `src/screens/ArchiveScreen/browse/TabBar.tsx` is deleted
+- [ ] The hook no longer exports `ArchiveTab` / `AudioScopeState` / `VideoScopeState`
+- [ ] `npx tsc --noEmit` reports 0 errors
+- [ ] `npx jest` reports no new failures
+- [ ] `git log --oneline -1` shows the V18.11.1 commit
+
+### Phase 42: V18.11.2 — Delete `LiveTVScreen` (legacy) in favor of `LiveTVScreenNew`
+
+- [ ] `git grep -l "LiveTVScreen'"` outside the legacy dir returns 0 results (no nav route still uses the legacy name)
+- [ ] If routes still use the legacy name, migrate them to point at `LiveTVScreenNew`
+- [ ] `src/screens/LiveTVScreen/` directory is deleted (hook + screen + components)
+- [ ] `npx tsc --noEmit` reports 0 errors
+- [ ] `npx jest` reports no new failures
+- [ ] `git log --oneline -1` shows the V18.11.2 commit
+
+### Phase 43: V18.11.3 — Convert `AudiobooksScreen` to FAB pattern
+
+- [ ] "Recent" tab decision: `drop` / `keep` / `move to rail` — document the choice in the commit message
+- [ ] `useAudiobooksScreen` is rewritten to a single `useApiQuery` (search is the primary stream)
+- [ ] `AudiobooksContent` uses `<BrowseLayout>` + a genre chip filter (FAB-triggered)
+- [ ] The 3 useApiQuery calls collapse to 1
+- [ ] `npx tsc --noEmit` reports 0 errors
+- [ ] `npx jest` reports no new failures
+- [ ] `git log --oneline -1` shows the V18.11.3 commit
+
+### Phase 44: V18.11.4 — Convert `GenreScreen` to FAB pattern
+
+- [ ] "Moods" tab decision: `own screen` / `section of GenreScreen` / `drop` — document the choice
+- [ ] `useGenreScreen` is rewritten to a single `useApiQuery` for the streaming tab
+- [ ] The local-tracks tab stays as a zustand-selector view (no async data)
+- [ ] The radio tab becomes a FAB filter to `RadioScreenNew` (or its own section)
+- [ ] `GenreScreen.tsx` uses `<BrowseLayout>` if applicable
+- [ ] `npx tsc --noEmit` reports 0 errors
+- [ ] `npx jest` reports no new failures
+- [ ] `git log --oneline -1` shows the V18.11.4 commit
+
+### Phase 45: V18.11.5 — Convert `ShowsScreen` to FAB pattern
+
+- [ ] "Today" tab decision: `hero rail at top` / `separate browse mode` / `drop` — document the choice
+- [ ] `useShowsScreen` is rewritten to a single `useApiQuery` (search + browse via FAB)
+- [ ] `ShowsScreen.tsx` uses `<BrowseLayout>` + the "Today" rail (if chosen)
+- [ ] The 3 useApiQuery calls collapse to 1 (or 2 if Today is a separate query)
+- [ ] `npx tsc --noEmit` reports 0 errors
+- [ ] `npx jest` reports no new failures
+- [ ] `git log --oneline -1` shows the V18.11.5 commit
+
+### Phase 46: V18.11.6 — Remove `@react-native-tab-view` dependency
+
+- [ ] `git grep -l "react-native-tab-view" -- src/` returns 0 results (no remaining importer)
+- [ ] `package.json` removes the `@react-native-tab-view` entry
+- [ ] `package-lock.json` is regenerated
+- [ ] `npm ls @react-native-tab-view` reports "(empty)"
+- [ ] `npx tsc --noEmit` reports 0 errors
+- [ ] `npx jest` reports no new failures
+- [ ] `git log --oneline -1` shows the V18.11.6 commit
+- [ ] `git diff v18.0.0..HEAD --stat | tail -1` shows an additional net reduction of ≥1,000 lines from Wave 11
+
+---
+
+## Summary (V18 + Wave 11)
+
+- **V18 (10 waves, 40 phases)** — data layer refactor; ~3,500 LOC net removed
+- **Wave 11 (5 screens, 6 phases)** — UI consistency; ~1,500 additional LOC removed; the legacy TabView pattern is fully retired
+- **Final state:** every browse screen in the app uses the same `BrowseLayout` shell + FAB pattern. The data plumbing is one `useApiQuery` per screen. The convertor pattern (per-service) is the only HTTP-layer abstraction.
+- **Junior-dev rule holds for both layers:** adapter author (1 file, ~120 LOC) and screen author (1 hook call, ~5 LOC).
+
+---
+
 ## Summary
 
 - **10 waves** · **40 phases** · **~800 checkable steps** · **~3,500 LOC net removed**
