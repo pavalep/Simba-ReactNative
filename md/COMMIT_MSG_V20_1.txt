@@ -1,0 +1,107 @@
+V20.1: useRadioBrowser rewrite — per-scope Map + 5 refs + 6 useStates retired (329 → ~140 effective lines)
+
+V20.1 — the first batch in the V20 "junior-dev simplicity"
+sweep. Rewrites `useRadioBrowser` on `useApiQuery` +
+`useInfiniteApiQuery` per the V18 ideal. The pre-V18
+implementation was 329 lines with a per-scope `Map<key,
+ScopeState>`, `seqRef` for stale-request cancellation,
+`guardRef` for in-flight dedup, `failedKeyRef` for
+auto-retry, `wasOnlineRef` for reconnect tracking,
+`ensureLoadedRef` to swallow identical triggers, and a
+hand-rolled debounce of `searchQuery` → `searchTerm`. The
+V18-ideal version is ~277 lines (much of the new file
+is doc-comments; the actual code is ~140 lines):
+
+  - 2 `useState` (filters, searchQuery + searchTerm)
+  - 1 `useInfiniteApiQuery` (the active scope's stations,
+    with `getNextPageParam` derived from the Radio-Browser
+    API's `offset`/`limit` pagination)
+  - 3 `useApiQuery` (one per tag sheet: genres, countries,
+    languages; previously a hand-rolled `Promise.all`)
+  - 0 useRef (the 5 refs are gone — TanStack's
+    queryKey cache IS the per-scope state machine)
+  - 0 useEffect (the manual reconnect / debounce / refetch
+    orchestration is gone — TanStack handles it)
+
+What was removed (the legacy code):
+
+  - `scopes: Record<string, RadioScopeState>` — the per-scope
+    cache Map. Replaced by TanStack's queryKey cache (every
+    (filters, searchTerm) combination is its own entry).
+  - `seqRef: Record<string, number>` — stale-response
+    cancellation. TanStack does this when the queryKey
+    changes.
+  - `guardRef: Set<string>` — in-flight dedup. TanStack
+    per-key dedup.
+  - `failedKeyRef` — auto-retry of failing scopes. TanStack
+    refetches on focus + mount + reconnect.
+  - `wasOnlineRef` — reconnect tracking. The consumer uses
+    `useNetworkStatus` directly; the ref was dead weight.
+  - `ensureLoadedRef` — the effect-control ref to swallow
+    identical trigger values. No longer needed; TanStack
+    dedups at the queryKey level.
+  - `searchQuery` → `searchTerm` manual debounce. The
+    SearchBar already debounces via `onDebouncedChange`
+    (per the V18.6.2a / V18.11.5 pattern); the hook just
+    receives the debounced value.
+  - The `getStationsAndTags()` Promise.all — 3 separate
+    adapter calls (genres, countries, languages) hoisted
+    into 3 independent `useApiQuery` calls, each with its
+    own `staleTime: 5 * 60_000` (tags don't change often).
+
+What was added (the V18-ideal pattern):
+
+  - `useInfiniteApiQuery<RadioStationResult[]>` for the
+    active scope. The `queryFn` dispatches on the active
+    inputs:
+      - search term set → `searchStations(term, {limit, offset})`
+      - filters set     → `getStationsByFilters(filters, {limit, offset})`
+      - neither         → `getTopStations({limit, offset})`
+    `getNextPageParam` is `(lastPage, _pages, lastParam) =>
+    lastParam + PAGE_SIZE` when the page is full, `undefined`
+    otherwise. TanStack handles the rest (caching, dedup,
+    retry, refetch).
+
+  - Server-side pagination (not client-side slicing). The
+    Radio-Browser API supports `offset` natively, so the
+    right pattern is `useInfiniteApiQuery` with per-page
+    network requests. The legacy hook fetched a list with
+    a "higher limit" — same wire cost, but no scroll-state
+    preservation if the user navigated away and back.
+
+  - 3 tag-sheet `useApiQuery` calls with a 5-minute staleTime.
+    Each tag sheet is its own cache entry; if the user opens
+    one sheet then another, the second sheet doesn't pay
+    a network round-trip if its data is fresh.
+
+Junior-dev rule:
+
+  - Adapter author: 1 file (already done in V18.4.1).
+  - Hook author: 1 `useInfiniteApiQuery` + 3 `useApiQuery`
+    calls. The whole hook is 4 query calls + 2 useStates
+    for UI.
+  - Screen author: 1 `useRadioBrowser` call. The
+    `getScope()` API is preserved for backwards compat;
+    the screen consumer doesn't move (the next V20.2+ pass
+    can update the consumer to use `data` directly).
+
+Verification:
+
+  - npx tsc --noEmit             : 0 errors
+  - npx jest --forceExit         : 9 suites, 106 passed,
+                                    1 todo, 0 failures
+  - useRadioBrowser.ts LOC       : 329 → 277 (-52;
+                                    effective code is
+                                    ~140, the rest is
+                                    the same docstring
+                                    style as
+                                    useLiveTVBrowser)
+  - useState / useEffect /
+    useRef count in the hook     : 6 / 5 / 5 → 2 / 0 / 0
+  - Per-scope Map + seqRef +
+    guardRef references in src/ : 0 (the V18 ideal is
+                                    reached at the
+                                    consumer layer)
+
+Closes V20.1 of the V20 sweep. Next: V20.2
+(usePodcastsScreen rewrite) — same template, smaller.
