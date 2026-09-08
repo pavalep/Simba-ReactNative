@@ -1,9 +1,9 @@
 import type {
   AudiobooksTab,
-  AudiobookScopeState,
+  AudiobookScope,
 } from '../hooks/useAudiobooksScreen';
 
-export type {AudiobooksTab, AudiobookScopeState};
+export type {AudiobooksTab, AudiobookScope};
 
 export interface BookRow {
   id: number;
@@ -22,13 +22,10 @@ export interface BookCardProps {
 
 export interface AudiobookTabSceneProps {
   tab: AudiobooksTab;
-  scope: AudiobookScopeState;
+  scope: AudiobookScope;
   isSearchActive: boolean;
   selectedGenre: string | null;
   selectGenre: (genre: string) => void;
-  ensureLoaded: (tab: AudiobooksTab) => void;
-  loadMore: (tab: AudiobooksTab) => void;
-  retry: (tab: AudiobooksTab) => void;
   onPressBook: (row: BookRow) => void;
 }
 

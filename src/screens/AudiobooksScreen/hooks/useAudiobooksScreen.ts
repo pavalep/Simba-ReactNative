@@ -1,49 +1,35 @@
 // ─── Audiobooks Screen Hook ──────────────────────────────────────────
-// Phase 3 formula: per-scope cache + infinite scroll + search persistence.
+// Phase 3 formula: search bar above a react-native-tab-view tab bar.
+//   • Search / Genres / New Releases are lazily-mounted scenes
+//   • each (tab, searchTerm, genre) scope is cached independently —
+//     toggling tabs never refetches or clears already-loaded data
+//   • every list paginates via onEndReached (infinite scroll)
 //
-// A "scope" is a (tab, searchTerm, selectedGenre) triplet. Every
-// combination is cached independently, so:
-//   • toggling tabs never loses results already loaded for that scope
-//   • typing a search never clears the genre/tab browse data
-//   • scrolling back to a visited tab shows its cached list instantly
-// Pagination: LibriVox has no total-count field, so hasMore is derived
-// from `items.length === PAGE_SIZE`.
+// V18.3.3: the per-scope cache that used to live in `scopes` (a
+// Map<key, AudiobookScopeState>) is now TanStack's cache. The hook
+// runs ONE useInfiniteApiQuery per tab (search / genres / recent);
+// the queryKey includes the active searchTerm or selectedGenre. When
+// the user switches tabs, the previously-fetched tab's data is
+// served from TanStack's cache instantly (within staleTime).
+//
+// `ensureLoaded(tab)` is no longer needed — the queries run whenever
+// their `enabled` flag is true. The screen's `AudiobookTabScene`
+// renders a loading placeholder while the first page fetches and the
+// cached data on re-mount.
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
+import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {
   searchAudiobooks,
   searchByGenre,
   getRecentAudiobooks,
-} from '../../../services/api/librivoxService';
+} from '../../../services/api/librivoxAdapter';
 import type {AudiobookResult} from '../../../types/api';
 
 export type AudiobooksTab = 'search' | 'genres' | 'recent';
 
 const PAGE_SIZE = 20;
-
-export interface AudiobookScopeState {
-  items: AudiobookResult[];
-  /** Last loaded page (1-based). 0 = nothing loaded yet. */
-  page: number;
-  hasLoaded: boolean;
-  isLoading: boolean;
-  isLoadingMore: boolean;
-  error: string | null;
-}
-
-/** Shared immutable empty state — keeps memoized scenes stable. */
-const EMPTY_SCOPE: AudiobookScopeState = {
-  items: [],
-  page: 0,
-  hasLoaded: false,
-  isLoading: false,
-  isLoadingMore: false,
-  error: null,
-};
-
-function scopeCacheKey(tab: AudiobooksTab, term: string, genre: string): string {
-  return `${tab}|${term.trim()}|${genre}`;
-}
+const SEARCH_CACHE_TTL_MS = 600_000; // 10 min (matches old behavior)
 
 function dedupe(items: AudiobookResult[]): AudiobookResult[] {
   const seen = new Set<number>();
@@ -54,185 +40,118 @@ function dedupe(items: AudiobookResult[]): AudiobookResult[] {
   });
 }
 
-export function useAudiobooksScreen(initialTab?: string, initialGenre?: string) {
-  const [selectedTab, setSelectedTab] = useState<AudiobooksTab>(
+export interface AudiobookScope {
+  items: AudiobookResult[];
+  hasLoaded: boolean;
+  isLoading: boolean;
+  isLoadingMore: boolean;
+  hasNextPage: boolean;
+  error: string | null;
+  fetchNextPage: () => void;
+  refetch: () => void;
+}
+
+function shapeQuery(
+  query: ReturnType<typeof useInfiniteApiQuery<AudiobookResult[]>>,
+): AudiobookScope {
+  return {
+    items: dedupe((query.data?.pages ?? []).flat()),
+    hasLoaded: !!query.data,
+    isLoading: query.isFetching,
+    isLoadingMore: query.isFetchingNextPage,
+    hasNextPage: query.hasNextPage ?? false,
+    error: query.error?.message ?? null,
+    fetchNextPage: () => {
+      void query.fetchNextPage();
+    },
+    refetch: () => {
+      void query.refetch();
+    },
+  };
+}
+
+export interface UseAudiobooksScreenResult {
+  // search + selection state
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  isSearchActive: boolean;
+  selectedGenre: string | null;
+  setSelectedGenre: (genre: string) => void;
+  // the 3 scopes
+  search: AudiobookScope;
+  genres: AudiobookScope;
+  recent: AudiobookScope;
+}
+
+export function useAudiobooksScreen(
+  initialTab?: string,
+  initialGenre?: string,
+): UseAudiobooksScreenResult {
+  const [_selectedTab] = useState<AudiobooksTab>(
     (initialTab as AudiobooksTab) || 'search',
   );
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedGenre, setSelectedGenre] = useState<string | null>(
     initialGenre ?? null,
   );
 
-  // ── Search (debounced upstream via SearchBar onDebouncedChange) ──
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const [scopes, setScopes] = useState<Record<string, AudiobookScopeState>>({});
-  const seqRef = useRef<Record<string, number>>({});
-  const guardRef = useRef<Set<string>>(new Set());
-
-  const isSearchActive = searchTerm.trim().length > 0;
-
-  const keyFor = useCallback(
-    (tab: AudiobooksTab) =>
-      scopeCacheKey(tab, searchTerm, selectedGenre ?? ''),
-    [searchTerm, selectedGenre],
-  );
-
-  const getScope = useCallback(
-    (tab: AudiobooksTab): AudiobookScopeState =>
-      scopes[keyFor(tab)] ?? EMPTY_SCOPE,
-    [scopes, keyFor],
-  );
-
-  const patchScope = useCallback(
-    (tab: AudiobooksTab, patch: Partial<AudiobookScopeState>) => {
-      const key = keyFor(tab);
-      setScopes(prev => ({
-        ...prev,
-        [key]: {...(prev[key] ?? EMPTY_SCOPE), ...patch},
-      }));
+  // Three independent infinite queries, one per tab. The queryKey
+  // includes the term/genre so TanStack caches each unique scope.
+  const searchQ = useInfiniteApiQuery<AudiobookResult[]>({
+    queryKey: ['librivox', 'search', searchTerm],
+    queryFn: ({pageParam}) =>
+      searchAudiobooks(searchTerm, {limit: PAGE_SIZE, page: pageParam as number}),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, lastPageParam) => {
+      if (typeof lastPageParam !== 'number') return undefined;
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      return lastPageParam + 1;
     },
-    [keyFor],
-  );
+    enabled: searchTerm.trim().length > 0,
+    staleTime: SEARCH_CACHE_TTL_MS,
+  });
 
-  const fetchPage = useCallback(
-    async (tab: AudiobooksTab, page: number, mode: 'initial' | 'more') => {
-      const term = searchTerm.trim();
-      const genre = selectedGenre;
-      const key = scopeCacheKey(tab, term, genre ?? '');
-      if (guardRef.current.has(key)) return;
-      guardRef.current.add(key);
-
-      const seq = (seqRef.current[key] = (seqRef.current[key] ?? 0) + 1);
-
-      if (mode === 'initial') {
-        patchScope(tab, {isLoading: true, error: null});
-      } else {
-        patchScope(tab, {isLoadingMore: true, error: null});
-      }
-
-      try {
-        let items: AudiobookResult[] = [];
-
-        if (tab === 'search' && term) {
-          items = await searchAudiobooks(term, {limit: PAGE_SIZE, page});
-        } else if (tab === 'genres' && genre) {
-          items = await searchByGenre(genre, {limit: PAGE_SIZE, page});
-        } else if (tab === 'recent') {
-          items = await getRecentAudiobooks({limit: PAGE_SIZE, page});
-        }
-
-        if (seq !== (seqRef.current[key] ?? 0)) return; // stale response
-
-        setScopes(prev => {
-          const cur = prev[key] ?? EMPTY_SCOPE;
-          return {
-            ...prev,
-            [key]: {
-              ...cur,
-              items:
-                mode === 'more'
-                  ? dedupe([...cur.items, ...items])
-                  : items,
-              page,
-              hasLoaded: true,
-              isLoading: false,
-              isLoadingMore: false,
-              error: null,
-            },
-          };
-        });
-      } catch (err) {
-        if (seq !== (seqRef.current[key] ?? 0)) return;
-        patchScope(tab, {
-          isLoading: false,
-          isLoadingMore: false,
-          error:
-            err instanceof Error
-              ? err.message
-              : 'Failed to load audiobooks',
-        });
-      } finally {
-        guardRef.current.delete(key);
-      }
+  const genresQ = useInfiniteApiQuery<AudiobookResult[]>({
+    queryKey: ['librivox', 'genres', selectedGenre ?? ''],
+    queryFn: ({pageParam}) =>
+      selectedGenre
+        ? searchByGenre(selectedGenre, {limit: PAGE_SIZE, page: pageParam as number})
+        : Promise.resolve([]),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, lastPageParam) => {
+      if (typeof lastPageParam !== 'number') return undefined;
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      return lastPageParam + 1;
     },
-    [searchTerm, selectedGenre, patchScope],
-  );
+    enabled: !!selectedGenre,
+    staleTime: SEARCH_CACHE_TTL_MS,
+  });
 
-  const ensureLoaded = useCallback(
-    (tab: AudiobooksTab) => {
-      // For 'search' tab with no term, or 'genres' tab with no genre
-      // selected, there's nothing to fetch yet — don't trigger a load.
-      if (tab === 'search' && !searchTerm.trim()) return;
-      if (tab === 'genres' && !selectedGenre) return;
-      const scope = getScope(tab);
-      if (scope.hasLoaded || scope.isLoading) return;
-      fetchPage(tab, 1, 'initial');
+  const recentQ = useInfiniteApiQuery<AudiobookResult[]>({
+    queryKey: ['librivox', 'recent'],
+    queryFn: ({pageParam}) =>
+      getRecentAudiobooks({limit: PAGE_SIZE, page: pageParam as number}),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, lastPageParam) => {
+      if (typeof lastPageParam !== 'number') return undefined;
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      return lastPageParam + 1;
     },
-    [getScope, fetchPage, searchTerm, selectedGenre],
-  );
+    staleTime: SEARCH_CACHE_TTL_MS,
+  });
 
-  const loadMore = useCallback(
-    (tab: AudiobooksTab) => {
-      const scope = getScope(tab);
-      if (!scope.hasLoaded || scope.isLoading || scope.isLoadingMore) return;
-      if (scope.items.length % PAGE_SIZE !== 0) return; // partial page = end
-      if (scope.items.length === 0) return; // nothing to load more of
-      fetchPage(tab, scope.page + 1, 'more');
-    },
-    [getScope, fetchPage],
-  );
-
-  const retry = useCallback(
-    (tab: AudiobooksTab) => {
-      const key = keyFor(tab);
-      seqRef.current[key] = (seqRef.current[key] ?? 0) + 1;
-      setScopes(prev => {
-        const cur = prev[key];
-        if (!cur) return prev;
-        return {...prev, [key]: {...cur, items: [], hasLoaded: false}};
-      });
-      fetchPage(tab, 1, 'initial');
-    },
-    [keyFor, fetchPage],
-  );
-
-  const selectTab = useCallback((tab: AudiobooksTab) => {
-    setSelectedTab(tab);
+  const setSelectedGenreToggle = useCallback((genre: string) => {
+    setSelectedGenre(prev => (prev === genre ? null : genre));
   }, []);
 
-  const selectGenre = useCallback(
-    (genre: string) => {
-      setSelectedGenre(prev => (prev === genre ? null : genre));
-    },
-    [],
-  );
-
-  // Keep the current tab scoped-loaded when it (or the search term, or
-  // selected genre) changes. Stash ensureLoaded in a ref so the effect
-  // doesn't re-fire on every callback-identity change of ensureLoaded
-  // (which happens on unrelated state updates via getScope/fetchPage).
-  // [FIX-PODCASTS-LOOP]
-  const ensureLoadedRef = useRef(ensureLoaded);
-  ensureLoadedRef.current = ensureLoaded;
-  useEffect(() => {
-    ensureLoadedRef.current(selectedTab);
-  }, [selectedTab, keyFor]);
-
   return {
-    selectedTab,
-    selectTab,
-    selectedGenre,
-    selectGenre,
-    // search
-    searchQuery,
-    setSearchQuery,
+    searchTerm,
     setSearchTerm,
-    isSearchActive,
-    // per-scope data + actions
-    getScope,
-    ensureLoaded,
-    loadMore,
-    retry,
+    isSearchActive: searchTerm.trim().length > 0,
+    selectedGenre,
+    setSelectedGenre: setSelectedGenreToggle,
+    search: shapeQuery(searchQ),
+    genres: shapeQuery(genresQ),
+    recent: shapeQuery(recentQ),
   };
 }

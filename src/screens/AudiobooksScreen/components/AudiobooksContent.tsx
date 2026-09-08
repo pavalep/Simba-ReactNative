@@ -6,7 +6,7 @@
 //   • every list paginates via onEndReached (infinite scroll)
 // Tap a book → AudiobookDetail (chapter list + playback).
 
-import React, {useCallback, useMemo} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   View,
   FlatList,
@@ -37,7 +37,7 @@ import {AUDIOBOOK_SCOPE_CHIPS} from '../related/scopeConfig';
 import {styles} from '../styles';
 import type {
   AudiobooksTab,
-  AudiobookScopeState,
+  AudiobookScope,
   BookRow,
   BookCardProps,
   AudiobookTabSceneProps,
@@ -133,21 +133,11 @@ const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
     isSearchActive,
     selectedGenre,
     selectGenre,
-    ensureLoaded,
-    loadMore,
-    retry,
     onPressBook,
   }) => {
     const {colors} = useTheme();
     const toast = useToast();
-    const {items, hasLoaded, isLoading, isLoadingMore, error} = scope;
-
-    // [FIX-PODCASTS-LOOP] Stash ensureLoaded in a ref.
-    const ensureLoadedRef = React.useRef(ensureLoaded);
-    ensureLoadedRef.current = ensureLoaded;
-    React.useEffect(() => {
-      ensureLoadedRef.current(tab);
-    }, [tab]);
+    const {items, hasLoaded, isLoading, isLoadingMore, error, fetchNextPage, refetch} = scope;
 
     // Surface page-1 load failures as a toast with a Retry action.
     // [FIX-PODCASTS-LOOP] deps only include state (not toast/retry fn refs).
@@ -163,7 +153,7 @@ const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
             label: 'Retry',
             onPress: () => {
               lastShownErrorRef.current = null;
-              retry(tab);
+              refetch();
             },
           },
         });
@@ -171,7 +161,7 @@ const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
         lastShownErrorRef.current = null;
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasLoaded, isLoading, error]);
+    }, [hasLoaded, isLoading, error, refetch]);
 
     const rows = useMemo<BookRow[]>(() => items.map(toRow), [items]);
 
@@ -242,7 +232,7 @@ const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={ItemSeparator}
-        onEndReached={() => loadMore(tab)}
+        onEndReached={() => fetchNextPage()}
         onEndReachedThreshold={0.4}
         ListFooterComponent={
           isLoadingMore || error ? (
@@ -252,7 +242,7 @@ const AudiobookTabScene: React.FC<AudiobookTabSceneProps> = React.memo(
               ) : (
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  onPress={() => loadMore(tab)}
+                  onPress={() => fetchNextPage()}
                   style={[
                     styles.loadMoreRetry,
                     {borderColor: colors.border.subtle},
@@ -280,19 +270,29 @@ export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
   const insets = useSafeAreaInsets();
   const {initialTab, initialGenre: genre} = route.params ?? {};
   const {
-    selectedTab,
-    selectTab,
-    selectedGenre,
-    selectGenre,
-    searchQuery,
-    setSearchQuery,
+    searchTerm,
     setSearchTerm,
     isSearchActive,
-    getScope,
-    ensureLoaded,
-    loadMore,
-    retry,
+    selectedGenre,
+    setSelectedGenre,
+    search: searchScope,
+    genres: genresScope,
+    recent: recentScope,
   } = useAudiobooksScreen(initialTab, genre);
+
+  // Active tab is owned by the screen now (the per-scope cache
+  // lives in TanStack, not in the hook). The default falls back to
+  // 'search' when no initial tab is given.
+  const [selectedTab, setSelectedTab] = useState<AudiobooksTab>(
+    (initialTab as AudiobooksTab) || 'search',
+  );
+
+  const currentScope =
+    selectedTab === 'search'
+      ? searchScope
+      : selectedTab === 'genres'
+      ? genresScope
+      : recentScope;
 
   const handleBookPress = useCallback(
     (row: BookRow) => {
@@ -303,8 +303,6 @@ export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
     },
     [navigation],
   );
-
-  const currentScope = getScope(selectedTab);
 
   return (
     <View
@@ -318,19 +316,18 @@ export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
       {/* ── Search (stays put while tabs change) ── */}
       <View style={styles.searchSection}>
         <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onDebouncedChange={setSearchTerm}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
           placeholder="Search titles or authors…"
         />
       </View>
 
-            <View style={styles.scopeSection}>
+      <View style={styles.scopeSection}>
         <FilterChips
           wrap
           items={AUDIOBOOK_SCOPE_CHIPS}
           selectedKey={selectedTab}
-          onSelect={key => selectTab(key as AudiobooksTab)}
+          onSelect={key => setSelectedTab(key as AudiobooksTab)}
         />
       </View>
 
@@ -339,13 +336,9 @@ export const AudiobooksScreen: React.FC<Props> = ({navigation, route}) => {
         scope={currentScope}
         isSearchActive={isSearchActive}
         selectedGenre={selectedGenre}
-        selectGenre={selectGenre}
-        ensureLoaded={ensureLoaded}
-        loadMore={loadMore}
-        retry={retry}
+        selectGenre={setSelectedGenre}
         onPressBook={handleBookPress}
       />
-
     </View>
   );
 };
