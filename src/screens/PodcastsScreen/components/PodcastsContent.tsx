@@ -30,6 +30,7 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
     isLoadingMore,
     error,
     hasLoaded,
+    hasMore,
     isSearchActive,
     searchTerm,
     setSearchTerm,

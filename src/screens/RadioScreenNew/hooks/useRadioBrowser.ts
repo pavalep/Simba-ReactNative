@@ -32,10 +32,8 @@ import {
 import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import {useLiveFavoritesStore} from '../../../state';
-import type {
-  RadioStationResult,
-  RadioBrowseTag,
-} from '../../../types/api';
+import type {RadioStationResult} from '../../../types/api';
+import type {RadioBrowseTag} from '../../../services/api/radioBrowserAdapter';
 
 const PAGE_SIZE = 30;
 const TAGS_LIMIT = 40;
@@ -115,6 +113,8 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
   // ── Filter + search state (UI-level concerns) ──
   const [filters, setFilters] = useState<RadioFilters>({
     genre: initialTag ?? null,
+    country: null,
+    language: null,
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -155,26 +155,26 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
       filters,
       searchTerm.trim(),
     ],
-    initialPageParam: 0,
+    initialPageParam: 1,
     queryFn: ({pageParam}) => {
-      const offset = pageParam as number;
+      const page = pageParam as number;
       const term = searchTerm.trim();
       if (term) {
-        return searchStations(term, {limit: PAGE_SIZE, offset});
+        return searchStations(term, {limit: PAGE_SIZE, page});
       }
       const filterSet: RadioFilterSet = {};
       if (filters.genre) filterSet.genre = filters.genre;
       if (filters.country) filterSet.country = filters.country;
       if (filters.language) filterSet.language = filters.language;
       if (Object.keys(filterSet).length > 0) {
-        return getStationsByFilters(filterSet, {limit: PAGE_SIZE, offset});
+        return getStationsByFilters(filterSet, {limit: PAGE_SIZE, page});
       }
-      return getTopStations({limit: PAGE_SIZE, offset});
+      return getTopStations({limit: PAGE_SIZE, page});
     },
     getNextPageParam: (lastPage, _pages, lastPageParam) => {
       // If the page is short, there are no more — stop here.
       if (lastPage.length < PAGE_SIZE) return undefined;
-      return (lastPageParam as number) + PAGE_SIZE;
+      return (lastPageParam as number) + 1;
     },
     staleTime: 60_000,
   });
@@ -257,7 +257,7 @@ export function useRadioBrowser(initialTag?: string): UseRadioBrowserReturn {
         kind: 'radio',
         id: station.stationuuid,
         name: station.name,
-        url: station.url_resolved || station.url,
+        url: station.urlResolved || station.url,
         image: station.favicon || '',
         subtitle: [station.country, station.tags?.split(',')[0]?.trim()]
           .filter(Boolean)

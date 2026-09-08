@@ -152,19 +152,20 @@ describe('useApiQueries (V18.6 — parallel queries)', () => {
   it('calls all fetchers in parallel and combines the results', async () => {
     const fetcherA = jest.fn().mockResolvedValue('a-data');
     const fetcherB = jest.fn().mockResolvedValue('b-data');
+    type SourceResult = {data: string | undefined};
     function Probe() {
-      const result = useApiQueries<
-        [string, string],
-        {joined: string; raw: [string, string]}
-      >({
+      const result = useApiQueries({
         queries: [
           {queryKey: ['parallel', 'a'], queryFn: fetcherA},
           {queryKey: ['parallel', 'b'], queryFn: fetcherB},
         ],
-        combine: ([a, b]) => ({
-          raw: [a.data ?? 'a-empty', b.data ?? 'b-empty'],
-          joined: `${a.data ?? 'a-empty'}|${b.data ?? 'b-empty'}`,
-        }),
+        combine: results => {
+          const [a, b] = results as ReadonlyArray<SourceResult>;
+          return {
+            raw: [a.data ?? 'a-empty', b.data ?? 'b-empty'],
+            joined: `${a.data ?? 'a-empty'}|${b.data ?? 'b-empty'}`,
+          };
+        },
       });
       return <Text>joined={result.joined}</Text>;
     }
@@ -179,13 +180,17 @@ describe('useApiQueries (V18.6 — parallel queries)', () => {
   it('isolates per-source errors (a failed source returns undefined data; the other still renders)', async () => {
     const fetcherA = jest.fn().mockResolvedValue('a-data');
     const fetcherB = jest.fn().mockRejectedValue(new Error('b-boom'));
+    type SourceResult = {data: string | undefined};
     function Probe() {
-      const result = useApiQueries<[{data: string | undefined}, {data: string | undefined}], string>({
+      const result = useApiQueries({
         queries: [
           {queryKey: ['iso', 'a'], queryFn: fetcherA},
           {queryKey: ['iso', 'b'], queryFn: fetcherB},
         ],
-        combine: ([a, b]) => `a=${a.data ?? 'undefined'} b=${b.data ?? 'undefined'}`,
+        combine: results => {
+          const [a, b] = results as ReadonlyArray<SourceResult>;
+          return `a=${a.data ?? 'undefined'} b=${b.data ?? 'undefined'}`;
+        },
       });
       return <Text>{result}</Text>;
     }

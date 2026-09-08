@@ -33,6 +33,8 @@ import {
   type UseMutationOptions,
   type QueryKey,
   type InfiniteData,
+  type QueriesOptions,
+  type QueriesResults,
 } from '@tanstack/react-query';
 
 /**
@@ -106,27 +108,37 @@ export function useApiMutation<TData, TVariables, TError = Error>(
  * pattern `Promise.allSettled` gave us, but TanStack now
  * owns the cancellation / dedup / retry logic).
  *
- * The generic `TCombined` is the shape the consumer wants
- * back (e.g. `AggregatedSearchResults`); `combine` is the
- * mapper from the per-source results to the combined shape.
- * If `combine` is omitted, the raw array is returned.
+ * The `TQueries` tuple generic is the literal array shape
+ * the consumer passes (e.g. `[{queryKey: ['a'], queryFn: ...},
+ * {queryKey: ['b'], queryFn: ...}]`). TanStack's
+ * `QueriesOptions<TQueries>` validates each entry against
+ * its position in the tuple; `QueriesResults<TQueries>`
+ * types the per-source `UseQueryResult` array returned to
+ * `combine`. This gives the consumer full per-source type
+ * inference without manual casts.
  *
- * V18.6 type note: TanStack v5's `useQueries` has rich
- * inference (`T extends Array<any>` for both the input
- * tuple and the result tuple) but exposing those generics
- * through a wrapper is brittle. We take a permissive input
- * type and let the consumer use the `combine` callback to
- * type-assert the per-source result shape. The wrapper
- * returns the raw result array when `combine` is omitted
- * and `TCombined` when it's present.
+ * When `combine` is present, the return is the combined
+ * shape; when omitted, the raw `QueriesResults` array is
+ * returned.
  */
-export function useApiQueries<TCombined = unknown>(
+// Overload 1: combine present → return TCombined (the joined shape).
+export function useApiQueries<TCombined, TQueries extends any[]>(
   options: {
-    queries: ReadonlyArray<Parameters<typeof useQueries>[0]['queries'][number]>;
-    combine?: (results: ReadonlyArray<unknown>) => TCombined;
+    queries: readonly [...QueriesOptions<TQueries>];
+    combine: (results: QueriesResults<TQueries>) => TCombined;
   },
-): TCombined | ReadonlyArray<unknown> {
+): TCombined;
+// Overload 2: combine absent → return the raw per-source array.
+export function useApiQueries<TQueries extends any[]>(
+  options: {
+    queries: readonly [...QueriesOptions<TQueries>];
+    combine?: undefined;
+  },
+): QueriesResults<TQueries>;
+// Implementation signature — `any` is the standard pattern for
+// overloaded hooks; the public overloads do all the type work.
+export function useApiQueries(options: any): any {
   const {combine, queries} = options;
   const result = useQueries({queries});
-  return combine ? combine(result as ReadonlyArray<unknown>) : result;
+  return combine ? combine(result) : result;
 }

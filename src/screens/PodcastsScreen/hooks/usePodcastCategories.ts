@@ -11,7 +11,10 @@
 
 import {useMemo} from 'react';
 import {PODCAST_CATEGORIES, type PodcastCategory} from '../../../constants/podcastCategories';
-import {getPodcastCategories} from '../../../services/api/podcastIndexAdapter';
+import {
+  getPodcastCategories,
+  type PodcastCategoryResult,
+} from '../../../services/api/podcastIndexAdapter';
 import {useApiQuery} from '../../../hooks/useApiQuery';
 
 interface PodcastCategoriesState {
@@ -28,7 +31,7 @@ interface PodcastCategoriesState {
  * metadata endpoint is unavailable.
  */
 export function usePodcastCategories(): PodcastCategoriesState {
-  const q = useApiQuery<PodcastCategory[]>({
+  const q = useApiQuery<PodcastCategoryResult[]>({
     queryKey: ['podcastIndex', 'categories'],
     queryFn: () => getPodcastCategories(),
     staleTime: 5 * 60_000, // categories don't change often

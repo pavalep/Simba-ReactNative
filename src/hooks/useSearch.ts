@@ -1,4 +1,28 @@
-import {useMemo, useState, useEffect} from 'react';
+// ─── In-Memory Local Search Hook ───────────────────────────────────────
+// V20.5: the manual debounce triplet (searchText + debouncedQuery +
+// isSearching + the useEffect for the 300ms timer) is replaced by the
+// `useDebounce` primitive that's already in `src/hooks/`. The
+// "isSearching" flag is gone — the consumer can derive it as
+// `searchText !== debouncedText` if needed.
+//
+// Per the V18.6.2a ideal, the SearchBar already debounces via
+// `onDebouncedChange` for the REMOTE search (driven by
+// `useAggregatedSearch`). The LOCAL search (this hook) keeps
+// its own debounce for the in-memory filter — the cost of
+// filtering 10,000 tracks on every keystroke is non-trivial,
+// and the user-perceived "smooth" feedback is what we want
+// to preserve. The `useDebounce` primitive owns the timer
+// + cleanup, so this hook is the 7-result-category builder
+// + 2 small state pieces (searchText + debouncedQuery).
+//
+// Junior-dev rule: 1 useState (controlled echo) + 1
+// useDebounce primitive (the timer) + 4 useMemos (the
+// result builder). The 7 categories of in-memory results
+// (recent / videos / audio / artists / albums / playlists /
+// folders) are computed locally because they all live in
+// the Zustand stores and are already in memory.
+
+import {useMemo, useState} from 'react';
 import {usePlaylists} from '../features/playlists';
 import {
   useMediaStore,
@@ -6,8 +30,7 @@ import {
   useMediaArtists,
   useMediaAlbums,
 } from '../state';
-
-// ─── Types ──────────────────────────────────────────────────
+import {useDebounce} from './useDebounce';
 
 export type SearchResultGroup =
   | 'recent'
@@ -44,17 +67,15 @@ interface UseSearchReturn {
   isSearching: boolean;
 }
 
-/** Extract last segment of a URI/path for display */
+const SEARCH_DEBOUNCE_MS = 300;
+
 const displayNameFromPath = (path: string): string => {
   const segments = path.replace(/\/$/, '').split('/');
   return segments[segments.length - 1] || path;
 };
 
-/** Check if a file extension suggests video */
 const isVideoExtension = (uri: string): boolean =>
   /\.(mp4|mkv|avi|mov|wmv|flv|webm)$/i.test(uri);
-
-// ─── Hook ───────────────────────────────────────────────────
 
 export function useSearch(
   recentFiles: Array<{
@@ -69,26 +90,17 @@ export function useSearch(
   videoFolders: string[],
   audioFolders: string[],
 ): UseSearchReturn {
+  // Controlled-input echo (the SearchBar's `value` prop).
   const [searchText, setSearchText] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  // Debounced value used for the actual filter. Owned by
+  // the shared `useDebounce` primitive.
+  const debouncedQuery = useDebounce(searchText, SEARCH_DEBOUNCE_MS);
+  // True while the user's input hasn't yet settled to the
+  // debounced value. The legacy hook exposed this; we keep
+  // it for API compat (it can be derived but the call site
+  // may want it).
+  const isSearching = searchText.trim() !== debouncedQuery.trim();
 
-  // Debounce: 300ms
-  useEffect(() => {
-    if (!searchText.trim()) {
-      setDebouncedQuery('');
-      setIsSearching(false);
-      return;
-    }
-    setIsSearching(true);
-    const timer = setTimeout(() => {
-      setDebouncedQuery(searchText.trim());
-      setIsSearching(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchText]);
-
-  // Redux data
   const tracks = useMediaStore(s => s.tracks);
   const searchIndex = useMediaSearchIndex();
   const artists = useMediaArtists();
@@ -97,7 +109,7 @@ export function useSearch(
 
   const query = debouncedQuery.toLowerCase();
 
-  // ── Search index lookup for tracks ──
+  // Search index lookup for tracks
   const indexHitUris = useMemo((): Set<string> | null => {
     if (!query) return null;
     const words = query.split(/\s+/).filter(Boolean);
@@ -110,7 +122,9 @@ export function useSearch(
       if (combined === null) {
         combined = new Set(hitSet);
       } else {
-        combined = new Set([...(combined as Set<string>)].filter(uri => hitSet.has(uri)));
+        combined = new Set(
+          [...(combined as Set<string>)].filter(uri => hitSet.has(uri)),
+        );
       }
     }
     return combined ?? new Set();
@@ -128,7 +142,7 @@ export function useSearch(
     return matches;
   }, [query, searchIndex]);
 
-  // ── Build all results ──
+  // Build all results (one giant useMemo for the 7 categories)
   const allResults = useMemo((): SearchResultItem[] => {
     if (!query) return [];
 

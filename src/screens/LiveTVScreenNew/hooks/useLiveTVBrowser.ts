@@ -22,10 +22,8 @@
 // `LiveTVContent.tsx` doesn't move.
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import {
-  useApiQuery,
-  type UseQueryResult,
-} from '@tanstack/react-query';
+import {type UseQueryResult} from '@tanstack/react-query';
+import {useApiQuery} from '../../../hooks/useApiQuery';
 import {
   getAllIPTVChannels,
   searchIPTVChannels,
