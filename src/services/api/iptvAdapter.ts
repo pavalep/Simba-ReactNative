@@ -83,7 +83,6 @@ export async function getAllIPTVChannels(
   const raw = await apiFetch<IPTVChannelRaw[]>({
     config: API_CONFIG.iptv,
     path: '/channels.json',
-    cacheTtlMs: SEARCH_CACHE_TTL,
   });
   const all = channelResultsFromRaw(raw);
   // In-memory pagination (the API returns the full list).
@@ -129,7 +128,6 @@ export async function getIPTVCategories(): Promise<IPTVCategory[]> {
   const raw = await apiFetch<IPTVCategoryRaw[]>({
     config: API_CONFIG.iptv,
     path: '/categories.json',
-    cacheTtlMs: SEARCH_CACHE_TTL,
   });
   return categoryResultsFromRaw(raw);
 }

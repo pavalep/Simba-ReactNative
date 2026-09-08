@@ -172,7 +172,6 @@ export async function searchPodcasts(
     path: '/search/byterm',
     params: {q: query, max},
     headers,
-    cacheTtlMs: CACHE.search,
   });
   return podcastResultsFromRaw(unwrapArray<RawFeed>(raw));
 }
@@ -190,7 +189,6 @@ export async function getTrendingPodcasts(
       ...(categoryId && categoryId !== 'all' ? {cat: categoryId} : {}),
     },
     headers,
-    cacheTtlMs: CACHE.trending,
   });
   return podcastResultsFromRaw(unwrapArray<RawFeed>(raw));
 }
@@ -205,7 +203,6 @@ export async function getEpisodes(
     path: '/episodes/byfeedid',
     params: {id: podcastId, max},
     headers,
-    cacheTtlMs: CACHE.episodes,
   });
   return podcastEpisodesFromRaw(unwrapArray<RawEpisode>(raw));
 }
@@ -227,7 +224,6 @@ export async function getPodcastCategories(): Promise<PodcastCategoryResult[]> {
     config: API_CONFIG.podcastIndex,
     path: '/categories/list',
     headers,
-    cacheTtlMs: CACHE.categories,
   });
   const list = (raw?.feeds as {id: number; name: string}[] | undefined) ?? [];
   return list

@@ -102,7 +102,6 @@ export async function searchAudiobooks(
       limit: options?.limit ?? 20,
       page: options?.page ?? 1,
     },
-    cacheTtlMs: SEARCH_CACHE_TTL,
   });
   return audiobookResultsFromResponseRaw(raw);
 }
@@ -114,7 +113,6 @@ export async function getAudiobookById(
     config: API_CONFIG.librivox,
     path: '',
     params: {id, format: 'json'},
-    cacheTtlMs: DETAIL_CACHE_TTL,
   });
   const books = normalizeBooks(raw?.books);
   return books.length > 0 ? audiobookResultFromRaw(books[0]) : null;
@@ -133,7 +131,6 @@ export async function searchByAuthor(
       limit: options?.limit ?? 20,
       page: options?.page ?? 1,
     },
-    cacheTtlMs: SEARCH_CACHE_TTL,
   });
   return audiobookResultsFromResponseRaw(raw);
 }
@@ -159,7 +156,6 @@ export async function searchByGenre(
         limit: options?.limit ?? 20,
         page: options?.page ?? 1,
       },
-      cacheTtlMs: SEARCH_CACHE_TTL,
     });
     const books = normalizeBooks(raw?.books);
     if (books.length > 0) return books.map(audiobookResultFromRaw).filter(Boolean) as AudiobookResult[];
@@ -180,7 +176,6 @@ export async function getRecentAudiobooks(
       limit: options?.limit ?? 30,
       page: options?.page ?? 1,
     },
-    cacheTtlMs: SEARCH_CACHE_TTL,
   });
   return audiobookResultsFromResponseRaw(raw);
 }

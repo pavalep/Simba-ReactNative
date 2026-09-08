@@ -1,13 +1,31 @@
 // ─── Shared HTTP Client ────────────────────────────────────────────────
-// Axios-based: rate limiting, in-memory caching, timeout, interceptors,
-// and error normalization.
+// Axios-based: timeout, interceptors, and error normalization.
 //
-// All services that need to make HTTP calls should go through the
-// exported `axiosInstance` (or call `apiFetch()` for the rate-limited,
-// cache-aware variant). Do NOT create your own axios.create() in a
-// service — every instance is configured the same way (User-Agent,
-// timeout, request/response logging) and we want one place to evolve
-// that contract.
+// V18.8.1 cleanup: removed the in-memory `cache: Map` and the
+// `rateLimit` helper. TanStack Query owns caching (via `staleTime`
+// on `useApiQuery`); the hook layer owns dedup and refetch
+// policy. Rate limiting was removed because (a) TanStack's
+// retry / dedup already prevents the worst abuse and (b) the
+// per-service `rateLimitMs` config was duplicating concerns —
+// if a service needs backpressure, the adapter should add it
+// (or the service layer moves to a queue).
+//
+// What stays:
+//   - The shared `axiosInstance` with the User-Agent override
+//     and the request/response interceptors.
+//   - The `apiFetch(opts)` wrapper: `config`, `path`, `params`,
+//     `headers`, `signal` — all of which downstream adapters
+//     still pass.
+//   - The `ApiError` class for normalized errors.
+//
+// What was removed (visible only in the diff):
+//   - `cache: Map<string, CacheEntry<unknown>>` + `getCached` / `setCache`
+//   - `lastCallTimestamps: Map<string, number>` + `rateLimit`
+//   - The `cacheTtlMs: number` field on `FetchOptions`
+//   - The `cacheKey` computation in `apiFetch`
+//   - The cache get / set calls in `apiFetch`
+//   - 49 occurrences of `cacheTtlMs: N,` across the 9 adapter
+//     files (all stripped)
 
 import axios, {type AxiosInstance, type AxiosError, type AxiosRequestConfig} from 'axios';
 import type {ApiConfig, ApiSearchOptions} from '../../types/api';
@@ -27,7 +45,7 @@ const DEFAULT_USER_AGENT = 'SimbaMediaPlayer/1.0.0 (paval@simba.app)';
  * the app goes through this — services should `import {axiosInstance}`
  * and call `axiosInstance.get(...)` directly when they need raw
  * axios (e.g. for one-off endpoints that don't go through the
- * rate-limited `apiFetch` wrapper, like the weather service).
+ * shared `apiFetch` wrapper, like the weather service).
  */
 export let axiosInstance: AxiosInstance | null = null;
 
@@ -67,42 +85,6 @@ export function getAxiosInstance(): AxiosInstance {
   return axiosInstance;
 }
 
-// ─── Cache ──────────────────────────────────────────────────────────────
-
-interface CacheEntry<T> {
-  data: T;
-  expiresAt: number;
-}
-
-const cache = new Map<string, CacheEntry<unknown>>();
-
-function getCached<T>(key: string): T | null {
-  const entry = cache.get(key);
-  if (!entry) {return null;}
-  if (Date.now() > entry.expiresAt) {
-    cache.delete(key);
-    return null;
-  }
-  return entry.data as T;
-}
-
-function setCache<T>(key: string, data: T, ttlMs: number): void {
-  cache.set(key, {data, expiresAt: Date.now() + ttlMs});
-}
-
-// ─── Rate Limiter ───────────────────────────────────────────────────────
-
-const lastCallTimestamps = new Map<string, number>();
-
-async function rateLimit(key: string, minIntervalMs: number): Promise<void> {
-  const last = lastCallTimestamps.get(key) ?? 0;
-  const elapsed = Date.now() - last;
-  if (elapsed < minIntervalMs) {
-    await new Promise<void>(resolve => setTimeout(() => resolve(), minIntervalMs - elapsed));
-  }
-  lastCallTimestamps.set(key, Date.now());
-}
-
 // ─── ApiError ───────────────────────────────────────────────────────────
 
 export class ApiError extends Error {
@@ -120,33 +102,21 @@ interface FetchOptions {
   config: ApiConfig;
   path: string;
   params?: Record<string, string | number | undefined>;
-  /** Cache TTL in ms. 0 = no cache. */
-  cacheTtlMs?: number;
   /** Additional headers. */
   headers?: Record<string, string>;
-  /** AbortSignal for timeout (passed to axios cancelToken / signal). */
+  /** AbortSignal for timeout (passed to axios). */
   signal?: AbortSignal;
 }
 
 // ─── apiFetch ───────────────────────────────────────────────────────────
-// Signature unchanged: all 10 consumers keep working.
+// V18.8.1: signature is `config / path / params / headers / signal`.
+// The `cacheTtlMs` parameter was removed; caching is now owned by
+// TanStack Query at the `useApiQuery` layer (`staleTime`).
 
 export async function apiFetch<T>(opts: FetchOptions): Promise<T> {
-  const {config, path, params, cacheTtlMs = 0, headers, signal} = opts;
+  const {config, path, params, headers, signal} = opts;
 
-  // Build URL (just for cache key & logging; axios gets the full URL)
   const url = `${config.baseUrl}${path}`;
-
-  const cacheKey = url + (params ? JSON.stringify(params) : '');
-
-  // Check cache
-  if (cacheTtlMs > 0) {
-    const cached = getCached<T>(cacheKey);
-    if (cached) {return cached;}
-  }
-
-  // Rate limit
-  await rateLimit(config.baseUrl, config.rateLimitMs);
 
   // Build axios config
   const axiosConfig: AxiosRequestConfig = {
@@ -179,14 +149,7 @@ export async function apiFetch<T>(opts: FetchOptions): Promise<T> {
 
   const response = await instance.get<T>(url, axiosConfig);
 
-  const data = response.data;
-
-  // Cache
-  if (cacheTtlMs > 0) {
-    setCache(cacheKey, data, cacheTtlMs);
-  }
-
-  return data;
+  return response.data;
 }
 
 // ─── Pagination helper ──────────────────────────────────────────────────

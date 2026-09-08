@@ -66,7 +66,6 @@ export async function searchStations(
     config: API_CONFIG.radioBrowser,
     path: '/json/stations/search',
     params: {name: query, ...buildParams(options)},
-    cacheTtlMs: CACHE.search,
   });
 }
 
@@ -78,7 +77,6 @@ export async function getStationsByCountry(
     config: API_CONFIG.radioBrowser,
     path: `/json/stations/bycountry/${encodeURIComponent(country)}`,
     params: buildParams(options),
-    cacheTtlMs: CACHE.search,
   });
 }
 
@@ -90,7 +88,6 @@ export async function getStationsByGenre(
     config: API_CONFIG.radioBrowser,
     path: `/json/stations/bytag/${encodeURIComponent(genre)}`,
     params: buildParams(options),
-    cacheTtlMs: CACHE.search,
   });
 }
 
@@ -102,7 +99,6 @@ export async function getStationsByLanguage(
     config: API_CONFIG.radioBrowser,
     path: `/json/stations/bylanguage/${encodeURIComponent(language)}`,
     params: buildParams(options),
-    cacheTtlMs: CACHE.search,
   });
 }
 
@@ -129,7 +125,6 @@ export async function getStationsByFilters(
     config: API_CONFIG.radioBrowser,
     path: '/json/stations/search',
     params,
-    cacheTtlMs: CACHE.search,
   });
 }
 
@@ -140,7 +135,6 @@ export async function getTopStations(
     config: API_CONFIG.radioBrowser,
     path: '/json/stations/topclick',
     params: buildParams(options),
-    cacheTtlMs: CACHE.top,
   });
 }
 
@@ -165,7 +159,6 @@ export async function getGenres(limit = 40): Promise<RadioBrowseTag[]> {
       reverse: 'true',
       limit: Math.max(limit * 2, 80),
     },
-    cacheTtlMs: CACHE.top,
   });
   return browseTagsFromRaw(raw).slice(0, limit);
 }
@@ -174,7 +167,6 @@ export async function getCountries(limit = 30): Promise<RadioBrowseTag[]> {
   const raw = await apiFetch<RadioBrowseTagRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: '/json/countries',
-    cacheTtlMs: CACHE.top,
   });
   return browseTagsFromRaw(raw).slice(0, limit);
 }
@@ -183,7 +175,6 @@ export async function getLanguages(limit = 30): Promise<RadioBrowseTag[]> {
   const raw = await apiFetch<RadioBrowseTagRaw[]>({
     config: API_CONFIG.radioBrowser,
     path: '/json/languages',
-    cacheTtlMs: CACHE.top,
   });
   return browseTagsFromRaw(raw).slice(0, limit);
 }

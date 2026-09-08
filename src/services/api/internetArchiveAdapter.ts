@@ -458,7 +458,6 @@ export async function searchInternetArchiveAudio(
       page: options?.page ?? 1,
       output: 'json',
     },
-    cacheTtlMs: 900_000, // 15 min — IA advancedsearch is slow; raise TTL
   });
   return internetArchiveItemResultsFromRaw(raw);
 }
@@ -479,7 +478,6 @@ export async function searchInternetArchiveMusic(
       page: options?.page ?? 1,
       output: 'json',
     },
-    cacheTtlMs: 300_000,
   });
   return internetArchiveItemResultsFromRaw(raw);
 }
@@ -492,7 +490,6 @@ export async function getInternetArchiveItemDetails(
     const data = await apiFetch<IAMetadataResponse>({
       config: API_CONFIG.internetArchive,
       path: `/metadata/${identifier}`,
-      cacheTtlMs: 600_000,
     });
     return internetArchiveItemDetailsFromRaw(identifier, data);
   } catch {
@@ -510,7 +507,6 @@ export async function getArchiveTracks(
   const data = await apiFetch<IAMetadataResponse>({
     config: API_CONFIG.internetArchive,
     path: `/metadata/${identifier}`,
-    cacheTtlMs: 600_000,
   });
   return archiveTracksFromRaw(identifier, data);
 }
@@ -541,7 +537,6 @@ export async function searchInternetArchiveVideos(
       // Optional IA sort for callers that explicitly opt in.
       ...(options?.sort ? {'sort[]': options.sort} : {}),
     },
-    cacheTtlMs: 300_000,
   });
   return internetArchiveVideoResultsFromRaw(raw);
 }
@@ -615,9 +610,9 @@ async function getInternetArchiveVideoDetailsOnce(
       path: `/metadata/${identifier}`,
       // Bypass the cache on retries so we actually hit a different server
       // instead of getting the same broken response back. The first
-      // attempt CAN use the cache (cacheTtlMs > 0) to benefit from a
-      // healthy response that was stored within the last 10 minutes.
-      cacheTtlMs: attempt === 1 ? 600_000 : 0,
+      // attempt CAN use the cache (via `staleTime` on the
+      // `useApiQuery` call site) to benefit from a healthy response
+      // that was stored within the last 10 minutes.
     });
     return internetArchiveVideoDetailsFromRaw(identifier, data);
   } catch {

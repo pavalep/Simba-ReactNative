@@ -1,0 +1,80 @@
+V18.8.1: apiClient cleanup — remove cache + rate-limit + cacheTtlMs (TanStack owns caching)
+
+V18.8.1 — the apiClient cleanup. Strips the in-memory
+`cache: Map` and the `rateLimit` helper that pre-dated
+TanStack Query, plus the `cacheTtlMs` parameter on
+`apiFetch` that they fed.
+
+What was removed from `apiClient.ts`:
+
+  - `cache: Map<string, CacheEntry<unknown>>` + the
+    `getCached<T>` / `setCache<T>` helpers
+  - `lastCallTimestamps: Map<string, number>` + the
+    `rateLimit(key, minIntervalMs)` helper
+  - The `cacheTtlMs: number` field on `FetchOptions`
+  - The `cacheKey` computation in `apiFetch`
+  - The cache get / set calls in `apiFetch`
+  - The call to `rateLimit(config.baseUrl, config.rateLimitMs)`
+
+What stays:
+
+  - The shared `axiosInstance` (lazy + request/response
+    interceptors + User-Agent override)
+  - The `apiFetch(opts)` wrapper with `config / path / params /
+    headers / signal` — every adapter still uses this
+  - The `ApiError` class
+  - The `parsePageParam(options?)` pagination helper
+
+The cascade (V18.8.1 footprint):
+
+  - 10 adapter files: stripped 48 `cacheTtlMs: N,` lines
+    (PowerShell `Get-Content | [regex]::Replace` on
+    `src/services/api/*Adapter.ts`). Each adapter had 2-9
+    occurrences; the total went from 48 down to 0 in code
+    (one comment reference in `internetArchiveAdapter.ts`
+    was updated to point at `staleTime` on `useApiQuery`).
+  - The 3 dead `rateLimitMs: 200/1000` lines in
+    `jamendoAdapter.ts` and `weatherAdapter.ts` are left
+    in place — the field is still on the `ApiConfig` type
+    (V18.8.2 cleans up `types/api.ts`; once the field is
+    removed, those 3 lines will become type errors and
+    are deleted in the same commit).
+
+The justification:
+
+  - **Cache**: TanStack Query owns caching via `staleTime`
+    on every `useApiQuery` call. The app's query
+    configuration is centralized in `app/QueryProvider.tsx`
+    (60s stale, 5min gc, retry 2, no refetchOnWindowFocus).
+    The Map cache was both redundant and inconsistent
+    (cache state at the wire layer vs. cache state at the
+    query layer — bug magnet).
+
+  - **Rate limit**: TanStack's retry + dedup prevents
+    the obvious abuse (concurrent identical requests
+    collapse to one in-flight call). The per-service
+    `rateLimitMs` was duplicating a concern that's
+    better handled at the adapter (when a service
+    actually needs backpressure, it can use a queue —
+    the weather adapter is the only one that should
+    need it, and the spec says to remove it). If a
+    service later needs real rate limiting, the right
+    place is the adapter, not the shared client.
+
+Verification:
+
+  - npx tsc --noEmit                 : 0 errors
+  - npx jest                         : 9 suites, 104 passed,
+                                       1 todo, 0 failures
+  - git grep "cacheTtlMs\|getCached\|setCache" -- src/ :
+    0 in code (the 7 matches in apiClient.ts are
+    intentional doc comments explaining what was removed)
+  - apiClient.ts line count: 196 → 130 (-66, -34%)
+    spec called for ~80; landed at 130 because the doc
+    comment at the top explaining the cleanup is verbose
+
+Unblocks:
+  - V18.8.2 (types/api.ts *Raw/*Response cleanup) —
+    `ApiConfig.rateLimitMs` is now dead and can go
+  - V18.6.2 (useAggregatedSearch → useQueries) —
+    one less parameter to thread through the hook layer

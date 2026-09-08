@@ -93,7 +93,6 @@ export async function searchAudiusTracks(
       limit: options?.limit ?? 10,
       offset: options?.page ? (options.page - 1) * (options.limit ?? 10) : 0,
     },
-    cacheTtlMs: 60_000,
   });
   return trackResultsFromListRaw(raw);
 }
@@ -105,7 +104,6 @@ export async function getTrendingAudiusTracks(
     config: API_CONFIG.audius,
     path: `${AUDIUS_API_PATH}/trending`,
     params: {limit},
-    cacheTtlMs: 120_000,
   });
   return trackResultsFromListRaw(raw);
 }
@@ -117,7 +115,6 @@ export async function getAudiusTrackById(
     const raw = await apiFetch<AudiusSingleRaw>({
       config: API_CONFIG.audius,
       path: `${AUDIUS_API_PATH}/${id}`,
-      cacheTtlMs: 300_000,
     });
     return trackResultFromRaw(raw.data);
   } catch {

@@ -47,7 +47,6 @@ export async function searchShows(query: string): Promise<TVMazeShow[]> {
     config: API_CONFIG.tvmaze,
     path: '/search/shows',
     params: {q: query},
-    cacheTtlMs: CACHE.SEARCH,
   });
   return showsFromSearchRaw(raw);
 }
@@ -60,7 +59,6 @@ export async function getPopularShows(
     config: API_CONFIG.tvmaze,
     path: '/shows',
     params: genre ? {page, genre} : {page},
-    cacheTtlMs: CACHE.BROWSE,
   });
 }
 
@@ -68,7 +66,6 @@ export async function getShowById(id: number): Promise<TVMazeShow> {
   return apiFetch<TVMazeShow>({
     config: API_CONFIG.tvmaze,
     path: `/shows/${id}`,
-    cacheTtlMs: CACHE.DETAILS,
   });
 }
 
@@ -78,7 +75,6 @@ export async function getEpisodeList(
   return apiFetch<TVMazeEpisode[]>({
     config: API_CONFIG.tvmaze,
     path: `/shows/${showId}/episodes`,
-    cacheTtlMs: CACHE.DETAILS,
   });
 }
 
@@ -93,6 +89,5 @@ export async function getSchedule(
     config: API_CONFIG.tvmaze,
     path: '/schedule',
     params,
-    cacheTtlMs: CACHE.SCHEDULE,
   });
 }

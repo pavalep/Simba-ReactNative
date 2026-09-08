@@ -101,7 +101,6 @@ export async function searchJamendoTracks(
       page: options?.page ?? 1,
       include: 'musicinfo',
     },
-    cacheTtlMs: 60_000,
   });
   return trackResultsFromResponseRaw(raw);
 }
@@ -122,7 +121,6 @@ export async function getJamendoTracksByGenre(
       include: 'musicinfo',
       order: 'popularity_total',
     },
-    cacheTtlMs: 120_000,
   });
   return trackResultsFromResponseRaw(raw);
 }
@@ -163,7 +161,6 @@ export async function getPopularJamendoTracks(
         include: 'musicinfo',
         order,
       },
-      cacheTtlMs: 120_000,
     });
     const results = trackResultsFromResponseRaw(raw);
     if (results.length > 0) {
@@ -187,7 +184,6 @@ export async function getJamendoTrackById(
         format: 'json',
         id,
       },
-      cacheTtlMs: 300_000,
     });
     const list = unwrapJamendoResults(raw);
     return list.length > 0 ? trackResultFromRaw(list[0]) : null;

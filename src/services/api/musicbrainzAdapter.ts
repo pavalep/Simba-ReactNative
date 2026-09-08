@@ -181,7 +181,6 @@ export async function searchArtists(
     config: API_CONFIG.musicbrainz,
     path: '/artist',
     params: {query, fmt: 'json', limit: options?.limit},
-    cacheTtlMs: SEARCH_CACHE_TTL,
     headers: {'User-Agent': USER_AGENT},
   });
   return artistResultsFromSearchRaw(raw);
@@ -194,7 +193,6 @@ export async function getArtistDiscography(
     config: API_CONFIG.musicbrainz,
     path: `/artist/${artistId}`,
     params: {inc: 'release-groups', fmt: 'json'},
-    cacheTtlMs: DISCOGRAPHY_CACHE_TTL,
     headers: {'User-Agent': USER_AGENT},
   });
   return releaseResultsFromArtistLookupRaw(raw);
@@ -208,7 +206,6 @@ export async function getReleaseGroupDetail(
       config: API_CONFIG.musicbrainz,
       path: `/release-group/${releaseGroupId}`,
       params: {inc: 'releases+artists', fmt: 'json'},
-      cacheTtlMs: DISCOGRAPHY_CACHE_TTL,
       headers: {'User-Agent': USER_AGENT},
     });
     const sortedReleases = (raw.releases ?? []).slice().sort((a, b) => {
@@ -225,7 +222,6 @@ export async function getReleaseGroupDetail(
           config: API_CONFIG.musicbrainz,
           path: `/release/${firstRelease.id}`,
           params: {inc: 'recordings', fmt: 'json'},
-          cacheTtlMs: DISCOGRAPHY_CACHE_TTL,
           headers: {'User-Agent': USER_AGENT},
         });
         const seen = new Set<string>();
