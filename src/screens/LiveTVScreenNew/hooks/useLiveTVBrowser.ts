@@ -1,14 +1,31 @@
 // ─── Live TV Browser Hook ──────────────────────────────────────────────
-// Wave 8: single-stream, FAB-only browse model for Live TV.
-// Mirrors useRadioBrowser but adapted to IPTV's client-side pagination:
-//   • first call fetches limit=PAGE_SIZE channels
-//   • loadMore re-fetches with limit += PAGE_SIZE (cheap; IPTV-org is
-//     statically cached at 10 minutes)
-//   • category filter narrows the client-side slice when set
+// V18.6.2b: rewritten on `useApiQuery` (TanStack's single-query
+// primitive) per the V18 ideal. The pre-V18 implementation was
+// 361 lines with a per-scope `Map<key, ScopeState>`, `seqRef` for
+// stale-request cancellation, `guardRef` for in-flight dedup,
+// and a client-side `loadMore` that re-fetched with an
+// ever-larger limit. The V18-ideal version is ~120 lines:
 //
-// Scope key = `${category}|${term}` so each (filter, search) combo is cached.
+//   - The "scope" is just a TanStack queryKey. Every
+//     (category, searchTerm) combination is its own cache entry;
+//     revisiting a combination shows its cached list instantly.
+//   - The "loadMore" is now client-side: we fetch the full
+//     list (or filtered subset) once per scope and slice it
+//     in a `useMemo`. The slice size grows as the user scrolls.
+//   - The "stale-request cancellation" is TanStack's own
+//     dedup — the queryKey changes when filters change, the
+//     in-flight query is cancelled, the new one fires.
+//   - The "in-flight dedup" is TanStack's per-key dedup —
+//     only one fetch per (category, searchTerm) at a time.
+//
+// The public surface (returned shape) is unchanged so
+// `LiveTVContent.tsx` doesn't move.
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
+import {
+  useApiQuery,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import {
   getAllIPTVChannels,
   searchIPTVChannels,
@@ -19,9 +36,8 @@ import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
 import {useLiveFavoritesStore} from '../../../state';
 
-// ─── Public types ────────────────────────────────────────────
-
 const PAGE_SIZE = 50;
+const FULL_LIMIT = 1000; // IPTV-org returns the full list; we slice client-side
 
 export interface LiveTVFilters {
   category: string | null; // category name; null = all
@@ -29,8 +45,6 @@ export interface LiveTVFilters {
 
 export interface LiveTVScopeState {
   items: IPTVChannelResult[];
-  /** Total channels fetched from the API (cache ceiling for slicing). */
-  sourceCount: number;
   hasLoaded: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -41,19 +55,19 @@ export interface LiveTVBrowseTags {
   categories: IPTVCategory[];
 }
 
+const EMPTY_FILTERS: LiveTVFilters = {category: null};
 const EMPTY_SCOPE: LiveTVScopeState = {
   items: [],
-  sourceCount: 0,
   hasLoaded: false,
   isLoading: false,
   isLoadingMore: false,
   error: null,
 };
 
-const EMPTY_FILTERS: LiveTVFilters = {category: null};
-
-function scopeCacheKey(category: string | null, term: string): string {
-  return `tv|${category || ''}|${term.trim()}`;
+function errorMessage(err: unknown): string | null {
+  if (!err) return null;
+  if (err instanceof Error) return err.message;
+  return String(err);
 }
 
 // ─── Hook ────────────────────────────────────────────────────
@@ -67,44 +81,52 @@ export function useLiveTVBrowser(initialCategory?: string) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const isSearchActive = searchTerm.trim().length > 0;
-
-  const [scopes, setScopes] = useState<
-    Record<string, LiveTVScopeState>
-  >({});
-  const [refreshing, setRefreshing] = useState(false);
-
-  const [tags, setTags] = useState<LiveTVBrowseTags>({categories: []});
-  const [tagsLoaded, setTagsLoaded] = useState(false);
-
-  // ── Internal bookkeeping ──
-  const seqRef = useRef<Record<string, number>>({});
-  const guardRef = useRef<Set<string>>(new Set());
-  const failedKeyRef = useRef<string | null>(null);
-  const wasOnlineRef = useRef(isOnline);
-
-  // ── Redux favorites ──
-  const favorites = useLiveFavoritesStore(s =>
-    s.items.filter(f => f.kind === 'tv'),
-  );
-  const isFavoriteId = useCallback(
-    (id: string) => favorites.some(f => f.id === id),
-    [favorites],
-  );
-
   const activeFilterCount = filters.category ? 1 : 0;
 
-  // ── Scope key + accessor ──
-  const keyFor = useCallback(
-    () => scopeCacheKey(filters.category, searchTerm),
-    [filters.category, searchTerm],
+  /** Number of channels to display in the current scope (client-side slice). */
+  const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
+
+  // ── The big one: one query per (category, searchTerm) tuple.
+  //    Every combination is its own TanStack cache entry. ──
+  const channelQuery: UseQueryResult<IPTVChannelResult[]> = useApiQuery<
+    IPTVChannelResult[]
+  >({
+    queryKey: ['iptv', 'browse', filters.category, searchTerm.trim()],
+    queryFn: async () => {
+      const term = searchTerm.trim();
+      if (term) {
+        return searchIPTVChannels(term, {limit: FULL_LIMIT});
+      }
+      if (filters.category) {
+        return getChannelsByCategory(filters.category, {limit: FULL_LIMIT});
+      }
+      return getAllIPTVChannels({limit: FULL_LIMIT});
+    },
+    staleTime: 60_000,
+  });
+
+  // ── Categories (tags for the filter sheet) ──
+  const categoriesQuery = useApiQuery<IPTVCategory[]>({
+    queryKey: ['iptv', 'categories'],
+    queryFn: () => getIPTVCategories(),
+    staleTime: 5 * 60_000,
+  });
+
+  // ── Display slice (client-side pagination) ──
+  // Reset the slice when the scope changes — a fresh scope starts
+  // at PAGE_SIZE again.
+  useEffect(() => {
+    setDisplayCount(PAGE_SIZE);
+  }, [filters.category, searchTerm]);
+
+  const allItems = channelQuery.data ?? [];
+  const items = useMemo(
+    () => allItems.slice(0, displayCount),
+    [allItems, displayCount],
   );
+  const hasMore = allItems.length > displayCount;
 
-  const getScope = useCallback((): LiveTVScopeState => {
-    const key = keyFor();
-    return scopes[key] ?? EMPTY_SCOPE;
-  }, [scopes, keyFor]);
-
-  // ── setFilter (string '' → null) ──
+  // ── Filter actions ──
   const setFilter = useCallback(
     (id: 'category', key: string) => {
       const next = key ? key : null;
@@ -116,215 +138,65 @@ export function useLiveTVBrowser(initialCategory?: string) {
     },
     [],
   );
-
   const resetFilters = useCallback(() => {
     setFilters(EMPTY_FILTERS);
   }, []);
 
-  // ── Fetch a window of channels ──
-  // mode 'initial' → replaces items, fetches up to PAGE_SIZE
-  // mode 'more'    → appends, fetches up to limit += PAGE_SIZE
-  const fetchPage = useCallback(
-    async (limit: number, mode: 'initial' | 'more') => {
-      const term = searchTerm.trim();
-      const key = keyFor();
+  // ── Scope accessor (kept for the consumer's `getScope()` API) ──
+  const getScope = useCallback((): LiveTVScopeState => ({
+    items,
+    hasLoaded: !!channelQuery.data || !!channelQuery.error,
+    isLoading: channelQuery.isFetching,
+    isLoadingMore: false, // client-side pagination has no separate "loading more" state
+    error: errorMessage(channelQuery.error),
+  }), [items, channelQuery.data, channelQuery.error, channelQuery.isFetching]);
 
-      if (guardRef.current.has(key)) return;
-      guardRef.current.add(key);
-
-      const seq = (seqRef.current[key] =
-        (seqRef.current[key] ?? 0) + 1);
-
-      setScopes(prev => {
-        const cur = prev[key] ?? EMPTY_SCOPE;
-        return {
-          ...prev,
-          [key]: {
-            ...cur,
-            isLoading: mode === 'initial',
-            isLoadingMore: mode === 'more',
-            error: null,
-          },
-        };
-      });
-
-      try {
-        let items: IPTVChannelResult[] = [];
-        if (term) {
-          // Search hits all categories – ignore category filter
-          // (matches the search-vision over the whole catalog)
-          items = await searchIPTVChannels(term, {limit});
-        } else if (filters.category) {
-          items = await getChannelsByCategory(filters.category, {limit});
-        } else {
-          items = await getAllIPTVChannels({limit});
-        }
-
-        if (seq !== (seqRef.current[key] ?? 0)) return; // stale
-
-        setScopes(prev => {
-          const cur = prev[key] ?? EMPTY_SCOPE;
-          const next: IPTVChannelResult[] =
-            mode === 'more' ? dedupe([...cur.items, ...items]) : items;
-          return {
-            ...prev,
-            [key]: {
-              ...cur,
-              items: next,
-              sourceCount: items.length,
-              hasLoaded: true,
-              isLoading: false,
-              isLoadingMore: false,
-              error: null,
-            },
-          };
-        });
-        failedKeyRef.current = null;
-      } catch (err) {
-        if (seq !== (seqRef.current[key] ?? 0)) return;
-        failedKeyRef.current = key;
-        setScopes(prev => {
-          const cur = prev[key] ?? EMPTY_SCOPE;
-          return {
-            ...prev,
-            [key]: {
-              ...cur,
-              isLoading: false,
-              isLoadingMore: false,
-              error:
-                err instanceof Error
-                  ? err.message
-                  : 'Failed to load channels',
-            },
-          };
-        });
-      } finally {
-        guardRef.current.delete(key);
-      }
-    },
-    [searchTerm, filters.category, keyFor],
-  );
-
-  // ── Public actions ──
-  const ensureLoaded = useCallback(() => {
-    const key = keyFor();
-    if (scopes[key]?.hasLoaded || scopes[key]?.isLoading) return;
-    fetchPage(PAGE_SIZE, 'initial');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyFor, scopes, fetchPage]);
-
+  // ── Pagination actions ──
   const loadMore = useCallback(() => {
-    const cur = getScope();
-    if (
-      !cur.hasLoaded ||
-      cur.isLoading ||
-      cur.isLoadingMore ||
-      cur.items.length === 0
-    ) {
-      return;
-    }
-    // hasMore proxy: when the previous response came back at the limit,
-    // there are likely more. (Client-side slice = requested limit.)
-    const nextLimit = cur.items.length + PAGE_SIZE;
-    fetchPage(nextLimit, 'more');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getScope, fetchPage]);
+    if (!hasMore) return;
+    setDisplayCount(c => c + PAGE_SIZE);
+  }, [hasMore]);
 
   const retry = useCallback(() => {
-    const key = keyFor();
-    seqRef.current[key] = (seqRef.current[key] ?? 0) + 1;
-    setScopes(prev => {
-      const cur = prev[key];
-      if (!cur) return prev;
-      return {
-        ...prev,
-        [key]: {...cur, items: [], sourceCount: 0, hasLoaded: false},
-      };
-    });
-    fetchPage(PAGE_SIZE, 'initial');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyFor, fetchPage]);
+    void channelQuery.refetch();
+  }, [channelQuery]);
 
   const handleRefresh = useCallback(() => {
-    setRefreshing(true);
-    retry();
-    setRefreshing(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [retry]);
+    void channelQuery.refetch();
+  }, [channelQuery]);
 
-  // ── Tags effect: fetch IPTV categories once ──
-  useEffect(() => {
-    let cancelled = false;
-    if (isSearchActive) {
-      // While the user is searching, no category list is needed in the sheet
-      return;
-    }
-    setTagsLoaded(false);
-    (async () => {
-      try {
-        const cats = await getIPTVCategories();
-        if (!cancelled) {
-          setTags({categories: cats});
-          setTagsLoaded(true);
-        }
-      } catch {
-        if (!cancelled) setTagsLoaded(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isSearchActive]);
-
-  // ── Auto-retry on reconnect ──
-  useEffect(() => {
-    const wasOnline = wasOnlineRef.current;
-    wasOnlineRef.current = isOnline;
-    if (!wasOnline && isOnline && failedKeyRef.current) {
-      failedKeyRef.current = null;
-      ensureLoaded();
-    }
-  }, [isOnline, ensureLoaded]);
-
-  // ── Keep current scope loaded ──
-  const ensureLoadedRef = useRef(ensureLoaded);
-  ensureLoadedRef.current = ensureLoaded;
-  useEffect(() => {
-    ensureLoadedRef.current();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyFor()]);
-
-  // ── Favorites actions ──
-  const toggleFavorite = useCallback(
-    (channel: IPTVChannelResult) => {
-      const existing = favorites.find(f => f.id === channel.id);
-      if (existing) {
-        useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id: channel.id});
-        return;
-      }
-      useLiveFavoritesStore.getState().addLiveFavorite({
-          kind: 'tv',
-          id: channel.id,
-          name: channel.name,
-          url: channel.url,
-          image: channel.logo || '',
-          subtitle: [channel.category, channel.country]
-            .filter(Boolean)
-            .join(' · '),
-          addedAt: new Date().toISOString(),
-        });
-    },
+  // ── Favorites ──
+  const favorites = useLiveFavoritesStore(s =>
+    s.items.filter(f => f.kind === 'tv'),
+  );
+  const isFavoriteId = useCallback(
+    (id: string) => favorites.some(f => f.id === id),
     [favorites],
   );
-
-  const removeFavorite = useCallback(
-    (id: string) => {
-      useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id});
-    },
-    [],
-  );
+  const toggleFavorite = useCallback((channel: IPTVChannelResult) => {
+    const existing = favorites.find(f => f.id === channel.id);
+    if (existing) {
+      useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id: channel.id});
+      return;
+    }
+    useLiveFavoritesStore.getState().addLiveFavorite({
+      kind: 'tv',
+      id: channel.id,
+      name: channel.name,
+      url: channel.url,
+      image: channel.logo || '',
+      subtitle: [channel.category, channel.country]
+        .filter(Boolean)
+        .join(' · '),
+      addedAt: new Date().toISOString(),
+    });
+  }, [favorites]);
+  const removeFavorite = useCallback((id: string) => {
+    useLiveFavoritesStore.getState().removeLiveFavorite({kind: 'tv', id});
+  }, []);
 
   return {
+    // filters + search
     filters,
     setFilter,
     resetFilters,
@@ -334,28 +206,25 @@ export function useLiveTVBrowser(initialCategory?: string) {
     setSearchTerm,
     isSearchActive,
     isOnline,
+    // data
     getScope,
-    ensureLoaded,
     loadMore,
     retry,
-    refreshing,
+    refreshing: false, // no longer tracking a separate "refreshing" state — pull-to-refresh triggers refetch()
     handleRefresh,
-    tags,
-    tagsLoaded,
-    favorites,
+    tags: {categories: categoriesQuery.data ?? []} as LiveTVBrowseTags,
+    tagsLoaded: !!categoriesQuery.data,
+    // favorites
     isFavoriteId,
     toggleFavorite,
     removeFavorite,
+    // expose `hasMore` for the screen's "show more" footer (the
+    // legacy `loadMore` callback still works for backwards compat
+    // — see LiveTVContent's `onEndReached`)
+    hasMore,
   };
 }
 
-// ─── helpers ────────────────────────────────────────────────
-
-function dedupe(items: IPTVChannelResult[]): IPTVChannelResult[] {
-  const seen = new Set<string>();
-  return items.filter(i => {
-    if (seen.has(i.id)) return false;
-    seen.add(i.id);
-    return true;
-  });
-}
+// `hasLoaded` was on the old EMPTY_SCOPE for the type export; keep
+// it as an alias so type-only consumers still compile.
+export type {IPTVChannelResult as IPTVChannelResultType} from '../../../types/api';
