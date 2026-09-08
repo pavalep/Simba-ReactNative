@@ -27,11 +27,11 @@ interface AudiusTrackRaw {
 }
 
 interface AudiusListRaw {
-  data: AudiusTrackRaw[];
+  data?: AudiusTrackRaw[];
 }
 
 interface AudiusSingleRaw {
-  data: AudiusTrackRaw;
+  data?: AudiusTrackRaw;
 }
 
 /**
