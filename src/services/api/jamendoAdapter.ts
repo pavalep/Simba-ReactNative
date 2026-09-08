@@ -21,7 +21,6 @@ export type {JamendoTrackResult};
 
 const JAMENDO_CONFIG = {
   baseUrl: 'https://api.jamendo.com/v3.0',
-  rateLimitMs: 200,
 };
 
 const clientId = (): string => ENV.JAMENDO_CLIENT_ID;

@@ -231,12 +231,10 @@ export function weatherSnapshotFromCurrentRaw(
 
 const FORECAST_CONFIG: ApiConfig = {
   baseUrl: 'https://api.open-meteo.com',
-  rateLimitMs: 1000,
 };
 
 const GEOCODING_CONFIG: ApiConfig = {
   baseUrl: 'https://geocoding-api.open-meteo.com',
-  rateLimitMs: 1000,
 };
 
 // ─── Service functions (the public surface) ──────────────────────
