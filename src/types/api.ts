@@ -14,7 +14,6 @@ export interface ApiConfig {
   baseUrl: string;
   apiKey?: string;
   apiSecret?: string;
-  rateLimitMs: number;
   /**
    * Request timeout in ms. Falls back to the client default (10s).
    * Slow-cold APIs (e.g. Internet Archive advancedsearch, which takes
@@ -22,6 +21,10 @@ export interface ApiConfig {
    * higher ceiling here — otherwise the first request in a session
    * times out while the server is still working, and only the retry
    * (which hits the now-warm cache) succeeds.
+   *
+   * V18.8.2: `rateLimitMs` was removed in V18.8.1 along with the
+   * `rateLimit` helper in `apiClient.ts`. TanStack's retry + dedup
+   * is now the only outbound throttling layer.
    */
   timeoutMs?: number;
 }

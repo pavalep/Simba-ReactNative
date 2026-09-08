@@ -1,46 +1,42 @@
 // ─── API Endpoint Configuration ─────────────────────────────────────────
-// Base URLs, default params, and rate-limit settings per API.
+// Base URLs, default params, and per-service settings.
+//
+// V18.8.2: `rateLimitMs` was removed in V18.8.1 along with the
+// `rateLimit` helper in `apiClient.ts`. TanStack's retry + dedup
+// is now the only outbound throttling layer.
 
 import {ENV} from './env';
 
 export const API_CONFIG = {
   tvmaze: {
     baseUrl: 'https://api.tvmaze.com',
-    rateLimitMs: 200,
   },
   musicbrainz: {
     baseUrl: 'https://musicbrainz.org/ws/2',
-    rateLimitMs: 1000, // MusicBrainz requires 1 req/s
     userAgent: 'SimbaMediaPlayer/1.0.0 (paval@simba.app)',
   },
   podcastIndex: {
     baseUrl: 'https://api.podcastindex.org/api/1.0',
     apiKey: ENV.PODCAST_INDEX_API_KEY,
     apiSecret: ENV.PODCAST_INDEX_API_SECRET,
-    rateLimitMs: 200,
   },
   radioBrowser: {
     baseUrl: 'https://de1.api.radio-browser.info',
-    rateLimitMs: 200,
   },
   librivox: {
     baseUrl: 'https://librivox.org/api/feed/audiobooks',
-    rateLimitMs: 200,
   },
   iptv: {
     baseUrl: 'https://iptv-org.github.io/api',
-    rateLimitMs: 500,
     m3uBaseUrl: 'https://iptv-org.github.io/iptv',
   },
   jamendo: {
     baseUrl: 'https://api.jamendo.com/v3.0',
     clientId: ENV.JAMENDO_CLIENT_ID,
     clientSecret: ENV.JAMENDO_CLIENT_SECRET,
-    rateLimitMs: 200,
   },
   internetArchive: {
     baseUrl: 'https://archive.org',
-    rateLimitMs: 500,
     // advancedsearch is genuinely slow on a cold CDN node (>10s before
     // the query cache warms). 10s would abort the FIRST request of a
     // session (the "first load fails, refresh works" bug) — 30s keeps
@@ -49,7 +45,6 @@ export const API_CONFIG = {
   },
   audius: {
     baseUrl: 'https://api.audius.co',
-    rateLimitMs: 300,
   },
   // P61: weather greeting on Home. No API keys, fully open source.
   // All three URLs live here so the weather service doesn't hardcode
@@ -70,7 +65,5 @@ export const API_CONFIG = {
       lat: 19.076,
       lon: 72.8777,
     },
-    /** Per-service rate limit, used by the future apiFetch wrapper. */
-    rateLimitMs: 1000, // ip-api.com allows ~45 req/min/IP
   },
 } as const;
