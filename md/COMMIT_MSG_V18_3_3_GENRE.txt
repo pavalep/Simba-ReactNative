@@ -1,0 +1,63 @@
+V18.3.3 (batch 3): migrate useGenreScreen (3-tab genre browse)
+
+The hardest "simple" hook in V18.3.3 so far — 3 separate
+fetches (streaming catalog, mood collections, radio stations)
+plus 4 tabs of UI state. The original had 3 useState/useEffect
+blocks, each with its own cancelled flag, attempt counter,
+and loading/failed booleans.
+
+Migrated to 3 useApiQuery calls (one per data source). The
+"attempt counter" retry pattern is replaced by TanStack's
+refetch. The cancelled flag is replaced by TanStack's
+internal request tracking (a stale request is simply not
+used).
+
+### 1. Streaming catalog (jamendo)
+
+Before: useState[streamingTracks, streamingLoading,
+streamingFailed, streamingAttempt] + useEffect.
+
+After: one useApiQuery with `queryKey: ['jamendo', 'byGenre',
+genre, STREAMING_LIMIT]`. The `streamingAttempt` retry
+becomes `streaming.refetch()`. The `streamingFailed` flag
+becomes `!!streaming.error`.
+
+### 2. Mood collections (jamendo multi-source merge)
+
+Before: useState[moodTracks, moodLoading, selectedMoodId] +
+useEffect with `Promise.allSettled` over `selectedMood.tags`.
+Manual dedupe by track id.
+
+After: one useApiQuery with `queryKey: ['jamendo', 'mood',
+selectedMoodId, tags.join('|')]`. The `Promise.allSettled` +
+dedupe stays inside the queryFn (pure HTTP fan-out + pure
+data transform). The `selectedMoodId` state stays
+component-level (it's a UI choice, not server data).
+
+The `enabled: !!selectedMood` flag prevents the fetch when
+the user has somehow ended up with no selected mood (shouldn't
+happen, but defensive).
+
+### 3. Radio stations (radioBrowserService — not yet V18-migrated)
+
+Before: same pattern as streaming.
+
+After: one useApiQuery, same shape. The radioBrowserService
+stays imported from the legacy file (Wave 4 will create a
+radioBrowserAdapter and a shim).
+
+### Other
+
+- The local tracks tab stays as a useMemo over the zustand
+  `useMediaStore` selector (it's a pure read-only snapshot).
+- The 3 player-action callbacks (handlePlayTrack /
+  handlePlayStreaming / handlePlayStation) stay unchanged
+  — they're player dispatches, not data flows.
+
+LOC: 230 → 167 (27% reduction). The new shape has more
+explicit "data ?? []" defaults (each query is a separate
+source of truth) but fewer "is loading" / "is failed"
+flags to keep in sync.
+
+Verification:
+- npx tsc --noEmit  -> 0 errors

@@ -1,26 +1,40 @@
-// ─── Barrel Export — Phase 0 Content API Services ───────────────────────
-// Import individual services as needed:
-//   import { searchJamendoTracks } from '../services/api';
-// or destructure the named exports.
+// ─── Barrel Export — V18 ──────────────────────────────────────────────
+// Re-exports the public service functions + domain types from
+// the V18 adapters. The pre-V18 `*Service.ts` files were deleted
+// in V18.3.4 (their only remaining consumer, useAggregatedSearch,
+// was updated to import from the adapters directly).
 //
-// NOTE: Explicit re-exports are used where function names collide
-// across services (e.g. searchArtists, searchPodcasts, searchAudiobooks).
+// Convertors are NOT re-exported here — they collide across
+// services (audius + jamendo both have `trackResultFromRaw`).
+// Consumers that need convertors should import from the
+// adapter directly.
+//
+// Where a service name has a collision across adapters
+// (e.g. searchArtists vs searchShows), the V18 barrel renames
+// the export so callers can disambiguate.
 
 export * from './apiClient';
-export * from './tvmazeService';
+
+export {
+  searchShows,
+  getPopularShows,
+  getShowById,
+  getEpisodeList,
+  getSchedule,
+  type TVMazeShow,
+  type TVMazeEpisode,
+} from './tvmazeAdapter';
 
 export {
   searchArtists as searchMusicBrainzArtists,
   getArtistDiscography,
+  getReleaseGroupDetail,
   getCoverArt,
-} from './musicbrainzService';
-
-export {
-  searchPodcasts,
-  getTrendingPodcasts,
-  getEpisodes,
-  getPodcastById,
-} from './podcastIndexService';
+  type MusicBrainzArtist,
+  type MusicBrainzRelease,
+  type MusicBrainzReleaseGroupDetail,
+  type MusicBrainzRecording,
+} from './musicbrainzAdapter';
 
 export * from './radioBrowserService';
 
@@ -28,9 +42,26 @@ export {
   searchAudiobooks,
   getAudiobookById,
   searchByAuthor,
-} from './librivoxService';
+  searchByGenre,
+  getRecentAudiobooks,
+  type AudiobookResult,
+} from './librivoxAdapter';
 
 export * from './iptvService';
-export * from './jamendoService';
+
+export {
+  searchJamendoTracks,
+  getJamendoTracksByGenre,
+  getPopularJamendoTracks,
+  getJamendoTrackById,
+  type JamendoTrackResult,
+} from './jamendoAdapter';
+
 export * from './internetArchiveService';
-export * from './audiusService';
+
+export {
+  searchAudiusTracks,
+  getTrendingAudiusTracks,
+  getAudiusTrackById,
+  type AudiusTrackResult,
+} from './audiusAdapter';

@@ -5,11 +5,11 @@
 // Only includes APIs that provide free, full-length content — no
 // 30-second previews, no paid commercial plans.
 
-import {searchAudiobooks} from './librivoxService';
+import {searchAudiobooks} from './librivoxAdapter';
 import {getAllIPTVChannels} from './iptvService';
-import {searchJamendoTracks} from './jamendoService';
+import {searchJamendoTracks} from './jamendoAdapter';
 import {searchInternetArchiveAudio} from './internetArchiveService';
-import {searchAudiusTracks} from './audiusService';
+import {searchAudiusTracks} from './audiusAdapter';
 import type {AggregatedSearchResults, ApiSearchOptions} from '../../types/api';
 
 /**

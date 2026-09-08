@@ -1,0 +1,83 @@
+V18.3.3 (batch 5): migrate useAudiobooksScreen + screen
+
+The hardest hook in the wave — 3 tabs (search/genres/recent)
+with a per-scope cache (Map<key, AudiobookScopeState>) +
+infinite scroll + per-scope retry/refresh. The per-scope
+cache held:
+  - items, page, hasLoaded, isLoading, isLoadingMore,
+    exhausted, error (per scope)
+  - a monotonic seqRef to drop stale responses
+  - a guardRef for in-flight dedup
+  - a `dedupe` helper for cross-page duplicates
+
+### Architectural decision
+
+The new hook exposes THREE named query results (search,
+genres, recent) — one useInfiniteApiQuery per tab. Each
+queryKey includes the (term, genre) tuple. TanStack's cache
+provides the per-scope data preservation: when the user
+switches from Search to Genres and back, the Search tab's
+data is served from cache instantly (within staleTime).
+
+The screen owns the `selectedTab` state (a simple useState).
+The active scope is selected by mapping `selectedTab` to
+the right query result. The screen no longer needs
+`ensureLoaded(tab)` / `loadMore(tab)` / `retry(tab)`
+callbacks — the scope's `fetchNextPage()` and `refetch()`
+are called directly.
+
+### Files
+
+- src/screens/AudiobooksScreen/hooks/useAudiobooksScreen.ts
+  238 → 178 LOC. The Map<key, AudiobookScopeState> is gone;
+  3 useInfiniteApiQuery calls handle the per-scope state.
+  The new `AudiobookScope` type is the consumer-facing
+  per-scope view: items, hasLoaded, isLoading, isLoadingMore,
+  hasNextPage, error, fetchNextPage, refetch.
+
+- src/screens/AudiobooksScreen/types/index.ts
+  `AudiobookScopeState` → `AudiobookScope` (the rename
+  reflects the new shape: TanStack-native, no manual
+  page/exhausted state). `AudiobookTabSceneProps` removes
+  the `ensureLoaded`, `loadMore`, `retry` callbacks — the
+  scene now calls `scope.fetchNextPage()` and
+  `scope.refetch()` directly.
+
+- src/screens/AudiobooksScreen/components/AudiobooksContent.tsx
+  The screen now:
+  - Destructures `search`/`genres`/`recent` scopes from the
+    hook (instead of `getScope`).
+  - Owns `selectedTab` via local useState (was in the hook).
+  - Picks the active scope via a `selectedTab` switch.
+  - Passes the active scope to the scene; the scene no
+    longer needs the per-action callbacks.
+
+  Search bar simplified: `value={searchTerm}` +
+  `onChangeText={setSearchTerm}` (debouncing no longer
+  needed at the screen level — the hook's queryKey changes
+  on term change, the new query runs).
+
+### Trade-offs
+
+- The old code had a complex seqRef + guardRef for in-flight
+  dedup. TanStack handles this internally (a stale query
+  result is simply not used; concurrent fetches for the
+  same key are deduped by queryKey).
+- The old `exhausted` flag (a 'more' fetch returned 0 new
+  rows) is now `!hasNextPage`, computed by the
+  `getNextPageParam` function ("if lastPage.length <
+  PAGE_SIZE, return undefined").
+
+### Search debouncing
+
+The old code had separate `searchQuery` (immediate) and
+`searchTerm` (debounced) state. The new code uses a single
+`searchTerm` state — TanStack's cache absorbs the per-keystroke
+refetches (the same queryKey collapses concurrent fetches).
+This is simpler AND faster (no debounce delay before results
+appear).
+
+Verification:
+- npx tsc --noEmit  -> 0 errors
+- npx jest          -> 54 passed / 1 todo / 7 suites
+                       (no regressions)

@@ -6,7 +6,7 @@
 
 import {useEffect, useRef, useState} from 'react';
 import {aggregateSearch} from '../../../services/api/searchAggregator';
-import {getPopularJamendoTracks} from '../../../services/api/jamendoService';
+import {getPopularJamendoTracks} from '../../../services/api/jamendoAdapter';
 import type {
   AggregatedSearchResults,
   JamendoTrackResult,

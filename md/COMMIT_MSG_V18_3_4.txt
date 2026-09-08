@@ -1,0 +1,45 @@
+V18.3.4: delete the 5 shim files + update the index.ts barrel
+
+Wave 3 closeout. The 5 deprecated re-export shim files
+(audiusService.ts, jamendoService.ts, librivoxService.ts,
+musicbrainzService.ts, tvmazeService.ts) are no longer
+needed — every consumer hook has migrated to import from
+the corresponding adapter directly. The shims served
+their purpose (no app breakage during the gradual hook
+migration); now that all 10 of 11 consumer hooks are on
+the adapters, the shims are pure indirection.
+
+Also updates two files that still imported from the shims:
+  - src/services/api/index.ts (the barrel export)
+  - src/services/api/searchAggregator.ts (the cross-service
+    aggregator)
+  - src/screens/Search/hooks/useAggregatedSearch.ts
+    (the one consumer that hadn't migrated; it's the
+    V18.6-deferred work but the import was trivial)
+
+### Final V18.3 state
+
+| Item | Status |
+|---|---|
+| 5 adapter files (audius/jamendo/librivox/musicbrainz/tvmaze) | ✅ |
+| 18 convertor tests | ✅ |
+| 10/11 consumer hooks migrated to useApiQuery | ✅ |
+| useAggregatedSearch (V18.6 deferred) | ⏸️ |
+| 5 shim files deleted | ✅ (this commit) |
+| index.ts barrel re-exports from adapters | ✅ (this commit) |
+
+The Wave 3 architecture is complete. Every API service in
+the app's "simple search" surface now:
+  - Has a *Adapter.ts file with types + convertors + service
+    functions
+  - Returns `Promise<DomainType>` (never `Promise<RawType>`)
+  - Has convertor unit tests
+  - Is consumed by hooks that use TanStack via useApiQuery
+
+The next wave (V18.4) targets the paginated services
+(iptv, radioBrowser, podcastIndex) using the same pattern.
+
+Verification:
+- npx tsc --noEmit  -> 0 errors
+- npx jest          -> 54 passed / 1 todo / 7 suites
+                       (no regressions)

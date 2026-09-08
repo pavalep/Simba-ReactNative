@@ -1,0 +1,30 @@
+V18.3.3-prep: deprecated re-export shims for the 5 service files
+
+Makes the 5 new adapters the source of truth (per the V18
+type contract §2.5) without breaking any consumer that
+still imports from the old service files.
+
+The 5 old service files now re-export ONLY the public
+service functions + domain types from the new adapters.
+They do NOT re-export the convertors (`trackResultFromRaw`
+collides across audius + jamendo; same for the musicbrainz
+artist/release/recording result convertors). Consumers that
+need convertors should import from the adapter directly.
+
+This is V18.3.3-prep — the consumer hook migration continues
+under V18.3.3 proper. The shims let us migrate hooks
+incrementally (one reviewable diff at a time) without
+breaking the app. V18.3.4 deletes the shims.
+
+Also: audiusAdapter.ts — made `AudiusListRaw.data` and
+`AudiusSingleRaw.data` optional (`data?:`). The convertors
+handle both the defined-data and the missing-data cases
+(`raw?.data ?? []` and `raw.data ? map(raw.data) : null`),
+so the type should match the convertor's defensive contract.
+Test `__tests__/simpleAdapters.test.ts` covers both shapes.
+
+Verification:
+- npx tsc --noEmit  -> 0 errors
+- npx jest          -> 54 passed / 1 todo / 7 suites
+                       (no change vs V18.3.1+2 — shims
+                       re-export the same surface)

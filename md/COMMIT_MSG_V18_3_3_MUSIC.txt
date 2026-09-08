@@ -1,0 +1,68 @@
+V18.3.3 (batch 4): migrate useMusicScreen + screen + provider
+
+The second-largest "complex" hook in the wave. The original
+useMusicScreen had a per-scope cache (Map<key, MusicScopeState>)
+with monotonic seqRef + guardRef for in-flight dedup — 268
+lines of state-machine code that mirrors what TanStack's
+queryKey-based cache does natively.
+
+### Architectural decision
+
+After V18, the per-scope cache lives in TanStack, not in the
+hook. The hook tracks ONE active scope at a time; switching
+scopes re-points the queryKey, and TanStack serves cached
+data instantly if the user has visited that scope before
+(within `staleTime: 60_000`).
+
+This changes the hook's API:
+
+  Before (per-scope):                    After (active-scope):
+  - getScope(genre): MusicScopeState     - items: JamendoTrackResult[]
+  - ensureLoaded(genre): void            - setActiveGenre(genre): void
+  - loadMore(genre): void                - fetchNextPage(): void
+  - retry(genre): void                   - refetch(): void
+  - refresh(genre): void                 - hasNextPage: boolean
+                                          - isLoadingMore: boolean
+
+The screen calls `setActiveGenre(genre)` in a useEffect
+when the FAB filter changes; the queryKey change triggers
+TanStack to either fetch fresh or return cached data.
+
+### Files
+
+- src/screens/MusicScreen/hooks/useMusicScreen.ts (268 → 137 LOC)
+  The hook now returns: {activeGenre, setActiveGenre, searchTerm,
+  setSearchTerm, isSearchActive, items, hasLoaded, isLoading,
+  isLoadingMore, hasNextPage, error, fetchNextPage, refetch}.
+  One useInfiniteApiQuery with the (genre, term) pair in the key.
+
+- src/screens/MusicScreen/components/MusicDataProvider.tsx
+  Updated to pass through the new API as the context value.
+  Same shape, new fields.
+
+- src/screens/MusicScreen/components/MusicContent.tsx
+  Updated to call `setActiveGenre(genre)` in a useEffect
+  (replaces the old `ensureLoadedRef.current(genre)`); uses
+  `items`, `fetchNextPage`, `refetch` directly. The
+  `onEndReached` now also guards on `hasNextPage` (the
+  old `loadMore` did this via the `exhausted` flag).
+
+### Behavior preserved
+
+- Per-scope data still served (TanStack's cache replaces the
+  manual Map).
+- Infinite scroll still works (useInfiniteApiQuery + fetchNextPage).
+- Error retry still works (refetch).
+- Pull-to-refresh still works (refetch).
+- Search debouncing still works (setSearchTerm from the shell).
+
+The ONLY behavior change: the screen used to call
+`ensureLoaded(genre)` to lazily trigger a first fetch; the
+new version calls `setActiveGenre(genre)` which triggers
+the same fetch via the queryKey change. Net effect is
+identical for the user.
+
+Verification:
+- npx tsc --noEmit  -> 0 errors
+- npx jest          -> 54 passed / 1 todo / 7 suites
+                       (no regressions)
