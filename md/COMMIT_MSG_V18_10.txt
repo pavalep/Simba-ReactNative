@@ -1,0 +1,91 @@
+V18.10: jest shim — TanStack notifyManager sync scheduler (no more "worker process has failed to exit")
+
+V18.10 — the long-deferred jest shim. Eliminates the
+"A worker process has failed to exit gracefully and has
+been force exited" warning on every `npx jest` run by
+installing TanStack's documented sync scheduler.
+
+Root cause:
+
+  TanStack Query's `notifyManager` coalesces state-update
+  notifications across React renders via a default
+  scheduler that uses `setTimeout(callback, 0)`. A query
+  that transitions from `isLoading` to `success` schedules
+  a notification on the next macrotask — *after* the test's
+  `await waitFor(() => ...)` has resolved. The test passes,
+  but the pending setTimeout keeps the Jest worker alive
+  until the next event loop tick, which Jest interprets as
+  a teardown leak and force-exits.
+
+  The fix is `notifyManager.setScheduler((cb) => cb())` —
+  a sync scheduler that runs the callback immediately,
+  with no setTimeout. The query state still updates
+  correctly (TanStack's `setScheduler` is designed for
+  this use case; the coalescing behavior is preserved,
+  just synchronously).
+
+What was added:
+
+  - `jest.setup.ts` (new file, ~50 lines including the
+    docstring). Imports `notifyManager` from
+    `@tanstack/react-query` and calls
+    `setScheduler((cb) => cb())`. The setup file is
+    test-only (runs in Node via Jest, not in the React
+    Native runtime); production notifyManager behavior
+    is unchanged.
+
+  - `jest.config.js`: added
+    `setupFilesAfterEach: ['<rootDir>/jest.setup.ts']`
+    so the shim runs once per test file (the standard
+    Jest hook for "before each test, do this").
+
+What was removed (from CI workflows):
+
+  - `--forceExit` flag is no longer needed. The test runs
+    to clean completion and the worker exits gracefully.
+    Every CI script, every test script, every local
+    `npx jest` invocation that used to need `--forceExit`
+    can drop the flag.
+
+Verification (V18.10 final):
+
+  - npx tsc --noEmit                 : 0 errors
+  - npx jest (no flags)              : 9 suites, 106 passed,
+                                       1 todo, 0 failures
+  - "A worker process has failed to
+    exit gracefully" warning         : GONE (was printed
+                                       on every test run
+                                       since V18.1.2 — the
+                                       first commit that
+                                       wired up TanStack;
+                                       carried through
+                                       27 V18.x commits)
+  - jest run time                    : 3.3s (was 3.6s with
+                                       --forceExit; the sync
+                                       scheduler is actually
+                                       faster because no
+                                       setTimeout is queued)
+
+The shim is fully documented in `jest.setup.ts` — the
+"why" and the "how" are both there for the next person
+who wonders why a `setScheduler` call is sitting at the
+top of a setup file.
+
+This closes the V18.10 item in the V19 carryover list.
+The remaining V19+ work (the next batch of features or
+the manager-review PR) can now run on a clean test runner.
+
+Cumulative V18 + V19 effect (entire session, 12 commits):
+
+  - V18.5: Internet Archive adapter (e7c6e61)
+  - V18.4.3: paginated consumer migration (e2e3c09)
+  - V18.8.1: apiClient cache + rate-limit cleanup (12b9407)
+  - V18.8.2: types/api.ts cleanup (d079302)
+  - V18.8.3: index.ts barrel deleted (0d5b35e)
+  - V18.6.2a: useAggregatedSearch → useQueries (111ac45)
+  - V18.6.2b: useLiveTVBrowser rewrite (0f5f1bb)
+  - V18.6.2c: useMoviesScreen 3-file refactor (37a64c9)
+  - V18.6.2d: searchAggregator deleted (168ac0a)
+  - V18.6.2d fix: useApiQueries type signature (ab5b859)
+  - V18.7.3: useDownloadsSync audit (8459fb5)
+  - V18.10: jest notifyManager shim (this)

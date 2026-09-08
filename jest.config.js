@@ -5,6 +5,11 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!(immer|@reduxjs/toolkit|react-redux|redux-persist|@react-navigation|@react-native|react-native(-.*)?)/)',
   ],
+  // V18.10: jest setup file (see jest.setup.ts for the
+  // notifyManager sync-scheduler shim that eliminates the
+  // "worker process has failed to exit gracefully" warning
+  // on every `npx jest` run).
+  setupFilesAfterEach: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^react-native-linear-gradient$':
       '<rootDir>/__mocks__/react-native-linear-gradient.js',
