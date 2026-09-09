@@ -6,7 +6,7 @@ module.exports = {
     'node_modules/(?!(immer|@reduxjs/toolkit|react-redux|redux-persist|@react-navigation|@react-native|react-native(-.*)?)/)',
   ],
   // V18.10: jest setup file (see jest.setup.ts for the
-  // notifyManager sync-scheduler shim that eliminates the
+  // notifyManager microtask-scheduler shim that eliminates the
   // "worker process has failed to exit gracefully" warning
   // on every `npx jest` run).
   // V21 P01 / D-003: the prior key was `setupFilesAfterEach`,
