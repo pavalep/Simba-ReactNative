@@ -3,7 +3,7 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}'],
   transformIgnorePatterns: [
-    'node_modules/(?!(immer|@reduxjs/toolkit|react-redux|redux-persist|@react-navigation|@react-native|react-native(-.*)?)/)',
+    'node_modules/(?!(immer|@reduxjs/toolkit|react-redux|redux-persist|@react-navigation|@react-native|react-native(-.*)?|@simba-dev)/)',
   ],
   // V18.10: jest setup file (see jest.setup.ts for the
   // notifyManager microtask-scheduler shim that eliminates the
