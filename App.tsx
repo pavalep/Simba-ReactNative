@@ -1,4 +1,4 @@
-import React, {useMemo, useEffect} from 'react';
+import React, {useMemo, useEffect, useRef} from 'react';
 import {Linking, View, StyleSheet} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
@@ -114,23 +114,32 @@ const AppContent: React.FC = () => {
     [colors],
   );
 
-  // 56.6: auth-gated deep links — content:// / file:// shared-file URIs bypass
-  // the gate (handled by V14's `useOpenFromUrl`), simbaplayer:// links wait
-  // for the session restore so they never land on a logged-out app.
+  // V21 / W3 P12 / D-009: the cold-start hook is the SINGLE source
+  // of truth for `Linking.getInitialURL()` (it dispatches via the
+  // V14 `useOpenFromUrl` hook, which already handles the
+  // content:// / file:// bypass + the simbaplayer:// auth-gating +
+  // the basename-derivation + the extension-classification).
+  //
+  // Before P12: the React Navigation `linking.getInitialURL` below
+  // ALSO called `Linking.getInitialURL()` and re-implemented the
+  // auth-gating. The two paths fired on every cold-start, so the
+  // user saw the shared file twice (D-009).
+  //
+  // P12 fix: the Promise returned by `Linking.getInitialURL()` is
+  // created ONCE (synchronously, in the render body) and shared
+  // between the React Navigation config (it just returns the
+  // Promise) and the cold-start hook (it awaits the Promise and
+  // dispatches via `useOpenFromUrl`). The Promise's resolution
+  // value is used both for routing (React Navigation) and for
+  // playback (`useOpenFromUrl`).
+  const deepLinkPromiseRef = useRef<Promise<string | null> | null>(null);
+  if (deepLinkPromiseRef.current === null) {
+    deepLinkPromiseRef.current = Linking.getInitialURL();
+  }
   const linkingConfig = useMemo(
     () => ({
       ...linking,
-      getInitialURL: async () => {
-        const url = await Linking.getInitialURL();
-        if (!url) return url;
-        const isAppLink =
-          url.startsWith('simbaplayer://') ||
-          url.startsWith('https://simbaplayer.app');
-        if (!isAppLink) return url;
-        await waitForAuthSettle();
-        // V17 Phase 78: auth.isAuthenticated moved to useAuthStore.
-        return useAuthStore.getState().isAuthenticated ? url : null;
-      },
+      getInitialURL: () => deepLinkPromiseRef.current!,
     }),
     [],
   );
@@ -146,7 +155,7 @@ const AppContent: React.FC = () => {
     // extension-classification are all inside `useOpenFromUrl`. The
     // consumer owns only the `Linking` plumbing (cold-start + warm
     // listener).
-    Linking.getInitialURL().then(url => {
+    deepLinkPromiseRef.current!.then(url => {
       if (url) void openFromUrl(url);
     });
 
