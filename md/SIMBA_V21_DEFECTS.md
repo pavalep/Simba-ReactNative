@@ -73,6 +73,7 @@
 2026-09-10 — D-022 (P1) closed by W2 P07 (`446c6d5` + `970ef8b`, after a re-amend that folded the adapter internal-import fix into the P07 code commit). 8 P0 closed, 6 P0 open; 8 P1 open, 1 P1 closed.
 2026-09-10 (W2 P08) — Library feature pilot: 24 files moved to `src/features/library/presentation/`. T08.04 re-scoped (no library-specific application service; `mediaService` is shared across 6+ features, `libraryScanService` was deleted at W2 P06). No new defects.
 2026-09-10 (W2 exit + W3 P13) — D-004 investigation complete: act flag is a no-op (RN preset already sets it); act wrap breaks tests with "overlapping act" errors; root cause is `notifyManager` + `actQueue` + `Query.#dispatch` interaction. Re-scoped to a new W3 P13 phase with 4 tasks. No new defects.
+2026-09-10 (W3 T13.01 attempt, commit `60c83bf`) — sync shim was tried and REVERTED. It changed the warning from "not wrapped in act" to "act is not configured" (different warning, same root cause: flag is read as falsy by `isConcurrentActEnvironment` even after 4 separate set methods, all verified to write `true` to the test VM's `globalThis`). T13.01 ships (c) "accept the warning as cosmetic"; T13.01a added to debug the flag-visibility issue separately.
 
 The audit was a single-pass read of:
 - `App.tsx`, `jest.config.js`, `jest.setup.ts`
