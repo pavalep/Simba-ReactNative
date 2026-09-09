@@ -1,0 +1,31 @@
+diff --git a/node_modules/@testing-library/react-native/dist/helpers/wrap-async.js b/node_modules/@testing-library/react-native/dist/helpers/wrap-async.js
+index 71178bf..ae61dfc 100644
+--- a/node_modules/@testing-library/react-native/dist/helpers/wrap-async.js
++++ b/node_modules/@testing-library/react-native/dist/helpers/wrap-async.js
+@@ -15,15 +15,20 @@ var _flushMicroTasks = require("../flush-micro-tasks");
+  * @returns Result of the callback
+  */
+ async function wrapAsync(callback) {
+-  const previousActEnvironment = (0, _act.getIsReactActEnvironment)();
+-  (0, _act.setReactActEnvironment)(false);
++  // T13.01a/c EXPERIMENT: do NOT disable the act environment during
++  // waitFor polling. The original code intentionally sets the flag
++  // to false here to suppress "not wrapped in act" warnings during
++  // polling, but this is what causes the "act is not configured"
++  // warning we see in D-004. Setting the flag to true (keeping it
++  // enabled) instead lets React 19 see the flag as truthy during
++  // state updates fired from the polling microtask.
+   try {
+     const result = await callback();
+-    // Flush the microtask queue before restoring the `act` environment
++    // Flush the microtask queue
+     await (0, _flushMicroTasks.flushMicroTasks)();
+     return result;
+-  } finally {
+-    (0, _act.setReactActEnvironment)(previousActEnvironment);
++  } catch (e) {
++    throw e;
+   }
+ }
+ //# sourceMappingURL=wrap-async.js.map
+\ No newline at end of file
