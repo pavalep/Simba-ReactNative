@@ -88,7 +88,7 @@
 
 ### P08 exit — Wave 2 review
 
-- [ ] **T08.09** Reviewer confirms W2 is complete: P05 folder contract + linter, P06 4 placeholders replaced, P07 10 adapters moved (with the internal-import fix folded into the same commit), P08 library pilot. Evidence: reviewer initials + date in the W2 exit review doc.
+- [x] **T08.09** Reviewer confirms W2 is complete: P05 folder contract + linter, P06 4 placeholders replaced, P07 10 adapters moved (with the internal-import fix folded into the same commit), P08 library pilot. Evidence: `md/SIMBA_V21_W2_EXIT.md` — APPROVED 2026-09-10 with the 2 re-scopings (T08.04 nothing-to-move + T08.05 linter-target) and the 1 commit-history correction (P07 re-amend) noted. W3 may begin.
 
 ---
 
