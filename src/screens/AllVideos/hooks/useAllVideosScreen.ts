@@ -1,6 +1,12 @@
 // ────────────────────────────────────────────────────────
 // Simba Player — useAllVideosScreen Hook (Phase 20)
 // 54.3: pull-to-refresh triggers a media re-scan.
+//
+// V20.10: the manual `refreshing` state was redundant —
+// `useMediaScanner()` already exposes `isScanning` from the
+// Zustand store. The hook's `handleRefresh` is now a 1-liner
+// that just calls `startScan(true)`, and the screen's
+// `<RefreshControl>` reads `isScanning` directly.
 // ────────────────────────────────────────────────────────
 
 import {useCallback, useMemo, useState} from 'react';
@@ -21,7 +27,7 @@ export interface UseAllVideosScreenResult {
   toggleViewMode: () => void;
   filteredTracks: ScannedTrack[];
   handlePlayTrack: (uri: string, title: string) => void;
-  /** 54.3: pull-to-refresh state + handler */
+  /** 54.3: pull-to-refresh state (now the store's `isScanning`). */
   refreshing: boolean;
   handleRefresh: () => void;
 }
@@ -31,8 +37,10 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('title');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [refreshing, setRefreshing] = useState(false);
-  const {startScan} = useMediaScanner();
+  // V20.10: `isScanning` comes from the media-scan store directly
+  // (via `useMediaScanner()`). No local `refreshing` state — the
+  // scan-in-flight boolean is the single source of truth.
+  const {startScan, isScanning} = useMediaScanner();
 
   const videoTracks = useMediaVideoTracks();
 
@@ -78,11 +86,12 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
     [openPlayer],
   );
 
-  // 54.3: pull-to-refresh — force a full re-scan of linked folders
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await startScan(true);
-    setRefreshing(false);
+  // 54.3: pull-to-refresh — force a full re-scan of linked folders.
+  // V20.10: no async wrapper / no spinner state — the store's
+  // `isScanning` is the single source of truth for the
+  // `<RefreshControl refreshing={...}>` boolean.
+  const handleRefresh = useCallback(() => {
+    startScan(true);
   }, [startScan]);
 
   return {
@@ -95,7 +104,7 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
     toggleViewMode,
     filteredTracks,
     handlePlayTrack,
-    refreshing,
+    refreshing: isScanning,
     handleRefresh,
   };
 }

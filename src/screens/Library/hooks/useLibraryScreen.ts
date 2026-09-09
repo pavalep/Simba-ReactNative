@@ -80,7 +80,11 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const [createModalVisible, setCreateModalVisible] = useState(false);
 
   // ── Pull-to-refresh ──
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // V20.10: the local `isRefreshing` state was redundant — the
+  // media-scan store's `isScanning` (already destructured below
+  // as `isScanning` from `useMediaScanner()`) is the single source
+  // of truth. The screen's `<RefreshControl refreshing={isRefreshing}>`
+  // now reads `isScanning` directly.
   const [hasAnimated, setHasAnimated] = useState(false);
 
   // ── Redux Selectors ──
@@ -135,15 +139,13 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   }, [hasAnimated]);
 
   // ── Pull-to-refresh ──
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      await startScan();
-    } catch {
-      // Scan errors handled by toast
-    } finally {
-      setIsRefreshing(false);
-    }
+  // V20.10: no async wrapper / no spinner state / no try-catch.
+  // The store's `isScanning` is the single source of truth for
+  // the `<RefreshControl refreshing={...}>` boolean, and the
+  // scan-error toast (in the `useEffect` above) is fired by
+  // `scanHistory.errorsCount` change — not by an exception path.
+  const handleRefresh = useCallback(() => {
+    startScan();
   }, [startScan]);
 
   // ── Navigation Handlers ──
@@ -299,7 +301,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
     showSortControls, showFilterChips, showViewToggle,
     isScanning, scanProgress, scanHistory,
     cancelScan,
-    isRefreshing, hasAnimated,
+    isRefreshing: isScanning, hasAnimated,
     isAudioPlaying, currentAudioUri,
     handleRefresh,
     navigateToSettings, navigateToLinkedFolders, navigateToFolderBrowser, handleLinkFolder,
