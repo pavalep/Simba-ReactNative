@@ -10,10 +10,20 @@
 //     (the V11-era diagnostic from the PiP black-screen investigation)
 //   • Documented in [`SIMBA_PLAYER_MODULE_V12_DEBUG_LOG_CLEANUP.md`](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_DEBUG_LOG_CLEANUP.md) §3.1
 //
-// **Phase 47 deletion:** this file is scheduled for removal in Phase 47's
-// sweep (along with `MediaNotificationService.kt` + the rest of the
-// `com.simba.player.*` V11 native surface). The V12 equivalent lives in
-// `react-native-media-player/android/src/main/java/com/simba/player/PlayerActivity.kt`.
+// **V21 W4 P15 (2026-09-10) — half of the V11 surface retired:**
+//   • `MediaNotificationService.kt` (387 lines) — REMOVED. Manifest
+//     registration deleted. The library's `MediaPlaybackService` is
+//     now the sole foreground-notification owner.
+//   • `android:supportsPictureInPicture="true"` on MainActivity — REMOVED
+//     from the manifest. MainActivity has zero PiP consumers since
+//     Phase 44 retired the inline-mount hooks.
+//   • This file (MainActivity.kt) — REMAINS. It's the JS bundle host —
+//     deleting it would break the entire app launch flow.
+//   • Remaining V11 cleanup deferred to V22:
+//       - `PipActionReceiver`, `onPictureInPictureModeChanged`,
+//         `onBackPressed`-to-PiP exit handler are dead code (T15.06).
+//       - The `USE_DEDICATED_PLAYER_ACTIVITY = false` rollback path is
+//         itself likely dead (NowPlayingScreen.tsx has zero callers).
 package com.simba.player
 
 import android.app.PictureInPictureParams
