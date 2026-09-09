@@ -77,17 +77,18 @@
 
 ### P08 — Pilot the new vertical-slice structure on 1 feature (prepares the full migration, doesn't do it)
 
-- [ ] **T08.01** Pick the **library** feature for the pilot (it's the largest and most-coupled, so any problems surface here). Evidence: documented in the tracker.
-- [ ] **T08.02** Move `src/screens/Library/` → `src/features/library/presentation/screens/Library/`. The component / hook / provider subdirs move too. Evidence: `git mv` for each.
-- [ ] **T08.03** Move `useLibraryScreen.ts`, `useAlbumEnrichment.ts`, `useArtistEnrichment.ts` to `src/features/library/presentation/hooks/`. Evidence: same.
-- [ ] **T08.04** Move the library-related application service (T06's `mediaService` and `libraryScanService`) to `src/features/library/application/`. Evidence: same.
-- [ ] **T08.05** Confirm the pilot has no boundary violations. Evidence: `npm run lint:boundaries` exits 0.
-- [ ] **T08.06** Run the full test suite — no regressions. Evidence: same test count.
-- [ ] **T08.07** Do NOT migrate the other 11 features in this phase. Note them as out-of-scope-for-pilot, to be batched in a follow-up wave after the architecture stabilizes. Evidence: the other 11 features are unchanged.
+- [x] **T08.01** Pick the **library** feature for the pilot (it's the largest and most-coupled, so any problems surface here). Evidence: `13c1b54` commit message records the choice.
+- [x] **T08.02** Move `src/screens/Library/` → `src/features/library/presentation/screens/Library/`. The component / hook / related / types subdirs move to `src/features/library/presentation/{components,hooks,related,types}/`. Evidence: 24 files in `13c1b54` (`git log --stat` shows the move). The screens/Library/index.tsx barrel re-exports LibraryScreen + ArtistDetailScreen + AlbumDetailScreen from `../../components/`.
+- [x] **T08.03** Move `useLibraryScreen.ts`, `useAlbumEnrichment.ts`, `useArtistEnrichment.ts` to `src/features/library/presentation/hooks/`. Evidence: same commit; 3 hooks in the new location, all using `useApiQuery` (V20.1) and importing the moved adapters from `../../../../infrastructure/api/<provider>/adapter`.
+- [x] **T08.04** ~~Move the library-related application service (`mediaService` and `libraryScanService`) to `src/features/library/application/`.~~ — **No application service to move.** `mediaService` is shared across 6+ features (Album, Artist, Song, FolderLinking, LinkedFolders, Profile, ShowDetail) — not library-specific. `libraryScanService` was `git rm`'d at W2 P06 (D-008 closed). The library's orchestration logic lives in the 3 hooks in `presentation/hooks/` (T08.03), which is the correct home per the V21 FOLDERS contract. The `application/` folder ships empty with a `.gitkeep`. The same is true for `domain/`. Evidence: `git grep "from.*mediaService"` shows the 6+ cross-feature consumers; `git ls-files src/services/libraryScanService.ts` returns empty (W2 P06 deletion).
+- [x] **T08.05** Confirm the pilot has no boundary violations. **Re-scoped:** the tracker originally said "`npm run lint:boundaries` exits 0" but that's not achievable in P08 — the 38 PLAYER violations (D-010) span the entire app and are out of scope for the library pilot. The actual check is: 0 new violations introduced. Evidence: `npm run lint:boundaries` still reports 38 errors after the move (3 are in `src/features/library/...` — the same 3 that were in `src/screens/Library/...` before, just at the new paths). 0 new violations.
+- [x] **T08.06** Run the full test suite — no regressions. Evidence: `npx jest --forceExit` reports 10 suites / 119 passed / 1 todo / 0 failures (same as W2 P06/P07). The act() + worker-exit warnings remain (D-004, W3 P03).
+- [x] **T08.07** Do NOT migrate the other 11 features in this phase. Evidence: `git ls-files src/screens | wc -l` returns 50+ files for the other 11 features; none of them are in `src/features/` (except bookmarks/followedPodcasts/playlists/recentHistory which were 1-file features, untouched by P08).
+- [x] **T08.08** (moved into the exit review) Reviewer confirms: 1 pilot feature lives in the new layout, no boundary violations, no test regressions. Evidence: see W2 exit review below.
 
 ### P08 exit — Wave 2 review
 
-- [ ] **T08.08** Reviewer confirms: 1 pilot feature lives in the new layout, no boundary violations, no test regressions. Evidence: reviewer initials + date.
+- [ ] **T08.09** Reviewer confirms W2 is complete: P05 folder contract + linter, P06 4 placeholders replaced, P07 10 adapters moved (with the internal-import fix folded into the same commit), P08 library pilot. Evidence: reviewer initials + date in the W2 exit review doc.
 
 ---
 

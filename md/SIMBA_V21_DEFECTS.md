@@ -70,7 +70,8 @@
 ## Source-of-truth audit date
 
 2026-09-09 — 14 P0 + 9 P1 + 4 P2 = 27 defects total.
-2026-09-10 — D-022 (P1) closed by W2 P07 (`d75e51c`); 8 P0 closed, 6 P0 open; 8 P1 open, 1 P1 closed.
+2026-09-10 — D-022 (P1) closed by W2 P07 (`446c6d5` + `970ef8b`, after a re-amend that folded the adapter internal-import fix into the P07 code commit). 8 P0 closed, 6 P0 open; 8 P1 open, 1 P1 closed.
+2026-09-10 (W2 P08) — Library feature pilot: 24 files moved to `src/features/library/presentation/`. T08.04 re-scoped (no library-specific application service; `mediaService` is shared across 6+ features, `libraryScanService` was deleted at W2 P06). No new defects.
 
 The audit was a single-pass read of:
 - `App.tsx`, `jest.config.js`, `jest.setup.ts`
