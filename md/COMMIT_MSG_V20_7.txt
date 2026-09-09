@@ -1,0 +1,52 @@
+V20.7 — DRY lift useSectionSearch (3 copies → 1)
+
+The 3 per-screen copies of `useSectionSearch` that lived at
+  src/screens/MusicScreen/hooks/useSearch.ts
+  src/screens/MoviesScreen/hooks/useSearch.ts
+  src/screens/PodcastsScreen/hooks/useSearch.ts
+were character-for-character identical (the 3 even used the
+same hook name `useSectionSearch` and the same return-shape
+name `SectionSearchState`). They each imported `SectionBrowseConfig`
+from their per-screen `../types`, and the 3 per-screen definitions
+of `SectionBrowseConfig` are themselves structurally identical.
+
+The lift:
+  1. New shared hook at `src/hooks/useSectionSearch.ts` — the
+     one canonical implementation, importing a minimal
+     `SectionBrowseConfigSearch` subset (just `route: string`
+     and `search?: {debounceMs?}`) from the new
+     `src/screens/_shared/sectionBrowseConfig.ts`. Structural
+     typing means the per-screen full-fat `SectionBrowseConfig`
+     passes through (it has both fields).
+  2. New shared type file `src/screens/_shared/sectionBrowseConfig.ts`
+     — the minimal `SectionBrowseConfigSearch` interface the
+     shared hook needs. This is NOT the full `SectionBrowseConfig`
+     (the per-screen types carry extra `title`, `options`,
+     `renderContent` fields their consumers need). A full
+     `SectionBrowseConfig` lift is deferred to a follow-up
+     wave (V20.9) — the V20.7 scope is just the hook.
+  3. The 3 per-screen `hooks/useSearch.ts` are deleted (parked
+     at `md/_v20_7_dead_code/` as the established dead-code
+     pattern, renamed to `.txt` so tsc ignores them).
+  4. The 3 `BrowseLayout.tsx` consumers' imports are
+     re-pointed from `'../hooks/useSearch'` to
+     `'../../../hooks/useSectionSearch'`. No other consumer
+     change — the hook's public shape is preserved.
+
+Net line count: -180 lines (3 × ~60 lines deleted) + ~60 lines
+for the new shared file. Plus the 1 new shared-type file (~25
+lines). Plus 1-line import updates in 3 consumers.
+
+Verification:
+  - `npx tsc --noEmit` clean.
+  - `npx jest --forceExit` clean: 9 suites, 106 passed, 1 todo.
+
+Files:
+  A  src/hooks/useSectionSearch.ts                  (new shared hook)
+  A  src/screens/_shared/sectionBrowseConfig.ts     (new shared type)
+  M  src/screens/MusicScreen/components/BrowseLayout.tsx
+  M  src/screens/MoviesScreen/components/BrowseLayout.tsx
+  M  src/screens/PodcastsScreen/components/BrowseLayout.tsx
+  D  src/screens/MusicScreen/hooks/useSearch.ts     (→ md/_v20_7_dead_code/)
+  D  src/screens/MoviesScreen/hooks/useSearch.ts    (→ md/_v20_7_dead_code/)
+  D  src/screens/PodcastsScreen/hooks/useSearch.ts  (→ md/_v20_7_dead_code/)

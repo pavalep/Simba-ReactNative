@@ -1,0 +1,59 @@
+V20.11a — Radio adapter completion (stationFromRaw + id/image/url)
+
+The `radioBrowserAdapter` was the only adapter in the project
+missing the `*Raw` / `*FromRaw` pattern. The wire shape
+(`stationuuid`, `favicon`, `url_resolved`, `clickcount`) leaked
+into the `RadioStationResult` domain type, and the screen layer
+had to rename those fields back to UI-friendly names in a
+`toRow` function.
+
+This commit completes the adapter to match the V18/V20 contract:
+
+  1. New file-local `RadioStationResultRaw` interface in the
+     adapter — declares the wire keys the radio-browser API
+     actually returns (`stationuuid`, `favicon`, `url_resolved`,
+     `clickcount`, etc.).
+  2. New `stationFromRaw(raw)` convertor — maps the wire to
+     the domain, returning `null` for entries that can't be
+     safely converted (no `stationuuid` or no `name`).
+  3. New `stationsFromRaw(raw)` helper — `map + filter(notNull)`
+     on the array, mirroring the `browseTagsFromRaw` pattern.
+  4. The 6 public service functions
+     (`searchStations`, `getStationsByCountry`,
+     `getStationsByGenre`, `getStationsByLanguage`,
+     `getStationsByFilters`, `getTopStations`,
+     `getStationById`) now fetch the raw shape, convert, and
+     return `Promise<RadioStationResult[]>` (or `null` for the
+     single-fetch variant).
+  5. The `RadioStationResult` domain type (in `src/types/api.ts`)
+     is updated to expose `id` / `image` / `url` only. The
+     `url` field carries the resolved playable URL (the
+     `url_resolved || url` fallback now happens once, in the
+     convertor). The `urlResolved` field is dropped.
+  6. Screen-layer call sites are updated to use the new field
+     names. The 3 renames in `RadioStationCard.toRow` (lines
+     29-39) become direct field reads. The `s.stationuuid ===
+     row.id` find in `RadioContent.tsx:200` becomes
+     `s.id === row.id` (works by accident pre-V20.11a).
+     The 5 references in `useRadioBrowser.toggleFavorite`
+     are updated to `station.id` / `station.url` / `station.image`.
+  7. The `LiveFavoriteItem` docstring in
+     `src/state/liveFavoritesStore.ts` is updated to refer
+     to the new field names (`id` for radio, `image` for
+     both kinds — no behavior change, just stale comments).
+
+The screen layer's `toRow` function now only does the
+legitimate work (the country + tags subtitle join) and no
+longer carries the 3 field renames.
+
+Verification:
+  - `npx tsc --noEmit` clean.
+  - `npx jest --forceExit` clean: 9 suites, 106 passed, 1 todo.
+
+Files:
+  M  src/services/api/radioBrowserAdapter.ts
+  M  src/types/api.ts
+  M  src/screens/RadioScreenNew/components/RadioStationCard.tsx
+  M  src/screens/RadioScreenNew/components/RadioContent.tsx
+  M  src/screens/RadioScreenNew/hooks/useRadioBrowser.ts
+  M  src/state/liveFavoritesStore.ts

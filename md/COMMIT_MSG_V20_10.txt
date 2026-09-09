@@ -1,0 +1,63 @@
+V20.10 — Drop redundant `refreshing` state in 3 hooks (useMediaScanner owns it)
+
+The V20.10 audit covered 4 screen hooks not yet touched in
+the V20 wave:
+  - src/screens/AllAudio/hooks/useAllAudioScreen.ts
+  - src/screens/AllVideos/hooks/useAllVideosScreen.ts
+  - src/screens/AllAudio/hooks/useAllVideosScreen.ts
+  - src/screens/Library/hooks/useLibraryScreen.ts
+  - src/screens/ShowsScreen/hooks/useShowsScreen.ts
+
+The 4 hooks fall into 2 categories:
+
+  CLEAN (no significant findings):
+    - useShowsScreen — already a proper TanStack pattern
+      (1 useApiQuery for today's rail, 1 useApiQuery for
+      search, 1 useInfiniteApiQuery for browse, dispatched
+      by isSearchActive). The `source` UI-only chip state
+      and the `dedupe` cross-page helper are both legitimate
+      (the chip is decoupled from the data source by design;
+      the dedupe guards against any API-level overlap).
+    - useAlbumEnrichment / useArtistEnrichment — small
+      enrichment hooks, no audit needed.
+
+  ONE REDUNDANT PATTERN IN 3 HOOKS (fixed in this commit):
+    - useAllAudioScreen, useAllVideosScreen, useLibraryScreen
+    all carried a local `useState<boolean>(refreshing)` and
+    an `async` `handleRefresh` wrapper that did
+    `setRefreshing(true) → await startScan() → setRefreshing(false)`.
+    But `useMediaScanner()` already returns `isScanning` from
+    the Zustand media-scan store — the canonical "is a scan
+    in flight" boolean.
+
+  This commit:
+    1. `useAllAudioScreen` — removes the local `refreshing`
+       state. `refreshing` (in the return shape) is now aliased
+       to `isScanning` from `useMediaScanner()`. `handleRefresh`
+       is now a 1-liner `() => startScan(true)` (no async, no
+       setState). The screen's `<RefreshControl refreshing={...}>`
+       reads the same boolean as before; consumer unchanged.
+    2. `useAllVideosScreen` — same fix (identical pattern).
+    3. `useLibraryScreen` — `isScanning` was already
+       destructured from `useMediaScanner()` (line 102) and
+       was being used in the return shape as `isScanning` —
+       the local `useState<boolean>(isRefreshing)` was a
+       duplicate. The `try/finally` wrapper around `startScan`
+       in `handleRefresh` is gone (the scan-error toast
+       effect in the hook is fired by the
+       `scanHistory.errorsCount` change, not by an exception
+       path; the catch was dead). The hook's return shape
+       keeps the consumer's `isRefreshing` field for the
+       `<RefreshControl>`, aliased to `isScanning`.
+
+Net line count: 3 hooks, ~25 lines removed (3 redundant
+useStates + 3 async wrappers + 1 try/catch).
+
+Verification:
+  - `npx tsc --noEmit` clean.
+  - `npx jest --forceExit` clean: 9 suites, 106 passed, 1 todo.
+
+Files:
+  M  src/screens/AllAudio/hooks/useAllAudioScreen.ts
+  M  src/screens/AllVideos/hooks/useAllVideosScreen.ts
+  M  src/screens/Library/hooks/useLibraryScreen.ts

@@ -1,0 +1,59 @@
+V20.5 — useSearch debounce triplet dropped + useApiQueries overloads
+
+The V20.5 rewrite of `src/hooks/useSearch.ts`: the manual debounce
+triplet (3 useStates + 1 useEffect for the 300ms timer) is replaced
+by the existing `useDebounce` primitive from `src/hooks/useDebounce.ts`.
+The `isSearching` flag is now derived as `searchText.trim() !==
+debouncedQuery.trim()`. Public surface preserved (consumer at
+`src/screens/Search/components/SearchScreen.tsx` did not move).
+
+While verifying tsc, four stale-type fixes from earlier V20 commits
+were required to make the codebase clean again:
+
+  1. `useApiQueries` overloads: the wrapper's return type was the
+     union `TCombined | ReadonlyArray<unknown>`, which broke the
+     `useAggregatedSearch` consumer (it tried to read `.audiobooks`
+     on the union). Replaced with two overloads (combine present /
+     combine absent) so the return narrows to `TCombined` when
+     `combine` is provided. Implementation signature uses `any`
+     (standard for overloaded hooks). Test signature updated
+     to let TS infer `TCombined` from the `combine` return shape.
+
+  2. `useLiveTVBrowser` was importing `useApiQuery` from
+     `@tanstack/react-query` instead of from
+     `../../../hooks/useApiQuery`. Re-pointed to the project wrapper.
+
+  3. `PodcastsContent` was reading `reachedEnd = !hasMore` but
+     `hasMore` was missing from the `usePodcastsData()` destructure.
+     V20.2 left the destructure incomplete. Added `hasMore` to the
+     destructure list.
+
+  4. `usePodcastCategories` typed its `useApiQuery` as
+     `PodcastCategory[]` (the constant-shape, with `icon`/`image`),
+     but the adapter returns `PodcastCategoryResult[]` (the API
+     shape, id + name only). Changed the query generic to
+     `PodcastCategoryResult[]`; the `useMemo` overlay merges
+     the API data with the constant catalog's design fields.
+
+  5. `useRadioBrowser` (V20.1) had four pre-existing tsc errors
+     that the original commit missed because the verify pass was
+     skipped. Fixed: initial filters needed all three keys
+     (`country: null`, `language: null`), `RadioBrowseTag` is
+     exported from the adapter not from `types/api`, the
+     `ApiSearchOptions.page` field is the right key (the adapter
+     translates to `offset` internally — was passing `offset`
+     directly), and `RadioStationResult.urlResolved` is the
+     camelCase field name (was `url_resolved`).
+
+Verification:
+  - `npx tsc --noEmit` clean.
+  - `npx jest --forceExit` clean: 9 suites, 106 passed, 1 todo.
+
+Files:
+  M __tests__/useApiQuery.test.tsx
+  M src/hooks/useApiQuery.ts
+  M src/hooks/useSearch.ts
+  M src/screens/LiveTVScreenNew/hooks/useLiveTVBrowser.ts
+  M src/screens/PodcastsScreen/components/PodcastsContent.tsx
+  M src/screens/PodcastsScreen/hooks/usePodcastCategories.ts
+  M src/screens/RadioScreenNew/hooks/useRadioBrowser.ts
