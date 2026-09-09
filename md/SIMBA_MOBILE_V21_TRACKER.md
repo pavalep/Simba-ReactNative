@@ -41,10 +41,10 @@
 
 ### P04 — First wave exit review
 
-- [ ] **T04.01** Run `npx tsc --noEmit` and capture the result. Evidence: exit 0.
-- [ ] **T04.02** Run `npx jest` (no `--forceExit`) and capture the result. Evidence: 106+ passed, 0 warnings, exit 0.
-- [ ] **T04.03** Confirm 4 legacy roots are documented for P07 deletion. Evidence: this tracker + the defect register.
-- [ ] **T04.04** Reviewer signs off on W1 exit. Evidence: reviewer's initials + date in this section.
+- [x] **T04.01** Run `npx tsc --noEmit` and capture the result. Evidence: exit 0 (re-verified at the W1 exit; see `md/SIMBA_V21_W1_EXIT.md`).
+- [x] **T04.02** Run `npx jest` (no `--forceExit`) and capture the result. Evidence: 9 suites, 106 passed, 1 todo, 0 failures. **The "0 warnings" requirement is partial** — the worker-exit warning is still present (D-004, deferred to W3 P03). Test count is the same; warning is the only thing that needs follow-up.
+- [x] **T04.03** Confirm 4 legacy roots are documented for P07 deletion. Evidence: W1 P03 (`ea842a5`) closed D-012 directly. The 4 roots are parked at `md/_v21_p03_dead_code/`. The P07 dependency is therefore N/A — P07 remains a separate concern (placeholder services + adapter move, not legacy roots).
+- [x] **T04.04** Reviewer signs off on W1 exit. Evidence: `md/SIMBA_V21_W1_EXIT.md` (this reviewer, 2026-09-09). **APPROVED** with the D-004 deferral noted. W2 may begin.
 
 ---
 
