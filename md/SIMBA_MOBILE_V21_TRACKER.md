@@ -130,11 +130,11 @@ hidden.
 
 ### P11 — Migrate the 36 call sites to the facade (closes D-010)
 
-- [ ] **T11.01** Update each of the 36 files (per the P09 inventory) to import the symbols from `src/infrastructure/player/` instead of from `@simba-dev/react-native-media-player`. The re-export facade means the import shape stays the same (e.g., `import {usePlayerActivity, resolveStreamType} from '../../infrastructure/player'`), only the source path changes. Evidence: `git grep -l "@simba-dev/react-native-media-player"` returns 1 file (the facade itself).
-- [ ] **T11.02** No call-site logic changes — the facade re-exports the same symbols with the same types. Each file compiles and its tests pass without modification. Evidence: per-file `npx tsc --noEmit` clean.
-- [ ] **T11.03** Run the full test suite — no regressions. Evidence: same test count (11/128/1/0).
-- [ ] **T11.04** Run `npx tsc --noEmit` — clean. Evidence: exit 0.
-- [ ] **T11.05** `npm run lint:boundaries` reports 0 PLAYER violations (was 38). Evidence: linter count line.
+- [x] **T11.01** Update each of the 36 files (per the P09 inventory) to import the symbols from `src/infrastructure/player/` instead of from `@simba-dev/react-native-media-player`. Evidence: commit `76d2283`. `git grep -l "@simba-dev/react-native-media-player" -- src` returns 1 file (the facade itself).
+- [x] **T11.02** No call-site logic changes — the facade re-exports the same symbols with the same types. Each file compiles and its tests pass without modification. Evidence: per-file `npx tsc --noEmit` clean.
+- [x] **T11.03** Run the full test suite — no regressions. Evidence: 11/129/1/0 (was 11/128/1/0; the +1 is the test file from P10).
+- [x] **T11.04** Run `npx tsc --noEmit` — clean. Evidence: exit 0.
+- [x] **T11.05** `npm run lint:boundaries` reports 0 PLAYER violations (was 38). Evidence: linter output line "scanned 521 files in 421ms — 0 error(s), 0 warning(s)".
 
 ### P12 — De-duplicate the cold-start `Linking.getInitialURL` (closes D-009)
 
