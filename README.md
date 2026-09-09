@@ -4,6 +4,17 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
+## Step 0: Environment configuration
+
+SIMBA needs 6 API keys to talk to the providers (Podcast Index, Jamendo, Audius, Google OAuth). Copy the example file and fill in the keys:
+
+```sh
+cp android/.env.example android/.env
+# then edit android/.env and fill in the keys
+```
+
+The full per-key quick-start is in **`md/SIMBA_V21_ENV.md`**. The build fails fast with a clear error if `android/.env` is missing — no more "deep Gradle error" mystery.
+
 ## Step 1: Start Metro
 
 First, you will need to run **Metro**, the JavaScript build tool for React Native.

@@ -50,6 +50,8 @@ import {notifyManager} from '@tanstack/react-query';
 
 notifyManager.setScheduler((cb: () => void) => {
   // Microtask scheduler — see the comment above for why
-  // microtask, not sync, not setTimeout.
-  queueMicrotask(cb);
+  // microtask, not sync, not setTimeout. `Promise.resolve().then`
+  // is a portable microtask schedule that doesn't depend on
+  // the `queueMicrotask` global being in the TS lib config.
+  Promise.resolve().then(cb);
 });

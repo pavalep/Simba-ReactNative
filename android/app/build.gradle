@@ -2,6 +2,31 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// ─── V21 P02 T02.02 (D-013) — fail-fast env validator ────────────────
+// Without this, a missing `android/.env` produces a confusing
+// Gradle error deep inside the react-native-config `dotenv.gradle`
+// apply. With this, the build fails immediately at the top with a
+// clear "do this, then re-run" message.
+//
+// We check for the .env file (not the keys inside it — empty values
+// are accepted for "not used" adapters; see `android/.env.example`).
+def envFile = rootProject.file('.env')
+def envExampleFile = rootProject.file('.env.example')
+if (!envFile.exists()) {
+    throw new GradleException(
+        "android/.env is missing. " +
+        "Copy android/.env.example to android/.env and fill in the keys. " +
+        "See md/SIMBA_V21_ENV.md for the quick-start."
+    )
+}
+if (!envExampleFile.exists()) {
+    throw new GradleException(
+        "android/.env.example is missing. " +
+        "It should be checked in next to this build.gradle. " +
+        "Re-add it from git (md/ files are not authoritative)."
+    )
+}
+
 // react-native-config: tell dotenv.gradle which .env file to load for each
 // build type. Without this, dotenv.gradle doesn't know which file to read
 // and never generates env.json in the bundled assets — so JS-side
