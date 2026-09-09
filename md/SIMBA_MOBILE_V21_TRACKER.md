@@ -96,9 +96,9 @@
 
 ### P09 — Inventory the 38 player call sites (closes the analysis half of D-010)
 
-- [ ] **T09.01** List the 37 files (38 sites, 1 file has 2 sites). Use `git grep -l "@simba-dev/react-native-media-player"` to enumerate. Evidence: 37-file table in this tracker with 1 row per file.
-- [ ] **T09.02** For each file, classify the import: `usePlayerActivity` (most common), `useQueue`, `useOpenWithResume`, `resolveStreamType`, `usePlayerFacade` (none yet). Evidence: column in the table.
-- [ ] **T09.03** Identify the 5–10 distinct *use cases* these imports serve (e.g. "play this URI", "play with resume", "add to queue", "show now playing", "enqueue next"). Evidence: a 5–10 row use-case map.
+- [x] **T09.01** List the 36 files (38 import lines per the linter, 36 unique files per `git grep -l`; the 2-file discrepancy is from counting multi-symbol imports). Use `git grep -l "@simba-dev/react-native-media-player"` to enumerate. Evidence: 36-file table in `md/SIMBA_V21_W3_P09_INVENTORY.md` (commit `f536317`).
+- [x] **T09.02** For each file, classify the import. **9 unique symbols:** `usePlayerActivity` (24 files), `resolveStreamType` (19), `useQueue` (5), `useOpenPlaylist` (4), `usePlayer` (3), `getMpvPlayerModule` (4), `useQueueItemsAs` (1), `usePlaybackHistoryAs` (1), `PlayerQueueItem` (type, 3 files). Evidence: same inventory doc.
+- [x] **T09.03** Identify the 4–6 distinct *use cases* these imports serve, organized into 4 facade API surfaces: **read-state** (`usePlayerActivity`), **open-in-player** (`useOpenPlaylist`), **stream-resolution** (`resolveStreamType` — pure function, no React), **queue** (`useQueue` + 2 utility hooks + `PlayerQueueItem` type), **player-imperative** (`usePlayer`), **low-level** (`getMpvPlayerModule` escape hatch). Evidence: same inventory doc, "Symbol-to-facade mapping" section.
 
 ### P10 — Build the `PlaybackFacade` (closes the implementation half of D-010)
 
