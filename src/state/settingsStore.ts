@@ -4,7 +4,7 @@ import type {RepeatMode} from '../types';
 import {DEFAULT_SUBTITLE_COLOR} from '../constants/subtitleColors';
 import type {LinkedMediaFolder, MediaLane} from '../types/media';
 import {linkedMediaFolderId} from '../types/media';
-import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 
 /**
  * V17 Phase 79: replaces `settingsSlice` (Redux) with
@@ -338,7 +338,7 @@ export const useSettingsStore = create<SettingsState & SettingsActions>()(
     {
       name: 'settings',
       version: CURRENT_PERSIST_VERSION,
-      storage: createJSONStorage(() => sharedAsyncStorage),
+      storage: createJSONStorage(() => sharedMMKVStorage),
     },
   ),
 );

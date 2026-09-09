@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
-import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 
 /**
  * V17 Phase 78: replaces `authSlice` (Redux) with `authStore` (Zustand
@@ -136,7 +136,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
     {
       name: 'auth',
       version: CURRENT_PERSIST_VERSION,
-      storage: createJSONStorage(() => sharedAsyncStorage),
+      storage: createJSONStorage(() => sharedMMKVStorage),
       // The `partialize` defaults to "persist everything". The
       // `isLoading` and `isRestoring` fields are transient runtime
       // flags that should NOT survive a process restart — but on

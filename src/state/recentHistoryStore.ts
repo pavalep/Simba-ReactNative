@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
-import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 import type {MediaKind, MediaLane, MediaSource} from '../types/media';
 import {normalizeMediaClassification} from '../types/media';
 
@@ -106,7 +106,7 @@ export const useRecentHistoryStore = create<RecentHistoryState & RecentHistoryAc
     {
       name: 'recentHistory',
       version: CURRENT_PERSIST_VERSION,
-      storage: createJSONStorage(() => sharedAsyncStorage),
+      storage: createJSONStorage(() => sharedMMKVStorage),
     },
   ),
 );

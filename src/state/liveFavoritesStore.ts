@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
-import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 
 /**
  * V17 Phase 79: replaces `liveFavoritesSlice` (Redux) with
@@ -61,7 +61,7 @@ export const useLiveFavoritesStore = create<LiveFavoritesState & LiveFavoritesAc
     {
       name: 'liveFavorites',
       version: CURRENT_PERSIST_VERSION,
-      storage: createJSONStorage(() => sharedAsyncStorage),
+      storage: createJSONStorage(() => sharedMMKVStorage),
     },
   ),
 );

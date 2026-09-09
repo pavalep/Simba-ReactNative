@@ -33,5 +33,8 @@ module.exports = {
       '<rootDir>/__mocks__/@react-native-documents-picker.js',
     '^@react-native-async-storage/async-storage$':
       '<rootDir>/__mocks__/@react-native-async-storage-async-storage.js',
+    // V21 W5 P17 — MMKV mock is Map-backed (see __mocks__/react-native-mmkv.js).
+    '^react-native-mmkv$':
+      '<rootDir>/__mocks__/react-native-mmkv.js',
   },
 };

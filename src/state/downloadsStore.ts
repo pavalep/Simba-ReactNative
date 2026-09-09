@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import {useMemo} from 'react';
 import {persist} from 'zustand/middleware';
-import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 import type {DownloadRecord, DownloadStatus} from '../services/downloadService';
 
 /**
@@ -75,7 +75,7 @@ export const useDownloadsStore = create<DownloadsState & DownloadsActions>()(
     {
       name: 'downloads',
       version: CURRENT_PERSIST_VERSION,
-      storage: createJSONStorage(() => sharedAsyncStorage),
+      storage: createJSONStorage(() => sharedMMKVStorage),
     },
   ),
 );

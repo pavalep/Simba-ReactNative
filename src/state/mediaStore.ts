@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
 import {useMemo} from 'react';
-import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 import type {MediaKind, MediaSource} from '../types/media';
 
 // ─── Types ──────────────────────────────────────────────────
@@ -235,7 +235,7 @@ export const useMediaStore = create<MediaState & MediaActions>()(
     {
       name: 'media',
       version: CURRENT_PERSIST_VERSION,
-      storage: createJSONStorage(() => sharedAsyncStorage),
+      storage: createJSONStorage(() => sharedMMKVStorage),
     },
   ),
 );

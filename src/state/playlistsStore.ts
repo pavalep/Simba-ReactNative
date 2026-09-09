@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
-import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 import {isPlaylistMediaKindAllowed, type Playlist, type PlaylistItem, type PlaylistKind, type PlaylistLegacyKind} from '../types/playlist';
 import type {MediaKind, MediaLane} from '../types/media';
 
@@ -264,7 +264,7 @@ export const usePlaylistsStore = create<PlaylistsState & PlaylistsActions>()(
     {
       name: 'playlists',
       version: CURRENT_PERSIST_VERSION,
-      storage: createJSONStorage(() => sharedAsyncStorage),
+      storage: createJSONStorage(() => sharedMMKVStorage),
       // Run the legacy-MIXED-split normalizer on rehydrate so old
       // persisted shapes fold into the new V13+ V17 store cleanly.
       onRehydrateStorage: () => (state) => {

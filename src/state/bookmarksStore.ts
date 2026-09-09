@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
-import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 import type {MediaKind, MediaLane, MediaSource} from '../types/media';
 import {normalizeMediaClassification} from '../types/media';
 
@@ -205,7 +205,7 @@ export const useBookmarksStore = create<BookmarksState & BookmarksActions>()(
     {
       name: 'bookmark',
       version: CURRENT_PERSIST_VERSION,
-      storage: createJSONStorage(() => sharedAsyncStorage),
+      storage: createJSONStorage(() => sharedMMKVStorage),
     },
   ),
 );
