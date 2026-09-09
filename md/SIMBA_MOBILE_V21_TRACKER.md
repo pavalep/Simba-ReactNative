@@ -68,12 +68,12 @@
 
 ### P07 — Move the 10 API adapters to `src/infrastructure/api/<provider>/` (closes D-022)
 
-- [ ] **T07.01** List the 10 adapters: `jamendoAdapter`, `audiusAdapter`, `libriVoxAdapter`, `internetArchiveAdapter`, `iptvAdapter`, `musicBrainzAdapter`, `podcastIndexAdapter`, `radioBrowserAdapter`, `tvmazeAdapter`, `weatherAdapter`. Evidence: `Get-ChildItem src/services/api` returns 10 files.
-- [ ] **T07.02** Create `src/infrastructure/api/<provider>/index.ts` for each provider with a re-export of the public functions. This is the bridge that lets consumers continue to import from the new path without a giant sed. Evidence: each `index.ts` re-exports the same surface.
-- [ ] **T07.03** Move each `*.ts` from `src/services/api/` to `src/infrastructure/api/<provider>/adapter.ts` (the new home). No code change. Evidence: `git mv` for each.
-- [ ] **T07.04** Update the 50+ import sites across the app. Use `git grep -l "from '.*services/api/"` to find them, then sed the path. Evidence: `git grep -l "services/api"` returns 0 matches after the change.
-- [ ] **T07.05** Run `npx tsc --noEmit` — must exit 0. Evidence: clean.
-- [ ] **T07.06** Run `npx jest` — all 10 adapter tests must pass without modification (the public surface didn't change). Evidence: test count is the same.
+- [x] **T07.01** List the 10 adapters: `jamendoAdapter`, `audiusAdapter`, `libriVoxAdapter`, `internetArchiveAdapter`, `iptvAdapter`, `musicBrainzAdapter`, `podcastIndexAdapter`, `radioBrowserAdapter`, `tvmazeAdapter`, `weatherAdapter`. Evidence: `git ls-files src/services/api | wc -l` returns 11 (10 adapters + apiClient.ts).
+- [x] **T07.02** ~~Create `src/infrastructure/api/<provider>/index.ts` re-export shims~~ — skipped. The folder contract (`md/SIMBA_V21_FOLDERS.md` line 66) explicitly says "No `index.ts` barrel requirement — every file can be imported directly". Direct imports of `../infrastructure/api/<provider>/adapter` are the cleaner pattern. Consumers point straight at the adapter file, with no re-export layer in between.
+- [x] **T07.03** Move each `*.ts` from `src/services/api/` to `src/infrastructure/api/<provider>/adapter.ts` (the new home). Evidence: `git log --diff-filter=R --name-status -1 d75e51c` shows 11 `R` (rename) entries (10 adapters + apiClient.ts); 100% similarity for every one (no content change, only path).
+- [x] **T07.04** Update the import sites across the app. Evidence: `git grep -l "services/api/" -- src __tests__` returns 0 matches after `d75e51c`. 32 consumer files (28 src/, 4 __tests__/) updated. Internal adapter paths rebased from `../../constants/api` → `../../../constants/api` (and the same for `types/api`, `constants/env`, `lib/logger`) in 10 files. Migration done via `scripts/_v21_p07_fix_imports.js` (not committed — one-time tool).
+- [x] **T07.05** Run `npx tsc --noEmit` — must exit 0. Evidence: exit 0 (was 30+ TS2307 errors pre-commit; clean post-commit).
+- [x] **T07.06** Run `npx jest` — all 10 adapter tests must pass without modification (the public surface didn't change). Evidence: 10 suites / 119 passed / 1 todo / 0 failures. The 4 adapter test files import directly from the new `../src/infrastructure/api/<x>/adapter` path; no test logic changed.
 
 ### P08 — Pilot the new vertical-slice structure on 1 feature (prepares the full migration, doesn't do it)
 

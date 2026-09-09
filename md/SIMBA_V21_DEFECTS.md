@@ -41,7 +41,7 @@
 |----|-------|----------|--------|
 | **D-020** | Unsafe `as any` casts (11 total) across 8 files | `useLibraryScreen.ts:3`, `Dialog.tsx:2`, `SkeletonLoader.tsx:1`, `navigationHelper.ts:1`, `AboutScreen.tsx:1`, `useArtistScreen.ts:1`, `SearchScreen.tsx:1`, `authService.ts:1` — the spec lists the first 5; the next 3 are new findings | OPEN |
 | **D-021** | Unsafe `as unknown as` casts (3 total) across 2 files | `useQueueScreen.ts:2`, `MovieCard.tsx:1` — neither called out in the original spec; new finding | OPEN |
-| **D-022** | Adapter layer is mixed with application services | `src/services/api/*` (10 adapters) live alongside `src/services/{auth,download,media,playlist,storage,libraryScan,file,metadata}Service.ts`. The clean rule is `src/infrastructure/api/<provider>/` for adapters, application services live in `src/features/*/application/` | OPEN |
+| **D-022** | Adapter layer is mixed with application services | `src/services/api/*` (10 adapters) live alongside `src/services/{auth,download,media,playlist,storage,libraryScan,file,metadata}Service.ts`. The clean rule is `src/infrastructure/api/<provider>/` for adapters, application services live in `src/features/*/application/` | **CLOSED** W2 P07 (`d75e51c`) — 10 adapters + apiClient moved to `src/infrastructure/api/<provider>/adapter.ts` and `src/infrastructure/api/apiClient.ts`. 32 consumer files (28 src/, 4 __tests__/) updated. `tsc --noEmit` exits 0; `jest` 10/10 suites / 119 passed. `npm run lint:boundaries` reports 0 ADAPTER violations. The shared `src/services/{auth,download,media,playlist,storage,file,metadata}Service.ts` files remain in `src/services/` and are still application-service work (P06 already replaced 4 of the placeholders; the remaining 3 are real) — that's tracked in the per-feature migration, not in D-022. |
 | **D-023** | Player integration is not behind a typed `PlaybackFacade` | No `usePlaybackFacade()` hook in `src/infrastructure/player/`. The 38 call sites each call `openPlayer({...})` directly from the module — no contract enforcement | OPEN |
 | **D-024** | Adapters do not declare schema-validation contract | None of the 10 adapters in `src/services/api/*` use a schema library (zod, yup, valibot). Wire-shape drift is caught only at TypeScript build time, not at runtime | OPEN |
 | **D-025** | Adapters do not declare cancellation / timeout / retry policy | None of the 10 adapters pass `signal`, `timeout`, or `retry` options. Network failures are the consumer's problem (TanStack Query handles retry on `useQuery` calls, but the adapter itself doesn't) | OPEN |
@@ -70,6 +70,7 @@
 ## Source-of-truth audit date
 
 2026-09-09 — 14 P0 + 9 P1 + 4 P2 = 27 defects total.
+2026-09-10 — D-022 (P1) closed by W2 P07 (`d75e51c`); 8 P0 closed, 6 P0 open; 8 P1 open, 1 P1 closed.
 
 The audit was a single-pass read of:
 - `App.tsx`, `jest.config.js`, `jest.setup.ts`
