@@ -16,6 +16,13 @@
  * `MediaNotificationService` still owns the foreground notification
  * path. That flag flips in a separate cutover (Phase 41.5 or later).
  *
+ * **W4 P15 (2026-09-10):** `MediaNotificationService.kt` and its
+ * manifest registration are scheduled for deletion (T15.02 + T15.03)
+ * — see `md/SIMBA_MOBILE_V21_TRACKER.md` P15. After that commit ships,
+ * the only foreground-notification owner is the library's
+ * `MediaPlaybackService`, and the `USE_UNIFIED_MEDIA_SESSION` flag
+ * becomes effectively unconditional.
+ *
  * **Rollback procedure:** if V12 misbehaves in production, set the
  * flag back to `false` and re-ship. The `if (USE_DEDICATED_PLAYER_ACTIVITY)`
  * branches are the only V12-specific call sites — flipping to

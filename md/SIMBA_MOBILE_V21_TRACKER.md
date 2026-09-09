@@ -169,16 +169,19 @@ hidden.
 ### P14 — Verify manifest, PiP, permissions (closes D-011 partly, prepares D-026)
 
 - [ ] **T14.01** Run `gradlew :app:processReleaseManifest` and inspect the merged manifest. Confirm: `android.permission.INTERNET`, `android.permission.WAKE_LOCK`, `android.permission.FOREGROUND_SERVICE`, `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `android.permission.POST_NOTIFICATIONS` are all present. Evidence: `app/build/intermediates/merged_manifests/release/AndroidManifest.xml` shows the 5 permissions.
-- [ ] **T14.02** Confirm `MainActivity` has `android:resizeableActivity="true"` and `android:supportsPictureInPicture="true"`. Evidence: `AndroidManifest.xml:30-45`.
-- [ ] **T14.03** Confirm the `MediaNotificationService.kt` legacy service is NOT registered in the manifest after the v21 retirement. Evidence: `AndroidManifest.xml` has only the module's `MediaPlaybackService`.
+- [ ] **T14.02** Confirm the PiP ownership split is correct: `PlayerActivity` (the V12 dedicated player) has **both** `android:supportsPictureInPicture="true"` and `android:resizeableActivity="true"`. `MainActivity` (the JS host) has **only** `android:resizeableActivity="true"` — the PiP attribute was removed in T15.05 because MainActivity has zero PiP consumers (V11 inline-mount PiP hooks were retired in Phase 44). Evidence: `AndroidManifest.xml:62-85` (MainActivity) and `AndroidManifest.xml:109-117` (PlayerActivity).
 - [ ] **T14.04** On a physical device, enter PiP during playback, return to the app, and confirm playback continues. Evidence: `device: Pixel 7 / Android 14` + 3 screenshots (in PiP / returning / playing).
+
+> **Note:** the original T14.03 (verify the V11 service is not registered) was merged into T15.03 — the verification is the absence-after-deletion check that T15.03 produces. There's no separate "acceptance test" task; the deletion itself is the verification.
 
 ### P15 — Retire the legacy `MediaNotificationService.kt` (closes D-011)
 
 - [ ] **T15.01** Confirm no production code calls `MediaNotificationService` (the module's `MediaPlaybackService` is the only active bridge). Evidence: `git grep -n MediaNotificationService src` returns 0 matches; `git grep -n MediaNotificationService android` returns 1 (the file itself) and 0 from Java/Kotlin non-test code.
 - [ ] **T15.02** Delete `android/app/src/main/java/com/simba/player/MediaNotificationService.kt`. Evidence: file gone.
-- [ ] **T15.03** Remove the service entry from `AndroidManifest.xml` (if any). Evidence: `AndroidManifest.xml` no longer references the class.
+- [ ] **T15.03** Remove the `<service android:name=".MediaNotificationService" .../>` block from `AndroidManifest.xml` (lines 119-127 in the pre-retirement file). Evidence: `AndroidManifest.xml` no longer references the class.
 - [ ] **T15.04** On a physical device, confirm the notification still works (the module's `MediaPlaybackService` handles it). Evidence: `device: Pixel 7 / Android 14` + screenshot of the media notification.
+- [ ] **T15.05** Delete `android:supportsPictureInPicture="true"` from `MainActivity` in `AndroidManifest.xml` (line 68 in the pre-retirement file). Keep `android:resizeableActivity="true"` on line 69 — that's required for Android 12+ multi-window, independent of PiP. Evidence: `git diff AndroidManifest.xml` shows the one-line removal.
+- [ ] **T15.06 (deferred to V22)** Audit and delete the dead V11 PiP wiring in `MainActivity.kt` — the `PipActionReceiver`, `onPictureInPictureModeChanged` override, and `onBackPressed`-to-PiP exit handler. These are unreachable since Phase 44, but require a confidence audit of the `USE_DEDICATED_PLAYER_ACTIVITY = false` rollback path first (likely dead too — `NowPlayingScreen.tsx` is itself a dead route with zero callers in `src/`). Scheduled for V22 post-release cleanup.
 
 ### P16 — `.env.example` validation at boot (closes D-013)
 
