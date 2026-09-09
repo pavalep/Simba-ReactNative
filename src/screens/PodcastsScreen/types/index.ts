@@ -1,68 +1,24 @@
-// ─── Podcasts Screen — section shell types ────────────────────────────
-// Per-screen copy of the v10 section-browse types. Each section owns its
-// own copy (Podcasts / Movies / Music) so they can diverge without
-// sharing a `sections/` folder.
+// ─── Podcasts Screen — section shell types (V20.9) ─────────────────────
 //
-// Types here describe:
-//   • the section's static CONFIG (`SectionBrowseConfig` + option types)
-//   • the runtime CONTEXT the shell hands to the content's
-//     `renderContent` so it can render rows + respond to options.
+// V20.9: the section types (SectionRouteKey, SectionRouteParams,
+// SectionOptionGroupId, OptionItem, OptionGroup, SectionOptionsMerged,
+// SectionRenderContext, SectionBrowseConfig) were lifted to
+// `src/screens/_shared/`. This file is now a thin re-export so
+// existing `import ... from '../types'` calls keep working without
+// changes at any call site.
+//
+// Note: PodcastsScreen was already the KISS-screen for ctx
+// (3 fields). MusicScreen and MoviesScreen pass 4 extra
+// `activeChips` / `refreshing` / `onRetry` / `routeParams`
+// fields; the shared `SectionRenderContext` types those as
+// optional so both shapes continue to compile.
 
-import type {ReactNode} from 'react';
-
-// ─── Route plumbing ────────────────────────────────────────────────────
-
-export type SectionRouteKey = 'PodcastsScreen';
-
-export type SectionRouteParams<T extends SectionRouteKey> = Readonly<
-  Record<string, unknown>
->;
-
-// ─── Option groups (the FAB sheet payload) ────────────────────────────
-
-export type SectionOptionGroupId = 'filter' | 'sort' | 'view' | string;
-
-export interface OptionItem {
-  key: string;
-  label: string;
-  icon?: string;
-}
-
-export interface OptionGroup {
-  id: SectionOptionGroupId;
-  title: string;
-  multiSelect?: boolean;
-  collapsedRowLimit?: number;
-  options: OptionItem[];
-}
-
-/** Merged record rendered as `ctx.options` (the host's content stream
- *  reads this — single source of truth for filters/sort/view). */
-export type SectionOptionsMerged = {
-  filter?: string[];
-  sort?: string;
-  view?: string;
-};
-
-// ─── Section render context (shell → content) ─────────────────────────
-// KISS: only the fields content actually reads. (The legacy section
-// contract carried `refreshing` / `onRetry` / `routeParams` /
-// `activeChips` too — none of which any v10 content uses. BrowseLayout
-// uses `activeChips` directly to render <FilterChips>; refresh + retry
-// live in the content's own hook; route params are a BrowseLayout
-// prop, not a ctx field.)
-export interface SectionRenderContext {
-  query: string;
-  options: SectionOptionsMerged;
-  offline: boolean;
-}
-
-// ─── Section static config ────────────────────────────────────────────
-
-export interface SectionBrowseConfig {
-  route: SectionRouteKey;
-  title: string;
-  search?: {placeholder?: string; debounceMs?: number};
-  options?: {groups: OptionGroup[]};
-  renderContent: (ctx: SectionRenderContext) => ReactNode;
-}
+export type {SectionRouteKey, SectionRouteParams} from '../../_shared/sectionRoute';
+export type {
+  SectionOptionGroupId,
+  OptionItem,
+  OptionGroup,
+  SectionOptionsMerged,
+} from '../../_shared/sectionOptions';
+export type {SectionRenderContext} from '../../_shared/sectionRenderContext';
+export type {SectionBrowseConfig} from '../../_shared/sectionBrowseConfig';

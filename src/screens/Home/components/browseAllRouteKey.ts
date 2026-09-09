@@ -1,15 +1,8 @@
-// ─── Browse All — SectionRouteKey type ───────────────────────────────
-// The union of all Home Discover destinations — used by BrowseAllShelf to
-// type the per-section entries. `LocalFiles` is a nested shell destination
-// rather than a root-stack screen, so Home resolves it explicitly.
+// ─── Browse All — SectionRouteKey type (V20.9) ────────────────────────
+// The union of all Home Discover destinations. V20.9 lifted the
+// canonical `SectionRouteKey` type to `src/screens/_shared/sectionRoute`.
+// This file is now a re-export so the existing
+// `import type {SectionRouteKey} from './browseAllRouteKey'`
+// call site (BrowseAllShelf.tsx) keeps working without change.
 
-export type SectionRouteKey =
-  | 'MoviesScreen'
-  | 'MusicScreen'
-  | 'RadioScreen'
-  | 'LiveTVScreen'
-  | 'AudiobooksScreen'
-  | 'PodcastsScreen'
-  | 'ShowsScreen'
-  | 'ArchiveScreen'
-  | 'LocalFiles';
+export type {SectionRouteKey} from '../../_shared/sectionRoute';
