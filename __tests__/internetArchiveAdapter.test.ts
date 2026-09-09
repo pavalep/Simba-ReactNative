@@ -29,7 +29,7 @@ import {
   archiveImageUrl,
   archiveIdentifierFromUrl,
   parseRuntime,
-} from '../src/services/api/internetArchiveAdapter';
+} from '../src/infrastructure/api/internetArchive/adapter';
 
 describe('internetArchiveItemResultFromRaw', () => {
   it('maps a complete item to the domain shape', () => {

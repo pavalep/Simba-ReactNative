@@ -14,7 +14,7 @@ import {PODCAST_CATEGORIES, type PodcastCategory} from '../../../constants/podca
 import {
   getPodcastCategories,
   type PodcastCategoryResult,
-} from '../../../services/api/podcastIndexAdapter';
+} from '../../../infrastructure/api/podcastIndex/adapter';
 import {useApiQuery} from '../../../hooks/useApiQuery';
 
 interface PodcastCategoriesState {

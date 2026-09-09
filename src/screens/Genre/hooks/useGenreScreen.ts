@@ -23,7 +23,7 @@
 
 import {useCallback, useMemo, useState} from 'react';
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getJamendoTracksByGenre} from '../../../services/api/jamendoAdapter';
+import {getJamendoTracksByGenre} from '../../../infrastructure/api/jamendo/adapter';
 import {useMediaStore, type ScannedTrack} from '../../../state';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {JamendoTrackResult} from '../../../types/api';

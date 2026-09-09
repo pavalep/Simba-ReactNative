@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
 import {createJSONStorage, sharedAsyncStorage, CURRENT_PERSIST_VERSION} from './persistence';
-import type {WeatherSnapshot} from '../services/api/weatherAdapter';
+import type {WeatherSnapshot} from '../infrastructure/api/weather/adapter';
 
 /**
  * V17 Phase 79: replaces `weatherSlice` (Redux + createAsyncThunk)

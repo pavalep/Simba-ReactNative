@@ -28,7 +28,7 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useApiQuery} from '../../../hooks/useApiQuery';
 import {MOVIE_CATEGORIES, withJunkFilter} from '../../../constants/movieCategories';
-import {searchInternetArchiveVideos} from '../../../services/api/internetArchiveAdapter';
+import {searchInternetArchiveVideos} from '../../../infrastructure/api/internetArchive/adapter';
 import type {
   InternetArchiveVideoResult,
   PaginatedResult,

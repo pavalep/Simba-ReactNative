@@ -6,12 +6,12 @@
  *   Convertors are pure, exported, named. Service functions always
  *   return Promise<DomainType>.
  */
-import {apiFetch} from './apiClient';
-import {API_CONFIG} from '../../constants/api';
-import type {AudiusTrackResult, ApiSearchOptions} from '../../types/api';
+import {apiFetch} from '../apiClient';
+import {API_CONFIG} from '../../../constants/api';
+import type {AudiusTrackResult, ApiSearchOptions} from '../../../types/api';
 
 // Re-export the domain type so consumers can do
-// `import type {AudiusTrackResult} from '../services/api/audiusAdapter'`.
+// `import type {AudiusTrackResult} from '../infrastructure/api/audius/adapter'`.
 export type {AudiusTrackResult};
 
 const AUDIUS_API_PATH = '/v1/tracks';

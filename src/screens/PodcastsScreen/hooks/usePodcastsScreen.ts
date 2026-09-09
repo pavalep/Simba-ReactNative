@@ -34,7 +34,7 @@ import {useCallback, useState} from 'react';
 import {
   searchPodcasts,
   getTrendingPodcasts,
-} from '../../../services/api/podcastIndexAdapter';
+} from '../../../infrastructure/api/podcastIndex/adapter';
 import {INITIAL_MAX, MAX_RESULTS_PER_QUERY} from '../related/constants';
 import text from '../related/textContent.json';
 import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';

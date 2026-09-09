@@ -17,15 +17,15 @@
  * rare cases where a service function doesn't use the canonical
  * helper; the convertor pattern still applies for the URL builder.
  */
-import {apiFetch} from './apiClient';
-import {API_CONFIG} from '../../constants/api';
+import {apiFetch} from '../apiClient';
+import {API_CONFIG} from '../../../constants/api';
 import type {
   MusicBrainzArtist,
   MusicBrainzRelease,
   MusicBrainzReleaseGroupDetail,
   MusicBrainzRecording,
   ApiSearchOptions,
-} from '../../types/api';
+} from '../../../types/api';
 
 export type {
   MusicBrainzArtist,

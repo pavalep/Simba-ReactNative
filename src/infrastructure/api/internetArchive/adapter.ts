@@ -23,8 +23,8 @@
 //   - resolveInternetArchiveVideoDetails
 //   - archiveImageUrl / archiveIdentifierFromUrl (pure helpers)
 
-import {apiFetch} from './apiClient';
-import {API_CONFIG} from '../../constants/api';
+import {apiFetch} from '../apiClient';
+import {API_CONFIG} from '../../../constants/api';
 import type {
   InternetArchiveItemResult,
   InternetArchiveVideoResult,
@@ -33,7 +33,7 @@ import type {
   ApiSearchOptions,
   ArchiveTrack,
   PaginatedResult,
-} from '../../types/api';
+} from '../../../types/api';
 
 // ─── Raw wire types (file-local per V18 type contract §2) ──────────────
 

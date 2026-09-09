@@ -30,7 +30,7 @@ import {
   fetchWeatherByCity,
   fetchWeatherByCoords,
   type WeatherSnapshot,
-} from '../services/api/weatherAdapter';
+} from '../infrastructure/api/weather/adapter';
 import {getCurrentCoords, reverseGeocodeCity} from '../services/device/geolocation';
 import {cityFromTimezone, cityFromLocale} from '../utils/timezoneToCity';
 import {resolveTimezone, resolveLocale} from '../utils/weatherLocale';

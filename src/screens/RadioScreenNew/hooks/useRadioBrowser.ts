@@ -28,12 +28,12 @@ import {
   getCountries,
   getLanguages,
   type RadioFilterSet,
-} from '../../../services/api/radioBrowserAdapter';
+} from '../../../infrastructure/api/radioBrowser/adapter';
 import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import {useLiveFavoritesStore} from '../../../state';
 import type {RadioStationResult} from '../../../types/api';
-import type {RadioBrowseTag} from '../../../services/api/radioBrowserAdapter';
+import type {RadioBrowseTag} from '../../../infrastructure/api/radioBrowser/adapter';
 
 const PAGE_SIZE = 30;
 const TAGS_LIMIT = 40;

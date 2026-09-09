@@ -9,7 +9,7 @@
 // of the V18 family).
 
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getInternetArchiveVideoDetails} from '../../../services/api/internetArchiveAdapter';
+import {getInternetArchiveVideoDetails} from '../../../infrastructure/api/internetArchive/adapter';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 
 export function useMovieDetailScreen(identifier: string) {

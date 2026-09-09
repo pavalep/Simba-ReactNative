@@ -11,9 +11,9 @@
  *   Convertors are pure, exported, named. Service functions always
  *   return Promise<DomainType>.
  */
-import {apiFetch} from './apiClient';
-import {API_CONFIG} from '../../constants/api';
-import type {IPTVChannelResult, IPTVCategory, ApiSearchOptions} from '../../types/api';
+import {apiFetch} from '../apiClient';
+import {API_CONFIG} from '../../../constants/api';
+import type {IPTVChannelResult, IPTVCategory, ApiSearchOptions} from '../../../types/api';
 
 export type {IPTVChannelResult, IPTVCategory};
 

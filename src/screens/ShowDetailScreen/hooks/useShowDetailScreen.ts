@@ -9,7 +9,7 @@
 
 import {useMemo} from 'react';
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getShowById, getEpisodeList} from '../../../services/api/tvmazeAdapter';
+import {getShowById, getEpisodeList} from '../../../infrastructure/api/tvmaze/adapter';
 import {
   fileNameMatchesShow,
   fileNameMatchesEpisode,

@@ -13,7 +13,7 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import {
   searchArtists,
   getArtistDiscography,
-} from '../../../services/api/musicbrainzAdapter';
+} from '../../../infrastructure/api/musicbrainz/adapter';
 import type {
   MusicBrainzArtist,
   MusicBrainzRelease,

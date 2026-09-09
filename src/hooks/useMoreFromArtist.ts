@@ -11,7 +11,7 @@
 
 import {useMemo} from 'react';
 import {useApiQuery} from './useApiQuery';
-import {searchJamendoTracks} from '../services/api/jamendoAdapter';
+import {searchJamendoTracks} from '../infrastructure/api/jamendo/adapter';
 import type {JamendoTrackResult} from '../types/api';
 
 export function useMoreFromArtist(

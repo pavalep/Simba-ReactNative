@@ -14,7 +14,7 @@ import {
   cityCoordsFromRaw,
   weatherSnapshotFromCurrentRaw,
   wmoCodeToCondition,
-} from '../src/services/api/weatherAdapter';
+} from '../src/infrastructure/api/weather/adapter';
 
 describe('cityCoordsFromRaw', () => {
   it('maps a valid geocoding response to CityCoords', () => {

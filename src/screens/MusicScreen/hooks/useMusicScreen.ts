@@ -20,7 +20,7 @@ import {
   searchJamendoTracks,
   getJamendoTracksByGenre,
   getPopularJamendoTracks,
-} from '../../../services/api/jamendoAdapter';
+} from '../../../infrastructure/api/jamendo/adapter';
 import type {JamendoTrackResult} from '../../../types/api';
 import {useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 

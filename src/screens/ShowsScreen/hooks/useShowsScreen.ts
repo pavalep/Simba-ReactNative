@@ -24,7 +24,7 @@ import {
   getSchedule,
   getPopularShows,
   type TVMazeScheduleItem,
-} from '../../../services/api/tvmazeAdapter';
+} from '../../../infrastructure/api/tvmaze/adapter';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {TVMazeShow} from '../../../types/api';
 

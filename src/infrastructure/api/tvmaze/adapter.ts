@@ -7,9 +7,9 @@
  * `searchShows`, which extracts `.show` from the `[{score, show}]`
  * envelope.
  */
-import {apiFetch} from './apiClient';
-import {API_CONFIG} from '../../constants/api';
-import type {TVMazeShow, TVMazeEpisode} from '../../types/api';
+import {apiFetch} from '../apiClient';
+import {API_CONFIG} from '../../../constants/api';
+import type {TVMazeShow, TVMazeEpisode} from '../../../types/api';
 
 export type {TVMazeShow, TVMazeEpisode};
 

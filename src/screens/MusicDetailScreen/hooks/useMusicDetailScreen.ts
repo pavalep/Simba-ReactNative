@@ -5,8 +5,8 @@
 // on `source` and returns the union type `TrackResult`.
 
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getJamendoTrackById} from '../../../services/api/jamendoAdapter';
-import {getAudiusTrackById} from '../../../services/api/audiusAdapter';
+import {getJamendoTrackById} from '../../../infrastructure/api/jamendo/adapter';
+import {getAudiusTrackById} from '../../../infrastructure/api/audius/adapter';
 import type {JamendoTrackResult, AudiusTrackResult} from '../../../types/api';
 
 type TrackResult = JamendoTrackResult | AudiusTrackResult | null;

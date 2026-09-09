@@ -29,7 +29,7 @@ import {
   searchIPTVChannels,
   getChannelsByCategory,
   getIPTVCategories,
-} from '../../../services/api/iptvAdapter';
+} from '../../../infrastructure/api/iptv/adapter';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {IPTVChannelResult, IPTVCategory} from '../../../types/api';
 import {useLiveFavoritesStore} from '../../../state';

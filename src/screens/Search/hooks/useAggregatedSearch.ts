@@ -15,12 +15,12 @@
 
 import {useEffect, useState} from 'react';
 import {useApiQueries} from '../../../hooks/useApiQuery';
-import {searchAudiobooks} from '../../../services/api/librivoxAdapter';
-import {getAllIPTVChannels} from '../../../services/api/iptvAdapter';
-import {searchJamendoTracks} from '../../../services/api/jamendoAdapter';
-import {searchInternetArchiveAudio} from '../../../services/api/internetArchiveAdapter';
-import {searchAudiusTracks} from '../../../services/api/audiusAdapter';
-import {getPopularJamendoTracks} from '../../../services/api/jamendoAdapter';
+import {searchAudiobooks} from '../../../infrastructure/api/librivox/adapter';
+import {getAllIPTVChannels} from '../../../infrastructure/api/iptv/adapter';
+import {searchJamendoTracks} from '../../../infrastructure/api/jamendo/adapter';
+import {searchInternetArchiveAudio} from '../../../infrastructure/api/internetArchive/adapter';
+import {searchAudiusTracks} from '../../../infrastructure/api/audius/adapter';
+import {getPopularJamendoTracks} from '../../../infrastructure/api/jamendo/adapter';
 import type {
   AggregatedSearchResults,
   AudiobookResult,

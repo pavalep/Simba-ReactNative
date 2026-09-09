@@ -10,9 +10,9 @@
  * re-exported from `services/api/index.ts`). Kept for API parity;
  * delete on a follow-up.
  */
-import {apiFetch} from './apiClient';
-import {API_CONFIG} from '../../constants/api';
-import type {AudiobookResult, ApiSearchOptions} from '../../types/api';
+import {apiFetch} from '../apiClient';
+import {API_CONFIG} from '../../../constants/api';
+import type {AudiobookResult, ApiSearchOptions} from '../../../types/api';
 
 export type {AudiobookResult};
 

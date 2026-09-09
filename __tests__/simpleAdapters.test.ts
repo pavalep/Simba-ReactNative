@@ -7,22 +7,22 @@
 import {
   trackResultFromRaw as audiusTrackFromRaw,
   trackResultsFromListRaw as audiusTracksFromList,
-} from '../src/services/api/audiusAdapter';
+} from '../src/infrastructure/api/audius/adapter';
 import {
   trackResultFromRaw as jamendoTrackFromRaw,
   trackResultsFromResponseRaw as jamendoTracksFromResponse,
-} from '../src/services/api/jamendoAdapter';
+} from '../src/infrastructure/api/jamendo/adapter';
 import {
   audiobookResultFromRaw as libroBookFromRaw,
   audiobookResultsFromResponseRaw as libroBooksFromResponse,
-} from '../src/services/api/librivoxAdapter';
+} from '../src/infrastructure/api/librivox/adapter';
 import {
   artistResultFromRaw as mbArtistFromRaw,
   artistResultsFromSearchRaw as mbArtistsFromSearch,
   releaseResultFromRaw as mbReleaseFromRaw,
   releaseResultsFromArtistLookupRaw as mbReleasesFromArtist,
-} from '../src/services/api/musicbrainzAdapter';
-import {showsFromSearchRaw as tvmazeShowsFromSearch} from '../src/services/api/tvmazeAdapter';
+} from '../src/infrastructure/api/musicbrainz/adapter';
+import {showsFromSearchRaw as tvmazeShowsFromSearch} from '../src/infrastructure/api/tvmaze/adapter';
 
 describe('audiusAdapter', () => {
   it('trackResultFromRaw maps a full track', () => {

@@ -13,7 +13,7 @@
 
 import {useMemo} from 'react';
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getReleaseGroupDetail} from '../../../services/api/musicbrainzAdapter';
+import {getReleaseGroupDetail} from '../../../infrastructure/api/musicbrainz/adapter';
 import type {MusicBrainzReleaseGroupDetail} from '../../../types/api';
 import {useMediaStore} from '../../../state';
 

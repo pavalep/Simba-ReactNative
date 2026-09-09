@@ -9,11 +9,11 @@
 // V18-migrated (Wave 5), so it stays imported from the legacy file.
 
 import {useApiQuery} from '../../../hooks/useApiQuery';
-import {getAudiobookById} from '../../../services/api/librivoxAdapter';
+import {getAudiobookById} from '../../../infrastructure/api/librivox/adapter';
 import {
   getArchiveTracks,
   archiveIdentifierFromUrl,
-} from '../../../services/api/internetArchiveAdapter';
+} from '../../../infrastructure/api/internetArchive/adapter';
 import type {AudiobookResult, ArchiveTrack} from '../../../types/api';
 
 interface UseAudiobookDetailScreenReturn {

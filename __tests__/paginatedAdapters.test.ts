@@ -11,16 +11,16 @@ import {
   channelResultFromRaw as iptvChannelFromRaw,
   channelResultsFromRaw as iptvChannelsFromRaw,
   categoryResultFromRaw as iptvCategoryFromRaw,
-} from '../src/services/api/iptvAdapter';
+} from '../src/infrastructure/api/iptv/adapter';
 import {
   browseTagFromRaw as radioBrowseTagFromRaw,
   browseTagsFromRaw as radioBrowseTagsFromRaw,
-} from '../src/services/api/radioBrowserAdapter';
+} from '../src/infrastructure/api/radioBrowser/adapter';
 import {
   podcastResultFromRaw as podResultFromRaw,
   podcastResultsFromRaw as podResultsFromRaw,
   podcastEpisodeResultFromRaw as podEpisodeFromRaw,
-} from '../src/services/api/podcastIndexAdapter';
+} from '../src/infrastructure/api/podcastIndex/adapter';
 
 describe('iptvAdapter', () => {
   it('channelResultFromRaw maps a complete channel', () => {

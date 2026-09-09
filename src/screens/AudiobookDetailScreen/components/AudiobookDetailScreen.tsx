@@ -30,7 +30,7 @@ import {shareContent} from '../../../services/shareService';
 import {
   archiveImageUrl,
   archiveIdentifierFromUrl,
-} from '../../../services/api/internetArchiveAdapter';
+} from '../../../infrastructure/api/internetArchive/adapter';
 import type {ArchiveTrack} from '../../../types/api';
 import type {MediaSource} from '../../../types/media';
 

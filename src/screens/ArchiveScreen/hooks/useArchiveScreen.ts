@@ -16,7 +16,7 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import {
   searchInternetArchiveAudio,
   searchInternetArchiveVideos,
-} from '../../../services/api/internetArchiveAdapter';
+} from '../../../infrastructure/api/internetArchive/adapter';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 import type {
   InternetArchiveItemResult,

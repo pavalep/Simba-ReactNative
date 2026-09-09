@@ -21,11 +21,11 @@
  *   import {fetchWeatherByCity, fetchWeatherByCoords,
  *           getCityCoords, type WeatherSnapshot,
  *           type CityCoords, type WeatherCondition} from
- *           '../services/api/weatherAdapter';
+ *           '../infrastructure/api/weather/adapter';
  */
-import {apiFetch} from './apiClient';
-import type {ApiConfig} from '../../types/api';
-import {logger} from '../../lib/logger';
+import {apiFetch} from '../apiClient';
+import type {ApiConfig} from '../../../types/api';
+import {logger} from '../../../lib/logger';
 
 // ─── Domain types (exported) ─────────────────────────────────────
 

@@ -20,7 +20,7 @@
 // dedupe).
 
 import {useCallback} from 'react';
-import {getPodcastById, getEpisodes} from '../../../services/api/podcastIndexAdapter';
+import {getPodcastById, getEpisodes} from '../../../infrastructure/api/podcastIndex/adapter';
 import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {INITIAL_MAX, MAX_RESULTS_PER_QUERY} from '../related/constants';
 import text from '../related/textContent.json';

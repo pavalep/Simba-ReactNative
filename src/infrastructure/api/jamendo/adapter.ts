@@ -13,9 +13,9 @@
  * stays in the service function (not the convertor) because it's
  * HTTP-fan-out, not data shape.
  */
-import {apiFetch, ApiError} from './apiClient';
-import {ENV} from '../../constants/env';
-import type {JamendoTrackResult, ApiSearchOptions} from '../../types/api';
+import {apiFetch, ApiError} from '../apiClient';
+import {ENV} from '../../../constants/env';
+import type {JamendoTrackResult, ApiSearchOptions} from '../../../types/api';
 
 export type {JamendoTrackResult};
 

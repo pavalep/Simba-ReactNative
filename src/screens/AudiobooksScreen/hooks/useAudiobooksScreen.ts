@@ -11,7 +11,7 @@ import {useApiQuery, useInfiniteApiQuery} from '../../../hooks/useApiQuery';
 import {
   searchAudiobooks,
   searchByGenre,
-} from '../../../services/api/librivoxAdapter';
+} from '../../../infrastructure/api/librivox/adapter';
 import type {AudiobookResult} from '../../../types/api';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
 

@@ -20,7 +20,7 @@ import {
   resolveStreamType,
   usePlayerActivity,
 } from '@simba-dev/react-native-media-player';
-import {resolveInternetArchiveVideoDetails} from '../../../services/api/internetArchiveAdapter';
+import {resolveInternetArchiveVideoDetails} from '../../../infrastructure/api/internetArchive/adapter';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 import {
   useMoviesScreen,

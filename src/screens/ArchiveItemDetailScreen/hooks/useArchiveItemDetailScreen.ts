@@ -11,7 +11,7 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import {
   getInternetArchiveItemDetails,
   getArchiveTracks,
-} from '../../../services/api/internetArchiveAdapter';
+} from '../../../infrastructure/api/internetArchive/adapter';
 import type {
   InternetArchiveItemResult,
   ArchiveTrack,

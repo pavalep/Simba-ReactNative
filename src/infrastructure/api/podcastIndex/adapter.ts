@@ -21,13 +21,13 @@
  *   Convertors are pure, exported, named. Service functions always
  *   return Promise<DomainType>.
  */
-import {apiFetch} from './apiClient';
-import {API_CONFIG} from '../../constants/api';
+import {apiFetch} from '../apiClient';
+import {API_CONFIG} from '../../../constants/api';
 import type {
   PodcastResult,
   PodcastEpisodeResult,
   PodcastCategoryResult,
-} from '../../types/api';
+} from '../../../types/api';
 import {sha1} from 'js-sha1';
 
 export type {PodcastResult, PodcastEpisodeResult, PodcastCategoryResult};
