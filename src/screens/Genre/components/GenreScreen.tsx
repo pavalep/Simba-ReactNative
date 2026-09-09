@@ -29,7 +29,7 @@ import {ErrorState} from '../../../components/feedback/ErrorState/ErrorState';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {StreamingRow} from '../../../components/media/StreamingRow/StreamingRow';
-import {resolveStreamType, usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {resolveStreamType, usePlayerActivity} from '../../../infrastructure/player';
 import type {GenreScreenProps} from '../types';
 import type {JamendoTrackResult} from '../../../types/api';
 import {useGenreScreen} from '../hooks/useGenreScreen';

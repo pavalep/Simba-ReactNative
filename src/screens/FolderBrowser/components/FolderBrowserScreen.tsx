@@ -26,7 +26,7 @@ import {PlaylistCreateModal} from '../../../components/playlist/PlaylistCreateMo
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {logger} from '../../../lib/logger';
 import {usePlaylists} from '../../../features/playlists';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 
 import type {PlaylistItem, PlaylistKind} from '../../../types/playlist';
 

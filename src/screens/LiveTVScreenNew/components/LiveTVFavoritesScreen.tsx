@@ -25,7 +25,7 @@ import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 import {useLiveFavoritesStore} from '../../../state';
 import {
   ChannelCard,

@@ -68,7 +68,7 @@ describe('Player Facade (V21 W3 P10) — re-exports', () => {
     // (e.g., to add logging), this test will fail and force the
     // author to make a deliberate decision about wrapping.
     const underlying = jest.requireActual(
-      '@simba-dev/react-native-media-player',
+      '../../src/infrastructure/player',
     );
     expect(Player.usePlayerActivity).toBe(underlying.usePlayerActivity);
     expect(Player.useOpenPlaylist).toBe(underlying.useOpenPlaylist);

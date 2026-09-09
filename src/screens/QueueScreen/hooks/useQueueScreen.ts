@@ -9,10 +9,10 @@
 import {useCallback, useMemo} from 'react';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {playlistActions} from '../../../features/playlists';
-import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
+import {getMpvPlayerModule} from '../../../infrastructure/player';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {logger} from '../../../lib/logger';
-import type {PlayerQueueItem} from '@simba-dev/react-native-media-player';
+import type {PlayerQueueItem} from '../../../infrastructure/player';
 
 import type {PlaylistItem} from '../../../types/playlist';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
@@ -25,7 +25,7 @@ import {
   useQueue,
   useQueueItemsAs,
   usePlaybackHistoryAs,
-} from '@simba-dev/react-native-media-player';
+} from '../../../infrastructure/player';
 
 interface QueueDisplayRow {
   /**

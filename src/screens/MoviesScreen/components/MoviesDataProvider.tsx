@@ -19,7 +19,7 @@ import {useToast} from '../../../components/feedback/Toast';
 import {
   resolveStreamType,
   usePlayerActivity,
-} from '@simba-dev/react-native-media-player';
+} from '../../../infrastructure/player';
 import {resolveInternetArchiveVideoDetails} from '../../../infrastructure/api/internetArchive/adapter';
 import type {InternetArchiveVideoResult} from '../../../types/api';
 import {

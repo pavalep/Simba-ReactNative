@@ -18,7 +18,7 @@ import {Placeholder} from '../../../components/feedback/Placeholder';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {useSettingsStore, usePlayerStore} from '../../../state';
 import {useRecentHistory} from '../../../features/recentHistory';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 
 import {useSearch} from '../../../hooks/useSearch';
 import type {SearchScreenProps} from '../types';

@@ -34,7 +34,7 @@ import {formatDuration} from '../../../utils/timeAgo';
 import {clearCache} from '../../../services/cacheService';
 import type {RootStackScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
-import {usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {usePlayerActivity} from '../../../infrastructure/player';
 import {useSettingsStore} from '../../../state';
 import {useMediaStore} from '../../../state';
 

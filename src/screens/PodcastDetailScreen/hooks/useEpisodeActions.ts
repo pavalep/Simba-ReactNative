@@ -10,7 +10,7 @@ import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {shareContent} from '../../../services/shareService';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import { resolveStreamType, usePlayerActivity, useQueue } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity, useQueue } from '../../../infrastructure/player';
 import text from '../related/textContent.json';
 
 type Navigation = PodcastDetailScreenProps['navigation'];

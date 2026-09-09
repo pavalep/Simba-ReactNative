@@ -13,7 +13,7 @@ import {logger} from '../../../lib/logger';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import {useAuth} from '../../../hooks/useAuth';
 import {useWeather} from '../../../hooks/useWeather';

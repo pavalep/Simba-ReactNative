@@ -8,7 +8,7 @@ import {
   type PlaybackOrigin,
 } from '../types/playback';
 import type {MediaKind, MediaLane, MediaSource} from '../types/media';
-import type {PlayerQueueItem} from '@simba-dev/react-native-media-player';
+import type {PlayerQueueItem} from '../infrastructure/player';
 import type {PlaylistItem} from '../types/playlist';
 
 /**

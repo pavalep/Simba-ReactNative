@@ -15,7 +15,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 import {useBookmarks} from '../../../features/bookmarks';
 
 import type {MovieDetailScreenProps} from '../types';

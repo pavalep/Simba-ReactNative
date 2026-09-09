@@ -1,5 +1,5 @@
 import RNFS from 'react-native-fs';
-import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
+import {getMpvPlayerModule} from '../infrastructure/player';
 import {LrcParseResult, parseLrc} from '../utils/lrcParser';
 
 import {linkedMediaFolderIdFromPath} from '../types/media';

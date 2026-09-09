@@ -12,7 +12,7 @@ import {ViewMode} from '../components/ViewToggle';
 import type {PlaylistKind} from '../../../../types/playlist';
 import type {LibraryScreenProps} from '../../../../navigation/types';
 import {normalizeMediaClassification} from '../../../../types/media';
-import { resolveStreamType, useOpenPlaylist, usePlayer, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, useOpenPlaylist, usePlayer, usePlayerActivity } from '../../../../infrastructure/player';
 import {useMediaStore, usePlayerStore, playlistItemsToEntries, type ScannedTrack} from '../../../../state';
 import type {
   ContentMode,

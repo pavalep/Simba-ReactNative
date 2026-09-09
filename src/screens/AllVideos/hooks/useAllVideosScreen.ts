@@ -11,7 +11,7 @@
 
 import {useCallback, useMemo, useState} from 'react';
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
-import {usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {usePlayerActivity} from '../../../infrastructure/player';
 import {useMediaVideoTracks} from '../../../state';
 
 export type SortMode = 'title' | 'date';

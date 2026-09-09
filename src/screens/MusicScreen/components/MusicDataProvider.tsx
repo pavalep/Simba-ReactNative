@@ -11,7 +11,7 @@
 // useInfiniteApiQuery re-points the queryKey.
 
 import React, {useCallback, useMemo, type ReactNode} from 'react';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 import {useMusicScreen} from '../hooks/useMusicScreen';
 import type {JamendoTrackResult} from '../../../types/api';
 

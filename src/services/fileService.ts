@@ -1,7 +1,7 @@
 import {pick, types} from '@react-native-documents/picker';
 import RNFS from 'react-native-fs';
 
-import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
+import {getMpvPlayerModule} from '../infrastructure/player';
 
 import {isRemoteUri} from '../utils/mediaUri';
 import {logger} from '../lib/logger';

@@ -32,7 +32,7 @@ import {spacing, radius} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useToast} from '../../../components/feedback/Toast';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 import type {NowPlayingScreenProps} from '../types';
 
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';

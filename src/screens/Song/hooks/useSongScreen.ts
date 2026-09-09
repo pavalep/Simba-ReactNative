@@ -14,7 +14,7 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {LrcLine} from '../../../utils/lrcParser';
 import {isRemoteUri} from '../../../utils/mediaUri';
-import { resolveStreamType, usePlayerActivity, useQueue } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity, useQueue } from '../../../infrastructure/player';
 import {useMediaStore} from '../../../state';
 
 type SongRoute = RouteProp<RootStackParamList, 'SongScreen'>;

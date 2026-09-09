@@ -22,7 +22,7 @@ import {StreamingRow} from '../../../components/media/StreamingRow/StreamingRow'
 import type {JamendoTrackResult, AudiusTrackResult} from '../../../types/api';
 import {shareContent} from '../../../services/shareService';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 
 type Props = MusicDetailScreenProps;
 

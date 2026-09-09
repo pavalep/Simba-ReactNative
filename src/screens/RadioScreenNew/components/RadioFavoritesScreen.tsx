@@ -23,7 +23,7 @@ import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSh
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {shareContent} from '../../../services/shareService';
 import {useBookmarks} from '../../../features/bookmarks';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 import {useLiveFavoritesStore} from '../../../state';
 
 type Props = RootStackScreenProps<'RadioFavoritesScreen'>;

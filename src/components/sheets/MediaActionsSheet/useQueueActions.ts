@@ -1,5 +1,5 @@
 import {useCallback} from 'react';
-import {useQueue, type PlayerQueueItem} from '@simba-dev/react-native-media-player';
+import {useQueue, type PlayerQueueItem} from '../../../infrastructure/player';
 import {mediaKindToLane, type MediaKind, type MediaLane, type MediaSource} from '../../../types/media';
 
 import {useToast} from '../../feedback/Toast/Toast';

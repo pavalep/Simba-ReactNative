@@ -41,7 +41,7 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {isRemoteUri} from '../../../utils/mediaUri';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import { resolveStreamType, useOpenPlaylist, usePlayerActivity, useQueue } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, useOpenPlaylist, usePlayerActivity, useQueue } from '../../../infrastructure/player';
 import {usePlayerStore, playlistItemsToEntries} from '../../../state';
 
 type Props = PlaylistDetailScreenProps;

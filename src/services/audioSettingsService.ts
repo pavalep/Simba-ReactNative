@@ -1,4 +1,4 @@
-import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
+import {getMpvPlayerModule} from '../infrastructure/player';
 import {useSettingsStore} from '../state';
 import {logger} from '../lib/logger';
 

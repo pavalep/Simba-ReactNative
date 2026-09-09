@@ -22,7 +22,7 @@ import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
 import {formatDuration} from '../../../utils/timeAgo';

@@ -6,7 +6,7 @@ import {useMemo, useCallback} from 'react';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useOpenPlaylist, usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {useOpenPlaylist, usePlayer, usePlayerActivity} from '../../../infrastructure/player';
 import {useMediaStore} from '../../../state';
 import {usePlayerStore} from '../../../state';
 

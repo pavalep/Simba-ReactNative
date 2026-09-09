@@ -16,7 +16,7 @@ import {useSessionStore} from '../../../state';
 import {useRecentHistory} from '../../../features/recentHistory';
 import {formatDuration} from '../../../utils/timeAgo';
 import type {StatsScreenProps} from '../types';
-import { resolveStreamType, usePlayerActivity } from '@simba-dev/react-native-media-player';
+import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
 
 type Props = StatsScreenProps;
 
