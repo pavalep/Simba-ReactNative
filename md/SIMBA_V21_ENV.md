@@ -54,30 +54,55 @@ Expected: a debug APK at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
 ## 5. CI / GitHub Actions
 
-In a CI workflow, the recommended pattern is to base64-encode the keystore and store it as a secret:
+In a CI workflow, the recommended pattern is to base64-encode the keystore and store it as a secret. **V21 W4 P13 (D-001)** shipped the env-var-backed `signingConfigs.release` block in `android/app/build.gradle`, so the 4 KEYSTORE_* vars are now mandatory for any `assembleRelease` run — `:app:assembleRelease` fails fast with a clear "Missing: ..." error if any is unset. The standalone `./gradlew :app:validateEnv` task (V21 W4 P16, T16.01) is the pre-flight check.
 
 ```yaml
+# Recommended CI flow — see md/SIMBA_V21_KEYSTORE.md §4 for the full version.
+
 - name: Restore keystore
   run: |
-    echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
-- name: Set keystore env
-  run: |
-    echo "KEYSTORE_PATH=$PWD/android/app/release.keystore" >> $GITHUB_ENV
+    mkdir -p /tmp/simba-keystore
+    echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > /tmp/simba-keystore/release.keystore
+    echo "KEYSTORE_PATH=/tmp/simba-keystore/release.keystore" >> $GITHUB_ENV
     echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
     echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
     echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+
+- name: Pre-flight env check
+  working-directory: android
+  run: ./gradlew :app:validateEnv
+
 - name: Write android/.env
   run: |
     cp android/.env.example android/.env
-    # Override the keys from secrets
+    # Override the 6 keys from secrets
     echo "PODCAST_INDEX_API_KEY=${{ secrets.PODCAST_INDEX_API_KEY }}" >> android/.env
     echo "PODCAST_INDEX_API_SECRET=${{ secrets.PODCAST_INDEX_API_SECRET }}" >> android/.env
-    # ... repeat for each key
-- name: Build
+    echo "JAMENDO_CLIENT_ID=${{ secrets.JAMENDO_CLIENT_ID }}" >> android/.env
+    echo "JAMENDO_CLIENT_SECRET=${{ secrets.JAMENDO_CLIENT_SECRET }}" >> android/.env
+    echo "AUDIUS_API_KEY=${{ secrets.AUDIUS_API_KEY }}" >> android/.env
+    echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> android/.env
+
+- name: Build signed release APK
+  working-directory: android
   run: ./gradlew :app:assembleRelease
 ```
 
-(For V21, this is the W4 P13 work — the signed-release build + the env-var keystore. The CI workflow itself is V8 P29.)
+The 4 keystore vars are restored into ephemeral `$RUNNER_TMP` (`/tmp/simba-keystore/release.keystore`) — never written to a tracked path. The full keystore-generation recipe is in [`md/SIMBA_V21_KEYSTORE.md`](./SIMBA_V21_KEYSTORE.md) (V21 W4 P13 T13.03).
+
+### 5a. Debug builds in CI
+
+Debug builds skip the keystore check (`:app:validateEnv` only enforces the 4 vars when a task name contains `release`). For PR builds, the simplest pattern is to skip `:app:validateEnv` entirely and just write `.env`:
+
+```yaml
+- name: Write android/.env (debug build — no keystore needed)
+  run: cp android/.env.example android/.env  # all values empty; debug build never reads them
+- name: Build debug APK
+  working-directory: android
+  run: ./gradlew :app:assembleDebug
+```
+
+This is the same pattern V21 ships with today (D-013 closed by W1 P02 — commit `650c04c`).
 
 ## 6. Production secrets (read this!)
 

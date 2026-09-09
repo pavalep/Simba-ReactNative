@@ -39,6 +39,64 @@ project.ext.envConfigFiles = [
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
 
 /**
+ * V21 W4 P16 (T16.01) — reusable `validateEnv` Gradle task.
+ *
+ * Reuses the same checks as the inline fail-fast above (which still
+ * runs at script-eval time, so a missing `.env` fails the build even
+ * before this task is reached). The task form is useful as a
+ * standalone pre-flight check (e.g. `./gradlew :app:validateEnv`)
+ * and for explicit wiring via `tasks.named('assembleRelease')
+ * { dependsOn validateEnv }`.
+ */
+tasks.register("validateEnv") {
+    group = "verification"
+    description = "Verify android/.env + the release signing env vars exist. Re-runnable."
+    doLast {
+        if (!envFile.exists()) {
+            throw new GradleException(
+                "android/.env is missing. " +
+                "Copy android/.env.example to android/.env and fill in the keys. " +
+                "See md/SIMBA_V21_ENV.md for the quick-start."
+            )
+        }
+        if (!envExampleFile.exists()) {
+            throw new GradleException(
+                "android/.env.example is missing. " +
+                "It should be checked in next to this build.gradle."
+            )
+        }
+        // Release-only check: the 4 KEYSTORE_* vars are only needed for
+        // release builds, so only enforce them when the task that runs
+        // is a release task. `gradle.startParameter.taskNames` lists the
+        // tasks requested on the command line.
+        def requestedTasks = gradle.startParameter.taskNames
+        def isReleaseRun = requestedTasks.any { it.toLowerCase().contains("release") }
+        if (isReleaseRun) {
+            def ksVars = [
+                "KEYSTORE_PATH"     : System.getenv("KEYSTORE_PATH"),
+                "KEYSTORE_PASSWORD"  : System.getenv("KEYSTORE_PASSWORD"),
+                "KEY_ALIAS"          : System.getenv("KEY_ALIAS"),
+                "KEY_PASSWORD"       : System.getenv("KEY_PASSWORD"),
+            ]
+            def missing = ksVars.findAll { k, v -> !v }.keySet()
+            if (!missing.isEmpty()) {
+                throw new GradleException(
+                    "Release build requires env vars: ${missing.sort().join(', ')}. " +
+                    "See md/SIMBA_V21_KEYSTORE.md."
+                )
+            }
+        }
+    }
+}
+
+// Wire release builds to run validateEnv first. Debug builds skip this
+// (debug-signed APKs are fine — they only run on developer machines).
+afterEvaluate {
+    def releaseTasks = tasks.matching { it.name.toLowerCase().contains("release") }
+    releaseTasks.configureEach { dependsOn "validateEnv" }
+}
+
+/**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
