@@ -145,7 +145,7 @@ hidden.
 
 ### P12 exit — Wave 3 review
 
-- [ ] **T12.05** Reviewer confirms: 1 facade (`src/infrastructure/player/`), 36 source sites + 1 test-file import migrated, cold-start URL is 1 path, linter 0/0/0, jest 11/129/1/0, tsc exit 0. Evidence: reviewer initials + date in the W3 exit review doc.
+- [x] **T12.05** Reviewer confirms: 1 facade (`src/infrastructure/player/`), 36 source sites + 1 test-file import migrated, cold-start URL is 1 path, linter 0/0/0, jest 11/129/1/0, tsc exit 0. Evidence: `md/SIMBA_V21_W3_EXIT.md` (commit `33a5a36`) — APPROVED 2026-09-10 with the 3 re-scopings (P10 re-export facade + T12.04 device-test + T13.02 worker-exit best-effort) and the 1 deferred verification (T12.04) noted. W4 may begin.
 
 ### P13 — Test runtime cleanup (closes D-004)
 
