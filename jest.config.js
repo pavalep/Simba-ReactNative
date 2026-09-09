@@ -9,7 +9,15 @@ module.exports = {
   // notifyManager sync-scheduler shim that eliminates the
   // "worker process has failed to exit gracefully" warning
   // on every `npx jest` run).
-  setupFilesAfterEach: ['<rootDir>/jest.setup.ts'],
+  // V21 P01 / D-003: the prior key was `setupFilesAfterEach`,
+  // which Jest 29 silently ignores (the actual valid keys are
+  // `setupFiles` and `setupFilesAfterEnv` — verified in
+  // `node_modules/jest-config/build/ValidConfig.js:170-171`).
+  // The shim was not being loaded, which is why every run
+  // printed the open-async-handle warning. `setupFilesAfterEnv`
+  // runs after the test framework is set up, which is what the
+  // TanStack notifyManager replacement needs.
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^react-native-linear-gradient$':
       '<rootDir>/__mocks__/react-native-linear-gradient.js',
