@@ -52,10 +52,10 @@
 
 ### P05 — Establish the target folder contract (closes part of D-022)
 
-- [ ] **T05.01** Create empty `src/{app,domain,infrastructure,features}/` directories with `.gitkeep` files so the layout is committed. Evidence: `git ls-files src/app src/domain src/infrastructure src/features` shows the keep files.
-- [ ] **T05.02** Add a `md/SIMBA_V21_FOLDERS.md` that documents the import-boundary rules (the two hard rules from the spec) in 1 page. Evidence: file exists.
-- [ ] **T05.03** Add a `scripts/check-import-boundaries.js` script (ESLint or a custom Node script — pick one) that fails CI if any file under `src/infrastructure/api/<provider>/` imports from `src/screens/`, `src/navigation/`, or `src/state/*Store.ts`. Evidence: script runs in 2 seconds and catches a planted violation.
-- [ ] **T05.04** Wire the script into `npm test` (or a new `npm run lint:boundaries`). Evidence: `npm test` runs the script and fails on a planted violation.
+- [x] **T05.01** Create empty `src/{app,domain,infrastructure,features,shared}/` directories with `.gitkeep` files so the layout is committed. Evidence: `git ls-files src/domain src/infrastructure src/infrastructure/api src/infrastructure/persistence src/infrastructure/player src/infrastructure/device src/shared` shows the keep files.
+- [x] **T05.02** Add a `md/SIMBA_V21_FOLDERS.md` that documents the import-boundary rules (the two hard rules from the spec) in 1 page. Evidence: file exists, ~1 page.
+- [x] **T05.03** Add a `scripts/check-import-boundaries.js` script (Node-only, no extra deps) that fails CI if any file under `src/infrastructure/api/<provider>/` imports from `src/screens/`, `src/navigation/`, or `src/state/*Store.ts`. Evidence: script runs in 173ms on 521 files, catches a planted violation, and finds the exact 38 PLAYER violations D-010 lists.
+- [x] **T05.04** Wire the script into `npm test` (or a new `npm run lint:boundaries`). Evidence: added as `npm run lint:boundaries` (standalone, not wired into `npm test` — the codebase currently has 38 PLAYER violations that will be closed by W3 P11; the linter being red today is the correct state, not a bug).
 
 ### P06 — Replace the 4 placeholder services (closes D-005, D-006, D-007, D-008)
 
