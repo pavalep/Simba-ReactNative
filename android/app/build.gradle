@@ -92,8 +92,14 @@ react {
 
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
+ *
+ * V21 W4 P13 (D-002): flipped to `true` after proguard-rules.pro was
+ * populated with keep rules for the player module + 3rd-party libs
+ * (TanStack Query, react-navigation, Zustand, MMKV, react-native-svg,
+ * Reanimated). See `android/app/proguard-rules.pro` for the rules and
+ * `md/SIMBA_MOBILE_V21_TRACKER.md` T13.02 for the audit.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -146,15 +152,51 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        // V21 W4 P13 (D-001): release signing config reads from env
+        // vars (KEYSTORE_PATH / KEYSTORE_PASSWORD / KEY_ALIAS /
+        // KEY_PASSWORD) so the keystore + credentials never enter
+        // version control. CI restores the keystore via base64
+        // (see md/SIMBA_V21_ENV.md §5 + md/SIMBA_V21_KEYSTORE.md).
+        //
+        // Build fails fast if any of the 4 vars is missing — better
+        // to fail at the top of the build than to silently ship an
+        // unsigned (or debug-signed) release APK.
+        release {
+            def ksPath = System.getenv("KEYSTORE_PATH")
+            def ksPass = System.getenv("KEYSTORE_PASSWORD")
+            def ksAlias = System.getenv("KEY_ALIAS")
+            def keyPass = System.getenv("KEY_PASSWORD")
+            if (!ksPath || !ksPass || !ksAlias || !keyPass) {
+                throw new GradleException(
+                    "Release signing requires 4 env vars: " +
+                    "KEYSTORE_PATH, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD. " +
+                    "Missing: " +
+                    ([
+                        ("KEYSTORE_PATH=" + (ksPath ?: "<unset>")),
+                        ("KEYSTORE_PASSWORD=" + (ksPass ? "<set>" : "<unset>")),
+                        ("KEY_ALIAS=" + (ksAlias ?: "<unset>")),
+                        ("KEY_PASSWORD=" + (keyPass ? "<set>" : "<unset>"))
+                    ].findAll { it.endsWith("<unset>") }.join(", ")) +
+                    ". See md/SIMBA_V21_KEYSTORE.md for keystore generation " +
+                    "and md/SIMBA_V21_ENV.md §5 for CI setup."
+                )
+            }
+            storeFile file(ksPath)
+            storePassword ksPass
+            keyAlias ksAlias
+            keyPassword keyPass
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // V21 W4 P13 (D-001): use the env-var-backed signing
+            // config instead of signingConfigs.debug (which was the
+            // P0 defect — debug-signed release APK can't be installed
+            // via Play Store and trips Google's integrity checks).
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
