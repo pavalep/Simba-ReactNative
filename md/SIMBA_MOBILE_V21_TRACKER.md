@@ -161,36 +161,36 @@ hidden.
 
 ### P13 — Sign the release build (closes D-001, D-002)
 
-- [ ] **T13.01** Add `release` signing config to `android/app/build.gradle` that reads the keystore path + passwords from `.env`. Do NOT commit the keystore. Evidence: `git ls-files release.keystore` returns empty; `build.gradle` references `System.getenv("KEYSTORE_PATH")` etc.
-- [ ] **T13.02** Set `enableProguardInReleaseBuilds = true`. Add `proguard-rules.pro` rules for the player module and the 3rd-party libs (TanStack, react-navigation, Zustand, MMKV, etc.). Evidence: `gradlew :app:assembleRelease` exits 0; the APK installs and runs.
-- [ ] **T13.03** Add a `md/SIMBA_V21_KEYSTORE.md` documenting how to generate a keystore (`keytool -genkeypair -v -keystore ...`) and how to set the 4 env vars. Evidence: file exists, no real keystore path.
-- [ ] **T13.04** On a Pixel 7, install the signed-release APK and confirm the app launches. Evidence: `device: Pixel 7 / Android 14 / <commit>` + screenshot.
+- [x] **T13.01** Add `release` signing config to `android/app/build.gradle` that reads the keystore path + passwords from `.env`. Do NOT commit the keystore. Evidence: `git ls-files release.keystore` returns empty; `build.gradle` references `System.getenv("KEYSTORE_PATH")` etc. **Done W4 P13 commit `f3011dc` (closes D-001).**
+- [x] **T13.02** Set `enableProguardInReleaseBuilds = true`. Add `proguard-rules.pro` rules for the player module and the 3rd-party libs (TanStack, react-navigation, Zustand, MMKV, etc.). Evidence: `gradlew :app:assembleRelease` exits 0; the APK installs and runs. **Done W4 P13 commit `f3011dc` (closes D-002). The user-verification half (gradle build + APK install) is deferred to T13.04.**
+- [x] **T13.03** Add a `md/SIMBA_V21_KEYSTORE.md` documenting how to generate a keystore (`keytool -genkeypair -v -keystore ...`) and how to set the 4 env vars. Evidence: file exists, no real keystore path. **Done W4 P13 commit `f3011dc`.**
+- [ ] **T13.04** On a Pixel 7, install the signed-release APK and confirm the app launches. Evidence: `device: Pixel 7 / Android 14 / <commit>` + screenshot. **DEFERRED to user (T13.04).**
 
 ### P14 — Verify manifest, PiP, permissions (closes D-011 partly, prepares D-026)
 
-- [ ] **T14.01** Run `gradlew :app:processReleaseManifest` and inspect the merged manifest. Confirm: `android.permission.INTERNET`, `android.permission.WAKE_LOCK`, `android.permission.FOREGROUND_SERVICE`, `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `android.permission.POST_NOTIFICATIONS` are all present. Evidence: `app/build/intermediates/merged_manifests/release/AndroidManifest.xml` shows the 5 permissions.
-- [ ] **T14.02** Confirm the PiP ownership split is correct: `PlayerActivity` (the V12 dedicated player) has **both** `android:supportsPictureInPicture="true"` and `android:resizeableActivity="true"`. `MainActivity` (the JS host) has **only** `android:resizeableActivity="true"` — the PiP attribute was removed in T15.05 because MainActivity has zero PiP consumers (V11 inline-mount PiP hooks were retired in Phase 44). Evidence: `AndroidManifest.xml:62-85` (MainActivity) and `AndroidManifest.xml:109-117` (PlayerActivity).
-- [ ] **T14.04** On a physical device, enter PiP during playback, return to the app, and confirm playback continues. Evidence: `device: Pixel 7 / Android 14` + 3 screenshots (in PiP / returning / playing).
+- [ ] **T14.01** Run `gradlew :app:processReleaseManifest` and inspect the merged manifest. Confirm: `android.permission.INTERNET`, `android.permission.WAKE_LOCK`, `android.permission.FOREGROUND_SERVICE`, `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `android.permission.POST_NOTIFICATIONS` are all present. Evidence: `app/build/intermediates/merged_manifests/release/AndroidManifest.xml` shows the 5 permissions. **DEFERRED to user (T14.01).**
+- [x] **T14.02** Confirm the PiP ownership split is correct: `PlayerActivity` (the V12 dedicated player) has **both** `android:supportsPictureInPicture="true"` and `android:resizeableActivity="true"`. `MainActivity` (the JS host) has **only** `android:resizeableActivity="true"` — the PiP attribute was removed in T15.05 because MainActivity has zero PiP consumers (V11 inline-mount PiP hooks were retired in Phase 44). Evidence: `AndroidManifest.xml:62-85` (MainActivity) and `AndroidManifest.xml:109-117` (PlayerActivity). **Done W4 prep commit `ac2609e` (corrected wording) + W4 P15 commit `2b303e2` (removed the dead attribute).**
+- [ ] **T14.04** On a physical device, enter PiP during playback, return to the app, and confirm playback continues. Evidence: `device: Pixel 7 / Android 14` + 3 screenshots (in PiP / returning / playing). **DEFERRED to user (T14.04).**
 
 > **Note:** the original T14.03 (verify the V11 service is not registered) was merged into T15.03 — the verification is the absence-after-deletion check that T15.03 produces. There's no separate "acceptance test" task; the deletion itself is the verification.
 
 ### P15 — Retire the legacy `MediaNotificationService.kt` (closes D-011)
 
-- [ ] **T15.01** Confirm no production code calls `MediaNotificationService` (the module's `MediaPlaybackService` is the only active bridge). Evidence: `git grep -n MediaNotificationService src` returns 0 matches; `git grep -n MediaNotificationService android` returns 1 (the file itself) and 0 from Java/Kotlin non-test code.
-- [ ] **T15.02** Delete `android/app/src/main/java/com/simba/player/MediaNotificationService.kt`. Evidence: file gone.
-- [ ] **T15.03** Remove the `<service android:name=".MediaNotificationService" .../>` block from `AndroidManifest.xml` (lines 119-127 in the pre-retirement file). Evidence: `AndroidManifest.xml` no longer references the class.
-- [ ] **T15.04** On a physical device, confirm the notification still works (the module's `MediaPlaybackService` handles it). Evidence: `device: Pixel 7 / Android 14` + screenshot of the media notification.
-- [ ] **T15.05** Delete `android:supportsPictureInPicture="true"` from `MainActivity` in `AndroidManifest.xml` (line 68 in the pre-retirement file). Keep `android:resizeableActivity="true"` on line 69 — that's required for Android 12+ multi-window, independent of PiP. Evidence: `git diff AndroidManifest.xml` shows the one-line removal.
+- [x] **T15.01** Confirm no production code calls `MediaNotificationService` (the module's `MediaPlaybackService` is the only active bridge). Evidence: `git grep -n MediaNotificationService src` returns 0 matches; `git grep -n MediaNotificationService android` returns 1 (the file itself) and 0 from Java/Kotlin non-test code. **Done W4 P15 commit `2b303e2`.**
+- [x] **T15.02** Delete `android/app/src/main/java/com/simba/player/MediaNotificationService.kt`. Evidence: file gone. **Done W4 P15 commit `2b303e2`.**
+- [x] **T15.03** Remove the `<service android:name=".MediaNotificationService" .../>` block from `AndroidManifest.xml` (lines 119-127 in the pre-retirement file). Evidence: `AndroidManifest.xml` no longer references the class. **Done W4 P15 commit `2b303e2`.**
+- [ ] **T15.04** On a physical device, confirm the notification still works (the module's `MediaPlaybackService` handles it). Evidence: `device: Pixel 7 / Android 14` + screenshot of the media notification. **DEFERRED to user (T15.04).**
+- [x] **T15.05** Delete `android:supportsPictureInPicture="true"` from `MainActivity` in `AndroidManifest.xml` (line 68 in the pre-retirement file). Keep `android:resizeableActivity="true"` on line 69 — that's required for Android 12+ multi-window, independent of PiP. Evidence: `git diff AndroidManifest.xml` shows the one-line removal. **Done W4 P15 commit `2b303e2`.**
 - [ ] **T15.06 (deferred to V22)** Audit and delete the dead V11 PiP wiring in `MainActivity.kt` — the `PipActionReceiver`, `onPictureInPictureModeChanged` override, and `onBackPressed`-to-PiP exit handler. These are unreachable since Phase 44, but require a confidence audit of the `USE_DEDICATED_PLAYER_ACTIVITY = false` rollback path first (likely dead too — `NowPlayingScreen.tsx` is itself a dead route with zero callers in `src/`). Scheduled for V22 post-release cleanup.
 
 ### P16 — `.env.example` validation at boot (closes D-013)
 
-- [ ] **T16.01** Reuse T02.02's Gradle-time validator. Add a `validateEnv` script that runs at the start of every Gradle task and fails fast. Evidence: `gradlew :app:assembleDebug` with a missing key exits non-zero with a clear message.
-- [ ] **T16.02** Document in `md/SIMBA_V21_ENV.md` that CI must set the keys (suggest GitHub Actions secrets + `keystoreBase64` pattern). Evidence: file updated.
+- [x] **T16.01** Reuse T02.02's Gradle-time validator. Add a `validateEnv` script that runs at the start of every Gradle task and fails fast. Evidence: `gradlew :app:assembleDebug` with a missing key exits non-zero with a clear message. **Done W4 P16 commit `18f3404`. Reusable `validateEnv` Gradle task (group: verification, re-runnable) added to `android/app/build.gradle`; release-only KEYSTORE_* check; wired via `afterEvaluate { tasks.matching { ... }.configureEach { dependsOn "validateEnv" } }`. The inline fail-fast at script-eval time still fires first if `.env` is missing.**
+- [x] **T16.02** Document in `md/SIMBA_V21_ENV.md` that CI must set the keys (suggest GitHub Actions secrets + `keystoreBase64` pattern). Evidence: file updated. **Done W4 P16 commit `18f3404`. §5 rewritten for the post-P13 reality (KEYSTORE_BASE64 + `/tmp/simba-keystore/` ephemeral restore + pre-flight `validateEnv` step); new §5a covers debug builds in CI.**
 
 ### P16 exit — Wave 4 review
 
-- [ ] **T16.03** Reviewer signs off on signed-release + PiP + notification ownership. Evidence: reviewer initials + date.
+- [x] **T16.03** Reviewer signs off on signed-release + PiP + notification ownership. Evidence: reviewer initials + date. **Done W4 exit commit `<this>` (reviewer = Paval EP, 2026-09-10). See `md/SIMBA_V21_W4_EXIT.md` for the full review.** 4 user-verification tasks (T13.04 + T14.01 + T14.04 + T15.04) deferred — these are the release-gate-2 + release-gate-3 inputs.
 
 ---
 
