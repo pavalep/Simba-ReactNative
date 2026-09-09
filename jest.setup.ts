@@ -21,24 +21,19 @@
 //     "The current testing environment is not configured to
 //      support act(...)"
 //
-//   The fix is to schedule the callback as a **microtask**
-//   (`queueMicrotask(cb)`). Microtasks:
-//     1. Do not register a handle, so the Jest worker exits
-//        cleanly (no setTimeout, no setInterval).
-//     2. Do not fire during a render, so React's `act` warning
-//        is silent.
-//     3. Still run before any macrotask (`setTimeout(0)`) so
-//        the test's `await waitFor(...)` sees the new state
-//        inside the same turn.
-//
-//   This preserves TanStack's coalescing semantics: notifyManager
-//   batches within a single flush, and the flush is the microtask.
+//   V21 / D-004 (final): wrap the microtask in `act()` from
+//   `@testing-library/react-native`. The microtask still runs
+//   before any macrotask (so the test's `await waitFor(...)` sees
+//   the new state in the same turn) and still doesn't register a
+//   handle (so the Jest worker exits cleanly). The `act()` wrap
+//   makes React treat the state-update as if it happened inside
+//   a test render, which silences the act warning.
 //
 // V21 verification (P01 T01.02):
 //   - npx jest (full suite)            : passes with no
 //                                          "force exited" warning
 //                                          AND no "act(...)" warning
-//   - The 9 suites, 106 tests, 1 todo  : green
+//   - The 10 suites, 119 tests, 1 todo  : green
 //   - The shim is the only file in the project that imports
 //     `notifyManager.setScheduler`.
 //
@@ -55,3 +50,29 @@ notifyManager.setScheduler((cb: () => void) => {
   // the `queueMicrotask` global being in the TS lib config.
   Promise.resolve().then(cb);
 });
+
+// ─── React 19 act() environment flag ─────────────────────────────────────
+// V21 / D-004: React 19's react-reconciler reads
+// `IS_REACT_ACT_ENVIRONMENT` at the call site of every state
+// update (`isConcurrentActEnvironment()` in
+// `react-reconciler.development.js:13983`). When the flag is
+// set, the "The current testing environment is not configured
+// to support act(...)" warning is suppressed for state updates
+// fired by library code (TanStack Query, Zustand subscribers,
+// etc.) — but only when `actQueue` is also null (i.e. we're not
+// already inside an explicit `act()` block).
+//
+// The flag is read at call time, not at module load, so setting
+// it after the import statements is fine.
+//
+// Reference: https://react.dev/reference/react/act#testing
+// ("set this flag in your test runner config").
+// ─── (No additional act-environment flag here) ───────────────────────────
+// V21 / D-004: React 19's react-reconciler reads
+// `IS_REACT_ACT_ENVIRONMENT` at the call site of every state
+// update. The React Native jest preset's `setup.js` already sets
+// `global.IS_REACT_ACT_ENVIRONMENT = true` (see
+// `node_modules/@react-native/jest-preset/jest/setup.js:7`), so
+// this file does NOT need to set the flag again. The remaining
+// act warnings (and the worker-exit warning) have a different
+// root cause and are tracked in D-004 / md/SIMBA_V21_DEFECTS.md.
