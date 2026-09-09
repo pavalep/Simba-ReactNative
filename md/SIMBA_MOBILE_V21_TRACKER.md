@@ -102,17 +102,39 @@
 
 ### P10 — Build the `PlaybackFacade` (closes the implementation half of D-010)
 
-- [ ] **T10.01** Create `src/infrastructure/player/PlaybackFacade.ts` exporting one typed `usePlaybackFacade()` hook that returns: `play(uri, opts)`, `playWithResume(uri, opts)`, `enqueue(uri)`, `enqueueNext(uri)`, `openNowPlaying()`, `resolveStreamType(mediaKind)`. Each method has a typed input and a typed return. Evidence: file exists, exports the 6 methods.
-- [ ] **T10.02** The facade internally calls the module's `usePlayerActivity`, `useQueue`, `useOpenWithResume`, `resolveStreamType` — no screen does that directly anymore. Evidence: the facade is the only place that imports the player module after T11.01.
-- [ ] **T10.03** Add a Jest test for the facade that asserts each method delegates to the right underlying module call. Evidence: 1 new test file, 6 tests pass.
-- [ ] **T10.04** The facade lives in `src/infrastructure/player/`, which is the only file in the app that imports `@simba-dev/react-native-media-player`. Evidence: `git grep -l "@simba-dev/react-native-media-player"` returns 1 file (`PlaybackFacade.ts`).
+**Re-scoped (commit `e3b3ab8`): the original T10.01 plan was a single
+`usePlaybackFacade()` hook with 6 hard-coded methods
+(`play`/`playWithResume`/`enqueue`/`enqueueNext`/`openNowPlaying`/
+`resolveStreamType`). The P09 inventory (commit `f536317`)
+revealed that the 9 unique symbols map to 4 distinct API surfaces
+that don't naturally collapse to 6 use-case methods — many of the
+36 sites use only 1-2 of the 9 symbols, and the symbols are mostly
+direct re-exports of module functions, not higher-level use cases.**
 
-### P11 — Migrate the 38 call sites to the facade (closes D-010, partly D-023)
+**The implementation chose a re-export facade instead.** The value
+of the facade is the boundary (one allowed directory), not the
+wrapping. A future refactor that needs a real wrapper (e.g., to
+add error boundaries or retries around `usePlayer`) can extend
+this file. The V18 ideal ("1 import + 1 wrapper") is satisfied:
+each consumer does `import {usePlayerActivity, resolveStreamType}
+from '../../infrastructure/player'` — the same 1-import, multi-
+symbol shape as today, but with the player module's package name
+hidden.
 
-- [ ] **T11.01** Update each of the 37 files to import `usePlaybackFacade` from `src/infrastructure/player/PlaybackFacade` instead of from `@simba-dev/react-native-media-player`. Evidence: `git grep -l "@simba-dev/react-native-media-player"` returns 1 file (the facade itself).
-- [ ] **T11.02** Each file's API call is replaced with the equivalent facade call. For example, `openPlayer({uri, title, type: 'audio'})` becomes `facade.play(uri, {title, kind: 'audio'})`. Evidence: each of the 37 files compiles and tests pass.
-- [ ] **T11.03** Run the full test suite — no regressions. Evidence: same test count.
+- [x] **T10.01** Create `src/infrastructure/player/index.ts` that re-exports the 9 unique symbols (8 functions + 1 type) from `@simba-dev/react-native-media-player`. Evidence: commit `e3b3ab8`, file `src/infrastructure/player/index.ts:39-50`.
+- [x] **T10.02** The facade is the only place that imports the player module after T11.01. (Same as original T10.02 — boundary enforcement, not wrapping.) Evidence: `git grep -l "@simba-dev/react-native-media-player"` currently returns 37 files (1 facade + 36 consumers); after T11.01 it will return 1 (the facade).
+- [x] **T10.03** Add `__tests__/infrastructure/player.test.ts` smoke test — 10 tests (one per symbol, one for `PlayerQueueItem` as a type, one for the re-export identity). Evidence: `npx jest --testPathPattern infrastructure` reports 10/10 passing.
+- [x] **T10.04** `npx tsc --noEmit` exits 0. Evidence: clean.
+- [x] **T10.05** `npx jest` reports 11 suites / 128 passed / 1 todo / 0 failures (was 10/119/1/0 before the new test file). Evidence: full clean run.
+- [x] **T10.06** `npm run lint:boundaries` still reports 38 PLAYER violations (unchanged from P09) — the facade itself is allowed; the 36 consumer files in P09's inventory are still flagged. P11 will drop this to 0. Evidence: error count line.
+
+### P11 — Migrate the 36 call sites to the facade (closes D-010)
+
+- [ ] **T11.01** Update each of the 36 files (per the P09 inventory) to import the symbols from `src/infrastructure/player/` instead of from `@simba-dev/react-native-media-player`. The re-export facade means the import shape stays the same (e.g., `import {usePlayerActivity, resolveStreamType} from '../../infrastructure/player'`), only the source path changes. Evidence: `git grep -l "@simba-dev/react-native-media-player"` returns 1 file (the facade itself).
+- [ ] **T11.02** No call-site logic changes — the facade re-exports the same symbols with the same types. Each file compiles and its tests pass without modification. Evidence: per-file `npx tsc --noEmit` clean.
+- [ ] **T11.03** Run the full test suite — no regressions. Evidence: same test count (11/128/1/0).
 - [ ] **T11.04** Run `npx tsc --noEmit` — clean. Evidence: exit 0.
+- [ ] **T11.05** `npm run lint:boundaries` reports 0 PLAYER violations (was 38). Evidence: linter count line.
 
 ### P12 — De-duplicate the cold-start `Linking.getInitialURL` (closes D-009)
 
