@@ -54,6 +54,7 @@ import {
   type Result,
   type StreamError,
 } from './streamErrors';
+import type {PlaybackId} from './playbackFacade';
 
 export {
   usePlayerActivity,
@@ -92,6 +93,22 @@ export {
   isExpiredError,
   isBlockedError,
 } from './streamErrors';
+
+// W22 D-023 — unified PlaybackFacade (1-import-1-wrapper for
+// new consumers; the canonical junior-dev integration).
+export {
+  usePlaybackFacade,
+  type PlaybackFacade,
+  type PlaybackState,
+  type PlaybackProgress,
+  type PlaybackCommands,
+  type PlaybackLauncher,
+  type PlaybackActivity,
+  type OpenInput,
+  type OpenWithResumeInput,
+  type OpenPlaylistInput,
+  type PlaybackId,
+} from './playbackFacade';
 
 // ─── W7 P26 — usePlayWithResume ──────────────────────────────
 
@@ -152,14 +169,9 @@ export function usePlayWithResume(): (
   );
 }
 
-// ─── W7 P28 — usePlay (typed Result<PlaybackId, StreamError>) ─
+// ─── W7 P28 - usePlay (typed Result<PlaybackId, StreamError>) ─
 
-/** Stable identity returned on a successful `play()` call. The
- *  identity is local to the JS side; the native bridge tracks the
- *  actual playback session independently. */
-export type PlaybackId = string;
-
-/** Input shape for `usePlay`. Lighter than `usePlayWithResume` —
+/** Input shape for `usePlay`. Lighter than `usePlayWithResume` -
  *  no resume position (callers use `usePlayWithResume` if they
  *  know the saved position). */
 export interface PlayInput {

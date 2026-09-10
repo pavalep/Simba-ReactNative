@@ -2,21 +2,24 @@
  * V21 W3 P10 — Player Facade smoke test
  * V21 W7 P25 — added usePlayerProgress
  * V21 W7 P26 — added usePlayWithResume (real wrapper, NOT a re-export)
+ * V21 W7 P28 — added usePlay (real wrapper, NOT a re-export)
+ * V21 W22 D-023 — added usePlaybackFacade (real wrapper, NOT a re-export)
  *
  * Verifies the facade at `src/infrastructure/player/index.ts`
- * re-exports the 11 symbols documented in
- * `md/SIMBA_V21_W3_P09_INVENTORY.md` (P10) + P25 + P26:
+ * re-exports the 12 symbols documented in
+ * `md/SIMBA_V21_W3_P09_INVENTORY.md` (P10) + P25 + P26 + P28 + D-023:
  *
- *   - 10 functions: usePlayerActivity, useOpenPlaylist, usePlayer,
+ *   - 11 functions: usePlayerActivity, useOpenPlaylist, usePlayer,
  *     usePlayerProgress, useQueue, useQueueItemsAs,
  *     usePlaybackHistoryAs, resolveStreamType, getMpvPlayerModule,
- *     usePlayWithResume
+ *     usePlayWithResume, usePlay, usePlaybackFacade
  *   - 1 type:       PlayerQueueItem
  *   - 1 helper:     secondsToMs (re-exported from ./position)
  *
- * The P26 `usePlayWithResume` is the first facade symbol that's
- * a REAL WRAPPER, not a re-export. The "same identity as the
- * underlying module" test therefore deliberately excludes it.
+ * The P26 / P28 / D-023 hooks (usePlayWithResume, usePlay,
+ * usePlaybackFacade) are real wrappers, NOT re-exports. The
+ * "same identity as the underlying module" test therefore
+ * deliberately excludes them.
  *
  * No functional testing of the player module itself — that's the
  * player module's job, not this facade's. The smoke test exists
@@ -68,11 +71,19 @@ describe('Player Facade (V21 W3 P10) — re-exports', () => {
     expect(typeof Player.getMpvPlayerModule).toBe('function');
   });
 
-  it('exports usePlayWithResume as a function (V21 W7 P26 — wrapper, not re-export)', () => {
+  it('exports usePlayWithResume as a function (V21 W7 P26 - wrapper, not re-export)', () => {
     expect(typeof Player.usePlayWithResume).toBe('function');
   });
 
-  it('exports secondsToMs as a function (V21 W7 P26 — re-exported from ./position)', () => {
+  it('exports usePlay as a function (V21 W7 P28 - wrapper, not re-export)', () => {
+    expect(typeof Player.usePlay).toBe('function');
+  });
+
+  it('exports usePlaybackFacade as a function (V21 W22 D-023 - wrapper, not re-export)', () => {
+    expect(typeof Player.usePlaybackFacade).toBe('function');
+  });
+
+  it('exports secondsToMs as a function (V21 W7 P26 - re-exported from ./position)', () => {
     expect(typeof Player.secondsToMs).toBe('function');
   });
 

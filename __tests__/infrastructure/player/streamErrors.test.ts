@@ -176,9 +176,10 @@ describe('capture() (V21 W7 P28)', () => {
       throw new Error('boom');
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error.kind).toBe('network');
+    if (!r.ok && isNetworkError(r.error)) {
       expect(r.error.cause).toBe('boom');
+    } else {
+      fail(`expected network error, got: ${JSON.stringify(r)}`);
     }
   });
   it('wraps a rejected promise in err(networkError)', async () => {
@@ -186,9 +187,10 @@ describe('capture() (V21 W7 P28)', () => {
       throw new Error('async boom');
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error.kind).toBe('network');
+    if (!r.ok && isNetworkError(r.error)) {
       expect(r.error.cause).toBe('async boom');
+    } else {
+      fail(`expected network error, got: ${JSON.stringify(r)}`);
     }
   });
   it('handles a non-Error throwable', async () => {
@@ -197,9 +199,10 @@ describe('capture() (V21 W7 P28)', () => {
       throw 'string thrown';
     });
     expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.error.kind).toBe('network');
+    if (!r.ok && isNetworkError(r.error)) {
       expect(r.error.cause).toBe('string thrown');
+    } else {
+      fail(`expected network error, got: ${JSON.stringify(r)}`);
     }
   });
   it('respects a custom mapThrowable', async () => {

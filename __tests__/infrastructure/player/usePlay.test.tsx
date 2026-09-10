@@ -117,7 +117,7 @@ describe('usePlay (V21 W7 P28)', () => {
     const {result} = await renderHook(() => usePlay());
     const r1 = await result.current({uri: 'a', title: 'A', mediaType: 'audio'});
     // wait 2ms to ensure a different Date.now()
-    await new Promise(resolve => setTimeout(resolve, 2));
+    await new Promise<void>(resolve => setTimeout(() => resolve(), 2));
     const r2 = await result.current({uri: 'b', title: 'B', mediaType: 'audio'});
     if (r1.ok && r2.ok) {
       expect(r1.value).not.toBe(r2.value);
