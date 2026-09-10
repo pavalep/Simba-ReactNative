@@ -1,5 +1,5 @@
 import {useCallback, useMemo, useState} from 'react';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import {usePlayWithResume} from '../../../infrastructure/player';
 import {useBookmarks} from '../../../features/bookmarks';
 import type {Bookmark} from '../../../features/bookmarks';
 
@@ -17,7 +17,11 @@ export interface UseBookmarksScreenResult {
 }
 
 export function useBookmarksScreen(): UseBookmarksScreenResult {
-  const {openPlayer} = usePlayerActivity();
+  // W7 P26: `usePlayWithResume` replaces the direct `usePlayerActivity().openPlayer`
+  // call. Pre-P26, `handlePress` did not pass `startPositionMs` at all — every
+  // bookmark open played from the beginning, silently ignoring the saved position.
+  // The new hook threads the position through (with the seconds→ms conversion).
+  const playWithResume = usePlayWithResume();
   const {allBookmarks, bookmarkCount, remove, clearAll} = useBookmarks();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -34,13 +38,18 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
 
   const handlePress = useCallback(
     (item: Bookmark) => {
-      openPlayer({
+      // W7 P26: thread the bookmark's `position` (in SECONDS — see
+      // `src/state/bookmarksStore.ts:49` for the type contract) through
+      // to the bridge as `startPositionMs`. The hook does the
+      // seconds→ms conversion in one place.
+      void playWithResume({
         uri: item.fileUri,
         title: item.title,
-        type: resolveStreamType(item.type),
+        mediaType: item.type,
+        positionSec: item.position,
       });
     },
-    [openPlayer],
+    [playWithResume],
   );
 
   const removeBookmark = useCallback(

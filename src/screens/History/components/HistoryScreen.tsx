@@ -22,7 +22,7 @@ import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import {usePlayWithResume} from '../../../infrastructure/player';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
 import {formatDuration} from '../../../utils/timeAgo';
@@ -50,7 +50,12 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   const toast = useToast();
   const {confirm, dialog} = useConfirmDialog();
   const {list: recentFiles, removeRecent, clearRecent} = useRecentHistory();
-  const {openPlayer} = usePlayerActivity();
+  // W7 P26: `usePlayWithResume` replaces the direct `usePlayerActivity().openPlayer`
+  // call. Pre-P26, the `handlePress` below was passing `startPositionMs: position`
+  // where `position` was in SECONDS (the history store's convention) but the
+  // bridge field expects MILLISECONDS — every resume seek was 1000x too small.
+  // The new hook handles the seconds→ms conversion in one place.
+  const playWithResume = usePlayWithResume();
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [query, setQuery] = useState('');
   // 58.4/58.5: standard long-press menu (Play Next / Queue / Remove)
@@ -82,15 +87,19 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   const handlePress = useCallback(
     (fileUri: string, mediaType?: 'video' | 'audio', title?: string, position?: number) => {
       const lane = mediaType ?? 'video';
-      // 58.2: explicit tap intent — silent seek to the saved position
-      openPlayer({
+      // 58.2: explicit tap intent — silent seek to the saved position.
+      // W7 P26: `position` is in SECONDS (history store convention); the
+      // hook converts to milliseconds for the bridge. Pre-P26 the code
+      // passed `position` directly as `startPositionMs`, which was
+      // a 1000x-off bug.
+      void playWithResume({
         uri: fileUri,
         title: title ?? 'Untitled',
-        startPositionMs: position,
-        type: resolveStreamType(lane === 'audio' ? 'audio' : 'video'),
+        mediaType: lane,
+        positionSec: position ?? 0,
       });
     },
-    [openPlayer],
+    [playWithResume],
   );
 
   const handleRemove = useCallback(
