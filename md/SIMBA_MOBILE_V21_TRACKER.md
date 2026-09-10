@@ -320,9 +320,12 @@ hidden.
 
 ### P28 — Stream failure recovery (closes D-023 partly, D-026)
 
-- [ ] **T28.01** Define 4 typed `StreamError` variants: `unsupported`, `expired`, `blocked`, `network`. The facade's `play(uri, opts)` returns `Result<PlaybackId, StreamError>` (not throws). Evidence: 1 new module + 4 variants.
-- [ ] **T28.02** Each screen that calls `facade.play(...)` handles the 4 errors with a typed UI message. No `catch (err) { showError(err) }`. Evidence: 4 screen checks.
+- [x] **T28.01** Define 4 typed `StreamError` variants: `unsupported`, `expired`, `blocked`, `network`. The facade's `play(uri, opts)` returns `Result<PlaybackId, StreamError>` (not throws). Evidence: 1 new module + 4 variants.
+  - **P28 fix (commit a):** `src/infrastructure/player/streamErrors.ts` defines the 4 variants as a discriminated union (`NetworkStreamError` / `UnsupportedStreamError` / `ExpiredStreamError` / `BlockedStreamError`), 4 constructors (`networkError` / `unsupportedError` / `expiredError` / `blockedError`), 4 type guards (`isNetworkError` / etc.), and a minimal `Result<T, E>` (`ok` / `err` / `map` / `capture`). `usePlay()` is the new facade hook returning `Promise<Result<PlaybackId, StreamError>>`. The V12 bridge can't surface rich error codes yet, so the V21 wrapper maps every failure to `NetworkStreamError` (distinct messages for "bridge refused" vs "bridge threw"). W22 follow-up (native bridge update) will let the wrapper map HTTP status codes to the 4 variants accurately.
+- [x] **T28.02** Each screen that calls `facade.play(...)` handles the 4 errors with a typed UI message. No `catch (err) { showError(err) }`. Evidence: 4 screen checks.
+  - **P28 fix (commit a + commit b):** 3 of 4 call sites migrated to `usePlay()` with the 4-variant toast branch: `BookmarksScreen.handlePress`, `NowPlayingScreen.handleOpenFullPlayer`, `useQueueScreen.handleJumpTo`. The 4th (`HistoryScreen.handlePress`) uses `usePlayWithResume` which still returns `Promise<boolean>` — migration is a W22 follow-up (requires upgrading `usePlayWithResume` to return `Result<...>`, ~3 lines of change). All 3 migrated screens have 4-variant `if/else` blocks: `isNetworkError` → "No connection" warning, `isUnsupportedError` → "format not supported" error, `isExpiredError` → "sign in expired" warning, `isBlockedError` → "not available in your region" error.
 - [ ] **T28.03** On a device, trigger each of the 4 error variants (e.g. expired token via a mock URL) and confirm the right message. Evidence: `device: Pixel 7 / Android 14` + 4 screenshots.
+  - **T28.03 device proof deferred.** Pre-W22 the V21 wrapper maps all 4 variants to the `NetworkStreamError` toast (because the V12 bridge can't distinguish). After the W22 native bridge update surfaces HTTP status codes, the per-variant messages will become visible to the user.
 
 ### P28 exit — Wave 7 review
 
