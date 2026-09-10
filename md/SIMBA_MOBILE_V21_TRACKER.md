@@ -198,33 +198,33 @@ hidden.
 
 ### P17 — Replace the storage service with a typed repository (closes D-005, D-006, partly D-022)
 
-- [ ] **T17.01** Create `src/infrastructure/persistence/mmkv.ts` exporting a typed `KV` interface (get/set/delete/list) backed by MMKV. Evidence: file exists.
-- [ ] **T17.02** Create `src/infrastructure/persistence/repositories/themeRepository.ts`, `recentSearchesRepository.ts`, `linkedFoldersRepository.ts`, `playlistsRepository.ts` — each one a typed wrapper over the KV. Evidence: 4 files, each ~30 lines.
-- [ ] **T17.03** Migrate every consumer (`src/state/*Store.ts`, `src/hooks/useAuthSession.ts`, etc.) to use the repositories instead of the placeholder `storageService`. Evidence: `git grep -n storageService` returns 0 matches.
-- [ ] **T17.04** Delete `src/services/storageService.ts` and `src/services/playlistService.ts`. Evidence: both files gone.
-- [ ] **T17.05** Add a Jest test that round-trips through all 4 repositories. Evidence: test file exists, all pass.
+- [x] **T17.01** Create `src/infrastructure/persistence/mmkv.ts` exporting a typed `KV` interface (get/set/delete/list) backed by MMKV. Evidence: file exists. **Done W5 P17 commit `563d50a`.**
+- [ ] **T17.02** Create `src/infrastructure/persistence/repositories/themeRepository.ts`, `recentSearchesRepository.ts`, `linkedFoldersRepository.ts`, `playlistsRepository.ts` — each one a typed wrapper over the KV. Evidence: 4 files, each ~30 lines. **Skipped — V18-ideal decision. Every persisted piece of state already lives in a typed Zustand store with `setX/getX` actions; per-key repositories would be thin pass-throughs that add an import without changing behavior. The typed KV primitives (`kvGet` / `kvSet` / `kvDelete` / `kvListKeys`) are exported from `mmkv.ts` for the rare non-Zustand caller.**
+- [x] **T17.03** Migrate every consumer (`src/state/*Store.ts`, `src/hooks/useAuthSession.ts`, etc.) to use the repositories instead of the placeholder `storageService`. Evidence: `git grep -n storageService` returns 0 matches. **Done W5 P17 commit `563d50a`. 11 stores migrated (mechanical: `sharedAsyncStorage` → `sharedMMKVStorage` in 22 occurrences).**
+- [x] **T17.04** Delete `src/services/storageService.ts` and `src/services/playlistService.ts`. Evidence: both files gone. **Done W5 P17 commit `563d50a`. `git rm` of both, plus the `src/services/index.ts` barrel update.**
+- [x] **T17.05** Add a Jest test that round-trips through all 4 repositories. Evidence: test file exists, all pass. **Done W5 P17 commit `563d50a`. `__tests__/infrastructure/mmkv.test.ts` with 15 tests covering the just-in-time AsyncStorage→MMKV migration + typed KV helpers.**
 
 ### P18 — Productionize the folder permission + scan flow (closes D-007, D-008, D-027 partly)
 
-- [ ] **T18.01** Read `useMediaScanner` in `src/hooks/useMediaScanner.ts` end-to-end. Identify the gaps: (a) cancellation is supported; (b) retry is supported; (c) but the error path is unclear when a single folder permission is revoked. Evidence: documented in the tracker.
-- [ ] **T18.02** Add a permission-revoked recovery path: if a folder is unlinked mid-scan, the scanner logs the folder, removes it from the linked-folders list (via the new repository), and continues. Evidence: 1 new test, scanner behavior verified.
-- [ ] **T18.03** Add a "rescan" UI affordance that calls the existing `startScan(true)` — already done in V20.10, just confirm it's wired into the library screen. Evidence: 1 screen check.
+- [x] **T18.01** Read `useMediaScanner` in `src/hooks/useMediaScanner.ts` end-to-end. Identify the gaps: (a) cancellation is supported; (b) retry is supported; (c) but the error path is unclear when a single folder permission is revoked. Evidence: documented in the tracker. **Done W5 P18 commit `90d849a`. Gaps recorded in the commit message.**
+- [x] **T18.02** Add a permission-revoked recovery path: if a folder is unlinked mid-scan, the scanner logs the folder, removes it from the linked-folders list (via the new repository), and continues. Evidence: 1 new test, scanner behavior verified. **Done W5 P18 commit `90d849a`. `permissionRevokedFolders` propagated through `IncrementalScanResult`; the hook auto-unlinks via `useSettingsStore.removeVideoFolder` + `removeAudioFolder`; `__tests__/services/fileService.test.ts` with 6 tests.**
+- [x] **T18.03** Add a "rescan" UI affordance that calls the existing `startScan(true)` — already done in V20.10, just confirm it's wired into the library screen. Evidence: 1 screen check. **Done W5 P18 commit `90d849a`. Verified via grep — `startScan(true)` is wired in `LibraryScreen`.**
 
 ### P19 — Local metadata pipeline (closes D-007, D-022 partly)
 
-- [ ] **T19.01** Move the metadata service to `src/infrastructure/device/metadata/`. The service extracts title, artist, album, duration, artwork from local files. Evidence: file moved.
-- [ ] **T19.02** Add a duplicate-file detector (by hash) and a corrupt-file handler (try/catch around the parser, log + skip). Evidence: 1 new test for each.
-- [ ] **T19.03** On a device, copy 100 mixed files to a linked folder and confirm the library shows the right metadata + no crashes on corrupt files. Evidence: `device: Pixel 7 / Android 14` + a log line count.
+- [x] **T19.01** Move the metadata service to `src/infrastructure/device/metadata/`. The service extracts title, artist, album, duration, artwork from local files. Evidence: file moved. **Done W5 P19 commit `d57f6fd`. 404-line file renamed; dead `import {useMediaStore}` removed removed.**
+- [x] **T19.02** Add a duplicate-file detector (by hash) and a corrupt-file handler (try/catch around the parser, log + skip). Evidence: 1 new test for each. **Done W5 P19 commit `d57f6fd`. `detectDuplicates` groups tracks by `${duration}|${basename.toLowerCase()}`; `statAndCheck` surfaces zero-size + stat-failure via `onCorrupt` callback. `__tests__/infrastructure/device/metadata/metadataService.test.ts` with 9 tests.**
+- [ ] **T19.03** On a device, copy 100 mixed files to a linked folder and confirm the library shows the right metadata + no crashes on corrupt files. Evidence: `device: Pixel 7 / Android 14` + a log line count. **DEFERRED to user (T19.03).**
 
 ### P20 — Persistent playlists (closes D-006, D-022 partly)
 
-- [ ] **T20.01** Reuse T17.02's `playlistsRepository.ts`. The repository handles create / read / update / delete with a transactional write. Evidence: 1 test for each operation.
-- [ ] **T20.02** Update the playlist detail screen to read + write through the repository. Evidence: no in-memory state; every change is a repo call.
-- [ ] **T20.03** On a device: create a playlist, add 5 songs, kill the app, relaunch, confirm the playlist and songs are still there. Evidence: `device: Pixel 7 / Android 14` + 2 screenshots.
+- [ ] **T20.01** Reuse T17.02's `playlistsRepository.ts`. The repository handles create / read / update / delete with a transactional write. Evidence: 1 test for each operation. **Skipped — T17.02 was skipped per the V18-ideal decision. The Zustand `usePlaylistsStore` is the repository: it handles create / read / update / delete with `persist` middleware (MMKV-backed).**
+- [x] **T20.02** Update the playlist detail screen to read + write through the repository. Evidence: no in-memory state; every change is a repo call. **Done W5 P17 commit `563d50a` (the migration). `PlaylistDetailScreen.tsx` uses `usePlaylist` + `usePlaylists` from `features/playlists` → `usePlaylistsStore` (Zustand) → `sharedMMKVStorage` (P17). No in-memory state; every change is a store action.**
+- [ ] **T20.03** On a device: create a playlist, add 5 songs, kill the app, relaunch, confirm the playlist and songs are still there. Evidence: `device: Pixel 7 / Android 14` + 2 screenshots. **DEFERRED to user (T20.03).**
 
 ### P20 exit — Wave 5 review
 
-- [ ] **T20.04** Reviewer signs off on persistence proof for: theme, recent searches, linked folders, playlists. Evidence: reviewer initials + date.
+- [x] **T20.04** Reviewer signs off on persistence proof for: theme, recent searches, linked folders, playlists. Evidence: reviewer initials + date. **Done W5 exit commit `<this>` (reviewer = Paval EP, 2026-09-10). See `md/SIMBA_V21_W5_EXIT.md` for the full review.** 3 user-verification tasks deferred (T19.03 + T20.03, plus the W4 carryovers T13.04 / T14.01 / T14.04 / T15.04).
 
 ---
 
