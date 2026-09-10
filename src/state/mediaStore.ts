@@ -148,6 +148,14 @@ export interface MediaState {
   scanProgress: ScanProgress;
   /** History of the most recent scan */
   scanHistory: ScanHistory;
+  /**
+   * V21 W5 P18 (D-027 partly): folders whose top-level read failed
+   * with a permission-revoked error during the most recent scan.
+   * The scanner hook unlinks these from `useSettingsStore`
+   * automatically; this list lets the UI surface a one-shot
+   * toast/banner so the user knows why their folder disappeared.
+   */
+  permissionRevokedFolders: string[];
 }
 
 export interface MediaActions {
@@ -161,6 +169,8 @@ export interface MediaActions {
   addTracks: (tracks: ScannedTrack[]) => void;
   removeTrack: (uri: string) => void;
   clearTracks: () => void;
+  /** V21 W5 P18 — surface folders whose permission was revoked. */
+  setPermissionRevokedFolders: (folders: string[]) => void;
   /** Phase 80: the old `rebuildSearchIndex` action is a no-op now
    * that the index is derived. Kept as a function for backwards
    * compatibility (no-op body) so existing dispatch call sites
@@ -176,6 +186,7 @@ const initialState: MediaState = {
   cancelRequested: false,
   scanProgress: {currentFolder: null, filesFound: 0, totalFiles: 0, percentComplete: 0},
   scanHistory: EMPTY_SCAN_HISTORY,
+  permissionRevokedFolders: [],
 };
 
 export const useMediaStore = create<MediaState & MediaActions>()(
@@ -223,6 +234,9 @@ export const useMediaStore = create<MediaState & MediaActions>()(
         set((s) => ({tracks: s.tracks.filter(t => t.uri !== uri)})),
 
       clearTracks: () => set({tracks: []}),
+
+      setPermissionRevokedFolders: (folders) =>
+        set({permissionRevokedFolders: folders}),
 
       // Phase 80: no-op. The index is now a memoized derived value
       // (see `useSearch` + `buildSearchIndex`).

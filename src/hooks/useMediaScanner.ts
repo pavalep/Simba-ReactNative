@@ -28,6 +28,7 @@ export function useMediaScanner() {
   const scanProgress = useMediaStore(s => s.scanProgress);
   const scanHistory = useMediaStore(s => s.scanHistory);
   const cancelRequested = useMediaStore(s => s.cancelRequested);
+  const permissionRevokedFolders = useMediaStore(s => s.permissionRevokedFolders);
   const videoFolders = useSettingsStore(s => s.videoFolders ?? []);
   const audioFolders = useSettingsStore(s => s.audioFolders ?? []);
   const settingsLastScan = useSettingsStore(s => s.lastScanTimestamp ?? null);
@@ -130,6 +131,21 @@ export function useMediaScanner() {
             timestamp: result.scanTimestamp,
             paths: allFolders,
           });
+
+        // V21 W5 P18 (D-027 partly): auto-unlink folders whose top-level
+        // permission was revoked during this scan. Without this, the
+        // scanner retries the same dead folder forever and the user
+        // sees no UI signal — the library just never populates.
+        if (result.permissionRevokedFolders.length > 0) {
+          const settingsState = useSettingsStore.getState();
+          result.permissionRevokedFolders.forEach((folder) => {
+            settingsState.removeVideoFolder(folder);
+            settingsState.removeAudioFolder(folder);
+          });
+          useMediaStore
+            .getState()
+            .setPermissionRevokedFolders(result.permissionRevokedFolders);
+        }
       } catch {
         // Silently fail — user can retry
       } finally {
@@ -184,5 +200,9 @@ export function useMediaScanner() {
     scanHistory,
     /** Whether a cancellation has been requested. */
     cancelRequested,
+    /** V21 W5 P18 — folders auto-unlinked from settingsStore because
+     * their top-level readDir failed with a permission-revoked error
+     * during the most recent scan. UI can render a one-shot banner. */
+    permissionRevokedFolders,
   };
 }

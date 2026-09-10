@@ -423,6 +423,17 @@ export interface IncrementalScanResult {
   unsupportedCount: number;
   /** Number of errors encountered during enumeration */
   errorsCount: number;
+  /**
+   * V21 W5 P18 (D-027 partly): top-level folders whose root
+   * `RNFS.readDir` failed with a permission-style error. The
+   * caller (useMediaScanner) uses this list to unlink the
+   * affected folders from settingsStore instead of retrying
+   * forever on a folder the user revoked access to.
+   *
+   * Errors in nested subfolders do NOT appear here — those are
+   * transient and logged via `errorsCount` only.
+   */
+  permissionRevokedFolders: string[];
   /** The scan timestamp (ms) */
   scanTimestamp: number;
 }
@@ -486,21 +497,56 @@ async function enumerateMediaFiles(
   lastScanTimestamp: number | null,
   onProgress?: ScanProgressCallback,
   cancelRef?: {current: boolean},
-): Promise<{files: FileEntry[]; skippedCount: number; unsupportedCount: number; errorsCount: number}> {
+): Promise<{
+  files: FileEntry[];
+  skippedCount: number;
+  unsupportedCount: number;
+  errorsCount: number;
+  permissionRevoked: boolean;
+}> {
   const results: FileEntry[] = [];
   let skippedCount = 0;
   let unsupportedCount = 0;
   let errorsCount = 0;
+  let permissionRevoked = false;
 
-  async function walk(dir: string) {
+  // V21 W5 P18: detect the very first RNFS.readDir failure on the
+  // top-level folder as a permission-revoked signal. `react-native-fs`
+  // throws on `content://` URIs whose persistable grant has been
+  // revoked by the user (system File Manager → revoke) AND on raw
+  // paths the app no longer has access to. We use the typed error
+  // code (`EACCES` / `EPERM`) when present, and fall back to a
+  // message check for the typical `Permission Denial` string the
+  // SAF layer surfaces.
+  function isPermissionError(err: unknown): boolean {
+    if (!err) return false;
+    const code = typeof err === 'object' && err && 'code' in err
+      ? (err as {code?: unknown}).code
+      : undefined;
+    if (typeof code === 'string' && (code === 'EACCES' || code === 'EPERM')) return true;
+    const msg = typeof err === 'object' && err && 'message' in err
+      ? String((err as {message?: unknown}).message ?? '')
+      : String(err);
+    return /permission|dere|denied|access/i.test(msg);
+  }
+
+  async function walk(dir: string, isTopLevel: boolean) {
     // Check cancellation
     if (cancelRef?.current) return;
 
     let items: RNFS.ReadDirItem[];
     try {
       items = await RNFS.readDir(dir);
-    } catch {
-      errorsCount++;
+    } catch (err) {
+      // Top-level failure on the folder the user originally linked
+      // → assume the persistable permission was revoked. Subfolder
+      // failures are transient (a stray bad symlink, etc.) and stay
+      // in `errorsCount` only.
+      if (isTopLevel && isPermissionError(err)) {
+        permissionRevoked = true;
+      } else {
+        errorsCount++;
+      }
       return;
     }
 
@@ -519,7 +565,7 @@ async function enumerateMediaFiles(
       if (cancelRef?.current) return;
 
       if (item.isDirectory()) {
-        await walk(item.path);
+        await walk(item.path, false);
         continue;
       }
 
@@ -550,8 +596,8 @@ async function enumerateMediaFiles(
     }
   }
 
-  await walk(folderPath);
-  return {files: results, skippedCount, unsupportedCount, errorsCount};
+  await walk(folderPath, true);
+  return {files: results, skippedCount, unsupportedCount, errorsCount, permissionRevoked};
 }
 
 /**
@@ -575,6 +621,7 @@ export async function scanFoldersIncremental(
   let totalUnsupported = 0;
   let totalErrors = 0;
   let totalFiles = 0;
+  const permissionRevokedFolders: string[] = [];
 
   if (folderPaths.length === 0) {
     return {
@@ -582,6 +629,7 @@ export async function scanFoldersIncremental(
       skippedCount: 0,
       unsupportedCount: 0,
       errorsCount: 0,
+      permissionRevokedFolders: [],
       scanTimestamp: Date.now(),
     };
   }
@@ -602,6 +650,9 @@ export async function scanFoldersIncremental(
     totalUnsupported += result.unsupportedCount;
     totalErrors += result.errorsCount;
     totalFiles = allFiles.length;
+    if (result.permissionRevoked) {
+      permissionRevokedFolders.push(folder);
+    }
 
     // Report progress
     if (onProgress) {
@@ -621,6 +672,7 @@ export async function scanFoldersIncremental(
     skippedCount: totalSkipped,
     unsupportedCount: totalUnsupported,
     errorsCount: totalErrors,
+    permissionRevokedFolders: permissionRevokedFolders,
     scanTimestamp: Date.now(),
   };
 }
