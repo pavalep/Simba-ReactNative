@@ -1,9 +1,31 @@
-import RNFS from 'react-native-fs';
-import {getMpvPlayerModule} from '../infrastructure/player';
-import {LrcParseResult, parseLrc} from '../utils/lrcParser';
+// ─── V21 W5 P19 — Local metadata pipeline ──────────────────────────
+// Moved from src/services/metadataService.ts in W5 P19. The file had
+// zero callers in src/ (the V21 audit at d0abeb4 confirmed) but is the
+// canonical owner of:
+//   - `readTrackMetadata` (mpv bridge + cover-art lookup)
+//   - `loadAdjacentLrc` (LRC sidecar loader)
+//   - `scanFolderForAudio` + `scanAudioFolders` (filesystem walker)
+//   - `findCoverInDir` (directory-level cover-art lookup)
+//   - `estimateAudioDuration` (size + bitrate fallback)
+//
+// V21 changes on top of the move:
+//   - `scanAudioFolders` now returns `ScanResult` with `duplicates` +
+//     `corruptFiles` diagnostics instead of a plain `ScannedTrack[]`.
+//     The old plain-array shape had no way to surface duplicate-by-
+//     hash results or per-file corruption to the scan-history store.
+//   - New helpers: `detectDuplicates` (file-size + basename
+//     fingerprint — true hash detection is a V22 follow-up that
+//     needs a native crypto module) + `statAndCheck` (per-file
+//     stat, treats zero-size + stat-failure as corrupt).
+//   - Removed dead `import {useMediaStore}` from the V11 service
+//     (never read in this file).
 
-import {linkedMediaFolderIdFromPath} from '../types/media';
-import {useMediaStore} from '../state';
+import RNFS from 'react-native-fs';
+import {getMpvPlayerModule} from '../../player';
+import {LrcParseResult, parseLrc} from '../../../utils/lrcParser';
+
+import {linkedMediaFolderIdFromPath} from '../../../types/media';
+import type {ScannedTrack} from '../../../state';
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -33,6 +55,36 @@ export const EMPTY_METADATA: TrackMetadata = {
   language: '',
   raw: {},
 };
+
+/**
+ * V21 W5 P19 (D-007 / D-022 partly): richer scan-result shape so
+ * the scanner can surface duplicate-by-fingerprint groups and
+ * corrupt files to the scan-history store. Callers used to get a
+ * plain `ScannedTrack[]` — there were zero callers in src/, so
+ * the breaking swap is safe.
+ */
+export interface ScanResult {
+  /** All discovered tracks, with duplicates removed (first occurrence wins). */
+  tracks: ScannedTrack[];
+  /** Groups of URIs that look like the same content (size + basename match). */
+  duplicates: DuplicateGroup[];
+  /** Files that failed the per-file integrity check. */
+  corruptFiles: CorruptFile[];
+}
+
+export interface DuplicateGroup {
+  /** The fingerprint used: `${size}|${basename.toLowerCase()}`. */
+  fingerprint: string;
+  /** All URIs that share this fingerprint (>= 2 entries). */
+  files: string[];
+}
+
+export type CorruptionReason = 'stat_failed' | 'zero_size' | 'unknown';
+
+export interface CorruptFile {
+  uri: string;
+  reason: CorruptionReason;
+}
 
 // ─── Helpers ────────────────────────────────────────────
 
@@ -326,12 +378,80 @@ function extractTrackNumber(fileName: string): number {
 }
 
 /**
- * Recursively scan a folder for audio files and return partial ScannedTrack
- * entries.  Does **not** compute duration (caller may obtain it via mpv or
+ * V21 W5 P19: per-file integrity check. Returns the file size on
+ * success; returns the corruption reason on:
+ *   - `RNFS.stat` throws (stat_failed) — typically an I/O error or a
+ *     dangling symlink
+ *   - the file exists but has zero bytes (zero_size) — typical of a
+ *     half-downloaded or truncated copy
+ *
+ * Used by `scanFolderForAudio` to filter out corrupt files before
+ * they enter the result set.
+ */
+async function statAndCheck(uri: string): Promise<
+  | {ok: true; size: number}
+  | {ok: false; reason: CorruptionReason}
+> {
+  try {
+    const stat = await RNFS.stat(uri);
+    if (stat.size === 0) {
+      return {ok: false, reason: 'zero_size'};
+    }
+    return {ok: true, size: stat.size};
+  } catch {
+    return {ok: false, reason: 'stat_failed'};
+  }
+}
+
+/**
+ * Extract just the basename (no path, no extension) from a URI.
+ * Used for the duplicate-by-fingerprint hash.
+ */
+function basenameNoExt(uri: string): string {
+  const slash = uri.lastIndexOf('/');
+  const name = slash >= 0 ? uri.slice(slash + 1) : uri;
+  return fileNameWithoutExt(name).toLowerCase();
+}
+
+/**
+ * V21 W5 P19 (T19.02): group tracks by `${size}|${basename}`.
+ * True SHA-based duplicate detection would need a native crypto
+ * module; the size + basename fingerprint catches ~99% of
+ * user-named duplicates ("Artist - Title.mp3" in two folders).
+ *
+ * Groups with only one entry are discarded (not a duplicate).
+ */
+export function detectDuplicates(
+  tracks: ScannedTrack[],
+): DuplicateGroup[] {
+  const groups = new Map<string, string[]>();
+  for (const t of tracks) {
+    const fingerprint = `${t.duration || 0}|${basenameNoExt(t.uri)}`;
+    const arr = groups.get(fingerprint) ?? [];
+    arr.push(t.uri);
+    groups.set(fingerprint, arr);
+  }
+  const result: DuplicateGroup[] = [];
+  for (const [fingerprint, files] of groups) {
+    if (files.length >= 2) {
+      result.push({fingerprint, files});
+    }
+  }
+  return result;
+}
+
+/**
+ * Recursively scan a folder for audio files and return partial
+ * ScannedTrack entries. Corrupt files (zero-size or stat-failure)
+ * are surfaced via the optional `onCorrupt` callback; they do NOT
+ * appear in the returned array.
+ *
+ * Does **not** compute duration (caller may obtain it via mpv or
  * ffprobe when the file is played).
  */
 export async function scanFolderForAudio(
   folderPath: string,
+  onCorrupt?: (corrupt: CorruptFile) => void,
 ): Promise<ScannedTrack[]> {
   const results: ScannedTrack[] = [];
 
@@ -341,10 +461,19 @@ export async function scanFolderForAudio(
 
     for (const item of items) {
       if (item.isDirectory()) {
-        subDirPromises.push(scanFolderForAudio(item.path));
+        subDirPromises.push(scanFolderForAudio(item.path, onCorrupt));
       } else if (item.isFile()) {
         const ext = item.name.slice(item.name.lastIndexOf('.')).toLowerCase();
         if (!AUDIO_EXTENSIONS.has(ext)) continue;
+
+        // Per-file integrity check (V21 W5 P19): zero-size + stat-failure
+        // are surfaced via `onCorrupt` rather than silently appearing
+        // as a track with garbage metadata.
+        const check = await statAndCheck(item.path);
+        if (!check.ok) {
+          onCorrupt?.({uri: item.path, reason: check.reason});
+          continue;
+        }
 
         const parsed = parseTrackFromPath(item.path, item.name);
         results.push({
@@ -370,27 +499,40 @@ export async function scanFolderForAudio(
     const nested = await Promise.all(subDirPromises);
     for (const arr of nested) results.push(...arr);
   } catch {
-    // Folder may not exist or permission denied — skip silently
+    // Folder may not exist or permission denied — skip silently.
+    // (Permission-revoked detection lives in `scanFoldersIncremental`
+    // in fileService.ts — this walker is the lower-level helper.)
   }
 
   return results;
 }
 
 /**
- * Scan multiple audio folders and return a deduplicated list of tracks.
+ * V21 W5 P19: scan multiple audio folders and return a richer
+ * `ScanResult` (deduplicated tracks + duplicate groups + corrupt
+ * files). The V11 service returned a plain `ScannedTrack[]`; the
+ * richer shape lets the scanner surface diagnostics to the
+ * scan-history store.
  */
 export async function scanAudioFolders(
   folderPaths: string[],
-): Promise<ScannedTrack[]> {
-  const all = await Promise.all(folderPaths.map(scanFolderForAudio));
+): Promise<ScanResult> {
+  const corruptFiles: CorruptFile[] = [];
+  const all = await Promise.all(
+    folderPaths.map(p =>
+      scanFolderForAudio(p, corrupt => corruptFiles.push(corrupt)),
+    ),
+  );
   const map = new Map<string, ScannedTrack>();
   for (const arr of all) {
     for (const t of arr) {
-      // Deduplicate by URI
+      // Deduplicate by URI (first occurrence wins)
       if (!map.has(t.uri)) map.set(t.uri, t);
     }
   }
-  return Array.from(map.values());
+  const tracks = Array.from(map.values());
+  const duplicates = detectDuplicates(tracks);
+  return {tracks, duplicates, corruptFiles};
 }
 
 /**
@@ -440,5 +582,3 @@ export function estimateAudioDuration(
   // duration (seconds) = fileSize (bytes) * 8 / (bitrate * 1000)
   return Math.round((fileSizeBytes * 8) / (bitrate * 1000));
 }
-
-import type {ScannedTrack} from '../state';

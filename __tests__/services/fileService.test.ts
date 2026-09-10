@@ -112,7 +112,7 @@ describe('fileService.scanFoldersIncremental — V21 W5 P18 (D-027 partly)', () 
         ];
       }
       // Subdirectory — ENOENT (file not found, NOT permission).
-      const err: NodeJS.ErrnoException = Object.assign(
+      const err = Object.assign(
         new Error('ENOENT: no such file or directory'),
         {code: 'ENOENT'},
       );
