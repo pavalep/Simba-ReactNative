@@ -22,7 +22,7 @@ import {renderHook} from '@testing-library/react-native';
 import {usePlaybackFacade} from '../../../src/infrastructure/player';
 
 const mockOpenPlayer = jest.fn();
-const mockGetLaunchParams = jest.fn(() => null);
+const mockGetLaunchParams = jest.fn<unknown, []>(() => null);
 const mockOpenPlaylistRaw = jest.fn();
 
 let mockState: Record<string, unknown> = {};

@@ -1,23 +1,38 @@
-// ─── W7 P25 — NowPlaying screen (live player state) ──────────
+// ─── W7 P25 / T23.07 — NowPlaying screen (live player state) ──────────
 //
-// **W7 P25 audit (closes D-023 / D-026 partly):** the V11/V12 screen
-// carried 6 placeholder `useState` calls (isLoading / error /
-// refreshing / isPlaying / position / duration) and 4 placeholder
-// handlers that only mutated local state. The screen was a
-// *launch pad* for the dedicated `PlayerActivity` (per the
-// W2.x header) but its UI controls did not actually drive
-// playback — tapping play/pause/prev/next/seek only updated
-// local state, which the bridge never read.
+// **W7 P25 audit:** the V11/V12 screen carried 6 placeholder
+// `useState` calls (isLoading / error / refreshing / isPlaying /
+// position / duration) and 4 placeholder handlers that only
+// mutated local state. The screen was a *launch pad* for the
+// dedicated `PlayerActivity` (per the W2.x header) but its UI
+// controls did not actually drive playback — tapping play/pause/
+// prev/next/seek only updated local state, which the bridge
+// never read.
 //
 // P25 fix: drop the local `useState` for player state, read
-// the live state from the V21 player facade (`usePlayer` for
-// isPlaying + commands, `usePlayerProgress` for position /
-// duration / buffering). The 4 transport handlers now call
-// the bridge-backed commands. The 3 dead UI-feedback states
-// (isLoading / error / refreshing) had no async source, so
-// `isLoading` is now wired to `progress.isBuffering` (a real
-// signal) and `error` / `refreshing` are removed (the
-// `<RefreshControl>` had no data to refresh).
+// the live state from the V21 player facade.
+//
+// **T23.07 migration (V22 D-023 / "1-import-1-wrapper rule"):**
+// the screen used to import 3 separate hooks (`usePlayer` +
+// `usePlayerProgress` + `usePlay`) + 4 type guards. That's 7
+// symbols for a single screen. The unified `usePlaybackFacade()`
+// composes all of them into one `PlaybackFacade` object with
+// 5 sub-surfaces (state / progress / commands / launch /
+// activity). The screen now reads the 4 it needs (state +
+// progress + commands + launch) from the facade.
+//
+// The migration is a pure refactor — same live state, same
+// bridge-backed commands, same `Result<PlaybackId, StreamError>`
+// branching in `handleOpenFullPlayer`. The facade does not own
+// new behavior; it just reshapes the 5 underlying contexts into
+// a single import.
+//
+// **Performance note:** the facade re-renders on ANY of the 5
+// contexts. The NowPlaying screen consumes state + progress
+// (both update at 1Hz) + commands (rare) + launch (rare), so
+// the facade is the right fit. A header badge that only needs
+// `isPlaying` should still call `usePlayer()` directly to avoid
+// the 1Hz progress re-renders.
 //
 // The screen still works as a deep-link target for the legacy
 // `simbaplayer://now-playing?fileUri=...&fileTitle=...` route
@@ -43,9 +58,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useToast} from '../../../components/feedback/Toast';
 import {
-  usePlayer,
-  usePlayerProgress,
-  usePlay,
+  usePlaybackFacade,
   isNetworkError,
   isUnsupportedError,
   isExpiredError,
@@ -69,18 +82,14 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
   const insets = useSafeAreaInsets();
   const toast = useToast();
 
-  // W7 P25: live player state + commands come from the facade.
-  // `usePlayer` returns the full state (isPlaying / title / etc.)
-  // + the bridge-backed commands. `usePlayerProgress` is a
-  // separate context (split so progress consumers don't
-  // re-render on every volume / speed change — see
-  // `node_modules/@simba-dev/react-native-media-player/src/types/player.ts:103-110`).
-  const {state, commands} = usePlayer();
-  const progress = usePlayerProgress();
-  // W7 P28: typed `play()` for the "Open Full Player" affordance.
-  // Returns `Result<PlaybackId, StreamError>` so the toast can
-  // branch on the 4 variants.
-  const play = usePlay();
+  // T23.07: the unified `usePlaybackFacade()` composes all 5
+  // lower-level hooks into a single object. The screen reads
+  // 4 of the 5 sub-surfaces (state / progress / commands /
+  // launch) — `activity.getLaunchParams` is unused here (the
+  // deep-link parameters come from `route.params`, not the
+  // native bridge's launch queue).
+  const facade = usePlaybackFacade();
+  const {state, progress, commands, launch} = facade;
 
   // ── Derived view state (no local useState) ──
   const isPlaying = state.isPlaying;
@@ -142,30 +151,34 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
       toast.show('No media is available to open.', 'error');
       return;
     }
-    // W7 P28: typed Result<PlaybackId, StreamError> — branch on
-    // the 4 variants. The V12 bridge currently maps all failures
-    // to NetworkStreamError; the W22 follow-up (native bridge
+    // T23.07: `launch.open` is the facade's typed entry point —
+    // same `Result<PlaybackId, StreamError>` contract as the
+    // previous `usePlay()` call, just sourced from the facade.
+    // The V12 bridge currently maps all failures to
+    // NetworkStreamError; the W22 follow-up (native bridge
     // update + Result-returning usePlayWithResume) lets each
     // variant show a distinct message.
-    void play({
-      uri: fileUri,
-      title: fileTitle ?? 'Now Playing',
-      mediaType: 'audio',
-    }).then(r => {
-      if (r.ok) return;
-      if (isNetworkError(r.error)) {
-        toast.show('No connection. Open Full Player will launch when online.', 'warning');
-      } else if (isUnsupportedError(r.error)) {
-        toast.show('This file format is not supported by the full player.', 'error');
-      } else if (isExpiredError(r.error)) {
-        toast.show('Sign in expired. Please sign in again.', 'warning');
-      } else if (isBlockedError(r.error)) {
-        toast.show('This content is not available in your region.', 'error');
-      } else {
-        toast.show('Could not open the full player.', 'error');
-      }
-    });
-  }, [fileTitle, fileUri, play, toast]);
+    void launch
+      .open({
+        uri: fileUri,
+        title: fileTitle ?? 'Now Playing',
+        mediaType: 'audio',
+      })
+      .then(r => {
+        if (r.ok) return;
+        if (isNetworkError(r.error)) {
+          toast.show('No connection. Open Full Player will launch when online.', 'warning');
+        } else if (isUnsupportedError(r.error)) {
+          toast.show('This file format is not supported by the full player.', 'error');
+        } else if (isExpiredError(r.error)) {
+          toast.show('Sign in expired. Please sign in again.', 'warning');
+        } else if (isBlockedError(r.error)) {
+          toast.show('This content is not available in your region.', 'error');
+        } else {
+          toast.show('Could not open the full player.', 'error');
+        }
+      });
+  }, [fileTitle, fileUri, launch, toast]);
 
   const styles = useMemo(
     () =>

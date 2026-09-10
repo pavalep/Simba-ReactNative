@@ -63,10 +63,34 @@ function toAuthUser(user: {
 }
 
 function toAuthUserFromGooglePayload(payload: unknown): AuthUser {
-  const p = payload as any;
-  const profile =
-    p && typeof p === 'object' && p.user && typeof p.user === 'object' ? p.user : p;
-  return toAuthUser(profile ?? {});
+  // W22 D-020: extract the user profile from an unknown payload
+  // without `as any`. The Google Sign-In library returns a
+  // `User` object directly (the `payload` here is just the
+  // `User` we already extracted) or a `{user: User}` wrapper
+  // (older API). Both shapes are accepted.
+  const profile = extractGoogleProfile(payload);
+  return toAuthUser(profile);
+}
+
+function extractGoogleProfile(
+  payload: unknown,
+): {id?: string; name?: string; email?: string; photo?: string | null} {
+  if (payload === null || typeof payload !== 'object') return {};
+  const obj = payload as {user?: unknown};
+  if (obj.user && typeof obj.user === 'object') {
+    return obj.user as {
+      id?: string;
+      name?: string;
+      email?: string;
+      photo?: string | null;
+    };
+  }
+  return payload as {
+    id?: string;
+    name?: string;
+    email?: string;
+    photo?: string | null;
+  };
 }
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {

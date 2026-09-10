@@ -164,6 +164,19 @@ export function map<T, U, E>(r: Result<T, E>, fn: (t: T) => U): Result<U, E> {
  * `NetworkStreamError` (best-effort given the V12 bridge's
  * lack of error codes). Call sites that know more (e.g. a
  * podcast that 404'd) can pass a custom mapper.
+ *
+ * D-021: the default mapper has return type `NetworkStreamError`,
+ * but the generic `E` is unconstrained here (so callers can pass
+ * `string` or any other error shape). The single `as E` cast
+ * is the only way to bridge "concrete variant" → "free generic".
+ * A constraint `E extends StreamError` was tried (D-021 first
+ * pass) and removed — TypeScript still rejected the assignment
+ * because `NetworkStreamError` is not assignable to a free `E`
+ * (E could be `UnsupportedStreamError` or any other variant).
+ * The cast is honest: the runtime value IS a `NetworkStreamError`
+ * which is a `StreamError`, and the default `E = StreamError`
+ * is satisfied. Callers that need a custom variant must pass
+ * their own `mapThrowable`.
  */
 export function capture<T, E = StreamError>(
   fn: () => T | Promise<T>,
@@ -171,7 +184,7 @@ export function capture<T, E = StreamError>(
     networkError(
       'Player launch failed',
       {cause: e instanceof Error ? e.message : String(e)},
-    ) as unknown as E,
+    ) as E,
 ): Promise<Result<T, E>> {
   return Promise.resolve()
     .then(fn)

@@ -17,6 +17,7 @@
 import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {Animated, StyleSheet, View, TouchableOpacity, type ImageSourcePropType} from 'react-native';
 import FastImage from 'react-native-fast-image';
+import type {FastImageProps} from 'react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -30,7 +31,12 @@ interface MovieCardProps {
   onPress: (item: InternetArchiveVideoResult) => void;
   isResolving?: boolean;
   /** Category cover image — used as a fallback when the IA item has no
-   *  `imageUrl` so consecutive empty cards don't render as visual voids. */
+   *  `imageUrl` so consecutive empty cards don't render as visual voids.
+   *  Typed as the wide RN `ImageSourcePropType` so callers can pass
+   *  either a `require()` result (number) or an `{uri: '...'}` source.
+   *  At the FastImage boundary we narrow with a single cast to
+   *  `FastImageProps['source']` (D-021) — the value is always one of
+   *  those two shapes at runtime. */
   placeholderImage?: ImageSourcePropType;
   /** When true, this card is the sole item in its row (odd item count).
    *  Renders at an explicit 50% width via `heroCardLonely` instead of
@@ -100,7 +106,7 @@ export const MovieCard: React.FC<MovieCardProps> = React.memo(
         <View style={[styles.heroImageLayer, {backgroundColor: colors.background.primary}]}>
           {hasCover ? (
             <FastImage
-              source={placeholderImage as unknown as number}
+              source={placeholderImage as FastImageProps['source']}
               style={StyleSheet.absoluteFill}
               resizeMode={FastImage.resizeMode.cover}
               accessibilityIgnoresInvertColors

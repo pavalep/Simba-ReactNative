@@ -4,12 +4,24 @@
 // Phase 15: Animated shimmer placeholder for loading states.
 
 import React, {useEffect, useRef} from 'react';
-import {Animated, StyleSheet, ViewStyle} from 'react-native';
+import {
+  Animated,
+  StyleSheet,
+  type DimensionValue,
+  type ViewStyle,
+} from 'react-native';
 import {useTheme} from '../../../theme';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 
 interface SkeletonLoaderProps {
-  width?: number | string;
+  /**
+   * Width passed to the ViewStyle. Uses RN's `DimensionValue` so
+   * `'100%' | 'auto' | number | null | undefined` all work
+   * without an `as any` cast on the style literal (pre-D-020
+   * cast was needed because the prop was typed as a narrower
+   * `number | string`).
+   */
+  width?: DimensionValue;
   height?: number;
   borderRadius?: number;
   style?: ViewStyle;
@@ -61,7 +73,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       style={[
         styles.base,
         {
-          width: width as any,
+          width,
           height,
           borderRadius,
           backgroundColor: colors.border.subtle,

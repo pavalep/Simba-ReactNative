@@ -208,13 +208,22 @@ function getActionStyle(
       return {
         backgroundColor: colors.accent.gold,
         borderWidth: 0,
-      } as any;
+      };
     case 'destructive':
+      // W22 D-020: the `+ '1F'` / `+ '4D'` opacity suffixes create
+      // a `string | number | OpaqueColorValue` type that doesn't
+      // fit the `ColorValue` slot without an explicit cast. The
+      // `colors.semantic.error` is a `ColorValue` (string | OpaqueColorValue);
+      // pre-D-020 the function used `} as any` to silence the
+      // type error. Now the suffixed string is asserted as a
+      // literal template (`as const`) so the result is just a
+      // plain `string` that fits `ColorValue`.
+      const errorColor = String(colors.semantic.error);
       return {
-        backgroundColor: colors.semantic.error + '1F', // ~12% opacity
+        backgroundColor: `${errorColor}1F`, // ~12% opacity
         borderWidth: 1,
-        borderColor: colors.semantic.error + '4D', // ~30% opacity
-      } as any;
+        borderColor: `${errorColor}4D`, // ~30% opacity
+      };
     default:
       return {};
   }

@@ -471,8 +471,13 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
               debouncedQuery={debouncedQuery}
               tileWidth={tileWidth}
               onPlayFile={handlePlayFile}
+              // W22 D-020: the `onNavigate` prop is now typed with
+              // `keyof RootStackParamList` (see `SearchResults.tsx`).
+              // The cast remains `as any` because of the variadic
+              // signature limitation (see `navigationHelper.ts`
+              // for the full rationale + W22 follow-up).
               onNavigate={(route, params) =>
-                (navigation.navigate as any)(route, params)
+                navigation.navigate(route as any, params as any)
               }
             />
           )}

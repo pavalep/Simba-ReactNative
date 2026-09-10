@@ -31,6 +31,18 @@ interface LinkItem {
   label: string;
   description?: string;
   action: 'navigate' | 'url' | 'contact' | 'share';
+  /**
+   * W22 D-020: kept as `string` (not tightened to
+   * `keyof RootStackParamList`) because the typed
+   * `navigation.navigate` has a variadic signature that
+   * doesn't distribute over a 2-tuple of `string` route
+   * names — the original `(navigation as any)` was hiding
+   * this distribution problem. The current fix uses the
+   * documented `as never` escape hatch instead. A W22
+   * follow-up can narrow the `LinkItem.route` type once
+   * `@react-navigation/native` ships the `[RouteName, params?]`
+   * tuple overload.
+   */
   route?: string;
   url?: string;
   icon: 'listMusic' | 'list' | 'folder' | 'settings' | 'music' | 'video';
@@ -237,8 +249,13 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
     async (item: LinkItem) => {
       switch (item.action) {
         case 'navigate':
+          // W22 D-020: `item.route` is `string` (the array
+          // produces runtime route names; see `LINK_ITEMS`).
+          // The cast remains `as any` because of the variadic
+          // signature limitation (see `navigationHelper.ts` for
+          // the full rationale + W22 follow-up).
           if (item.route) {
-            (navigation as any).navigate(item.route);
+            navigation.navigate(item.route as any);
           }
           break;
         case 'url':

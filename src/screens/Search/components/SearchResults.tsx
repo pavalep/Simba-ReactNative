@@ -2,6 +2,7 @@ import React from 'react';
 import {View, StyleSheet, FlatList} from 'react-native';
 import {useTheme} from '../../../theme';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
+import type {RootStackParamList} from '../../../navigation/types';
 import {ResultTile} from './ResultTile';
 import {ResultListRow} from './ResultListRow';
 
@@ -18,7 +19,19 @@ interface SearchResultsProps {
   debouncedQuery: string;
   tileWidth: number;
   onPlayFile: (fileUri: string, title: string) => void;
-  onNavigate: (route: string, params?: Record<string, any>) => void;
+  /**
+   * W22 D-020: typed as `keyof RootStackParamList` (and the
+   * matching `params` shape for that route) so the call site
+   * in `SearchScreen.tsx` no longer needs `(navigation.navigate
+   * as any)(route, params)`. Consumers that already know the
+   * route at compile time get a typecheck; consumers that
+   * pass a runtime-determined route still get a warning if
+   * the route name doesn't exist.
+   */
+  onNavigate: <RouteName extends keyof RootStackParamList>(
+    route: RouteName,
+    params?: RootStackParamList[RouteName],
+  ) => void;
 }
 
 export const SearchResults: React.FC<SearchResultsProps> = ({

@@ -155,7 +155,27 @@ function parseRawEnvelope<T>(
       'expected single feed object',
     );
   }
-  return rec as unknown as RawEnvelope<T>;
+  // D-021: assemble the typed envelope from the validated fields
+  // instead of casting the whole `rec` (which has type
+  // `Record<string, unknown>`) to `RawEnvelope<T>`. Each field-level
+  // cast is the only trust we make: status is a literal, and the
+  // array/single fields are present iff the caller asked for them.
+  // The function does NOT validate the element shape of feeds/items
+  // — that's the responsibility of the per-endpoint convertor that
+  // follows (`parseRawFeeds`, `parseRawEpisodes`, etc.).
+  const envelope: RawEnvelope<T> = {
+    status: rec.status as 'true' | 'false',
+  };
+  if (options.expectFeeds && 'feeds' in rec) {
+    envelope.feeds = rec.feeds as T[] | RawFeed;
+  }
+  if (options.expectItems && 'items' in rec) {
+    envelope.items = rec.items as T[];
+  }
+  if (options.expectFeed && 'feed' in rec) {
+    envelope.feed = rec.feed as T;
+  }
+  return envelope;
 }
 
 function describe(value: unknown): string {
