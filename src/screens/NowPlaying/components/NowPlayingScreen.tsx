@@ -44,8 +44,12 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useToast} from '../../../components/feedback/Toast';
 import {
   usePlayer,
-  usePlayerActivity,
   usePlayerProgress,
+  usePlay,
+  isNetworkError,
+  isUnsupportedError,
+  isExpiredError,
+  isBlockedError,
 } from '../../../infrastructure/player';
 import type {NowPlayingScreenProps} from '../types';
 
@@ -64,7 +68,6 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const {openPlayer} = usePlayerActivity();
 
   // W7 P25: live player state + commands come from the facade.
   // `usePlayer` returns the full state (isPlaying / title / etc.)
@@ -74,6 +77,10 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
   // `node_modules/@simba-dev/react-native-media-player/src/types/player.ts:103-110`).
   const {state, commands} = usePlayer();
   const progress = usePlayerProgress();
+  // W7 P28: typed `play()` for the "Open Full Player" affordance.
+  // Returns `Result<PlaybackId, StreamError>` so the toast can
+  // branch on the 4 variants.
+  const play = usePlay();
 
   // ── Derived view state (no local useState) ──
   const isPlaying = state.isPlaying;
@@ -135,12 +142,30 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
       toast.show('No media is available to open.', 'error');
       return;
     }
-    openPlayer({
+    // W7 P28: typed Result<PlaybackId, StreamError> — branch on
+    // the 4 variants. The V12 bridge currently maps all failures
+    // to NetworkStreamError; the W22 follow-up (native bridge
+    // update + Result-returning usePlayWithResume) lets each
+    // variant show a distinct message.
+    void play({
       uri: fileUri,
       title: fileTitle ?? 'Now Playing',
-      type: 'audio',
+      mediaType: 'audio',
+    }).then(r => {
+      if (r.ok) return;
+      if (isNetworkError(r.error)) {
+        toast.show('No connection. Open Full Player will launch when online.', 'warning');
+      } else if (isUnsupportedError(r.error)) {
+        toast.show('This file format is not supported by the full player.', 'error');
+      } else if (isExpiredError(r.error)) {
+        toast.show('Sign in expired. Please sign in again.', 'warning');
+      } else if (isBlockedError(r.error)) {
+        toast.show('This content is not available in your region.', 'error');
+      } else {
+        toast.show('Could not open the full player.', 'error');
+      }
     });
-  }, [fileTitle, fileUri, openPlayer, toast]);
+  }, [fileTitle, fileUri, play, toast]);
 
   const styles = useMemo(
     () =>

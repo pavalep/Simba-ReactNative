@@ -152,7 +152,7 @@ describe('Result<T, E> (V21 W7 P28)', () => {
     if (r2.ok) expect(r2.value).toBe(20);
   });
   it('map() passes through errors untouched', () => {
-    const r1 = err<number, string>('failed');
+    const r1: Result<number, string> = err('failed');
     const r2: Result<string, string> = map(r1, x => `x=${x}`);
     expect(r2.ok).toBe(false);
     if (!r2.ok) expect(r2.error).toBe('failed');

@@ -11,6 +11,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {playlistActions} from '../../../features/playlists';
 import {getMpvPlayerModule} from '../../../infrastructure/player';
 import {useHaptics} from '../../../hooks/useHaptics';
+import {useToast} from '../../../components/feedback/Toast';
 import {logger} from '../../../lib/logger';
 import type {PlayerQueueItem} from '../../../infrastructure/player';
 
@@ -21,7 +22,11 @@ import {usePlayerStore, toPlaylistEntry} from '../../../state';
 import {
   resolveStreamType,
   usePlayer,
-  usePlayerActivity,
+  usePlay,
+  isNetworkError,
+  isUnsupportedError,
+  isExpiredError,
+  isBlockedError,
   useQueue,
   useQueueItemsAs,
   usePlaybackHistoryAs,
@@ -69,7 +74,10 @@ export function useQueueScreen(): UseQueueScreenResult {
     useNavigation<RootStackScreenProps<'Queue'>['navigation']>();
   const route = useRoute<RootStackScreenProps<'Queue'>['route']>();
   const haptics = useHaptics();
-  const {openPlayer} = usePlayerActivity();
+  // W7 P28: typed `play()` for jumping to a history entry from a
+  // different media context. Returns Result<PlaybackId, StreamError>.
+  const play = usePlay();
+  const toast = useToast();
 
   const currentTrack = usePlayerStore(state => state.currentFile);
   const playlist = usePlayerStore(state => state.playlist);
@@ -179,15 +187,32 @@ export function useQueueScreen(): UseQueueScreenResult {
         (entry.mediaType === 'audio' && from === 'audio') ||
         (entry.mediaType === 'video' && from === 'video');
       if (!sameContext) {
-        openPlayer({
+        // W7 P28: typed `play()` — branch on the 4 StreamError variants
+        // with distinct toast messages. The V12 bridge currently maps
+        // every failure to NetworkStreamError; the W22 native update
+        // will let each variant show a distinct message.
+        void play({
           uri: entry.uri,
           title: entry.title,
-          type: resolveStreamType(entry.type),
+          mediaType: entry.type ?? 'video',
+        }).then(r => {
+          if (r.ok) return;
+          if (isNetworkError(r.error)) {
+            toast.show('No connection. Will jump when online.', 'warning');
+          } else if (isUnsupportedError(r.error)) {
+            toast.show('This file format is not supported by the player.', 'error');
+          } else if (isExpiredError(r.error)) {
+            toast.show('Sign in expired. Please sign in again.', 'warning');
+          } else if (isBlockedError(r.error)) {
+            toast.show('This content is not available in your region.', 'error');
+          } else {
+            toast.show('Could not jump to that entry.', 'error');
+          }
         });
       }
 
     },
-    [, openPlayer, playlist, queue, route.params?.from, removeFromQueueByIndex],
+    [, play, playlist, queue, route.params?.from, removeFromQueueByIndex, toast],
   );
 
   const handleReorder = useCallback(
