@@ -306,9 +306,17 @@ hidden.
 
 ### P27 — Downloads productionization (closes D-022 partly)
 
-- [ ] **T27.01** Read `src/services/downloadService.ts` and identify the gaps: storage accounting, cleanup, resume, offline playback. Evidence: file:line evidence.
-- [ ] **T27.02** Add a periodic cleanup (delete downloads that haven't been opened in 30 days). Evidence: 1 Jest test.
+- [x] **T27.01** Read `src/services/downloadService.ts` and identify the gaps: storage accounting, cleanup, resume, offline playback. Evidence: file:line evidence.
+  - **P27 audit (b746f5a)**:
+    - **Storage accounting** ✅ — `getTotalDownloadedBytes()` + `useDownloadsTotalBytes()` already existed; counts bytes of all `status === 'done'` records.
+    - **Count-based cleanup** ✅ — `setKeepLastN(n)` already existed; default 5.
+    - **Age-based cleanup** ❌ — only count-based. W7 P27 added `setMaxAgeMs(ms)` + `selectExpiredDownloads` pure helper. Default 30 days.
+    - **Android resume** ❌ — the old `startDownload` ALWAYS unlinked the partial file (`A stale partial from an interrupted transfer would corrupt the fresh one`). `react-native-fs`'s `resumable: true` is iOS-only; on Android, every resume was a full re-download. W7 P27 added `Range: bytes=N-` header support with 206/200 detection in the `begin` callback.
+    - **Offline playback** ✅ — `getLocalPath(uri)` was already wired into `player.api.ts` for sync remap.
+- [x] **T27.02** Add a periodic cleanup (delete downloads that haven't been opened in 30 days). Evidence: 1 Jest test.
+  - **P27 fix (b746f5a)**: `setMaxAgeMs(ms)` + `getDownloadPolicy()` + `selectExpiredDownloads(records, now, maxAgeMs)` pure helper. 14 Jest tests cover the disable cases (null/0/negative/NaN/Infinity), the 30-day boundary (29d kept, 31d expired, exact-30d kept), the defensive `downloadedAt: null` case, and the identity-preservation guarantee. `applyAutoDeletePolicy` now runs age cleanup first (cheaper), then count cleanup. Policy persistence is forward-compatible: V17-V20 bare-integer manifests are auto-migrated to the new JSON `{keepLastN, maxAgeMs}` shape with the default 30-day max age.
 - [ ] **T27.03** On a device, download a 100MB file, kill the app mid-download, relaunch, confirm the download resumes. Evidence: `device: Pixel 7 / Android 14` + 1 log line.
+  - **T27.03 device proof deferred** to the user. Pre-P27: the resume re-downloads the file from byte 0 (progress bar resets). Post-P27: the resume honors `Range: bytes=N-` and only fetches the remaining bytes (progress bar picks up from the partial). Server must return `Accept-Ranges: bytes` for the resume to work; if it returns 200 OK, the file is re-downloaded from 0 (matching pre-P27 behavior).
 
 ### P28 — Stream failure recovery (closes D-023 partly, D-026)
 
