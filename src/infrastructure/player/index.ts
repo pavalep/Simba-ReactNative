@@ -47,6 +47,13 @@ import {
 } from '@simba-dev/react-native-media-player';
 import type {MediaKind, MediaLane} from '../../types/media';
 import {secondsToMs} from './position';
+import {
+  err,
+  networkError,
+  ok,
+  type Result,
+  type StreamError,
+} from './streamErrors';
 
 export {
   usePlayerActivity,
@@ -63,6 +70,28 @@ export {
 export type {PlayerQueueItem} from '@simba-dev/react-native-media-player';
 
 export {secondsToMs} from './position';
+
+// W7 P28 — typed `play()` facade + Result/StreamError re-exports.
+export {
+  type StreamError,
+  type NetworkStreamError,
+  type UnsupportedStreamError,
+  type ExpiredStreamError,
+  type BlockedStreamError,
+  type Result,
+  ok,
+  err,
+  capture,
+  map,
+  networkError,
+  unsupportedError,
+  expiredError,
+  blockedError,
+  isNetworkError,
+  isUnsupportedError,
+  isExpiredError,
+  isBlockedError,
+} from './streamErrors';
 
 // ─── W7 P26 — usePlayWithResume ──────────────────────────────
 
@@ -118,6 +147,89 @@ export function usePlayWithResume(): (
         type: resolveStreamType(input.mediaType),
         ...(startPositionMs != null ? {startPositionMs} : {}),
       });
+    },
+    [openPlayer],
+  );
+}
+
+// ─── W7 P28 — usePlay (typed Result<PlaybackId, StreamError>) ─
+
+/** Stable identity returned on a successful `play()` call. The
+ *  identity is local to the JS side; the native bridge tracks the
+ *  actual playback session independently. */
+export type PlaybackId = string;
+
+/** Input shape for `usePlay`. Lighter than `usePlayWithResume` —
+ *  no resume position (callers use `usePlayWithResume` if they
+ *  know the saved position). */
+export interface PlayInput {
+  uri: string;
+  title: string;
+  mediaType: MediaKind | MediaLane | 'video' | 'audio';
+}
+
+/**
+ * V21 W7 P28 — open a media item and return a typed
+ * `Result<PlaybackId, StreamError>` instead of a boolean.
+ *
+ * The V12 bridge's `openPlayer` returns `false` for ANY failure
+ * (no error code, no retry hint). The W7 P28 work wraps the
+ * bridge call with the 4 `StreamError` variants and exposes a
+ * `Result` so call sites can pattern-match on `.kind`.
+ *
+ * Current best-effort mapping (W7 P28):
+ *   - `bridge returns true`  → `ok(playbackId)`
+ *   - `bridge returns false` → `err(networkError('Player refused launch'))`
+ *   - `bridge throws`        → `err(networkError('Player launch failed', {cause}))`
+ *
+ * W22 follow-up (after a native bridge update that surfaces
+ * HTTP status codes):
+ *   - `404` / `410`     → `unsupportedError` (de-listed)
+ *   - `401` / `403`     → `expiredError` (auth) or `blockedError` (geo / ban)
+ *   - `408` / `5xx`     → `networkError({retryable: true})`
+ *   - codec mismatch    → `unsupportedError({drm: true})`
+ *   - native exception  → `networkError({retryable: false})`
+ *
+ * The call site is the right place for the W22 mapping when the
+ * context is known (e.g. a podcast adapter knows the auth token
+ * is for `podcastIndex`). For now, the wrapper logs the failure
+ * and returns a `network` variant — the call site's `if (e.kind
+ * === 'network')` branch is correct; the user just sees a
+ * generic "couldn't open this file" message.
+ */
+export function usePlay(): (input: PlayInput) => Promise<Result<PlaybackId, StreamError>> {
+  const {openPlayer} = usePlayerActivity();
+  return useCallback(
+    async (input: PlayInput): Promise<Result<PlaybackId, StreamError>> => {
+      // Hand-rolled try/catch instead of `capture()` so we can
+      // produce the two distinct error messages:
+      //   - "Player refused launch" (bridge returned false)
+      //   - "Player launch failed"  (bridge threw)
+      // `capture()` wraps thrown errors with a single message,
+      // which would lose the distinction.
+      try {
+        const accepted = await openPlayer({
+          uri: input.uri,
+          title: input.title,
+          type: resolveStreamType(input.mediaType),
+        });
+        if (!accepted) {
+          return err(networkError('Player refused launch'));
+        }
+        // V12 doesn't return a PlaybackId; the bridge maintains
+        // its own session identity. We synthesize a JS-side id
+        // for callers that want to track the call (e.g. for
+        // cancellation, retry counters). The format is
+        // `play:<uri>:<ms>`; the ms is the call time.
+        const playbackId = `play:${input.uri}:${Date.now()}`;
+        return ok(playbackId);
+      } catch (e) {
+        return err(
+          networkError('Player launch failed', {
+            cause: e instanceof Error ? e.message : String(e),
+          }),
+        );
+      }
     },
     [openPlayer],
   );
