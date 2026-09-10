@@ -120,3 +120,18 @@ v13-trash-2026-09-04/
 # scripts, debug images, and commit-message drafts moved here from root
 # to keep the project root clean. Safe to delete in bulk at any time.
 scratch/
+
+# W22 manual-deletion folder — accumulated `??` working scratch
+# (49 tracked `md/COMMIT_MSG_*.txt` files + 16 untracked scratch +
+# 9 `md/jest_*.txt` + 1 `md/lint_*.txt` + 1 `scripts/_v21_p17_swap_mmkv.py`
+# + the W1 P03 retired `md/_v21_p03_dead_code/` subdir) that the user
+# wants to delete manually. The folder itself + everything inside is
+# OUT of git (the 49 tracked files were `git rm`'d in the W22 move;
+# the rest was untracked). Safe to delete in bulk at any time.
+#
+# The `delete_me/**` pattern (not just `delete_me/`) matches the
+# directory's contents recursively — without it, git shows the
+# directory itself in `git status` even though the contents are
+# all ignored.
+delete_me/
+delete_me/**
