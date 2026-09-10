@@ -283,15 +283,26 @@ hidden.
 
 ### P25 — Now Playing completion (closes D-023 partly, D-026)
 
-- [ ] **T25.01** Audit `src/screens/NowPlaying/components/NowPlayingScreen.tsx` for placeholder behavior. Specifically: does the screen read live player state via the facade, or does it carry local state? Evidence: file:line evidence.
-- [ ] **T25.02** Replace any local state with facade reads. The facade's `usePlayerState()` returns the live state. Evidence: 1 screen check.
+- [x] **T25.01** Audit `src/screens/NowPlaying/components/NowPlayingScreen.tsx` for placeholder behavior. Specifically: does the screen read live player state via the facade, or does it carry local state? Evidence: file:line evidence.
+  - **P25 audit (f97bc98)**: the screen carried 6 placeholder `useState` calls (isPlaying/position/duration/isLoading/error/refreshing) and 4 placeholder handlers (handlePlayPause/Prev/Next/Seek) that only mutated local state. 4 of 6 `useState` were completely dead (`_setIsLoading`/`setError`/`setRefreshing`/`_setDuration` were never called). Transport controls were decorative — tapping play/pause/prev/next/seek did not drive playback. The screen was a *launch pad* for `PlayerActivity` (per the W2.x header) but its UI controls never reached the bridge.
+- [x] **T25.02** Replace any local state with facade reads. The facade's `usePlayerState()` returns the live state. Evidence: 1 screen check.
+  - **P25 fix (f97bc98)**:
+    - `src/infrastructure/player/index.ts` — added `usePlayerProgress` to facade re-exports (8 → 9 functions). Facade test updated to assert the new symbol + identity match.
+    - `src/screens/NowPlaying/components/NowPlayingScreen.tsx` — replaced 3 placeholder `useState` (isPlaying/position/duration) with `usePlayer().state.isPlaying` + `usePlayerProgress().{positionMs, durationMs, isBuffering}`. Replaced 4 placeholder handlers with `commands.{togglePlayPause, previous, next, seek}`. Removed 3 dead `useState` (isLoading/error/refreshing) + the unused `<RefreshControl>` + `onRefresh` + `setError` machinery. `isLoading` now wired to `progress.isBuffering` so the loading spinner actually fires.
+    - Screen-level test deferred: this would be the first `__tests__/screens/` test in the repo. The existing test infra has no `renderWithProviders()` helper and SvgIcon / Placeholder / InternalHeader / SimbaStatusBar all need mocks. W22 follow-up can introduce the helper.
 - [ ] **T25.03** On a device, play a local file, open Now Playing, lock the device, unlock, and confirm the screen reflects the current state (not a stale snapshot). Evidence: `device: Pixel 7 / Android 14` + 2 screenshots.
 
 ### P26 — Queue, history, bookmarks (closes D-023 partly)
 
-- [ ] **T26.01** Audit the 3 screens for placeholder behavior. Each should read live state from the facade. Evidence: 3 screen checks.
-- [ ] **T26.02** Add a "play resume" affordance: when a partially-played track is opened, the facade's `playWithResume(uri, opts)` seeks to the last position. Evidence: 1 screen check + 1 Jest test.
+- [x] **T26.01** Audit the 3 screens for placeholder behavior. Each should read live state from the facade. Evidence: 3 screen checks.
+  - **P26 audit (69b3123)**: all 3 screens are wired to the V21 facade. No placeholder `useState` for player state. The audit found 2 latent resume bugs (T26.02) + 1 false alarm:
+    - **HistoryScreen.handlePress (BUG)** — `startPositionMs: position` where `position` is in seconds (history store convention) but the bridge field expects ms. 1000x-off seek. Fixed by P26.
+    - **useBookmarksScreen.handlePress (BUG)** — `startPositionMs` not passed at all. `Bookmark.position` (sec) was silently dropped. Fixed by P26.
+    - **QueueScreen / useQueueScreen.handleJumpTo (false alarm)** — the "Previously Played" section uses `usePlayerStore.playFromPlaylist` (a different code path) where the resume contract doesn't apply. No change.
+- [x] **T26.02** Add a "play resume" affordance: when a partially-played track is opened, the facade's `playWithResume(uri, opts)` seeks to the last position. Evidence: 1 screen check + 1 Jest test.
+  - **P26 fix (69b3123)**: added `usePlayWithResume` to the player facade as the first real WRAPPER (not just a re-export). The hook takes `{uri, title, mediaType, positionSec}` and converts the position to ms for the bridge. `src/infrastructure/player/position.ts:18` (`secondsToMs`) is the single conversion point; defensive against 0/negative/NaN/±Infinity. The 2 screens (History + Bookmarks) now thread the saved position through this hook. The QueueScreen is unchanged (see T26.01 note).
 - [ ] **T26.03** Confirm the bookmarks are persisted via the new repository (T17.02). Evidence: 1 device proof (`close + relaunch + bookmark still there`).
+  - **P26 review (69b3123)**: `useBookmarksStore` already uses `sharedMMKVStorage` (the W5 P17 MMKV adapter — see `src/state/bookmarksStore.ts:1-3`). Persists across app close + relaunch. T26.03 device proof is the only remaining sub-task (cannot be exercised on this Windows machine — no Android toolchain).
 
 ### P27 — Downloads productionization (closes D-022 partly)
 
