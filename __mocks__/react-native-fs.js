@@ -23,14 +23,20 @@ const makeItem = ({name, path, size, isDir, mtime}) => ({
   isFile: () => !isDir,
   isDirectory: () => !!isDir,
   mtime: mtime ? new Date(mtime) : undefined,
+  ctime: mtime ? new Date(mtime) : new Date(),
 });
 
 const defaultStat = () =>
   Promise.resolve({
     size: 0,
+    name: '',
+    path: '',
+    mode: 0,
     isFile: () => true,
     isDirectory: () => false,
-    mtime: new Date(),
+    mtime: Math.floor(Date.now() / 1000),
+    ctime: Math.floor(Date.now() / 1000),
+    originalFilepath: '',
   });
 
 // Bind at module-evaluation time so the same function instance is

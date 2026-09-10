@@ -22,32 +22,39 @@ const mockedReadDir = RNFS.readDir as jest.MockedFunction<typeof RNFS.readDir>;
 const mockedStat = RNFS.stat as jest.MockedFunction<typeof RNFS.stat>;
 
 // Mock helper: file-as-RNFS-item shape.
-const file = ({name, path, size}) => ({
+const file = ({name, path, size}: {name: string; path: string; size: number}) => ({
   name,
   path,
   size,
   isFile: () => true,
   isDirectory: () => false,
   mtime: new Date(),
+  ctime: new Date(),
 });
 
 // Mock helper: dir-as-RNFS-item shape.
-const dir = ({name, path}) => ({
+const dir = ({name, path}: {name: string; path: string}) => ({
   name,
   path,
   size: 0,
   isFile: () => false,
   isDirectory: () => true,
   mtime: new Date(),
+  ctime: new Date(),
 });
 
 // Mock helper: a stat result with the given size.
 function statOf(size: number) {
   return {
     size,
+    name: '',
+    path: '',
+    mode: 0,
     isFile: () => true,
     isDirectory: () => false,
-    mtime: new Date(),
+    mtime: Math.floor(Date.now() / 1000),
+    ctime: Math.floor(Date.now() / 1000),
+    originalFilepath: '',
   };
 }
 
