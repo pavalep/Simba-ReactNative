@@ -322,3 +322,8 @@ async function fetchWeatherForCoords(
     return null;
   }
 }
+import {AdapterParseError} from '../adapterErrors';
+
+// V21 W6 P21 (T21.04): documented retries for TanStack Query.
+// Adapter itself doesn't retry — hook layer honors this constant.
+export const WEATHER_RETRIES = 2;
