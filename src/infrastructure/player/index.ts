@@ -110,7 +110,7 @@ export {
   type PlaybackId,
 } from './playbackFacade';
 
-// ─── W7 P26 — usePlayWithResume ──────────────────────────────
+// ─── W7 P26 / W22 F/U — usePlayWithResume ─────────────────────
 
 /**
  * Input shape for `usePlayWithResume`. The caller already knows
@@ -128,7 +128,7 @@ export interface PlayWithResumeInput {
 }
 
 /**
- * V21 W7 P26 — open a media item with an explicit resume position.
+ * V21 W7 P26 + W22 F/U — open a media item with an explicit resume position.
  *
  * Fixes two bugs found in the W7 P26 audit:
  *   1. `HistoryScreen.handlePress` was passing `startPositionMs: position`
@@ -147,23 +147,50 @@ export interface PlayWithResumeInput {
  * that already know the position (History / Bookmarks) pass it
  * explicitly via this hook.
  *
- * Returns `Promise<boolean>` matching `usePlayerActivity().openPlayer`'s
- * contract: `true` if the bridge accepted the launch, `false`
- * otherwise.
+ * **W22 F/U — return shape:** the hook now returns
+ * `Promise<Result<PlaybackId, StreamError>>` (matching the
+ * `usePlaybackFacade().launch.openWithResume` shape from
+ * D-023, commit `e0feaac`). Pre-W22 the return was
+ * `Promise<boolean>` — the bridge's `false` reply was either
+ * silently swallowed (History) or surface as a generic toast
+ * (Bookmarks). The typed `Result` lets call sites branch on
+ * the 4 `StreamError` variants (`NetworkStreamError` /
+ * `UnsupportedStreamError` / `ExpiredStreamError` /
+ * `BlockedStreamError`) using the shared type guards
+ * (`isNetworkError` / `isUnsupportedError` / `isExpiredError`
+ * / `isBlockedError`).
+ *
+ * Today, the V12 bridge can't surface rich error codes — every
+ * failure maps to `NetworkStreamError`. After the W22 F/U
+ * (native bridge update surfacing HTTP status codes), the
+ * call sites stay the same and the right variant lights up
+ * per the actual failure.
  */
 export function usePlayWithResume(): (
   input: PlayWithResumeInput,
-) => Promise<boolean> {
+) => Promise<Result<PlaybackId, StreamError>> {
   const {openPlayer} = usePlayerActivity();
   return useCallback(
-    (input: PlayWithResumeInput) => {
+    async (input: PlayWithResumeInput): Promise<Result<PlaybackId, StreamError>> => {
       const startPositionMs = secondsToMs(input.positionSec);
-      return openPlayer({
-        uri: input.uri,
-        title: input.title,
-        type: resolveStreamType(input.mediaType),
-        ...(startPositionMs != null ? {startPositionMs} : {}),
-      });
+      try {
+        const accepted = await openPlayer({
+          uri: input.uri,
+          title: input.title,
+          type: resolveStreamType(input.mediaType),
+          ...(startPositionMs != null ? {startPositionMs} : {}),
+        });
+        if (!accepted) {
+          return err(networkError('Player refused resume launch'));
+        }
+        return ok(`resume:${input.uri}:${Date.now()}` as PlaybackId);
+      } catch (e) {
+        return err(
+          networkError('Player resume launch failed', {
+            cause: e instanceof Error ? e.message : String(e),
+          }),
+        );
+      }
     },
     [openPlayer],
   );

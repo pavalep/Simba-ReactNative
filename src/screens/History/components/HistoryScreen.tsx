@@ -22,7 +22,13 @@ import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
-import {usePlayWithResume} from '../../../infrastructure/player';
+import {
+  usePlayWithResume,
+  isNetworkError,
+  isUnsupportedError,
+  isExpiredError,
+  isBlockedError,
+} from '../../../infrastructure/player';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
 import {formatDuration} from '../../../utils/timeAgo';
@@ -55,6 +61,10 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   // where `position` was in SECONDS (the history store's convention) but the
   // bridge field expects MILLISECONDS — every resume seek was 1000x too small.
   // The new hook handles the seconds→ms conversion in one place.
+  // W22 F/U: the hook now returns `Result<PlaybackId, StreamError>` —
+  // `handlePress` branches on the 4 variants (Network / Unsupported /
+  // Expired / Blocked) using the shared type guards imported above.
+  // Pre-W22, a `false` reply was silently swallowed (`void playWithResume(...)`).
   const playWithResume = usePlayWithResume();
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [query, setQuery] = useState('');
@@ -92,14 +102,34 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
       // hook converts to milliseconds for the bridge. Pre-P26 the code
       // passed `position` directly as `startPositionMs`, which was
       // a 1000x-off bug.
+      // W22 F/U: typed `Result<PlaybackId, StreamError>` branching —
+      // 4 variants (Network / Unsupported / Expired / Blocked). Pre-W22
+      // a `false` reply was silently swallowed (`void`); now each variant
+      // surfaces a specific reason. The V12 bridge still maps every
+      // failure to NetworkStreamError; the W22 F/U (native bridge
+      // surfacing HTTP status codes) lights up the other variants
+      // without changing this call site.
       void playWithResume({
         uri: fileUri,
         title: title ?? 'Untitled',
         mediaType: lane,
         positionSec: position ?? 0,
+      }).then(r => {
+        if (r.ok) return;
+        if (isNetworkError(r.error)) {
+          toast.show('No connection. History resume will play when online.', 'warning');
+        } else if (isUnsupportedError(r.error)) {
+          toast.show('This file format is not supported.', 'error');
+        } else if (isExpiredError(r.error)) {
+          toast.show('Sign in expired. Please sign in again.', 'warning');
+        } else if (isBlockedError(r.error)) {
+          toast.show('This content is not available in your region.', 'error');
+        } else {
+          toast.show('Could not resume playback.', 'error');
+        }
       });
     },
-    [playWithResume],
+    [playWithResume, toast],
   );
 
   const handleRemove = useCallback(

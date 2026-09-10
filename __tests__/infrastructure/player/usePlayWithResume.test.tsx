@@ -133,16 +133,65 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
     expect(result.current).toBe(first);
   });
 
-  it('returns the openPlayer promise (boolean) for callers that await', async () => {
+  it('returns ok(playbackId) when the bridge accepts', async () => {
     mockOpenPlayer.mockResolvedValueOnce(true);
     const {result} = await renderHook(() => usePlayWithResume());
-    const resolved = await result.current!({
+    const r = await result.current!({
       uri: 'file:///x',
       title: 'X',
       mediaType: 'audio',
       positionSec: 1,
     });
-    expect(resolved).toBe(true);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toMatch(/^resume:file:\/\/\/x:\d+$/);
+  });
+
+  it('returns err(networkError) when the bridge returns false', async () => {
+    mockOpenPlayer.mockResolvedValueOnce(false);
+    const {result} = await renderHook(() => usePlayWithResume());
+    const r = await result.current!({
+      uri: 'file:///x',
+      title: 'X',
+      mediaType: 'audio',
+      positionSec: 0,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.kind).toBe('network');
+      expect(r.error.message).toMatch(/refused/i);
+    }
+  });
+
+  it('returns err(networkError) when the bridge throws', async () => {
+    mockOpenPlayer.mockRejectedValueOnce(new Error('bridge down'));
+    const {result} = await renderHook(() => usePlayWithResume());
+    const r = await result.current!({
+      uri: 'file:///x',
+      title: 'X',
+      mediaType: 'audio',
+      positionSec: 0,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.kind).toBe('network');
+      expect(r.error.cause).toBe('bridge down');
+    }
+  });
+
+  it('returns err(networkError) when the bridge throws a non-Error value', async () => {
+    mockOpenPlayer.mockRejectedValueOnce('plain string');
+    const {result} = await renderHook(() => usePlayWithResume());
+    const r = await result.current!({
+      uri: 'file:///x',
+      title: 'X',
+      mediaType: 'audio',
+      positionSec: 0,
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.kind).toBe('network');
+      expect(r.error.cause).toBe('plain string');
+    }
   });
 });
 

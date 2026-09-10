@@ -1,5 +1,11 @@
 import {useCallback, useMemo, useState} from 'react';
-import {usePlayWithResume} from '../../../infrastructure/player';
+import {
+  isBlockedError,
+  isExpiredError,
+  isNetworkError,
+  isUnsupportedError,
+  usePlayWithResume,
+} from '../../../infrastructure/player';
 import {useToast} from '../../../components/feedback/Toast';
 import {useBookmarks} from '../../../features/bookmarks';
 import type {Bookmark} from '../../../features/bookmarks';
@@ -23,13 +29,14 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
   // bookmark open played from the beginning, silently ignoring the saved position.
   // The new hook threads the position through (with the seconds→ms conversion).
   const playWithResume = usePlayWithResume();
-  // W7 P28: surface failures to the user. Pre-P28, the bridge's
-  // `false` return was silently swallowed — the bookmark "open"
-  // was a no-op and the user saw nothing. The V12 bridge doesn't
-  // surface rich error codes yet, so the catch block maps any
-  // thrown error to a generic message. W22 follow-up: upgrade
-  // `usePlayWithResume` to return `Result<PlaybackId, StreamError>`
-  // and migrate this handler to the 4 typed variants.
+  // W22 F/U: `usePlayWithResume` now returns
+  // `Result<PlaybackId, StreamError>` (matching `usePlaybackFacade().launch.openWithResume`).
+  // Pre-W22 the return was `Promise<boolean>` and a `false` reply surfaced
+  // a single generic toast. Now we branch on the 4 `StreamError` variants
+  // so the user sees a specific reason. Today, the V12 bridge maps every
+  // failure to `NetworkStreamError`; the W22 follow-up (native bridge
+  // surfacing HTTP status codes) lights up the other variants without
+  // changing the call site.
   const toast = useToast();
   const {allBookmarks, bookmarkCount, remove, clearAll} = useBookmarks();
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,24 +54,30 @@ export function useBookmarksScreen(): UseBookmarksScreenResult {
 
   const handlePress = useCallback(
     (item: Bookmark) => {
-      // W7 P28: wrap the playWithResume call so a bridge
-      // rejection surfaces a toast (vs. silently failing pre-P28).
-      const run = async () => {
-        try {
-          const accepted = await playWithResume({
-            uri: item.fileUri,
-            title: item.title,
-            mediaType: item.type,
-            positionSec: item.position,
-          });
-          if (!accepted) {
-            toast.show('Could not open the bookmarked file.', 'error');
-          }
-        } catch {
+      // W22 F/U: typed `Result<PlaybackId, StreamError>` branching
+      // (4 variants). The shared type guards live next to the
+      // `StreamError` discriminated union in `streamErrors.ts` —
+      // they're the same 4 used by `NowPlayingScreen.handleOpenFullPlayer`
+      // (T23.07) so the per-variant toast strings stay consistent.
+      void playWithResume({
+        uri: item.fileUri,
+        title: item.title,
+        mediaType: item.type,
+        positionSec: item.position,
+      }).then(r => {
+        if (r.ok) return;
+        if (isNetworkError(r.error)) {
+          toast.show('No connection. Bookmark will resume when online.', 'warning');
+        } else if (isUnsupportedError(r.error)) {
+          toast.show('This file format is not supported.', 'error');
+        } else if (isExpiredError(r.error)) {
+          toast.show('Sign in expired. Please sign in again.', 'warning');
+        } else if (isBlockedError(r.error)) {
+          toast.show('This content is not available in your region.', 'error');
+        } else {
           toast.show('Could not open the bookmarked file.', 'error');
         }
-      };
-      void run();
+      });
     },
     [playWithResume, toast],
   );
