@@ -30,7 +30,7 @@
  *   - **stream-resolution**: resolveStreamType  (pure function)
  *   - **queue**:             useQueue, useQueueItemsAs,
  *                            usePlaybackHistoryAs, PlayerQueueItem
- *   - **player-imperative**: usePlayer          (escape hatch)
+ *   - **player-imperative**: usePlayer, usePlayerProgress (state/commands + position/duration)
  *   - **low-level**:         getMpvPlayerModule (escape hatch)
  *
  * No code change here vs. a bare re-export — the value of the
@@ -43,6 +43,7 @@ export {
   usePlayerActivity,
   useOpenPlaylist,
   usePlayer,
+  usePlayerProgress,
   useQueue,
   useQueueItemsAs,
   usePlaybackHistoryAs,

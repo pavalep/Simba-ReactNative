@@ -1,13 +1,14 @@
 /**
  * V21 W3 P10 — Player Facade smoke test
+ * V21 W7 P25 — added usePlayerProgress
  *
  * Verifies the facade at `src/infrastructure/player/index.ts`
- * re-exports the 9 symbols documented in
- * `md/SIMBA_V21_W3_P09_INVENTORY.md`:
+ * re-exports the 10 symbols documented in
+ * `md/SIMBA_V21_W3_P09_INVENTORY.md` (P10) + P25:
  *
- *   - 8 functions: usePlayerActivity, useOpenPlaylist, usePlayer,
- *     useQueue, useQueueItemsAs, usePlaybackHistoryAs,
- *     resolveStreamType, getMpvPlayerModule
+ *   - 9 functions: usePlayerActivity, useOpenPlaylist, usePlayer,
+ *     usePlayerProgress, useQueue, useQueueItemsAs,
+ *     usePlaybackHistoryAs, resolveStreamType, getMpvPlayerModule
  *   - 1 type:      PlayerQueueItem
  *
  * No functional testing of the player module itself — that's the
@@ -32,6 +33,10 @@ describe('Player Facade (V21 W3 P10) — re-exports', () => {
 
   it('exports usePlayer as a function', () => {
     expect(typeof Player.usePlayer).toBe('function');
+  });
+
+  it('exports usePlayerProgress as a function (V21 W7 P25)', () => {
+    expect(typeof Player.usePlayerProgress).toBe('function');
   });
 
   it('exports useQueue as a function', () => {
@@ -73,6 +78,7 @@ describe('Player Facade (V21 W3 P10) — re-exports', () => {
     expect(Player.usePlayerActivity).toBe(underlying.usePlayerActivity);
     expect(Player.useOpenPlaylist).toBe(underlying.useOpenPlaylist);
     expect(Player.usePlayer).toBe(underlying.usePlayer);
+    expect(Player.usePlayerProgress).toBe(underlying.usePlayerProgress);
     expect(Player.useQueue).toBe(underlying.useQueue);
     expect(Player.useQueueItemsAs).toBe(underlying.useQueueItemsAs);
     expect(Player.usePlaybackHistoryAs).toBe(

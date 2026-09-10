@@ -1,29 +1,39 @@
-// ─── W2.x — NowPlaying screen (Phase 43 launch pad) ────────────
+// ─── W7 P25 — NowPlaying screen (live player state) ──────────
 //
-// **Phase 43 update (Wave 8):** The V11 inline-mount player has been
-// replaced by V12's dedicated Android `PlayerActivity`. This screen
-// no longer hosts a V11 inline playback surface — it is a *launch pad*
-// that surfaces the legacy "Now Playing" route (kept for the
-// `simbaplayer://now-playing?fileUri=...&fileTitle=...` deep link
-// and the Phase 47 deletion list). All playback now flows through
-// `openPlayer()`, which delegates to `PlayerActivity` whenever
-// `USE_DEDICATED_PLAYER_ACTIVITY` is `true` (the V12 default since
-// Phase 41).
+// **W7 P25 audit (closes D-023 / D-026 partly):** the V11/V12 screen
+// carried 6 placeholder `useState` calls (isLoading / error /
+// refreshing / isPlaying / position / duration) and 4 placeholder
+// handlers that only mutated local state. The screen was a
+// *launch pad* for the dedicated `PlayerActivity` (per the
+// W2.x header) but its UI controls did not actually drive
+// playback — tapping play/pause/prev/next/seek only updated
+// local state, which the bridge never read.
 //
-// Phase 47 deletes this screen + the route + the deep link. See
-// [`SIMBA_PLAYER_MODULE_V12_DEPRECATION_AUDIT.md`](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_DEPRECATION_AUDIT.md) + §43.
+// P25 fix: drop the local `useState` for player state, read
+// the live state from the V21 player facade (`usePlayer` for
+// isPlaying + commands, `usePlayerProgress` for position /
+// duration / buffering). The 4 transport handlers now call
+// the bridge-backed commands. The 3 dead UI-feedback states
+// (isLoading / error / refreshing) had no async source, so
+// `isLoading` is now wired to `progress.isBuffering` (a real
+// signal) and `error` / `refreshing` are removed (the
+// `<RefreshControl>` had no data to refresh).
+//
+// The screen still works as a deep-link target for the legacy
+// `simbaplayer://now-playing?fileUri=...&fileTitle=...` route
+// (Phase 47 deletion is still pending — see the V12 deprecation
+// audit). When a file is loaded in the player, this screen now
+// reflects the live state instead of a static placeholder.
 
-import React, {useMemo, useState, useCallback, useEffect} from 'react';
+import React, {useMemo, useCallback} from 'react';
 import {
   View,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  RefreshControl,
   type GestureResponderEvent,
 } from 'react-native';
-import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -32,7 +42,11 @@ import {spacing, radius} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useToast} from '../../../components/feedback/Toast';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import {
+  usePlayer,
+  usePlayerActivity,
+  usePlayerProgress,
+} from '../../../infrastructure/player';
 import type {NowPlayingScreenProps} from '../types';
 
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
@@ -52,81 +66,69 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
   const toast = useToast();
   const {openPlayer} = usePlayerActivity();
 
-  // ── Edge case states ──
-  const [isLoading, _setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  // W7 P25: live player state + commands come from the facade.
+  // `usePlayer` returns the full state (isPlaying / title / etc.)
+  // + the bridge-backed commands. `usePlayerProgress` is a
+  // separate context (split so progress consumers don't
+  // re-render on every volume / speed change — see
+  // `node_modules/@simba-dev/react-native-media-player/src/types/player.ts:103-110`).
+  const {state, commands} = usePlayer();
+  const progress = usePlayerProgress();
 
-  // Local UI state (placeholder — will come from Redux later)
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [position, setPosition] = useState(0);
-  const [duration, _setDuration] = useState(0);
+  // ── Derived view state (no local useState) ──
+  const isPlaying = state.isPlaying;
+  const positionSec = Math.floor(progress.positionMs / 1000);
+  const durationSec = Math.floor(progress.durationMs / 1000);
+  // W7 P25: `isLoading` was a dead placeholder (`_setIsLoading`
+  // was never called). Wire it to the bridge's `isBuffering`
+  // signal so the loading spinner actually fires.
+  const isLoading = progress.isBuffering;
+
   const fileUri = route.params?.fileUri;
   const fileTitle = route.params?.fileTitle;
 
-  const positionPct = duration > 0 ? Math.min(position / duration, 1) : 0;
+  const positionPct =
+    progress.durationMs > 0
+      ? Math.min(progress.positionMs / progress.durationMs, 1)
+      : 0;
 
   const currentTime = useMemo(() => {
-    const m = Math.floor(position / 60);
-    const s = Math.floor(position % 60);
+    const m = Math.floor(positionSec / 60);
+    const s = positionSec % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
-  }, [position]);
+  }, [positionSec]);
 
   const totalTime = useMemo(() => {
-    const m = Math.floor(duration / 60);
-    const s = Math.floor(duration % 60);
+    const m = Math.floor(durationSec / 60);
+    const s = durationSec % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
-  }, [duration]);
+  }, [durationSec]);
 
+  // W7 P25: transport handlers now call the bridge-backed
+  // commands. The V12 `previous()` / `next()` walk the
+  // module's internal playlist (no-op for a single-file
+  // launch via the deep link, real for `useOpenPlaylist`).
   const handlePlayPause = useCallback(() => {
-    setIsPlaying(prev => !prev);
-  }, []);
+    commands.togglePlayPause();
+  }, [commands]);
 
   const handlePrev = useCallback(() => {
-    setPosition(0);
-  }, []);
+    commands.previous();
+  }, [commands]);
 
   const handleNext = useCallback(() => {
-    setPosition(0);
-  }, []);
+    commands.next();
+  }, [commands]);
 
   const handleSeek = useCallback(
     (e: GestureResponderEvent) => {
       const x = e.nativeEvent.locationX;
       const trackWidth = SCREEN_WIDTH - 32;
       const pct = Math.max(0, Math.min(1, x / trackWidth));
-      setPosition(Math.round(pct * duration));
+      commands.seek(Math.round(pct * progress.durationMs));
     },
-    [duration],
+    [commands, progress.durationMs],
   );
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    setError(null);
-    try {
-      // Simulate refresh — add real data-fetching logic here later
-      await new Promise<void>(resolve => setTimeout(resolve, 1000));
-    } catch {
-      setError('Failed to load now playing.');
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  const showErrorToast = useCallback(() => {
-    toast.show('Failed to load now playing.', 'error', {
-      duration: 8000,
-      action: {label: 'Retry', onPress: () => {
-        setError(null);
-        // No real data source yet — placeholder for future re-fetch.
-      }},
-    });
-  }, [toast]);
-
-  // Surface page-load failures as a top-of-screen toast.
-  useEffect(() => {
-    if (error) showErrorToast();
-  }, [error, showErrorToast]);
 
   const handleOpenFullPlayer = useCallback(() => {
     if (!fileUri) {
@@ -138,7 +140,7 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
       title: fileTitle ?? 'Now Playing',
       type: 'audio',
     });
-  }, [duration, fileTitle, fileUri, openPlayer, toast]);
+  }, [fileTitle, fileUri, openPlayer, toast]);
 
   const styles = useMemo(
     () =>
@@ -329,18 +331,10 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
 
       {isLoading ? (
         <Placeholder variant="loading" anchor="center" />
-      ) : fileUri && !error ? (
+      ) : fileUri ? (
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.accent.gold}
-              colors={[colors.accent.gold]}
-            />
-          }>
+          showsVerticalScrollIndicator={false}>
           {/* Album art placeholder */}
           <View style={styles.artContainer}>
             <AppText style={styles.artPlaceholder}>{'♫'}</AppText>
