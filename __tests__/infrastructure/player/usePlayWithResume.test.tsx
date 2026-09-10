@@ -173,8 +173,12 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
     });
     expect(r.ok).toBe(false);
     if (!r.ok) {
+      // Narrow to NetworkStreamError to read `cause` (other
+      // variants don't have a `cause` field).
       expect(r.error.kind).toBe('network');
-      expect(r.error.cause).toBe('bridge down');
+      if (r.error.kind === 'network') {
+        expect(r.error.cause).toBe('bridge down');
+      }
     }
   });
 
@@ -190,7 +194,9 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.error.kind).toBe('network');
-      expect(r.error.cause).toBe('plain string');
+      if (r.error.kind === 'network') {
+        expect(r.error.cause).toBe('plain string');
+      }
     }
   });
 });

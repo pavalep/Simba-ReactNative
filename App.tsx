@@ -8,11 +8,12 @@ import {
   SimbaPlayerRoot,
   useOpenFromUrl,
 } from '@simba-dev/react-native-media-player';
-import {useAuthStore, useBookmarksStore, useDownloadsStore} from './src/state';
+import {useAuthStore, useBookmarksStore, useDownloadsStore, useRecentHistoryStore} from './src/state';
 import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
 import {linking} from './src/navigation/linking';
+import {resolveResumeMs} from './src/infrastructure/player';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {QueryProvider} from './src/app/QueryProvider';
 import {SimbaStatusBar} from './src/components/StatusBar';
@@ -201,29 +202,34 @@ const styles = StyleSheet.create({
 });
 
 const App: React.FC = () => {
-  // V16 Phase 71: bookmark-aware resume lookup is now a single
-  // `resumePolicy` function prop on `<SimbaPlayer>`. Replaces the
-  // V13 `lookup` object prop + V14 `useSimbaPlayerLookup` factory
-  // hook pair (31 lines collapsed to 14). The body is unchanged:
-  // it reads the most recent bookmark for the given file URI and
-  // returns its position in milliseconds (the module expects ms;
-  // bookmarks store seconds).
-  const resumePolicy = (resumeId: string) => {
-    const items = useBookmarksStore.getState().items;
-    // Bookmarks are `(fileUri, position)`-hashed so multiple
-    // positions can exist per URI; we take the most recently
-    // created.
-    const matches = items.filter(b => b.fileUri === resumeId);
-    if (matches.length === 0) return undefined;
-    const latest = matches.reduce<typeof matches[number] | null>((acc, b) =>
-      acc && acc.createdAt > b.createdAt ? acc : b,
-      null,
-    );
-    if (!latest) return undefined;
-    // Bookmark.position is seconds; the module expects ms.
-    const ms = Math.round(latest.position * 1000);
-    return Number.isFinite(ms) && ms > 0 ? ms : undefined;
-  };
+  // V16 Phase 71 + W22 F/U #2: bookmark-aware resume lookup is a
+  // single `resumePolicy` function prop on `<SimbaPlayer>`. Replaces
+  // the V13 `lookup` object prop + V14 `useSimbaPlayerLookup`
+  // factory hook pair (31 lines collapsed to 6).
+  //
+  // **W22 F/U #2 priority** (bookmark first, history fallback):
+  //   1. Bookmarks — the explicit user signal. Multiple positions
+  //      can exist per URI (A14: each id encodes `(fileUri, position)`),
+  //      so we take the most recently created. `resolveResumeMs`
+  //      handles the latest-wins reduction.
+  //   2. History — the implicit recent-play signal. 1 entry per
+  //      fileUri (upsert on every play), so `find` is sufficient.
+  //   3. `undefined` if neither — `useOpenWithResume` falls back to
+  //      the consumer-provided `startPositionMs` (or 0).
+  //
+  // Both stores persist `position` in seconds; the module expects
+  // ms. The conversion + the priority + the defensive `> 0` check
+  // are all in the pure helper `resolveResumeMs` (10 unit tests
+  // cover the branches — see `__tests__/infrastructure/player/resumePolicy.test.ts`).
+  //
+  // The function is `useCallback`-ed so the `<SimbaPlayer>` memo
+  // (line 102 of the module's SimbaPlayer.tsx) doesn't churn the
+  // inner `<PlayerResumeContext>` value on every render.
+  const resumePolicy = React.useCallback((resumeId: string) => {
+    const bookmarks = useBookmarksStore.getState().items;
+    const history = useRecentHistoryStore.getState().entries;
+    return resolveResumeMs({bookmarks, history}, resumeId);
+  }, []);
 
   return (
     // GestureHandlerRootView is required by @lodev09/react-native-true-sheet

@@ -66,11 +66,35 @@ export {
   usePlaybackHistoryAs,
   resolveStreamType,
   getMpvPlayerModule,
+  // W22 F/U #2: V13/V14 resume-lookup surface. `SimbaPlayer` (the
+  // V16 root) already mounts `<PlayerResumeProvider>` internally
+  // and translates the `resumePolicy` prop into the V13
+  // `lookup` shape. These re-exports let consumers who want the
+  // V13 plumbing directly (e.g. wrapping their own subtree,
+  // unit-testing the lookup in isolation) opt in without
+  // reaching into the module package.
+  PlayerResumeProvider,
+  useOpenWithResume,
+  usePlayItem,
 } from '@simba-dev/react-native-media-player';
 
-export type {PlayerQueueItem} from '@simba-dev/react-native-media-player';
+export type {
+  PlayerQueueItem,
+  // W22 F/U #2: types for the V13 resume-lookup surface.
+  PlayerResumeLookup,
+  PlayerResumeProviderProps,
+  ResumePolicy,
+} from '@simba-dev/react-native-media-player';
 
 export {secondsToMs} from './position';
+
+// W22 F/U #2 — pure helper backing `<SimbaPlayer resumePolicy>`.
+// The App.tsx glue reads bookmarks + history via `getState()`
+// and passes them to `resolveResumeMs({bookmarks, history}, id)`,
+// which returns the saved resume position in ms (or `undefined`
+// for "no saved position — start from 0"). See `resumePolicy.ts`
+// for the priority order (bookmark first, history fallback).
+export {resolveResumeMs, type ResumeLookupInput} from './resumePolicy';
 
 // W7 P28 — typed `play()` facade + Result/StreamError re-exports.
 export {
