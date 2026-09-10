@@ -29,8 +29,26 @@ import type {
   PodcastCategoryResult,
 } from '../../../types/api';
 import {sha1} from 'js-sha1';
+import {
+  AdapterParseError,
+  isArray,
+  isFiniteNumber,
+  isNonEmptyString,
+  isRecord,
+  isString,
+  assertShape,
+} from '../adapterErrors';
 
 export type {PodcastResult, PodcastEpisodeResult, PodcastCategoryResult};
+
+/**
+ * V21 W6 P21 (T21.04): the adapter's retry policy. The adapter
+ * itself doesn't retry (TanStack Query owns retry); this constant
+ * is the documented default the call site uses. Set to `2` (one
+ * initial + two retries) — Podcast Index is reliable, three
+ * attempts is enough for transient 5xx.
+ */
+export const PODCAST_INDEX_RETRIES = 2;
 
 const PODCAST_INDEX_USER_AGENT = 'SimbaMediaPlayer/1.0.0 (paval@simba.app)';
 
@@ -86,10 +104,147 @@ interface RawEnvelope<T> {
   feed?: T;
 }
 
+/**
+ * V21 W6 P21 (T21.02): validate the wire payload against the
+ * `RawEnvelope<T>` shape. Throws `AdapterParseError` if the
+ * status field is missing, not the expected literal, or 'false'
+ * (the upstream non-ok signal). The `expected*` flags enforce
+ * that the correct array field is present for this endpoint.
+ */
+function parseRawEnvelope<T>(
+  raw: unknown,
+  options: {
+    expectFeeds?: boolean;
+    expectItems?: boolean;
+    expectFeed?: boolean;
+  },
+): RawEnvelope<T> {
+  const rec = assertShape(raw, 'envelope', 'podcastIndex', isRecord);
+  if (rec.status !== 'true' && rec.status !== 'false') {
+    throw new AdapterParseError(
+      'podcastIndex',
+      'envelope.status',
+      `expected 'true' | 'false', got ${describe(rec.status)}`,
+    );
+  }
+  if (rec.status === 'false') {
+    throw new AdapterParseError(
+      'podcastIndex',
+      'envelope.status',
+      'Podcast Index request returned non-ok status',
+    );
+  }
+  if (options.expectFeeds && !('feeds' in rec)) {
+    throw new AdapterParseError(
+      'podcastIndex',
+      'envelope.feeds',
+      'expected array of feeds',
+    );
+  }
+  if (options.expectItems && !('items' in rec)) {
+    throw new AdapterParseError(
+      'podcastIndex',
+      'envelope.items',
+      'expected array of items',
+    );
+  }
+  if (options.expectFeed && !('feed' in rec)) {
+    throw new AdapterParseError(
+      'podcastIndex',
+      'envelope.feed',
+      'expected single feed object',
+    );
+  }
+  return rec as unknown as RawEnvelope<T>;
+}
+
+function describe(value: unknown): string {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return `array(${value.length})`;
+  return `${typeof value} ${JSON.stringify(value)}`;
+}
+
+/** V21 W6 P21 (T21.02): validate a single RawFeed object's shape. */
+function parseRawFeed(raw: unknown, path: string): RawFeed {
+  const rec = assertShape(raw, path, 'podcastIndex', isRecord);
+  return {
+    id: assertShape(rec.id, `${path}.id`, 'podcastIndex', isFiniteNumber),
+    title: assertShape(rec.title, `${path}.title`, 'podcastIndex', isString),
+    author: assertShape(rec.author, `${path}.author`, 'podcastIndex', isString),
+    description: assertShape(
+      rec.description,
+      `${path}.description`,
+      'podcastIndex',
+      isString,
+    ),
+    image: assertShape(rec.image, `${path}.image`, 'podcastIndex', isString),
+    url: assertShape(rec.url, `${path}.url`, 'podcastIndex', isString),
+    episodeCount: assertShape(
+      rec.episodeCount,
+      `${path}.episodeCount`,
+      'podcastIndex',
+      isFiniteNumber,
+    ),
+    categories: isRecord(rec.categories)
+      ? (rec.categories as Record<string, string>)
+      : {},
+  };
+}
+
+/** V21 W6 P21 (T21.02): validate a single RawEpisode object's shape. */
+function parseRawEpisode(raw: unknown, path: string): RawEpisode {
+  const rec = assertShape(raw, path, 'podcastIndex', isRecord);
+  return {
+    id: assertShape(rec.id, `${path}.id`, 'podcastIndex', isFiniteNumber),
+    title: assertShape(rec.title, `${path}.title`, 'podcastIndex', isString),
+    description: assertShape(
+      rec.description,
+      `${path}.description`,
+      'podcastIndex',
+      isString,
+    ),
+    datePublished: assertShape(
+      rec.datePublished,
+      `${path}.datePublished`,
+      'podcastIndex',
+      isFiniteNumber,
+    ),
+    duration: assertShape(
+      rec.duration,
+      `${path}.duration`,
+      'podcastIndex',
+      isFiniteNumber,
+    ),
+    image: assertShape(rec.image, `${path}.image`, 'podcastIndex', isString),
+    feedUrl: assertShape(
+      rec.feedUrl,
+      `${path}.feedUrl`,
+      'podcastIndex',
+      isString,
+    ),
+    enclosureUrl: assertShape(
+      rec.enclosureUrl,
+      `${path}.enclosureUrl`,
+      'podcastIndex',
+      isString,
+    ),
+    enclosureType: assertShape(
+      rec.enclosureType,
+      `${path}.enclosureType`,
+      'podcastIndex',
+      isString,
+    ),
+  };
+}
+
 /** Unwrap the Podcast Index status envelope; throws on non-ok. */
 function unwrap<T>(envelope: RawEnvelope<T> | undefined): T | undefined {
   if (envelope?.status !== 'true') {
-    throw new Error('Podcast Index request returned non-ok status');
+    throw new AdapterParseError(
+      'podcastIndex',
+      'envelope.status',
+      'Podcast Index request returned non-ok status',
+    );
   }
   return undefined;
 }
@@ -165,6 +320,7 @@ function categoryFromRaw(
 export async function searchPodcasts(
   query: string,
   max: number = 25,
+  signal?: AbortSignal,
 ): Promise<PodcastResult[]> {
   const headers = buildAuthHeaders();
   const raw = await apiFetch<RawEnvelope<RawFeed>>({
@@ -172,13 +328,17 @@ export async function searchPodcasts(
     path: '/search/byterm',
     params: {q: query, max},
     headers,
+    signal,
   });
-  return podcastResultsFromRaw(unwrapArray<RawFeed>(raw));
+  const envelope = parseRawEnvelope<RawFeed>(raw, {expectFeeds: true});
+  const feeds = (envelope.feeds ?? []) as unknown[];
+  return podcastResultsFromRaw(feeds.map((f, i) => parseRawFeed(f, `feeds[${i}]`)));
 }
 
 export async function getTrendingPodcasts(
   max: number = 10,
   categoryId?: string,
+  signal?: AbortSignal,
 ): Promise<PodcastResult[]> {
   const headers = buildAuthHeaders();
   const raw = await apiFetch<RawEnvelope<RawFeed>>({
@@ -189,13 +349,17 @@ export async function getTrendingPodcasts(
       ...(categoryId && categoryId !== 'all' ? {cat: categoryId} : {}),
     },
     headers,
+    signal,
   });
-  return podcastResultsFromRaw(unwrapArray<RawFeed>(raw));
+  const envelope = parseRawEnvelope<RawFeed>(raw, {expectFeeds: true});
+  const feeds = (envelope.feeds ?? []) as unknown[];
+  return podcastResultsFromRaw(feeds.map((f, i) => parseRawFeed(f, `feeds[${i}]`)));
 }
 
 export async function getEpisodes(
   podcastId: number,
   max: number = 10,
+  signal?: AbortSignal,
 ): Promise<PodcastEpisodeResult[]> {
   const headers = buildAuthHeaders();
   const raw = await apiFetch<RawEnvelope<RawEpisode>>({
@@ -203,30 +367,55 @@ export async function getEpisodes(
     path: '/episodes/byfeedid',
     params: {id: podcastId, max},
     headers,
+    signal,
   });
-  return podcastEpisodesFromRaw(unwrapArray<RawEpisode>(raw));
+  const envelope = parseRawEnvelope<RawEpisode>(raw, {expectItems: true});
+  const items = (envelope.items ?? []) as unknown[];
+  return podcastEpisodesFromRaw(
+    items.map((it, i) => parseRawEpisode(it, `items[${i}]`)),
+  );
 }
 
-export async function getPodcastById(id: number): Promise<PodcastResult | null> {
+export async function getPodcastById(
+  id: number,
+  signal?: AbortSignal,
+): Promise<PodcastResult | null> {
   const headers = buildAuthHeaders();
   const raw = await apiFetch<RawEnvelope<RawFeed>>({
     config: API_CONFIG.podcastIndex,
     path: '/podcasts/byfeedid',
     params: {id},
     headers,
+    signal,
   });
-  return podcastResultFromRaw(unwrapSingle<RawFeed>(raw));
+  const envelope = parseRawEnvelope<RawFeed>(raw, {expectFeed: true});
+  const feed = envelope.feed as unknown | undefined;
+  return podcastResultFromRaw(
+    feed !== undefined ? parseRawFeed(feed, 'feed') : undefined,
+  );
 }
 
-export async function getPodcastCategories(): Promise<PodcastCategoryResult[]> {
+export async function getPodcastCategories(
+  signal?: AbortSignal,
+): Promise<PodcastCategoryResult[]> {
   const headers = buildAuthHeaders();
   const raw = await apiFetch<RawEnvelope<{id: number; name: string}>>({
     config: API_CONFIG.podcastIndex,
     path: '/categories/list',
     headers,
+    signal,
   });
-  const list = (raw?.feeds as {id: number; name: string}[] | undefined) ?? [];
+  // The /categories/list endpoint returns `{status, feeds: [...]}`.
+  // Validate the envelope + parse the list shape (id + name per row).
+  parseRawEnvelope<{id: number; name: string}>(raw, {expectFeeds: true});
+  const list = ((raw as {feeds?: unknown[]})?.feeds ?? []) as unknown[];
   return list
-    .map(categoryFromRaw)
-    .filter((c): c is PodcastCategoryResult => c !== null);
+    .filter((row): row is {id: number; name: string} => {
+      if (!isRecord(row)) return false;
+      if (!isFiniteNumber(row.id)) return false;
+      if (!isString(row.name)) return false;
+      return true;
+    })
+    .map(row => ({id: row.id, name: row.name.trim()}))
+    .filter(c => c.name.length > 0);
 }
