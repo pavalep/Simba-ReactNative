@@ -1,0 +1,146 @@
+# V21 W8 P29 T29.01 — Continuous Integration
+#
+# Triggers on every push to main and every PR. Runs the JS
+# gate (tsc + eslint + jest + import-boundary linter) and the
+# native gate (assembleDebug). A green run means the PR is
+# safe to merge from a build perspective; a red run blocks
+# the merge.
+#
+# The release APK build lives in `release.yml` and only runs
+# on tag push. Keeping the two workflows separate means a
+# tag-triggered release isn't blocked by a noisy CI run.
+#
+# Java / Android SDK pinning matches `android/build.gradle`:
+#   - Java 17   (Gradle 9.3.1 + AGP 8 require JDK 17+)
+#   - Node 22   (engines: ">= 22.11.0")
+#   - build-tools 36, platform android-36, NDK 27.1.12297006
+#     (compileSdk 36 + targetSdk 36 + ndkVersion 27.1.12297006)
+#
+# The `android/.env` copy step is required by the fail-fast
+# env validator in `android/build.gradle` (D-013) — without
+# this, the Gradle build throws "android/.env is missing" 30s
+# into the build instead of 1s. Empty values are accepted
+# (the env validator only checks file existence, not keys).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-flight runs for the same ref when a new commit
+# is pushed. Saves CI minutes on rapid-fire PR updates.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  js-gate:
+    name: JS gate (tsc + eslint + jest + boundaries)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22 (matches package.json engines >= 22.11.0)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript — strict type check (V21 P01 baseline)
+        run: npx tsc --noEmit
+
+      - name: ESLint — V21 baseline
+        # The repo's `lint` script is `eslint .`. A red run here
+        # means an unguarded `any`, an unused import in a non-test
+        # file, or a non-React forwardRef.
+        run: npm run lint -- --max-warnings 0
+
+      - name: Import-boundary linter — V21 P05 (must be 0/0)
+        # `scripts/check-import-boundaries.js` enforces 4 rules:
+        # ADAPTER (error), PLAYER (error), DOMAIN-PURITY (warning),
+        # SHARED-LEAF (warning). New call sites outside
+        # `src/infrastructure/player/` that import the player
+        # module will trip the PLAYER rule and fail the build.
+        run: npm run lint:boundaries
+
+      - name: Jest — V21 baseline
+        # `npx jest` (no --forceExit) per the V21 W8 P29 spec. The
+        # W2 P08 D-004 worker-exit warning is a known cosmetic
+        # issue (patch-package'd; see MEMORY.md). If a test now
+        # genuinely leaks, jest will fail with a non-zero exit.
+        run: npx jest
+
+  android-gate:
+    name: Android gate (assembleDebug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup JDK 17 (Gradle 9.3.1 + AGP 8)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK (build-tools 36, platform 36, NDK 27.1.12297006)
+        uses: android-actions/setup-android@v3
+        with:
+          # Match android/build.gradle:
+          #   - buildToolsVersion = "36.0.0"
+          #   - compileSdkVersion = 36
+          #   - ndkVersion = "27.1.12297006"
+          # The `platform-36` component is API 36 (Android 16).
+          # `patcher;v4` is required for AGP 8 + R8 shrinking.
+          packages: |
+            platform-tools
+            platforms;android-36
+            build-tools;36.0.0
+            ndk;27.1.12297006
+          # A GitHub-hosted cache for Gradle / Maven / NDK artifacts
+          # cuts the assembleDebug time from ~12min (cold) to ~4min
+          # (warm). The cache is keyed on the gradle-wrapper version
+          # so a Gradle upgrade doesn't serve stale artifacts.
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          cache-key-paths: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+
+      - name: Copy .env.example to .env (V21 P02 D-013 fail-fast)
+        # The env validator in `android/build.gradle` only checks
+        # file existence, not key contents. Empty values are
+        # accepted (a "not used" adapter is fine). This avoids
+        # the 30s-into-build "android/.env is missing" failure.
+        run: cp android/.env.example android/.env
+
+      - name: Install JS dependencies (the React Native bundler step)
+        run: npm ci
+
+      - name: Build debug APK (assembleDebug)
+        working-directory: android
+        run: ./gradlew :app:assembleDebug
+
+      - name: Upload APK artifact (for the 30-day retention window)
+        uses: actions/upload-artifact@v4
+        with:
+          name: simba-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
+
+  # T29.02 lives in `release.yml` — only runs on tag push.

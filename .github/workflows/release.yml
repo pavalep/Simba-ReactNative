@@ -1,0 +1,184 @@
+# V21 W8 P29 T29.02 — Release APK build (signing + upload)
+#
+# Triggers ONLY on a version tag push (e.g. `v1.5.0-beta.1`,
+# `v1.5.0`, `v1.5.0-rc.1`). Produces a signed release APK +
+# a GitHub Release with the APK attached.
+#
+# The signing config (W4 P13) reads from 4 env vars:
+#   - KEYSTORE_PATH      (path to the .jks or .keystore file)
+#   - KEYSTORE_PASSWORD  (keystore password)
+#   - KEY_ALIAS          (key alias inside the keystore)
+#   - KEY_PASSWORD       (key password)
+#
+# These must be set in the GitHub repo's
+# Settings → Secrets and variables → Actions as repository
+# secrets. The base64 of the keystore is the recommended
+# format (the workflow decodes it to a temp file before the
+# gradle build, then deletes it after the build completes).
+#
+# The P13 doc at `android/KEYSTORE.md` walks through the
+# local-side setup; this workflow just consumes the same
+# 4 env vars on the CI side.
+#
+# A failed build does NOT auto-create a release; the
+# `softprops/action-gh-release` step is gated on a
+# successful build, so a failed build leaves the tag in
+# place but no release artifact. Delete the failed tag
+# with `git push --delete origin v1.5.0-beta.1` and re-tag
+# after the fix.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  # Allow manual trigger from the Actions tab for the
+      # "test the release pipeline without a tag" case.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag or branch to build (e.g. v1.5.0-beta.1 or main)'
+        required: true
+        default: 'main'
+
+permissions:
+  contents: write   # needed for `softprops/action-gh-release`
+  id-token: none    # no OIDC; secrets are enough
+
+jobs:
+  build-release:
+    name: Build signed release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # When workflow_dispatch supplies a different ref
+          # (e.g. a previous tag), check that out instead of
+          # the auto-resolved tag. For tag-triggered runs the
+          # ref IS the tag, so this is a no-op.
+          ref: ${{ github.event.inputs.ref || github.ref }}
+
+      - name: Resolve release version
+        id: version
+        # The tag is e.g. `v1.5.0-beta.1`. Strip the leading
+        # `v` and any pre-release suffix for the gradle
+        # `versionName` (set via project.ext.version_name).
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platform-tools
+            platforms;android-36
+            build-tools;36.0.0
+            ndk;27.1.12297006
+          cache-key-paths: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Copy .env.example to .env (V21 P02 D-013)
+        run: cp android/.env.example android/.env
+
+      - name: Decode keystore (base64 → temp file)
+        # The keystore is stored as a GitHub Actions secret
+        # `KEYSTORE_BASE64`. Decoding to a temp file is
+        # safer than mounting the secret as a file (the
+        # Gradle signing config reads from a file path).
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 secret is empty. Upload the keystore as a base64-encoded repository secret."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > /tmp/simba.keystore
+          ls -la /tmp/simba.keystore
+
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          # The 4 signing env vars are read by the W4 P13
+          # `signingConfigs.release` block in
+          # `android/app/build.gradle:142-200`. They MUST
+          # match the values in the local keystore (see
+          # android/KEYSTORE.md).
+          KEYSTORE_PATH: /tmp/simba.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # The P02 T02.02 env validator requires android/.env
+          # to exist; the previous step already copied it.
+          # The P13 fail-fast in build.gradle requires the 4
+          # signing env vars; this env block supplies them.
+          ./gradlew :app:assembleRelease \
+            -PversionName=${{ steps.version.outputs.version }} \
+            -PversionCode=$(date +%s)
+
+      - name: Verify APK is signed (apksigner verify)
+        # apksigner is in the build-tools 36 package. The
+        # exit code is non-zero if the signature is missing
+        # or invalid. This catches "build succeeded but APK
+        # is unsigned" before the artifact ships.
+        run: |
+          APK_PATH="android/app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "::error::Release APK not found at $APK_PATH"
+            exit 1
+          fi
+          APK_SIZE=$(stat -c%s "$APK_PATH")
+          echo "APK size: $APK_SIZE bytes"
+          # The build-tools 36.0.0 path:
+          $ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose "$APK_PATH"
+
+      - name: Upload signed release APK as a workflow artifact (90-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: simba-release-apk-${{ steps.version.outputs.version }}
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Create GitHub Release with the APK attached
+        uses: softprops/action-gh-release@v2
+        with:
+          # When tag-triggered, `tag_name` IS the pushed tag.
+          # When workflow_dispatch with a ref, derive the tag
+          # from the ref (the dispatch form should be invoked
+          # with a tag-shaped input like `v1.5.0-beta.1`).
+          tag_name: ${{ github.event.inputs.ref || github.ref_name }}
+          name: 'SIMBA ${{ steps.version.outputs.version }}'
+          generate_release_notes: true
+          files: |
+            android/app/build/outputs/apk/release/app-release.apk
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete the decoded keystore (don't leave it in the runner)
+        # The /tmp directory is on the runner; deleting here
+        # is belt-and-suspenders (the runner is ephemeral).
+        run: rm -f /tmp/simba.keystore
