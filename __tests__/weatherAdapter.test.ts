@@ -33,14 +33,16 @@ describe('cityCoordsFromRaw', () => {
     expect(cityCoordsFromRaw({results: []})).toBeNull();
   });
 
-  it('returns null when latitude is non-numeric', () => {
-    expect(
+  it('throws AdapterParseError when latitude is non-numeric (V21 W6 P21c)', () => {
+    // Pre-W22 returned `null` (silent-skip pattern). The new
+    // contract throws.
+    expect(() =>
       cityCoordsFromRaw({
         results: [
           {name: 'Bad', latitude: '19.076' as unknown as number, longitude: 72.8777},
         ],
       }),
-    ).toBeNull();
+    ).toThrow(/expected finite number/);
   });
 
   it('returns null for undefined input (transport failure)', () => {
@@ -90,25 +92,35 @@ describe('weatherSnapshotFromCurrentRaw', () => {
     expect(weatherSnapshotFromCurrentRaw({}, context)).toBeNull();
   });
 
-  it('returns null when temperature_2m is missing', () => {
-    expect(
+  it('throws AdapterParseError when temperature_2m is missing (V21 W6 P21c)', () => {
+    // Pre-W22 returned `null` (silent-skip pattern). The new
+    // contract throws — wire-shape failures propagate.
+    expect(() =>
       weatherSnapshotFromCurrentRaw(
         {current: {weather_code: 2, is_day: 1}},
         context,
       ),
-    ).toBeNull();
+    ).toThrow(/expected finite number/);
   });
 
-  it('returns null when weather_code is missing', () => {
-    expect(
+  it('throws AdapterParseError when weather_code is missing (V21 W6 P21c)', () => {
+    // Pre-W22 returned `null` (silent-skip pattern). The new
+    // contract throws — wire-shape failures (non-numeric
+    // weather_code) propagate so the hook layer can
+    // distinguish "server down" from "server returned garbage".
+    expect(() =>
       weatherSnapshotFromCurrentRaw(
         {current: {temperature_2m: 20, is_day: 1}},
         context,
       ),
-    ).toBeNull();
+    ).toThrow(/expected number/);
   });
 
   it('returns null for undefined input (transport failure)', () => {
+    // `undefined` is the legitimate "no data" signal — the
+    // catch in `fetchWeatherForCoords` swallows it and returns
+    // `null`. This is NOT a wire-shape error (the request
+    // never got a response).
     expect(weatherSnapshotFromCurrentRaw(undefined, context)).toBeNull();
   });
 
