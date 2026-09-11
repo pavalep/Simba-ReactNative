@@ -49,8 +49,10 @@ describe('iptvAdapter', () => {
     });
   });
 
-  it('channelResultFromRaw returns null for undefined', () => {
-    expect(iptvChannelFromRaw(undefined)).toBeNull();
+  it('channelResultFromRaw throws AdapterParseError for undefined (V21 W6 P21c)', () => {
+    // Pre-W22 returned `null` (silent-skip pattern that masked
+    // upstream API breakages). The new contract throws.
+    expect(() => iptvChannelFromRaw(undefined)).toThrow(/expected channel object/);
   });
 
   it('channelResultFromRaw defaults isPlayable to true when missing', () => {
@@ -67,8 +69,11 @@ describe('iptvAdapter', () => {
     expect(result?.isPlayable).toBe(true);
   });
 
-  it('channelResultsFromRaw filters out null entries', () => {
-    expect(
+  it('channelResultsFromRaw throws AdapterParseError on a malformed entry (V21 W6 P21c)', () => {
+    // Pre-W22 silently filtered out malformed entries and the
+    // caller saw fewer channels than the API returned, with no
+    // diagnostic. The new contract rejects the whole batch.
+    expect(() =>
       iptvChannelsFromRaw([
         {
           id: '1',
@@ -83,7 +88,7 @@ describe('iptvAdapter', () => {
         },
         undefined as any,
       ]),
-    ).toHaveLength(1);
+    ).toThrow(/expected channel object/);
   });
 
   it('categoryResultFromRaw renames channel_count → channelCount', () => {
