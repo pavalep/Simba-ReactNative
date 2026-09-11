@@ -179,8 +179,10 @@ describe('musicbrainzAdapter', () => {
     });
   });
 
-  it('artistResultFromRaw returns null for undefined', () => {
-    expect(mbArtistFromRaw(undefined)).toBeNull();
+  it('artistResultFromRaw throws AdapterParseError for undefined (V21 W6 P21c)', () => {
+    // Pre-W22 returned `null` (silent-skip pattern). The new
+    // contract throws.
+    expect(() => mbArtistFromRaw(undefined)).toThrow(/expected artist object/);
   });
 
   it('artistResultsFromSearchRaw handles missing artists', () => {
