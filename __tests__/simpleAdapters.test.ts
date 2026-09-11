@@ -46,8 +46,11 @@ describe('audiusAdapter', () => {
     });
   });
 
-  it('trackResultFromRaw returns null for undefined', () => {
-    expect(audiusTrackFromRaw(undefined)).toBeNull();
+  it('trackResultFromRaw throws AdapterParseError for undefined', () => {
+    // V21 W6 P21c: malformed / undefined input throws
+    // `AdapterParseError` (was `null` pre-W22 — the silent-skip
+    // pattern masked upstream API breakages).
+    expect(() => audiusTrackFromRaw(undefined)).toThrow(/expected track object/);
   });
 
   it('trackResultsFromListRaw handles missing data envelope', () => {
