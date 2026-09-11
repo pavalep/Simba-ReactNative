@@ -53,14 +53,15 @@ describe('navigate (V21 W22 F/U #13 — D-020 escape)', () => {
 
   it('forwards a 1-arg call (no params route) as the options form with undefined params', () => {
     // The conditional rest-arg type accepts `navigate(name)`
-    // for routes whose param is optional/undefined. The
-    // internal call still passes `params: undefined` in the
-    // options object — that's the v7 shape and the
-    // `as never` is the narrowest escape.
+    // for routes whose param is `undefined` in
+    // `RootStackParamList` (e.g. `Home: undefined`,
+    // `Splash: undefined`, etc.). The internal call still
+    // passes `params: undefined` in the options object — that's
+    // the v7 shape and the `as never` is the narrowest escape.
     mockedIsReady.mockReturnValue(true);
-    navigate('SomeRouteWithNoParams' as keyof RootStackParamList);
+    navigate('Home');
     expect(mockedNavigate).toHaveBeenCalledWith({
-      name: 'SomeRouteWithNoParams',
+      name: 'Home',
       params: undefined,
     });
   });

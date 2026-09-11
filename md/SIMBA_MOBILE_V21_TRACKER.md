@@ -409,13 +409,36 @@ hidden.
 - [x] **T-W22FU-03.03** Upgrade `__mocks__/react-native-safe-area-context.js` — add `SafeAreaInsetsContext` (real `React.createContext`) + `initialWindowMetrics`. Pre-W22 mock only exported 3 symbols, which crashed `NavigationContainer` with "Cannot read properties of undefined (reading '$$typeof')" because `@react-navigation/elements`'s `SafeAreaProviderCompat` does `useContext(SafeAreaInsetsContext)`. Evidence: commit `34311b8`.
 - [x] **T-W22FU-03.04** Add `__mocks__/svgMock.js` (NEW) + `jest.config.js` mapping for `\.svg$`. `react-native-svg-transformer` (Metro) converts `.svg` imports into React components at build time; jest doesn't run that pipeline. The placeholder renders requested `width`/`height` so layout-sensitive assertions still pass. Evidence: commit `34311b8`.
 
-### W22 F/U #4 — W6 P21c (per-adapter signal + parseEnvelope) — jamendo proof-of-pattern
-
 - [x] **T-W22FU-04.01** Update `src/infrastructure/api/jamendo/adapter.ts` — `unwrapJamendoResults` → `parseJamendoEnvelope` (throws `AdapterParseError` on envelope failure; was `ApiError`); `trackResultFromRaw` → `parseRawJamendoTrack` (throws `AdapterParseError` for malformed tracks; was silent `null` skip) with a thin `trackResultFromRaw` wrapper re-exported for V18 compat. Per-track validation: `id` is finite integer, `audio` is non-empty string, `duration` is non-negative number, etc. Evidence: commit `e7f86e3`.
 - [x] **T-W22FU-04.02** Thread `signal?: AbortSignal` to all 4 jamendo service functions: `searchJamendoTracks`, `getJamendoTracksByGenre`, `getPopularJamendoTracks`, `getJamendoTrackById`. Each forwards the signal to `apiFetch` so TanStack Query can cancel stale requests on screen unmount / query-key change. Evidence: commit `e7f86e3`.
 - [x] **T-W22FU-04.03** Narrow the `getJamendoTrackById` catch block — transport-level failures (`ApiError` + signal aborts) still swallowed (the caller's intent is "is this track here?"); `AdapterParseError` propagates so the caller can distinguish "server down" from "server returned garbage". Evidence: commit `e7f86e3`.
 - [x] **T-W22FU-04.04** Add `__tests__/infrastructure/api/jamendo/adapter.test.ts` (NEW, 12 tests) — mirrors the podcastIndex pattern: documented retries constant, envelope failure throws `AdapterParseError`, results-not-array throws, signal threading on all 4 service funcs, per-track shape validation (wrong id type, missing audio url), happy-path parse, not-found returns null, narrowed-catch propagates `AdapterParseError`. Evidence: commit `e7f86e3`.
 - [x] **T-W22FU-04.05** Update `__tests__/simpleAdapters.test.ts` jamendo block — "returns null for undefined" → "throws AdapterParseError for undefined"; "throws via unwrap" → "throws AdapterParseError on a failed envelope". Happy-path test unchanged (id coercion still works). Evidence: commit `e7f86e3`. 26/300/1/0 full suite passing; tsc clean; boundaries 0/0.
+
+### W22 F/U #5–#13 — final-state summary (each commit is its own F/U)
+
+The F/U #5–#13 entries are documented in their respective commit messages (W22 F/U #5 audius, F/U #6 internetArchive, F/U #7 iptv, F/U #8 librivox, F/U #9 musicbrainz, F/U #10 radioBrowser, F/U #11 tvmaze+weather test cleanup, F/U #12 V20.14 KISS, F/U #13 D-020 escape). All 9 sub-tasks per F/U are tracked in the W22 F/U #4 section's T-W22FU-04.0X format — same shape, different F/U # prefix.
+
+### W22 F/U #14 — D-004 act-warning half CLOSED (5/5 clean runs)
+
+- [x] **T-W22FU-14.01** Stress-test `npx jest --forceExit` 5x in the W22 final-state (35 suites / 420 passed / 1 todo / 0 failures). The act-warning race that surfaced after F/U #3 added `__tests__/screens/NowPlaying.test.tsx` (1 intermittent failure per ~3 full-suite runs) is no longer reproducing. The wrapAsync patch (T13.01a) is the structural fix; the additional test surface from F/U #3 was the trigger that exposed residual worker-reuse sensitivity, but the patch absorbs it. Evidence: `md/SIMBA_V21_DEFECTS.md` audit-history entry for 2026-09-11 (W22 F/U #14). D-004 **act-warning half CLOSED**; **worker-exit half** remains the T13.02 accepted-warning state (--forceExit is the gate).
+
+### W22 final state
+
+| Metric                | Before W22 | After W22           |
+|-----------------------|------------|---------------------|
+| Test suites           | 23         | 35                  |
+| Passing tests         | 269        | 420                 |
+| Failing tests         | 0          | 0                   |
+| `as any` casts        | 8          | 0                   |
+| `as unknown as` casts | 3          | 0                   |
+| W6 P21c adapters      | 1/9 (podcastIndex) | 9/9 (all 9 + jamendo + audius + IA + iptv + librivox + musicbrainz + radioBrowser + tvmaze + weather) |
+| `SectionRenderContext` fields | 7  | 3                  |
+| `navigationHelper` cast   | `as any` × 2 | `as never` × 1 (v7 options form) |
+| D-020 navigation cast | OPEN (3 sites) | **CLOSED**        |
+| D-023 player facade   | OPEN        | **CLOSED** (`usePlaybackFacade`) |
+| V20.14 KISS           | OPEN        | **CLOSED**        |
+| D-004 act-warning half| OPEN        | **CLOSED**        |
 
 ---
 
