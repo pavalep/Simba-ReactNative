@@ -131,8 +131,10 @@ describe('librivoxAdapter', () => {
     });
   });
 
-  it('audiobookResultFromRaw returns null for undefined', () => {
-    expect(libroBookFromRaw(undefined)).toBeNull();
+  it('audiobookResultFromRaw throws AdapterParseError for undefined (V21 W6 P21c)', () => {
+    // Pre-W22 returned `null` (silent-skip pattern). The new
+    // contract throws.
+    expect(() => libroBookFromRaw(undefined)).toThrow(/expected book object/);
   });
 
   it('audiobookResultFromRaw defaults to "Unknown Author" when missing', () => {
