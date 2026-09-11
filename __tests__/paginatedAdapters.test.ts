@@ -108,26 +108,30 @@ describe('radioBrowserAdapter', () => {
     });
   });
 
-  it('browseTagFromRaw returns null for missing name', () => {
-    expect(radioBrowseTagFromRaw({name: '', stationcount: 100})).toBeNull();
+  it('browseTagFromRaw throws AdapterParseError for missing name (V21 W6 P21c)', () => {
+    // Pre-W22 returned `null` (silent-skip pattern). The new
+    // contract throws.
+    expect(() =>
+      radioBrowseTagFromRaw({name: '', stationcount: 100}),
+    ).toThrow(/expected non-empty string/);
   });
 
   it('browseTagFromRaw defaults stationCount to 0 when missing', () => {
     expect(radioBrowseTagFromRaw({name: 'pop'})).toEqual({name: 'pop', stationCount: 0});
   });
 
-  it('browseTagsFromRaw handles undefined and filters nulls', () => {
+  it('browseTagsFromRaw throws AdapterParseError on a malformed entry (V21 W6 P21c)', () => {
+    // Pre-W22 silently filtered out malformed entries and the
+    // caller saw fewer tags than the API returned, with no
+    // diagnostic. The new contract rejects the whole batch.
     expect(radioBrowseTagsFromRaw(undefined)).toEqual([]);
-    expect(
+    expect(() =>
       radioBrowseTagsFromRaw([
         {name: 'rock', stationcount: 1},
         {name: '', stationcount: 1},
         {name: 'pop', stationcount: 2},
       ]),
-    ).toEqual([
-      {name: 'rock', stationCount: 1},
-      {name: 'pop', stationCount: 2},
-    ]);
+    ).toThrow(/expected non-empty string/);
   });
 });
 
