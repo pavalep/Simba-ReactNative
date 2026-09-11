@@ -86,14 +86,10 @@ export const BrowseLayout: React.FC<Props> = ({
   const ctx = useMemo<SectionRenderContext>(
     () => ({
       query: search.debouncedQuery,
-      activeChips,
       options,
-      refreshing: false,
       offline: !isOnline,
-      onRetry: () => {},
-      routeParams: routeParams as SectionRouteParams<SectionRouteKey>,
     }),
-    [search.debouncedQuery, activeChips, options, isOnline, routeParams],
+    [search.debouncedQuery, options, isOnline],
   );
 
   return (
