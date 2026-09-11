@@ -78,15 +78,17 @@ describe('jamendoAdapter', () => {
     });
   });
 
-  it('trackResultFromRaw returns null for undefined', () => {
-    expect(jamendoTrackFromRaw(undefined)).toBeNull();
+  it('trackResultFromRaw throws AdapterParseError for undefined', () => {
+    // V21 W6 P21c: malformed / undefined input throws
+    // `AdapterParseError` (was `null` pre-W22 — the silent-skip
+    // pattern masked upstream API breakages).
+    expect(() => jamendoTrackFromRaw(undefined)).toThrow(/expected track object/);
   });
 
-  it('trackResultsFromResponseRaw returns [] on a failed response (throws via unwrap)', () => {
-    // The convertor calls unwrapJamendoResults which throws on
-    // status !== 'success'. The convertor does not swallow it;
-    // the service function does. The test asserts the throw
-    // behavior (the convertor is honest about failure).
+  it('trackResultsFromResponseRaw throws AdapterParseError on a failed envelope', () => {
+    // V21 W6 P21c: envelope failure throws `AdapterParseError`
+    // (was `ApiError` pre-W22 — the transport-level / shape-level
+    // distinction is now first-class in catch blocks).
     expect(() =>
       jamendoTracksFromResponse({headers: {status: 'error'}, results: []}),
     ).toThrow(/Jamendo request failed/);
