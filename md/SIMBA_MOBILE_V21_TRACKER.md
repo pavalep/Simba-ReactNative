@@ -409,6 +409,14 @@ hidden.
 - [x] **T-W22FU-03.03** Upgrade `__mocks__/react-native-safe-area-context.js` — add `SafeAreaInsetsContext` (real `React.createContext`) + `initialWindowMetrics`. Pre-W22 mock only exported 3 symbols, which crashed `NavigationContainer` with "Cannot read properties of undefined (reading '$$typeof')" because `@react-navigation/elements`'s `SafeAreaProviderCompat` does `useContext(SafeAreaInsetsContext)`. Evidence: commit `34311b8`.
 - [x] **T-W22FU-03.04** Add `__mocks__/svgMock.js` (NEW) + `jest.config.js` mapping for `\.svg$`. `react-native-svg-transformer` (Metro) converts `.svg` imports into React components at build time; jest doesn't run that pipeline. The placeholder renders requested `width`/`height` so layout-sensitive assertions still pass. Evidence: commit `34311b8`.
 
+### W22 F/U #4 — W6 P21c (per-adapter signal + parseEnvelope) — jamendo proof-of-pattern
+
+- [x] **T-W22FU-04.01** Update `src/infrastructure/api/jamendo/adapter.ts` — `unwrapJamendoResults` → `parseJamendoEnvelope` (throws `AdapterParseError` on envelope failure; was `ApiError`); `trackResultFromRaw` → `parseRawJamendoTrack` (throws `AdapterParseError` for malformed tracks; was silent `null` skip) with a thin `trackResultFromRaw` wrapper re-exported for V18 compat. Per-track validation: `id` is finite integer, `audio` is non-empty string, `duration` is non-negative number, etc. Evidence: commit `e7f86e3`.
+- [x] **T-W22FU-04.02** Thread `signal?: AbortSignal` to all 4 jamendo service functions: `searchJamendoTracks`, `getJamendoTracksByGenre`, `getPopularJamendoTracks`, `getJamendoTrackById`. Each forwards the signal to `apiFetch` so TanStack Query can cancel stale requests on screen unmount / query-key change. Evidence: commit `e7f86e3`.
+- [x] **T-W22FU-04.03** Narrow the `getJamendoTrackById` catch block — transport-level failures (`ApiError` + signal aborts) still swallowed (the caller's intent is "is this track here?"); `AdapterParseError` propagates so the caller can distinguish "server down" from "server returned garbage". Evidence: commit `e7f86e3`.
+- [x] **T-W22FU-04.04** Add `__tests__/infrastructure/api/jamendo/adapter.test.ts` (NEW, 12 tests) — mirrors the podcastIndex pattern: documented retries constant, envelope failure throws `AdapterParseError`, results-not-array throws, signal threading on all 4 service funcs, per-track shape validation (wrong id type, missing audio url), happy-path parse, not-found returns null, narrowed-catch propagates `AdapterParseError`. Evidence: commit `e7f86e3`.
+- [x] **T-W22FU-04.05** Update `__tests__/simpleAdapters.test.ts` jamendo block — "returns null for undefined" → "throws AdapterParseError for undefined"; "throws via unwrap" → "throws AdapterParseError on a failed envelope". Happy-path test unchanged (id coercion still works). Evidence: commit `e7f86e3`. 26/300/1/0 full suite passing; tsc clean; boundaries 0/0.
+
 ---
 
 ## Cross-cutting rules
