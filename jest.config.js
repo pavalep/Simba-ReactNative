@@ -36,5 +36,11 @@ module.exports = {
     // V21 W5 P17 — MMKV mock is Map-backed (see __mocks__/react-native-mmkv.js).
     '^react-native-mmkv$':
       '<rootDir>/__mocks__/react-native-mmkv.js',
+    // V21 W22 F/U #3 — SVG asset mock (see __mocks__/svgMock.js).
+    // Every `import FooSvg from './foo.svg'` resolves to a tiny
+    // `<View>` placeholder. Lets screen tests render without
+    // wiring a full jest transformer for `react-native-svg`.
+    '\\.svg$':
+      '<rootDir>/__mocks__/svgMock.js',
   },
 };
