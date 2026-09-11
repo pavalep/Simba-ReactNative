@@ -103,12 +103,16 @@ describe('internetArchiveItemResultFromRaw', () => {
     });
   });
 
-  it('returns null on undefined input (type contract §2.2)', () => {
-    expect(internetArchiveItemResultFromRaw(undefined)).toBeNull();
+  it('throws AdapterParseError on undefined input (V21 W6 P21c)', () => {
+    // Pre-W22 returned `null` (silent-skip pattern that masked
+    // upstream API breakages). The new contract throws.
+    expect(() => internetArchiveItemResultFromRaw(undefined)).toThrow(
+      /expected doc object/,
+    );
   });
 
-  it('returns null when identifier is missing (the canonical "no shape" case)', () => {
-    expect(
+  it('throws AdapterParseError when identifier is missing (V21 W6 P21c)', () => {
+    expect(() =>
       internetArchiveItemResultFromRaw({
         identifier: '',
         title: 'no id',
@@ -120,7 +124,7 @@ describe('internetArchiveItemResultFromRaw', () => {
         download_count: 0,
         image_url: '',
       }),
-    ).toBeNull();
+    ).toThrow(/expected non-empty string/);
   });
 });
 
@@ -172,38 +176,43 @@ describe('internetArchiveItemResultsFromRaw', () => {
     ).toEqual({items: [], numFound: 0});
   });
 
-  it('filters out items that fail the per-item convertor (no identifier)', () => {
-    const out = internetArchiveItemResultsFromRaw({
-      response: {
-        docs: [
-          {
-            identifier: 'good',
-            title: 'G',
-            description: '',
-            creator: '',
-            year: '',
-            runtime: '',
-            avg_rating: 0,
-            download_count: 0,
-            image_url: '',
-          },
-          {
-            identifier: '',
-            title: 'bad',
-            description: '',
-            creator: '',
-            year: '',
-            runtime: '',
-            avg_rating: 0,
-            download_count: 0,
-            image_url: '',
-          },
-        ],
-        numFound: 2,
-      },
-    });
-    expect(out.items).toHaveLength(1);
-    expect(out.items[0].identifier).toBe('good');
+  it('throws AdapterParseError when ANY item fails the per-item convertor (V21 W6 P21c)', () => {
+    // Pre-W22 silently filtered out malformed items and the
+    // caller saw fewer results than the API returned, with no
+    // diagnostic. The new contract throws — the whole batch is
+    // rejected so the hook layer can decide whether to retry
+    // or surface a toast.
+    expect(() =>
+      internetArchiveItemResultsFromRaw({
+        response: {
+          docs: [
+            {
+              identifier: 'good',
+              title: 'G',
+              description: '',
+              creator: '',
+              year: '',
+              runtime: '',
+              avg_rating: 0,
+              download_count: 0,
+              image_url: '',
+            },
+            {
+              identifier: '',
+              title: 'bad',
+              description: '',
+              creator: '',
+              year: '',
+              runtime: '',
+              avg_rating: 0,
+              download_count: 0,
+              image_url: '',
+            },
+          ],
+          numFound: 2,
+        },
+      }),
+    ).toThrow(/expected non-empty string/);
   });
 
   it('falls back to docs.length when numFound is missing', () => {
@@ -304,8 +313,14 @@ describe('internetArchiveVideoResultFromRaw', () => {
     });
   });
 
-  it('returns null on undefined input', () => {
-    expect(internetArchiveVideoResultFromRaw(undefined)).toBeNull();
+  it('throws AdapterParseError on undefined input (V21 W6 P21c)', () => {
+    // Pre-W22 returned `null`. The new contract throws so the
+    // call site can distinguish "missing doc" (which is
+    // legitimate — `internetArchiveVideoResultsFromRaw` filters
+    // it before reaching here) from "server returned garbage".
+    expect(() => internetArchiveVideoResultFromRaw(undefined)).toThrow(
+      /expected doc object/,
+    );
   });
 
   it('parses bare-seconds runtime', () => {

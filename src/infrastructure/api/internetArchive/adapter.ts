@@ -25,6 +25,7 @@
 
 import {apiFetch} from '../apiClient';
 import {API_CONFIG} from '../../../constants/api';
+import {AdapterParseError} from '../adapterErrors';
 import type {
   InternetArchiveItemResult,
   InternetArchiveVideoResult,
@@ -203,48 +204,107 @@ function fileUrlFor(identifier: string, name: string): string {
 
 // ─── Convertors (exported, pure, named per contract §2) ────────────────
 
-/** Single audio/music search result → domain. Null on undefined input. */
+/**
+ * Single audio/music search result → domain.
+ *
+ * V21 W6 P21c: a malformed record (missing required `identifier`)
+ * throws `AdapterParseError`. Pre-W22 returned `null` and the
+ * caller silently filtered it — the user saw fewer results than
+ * the API returned, with no diagnostic.
+ */
 export const internetArchiveItemResultFromRaw = (
-  raw: IAResultRaw | undefined,
-): InternetArchiveItemResult | null => {
-  if (!raw?.identifier) return null;
+  raw: unknown,
+  path: string = 'doc',
+): InternetArchiveItemResult => {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new AdapterParseError(
+      'internetArchive',
+      path,
+      'expected doc object',
+    );
+  }
+  const r = raw as Partial<IAResultRaw>;
+  if (typeof r.identifier !== 'string' || r.identifier.length === 0) {
+    throw new AdapterParseError(
+      'internetArchive',
+      `${path}.identifier`,
+      'expected non-empty string',
+    );
+  }
   return {
-    identifier: raw.identifier,
-    title: raw.title || '',
-    description: raw.description || '',
-    creator: raw.creator || '',
-    year: raw.year || '',
-    runtime: raw.runtime || '',
-    avgRating: raw.avg_rating || 0,
-    downloadCount: raw.download_count || 0,
-    imageUrl: raw.image_url || imageUrlFor(raw.identifier),
-    streamingUrl: directoryUrlFor(raw.identifier),
+    identifier: r.identifier,
+    title: r.title || '',
+    description: r.description || '',
+    creator: r.creator || '',
+    year: r.year || '',
+    runtime: r.runtime || '',
+    avgRating: r.avg_rating || 0,
+    downloadCount: r.download_count || 0,
+    imageUrl: r.image_url || imageUrlFor(r.identifier),
+    streamingUrl: directoryUrlFor(r.identifier),
     downloadUrls: [],
   };
 };
 
-/** Audio/music search response → paginated result. Empty on undefined input. */
+/**
+ * Audio/music search response → paginated result.
+ *
+ * V21 W6 P21c: `unknown` input + per-item validation. Missing
+ * `response` is a valid "no results" envelope; malformed per-item
+ * shapes throw `AdapterParseError` (the whole batch is rejected).
+ */
 export const internetArchiveItemResultsFromRaw = (
-  raw: IASearchResponse | undefined,
+  raw: unknown,
 ): PaginatedResult<InternetArchiveItemResult> => {
-  if (!raw) return {items: [], numFound: 0};
-  const docs = raw.response?.docs ?? [];
+  if (raw === undefined || raw === null) return {items: [], numFound: 0};
+  if (typeof raw !== 'object') {
+    throw new AdapterParseError(
+      'internetArchive',
+      'envelope',
+      'expected object envelope',
+    );
+  }
+  const e = raw as Partial<IASearchResponse>;
+  if (e.response === undefined) return {items: [], numFound: 0};
+  const docs = e.response.docs ?? [];
   return {
-    items: docs
-      .map(internetArchiveItemResultFromRaw)
-      .filter((x): x is InternetArchiveItemResult => x != null),
-    numFound: raw.response?.numFound ?? docs.length,
+    items: docs.map((d, i) => internetArchiveItemResultFromRaw(d, `docs[${i}]`)),
+    numFound: e.response.numFound ?? docs.length,
   };
 };
 
-/** Audio item metadata response → fully-resolved domain item (with download URLs). */
+/**
+ * Audio item metadata response → fully-resolved domain item (with download URLs).
+ *
+ * V21 W6 P21c: a missing `metadata` block returns `null` (legitimate
+ * "item not found"); a malformed inner identifier throws
+ * `AdapterParseError`. The wire-shape check distinguishes "server
+ * says no such item" (silent null) from "server returned garbage"
+ * (propagated error).
+ */
 export const internetArchiveItemDetailsFromRaw = (
   identifier: string,
-  data: IAMetadataResponse | undefined,
+  data: unknown,
 ): InternetArchiveItemResult | null => {
-  if (!data?.metadata) return null;
-  const md = data.metadata;
-  const audioFiles = (data.files ?? []).filter(
+  if (data === undefined || data === null) return null;
+  if (typeof data !== 'object') {
+    throw new AdapterParseError(
+      'internetArchive',
+      'envelope',
+      'expected object envelope',
+    );
+  }
+  const e = data as Partial<IAMetadataResponse>;
+  if (!e.metadata) return null;
+  const md = e.metadata;
+  if (typeof md.identifier !== 'string' || md.identifier.length === 0) {
+    throw new AdapterParseError(
+      'internetArchive',
+      'metadata.identifier',
+      'expected non-empty string',
+    );
+  }
+  const audioFiles = (e.files ?? []).filter(
     f =>
       f.source === 'original' &&
       (f.format === 'MP3' || f.format === 'OGG' || f.format === 'VBR MP3'),
@@ -269,20 +329,40 @@ export const internetArchiveItemDetailsFromRaw = (
   };
 };
 
-/** Single video search result → domain. Null on undefined input. */
+/**
+ * Single video search result → domain.
+ *
+ * V21 W6 P21c: a malformed record (missing required `identifier`)
+ * throws `AdapterParseError`. Pre-W22 returned `null`.
+ */
 export const internetArchiveVideoResultFromRaw = (
-  raw: IAVideoResultRaw | undefined,
-): InternetArchiveVideoResult | null => {
-  if (!raw?.identifier) return null;
+  raw: unknown,
+  path: string = 'doc',
+): InternetArchiveVideoResult => {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new AdapterParseError(
+      'internetArchive',
+      path,
+      'expected doc object',
+    );
+  }
+  const r = raw as Partial<IAVideoResultRaw>;
+  if (typeof r.identifier !== 'string' || r.identifier.length === 0) {
+    throw new AdapterParseError(
+      'internetArchive',
+      `${path}.identifier`,
+      'expected non-empty string',
+    );
+  }
   return {
-    identifier: raw.identifier,
-    title: raw.title || '',
-    description: raw.description || '',
-    creator: raw.creator || '',
-    year: raw.year || '',
-    duration: parseRuntime(raw.runtime),
-    avgRating: raw.avg_rating || 0,
-    downloadCount: raw.download_count || 0,
+    identifier: r.identifier,
+    title: r.title || '',
+    description: r.description || '',
+    creator: r.creator || '',
+    year: r.year || '',
+    duration: parseRuntime(r.runtime ?? ''),
+    avgRating: r.avg_rating || 0,
+    downloadCount: r.download_count || 0,
     // V6 2.3.2: thumbnail URL — `https://archive.org/services/img/{id}`.
     // This is the IA's universal thumbnail redirect:
     //   - Returns 200 image/jpeg for every item we tested (10/10 in the
@@ -297,25 +377,37 @@ export const internetArchiveVideoResultFromRaw = (
     // name) which the search API doesn't expose — using it would
     // require a metadata fetch per item. We prefer cheap-and-correct
     // over rich-and-slow here.
-    imageUrl: imageUrlFor(raw.identifier),
-    streamingUrl: directoryUrlFor(raw.identifier),
+    imageUrl: imageUrlFor(r.identifier),
+    streamingUrl: directoryUrlFor(r.identifier),
     subtitles: [],
     audioTracks: [],
     downloadUrls: [],
   };
 };
 
-/** Video search response → paginated result. Empty on undefined input. */
+/**
+ * Video search response → paginated result.
+ *
+ * V21 W6 P21c: `unknown` input + per-item validation. Same shape
+ * as the audio variant.
+ */
 export const internetArchiveVideoResultsFromRaw = (
-  raw: IAVideoSearchResponse | undefined,
+  raw: unknown,
 ): PaginatedResult<InternetArchiveVideoResult> => {
-  if (!raw) return {items: [], numFound: 0};
-  const docs = raw.response?.docs ?? [];
+  if (raw === undefined || raw === null) return {items: [], numFound: 0};
+  if (typeof raw !== 'object') {
+    throw new AdapterParseError(
+      'internetArchive',
+      'envelope',
+      'expected object envelope',
+    );
+  }
+  const e = raw as Partial<IAVideoSearchResponse>;
+  if (e.response === undefined) return {items: [], numFound: 0};
+  const docs = e.response.docs ?? [];
   return {
-    items: docs
-      .map(internetArchiveVideoResultFromRaw)
-      .filter((x): x is InternetArchiveVideoResult => x != null),
-    numFound: raw.response?.numFound ?? docs.length,
+    items: docs.map((d, i) => internetArchiveVideoResultFromRaw(d, `docs[${i}]`)),
+    numFound: e.response.numFound ?? docs.length,
   };
 };
 
@@ -446,6 +538,7 @@ export const archiveIdentifierFromUrl = (url: string): string => {
 export async function searchInternetArchiveAudio(
   query: string,
   options?: ApiSearchOptions,
+  signal?: AbortSignal,
 ): Promise<PaginatedResult<InternetArchiveItemResult>> {
   const q = `(${query}) AND mediatype:(audio)`;
   const raw = await apiFetch<IASearchResponse>({
@@ -458,6 +551,7 @@ export async function searchInternetArchiveAudio(
       page: options?.page ?? 1,
       output: 'json',
     },
+    signal,
   });
   return internetArchiveItemResultsFromRaw(raw);
 }
@@ -466,6 +560,7 @@ export async function searchInternetArchiveAudio(
 export async function searchInternetArchiveMusic(
   query: string,
   options?: ApiSearchOptions,
+  signal?: AbortSignal,
 ): Promise<PaginatedResult<InternetArchiveItemResult>> {
   const q = `(${query}) AND mediatype:(audio) AND collection:(etree OR opensource_audio OR netlabels)`;
   const raw = await apiFetch<IASearchResponse>({
@@ -478,21 +573,34 @@ export async function searchInternetArchiveMusic(
       page: options?.page ?? 1,
       output: 'json',
     },
+    signal,
   });
   return internetArchiveItemResultsFromRaw(raw);
 }
 
-/** Get full item details including download URLs for all formats. */
+/**
+ * Get full item details including download URLs for all formats.
+ *
+ * V21 W6 P21c: transport-level failures (`ApiError` from apiFetch +
+ * `AbortError` on signal abort) are still swallowed — the caller's
+ * intent is "tell me whether this item exists, with null meaning
+ * 'no'". Wire-shape failures (`AdapterParseError` thrown from the
+ * convertor) propagate so the hook layer / caller can distinguish
+ * "server is down" from "server returned garbage".
+ */
 export async function getInternetArchiveItemDetails(
   identifier: string,
+  signal?: AbortSignal,
 ): Promise<InternetArchiveItemResult | null> {
   try {
     const data = await apiFetch<IAMetadataResponse>({
       config: API_CONFIG.internetArchive,
       path: `/metadata/${identifier}`,
+      signal,
     });
     return internetArchiveItemDetailsFromRaw(identifier, data);
-  } catch {
+  } catch (e) {
+    if (e instanceof AdapterParseError) throw e;
     return null;
   }
 }
@@ -503,10 +611,12 @@ export async function getInternetArchiveItemDetails(
  */
 export async function getArchiveTracks(
   identifier: string,
+  signal?: AbortSignal,
 ): Promise<ArchiveTrack[]> {
   const data = await apiFetch<IAMetadataResponse>({
     config: API_CONFIG.internetArchive,
     path: `/metadata/${identifier}`,
+    signal,
   });
   return archiveTracksFromRaw(identifier, data);
 }
@@ -519,6 +629,7 @@ export async function getArchiveTracks(
 export async function searchInternetArchiveVideos(
   query: string,
   options?: ApiSearchOptions,
+  signal?: AbortSignal,
 ): Promise<PaginatedResult<InternetArchiveVideoResult>> {
   const q = `(${query}) AND mediatype:(movies)`;
   const raw = await apiFetch<IAVideoSearchResponse>({
@@ -537,6 +648,7 @@ export async function searchInternetArchiveVideos(
       // Optional IA sort for callers that explicitly opt in.
       ...(options?.sort ? {'sort[]': options.sort} : {}),
     },
+    signal,
   });
   return internetArchiveVideoResultsFromRaw(raw);
 }
@@ -547,8 +659,9 @@ export async function searchInternetArchiveVideos(
  */
 export async function getInternetArchiveVideoDetails(
   identifier: string,
+  signal?: AbortSignal,
 ): Promise<InternetArchiveVideoResult | null> {
-  return resolveInternetArchiveVideoDetails(identifier);
+  return resolveInternetArchiveVideoDetails(identifier, undefined, 3, signal);
 }
 
 /**
@@ -567,17 +680,25 @@ export async function getInternetArchiveVideoDetails(
  *                    after the first. Lets the caller show a toast like
  *                    "Trying alternate server… (attempt 2/3)".
  * @param maxAttempts Total attempts including the first. Default 3.
+ * @param signal      Optional AbortSignal — threaded through to the
+ *                    single-attempt helper so the retry loop is
+ *                    cancellable (V21 W6 P21c).
  */
 export async function resolveInternetArchiveVideoDetails(
   identifier: string,
   onRetry?: (attempt: number, maxAttempts: number) => void,
   maxAttempts: number = 3,
+  signal?: AbortSignal,
 ): Promise<InternetArchiveVideoResult | null> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (attempt > 1 && onRetry) {
       onRetry(attempt, maxAttempts);
     }
-    const result = await getInternetArchiveVideoDetailsOnce(identifier, attempt);
+    const result = await getInternetArchiveVideoDetailsOnce(
+      identifier,
+      attempt,
+      signal,
+    );
     if (result) {
       return result;
     }
@@ -599,15 +720,21 @@ export async function resolveInternetArchiveVideoDetails(
  * network failure OR partial-replication failure (server claims files
  * exist but returned an empty list). Callers that don't want retries
  * can use this directly.
+ *
+ * V21 W6 P21c: wire-shape failures (`AdapterParseError` from the
+ * convertor) propagate; transport-level failures (`ApiError` from
+ * apiFetch + `AbortError` on signal abort) are swallowed.
  */
 async function getInternetArchiveVideoDetailsOnce(
   identifier: string,
   attempt: number,
+  signal?: AbortSignal,
 ): Promise<InternetArchiveVideoResult | null> {
   try {
     const data = await apiFetch<IAMetadataResponse>({
       config: API_CONFIG.internetArchive,
       path: `/metadata/${identifier}`,
+      signal,
       // Bypass the cache on retries so we actually hit a different server
       // instead of getting the same broken response back. The first
       // attempt CAN use the cache (via `staleTime` on the
@@ -615,11 +742,11 @@ async function getInternetArchiveVideoDetailsOnce(
       // that was stored within the last 10 minutes.
     });
     return internetArchiveVideoDetailsFromRaw(identifier, data);
-  } catch {
+  } catch (e) {
+    if (e instanceof AdapterParseError) throw e;
     return null;
   }
 }
-import {AdapterParseError} from '../adapterErrors';
 
 // V21 W6 P21 (T21.04): documented retries for TanStack Query.
 // Adapter itself doesn't retry — hook layer honors this constant.
