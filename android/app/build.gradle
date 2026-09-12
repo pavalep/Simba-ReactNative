@@ -219,7 +219,30 @@ android {
         // Build fails fast if any of the 4 vars is missing — better
         // to fail at the top of the build than to silently ship an
         // unsigned (or debug-signed) release APK.
+        //
+        // NB: `signingConfigs` blocks are evaluated eagerly during
+        // project configuration, regardless of which variant is being
+        // built. So `installDebug` (which never touches release
+        // signing) must NOT trip this guard. Gate the check on the
+        // requested task names — only enforce when a release / bundle
+        // / installRelease task is actually on the command line.
         release {
+            def requestedTasks = gradle.startParameter.taskNames
+            def isReleaseTask = requestedTasks.any { name ->
+                def n = name.toLowerCase()
+                n.contains("release") || n.contains("bundle")
+            }
+            if (!isReleaseTask) {
+                // Debug-only invocation — skip env-var validation.
+                // Use the debug keystore as a safe placeholder so the
+                // signingConfig block still resolves; the release
+                // variant is never assembled in this run anyway.
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+                return
+            }
             def ksPath = System.getenv("KEYSTORE_PATH")
             def ksPass = System.getenv("KEYSTORE_PASSWORD")
             def ksAlias = System.getenv("KEY_ALIAS")
@@ -269,10 +292,14 @@ android {
 }
 
 dependencies {
-    // @simba/react-native-media-player — sibling Android library (mpv engine,
-    // PlayerActivity, SurfaceView renderer, PiP, MediaSession). Lives in
-    // ../react-native-media-player/android/ — wired up in settings.gradle.
-    implementation project(':react-native-media-player')
+    // Workaround: react-native-media-player declares a `debugImplementation`
+    // dep on `com.squareup.leakcanary:leakcanary-android:3.0.0-alpha-8`
+    // (heap-monitor for devs). That version isn't published to Maven Central,
+    // Google Maven, or JitPack, so `assembleDebug` fails to resolve it. We
+    // don't ship heap-monitoring to QA/test devices, so exclude the dep.
+    configurations.all {
+        exclude group: 'com.squareup.leakcanary', module: 'leakcanary-android'
+    }
 
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")

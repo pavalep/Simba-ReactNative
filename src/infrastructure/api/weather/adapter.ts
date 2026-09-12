@@ -1,5 +1,5 @@
 /**
- * V18 — weatherAdapter
+ * V18 + V21 W6 P21c — weatherAdapter
  *
  * Replaces `src/services/api/weatherService.ts` (V17 + pre-V18) with the
  * adapter + convertor pattern. The wire layer here is Open-Meteo
@@ -12,8 +12,7 @@
  * - `*Raw` DTOs are file-local (not exported).
  * - `*Result` / `CityCoords` / `WeatherSnapshot` are domain types
  *   and ARE exported.
- * - Convertors are pure, exported, named, single-purpose. They
- *   accept `undefined` to cover the transport-failure case.
+ * - Convertors are pure, exported, named, single-purpose.
  * - Service functions return `Promise<DomainType>` — never
  *   `Promise<RawType>`.
  *
@@ -22,10 +21,27 @@
  *           getCityCoords, type WeatherSnapshot,
  *           type CityCoords, type WeatherCondition} from
  *           '../infrastructure/api/weather/adapter';
+ *
+ * **V21 W6 P21c (T21.04) — typed `AdapterParseError` + signal:**
+ * `cityCoordsFromRaw` and `weatherSnapshotFromCurrentRaw` were
+ * already doing shape validation pre-W22 (the `typeof number`
+ * checks are documented in their docstrings as "defensive — the
+ * wire shape says number, but at the boundary we don't trust
+ * it"). The W6 P21c migration converts the silent-`null` returns
+ * to typed `AdapterParseError` for the wire-shape failures
+ * (non-numeric lat/lon, missing current.temperature_2m) while
+ * keeping the legitimate "no results" returns as `null`
+ * (transport failures and the no-city-found case).
+ *
+ * The Jamendo / Audius / Internet Archive / IPTV / LibriVox /
+ * MusicBrainz / RadioBrowser adapters are the proof-of-pattern
+ * references for the W6 P21c shape; this file follows the
+ * same pattern.
  */
 import {apiFetch} from '../apiClient';
 import type {ApiConfig} from '../../../types/api';
 import {logger} from '../../../lib/logger';
+import {AdapterParseError} from '../adapterErrors';
 
 // ─── Domain types (exported) ─────────────────────────────────────
 
@@ -168,22 +184,43 @@ export function wmoCodeToCondition(code: number, isDay: boolean): WmoMapping {
 /**
  * Geocoding response → CityCoords.
  *
- * Returns `null` when:
- * - raw is `undefined` (transport failure)
- * - `results` is missing or empty
- * - the first result has a non-numeric lat/lon (defensive — the
- *   wire shape says number, but at the boundary we don't trust it)
+ * V21 W6 P21c: the shape validation here was already in place
+ * pre-W22 (the `typeof number` checks are documented as
+ * "defensive — the wire shape says number, but at the boundary
+ * we don't trust it"). The W6 P21c migration distinguishes:
+ *   - Missing `results` or empty array → `null` (legitimate
+ *     "no city found" — the caller falls through to the next
+ *     source in the cascade).
+ *   - Non-numeric `latitude` / `longitude` in the first result
+ *     → `AdapterParseError` (wire-shape failure).
+ *   - Non-object envelope → `AdapterParseError` (wire-shape
+ *     failure).
  */
-export function cityCoordsFromRaw(
-  raw: OpenMeteoGeocodingRaw | undefined,
-): CityCoords | null {
-  const first = raw?.results?.[0];
-  if (
-    !first ||
-    typeof first.latitude !== 'number' ||
-    typeof first.longitude !== 'number'
-  ) {
-    return null;
+export function cityCoordsFromRaw(raw: unknown): CityCoords | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'object') {
+    throw new AdapterParseError(
+      'weather',
+      'envelope',
+      'expected object envelope',
+    );
+  }
+  const e = raw as Partial<OpenMeteoGeocodingRaw>;
+  const first = e.results?.[0];
+  if (!first) return null;
+  if (typeof first.latitude !== 'number' || !Number.isFinite(first.latitude)) {
+    throw new AdapterParseError(
+      'weather',
+      'results[0].latitude',
+      `expected finite number, got ${first.latitude}`,
+    );
+  }
+  if (typeof first.longitude !== 'number' || !Number.isFinite(first.longitude)) {
+    throw new AdapterParseError(
+      'weather',
+      'results[0].longitude',
+      `expected finite number, got ${first.longitude}`,
+    );
   }
   return {city: first.name, lat: first.latitude, lon: first.longitude};
 }
@@ -196,22 +233,47 @@ export function cityCoordsFromRaw(
  * the display name to show, and the fetch timestamp. Keeping these
  * out of the wire response is what makes the convertor pure
  * (no `Date.now()`, no implicit "current caller").
+ *
+ * V21 W6 P21c: distinguishes missing `current` (legitimate
+ * "no current data" — `null`) from malformed inner fields
+ * (non-numeric `temperature_2m` / `weather_code` —
+ * `AdapterParseError`).
  */
 export function weatherSnapshotFromCurrentRaw(
-  raw: OpenMeteoCurrentRaw | undefined,
+  raw: unknown,
   context: {
     source: WeatherSnapshot['source'];
     cityName: string;
     fetchedAt: number;
   },
 ): WeatherSnapshot | null {
-  const current = raw?.current;
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'object') {
+    throw new AdapterParseError(
+      'weather',
+      'envelope',
+      'expected object envelope',
+    );
+  }
+  const e = raw as Partial<OpenMeteoCurrentRaw>;
+  const current = e.current;
+  if (!current) return null;
   if (
-    !current ||
     typeof current.temperature_2m !== 'number' ||
-    typeof current.weather_code !== 'number'
+    !Number.isFinite(current.temperature_2m)
   ) {
-    return null;
+    throw new AdapterParseError(
+      'weather',
+      'current.temperature_2m',
+      `expected finite number, got ${current.temperature_2m}`,
+    );
+  }
+  if (typeof current.weather_code !== 'number') {
+    throw new AdapterParseError(
+      'weather',
+      'current.weather_code',
+      `expected number, got ${typeof current.weather_code}`,
+    );
   }
   const isDay = current.is_day === 1;
   const {condition, description} = wmoCodeToCondition(current.weather_code, isDay);
@@ -240,21 +302,30 @@ const GEOCODING_CONFIG: ApiConfig = {
 // ─── Service functions (the public surface) ──────────────────────
 
 /**
- * Geocode a manual city name into lat/lon. Returns `null` on any
- * failure (transport, empty results, non-numeric coords). The
- * caller decides what to do with `null` (the cascade in
- * `useWeather` falls through to the next source).
+ * Geocode a manual city name into lat/lon. Returns `null` on
+ * any transport failure or "no city found" (the caller falls
+ * through to the next source in the cascade). Wire-shape
+ * failures (`AdapterParseError`) propagate.
  */
-export async function getCityCoords(city: string): Promise<CityCoords | null> {
+export async function getCityCoords(
+  city: string,
+  signal?: AbortSignal,
+): Promise<CityCoords | null> {
   try {
     const raw = await apiFetch<OpenMeteoGeocodingRaw>({
       config: GEOCODING_CONFIG,
       path: '/v1/search',
       params: {name: city, count: 1, language: 'en', format: 'json'},
+      signal,
     });
     return cityCoordsFromRaw(raw);
-  } catch (err) {
-    logger.warn('[weatherAdapter] city geocoding error', err);
+  } catch (e) {
+    // Transport failures → `null` (the cascade in `useWeather`
+    // falls through to the next source). Wire-shape failures
+    // propagate so the hook layer can distinguish "server
+    // down" from "server returned garbage".
+    if (e instanceof AdapterParseError) throw e;
+    logger.warn('[weatherAdapter] city geocoding error', e);
     return null;
   }
 }
@@ -263,14 +334,18 @@ export async function getCityCoords(city: string): Promise<CityCoords | null> {
  * Resolve a full snapshot from a manual city name. Used when the
  * user has set a home city in Settings.
  */
-export async function fetchWeatherByCity(city: string): Promise<WeatherSnapshot | null> {
-  const coords = await getCityCoords(city);
+export async function fetchWeatherByCity(
+  city: string,
+  signal?: AbortSignal,
+): Promise<WeatherSnapshot | null> {
+  const coords = await getCityCoords(city, signal);
   if (!coords) return null;
   return fetchWeatherForCoords(
     coords.lat,
     coords.lon,
     coords.city,
     'manual',
+    signal,
   );
 }
 
@@ -284,12 +359,14 @@ export async function fetchWeatherByCoords(
   lat: number,
   lon: number,
   cityNameHint?: string,
+  signal?: AbortSignal,
 ): Promise<WeatherSnapshot | null> {
   return fetchWeatherForCoords(
     lat,
     lon,
     cityNameHint ?? `${lat.toFixed(2)}, ${lon.toFixed(2)}`,
     'coords',
+    signal,
   );
 }
 
@@ -300,6 +377,7 @@ async function fetchWeatherForCoords(
   lon: number,
   cityName: string,
   source: WeatherSnapshot['source'],
+  signal?: AbortSignal,
 ): Promise<WeatherSnapshot | null> {
   try {
     const raw = await apiFetch<OpenMeteoCurrentRaw>({
@@ -311,18 +389,20 @@ async function fetchWeatherForCoords(
         current: 'temperature_2m,weather_code,is_day',
         timezone: 'auto',
       },
+      signal,
     });
     return weatherSnapshotFromCurrentRaw(raw, {
       source,
       cityName,
       fetchedAt: Date.now(),
     });
-  } catch (err) {
-    logger.warn('[weatherAdapter] current weather error', err);
+  } catch (e) {
+    // Transport failures → `null`. Wire-shape failures propagate.
+    if (e instanceof AdapterParseError) throw e;
+    logger.warn('[weatherAdapter] current weather error', e);
     return null;
   }
 }
-import {AdapterParseError} from '../adapterErrors';
 
 // V21 W6 P21 (T21.04): documented retries for TanStack Query.
 // Adapter itself doesn't retry — hook layer honors this constant.
