@@ -142,11 +142,15 @@ function BottomSheetInner<T>(
       detents={detents}
       dismissible={dismissable}
       grabber
-      // On Android, the `scrollable` prop applies `flex: 1` to the native
+      // On Android, the `scrollableRef` prop (TrueSheet 4.x — was the
+      // boolean `scrollable` prop in 3.x) applies `flex: 1` to the native
       // content view, which is REQUIRED for child ScrollViews (FilterSheet,
       // QueueSheet, etc.) to size correctly. Without it the body collapses
-      // to zero height and only the title row is visible.
-      scrollable
+      // to zero height and only the title row is visible. We omit the
+      // prop for now since the consumer content provides its own
+      // ScrollView where needed; revisit if any sheet body collapses to
+      // zero height on Android after the 4.x bump.
+      // scrollableRef={sheetRef}
       // We use "never" and let the consumer add insets.bottom to their
       // last child (footer / reset button / etc.). With "automatic"
       // true-sheet pulls the sheet above the gesture bar AND reports

@@ -20,7 +20,7 @@
 //   - Removed dead `import {useMediaStore}` from the V11 service
 //     (never read in this file).
 
-import RNFS from 'react-native-fs';
+import {readDir as nativeReadDir, stat as nativeStat, UnsupportedContentUriError} from '../../nativeFs';
 import {getMpvPlayerModule} from '../../player';
 import {LrcParseResult, parseLrc} from '../../../utils/lrcParser';
 
@@ -79,11 +79,22 @@ export interface DuplicateGroup {
   files: string[];
 }
 
-export type CorruptionReason = 'stat_failed' | 'zero_size' | 'unknown';
+export type CorruptionReason =
+  | 'stat_failed'
+  | 'zero_size'
+  | 'permission_denied'
+  | 'unknown';
 
 export interface CorruptFile {
   uri: string;
   reason: CorruptionReason;
+  /**
+   * Optional human-readable detail. Set when `reason` is
+   * `permission_denied` so the UI can show the Android-14+
+   * scoped-storage remediation hint surfaced by the
+   * nativeFs shim.
+   */
+  message?: string;
 }
 
 // ─── Helpers ────────────────────────────────────────────
@@ -380,8 +391,11 @@ function extractTrackNumber(fileName: string): number {
 /**
  * V21 W5 P19: per-file integrity check. Returns the file size on
  * success; returns the corruption reason on:
- *   - `RNFS.stat` throws (stat_failed) — typically an I/O error or a
- *     dangling symlink
+ *   - `nativeStat` throws (stat_failed) — typically an I/O error, a
+ *     dangling symlink, or an Android-14+ `content://` URI that
+ *     react-native-fs can't open (D-033 — shim throws
+ *     UnsupportedContentUriError which the caller should catch and
+ *     surface via `onCorrupt`)
  *   - the file exists but has zero bytes (zero_size) — typical of a
  *     half-downloaded or truncated copy
  *
@@ -393,7 +407,7 @@ async function statAndCheck(uri: string): Promise<
   | {ok: false; reason: CorruptionReason}
 > {
   try {
-    const stat = await RNFS.stat(uri);
+    const stat = await nativeStat(uri);
     if (stat.size === 0) {
       return {ok: false, reason: 'zero_size'};
     }
@@ -456,7 +470,7 @@ export async function scanFolderForAudio(
   const results: ScannedTrack[] = [];
 
   try {
-    const items = await RNFS.readDir(folderPath);
+    const items = await nativeReadDir(folderPath);
     const subDirPromises: Promise<ScannedTrack[]>[] = [];
 
     for (const item of items) {
@@ -498,7 +512,16 @@ export async function scanFolderForAudio(
     // Merge sub-directory results
     const nested = await Promise.all(subDirPromises);
     for (const arr of nested) results.push(...arr);
-  } catch {
+  } catch (e) {
+    // D-033: surface the Android-14+ content:// URI error to the
+    // scanner-history store via onCorrupt instead of silently
+    // returning an empty result set (the pre-D-033 behaviour made
+    // it look like a "library is empty" failure rather than a
+    // scoped-storage permission issue).
+    if (e instanceof UnsupportedContentUriError) {
+      onCorrupt?.({uri: folderPath, reason: 'permission_denied', message: e.message});
+      return results;
+    }
     // Folder may not exist or permission denied — skip silently.
     // (Permission-revoked detection lives in `scanFoldersIncremental`
     // in fileService.ts — this walker is the lower-level helper.)
@@ -541,7 +564,7 @@ export async function scanAudioFolders(
  */
 export async function findCoverInDir(dirPath: string): Promise<string> {
   try {
-    const items = await RNFS.readDir(dirPath);
+    const items = await nativeReadDir(dirPath);
     for (const item of items) {
       if (!item.isFile()) continue;
       const lower = item.name.toLowerCase();
