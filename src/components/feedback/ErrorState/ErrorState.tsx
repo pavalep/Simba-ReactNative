@@ -17,6 +17,11 @@ interface ErrorStateProps {
   title?: string;
   /** Primary message, e.g. the fetch error text */
   message: string;
+  /** Optional raw diagnostic from the failed query (timeout text,
+   *  parse error stack, HTTP status, ...) — rendered under the
+   *  primary message in a monospace small caption so users can
+   *  report what actually went wrong. */
+  errorDetail?: string;
   /** Show a retry button that calls this */
   onRetry?: () => void;
   retryLabel?: string;
@@ -27,6 +32,7 @@ interface ErrorStateProps {
 export const ErrorState: React.FC<ErrorStateProps> = ({
   title = 'Something went wrong',
   message,
+  errorDetail,
   onRetry,
   retryLabel = 'Retry',
   icon = 'alertCircle',
@@ -49,6 +55,16 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
         style={styles.message}>
         {message}
       </AppText>
+      {errorDetail ? (
+        <AppText
+          variant="caption"
+          color="secondary"
+          style={styles.errorDetail}
+          accessibilityLabel={`Technical detail: ${errorDetail}`}
+          numberOfLines={4}>
+          {errorDetail}
+        </AppText>
+      ) : null}
       {onRetry && (
         <TouchableOpacity
           activeOpacity={0.8}
@@ -83,6 +99,12 @@ const styles = StyleSheet.create({
   message: {
     textAlign: 'center',
     lineHeight: 20,
+  },
+  errorDetail: {
+    marginTop: spacing.xs,
+    textAlign: 'center',
+    opacity: 0.7,
+    fontFamily: 'monospace',
   },
   retryButton: {
     marginTop: spacing.sm,

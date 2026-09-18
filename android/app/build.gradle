@@ -189,18 +189,78 @@ android {
             cmake {
                 cppFlags "-std=c++17 -frtti -fexceptions"
                 abiFilters "arm64-v8a", "x86_64"
+                // No -DANDROID_STL=c++_static here: libappmodules.so is
+                // linked against //react-native-nitro-modules/NitroModules
+                // prefab, which is built with c++_shared. CMake refuses
+                // "User is using a static STL but library requires a
+                // shared STL" with that flag (verified 1.5.9 attempt).
             }
         }
     }
 
     packagingOptions {
-        // Phase 28: libmpv + libav* + libplayer + libc++_shared packaging
-        // moved to react-native-media-player/android/build.gradle (the
-        // module's AAR now packages these .so files). The consumer app
-        // receives them transitively via `implementation project(':react-native-media-player')`.
+        // Phase 28: libmpv + libav* + libplayer packaging moved to
+        // react-native-media-player/android/build.gradle (the module's AAR
+        // packages these .so files and ships them transitively via
+        // `implementation project(':react-native-media-player')`).
         //
-        // No pickFirst needed here — the module handles all the
-        // duplicate-handling for the .so files it ships.
+        // V22.0.0 / 1.5.9 (D-033 fix #2): EXCLUDE the consumer's
+        // libappmodules.so's libc++_shared.so from the APK. Even with
+        // -DANDROID_STL=c++_static set on the LIB's CMake (which makes
+        // libsimbaplayer_mpv.so not depend on libc++_shared), the consumer
+        // app's own CMakeLists (libappmodules.so) still emits an NDK r27
+        // libc++_shared.so (~1.6 MB, LLVM 16, missing
+        // __from_chars_floating_point). pickFirst alone isn't enough
+        // because AGP's merge order puts the consumer's CMake output
+        // BEFORE the lib's jniLibs contribution, so pickFirst picks the
+        // wrong one. Excluding the consumer's CMake output entirely
+        // forces the merge to use ONLY the lib's bundled 9 MB libc++_shared
+        // (LLVM 17+, has __from_chars_floating_point), which is the only
+        // one libmpv.so can resolve its symbols against.
+        jniLibs {
+            // Exclude ONLY the consumer's CMake-emitted libc++_shared.so
+            // path. The lib's bundled one in jniLibs/x86_64 is preserved.
+            // The path is rooted at the merge input — the consumer's CMake
+            // output ends up under <module>/build/intermediates/cxx/...
+            // but AGP rewrites it to lib/<abi>/libc++_shared.so in the
+            // merge step. We exclude the merge-source path
+            // (intermediates/cxx/.../libc++_shared.so) instead.
+            excludes += ["**/cxx/**/libc++_shared.so"]
+            // V22.0.0 / 1.5.8 (D-038): drop the lib's AAR-bundled
+            // mpv-android 2026-08-11 binaries (which render as black
+            // SurfaceView on x86_64 GFXSTREAM emulator). The consumer
+            // supplies the working pre-mpv-2026-08-11 bundle in
+            // app/src/main/jniLibs/{abi}/. After AGP merges, the AAR's
+            // mpv lands at lib/<abi>/libmpv.so and the consumer's at
+            // lib/<abi>/<abi>/libmpv.so (path doubling on consumer
+            // contribution). We exclude the AAR's flat path so only the
+            // consumer's nested copy survives; AGP flattens it to
+            // lib/<abi>/libmpv.so at packaging time. Same for libav* and
+            // the matching libc++_shared because the OLD bundle is built
+            // against NDK r27's libc++ ABI while the NEW bundle
+            // (mpv-android 2026-08-11) uses LLVM 17's libc++; mixing
+            // them breaks the dlopen symbol resolution.
+            excludes += ["lib/*/libmpv.so"]
+            excludes += ["lib/*/libavcodec.so"]
+            excludes += ["lib/*/libavdevice.so"]
+            excludes += ["lib/*/libavfilter.so"]
+            excludes += ["lib/*/libavformat.so"]
+            excludes += ["lib/*/libavutil.so"]
+            excludes += ["lib/*/libswresample.so"]
+            excludes += ["lib/*/libswscale.so"]
+            excludes += ["lib/*/libOpenCL.so"]
+            excludes += ["lib/*/libc++_shared.so"]
+            pickFirst "lib/**/libmpv.so"
+            pickFirst "lib/**/libplayer.so"
+            pickFirst "lib/**/libavcodec.so"
+            pickFirst "lib/**/libavdevice.so"
+            pickFirst "lib/**/libavfilter.so"
+            pickFirst "lib/**/libavformat.so"
+            pickFirst "lib/**/libavutil.so"
+            pickFirst "lib/**/libswresample.so"
+            pickFirst "lib/**/libswscale.so"
+            pickFirst "lib/**/libOpenCL.so"
+        }
     }
 
     signingConfigs {
@@ -224,19 +284,40 @@ android {
         // project configuration, regardless of which variant is being
         // built. So `installDebug` (which never touches release
         // signing) must NOT trip this guard. Gate the check on the
-        // requested task names — only enforce when a release / bundle
-        // / installRelease task is actually on the command line.
+        // requested task names — only enforce when an actual release-
+        // packaging task is on the command line.
+        //
+        // We trigger on:
+        //   • bare aggregate tasks (`assemble`, `build`, `bundle`,
+        //     `install`) — these build ALL variants, including release
+        //   • variant-suffixed packaging tasks (`assembleRelease`,
+        //     `bundleRelease`, `installRelease`, `packageRelease`,
+        //     `signingReport`) — these consume the signingConfig
+        //
+        // We deliberately do NOT trigger on build-only tasks like
+        // `buildCMakeRelease`, `configureCMakeRelease`, or
+        // `externalNativeBuildCleanRelease` — those only compile
+        // native code and don't touch the signing keystore.
         release {
             def requestedTasks = gradle.startParameter.taskNames
-            def isReleaseTask = requestedTasks.any { name ->
+            def isReleasePackaging = requestedTasks.any { name ->
                 def n = name.toLowerCase()
-                n.contains("release") || n.contains("bundle")
+                // Bare aggregates that build every variant.
+                if (n == "assemble" || n == "build" ||
+                    n == "bundle"   || n == "install") return true
+                // Variant-suffixed packaging tasks.
+                if (n.endsWith("release") &&
+                    (n.contains("assemble") || n.contains("bundle") ||
+                     n.contains("install")  || n.contains("package") ||
+                     n.contains("signingreport"))) return true
+                return false
             }
-            if (!isReleaseTask) {
-                // Debug-only invocation — skip env-var validation.
-                // Use the debug keystore as a safe placeholder so the
+            if (!isReleasePackaging) {
+                // Debug-only invocation (or a build-only task like
+                // buildCMakeRelease) — skip env-var validation. Use
+                // the debug keystore as a safe placeholder so the
                 // signingConfig block still resolves; the release
-                // variant is never assembled in this run anyway.
+                // variant is never signed in this run.
                 storeFile file('debug.keystore')
                 storePassword 'android'
                 keyAlias 'androiddebugkey'

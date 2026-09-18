@@ -11,7 +11,15 @@
 
 import {useCallback, useMemo, useState} from 'react';
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
-import {usePlayerActivity} from '../../../infrastructure/player';
+import {
+  isBlockedError,
+  isExpiredError,
+  isLaunchError,
+  isNetworkError,
+  isUnsupportedError,
+  usePlay,
+} from '../../../infrastructure/player';
+import {useToast} from '../../../components/feedback/Toast';
 import {useMediaVideoTracks} from '../../../state';
 
 export type SortMode = 'title' | 'date';
@@ -33,7 +41,8 @@ export interface UseAllVideosScreenResult {
 }
 
 export function useAllVideosScreen(): UseAllVideosScreenResult {
-  const {openPlayer} = usePlayerActivity();
+  const play = usePlay();
+  const toast = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('title');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -76,14 +85,53 @@ export function useAllVideosScreen(): UseAllVideosScreenResult {
   }, [videoTracks, searchQuery, sortMode]);
 
   const handlePlayTrack = useCallback(
-    (uri: string, title: string) => {
-      openPlayer({
-        uri,
-        title,
-        type: 'video',
-      });
+    async (uri: string, title: string) => {
+      // V21 typed facade — awaited + Result pattern-match so the
+      // 4 failure variants (network / unsupported / expired /
+      // blocked) surface as toasts. Pre-V21: direct
+      // `openPlayer()` call returned Promise<boolean>; rejection
+      // became unhandled promise rejection, `false` discarded.
+      const result = await play({uri, title, mediaType: 'video'});
+      if (result.ok) return;
+      if (isNetworkError(result.error)) {
+        toast.show(
+          'No connection. The video will open when you are online.',
+          'warning',
+          {duration: 6000},
+        );
+      } else if (isUnsupportedError(result.error)) {
+        toast.show(
+          'This video format is not supported by the player.',
+          'error',
+          {duration: 6000},
+        );
+      } else if (isExpiredError(result.error)) {
+        toast.show('Sign in expired. Please sign in again.', 'warning', {
+          duration: 6000,
+        });
+      } else if (isBlockedError(result.error)) {
+        toast.show(
+          'This content is not available in your region.',
+          'error',
+          {duration: 6000},
+        );
+      } else if (isLaunchError(result.error)) {
+        // B-009: surface the typed bridge rejection code.
+        const detail = result.error.code ? ` [${result.error.code}]` : '';
+        toast.show(
+          `Player couldn’t start${detail ? ` — ${detail}` : ''}. ${result.error.message}`,
+          'error',
+          {duration: 8000},
+        );
+      } else {
+        toast.show(
+          'Could not open the player. Please try again.',
+          'error',
+          {duration: 6000},
+        );
+      }
     },
-    [openPlayer],
+    [play, toast],
   );
 
   // 54.3: pull-to-refresh — force a full re-scan of linked folders.

@@ -18,7 +18,15 @@ import {Placeholder} from '../../../components/feedback/Placeholder';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {useSettingsStore, usePlayerStore} from '../../../state';
 import {useRecentHistory} from '../../../features/recentHistory';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import {
+  isBlockedError,
+  isExpiredError,
+  isLaunchError,
+  isNetworkError,
+  isUnsupportedError,
+  usePlay,
+} from '../../../infrastructure/player';
+import {useToast} from '../../../components/feedback/Toast';
 
 import {useSearch} from '../../../hooks/useSearch';
 import type {SearchScreenProps} from '../types';
@@ -67,7 +75,59 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const {width: screenWidth} = useWindowDimensions();
 
     const {list: recentFiles} = useRecentHistory();
-  const {openPlayer} = usePlayerActivity();
+  // V21 typed facade — awaited + Result pattern-match so failures
+  // surface as toasts. The 4 call sites below (file/track/audius/
+  // live-tv) all share this helper.
+  const play = usePlay();
+  const toast = useToast();
+  // Centralised error-to-toast mapping. Pre-V21 the 4 call sites
+  // called `openPlayer` directly: not awaited (rejection became
+  // unhandled promise rejection) and `false` return discarded
+  // silently.
+  const playWithToast = useCallback(
+    async (input: {uri: string; title: string; mediaType: 'movie' | 'music' | 'podcast' | 'live-tv' | 'audiobook' | 'video' | 'audio'}) => {
+      const result = await play(input);
+      if (result.ok) return;
+      if (isNetworkError(result.error)) {
+        toast.show(
+          'No connection. The media will open when you are online.',
+          'warning',
+          {duration: 6000},
+        );
+      } else if (isUnsupportedError(result.error)) {
+        toast.show(
+          'This media format is not supported by the player.',
+          'error',
+          {duration: 6000},
+        );
+      } else if (isExpiredError(result.error)) {
+        toast.show('Sign in expired. Please sign in again.', 'warning', {
+          duration: 6000,
+        });
+      } else if (isBlockedError(result.error)) {
+        toast.show(
+          'This content is not available in your region.',
+          'error',
+          {duration: 6000},
+        );
+      } else if (isLaunchError(result.error)) {
+        // B-009: surface the typed bridge rejection code.
+        const detail = result.error.code ? ` [${result.error.code}]` : '';
+        toast.show(
+          `Player couldn’t start${detail ? ` — ${detail}` : ''}. ${result.error.message}`,
+          'error',
+          {duration: 8000},
+        );
+      } else {
+        toast.show(
+          'Could not open the player. Please try again.',
+          'error',
+          {duration: 6000},
+        );
+      }
+    },
+    [play, toast],
+  );
 
   const playlist = usePlayerStore(s => s.playlist);
   const videoFolders = useSettingsStore(state => state.videoFolders);
@@ -255,13 +315,9 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const handlePlayFile = useCallback(
     (fileUri: string, fileTitle: string) => {
       const mediaType = isVideoFile(fileTitle) ? 'video' : 'audio';
-      openPlayer({
-        uri: fileUri,
-        title: fileTitle,
-        type: resolveStreamType(mediaType),
-      });
+      void playWithToast({uri: fileUri, title: fileTitle, mediaType});
     },
-    [openPlayer],
+    [playWithToast],
   );
   const handleRetry = useCallback(() => setError(null), []);
   const handleSubmitSearch = useCallback(() => {
@@ -276,24 +332,24 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   // ── P40.5: remote rows route to their correct destination ──
   const handlePlayTrack = useCallback(
     (track: JamendoTrackResult) => {
-      openPlayer({
+      void playWithToast({
         uri: track.audioUrl,
         title: track.name,
-        type: resolveStreamType('music'),
+        mediaType: 'music',
       });
     },
-        [openPlayer],
+    [playWithToast],
   );
 
   const handlePlayAudius = useCallback(
     (track: AudiusTrackResult) => {
-      openPlayer({
+      void playWithToast({
         uri: track.streamUrl,
         title: track.title,
-        type: resolveStreamType('music'),
-            });
+        mediaType: 'music',
+      });
     },
-    [openPlayer],
+    [playWithToast],
   );
 
   const handleOpenAudiobook = useCallback(
@@ -318,13 +374,13 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
 
   const handleOpenChannel = useCallback(
     (channel: IPTVChannelResult) => {
-      openPlayer({
+      void playWithToast({
         uri: channel.url,
         title: channel.name,
-        type: resolveStreamType('live-tv'),
+        mediaType: 'live-tv',
       });
     },
-        [openPlayer],
+    [playWithToast],
   );
 
   const remoteHandlers: RemoteResultsHandlers = {

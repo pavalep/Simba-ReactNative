@@ -49,11 +49,13 @@ import type {MediaKind, MediaLane} from '../../types/media';
 import {secondsToMs} from './position';
 import {
   err,
+  launchError,
   networkError,
   ok,
   type Result,
   type StreamError,
 } from './streamErrors';
+import {mapBridgeLaunchError} from './bridgeErrors';
 import type {PlaybackId} from './playbackFacade';
 
 export {
@@ -103,6 +105,7 @@ export {
   type UnsupportedStreamError,
   type ExpiredStreamError,
   type BlockedStreamError,
+  type LaunchStreamError,
   type Result,
   ok,
   err,
@@ -112,11 +115,18 @@ export {
   unsupportedError,
   expiredError,
   blockedError,
+  launchError,
   isNetworkError,
   isUnsupportedError,
   isExpiredError,
   isBlockedError,
+  isLaunchError,
 } from './streamErrors';
+
+// V22 B-009 — bridge error code → typed StreamError mapper. Call
+// sites that need more granular launch-failure messaging can call
+// this directly to inspect the cause / userFixable flags.
+export {mapBridgeLaunchError, bridgeCodeFromError, type BridgeLaunchErrorCode} from './bridgeErrors';
 
 // W22 D-023 — unified PlaybackFacade (1-import-1-wrapper for
 // new consumers; the canonical junior-dev integration).
@@ -265,11 +275,13 @@ export function usePlay(): (input: PlayInput) => Promise<Result<PlaybackId, Stre
   return useCallback(
     async (input: PlayInput): Promise<Result<PlaybackId, StreamError>> => {
       // Hand-rolled try/catch instead of `capture()` so we can
-      // produce the two distinct error messages:
-      //   - "Player refused launch" (bridge returned false)
-      //   - "Player launch failed"  (bridge threw)
-      // `capture()` wraps thrown errors with a single message,
-      // which would lose the distinction.
+      // distinguish "bridge refused (returned false)" from "bridge
+      // threw a typed rejection code" — the latter is what B-009
+      // surfaced. The post-V22 mapper (`mapBridgeLaunchError`)
+      // routes the rejection code (E_INVALID_TYPE / E_NO_ACTIVITY
+      // / E_ACTIVITY_NOT_FOUND / E_SECURITY / E_OPEN_PLAYER_FAILED)
+      // to the right `StreamError` variant so call sites can
+      // show a meaningful toast.
       try {
         const accepted = await openPlayer({
           uri: input.uri,
@@ -277,7 +289,13 @@ export function usePlay(): (input: PlayInput) => Promise<Result<PlaybackId, Stre
           type: resolveStreamType(input.mediaType),
         });
         if (!accepted) {
-          return err(networkError('Player refused launch'));
+          // No typed code on a `false` return — the bridge only
+          // resolves `true` after a successful startActivity.
+          // Treat as launch failure with the underlying cause
+          // captured by the bridge.
+          return err(
+            launchError('Player refused launch', {userFixable: false}),
+          );
         }
         // V12 doesn't return a PlaybackId; the bridge maintains
         // its own session identity. We synthesize a JS-side id
@@ -287,11 +305,7 @@ export function usePlay(): (input: PlayInput) => Promise<Result<PlaybackId, Stre
         const playbackId = `play:${input.uri}:${Date.now()}`;
         return ok(playbackId);
       } catch (e) {
-        return err(
-          networkError('Player launch failed', {
-            cause: e instanceof Error ? e.message : String(e),
-          }),
-        );
+        return err(mapBridgeLaunchError(e));
       }
     },
     [openPlayer],

@@ -383,13 +383,15 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
             variant="h2"
             color="primary"
             style={styles.title}
-            accessibilityLabel={`Now playing: ${fileTitle || 'Unknown Track'}`}>
-            {fileTitle || 'Unknown Track'}
+            accessibilityLabel={`Now playing: ${state.title || fileTitle || 'Unknown Track'}`}>
+            {state.title || fileTitle || 'Unknown Track'}
           </AppText>
 
-          {/* Artist / file info */}
+          {/* Artist / file info — prefers the live `state.artist`
+              from the playback facade (mpv's metadata), falls
+              back to a generic label when no metadata is set. */}
           <AppText variant="body2" color="secondary" style={styles.artist}>
-            Unknown Artist
+            {state.artist || 'Unknown Artist'}
           </AppText>
 
           {/* Seek bar */}
@@ -467,19 +469,24 @@ export const NowPlayingScreen: React.FC<Props> = ({route}) => {
             </AppText>
           </TouchableOpacity>
 
-          {/* Volume indicator */}
+          {/* Volume indicator — wired to `state.volume` from the
+              playback facade so the bar + label always reflect the
+              real mpv output volume (0..100). Pre-fix was hardcoded
+              to 70% regardless of actual volume. */}
           <View style={styles.volumeRow}>
-            <AppText style={styles.volumeIcon}>{'🔈'}</AppText>
+            <AppText style={styles.volumeIcon}>
+              {state.volume === 0 ? '🔇' : state.volume < 33 ? '🔈' : state.volume < 66 ? '🔉' : '🔊'}
+            </AppText>
             <View style={styles.volumeTrack}>
               <View
                 style={[
                   styles.volumeFill,
-                  {width: '70%'},
+                  {width: `${Math.max(0, Math.min(100, state.volume))}%`},
                 ]}
               />
             </View>
             <AppText variant="caption" color="secondary" style={styles.volumeLabel}>
-              70%
+              {`${Math.round(Math.max(0, Math.min(100, state.volume)))}%`}
             </AppText>
           </View>
         </ScrollView>

@@ -94,11 +94,51 @@ export interface BlockedStreamError {
   readonly reason?: 'geo' | 'banned' | 'parental' | 'unknown';
 }
 
+/**
+ * V22 — A `launch` error — the `PlayerActivity` couldn't be launched.
+ *
+ * The native `MpvBridgeModule.openPlayer` rejects with one of 5
+ * documented codes when the launch fails for reasons unrelated to
+ * the content:
+ *   - `E_INVALID_TYPE`        — the `type` arg wasn't 'video' or 'audio'
+ *                              (defensive guard, JS-side type system
+ *                              normally prevents this)
+ *   - `E_NO_ACTIVITY`         — no current activity available (bridge
+ *                              called from headless context)
+ *   - `E_ACTIVITY_NOT_FOUND`  — `PlayerActivity` not declared in the
+ *                              AndroidManifest (broken manifest)
+ *   - `E_SECURITY`            — manifest restriction refused the launch
+ *   - `E_OPEN_PLAYER_FAILED`  — catch-all (e.g. startActivity threw)
+ *
+ * All five are app-side / device-state issues, not content/credential
+ * problems, so they map to a dedicated variant (not `network` / `blocked`).
+ *
+ * **B-009**: the pre-V22 facade collapsed every bridge rejection to
+ * `network`, so the user saw "No connection" toasts even when the
+ * player launch was the failure (e.g. when archive.org's stream URL
+ * was correct but `startActivity` threw `SecurityException`). Call
+ * sites that need a per-launch-message UI can branch on `code` and
+ * `userFixable`.
+ */
+export interface LaunchStreamError {
+  readonly kind: 'launch';
+  readonly message: string;
+  /** The native error code (E_INVALID_TYPE / E_NO_ACTIVITY / E_ACTIVITY_NOT_FOUND / E_SECURITY / E_OPEN_PLAYER_FAILED). */
+  readonly code?: string;
+  /** Underlying cause (e.g. startActivity exception message). */
+  readonly cause?: string;
+  /** True when the user can fix this themselves (E_NO_ACTIVITY when
+   *  the app is misconfigured mid-use). False for app-side bugs
+   *  (E_ACTIVITY_NOT_FOUND, E_INVALID_TYPE). */
+  readonly userFixable: boolean;
+}
+
 export type StreamError =
   | NetworkStreamError
   | UnsupportedStreamError
   | ExpiredStreamError
-  | BlockedStreamError;
+  | BlockedStreamError
+  | LaunchStreamError;
 
 /** Convenience constructors for the 4 variants. */
 export const networkError = (
@@ -139,6 +179,17 @@ export const blockedError = (
   message,
   provider: options.provider,
   reason: options.reason ?? 'unknown',
+});
+
+export const launchError = (
+  message = 'Player couldn’t launch',
+  options: {code?: string; cause?: string; userFixable?: boolean} = {},
+): LaunchStreamError => ({
+  kind: 'launch',
+  message,
+  code: options.code,
+  cause: options.cause,
+  userFixable: options.userFixable ?? false,
 });
 
 // ─── Result<T, E> ───────────────────────────────────────────
@@ -209,3 +260,7 @@ export const isExpiredError = (e: StreamError): e is ExpiredStreamError =>
 /** Narrow a `StreamError` to a `BlockedStreamError`. */
 export const isBlockedError = (e: StreamError): e is BlockedStreamError =>
   e.kind === 'blocked';
+
+/** Narrow a `StreamError` to a `LaunchStreamError` (B-009). */
+export const isLaunchError = (e: StreamError): e is LaunchStreamError =>
+  e.kind === 'launch';

@@ -17,8 +17,12 @@ import React, {
 } from 'react';
 import {useToast} from '../../../components/feedback/Toast';
 import {
-  resolveStreamType,
-  usePlayerActivity,
+  isBlockedError,
+  isExpiredError,
+  isLaunchError,
+  isNetworkError,
+  isUnsupportedError,
+  usePlay,
 } from '../../../infrastructure/player';
 import {resolveInternetArchiveVideoDetails} from '../../../infrastructure/api/internetArchive/adapter';
 import type {InternetArchiveVideoResult} from '../../../types/api';
@@ -66,7 +70,7 @@ export const MoviesDataProvider: React.FC<{
   sortKey?: string;
 }> = ({children, sortKey}) => {
   const toast = useToast();
-  const {openPlayer} = usePlayerActivity();
+  const play = usePlay();
 
   // Active scope state. The screen pushes changes via the
   // setters; the hook reads them as inputs.
@@ -113,12 +117,64 @@ export const MoviesDataProvider: React.FC<{
           );
           return;
         }
-        openPlayer({
+        // Use the V21 typed `usePlay()` facade — it awaits the
+        // bridge call and returns `Result<PlaybackId, StreamError>`
+        // so the 4 failure variants (network / unsupported /
+        // expired / blocked) can surface as distinct toasts.
+        // The pre-facade direct `usePlayerActivity().openPlayer()`
+        // call was not awaited (rejections became unhandled
+        // promise rejections) and the `false` return was discarded
+        // (silent no-op when the bridge refused launch).
+        const result = await play({
           uri: details.streamingUrl,
           title: item.title,
-          startPositionMs: 0,
-          type: resolveStreamType('movie'),
+          mediaType: 'movie',
         });
+        if (result.ok) return;
+        if (isNetworkError(result.error)) {
+          toast.show(
+            'No connection. The movie will open when you are online.',
+            'warning',
+            {duration: 6000},
+          );
+        } else if (isUnsupportedError(result.error)) {
+          toast.show(
+            'This video format is not supported by the player.',
+            'error',
+            {duration: 6000},
+          );
+        } else if (isExpiredError(result.error)) {
+          toast.show(
+            'Sign in expired. Please sign in again.',
+            'warning',
+            {duration: 6000},
+          );
+        } else if (isBlockedError(result.error)) {
+          toast.show(
+            'This content is not available in your region.',
+            'error',
+            {duration: 6000},
+          );
+        } else if (isLaunchError(result.error)) {
+          // B-009: the player activity refused to launch. Show the
+          // specific cause (from the bridge's typed rejection code)
+          // so users can report what actually went wrong instead
+          // of seeing a generic "No connection" toast.
+          const detail = result.error.code
+            ? ` [${result.error.code}]`
+            : '';
+          toast.show(
+            `Player couldn’t start${detail ? ` — ${detail}` : ''}. ${result.error.message}`,
+            'error',
+            {duration: 8000},
+          );
+        } else {
+          toast.show(
+            'Could not open the player. Please try again.',
+            'error',
+            {duration: 6000},
+          );
+        }
       } catch (err) {
         const detail =
           err instanceof Error && err.message
@@ -129,7 +185,7 @@ export const MoviesDataProvider: React.FC<{
         setResolvingId(null);
       }
     },
-    [openPlayer, toast],
+    [play, toast],
   );
 
   const isSearchActive = activeSearchTerm.trim().length > 0;

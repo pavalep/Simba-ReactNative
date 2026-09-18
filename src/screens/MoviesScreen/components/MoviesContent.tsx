@@ -105,6 +105,7 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
                 offline={offline}
                 isSearchActive={isSearchActive}
                 onRetry={refetch}
+                errorMessage={error}
               />
             )
         }

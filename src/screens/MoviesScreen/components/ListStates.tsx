@@ -26,6 +26,12 @@ interface Props {
   /** Search mode drives the icon + copy (search results vs category). */
   isSearchActive: boolean;
   onRetry: () => void;
+  /** Optional raw error message from the query — shown under the
+   *  generic "Couldn't load movies." line so users can report
+   *  what actually went wrong (timeout, network, parse error, etc.).
+   *  B-008: without this, the error UI hides the diagnostic and
+   *  every failure looks identical. */
+  errorMessage?: string | null;
 }
 
 export const ListStates: React.FC<Props> = ({
@@ -33,6 +39,7 @@ export const ListStates: React.FC<Props> = ({
   offline,
   isSearchActive,
   onRetry,
+  errorMessage,
 }) => {
   const {colors} = useTheme();
   const styles = useMemo(() => createListStatesStyles(), []);
@@ -66,6 +73,10 @@ export const ListStates: React.FC<Props> = ({
             ? text.states.errorOfflineMessage
             : text.states.errorLoadFailed
         }
+        // B-008: surface the raw error message (timeout, network
+        // failure, parse error, ...) under the generic copy so
+        // users can report what's actually wrong.
+        errorDetail={errorMessage ?? undefined}
         onRetry={onRetry}
       />
     );

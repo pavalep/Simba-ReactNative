@@ -11,8 +11,16 @@
 // useInfiniteApiQuery re-points the queryKey.
 
 import React, {useCallback, useMemo, type ReactNode} from 'react';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import {usePlay} from '../../../infrastructure/player';
 import {useMusicScreen} from '../hooks/useMusicScreen';
+import {useToast} from '../../../components/feedback/Toast';
+import {
+  isBlockedError,
+  isExpiredError,
+  isLaunchError,
+  isNetworkError,
+  isUnsupportedError,
+} from '../../../infrastructure/player';
 import type {JamendoTrackResult} from '../../../types/api';
 
 interface MusicDataContextValue {
@@ -50,15 +58,64 @@ export const MusicDataProvider: React.FC<{
 }> = ({children}) => {
   // Single hook instance for the whole screen.
   const music = useMusicScreen();
-  const {openPlayer} = usePlayerActivity();
+  const play = usePlay();
+  const toast = useToast();
 
-  const handleTrackPress = useCallback((item: JamendoTrackResult) => {
-    openPlayer({
-      uri: item.audioUrl,
-      title: item.name,
-      type: resolveStreamType('music'),
-    });
-  }, [openPlayer]);
+  const handleTrackPress = useCallback(
+    async (item: JamendoTrackResult) => {
+      // V21 typed facade — awaited + Result pattern-match so the
+      // 4 failure variants (network / unsupported / expired /
+      // blocked) surface as toasts instead of being swallowed.
+      // Pre-V21: direct usePlayerActivity().openPlayer() call
+      // returned a Promise<boolean>; rejection became unhandled
+      // promise rejection, `false` was discarded silently.
+      const result = await play({
+        uri: item.audioUrl,
+        title: item.name,
+        mediaType: 'music',
+      });
+      if (result.ok) return;
+      if (isNetworkError(result.error)) {
+        toast.show(
+          'No connection. The track will open when you are online.',
+          'warning',
+          {duration: 6000},
+        );
+      } else if (isUnsupportedError(result.error)) {
+        toast.show(
+          'This audio format is not supported by the player.',
+          'error',
+          {duration: 6000},
+        );
+      } else if (isExpiredError(result.error)) {
+        toast.show('Sign in expired. Please sign in again.', 'warning', {
+          duration: 6000,
+        });
+      } else if (isBlockedError(result.error)) {
+        toast.show(
+          'This content is not available in your region.',
+          'error',
+          {duration: 6000},
+        );
+      } else if (isLaunchError(result.error)) {
+        // B-009: player activity refused to launch. Surface the
+        // typed bridge rejection code so users can report it.
+        const detail = result.error.code ? ` [${result.error.code}]` : '';
+        toast.show(
+          `Player couldn’t start${detail ? ` — ${detail}` : ''}. ${result.error.message}`,
+          'error',
+          {duration: 8000},
+        );
+      } else {
+        toast.show(
+          'Could not open the player. Please try again.',
+          'error',
+          {duration: 6000},
+        );
+      }
+    },
+    [play, toast],
+  );
 
   const value = useMemo<MusicDataContextValue>(
     () => ({

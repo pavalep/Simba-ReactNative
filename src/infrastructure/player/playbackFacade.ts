@@ -44,7 +44,15 @@ import {
   usePlayerProgress,
 } from '@simba-dev/react-native-media-player';
 import type {MediaKind, MediaLane} from '../../types/media';
-import {err, networkError, ok, type Result, type StreamError} from './streamErrors';
+import {
+  err,
+  launchError,
+  networkError,
+  ok,
+  type Result,
+  type StreamError,
+} from './streamErrors';
+import {mapBridgeLaunchError} from './bridgeErrors';
 import {secondsToMs} from './position';
 
 // ─── Public types ───────────────────────────────────────────
@@ -56,6 +64,10 @@ export type PlaybackId = string;
 export interface PlaybackState {
   isPlaying: boolean;
   title: string;
+  /** Artist / channel / creator label from mpv metadata. Empty
+   *  string when no metadata is available; consumers should
+   *  display a fallback like "Unknown Artist" themselves. */
+  artist: string;
   volume: number;
   /** Mapped from `PlayerState.isMuted` — the underlying module uses `isMuted`; the facade uses the shorter `mute`. */
   mute: boolean;
@@ -184,6 +196,10 @@ export function usePlaybackFacade(): PlaybackFacade {
   // codes) will let this map to the right `StreamError.kind`.
   const open = useCallback(
     async (input: OpenInput): Promise<Result<PlaybackId, StreamError>> => {
+      // B-009: route bridge rejections through `mapBridgeLaunchError`
+      // so the typed code (E_INVALID_TYPE / E_NO_ACTIVITY / etc.)
+      // maps to the right `StreamError` variant instead of every
+      // failure collapsing to `network`.
       try {
         const accepted = await openPlayer({
           uri: input.uri,
@@ -191,15 +207,11 @@ export function usePlaybackFacade(): PlaybackFacade {
           type: resolveStreamType(input.mediaType),
         });
         if (!accepted) {
-          return err(networkError('Player refused launch'));
+          return err(launchError('Player refused launch', {userFixable: false}));
         }
         return ok(`play:${input.uri}:${Date.now()}` as PlaybackId);
       } catch (e) {
-        return err(
-          networkError('Player launch failed', {
-            cause: e instanceof Error ? e.message : String(e),
-          }),
-        );
+        return err(mapBridgeLaunchError(e));
       }
     },
     [openPlayer],
@@ -222,15 +234,11 @@ export function usePlaybackFacade(): PlaybackFacade {
           ...(startPositionMs != null ? {startPositionMs} : {}),
         });
         if (!accepted) {
-          return err(networkError('Player refused launch'));
+          return err(launchError('Player refused launch', {userFixable: false}));
         }
         return ok(`play:${input.uri}:${Date.now()}` as PlaybackId);
       } catch (e) {
-        return err(
-          networkError('Player launch failed', {
-            cause: e instanceof Error ? e.message : String(e),
-          }),
-        );
+        return err(mapBridgeLaunchError(e));
       }
     },
     [openPlayer],
@@ -252,17 +260,15 @@ export function usePlaybackFacade(): PlaybackFacade {
           ...(startPositionMs != null ? {startPositionMs} : {}),
         });
         if (!accepted) {
-          return err(networkError('Player refused playlist launch'));
+          return err(
+            launchError('Player refused playlist launch', {userFixable: false}),
+          );
         }
         return ok(
           `playlist:${input.entries[0]?.uri ?? 'unknown'}:${Date.now()}` as PlaybackId,
         );
       } catch (e) {
-        return err(
-          networkError('Player playlist launch failed', {
-            cause: e instanceof Error ? e.message : String(e),
-          }),
-        );
+        return err(mapBridgeLaunchError(e));
       }
     },
     [openPlaylistRaw],
@@ -273,6 +279,7 @@ export function usePlaybackFacade(): PlaybackFacade {
       state: {
         isPlaying: state.isPlaying,
         title: state.title,
+        artist: state.artist ?? '',
         volume: state.volume,
         mute: state.isMuted,
         speed: state.speed,
