@@ -1,0 +1,43 @@
+docs(v21/w8): consolidate Gate 5 coverage matrix + device-proof skeleton
+
+Gate 5 of the V21.5-beta.1 go/no-go review (md/SIMBA_V21_GO_NO_GO_REVIEW.md)
+fails on "no md/V21_COVERAGE.md and no md/V21_DEVICE_PROOF.md".
+This commit lands both files so Gate 5 becomes PARTIAL (files exist,
+device proofs still pending) instead of FAIL.
+
+Changes:
+
+1. md/SIMBA_V21_COVERAGE.md (new) — the consolidated 1-row-per-flow
+   matrix that joins the per-wave exit docs (W1-W8) and the defect
+   register into a single "is this beta-critical flow tested?" view.
+   23 user-facing flows + 5 N/A structural flows + 1 Gate-2-CI flow.
+   Cross-references the user's existing device_proof/ screenshots
+   (committed in 0d4cc7d) for Flow 4 (file playback) and Flow 22
+   (linked folders) — those rows are marked captured. The remaining
+   21 rows are pending; this file is the canonical "what's left"
+   checklist.
+
+2. md/SIMBA_V21_DEVICE_PROOF.md (new) — the empty skeleton for the
+   23 device proofs. Each row has a checkbox + the exact adb / shell
+   command to reproduce the proof + a Notes line. Ordered by Gate
+   (Gate 3 functional flows first, then Gate 4 persistence flows).
+   When all 23 are captured, flip the rows in V21_COVERAGE.md from
+   pending to captured, and Gate 3 + Gate 4 + Gate 5 all flip from
+   FAIL/PARTIAL to PASS.
+
+Pre-existing work referenced:
+- device_proof/T19.03_* (9 files): folder linking + media detect
+- device_proof/T26.03_* (2 files): music browse + music loaded
+- device_proof/T00_* (3 files): pre-link baselines
+- device_proof/baseline*.png, pre_login.png (3 files): app-state
+  baselines
+- device_proof/test_audio/*.wav (18 files): synthetic test data
+
+The matrix does NOT touch the user's build.gradle improvement
+(their >1.5x more rigorous gate condition is in the working tree
+but uncommitted by design — user commits that separately).
+
+Verification:
+- New files: 2
+- Lines added: ~430 (matrix) + ~340 (skeleton) = ~770
+- No code changes; no test changes; no config changes.

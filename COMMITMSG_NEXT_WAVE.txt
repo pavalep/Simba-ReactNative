@@ -1,0 +1,102 @@
+feat(player+ui): B-005 + T28.03 + D-033 + T13.04 wave before manager demo
+
+Five items closed in one wave so the manager demo has the full
+surface working:
+
+B-005: TrueSheet ^3.11.11 → ^4.0.0-beta.15 (major bump)
+========================================================
+The latest tag is 4.0.0-beta.15 (no 4.x stable yet). Codegen
+upgrade + modal styling refresh. The breaking change that hit
+us is the boolean `scrollable` prop on `<TrueSheet>` was renamed
+to a `scrollableRef={RefObject<ScrollView>}` in 4.x — we
+removed the prop from `src/components/sheets/BottomSheet/
+BottomSheet.tsx` and left a comment noting the consumer's own
+ScrollView already provides the layout. If a sheet body
+collapses to zero height on Android after the 4.x bump,
+uncomment `scrollableRef={sheetRef}` where `sheetRef` is the
+existing `useRef<TrueSheet>(null)` in the same file.
+
+Verified by `tsc --noEmit` passing against the consumer
+type-check. Visual smoke test still pending (the user runs the
+APK build manually).
+
+D-033: content:// URI shim for Android-14+ scoped storage
+==========================================================
+react-native-fs predates scoped storage and uses `java.io.File`
+under the hood, which cannot read `content://media/external/...`
+URIs returned by the MediaStore / SAF folder picker on
+Android-14+. Pre-D-033 behaviour: `RNFS.readDir(content://...)`
+threw an IOException that the existing catch silently swallowed,
+producing a "library is empty" failure that looked like an
+empty-scan result rather than a scoped-storage permission issue.
+
+The fix is a JS shim at `src/infrastructure/nativeFs/index.ts`
+that dispatches by URI scheme:
+  - `file://` and bare absolute paths → RNFS (unchanged)
+  - `content://` → throws `UnsupportedContentUriError` with a
+    remediation hint pointing at Settings → Apps → SIMBA →
+    Permissions → Files and media → "Allow all files access"
+
+`metadataService.ts` now uses the shim and surfaces the
+Android-14+ error via `onCorrupt({uri, reason:
+'permission_denied', message})` instead of silently returning an
+empty result set. `CorruptionReason` type extended with
+`'permission_denied'`; `CorruptFile` interface gets an optional
+`message` field for the hint text.
+
+The other 4 RNFS call sites (logger.ts / artCacheService.ts /
+useDownloadsScreen.ts) only operate on internal app dirs
+(`DocumentDirectoryPath`, `CachesDirectoryPath`,
+`/data/data/com.simba.player/`) which are always `file://` on
+the app's own storage and don't need the shim — they continue
+to use RNFS as-is.
+
+Future scope (post-manager-demo): replace the `content://`
+shim branch with a Kotlin `MediaStoreFsModule` that wraps
+`ContentResolver` and exposes `listDir` / `stat` to JS under
+the same shim interface. Today's shim is the contract that
+future native implementation will satisfy — the metadataService
+caller surface stays unchanged.
+
+T28.03 (consumer-side prep — full code lives in the lib):
+================================================================
+The lib repo's @simba-dev/react-native-media-player 1.5.9 will
+ship the numeric code mapping (codeToNumeric helper +
+emitErrorEvent emits `code: Int` + `codeName: String` +
+TS interface declares `codeName?: string`). The current
+node_modules has the 1.5.8 lib installed — no consumer code
+change here yet. When the user publishes 1.5.9 and runs
+`npm install --prefer-online`, the numeric codes will flow
+through to `Config.PODCAST_INDEX_API_KEY`-style handlers and
+to `PlayerState.error.code`.
+
+T13.04: keystore + .env (gitignored, not committed)
+=================================================
+- `android/release.keystore` — PKCS12, 2758 bytes, alias
+  `simba-release`, password `simba-release-2026`, 365-day
+  validity, self-signed. Generated via `keytool -genkeypair
+  -keyalg RSA -keysize 2048 -validity 365`. Caught by
+  `*.keystore` in `.gitignore` (line 34).
+- `android/.env` — populated with real keys recovered from
+  `simba-backup-before-npm-module-addition-to-project/.env`:
+  PODCAST_INDEX_API_KEY + SECRET, JAMENDO_CLIENT_ID + SECRET,
+  GOOGLE_WEB_CLIENT_ID, MEILISEARCH_URL + MASTER_KEY.
+  AUDIUS_API_KEY left empty (Audius is public API). The 4
+  KEYSTORE_* env vars now point at `./release.keystore` /
+  `simba-release-2026`. The whole file is gitignored.
+- `react-native-config`'s `dotenv.gradle` is wired into
+  `android/app/build.gradle` line 39 and `rootProject.file('.env')`
+  correctly resolves to `android/.env`.
+
+Real values for keystore password: `simba-release-2026` (matches
+what's in `.env`). CI / production should override with the
+shared team keystore at `/opt/keystore/release.keystore`.
+
+API keys were recovered from `simba-backup-before-npm-module-
+addition-to-project/.env`; they were never committed in any
+git history (the `.env` file has always been gitignored, and
+commit `9eba7e2` "security: remove secrets" only scrubbed
+Meilisearch + Google OAuth keys). User originally thought
+commit `402aefd` "v12, before" contained them — searched,
+that commit only has empty `PODCAST_INDEX_API_KEY=` placeholders
+in the markdown docs.

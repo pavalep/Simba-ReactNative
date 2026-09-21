@@ -1,0 +1,88 @@
+fix(player): D-038/D-039/D-040/D-042/D-043 chain unblocks video pixels at SurfaceView
+
+This commit pairs with the just-published @simba-dev/react-native-media-player@1.5.8
+(D-035 #1-#7 + D-036 + D-039 + D-040 + D-042 + D-043 — see the lib repo's
+CHANGELOG.md 1.5.8 entry for the full prose). The lib's wiring/UI fixes
+unblock the consumer-side binary override that's the centerpiece of this
+commit.
+
+D-038 (consumer-side binary override — centerpiece of this commit)
+==================================================================
+v1.5.7 shipped with mpv-android 2026-08-11 which regressed video output
+on x86_64 GFXSTREAM emulators and several Mali drivers — mpv decodes
+frames fine, but vo=gpu's EGL bootstrap fails before any pixel reaches
+the SurfaceView. The fix is to ship the pre-mpv-android-2026-08-11
+libmpv.so bundle at the consumer side (where it survives across gradle
+cleans) and use packagingOptions excludes to force AGP's native-lib
+merge to pick the consumer's nested copies over the AAR's flat
+contribution.
+
+Files added (30 binaries, 88 MB):
+
+  android/app/src/main/jniLibs/x86_64/libmpv.so                (6.7 MB, pre-2026-08-11)
+  android/app/src/main/jniLibs/x86_64/libavcodec.so           (16 MB)
+  android/app/src/main/jniLibs/x86_64/libavformat.so          (3.4 MB)
+  android/app/src/main/jniLibs/x86_64/libavutil.so            (897 KB)
+  android/app/src/main/jniLibs/x86_64/libavfilter.so          (5.3 MB)
+  android/app/src/main/jniLibs/x86_64/libavdevice.so          (9 KB)
+  android/app/src/main/jniLibs/x86_64/libswresample.so        (138 KB)
+  android/app/src/main/jniLibs/x86_64/libswscale.so           (1.7 MB)
+  android/app/src/main/jniLibs/x86_64/libOpenCL.so           (68 KB)
+  android/app/src/main/jniLibs/x86_64/libc++_shared.so        (1.3 MB, NDK-r27, matches old libmpv ABI)
+  ... + arm64-v8a/ + armeabi-v7a/ ABI variants of the same 10 files
+
+Source: tools/native-backups/2026-08-22-pre-mpv-2026-08-11/{x86_64,arm64-v8a,armeabi-v7a}/
+
+Files modified:
+
+  android/app/build.gradle — packagingOptions excludes += ["lib/*/libmpv.so",
+  "lib/*/libavcodec.so", "lib/*/libavformat.so", "lib/*/libavutil.so",
+  "lib/*/libavfilter.so", "lib/*/libavdevice.so", "lib/*/libswresample.so",
+  "lib/*/libswscale.so", "lib/*/libOpenCL.so", "lib/*/libc++_shared.so"].
+  The `lib/*/lib*.so` pattern matches the AAR's flat one-level path but
+  NOT the consumer's nested two-level path `lib/<abi>/<abi>/lib*.so`,
+  so AGP's mergeDebugNativeLibs task picks the consumer's copies.
+  Confirmed in the build dir:
+  app/build/intermediates/merged_native_libs/debug/mergeDebugNativeLibs/out/lib/x86_64/libmpv.so
+  = 6,729,360 bytes (the pre-2026-08-11 version).
+
+  package.json / package-lock.json — @simba-dev/react-native-media-player
+  ^1.5.7 → ^1.5.8 (npm install --prefer-online).
+
+  11 src/ files — D-035 #1-#7 (Promise<LaunchParams | null> signatures,
+  initPlayer idempotent mount, hydratePlayerState null-sentinel
+  filter, SimbaPlayerRoot→PlayerRoot prop pipe, loadFile+seek+play in
+  useEffect, DefaultControls.onClose→exitPipAndFinish) + D-036
+  (DefaultControls rgba → transparent + pointerEvents='box-none').
+
+Verification (live, emulator-5554 API 37 x86_64)
+==============================================
+- `am start -n com.simba.player/.PlayerActivity --es com.simba.player.EXTRA_URI
+  'file:///sdcard/Android/data/com.simba.player/files/test/bbb.mp4'`
+- mpv log:
+    [vo/gpu/opengl] GLES 3.1 detected
+    [vo/gpu/opengl] GL_RENDERER='Android Emulator OpenGL ES Translator (AMD Radeon(TM) 680M)'
+    [vo/gpu] Texture for plane 0: 640x360
+    [cplayer] playback restart complete @ 0.000000, video=playing
+- Screenshot delete_me/D043_top.png shows the Big Buck Bunny scene at
+  the SurfaceView layer (1.18 MB PNG, 1080x2400 portrait, letterboxed).
+
+Why the lib + consumer split
+============================
+The lib publishes at v1.5.7's stock mpv bundle (no binary blobs in the
+npm tarball). The consumer adds the binary override at the boundary.
+This keeps the lib portable for projects that DON'T need the override
+(ARM-only devices where the new mpv-android 2026-08-11 might be fine),
+while letting the SIMBA consumer carry the override forward until the
+mpv-android team ships a fix.
+
+If you fork this repo or build on a fresh machine, the jniLibs/
+files are checked in so `./gradlew :app:assembleDebug` Just Works
+without needing the archive at tools/native-backups/ to exist.
+
+Co-carries: D-036 defensive cleanup (DefaultControls rgba → transparent,
+pointerEvents='box-none'). The rgba(0,0,0,0.001) hack has been there
+since v1.5.0 era and was NOT the cause of the v1.5.7 video regression —
+but it's still confusing code that obscures intent. Replaced with the
+actual goal: a fully transparent fill View that doesn't intercept
+taps on the controls.
