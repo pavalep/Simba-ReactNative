@@ -13,7 +13,7 @@ import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
 import {linking} from './src/navigation/linking';
-import {resolveResumeMs} from './src/infrastructure/player';
+import {resolveResumeMs, useQueueSync} from './src/infrastructure/player';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {QueryProvider} from './src/app/QueryProvider';
 import {SimbaStatusBar} from './src/components/StatusBar';
@@ -77,6 +77,13 @@ const AppContent: React.FC = () => {
 
   // 43.1/43.2: cold-start silent restore + foreground session expiry
   useAuthSession();
+
+  // V19 W0 Phase 0.1: useQueueSync middleware. Wires the lib's native
+  // queue ↔ usePlayerStore. Mounted once at the app shell (W4+
+  // migration: this lives inside the V19 SimbaPlayer once V19
+  // replaces the V16 root). Source of truth:
+  // md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md §3.C + §5.
+  useQueueSync();
 
   // 49.1: hydrate downloads once at boot — the service owns the manifest, the
   // store mirrors it so badges/buttons/Downloads screen render instantly.

@@ -1,498 +1,107 @@
-// ─── W7 P25 / T23.07 — NowPlaying screen (live player state) ──────────
-//
-// **W7 P25 audit:** the V11/V12 screen carried 6 placeholder
-// `useState` calls (isLoading / error / refreshing / isPlaying /
-// position / duration) and 4 placeholder handlers that only
-// mutated local state. The screen was a *launch pad* for the
-// dedicated `PlayerActivity` (per the W2.x header) but its UI
-// controls did not actually drive playback — tapping play/pause/
-// prev/next/seek only updated local state, which the bridge
-// never read.
-//
-// P25 fix: drop the local `useState` for player state, read
-// the live state from the V21 player facade.
-//
-// **T23.07 migration (V22 D-023 / "1-import-1-wrapper rule"):**
-// the screen used to import 3 separate hooks (`usePlayer` +
-// `usePlayerProgress` + `usePlay`) + 4 type guards. That's 7
-// symbols for a single screen. The unified `usePlaybackFacade()`
-// composes all of them into one `PlaybackFacade` object with
-// 5 sub-surfaces (state / progress / commands / launch /
-// activity). The screen now reads the 4 it needs (state +
-// progress + commands + launch) from the facade.
-//
-// The migration is a pure refactor — same live state, same
-// bridge-backed commands, same `Result<PlaybackId, StreamError>`
-// branching in `handleOpenFullPlayer`. The facade does not own
-// new behavior; it just reshapes the 5 underlying contexts into
-// a single import.
-//
-// **Performance note:** the facade re-renders on ANY of the 5
-// contexts. The NowPlaying screen consumes state + progress
-// (both update at 1Hz) + commands (rare) + launch (rare), so
-// the facade is the right fit. A header badge that only needs
-// `isPlaying` should still call `usePlayer()` directly to avoid
-// the 1Hz progress re-renders.
-//
-// The screen still works as a deep-link target for the legacy
-// `simbaplayer://now-playing?fileUri=...&fileTitle=...` route
-// (Phase 47 deletion is still pending — see the V12 deprecation
-// audit). When a file is loaded in the player, this screen now
-// reflects the live state instead of a static placeholder.
+/**
+ * V19 W1 Phase 1.4 — `NowPlayingScreen` (chrome composition).
+ *
+ * The screen is now a THIN composition of the V19 chrome primitives.
+ * NO local state. NO `TouchableOpacity` for the seek track. NO
+ * `pointerEvents="none"` anti-patterns (V11 §13 fix). NO emoji icons.
+ *
+ * The five primitives (each one is a sibling, not a child of the
+ * others — this is what allows the chrome to auto-hide in W3.5
+ * without unmounting the surface):
+ *
+ *   - `VideoSurface`         (W1 — real)        — the frame area
+ *   - `VideoTitleOverlay`    (W1 stub → W3)     — top bar
+ *   - `TransportBar`         (W1 stub → W2)     — bottom transport row
+ *   - `VideoLoadingOverlay`  (W1 — real)        — spinner when buffering
+ *   - `VideoErrorOverlay`    (W1 — real)        — terminal error scrim
+ *
+ * `VideoMiniPlayer` is NOT mounted here — it's the shell-level dock
+ * (App.tsx), per SPEC §3.4.1.
+ *
+ * W2/W3 will fill in the title overlay + transport bar. W4 will
+ * fold this into the V19 SimbaPlayer consumer (one mount, not
+ * per-screen).
+ *
+ * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
+ * §3.1-3.6 + audit doc §5.
+ */
 
-import React, {useMemo, useCallback} from 'react';
-import {
-  View,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  type GestureResponderEvent,
-} from 'react-native';
-import {Placeholder} from '../../../components/feedback/Placeholder';
-import LinearGradient from 'react-native-linear-gradient';
+import * as React from 'react';
+import {StyleSheet, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
-import {spacing, radius} from '../../../theme/tokens';
-import {AppText} from '../../../components/core/AppText/AppText';
+import {spacing} from '../../../theme/tokens';
 import {SimbaStatusBar} from '../../../components/StatusBar';
-import {useToast} from '../../../components/feedback/Toast';
-import {
-  usePlaybackFacade,
-  isNetworkError,
-  isUnsupportedError,
-  isExpiredError,
-  isBlockedError,
-} from '../../../infrastructure/player';
+import {VideoSurface} from '../../../components/player/video/VideoSurface/VideoSurface';
+import {VideoTitleOverlay} from '../../../components/player/video/VideoTitleOverlay/VideoTitleOverlay';
+import {TransportBar} from '../../../components/player/video/TransportBar/TransportBar';
+import {VideoLoadingOverlay} from '../../../components/player/video/VideoLoadingOverlay/VideoLoadingOverlay';
+import {VideoErrorOverlay} from '../../../components/player/video/VideoErrorOverlay/VideoErrorOverlay';
+import {usePlaybackState} from '../../../infrastructure/player';
 import type {NowPlayingScreenProps} from '../types';
 
-import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
-
-// ─── Constants ───────────────────────────────────────────────
-
-const {width: SCREEN_WIDTH} = Dimensions.get('window');
-const ART_SIZE = Math.min(SCREEN_WIDTH - 64, 280);
-
-type Props = NowPlayingScreenProps;
-
-// ─── Component ───────────────────────────────────────────────
-
-export const NowPlayingScreen: React.FC<Props> = ({route}) => {
+export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
+  route,
+}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const toast = useToast();
+  const {fileTitle} = route.params ?? {};
+  // fileTitle is reserved for VideoTitleOverlay's W3 implementation;
+  // until then, the stub doesn't accept a prop.
+  // eslint-disable-next-line no-void
+  void fileTitle;
 
-  // T23.07: the unified `usePlaybackFacade()` composes all 5
-  // lower-level hooks into a single object. The screen reads
-  // 4 of the 5 sub-surfaces (state / progress / commands /
-  // launch) — `activity.getLaunchParams` is unused here (the
-  // deep-link parameters come from `route.params`, not the
-  // native bridge's launch queue).
-  const facade = usePlaybackFacade();
-  const {state, progress, commands, launch} = facade;
-
-  // ── Derived view state (no local useState) ──
-  const isPlaying = state.isPlaying;
-  const positionSec = Math.floor(progress.positionMs / 1000);
-  const durationSec = Math.floor(progress.durationMs / 1000);
-  // W7 P25: `isLoading` was a dead placeholder (`_setIsLoading`
-  // was never called). Wire it to the bridge's `isBuffering`
-  // signal so the loading spinner actually fires.
-  const isLoading = progress.isBuffering;
-
-  const fileUri = route.params?.fileUri;
-  const fileTitle = route.params?.fileTitle;
-
-  const positionPct =
-    progress.durationMs > 0
-      ? Math.min(progress.positionMs / progress.durationMs, 1)
-      : 0;
-
-  const currentTime = useMemo(() => {
-    const m = Math.floor(positionSec / 60);
-    const s = positionSec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }, [positionSec]);
-
-  const totalTime = useMemo(() => {
-    const m = Math.floor(durationSec / 60);
-    const s = durationSec % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  }, [durationSec]);
-
-  // W7 P25: transport handlers now call the bridge-backed
-  // commands. The V12 `previous()` / `next()` walk the
-  // module's internal playlist (no-op for a single-file
-  // launch via the deep link, real for `useOpenPlaylist`).
-  const handlePlayPause = useCallback(() => {
-    commands.togglePlayPause();
-  }, [commands]);
-
-  const handlePrev = useCallback(() => {
-    commands.previous();
-  }, [commands]);
-
-  const handleNext = useCallback(() => {
-    commands.next();
-  }, [commands]);
-
-  const handleSeek = useCallback(
-    (e: GestureResponderEvent) => {
-      const x = e.nativeEvent.locationX;
-      const trackWidth = SCREEN_WIDTH - 32;
-      const pct = Math.max(0, Math.min(1, x / trackWidth));
-      commands.seek(Math.round(pct * progress.durationMs));
-    },
-    [commands, progress.durationMs],
-  );
-
-  const handleOpenFullPlayer = useCallback(() => {
-    if (!fileUri) {
-      toast.show('No media is available to open.', 'error');
-      return;
-    }
-    // T23.07: `launch.open` is the facade's typed entry point —
-    // same `Result<PlaybackId, StreamError>` contract as the
-    // previous `usePlay()` call, just sourced from the facade.
-    // The V12 bridge currently maps all failures to
-    // NetworkStreamError; the W22 follow-up (native bridge
-    // update + Result-returning usePlayWithResume) lets each
-    // variant show a distinct message.
-    void launch
-      .open({
-        uri: fileUri,
-        title: fileTitle ?? 'Now Playing',
-        mediaType: 'audio',
-      })
-      .then(r => {
-        if (r.ok) return;
-        if (isNetworkError(r.error)) {
-          toast.show('No connection. Open Full Player will launch when online.', 'warning');
-        } else if (isUnsupportedError(r.error)) {
-          toast.show('This file format is not supported by the full player.', 'error');
-        } else if (isExpiredError(r.error)) {
-          toast.show('Sign in expired. Please sign in again.', 'warning');
-        } else if (isBlockedError(r.error)) {
-          toast.show('This content is not available in your region.', 'error');
-        } else {
-          toast.show('Could not open the full player.', 'error');
-        }
-      });
-  }, [fileTitle, fileUri, launch, toast]);
-
-  const styles = useMemo(
-    () =>
-      StyleSheet.create({
-        root: {
-          flex: 1,
-        },
-        header: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 16,
-          paddingTop: insets.top,
-          height: 48 + insets.top,
-        },
-        headerTitle: {
-          flex: 1,
-          textAlign: 'center',
-          marginRight: 36,
-        },
-        scrollContent: {
-          flex: 1,
-          alignItems: 'center',
-          paddingHorizontal: 32,
-        },
-        // ── Album art ──
-        artContainer: {
-          width: ART_SIZE,
-          height: ART_SIZE,
-          borderRadius: 12,
-          backgroundColor: colors.border.subtle,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginTop: 24,
-          marginBottom: 32,
-        },
-        artPlaceholder: {
-          fontSize: 48,
-          color: colors.text.tertiary,
-        },
-        // ── Title / Info ──
-        title: {
-          marginBottom: 4,
-        },
-        artist: {
-          marginBottom: 40,
-        },
-        // ── Seek bar ──
-        seekRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          width: '100%',
-          paddingHorizontal: 16,
-          marginBottom: 24,
-        },
-        seekTrack: {
-          flex: 1,
-          height: 24,
-          justifyContent: 'center',
-        },
-        seekTrackBg: {
-          height: 4,
-          borderRadius: 4,
-          backgroundColor: colors.border.subtle,
-        },
-        seekTrackFill: {
-          position: 'absolute',
-          left: 0,
-          top: 10,
-          height: 4,
-          borderRadius: 4,
-          backgroundColor: colors.accent.gold,
-        },
-        seekThumb: {
-          position: 'absolute',
-          width: 14,
-          height: 14,
-          borderRadius: 7,
-          backgroundColor: colors.accent.gold,
-          marginLeft: -7,
-          top: 5,
-        },
-        timeRow: {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          width: '100%',
-          paddingHorizontal: 16,
-          marginTop: -16,
-          marginBottom: 32,
-        },
-        // ── Transport controls ──
-        transportRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 24,
-          marginBottom: 32,
-        },
-        transportBtn: {
-          width: 48,
-          height: 48,
-          borderRadius: 24,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        playBtn: {
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          backgroundColor: colors.accent.gold,
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-        transportIcon: {
-          fontSize: 22,
-          color: colors.text.primary,
-        },
-        playIcon: {
-          fontSize: 28,
-          color: colors.background.primary,
-        },
-        // ── Volume indicator ──
-        volumeRow: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          marginBottom: 32,
-        },
-        volumeIcon: {
-          fontSize: 14,
-          color: colors.text.secondary,
-        },
-        volumeLabel: {
-          minWidth: 60,
-          textAlign: 'center',
-        },
-        volumeTrack: {
-          width: 120,
-          height: 4,
-          borderRadius: 4,
-          backgroundColor: colors.border.subtle,
-          overflow: 'hidden',
-        },
-        volumeFill: {
-          height: '100%',
-          borderRadius: 4,
-          backgroundColor: colors.accent.gold,
-        },
-        fullPlayerBtn: {
-          alignSelf: 'center',
-          paddingHorizontal: 24,
-          paddingVertical: 10,
-          borderRadius: radius.sm,
-          marginBottom: 16,
-        },
-        // (Replaced by the shared <Placeholder> component.)
-      }),
-    [colors, insets.top],
-  );
-
-  const handleEmptyState = useCallback(() => {
-    if (!fileUri) {
-      return (
-        <Placeholder
-          variant="empty"
-          anchor="center"
-          icon="music"
-          title="No Track Playing"
-          message="Open a file from the player or search to start listening."
-        />
-      );
-    }
-    return null;
-  }, [fileUri]);
+  // V19 SPEC §2.1 — the screen does NOT call openPlayer / commands
+  // directly. The deep-link launch was already handled by the V16
+  // SimbaPlayer root (which mounts the PlayerActivity). The screen
+  // is a viewer of state + chrome composition.
+  const {videoState} = usePlaybackState();
 
   return (
-    <View style={styles.root}>
-      <SimbaStatusBar variant="home" />
+    <View style={[styles.root, {paddingTop: insets.top, backgroundColor: colors.background.primary}]}>
+      <SimbaStatusBar variant="player" />
 
-      <LinearGradient
-        colors={
-          [colors.background.primary, colors.background.primary]
-        }
-        style={StyleSheet.absoluteFill}
-      />
+      {/* VideoSurface owns the frame area. Geometry is `flex:1` so
+          siblings stack vertically without an explicit layout. */}
+      <View style={styles.surfaceContainer}>
+        <VideoSurface accessibilityLabel={fileTitle ?? 'Video'} />
 
-      <InternalHeader title="Now Playing" />
+        {/* Title overlay + transport bar are W3/W2 stubs that render
+            null in W1. The chrome composition shape is in place. */}
+        <VideoTitleOverlay />
 
-      {isLoading ? (
-        <Placeholder variant="loading" anchor="center" />
-      ) : fileUri ? (
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
-          {/* Album art placeholder */}
-          <View style={styles.artContainer}>
-            <AppText style={styles.artPlaceholder}>{'♫'}</AppText>
-          </View>
+        {/* Loading overlay sits on top of the surface (sibling, not
+            child — keeps the surface mounted). */}
+        <VideoLoadingOverlay />
 
-          {/* Title */}
-          <AppText
-            variant="h2"
-            color="primary"
-            style={styles.title}
-            accessibilityLabel={`Now playing: ${state.title || fileTitle || 'Unknown Track'}`}>
-            {state.title || fileTitle || 'Unknown Track'}
-          </AppText>
+        {/* Error overlay is the terminal scrim. Only renders when
+            videoState === 'error'. */}
+        <VideoErrorOverlay />
+      </View>
 
-          {/* Artist / file info — prefers the live `state.artist`
-              from the playback facade (mpv's metadata), falls
-              back to a generic label when no metadata is set. */}
-          <AppText variant="body2" color="secondary" style={styles.artist}>
-            {state.artist || 'Unknown Artist'}
-          </AppText>
+      {/* TransportBar lives at the bottom, BELOW the surface. W2 will
+          fill this in with seek + 5 controls + mode row. */}
+      <TransportBar />
 
-          {/* Seek bar */}
-          <TouchableOpacity
-            style={styles.seekRow}
-            activeOpacity={1}
-            onPress={handleSeek}
-            accessibilityRole="adjustable"
-            accessibilityLabel={`Seek position, ${Math.round(positionPct * 100)} percent`}>
-            <View style={styles.seekTrack} pointerEvents="none">
-              <View style={styles.seekTrackBg} />
-              <View
-                style={[
-                  styles.seekTrackFill,
-                  {width: `${positionPct * 100}%`},
-                ]}
-              />
-              <View
-                style={[
-                  styles.seekThumb,
-                  {left: `${positionPct * 100}%`},
-                ]}
-              />
-            </View>
-          </TouchableOpacity>
-
-          {/* Time labels */}
-          <View style={styles.timeRow}>
-            <AppText variant="caption" color="secondary">
-              {currentTime}
-            </AppText>
-            <AppText variant="caption" color="secondary">
-              {totalTime}
-            </AppText>
-          </View>
-
-          {/* Transport controls */}
-          <View style={styles.transportRow}>
-            <TouchableOpacity
-              style={styles.transportBtn}
-              onPress={handlePrev}
-              accessibilityLabel="Previous track"
-              accessibilityRole="button">
-              <AppText style={styles.transportIcon}>{'◀◀'}</AppText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.playBtn}
-              onPress={handlePlayPause}
-              accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
-              accessibilityRole="button">
-              <AppText style={styles.playIcon}>
-                {isPlaying ? '⏸' : '▶'}
-              </AppText>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.transportBtn}
-              onPress={handleNext}
-              accessibilityLabel="Next track"
-              accessibilityRole="button">
-              <AppText style={styles.transportIcon}>{'▶▶'}</AppText>
-            </TouchableOpacity>
-          </View>
-
-          {/* Full Player button */}
-          <TouchableOpacity
-            style={[styles.fullPlayerBtn, {backgroundColor: colors.accent.goldDim}]}
-            onPress={handleOpenFullPlayer}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Open full player">
-            <AppText variant="body2" color="accent">
-              Open Full Player
-            </AppText>
-          </TouchableOpacity>
-
-          {/* Volume indicator — wired to `state.volume` from the
-              playback facade so the bar + label always reflect the
-              real mpv output volume (0..100). Pre-fix was hardcoded
-              to 70% regardless of actual volume. */}
-          <View style={styles.volumeRow}>
-            <AppText style={styles.volumeIcon}>
-              {state.volume === 0 ? '🔇' : state.volume < 33 ? '🔈' : state.volume < 66 ? '🔉' : '🔊'}
-            </AppText>
-            <View style={styles.volumeTrack}>
-              <View
-                style={[
-                  styles.volumeFill,
-                  {width: `${Math.max(0, Math.min(100, state.volume))}%`},
-                ]}
-              />
-            </View>
-            <AppText variant="caption" color="secondary" style={styles.volumeLabel}>
-              {`${Math.round(Math.max(0, Math.min(100, state.volume)))}%`}
-            </AppText>
-          </View>
-        </ScrollView>
-      ) : (
-        handleEmptyState()
-      )}
+      {/* State hint for accessibility — screen readers can announce
+          what the player is doing right now. */}
+      <View accessibilityRole="text" accessibilityLabel={`Player is ${videoState}`} />
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  surfaceContainer: {
+    flex: 1,
+    position: 'relative',
+    margin: spacing.md,
+    borderRadius: spacing.sm,
+    overflow: 'hidden',
+  },
+});
+
+// Re-export for backward compatibility (existing imports keep working).
+export default NowPlayingScreen;

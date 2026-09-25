@@ -80,6 +80,68 @@ export {
   usePlayItem,
 } from '@simba-dev/react-native-media-player';
 
+// V19 W0 Phase 0.1 — queue sync middleware. Wires the lib's native
+// queue ↔ usePlayerStore. Mounted ONCE at AppContent (App.tsx).
+// Source of truth: md/SIMBA_PLAYER_V19_SPECIFICATION.md §3.22 +
+// md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md §3.C.
+export {useQueueSync} from './useQueueSync';
+
+// V19 W0 Phase 0.2 — presentation state (mini / expanded / pip).
+// Persisted via MMKV (matches the app's persistence layer). Source
+// of truth: SPEC §3.23 + audit §3.B.
+export {
+  usePresentation,
+  usePresentationStore,
+  type PresentationMode,
+  type PresentationState,
+} from './usePresentation';
+
+// V19 W0 Phase 0.3 — lane integrity guard on every launch path.
+// JS-side enforcement (native-level is V20). Source of truth:
+// SPEC §3.24 + audit §3.D.
+export {
+  validateLane,
+  laneError,
+  type LaneStreamError,
+} from './validateLane';
+
+// V19 W0 Phase 0.5 — the V19 chrome component (STUB in W0; Wave 4
+// fills in). Source of truth: SPEC §3 + audit §5. Migration note
+// (audit §5): the V16 lib also exports a `SimbaPlayer`. V19's NEW
+// `SimbaPlayer` REPLACES the V16 root in W4+. Until then, both
+// coexist; consumers keep using the V16 root.
+export {
+  SimbaPlayer,
+  type SimbaPlayerProps,
+  type SimbaPlayerRef,
+  type VideoSource,
+} from '../../components/player/video/SimbaPlayer';
+
+// V19 W1 — `usePlaybackState()` helper. Derives the V19 VideoState
+// enum from the lib's existing hooks. Used by VideoLoadingOverlay,
+// VideoErrorOverlay, and the rest of the chrome primitives.
+// Source of truth: SPEC §5.4 + §6 (playback axis state machine).
+export {
+  usePlaybackState,
+  type VideoState,
+  type PlaybackStateDerived,
+} from './usePlaybackState';
+
+// V19 W2 — `useTransport()` facade. Wraps the lib's
+// `usePlayerProgress()` + `usePlayer()` hooks and adds V19
+// derivations (`isPlaying`, `isEnded`, `normalizedWindow`,
+// `canEnterPip`). Source of truth: SPEC §3.7 + TRACKER Phase 2.1.
+export {
+  useTransport,
+  formatMsAsClock,
+  clampPosition,
+  type TransportState,
+  type TransportCommands,
+  type TransportHook,
+  type BufferedRange,
+  type NormalizedWindow,
+} from './useTransport';
+
 export type {
   PlayerQueueItem,
   // W22 F/U #2: types for the V13 resume-lookup surface.

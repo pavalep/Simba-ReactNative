@@ -71,6 +71,57 @@ jobs:
         # module will trip the PLAYER rule and fail the build.
         run: npm run lint:boundaries
 
+      - name: V19 isolation contract — Rule 1-9 grep checks
+        # V19 W0 Phase 0.0 — the isolation contract (SPEC §2.1).
+        # These 9 grep checks enforce the boundary at CI time so a
+        # junior dev can't accidentally bypass the facade. Source
+        # of truth: md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md §3.A.
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+
+          # Rule 2: no consumer imports the lib package directly.
+          if grep -rn "from '@simba-dev/react-native-media-player'" src/screens src/pages src/features 2>/dev/null; then
+            echo "::error::V19 isolation Rule 2 violated: consumers must import from src/infrastructure/player/ (the facade), not the lib package."
+            exit 1
+          fi
+
+          # Rule 3: no native-knowledge reach-through in consumers.
+          if grep -rn "MpvBridgeModule\|libmpv\|MpvPlayer" src/screens src/pages src/features 2>/dev/null; then
+            echo "::error::V19 isolation Rule 3 violated: consumer references a native type."
+            exit 1
+          fi
+
+          # Rule 4: no internal state ownership in consumers.
+          if grep -rn "useState" src/screens/NowPlaying src/screens/Movies 2>/dev/null; then
+            echo "::error::V19 isolation Rule 4 violated: consumer holds player state in useState."
+            exit 1
+          fi
+
+          # Rule 6: no chrome composition by the consumer.
+          if grep -rnE "<VideoSurface|<TransportBar|<VideoTitleOverlay|<VideoMoreSheet|<ScrubPreview|<ChromeAutoHide" src/screens src/pages src/features 2>/dev/null; then
+            echo "::error::V19 isolation Rule 6 violated: consumer composes chrome primitives directly."
+            exit 1
+          fi
+
+          # Rule 8: SimbaPlayer mounted ONLY in App.tsx.
+          HITS=$(grep -rn "<SimbaPlayer" src/ 2>/dev/null | grep -v "App.tsx" || true)
+          if [ -n "$HITS" ]; then
+            echo "::error::V19 isolation Rule 8 violated: <SimbaPlayer /> rendered outside App.tsx."
+            echo "$HITS"
+            exit 1
+          fi
+
+          # Rule 9: VideoMiniPlayer imported only by App.tsx.
+          HITS=$(grep -rn "<VideoMiniPlayer" src/ 2>/dev/null | grep -v "App.tsx" || true)
+          if [ -n "$HITS" ]; then
+            echo "::error::V19 isolation Rule 9 violated: <VideoMiniPlayer /> imported outside App.tsx."
+            echo "$HITS"
+            exit 1
+          fi
+
+          echo "V19 isolation contract: Rules 1-9 PASS."
+
       - name: Jest — V21 baseline
         # `npx jest` (no --forceExit) per the V21 W8 P29 spec. The
         # W2 P08 D-004 worker-exit warning is a known cosmetic

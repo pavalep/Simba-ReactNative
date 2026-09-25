@@ -195,7 +195,6 @@ describe('capture() (V21 W7 P28)', () => {
   });
   it('handles a non-Error throwable', async () => {
     const r = await capture(() => {
-      // eslint-disable-next-line @typescript-eslint/no-throw-literal
       throw 'string thrown';
     });
     expect(r.ok).toBe(false);
