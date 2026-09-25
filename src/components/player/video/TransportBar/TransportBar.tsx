@@ -1,5 +1,5 @@
 /**
- * V19 W2 Phase 2.3 — `TransportBar` (the progress row).
+ * V19 W2 Phase 2.3 + W3 Phase 3.1 — `TransportBar` (progress row + mode row).
  *
  * The single chrome primitive that owns the seek gesture and
  * the time labels. Reads everything from `useTransport()` (W2
@@ -7,7 +7,8 @@
  *
  * Geometry:
  *   ┌─────────────────────────────────────────────────────┐
- *   │  1:23   ██████████░░░░░░░░░░░░░░░░░  -3:45         │  ← progress row
+ *   │  1:23   ██████████░░░░░░░░░░░░░░░░░  -3:45         │  ← progress row (W2)
+ *   │  [⟲ Off]                              [⋯]           │  ← mode row (W3)
  *   └─────────────────────────────────────────────────────┘
  *
  *   Progress row breakdown:
@@ -17,6 +18,14 @@
  *       (deeper slate), the `PlayedRangeFill` (gold), and the
  *       `Thumb` (gold dot, scaled up under the finger).
  *     - Right `TimeLabel`: remaining time as `-3:45`.
+ *
+ *   Mode row breakdown (W3 — Phase 3.1):
+ *     - Left: `<ModeControl />` (compact repeat-mode button).
+ *     - Right: slot reserved for `<More />` (Phase 3.4).
+ *     - The transport row (Phase 3.5 — play/pause/skip) lives
+ *       BETWEEN the progress and mode rows in the full SPEC.
+ *       W3 batches the mode row first as a clean review unit;
+ *       the transport row comes in a follow-up wave.
  *
  *   The full track is `Pressable` with `accessibilityRole=
  *   "adjustable"` so screen-reader users can scrub by swiping
@@ -59,6 +68,7 @@ import {
   formatMsAsClock,
 } from '../../../../infrastructure/player';
 import {BufferedRangeFill} from './BufferedRangeFill';
+import {ModeControl} from './ModeControl';
 
 /** Minimum drag distance (px) before a touch is treated as a pan
  *  rather than a tap. Apple's AVPlayer uses ~5px; we mirror. */
@@ -255,6 +265,19 @@ export const TransportBar: React.FC = () => {
           {formatMsAsClock(state.durationMs - displayMs)}
         </AppText>
       </View>
+
+      {/* Row 3 — Mode + More (W3 Phase 3.1).
+          The transport row (Phase 3.5) goes BETWEEN the progress
+          row and this mode row in the full SPEC; W3 batches the
+          mode row first as a clean review unit. */}
+      <View style={styles.modeRow}>
+        <View style={styles.modeLeft}>
+          <ModeControl />
+        </View>
+        <View style={styles.modeRight}>
+          {/* Slot for <More /> (Phase 3.4) */}
+        </View>
+      </View>
     </View>
   );
 };
@@ -280,6 +303,22 @@ const styles = StyleSheet.create({
     minWidth: 44,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
+  },
+  modeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.xs,
+  },
+  modeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  modeRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   trackHitArea: {
     flex: 1,

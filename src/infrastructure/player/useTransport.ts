@@ -94,6 +94,8 @@ export interface TransportState {
   normalizedWindow: NormalizedWindow;
   seekable: boolean;
   canEnterPip: boolean;
+  /** V19 W3 — current repeat mode (V19 vocabulary). */
+  repeatMode: RepeatMode;
 }
 
 /**
@@ -110,6 +112,39 @@ export interface TransportCommands {
   togglePlayPause(): void;
   play(): void;
   pause(): void;
+  /**
+   * V19 W3 — set the loop mode. Maps the V19 semantic
+   * (`'off' | 'one' | 'all'`) to the lib's mpv-native
+   * `MpvLoopMode` (`'none' | 'file' | 'playlist'`).
+   */
+  setRepeatMode(mode: RepeatMode): void;
+}
+
+/**
+ * V19 W3 — the V19 semantic loop mode. The chrome renders these
+ * labels; the facade maps them to the lib's `MpvLoopMode`.
+ *
+ *   - `'off'`  → lib `'none'`    — no looping
+ *   - `'one'`  → lib `'file'`    — repeat the current file
+ *   - `'all'`  → lib `'playlist'`— repeat the entire playlist
+ *
+ * Why a V19 enum separate from `MpvLoopMode`: the V19 chrome
+ * renders Apple-Music-style labels ("Repeat one" / "Repeat all"),
+ * and decoupling the chrome vocabulary from the native vocabulary
+ * means a future lib-side rename doesn't cascade through the UI.
+ */
+export type RepeatMode = 'off' | 'one' | 'all';
+
+function mpvLoopModeToRepeat(mode: string | undefined): RepeatMode {
+  if (mode === 'file') return 'one';
+  if (mode === 'playlist') return 'all';
+  return 'off';
+}
+
+function repeatModeToMpv(mode: RepeatMode): 'none' | 'file' | 'playlist' {
+  if (mode === 'one') return 'file';
+  if (mode === 'all') return 'playlist';
+  return 'none';
 }
 
 export interface TransportHook {
@@ -184,12 +219,20 @@ function deriveNormalizedWindow(
 
 export function useTransport(): TransportHook {
   const progress = usePlayerProgress();
-  const {commands: libCommands}: {commands: PlayerCommands} = usePlayer();
+  const {state: playerState, commands: libCommands}: {
+    state: {loopMode?: string};
+    commands: PlayerCommands;
+  } = usePlayer();
   const commands = libCommands;
 
   const bufferedRanges = useMemo(
     () => deriveBufferedRanges(progress),
     [progress.durationMs, progress.cacheFill, progress.cacheRanges],
+  );
+
+  const repeatMode = useMemo<RepeatMode>(
+    () => mpvLoopModeToRepeat(playerState.loopMode),
+    [playerState.loopMode],
   );
 
   const state = useMemo<TransportState>(() => {
@@ -216,8 +259,9 @@ export function useTransport(): TransportHook {
       // gesture on `presentation.mode === 'expanded'` already;
       // this is a belt-and-suspenders for the hook consumer.
       canEnterPip: isPlaying && !isEnded && !isBuffering,
+      repeatMode,
     };
-  }, [progress, bufferedRanges]);
+  }, [progress, bufferedRanges, repeatMode]);
 
   const wrapped = useMemo<TransportCommands>(
     () => ({
@@ -245,6 +289,9 @@ export function useTransport(): TransportHook {
       },
       pause: () => {
         commands.pause();
+      },
+      setRepeatMode: (mode: RepeatMode) => {
+        commands.setLoopMode(repeatModeToMpv(mode));
       },
     }),
     [commands, state.durationMs],

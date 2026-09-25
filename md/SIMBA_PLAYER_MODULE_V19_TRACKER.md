@@ -285,26 +285,32 @@ Before W0 closes, ALL of the following must be true:
 
 ## Wave 3 — Mode row + `More` surface
 
+> **Wave 3 status (2026-09-25): Phase 3.1 shipped**. Phases 3.2-3.5
+> pending as separate review units (3.2 CaptionsToggle, 3.3 PiPToggle,
+> 3.4 More, 3.5 TransportRow). Per the batched-review workflow, each
+> phase lands as its own greenlit batch.
+
 ### Phase 3.1 — `ModeControl` (compact one-value display)
 
-- [ ] `src/components/player/video/TransportBar/ModeControl.tsx` exists
-- [ ] Renders ONE compact current-mode label (`Off` / `Repeat one` / `Repeat all`) with the gold accent
-- [ ] Tap opens `ModeSheet` (single-choice popover anchored to the control)
-- [ ] `ModeSheet` lists three options; the selected one is gold-highlighted
-- [ ] Selecting an option updates `VideoController.repeatMode` which sets the native mpv `loop-file`/`loop-playlist` defensively
-- [ ] `repeatMode === 'off'` is the default
-- [ ] Unit test: `ModeControl` renders the current mode correctly
-- [ ] Unit test: tap → opens the `ModeSheet`
-- [ ] Unit test: selecting a different mode calls `commands.setRepeatMode('repeat-one' | 'repeat-all' | 'off')`
-- [ ] Unit test: the selected option in the sheet matches the active mode after each interaction
-- [ ] Unit test: closing the sheet via tap-outside dismisses without changing the mode
+- [x] `src/components/player/video/TransportBar/ModeControl.tsx` exists
+- [x] Renders ONE compact current-mode label (`Off` / `Repeat one` / `Repeat all`) with the gold accent
+- [x] Tap opens `ModeSheet` (single-choice popover anchored to the control)
+- [x] `ModeSheet` lists three options; the selected one is gold-highlighted
+- [x] Selecting an option updates `useTransport().commands.setRepeatMode(...)` which maps V19 `RepeatMode` → lib `setLoopMode('none' | 'file' | 'playlist')`
+- [x] `repeatMode === 'off'` is the default
+- [x] Unit test: `ModeControl` renders the current mode correctly
+- [x] Unit test: tap → opens the `ModeSheet`
+- [x] Unit test: selecting a different mode calls `commands.setRepeatMode(...)`
+- [x] Unit test: the selected option in the sheet matches the active mode after each interaction
+- [x] Unit test: closing the sheet via tap-outside dismisses without changing the mode
+- [ ] **DEVIATION**: `commands.setRepeatMode(...)` instead of the spec's `commands.setRepeatMode('repeat-one' | 'repeat-all' | 'off')`. The V19 facade exposes a V19 `RepeatMode = 'off' | 'one' | 'all'` vocabulary and maps to the lib's native `MpvLoopMode = 'none' | 'file' | 'playlist'` at the boundary. Decoupling lets a future lib-side rename not cascade through the UI.
 
 ### Phase 3.2 — `CaptionsToggle` (compact optional control)
 
 - [ ] `src/components/player/video/TransportBar/CaptionsToggle.tsx` exists
-- [ ] Renders ONLY when `useTransport().captionTracks.length > 0`
+- [ ] Renders ONLY when `useTransport().captionTracks.length > 0` — **REQUIRES** adding `captionTracks` to the V19 `useTransport()` facade (not in lib's `PlayerProgress`; need to read from `PlayerState.tracks` filtering by `type === 'sub'`)
 - [ ] Tap opens `CaptionsSheet` (single-choice list of `captionTracks` items)
-- [ ] Selecting a track calls `commands.selectCaptionTrack(trackId)`
+- [ ] Selecting a track calls `commands.selectTrack('sub', trackId)`
 - [ ] The currently-active track is gold-highlighted
 - [ ] Unit test: does NOT render when `captionTracks.length === 0`
 - [ ] Unit test: tap → opens the sheet
@@ -315,7 +321,7 @@ Before W0 closes, ALL of the following must be true:
 
 - [ ] `src/components/player/video/TransportBar/PiPToggle.tsx` exists
 - [ ] Renders ONLY when `useTransport().canEnterPip === true`
-- [ ] Tap calls `VideoController.enterPip()` (native module call)
+- [ ] Tap calls `commands.enterPip()` (V19 W2 already exposes `canEnterPip` derivation in `useTransport`)
 - [ ] No inert button when unsupported — the component returns `null` when `canEnterPip === false` (no opacity:0 stub)
 - [ ] Unit test: renders when `canEnterPip === true`
 - [ ] Unit test: returns `null` when `canEnterPip === false`
@@ -340,9 +346,9 @@ Before W0 closes, ALL of the following must be true:
 
 - [ ] `src/components/player/video/TransportBar/TransportRow.tsx` exists
 - [ ] Five controls in order: Rewind 10 / Previous / Play-Pause / Next / Forward 10
-- [ ] Previous / Next disappear when `commands.canGoPrev === false` / `commands.canGoNext === false` — they MUST NOT become dead spacers
+- [ ] Previous / Next disappear when `commands.canGoPrev === false` / `commands.canGoNext === false` — they MUST NOT become dead spacers — **REQUIRES** adding `canGoPrev` / `canGoNext` derivations to `useTransport` (read from `PlayerState.playlist` + `currentIndex`)
 - [ ] Play-Pause is the only filled control, gold-accent
-- [ ] Rewind / Forward use the canonical 10s semantic
+- [ ] Rewind / Forward use the canonical 10s semantic (via `commands.step(-10000)` / `commands.step(10000)`)
 - [ ] Hit areas ≥ 44 × 44 pt
 - [ ] `accessibilityLabel` is state-aware (Pause vs Play; Play from beginning when finished; AudioTrack N of M)
 - [ ] Unit test: each button calls its respective command
