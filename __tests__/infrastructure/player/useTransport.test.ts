@@ -40,6 +40,16 @@ const mockCommands = {
   togglePlayPause: jest.fn(),
   play: jest.fn(),
   pause: jest.fn(),
+  setSpeed: jest.fn(),
+  setVolume: jest.fn(),
+  setScreenBrightness: jest.fn(),
+  getScreenBrightness: jest.fn(() => 0.75),
+  setProperty: jest.fn(),
+  setLoopMode: jest.fn(),
+  setTrack: jest.fn(),
+  selectTrack: jest.fn(),
+  next: jest.fn(),
+  previous: jest.fn(),
 };
 
 jest.mock('@simba-dev/react-native-media-player', () => ({
@@ -256,6 +266,60 @@ describe('useTransport — commands', () => {
     expect(mockCommands.togglePlayPause).toHaveBeenCalledTimes(1);
     expect(mockCommands.play).toHaveBeenCalledTimes(1);
     expect(mockCommands.pause).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── Tests for W3.5 surface additions (gestures + VideoMoreSheet) ─────
+
+describe('useTransport — W3.5 surface', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockProgress.positionMs = 0;
+    mockProgress.durationMs = 0;
+  });
+
+  it('setSpeed(rate) passes through to the lib commands', async () => {
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.setSpeed(2);
+    });
+    expect(mockCommands.setSpeed).toHaveBeenCalledWith(2);
+  });
+
+  it('setVolume(volume) passes through to the lib commands (W3.5.3)', async () => {
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.setVolume(72);
+    });
+    expect(mockCommands.setVolume).toHaveBeenCalledWith(72);
+  });
+
+  it('setScreenBrightness(value) passes through to the lib commands (W3.5.3)', async () => {
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.setScreenBrightness(0.42);
+    });
+    expect(mockCommands.setScreenBrightness).toHaveBeenCalledWith(0.42);
+  });
+
+  it('getScreenBrightness() returns the lib value (W3.5.3 readback)', async () => {
+    const {result} = await renderHook(() => useTransport());
+    let brightness = -1;
+    await act(async () => {
+      brightness = result.current.commands.getScreenBrightness();
+    });
+    expect(brightness).toBe(0.75);
+  });
+
+  it('setProperty(name, value) passes through (W3.5.6 quality presets)', async () => {
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.setProperty('hwdec', 'mediacodec');
+    });
+    expect(mockCommands.setProperty).toHaveBeenCalledWith(
+      'hwdec',
+      'mediacodec',
+    );
   });
 });
 

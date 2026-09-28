@@ -104,6 +104,19 @@ export interface TransportState {
   canGoPrev: boolean;
   /** V19 W3.5 — true when the playlist has a next entry. */
   canGoNext: boolean;
+  /**
+   * V19 W3.5.5 — current playback rate (1.0 = normal). Mirrors
+   * `lib.PlayerState.speed` and is the value the long-press gesture
+   * restores after a 2× preview.
+   */
+  speed: number;
+  /**
+   * V19 W3.5.3 — current mpv volume (0..100). Drives the
+   * volume indicator pill on right-half vertical swipes.
+   */
+  volume: number;
+  /** V19 W3.5.3 — mute state (decoupled from `volume`). */
+  isMuted: boolean;
 }
 
 /**
@@ -139,6 +152,42 @@ export interface TransportCommands {
   rewind10(): void;
   /** V19 W3.5 — seek forward by 10s (canonical forward). */
   forward10(): void;
+  /**
+   * V19 W3.5.5 — set playback rate. Backed by lib
+   * `commands.setSpeed(rate)`. Used by the long-press preview
+   * (which writes 2 and restores) and by the More menu Speed chips.
+   */
+  setSpeed(rate: number): void;
+  /**
+   * V19 W3.5.3 — set mpv volume (0..100). Backed by lib
+   * `commands.setVolume`. Drives the volume indicator pill on
+   * right-half vertical swipes.
+   */
+  setVolume(volume: number): void;
+  /**
+   * V19 W3.5.3 — set the OS screen brightness (0..1) via the lib.
+   * Backed by lib `commands.setScreenBrightness` (Android
+   * `Window.LayoutParams.screenBrightness`).
+   */
+  setScreenBrightness(value: number): void;
+  /**
+   * V19 W3.5.3 — read the current OS screen brightness (0..1).
+   * Promoted onto public `PlayerCommands` in lib 1.6.0. Used by
+   * the VerticalSwipeGestures mount-time hydration so the
+   * brightness pill starts at the user's prior value (the
+   * mpv bridge doesn't expose a `volume` readback-by-event for
+   * screen brightness — the lib caches a value on the
+   * `MpvPlayerModule` and we read it once).
+   */
+  getScreenBrightness(): number;
+  /**
+   * V19 W3.5.6 — write an arbitrary mpv property via lib
+   * `commands.setProperty(name, value)`. Used by the Quality
+   * chips to set `hwdec` + `profile` (mpv-native mapping; no
+   * dedicated `setVideoQuality` exists in mpv — the facade
+   * deliberately avoids adding one to keep the surface honest).
+   */
+  setProperty(name: string, value: unknown): void;
 }
 
 /**
@@ -289,6 +338,9 @@ export function useTransport(): TransportHook {
       tracks?: ReadonlyArray<{id: number; type: string; title?: string; lang?: string; selected: boolean}>;
       playlist?: ReadonlyArray<unknown>;
       currentIndex?: number;
+      speed?: number;
+      volume?: number;
+      isMuted?: boolean;
     };
     commands: PlayerCommands;
   } = usePlayer();
@@ -349,6 +401,9 @@ export function useTransport(): TransportHook {
       activeCaptionTrackId,
       canGoPrev,
       canGoNext,
+      speed: playerState.speed ?? 1,
+      volume: playerState.volume ?? 100,
+      isMuted: playerState.isMuted ?? false,
     };
   }, [
     progress,
@@ -358,6 +413,9 @@ export function useTransport(): TransportHook {
     activeCaptionTrackId,
     canGoPrev,
     canGoNext,
+    playerState.speed,
+    playerState.volume,
+    playerState.isMuted,
   ]);
 
   const wrapped = useMemo<TransportCommands>(
@@ -410,6 +468,19 @@ export function useTransport(): TransportHook {
       },
       forward10: () => {
         commands.seekBy(10_000);
+      },
+      setSpeed: (rate: number) => {
+        commands.setSpeed(rate);
+      },
+      setVolume: (volume: number) => {
+        commands.setVolume(volume);
+      },
+      setScreenBrightness: (value: number) => {
+        commands.setScreenBrightness(value);
+      },
+      getScreenBrightness: () => commands.getScreenBrightness(),
+      setProperty: (name: string, value: unknown) => {
+        commands.setProperty(name, value);
       },
     }),
     [commands, state.durationMs],

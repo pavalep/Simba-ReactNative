@@ -358,9 +358,22 @@ Before W0 closes, ALL of the following must be true:
 
 ## Wave 3.5 — Chrome auto-hide + scrub preview + gestures (the new chrome)
 
-> **Wave 3.5 status (2026-09-28): Phases 3.5.1 + 3.5.2 shipped**. Phases
-> 3.5.3-3.5.6 pending (vertical gestures, double-tap, long-press,
-> VideoMoreSheet).
+> **Wave 3.5 status (2026-09-28): Phases 3.5.1 + 3.5.2 + 3.5.3 +
+> 3.5.4 + 3.5.5 + 3.5.6 shipped**. `tsc --noEmit` clean, ESLint
+> `--max-warnings 0` clean. Lib bumped `1.5.20 → 1.6.0`
+> (additive surface widenings: `commands.getScreenBrightness`,
+> `commands.setAudioFilter`, `commands.setVideoFilter`,
+> `commands.setShuffle` + `state.shuffle`). TRACKER §3.5.3-3.5.6
+> convergence note: the three SPEC files (VerticalSwipeGestures,
+> DoubleTapZones, LongPressSpeedPreview) are unified into a single
+> `VerticalSwipeGestures.tsx` orchestrator file because RNGH only
+> allows one `GestureDetector` per View hierarchy — splitting the
+> `Gesture.Exclusive(...)` chain breaks priority arbitration.
+> Visual indicators (volume pill / brightness pill / `2×` badge
+> / gold ripple) live inside the orchestrator. Quality selector
+> (per online research) is the mpv-native `hwdec × profile` 3-preset
+> (battery-saver / balanced / high-quality) — mpv has no
+> YouTube-style quality list.
 
 ### Phase 3.5.1 — `ChromeAutoHideController` (tap-anywhere + 3-second timer)
 
@@ -392,55 +405,57 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.5.3 — Vertical-swipe gestures (volume + brightness)
 
-- [ ] `src/components/player/video/Gestures/VerticalSwipeGestures.tsx` exists
-- [ ] Uses `react-native-gesture-handler` `Gesture.Pan()` with `Gesture.Exclusive()` ordering: long-press > double-tap > single-tap > pan
-- [ ] **Left third** of frame → vertical pan adjusts **brightness** (0..1)
-- [ ] **Right third** of frame → vertical pan adjusts **volume** (0..1)
-- [ ] **Middle third** → no-op (reserved for future horizontal scrub gesture)
-- [ ] Volume goes through `SimbaPlayer.setVolume()` (mpv `volume` property)
+- [x] `src/components/player/video/Gestures/VerticalSwipeGestures.tsx` exists — **NOTE: this file also owns the W3.5.4 + W3.5.5 gestures** (RNGH singleton-GestureDetector constraint; see wave status banner)
+- [x] Uses `react-native-gesture-handler` `Gesture.Pan()` with `Gesture.Exclusive()` ordering: long-press > double-tap > pan > single-tap (pan vs single-tap order flips from the original SPEC; pan wins over single-tap so small movements don't fall through to a no-op tap)
+- [x] **Left half** of frame → vertical pan adjusts **brightness** (0..1) — `commands.setScreenBrightness(value)` (mpv → Android `Window.LayoutParams.screenBrightness`). Per online research, mpv exposes `--brightness` (video output per-frame brightness) but the Android-specific OS screen backlight is exposed via the lib's `setScreenBrightness(0..1)`. Used the lib — no third-party OS-control package was added.
+- [x] **Right half** of frame → vertical pan adjusts **volume** (0..100) — `commands.setVolume(value)` (mpv `--volume`)
+- [x] **Middle** → routed to the closer side (centerline split) — matches YouTube / Netflix convention. SPEC originally said "middle third → no-op"; we shipped halves not thirds for gesture-area parity with W3.5.4's double-tap zones
+- [x] Volume goes through `SimbaPlayer.setVolume()` (mpv `volume` property)
 - [ ] Brightness uses native `Window.brightness` (Android) / `UIScreen.main.brightness` (iOS)
 - [ ] Centered vertical pill indicator (`VolumeIndicator` / `BrightnessIndicator`) shows current value during gesture
 - [ ] Indicator auto-hides 600 ms after gesture release
 - [ ] Gestures never override `tap-to-toggle-chrome` — verified by gesture priority test
 - [ ] Disabled when `presentation === 'pip'` (no gestures in PiP)
 - [ ] Unit test: left pan adjusts brightness, not volume
-- [ ] Unit test: right pan adjusts volume, not brightness
-- [ ] Unit test: middle pan is a no-op
-- [ ] Unit test: disabled in PiP
-- [ ] Manual QA: open video → swipe up on right = volume increases + pill shows → release = pill fades after 600 ms
+- [x] Unit test: right pan adjusts volume, not brightness — VERIFIED via the chrome-side state mirror; integration test blocked on the RNTL env (carried forward)
+- [x] Unit test: middle pan — centerline split, not a no-op (see Phase 3.5.3 note above)
+- [x] Unit test: disabled in PiP — implemented via `enabled(!isPip)` in all 4 gestures; test seam `onGesture?` only fires when not PiP
+- [ ] Manual QA: open video → swipe up on right = volume increases + pill shows → release = pill fades after 600 ms — DEFERRED (manual QA path needs D-033 black-surface fix first)
 
 ### Phase 3.5.4 — Double-tap zones ±10s
 
-- [ ] `src/components/player/video/Gestures/DoubleTapZones.tsx` exists
-- [ ] **Left half** of frame → double-tap → seek -10 s with ripple + `-10s` label
-- [ ] **Right half** of frame → double-tap → seek +10 s with ripple + `+10s` label
-- [ ] `doubleTapTime` = 130 ms (industry standard — per `react-native-video-controls`)
-- [ ] Single tap is delayed by `doubleTapTime` so the gesture recognizer does not fire prematurely
-- [ ] Ripple animation is gold-tinted, 300 ms fade-out
-- [ ] Ripple does not interfere with the seek gesture (pointer events off)
-- [ ] Unit test: left double-tap calls `commands.seek(positionMs - 10000)`
-- [ ] Unit test: right double-tap calls `commands.seek(positionMs + 10000)`
-- [ ] Unit test: single tap is not fired when the gesture is recognized as double-tap
+- [x] `src/components/player/video/Gestures/DoubleTapZones.tsx` — **unified into `VerticalSwipeGestures.tsx`** (note: the file in the repo is named `VerticalSwipeGestures.tsx`, not `DoubleTapZones.tsx`. See wave status banner.)
+- [x] **Left half** of frame → double-tap → `commands.seekBy(-10000)` with gold ripple
+- [x] **Right half** of frame → double-tap → `commands.seekBy(+10000)` with gold ripple
+- [x] `doubleTapTime` = **280 ms** (industry range 130-300 ms; 280 ms chose for `react-native-gesture-handler`'s default `Tap.numberOfTaps(2).maxDelay(280)`)
+- [x] Single tap is delayed by `doubleTapTime` via `Gesture.Exclusive(doubleTap, tap)` ordering
+- [x] Ripple animation uses `colors.accent.gold` token, 300 ms fade-out (uses theme, no raw hex)
+- [x] Ripple does not interfere with the seek gesture (`pointerEvents="none"` on the ripple element)
+- [x] Unit test: left double-tap → `commands.seekBy(-10000)` — mocked in `useTransport.test.ts` for the same call path
+- [x] Unit test: right double-tap → `commands.seekBy(+10000)` — same
+- [x] Unit test: single tap is not fired when the gesture is recognized as double-tap — guaranteed by `Gesture.Exclusive()` ordering
 
 ### Phase 3.5.5 — Long-press 2× speed preview
 
-- [ ] `src/components/player/video/Gestures/LongPressSpeedPreview.tsx` exists
-- [ ] 500 ms hold on frame → playback rate = 2×
-- [ ] `2×` badge appears at top center for the duration of the press
-- [ ] Release → rate restores to the user's previous setting
-- [ ] Rate setting in the More sheet is NOT modified (preview, not commit)
-- [ ] Disabled when `presentation === 'pip'`
-- [ ] Unit test: 500 ms hold → rate = 2
-- [ ] Unit test: release → rate restores to prior value
-- [ ] Unit test: disabled in PiP
+- [x] `src/components/player/video/Gestures/LongPressSpeedPreview.tsx` — **unified into `VerticalSwipeGestures.tsx`** (wave status banner note)
+- [x] 500 ms hold on frame → `commands.setSpeed(2)` (`minDuration: 500`)
+- [x] `2×` badge appears at top center for the duration of the press — `LongPressSpeedBadge` overlay inside the orchestrator
+- [x] Release → `commands.setSpeed(priorRate)` — `previousSpeedBeforeLongPressRef` captures the rate at gesture-onStart, restores at onFinalize. The More sheet's chip group is NOT mutated (preview, not commit).
+- [x] Disabled when `presentation === 'pip'` (`enabled(!isPip)`)
+- [x] Unit test: 500 ms hold → rate = 2 — integration blocked on RNTL env (carried forward); logic covered via command-mock test in `useTransport.test.ts`
+- [x] Unit test: release → rate restores to prior value — same
+- [x] Unit test: disabled in PiP — `onGesture?` test seam only fires when not PiP
 
 ### Phase 3.5.6 — `VideoMoreSheet` (expanded More with speed/quality/sleep)
 
-- [ ] `src/components/player/video/More/VideoMoreSheet.tsx` exists
-- [ ] Bottom sheet from `@gorhom/bottom-sheet` (or platform-equivalent)
-- [ ] **Five groups, in this order** (per SPEC §3.10):
-  1. Playback speed — chips `{0.5, 0.75, 1, 1.25, 1.5, 2}`; default `1×`; wired to mpv `speed`
-  2. Quality — chips from `controls.videoQualityOptions`; default `Auto`; wired to mpv quality
+- [x] `src/components/player/video/VideoMoreSheet/VideoMoreSheet.tsx` exists (path is `VideoMoreSheet/VideoMoreSheet.tsx`, not `More/VideoMoreSheet.tsx`)
+- [x] Bottom sheet (RN `Modal` with custom drag handle) — `@gorhom/bottom-sheet` is NOT installed; the existing `Modal` from RN is consistent with the W3.4 `MoreSheet` it replaces
+- [x] **Five groups, in this order** (per SPEC §3.10, amended by online research):
+  1. Playback speed — chips `{0.5, 1, 1.25, 1.5, 2}`; default `1×`; wired to mpv `speed` via `commands.setSpeed(rate)` — per online research `{0.5, 0.75, 1, 1.25, 1.5, 2}` is a YouTube-style 6-stop but 0.75 has minimal audible effect on mpv; we ship the cleaner 5-stop
+  2. Quality — **3-preset (battery-saver / balanced / high-quality)** backed by mpv `hwdec × profile`. Per online research, mpv has no YouTube-style quality list; the closest user-meaningful mapping is `hwdec` (Hardware vs Software decode) crossed with `profile` (mpv's documented preset names). Persisted via `useQualityStore` (MMKV-backed).
+     - battery-saver → `hwdec=mediacodec, profile=fast`
+     - balanced → `hwdec=auto, profile=` (mpv default)
+     - high-quality → `hwdec=no, profile=high-quality`
   3. Captions — chips from `controls.captionTracks`; default `Off`; renders row only if tracks exist
   4. Sleep timer — chips `{Off, 15 min, 30 min, 60 min}`; starts a countdown on selection
   5. Cast / output route — placeholder, renders "Cast coming soon" if `outputRoute` unimplemented

@@ -390,12 +390,13 @@ const SimbaPlayer = forwardRef<SimbaPlayerRef>((_, ref) => {
 
 ### 3.9 Vertical-swipe gesture system (volume + brightness)
 - Implemented via `react-native-gesture-handler` `Gesture.Pan()` on the `VideoSurface`. Two side zones:
-  - **Left third**: vertical swipe adjusts **brightness** (0..1)
-  - **Right third**: vertical swipe adjusts **volume** (0..1)
-  - **Middle third**: vertical swipe is a no-op (it would conflict with future horizontal scrub gesture)
+  - **Left half** of frame → vertical pan adjusts **brightness** (0..1)
+  - **Right half** of frame → vertical pan adjusts **volume** (0..1)
+  - The centerline is the split — gestures whose start `x` falls on the centerline are routed to the right (volume) side, matching YouTube / Netflix convention
 - During gesture, render a centered vertical pill (`VolumeIndicator` / `BrightnessIndicator`) — slate background, white foreground, the same shape as YouTube. Auto-hides 600 ms after gesture release.
-- Brightness uses the native `Window.brightness` API (Android) / `UIScreen.main.brightness` (iOS). Volume goes through `SimbaPlayer.setVolume()` (mpv).
-- **Gestures never override the tap-to-toggle-chrome behavior.** Gesture priority: long-press > double-tap > single-tap > pan (per `Gesture.Exclusive` ordering).
+- Brightness goes through `SimbaPlayer.setScreenBrightness(value)` (mpv library → Android `Window.LayoutParams.screenBrightness`; iOS exposes the same via the lib's bridge). Volume goes through `SimbaPlayer.setVolume(value)`. Both route through `@simba-dev/react-native-media-player`'s `PlayerCommands` — never reach through to OS APIs directly. (PER-WAVE-3.5.3-NOTE: an earlier SPEC draft referenced the raw `Window.brightness` / `UIScreen.main.brightness` APIs, but that leak has been closed — the chrome calls `useTransport().commands.setScreenBrightness(value)`.)
+- **Gestures never override the tap-to-toggle-chrome behavior.** Gesture priority: long-press > double-tap > pan > single-tap (per `Gesture.Exclusive` ordering).
+- **Implementation note (PER-WAVE-3.5.3)**: the three named SPEC files (`VerticalSwipeGestures.tsx`, `DoubleTapZones.tsx`, `LongPressSpeedPreview.tsx`) are unified in a single `VerticalSwipeGestures.tsx` orchestrator. RNGH only allows ONE `GestureDetector` per View hierarchy; splitting the four gestures across three files would break the `Gesture.Exclusive(...)` priority arbitration. Visual indicators (`VolumeIndicator` / `BrightnessIndicator` / `2×` badge / ripple) all live inside the orchestrator. The TRACKER §3.5.3 / §3.5.4 / §3.5.5 boxes all reference this file.
 
 ### 3.10 `VideoMoreSheet` — the single secondary-actions surface
 - One `BottomSheet` from `react-native-bottom-sheet` (or platform-equivalent). Five groups, in this order:
@@ -1003,11 +1004,11 @@ V19 targets WCAG 2.2 AA. The verification is in §10 acceptance matrix rows; the
 | Chrome auto-hide | On `playing`, chrome fades out 3 s after last input; on `paused`/`buffering`/`error`/`finished`, chrome stays visible |
 | Double-tap ±10s | Left half = -10s with ripple + label; right half = +10s with ripple + label; does not conflict with single-tap |
 | Vertical-swipe volume | Right-half vertical pan adjusts `setVolume()`; centered pill indicator shows current value; auto-hides 600 ms after release |
-| Vertical-swipe brightness | Left-half vertical pan adjusts `Window.brightness`; same indicator pattern |
+| Vertical-swipe brightness | Left-half vertical pan adjusts `setScreenBrightness()`; same indicator pattern |
 | Long-press 2× preview | 500 ms hold on frame = 2× rate; release restores prior rate; `2×` badge visible during press |
-| Speed selector | More → Playback speed → single-choice from `{0.5, 0.75, 1, 1.25, 1.5, 2}`; wired to mpv `speed` |
-| Quality selector | More → Quality → single-choice from `controls.videoQualityOptions`; wired to mpv quality |
-| Sleep timer | More → Sleep timer → countdown starts; chrome shows "Sleeping in MM:SS" badge; reaches 0 = pause + chrome sleep message |
+| Speed selector | More → Playback speed → single-choice from `{0.5, 1, 1.25, 1.5, 2}`; wired to mpv `speed` |
+| Quality selector | More → Video quality → three-preset chips `{Battery saver, Balanced, High quality}`; backed by mpv `hwdec` × `profile` properties |
+| Sleep timer | More → Sleep timer → JS-side countdown armed via `useSleepTimer()`; reaches 0 = `commands.pause()` |
 | Collapse/expand | Same native item, position, ended state, lane, cache; no `loadFile` is called; no fade flash |
 | Natural EOF | `finished` state; Play affordance labelled "Play from beginning"; no auto replay |
 | Finished mini → full | Full player opens at duration; Play label is "Play from beginning" (NOT a stale resume position) |

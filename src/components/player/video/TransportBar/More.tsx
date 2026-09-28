@@ -34,54 +34,20 @@ import {Pressable, StyleSheet, View} from 'react-native';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
-import {shareContent} from '../../../../services/shareService';
-import {usePlayer} from '@simba-dev/react-native-media-player';
-import {MoreSheet, type MoreAction} from './MoreSheet';
+import {
+  VideoMoreSheet,
+  type VideoMoreAction,
+} from '../VideoMoreSheet/VideoMoreSheet';
 
 export const More: React.FC = () => {
   const {colors} = useTheme();
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  // `usePlayer().state` carries the lib-side title + artist
-  // (mpv's media-title + metadata/by-key/artist). W3.4's Share
-  // action uses these for the share sheet body. Once the chrome
-  // gains a proper "current track" facade, this falls back to
-  // the facade's track URI for deep-linking.
-  const {state: playerState} = usePlayer();
-  const title = playerState.title ?? '';
-  const artist = playerState.artist ?? '';
-
-  const handleAction = React.useCallback(
-    (action: MoreAction) => {
-      switch (action) {
-        case 'share':
-          if (title) {
-            shareContent({
-              route: 'SongScreen',
-              params: {},
-              title,
-              subtitle: artist || undefined,
-            }).catch(() => {
-              // User cancelled share — shareService already
-              // swallows the cancellation; this catch is just to
-              // satisfy the no-floating-promises lint rule.
-            });
-          }
-          break;
-        case 'save':
-        case 'addToPlaylist':
-        case 'trackInfo':
-          // Placeholder — full wiring requires a "current track"
-          // identity (URI + mediaType) on the facade, which the
-          // chrome doesn't have yet. See header comment.
-          console.warn(
-            `[More] action '${action}' is a placeholder — wire in a follow-up wave.`,
-          );
-          break;
-      }
-    },
-    [title, artist],
-  );
+  // V19 W3.5.6 — share / save / track-info / etc. now live inside
+  // the `VideoMoreSheet` component. This button just opens it.
+  // (Title/artist context is read inside the sheet from the same
+  // lib hook.) The legacy W3.4 shareService/shareContent path is
+  // owned by `VideoMoreSheet`'s `handleLegacy` switch.
 
   return (
     <View style={styles.container}>
@@ -99,9 +65,13 @@ export const More: React.FC = () => {
         <SvgIcon name="sliders" size={20} color={colors.text.secondary} />
       </Pressable>
 
-      <MoreSheet
+      <VideoMoreSheet
         visible={sheetOpen}
-        onAction={handleAction}
+        onAction={(_action: VideoMoreAction) => {
+          // The sheet owns all action side-effects (setSpeed,
+          // shareContent, etc.). The button only owns visibility,
+          // so we intentionally no-op here.
+        }}
         onClose={() => setSheetOpen(false)}
       />
     </View>
