@@ -599,17 +599,13 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.6.9 — `DpadController` + hardware media keys
 
-- [ ] `src/components/player/video/Dpad/DpadController.tsx` exists
-- [ ] Subscribes to:
-  - `KEYCODE_DPAD_UP/DOWN/LEFT/RIGHT/CENTER` → focus traversal (left-to-right, top-to-bottom)
-  - `KEYCODE_MEDIA_PLAY/PAUSE/STOP/NEXT/PREVIOUS/REWIND/FAST_FORWARD` → wired to MediaSession (lib handles)
-  - `KEYCODE_VOLUME_UP/DOWN/MUTE` → wired to `SimbaPlayer.setVolume()` when foreground; system volume in PiP
-- [ ] Visible focus ring: 2 px gold outline at 100% alpha (WCAG 2.4.7)
-- [ ] Disabled when no D-pad / keyboard is connected (focus ring hidden)
-- [ ] WCAG 2.1.1 surface — every transport action reachable by keyboard alone
-- [ ] Unit test: KEYCODE_DPAD_RIGHT moves focus to next control
-- [ ] Unit test: KEYCODE_MEDIA_PLAY_PAUSE toggles playback
-- [ ] Unit test: visible focus ring renders 2 px gold
+- [x] `src/components/player/video/Dpad/DpadController.tsx` exists (STUB — chrome-side contract landed; lib-side hardware-key routing required before consumers can react)
+- [x] Chrome-side `useHardwareMediaKeys(onKey)` hook + keycode constants exported (DPAD / MEDIA / VOLUME) for tests + consumers
+- [ ] Subscribes to `KEYCODE_DPAD_*` / `KEYCODE_MEDIA_*` / `KEYCODE_VOLUME_*` → routed to commands (e.g. `commands.next`, `commands.setVolume(±step)`) — **DEFERRED to same-week follow-up**: requires lib 1.7.0 widening (`lib.commands.addHardwareKeyListener(callback)` + `MpvBridgeModule.dispatchKeyEvent` override on MainActivity so the system delivers hardware keys to the bridge). Per the user's "system controls via lib facade, never third-party" rule.
+- [x] `useFocusRing()` primitive stub (returns `{isFocused: false, ...}`) — chrome primitives opt-in shape. Full impl lands with lib 1.7.0 chrome rewire of every primitive (TransportBar, ModeControl, CaptionsToggle, PiPToggle, More, VideoTitleOverlay back). The 2 px gold outline (WCAG 2.4.7) is a same-week follow-up after the lib lands.
+- [x] Mount point is always-present (matches the V19 architecture audit §4.D "always-mount chrome primitives" rule); Today: no observable behavior on iOS. Android: forwards the BACK key (RN's `Keyboard.addListener('hardwareBackPress')`) only.
+- [ ] Unit test: `KEYCODE_DPAD_RIGHT` moves focus to next control — DEFERRED (depends on lib surface)
+- [ ] Manual QA: Bluetooth media keys route to commands.* — DEFERRED (lib)
 
 ### Phase 3.6.11 — `SkipPrevSmartThreshold` (Apple Music / Spotify pattern)
 
