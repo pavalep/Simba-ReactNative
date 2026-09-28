@@ -31,6 +31,7 @@
 
 import * as React from 'react';
 import {Vibration, Platform} from 'react-native';
+import {useReduceMotion} from './useReduceMotion';
 
 export type HapticIntensity = 'light' | 'medium' | 'heavy';
 
@@ -65,17 +66,24 @@ export function useHaptic(): HapticApi {
     () => Platform.OS === 'android',
     [],
   );
+  // WCAG 2.3.3 — when the OS "reduce motion" flag is on, vibrate
+  // is itself a motion accessibility violation. The hook no-ops
+  // so every chrome surface that calls `haptic(...)` is safe by
+  // default. The 1-import + 1-wrapper rule means consumers don't
+  // need to check the flag themselves.
+  const reduceMotion = useReduceMotion();
 
   const haptic = React.useCallback(
     (intensity: HapticIntensity = 'light') => {
       if (!isSupported) return;
+      if (reduceMotion) return;
       try {
         Vibration.vibrate(HAPTIC_MS[intensity]);
       } catch {
         // Bridge not wired (jest / web preview). Skip silently.
       }
     },
-    [isSupported],
+    [isSupported, reduceMotion],
   );
 
   // Clean up any in-flight vibration on unmount so a chrome

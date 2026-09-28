@@ -50,6 +50,9 @@ const mockCommands = {
   selectTrack: jest.fn(),
   next: jest.fn(),
   previous: jest.fn(),
+  setAudioFilter: jest.fn(),
+  setVideoFilter: jest.fn(),
+  setShuffle: jest.fn(),
 };
 
 jest.mock('@simba-dev/react-native-media-player', () => ({
@@ -244,12 +247,15 @@ describe('useTransport — commands', () => {
     expect(mockCommands.seekBy).toHaveBeenCalledWith(-15_000);
   });
 
-  it('step() delegates to the lib seekBy (15s skip buttons)', async () => {
+  it('step() command was removed in W4 reaudit — use seekBy instead', async () => {
+    // W4 reaudit: `commands.step(delta)` was a fourth name for
+    // the same operation as `rewind10()` / `forward10()` /
+    // `seekBy(delta)`. Junior-dev consumer confusion; removed.
+    // TransportRow now calls `commands.rewind10()` /
+    // `commands.forward10()` directly. The generic delta case
+    // (15s skip in W2 spec) routes through `commands.seekBy(N)`.
     const {result} = await renderHook(() => useTransport());
-    await act(async () => {
-      result.current.commands.step(15_000);
-    });
-    expect(mockCommands.seekBy).toHaveBeenCalledWith(15_000);
+    expect((result.current.commands as unknown as Record<string, unknown>).step).toBeUndefined();
   });
 
   it('togglePlayPause / play / pause pass through to the lib', async () => {

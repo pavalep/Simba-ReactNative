@@ -60,12 +60,8 @@ import {
   useSleepTimerStore,
   SLEEP_TIMER_OPTIONS,
 } from '../../../../state/useSleepTimerStore';
-import {
-  useSkipSilenceStore,
-} from '../../../../state/useSkipSilenceStore';
 import {useAutoPlayNextStore} from '../../../../state/useAutoPlayNextStore';
 import {shareContent} from '../../../../services/shareService';
-import {usePlayer} from '@simba-dev/react-native-media-player';
 
 /* ─────────────────────────────────────────────────────────────────────────
  *                                CONSTANTS
@@ -145,7 +141,14 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
 }) => {
   const {colors} = useTheme();
   const {state, commands} = useTransport();
-  const {state: playerState} = usePlayer();
+  // V19 chrome surface — current track title + artist. The
+  // facade (useTransport) reads these from the lib's
+  // `usePlayer().state.title` / `.artist`, so the chrome never
+  // reaches into the lib directly (audit §5 Rule 2 spirit —
+  // the rule's grep is screens/pages/features only, but the
+  // facade-as-public-surface architecture applies chrome-wide).
+  const title = state.title;
+  const artist = state.artist;
 
   // Quality store
   const qualityPreset = useQualityStore(s => s.preset);
@@ -177,16 +180,15 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
   }, [commands]);
   useSleepTimer(handleSleepExpire);
 
-  // Skip-silence store (W3.6.5). The `useSkipSilence()` hook from
+  // Skip-silence (W3.6.5). The `useSkipSilence()` hook from
   // infrastructure/player auto-fires `commands.setAudioFilter`
-  // (`scaletempo2=max-speed=32.0`) on toggle — call it here so
-  // the side-effect is wired while the sheet is mounted.
-  const skipSilenceData = useSkipSilence();
-  const skipSilenceEnabled = skipSilenceData.enabled;
-  // The hook exposes `toggle` for compact surfaces that want a
-  // single button; this sheet renders two explicit On/Off chips
-  // so we drive the store's setter directly for clarity.
-  const setSkipSilenceEnabled = useSkipSilenceStore(s => s.setEnabled);
+  // (`scaletempo2=max-speed=32.0`) on toggle — calling it here
+  // subscribes the side-effect while the sheet is mounted. We use
+  // the hook's return value for BOTH the `enabled` read AND the
+  // toggle (via `.toggle()`) — no separate direct store
+  // subscription is needed; the hook IS the single source of truth
+  // for the chrome's read+write surface.
+  const skipSilence = useSkipSilence();
 
   // Auto-play-next (W3.6.12). The NextUpOverlay (Phase 3.6.7)
   // reads `useAutoPlayNextStore.getState().enabled` when its
@@ -219,12 +221,12 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
     (action: LegacyMoreAction) => {
       switch (action) {
         case 'share':
-          if (playerState.title) {
+          if (title) {
             shareContent({
               route: 'SongScreen',
               params: {},
-              title: playerState.title,
-              subtitle: playerState.artist || undefined,
+              title,
+              subtitle: artist || undefined,
             }).catch(() => {
               // Cancelled — swallow.
             });
@@ -240,7 +242,7 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
       }
       onAction(action);
     },
-    [onAction, playerState.title, playerState.artist],
+    [onAction, title, artist],
   );
 
   const currentSpeed = state.speed ?? 1;
@@ -331,19 +333,19 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
             <ChipRow>
               <Chip
                 label="Skip silence: Off"
-                active={!skipSilenceEnabled}
-                onPress={() => setSkipSilenceEnabled(false)}
+                active={!skipSilence.enabled}
+                onPress={() => skipSilence.toggle()}
                 testID="skip-silence-chip-off"
               />
               <Chip
                 label="Skip silence: On"
-                active={skipSilenceEnabled}
-                onPress={() => setSkipSilenceEnabled(true)}
+                active={skipSilence.enabled}
+                onPress={() => skipSilence.toggle()}
                 testID="skip-silence-chip-on"
               />
             </ChipRow>
             <AppText variant="caption" color="secondary" style={styles.descriptionText}>
-              {skipSilenceEnabled
+              {skipSilence.enabled
                 ? 'Silence is detected and skipped (mpv scaletempo2=max-speed=32.0).'
                 : 'Plays silence as-is.'}
             </AppText>

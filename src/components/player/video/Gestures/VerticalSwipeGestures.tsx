@@ -107,9 +107,22 @@ export const VerticalSwipeGestures: React.FC<{
   const [width, setWidth] = React.useState(0);
   const [height, setHeight] = React.useState(0);
 
-  const [brightnessValue, setBrightnessValue] = React.useState(0.5);
+  const [brightnessValue, setBrightnessValue] = React.useState<number>(
+    // Lazy init reads the lib synchronously on mount. The bridge
+    // is reachable by the time React calls useState (the lib's
+    // <PlayerProvider> wraps this component via App.tsx). Fallback
+    // `0.5` covers jest / web preview where the bridge isn't wired.
+    () => {
+      try {
+        const v = commands.getScreenBrightness();
+        return Number.isFinite(v) ? clamp01(v) : 0.5;
+      } catch {
+        return 0.5;
+      }
+    },
+  );
   const [volumeValue, setVolumeValue] = React.useState<number>(
-    state.volume ?? 100,
+    () => clamp100(state.volume ?? 100),
   );
   const [brightnessVisible, setBrightnessVisible] = React.useState(false);
   const [volumeVisible, setVolumeVisible] = React.useState(false);
@@ -126,30 +139,17 @@ export const VerticalSwipeGestures: React.FC<{
 
   // Pan start values captured at gesture-begun time (RNGH
   // releases `onBegin` after the activeOffset is exceeded).
-  const panStartBrightnessRef = React.useRef<number>(0.5);
-  const panStartVolumeRef = React.useRef<number>(100);
+  const panStartBrightnessRef = React.useRef<number>(brightnessValue);
+  const panStartVolumeRef = React.useRef<number>(volumeValue);
 
   // For long-press restoration.
   const previousSpeedBeforeLongPressRef = React.useRef<number | null>(null);
 
-  // Hydrate local brightness mirror from the lib on mount (lib
-  // 1.6.0 promoted `getScreenBrightness()` onto public
-  // `PlayerCommands`). Volume is read from `state.volume` which
-  // is already wired via `onPropertyChanged('volume')`.
-  React.useEffect(() => {
-    try {
-      const b = commands.getScreenBrightness();
-      if (Number.isFinite(b)) setBrightnessValue(clamp01(b));
-    } catch {
-      // Bridge not wired (tests / web preview) — default 0.5.
-    }
-    // Run once on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Keep volume mirror synced with the lib (e.g. system volume
   // changes via hardware buttons should still reflect when the
-  // user opens the indicator again).
+  // user opens the indicator again). Brightness doesn't need this
+  // sync — the lib's `getScreenBrightness()` is the source of truth
+  // and the chrome only writes through `setScreenBrightness`.
   React.useEffect(() => {
     setVolumeValue(clamp100(state.volume));
   }, [state.volume]);

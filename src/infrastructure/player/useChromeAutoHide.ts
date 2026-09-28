@@ -48,6 +48,33 @@ import {Animated} from 'react-native';
 import {usePlaybackState} from './usePlaybackState';
 import {useReduceMotion} from './useReduceMotion';
 
+/**
+ * Internal helper — collapses the chrome's `fadeMs === 0` instant
+ * branch vs. `Animated.timing(...)` branch. The 3 call sites
+ * (the videoState effect, the toggle callback, the kick callback)
+ * all need this exact same dispatch; extracting avoids the
+ * triple-duplicate jugaad where any future change (e.g. swap
+ * to Reanimated) would need three edits.
+ */
+function scheduleHide(
+  opacity: Animated.Value,
+  fadeMs: number,
+  onComplete: () => void,
+): void {
+  if (fadeMs === 0) {
+    opacity.setValue(0);
+    onComplete();
+    return;
+  }
+  Animated.timing(opacity, {
+    toValue: 0,
+    duration: fadeMs,
+    useNativeDriver: true,
+  }).start(({finished}) => {
+    if (finished) onComplete();
+  });
+}
+
 export const CHROME_AUTO_HIDE_MS = 3_000;
 export const CHROME_HIDE_ANIM_MS = 200;
 
@@ -136,16 +163,9 @@ export function useChromeAutoHide(): ChromeAutoHideApi {
     if (testNoTimer) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      if (fadeMs === 0) {
-        opacity.setValue(0);
-      } else {
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: fadeMs,
-          useNativeDriver: true,
-        }).start();
-      }
-      setIsVisible(false);
+      scheduleHide(opacity, fadeMs, () => {
+        setIsVisible(false);
+      });
       timerRef.current = null;
     }, CHROME_AUTO_HIDE_MS);
     return () => {
@@ -176,16 +196,9 @@ export function useChromeAutoHide(): ChromeAutoHideApi {
       if (videoState === 'playing') {
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => {
-          if (fadeMs === 0) {
-            opacity.setValue(0);
-          } else {
-            Animated.timing(opacity, {
-              toValue: 0,
-              duration: fadeMs,
-              useNativeDriver: true,
-            }).start();
-          }
-          setIsVisible(false);
+          scheduleHide(opacity, fadeMs, () => {
+            setIsVisible(false);
+          });
           timerRef.current = null;
         }, CHROME_AUTO_HIDE_MS);
       }
@@ -205,16 +218,9 @@ export function useChromeAutoHide(): ChromeAutoHideApi {
     setIsVisible(true);
     if (isPinned(videoState) || testNoTimer) return;
     timerRef.current = setTimeout(() => {
-      if (fadeMs === 0) {
-        opacity.setValue(0);
-      } else {
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: fadeMs,
-          useNativeDriver: true,
-        }).start();
-      }
-      setIsVisible(false);
+      scheduleHide(opacity, fadeMs, () => {
+        setIsVisible(false);
+      });
       timerRef.current = null;
     }, CHROME_AUTO_HIDE_MS);
   }, [opacity, videoState, fadeMs]);

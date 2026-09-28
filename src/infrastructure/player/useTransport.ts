@@ -118,19 +118,28 @@ export interface TransportState {
   volume: number;
   /** V19 W3.5.3 — mute state (decoupled from `volume`). */
   isMuted: boolean;
+  /** V19 chrome surface — current track title (mpv `media-title`).
+   *  Used by the share action (W3.4) and the more menu's title
+   *  preview. Defaults to empty string when no file is loaded. */
+  title: string;
+  /** V19 chrome surface — current track artist (mpv
+   *  `metadata/by-key/artist`). May be empty when the source
+   *  metadata doesn't carry the field. */
+  artist: string;
 }
 
 /**
  * Transport commands — what chrome primitives call.
  *
  * `seek()` takes a millisecond position (clamped to `[0, durationMs]`).
- * `seekBy()` takes a signed delta (negative seeks backward). `step()`
- * is a small forward/back skip — 15s matches the V11/V2 audio UX.
+ * `seekBy()` takes a signed delta (negative seeks backward). For
+ * the common "rewind 10s" / "forward 10s" UI, use the semantic
+ * wrappers `rewind10()` / `forward10()` (W3.5). `skipPrev()` is
+ * the Apple Music / Spotify smart-prev pattern (W3.6.11).
  */
 export interface TransportCommands {
   seek(positionMs: number): void;
   seekBy(deltaMs: number): void;
-  step(deltaMs: number): void;
   togglePlayPause(): void;
   play(): void;
   pause(): void;
@@ -374,6 +383,8 @@ export function useTransport(): TransportHook {
       speed?: number;
       volume?: number;
       isMuted?: boolean;
+      title?: string;
+      artist?: string;
     };
     commands: PlayerCommands;
   } = usePlayer();
@@ -437,6 +448,8 @@ export function useTransport(): TransportHook {
       speed: playerState.speed ?? 1,
       volume: playerState.volume ?? 100,
       isMuted: playerState.isMuted ?? false,
+      title: playerState.title ?? '',
+      artist: playerState.artist ?? '',
     };
   }, [
     progress,
@@ -449,6 +462,8 @@ export function useTransport(): TransportHook {
     playerState.speed,
     playerState.volume,
     playerState.isMuted,
+    playerState.title,
+    playerState.artist,
   ]);
 
   const wrapped = useMemo<TransportCommands>(
@@ -461,12 +476,6 @@ export function useTransport(): TransportHook {
         commands.seek(clamped);
       },
       seekBy: (deltaMs: number) => {
-        commands.seekBy(deltaMs);
-      },
-      step: (deltaMs: number) => {
-        // `step` is a V19 convenience for the TransportBar's
-        // 15-second skip buttons. Maps to the lib's `seekBy` so
-        // it survives a single native call (no re-entry).
         commands.seekBy(deltaMs);
       },
       togglePlayPause: () => {

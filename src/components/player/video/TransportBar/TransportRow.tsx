@@ -36,10 +36,7 @@ import {spacing} from '../../../../theme/tokens';
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {useTransport, useHaptic} from '../../../../infrastructure/player';
 
-const REWIND_MS = -10_000;
-const FORWARD_MS = 10_000;
-
-export const TransportRow: React.FC = () => {
+const TransportRow: React.FC = () => {
   const {state, commands} = useTransport();
   const {colors} = useTheme();
   // V19 W3.6.13 — light haptic on every chrome tap. Android gets
@@ -65,11 +62,11 @@ export const TransportRow: React.FC = () => {
   // flurry of taps during a seek preview doesn't blare).
   const onRewind = () => {
     haptic('light');
-    commands.step(REWIND_MS);
+    commands.rewind10();
   };
   const onForward = () => {
     haptic('light');
-    commands.step(FORWARD_MS);
+    commands.forward10();
   };
   const onSkipPrev = () => {
     haptic('light');
@@ -194,3 +191,8 @@ const styles = StyleSheet.create({
 });
 
 export default TransportRow;
+
+// Named re-export for callers that prefer named imports (test
+// suites, sibling chrome primitives). The default export remains
+// the canonical entry — both reference the SAME component.
+export {TransportRow};
