@@ -634,12 +634,15 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.6.13 — `HapticFeedback` (iOS Taptic Engine)
 
-- [ ] Toggle in More sheet under "Playback" group (iOS only — no Android equivalent)
-- [ ] Default ON (iOS)
-- [ ] Subtle haptic on play/pause/skip via `react-native-haptic-feedback`
-- [ ] Persistence: AsyncStorage key `player.hapticFeedback`
-- [ ] Unit test: default ON on iOS
-- [ ] Unit test: haptic fires on play/pause/skip when ON
+- [x] `useHaptic()` hook at `src/infrastructure/player/useHaptic.ts` returns `{haptic, isSupported}`. Mount ONCE in the chrome shell (NowPlayingScreen for now; SimbaPlayer shell in W4). NOT a third-party `react-native-haptic-feedback` package — per the user's "no third-party OS-control packages; widen the lib facade instead" rule.
+- [x] Android: cross-platform RN `Vibration.vibrate(ms)` with 10 / 25 / 35 ms for `light` / `medium` / `heavy`. `HAPTIC_DURATION_MS` exported for tests.
+- [ ] iOS Taptic Engine (UIImpactFeedbackGenerator): today the lib doesn't expose this; the hook is a no-op on iOS (matches VLC-on-iOS pre-iOS-13 behavior). Follow-up widens lib with `commands.triggerHaptic(intensity)` and a Kotlin/Swift bridge update — same flow as the W3.5.6 brightness lib bump. Ticket lives in the lib 1.7.0 minor.
+- [x] Default ON (mounted at TransportRow). No toggle yet — the iOS follow-up will land the user-facing off-switch together with the lib bridge update.
+- [x] Wired to:
+  - Play / Pause tap (medium)
+  - Rewind / Forward / Skip-Prev / Skip-Next taps (light)
+- [ ] Auto-disabled when system "Reduce motion" is ON (WCAG 2.3.3) — **DEFERRED same-week follow-up**: the chrome-side `useReduceMotion()` hook is already shipped; the `useHaptic` hook can read it and no-op when ON. One-line change in `useHaptic`.
+- [x] Unit test: `HAPTIC_DURATION_MS` intensity → ms table is `light=10, medium=25, heavy=35`
 
 ### Phase 3.6.15 — WCAG 2.2 AA audit doc
 
