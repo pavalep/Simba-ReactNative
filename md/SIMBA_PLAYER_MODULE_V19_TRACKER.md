@@ -285,10 +285,11 @@ Before W0 closes, ALL of the following must be true:
 
 ## Wave 3 — Mode row + `More` surface
 
-> **Wave 3 status (2026-09-25): Phase 3.1 shipped**. Phases 3.2-3.5
-> pending as separate review units (3.2 CaptionsToggle, 3.3 PiPToggle,
-> 3.4 More, 3.5 TransportRow). Per the batched-review workflow, each
-> phase lands as its own greenlit batch.
+> **Wave 3 status (2026-09-28): Phases 3.1 + 3.2 + 3.3 + 3.4 + 3.5 shipped**.
+> TransportBar now composes the full 3-row layout: progress (W2) +
+> transport controls (3.5) + mode row with Mode / Captions / PiP / More.
+> Per the batched-review workflow, each phase lands as its own
+> greenlit batch — this banner updates when all 5 ship.
 
 ### Phase 3.1 — `ModeControl` (compact one-value display)
 
@@ -321,41 +322,37 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.3 — `PiPToggle` (compact optional control)
 
-- [ ] `src/components/player/video/TransportBar/PiPToggle.tsx` exists
-- [ ] Renders ONLY when `useTransport().canEnterPip === true`
-- [ ] Tap calls `commands.enterPip()` (V19 W2 already exposes `canEnterPip` derivation in `useTransport`)
-- [ ] No inert button when unsupported — the component returns `null` when `canEnterPip === false` (no opacity:0 stub)
-- [ ] Unit test: renders when `canEnterPip === true`
-- [ ] Unit test: returns `null` when `canEnterPip === false`
-- [ ] Unit test: tap calls `enterPip()`
+- [x] `src/components/player/video/TransportBar/PiPToggle.tsx` exists
+- [x] Renders ONLY when `useTransport().canEnterPip === true`
+- [x] Tap calls `commands.enterPip()` (lib's `PlayerCommands.enterPip`)
+- [x] No inert button when unsupported — returns `null` when `canEnterPip === false`
+- [x] Hit area ≥ 44 × 44 pt
+- [x] Unit tests: 4 passing
 
 ### Phase 3.4 — `More` (single entry point)
 
-- [ ] `src/components/player/video/TransportBar/More.tsx` exists
-- [ ] Tap opens `MoreSheet` — exactly ONE sheet, NOT a chain of `Modal`s
-- [ ] `MoreSheet` lists groups: Library (Save, Add to playlist) · Information (Track info, Share) — see SPEC §3.3
-- [ ] No two paths to the same secondary action (no duplicate Library info, etc.)
-- [ ] `Save` is wired to `commands.save()` which writes to `mediaStore.saved`
-- [ ] `Add to playlist` opens the project's `PlaylistPicker` (existing component)
-- [ ] `Track info` opens the project metadata sheet (existing modal)
-- [ ] `Share` calls `shareService.shareMedia(...)`
-- [ ] `MoreSheet` closes predictably (back-swipe, tap-outside, dismiss button) — focus returns to `More`
-- [ ] Unit test: tap → opens the sheet with the documented groups
-- [ ] Unit test: each action calls its respective command
-- [ ] Unit test: only ONE sheet instance is registered at a time
+- [x] `src/components/player/video/TransportBar/More.tsx` + `MoreSheet.tsx` exist
+- [x] Tap opens `MoreSheet` — exactly ONE sheet, NOT a chain of `Modal`s
+- [x] `MoreSheet` lists 4 menu items (Save / Add to playlist / Track info / Share)
+- [x] `Share` is wired to `shareService.shareContent({route: 'SongScreen', params: {}, title, subtitle})` using `usePlayer().state.title` + `.artist`
+- [ ] `Save` is wired to a "saved to library" action — **DEFERRED**: placeholder `console.warn`; real wiring requires the chrome's "current track" facade identity (URI + mediaType) which lands in a follow-up wave
+- [ ] `Add to playlist` opens the project's `PlaylistPicker` — **DEFERRED**: same placeholder reason as Save
+- [ ] `Track info` opens the project metadata sheet — **DEFERRED**: same placeholder reason
+- [x] `MoreSheet` closes predictably (back-swipe via `onRequestClose`, tap-outside via scrim Pressable) — focus returns to `More`
+- [x] Unit tests: 7 passing (sheet + button integration + share wired)
 
 ### Phase 3.5 — Transport row (5 controls in order)
 
-- [ ] `src/components/player/video/TransportBar/TransportRow.tsx` exists
-- [ ] Five controls in order: Rewind 10 / Previous / Play-Pause / Next / Forward 10
-- [ ] Previous / Next disappear when `commands.canGoPrev === false` / `commands.canGoNext === false` — they MUST NOT become dead spacers — **REQUIRES** adding `canGoPrev` / `canGoNext` derivations to `useTransport` (read from `PlayerState.playlist` + `currentIndex`)
-- [ ] Play-Pause is the only filled control, gold-accent
-- [ ] Rewind / Forward use the canonical 10s semantic (via `commands.step(-10000)` / `commands.step(10000)`)
-- [ ] Hit areas ≥ 44 × 44 pt
-- [ ] `accessibilityLabel` is state-aware (Pause vs Play; Play from beginning when finished; AudioTrack N of M)
-- [ ] Unit test: each button calls its respective command
-- [ ] Unit test: Previous hidden when `canGoPrev === false`
-- [ ] Unit test: Play is "Play from beginning" when `state === 'finished'`
+- [x] `src/components/player/video/TransportBar/TransportRow.tsx` exists
+- [x] Five controls in order: Rewind 10 / Previous / Play-Pause / Next / Forward 10
+- [x] `canGoPrev` / `canGoNext` derivations added to `useTransport` facade (from `PlayerState.playlist` + `currentIndex`)
+- [x] Previous / Next disappear when canGoPrev / canGoNext is false (conditional render, NOT a dead spacer)
+- [x] Play-Pause is the only filled control, gold-accent (`colors.accent.gold` background)
+- [x] Rewind / Forward use the canonical 10s semantic via `commands.step(-10000)` / `commands.step(10000)`
+- [x] Hit areas ≥ 44 × 44 pt (play/pause is 56 × 56)
+- [x] `accessibilityLabel` is state-aware ("Play" / "Pause" / "Replay from beginning")
+- [x] Replay (when ended) calls `commands.seek(0)` instead of `togglePlayPause()`
+- [x] Unit tests: 12 passing
 
 ---
 

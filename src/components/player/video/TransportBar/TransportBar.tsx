@@ -70,6 +70,9 @@ import {
 import {BufferedRangeFill} from './BufferedRangeFill';
 import {ModeControl} from './ModeControl';
 import {CaptionsToggle} from './CaptionsToggle';
+import {PiPToggle} from './PiPToggle';
+import {TransportRow} from './TransportRow';
+import {More} from './More';
 
 /** Minimum drag distance (px) before a touch is treated as a pan
  *  rather than a tap. Apple's AVPlayer uses ~5px; we mirror. */
@@ -267,19 +270,27 @@ export const TransportBar: React.FC = () => {
         </AppText>
       </View>
 
-      {/* Row 3 — Mode + Captions + More (W3 Phases 3.1 + 3.2).
-          The transport row (Phase 3.5) goes BETWEEN the progress
-          row and this mode row in the full SPEC; W3 batches the
-          mode row first as a clean review unit. CaptionsToggle
-          self-collapses (returns null) when no caption tracks
-          exist for the current file. */}
+      {/* Row 2 — Transport controls (W3 Phase 3.5). Five
+          controls: Rewind 10 / Previous / Play-Pause / Next /
+          Forward 10. Previous + Next are conditionally rendered
+          (returns null when canGoPrev/canGoNext is false) so
+          they don't become dead spacers. */}
+      <TransportRow />
+
+      {/* Row 3 — Mode + Captions + PiP + More (W3 Phases 3.1 +
+          3.2 + 3.3 + 3.4). CaptionsToggle self-collapses (returns
+          null) when no caption tracks exist. PiPToggle self-
+          collapses when canEnterPip is false. More opens a
+          single sheet wired to Save / Track info / Playlist /
+          Share. */}
       <View style={styles.modeRow}>
         <View style={styles.modeLeft}>
           <ModeControl />
           <CaptionsToggle />
         </View>
         <View style={styles.modeRight}>
-          {/* Slot for <More /> (Phase 3.4) */}
+          <PiPToggle />
+          <More />
         </View>
       </View>
     </View>

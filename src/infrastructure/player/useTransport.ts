@@ -100,6 +100,10 @@ export interface TransportState {
   captionTracks: CaptionTrack[];
   /** V19 W3 — id of the currently-active subtitle track (or null). */
   activeCaptionTrackId: number | null;
+  /** V19 W3.5 — true when the playlist has a previous entry. */
+  canGoPrev: boolean;
+  /** V19 W3.5 — true when the playlist has a next entry. */
+  canGoNext: boolean;
 }
 
 /**
@@ -127,6 +131,14 @@ export interface TransportCommands {
    * disable captions (lib's `setTrack('sub', -1)` sentinel).
    */
   selectCaptionTrack(trackId: number | null): void;
+  /** V19 W3.5 — skip to the next playlist entry. */
+  next(): void;
+  /** V19 W3.5 — skip to the previous playlist entry. */
+  previous(): void;
+  /** V19 W3.5 — seek backward by 10s (canonical rewind). */
+  rewind10(): void;
+  /** V19 W3.5 — seek forward by 10s (canonical forward). */
+  forward10(): void;
 }
 
 /**
@@ -272,7 +284,12 @@ function deriveCaptionTracks(tracks: ReadonlyArray<{id: number; type: string; ti
 export function useTransport(): TransportHook {
   const progress = usePlayerProgress();
   const {state: playerState, commands: libCommands}: {
-    state: {loopMode?: string; tracks?: ReadonlyArray<{id: number; type: string; title?: string; lang?: string; selected: boolean}>};
+    state: {
+      loopMode?: string;
+      tracks?: ReadonlyArray<{id: number; type: string; title?: string; lang?: string; selected: boolean}>;
+      playlist?: ReadonlyArray<unknown>;
+      currentIndex?: number;
+    };
     commands: PlayerCommands;
   } = usePlayer();
   const commands = libCommands;
@@ -291,6 +308,17 @@ export function useTransport(): TransportHook {
     () => deriveCaptionTracks(playerState.tracks),
     [playerState.tracks],
   );
+
+  const canGoPrev = useMemo(() => {
+    const idx = playerState.currentIndex ?? -1;
+    return idx > 0;
+  }, [playerState.currentIndex]);
+
+  const canGoNext = useMemo(() => {
+    const idx = playerState.currentIndex ?? -1;
+    const playlist = playerState.playlist ?? [];
+    return idx >= 0 && idx < playlist.length - 1;
+  }, [playerState.currentIndex, playerState.playlist]);
 
   const state = useMemo<TransportState>(() => {
     const {positionMs, durationMs, isBuffering, isSeeking, seekable} = progress;
@@ -319,6 +347,8 @@ export function useTransport(): TransportHook {
       repeatMode,
       captionTracks,
       activeCaptionTrackId,
+      canGoPrev,
+      canGoNext,
     };
   }, [
     progress,
@@ -326,6 +356,8 @@ export function useTransport(): TransportHook {
     repeatMode,
     captionTracks,
     activeCaptionTrackId,
+    canGoPrev,
+    canGoNext,
   ]);
 
   const wrapped = useMemo<TransportCommands>(
@@ -366,6 +398,18 @@ export function useTransport(): TransportHook {
         } else {
           commands.selectTrack(trackId);
         }
+      },
+      next: () => {
+        commands.next();
+      },
+      previous: () => {
+        commands.previous();
+      },
+      rewind10: () => {
+        commands.seekBy(-10_000);
+      },
+      forward10: () => {
+        commands.seekBy(10_000);
       },
     }),
     [commands, state.durationMs],
