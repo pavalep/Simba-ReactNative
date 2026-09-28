@@ -79,10 +79,18 @@ export interface SimbaPlayerRef {
  * The declarative props for `<SimbaPlayer source={...} ref={ref} />`.
  *
  * V19 SPEC §5.2 — this is what consumers write.
+ *
+ * W4 note: `source` is OPTIONAL in W4 because the chrome
+ * composition doesn't yet route the source to the lib's
+ * PlayerSurface — the V16 SimbaPlayer's PlayerSurface handles
+ * that. The V19 component renders chrome on top of the lib's
+ * surface; the `source` prop becomes load-bearing once V19
+ * replaces the V16 root in W22+.
  */
 export interface SimbaPlayerProps {
-  /** Required. The media source. `null` = unload + reset to idle. */
-  source: VideoSource | null;
+  /** Optional. W4: the chrome ignores this (V16 owns the surface).
+   *  W22+: load-bearing; `null` = unload + reset to idle. */
+  source?: VideoSource | null;
 
   /** Deep-link / scrub-to-time only. Mini-expand NEVER sets this. */
   initialPositionMs?: number;

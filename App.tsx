@@ -14,6 +14,8 @@ import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
 import {linking} from './src/navigation/linking';
 import {resolveResumeMs, useQueueSync} from './src/infrastructure/player';
+import {SimbaPlayer as V19SimbaPlayer} from './src/components/player/video/SimbaPlayer/SimbaPlayer';
+import {VideoMiniPlayer} from './src/components/player/video/VideoMiniPlayer/VideoMiniPlayer';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {QueryProvider} from './src/app/QueryProvider';
 import {SimbaStatusBar} from './src/components/StatusBar';
@@ -253,8 +255,24 @@ const App: React.FC = () => {
           {/* V16: one wrapper, one prop. Replaces the V13
               `<PlayerProvider>` + `<PlayerResumeProvider>` pair
               and the V14 `<SimbaPlayer lookup={...}>` shape with
-              a single `<SimbaPlayer resumePolicy={...}>`. */}
+              a single `<SimbaPlayer resumePolicy={...}>`.
+
+              V19 W4: V19 SimbaPlayer (chrome compositor) and
+              VideoMiniPlayer (mini dock) live as siblings of
+              AppContent INSIDE the V16 SimbaPlayer. The V19
+              chrome overlay reads lib hooks (usePlayer) so it
+              must be a child of the V16 SimbaPlayer; it is
+              rendered FIRST so it stacks ABOVE AppContent in
+              z-order (later siblings render on top in RN).
+              Audit §5: SimbaPlayer (V19) + VideoMiniPlayer are
+              the only chrome composites mounted at the shell —
+              all other chrome primitives (VideoSurface,
+              VerticalSwipeGestures, ChromeAutoHideController,
+              NextUpOverlay, TransportBar) live INSIDE V19
+              SimbaPlayer and never in src/screens. */}
           <SimbaPlayer resumePolicy={resumePolicy}>
+            <V19SimbaPlayer />
+            <VideoMiniPlayer />
             <AppContent />
           </SimbaPlayer>
         </ThemeProvider>

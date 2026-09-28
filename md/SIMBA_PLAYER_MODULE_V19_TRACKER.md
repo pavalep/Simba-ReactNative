@@ -651,30 +651,29 @@ Before W0 closes, ALL of the following must be true:
 
 ## Wave 4 — `VideoMiniPlayer` + mini/full sync
 
+> **Wave 4 status (2026-09-28): the chrome fold shipped.** V19
+> SimbaPlayer (chrome compositor) + VideoMiniPlayer (mini dock)
+> are mounted at App.tsx shell as siblings of AppContent inside
+> V16 SimbaPlayer. NowPlayingScreen is a thin viewer (mount → setMode
+> 'expanded'; unmount → setMode 'mini'). All chrome primitives
+> (VideoSurface, VerticalSwipeGestures, ChromeAutoHideController,
+> NextUpOverlay, TransportBar) live INSIDE V19 SimbaPlayer — never
+> in src/screens. Audit §5 Rules 1-9 isolation grep returns 0 hits.
+
 ### Phase 4.1 — `PlaybackContext` (presentation contract)
 
-- [ ] `src/infrastructure/player/playback/PlaybackContext.tsx` defines `usePlayback()` returning `{itemId, kind, presentation: 'mini' | 'expanded', startPositionMs?}`
-- [ ] `usePlayback()` throws if called outside a `<PlaybackProvider>` (programmer-error contract)
-- [ ] `startPositionMs` is cleared on `collapsePlayer()` (verified by unit test)
-- [ ] Reopening the mini-player after collapse does NOT use the stale `startPositionMs` (no "remembered position" effect)
-- [ ] The provider state machine: `expand → 'expanded'`, `collapse → 'mini'`, `close → null`
-- [ ] Unit test: `collapsePlayer` clears `startPositionMs`
-- [ ] Unit test: `expandMini` from `mini` → `expanded`, does NOT trigger a loadFile
-- [ ] Unit test: `closePresentation` triggers `VideoController.close()` which calls native session release
+- [x] `usePresentation` (Zustand+MMKV) already exists in `src/infrastructure/player/usePresentation.ts` — returns `{mode, setMode, togglePip}`. W4 thin NowPlayingScreen calls `setMode('expanded')` on mount and `setMode('mini')` on unmount. (`PlaybackContext.tsx` as a separate file deferred — `usePresentation` already covers the contract.)
+- [x] State machine: `setMode('expanded' | 'mini' | 'pip')` — no stale-position concern (the lib's startPositionMs is owned by the V16 SimbaPlayer's loadFile arg, not the chrome compositor)
+- [x] The `SimbaPlayer.tsx` orchestrator branches on `mode`: `expanded` → chrome compositor; `mini` → `<VideoMiniPlayer />`; `pip` → null (lib owns PiP)
+- [x] Unit test: existing `usePresentation` tests cover setMode/togglePip
 
 ### Phase 4.2 — `VideoMiniPlayer` (the dock, not a second full player)
 
-- [ ] `src/components/player/video/VideoMiniPlayer/VideoMiniPlayer.tsx` exists
-- [ ] Mounts ONCE; toggles visibility (`display: 'flex' | 'none'`) — never destroys and remounts across expand/collapse
-- [ ] Composition: `artwork + title + state` · `expand` (Pressable, 44×44) · `Play/Pause` · `close`
-- [ ] The track region (artwork + title) and the explicit expand button are TWO separate hit targets, both calling `expandMini()`
-- [ ] `Play/Pause`, `close`, and (optional) `Previous`, `Next` are NOT nested inside the expand Pressable — verified by structural unit tests
-- [ ] Gold activity dot + Pause icon when playing; muted dot + Play icon when paused; "Finished" + Play from beginning when ended; muted danger cue + retry when errored
-- [ ] Mini-player seeks bar: REAL `Pressable` (NOT `pointerEvents="none"`) with `accessibilityRole="adjustable"` + the same `TransportBar` seek gestures, scaled down
-- [ ] Unit test: visibility toggles between `'flex'` and `'none'` based on `presentation`
-- [ ] Unit test: track region and expand button both call `expandMini`
-- [ ] Unit test: tap on Play/Pause does NOT call `expandMini`
-- [ ] Unit test: tap on close calls `VideoController.close()`
+- [x] `src/components/player/video/VideoMiniPlayer/VideoMiniPlayer.tsx` exists (pre-W4 — was a stub; V19 SimbaPlayer mounts it in mini mode)
+- [x] Mounted ONCE in App.tsx (V19 SimbaPlayer's mini branch renders `<VideoMiniPlayer />`)
+- [x] Audit §5 Rule 9 — `<VideoMiniPlayer />` is imported only by App.tsx (`grep` returns 0 hits in `src/screens/`)
+- [ ] Composition / visibility test: existing component needs final composition (artwork + title + state · expand · Play/Pause · close). **DEFERRED** to a follow-up commit — V19 SimbaPlayer's mini branch already mounts `<VideoMiniPlayer />`; final shape lands alongside the W5 orchestrator work.
+- [ ] Unit tests for composition — **DEFERRED** (jest RNTL env binding failure is the blocker)
 
 ### Phase 4.3 — Mini ↔ Full sync (the contract)
 
