@@ -67,12 +67,14 @@ import {
   clampPosition,
   formatMsAsClock,
 } from '../../../../infrastructure/player';
+import {useKeyframes} from '../../../../infrastructure/player/useKeyframes';
 import {BufferedRangeFill} from './BufferedRangeFill';
 import {ModeControl} from './ModeControl';
 import {CaptionsToggle} from './CaptionsToggle';
 import {PiPToggle} from './PiPToggle';
 import {TransportRow} from './TransportRow';
 import {More} from './More';
+import {ScrubPreview} from '../ScrubPreview/ScrubPreview';
 
 /** Minimum drag distance (px) before a touch is treated as a pan
  *  rather than a tap. Apple's AVPlayer uses ~5px; we mirror. */
@@ -94,11 +96,15 @@ export const TransportBar: React.FC = () => {
   // Local UI state for the scrub gesture. We do NOT push this to
   // useTransport / the lib during pan — only on release — so the
   // native 1Hz position-tick doesn't fight the gesture preview.
+  // W3.5.2: also track the X coordinate so ScrubPreview can be
+  // centered on the thumb.
   const [trackWidth, setTrackWidth] = React.useState(0);
   const [scrubPreviewMs, setScrubPreviewMs] = React.useState<
     number | null
   >(null);
+  const [scrubPreviewX, setScrubPreviewX] = React.useState<number>(0);
   const [isScrubbing, setIsScrubbing] = React.useState(false);
+  const {samples: keyframes} = useKeyframes();
 
   const displayMs = scrubPreviewMs ?? state.positionMs;
 
@@ -120,8 +126,9 @@ export const TransportBar: React.FC = () => {
         ) => state.seekable && Math.abs(g.dx) > PAN_THRESHOLD_PX,
         onPanResponderGrant: (e: GestureResponderEvent) => {
           if (!state.seekable) return;
-          const fraction = clampFraction(e.nativeEvent.locationX, trackWidth);
-          setScrubPreviewMs(Math.round(fraction * state.durationMs));
+          const x = clampFraction(e.nativeEvent.locationX, trackWidth);
+          setScrubPreviewMs(Math.round(x * state.durationMs));
+          setScrubPreviewX(e.nativeEvent.locationX);
           setIsScrubbing(true);
         },
         onPanResponderMove: (
@@ -129,8 +136,9 @@ export const TransportBar: React.FC = () => {
           _g: PanResponderGestureState,
         ) => {
           if (!state.seekable) return;
-          const fraction = clampFraction(e.nativeEvent.locationX, trackWidth);
-          setScrubPreviewMs(Math.round(fraction * state.durationMs));
+          const x = clampFraction(e.nativeEvent.locationX, trackWidth);
+          setScrubPreviewMs(Math.round(x * state.durationMs));
+          setScrubPreviewX(e.nativeEvent.locationX);
         },
         onPanResponderRelease: () => {
           if (scrubPreviewMs !== null && state.seekable) {
@@ -210,7 +218,20 @@ export const TransportBar: React.FC = () => {
                 Math.round(fraction * state.durationMs),
                 state.durationMs,
               );
+              // W3.5.2: show the scrub preview for ~600ms after a
+              // tap so the user sees confirmation of the seek
+              // target. The preview disappears naturally on the
+              // next position-tick because `scrubPreviewMs` is
+              // null and `displayMs` falls back to `state.positionMs`.
+              setScrubPreviewMs(targetMs);
+              setScrubPreviewX(e.nativeEvent.locationX);
+              setIsScrubbing(true);
               commands.seek(targetMs);
+              // Clear the preview after a short delay.
+              setTimeout(() => {
+                setScrubPreviewMs(null);
+                setIsScrubbing(false);
+              }, 600);
             }}
             style={({pressed}) => [
               styles.track,
@@ -256,6 +277,17 @@ export const TransportBar: React.FC = () => {
                   shadowColor: colors.accent.gold,
                 },
               ]}
+            />
+            {/* W3.5.2 — ScrubPreview tooltip. Renders only while
+                isScrubbing (touch-down + drag, or briefly after
+                a tap). pointerEvents="none" inside ScrubPreview
+                so it doesn't steal the seek gesture. */}
+            <ScrubPreview
+              visible={isScrubbing && scrubPreviewMs !== null}
+              positionMs={scrubPreviewMs ?? 0}
+              centerX={scrubPreviewX}
+              barWidth={trackWidth}
+              keyframes={keyframes}
             />
           </Pressable>
         </View>
