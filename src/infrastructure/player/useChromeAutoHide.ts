@@ -46,6 +46,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Animated} from 'react-native';
 import {usePlaybackState} from './usePlaybackState';
+import {useReduceMotion} from './useReduceMotion';
 
 export const CHROME_AUTO_HIDE_MS = 3_000;
 export const CHROME_HIDE_ANIM_MS = 200;
@@ -97,6 +98,12 @@ export function __setChromeNoTimerForTests(value: boolean): void {
 
 export function useChromeAutoHide(): ChromeAutoHideApi {
   const {videoState} = usePlaybackState();
+  // V19 W3.6.8 — fade duration collapses to 0 when the user has
+  // enabled the system "reduce motion" accessibility flag (WCAG
+  // 2.3.3). Honors the OS-level preference without re-mounting
+  // the chrome subtree.
+  const reduceMotion = useReduceMotion();
+  const fadeMs = reduceMotion ? 0 : CHROME_HIDE_ANIM_MS;
   const opacity = useMemo(() => new Animated.Value(1), []);
   const [isVisible, setIsVisible] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,7 +123,7 @@ export function useChromeAutoHide(): ChromeAutoHideApi {
   // When videoState changes, decide pinned vs. auto-hide.
   useEffect(() => {
     if (isPinned(videoState)) {
-      // Pinned visible — show instantly, clear any pending hide.
+      // Pinned visible - show instantly, clear any pending hide.
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
@@ -129,11 +136,15 @@ export function useChromeAutoHide(): ChromeAutoHideApi {
     if (testNoTimer) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: CHROME_HIDE_ANIM_MS,
-        useNativeDriver: true,
-      }).start();
+      if (fadeMs === 0) {
+        opacity.setValue(0);
+      } else {
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: fadeMs,
+          useNativeDriver: true,
+        }).start();
+      }
       setIsVisible(false);
       timerRef.current = null;
     }, CHROME_AUTO_HIDE_MS);
@@ -143,12 +154,12 @@ export function useChromeAutoHide(): ChromeAutoHideApi {
         timerRef.current = null;
       }
     };
-  }, [videoState, opacity]);
+  }, [videoState, opacity, fadeMs]);
 
   const toggle = useCallback(() => {
     if (visibleRef.current) {
       // Hide instantly (no 200 ms animation when user explicitly
-      // taps to hide — matches YouTube / Netflix behavior).
+      // taps to hide - matches YouTube / Netflix behavior).
       opacity.setValue(0);
       setIsVisible(false);
       if (timerRef.current) {
@@ -165,17 +176,21 @@ export function useChromeAutoHide(): ChromeAutoHideApi {
       if (videoState === 'playing') {
         if (timerRef.current) clearTimeout(timerRef.current);
         timerRef.current = setTimeout(() => {
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: CHROME_HIDE_ANIM_MS,
-            useNativeDriver: true,
-          }).start();
+          if (fadeMs === 0) {
+            opacity.setValue(0);
+          } else {
+            Animated.timing(opacity, {
+              toValue: 0,
+              duration: fadeMs,
+              useNativeDriver: true,
+            }).start();
+          }
           setIsVisible(false);
           timerRef.current = null;
         }, CHROME_AUTO_HIDE_MS);
       }
     }
-  }, [opacity, videoState]);
+  }, [opacity, videoState, fadeMs]);
 
   const kick = useCallback(() => {
     // Re-show + reset the 3 s timer. No-op during pinned states
@@ -190,15 +205,19 @@ export function useChromeAutoHide(): ChromeAutoHideApi {
     setIsVisible(true);
     if (isPinned(videoState) || testNoTimer) return;
     timerRef.current = setTimeout(() => {
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: CHROME_HIDE_ANIM_MS,
-        useNativeDriver: true,
-      }).start();
+      if (fadeMs === 0) {
+        opacity.setValue(0);
+      } else {
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: fadeMs,
+          useNativeDriver: true,
+        }).start();
+      }
       setIsVisible(false);
       timerRef.current = null;
     }, CHROME_AUTO_HIDE_MS);
-  }, [opacity, videoState]);
+  }, [opacity, videoState, fadeMs]);
 
   return {opacity, isVisible, toggle, kick};
 }

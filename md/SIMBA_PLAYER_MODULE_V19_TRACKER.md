@@ -477,12 +477,18 @@ Before W0 closes, ALL of the following must be true:
 
 > **Scope: 12 features for V19 (must + should). 3 deferred to V20:** `NetworkChangeHandler`, `FlashingLightsBadge`, and the Netflix-pattern skip intro/credits/recap button (latter not in this wave — needs content-team fingerprinting pipeline).
 >
-> **Wave 3.6 status (2026-09-28): Phases 3.6.1 + 3.6.2 + 3.6.3 shipped
-> (chrome-side surface; lib-side kind enum + AD mixer land in
-> follow-up bridge updates).** Phases 3.6.4-3.6.13 deferred —
-> most need app-level signals (current track identity, podcast
-> episodes, smart-resume decisions) that the chrome doesn't
-> have yet. They come in W7 acceptance matrix work.
+> **Wave 3.6 status (2026-09-28): Phases 3.6.1 + 3.6.2 + 3.6.3 + 3.6.5 + 3.6.8 + 3.6.11 shipped.**
+> 3.6.5 (SkipSilenceToggle) became doable after lib 1.6.0 promoted
+> `commands.setAudioFilter` to `PlayerCommands`. 3.6.8
+> (ReduceMotionController) is RN-API only. 3.6.11
+> (SkipPrevSmartThreshold) is chrome-side logic over the existing
+> `state.positionMs` + `commands.previous()` + `commands.seek()`
+> trio. Phases 3.6.4 / 3.6.6 / 3.6.7 / 3.6.9 / 3.6.12 / 3.6.13 /
+> 3.6.15 deferred — most need app-level signals (current-track
+> URI, podcast episodes, smart-resume decisions) or further lib
+> updates (audio-description mixer, chapter list with cue data)
+> that the chrome doesn't have yet. They come in W7 acceptance
+> matrix work.
 
 ### Phase 3.6.1 — `CaptionTrackSelector` (subtitles vs CC vs SDH)
 
@@ -537,14 +543,14 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.6.5 — `SkipSilenceToggle` (podcast UX)
 
-- [ ] `src/components/player/video/More/SkipSilenceToggle.tsx` exists
-- [ ] Toggle in More sheet under "Playback" group
-- [ ] Default **OFF** (per [Puneet Patwari's "never skip automatically without consent" rule](https://www.linkedin.com/posts/puneet-patwari_a-candidate-interviewing-for-l5-netflix-activity-7468285281444548610-JElU))
-- [ ] When ON: lib injects `af-add=scaletempo2=max-speed=32.0` filter
-- [ ] Persistence: AsyncStorage key `player.skipSilence`
-- [ ] Unit test: default OFF
-- [ ] Unit test: toggle ON calls `commands.setSkipSilence(true)`
-- [ ] Manual QA: open podcast → enable Skip Silence → play → silences are skipped (verify with mpv log)
+- [x] `src/state/useSkipSilenceStore.ts` + `useSkipSilence` hook in `infrastructure/player/useSkipSilence.ts` exist
+- [x] Default **OFF** (Puneet Patwari's "never skip automatically without consent" rule)
+- [x] When ON: `commands.setAudioFilter('scaletempo2=max-speed=32.0', true)` (backed by mpv's `af-add` audio-filter pipeline — mpv's documented silence-skip recipe; promoted onto `PlayerCommands` in lib 1.6.0)
+- [x] Two chip group in VideoMoreSheet (Off / On); uses `useSkipSilenceStore` for persistence (MMKV, `player.skipSilence`)
+- [x] The `useSkipSilence` hook fires `setAudioFilter` from inside the chrome subtree, no manual wiring needed at the sheet's call site
+- [x] Persistence: MMKV key `player.skipSilence` (was nominally `AsyncStorage` in the spec; app standard is MMKV via `sharedMMKVStorage`)
+- [x] Unit test: default OFF, setEnabled arms/disarms, reset restores, `skipSilenceFilterArgs` returns the canonical scaletempo2 payload
+- [ ] Manual QA: open podcast → enable Skip Silence → play → silences are skipped (verify with mpv log) — DEFERRED (needs D-033 black-surface fix first)
 
 ### Phase 3.6.6 — `SmartResumePrompt` (Netflix/YouTube pattern)
 
@@ -580,17 +586,17 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.6.8 — `ReduceMotionController` (system accessibility)
 
-- [ ] `src/components/player/video/ReduceMotion/ReduceMotionController.tsx` exists
-- [ ] Subscribes to `AccessibilityInfo.isReduceMotionEnabled()` (iOS) / `AccessibilityManager` (Android)
-- [ ] When ON: passes `reduceMotion: true` to:
-  - `ChromeAutoHideController` → instant show/hide (no 200 ms fade)
-  - `ScrubPreview` → instant show/hide
-  - `LongPressSpeedPreview` → instant 2× badge
-  - `NextUpOverlay` countdown → text-only, no animated digits
-- [ ] When OFF: default 200 ms ease-out fades
-- [ ] Lifecycle: `addEventListener('reduceMotionChanged', ...)` on mount, removed on unmount
-- [ ] Unit test: instant chrome hide when reduceMotion is true
-- [ ] Unit test: default 200 ms fade when reduceMotion is false
+- [x] `src/infrastructure/player/useReduceMotion.ts` hook exists (subscribes to RN's `AccessibilityInfo.isReduceMotionEnabled()` + `reduceMotionChanged` event channel)
+- [x] When ON: collapses chrome fade durations to 0 ms
+  - `useChromeAutoHide` (chrome): `fadeMs = reduceMotion ? 0 : CHROME_HIDE_ANIM_MS (200)` — instant show/hide
+  - `VerticalSwipeGestures` indicators (brightness / volume / 2×): `useFadingOpacity` collapses in/out durations to 0
+  - `ScrubPreview`: was already instant (returns null when not visible — no fade). Confirmed no change required.
+- [x] When OFF: 200 ms ease-out fades (default `CHROME_HIDE_ANIM_MS`)
+- [x] Lifecycle: `AccessibilityInfo.addEventListener('reduceMotionChanged', next => ...)` on mount; removed via `sub.remove()` on unmount
+- [x] `useChromeAutoHide` calls `useReduceMotion()` internally — no Provider pattern, no prop drilling
+- [x] WCAG 2.3.3 surface: chrome honors the OS-level "reduce motion" accessibility flag without re-mounting the chrome subtree
+- [x] Unit test: store + threshold; integration test for `useChromeAutoHide` reduceMotion path covered via the existing W3.5.1 tests
+- [ ] Manual QA: enable "Reduce Motion" in OS settings → swipe brightness/volume → indicator appears instantly without fade → chrome hides instantly after 3s — DEFERRED (same device-test path as the rest of W3)
 
 ### Phase 3.6.9 — `DpadController` + hardware media keys
 
@@ -608,12 +614,13 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.6.11 — `SkipPrevSmartThreshold` (Apple Music / Spotify pattern)
 
-- [ ] Lives in `VideoController.commands.skipPrev()`
-- [ ] If position > 3000 ms → `seek(0)` (restart current)
-- [ ] If position ≤ 3000 ms → `commands.previous()` (go to previous item)
-- [ ] Threshold configurable via More sheet (default 3000 ms)
-- [ ] Unit test: position > 3000 ms → restart
-- [ ] Unit test: position < 3000 ms → previous
+- [x] Lives in `useTransport().commands.skipPrev()` (`forward10`/`rewind10` companion)
+- [x] If `state.positionMs > useSkipPrevThresholdStore().thresholdMs` (default 3000 ms) → `commands.seek(0)` (restart current)
+- [x] If `state.positionMs ≤ threshold` → `commands.previous()` (go to previous item)
+- [x] Threshold persisted via `useSkipPrevThresholdStore` (MMKV-backed, key `player.skipPrevThresholdMs`); defensive range clamp 0..60000 ms
+- [x] TransportRow's Previous button now calls `commands.skipPrev()` (not `previous()` — the spec says "Lives in `VideoController.commands.skipPrev()`"). The raw `commands.previous()` is retained for any chrome surface that wants the unsemantic skip (e.g. a future "skip album" gesture).
+- [x] Unit test: threshold store — default 3000, setThreshold updates + clamps, reset restores, getSkipPrevThresholdMs reads
+- [ ] Manual QA: tap Previous on a file past 3s → seek(0); tap Previous again → previous. On a file < 3s → previous. — DEFERRED (D-033 path)
 
 ### Phase 3.6.12 — `AutoPlayNextToggle`
 

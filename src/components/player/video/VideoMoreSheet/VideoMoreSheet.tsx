@@ -49,7 +49,7 @@ import {
 import {useTheme} from '../../../../theme';
 import {spacing, radius} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
-import {useTransport} from '../../../../infrastructure/player';
+import {useTransport, useSkipSilence} from '../../../../infrastructure/player';
 import {
   useQualityStore,
   VIDEO_QUALITY_PRESETS,
@@ -60,6 +60,9 @@ import {
   useSleepTimerStore,
   SLEEP_TIMER_OPTIONS,
 } from '../../../../state/useSleepTimerStore';
+import {
+  useSkipSilenceStore,
+} from '../../../../state/useSkipSilenceStore';
 import {shareContent} from '../../../../services/shareService';
 import {usePlayer} from '@simba-dev/react-native-media-player';
 
@@ -172,6 +175,17 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
     }
   }, [commands]);
   useSleepTimer(handleSleepExpire);
+
+  // Skip-silence store (W3.6.5). The `useSkipSilence()` hook from
+  // infrastructure/player auto-fires `commands.setAudioFilter`
+  // (`scaletempo2=max-speed=32.0`) on toggle — call it here so
+  // the side-effect is wired while the sheet is mounted.
+  const skipSilenceData = useSkipSilence();
+  const skipSilenceEnabled = skipSilenceData.enabled;
+  // The hook exposes `toggle` for compact surfaces that want a
+  // single button; this sheet renders two explicit On/Off chips
+  // so we drive the store's setter directly for clarity.
+  const setSkipSilenceEnabled = useSkipSilenceStore(s => s.setEnabled);
 
   const handleSpeed = React.useCallback(
     (rate: number) => {
@@ -302,6 +316,29 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
                 );
               })}
             </ChipRow>
+
+            <AppText variant="h2" color="inverse" style={styles.sectionHeader}>
+              Playback
+            </AppText>
+            <ChipRow>
+              <Chip
+                label="Skip silence: Off"
+                active={!skipSilenceEnabled}
+                onPress={() => setSkipSilenceEnabled(false)}
+                testID="skip-silence-chip-off"
+              />
+              <Chip
+                label="Skip silence: On"
+                active={skipSilenceEnabled}
+                onPress={() => setSkipSilenceEnabled(true)}
+                testID="skip-silence-chip-on"
+              />
+            </ChipRow>
+            <AppText variant="caption" color="secondary" style={styles.descriptionText}>
+              {skipSilenceEnabled
+                ? 'Silence is detected and skipped (mpv scaletempo2=max-speed=32.0).'
+                : 'Plays silence as-is.'}
+            </AppText>
 
             <View style={styles.dividerRow}>
               <View style={[styles.divider, {backgroundColor: colors.border.emphasis}]} />

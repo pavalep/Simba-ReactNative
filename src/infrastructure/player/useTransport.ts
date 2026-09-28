@@ -45,6 +45,7 @@ import {
   type PlayerProgress,
   type PlayerCommands,
 } from '@simba-dev/react-native-media-player';
+import {getSkipPrevThresholdMs} from '../../state/useSkipPrevThresholdStore';
 
 /**
  * A contiguous buffered range, normalized to milliseconds.
@@ -153,6 +154,13 @@ export interface TransportCommands {
   /** V19 W3.5 — seek forward by 10s (canonical forward). */
   forward10(): void;
   /**
+   * V19 W3.6.11 — Apple Music / Spotify pattern. If the playhead
+   * is more than `useSkipPrevThresholdStore().thresholdMs` into
+   * the current item, `seek(0)` (restart). Else, `commands.previous()`
+   * (skip to the previous item). Threshold defaults to 3000 ms.
+   */
+  skipPrev(): void;
+  /**
    * V19 W3.5.5 — set playback rate. Backed by lib
    * `commands.setSpeed(rate)`. Used by the long-press preview
    * (which writes 2 and restores) and by the More menu Speed chips.
@@ -188,6 +196,31 @@ export interface TransportCommands {
    * deliberately avoids adding one to keep the surface honest).
    */
   setProperty(name: string, value: unknown): void;
+  /**
+   * V19 W3.6.5 — toggle an mpv audio filter. Backed by lib
+   * `commands.setAudioFilter(filter, enabled)` (mpv `--af-add`
+   * when `enabled`, `--af-remove` when not). Powers the
+   * SkipSilence toggle (mpv's `scaletempo2=max-speed=32.0`
+   * is the canonical silence-skip recipe).
+   */
+  setAudioFilter(filter: string, enabled: boolean): void;
+  /**
+   * V19 W3.6.5 — toggle an mpv video filter. Backed by lib
+   * `commands.setVideoFilter(filter, enabled)` (mpv `--vf-add`
+   * when `enabled`, `--vf-remove` when not). Reserved for
+   * future chrome pieces that wrap mpv video filters; today
+   * no chrome surface calls it.
+   */
+  setVideoFilter(filter: string, enabled: boolean): void;
+  /**
+   * V19 W3.6.12 / lib 1.6.0 — enable or disable playlist
+   * shuffle. Backed by mpv's `playlist-shuffle` property.
+   * State mirrored on `state.shuffle`. Not currently consumed
+   * by chrome (W3.6.12 AutoPlayNextToggle ships later) but
+   * promoted onto `PlayerCommands` in 1.6.0 and routed through
+   * here for the next chrome piece.
+   */
+  setShuffle(enabled: boolean): void;
 }
 
 /**
@@ -469,6 +502,15 @@ export function useTransport(): TransportHook {
       forward10: () => {
         commands.seekBy(10_000);
       },
+      skipPrev: () => {
+        const threshold = getSkipPrevThresholdMs();
+        const position = state.positionMs;
+        if (position > threshold) {
+          commands.seek(0);
+        } else {
+          commands.previous();
+        }
+      },
       setSpeed: (rate: number) => {
         commands.setSpeed(rate);
       },
@@ -481,6 +523,15 @@ export function useTransport(): TransportHook {
       getScreenBrightness: () => commands.getScreenBrightness(),
       setProperty: (name: string, value: unknown) => {
         commands.setProperty(name, value);
+      },
+      setAudioFilter: (filter: string, enabled: boolean) => {
+        commands.setAudioFilter(filter, enabled);
+      },
+      setVideoFilter: (filter: string, enabled: boolean) => {
+        commands.setVideoFilter(filter, enabled);
+      },
+      setShuffle: (enabled: boolean) => {
+        commands.setShuffle(enabled);
       },
     }),
     [commands, state.durationMs],

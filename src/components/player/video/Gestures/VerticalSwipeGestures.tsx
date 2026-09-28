@@ -72,6 +72,7 @@ import {AppText} from '../../../../components/core/AppText/AppText';
 import {
   useChromeAutoHide,
   usePresentation,
+  useReduceMotion,
   useTransport,
 } from '../../../../infrastructure/player';
 
@@ -98,6 +99,10 @@ export const VerticalSwipeGestures: React.FC<{
   const {state, commands} = useTransport();
   const {toggle, kick} = useChromeAutoHide();
   const presentation = usePresentation();
+  // V19 W3.6.8 — system "reduce motion" preference; collapses the
+  // indicator fade durations to 0 ms when the user has enabled
+  // the accessibility flag in their OS.
+  const reduceMotion = useReduceMotion();
 
   const [width, setWidth] = React.useState(0);
   const [height, setHeight] = React.useState(0);
@@ -334,13 +339,23 @@ export const VerticalSwipeGestures: React.FC<{
       </View>
 
       {/* Indicator overlays — `pointerEvents="none"` so they don't
-          intercept their own gestures. */}
+          intercept their own gestures. `reduceMotion` collapses
+          the fade to 0 ms when the user has the OS-level reduce-
+          motion accessibility flag on (WCAG 2.3.3). */}
       <BrightnessIndicator
         visible={brightnessVisible}
         value={brightnessValue}
+        reduceMotion={reduceMotion}
       />
-      <VolumeIndicator visible={volumeVisible} value={volumeValue} />
-      <LongPressSpeedBadge visible={longPressActive} />
+      <VolumeIndicator
+        visible={volumeVisible}
+        value={volumeValue}
+        reduceMotion={reduceMotion}
+      />
+      <LongPressSpeedBadge
+        visible={longPressActive}
+        reduceMotion={reduceMotion}
+      />
       {doubleTapRipple && (
         <DoubleTapRipple
           key={doubleTapRipple.key}
@@ -357,24 +372,32 @@ export const VerticalSwipeGestures: React.FC<{
  *                              VISUAL PRIMITIVES
  * ──────────────────────────────────────────────────────────────────────── */
 
-const useFadingOpacity = (visible: boolean, inMs = 100, outMs = 200) => {
+const useFadingOpacity = (
+  visible: boolean,
+  reduceMotion: boolean,
+  inMs = 100,
+  outMs = 200,
+) => {
   const opacity = React.useRef(new Animated.Value(0)).current;
+  const fadeIn = reduceMotion ? 0 : inMs;
+  const fadeOut = reduceMotion ? 0 : outMs;
   React.useEffect(() => {
     Animated.timing(opacity, {
       toValue: visible ? 1 : 0,
-      duration: visible ? inMs : outMs,
+      duration: visible ? fadeIn : fadeOut,
       useNativeDriver: true,
     }).start();
-  }, [visible, opacity, inMs, outMs]);
+  }, [visible, opacity, fadeIn, fadeOut]);
   return opacity;
 };
 
 /** Pill showing the current OS screen brightness (0..1, displayed %). */
-const BrightnessIndicator: React.FC<{visible: boolean; value: number}> = ({
+const BrightnessIndicator: React.FC<{visible: boolean; value: number; reduceMotion: boolean}> = ({
   visible,
   value,
+  reduceMotion,
 }) => {
-  const opacity = useFadingOpacity(visible);
+  const opacity = useFadingOpacity(visible, reduceMotion);
   const {colors} = useTheme();
   const percent = Math.round(clamp01(value) * 100);
   return (
@@ -397,11 +420,12 @@ const BrightnessIndicator: React.FC<{visible: boolean; value: number}> = ({
 };
 
 /** Pill showing the current mpv volume (0..100, displayed %). */
-const VolumeIndicator: React.FC<{visible: boolean; value: number}> = ({
+const VolumeIndicator: React.FC<{visible: boolean; value: number; reduceMotion: boolean}> = ({
   visible,
   value,
+  reduceMotion,
 }) => {
-  const opacity = useFadingOpacity(visible);
+  const opacity = useFadingOpacity(visible, reduceMotion);
   const {colors} = useTheme();
   const percent = Math.round(clamp100(value));
   return (
@@ -424,8 +448,8 @@ const VolumeIndicator: React.FC<{visible: boolean; value: number}> = ({
 };
 
 /** Top-center "2×" badge shown while the user holds the long-press. */
-const LongPressSpeedBadge: React.FC<{visible: boolean}> = ({visible}) => {
-  const opacity = useFadingOpacity(visible, 100, 150);
+const LongPressSpeedBadge: React.FC<{visible: boolean; reduceMotion: boolean}> = ({visible, reduceMotion}) => {
+  const opacity = useFadingOpacity(visible, reduceMotion, 100, 150);
   return (
     <Animated.View
       style={[styles.speedBadge, {opacity}]}

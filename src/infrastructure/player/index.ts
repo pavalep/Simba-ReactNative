@@ -146,7 +146,7 @@ export {
   type CaptionTrack,
 } from './useTransport';
 
-// V19 W3.5 — `useChromeAutoHide` hook. Owns the chrome's
+// V19 W3.5 - `useChromeAutoHide` hook. Owns the chrome's
 // opacity Animated.Value and the 3-second auto-hide timer.
 // Source of truth: TRACKER Phase 3.5.1.
 export {
@@ -155,6 +155,20 @@ export {
   CHROME_HIDE_ANIM_MS,
   type ChromeAutoHideApi,
 } from './useChromeAutoHide';
+
+// V19 W3.6.5 - `useSkipSilence` hook. Bridges the
+// `useSkipSilenceStore` to `commands.setAudioFilter`. Mount in
+// the chrome (NowPlayingScreen or higher) — NOT in every
+// primitive. Source of truth: TRACKER Phase 3.6.5.
+export {useSkipSilence} from './useSkipSilence';
+
+// V19 W3.6.8 - `useReduceMotion` hook. Subscribes to RN's
+// `AccessibilityInfo.isReduceMotionEnabled()` and re-renders on
+// `reduceMotionChanged`. Mount in the chrome (NowPlayingScreen)
+// — the hook auto-fades ChromeAutoHideController's animation
+// when the system setting flips on. Source of truth: TRACKER
+// Phase 3.6.8 + WCAG 2.3.3.
+export {useReduceMotion} from './useReduceMotion';
 
 export type {
   PlayerQueueItem,

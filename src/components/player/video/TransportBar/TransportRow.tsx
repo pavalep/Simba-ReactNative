@@ -69,10 +69,16 @@ export const TransportRow: React.FC = () => {
         <SvgIcon name="rewind10" size={28} color={colors.text.primary} />
       </Pressable>
 
-      {/* Previous — hidden when no previous entry (NOT a dead spacer) */}
+      {/* Previous — Apple Music / Spotify smart-prev pattern (W3.6.11).
+          - position > thresholdMs (default 3000) → restart current item
+          - position ≤ thresholdMs → `commands.previous()`
+          Threshold is `useSkipPrevThresholdStore.thresholdMs`
+          (MMKV-backed). The raw `commands.previous()` is
+          retained for any chrome surface that wants the unsemantic
+          skip (e.g. a future "skip album" gesture). */}
       {state.canGoPrev ? (
         <Pressable
-          onPress={() => commands.previous()}
+          onPress={() => commands.skipPrev()}
           accessibilityRole="button"
           accessibilityLabel="Previous track"
           hitSlop={8}
