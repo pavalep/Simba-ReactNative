@@ -59,6 +59,7 @@ import {VideoLoadingOverlay} from '../../../components/player/video/VideoLoading
 import {VideoErrorOverlay} from '../../../components/player/video/VideoErrorOverlay/VideoErrorOverlay';
 import {ChromeAutoHideController} from '../../../components/player/video/ChromeAutoHide/ChromeAutoHideController';
 import {VerticalSwipeGestures} from '../../../components/player/video/Gestures/VerticalSwipeGestures';
+import {NextUpOverlay} from '../../../components/player/video/NextUp/NextUpOverlay';
 import {useChromeAutoHide, usePlaybackState} from '../../../infrastructure/player';
 import type {NowPlayingScreenProps} from '../types';
 
@@ -124,6 +125,10 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
           <VideoTitleOverlay />
           <VideoLoadingOverlay />
           <VideoErrorOverlay />
+          {/* V19 W3.6.7 — NextUpOverlay sits inside the surface frame
+              (bottom 40%); Cancel + Play now buttons intercept taps
+              before they reach the gesture surface below. */}
+          <NextUpOverlay />
         </ChromeAutoHideController>
       </View>
 

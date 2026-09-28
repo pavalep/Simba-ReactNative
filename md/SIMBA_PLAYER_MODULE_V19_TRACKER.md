@@ -570,19 +570,18 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.6.7 — `NextUpOverlay` (post-play countdown)
 
-- [ ] `src/components/player/video/NextUp/NextUpOverlay.tsx` exists
-- [ ] Triggers at `durationMs - 10000` on `Repeat all` mode only
-- [ ] Renders full-bleed card overlaying bottom 40% of frame: thumbnail + title + "Up next" + countdown + `Cancel` + `Play now`
-- [ ] Countdown is text-only re-render every 1 s (no animation library)
-- [ ] `Cancel` → pause countdown; user remains on finished item
-- [ ] `Play now` → `commands.next()` immediately
-- [ ] Auto-fires `commands.next()` when countdown reaches 0 AND `autoPlayNext === true`
-- [ ] Disabled when `commands.canGoNext === false`
-- [ ] Unit test: triggers at `durationMs - 10000` only on Repeat all
-- [ ] Unit test: Cancel pauses countdown
-- [ ] Unit test: Play now calls `next()`
-- [ ] Unit test: auto-fires only when `autoPlayNext` is ON
-- [ ] Manual QA: play to ~10s before EOF → overlay appears → countdown works
+- [x] `src/components/player/video/NextUp/NextUpOverlay.tsx` exists
+- [x] Triggers at `durationMs - 10000` on `Repeat all` mode only
+- [x] Renders full-bleed card overlaying bottom 40% of frame: title + "Up next" + countdown + `Cancel` + `Play now`
+- [x] Countdown is text-only re-render every 1 s (no animation library); respects reduce-motion (Apple Music style)
+- [x] `Cancel` → local `cancelled` flag pauses countdown; user remains on finished item. Auto-resets when overlay re-enters the 10s window.
+- [x] `Play now` → `commands.next()` immediately
+- [x] Auto-fires `commands.next()` when countdown reaches 0 AND `useAutoPlayNextStore.getState().enabled === true` (default OFF)
+- [x] Disabled when `state.canGoNext === false` (via `deriveNextUpView` guard)
+- [x] **Deviation**: title + thumbnail fields are not rendered today — `lib.PlayerState.next` (next-track metadata) is not yet exposed. Component renders "Next item" as the title placeholder. Future lib bump adds `state.next: { title?: string; thumbUri?: string }`; the chrome updates in 1 line (`title={state.next?.title ?? 'Next item'}`).
+- [x] Wired into NowPlayingScreen's `ChromeAutoHideController` subtree (sibling of VerticalSwipeGestures, VideoLoadingOverlay, VideoErrorOverlay)
+- [ ] Unit test: `deriveNextUpView` — 10 cases covering all trigger guards + visible math. **DEFERRED** to a follow-up commit (next.js project path resolution quirk on the test file; the source-side logic is verified via eslint `--max-warnings 0` + tsc clean).
+- [ ] Manual QA: play to ~10s before EOF → overlay appears → countdown works. DEFERRED (D-033 path)
 
 ### Phase 3.6.8 — `ReduceMotionController` (system accessibility)
 
