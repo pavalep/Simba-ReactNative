@@ -69,6 +69,7 @@ import {
 } from '../../../../infrastructure/player';
 import {BufferedRangeFill} from './BufferedRangeFill';
 import {ModeControl} from './ModeControl';
+import {CaptionsToggle} from './CaptionsToggle';
 
 /** Minimum drag distance (px) before a touch is treated as a pan
  *  rather than a tap. Apple's AVPlayer uses ~5px; we mirror. */
@@ -266,13 +267,16 @@ export const TransportBar: React.FC = () => {
         </AppText>
       </View>
 
-      {/* Row 3 — Mode + More (W3 Phase 3.1).
+      {/* Row 3 — Mode + Captions + More (W3 Phases 3.1 + 3.2).
           The transport row (Phase 3.5) goes BETWEEN the progress
           row and this mode row in the full SPEC; W3 batches the
-          mode row first as a clean review unit. */}
+          mode row first as a clean review unit. CaptionsToggle
+          self-collapses (returns null) when no caption tracks
+          exist for the current file. */}
       <View style={styles.modeRow}>
         <View style={styles.modeLeft}>
           <ModeControl />
+          <CaptionsToggle />
         </View>
         <View style={styles.modeRight}>
           {/* Slot for <More /> (Phase 3.4) */}

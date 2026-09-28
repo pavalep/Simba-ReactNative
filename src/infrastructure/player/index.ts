@@ -130,8 +130,9 @@ export {
 // V19 W2 — `useTransport()` facade. Wraps the lib's
 // `usePlayerProgress()` + `usePlayer()` hooks and adds V19
 // derivations (`isPlaying`, `isEnded`, `normalizedWindow`,
-// `canEnterPip`, `repeatMode`). Source of truth: SPEC §3.7 +
-// TRACKER Phase 2.1 + Phase 3.1.
+// `canEnterPip`, `repeatMode`, `captionTracks`,
+// `activeCaptionTrackId`). Source of truth: SPEC §3.7 +
+// TRACKER Phase 2.1 + Phase 3.1 + Phase 3.2.
 export {
   useTransport,
   formatMsAsClock,
@@ -142,6 +143,7 @@ export {
   type BufferedRange,
   type NormalizedWindow,
   type RepeatMode,
+  type CaptionTrack,
 } from './useTransport';
 
 export type {

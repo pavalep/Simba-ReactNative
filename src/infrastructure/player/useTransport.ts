@@ -96,6 +96,10 @@ export interface TransportState {
   canEnterPip: boolean;
   /** V19 W3 — current repeat mode (V19 vocabulary). */
   repeatMode: RepeatMode;
+  /** V19 W3 — subtitle/caption tracks for the current file. */
+  captionTracks: CaptionTrack[];
+  /** V19 W3 — id of the currently-active subtitle track (or null). */
+  activeCaptionTrackId: number | null;
 }
 
 /**
@@ -118,6 +122,11 @@ export interface TransportCommands {
    * `MpvLoopMode` (`'none' | 'file' | 'playlist'`).
    */
   setRepeatMode(mode: RepeatMode): void;
+  /**
+   * V19 W3 — select a caption track by id. Pass `null` to
+   * disable captions (lib's `setTrack('sub', -1)` sentinel).
+   */
+  selectCaptionTrack(trackId: number | null): void;
 }
 
 /**
@@ -145,6 +154,23 @@ function repeatModeToMpv(mode: RepeatMode): 'none' | 'file' | 'playlist' {
   if (mode === 'one') return 'file';
   if (mode === 'all') return 'playlist';
   return 'none';
+}
+
+/**
+ * V19 W3 — A caption track. Derived from the lib's `MpvTrack`
+ * filtered by `type === 'sub'`. The chrome never sees the raw
+ * `MpvTrack` shape — the facade strips it down to the fields
+ * the chrome actually renders (id + display label).
+ */
+export interface CaptionTrack {
+  /** Stable id passed back to `commands.selectCaptionTrack(id)`. */
+  id: number;
+  /** Display label. Falls back to "Track N" when no title/lang. */
+  label: string;
+  /** BCP-47-ish language tag (e.g. "en", "ja") when available. */
+  lang: string | null;
+  /** True when this is the track the lib is currently rendering. */
+  active: boolean;
 }
 
 export interface TransportHook {
@@ -217,10 +243,36 @@ function deriveNormalizedWindow(
   return null;
 }
 
+function deriveCaptionTracks(tracks: ReadonlyArray<{id: number; type: string; title?: string; lang?: string; selected: boolean}> | undefined): {
+  captionTracks: CaptionTrack[];
+  activeCaptionTrackId: number | null;
+} {
+  if (!tracks || tracks.length === 0) {
+    return {captionTracks: [], activeCaptionTrackId: null};
+  }
+  const captions: CaptionTrack[] = [];
+  let activeId: number | null = null;
+  for (let i = 0; i < tracks.length; i++) {
+    const t = tracks[i];
+    if (t.type !== 'sub') continue;
+    const label =
+      t.title ||
+      (t.lang ? `Track (${t.lang})` : `Track ${captions.length + 1}`);
+    captions.push({
+      id: t.id,
+      label,
+      lang: t.lang ?? null,
+      active: t.selected,
+    });
+    if (t.selected) activeId = t.id;
+  }
+  return {captionTracks: captions, activeCaptionTrackId: activeId};
+}
+
 export function useTransport(): TransportHook {
   const progress = usePlayerProgress();
   const {state: playerState, commands: libCommands}: {
-    state: {loopMode?: string};
+    state: {loopMode?: string; tracks?: ReadonlyArray<{id: number; type: string; title?: string; lang?: string; selected: boolean}>};
     commands: PlayerCommands;
   } = usePlayer();
   const commands = libCommands;
@@ -233,6 +285,11 @@ export function useTransport(): TransportHook {
   const repeatMode = useMemo<RepeatMode>(
     () => mpvLoopModeToRepeat(playerState.loopMode),
     [playerState.loopMode],
+  );
+
+  const {captionTracks, activeCaptionTrackId} = useMemo(
+    () => deriveCaptionTracks(playerState.tracks),
+    [playerState.tracks],
   );
 
   const state = useMemo<TransportState>(() => {
@@ -260,8 +317,16 @@ export function useTransport(): TransportHook {
       // this is a belt-and-suspenders for the hook consumer.
       canEnterPip: isPlaying && !isEnded && !isBuffering,
       repeatMode,
+      captionTracks,
+      activeCaptionTrackId,
     };
-  }, [progress, bufferedRanges, repeatMode]);
+  }, [
+    progress,
+    bufferedRanges,
+    repeatMode,
+    captionTracks,
+    activeCaptionTrackId,
+  ]);
 
   const wrapped = useMemo<TransportCommands>(
     () => ({
@@ -292,6 +357,15 @@ export function useTransport(): TransportHook {
       },
       setRepeatMode: (mode: RepeatMode) => {
         commands.setLoopMode(repeatModeToMpv(mode));
+      },
+      selectCaptionTrack: (trackId: number | null) => {
+        if (trackId === null) {
+          // Disable captions. The lib's `setTrack(type, -1)`
+          // sentinel clears the active track of that type.
+          commands.setTrack('sub', -1);
+        } else {
+          commands.selectTrack(trackId);
+        }
       },
     }),
     [commands, state.durationMs],

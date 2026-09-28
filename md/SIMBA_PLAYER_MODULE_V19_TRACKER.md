@@ -307,15 +307,17 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.2 — `CaptionsToggle` (compact optional control)
 
-- [ ] `src/components/player/video/TransportBar/CaptionsToggle.tsx` exists
-- [ ] Renders ONLY when `useTransport().captionTracks.length > 0` — **REQUIRES** adding `captionTracks` to the V19 `useTransport()` facade (not in lib's `PlayerProgress`; need to read from `PlayerState.tracks` filtering by `type === 'sub'`)
-- [ ] Tap opens `CaptionsSheet` (single-choice list of `captionTracks` items)
-- [ ] Selecting a track calls `commands.selectTrack('sub', trackId)`
-- [ ] The currently-active track is gold-highlighted
-- [ ] Unit test: does NOT render when `captionTracks.length === 0`
-- [ ] Unit test: tap → opens the sheet
-- [ ] Unit test: selecting a track calls the right command
-- [ ] Unit test: if the active track disappears (mpv event), the active selection is cleared (no stale UI)
+- [x] `src/components/player/video/TransportBar/CaptionsToggle.tsx` exists
+- [x] Renders ONLY when `useTransport().captionTracks.length > 0` (added `captionTracks` derivation in `useTransport` facade; reads from `PlayerState.tracks` filtering `type === 'sub'`)
+- [x] Tap opens `CaptionsSheet` (single-choice list of `captionTracks` items + an "Off" entry)
+- [x] Selecting a track calls `commands.selectCaptionTrack(trackId)` (maps to lib `commands.selectTrack(trackId)`); "Off" passes `null` which maps to lib `commands.setTrack('sub', -1)` sentinel
+- [x] The currently-active track is gold-highlighted
+- [x] Unit test: does NOT render when `captionTracks.length === 0`
+- [x] Unit test: tap → opens the sheet
+- [x] Unit test: selecting a track calls `commands.selectCaptionTrack(id)`
+- [x] Unit test: selecting "Off" calls `commands.selectCaptionTrack(null)`
+- [x] Unit test: a11y label reflects current state ("Captions: English..." vs "Captions off. Tap to choose...")
+- [ ] Unit test: if the active track disappears (mpv event), the active selection is cleared (no stale UI) — **DEFERRED**: the facade derives `activeCaptionTrackId` from the lib's tracks list, which removes the entry when the track disappears; tested via the integration path, not the chrome-level unit (same caveat as W2's `bufferedRanges` mutation tests)
 
 ### Phase 3.3 — `PiPToggle` (compact optional control)
 
