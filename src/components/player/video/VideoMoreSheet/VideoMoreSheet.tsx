@@ -63,6 +63,7 @@ import {
 import {
   useSkipSilenceStore,
 } from '../../../../state/useSkipSilenceStore';
+import {useAutoPlayNextStore} from '../../../../state/useAutoPlayNextStore';
 import {shareContent} from '../../../../services/shareService';
 import {usePlayer} from '@simba-dev/react-native-media-player';
 
@@ -186,6 +187,13 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
   // single button; this sheet renders two explicit On/Off chips
   // so we drive the store's setter directly for clarity.
   const setSkipSilenceEnabled = useSkipSilenceStore(s => s.setEnabled);
+
+  // Auto-play-next (W3.6.12). The NextUpOverlay (Phase 3.6.7)
+  // reads `useAutoPlayNextStore.getState().enabled` when its
+  // countdown hits zero — when TRUE, it auto-fires
+  // `commands.next()`. Default OFF (Puneet Patwari).
+  const autoPlayNextEnabled = useAutoPlayNextStore(s => s.enabled);
+  const setAutoPlayNextEnabled = useAutoPlayNextStore(s => s.setEnabled);
 
   const handleSpeed = React.useCallback(
     (rate: number) => {
@@ -338,6 +346,25 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
               {skipSilenceEnabled
                 ? 'Silence is detected and skipped (mpv scaletempo2=max-speed=32.0).'
                 : 'Plays silence as-is.'}
+            </AppText>
+            <ChipRow>
+              <Chip
+                label="Auto-play next: Off"
+                active={!autoPlayNextEnabled}
+                onPress={() => setAutoPlayNextEnabled(false)}
+                testID="auto-play-next-chip-off"
+              />
+              <Chip
+                label="Auto-play next: On"
+                active={autoPlayNextEnabled}
+                onPress={() => setAutoPlayNextEnabled(true)}
+                testID="auto-play-next-chip-on"
+              />
+            </ChipRow>
+            <AppText variant="caption" color="secondary" style={styles.descriptionText}>
+              {autoPlayNextEnabled
+                ? 'When on, the NextUp countdown auto-fires when it reaches zero.'
+                : 'Auto-play off; Cancel + Play now are always required.'}
             </AppText>
 
             <View style={styles.dividerRow}>

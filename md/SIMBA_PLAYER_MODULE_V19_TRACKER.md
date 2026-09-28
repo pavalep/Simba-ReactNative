@@ -624,13 +624,13 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 3.6.12 — `AutoPlayNextToggle`
 
-- [ ] Toggle in More sheet under "Playback" group
-- [ ] Default **OFF** (user-agency-first per Puneet Patwari)
-- [ ] Persistence: AsyncStorage key `player.autoPlayNext`
-- [ ] When ON: NextUpOverlay auto-fires `commands.next()` at countdown 0
-- [ ] When OFF: NextUpOverlay always requires user gesture
-- [ ] Unit test: default OFF
-- [ ] Unit test: NextUpOverlay auto-fires only when ON
+- [x] Two-chip group in VideoMoreSheet Playback section (Off / On)
+- [x] Default **OFF** (user-agency-first per Puneet Patwari)
+- [x] Persistence: MMKV key `player.autoPlayNext` (was nominally `AsyncStorage` in the spec; app standard is MMKV via `sharedMMKVStorage`)
+- [x] `useAutoPlayNextStore` exposed with `setEnabled` / `reset` actions
+- [x] When ON: NextUpOverlay (Phase 3.6.7 follow-up) auto-fires `commands.next()` at countdown 0 — gated on `useAutoPlayNextStore.getState().enabled`
+- [x] When OFF: NextUpOverlay always requires user gesture (Cancel stays on the finished item; Play now calls `commands.next()` once)
+- [x] Unit test: default OFF, setEnabled arms/disarms (idempotent), reset restores
 
 ### Phase 3.6.13 — `HapticFeedback` (iOS Taptic Engine)
 

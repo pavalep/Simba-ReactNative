@@ -34,7 +34,7 @@ import {Pressable, StyleSheet, View} from 'react-native';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
-import {useTransport} from '../../../../infrastructure/player';
+import {useTransport, useHaptic} from '../../../../infrastructure/player';
 
 const REWIND_MS = -10_000;
 const FORWARD_MS = 10_000;
@@ -42,6 +42,11 @@ const FORWARD_MS = 10_000;
 export const TransportRow: React.FC = () => {
   const {state, commands} = useTransport();
   const {colors} = useTheme();
+  // V19 W3.6.13 — light haptic on every chrome tap. Android gets
+  // a 10 ms Vibration; iOS is a no-op today (lib doesn't yet expose
+  // iOS UIImpactFeedbackGenerator). Future lib-side widening adds
+  // `commands.triggerHaptic(intensity)` and the lib branches on iOS.
+  const {haptic} = useHaptic();
 
   const playPauseLabel = state.isEnded
     ? 'Replay from beginning'
@@ -50,8 +55,30 @@ export const TransportRow: React.FC = () => {
       : 'Play';
   const playPauseIcon = state.isEnded ? 'replay' : state.isPlaying ? 'pause' : 'play';
 
-  const onRewind = () => commands.step(REWIND_MS);
-  const onForward = () => commands.step(FORWARD_MS);
+  // play/pause is the primary CTA — `medium` haptic.
+  const onPlayPause = () => {
+    haptic('medium');
+    if (state.isEnded) commands.seek(0);
+    else commands.togglePlayPause();
+  };
+  // Skip / chapter operations get `light` haptic (lower-key so a
+  // flurry of taps during a seek preview doesn't blare).
+  const onRewind = () => {
+    haptic('light');
+    commands.step(REWIND_MS);
+  };
+  const onForward = () => {
+    haptic('light');
+    commands.step(FORWARD_MS);
+  };
+  const onSkipPrev = () => {
+    haptic('light');
+    commands.skipPrev();
+  };
+  const onSkipNext = () => {
+    haptic('light');
+    commands.next();
+  };
 
   return (
     <View style={styles.row} accessible={false}>
@@ -78,7 +105,7 @@ export const TransportRow: React.FC = () => {
           skip (e.g. a future "skip album" gesture). */}
       {state.canGoPrev ? (
         <Pressable
-          onPress={() => commands.skipPrev()}
+          onPress={onSkipPrev}
           accessibilityRole="button"
           accessibilityLabel="Previous track"
           hitSlop={8}
@@ -91,11 +118,9 @@ export const TransportRow: React.FC = () => {
         </Pressable>
       ) : null}
 
-      {/* Play / Pause — the only filled control, gold-accent */}
+      {/* Play / Pause - the only filled control, gold-accent */}
       <Pressable
-        onPress={() =>
-          state.isEnded ? commands.seek(0) : commands.togglePlayPause()
-        }
+        onPress={onPlayPause}
         accessibilityRole="button"
         accessibilityLabel={playPauseLabel}
         hitSlop={8}
@@ -113,10 +138,10 @@ export const TransportRow: React.FC = () => {
         />
       </Pressable>
 
-      {/* Next — hidden when no next entry (NOT a dead spacer) */}
+      {/* Next - hidden when no next entry (NOT a dead spacer) */}
       {state.canGoNext ? (
         <Pressable
-          onPress={() => commands.next()}
+          onPress={onSkipNext}
           accessibilityRole="button"
           accessibilityLabel="Next track"
           hitSlop={8}

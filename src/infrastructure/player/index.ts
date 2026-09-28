@@ -170,6 +170,15 @@ export {useSkipSilence} from './useSkipSilence';
 // Phase 3.6.8 + WCAG 2.3.3.
 export {useReduceMotion} from './useReduceMotion';
 
+// V19 W3.6.13 - `useHaptic` hook. Cross-platform haptic helper
+// for chrome tap feedback. Android: RN `Vibration.vibrate(ms)`.
+// iOS today: no-op (the lib doesn't yet expose a proper
+// UIImpactFeedbackGenerator surface; W3.6.13 follow-up widens
+// lib facade). Mount ONCE in the chrome shell (NowPlayingScreen
+// for now; SimbaPlayer shell in W4); call from chrome tap
+// handlers. Source of truth: TRACKER Phase 3.6.13.
+export {useHaptic, HAPTIC_DURATION_MS, type HapticIntensity, type HapticApi} from './useHaptic';
+
 export type {
   PlayerQueueItem,
   // W22 F/U #2: types for the V13 resume-lookup surface.
