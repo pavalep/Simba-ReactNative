@@ -131,8 +131,8 @@ export {
 // `usePlayerProgress()` + `usePlayer()` hooks and adds V19
 // derivations (`isPlaying`, `isEnded`, `normalizedWindow`,
 // `canEnterPip`, `repeatMode`, `captionTracks`,
-// `activeCaptionTrackId`). Source of truth: SPEC §3.7 +
-// TRACKER Phase 2.1 + Phase 3.1 + Phase 3.2.
+// `activeCaptionTrackId`, `canGoPrev`, `canGoNext`).
+// Source of truth: SPEC §3.7 + TRACKER Phase 2.1 + Phase 3.
 export {
   useTransport,
   formatMsAsClock,
@@ -145,6 +145,16 @@ export {
   type RepeatMode,
   type CaptionTrack,
 } from './useTransport';
+
+// V19 W3.5 — `useChromeAutoHide` hook. Owns the chrome's
+// opacity Animated.Value and the 3-second auto-hide timer.
+// Source of truth: TRACKER Phase 3.5.1.
+export {
+  useChromeAutoHide,
+  CHROME_AUTO_HIDE_MS,
+  CHROME_HIDE_ANIM_MS,
+  type ChromeAutoHideApi,
+} from './useChromeAutoHide';
 
 export type {
   PlayerQueueItem,

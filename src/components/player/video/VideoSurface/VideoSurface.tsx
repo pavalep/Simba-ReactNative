@@ -18,7 +18,7 @@
  */
 
 import * as React from 'react';
-import {StyleSheet, View} from 'react-native';
+import {Pressable, StyleSheet, View} from 'react-native';
 import {useTheme} from '../../../../theme';
 
 export interface VideoSurfaceProps {
@@ -26,13 +26,42 @@ export interface VideoSurfaceProps {
   style?: object;
   /** Optional accessibility label — defaults to `"Video"` for screen readers. */
   accessibilityLabel?: string;
+  /**
+   * V19 W3.5.1 — optional tap handler. When provided, the
+   * surface becomes Pressable (chrome tap-anywhere toggle).
+   * When absent, the surface stays a plain View (zero gesture
+   * cost). The chrome's auto-hide controller owns the toggle
+   * logic; the surface just forwards taps.
+   */
+  onPress?: () => void;
 }
 
 export const VideoSurface: React.FC<VideoSurfaceProps> = ({
   style,
   accessibilityLabel = 'Video',
+  onPress,
 }) => {
   const {colors} = useTheme();
+
+  // When onPress is provided, render a Pressable so taps bubble
+  // to the chrome's auto-hide toggle. Otherwise render a plain
+  // View — the surface stays a passive visual primitive.
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="image"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint="Tap to toggle player controls"
+        style={[
+          StyleSheet.absoluteFill,
+          styles.surface,
+          {backgroundColor: colors.background.surfaceDark},
+          style,
+        ]}
+      />
+    );
+  }
 
   return (
     <View

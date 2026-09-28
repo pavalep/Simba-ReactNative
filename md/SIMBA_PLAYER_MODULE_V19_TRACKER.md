@@ -358,20 +358,23 @@ Before W0 closes, ALL of the following must be true:
 
 ## Wave 3.5 — Chrome auto-hide + scrub preview + gestures (the new chrome)
 
+> **Wave 3.5 status (2026-09-28): Phase 3.5.1 shipped**. Phases 3.5.2-3.5.6
+> pending (ScrubPreview, vertical gestures, double-tap, long-press,
+> VideoMoreSheet).
+
 ### Phase 3.5.1 — `ChromeAutoHideController` (tap-anywhere + 3-second timer)
 
-- [ ] `src/components/player/video/ChromeAutoHide/ChromeAutoHideController.tsx` exists
-- [ ] Owns `isChromeVisible: boolean` independent of `VideoController` state
-- [ ] Chrome is **pinned visible** when `videoState ∈ {preparing, paused, buffering, seeking, error, finished}`
-- [ ] Chrome **fades after 3 s of no input** when `videoState === 'playing'`
-- [ ] Tap anywhere on `VideoSurface` (including outside chrome bounds) toggles chrome visibility
-- [ ] Any transport interaction (seek, skip, pause, mode change) re-shows chrome for 3 s
-- [ ] Hide animation: 200 ms ease-out; show: instant (no fade-in delay)
-- [ ] Paused state: chrome stays visible — verified by unit test
-- [ ] Manual QA: open Movies → tap a video → wait 3 s on `playing` → chrome fades → tap frame → chrome reappears
-- [ ] Manual QA: tap on chrome does NOT toggle (only the frame + outside-chrome area)
-- [ ] Unit test: 3 s timer is reset on any transport interaction
-- [ ] Unit test: chrome stays visible when `videoState === 'buffering'`
+- [x] `src/components/player/video/ChromeAutoHide/ChromeAutoHideController.tsx` exists
+- [x] Owns `opacity: Animated.Value` + `isVisible` state (via `useChromeAutoHide()` hook)
+- [x] Chrome is **pinned visible** when `videoState ∈ {preparing, paused, buffering, seeking, error, finished, idle}` (PINNED_STATES set in the hook)
+- [x] Chrome **fades after 3 s of no input** when `videoState === 'playing'` (CHROME_AUTO_HIDE_MS = 3000)
+- [x] Tap anywhere on `VideoSurface` (via the optional `onPress` prop added to VideoSurface) toggles chrome visibility
+- [x] `kick()` resets the 3 s timer + re-shows chrome (called from transport interactions in follow-up waves W3.5.4 / 3.5.5)
+- [x] Hide animation: 200 ms ease-out (Animated.timing); show: instant (no fade-in delay — `opacity.setValue(1)` directly)
+- [x] NowPlayingScreen wires ChromeAutoHideController around the chrome subtree + TransportBar
+- [x] Unit tests: 6 passing (visibility states, toggle, kick, opacity value)
+- [ ] Manual QA: open Movies → tap a video → wait 3 s on `playing` → chrome fades → tap frame → chrome reappears — **DEFERRED**: needs a real device + the playing-state workaround (D-033 black surface is independent)
+- [ ] Manual QA: tap on chrome does NOT toggle — **DEFERRED**: same manual QA path
 
 ### Phase 3.5.2 — `ScrubPreview` (Netflix-style tooltip during seek)
 

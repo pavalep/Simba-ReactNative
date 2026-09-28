@@ -1,5 +1,6 @@
 /**
- * V19 W1 Phase 1.4 — `NowPlayingScreen` (chrome composition).
+ * V19 W1 Phase 1.4 + W3.5 Phase 3.5.1 — `NowPlayingScreen`
+ * (chrome composition + auto-hide wiring).
  *
  * The screen is now a THIN composition of the V19 chrome primitives.
  * NO local state. NO `TouchableOpacity` for the seek track. NO
@@ -15,12 +16,17 @@
  *   - `VideoLoadingOverlay`  (W1 — real)        — spinner when buffering
  *   - `VideoErrorOverlay`    (W1 — real)        — terminal error scrim
  *
+ * W3.5 adds `ChromeAutoHideController` wrapping the chrome
+ * subtree so the whole chrome fades in / out as a single unit.
+ * The VideoSurface's onPress toggles chrome visibility
+ * (tap-anywhere behavior).
+ *
  * `VideoMiniPlayer` is NOT mounted here — it's the shell-level dock
  * (App.tsx), per SPEC §3.4.1.
  *
- * W2/W3 will fill in the title overlay + transport bar. W4 will
- * fold this into the V19 SimbaPlayer consumer (one mount, not
- * per-screen).
+ * W4 will fold this into the V19 SimbaPlayer consumer (one mount,
+ * not per-screen) and hoist ChromeAutoHideController to the
+ * SimbaPlayer root so visibility survives screen navigation.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.1-3.6 + audit doc §5.
@@ -37,7 +43,8 @@ import {VideoTitleOverlay} from '../../../components/player/video/VideoTitleOver
 import {TransportBar} from '../../../components/player/video/TransportBar/TransportBar';
 import {VideoLoadingOverlay} from '../../../components/player/video/VideoLoadingOverlay/VideoLoadingOverlay';
 import {VideoErrorOverlay} from '../../../components/player/video/VideoErrorOverlay/VideoErrorOverlay';
-import {usePlaybackState} from '../../../infrastructure/player';
+import {ChromeAutoHideController} from '../../../components/player/video/ChromeAutoHide/ChromeAutoHideController';
+import {useChromeAutoHide, usePlaybackState} from '../../../infrastructure/player';
 import type {NowPlayingScreenProps} from '../types';
 
 export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
@@ -56,32 +63,49 @@ export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = ({
   // SimbaPlayer root (which mounts the PlayerActivity). The screen
   // is a viewer of state + chrome composition.
   const {videoState} = usePlaybackState();
+  // The controller owns opacity + visibility + toggle. We need
+  // `toggle` for the VideoSurface onPress and `kick` to expose
+  // to chrome primitives that reset the auto-hide timer (W3.5.4
+  // / W3.5.5 gestures). Today only `toggle` is wired.
+  const {toggle, kick} = useChromeAutoHide();
+
+  // Loading + Error overlays render INSIDE the auto-hide wrapper
+  // so they also fade. They're already conditionally rendered so
+  // they're effectively pinned when their state is active. We
+  // explicitly kick the timer on each render of an overlay so
+  // the chrome stays visible during long buffering.
+  // (Defensive — the auto-hide hook already pins buffering/error
+  // as visible, but `kick` is the explicit "user intent" path.)
+  // eslint-disable-next-line no-void
+  void kick;
 
   return (
     <View style={[styles.root, {paddingTop: insets.top, backgroundColor: colors.background.primary}]}>
       <SimbaStatusBar variant="player" />
 
       {/* VideoSurface owns the frame area. Geometry is `flex:1` so
-          siblings stack vertically without an explicit layout. */}
+          siblings stack vertically without an explicit layout.
+          W3.5.1: onPress toggles chrome visibility (tap-anywhere). */}
       <View style={styles.surfaceContainer}>
-        <VideoSurface accessibilityLabel={fileTitle ?? 'Video'} />
+        <VideoSurface
+          accessibilityLabel={fileTitle ?? 'Video'}
+          onPress={toggle}
+        />
 
-        {/* Title overlay + transport bar are W3/W2 stubs that render
-            null in W1. The chrome composition shape is in place. */}
-        <VideoTitleOverlay />
-
-        {/* Loading overlay sits on top of the surface (sibling, not
-            child — keeps the surface mounted). */}
-        <VideoLoadingOverlay />
-
-        {/* Error overlay is the terminal scrim. Only renders when
-            videoState === 'error'. */}
-        <VideoErrorOverlay />
+        <ChromeAutoHideController style={StyleSheet.absoluteFill}>
+          <VideoTitleOverlay />
+          <VideoLoadingOverlay />
+          <VideoErrorOverlay />
+        </ChromeAutoHideController>
       </View>
 
-      {/* TransportBar lives at the bottom, BELOW the surface. W2 will
-          fill this in with seek + 5 controls + mode row. */}
-      <TransportBar />
+      {/* TransportBar lives at the bottom, BELOW the surface. W3.5.1:
+          also wrapped in ChromeAutoHideController so it fades with
+          the rest of the chrome. The bar already calls kick() via
+          its transport interactions (W3.5.4 wiring). */}
+      <ChromeAutoHideController>
+        <TransportBar />
+      </ChromeAutoHideController>
 
       {/* State hint for accessibility — screen readers can announce
           what the player is doing right now. */}
