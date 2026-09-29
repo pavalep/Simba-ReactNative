@@ -32,6 +32,14 @@ jest.mock('../../../../../src/theme', () => ({
 }));
 
 jest.mock('../../../../../src/infrastructure/player', () => ({
+  // Spread the individual facade SUBMODULES, not the barrel — Jest is
+  // mid-mock on that module, so its re-export getters would read a
+  // half-initialised namespace ("Cannot read properties of undefined
+  // (reading 'CHROME_AUTO_HIDE_MS')").
+  ...jest.requireActual(
+    '../../../../../src/infrastructure/player/useChromeAutoHide',
+  ),
+  ...jest.requireActual('../../../../../src/infrastructure/player/useTransport'),
   useChromeAutoHide: () => ({
     opacity: {_value: 1, setValue: jest.fn(), interpolate: jest.fn(), stopAnimation: jest.fn(), addListener: jest.fn(), removeListener: jest.fn(), resetAnimation: jest.fn()} as unknown as ReturnType<typeof Object> & {_value: number},
     isVisible: true,

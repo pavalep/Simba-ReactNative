@@ -186,6 +186,7 @@ export const TransportBar: React.FC = () => {
         </AppText>
 
         <View
+          testID="scrub-track-hit-area"
           style={styles.trackHitArea}
           onLayout={e => setTrackWidth(e.nativeEvent.layout.width)}
           {...panResponder.panHandlers}
@@ -292,13 +293,21 @@ export const TransportBar: React.FC = () => {
           </Pressable>
         </View>
 
+        {/*
+          Remaining time is rendered as a NEGATIVE clock (`-3:45`),
+          matching the Media3 `RemainingDurationText` primitive that
+          the SPEC names as the canonical reference, and matching this
+          component's own documented contract. The implementation had
+          drifted to a bare `3:45`, so the label read as elapsed time
+          sitting next to the real elapsed time.
+        */}
         <AppText
           variant="caption"
           color="tertiary"
           accessibilityLabel={`Remaining ${formatMsAsClock(state.durationMs - displayMs)}`}
           style={styles.timeLabel}
         >
-          {formatMsAsClock(state.durationMs - displayMs)}
+          {`-${formatMsAsClock(state.durationMs - displayMs)}`}
         </AppText>
       </View>
 

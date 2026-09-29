@@ -16,7 +16,8 @@
  */
 
 import * as React from 'react';
-import {fireEvent, render} from '@testing-library/react-native';
+import {fireEvent} from '@testing-library/react-native';
+import {renderChrome} from '../../../../helpers/renderChrome';
 import {MoreSheet} from '../../../../../src/components/player/video/TransportBar/MoreSheet';
 import {More} from '../../../../../src/components/player/video/TransportBar/More';
 
@@ -48,23 +49,52 @@ jest.mock('../../../../../src/services/shareService', () => ({
 
 const shareService = require('../../../../../src/services/shareService');
 
+// W5/W6 reaudit: Save now performs a REAL download, so the service is
+// mocked and asserted on rather than letting a filesystem write happen
+// in a unit test.
+jest.mock('../../../../../src/services/downloadService', () => ({
+  startDownload: jest.fn().mockResolvedValue(undefined),
+}));
+const downloadService = require('../../../../../src/services/downloadService');
+
+// NB: the variable name must start with `mock` — jest's hoisting
+// plugin rejects any other out-of-scope reference inside a
+// `jest.mock` factory ("The module factory of `jest.mock()` is not
+// allowed to reference any out-of-scope variables").
+jest.mock('../../../../../src/state/playerStore', () => ({
+  usePlayerStore: {
+    getState: () => ({addToPlaylist: mockAddToPlaylist}),
+  },
+}));
+const mockAddToPlaylist = jest.fn();
+const playerStore = {addToPlaylist: mockAddToPlaylist};
+
+// The facade exposes the current URI structurally, derived from the
+// lib's playlist entry. The W5/W6 Save / Add-to-playlist actions act
+// on that value, so the mocked lib state must carry it.
 jest.mock('@simba-dev/react-native-media-player', () => ({
   usePlayer: () => ({
-    state: {title: 'Stairway to Heaven', artist: 'Led Zeppelin'},
+    state: {
+      title: 'Stairway to Heaven',
+      artist: 'Led Zeppelin',
+      playlist: [{filename: 'https://cdn.test/stairway.mp4', title: 'Stairway to Heaven'}],
+      currentIndex: 0,
+    },
     commands: {},
   }),
+  usePlayerProgress: () => ({positionMs: 0, durationMs: 0, isBuffering: false}),
 }));
 
 describe('MoreSheet', () => {
   it('renders nothing when visible=false', async () => {
-    const {toJSON} = await render(
+    const {toJSON} = await renderChrome(
       <MoreSheet visible={false} onAction={jest.fn()} onClose={jest.fn()} />,
     );
     expect(toJSON()).toBeNull();
   });
 
   it('renders all 4 menu items', async () => {
-    const {getByLabelText} = await render(
+    const {getByLabelText} = await renderChrome(
       <MoreSheet visible onAction={jest.fn()} onClose={jest.fn()} />,
     );
     expect(getByLabelText('Save')).toBeTruthy();
@@ -75,7 +105,7 @@ describe('MoreSheet', () => {
 
   it('tapping an item invokes onAction with the right key', async () => {
     const onAction = jest.fn();
-    const {getByLabelText} = await render(
+    const {getByLabelText} = await renderChrome(
       <MoreSheet visible onAction={onAction} onClose={jest.fn()} />,
     );
     fireEvent.press(getByLabelText('Track info'));
@@ -85,7 +115,7 @@ describe('MoreSheet', () => {
   it('tapping the scrim calls onClose WITHOUT onAction', async () => {
     const onAction = jest.fn();
     const onClose = jest.fn();
-    const {getByLabelText} = await render(
+    const {getByLabelText} = await renderChrome(
       <MoreSheet visible onAction={onAction} onClose={onClose} />,
     );
     fireEvent.press(getByLabelText('Close more menu'));
@@ -101,16 +131,20 @@ describe('More (button + sheet integration)', () => {
   });
 
   it('renders the button + opens the sheet on tap', async () => {
-    const {getByLabelText} = await render(<More />);
+    const {getByTestId, getByLabelText} = await renderChrome(<More />);
     fireEvent.press(getByLabelText('More options'));
-    expect(getByLabelText('Save')).toBeTruthy();
-    expect(getByLabelText('Share')).toBeTruthy();
+    // `More` renders `VideoMoreSheet` (W3.5.6 replaced `MoreSheet`),
+    // whose legacy rows are addressed by testID, not by
+    // accessibility label. These assertions were still written
+    // against the W3.4 `MoreSheet` labels and never matched.
+    expect(getByTestId('legacy-save')).toBeTruthy();
+    expect(getByTestId('legacy-share')).toBeTruthy();
   });
 
   it('Share calls shareContent with the current track title + artist', async () => {
-    const {getByLabelText} = await render(<More />);
+    const {getByTestId, getByLabelText} = await renderChrome(<More />);
     fireEvent.press(getByLabelText('More options'));
-    fireEvent.press(getByLabelText('Share'));
+    fireEvent.press(getByTestId('legacy-share'));
     expect(shareService.shareContent).toHaveBeenCalledWith({
       route: 'SongScreen',
       params: {},
@@ -119,29 +153,25 @@ describe('More (button + sheet integration)', () => {
     });
   });
 
-  it('Save logs a placeholder warning (documented as deferred)', async () => {
-    const warnSpy = jest
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
-    const {getByLabelText} = await render(<More />);
+  it('Save starts a real download for the current track URI', async () => {
+    // W5/W6 reaudit: these tests previously asserted that Save and
+    // Add-to-playlist only logged a placeholder warning. A test that
+    // pins placeholder behaviour LOCKS the jugaad in, so both were
+    // rewritten against the real implementation.
+    const {getByTestId, getByLabelText} = await renderChrome(<More />);
     fireEvent.press(getByLabelText('More options'));
-    fireEvent.press(getByLabelText('Save'));
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[More] action 'save'"),
+    fireEvent.press(getByTestId('legacy-save'));
+    expect(downloadService.startDownload).toHaveBeenCalledWith(
+      expect.objectContaining({uri: 'https://cdn.test/stairway.mp4'}),
     );
-    warnSpy.mockRestore();
   });
 
-  it('Add to playlist logs a placeholder warning', async () => {
-    const warnSpy = jest
-      .spyOn(console, 'warn')
-      .mockImplementation(() => {});
-    const {getByLabelText} = await render(<More />);
+  it('Add to playlist really appends to the player queue', async () => {
+    const {getByTestId, getByLabelText} = await renderChrome(<More />);
     fireEvent.press(getByLabelText('More options'));
-    fireEvent.press(getByLabelText('Add to playlist'));
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[More] action 'addToPlaylist'"),
+    fireEvent.press(getByTestId('legacy-add-to-playlist'));
+    expect(playerStore.addToPlaylist).toHaveBeenCalledWith(
+      expect.objectContaining({uri: 'https://cdn.test/stairway.mp4'}),
     );
-    warnSpy.mockRestore();
   });
 });

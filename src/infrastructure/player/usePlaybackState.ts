@@ -25,7 +25,14 @@
 
 import {useEffect, useSyncExternalStore} from 'react';
 import {usePlayer, usePlayerProgress} from '@simba-dev/react-native-media-player';
-import {getVideoController} from './video/useVideoController';
+// Import the DEPENDENCY-FREE singleton holder, not `useVideoController`
+// (which pulls in React + the lib + the app stores). Routing through
+// the barrel from here forms the cycle
+//   barrel → useChromeAutoHide → usePlaybackState → useVideoController
+// whose re-exported bindings then read back as `undefined`
+// ("Cannot read properties of undefined (reading
+// 'CHROME_AUTO_HIDE_MS')"). See `video/controllerSingleton.ts`.
+import {getVideoController} from './video/controllerSingleton';
 import type {VideoState} from './video/VideoController';
 
 export type {VideoState};

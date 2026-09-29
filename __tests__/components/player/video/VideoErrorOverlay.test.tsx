@@ -16,7 +16,8 @@
  */
 
 import * as React from 'react';
-import {render, screen} from '@testing-library/react-native';
+import {fireEvent, screen} from '@testing-library/react-native';
+import {renderChrome} from '../../../helpers/renderChrome';
 import {VideoErrorOverlay} from '../../../../src/components/player/video/VideoErrorOverlay/VideoErrorOverlay';
 
 // Mock the transport facade so the overlay sees a controlled
@@ -31,7 +32,10 @@ const mockCommands = {
 };
 const mockController = {
   getState: jest.fn(() => ({currentItem: null})),
-  retry: jest.fn(),
+  // Returns a real promise: the overlay chains `.catch(...)` on the
+  // result, so a bare `jest.fn()` returning undefined throws
+  // "Cannot read properties of undefined (reading 'catch')".
+  retry: jest.fn(() => Promise.resolve()),
 };
 
 jest.mock('../../../../src/infrastructure/player', () => ({
@@ -56,21 +60,21 @@ describe('VideoErrorOverlay', () => {
 
   it('renders nothing when videoState is not "error"', async () => {
     mockVideoState.current = 'playing';
-    await render(<VideoErrorOverlay />);
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
     expect(screen.queryByText("Couldn't reach the server")).toBeNull();
     expect(screen.queryByLabelText('Close player')).toBeNull();
   });
 
   it('renders nothing on the idle screen', async () => {
     mockVideoState.current = 'idle';
-    await render(<VideoErrorOverlay />);
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
     expect(screen.queryByLabelText('Close player')).toBeNull();
   });
 
   it('shows the classifier copy for a real network failure', async () => {
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 503 Service Unavailable');
-    await render(<VideoErrorOverlay />);
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
     expect(screen.getByText("Couldn't reach the server")).toBeTruthy();
   });
 
@@ -79,7 +83,7 @@ describe('VideoErrorOverlay', () => {
     // problem. A codec failure must now show codec copy.
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('no decoder for codec hevc failed');
-    await render(<VideoErrorOverlay />);
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
     expect(screen.getByText("Can't play this video")).toBeTruthy();
     expect(screen.queryByText('Connection problem')).toBeNull();
   });
@@ -87,7 +91,7 @@ describe('VideoErrorOverlay', () => {
   it('shows a distinct title for an expired session', async () => {
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 401 Unauthorized');
-    await render(<VideoErrorOverlay />);
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
     expect(screen.getByText('Sign in again')).toBeTruthy();
   });
 
@@ -97,7 +101,7 @@ describe('VideoErrorOverlay', () => {
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 500');
     mockController.getState.mockReturnValue({currentItem: null} as never);
-    await render(<VideoErrorOverlay />);
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
     expect(screen.queryByLabelText('Retry loading')).toBeNull();
     expect(screen.getByLabelText('Close player')).toBeTruthy();
   });
@@ -108,7 +112,7 @@ describe('VideoErrorOverlay', () => {
     mockController.getState.mockReturnValue({
       currentItem: {uri: 'a.mp4', title: 'A', lane: 'video'},
     } as never);
-    await render(<VideoErrorOverlay />);
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
     expect(screen.getByLabelText('Retry loading')).toBeTruthy();
   });
 
@@ -118,8 +122,11 @@ describe('VideoErrorOverlay', () => {
     mockController.getState.mockReturnValue({
       currentItem: {uri: 'a.mp4', title: 'A', lane: 'video'},
     } as never);
-    await render(<VideoErrorOverlay />);
-    screen.getByLabelText('Retry loading').props.onPress?.();
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
+    // `fireEvent.press` rather than calling `props.onPress()`:
+    // Pressable wraps the handler, so invoking the raw prop bypasses
+    // the pressability plumbing and never runs the callback.
+    fireEvent.press(screen.getByLabelText('Retry loading'));
     expect(mockController.retry).toHaveBeenCalled();
   });
 
@@ -127,8 +134,8 @@ describe('VideoErrorOverlay', () => {
     // W5 reaudit: Close used to be an explicit no-op placeholder.
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 500');
-    await render(<VideoErrorOverlay />);
-    screen.getByLabelText('Close player').props.onPress?.();
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
+    fireEvent.press(screen.getByLabelText('Close player'));
     expect(mockCommands.close).toHaveBeenCalled();
   });
 });

@@ -17,6 +17,13 @@ import {VideoLoadingOverlay} from '../../../../src/components/player/video/Video
 
 // Mock the facade hook so each test can drive the derived state.
 jest.mock('../../../../src/infrastructure/player', () => ({
+  // Spread the individual facade SUBMODULES (not the barrel — Jest is
+  // mid-mock on that module, so its re-export getters read a
+  // half-initialised namespace). Only `usePlaybackState` is
+  // controlled here; every other hook the component reaches for
+  // still resolves.
+  ...jest.requireActual('../../../../src/infrastructure/player/usePlaybackState'),
+  ...jest.requireActual('../../../../src/infrastructure/player/useTransport'),
   usePlaybackState: jest.fn(),
 }));
 

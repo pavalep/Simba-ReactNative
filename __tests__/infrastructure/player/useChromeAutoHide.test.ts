@@ -28,9 +28,56 @@ import {
 // Mock usePlaybackState so we can drive videoState from tests.
 const mockVideoState: {current: string} = {current: 'preparing'};
 jest.mock('../../../src/infrastructure/player', () => {
-  const actual = jest.requireActual(
-    '../../../src/infrastructure/player/usePlaybackState',
-  );
+  const actual = {
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/useTransport',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/useHaptic',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/usePresentation',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/useReduceMotion',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/usePlaybackState',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/useKeyframes',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/useSkipSilence',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/useQueueSync',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/useChromeAutoHide',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/position',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/streamErrors',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/bridgeErrors',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/resumePolicy',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/validateLane',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/playbackFacade',
+      ),
+      ...jest.requireActual(
+        '../../../src/infrastructure/player/video',
+      ),
+    };
   return {
     ...actual,
     usePlaybackState: () => ({

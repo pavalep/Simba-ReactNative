@@ -44,6 +44,7 @@ import {usePlayer} from '@simba-dev/react-native-media-player';
 import {usePlayerStore} from '../../../state/playerStore';
 import {usePresentationStore} from '../../../state/usePresentationStore';
 import {VideoController} from './VideoController';
+import {getVideoController, setVideoController} from './controllerSingleton';
 import type {
   LoadFileOptions,
   VideoRepeatMode,
@@ -60,31 +61,11 @@ import type {ErrorRecoveryAction} from './errorClassifier';
  * call so a test can import the module without constructing a
  * controller (which would need the lib mocked).
  */
-let singleton: VideoController | null = null;
-
 /** Test seam: inject a controller (or null to reset). */
 export function __setVideoControllerForTests(
   next: VideoController | null,
 ): void {
-  singleton = next;
-}
-
-/**
- * Read the controller WITHOUT the React hook.
- *
- * `usePlaybackState()` needs to read and feed the controller but
- * must not itself become a consumer of `useVideoController()` —
- * that would create an import cycle (the controller owns the
- * `VideoState` type that `usePlaybackState` re-exports). Returning
- * the raw instance lets the derivation hook push the lib
- * observation in and read the single owned phase back out.
- *
- * Returns `null` before the first `useVideoController()` mount, in
- * which case callers fall back to their own derivation — so the
- * hook stays usable in isolation (unit tests mock the lib only).
- */
-export function getVideoController(): VideoController | null {
-  return singleton;
+  setVideoController(next);
 }
 
 /**
@@ -178,16 +159,16 @@ export function useVideoController(): UseVideoControllerApi {
   // the closures, so re-injection is unnecessary after the first).
   const deps = useMemo(useBuildDeps, []);
 
-  if (singleton === null) {
-    singleton = new VideoController(deps);
+  // Create the singleton once, then keep its bridge pointed at the
+  // latest commands. Recreating it would drop every subscriber and
+  // reset the loaded item mid-session, so only the deps are swapped.
+  let controller = getVideoController();
+  if (controller === null) {
+    controller = new VideoController(deps);
+    setVideoController(controller);
   } else {
-    // Keep the singleton's bridge pointed at the latest commands
-    // without recreating the controller (recreating would drop
-    // subscribers and reset the loaded item mid-session).
-    singleton.attachDeps(deps);
+    controller.attachDeps(deps);
   }
-
-  const controller = singleton;
 
   const state = useSyncExternalStore(
     controller.subscribeState,
