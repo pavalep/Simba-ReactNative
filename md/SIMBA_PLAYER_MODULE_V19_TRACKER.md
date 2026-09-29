@@ -688,39 +688,65 @@ Before W0 closes, ALL of the following must be true:
 
 ## Wave 5 — `VideoController` (the orchestrator)
 
+> **Status: SHIPPED** (commit `W5` — see git log). Slice lives in
+> `src/infrastructure/player/video/`: `VideoController.ts` (pure TS,
+> 0 React / 0 lib imports), `errorClassifier.ts` (pure fn),
+> `useVideoController.ts` (the ONLY React-aware file — the binding),
+> `index.ts` (barrel). 53 unit tests pass; `tsc --noEmit` clean;
+> ESLint `--max-warnings 0` clean.
+>
+> **Naming note:** the controller's repeat type is exported as
+> `VideoRepeatMode` (not `RepeatMode`) because the facade already
+> exports `RepeatMode` from `useTransport`. Same three members.
+>
+> **Deviation (documented, intentional):** the presentation intents
+> (`expandPresentation` / `collapsePresentation` /
+> `closePresentation`) live on the `useVideoController` binding
+> rather than the controller class. The controller itself must
+> never import React or the presentation store (SPEC §2: "never
+> knows about React"); routing them from the binding keeps the
+> policy layer pure while still exposing the documented surface.
+>
+> **Deviation (documented, intentional):** `prepare` is an
+> OPTIONAL injected hook, left unwired in production. The lib's
+> `commands.loadFile` is fire-and-forget with no prepare promise,
+> and faking one with a timer would be a fake acknowledgement. The
+> view instead reports REAL observed lib state via
+> `observePlayback(phase)`. No fake state is invented on either side.
+
 ### Phase 5.1 — `VideoController` core
 
-- [ ] `src/infrastructure/player/video/VideoController.ts` exists (TypeScript, no React)
-- [ ] Owns: `currentItem`, `videoState`, `error`, `repeatMode`, `lane` (always `'video'` here)
-- [ ] Exposes: `loadFile(uri, opts)`, `play()`, `pause()`, `seek(ms)`, `close()`, `retry()`, `setRepeatMode(mode)`, `expandPresentation()`, `collapsePresentation()`, `closePresentation()`
-- [ ] All commands are PURE: they emit an event/log but do not mutate UI directly
-- [ ] `loadFile` invalidates any in-flight operations from the previous item
-- [ ] `retry()` is `loadFile` with the cached URI
-- [ ] `close()` releases the native session and clears all controller state
-- [ ] Unit test: `loadFile('a')` followed by `loadFile('b')` — only `b` is active
-- [ ] Unit test: `retry()` invokes `loadFile(lastUri)` (no manual cache)
-- [ ] Unit test: `close()` clears `currentItem`, `videoState`, `error`, `repeatMode`
+- [x] `src/infrastructure/player/video/VideoController.ts` exists (TypeScript, no React)
+- [x] Owns: `currentItem`, `videoState`, `error`, `repeatMode`, `lane` (always `'video'` here)
+- [x] Exposes: `loadFile(uri, opts)`, `play()`, `pause()`, `seek(ms)`, `close()`, `retry()`, `setRepeatMode(mode)`, `expandPresentation()`, `collapsePresentation()`, `closePresentation()`
+- [x] All commands are PURE: they emit an event/log but do not mutate UI directly
+- [x] `loadFile` invalidates any in-flight operations from the previous item
+- [x] `retry()` is `loadFile` with the cached URI
+- [x] `close()` releases the native session and clears all controller state
+- [x] Unit test: `loadFile('a')` followed by `loadFile('b')` — only `b` is active
+- [x] Unit test: `retry()` invokes `loadFile(lastUri)` (no manual cache)
+- [x] Unit test: `close()` clears `currentItem`, `videoState`, `error`, `repeatMode`
 
 ### Phase 5.2 — Lane integrity + finish policy
 
-- [ ] `VideoController` is a video-only lane; `audio` kind is handled by a sibling `AudioController` (already exists in V18; V19 does not modify it)
-- [ ] `repeatMode === 'repeat-one'`: `eof-reached` event triggers `seek(0) + play()` (same item)
-- [ ] `repeatMode === 'repeat-all'`: `eof-reached` triggers `loadFile(nextItem.uri)` — but only if `nextItem` exists in the video queue; otherwise `state → 'finished'` (NOT auto-replay)
-- [ ] `repeatMode === 'off'`: `eof-reached` sets `state → 'finished'` and shows "Play from beginning"
-- [ ] Unit test: video lane `Next` returns video item or "no next" — never audio
-- [ ] Unit test: `repeat-one` on EOF restarts the same item, no second `loadFile`
-- [ ] Unit test: `repeat-all` with `nextItem === null` sets `finished` (no auto-replay)
+- [x] `VideoController` is a video-only lane; `audio` kind is handled by a sibling `AudioController` (already exists in V18; V19 does not modify it)
+- [x] `repeatMode === 'repeat-one'`: `eof-reached` event triggers `seek(0) + play()` (same item)
+- [x] `repeatMode === 'repeat-all'`: `eof-reached` triggers `loadFile(nextItem.uri)` — but only if `nextItem` exists in the video queue; otherwise `state → 'finished'` (NOT auto-replay)
+- [x] `repeatMode === 'off'`: `eof-reached` sets `state → 'finished'` and shows "Play from beginning"
+- [x] Unit test: video lane `Next` returns video item or "no next" — never audio
+- [x] Unit test: `repeat-one` on EOF restarts the same item, no second `loadFile`
+- [x] Unit test: `repeat-all` with `nextItem === null` sets `finished` (no auto-replay)
 
 ### Phase 5.3 — Classifier pipeline
 
-- [ ] `VideoController.classifyError(mpvError) → ErrorClassifier` (`network` / `codec` / `unsupported` / `expired` / `blocked` / `unknown`)
-- [ ] `network`: HTTP 5xx, DNS failure, connection reset → "Couldn't reach the server"
-- [ ] `codec`: mpv EXIT_FATAL with codec name → "Codec not supported" + auto-fallback to `software` decoding on next play
-- [ ] `unsupported`: EOF after seek-beyond-duration → "Cannot seek to that position" + Reset to 0 + Resume
-- [ ] `expired`: `Config.X` undefined → "API token expired — reauth" + Sign-out + Reload
-- [ ] `blocked`: SurfaceView null + another player active → "Blocked by another player" + Stop the other + Retry
-- [ ] `unknown`: everything else → "Something went wrong" + Retry + Close
-- [ ] Unit test: classifier table — every documented input → expected output, plus a fuzz test for the "anything else" fallback
+- [x] `VideoController.classifyError(mpvError) → ErrorClassifier` (`network` / `codec` / `unsupported` / `expired` / `blocked` / `unknown`)
+- [x] `network`: HTTP 5xx, DNS failure, connection reset → "Couldn't reach the server"
+- [x] `codec`: mpv EXIT_FATAL with codec name → "Codec not supported" + auto-fallback to `software` decoding on next play
+- [x] `unsupported`: EOF after seek-beyond-duration → "Cannot seek to that position" + Reset to 0 + Resume
+- [x] `expired`: `Config.X` undefined → "API token expired — reauth" + Sign-out + Reload
+- [x] `blocked`: SurfaceView null + another player active → "Blocked by another player" + Stop the other + Retry
+- [x] `unknown`: everything else → "Something went wrong" + Retry + Close
+- [x] Unit test: classifier table — every documented input → expected output, plus a fuzz test for the "anything else" fallback
 
 ---
 

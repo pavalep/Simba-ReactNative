@@ -179,6 +179,33 @@ export {useReduceMotion} from './useReduceMotion';
 // handlers. Source of truth: TRACKER Phase 3.6.13.
 export {useHaptic, HAPTIC_DURATION_MS, type HapticIntensity, type HapticApi} from './useHaptic';
 
+// V19 W5 — the `VideoController` orchestrator + its React binding.
+// The controller is PURE TypeScript (no React) and owns the video
+// lane's behaviour: load lifecycle, lane integrity, finish policy,
+// repeat semantics, and error classification. Chrome never
+// re-implements any of it — it subscribes and renders.
+// Source of truth: SPEC §2 (boundary diagram) + TRACKER Phase
+// 5.1 / 5.2 / 5.3.
+export {
+  VideoController,
+  useVideoController,
+  classifyError,
+  __setVideoControllerForTests,
+  type VideoControllerState,
+  type VideoControllerPhase,
+  type VideoControllerEvent,
+  type VideoControllerListener,
+  type VideoControllerDeps,
+  type VideoItem,
+  type LoadFileOptions,
+  type VideoRepeatMode,
+  type ClassifiedError,
+  type ErrorCategory,
+  type ErrorRecoveryAction,
+  type UseVideoControllerApi,
+} from './video';
+
+
 export type {
   PlayerQueueItem,
   // W22 F/U #2: types for the V13 resume-lookup surface.
