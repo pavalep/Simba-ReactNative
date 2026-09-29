@@ -70,6 +70,24 @@ export function __setVideoControllerForTests(
 }
 
 /**
+ * Read the controller WITHOUT the React hook.
+ *
+ * `usePlaybackState()` needs to read and feed the controller but
+ * must not itself become a consumer of `useVideoController()` —
+ * that would create an import cycle (the controller owns the
+ * `VideoState` type that `usePlaybackState` re-exports). Returning
+ * the raw instance lets the derivation hook push the lib
+ * observation in and read the single owned phase back out.
+ *
+ * Returns `null` before the first `useVideoController()` mount, in
+ * which case callers fall back to their own derivation — so the
+ * hook stays usable in isolation (unit tests mock the lib only).
+ */
+export function getVideoController(): VideoController | null {
+  return singleton;
+}
+
+/**
  * Build the controller's injected bridge. Named `use*` because it
  * calls `usePlayer()` — `react-hooks/rules-of-hooks` requires
  * hook-shaped names for functions that read hooks.

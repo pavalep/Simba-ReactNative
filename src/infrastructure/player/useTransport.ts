@@ -103,8 +103,30 @@ export interface TransportState {
   activeCaptionTrackId: number | null;
   /** V19 W3.5 — true when the playlist has a previous entry. */
   canGoPrev: boolean;
-  /** V19 W3.5 — true when the playlist has a next entry. */
+  /** V19 W3.5 - true when the playlist has a next entry. */
   canGoNext: boolean;
+  /**
+   * The URI (mpv `filename`) of the currently-playing playlist
+   * entry, or `null` when nothing is loaded.
+   *
+   * **W5/W6 cleanup — this closes the "current-track URI facade
+   * identity" blocker.** The lib's `PlayerState` already carries
+   * `playlist: PlaylistEntry[]` + `currentIndex`, and every entry
+   * has a `filename`, so the real current URI was available the
+   * whole time. It was just never surfaced, which is why
+   * `VideoMoreSheet`'s Save / Add-to-playlist / Track-info rows
+   * could only `console.warn` and the retry path had no URI to
+   * reload. Deriving it from the structural playlist (rather than
+   * re-inventing a "current item" concept) is what lets those
+   * actions be real.
+   */
+  currentUri: string | null;
+  /**
+   * The NEXT playlist entry after the current one, or `null` at the
+   * end of the queue. Drives `NextUpOverlay` so it can name the
+   * upcoming track instead of a generic placeholder.
+   */
+  nextTrack: {uri: string; title: string} | null;
   /**
    * V19 W3.5.5 — current playback rate (1.0 = normal). Mirrors
    * `lib.PlayerState.speed` and is the value the long-press gesture
@@ -410,7 +432,7 @@ export function useTransport(): TransportHook {
     state: {
       loopMode?: string;
       tracks?: ReadonlyArray<{id: number; type: string; title?: string; lang?: string; selected: boolean}>;
-      playlist?: ReadonlyArray<unknown>;
+      playlist?: ReadonlyArray<{filename?: string; title?: string}>;
       currentIndex?: number;
       speed?: number;
       volume?: number;
@@ -448,6 +470,29 @@ export function useTransport(): TransportHook {
     return idx >= 0 && idx < playlist.length - 1;
   }, [playerState.currentIndex, playerState.playlist]);
 
+  // The real current URI + next entry, derived structurally from the
+  // lib's playlist rather than from any app-side "current item"
+  // bookkeeping (which is what left the Save / Add-to-playlist /
+  // NextUp surfaces without an identity to act on).
+  const {currentUri, nextTrack} = useMemo(() => {
+    const idx = playerState.currentIndex ?? -1;
+    const playlist = playerState.playlist ?? [];
+    const current = idx >= 0 ? playlist[idx] : undefined;
+    const next = idx >= 0 ? playlist[idx + 1] : undefined;
+    // An entry with no `filename` is not a usable identity — mpv
+    // always sets it, but the lib's type marks it optional, so a
+    // malformed entry must degrade to "unknown" rather than
+    // producing `{uri: undefined}` that downstream actions would
+    // happily try to download.
+    return {
+      currentUri: current?.filename ?? null,
+      nextTrack:
+        next?.filename
+          ? {uri: next.filename, title: next.title ?? ''}
+          : null,
+    };
+  }, [playerState.currentIndex, playerState.playlist]);
+
   const state = useMemo<TransportState>(() => {
     const {positionMs, durationMs, isBuffering, isSeeking, seekable} = progress;
     const isEnded =
@@ -477,6 +522,8 @@ export function useTransport(): TransportHook {
       activeCaptionTrackId,
       canGoPrev,
       canGoNext,
+      currentUri,
+      nextTrack,
       speed: playerState.speed ?? 1,
       volume: playerState.volume ?? 100,
       isMuted: playerState.isMuted ?? false,
@@ -491,6 +538,8 @@ export function useTransport(): TransportHook {
     activeCaptionTrackId,
     canGoPrev,
     canGoNext,
+    currentUri,
+    nextTrack,
     playerState.speed,
     playerState.volume,
     playerState.isMuted,

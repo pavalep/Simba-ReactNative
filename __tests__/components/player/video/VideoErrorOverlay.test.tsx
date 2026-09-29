@@ -54,80 +54,80 @@ describe('VideoErrorOverlay', () => {
     mockController.getState.mockReturnValue({currentItem: null} as never);
   });
 
-  it('renders nothing when videoState is not "error"', () => {
+  it('renders nothing when videoState is not "error"', async () => {
     mockVideoState.current = 'playing';
-    render(<VideoErrorOverlay />);
+    await render(<VideoErrorOverlay />);
     expect(screen.queryByText("Couldn't reach the server")).toBeNull();
     expect(screen.queryByLabelText('Close player')).toBeNull();
   });
 
-  it('renders nothing on the idle screen', () => {
+  it('renders nothing on the idle screen', async () => {
     mockVideoState.current = 'idle';
-    render(<VideoErrorOverlay />);
+    await render(<VideoErrorOverlay />);
     expect(screen.queryByLabelText('Close player')).toBeNull();
   });
 
-  it('shows the classifier copy for a real network failure', () => {
+  it('shows the classifier copy for a real network failure', async () => {
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 503 Service Unavailable');
-    render(<VideoErrorOverlay />);
+    await render(<VideoErrorOverlay />);
     expect(screen.getByText("Couldn't reach the server")).toBeTruthy();
   });
 
-  it('does NOT hardcode "Connection problem" for a codec failure', () => {
+  it('does NOT hardcode "Connection problem" for a codec failure', async () => {
     // W5 reaudit: every error used to render as a connection
     // problem. A codec failure must now show codec copy.
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('no decoder for codec hevc failed');
-    render(<VideoErrorOverlay />);
+    await render(<VideoErrorOverlay />);
     expect(screen.getByText("Can't play this video")).toBeTruthy();
     expect(screen.queryByText('Connection problem')).toBeNull();
   });
 
-  it('shows a distinct title for an expired session', () => {
+  it('shows a distinct title for an expired session', async () => {
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 401 Unauthorized');
-    render(<VideoErrorOverlay />);
+    await render(<VideoErrorOverlay />);
     expect(screen.getByText('Sign in again')).toBeTruthy();
   });
 
-  it('hides Retry when there is no loaded item to retry', () => {
+  it('hides Retry when there is no loaded item to retry', async () => {
     // No-inert-control rule: a Retry button that cannot retry must
     // not render at all.
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 500');
     mockController.getState.mockReturnValue({currentItem: null} as never);
-    render(<VideoErrorOverlay />);
+    await render(<VideoErrorOverlay />);
     expect(screen.queryByLabelText('Retry loading')).toBeNull();
     expect(screen.getByLabelText('Close player')).toBeTruthy();
   });
 
-  it('renders Retry when a loaded item gives a real retry target', () => {
+  it('renders Retry when a loaded item gives a real retry target', async () => {
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 500');
     mockController.getState.mockReturnValue({
       currentItem: {uri: 'a.mp4', title: 'A', lane: 'video'},
     } as never);
-    render(<VideoErrorOverlay />);
+    await render(<VideoErrorOverlay />);
     expect(screen.getByLabelText('Retry loading')).toBeTruthy();
   });
 
-  it('Retry calls controller.retry() — NOT openPlayer with an empty URI', () => {
+  it('Retry calls controller.retry() — NOT openPlayer with an empty URI', async () => {
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 500');
     mockController.getState.mockReturnValue({
       currentItem: {uri: 'a.mp4', title: 'A', lane: 'video'},
     } as never);
-    render(<VideoErrorOverlay />);
+    await render(<VideoErrorOverlay />);
     screen.getByLabelText('Retry loading').props.onPress?.();
     expect(mockController.retry).toHaveBeenCalled();
   });
 
-  it('Close releases the session via commands.close()', () => {
+  it('Close releases the session via commands.close()', async () => {
     // W5 reaudit: Close used to be an explicit no-op placeholder.
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 500');
-    render(<VideoErrorOverlay />);
+    await render(<VideoErrorOverlay />);
     screen.getByLabelText('Close player').props.onPress?.();
     expect(mockCommands.close).toHaveBeenCalled();
   });

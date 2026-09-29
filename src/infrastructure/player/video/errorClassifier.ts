@@ -218,6 +218,12 @@ function asStreamError(e: unknown): StreamError | undefined {
  * rules (notably `codec`) into one-token rules. Signal must come
  * from the message or the structured fields, never from the JS
  * error class.
+ *
+ * `codeName` IS included on purpose: the lib's `PlayerState.error`
+ * is a typed object `{code, codeName?, recoverable, message}`, and
+ * `codeName` (e.g. `ERROR_INVALID_PARAMETER`) is often the most
+ * specific signal available — more specific than the prose
+ * `message` the native side hands back.
  */
 function haystack(e: unknown): string {
   if (e === null || e === undefined) return '';
@@ -225,10 +231,19 @@ function haystack(e: unknown): string {
   if (typeof e !== 'object') return String(e).toLowerCase();
   const o = e as Record<string, unknown>;
   const parts: string[] = [];
-  for (const k of ['message', 'code', 'reason', 'status', 'detail']) {
+  for (const k of [
+    'message',
+    'codeName',
+    'code',
+    'reason',
+    'status',
+    'detail',
+    'recoverable',
+  ]) {
     const v = o[k];
     if (typeof v === 'string') parts.push(v);
     else if (typeof v === 'number') parts.push(String(v));
+    else if (typeof v === 'boolean') parts.push(String(v));
   }
   return parts.join(' ').toLowerCase();
 }

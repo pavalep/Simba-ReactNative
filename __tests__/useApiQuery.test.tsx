@@ -7,7 +7,7 @@
  * hook layer is a thin, correct pass-through.
  *
  * Pattern note: @testing-library/react-native v14 binds the global
- * `screen` to the most recent `render()` call. We use `screen` +
+ * `screen` to the most recent `await render()` call. We use `screen` +
  * `waitFor` for assertions (this matches the existing AppButton /
  * AppText test style). For async TanStack state changes, the
  * `getByText` inside `waitFor` polls until the text appears or
@@ -47,7 +47,7 @@ describe('useApiQuery', () => {
       if (isLoading) return <Text>loading</Text>;
       return <Text>title={data?.title}</Text>;
     }
-    render(<Probe />, {wrapper: makeWrapper()});
+    await render(<Probe />, {wrapper: makeWrapper()});
     await waitFor(() => {
       expect(screen.getByText('title=A')).toBeTruthy();
     });
@@ -71,7 +71,7 @@ describe('useApiQuery', () => {
       }
       return <Text>loading</Text>;
     }
-    render(<Probe />, {wrapper: makeWrapper()});
+    await render(<Probe />, {wrapper: makeWrapper()});
     await waitFor(() => {
       expect(screen.getByText('err=boom')).toBeTruthy();
     });
@@ -85,7 +85,7 @@ describe('useApiQuery', () => {
       const b = useApiQuery<string>({queryKey: ['t', 'b'], queryFn: fetcherB});
       return <Text>{`${a.data ?? '?'}/${b.data ?? '?'}`}</Text>;
     }
-    render(<Probe />, {wrapper: makeWrapper()});
+    await render(<Probe />, {wrapper: makeWrapper()});
     await waitFor(() => {
       expect(screen.getByText('A/B')).toBeTruthy();
     });
@@ -104,7 +104,7 @@ describe('useApiMutation', () => {
       if (m.data) return <Text>ok={String(m.data.ok)}</Text>;
       return <Text onPress={() => m.mutate()}>tap-to-mutate</Text>;
     }
-    render(<Trigger />, {wrapper: makeWrapper()});
+    await render(<Trigger />, {wrapper: makeWrapper()});
     await waitFor(() => {
       expect(screen.getByText('tap-to-mutate')).toBeTruthy();
     });
@@ -140,7 +140,7 @@ describe('useInfiniteApiQuery', () => {
         )}`}</Text>
       );
     }
-    render(<Probe />, {wrapper: makeWrapper()});
+    await render(<Probe />, {wrapper: makeWrapper()});
     await waitFor(() => {
       expect(screen.getByText('items=2 nextParam=1')).toBeTruthy();
     });
@@ -169,7 +169,7 @@ describe('useApiQueries (V18.6 — parallel queries)', () => {
       });
       return <Text>joined={result.joined}</Text>;
     }
-    render(<Probe />, {wrapper: makeWrapper()});
+    await render(<Probe />, {wrapper: makeWrapper()});
     await waitFor(() => {
       expect(screen.getByText('joined=a-data|b-data')).toBeTruthy();
     });
@@ -194,7 +194,7 @@ describe('useApiQueries (V18.6 — parallel queries)', () => {
       });
       return <Text>{result}</Text>;
     }
-    render(<Probe />, {wrapper: makeWrapper()});
+    await render(<Probe />, {wrapper: makeWrapper()});
     await waitFor(() => {
       expect(screen.getByText('a=a-data b=undefined')).toBeTruthy();
     });

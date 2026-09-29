@@ -162,7 +162,7 @@ export const NextUpOverlay: React.FC = () => {
         style={styles.title}
         numberOfLines={1}
       >
-        Next item
+        {state.nextTrack?.title || 'Next item'}
       </AppText>
       <AppText
         variant="display"

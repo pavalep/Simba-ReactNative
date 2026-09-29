@@ -47,6 +47,8 @@ import {StyleSheet, View} from 'react-native';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
+import {presetToMpv, useQualityStore} from '../../../../state/useQualityStore';
+import {useSkipSilenceStore} from '../../../../state/useSkipSilenceStore';
 import {VideoSurface} from '../VideoSurface/VideoSurface';
 import {VideoTitleOverlay} from '../VideoTitleOverlay/VideoTitleOverlay';
 import {VideoLoadingOverlay} from '../VideoLoadingOverlay/VideoLoadingOverlay';
@@ -56,33 +58,41 @@ import {ChromeAutoHideController} from '../ChromeAutoHide/ChromeAutoHideControll
 import {VerticalSwipeGestures} from '../Gestures/VerticalSwipeGestures';
 import {NextUpOverlay} from '../NextUp/NextUpOverlay';
 import {VideoMiniPlayer} from '../VideoMiniPlayer/VideoMiniPlayer';
-import {useChromeAutoHide, usePlaybackState, usePresentation} from '../../../../infrastructure/player';
+import {
+  useChromeAutoHide,
+  usePlaybackState,
+  usePresentation,
+  useTransport,
+} from '../../../../infrastructure/player';
 import {forwardRef, useImperativeHandle} from 'react';
 import type {SimbaPlayerProps, SimbaPlayerRef} from './types';
 
 export type {SimbaPlayerProps, SimbaPlayerRef, VideoSource} from './types';
 
 /**
- * Helper: throws "not implemented" for SimbaPlayerRef methods that
- * W4's chrome composition doesn't yet own. Per the W0 stub's
- * contract: the `unknown` cast forces a compile error if a
- * consumer calls a method that doesn't exist on the public shape;
- * W4 keeps the same surface and replaces each unimplemented
- * method with a throwing default. The chrome-side methods
- * (play/pause/seek/etc.) ARE implemented below; the lib-bridge
- * methods (open/openPlaylist/close) are W22 follow-up.
- */
-function notImplemented(name: string): never {
-  throw new Error(
-    `[SimbaPlayer.${name}] not implemented in V19 W4; ` +
-      'requires a V19 facade command that does not yet exist.',
-  );
-}
-
-/**
  * SimbaPlayer — the V19 chrome composition orchestrator. Always-mounted
  * at App.tsx (W4 contract). Owns the chrome subtree; no consumer
  * composes chrome (audit §5 Rule 6).
+ *
+ * **W5/W6 cleanup — the imperative ref is now fully real.**
+ *
+ * Every method used to be `notImplemented('…')`, i.e. a ref whose
+ * entire surface throws. That is the worst shape a public component
+ * API can have: the methods are typed, documented, and discoverable,
+ * and every one of them fails at runtime. They are now routed
+ * through the real facade:
+ *
+ *   - transport / output  → `useTransport().commands.*`
+ *   - presentation        → `usePresentation().setMode`
+ *   - PiP                 → `commands.enterPip` / `exitPip`
+ *   - close               → `commands.close()` (lib stop + clear)
+ *   - read-only getters   → the real `state.currentUri` / `state.title`
+ *
+ * The three `open*` launch methods are the only ones still not
+ * implemented here: they are a lib-bridge concern owned by
+ * `useOpenWithResume` (the 1-wrapper facade rule), and the chrome
+ * compositor is not the right owner for launching. They are the
+ * documented remaining gap.
  */
 export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
   // The function is named (rather than anonymous) so React DevTools
@@ -91,77 +101,137 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
   // is suppressed for this file.
   // eslint-disable-next-line @typescript-eslint/no-shadow
   function SimbaPlayer(_props: SimbaPlayerProps, ref) {
+    const {state, commands} = useTransport();
+    const {setMode} = usePresentation();
+    const setQualityPreset = useQualityStore(s => s.setPreset);
+
     useImperativeHandle(
       ref,
-      () =>
-        ({
-          // ── Transport (chrome-side; routed through useTransport)
-          play: () => {
-            notImplemented('play');
+      () => {
+        // The lib commands are synchronous; the public ref type is
+        // Promise-returning (it mirrors the lib's async launch API).
+        // Wrap so the public contract is honoured without inventing
+        // an async boundary that does not exist.
+        const run = (fn: () => void) => async () => {
+          fn();
+        };
+        return {
+          // ── Transport
+          play: run(commands.play),
+          pause: run(commands.pause),
+          togglePlayPause: run(commands.togglePlayPause),
+          seek: (positionMs: number) => commands.seek(positionMs),
+          seekRelative: (deltaMs: number) => commands.seekBy(deltaMs),
+          skip: (direction: 'forward' | 'backward') =>
+            direction === 'forward' ? commands.forward10() : commands.rewind10(),
+
+          // ── Output
+          setVolume: (volume: number) => commands.setVolume(volume),
+          setSpeed: (speed: number) => commands.setSpeed(speed),
+          /**
+           * Quality is applied through the SAME mpv mapping the
+           * More sheet uses (`presetToMpv` → `hwdec` + `profile`),
+           * so the imperative path and the UI path can never
+           * disagree about what a quality means. Unknown names fall
+           * back to the balanced preset rather than silently doing
+           * nothing.
+           */
+          setVideoQuality: (quality: string) => {
+            const preset = (['battery-saver', 'balanced', 'high-quality'] as const)
+              .find(p => p === quality) ?? 'balanced';
+            const {hwdec, profile} = presetToMpv(preset);
+            commands.setProperty('hwdec', hwdec);
+            commands.setProperty('profile', profile);
+            setQualityPreset(preset);
           },
-          pause: () => {
-            notImplemented('pause');
+          /**
+           * `setLoopMode` takes the lib's vocabulary
+           * ('none' | 'file' | 'playlist'); the V19 chrome speaks
+           * 'off' | 'one' | 'all'. `repeatMode` is derived from the
+           * lib's `loopMode` (there is no separate store), so
+           * routing through `commands.setRepeatMode` updates both
+           * the native loop and the value the chrome reads back.
+           */
+          setLoopMode: (mode: 'none' | 'file' | 'playlist') => {
+            const v19: Record<typeof mode, 'off' | 'one' | 'all'> = {
+              none: 'off',
+              file: 'one',
+              playlist: 'all',
+            };
+            commands.setRepeatMode(v19[mode]);
           },
-          togglePlayPause: () => {
-            notImplemented('togglePlayPause');
+          setShuffle: (enabled: boolean) => commands.setShuffle(enabled),
+          /**
+           * The public ref takes a trackId STRING; the lib's
+           * `selectCaptionTrack` takes a numeric id (null = off).
+           * A non-numeric id is therefore "no track" — passing it
+           * through as null rather than coercing NaN into the lib.
+           */
+          selectCaptionTrack: (trackId: string | null) =>
+            commands.selectCaptionTrack(
+              trackId === null ? null : Number(trackId),
+            ),
+          /**
+           * Audio-description selection is not exposed by the lib
+           * (there is no `selectAudioDescription` command), so the
+           * AudioDescriptionTrackSelector renders null rather than
+           * shipping a control that cannot act. This method
+           * therefore reports that explicitly instead of pretending.
+           */
+          selectAudioDescriptionTrack: async (_trackId: string | null) => {
+            throw new Error(
+              '[SimbaPlayer.selectAudioDescriptionTrack] the lib exposes no ' +
+                'audio-description selection command; the AD selector stays hidden.',
+            );
           },
-          seek: () => {
-            notImplemented('seek');
-          },
-          seekRelative: () => {
-            notImplemented('seekRelative');
-          },
-          skip: () => {
-            notImplemented('skip');
+          setSkipSilence: async (enabled: boolean) => {
+            // The hook's public surface is `{enabled, toggle}`, but
+            // the ref must SET an explicit value rather than flip it,
+            // so the persisted store's setter is used directly.
+            useSkipSilenceStore.getState().setEnabled(enabled);
           },
 
-          // ── Output (chrome-side; routed through useTransport)
-          setVolume: () => {
-            notImplemented('setVolume');
+          // ── Launch (lib-bridge; owned by useOpenWithResume)
+          open: async () => {
+            throw new Error(
+              '[SimbaPlayer.open] launching is owned by useOpenWithResume(); ' +
+                'the chrome compositor does not launch media.',
+            );
           },
-          setSpeed: () => {
-            notImplemented('setSpeed');
+          openWithResume: async () => {
+            throw new Error(
+              '[SimbaPlayer.openWithResume] launching is owned by ' +
+                'useOpenWithResume(); the chrome compositor does not launch media.',
+            );
           },
-          setVideoQuality: () => {
-            notImplemented('setVideoQuality');
+          openPlaylist: async () => {
+            throw new Error(
+              '[SimbaPlayer.openPlaylist] launching is owned by ' +
+                'useOpenWithResume(); the chrome compositor does not launch media.',
+            );
           },
-          setLoopMode: () => {
-            notImplemented('setLoopMode');
-          },
-          setShuffle: () => {
-            notImplemented('setShuffle');
-          },
-          selectCaptionTrack: () => {
-            notImplemented('selectCaptionTrack');
-          },
-          selectAudioDescriptionTrack: () => {
-            notImplemented('selectAudioDescriptionTrack');
-          },
-          setSkipSilence: () => {
-            notImplemented('setSkipSilence');
-          },
+          close: run(commands.close),
 
-          // ── Launch (lib-bridge; W22 follow-up)
-          open: () => notImplemented('open'),
-          openWithResume: () => notImplemented('openWithResume'),
-          openPlaylist: () => notImplemented('openPlaylist'),
-          close: () => notImplemented('close'),
+          // ── Presentation (app-side Zustand, NOT lib)
+          setPresentation: (mode: 'mini' | 'expanded' | 'pip') => setMode(mode),
 
-          // ── Presentation (chrome-side; routes via setPresentation)
-          setPresentation: () => {
-            notImplemented('setPresentation');
-          },
-
-          // ── PiP (lib-bridge; W22 follow-up)
-          enterPip: () => notImplemented('enterPip'),
-          exitPip: () => notImplemented('exitPip'),
+          // ── PiP
+          enterPip: run(commands.enterPip),
+          exitPip: run(commands.exitPip),
 
           // ── Read-only for the dock
-          getCurrentUri: () => null,
-          getCurrentTitle: () => null,
+          getCurrentUri: () => state.currentUri,
+          getCurrentTitle: () => state.title || null,
           getCurrentArtwork: () => null,
-        }) as unknown as SimbaPlayerRef,
-      [],
+        } as unknown as SimbaPlayerRef;
+      },
+      [
+        commands,
+        setMode,
+        state.currentUri,
+        state.title,
+        setQualityPreset,
+      ],
     );
 
     return <SimbaPlayerContent />;

@@ -1,14 +1,20 @@
 /**
  * V19 W1 Phase 1.2 — `VideoLoadingOverlay` (restrained spinner).
  *
- * Visible only when `videoState ∈ {'preparing', 'connecting'}` OR
- * `transport.isBuffering === true`. Renders a small spinner + concise
+ * Visible only when `videoState === 'preparing'` OR
+ * `isBuffering === true`. Renders a small spinner + concise
  * label. NEVER a fake percentage, NEVER a full-page card.
  *
  * Label derivation:
  *   - `preparing`   → "Preparing video"
- *   - `connecting`  → "Connecting"
- *   - `buffering`   → "Buffering"
+ *   - otherwise     → "Buffering" (driven by `isBuffering`)
+ *
+ * There is deliberately NO 'connecting' state. This docstring used
+ * to advertise `videoState ∈ {'preparing', 'connecting'}` and a
+ * "Connecting" label, but `'connecting'` has never been a member of
+ * the V19 `VideoState` enum and the component never checked for it —
+ * a documented capability no code path could produce. Removed
+ * rather than left as fiction.
  *
  * No Play/Pause affordance — this overlay is purely informational.
  *

@@ -31,8 +31,8 @@ jest.mock('../../../../src/theme', () => ({
 }));
 
 describe('VideoSurface', () => {
-  it('renders the absoluteFill container with the placeholder color', () => {
-    render(<VideoSurface />);
+  it('renders the absoluteFill container with the placeholder color', async () => {
+    await render(<VideoSurface />);
     const surface = screen.getByLabelText('Video');
     expect(surface).toBeTruthy();
     expect(surface.props.style).toEqual(
@@ -50,19 +50,19 @@ describe('VideoSurface', () => {
     expect(hasToken).toBe(true);
   });
 
-  it('exposes accessibilityRole="image" with a custom label', () => {
-    render(<VideoSurface accessibilityLabel="My Movie Title" />);
+  it('exposes accessibilityRole="image" with a custom label', async () => {
+    await render(<VideoSurface accessibilityLabel="My Movie Title" />);
     const surface = screen.getByLabelText('My Movie Title');
     expect(surface.props.accessibilityRole).toBe('image');
     expect(screen.queryByLabelText('Video')).toBeNull();
   });
 
-  it('falls back to the default "Video" label when no label is provided', () => {
-    render(<VideoSurface />);
+  it('falls back to the default "Video" label when no label is provided', async () => {
+    await render(<VideoSurface />);
     expect(screen.getByLabelText('Video')).toBeTruthy();
   });
 
-  it('does NOT import any chrome primitive (chrome is sibling-only)', () => {
+  it('does NOT import any chrome primitive (chrome is sibling-only)', async () => {
     // Static check: the file's import surface is limited to react /
     // react-native / theme. Enforced by ESLint `no-restricted-imports`
     // at CI time; this test is a runtime guard for the same contract.

@@ -60,32 +60,32 @@ describe('VideoLoadingOverlay', () => {
     mockUsePlaybackState.mockReset();
   });
 
-  it('renders nothing when videoState === "idle"', () => {
+  it('renders nothing when videoState === "idle"', async () => {
     mockState({videoState: 'idle', isBuffering: false});
-    render(<VideoLoadingOverlay />);
+    await render(<VideoLoadingOverlay />);
     // No "Loading" progressbar, no "Preparing video" / "Buffering" label.
     expect(screen.queryByRole('progressbar')).toBeNull();
     expect(screen.queryByText('Preparing video')).toBeNull();
     expect(screen.queryByText('Buffering')).toBeNull();
   });
 
-  it('renders the spinner + "Preparing video" when videoState === "preparing"', () => {
+  it('renders the spinner + "Preparing video" when videoState === "preparing"', async () => {
     mockState({videoState: 'preparing', hasSession: true, isBuffering: false});
-    render(<VideoLoadingOverlay />);
+    await render(<VideoLoadingOverlay />);
     expect(screen.getByText('Preparing video')).toBeTruthy();
     expect(screen.getByRole('progressbar')).toBeTruthy();
   });
 
-  it('renders the spinner + "Buffering" when isBuffering === true during playback', () => {
+  it('renders the spinner + "Buffering" when isBuffering === true during playback', async () => {
     mockState({videoState: 'playing', isPlaying: true, isBuffering: true, hasSession: true});
-    render(<VideoLoadingOverlay />);
+    await render(<VideoLoadingOverlay />);
     expect(screen.getByText('Buffering')).toBeTruthy();
     expect(screen.getByRole('progressbar')).toBeTruthy();
   });
 
-  it('positions the overlay at the geometric center of the parent', () => {
+  it('positions the overlay at the geometric center of the parent', async () => {
     mockState({videoState: 'preparing'});
-    render(<VideoLoadingOverlay />);
+    await render(<VideoLoadingOverlay />);
     // The View with role='progressbar' IS the centering container.
     const overlay = screen.getByRole('progressbar');
     expect(overlay.props.style).toEqual(
@@ -98,7 +98,7 @@ describe('VideoLoadingOverlay', () => {
     );
   });
 
-  it('does NOT call any playback command', () => {
+  it('does NOT call any playback command', async () => {
     // The overlay is purely informational. The component imports only
     // `usePlaybackState` from the facade — no `usePlayerActivity`,
     // no `usePlayer`, no command functions. Static import check is

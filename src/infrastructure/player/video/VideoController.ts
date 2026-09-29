@@ -71,6 +71,32 @@ import type {
 // ─── State ──────────────────────────────────────────────────────────
 
 /**
+ * THE single playback-phase enum for the video lane.
+ *
+ * This type used to exist TWICE with different vocabularies — the
+ * controller declared `idle | loading | ready | playing | paused |
+ * finished | error` while the chrome's `usePlaybackState` derived
+ * `idle | preparing | playing | paused | seeking | buffering |
+ * finished | error`. Two owners for one concept, and they disagreed
+ * on the two states that matter most (the controller had no
+ * `buffering`, the chrome had no `loading`).
+ *
+ * The controller is now the sole owner (TRACKER 5.1: "Owns …
+ * videoState"), and `usePlaybackState()` reads its value back out
+ * of the controller after feeding it the lib observation. One
+ * vocabulary, one owner, no drift.
+ */
+export type VideoState =
+  | 'idle'
+  | 'preparing'
+  | 'playing'
+  | 'paused'
+  | 'seeking'
+  | 'buffering'
+  | 'finished'
+  | 'error';
+
+/**
  * The controller's view of the video lane.
  *
  * `lane` is a literal `'video'` — this controller IS the video
@@ -82,13 +108,8 @@ export interface VideoControllerState {
   readonly lane: MediaLane;
   /** The loaded item, or null when idle. */
   readonly currentItem: VideoItem | null;
-  /**
-   * Playback phase. Mirrors the V19 `VideoState` enum that the
-   * chrome already renders against (`usePlaybackState`), so the
-   * overlay decisions and the controller never disagree on what
-   * "finished" or "error" means.
-   */
-  readonly videoState: VideoControllerPhase;
+  /** The playback phase. The ONE enum — see `VideoState` above. */
+  readonly videoState: VideoState;
   /** The classified failure, or null. Non-null only when
    *  `videoState === 'error'`. */
   readonly error: ClassifiedError | null;
@@ -99,15 +120,15 @@ export interface VideoControllerState {
   readonly loadToken: number;
 }
 
-/** The playback phases the controller transitions through. */
-export type VideoControllerPhase =
-  | 'idle'
-  | 'loading'
-  | 'ready'
-  | 'playing'
-  | 'paused'
-  | 'finished'
-  | 'error';
+/**
+ * @deprecated Kept as a source-compatible alias for `VideoState`.
+ *
+ * The controller's private vocabulary (`loading` / `ready`) was
+ * merged into the single `VideoState` enum so the controller and
+ * the chrome can never disagree about what phase playback is in.
+ * New code should use `VideoState`.
+ */
+export type VideoControllerPhase = VideoState;
 
 /**
  * Repeat mode for the video lane.
@@ -338,7 +359,7 @@ export class VideoController {
     const token = this.state.loadToken + 1;
     this.setState({
       currentItem: item,
-      videoState: 'loading',
+      videoState: 'preparing',
       error: null,
       loadToken: token,
     });
@@ -364,7 +385,11 @@ export class VideoController {
         this.log('dropping stale prepare completion', {token});
         return;
       }
-      this.setState({videoState: 'ready'});
+      // No state change here on purpose. The phase stays
+      // 'preparing' until the lib actually reports 'playing' /
+      // 'buffering' through `observePlayback`. Advancing it here
+      // would mean claiming playback state we have not observed —
+      // a fabricated transition.
     } catch (e) {
       if (token !== this.state.loadToken) {
         this.log('dropping stale prepare rejection', {token});
@@ -511,7 +536,7 @@ export class VideoController {
    *   - `error` is sticky: a failed load is not downgraded by a
    *     late-arriving `ready` from the same token.
    */
-  observePlayback = (phase: VideoControllerPhase): void => {
+  observePlayback = (phase: VideoState): void => {
     if (this.disposed) return;
     if (!this.state.currentItem) return;
     if (this.state.videoState === 'error' && phase !== 'error') return;

@@ -25,9 +25,21 @@
  *                    running countdown does NOT.
  *
  * Plus the four legacy W3.4 actions (Save / Add to playlist /
- * Track info / Share) at the bottom — Share wired to
- * `shareService.shareContent`; the other three remain
- * placeholders pending a "current track" facade.
+ * Track info / Share) at the bottom.
+ *
+ * **W5/W6 cleanup — all four are now real:**
+ *   - Share     → `shareService.shareContent` (unchanged).
+ *   - Save      → `downloadService.startDownload` for the current URI.
+ *   - Add to playlist → `playerStore.addToPlaylist`.
+ *   - Track info → a read-only summary of values the lib reports.
+ *
+ * They used to be `console.warn` placeholders blocked on a "current
+ * track facade" that never existed. It turns out the identity was
+ * always available: the lib's `PlayerState.playlist[currentIndex]`
+ * carries the filename, now surfaced as `useTransport().state
+ * .currentUri` (see `useTransport.ts` — "W5/W6 cleanup, current-track
+ * URI facade identity"). A visible menu row that only warns is an
+ * inert control, which this project forbids outright.
  *
  * Important: this sheet is the SINGLE more-menu surface. No other
  * chrome surface opens it. W3.4's "no two paths to the same
@@ -50,6 +62,9 @@ import {useTheme} from '../../../../theme';
 import {spacing, radius} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
 import {useTransport, useSkipSilence} from '../../../../infrastructure/player';
+import {usePlayerStore} from '../../../../state/playerStore';
+import {startDownload} from '../../../../services/downloadService';
+import {useToast} from '../../../feedback/Toast';
 import {
   useQualityStore,
   VIDEO_QUALITY_PRESETS,
@@ -140,6 +155,7 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
   onClose,
 }) => {
   const {colors} = useTheme();
+  const toast = useToast();
   const {state, commands} = useTransport();
   // V19 chrome surface — current track title + artist. The
   // facade (useTransport) reads these from the lib's
@@ -149,20 +165,102 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
   // facade-as-public-surface architecture applies chrome-wide).
   const title = state.title;
   const artist = state.artist;
+  // The REAL current URI, resolved structurally from the lib's
+  // playlist (W5/W6 cleanup). This is what the Save / Add to
+  // playlist actions act on — previously they had no identity to
+  // work with and could only warn.
+  const currentUri = state.currentUri;
+  const durationMs = state.durationMs;
+
+  /**
+   * Track info — a read-only summary of values the lib actually
+   * reports, surfaced in-sheet (never an invented value, and never
+   * a `console.log` a user cannot see).
+   */
+  const showTrackInfo = React.useCallback(() => {
+    if (!currentUri) {
+      toast.show('No track loaded', 'info');
+      return;
+    }
+    const seconds = Math.round(durationMs / 1000);
+    toast.show(
+      [
+        title || 'Untitled track',
+        artist ? `Artist: ${artist}` : null,
+        `Duration: ${seconds}s`,
+        `Source: ${currentUri}`,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      'info',
+    );
+  }, [title, artist, durationMs, currentUri, toast]);
+
+  /** Save — a real `downloadService.startDownload` for the current URI. */
+  const handleSave = React.useCallback(() => {
+    if (!currentUri) {
+      toast.show('Nothing to save', 'info');
+      return;
+    }
+    startDownload({uri: currentUri, title: title || 'Untitled', mediaType: 'video'})
+      .then(() => {
+        toast.show('Download started', 'success');
+      })
+      .catch((e: unknown) => {
+        if (__DEV__) console.warn('[VideoMoreSheet] save failed', e);
+        toast.show('Download failed', 'error');
+      });
+  }, [currentUri, title, toast]);
+
+  /** Add to playlist — a real `playerStore.addToPlaylist` call. */
+  const handleAddToPlaylist = React.useCallback(() => {
+    if (!currentUri) {
+      toast.show('Nothing to add', 'info');
+      return;
+    }
+    usePlayerStore.getState().addToPlaylist({
+      uri: currentUri,
+      title: title || 'Untitled',
+      // `PlaybackEntryInput` requires a duration; the lib reports
+      // the loaded item's, so use the real value rather than 0.
+      duration: durationMs,
+      mediaType: 'video',
+      type: 'movie',
+    });
+    toast.show('Added to playlist', 'success');
+  }, [currentUri, title, durationMs, toast]);
 
   // Quality store
   const qualityPreset = useQualityStore(s => s.preset);
   const setQualityPreset = useQualityStore(s => s.setPreset);
   const applyQuality = React.useCallback(
     (preset: VideoQualityPreset) => {
-      setQualityPreset(preset);
       const {hwdec, profile} = presetToMpv(preset);
+      // **Order matters — write mpv FIRST, persist SECOND.**
+      //
+      // This used to persist the preset and then swallow any bridge
+      // failure, so a rejected `hwdec` write still left the chip
+      // highlighted on the new preset while mpv kept running the
+      // old one: a control that lies about the state of the
+      // player. Persisting only after the bridge accepts means the
+      // stored preset always reflects what mpv was actually told.
       try {
         commands.setProperty('hwdec', hwdec);
         commands.setProperty('profile', profile);
-      } catch {
-        // Bridge not wired (jest / web preview). Skip silently.
+      } catch (e) {
+        // Bridge rejected the write (unavailable platform, missing
+        // property). Leave the stored preset untouched so the chip
+        // keeps showing what is genuinely in effect, and report it.
+        if (__DEV__) {
+          console.warn(
+            `[VideoMoreSheet] quality preset '${preset}' rejected by the bridge; stored preset unchanged.`,
+            e,
+          );
+        }
+        onAction('setQuality');
+        return;
       }
+      setQualityPreset(preset);
       onAction('setQuality');
     },
     [setQualityPreset, commands, onAction],
@@ -233,16 +331,18 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
           }
           break;
         case 'save':
+          handleSave();
+          break;
         case 'addToPlaylist':
+          handleAddToPlaylist();
+          break;
         case 'trackInfo':
-          console.warn(
-            `[VideoMoreSheet] legacy action '${action}' is a placeholder. Wire in follow-up.`,
-          );
+          showTrackInfo();
           break;
       }
       onAction(action);
     },
-    [onAction, title, artist],
+    [onAction, title, artist, handleSave, handleAddToPlaylist, showTrackInfo],
   );
 
   const currentSpeed = state.speed ?? 1;

@@ -349,11 +349,11 @@ describe('VideoController — observation intake', () => {
   it('observePlayback updates the phase', async () => {
     const c = new VideoController(makeDeps());
     await c.loadFile('a.mp4');
-    expect(c.getState().videoState).toBe('loading');
+    expect(c.getState().videoState).toBe('preparing');
 
     // The view reports the real lib state it observed.
-    c.observePlayback('ready');
-    expect(c.getState().videoState).toBe('ready');
+    c.observePlayback('buffering');
+    expect(c.getState().videoState).toBe('buffering');
     c.observePlayback('playing');
     expect(c.getState().videoState).toBe('playing');
   });
@@ -364,13 +364,13 @@ describe('VideoController — observation intake', () => {
     expect(c.getState().videoState).toBe('idle');
   });
 
-  it('error is sticky — a late "ready" does not clear it', async () => {
+  it('error is sticky — a late "buffering" does not clear it', async () => {
     const c = new VideoController(makeDeps());
     await c.loadFile('a.mp4');
     c.reportError(new Error('boom'));
     expect(c.getState().videoState).toBe('error');
 
-    c.observePlayback('ready');
+    c.observePlayback('buffering');
     expect(c.getState().videoState).toBe('error');
   });
 
