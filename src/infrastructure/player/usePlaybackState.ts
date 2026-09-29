@@ -35,6 +35,18 @@ export interface PlaybackStateDerived {
   durationMs: number;
   /** True when the position is within 500 ms of the duration. */
   isAtEnd: boolean;
+  /**
+   * The raw lib failure, or `null` when there isn't one.
+   *
+   * Added in the W5 reaudit. `videoState === 'error'` is derived from
+   * this value, but the error itself was never exposed — so
+   * `VideoErrorOverlay` had nothing real to classify and hardcoded
+   * `kind = 'network'`, meaning every failure (codec, expired,
+   * blocked) rendered as "Connection problem". Exposing the raw value
+   * lets the overlay run it through `classifyError()` and show the
+   * copy the classifier actually prescribes.
+   */
+  error: unknown;
 }
 
 /**
@@ -89,5 +101,6 @@ export function usePlaybackState(): PlaybackStateDerived {
     positionMs,
     durationMs,
     isAtEnd,
+    error: state.error ?? null,
   };
 }

@@ -48,6 +48,9 @@ function mockState(overrides: Partial<ReturnType<typeof usePlaybackState>>) {
     positionMs: 0,
     durationMs: 0,
     isAtEnd: false,
+    // Added in the W5 reaudit: the raw lib error is now part of the
+    // derived state so `VideoErrorOverlay` can classify it.
+    error: null,
     ...overrides,
   });
 }

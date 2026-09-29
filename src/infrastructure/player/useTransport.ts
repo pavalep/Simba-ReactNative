@@ -230,6 +230,38 @@ export interface TransportCommands {
    * here for the next chrome piece.
    */
   setShuffle(enabled: boolean): void;
+  /**
+   * V19 W3 Phase 3.3 + W5 reaudit fix — enter the native PiP window.
+   * Backed by lib `commands.enterPip()` (lib 1.5.x+), which
+   * delegates to `MpvBridgeModule.enterPip()`.
+   *
+   * **Why this exists (W5 reaudit):** `PiPToggle` used to reach for
+   * this via `(commands as unknown as {enterPip?: () => void}).enterPip`
+   * and fall back to `() => {}` when it was absent. `TransportCommands`
+   * never had the method, so the cast always evaluated to
+   * `undefined` and the PiP button rendered (because `canEnterPip` is
+   * a state flag, not a command check) while being **completely
+   * inert** — a silently broken control. Promoting the real lib
+   * method onto the facade removes both the cast and the no-op
+   * fallback, and is the correct alternative to bolting on a
+   * third-party PiP package.
+   */
+  enterPip(): void;
+  /**
+   * Exit the native PiP window, returning to the pre-PiP
+   * presentation. Backed by lib `commands.exitPip()`.
+   */
+  exitPip(): void;
+  /**
+   * V19 W5 reaudit fix — close the session: release the native
+   * player and clear the playlist.
+   *
+   * Backed by the lib's real `commands.stop()` + `commands.clear()`.
+   * The V19 error overlay previously had no close path at all (its
+   * Close button was an explicit no-op placeholder), so this gives
+   * it a genuine one instead of a button that does nothing.
+   */
+  close(): void;
 }
 
 /**
@@ -541,6 +573,18 @@ export function useTransport(): TransportHook {
       },
       setShuffle: (enabled: boolean) => {
         commands.setShuffle(enabled);
+      },
+      enterPip: () => {
+        commands.enterPip();
+      },
+      exitPip: () => {
+        commands.exitPip();
+      },
+      close: () => {
+        // Release the native session, then clear the queue. Both are
+        // real lib commands — not a fabricated "close".
+        commands.stop();
+        commands.clear();
       },
     }),
     [commands, state.durationMs],
