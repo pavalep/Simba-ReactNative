@@ -34,7 +34,8 @@ jest.mock('../../../../../src/theme', () => ({
 }));
 
 const mockEnterPip = jest.fn();
-const mockSetMode = jest.fn();
+const mockSetPipActive = jest.fn();
+const mockTogglePip = jest.fn();
 const mockTransport: {
   state: {canEnterPip: boolean};
   // `enterPip` is a REQUIRED member of `TransportCommands` (lib 1.5.x+),
@@ -100,8 +101,15 @@ jest.mock('../../../../../src/infrastructure/player', () => {
   return {
     ...actual,
     useTransport: () => mockTransport,
+    // W6.0: the presentation hook no longer exposes `setMode` — the
+    // mode is derived from the host activity, and the only genuinely
+    // global presentation fact is whether the PiP window is up. See
+    // `src/state/usePresentationStore.ts`.
     usePresentation: () => ({
-      setMode: mockSetMode,
+      setPipActive: mockSetPipActive,
+      togglePip: mockTogglePip,
+      isPip: false,
+      isExpanded: true,
       mode: 'expanded',
     }),
   };
@@ -131,16 +139,41 @@ describe('PiPToggle', () => {
     expect(mockEnterPip).toHaveBeenCalledTimes(1);
   });
 
-  it('tap ALSO suppresses the JS chrome (setMode("pip"))', async () => {
+  it('tap ALSO suppresses the JS chrome (setPipActive(true))', async () => {
     // The W5 reaudit found the button was a complete no-op: the
     // `as unknown as {enterPip?}` cast always read `undefined` and the
     // `|| () => {}` fallback swallowed the press. Assert BOTH halves of
     // the press so a future one-sided regression is caught.
+    //
+    // W6.0: the second half is `setPipActive(true)`, not
+    // `setMode('pip')`. The mode is now DERIVED from the host activity
+    // plus this flag, so writing a `mode` was both unnecessary and —
+    // because every mounted activity root ran the writer — actively
+    // destructive. See `src/state/usePresentationStore.ts`.
     mockTransport.state.canEnterPip = true;
     const {getByLabelText} = await render(<PiPToggle />);
     fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
     expect(mockEnterPip).toHaveBeenCalledTimes(1);
-    expect(mockSetMode).toHaveBeenCalledWith('pip');
+    expect(mockSetPipActive).toHaveBeenCalledWith(true);
+  });
+
+  it('the native window opens BEFORE the chrome is suppressed', async () => {
+    // Order matters only for the failure case: if the native call
+    // throws, the chrome must not already be gone, or the user is
+    // left with a black screen and a floating window.
+    const order: string[] = [];
+    mockEnterPip.mockImplementationOnce(() => {
+      order.push('native');
+    });
+    mockSetPipActive.mockImplementationOnce(() => {
+      order.push('chrome');
+    });
+
+    mockTransport.state.canEnterPip = true;
+    const {getByLabelText} = await render(<PiPToggle />);
+    fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
+
+    expect(order).toEqual(['native', 'chrome']);
   });
 
   it('has no defensive cast that could make enterPip a silent no-op', async () => {

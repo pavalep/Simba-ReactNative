@@ -91,8 +91,37 @@ class MainActivity : ReactActivity() {
 
   override fun getMainComponentName(): String = "SimbaPlayer"
 
+  /**
+   * W6.0 — hand the React root a PER-TREE "am I the player activity?"
+   * fact.
+   *
+   * The lib's `MpvBridgeModule.isCurrentActivityPlayer()` cannot answer
+   * this question honestly: its backing field is a process-wide
+   * `@Volatile @JvmStatic` on the companion object, so while
+   * `PlayerActivity` is alive EVERY React root in the process — including
+   * this background one — reads `true`. That is the right answer for the
+   * lib's own "don't steal launch params" guard, but it is the wrong
+   * answer for the app's chrome gate, which needs to know whether
+   * *this* tree has a player surface underneath it.
+   *
+   * React context and `initialProps` are per-ROOT, so the launch
+   * options are the correct channel: each activity's delegate supplies
+   * the flag when it creates its own React root, and the flag can never
+   * be observed by the other activity's tree. `App.tsx` reads it from
+   * the root component's props and publishes it through
+   * `PlayerHostProvider`.
+   */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
-      DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+      object : DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled) {
+        override fun getLaunchOptions(): Bundle = Bundle().apply {
+          putBoolean(EXTRA_IS_PLAYER_ACTIVITY, false)
+        }
+      }
+
+  companion object {
+    /** Initial-prop key read by `App.tsx` → `PlayerHostProvider`. */
+    const val EXTRA_IS_PLAYER_ACTIVITY = "isPlayerActivity"
+  }
 
   // ── PiP mode change callback ──
   override fun onPictureInPictureModeChanged(

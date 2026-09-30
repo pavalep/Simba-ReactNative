@@ -38,12 +38,12 @@
 import {useCallback, useMemo} from 'react';
 import {
   resolveStreamType,
-  useIsPlayerActivity,
   useOpenPlaylist,
   usePlayer,
   usePlayerActivity,
   usePlayerProgress,
 } from '@simba-dev/react-native-media-player';
+import {useIsPlayerActivity} from './playerHost';
 import type {MediaKind, MediaLane} from '../../types/media';
 import {
   err,
@@ -63,8 +63,11 @@ export type PlaybackId = string;
 
 /**
  * V19 W6.0 — re-exported so chrome needs exactly one import for the
- * lib. See the lib's `useIsPlayerActivity` docstring for why this
- * exists instead of `useLaunchParams`.
+ * player-host question. This is the app's PER-TREE context-backed hook
+ * (`./playerHost`), NOT the lib's `useIsPlayerActivity`, which answers
+ * a process-wide question ("is a player activity alive in this
+ * process") and therefore reads `true` in the background `MainActivity`
+ * root too. See `playerHost.tsx` for the full account.
  */
 export {useIsPlayerActivity};
 

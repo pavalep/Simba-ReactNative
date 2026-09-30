@@ -60,8 +60,6 @@ import {VerticalSwipeGestures} from '../Gestures/VerticalSwipeGestures';
 import {NextUpOverlay} from '../NextUp/NextUpOverlay';
 import {
   useChromeAutoHide,
-  useIsPlayerActivity,
-  usePlaybackState,
   usePresentation,
   useTransport,
 } from '../../../../infrastructure/player';
@@ -84,8 +82,10 @@ export type {SimbaPlayerProps, SimbaPlayerRef, VideoSource} from './types';
  * through the real facade:
  *
  *   - transport / output  → `useTransport().commands.*`
- *   - presentation        → `usePresentation().setMode`
- *   - PiP                 → `commands.enterPip` / `exitPip`
+ *   - PiP                 → `commands.enterPip` / `exitPip`, plus
+ *                            `usePresentation().setPipActive` so the
+ *                            native window and the JS chrome move
+ *                            together
  *   - close               → `commands.close()` (lib stop + clear)
  *   - read-only getters   → the real `state.currentUri` / `state.title`
  *
@@ -103,7 +103,7 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
   // eslint-disable-next-line @typescript-eslint/no-shadow
   function SimbaPlayer(_props: SimbaPlayerProps, ref) {
     const {state, commands} = useTransport();
-    const {setMode} = usePresentation();
+    const {setPipActive} = usePresentation();
     const setQualityPreset = useQualityStore(s => s.setPreset);
 
     useImperativeHandle(
@@ -213,12 +213,32 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
           },
           close: run(commands.close),
 
-          // ── Presentation (app-side Zustand, NOT lib)
-          setPresentation: (mode: 'mini' | 'expanded' | 'pip') => setMode(mode),
-
           // ── PiP
-          enterPip: run(commands.enterPip),
-          exitPip: run(commands.exitPip),
+          //
+          // Entering PiP is a TWO-part transition and a consumer has no
+          // business knowing that: the native PiP window, AND the JS
+          // chrome going away. Doing only the first leaves the full
+          // chrome painted over the PiP window; doing only the second
+          // leaves the activity black behind a floating window. Both
+          // halves are therefore owned here, so `enterPip()` is one
+          // honest call.
+          //
+          // W6.0: the previous surface also exposed
+          // `setPresentation(mode)` taking `'mini' | 'expanded' |
+          // 'pip'`. With the mode derived from the host activity, only
+          // PiP is something a consumer can select — `'mini'` and
+          // `'expanded'` are facts about which activity is running, not
+          // choices. A `setPresentation('mini')` that the host then
+          // overrides would be a control that lies, so it is removed
+          // rather than kept as a no-op.
+          enterPip: async () => {
+            commands.enterPip();
+            setPipActive(true);
+          },
+          exitPip: async () => {
+            commands.exitPip();
+            setPipActive(false);
+          },
 
           // ── Read-only for the dock
           getCurrentUri: () => state.currentUri,
@@ -228,7 +248,7 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
       },
       [
         commands,
-        setMode,
+        setPipActive,
         state.currentUri,
         state.title,
         setQualityPreset,
@@ -245,68 +265,40 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
  * being entangled with the imperative ref's empty-stub closure.
  */
 const SimbaPlayerContent: React.FC = () => {
-  const {videoState} = usePlaybackState();
   const {toggle} = useChromeAutoHide();
   const presentation = usePresentation();
-  // V19 W6.0 (lib 1.7.0) — the structural mount gate. Synchronous,
-  // so it is already correct on the first render (no frame of chrome
-  // flashing over a non-player activity, and no frame of a player
-  // activity showing bare video).
-  const isPlayerActivity = useIsPlayerActivity();
 
-  // W6.0 — the mount gate.
+  // W6.0 — the mount gate. ONE gate, and it is derived.
   //
-  // Playback lives in `PlayerActivity`; the app's normal tree lives in
-  // `MainActivity`. There is no player surface in MainActivity, so the
-  // chrome has nothing to sit on there and must not mount — otherwise
-  // a full-bleed overlay would ride along over Home, Movies, Settings,
-  // every screen. This is the structural discriminator (lib 1.7.0
-  // `useIsPlayerActivity()`), not a proxy: it is true exactly when the
-  // native surface beneath this tree exists.
+  // `presentation.isExpanded` is true exactly when
+  // `isPlayerActivity && !pipActive` — i.e. when there is a native
+  // `MpvRenderView` beneath THIS tree and the PiP window is not
+  // owning it. Both inputs are read per-tree, so the background
+  // `MainActivity` root and the foreground `PlayerActivity` root
+  // cannot disagree, and nothing anywhere writes the mode.
   //
-  // It is checked BEFORE the mode gates because it is a fact about the
-  // host, whereas the mode is a policy about what to show once a
-  // surface is confirmed.
-  if (!isPlayerActivity) {
-    return null;
-  }
-
-  // Pinned-visible chrome states (matches W3.5.1's PINNED_STATES in
-  // useChromeAutoHide — duplicated here so the orchestrator can
-  // decide whether to render the chrome compositor at all when
-  // there's nothing to play).
-  const hasNothingToPlay =
-    videoState === 'idle' && presentation.mode === 'expanded';
-
-  if (hasNothingToPlay) {
-    // The player activity is up but nothing is loaded. `useOpenWithResume`
-    // / `useResumePolicy` own the "no item, don't autoplay" decision, so
-    // this state is reachable only when a stale intent arrives with no
-    // media. Render the composer's own error/empty path rather than an
-    // empty screen.
-    return null;
-  }
-
-  // MINI: W6.0.
+  // This replaces four stacked gates (`!isPlayerActivity`,
+  // `hasNothingToPlay`, `'mini'`, `'pip'`), which became redundant
+  // the moment the mode stopped being stored:
   //
-  // There is no video mini dock. `VideoMiniPlayer` is still the W0
-  // `return null` stub, and in this architecture there cannot be one:
-  // the video plays in its own activity, so the app's browsing screens
-  // are never on screen at the same time and have nothing to dock
-  // beneath. `usePresentationSync` therefore drives video straight to
-  // 'expanded' and only passes through 'mini' when leaving the player
-  // activity.
-  //
-  // This branch stays for that transition (and for the audio lane, which
-  // does have a dock) but it must not be the video path: routing video
-  // here is what made the whole V19 chrome unreachable in W1–W5.
-  if (presentation.mode === 'mini') {
-    return null;
-  }
-
-  // PiP: the lib owns the surface. Chrome is intentionally
-  // suppressed (no gesture detection during PiP per W3.5.3).
-  if (presentation.mode === 'pip') {
+  //   - `!isPlayerActivity` ⟹ `mode === 'mini'`, so it was already
+  //     covered by the mini branch. Kept separate it only gave the
+  //     two a chance to drift apart.
+  //   - `'mini'` and `'pip'` are precisely the two ways
+  //     `isExpanded` is false, so all three collapse to one branch.
+  //   - `hasNothingToPlay` (`videoState === 'idle' && mode ===
+  //     'expanded'`) was UNREACHABLE, and actively harmful. In the
+  //     player activity `hasSession` is structurally true
+  //     (`usePlaybackState`: `isPlayerActivity || hasPlaylistEntry`),
+  //     so the hook can never DERIVE `'idle'` — the only way to read
+  //     it here was the `VideoController`'s own initial state, which
+  //     is `'idle'` until its first `observePlayback` effect runs. So
+  //     this gate blanked the chrome for one commit on every launch.
+  //     Its comment promised to "render the composer's own error/empty
+  //     path rather than an empty screen" and then returned `null` —
+  //     a comment describing behaviour the code did not have. Removed
+  //     rather than kept as fiction.
+  if (!presentation.isExpanded) {
     return null;
   }
 

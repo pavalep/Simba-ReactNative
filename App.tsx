@@ -15,8 +15,8 @@ import {navigationRef} from './src/navigation/navigationHelper';
 import {linking} from './src/navigation/linking';
 import {
   resolveResumeMs,
+  PlayerHostProvider,
   useIsPlayerActivity,
-  usePresentationSync,
   useQueueSync,
 } from './src/infrastructure/player';
 import {SimbaPlayer as V19SimbaPlayer} from './src/components/player/video/SimbaPlayer/SimbaPlayer';
@@ -117,18 +117,6 @@ const AppContent: React.FC = () => {
   // detail page from before they signed out, and vice versa. Every
   // cold start now resolves fresh from auth state.
 
-  const fallbackColors = useMemo(
-    () => ({
-      background: colors.background.primary,
-      text: colors.text.primary,
-      textSecondary: colors.text.secondary,
-      accent: colors.accent.gold,
-      border: colors.border.emphasis,
-      accentDim: colors.accent.goldDim,
-    }),
-    [colors],
-  );
-
   // V21 / W3 P12 / D-009: the cold-start hook is the SINGLE source
   // of truth for `Linking.getInitialURL()` (it dispatches via the
   // V14 `useOpenFromUrl` hook, which already handles the
@@ -180,32 +168,36 @@ const AppContent: React.FC = () => {
     return () => subscription.remove();
   }, [openFromUrl]);
 
-  // V14 Phase 59: <SimbaPlayerRoot> owns the activity-launch branch
-  // (renders <PlayerRoot /> when launchParams is set, otherwise
-  // children). The ErrorBoundary wraps both branches.
+  // V14 Phase 59: `<SimbaPlayerRoot>` owns the activity-launch branch
+  // (renders `<PlayerRoot />` when launchParams is set, otherwise
+  // children).
+  //
+  // W6.0 fix: it is NOT rendered here. It lives in `ActivityShell`,
+  // ABOVE the `isPlayerActivity` split, because it is the single
+  // owner of the lib's one-shot `useLaunchParams()` queue and the only
+  // component that calls `loadFile` / binds the native surface in
+  // `PlayerActivity`. Rendering it only in MainActivity left the
+  // player activity blank. Only navigation + screens belong below the
+  // split.
   return (
-    <ErrorBoundary fallbackColors={fallbackColors}>
-      <SimbaPlayerRoot>
-        <ToastProvider>
-          <SimbaStatusBar variant="home" />
-          <View style={styles.root}>
-            <NavigationContainer
-              ref={navigationRef}
-              linking={linkingConfig}>
-              <RootNavigator />
-              {/* V13: V11 <PlaybackOverlayHost /> removed in Phase 54.
-                  The module's player surface is rendered by PlayerRoot
-                  via <SimbaPlayerRoot> in the activity branch. The
-                  MainActivity no longer needs an inline player overlay. */}
-            </NavigationContainer>
-            {/* 54.1: global offline banner overlays every screen */}
-            <OfflineBanner />
-            {/* 54.5: global long-operation progress (media scan) */}
-            <GlobalOperationProgress />
-          </View>
-        </ToastProvider>
-      </SimbaPlayerRoot>
-    </ErrorBoundary>
+    <>
+      <SimbaStatusBar variant="home" />
+      <View style={styles.root}>
+        <NavigationContainer
+          ref={navigationRef}
+          linking={linkingConfig}>
+          <RootNavigator />
+          {/* V13: V11 <PlaybackOverlayHost /> removed in Phase 54.
+              The module's player surface is rendered by PlayerRoot
+              via <SimbaPlayerRoot> in the activity branch. The
+              MainActivity no longer needs an inline player overlay. */}
+        </NavigationContainer>
+        {/* 54.1: global offline banner overlays every screen */}
+        <OfflineBanner />
+        {/* 54.5: global long-operation progress (media scan) */}
+        <GlobalOperationProgress />
+      </View>
+    </>
   );
 };
 
@@ -215,7 +207,118 @@ const styles = StyleSheet.create({
   },
 });
 
-const App: React.FC = () => {
+/**
+ * W6.0 fix — the app-wide providers that must survive the activity
+ * split, plus the split itself.
+ *
+ * This is its own component (rather than inline in `App`) for one
+ * concrete reason: it needs `useTheme()` to build the ErrorBoundary's
+ * fallback palette, and `App` is the component that RENDERS
+ * `ThemeProvider` — so `App` cannot read the theme context. A child
+ * of `ThemeProvider` can.
+ *
+ * ## The three layers, and why the split sits where it does
+ *
+ *   1. **App-wide providers** (`ErrorBoundary`, `ToastProvider`) —
+ *      ABOVE everything. Each Android activity hosts its own React
+ *      root, and each root gets its own context tree, so a provider
+ *      mounted below the split simply does not exist in
+ *      `PlayerActivity`. `useToast()` THROWS without its provider and
+ *      is called unconditionally by `VideoMoreSheet` inside the player
+ *      chrome; that throw tore down the whole compositor and left a
+ *      blank black screen with no controls, no topbar, nothing.
+ *
+ *   2. **The launch branch** (`SimbaPlayerRoot`) — the ONE thing that
+ *      must be mounted in BOTH activities. It is the single owner of
+ *      the lib's one-shot `useLaunchParams()` queue, and it renders
+ *      `<PlayerRoot>` (which calls `loadFile` and binds the native
+ *      `MpvRenderView` surface) whenever the activity was launched
+ *      with playback params. W6.0 originally hid it along with
+ *      `AppContent`, so in `PlayerActivity` nothing ever called
+ *      `loadFile` — the activity came up, the session was created, and
+ *      the screen stayed black.
+ *
+ *   3. **Navigation and screens** (`NavigationContainer`,
+ *      `RootNavigator`) — BELOW the split. These must not render in
+ *      `PlayerActivity`: `AppContent` paints an opaque screen
+ *      background, which would cover the native `MpvRenderView` that
+ *      sits beneath the React root along with the chrome on top of it.
+ *
+ * The V19 chrome sits OUTSIDE `SimbaPlayerRoot` on purpose:
+ * `SimbaPlayerRoot` returns `<PlayerRoot>` *instead of* its children
+ * when launch params exist, so a chrome rendered as a child would be
+ * discarded exactly when the player is active. As a sibling it is
+ * always mounted and self-gates on `useIsPlayerActivity()`.
+ */
+const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}> = ({
+  resumePolicy,
+}) => {
+  const {colors} = useTheme();
+  const isPlayerActivity = useIsPlayerActivity();
+
+  const fallbackColors = useMemo(
+    () => ({
+      background: colors.background.primary,
+      text: colors.text.primary,
+      textSecondary: colors.text.secondary,
+      accent: colors.accent.gold,
+      border: colors.border.emphasis,
+      accentDim: colors.accent.goldDim,
+    }),
+    [colors],
+  );
+
+  return (
+    <ErrorBoundary fallbackColors={fallbackColors}>
+      <ToastProvider>
+        {/* (1) V19 chrome — always mounted, self-gates on
+            useIsPlayerActivity(). Sibling of SimbaPlayerRoot, never a
+            child: see the docstring. */}
+        <V19SimbaPlayer />
+        <VideoMiniPlayer />
+        {/* (2) The launch branch — owns the one-shot launch-params
+            queue and renders <PlayerRoot> in PlayerActivity.
+
+            `headless` (lib 1.8.0) splits that component's two jobs.
+            Without it, <SimbaPlayerRoot> returns <PlayerRoot> INSTEAD
+            of its children whenever launch params exist, so the
+            module's default UI ("Simba Player", ✕, yellow play) took
+            over the screen and the V19 chrome — mounted above, but
+            painted underneath — was never seen. With `headless` the
+            module keeps the load lifecycle (`useLaunchPlayback`, so
+            the payload is still loaded exactly once) and the V19 chrome
+            is the player UI. Children render unconditionally; the split
+            below keeps the navigator out of the player activity. */}
+        <SimbaPlayerRoot headless>
+          {/* (3) Navigation + screens — MainActivity only. */}
+          {isPlayerActivity ? null : <AppContent />}
+        </SimbaPlayerRoot>
+      </ToastProvider>
+    </ErrorBoundary>
+  );
+};
+
+/**
+ * The props React Native hands the root component. `initialProps`
+ * comes from the hosting activity's
+ * `ReactActivityDelegate.getLaunchOptions()`.
+ *
+ * `isPlayerActivity` is the ONLY piece of app state that has to be
+ * per-activity rather than per-process, and it arrives here precisely
+ * because it cannot be derived in JS: the app and the player run the
+ * same `App` component, and the native flag behind
+ * `isCurrentActivityPlayer()` is process-wide (see
+ * `src/infrastructure/player/playerHost.tsx`).
+ *
+ * Defaults to `false` — "no player surface here" — which is the safe
+ * direction: chrome mounted over a surface that is not there is worse
+ * than a video without controls.
+ */
+export interface RootProps {
+  isPlayerActivity?: boolean;
+}
+
+const App: React.FC<RootProps> = ({isPlayerActivity = false}) => {
   // V16 Phase 71 + W22 F/U #2: bookmark-aware resume lookup is a
   // single `resumePolicy` function prop on `<SimbaPlayer>`. Replaces
   // the V13 `lookup` object prop + V14 `useSimbaPlayerLookup`
@@ -245,69 +348,76 @@ const App: React.FC = () => {
     return resolveResumeMs({bookmarks, history}, resumeId);
   }, []);
 
-  // V19 W6.0 — the presentation mode follows WHERE THE MEDIA IS, not
-  // a screen transition. Called at the composition root so the mode
-  // is settled before any chrome below reads it.
+  // V19 W6.0 — the presentation mode is DERIVED, not synced.
   //
-  // The old design set `expanded` from the `NowPlaying` route's mount
-  // effect, but nothing in the app ever navigates to `NowPlaying`, so
-  // the mode sat at its `'mini'` default and the entire V19 chrome was
-  // unreachable at runtime.
-  usePresentationSync();
-
-  // The chrome mount gate (lib 1.7.0). Synchronous, so there is no
-  // frame in which MainActivity shows bare video or PlayerActivity
-  // shows an un-chromed screen.
-  const isPlayerActivity = useIsPlayerActivity();
+  // This call used to be `usePresentationSync()`: an effect that
+  // wrote `isPlayerActivity ? 'expanded' : 'mini'` into a shared
+  // zustand store. It had to be removed rather than moved, because
+  // `App` is mounted ONCE PER ACTIVITY REACT ROOT — so while the
+  // player was up, the background `MainActivity` tree and the
+  // foreground `PlayerActivity` tree both ran this effect against the
+  // same process-global store. Each write re-triggered the other
+  // root's effect (the mode was a dependency) and they fought:
+  // `expanded → mini → expanded → mini`, forever. The chrome gate
+  // returns `null` in `'mini'`, so the whole compositor was torn down
+  // and rebuilt several times a second over a playing video.
+  //
+  // `usePresentation()` now computes the mode at read time from
+  // `useIsPlayerActivity()` — a question each tree asks about ITSELF
+  // — plus the PiP flow flag. With no writer, there is no race. See
+  // `src/state/usePresentationStore.ts`.
 
   return (
-    // GestureHandlerRootView is required by @lodev09/react-native-true-sheet
-    // (its drag-to-dismiss gesture uses the gesture-handler runtime) and by
-    // any nested navigation gesture support.
-    <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
-        {/* V18.1.2: QueryProvider wraps the data layer. Placed
-            inside SafeAreaProvider (consistent with other global
-            providers) and outside ThemeProvider (data layer is
-            a sibling of UI; no dependency on theme). */}
-        <QueryProvider>
-        <ThemeProvider>
-          {/* V16: one wrapper, one prop. Replaces the V13
-              `<PlayerProvider>` + `<PlayerResumeProvider>` pair
-              and the V14 `<SimbaPlayer lookup={...}>` shape with
-              a single `<SimbaPlayer resumePolicy={...}>`.
+    // W6.0 — the per-tree player-host fact goes in FIRST, above every
+    // provider, because `PlayerHostProvider` must wrap anything that
+    // asks "is there a player surface under me?". The value comes from
+    // this root's `initialProps`, which each activity supplies in its
+    // `ReactActivityDelegate.getLaunchOptions()` — per ROOT, so the
+    // background `MainActivity` tree can never read the player
+    // activity's `true`. See `src/infrastructure/player/playerHost.tsx`.
+    <PlayerHostProvider isPlayerActivity={isPlayerActivity}>
+      {/* GestureHandlerRootView is required by
+          @lodev09/react-native-true-sheet (its drag-to-dismiss
+          gesture uses the gesture-handler runtime) and by any nested
+          navigation gesture support. */}
+      <GestureHandlerRootView style={styles.root}>
+        <SafeAreaProvider>
+          {/* V18.1.2: QueryProvider wraps the data layer. Placed
+              inside SafeAreaProvider (consistent with other global
+              providers) and outside ThemeProvider (data layer is
+              a sibling of UI; no dependency on theme). */}
+          <QueryProvider>
+          <ThemeProvider>
+            {/* V16: one wrapper, one prop. Replaces the V13
+                `<PlayerProvider>` + `<PlayerResumeProvider>` pair
+                and the V14 `<SimbaPlayer lookup={...}>` shape with
+                a single `<SimbaPlayer resumePolicy={...}>`.
 
-              V19 W4: V19 SimbaPlayer (chrome compositor) and
-              VideoMiniPlayer (mini dock) live as siblings of
-              AppContent INSIDE the V16 SimbaPlayer. The V19
-              chrome overlay reads lib hooks (usePlayer) so it
-              must be a child of the V16 SimbaPlayer; it is
-              rendered FIRST so it stacks ABOVE AppContent in
-              z-order (later siblings render on top in RN).
-              Audit §5: SimbaPlayer (V19) + VideoMiniPlayer are
-              the only chrome composites mounted at the shell —
-              all other chrome primitives (VideoSurface,
-              VerticalSwipeGestures, ChromeAutoHideController,
-              NextUpOverlay, TransportBar) live INSIDE V19
-              SimbaPlayer and never in src/screens. */}
-          <SimbaPlayer resumePolicy={resumePolicy}>
-            <V19SimbaPlayer />
-            <VideoMiniPlayer />
-            {/* W6.0 — the navigator is NOT mounted inside the player
-                activity. Each activity hosts its own React tree, so
-                this costs no navigation state: MainActivity's
-                navigator is a different tree instance and is
-                untouched. The reason is z-order — `AppContent` paints
-                an opaque screen background, and inside PlayerActivity
-                it would cover the native `MpvRenderView` that sits
-                beneath the React root, along with the chrome
-                overlaid on top of it. */}
-            {isPlayerActivity ? null : <AppContent />}
-          </SimbaPlayer>
-        </ThemeProvider>
-        </QueryProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+                V19 W4: V19 SimbaPlayer (chrome compositor) and
+                VideoMiniPlayer (mini dock) live as siblings of
+                AppContent INSIDE the V16 SimbaPlayer. The V19
+                chrome overlay reads lib hooks (usePlayer) so it
+                must be a child of the V16 SimbaPlayer; it is
+                rendered FIRST so it stacks ABOVE AppContent in
+                z-order (later siblings render on top in RN).
+                Audit §5: SimbaPlayer (V19) + VideoMiniPlayer are
+                the only chrome composites mounted at the shell —
+                all other chrome primitives (VideoSurface,
+                VerticalSwipeGestures, ChromeAutoHideController,
+                NextUpOverlay, TransportBar) live INSIDE V19
+                SimbaPlayer and never in src/screens. */}
+            <SimbaPlayer resumePolicy={resumePolicy}>
+              {/* W6.0 fix — `ActivityShell` owns the app-wide providers
+                  (ErrorBoundary + ToastProvider) AND the activity split,
+                  so both branches have the providers they need. See its
+                  docstring for why the split must sit below them. */}
+              <ActivityShell resumePolicy={resumePolicy} />
+            </SimbaPlayer>
+          </ThemeProvider>
+          </QueryProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </PlayerHostProvider>
   );
 };
 

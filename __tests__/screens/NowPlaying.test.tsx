@@ -18,19 +18,24 @@
  * W4 note — this route used to render the chrome itself
  * (a `<Placeholder>` empty state, the `fileTitle` heading and
  * an `Unknown Track` fallback). W4's chrome hoist moved ALL of
- * that into V19 SimbaPlayer at the App.tsx shell, and the route
- * became a thin viewer whose only job is the presentation
- * signal: mount → `expanded`, unmount → `mini`. So the two
- * title assertions are gone, replaced by the contract the
- * route actually owns now.
+ * that into V19 SimbaPlayer at the App.tsx shell.
+ *
+ * W6.0 — the route's remaining "job" (write `expanded` on mount,
+ * `mini` on unmount) was removed too, because the presentation mode
+ * is now DERIVED from the host activity rather than commanded by a
+ * route. That effect was actively harmful: nothing in the app ever
+ * navigates to this route, so the mount path effectively never ran,
+ * while the unmount path could force `'mini'` at an arbitrary moment
+ * — including over a fully expanded player. It was also a second
+ * writer to a process-global store shared by both activity React
+ * roots, which is the defect behind the black player screen. See
+ * `src/state/usePresentationStore.ts`.
  */
 
 import {screen} from '@testing-library/react-native';
 import {renderWithProviders} from '../helpers/renderWithProviders';
 import {NowPlayingScreen} from '../../src/screens/NowPlaying';
 import type {RootStackParamList} from '../../src/navigation/types';
-
-const mockSetMode = jest.fn();
 
 jest.mock('../../src/infrastructure/player', () => {
   // Spread the facade SUBMODULES, not the barrel — Jest is mid-mock on
@@ -44,7 +49,9 @@ jest.mock('../../src/infrastructure/player', () => {
     ...actual,
     usePresentation: () => ({
       mode: 'expanded',
-      setMode: mockSetMode,
+      isPip: false,
+      isExpanded: true,
+      setPipActive: jest.fn(),
       togglePip: jest.fn(),
     }),
   };
@@ -68,15 +75,26 @@ describe('NowPlayingScreen (smoke — renderWithProviders proof)', () => {
     expect(screen.root).toBeTruthy();
   });
 
-  it('marks the presentation expanded on mount so the shell chrome shows', async () => {
-    // W4: the chrome lives in V19 SimbaPlayer at the App shell, so
-    // this route's ONLY output is the presentation signal. Without it
-    // the shell would stay collapsed on the mini dock while the user
-    // believes they opened the full player.
+  it('writes no presentation state on mount or unmount', async () => {
+    // W6.0: the route used to `setMode('expanded')` on mount and
+    // `setMode('mini')` on unmount. Both are gone. The mode is derived
+    // from which activity hosts this React tree, so a route has
+    // nothing to say about it — and a route that COULD say so would be
+    // a second writer to a value shared by both activity roots.
+    //
+    // This asserts the absence, because the presence of such a write
+    // is exactly the defect: nothing navigates to `NowPlaying` in
+    // normal use, so its mount effect never ran while its unmount
+    // effect could fire at any moment.
+    const store = jest.requireActual(
+      '../../src/state/usePresentationStore',
+    ).usePresentationStore;
+    store.setState({pipActive: false});
+
     await renderWithProviders(NowPlayingScreen, {
       routeName: 'NowPlaying',
     });
-    expect(mockSetMode).toHaveBeenCalledWith('expanded');
+    expect(store.getState().pipActive).toBe(false);
   });
 
   it('renders no body of its own (chrome is owned by the App shell)', async () => {

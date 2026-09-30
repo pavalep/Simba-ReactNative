@@ -24,9 +24,17 @@
  *
  * Entering PiP is a TWO-part transition, not one call:
  *   1. `commands.enterPip()` — the native PiP window.
- *   2. `setMode('pip')`      — the JS-side chrome must go away too
- *      (`SimbaPlayerContent` returns `null` in `pip` mode). Doing
+ *   2. `setPipActive(true)`   — the JS-side chrome must go away too
+ *      (`SimbaPlayerContent` renders nothing in `pip` mode). Doing
  *      only (1) leaves the full chrome painted over the PiP window.
+ *
+ * W6.0: step 2 used to be `setMode('pip')`, writing a `mode` into a
+ * process-global zustand store. `App` is mounted once per activity
+ * React root, and both roots ran the sync effect that owned `mode`,
+ * so they fought over it (`expanded ⇄ mini`, forever) and the chrome
+ * was torn down and rebuilt in a loop. `mode` is now derived from
+ * the host activity, so the only genuinely global fact left is
+ * whether the PiP window is up — which is what `setPipActive` is.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.3 + TRACKER Phase 3.3.
@@ -44,7 +52,7 @@ import {
 
 export const PiPToggle: React.FC = () => {
   const {state, commands} = useTransport();
-  const {setMode} = usePresentation();
+  const {setPipActive} = usePresentation();
   const {colors} = useTheme();
 
   // Per the spec: render ONLY when canEnterPip is true.
@@ -54,7 +62,7 @@ export const PiPToggle: React.FC = () => {
   const onPress = () => {
     // Native PiP window first, then suppress the JS chrome.
     commands.enterPip();
-    setMode('pip');
+    setPipActive(true);
   };
 
   return (

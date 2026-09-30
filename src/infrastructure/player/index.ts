@@ -43,7 +43,6 @@
 import {useCallback} from 'react';
 import {
   resolveStreamType,
-  useIsPlayerActivity,
   usePlayerActivity,
 } from '@simba-dev/react-native-media-player';
 import type {MediaKind, MediaLane} from '../../types/media';
@@ -69,10 +68,11 @@ export {
   usePlaybackHistoryAs,
   resolveStreamType,
   getMpvPlayerModule,
-  // V19 W6.0 (lib 1.7.0) — synchronous "is this tree hosted by
-  // PlayerActivity?". The chrome's mount gate: there is no player
-  // surface in MainActivity, so the overlay must not render there.
-  useIsPlayerActivity,
+  // W6.0 — `useIsPlayerActivity` is exported BELOW, from `./playerHost`
+  // (the app's per-tree context hook), NOT from the lib. The lib's
+  // version reads a process-wide native flag and therefore answers a
+  // different — and for the chrome, wrong — question. See the export
+  // next to `PlayerHostProvider`.
   // W22 F/U #2: V13/V14 resume-lookup surface. `SimbaPlayer` (the
   // V16 root) already mounts `<PlayerResumeProvider>` internally
   // and translates the `resumePolicy` prop into the V13
@@ -91,21 +91,27 @@ export {
 // md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md §3.C.
 export {useQueueSync} from './useQueueSync';
 
-// V19 W0 Phase 0.2 — presentation state (mini / expanded / pip).
-// Persisted via MMKV (matches the app's persistence layer). Source
-// of truth: SPEC §3.23 + audit §3.B.
+// V19 W6.0 — the PER-TREE player-host fact, published from the root
+// component's `initialProps` (each activity supplies its own value in
+// `ReactActivityDelegate.getLaunchOptions()`). This is what the
+// presentation mode is derived from; see `usePresentation` below.
+export {PlayerHostProvider, useIsPlayerActivity} from './playerHost';
+
+// V19 W6.0 — the chrome's presentation read model. `mode` is DERIVED
+// from `useIsPlayerActivity()` + the PiP flow flag; it is not stored.
+// The `usePresentationSync` effect that used to write a shared
+// `mode` is GONE: it was mounted once per activity React root, and
+// two roots writing one process-global zustand store ping-ponged
+// `expanded ⇄ mini` forever, which unmounted the chrome in a loop
+// over a playing video. See `usePresentationStore.ts`.
+// Source of truth: SPEC §3.23 + audit §3.B.
 export {
   usePresentation,
   usePresentationStore,
+  type Presentation,
   type PresentationMode,
   type PresentationState,
 } from './usePresentation';
-
-// V19 W6.0 — the single owner of the mini ⇄ expanded transition. The
-// mode is a function of where the media is (`useIsPlayerActivity`),
-// NOT of a screen transition — the old navigation-driven version
-// never fired, so the whole V19 chrome was unreachable at runtime.
-export {usePresentationSync} from './usePresentationSync';
 
 // V19 W0 Phase 0.3 — lane integrity guard on every launch path.
 // JS-side enforcement (native-level is V20). Source of truth:

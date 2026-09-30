@@ -62,10 +62,14 @@ export interface SimbaPlayerRef {
   }): Promise<Result<string, StreamError>>;
   close(): Promise<void>;
 
-  // ── Presentation (app-side Zustand, NOT lib)
-  setPresentation(mode: 'mini' | 'expanded' | 'pip'): void;
-
   // ── PiP
+  //
+  // Each of these performs BOTH halves of the transition: the native
+  // PiP window (`commands.enterPip` / `commands.exitPip`) and the JS
+  // chrome suppression that goes with it. W6.0 removed the separate
+  // `setPresentation(mode)` method — `'mini'` / `'expanded'` are
+  // derived from which activity is hosting, so they are not something
+  // a consumer selects, and a setter for them could only ever lie.
   enterPip(): Promise<void>;
   exitPip(): Promise<void>;
 

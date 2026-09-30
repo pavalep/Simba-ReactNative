@@ -15,9 +15,19 @@
  *                           or null if the playhead is in a gap or
  *                           there are no buffered ranges). Drives
  *                           the `BufferedRangeFill` width.
- *   - `canEnterPip`       — `presentation.mode === 'expanded' && isPlaying`
- *                           (PiP makes no sense for a paused / mini
- *                           player; the gesture wires through here).
+ *   - `canEnterPip`       — true while the media is actively playing,
+ *                           not ended and not buffering. This used
+ *                           to be documented as
+ *                           `presentation.mode === 'expanded' &&
+ *                           isPlaying`, but the code only ever tested
+ *                           the playback terms: the chrome that hosts
+ *                           `PiPToggle` renders only in
+ *                           `'expanded'` mode, so the mode test was
+ *                           implied by the call site rather than
+ *                           asserted here. Corrected to match the
+ *                           code instead of leaving the comment
+ *                           advertising a condition nothing
+ *                           evaluated.
  *
  * Why a facade instead of the spec's `TransportContext`:
  *

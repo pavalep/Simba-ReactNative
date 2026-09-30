@@ -3,22 +3,39 @@
  *
  * After W4's chrome hoist (audit §5 + SPEC §5.2-§5.4), the chrome
  * composition moved into V19 SimbaPlayer at the App.tsx shell. The
- * NowPlayingScreen route is now a thin viewer:
+ * NowPlayingScreen route is now a thin viewer: all visual chrome
+ * lives in V19 SimbaPlayer, and the route itself has no body.
  *
- *   1. On mount: marks `usePresentation.setPresentation('expanded')`
- *      so the V19 SimbaPlayer renders the full chrome (instead of
- *      just the mini dock or nothing).
- *   2. On unmount: marks `usePresentation.setPresentation('mini')`
- *      so the chrome collapses back to the dock.
- *   3. Returns `null` because all visual chrome lives in V19
- *      SimbaPlayer. The route itself has no body.
+ * ## Why there is no presentation effect here any more
+ *
+ * W4 gave this route a mount/unmount effect that wrote the
+ * presentation mode: `setMode('expanded')` on mount, `setMode('mini')`
+ * on unmount. W6.0 removed the whole idea, and with it this effect.
+ *
+ * The mode is a function of WHERE THE MEDIA IS, not of a screen
+ * transition: playback happens in `PlayerActivity`, and
+ * `usePresentation()` derives `'expanded'` from
+ * `useIsPlayerActivity()`. So the effect was not just redundant, it
+ * was actively wrong in both directions:
+ *
+ *   - On mount it forced `'expanded'` even in the `MainActivity`
+ *     tree, where there is no player surface for a chrome to sit on.
+ *   - On unmount it forced `'mini'` regardless of which activity was
+ *     actually hosting. Nothing in the app ever navigates to this
+ *     route (its only entry point is the `simba://now-playing` deep
+ *     link), so the mount path effectively never ran and the unmount
+ *     path could fire at any arbitrary time — including while the
+ *     player was fully expanded.
+ *
+ * Keeping it would have meant reintroducing exactly the cross-root
+ * write that shipped a black player screen: `mode` written into a
+ * process-global zustand store by every mounted React root at once.
+ * See `src/state/usePresentationStore.ts` for that failure.
  *
  * Why a no-op route at all:
  *   - The route exists in the navigation stack so deep-link
  *     navigation (`Linking.openURL('simba://player/...')`) still
  *     resolves to a known screen.
- *   - The route's mount / unmount are the natural "user opened the
- *     full player" / "user dismissed the full player" signals.
  *
  * What's intentionally NOT here:
  *   - No chrome primitives (VideoSurface, VerticalSwipeGestures,
@@ -35,26 +52,12 @@
  */
 
 import * as React from 'react';
-import {usePresentation} from '../../../infrastructure/player';
 import type {NowPlayingScreenProps} from '../types';
 
 export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = () => {
-  const presentation = usePresentation();
-
-  React.useEffect(() => {
-    // Entering the route → expanded chrome.
-    presentation.setMode('expanded');
-    return () => {
-      // Leaving the route → mini dock.
-      presentation.setMode('mini');
-    };
-    // We deliberately depend on the function reference (stable
-    // per store), not on `presentation.mode` — the unmount path
-    // must always reset to mini even when the chrome is hidden.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // All chrome primitives live in V19 SimbaPlayer at the shell.
+  // All chrome primitives live in V19 SimbaPlayer at the shell, and
+  // the presentation mode is derived from the host activity. There is
+  // nothing for this route to do.
   return null;
 };
 
