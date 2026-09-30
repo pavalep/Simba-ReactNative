@@ -688,14 +688,18 @@ Before W0 closes, ALL of the following must be true:
 
 ## Wave 6 — integrations (PiP · Captions · MediaSession)
 
-> **Status: W6.0 SHIPPED** (mount gate). W6.1–6.3 pending.
+> **Status: W6.0 SHIPPED AND DEVICE-VERIFIED.** W6.1–6.3 pending.
 >
 > ### W6.0 — the blocker: the chrome never mounted
 >
 > Starting W6 surfaced a W4-era architecture seam that made **every
 > W1–W5 primitive unreachable at runtime**. W6.1/6.2/6.3 are all
 > "wire PiP / captions / MediaSession into the chrome", and the chrome
-> did not render. Three coupled causes, all verified:
+> did not render. The bring-up then took five separate passes, because
+> each fix exposed the next defect underneath. All are recorded here
+> because the pattern is the lesson: **every one of them was a
+> provider, a gate, or a context tree living on the wrong side of the
+> activity split.**
 >
 > 1. **The mode was driven by a route nothing navigates to.**
 >    `usePresentationStore` defaults to `'mini'`; the only writers of
@@ -724,49 +728,111 @@ Before W0 closes, ALL of the following must be true:
 > true** — the state machine believed a session existed while the app
 > was idle, and `observed` could never be `'idle'`.
 >
-> ### The fix
+> ### W6.0b — four defects found during bring-up (commit `1a77cfa`)
 >
-> The presentation mode is a function of **where the media is**, not of
-> a screen transition.
+> With the mode gate in place the player still came up **black, with no
+> chrome and no JS error**. Four independent causes, found in order:
 >
-> - **Lib 1.7.0** adds `useIsPlayerActivity()` — a synchronous,
->   idempotent "is this React tree hosted by `PlayerActivity`?"
->   predicate. `useLaunchParams()` is the wrong tool three times over:
->   the launch params are a ONE-SHOT queue (a chrome component asking
->   the question would steal the payload from the default player UI),
->   `getLaunchParams()` is async (the answer lands a render late, so a
->   mount gate built on it flashes its own absence for a frame), and
->   "are there launch params?" is not "is there a player surface
->   under me?".
-> - **`usePresentationSync()`** (new) owns the mini ⇄ expanded
->   transition. It never touches `'pip'` — PiP owns that until it
->   exits.
-> - **`SimbaPlayer` mounts only inside the player activity**, and its
->   expanded root is now TRANSPARENT.
-> - **`VideoSurface` is a transparent tap target.** Its
->   `background.surfaceDark` "placeholder for when the surface has no
->   pixel" was permanent — it had no way to know whether a pixel
->   existed, so it covered the video completely. A placeholder that can
->   never yield is an opaque wall. "No pixel yet" is a real state and
->   it already has an owner: `VideoLoadingOverlay`.
-> - **`AppContent` is not mounted inside the player activity.** Each
->   activity hosts its own React tree, so this costs no navigation
->   state. `AppContent` paints an opaque screen background, which
->   would cover the native surface.
-> - **The `mini` branch returns `null`.** There is no video mini dock
->   and there cannot be one while playback lives in its own activity:
->   the browsing screens are never on screen at the same time and have
->   nothing to dock beneath. The branch is kept for the transition and
->   for the audio lane, but video must not route through it — that is
->   exactly what made the chrome unreachable.
+> 5. **Rules-of-hooks throw unmounted the whole compositor.**
+>    `useVideoController` had `useMemo(useBuildDeps, [])` where
+>    `useBuildDeps()` called `usePlayer()`. `VideoErrorOverlay` calls
+>    `useVideoController()` *above* its `videoState !== 'error'` early
+>    return, so it threw every render. Converted to a pure
+>    `buildDeps(commands)`.
+> 6. **`useToast()` threw in the player activity.** `ToastProvider` +
+>    `ErrorBoundary` lived inside `AppContent`, which renders `null`
+>    in `PlayerActivity`. Each activity has its own React root and
+>    therefore its own context tree, so `ToastContext` did not exist —
+>    and `VideoMoreSheet` calls `useToast` unconditionally. Both moved
+>    up into a new `ActivityShell` above the split.
+> 7. **Nothing called `loadFile`.** `SimbaPlayerRoot` — the single owner
+>    of the one-shot `useLaunchParams()` queue and the only component
+>    that calls `loadFile` — also lived inside `AppContent`. Hoisted
+>    above the split alongside the providers.
+> 8. **The mode fought itself.** This was the actual black screen. See
+>    below.
 >
-> ### Gates
+> ### The mode fight — the real defect (commit `1a77cfa`)
 >
-> 63/63 suites, 700/701 tests (1 todo). `tsc --noEmit` clean, ESLint
-> `--max-warnings 0` clean. New: `usePresentationSync.test.ts` (7
-> tests) pins the transition, the PiP non-clobber, and idempotency;
-> `VideoSurface.test.tsx` now asserts the ABSENCE of any background so
-> a future "just add a scrim" has to be deliberate.
+> Each Android activity hosts its **own React root**, so `App` is
+> mounted **twice** while a video plays: once in the foreground
+> `PlayerActivity`, once in the still-mounted background `MainActivity`.
+> `App` called `usePresentationSync()` — an effect that wrote
+> `isPlayerActivity ? 'expanded' : 'mini'` into a **process-global
+> zustand store** — and `mode` was in that effect's dependency array, so
+> each root's write re-triggered the other root's effect. The store
+> ping-ponged `expanded ⇄ mini` forever. The chrome gate returns `null`
+> in `'mini'`, so the entire compositor was mounted and unmounted in a
+> loop over a playing video, each cycle re-running a synchronous MMKV
+> write. The MMKV write log is the proof: a stream of
+> `player-presentation {"mode":"expanded"}` / `{"mode":"mini"}` pairs.
+>
+> **Fix — derive, do not write.** `mode` is now computed at read time
+> and nothing writes it:
+>
+> ```
+> mode = pipActive        → 'pip'      (a window state)
+>       isPlayerActivity  → 'expanded' (this tree has a surface)
+>       otherwise         → 'mini'
+> ```
+>
+> - `usePresentationStore` keeps **only** `pipActive`. No `mode`, no
+>   `prePipMode`, and **no persistence** — a PiP window cannot survive
+>   process death, and persisting the derived mode is what stranded a
+>   process killed in PiP (the old sync effect deliberately never
+>   overwrote `'pip'`, so it returned permanently suppressed).
+> - `usePresentationSync()` is **deleted**. With no writer, there is
+>   nothing to race.
+>
+> **The player-host fact had to become genuinely per-tree.** The first
+> attempt reused the lib's `useIsPlayerActivity()`, and a test caught
+> that the premise was wrong: `MpvBridgeModule.currentActivityIsPlayer`
+> is backed by a process-wide `@Volatile @JvmStatic` companion field, so
+> **both** roots read `true` while the player is alive. It answers "is a
+> player activity alive in this process", not "is this tree the player
+> activity's tree" — gating a full-bleed overlay on it would have
+> painted the browsing screens. Launch options are per-ROOT, so
+> **lib 1.8.1** has `PlayerActivity` supply `isPlayerActivity: true` in
+> `getLaunchOptions()` and the app's `MainActivity` supply `false`;
+> `App.tsx` reads the root component's `initialProps` and publishes it
+> through the new `PlayerHostProvider` context.
+>
+> **Call sites corrected, not patched.** `SimbaPlayerContent` collapses
+> four redundant gates into `presentation.isExpanded` — and
+> `hasNothingToPlay` was removed as *unreachable and harmful*: the
+> controller's initial state is `'idle'` until its first
+> `observePlayback` effect, so it blanked the chrome for one commit on
+> every launch (its comment promised an "error/empty path" and then
+> returned `null`). `SimbaPlayerRef.enterPip` / `.exitPip` now own both
+> halves of the PiP transition, and `setPresentation(mode)` is deleted —
+> `'mini'` / `'expanded'` are facts about the host, not choices, so a
+> setter for them could only ever lie. `NowPlayingScreen`'s
+> mount/unmount effect and `useVideoController`'s three presentation
+> intents (zero call sites) are gone. `useTransport`'s `canEnterPip`
+> docstring claimed a `mode === 'expanded'` test the code never ran.
+>
+> ### Gates (W6.0b)
+>
+> **64/64 suites, 708/708 tests** (1 todo). `tsc --noEmit` clean; ESLint
+> `--max-warnings 0` clean on all 15 changed source files. Lib
+> 10/10 suites, 135/135; `tsc --noEmit` clean. Android
+> `assembleDebug` clean.
+>
+> New tests: `usePresentation.test.tsx` (8) pins the derived mode, the
+> two-roots-mounted-at-once invariant, and fail-closed;
+> `playerHost.test.tsx` (5) pins that two roots cannot observe each
+> other's value. `usePresentationSync.test.ts` is **deleted** — it
+> asserted the defect. `PiPToggle` and `NowPlaying` suites were
+> rewritten off the removed API in the same commit (a test that pins
+> removed behaviour is a lock on it).
+>
+> **Device (emulator-5554, API 37, 16K page).** Video plays with the
+> full V19 chrome: position, buffered dot, duration, rewind / pause /
+> forward, repeat, PiP, more. Back to the app shows **no chrome
+> leakage** over Home / Movies / Settings. MMKV contains **zero**
+> `player-presentation` writes. Launch options confirmed per-root:
+> `rootTag:1 → {"isPlayerActivity":false}`,
+> `rootTag:11 → {"isPlayerActivity":true}`.
 
 ## Wave 5 — `VideoController` (the orchestrator)
 
