@@ -43,6 +43,7 @@
 import {useCallback} from 'react';
 import {
   resolveStreamType,
+  useIsPlayerActivity,
   usePlayerActivity,
 } from '@simba-dev/react-native-media-player';
 import type {MediaKind, MediaLane} from '../../types/media';
@@ -68,6 +69,10 @@ export {
   usePlaybackHistoryAs,
   resolveStreamType,
   getMpvPlayerModule,
+  // V19 W6.0 (lib 1.7.0) — synchronous "is this tree hosted by
+  // PlayerActivity?". The chrome's mount gate: there is no player
+  // surface in MainActivity, so the overlay must not render there.
+  useIsPlayerActivity,
   // W22 F/U #2: V13/V14 resume-lookup surface. `SimbaPlayer` (the
   // V16 root) already mounts `<PlayerResumeProvider>` internally
   // and translates the `resumePolicy` prop into the V13
@@ -95,6 +100,12 @@ export {
   type PresentationMode,
   type PresentationState,
 } from './usePresentation';
+
+// V19 W6.0 — the single owner of the mini ⇄ expanded transition. The
+// mode is a function of where the media is (`useIsPlayerActivity`),
+// NOT of a screen transition — the old navigation-driven version
+// never fired, so the whole V19 chrome was unreachable at runtime.
+export {usePresentationSync} from './usePresentationSync';
 
 // V19 W0 Phase 0.3 — lane integrity guard on every launch path.
 // JS-side enforcement (native-level is V20). Source of truth:

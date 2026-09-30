@@ -19,7 +19,6 @@
 
 import * as React from 'react';
 import {Pressable, StyleSheet, View} from 'react-native';
-import {useTheme} from '../../../../theme';
 
 export interface VideoSurfaceProps {
   /** Optional override style. Geometry is owned by the parent layout. */
@@ -41,7 +40,23 @@ export const VideoSurface: React.FC<VideoSurfaceProps> = ({
   accessibilityLabel = 'Video',
   onPress,
 }) => {
-  const {colors} = useTheme();
+  // W6.0 — the frame is TRANSPARENT, deliberately.
+  //
+  // The real video is a native `MpvRenderView` inserted at content
+  // index 0 of `PlayerActivity`, underneath this React tree. This
+  // component used to paint `background.surfaceDark` here as a
+  // "placeholder colour when the surface has no pixel yet", but it
+  // had no way to know whether a pixel existed, so the placeholder
+  // was permanent — it covered the video completely. A placeholder
+  // that can never yield is not a placeholder, it is an opaque wall.
+  //
+  // "No pixel yet" is a real state, and it already has an owner:
+  // `VideoLoadingOverlay`. Loading is that overlay's job (it owns the
+  // `progressbar` role and the spinner); the surface's job is
+  // geometry plus the tap target. Keeping one owner per concern is
+  // what lets the overlay disappear the instant a frame arrives.
+  //
+  // The component therefore no longer reads the theme at all.
 
   // When onPress is provided, render a Pressable so taps bubble
   // to the chrome's auto-hide toggle. Otherwise render a plain
@@ -53,12 +68,7 @@ export const VideoSurface: React.FC<VideoSurfaceProps> = ({
         accessibilityRole="image"
         accessibilityLabel={accessibilityLabel}
         accessibilityHint="Tap to toggle player controls"
-        style={[
-          StyleSheet.absoluteFill,
-          styles.surface,
-          {backgroundColor: colors.background.surfaceDark},
-          style,
-        ]}
+        style={[StyleSheet.absoluteFill, styles.surface, style]}
       />
     );
   }
@@ -68,12 +78,7 @@ export const VideoSurface: React.FC<VideoSurfaceProps> = ({
       accessible
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="image"
-      style={[
-        StyleSheet.absoluteFill,
-        styles.surface,
-        {backgroundColor: colors.background.surfaceDark},
-        style,
-      ]}
+      style={[StyleSheet.absoluteFill, styles.surface, style]}
     />
   );
 };

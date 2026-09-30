@@ -10,13 +10,16 @@
  *
  * What ships in W4:
  *   - Presentation-aware rendering (per `usePresentation`):
- *       - `mini`       → render `<VideoMiniPlayer />` (the dock)
- *       - `expanded`   → render the chrome compositor
- *                        (overlay-style absoluteFill over the V16
- *                        SimbaPlayer's player surface)
- *       - `pip`        → render nothing; the lib owns the PiP
- *                        surface via V16 SimbaPlayer + lib
- *                        enterPip() / exitPip()
+ *       - `expanded`   → render the chrome compositor, as a
+ *                        TRANSPARENT full-bleed overlay above the
+ *                        native `MpvRenderView` (W6.0: it used to be
+ *                        opaque, which covered the video)
+ *       - `pip`        → render nothing; the native PiP window owns
+ *                        the surface (`commands.enterPip()` /
+ *                        `exitPip()`)
+ *       - `mini`       → render nothing. W6.0: there is no video
+ *                        mini dock, and there cannot be one while
+ *                        playback lives in its own activity.
  *   - `forwardRef` + `useImperativeHandle` exposes the canonical
  *     `SimbaPlayerRef` shape (SPEC §5.3) — consumers can write
  *     `simbaPlayerRef.current?.play()` etc. (W0 had an empty
@@ -44,8 +47,6 @@
 
 import * as React from 'react';
 import {StyleSheet, View} from 'react-native';
-import {useTheme} from '../../../../theme';
-import {spacing} from '../../../../theme/tokens';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
 import {presetToMpv, useQualityStore} from '../../../../state/useQualityStore';
 import {useSkipSilenceStore} from '../../../../state/useSkipSilenceStore';
@@ -57,9 +58,9 @@ import {TransportBar} from '../TransportBar/TransportBar';
 import {ChromeAutoHideController} from '../ChromeAutoHide/ChromeAutoHideController';
 import {VerticalSwipeGestures} from '../Gestures/VerticalSwipeGestures';
 import {NextUpOverlay} from '../NextUp/NextUpOverlay';
-import {VideoMiniPlayer} from '../VideoMiniPlayer/VideoMiniPlayer';
 import {
   useChromeAutoHide,
+  useIsPlayerActivity,
   usePlaybackState,
   usePresentation,
   useTransport,
@@ -244,10 +245,31 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
  * being entangled with the imperative ref's empty-stub closure.
  */
 const SimbaPlayerContent: React.FC = () => {
-  const {colors} = useTheme();
   const {videoState} = usePlaybackState();
   const {toggle} = useChromeAutoHide();
   const presentation = usePresentation();
+  // V19 W6.0 (lib 1.7.0) — the structural mount gate. Synchronous,
+  // so it is already correct on the first render (no frame of chrome
+  // flashing over a non-player activity, and no frame of a player
+  // activity showing bare video).
+  const isPlayerActivity = useIsPlayerActivity();
+
+  // W6.0 — the mount gate.
+  //
+  // Playback lives in `PlayerActivity`; the app's normal tree lives in
+  // `MainActivity`. There is no player surface in MainActivity, so the
+  // chrome has nothing to sit on there and must not mount — otherwise
+  // a full-bleed overlay would ride along over Home, Movies, Settings,
+  // every screen. This is the structural discriminator (lib 1.7.0
+  // `useIsPlayerActivity()`), not a proxy: it is true exactly when the
+  // native surface beneath this tree exists.
+  //
+  // It is checked BEFORE the mode gates because it is a fact about the
+  // host, whereas the mode is a policy about what to show once a
+  // surface is confirmed.
+  if (!isPlayerActivity) {
+    return null;
+  }
 
   // Pinned-visible chrome states (matches W3.5.1's PINNED_STATES in
   // useChromeAutoHide — duplicated here so the orchestrator can
@@ -257,19 +279,29 @@ const SimbaPlayerContent: React.FC = () => {
     videoState === 'idle' && presentation.mode === 'expanded';
 
   if (hasNothingToPlay) {
-    // Nothing playing + no real chrome to render. The mini dock
-    // (rendered at App.tsx shell level as a sibling of this
-    // component) handles its own "empty" visual.
+    // The player activity is up but nothing is loaded. `useOpenWithResume`
+    // / `useResumePolicy` own the "no item, don't autoplay" decision, so
+    // this state is reachable only when a stale intent arrives with no
+    // media. Render the composer's own error/empty path rather than an
+    // empty screen.
     return null;
   }
 
-  // MINI: render the dock (the actual dock UI is VideoMiniPlayer).
+  // MINI: W6.0.
+  //
+  // There is no video mini dock. `VideoMiniPlayer` is still the W0
+  // `return null` stub, and in this architecture there cannot be one:
+  // the video plays in its own activity, so the app's browsing screens
+  // are never on screen at the same time and have nothing to dock
+  // beneath. `usePresentationSync` therefore drives video straight to
+  // 'expanded' and only passes through 'mini' when leaving the player
+  // activity.
+  //
+  // This branch stays for that transition (and for the audio lane, which
+  // does have a dock) but it must not be the video path: routing video
+  // here is what made the whole V19 chrome unreachable in W1–W5.
   if (presentation.mode === 'mini') {
-    return (
-      <View pointerEvents="box-none" style={styles.miniRoot}>
-        <VideoMiniPlayer />
-      </View>
-    );
+    return null;
   }
 
   // PiP: the lib owns the surface. Chrome is intentionally
@@ -278,15 +310,22 @@ const SimbaPlayerContent: React.FC = () => {
     return null;
   }
 
-  // EXPANDED (default): render the chrome compositor as a
-  // full-bleed overlay. The V16 SimbaPlayer's PlayerSurface is
-  // the actual mpv render under the surfaceContainer; this overlay
-  // sits ABOVE it (later sibling renders on top in React Native).
+  // EXPANDED: the chrome compositor, rendered as a TRANSPARENT
+  // full-bleed overlay ABOVE the native video surface.
+  //
+  // W6.0 — this root used to carry `backgroundColor:
+  // colors.background.primary`, and `VideoSurface` below it carried
+  // `background.surfaceDark`. Both are opaque, so the overlay painted
+  // over the `MpvRenderView` that `PlayerActivity` inserts at content
+  // index 0: the user would have seen a flat panel where the video
+  // should be. The old comment claimed "the V16 SimbaPlayer's
+  // PlayerSurface is the actual mpv render" — no such component
+  // exists on this path (the V16 `SimbaPlayer` only renders
+  // `PlayerProvider`; the surface is purely native). Nothing paints
+  // here now; the only opaque chrome is the deliberate scrims
+  // (gesture feedback, auto-hide fade) and the overlays themselves.
   return (
-    <View
-      style={[styles.expandedRoot, {backgroundColor: colors.background.primary}]}
-      pointerEvents="box-none"
-    >
+    <View style={styles.expandedRoot} pointerEvents="box-none">
       <SimbaStatusBar variant="player" />
 
       <View style={styles.surfaceContainer}>
@@ -308,26 +347,22 @@ const SimbaPlayerContent: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  // Full-bleed overlay. The V16 SimbaPlayer already wraps
-  // AppContent; this V19 SimbaPlayer overlays its surface.
+  // Full-bleed, transparent chrome overlay. W6.0: no background
+  // colour — the native `MpvRenderView` shows through from beneath.
   expandedRoot: {
     ...StyleSheet.absoluteFill,
     paddingTop: 0, // safe-area inset is already in the V16 root
   },
-  miniRoot: {
-    // Mini mode renders the dock at the shell; the App.tsx-level
-    // VideoMiniPlayer component handles its own positioning. This
-    // wrapper is intentionally non-positioned so the dock's own
-    // absolute positioning at the bottom of the screen wins.
-    ...StyleSheet.absoluteFill,
-    pointerEvents: 'box-none',
-  },
+  // W6.0: no `miniRoot` any more — the `mini` branch returns `null`
+  // because there is no video dock to render. Reintroduce a style here
+  // if the audio lane grows a real mini player.
   surfaceContainer: {
+    // W6.0: was `margin: spacing.md + borderRadius + overflow:
+    // hidden`, i.e. a rounded inset "card". The video is a full-bleed
+    // activity surface, not a card in a feed — the margins letterboxed
+    // it and the radius implied a container the app does not have.
     flex: 1,
     position: 'relative',
-    margin: spacing.md,
-    borderRadius: spacing.sm,
-    overflow: 'hidden',
   },
 });
 

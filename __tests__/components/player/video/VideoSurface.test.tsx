@@ -40,14 +40,32 @@ describe('VideoSurface', () => {
         expect.objectContaining({position: 'absolute', top: 0, left: 0, right: 0, bottom: 0}),
       ]),
     );
-    // The placeholder uses the theme token (not a raw hex literal).
-    const flattened = Array.isArray(surface.props.style)
-      ? surface.props.style.flat(Infinity)
-      : [surface.props.style];
-    const hasToken = flattened.some(
-      (s: object) => (s as {backgroundColor?: string}).backgroundColor === '#000000',
+  });
+
+  it('is TRANSPARENT so the native MpvRenderView shows through (W6.0)', async () => {
+    // W6.0. The surface used to paint `background.surfaceDark` as a
+    // "placeholder colour when the surface has no pixel yet" — but it
+    // had no way to know whether a pixel existed, so the placeholder
+    // was permanent and covered the video completely. The real frame
+    // is a native `MpvRenderView` under this React tree; nothing here
+    // may paint over it.
+    //
+    // "No pixel yet" is owned by `VideoLoadingOverlay`, which is the
+    // component that can actually tell (it reads the lib's buffering
+    // state). Assert the ABSENCE of any background so a future
+    // "just add a subtle scrim" change has to be deliberate.
+    await render(<VideoSurface />);
+    const surface = screen.getByLabelText('Video');
+    const flattened = (
+      Array.isArray(surface.props.style)
+        ? surface.props.style.flat(Infinity)
+        : [surface.props.style]
+    ).filter(Boolean);
+    const painters = flattened.filter(
+      (s: object) =>
+        (s as {backgroundColor?: string}).backgroundColor !== undefined,
     );
-    expect(hasToken).toBe(true);
+    expect(painters).toEqual([]);
   });
 
   it('exposes accessibilityRole="image" with a custom label', async () => {

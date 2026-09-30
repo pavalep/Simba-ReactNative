@@ -13,7 +13,12 @@ import {ThemeProvider, useTheme} from './src/theme';
 import {RootNavigator} from './src/navigation';
 import {navigationRef} from './src/navigation/navigationHelper';
 import {linking} from './src/navigation/linking';
-import {resolveResumeMs, useQueueSync} from './src/infrastructure/player';
+import {
+  resolveResumeMs,
+  useIsPlayerActivity,
+  usePresentationSync,
+  useQueueSync,
+} from './src/infrastructure/player';
 import {SimbaPlayer as V19SimbaPlayer} from './src/components/player/video/SimbaPlayer/SimbaPlayer';
 import {VideoMiniPlayer} from './src/components/player/video/VideoMiniPlayer/VideoMiniPlayer';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
@@ -240,6 +245,21 @@ const App: React.FC = () => {
     return resolveResumeMs({bookmarks, history}, resumeId);
   }, []);
 
+  // V19 W6.0 — the presentation mode follows WHERE THE MEDIA IS, not
+  // a screen transition. Called at the composition root so the mode
+  // is settled before any chrome below reads it.
+  //
+  // The old design set `expanded` from the `NowPlaying` route's mount
+  // effect, but nothing in the app ever navigates to `NowPlaying`, so
+  // the mode sat at its `'mini'` default and the entire V19 chrome was
+  // unreachable at runtime.
+  usePresentationSync();
+
+  // The chrome mount gate (lib 1.7.0). Synchronous, so there is no
+  // frame in which MainActivity shows bare video or PlayerActivity
+  // shows an un-chromed screen.
+  const isPlayerActivity = useIsPlayerActivity();
+
   return (
     // GestureHandlerRootView is required by @lodev09/react-native-true-sheet
     // (its drag-to-dismiss gesture uses the gesture-handler runtime) and by
@@ -273,7 +293,16 @@ const App: React.FC = () => {
           <SimbaPlayer resumePolicy={resumePolicy}>
             <V19SimbaPlayer />
             <VideoMiniPlayer />
-            <AppContent />
+            {/* W6.0 — the navigator is NOT mounted inside the player
+                activity. Each activity hosts its own React tree, so
+                this costs no navigation state: MainActivity's
+                navigator is a different tree instance and is
+                untouched. The reason is z-order — `AppContent` paints
+                an opaque screen background, and inside PlayerActivity
+                it would cover the native `MpvRenderView` that sits
+                beneath the React root, along with the chrome
+                overlaid on top of it. */}
+            {isPlayerActivity ? null : <AppContent />}
           </SimbaPlayer>
         </ThemeProvider>
         </QueryProvider>

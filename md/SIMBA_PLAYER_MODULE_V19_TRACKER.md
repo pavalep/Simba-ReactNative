@@ -686,6 +686,88 @@ Before W0 closes, ALL of the following must be true:
 
 ---
 
+## Wave 6 — integrations (PiP · Captions · MediaSession)
+
+> **Status: W6.0 SHIPPED** (mount gate). W6.1–6.3 pending.
+>
+> ### W6.0 — the blocker: the chrome never mounted
+>
+> Starting W6 surfaced a W4-era architecture seam that made **every
+> W1–W5 primitive unreachable at runtime**. W6.1/6.2/6.3 are all
+> "wire PiP / captions / MediaSession into the chrome", and the chrome
+> did not render. Three coupled causes, all verified:
+>
+> 1. **The mode was driven by a route nothing navigates to.**
+>    `usePresentationStore` defaults to `'mini'`; the only writers of
+>    `'expanded'` were the `NowPlaying` route's mount effect and
+>    `useVideoController.expandPresentation()`. No call site in the
+>    app ever navigates to `NowPlaying` — the sole entry is the
+>    `simba://now-playing` deep link.
+> 2. **The default mode rendered a stub.** The `mini` branch returned
+>    `<VideoMiniPlayer/>`, which is still the W0 `return null`. So the
+>    resting state rendered nothing at all.
+> 3. **Even when mounted, the video was hidden.** Playback runs in
+>    `PlayerActivity` (every play path resolves to `bridge.openPlayer`
+>    → `Intent(PlayerActivity::class.java)`), where the real
+>    `MpvRenderView` SurfaceView is inserted at content index 0. But
+>    the expanded root carried `backgroundColor: background.primary`
+>    and `VideoSurface` carried `background.surfaceDark` — both
+>    opaque, both painting over the surface. The old comment claimed
+>    "the V16 SimbaPlayer's PlayerSurface is the actual mpv render";
+>    no such component exists on this path (the V16 `SimbaPlayer` only
+>    renders `PlayerProvider`).
+>
+> A fourth, independent bug surfaced while fixing this: `hasSession`
+> in `usePlaybackState` was `hasPlaylistEntry || currentIndex >= 0 ||
+> !!state.title`, and the lib's `DEFAULT_STATE.title` is the non-empty
+> placeholder `'Simba Player'`. So **`hasSession` was constantly
+> true** — the state machine believed a session existed while the app
+> was idle, and `observed` could never be `'idle'`.
+>
+> ### The fix
+>
+> The presentation mode is a function of **where the media is**, not of
+> a screen transition.
+>
+> - **Lib 1.7.0** adds `useIsPlayerActivity()` — a synchronous,
+>   idempotent "is this React tree hosted by `PlayerActivity`?"
+>   predicate. `useLaunchParams()` is the wrong tool three times over:
+>   the launch params are a ONE-SHOT queue (a chrome component asking
+>   the question would steal the payload from the default player UI),
+>   `getLaunchParams()` is async (the answer lands a render late, so a
+>   mount gate built on it flashes its own absence for a frame), and
+>   "are there launch params?" is not "is there a player surface
+>   under me?".
+> - **`usePresentationSync()`** (new) owns the mini ⇄ expanded
+>   transition. It never touches `'pip'` — PiP owns that until it
+>   exits.
+> - **`SimbaPlayer` mounts only inside the player activity**, and its
+>   expanded root is now TRANSPARENT.
+> - **`VideoSurface` is a transparent tap target.** Its
+>   `background.surfaceDark` "placeholder for when the surface has no
+>   pixel" was permanent — it had no way to know whether a pixel
+>   existed, so it covered the video completely. A placeholder that can
+>   never yield is an opaque wall. "No pixel yet" is a real state and
+>   it already has an owner: `VideoLoadingOverlay`.
+> - **`AppContent` is not mounted inside the player activity.** Each
+>   activity hosts its own React tree, so this costs no navigation
+>   state. `AppContent` paints an opaque screen background, which
+>   would cover the native surface.
+> - **The `mini` branch returns `null`.** There is no video mini dock
+>   and there cannot be one while playback lives in its own activity:
+>   the browsing screens are never on screen at the same time and have
+>   nothing to dock beneath. The branch is kept for the transition and
+>   for the audio lane, but video must not route through it — that is
+>   exactly what made the chrome unreachable.
+>
+> ### Gates
+>
+> 63/63 suites, 700/701 tests (1 todo). `tsc --noEmit` clean, ESLint
+> `--max-warnings 0` clean. New: `usePresentationSync.test.ts` (7
+> tests) pins the transition, the PiP non-clobber, and idempotency;
+> `VideoSurface.test.tsx` now asserts the ABSENCE of any background so
+> a future "just add a scrim" has to be deliberate.
+
 ## Wave 5 — `VideoController` (the orchestrator)
 
 > **Status: SHIPPED** (commit `W5` — see git log). Slice lives in

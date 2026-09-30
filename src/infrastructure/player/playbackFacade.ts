@@ -38,6 +38,7 @@
 import {useCallback, useMemo} from 'react';
 import {
   resolveStreamType,
+  useIsPlayerActivity,
   useOpenPlaylist,
   usePlayer,
   usePlayerActivity,
@@ -59,6 +60,13 @@ import {secondsToMs} from './position';
 
 /** Stable identity returned on a successful launch. */
 export type PlaybackId = string;
+
+/**
+ * V19 W6.0 — re-exported so chrome needs exactly one import for the
+ * lib. See the lib's `useIsPlayerActivity` docstring for why this
+ * exists instead of `useLaunchParams`.
+ */
+export {useIsPlayerActivity};
 
 /** Read-state surface (the "static-ish" player state). */
 export interface PlaybackState {

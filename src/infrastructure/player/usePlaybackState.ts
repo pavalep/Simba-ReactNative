@@ -24,7 +24,7 @@
  */
 
 import {useEffect, useSyncExternalStore} from 'react';
-import {usePlayer, usePlayerProgress} from '@simba-dev/react-native-media-player';
+import {useIsPlayerActivity, usePlayer, usePlayerProgress} from '@simba-dev/react-native-media-player';
 // Import the DEPENDENCY-FREE singleton holder, not `useVideoController`
 // (which pulls in React + the lib + the app stores). Routing through
 // the barrel from here forms the cycle
@@ -78,6 +78,10 @@ export interface PlaybackStateDerived {
 export function usePlaybackState(): PlaybackStateDerived {
   const {state} = usePlayer();
   const progress = usePlayerProgress();
+  // V19 W6.0 (lib 1.7.0) — synchronous, idempotent "is there a player
+  // surface under this tree?". Not a subscription: the value is fixed
+  // for the lifetime of an activity's React tree.
+  const isPlayerActivity = useIsPlayerActivity();
 
   // **Session detection is structural, not title-based.**
   //
@@ -88,14 +92,29 @@ export function usePlaybackState(): PlaybackStateDerived {
   // playing — which suppresses the loading overlay and can hide a
   // real failure. The lib already exposes the structural truth on
   // `PlayerState`: a valid `currentIndex` into a non-empty
-  // `playlist`. Use that, and keep the title as a weak fallback
-  // only for a session with no playlist entry (e.g. a single
-  // `loadFile` call that didn't populate the playlist).
+  // `playlist`.
+  //
+  // W6.0: the previous version also accepted `|| !!state.title` as a
+  // fallback for a playlist-less `loadFile` session. That made
+  // `hasSession` CONSTANTLY TRUE — the lib's `DEFAULT_STATE.title` is
+  // the non-empty placeholder `'Simba Player'`, so the fallback
+  // matched before a single file was ever loaded. With `hasSession`
+  // pinned true, `observed` could never be `'idle'`, which meant the
+  // state machine believed a session existed while the app was idle
+  // in MainActivity, and the `hasNothingToPlay` guard in the V19
+  // `SimbaPlayer` could never fire.
+  //
+  // The placeholder title is not a usable signal, and string-matching
+  // it would duplicate a lib internal the app cannot import
+  // (`DEFAULT_STATE` is not part of the lib's public surface). So the
+  // structural question is answered structurally instead: the native
+  // side knows which activity hosts a player surface, and lib 1.7.0
+  // exposes that as a synchronous predicate.
   const hasPlaylistEntry =
     Array.isArray(state.playlist) &&
     state.currentIndex >= 0 &&
     state.currentIndex < state.playlist.length;
-  const hasSession = hasPlaylistEntry || state.currentIndex >= 0 || !!state.title;
+  const hasSession = isPlayerActivity || hasPlaylistEntry;
 
   const positionMs = progress.positionMs;
   const durationMs = progress.durationMs;
