@@ -669,6 +669,12 @@ export function formatMsAsClock(ms: number): string {
  *
  * Used by TransportBar's tap-to-seek handler before calling
  * `commands.seek`. Also useful for tests.
+ *
+ * A non-finite `positionMs` (NaN, ±Infinity from a degenerate gesture)
+ * resolves to `0`, the lower bound — the same fallback Media3's
+ * `Util.clampPosition` uses, and the safer of the two ends: a user who
+ * has somehow scrubbed to "infinity" is closer to the start of the file
+ * than to its end, and seeking to `durationMs` would end playback.
  */
 export function clampPosition(
   positionMs: number,

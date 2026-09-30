@@ -16,7 +16,7 @@
  */
 
 import * as React from 'react';
-import {fireEvent} from '@testing-library/react-native';
+import {act, fireEvent} from '@testing-library/react-native';
 import {renderChrome} from '../../../../helpers/renderChrome';
 import {MoreSheet} from '../../../../../src/components/player/video/TransportBar/MoreSheet';
 import {More} from '../../../../../src/components/player/video/TransportBar/More';
@@ -29,6 +29,16 @@ jest.mock('../../../../../src/theme', () => ({
       accent: {gold: '#C9A84C', goldSoft: 'rgba(201,168,76,0.10)'},
       text: {primary: '#EDEDED', secondary: '#80EDEDED', tertiary: '#4DEDEDED', accent: '#C9A84C', inverse: '#0A0A0C'},
       shadow: '#000000',
+      // `Toast` reads `colors.semantic.*` when it renders a toast
+      // banner. Save / Add-to-playlist now report through `useToast`,
+      // so a test that triggers them mounts a real Toast and the
+      // mock theme must carry these tokens.
+      semantic: {
+        success: '#3DD68C',
+        error: '#FF5A5F',
+        warning: '#FFB020',
+        info: '#5AA9FF',
+      },
     },
     spacing: {xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24},
     radius: {lg: 16},
@@ -132,7 +142,12 @@ describe('More (button + sheet integration)', () => {
 
   it('renders the button + opens the sheet on tap', async () => {
     const {getByTestId, getByLabelText} = await renderChrome(<More />);
-    fireEvent.press(getByLabelText('More options'));
+    // Awaited act(): the press flips `sheetOpen`, and RNTL 14's async
+    // act needs the re-render flushed before the Modal's rows are
+    // queryable.
+    await act(async () => {
+      fireEvent.press(getByLabelText('More options'));
+    });
     // `More` renders `VideoMoreSheet` (W3.5.6 replaced `MoreSheet`),
     // whose legacy rows are addressed by testID, not by
     // accessibility label. These assertions were still written
@@ -143,7 +158,9 @@ describe('More (button + sheet integration)', () => {
 
   it('Share calls shareContent with the current track title + artist', async () => {
     const {getByTestId, getByLabelText} = await renderChrome(<More />);
-    fireEvent.press(getByLabelText('More options'));
+    await act(async () => {
+      fireEvent.press(getByLabelText('More options'));
+    });
     fireEvent.press(getByTestId('legacy-share'));
     expect(shareService.shareContent).toHaveBeenCalledWith({
       route: 'SongScreen',
@@ -159,7 +176,9 @@ describe('More (button + sheet integration)', () => {
     // pins placeholder behaviour LOCKS the jugaad in, so both were
     // rewritten against the real implementation.
     const {getByTestId, getByLabelText} = await renderChrome(<More />);
-    fireEvent.press(getByLabelText('More options'));
+    await act(async () => {
+      fireEvent.press(getByLabelText('More options'));
+    });
     fireEvent.press(getByTestId('legacy-save'));
     expect(downloadService.startDownload).toHaveBeenCalledWith(
       expect.objectContaining({uri: 'https://cdn.test/stairway.mp4'}),
@@ -168,7 +187,9 @@ describe('More (button + sheet integration)', () => {
 
   it('Add to playlist really appends to the player queue', async () => {
     const {getByTestId, getByLabelText} = await renderChrome(<More />);
-    fireEvent.press(getByLabelText('More options'));
+    await act(async () => {
+      fireEvent.press(getByLabelText('More options'));
+    });
     fireEvent.press(getByTestId('legacy-add-to-playlist'));
     expect(playerStore.addToPlaylist).toHaveBeenCalledWith(
       expect.objectContaining({uri: 'https://cdn.test/stairway.mp4'}),

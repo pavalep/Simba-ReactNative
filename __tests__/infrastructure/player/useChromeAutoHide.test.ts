@@ -110,12 +110,19 @@ describe('useChromeAutoHide', () => {
   });
 
   it('stays visible during pinned states', async () => {
+    // One hook, swept across the pinned states via `rerender` — the
+    // hook re-reads `usePlaybackState()` on every render, so a re-render
+    // with a new state is all a state change needs.
+    //
+    // Both `rerender` AND `unmount` are async in RNTL 14. An un-awaited
+    // `unmount()` leaves its act() scope open, so the next render's
+    // effects never flush and `result.current` silently comes back
+    // `null` — poisoning every later assertion in the file. The only
+    // hint is a `console.error` about "overlapping act() calls".
+    const {result, rerender} = await renderHook(() => useChromeAutoHide());
     for (const state of ['idle', 'preparing', 'paused', 'buffering', 'seeking', 'error', 'finished']) {
       mockVideoState.current = state;
-      const {result, rerender} = await renderHook(() => useChromeAutoHide());
-      // Force a re-render with the new state.
-      mockVideoState.current = state;
-      rerender({});
+      await rerender({});
       expect(result.current.isVisible).toBe(true);
     }
   });
@@ -158,7 +165,7 @@ describe('useChromeAutoHide', () => {
   it('returns a stable opacity Animated.Value across re-renders', async () => {
     const {result, rerender} = await renderHook(() => useChromeAutoHide());
     const firstOpacity = result.current.opacity;
-    rerender({});
+    await rerender({});
     expect(result.current.opacity).toBe(firstOpacity);
   });
 
@@ -166,7 +173,7 @@ describe('useChromeAutoHide', () => {
     const {result, rerender} = await renderHook(() => useChromeAutoHide());
     const firstToggle = result.current.toggle;
     const firstKick = result.current.kick;
-    rerender({});
+    await rerender({});
     expect(result.current.toggle).toBe(firstToggle);
     expect(result.current.kick).toBe(firstKick);
   });

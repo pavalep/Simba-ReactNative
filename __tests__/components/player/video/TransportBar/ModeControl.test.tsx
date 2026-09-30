@@ -14,7 +14,7 @@
  */
 
 import * as React from 'react';
-import {fireEvent, render} from '@testing-library/react-native';
+import {act, fireEvent, render} from '@testing-library/react-native';
 import {ModeControl} from '../../../../../src/components/player/video/TransportBar/ModeControl';
 
 // ── Mocks ────────────────────────────────────────────────────────────
@@ -143,8 +143,14 @@ describe('ModeControl', () => {
   it('opens the ModeSheet on tap', async () => {
     const {getByLabelText} = await render(<ModeControl />);
     const button = getByLabelText('Repeat mode: Off. Tap to change.');
-    fireEvent.press(button);
-    // After tapping, the ModeSheet becomes visible — the option
+    // Wrapped in an awaited act(): the press flips `sheetOpen`, and
+    // RNTL 14's async act needs the re-render flushed before the
+    // sheet's rows are queryable. A bare `fireEvent.press` leaves the
+    // Modal un-mounted at assertion time.
+    await act(async () => {
+      fireEvent.press(button);
+    });
+    // After tapping, the ModeSheet becomes visible - the option
     // rows render with menuitem accessibility role.
     expect(
       getByLabelText('Repeat one'),
@@ -156,30 +162,39 @@ describe('ModeControl', () => {
 
   it('selecting a mode in the sheet calls commands.setRepeatMode', async () => {
     const {getByLabelText} = await render(<ModeControl />);
-    fireEvent.press(
-      getByLabelText('Repeat mode: Off. Tap to change.'),
-    );
+    await act(async () => {
+      fireEvent.press(
+        getByLabelText('Repeat mode: Off. Tap to change.'),
+      );
+    });
     fireEvent.press(getByLabelText('Repeat one'));
     expect(mockSetRepeatMode).toHaveBeenCalledWith('one');
   });
 
   it('selecting "Repeat all" calls setRepeatMode("all")', async () => {
     const {getByLabelText} = await render(<ModeControl />);
-    fireEvent.press(
-      getByLabelText('Repeat mode: Off. Tap to change.'),
-    );
+    await act(async () => {
+      fireEvent.press(
+        getByLabelText('Repeat mode: Off. Tap to change.'),
+      );
+    });
     fireEvent.press(getByLabelText('Repeat all'));
     expect(mockSetRepeatMode).toHaveBeenCalledWith('all');
   });
 
   it('tapping the scrim closes the sheet WITHOUT changing the mode', async () => {
-    const {getByLabelText} = await render(<ModeControl />);
-    fireEvent.press(
-      getByLabelText('Repeat mode: Off. Tap to change.'),
-    );
-    fireEvent.press(getByLabelText('Close repeat mode'));
+    const {getByLabelText, queryByLabelText} = await render(<ModeControl />);
+    await act(async () => {
+      fireEvent.press(
+        getByLabelText('Repeat mode: Off. Tap to change.'),
+      );
+    });
+    await act(async () => {
+      fireEvent.press(getByLabelText('Close repeat mode'));
+    });
     expect(mockSetRepeatMode).not.toHaveBeenCalled();
     // The menu items are unmounted after close.
+    expect(queryByLabelText('Repeat one')).toBeNull();
     expect(getByLabelText('Repeat mode: Off. Tap to change.')).toBeTruthy();
   });
 });

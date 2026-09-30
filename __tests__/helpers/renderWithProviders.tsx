@@ -112,7 +112,7 @@ export async function renderWithProviders<
   // own props type (`RootStackScreenProps<RouteName>`) varies
   // by route name and is wider than the helper's generic;
   // a stricter type would force every caller to cast.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   Component: ComponentType<any>,
   options: RenderWithProvidersOptions<RouteName> = {},
 ): Promise<RenderResult> {

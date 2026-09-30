@@ -14,7 +14,7 @@
 
 import * as React from 'react';
 import {Pressable, Text} from 'react-native';
-import {render} from '@testing-library/react-native';
+import {fireEvent, render} from '@testing-library/react-native';
 import {ChromeAutoHideController} from '../../../../../src/components/player/video/ChromeAutoHide/ChromeAutoHideController';
 
 jest.mock('../../../../../src/theme', () => ({
@@ -60,16 +60,19 @@ describe('ChromeAutoHideController', () => {
 
   it('wrapper is pointer-events box-none (children own their taps)', async () => {
     const onPress = jest.fn();
-    const {getByText} = await render(
-      <ChromeAutoHideController>
+    const {getByText, getByTestId} = await render(
+      <ChromeAutoHideController testID="chrome-wrapper">
         <Pressable onPress={onPress}>
           <Text>press me</Text>
         </Pressable>
       </ChromeAutoHideController>,
     );
-    // The child Pressable receives the press (the controller
-    // doesn't capture it).
-    const child = getByText('press me').parent;
-    expect(child?.props.onPress).toBeDefined();
+    // The wrapper is a pure pass-through: it never captures a tap, so a
+    // hidden (opacity 0) chrome still lets the tap reach the surface
+    // underneath.
+    expect(getByTestId('chrome-wrapper').props.pointerEvents).toBe('box-none');
+    // ...and the child really does own the press.
+    fireEvent.press(getByText('press me'));
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 });

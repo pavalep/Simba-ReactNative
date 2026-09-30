@@ -38,27 +38,37 @@ import {sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
 
 export type VideoQualityPreset = 'battery-saver' | 'balanced' | 'high-quality';
 
+// Frozen at runtime as well as typed `ReadonlyArray`: this is a
+// module-level constant the settings UI maps over, so a stray
+// `presets.push(...)` in a feature branch would silently change the
+// quality picker for every already-running screen. The type alone does
+// not stop that (it only stops TypeScript callers, and a `as any` cast
+// erases it), so the runtime agrees with the type.
 export const VIDEO_QUALITY_PRESETS: ReadonlyArray<{
   value: VideoQualityPreset;
   label: string;
   description: string;
-}> = [
-  {
-    value: 'battery-saver',
+}> = Object.freeze([
+  Object.freeze({
+    value: 'battery-saver' as VideoQualityPreset,
     label: 'Battery saver',
     description: 'Hardware decoding, lower quality rendering',
-  },
-  {
-    value: 'balanced',
+  }),
+  Object.freeze({
+    value: 'balanced' as VideoQualityPreset,
     label: 'Balanced',
     description: 'Auto-decoding, default rendering',
-  },
-  {
-    value: 'high-quality',
+  }),
+  Object.freeze({
+    value: 'high-quality' as VideoQualityPreset,
     label: 'High quality',
     description: 'Software decoding, high-quality scaling',
-  },
-];
+  }),
+]) as ReadonlyArray<{
+  value: VideoQualityPreset;
+  label: string;
+  description: string;
+}>;
 
 export interface QualityPresetActions {
   setPreset: (preset: VideoQualityPreset) => void;

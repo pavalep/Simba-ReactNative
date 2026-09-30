@@ -94,15 +94,31 @@ describe('VideoLoadingOverlay', () => {
     mockState({videoState: 'preparing'});
     await render(<VideoLoadingOverlay />);
     // The View with role='progressbar' IS the centering container.
+    // `styles.container` is a single registered StyleSheet entry, so
+    // `props.style` arrives already flattened — not as an array.
     const overlay = screen.getByRole('progressbar');
     expect(overlay.props.style).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          alignItems: 'center',
-          justifyContent: 'center',
-        }),
-      ]),
+      expect.objectContaining({
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+      }),
     );
+  });
+
+  it('is a real accessibility element (not an inert labelled View)', async () => {
+    // `accessibilityRole` / `accessibilityLabel` are inert on a View
+    // without `accessible` — VoiceOver skips the node and the whole
+    // overlay announces nothing while the video is stuck buffering.
+    mockState({videoState: 'preparing'});
+    await render(<VideoLoadingOverlay />);
+    const overlay = screen.getByRole('progressbar');
+    expect(overlay.props.accessible).toBe(true);
+    expect(overlay.props.accessibilityLabel).toBe('Loading');
   });
 
   it('does NOT call any playback command', async () => {

@@ -7,10 +7,17 @@
  * `Promise<Result<PlaybackId, StreamError>>` with the 4 typed
  * variants.
  *
- * Current best-effort mapping (V21):
+ * Current mapping (V21 W7 P28, refined by the B-009 reaudit):
  *   - bridge returns `true`  → `ok(playbackId)`
- *   - bridge returns `false` → `err(networkError)`
- *   - bridge throws          → `err(networkError({cause}))`
+ *   - bridge returns `false` → `err(launchError)` (the native player
+ *     refused to start; NOT a network problem)
+ *   - bridge throws          → `err(mapBridgeLaunchError(e))`, which
+ *     maps the typed bridge code to the matching variant
+ *
+ * A `false` return deliberately does NOT map to `network`: the bridge
+ * only resolves `false` when `startActivity` didn't come back OK, so
+ * telling the user "No connection — this will open when you're online"
+ * would be a message about a problem they cannot fix by toggling Wi-Fi.
  *
  * The W22 follow-up (after a native bridge update) will let the
  * wrapper map to `unsupported` / `expired` / `blocked` based on
@@ -54,7 +61,7 @@ describe('usePlay (V21 W7 P28)', () => {
     }
   });
 
-  it('returns err(networkError) when the bridge returns false', async () => {
+  it('returns err(launchError) when the bridge returns false', async () => {
     mockOpenPlayer.mockResolvedValueOnce(false);
     const {result} = await renderHook(() => usePlay());
     const r = await result.current({
@@ -64,13 +71,28 @@ describe('usePlay (V21 W7 P28)', () => {
     });
     expect(r.ok).toBe(false);
     if (!r.ok) {
-      expect(r.error.kind).toBe('network');
+      expect(r.error.kind).toBe('launch');
       expect(r.error.message).toBe('Player refused launch');
+      // Nothing the user can do about it — no "try again" affordance.
+      expect(r.error.kind === 'launch' && r.error.userFixable).toBe(false);
     }
   });
 
-  it('returns err(networkError) when the bridge throws', async () => {
-    mockOpenPlayer.mockRejectedValueOnce(new Error('bridge exploded'));
+  it('does NOT blame the network when the player refuses to launch', async () => {
+    // A `network` kind here would drive the call site
+    // (MoviesDataProvider) into a "No connection, this will open when
+    // you're online" toast — advice that cannot fix a refused launch.
+    mockOpenPlayer.mockResolvedValueOnce(false);
+    const {result} = await renderHook(() => usePlay());
+    const r = await result.current({
+      uri: 'file:///x',
+      title: 'X',
+      mediaType: 'video',
+    });
+    expect(!r.ok && r.error.kind).not.toBe('network');
+  });
+
+  it('returns err(networkError) when the bridge throws', async () => {    mockOpenPlayer.mockRejectedValueOnce(new Error('bridge exploded'));
     const {result} = await renderHook(() => usePlay());
     const r = await result.current({
       uri: 'file:///x',

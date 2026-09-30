@@ -85,19 +85,40 @@ describe('useTransport — derivations', () => {
         isSeeking: expect.any(Boolean),
         isEnded: expect.any(Boolean),
         bufferedRanges: expect.any(Array),
-        normalizedWindow: expect.anything(), // null or object
         seekable: expect.any(Boolean),
         canEnterPip: expect.any(Boolean),
+        canGoPrev: expect.any(Boolean),
+        canGoNext: expect.any(Boolean),
+        speed: expect.any(Number),
+        volume: expect.any(Number),
+        isMuted: expect.any(Boolean),
+        repeatMode: expect.any(String),
+        captionTracks: expect.any(Array),
+        // `normalizedWindow` is null until a buffered range contains the
+        // playhead, and `currentUri`/`nextTrack` are null before a
+        // playlist is attached. `expect.anything()` would be wrong here:
+        // it rejects `null` as well as `undefined`, so assert the real
+        // defaults instead.
+        normalizedWindow: null,
+        currentUri: null,
+        nextTrack: null,
+        activeCaptionTrackId: null,
       }),
     );
     expect(result.current.commands).toEqual(
       expect.objectContaining({
         seek: expect.any(Function),
         seekBy: expect.any(Function),
-        step: expect.any(Function),
+        rewind10: expect.any(Function),
+        forward10: expect.any(Function),
+        skipPrev: expect.any(Function),
+        next: expect.any(Function),
         togglePlayPause: expect.any(Function),
         play: expect.any(Function),
         pause: expect.any(Function),
+        enterPip: expect.any(Function),
+        exitPip: expect.any(Function),
+        close: expect.any(Function),
       }),
     );
   });
@@ -159,15 +180,29 @@ describe('useTransport — derivations', () => {
   });
 
   it('normalizedWindow tolerates 1s slop on the lower bound', async () => {
-    // playhead at 0; range starts at 1500ms — within tolerance.
+    // playhead at 0; range starts at exactly 1000ms — the boundary of
+    // PLAYHEAD_TOLERANCE_MS. The tolerance exists to absorb the 1Hz
+    // position-tick vs higher-rate cache-event skew, so a range that
+    // starts one second after the reported playhead is still "this one".
+    mockProgress.durationMs = 300_000;
+    mockProgress.cacheRanges = [{start: 1000, end: 60_000}];
+    mockProgress.positionMs = 0;
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.normalizedWindow).toEqual({
+      startMs: 1000,
+      endMs: 60_000,
+    });
+  });
+
+  it('normalizedWindow does NOT tolerate slop past the 1s bound', async () => {
+    // 1500ms > the 1000ms tolerance, so the range does not contain the
+    // playhead and the window is null (BufferedRangeFill renders
+    // nothing rather than a stale fill).
     mockProgress.durationMs = 300_000;
     mockProgress.cacheRanges = [{start: 1500, end: 60_000}];
     mockProgress.positionMs = 0;
     const {result} = await renderHook(() => useTransport());
-    expect(result.current.state.normalizedWindow).toEqual({
-      startMs: 1500,
-      endMs: 60_000,
-    });
+    expect(result.current.state.normalizedWindow).toBeNull();
   });
 
   it('normalizedWindow is null when the playhead is in a gap', async () => {
@@ -369,9 +404,13 @@ describe('clampPosition', () => {
     expect(clampPosition(50_000, 0)).toBe(0);
   });
 
-  it('clamps Infinity to durationMs', () => {
-    // Number.isFinite(Infinity) === false, but the duration check
-    // path catches it. Verify the documented behavior.
-    expect(clampPosition(Infinity, 300_000)).toBe(300_000);
+  it('resolves a non-finite position to 0 (the lower bound)', () => {
+    // Number.isFinite(Infinity) === false, so this takes the non-finite
+    // guard rather than the range clamp — and the guard resolves to 0,
+    // not durationMs. Seeking to the end of the file on a degenerate
+    // gesture would end playback, so the start is the safer fallback
+    // (same choice Media3's Util.clampPosition makes).
+    expect(clampPosition(Infinity, 300_000)).toBe(0);
+    expect(clampPosition(-Infinity, 300_000)).toBe(0);
   });
 });

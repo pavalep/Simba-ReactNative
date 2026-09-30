@@ -8,9 +8,9 @@
  *   - all 5 buttons render when canGoPrev === canGoNext === true
  *   - Previous hidden when canGoPrev === false
  *   - Next hidden when canGoNext === false
- *   - tap on Rewind 10 calls commands.step(-10000)
- *   - tap on Forward 10 calls commands.step(10000)
- *   - tap on Previous calls commands.previous()
+ *   - tap on Rewind 10 calls commands.rewind10()
+ *   - tap on Forward 10 calls commands.forward10()
+ *   - tap on Previous calls commands.skipPrev()
  *   - tap on Next calls commands.next()
  *   - tap on Play-Pause (when not playing) calls commands.togglePlayPause()
  *   - tap on Replay (when ended) calls commands.seek(0)
@@ -40,11 +40,12 @@ jest.mock('../../../../../src/theme', () => ({
   }),
 }));
 
-const mockStep = jest.fn();
 const mockNext = jest.fn();
-const mockPrevious = jest.fn();
+const mockSkipPrev = jest.fn();
 const mockTogglePlayPause = jest.fn();
 const mockSeek = jest.fn();
+const mockRewind10 = jest.fn();
+const mockForward10 = jest.fn();
 
 const mockTransport: {
   state: {
@@ -55,9 +56,10 @@ const mockTransport: {
     canGoNext: boolean;
   };
   commands: {
-    step: jest.Mock;
+    rewind10: jest.Mock;
+    forward10: jest.Mock;
     next: jest.Mock;
-    previous: jest.Mock;
+    skipPrev: jest.Mock;
     togglePlayPause: jest.Mock;
     seek: jest.Mock;
   };
@@ -70,9 +72,10 @@ const mockTransport: {
     canGoNext: true,
   },
   commands: {
-    step: mockStep,
+    rewind10: mockRewind10,
+    forward10: mockForward10,
     next: mockNext,
-    previous: mockPrevious,
+    skipPrev: mockSkipPrev,
     togglePlayPause: mockTogglePlayPause,
     seek: mockSeek,
   },
@@ -169,22 +172,29 @@ describe('TransportRow', () => {
     expect(getByLabelText('Previous track')).toBeTruthy();
   });
 
-  it('Rewind 10 calls commands.step(-10000)', async () => {
+  it('Rewind 10 calls commands.rewind10()', async () => {
     const {getByLabelText} = await render(<TransportRow />);
     fireEvent.press(getByLabelText('Rewind 10 seconds'));
-    expect(mockStep).toHaveBeenCalledWith(-10_000);
+    // `step` was removed from the facade in the W5 reaudit — it was a
+    // fourth name for the same seek and `seekBy` already covered it.
+    // The row now calls the dedicated `rewind10()` command.
+    expect(mockRewind10).toHaveBeenCalledTimes(1);
   });
 
-  it('Forward 10 calls commands.step(10000)', async () => {
+  it('Forward 10 calls commands.forward10()', async () => {
     const {getByLabelText} = await render(<TransportRow />);
     fireEvent.press(getByLabelText('Forward 10 seconds'));
-    expect(mockStep).toHaveBeenCalledWith(10_000);
+    expect(mockForward10).toHaveBeenCalledTimes(1);
   });
 
-  it('Previous calls commands.previous()', async () => {
+  it('Previous calls commands.skipPrev()', async () => {
+    // W3.6.11 — the button is the Apple Music / Spotify "smart
+    // previous": the row decides restart-vs-skip against the
+    // threshold store, so the chrome never issues a raw
+    // `commands.previous()` of its own accord.
     const {getByLabelText} = await render(<TransportRow />);
     fireEvent.press(getByLabelText('Previous track'));
-    expect(mockPrevious).toHaveBeenCalledTimes(1);
+    expect(mockSkipPrev).toHaveBeenCalledTimes(1);
   });
 
   it('Next calls commands.next()', async () => {

@@ -714,6 +714,35 @@ Before W0 closes, ALL of the following must be true:
 > view instead reports REAL observed lib state via
 > `observePlayback(phase)`. No fake state is invented on either side.
 
+### Pre-W6 test remediation — the suite now runs (and is honest)
+
+W5's 53 unit tests passed while the *chrome* suites did not execute at
+all: `@testing-library/react-native` v14 made `render()` async, and
+every suite was calling it synchronously. RNTL's own guard then threw
+`render function has not been called`, which had been filed as an
+"unfixable pre-existing environment failure" and carried forward as a
+blocker on ~140 tests. It was never an environment problem.
+
+Unblocking the suite exposed genuine defects underneath, several of
+which were real product bugs rather than test noise:
+
+| Finding | Verdict |
+|---|---|
+| `VideoLoadingOverlay` set `accessibilityRole`/`accessibilityLabel` with **no `accessible`** | **Product bug** — iOS VoiceOver skipped the node, so the overlay announced nothing while the video buffered. `accessible` added (+ a test that pins it). |
+| `PiPToggle` test asserted the *removed* defensive cast | Test locked the jugaad in. Rewritten to assert both halves of the press plus a source guard against `as unknown as` returning. |
+| `usePlay` docstring documented `networkError`; the code returned `launchError` | Docstring was stale. A `false` from the bridge means `startActivity` didn't return OK — a `network` kind would send `MoviesDataProvider` into a "No connection, this will open when you're online" toast the user cannot act on. Code kept, doc + test corrected. |
+| `VIDEO_QUALITY_PRESETS` typed `ReadonlyArray` but not frozen at runtime | **Product bug** — a `as any` cast in a feature branch would mutate the quality picker for every mounted screen. `Object.freeze` on the array and each entry. |
+| `normalizedWindow` "1s slop" test used a 1500 ms fixture | Contradicted its own name (tolerance is 1000 ms). Fixed to the boundary, plus a new test proving 1500 ms is NOT tolerated. |
+| `clampPosition(Infinity, 300_000)` expected `durationMs` | Actual (and Media3-consistent) answer is `0` — the lower bound; seeking to the end on a degenerate gesture would end playback. Docstring now states the rule. |
+| `ScrubPreview` left-clamp test passed `keyframes={[]}` | A zero-width pill cannot overflow, so `left === centerX` is correct. Test now uses a thumbnail, plus a new test for the zero-width case. |
+| `VideoSurface` isolation grep scanned the whole file | Matched the docstring, which names every chrome primitive *to state it composes none*. Now scans import lines only. |
+| `NowPlaying` asserted pre-W4 title/fallback text | W4's chrome hoist made the route a thin viewer returning `null`. Tests rewritten to the contract it owns now (mount → `expanded`). |
+| `useChromeAutoHide` / `ChromeAutoHideController` / sheet suites | Test-hygiene: RNTL 14's `rerender` AND `unmount` are async; an un-awaited `unmount()` leaves an act scope open and silently nulls `result.current` for every later assertion. |
+| 7 sheet suites timing out at Jest's 5 s default | Not a hang: RN `Modal` has a **one-time ~800 ms init on its first visible render** (second render: 0 ms), which scales to ~4.0 s on a real sheet tree while every other test in those files runs in 6–17 ms. `testTimeout` raised to 15 s — ~3.5× headroom over the observed worst case, still catches a true hang. |
+
+**Result: 62/62 suites, 693/694 tests passing (1 todo).** `tsc --noEmit`
+clean, ESLint `--max-warnings 0` clean, audit §5 isolation grep 0 hits.
+
 ### Phase 5.1 — `VideoController` core
 
 - [x] `src/infrastructure/player/video/VideoController.ts` exists (TypeScript, no React)

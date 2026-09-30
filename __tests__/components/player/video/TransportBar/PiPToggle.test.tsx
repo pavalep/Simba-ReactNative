@@ -34,9 +34,13 @@ jest.mock('../../../../../src/theme', () => ({
 }));
 
 const mockEnterPip = jest.fn();
+const mockSetMode = jest.fn();
 const mockTransport: {
   state: {canEnterPip: boolean};
-  commands: {enterPip?: () => void};
+  // `enterPip` is a REQUIRED member of `TransportCommands` (lib 1.5.x+),
+  // so the mock declares it required too — an optional key here would
+  // let this suite pass against the very cast the W5 reaudit removed.
+  commands: {enterPip: () => void};
 } = {
   state: {canEnterPip: false},
   commands: {enterPip: mockEnterPip},
@@ -96,6 +100,10 @@ jest.mock('../../../../../src/infrastructure/player', () => {
   return {
     ...actual,
     useTransport: () => mockTransport,
+    usePresentation: () => ({
+      setMode: mockSetMode,
+      mode: 'expanded',
+    }),
   };
 });
 
@@ -123,12 +131,36 @@ describe('PiPToggle', () => {
     expect(mockEnterPip).toHaveBeenCalledTimes(1);
   });
 
-  it('does not throw when the lib does not expose enterPip', async () => {
+  it('tap ALSO suppresses the JS chrome (setMode("pip"))', async () => {
+    // The W5 reaudit found the button was a complete no-op: the
+    // `as unknown as {enterPip?}` cast always read `undefined` and the
+    // `|| () => {}` fallback swallowed the press. Assert BOTH halves of
+    // the press so a future one-sided regression is caught.
     mockTransport.state.canEnterPip = true;
-    mockTransport.commands = {}; // simulate a lib without enterPip
     const {getByLabelText} = await render(<PiPToggle />);
-    expect(() =>
-      fireEvent.press(getByLabelText('Enter Picture-in-Picture')),
-    ).not.toThrow();
+    fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
+    expect(mockEnterPip).toHaveBeenCalledTimes(1);
+    expect(mockSetMode).toHaveBeenCalledWith('pip');
+  });
+
+  it('has no defensive cast that could make enterPip a silent no-op', async () => {
+    // `enterPip` is a required member of `TransportCommands`, backed by
+    // lib 1.5.x+. A cast + no-op fallback would type-check and render a
+    // button that silently does nothing — so guard the source directly.
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.join(
+        __dirname,
+        '../../../../../src/components/player/video/TransportBar/PiPToggle.tsx',
+      ),
+      'utf8',
+    );
+    const code = src
+      .split('\n')
+      .filter((line: string) => !/^\s*(\*|\/\/)/.test(line))
+      .join('\n');
+    expect(code).not.toMatch(/as unknown as/);
+    expect(code).not.toMatch(/enterPip\s*\?\s*enterPip/);
   });
 });

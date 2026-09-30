@@ -43,13 +43,27 @@ export const VideoLoadingOverlay: React.FC = () => {
     <View
       pointerEvents="none"
       style={styles.container}
+      // `accessible` is what makes this View an accessibility element
+      // at all. Without it, iOS VoiceOver skips the node entirely and
+      // BOTH `accessibilityRole="progressbar"` and
+      // `accessibilityLabel="Loading"` are inert — the overlay would
+      // announce nothing while the video is stuck buffering. (The
+      // visible caption is still read as its own text node, which is
+      // why this went unnoticed: the string appeared, just unlabelled
+      // and un-typed.)
+      accessible
       accessibilityRole="progressbar"
       accessibilityLabel="Loading"
+      accessibilityLiveRegion="polite"
     >
       <ActivityIndicator
         size="large"
         color={colors.text.primary}
+        // The spinner is decorative — the container above already
+        // carries the role and the label, so announcing it separately
+        // would double up.
         accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
       />
       <AppText
         variant="body1"

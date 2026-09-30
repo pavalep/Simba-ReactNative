@@ -67,14 +67,22 @@ describe('VideoSurface', () => {
     // react-native / theme. Enforced by ESLint `no-restricted-imports`
     // at CI time; this test is a runtime guard for the same contract.
     //
-    // Reading the source as a string is the lightest-weight way to
-    // assert the boundary without coupling to the bundler's resolution.
+    // Scanning the WHOLE file would be wrong: the module docstring
+    // names every chrome primitive precisely to state that this
+    // component does not compose them. Only the import statements
+    // carry the actual coupling.
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(
       path.join(__dirname, '../../../../src/components/player/video/VideoSurface/VideoSurface.tsx'),
       'utf8',
     );
-    expect(src).not.toMatch(/TransportBar|VideoTitleOverlay|VideoLoadingOverlay|VideoErrorOverlay|VideoMiniPlayer/);
+    const imports = src
+      .split('\n')
+      .filter((line: string) => /^\s*import\s/.test(line))
+      .join('\n');
+    expect(imports).not.toMatch(
+      /TransportBar|VideoTitleOverlay|VideoLoadingOverlay|VideoErrorOverlay|VideoMiniPlayer/,
+    );
   });
 });

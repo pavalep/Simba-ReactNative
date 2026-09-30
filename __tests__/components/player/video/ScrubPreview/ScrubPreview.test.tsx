@@ -39,6 +39,15 @@ jest.mock('../../../../../src/theme', () => ({
 }));
 
 describe('ScrubPreview', () => {
+  // The ScrubPreview root is deliberately hidden from screen readers
+  // (`accessibilityElementsHidden` + `importantForAccessibility=
+  // "no-hide-descendants"`): it is a transient drag affordance, and a
+  // VoiceOver cursor parked on it would read a moving timestamp on every
+  // pixel of a seek gesture. The seek bar itself owns the position
+  // announcement. So every query here opts in via `includeHiddenElements`
+  // — correct component behaviour, test-side opt-in.
+  const HIDDEN = {includeHiddenElements: true} as const;
+
   it('renders nothing when visible=false', async () => {
     const {queryByTestId} = await render(
       <ScrubPreview
@@ -62,8 +71,8 @@ describe('ScrubPreview', () => {
         keyframes={[]}
       />,
     );
-    expect(getByText('1:00')).toBeTruthy();
-    expect(getByTestId('scrub-preview-pill')).toBeTruthy();
+    expect(getByText('1:00', HIDDEN)).toBeTruthy();
+    expect(getByTestId('scrub-preview-pill', HIDDEN)).toBeTruthy();
   });
 
   it('formats sub-hour durations as M:SS', async () => {
@@ -76,7 +85,7 @@ describe('ScrubPreview', () => {
         keyframes={[]}
       />,
     );
-    expect(getByText('2:05')).toBeTruthy();
+    expect(getByText('2:05', HIDDEN)).toBeTruthy();
   });
 
   it('formats hour+ durations as H:MM:SS', async () => {
@@ -89,11 +98,11 @@ describe('ScrubPreview', () => {
         keyframes={[]}
       />,
     );
-    expect(getByText('1:02:05')).toBeTruthy();
+    expect(getByText('1:02:05', HIDDEN)).toBeTruthy();
   });
 
   it('renders a thumbnail when a keyframe with uri is available', async () => {
-    const {getByText, getByTestId, queryByTestId} = await render(
+    const {getByText, getByTestId} = await render(
       <ScrubPreview
         visible
         positionMs={60_000}
@@ -105,9 +114,9 @@ describe('ScrubPreview', () => {
         ]}
       />,
     );
-    expect(getByText('1:00')).toBeTruthy();
-    expect(getByTestId('scrub-preview-thumbnail')).toBeTruthy();
-    expect(queryByTestId('scrub-preview-pill')).toBeTruthy();
+    expect(getByText('1:00', HIDDEN)).toBeTruthy();
+    expect(getByTestId('scrub-preview-thumbnail', HIDDEN)).toBeTruthy();
+    expect(getByTestId('scrub-preview-pill', HIDDEN)).toBeTruthy();
   });
 
   it('does NOT render a thumbnail for keyframes without a uri', async () => {
@@ -120,22 +129,26 @@ describe('ScrubPreview', () => {
         keyframes={[{positionMs: 60_000, uri: ''}]}
       />,
     );
-    expect(queryByTestId('scrub-preview-thumbnail')).toBeNull();
+    expect(queryByTestId('scrub-preview-thumbnail', HIDDEN)).toBeNull();
     // Pill still renders.
-    expect(queryByTestId('scrub-preview-pill')).toBeTruthy();
+    expect(queryByTestId('scrub-preview-pill', HIDDEN)).toBeTruthy();
   });
 
   it('clamps the pill+thumbnail to the bar bounds (left edge)', async () => {
+    // A thumbnail is REQUIRED for this to be a clamping test: with no
+    // keyframe the pill's total width is 0, so `left` is just `centerX`
+    // and there is nothing to overflow. With a 96px thumbnail at
+    // centerX=5: desiredLeft = 5 - 48 = -43 → clamped up to 0.
     const {getByTestId} = await render(
       <ScrubPreview
         visible
         positionMs={60_000}
         centerX={5} // near the left edge — would overflow left
         barWidth={300}
-        keyframes={[]}
+        keyframes={[{positionMs: 60_000, uri: 'file:///cache/60.jpg'}]}
       />,
     );
-    const container = getByTestId('scrub-preview');
+    const container = getByTestId('scrub-preview', HIDDEN);
     const style = Array.isArray(container.props.style)
       ? container.props.style.flat(Infinity)
       : [container.props.style];
@@ -143,6 +156,28 @@ describe('ScrubPreview', () => {
       (s: object) => typeof (s as {left?: number}).left === 'number',
     );
     expect((left as {left: number}).left).toBe(0);
+  });
+
+  it('tracks centerX exactly when there is no thumbnail (zero width)', async () => {
+    // The counterpart to the clamp above: with nothing to lay out, the
+    // pill is anchored on centerX rather than pinned to an edge.
+    const {getByTestId} = await render(
+      <ScrubPreview
+        visible
+        positionMs={60_000}
+        centerX={5}
+        barWidth={300}
+        keyframes={[]}
+      />,
+    );
+    const container = getByTestId('scrub-preview', HIDDEN);
+    const style = Array.isArray(container.props.style)
+      ? container.props.style.flat(Infinity)
+      : [container.props.style];
+    const left = style.find(
+      (s: object) => typeof (s as {left?: number}).left === 'number',
+    );
+    expect((left as {left: number}).left).toBe(5);
   });
 
   it('clamps the pill+thumbnail to the bar bounds (right edge)', async () => {
@@ -155,7 +190,7 @@ describe('ScrubPreview', () => {
         keyframes={[{positionMs: 60_000, uri: 'file:///cache/60.jpg'}]}
       />,
     );
-    const container = getByTestId('scrub-preview');
+    const container = getByTestId('scrub-preview', HIDDEN);
     const style = Array.isArray(container.props.style)
       ? container.props.style.flat(Infinity)
       : [container.props.style];
@@ -177,7 +212,9 @@ describe('ScrubPreview', () => {
         keyframes={[]}
       />,
     );
-    expect(getByTestId('scrub-preview').props.pointerEvents).toBe('none');
+    expect(getByTestId('scrub-preview', HIDDEN).props.pointerEvents).toBe(
+      'none',
+    );
   });
 });
 
@@ -198,7 +235,14 @@ describe('findClosestKeyframe (pure helper)', () => {
   });
 
   it('returns the closest sample when the position is between keyframes', () => {
-    expect(findClosestKeyframe(samples, 90_000)).toEqual(samples[2]); // 120k is closer than 60k
+    // 100k is 40k from the 60k sample and 20k from the 120k sample, so
+    // the 120k snapshot wins outright. (A target of 90k would be a
+    // 30k/30k tie — the linear scan keeps the first on an exact tie.)
+    expect(findClosestKeyframe(samples, 100_000)).toEqual(samples[2]);
+  });
+
+  it('resolves an exact tie to the earlier sample', () => {
+    expect(findClosestKeyframe(samples, 90_000)).toEqual(samples[1]);
   });
 
   it('returns the boundary sample for positions past the last keyframe', () => {

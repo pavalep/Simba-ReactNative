@@ -18,6 +18,24 @@ module.exports = {
   // runs after the test framework is set up, which is what the
   // TanStack notifyManager replacement needs.
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  // V19: raised from Jest's 5 s default.
+  //
+  // RN's `Modal` has a ONE-TIME init cost on its first visible render
+  // in the jest environment (~800 ms measured with a bare
+  // `<Modal><Text/></Modal>`; the second render is 0 ms). On a real
+  // sheet tree (ModeSheet / CaptionsSheet / MoreSheet — several rows,
+  // theme lookups, TouchableOpacity) the same one-time cost measures
+  // ~4.0 s, which sits directly on the 5 s default and tips over under
+  // parallel worker load. That produced 7 suites failing with
+  // "Exceeded timeout of 5000 ms" while every other test in those
+  // same files ran in 6–17 ms.
+  //
+  // 15 s gives ~3.5x headroom over the observed worst case and still
+  // catches a genuine hang (one that never resolves), so this raises
+  // the ceiling without hiding a defect. A blanket bump is the right
+  // fix here precisely BECAUSE the slowness is a known framework
+  // one-off, not per-test work that could be optimised away.
+  testTimeout: 15000,
   moduleNameMapper: {
     '^react-native-linear-gradient$':
       '<rootDir>/__mocks__/react-native-linear-gradient.js',

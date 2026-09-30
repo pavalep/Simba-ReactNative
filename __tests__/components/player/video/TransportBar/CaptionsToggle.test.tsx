@@ -15,7 +15,7 @@
  */
 
 import * as React from 'react';
-import {fireEvent, render} from '@testing-library/react-native';
+import {act, fireEvent, render, screen} from '@testing-library/react-native';
 import {CaptionsToggle} from '../../../../../src/components/player/video/TransportBar/CaptionsToggle';
 import type {CaptionTrack} from '../../../../../src/infrastructure/player';
 
@@ -156,39 +156,52 @@ describe('CaptionsToggle', () => {
 
   it('opens the sheet on tap', async () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
-    fireEvent.press(
-      getByLabelText('Captions: English. Tap to change.'),
-    );
+    await act(async () => {
+      fireEvent.press(
+        getByLabelText('Captions: English. Tap to change.'),
+      );
+    });
     expect(getByLabelText('Captions: Español')).toBeTruthy();
     expect(getByLabelText('Captions off')).toBeTruthy();
   });
 
   it('selecting a track calls commands.selectCaptionTrack(id)', async () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
-    fireEvent.press(
-      getByLabelText('Captions: English. Tap to change.'),
-    );
+    await act(async () => {
+      fireEvent.press(
+        getByLabelText('Captions: English. Tap to change.'),
+      );
+    });
     fireEvent.press(getByLabelText('Captions: Español'));
     expect(mockSelectCaptionTrack).toHaveBeenCalledWith(101);
   });
 
   it('selecting "Off" calls commands.selectCaptionTrack(null)', async () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
-    fireEvent.press(
-      getByLabelText('Captions: English. Tap to change.'),
-    );
+    await act(async () => {
+      fireEvent.press(
+        getByLabelText('Captions: English. Tap to change.'),
+      );
+    });
     fireEvent.press(getByLabelText('Captions off'));
     expect(mockSelectCaptionTrack).toHaveBeenCalledWith(null);
   });
 
   it('tapping the scrim closes the sheet WITHOUT changing the track', async () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
-    fireEvent.press(
-      getByLabelText('Captions: English. Tap to change.'),
-    );
+    await act(async () => {
+      fireEvent.press(
+        getByLabelText('Captions: English. Tap to change.'),
+      );
+    });
     fireEvent.press(getByLabelText('Close captions picker'));
     expect(mockSelectCaptionTrack).not.toHaveBeenCalled();
-    // The toggle button is mounted again with the same a11y label.
+    // The sheet is torn down — the toggle is the only thing left, and
+    // it carries the same a11y label it had before opening.
+    await act(async () => {});
+    expect(
+      screen.queryByLabelText('Close captions picker'),
+    ).toBeNull();
     expect(
       getByLabelText('Captions: English. Tap to change.'),
     ).toBeTruthy();

@@ -376,10 +376,17 @@ export interface PlayInput {
  * bridge call with the 4 `StreamError` variants and exposes a
  * `Result` so call sites can pattern-match on `.kind`.
  *
- * Current best-effort mapping (W7 P28):
+ * Current mapping (W7 P28, refined by the B-009 reaudit):
  *   - `bridge returns true`  → `ok(playbackId)`
- *   - `bridge returns false` → `err(networkError('Player refused launch'))`
- *   - `bridge throws`        → `err(networkError('Player launch failed', {cause}))`
+ *   - `bridge returns false` → `err(launchError('Player refused launch'))`
+ *   - `bridge throws`        → `err(mapBridgeLaunchError(e))`
+ *
+ * A `false` return maps to `launch`, NOT `network`: the bridge only
+ * resolves `false` when `startActivity` did not come back OK, so a
+ * `network` kind would send the call site into a "No connection — this
+ * will open when you're online" toast, which is advice the user cannot
+ * act on. `mapBridgeLaunchError` (B-009) is what gives a *thrown* bridge
+ * error a typed variant (E_INVALID_TYPE / E_NO_ACTIVITY / …).
  *
  * W22 follow-up (after a native bridge update that surfaces
  * HTTP status codes):
@@ -391,10 +398,7 @@ export interface PlayInput {
  *
  * The call site is the right place for the W22 mapping when the
  * context is known (e.g. a podcast adapter knows the auth token
- * is for `podcastIndex`). For now, the wrapper logs the failure
- * and returns a `network` variant — the call site's `if (e.kind
- * === 'network')` branch is correct; the user just sees a
- * generic "couldn't open this file" message.
+ * is for `podcastIndex`).
  */
 export function usePlay(): (input: PlayInput) => Promise<Result<PlaybackId, StreamError>> {
   const {openPlayer} = usePlayerActivity();

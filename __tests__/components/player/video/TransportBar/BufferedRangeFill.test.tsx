@@ -30,6 +30,14 @@ jest.mock('../../../../../src/theme', () => ({
   }),
 }));
 
+/**
+ * The fill span is `accessibilityElementsHidden` — correct: it is
+ * decorative and must stay out of the accessibility tree. RNTL 14
+ * therefore excludes it from queries by default, so a test that
+ * asserts on it must opt in explicitly.
+ */
+const HIDDEN = {includeHiddenElements: true} as const;
+
 describe('BufferedRangeFill', () => {
   it('renders nothing when normalizedWindow is null', async () => {
     const {toJSON} = await render(
@@ -73,7 +81,7 @@ describe('BufferedRangeFill', () => {
         testID="fill"
       />,
     );
-    const fill = getByTestId('fill');
+    const fill = getByTestId('fill', HIDDEN);
     const style = Array.isArray(fill.props.style)
       ? fill.props.style.flat(Infinity)
       : [fill.props.style];
@@ -98,7 +106,7 @@ describe('BufferedRangeFill', () => {
         testID="fill"
       />,
     );
-    const fill = getByTestId('fill');
+    const fill = getByTestId('fill', HIDDEN);
     const style = Array.isArray(fill.props.style)
       ? fill.props.style.flat(Infinity)
       : [fill.props.style];
@@ -120,7 +128,7 @@ describe('BufferedRangeFill', () => {
         testID="fill"
       />,
     );
-    const fill = getByTestId('fill');
+    const fill = getByTestId('fill', HIDDEN);
     const style = Array.isArray(fill.props.style)
       ? fill.props.style.flat(Infinity)
       : [fill.props.style];
@@ -147,7 +155,7 @@ describe('BufferedRangeFill', () => {
         testID="fill"
       />,
     );
-    const fill = first.getByTestId('fill');
+    const fill = first.getByTestId('fill', HIDDEN);
     const style = Array.isArray(fill.props.style)
       ? fill.props.style.flat(Infinity)
       : [fill.props.style];
