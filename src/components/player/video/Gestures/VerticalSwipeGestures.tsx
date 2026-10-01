@@ -64,7 +64,7 @@
  */
 
 import * as React from 'react';
-import {Animated, StyleSheet, View} from 'react-native';
+import {Animated, Dimensions, StyleSheet, View} from 'react-native';
 import {Gesture, GestureDetector} from 'react-native-gesture-handler';
 import {useTheme} from '../../../../theme';
 import {spacing, radius} from '../../../../theme/tokens';
@@ -104,9 +104,18 @@ export const VerticalSwipeGestures: React.FC<{
   // the accessibility flag in their OS.
   const reduceMotion = useReduceMotion();
 
-  const [width, setWidth] = React.useState(0);
-  const [height, setHeight] = React.useState(0);
-
+  // Seeded from the window rather than 0.
+  //
+  // The probe below is `StyleSheet.absoluteFill`, so `onLayout` will
+  // report the window size — but only AFTER the first commit. Until it
+  // does, `width === 0` makes `isLeft = x < width / 2` evaluate to
+  // `false` for every x, so a pan on the LEFT half would drive VOLUME,
+  // and `height === 0` collapses `normDelta` to 0, so the drag would
+  // apply no change at all. Seeding removes that one-frame window in
+  // which the left/right split is simply wrong.
+  const windowFrame = React.useMemo(() => Dimensions.get('window'), []);
+  const [width, setWidth] = React.useState(windowFrame.width);
+  const [height, setHeight] = React.useState(windowFrame.height);
   const [brightnessValue, setBrightnessValue] = React.useState<number>(
     // Lazy init reads the lib synchronously on mount. The bridge
     // is reachable by the time React calls useState (the lib's
@@ -192,6 +201,41 @@ export const VerticalSwipeGestures: React.FC<{
 
   /* ─── Gesture handlers ─────────────────────────────────────────────── */
 
+  // Every gesture below sets `.runOnJS(true)`.
+  //
+  // WHY (this is not optional, and removing it silently breaks every
+  // gesture in this file):
+  //
+  //   The Worklets Babel plugin — required by Reanimated 4 — AUTOMATICALLY
+  //   workletizes callbacks that are passed INLINE in a gesture
+  //   configuration chain. `Gesture.Pan().onUpdate(e => …)` is exactly
+  //   that shape, so each handler below was being compiled into a worklet
+  //   and executed on the **UI runtime**. The RNGH typings say it
+  //   outright: "the callbacks passed to the gestures are automatically
+  //   workletized and run on the UI thread when called."
+  //
+  //   Nothing in these handlers is UI-runtime work. They call the mpv
+  //   bridge (`commands.setVolume` / `setScreenBrightness` / `seekBy` /
+  //   `setSpeed`), React state setters for the indicator pills, ripple and
+  //   badge, `setTimeout` timers, and the test seam. All of those are
+  //   JS-thread objects, and calling one from a worklet throws:
+  //
+  //     Uncaught Error: [Worklets] Tried to synchronously call a Remote
+  //     Function. Called "setSpeed" on the UI Runtime.
+  //
+  //   which aborts the handler mid-gesture — so brightness/volume swipe,
+  //   double-tap ±10s, long-press 2× and the single-tap chrome toggle were
+  //   all throwing instead of working.
+  //
+  // WHY `.runOnJS(true)` RATHER THAN WRAPPING CALLS IN `scheduleOnRN`:
+  //
+  //   `pan.onUpdate` drives mpv on EVERY frame of the drag. Routing that
+  //   through the UI→JS bridge per frame would be strictly slower than
+  //   running the whole handler on the JS thread, and it would still leave
+  //   a React re-render per frame for the indicator. `.runOnJS(true)` is
+  //   RNGH's documented switch for "these callbacks are JS-thread work",
+  //   and it keeps the per-frame path exactly as cheap as it already was.
+
   // PAN — vertical only, brightness (left half) or volume (right half).
   const pan = React.useMemo(
     () =>
@@ -199,6 +243,7 @@ export const VerticalSwipeGestures: React.FC<{
         .activeOffsetY([-PAN_ACTIVE_OFFSET_PX, PAN_ACTIVE_OFFSET_PX])
         .failOffsetX([-PAN_FAIL_OFFSET_X_PX, PAN_FAIL_OFFSET_X_PX])
         .enabled(!isPip)
+        .runOnJS(true)
         .onBegin(_e => {
           panStartBrightnessRef.current = brightnessValue;
           panStartVolumeRef.current = volumeValue;
@@ -253,6 +298,7 @@ export const VerticalSwipeGestures: React.FC<{
         .maxDelay(DOUBLE_TAP_MAX_DELAY_MS)
         .maxDuration(250)
         .enabled(!isPip)
+        .runOnJS(true)
         .onEnd(e => {
           const x = (e as {x: number}).x;
           const isLeft = x < width / 2;
@@ -278,6 +324,7 @@ export const VerticalSwipeGestures: React.FC<{
       Gesture.LongPress()
         .minDuration(LONG_PRESS_MIN_MS)
         .enabled(!isPip)
+        .runOnJS(true)
         .onStart(() => {
           previousSpeedBeforeLongPressRef.current = state.speed;
           commands.setSpeed(2);
@@ -303,6 +350,7 @@ export const VerticalSwipeGestures: React.FC<{
         .numberOfTaps(1)
         .maxDuration(250)
         .enabled(!isPip)
+        .runOnJS(true)
         .onEnd(() => {
           toggle();
           onGesture?.('singleTap');
