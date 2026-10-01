@@ -61,6 +61,7 @@ import {NextUpOverlay} from '../NextUp/NextUpOverlay';
 import {
   ChromeAutoHideProvider,
   useChromeAutoHide,
+  usePipBridge,
   usePresentation,
   useTransport,
 } from '../../../../infrastructure/player';
@@ -327,6 +328,14 @@ const SimbaPlayerContent: React.FC = () => {
  */
 const ExpandedChrome: React.FC = () => {
   const {toggle} = useChromeAutoHide();
+
+  // W6.1 — the single owner of PiP reconciliation. Mounted here, inside
+  // the mount gate, because PiP only exists while a player surface
+  // does. It must be the one place that subscribes: two subscribers
+  // would each call `setPipActive` with the same value, which happens to
+  // be harmless, but "one owner" is the property that keeps it
+  // harmless.
+  usePipBridge();
 
   // EXPANDED: the chrome compositor, rendered as a TRANSPARENT
   // full-bleed overlay ABOVE the native video surface.

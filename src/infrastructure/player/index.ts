@@ -163,6 +163,14 @@ export {
   type CaptionTrack,
 } from './useTransport';
 
+// V19 W6.1 — the single owner of Picture-in-Picture reconciliation.
+// Subscribes to the lib's `onPipModeChanged` (authoritative: fires for
+// system-initiated PiP and for the window being dismissed, which is the
+// only way the JS side learns the player is fullscreen again) plus the
+// PiP window's own `onPipPlayPause` / `onPipExpand` / `onPipClose`
+// transport buttons. Mount once, in the chrome compositor.
+export {usePipBridge} from './usePipBridge';
+
 // V19 W3.5 / W6.1 - chrome visibility. `ChromeAutoHideProvider` is the
 // single owner; `useChromeAutoHide()` reads the shared Animated.Value
 // and must be called under it. W6.1 removed the 3-second auto-hide
