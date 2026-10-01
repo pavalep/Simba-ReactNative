@@ -1,6 +1,39 @@
-import {getMpvPlayerModule} from '../infrastructure/player';
+import {getMpvPlayerModule, toMpvPropertyString} from '../infrastructure/player';
 import {useSettingsStore} from '../state';
 import {logger} from '../lib/logger';
+
+/**
+ * The single point where a JS value crosses into mpv as a property.
+ *
+ * `MpvBridgeModule.setProperty(name, value)` declares `value` as a Kotlin
+ * `String`, and React Native's JS→native marshalling THROWS on a type
+ * mismatch instead of coercing — `volume-max: 100` produced
+ *
+ *   Exception in HostFunction: Expected argument 1 of method
+ *   "setProperty" to be a string, but got a number (100.000000)
+ *
+ * as a red-box that unmounts the React tree. Three of the properties
+ * below are genuinely numeric (`volume-max`, `audio-delay`,
+ * `audio-samplerate`), so this was reachable on every settings apply.
+ *
+ * Encoding goes through the lib's own `toMpvPropertyString` rather than a
+ * local `String(value)`, so there is exactly one rule for how an mpv value
+ * is spelled and this file cannot drift from the one `commands.setProperty`
+ * uses.
+ *
+ * The guard is kept because mpv may not be initialised yet and an
+ * unsupported property must not crash the app — but it now LOGS the
+ * property name. The previous silent `catch {}` in
+ * `applyPlaybackSettingsToMpv` is precisely what let a setting quietly
+ * fail to apply for as long as it did.
+ */
+function setMpvProperty(name: string, value: string | number): void {
+  try {
+    getMpvPlayerModule().setProperty(name, toMpvPropertyString(value));
+  } catch (e) {
+    logger.warn('[audioSettingsService] setProperty failed:', name, e);
+  }
+}
 
 // ─── EQ constants (shared by player panels + Equalizer screen) ───
 
@@ -63,11 +96,7 @@ export function applyPlaybackSettingsToMpv(): void {
     ['slang', s.preferredLanguages],
   ];
   for (const [name, value] of properties) {
-    try {
-      getMpvPlayerModule().setProperty(name, value);
-    } catch {
-      // Ignore unsupported properties; the player remains usable.
-    }
+    setMpvProperty(name, value);
   }
 }
 
@@ -79,26 +108,17 @@ export function applyPlaybackSettingsToMpv(): void {
  */
 export function applyAudioSettingsToMpv(): void {
   const s = useSettingsStore.getState();
-  const bridge = getMpvPlayerModule();
-  // V16 Phase 73: every property is individually guarded AND
-  // logged if it fails. mpv may be uninitialized, and unsupported
-  // properties must never crash the app - but the silent failure
-  // was hiding real configuration problems. Each `logger.warn`
-  // includes the property name so support can diagnose the
-  // settings-not-sticking bug.
-  const setProp = (name: string, value: string | number) => {
-    try {
-      bridge.setProperty(name, value);
-    } catch (e) {
-      logger.warn('[audioSettingsService] setProperty failed:', name, e);
-    }
-  };
-  setProp('volume-max', s.isAudioNormalizationEnabled ? 100 : 130);
-  setProp('replaygain', s.replayGain);
-  setProp('gapless-audio', s.gaplessPlayback ? 'yes' : 'no');
-  setProp('audio-delay', s.audioDelay);
-  setProp('audio-samplerate', s.sampleRate);
-  setProp(
+  // V16 Phase 73: every property is individually guarded AND logged if it
+  // fails — mpv may be uninitialized and unsupported properties must never
+  // crash the app, but the silent failure was hiding real configuration
+  // problems. The guard + property-name log now live in the shared
+  // `setMpvProperty` helper, which also encodes the value.
+  setMpvProperty('volume-max', s.isAudioNormalizationEnabled ? 100 : 130);
+  setMpvProperty('replaygain', s.replayGain);
+  setMpvProperty('gapless-audio', s.gaplessPlayback ? 'yes' : 'no');
+  setMpvProperty('audio-delay', s.audioDelay);
+  setMpvProperty('audio-samplerate', s.sampleRate);
+  setMpvProperty(
     'af',
     buildAfFilter(
       s.eqEnabled ? s.eqGains : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

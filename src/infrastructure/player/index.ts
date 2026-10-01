@@ -68,6 +68,13 @@ export {
   usePlaybackHistoryAs,
   resolveStreamType,
   getMpvPlayerModule,
+  // W6.2 follow-up — the lib's mpv value encoder. `setProperty` on the
+  // native bridge takes a Kotlin `String`, and React Native *throws* on a
+  // type mismatch rather than coercing, so a raw number used to red-box
+  // the tree. Low-level call sites outside React (e.g.
+  // `services/audioSettingsService.ts`, which has no `commands` in scope)
+  // encode through this rather than each inventing their own rule.
+  toMpvPropertyString,
   // W6.0 — `useIsPlayerActivity` is exported BELOW, from `./playerHost`
   // (the app's per-tree context hook), NOT from the lib. The lib's
   // version reads a process-wide native flag and therefore answers a
