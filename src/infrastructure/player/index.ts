@@ -163,14 +163,18 @@ export {
   type CaptionTrack,
 } from './useTransport';
 
-// V19 W3.5 - `useChromeAutoHide` hook. Owns the chrome's
-// opacity Animated.Value and the 3-second auto-hide timer.
-// Source of truth: TRACKER Phase 3.5.1.
+// V19 W3.5 / W6.1 - chrome visibility. `ChromeAutoHideProvider` is the
+// single owner; `useChromeAutoHide()` reads the shared Animated.Value
+// and must be called under it. W6.1 removed the 3-second auto-hide
+// timer: the chrome is hidden by a TAP only, and stays pinned visible
+// whenever the video is not playing. Source of truth: TRACKER Phase
+// 3.5.1 / W6.1.
 export {
+  ChromeAutoHideProvider,
   useChromeAutoHide,
-  CHROME_AUTO_HIDE_MS,
   CHROME_HIDE_ANIM_MS,
   type ChromeAutoHideApi,
+  type ChromeAutoHideProviderProps,
 } from './useChromeAutoHide';
 
 // V19 W3.6.5 - `useSkipSilence` hook. Bridges the

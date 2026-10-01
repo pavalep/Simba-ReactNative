@@ -9,10 +9,14 @@
  * as a single unit, which avoids the visual chaos of partially-
  * hidden transport controls.
  *
- * Mounting: this controller lives where the chrome is mounted.
- * Today that's inside NowPlayingScreen (the W2 chrome
- * composition). W4 will hoist it to the V19 SimbaPlayer root
- * so the visibility state survives screen navigation.
+ * Mounting: this controller lives where the chrome is mounted —
+ * `SimbaPlayerContent`, inside `ChromeAutoHideProvider`. It is rendered
+ * twice (title/overlays over the surface, transport bar at the bottom)
+ * because they occupy different regions of the screen, but both read
+ * the SAME `Animated.Value` from the provider, so they always fade as
+ * one unit. Two controllers sharing one value is fine; two controllers
+ * each calling `useChromeAutoHide()` as a bare hook is what produced
+ * three independent visibility states and a dead tap handler.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3 + TRACKER Phase 3.5.1.
@@ -36,21 +40,25 @@ export interface ChromeAutoHideControllerProps
 export const ChromeAutoHideController: React.FC<
   ChromeAutoHideControllerProps
 > = ({children, style, ...rest}) => {
-  const {opacity} = useChromeAutoHide();
+  const {opacity, isVisible} = useChromeAutoHide();
 
-  // `pointerEvents` follows visibility: when chrome is hidden
-  // (opacity 0), taps pass through to the VideoSurface so the
-  // user can tap-anywhere to re-show. When chrome is visible
-  // (opacity 1), the chrome owns the taps.
-  // Note: we don't dynamically toggle pointerEvents here
-  // because Animated.Value isn't readable synchronously inside
-  // the render path; instead we always let the chrome children
-  // handle their own pointerEvents (the fade is purely visual).
+  // `pointerEvents` follows visibility. W6.1: the previous code left it
+  // permanently `box-none` with a comment explaining that
+  // `Animated.Value` "isn't readable synchronously inside the render
+  // path" — but `isVisible` is a plain boolean that is. So while the
+  // chrome was faded out, the invisible TransportBar still sat on top
+  // of the video and swallowed the taps meant to bring the chrome back:
+  // the user tapped a black-looking dead zone and nothing happened.
+  //
+  // `none` while hidden is also what lets `VideoSurface`'s press
+  // handler receive the tap at all. `box-none` disables touches on the
+  // wrapper only — the children (the transport buttons) still captured
+  // them.
   return (
     <Animated.View
       {...rest}
       style={[styles.container, style, {opacity}]}
-      pointerEvents="box-none"
+      pointerEvents={isVisible ? 'box-none' : 'none'}
     >
       {children}
     </Animated.View>

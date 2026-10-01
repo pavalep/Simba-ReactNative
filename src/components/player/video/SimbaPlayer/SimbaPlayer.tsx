@@ -59,6 +59,7 @@ import {ChromeAutoHideController} from '../ChromeAutoHide/ChromeAutoHideControll
 import {VerticalSwipeGestures} from '../Gestures/VerticalSwipeGestures';
 import {NextUpOverlay} from '../NextUp/NextUpOverlay';
 import {
+  ChromeAutoHideProvider,
   useChromeAutoHide,
   usePresentation,
   useTransport,
@@ -265,7 +266,6 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
  * being entangled with the imperative ref's empty-stub closure.
  */
 const SimbaPlayerContent: React.FC = () => {
-  const {toggle} = useChromeAutoHide();
   const presentation = usePresentation();
 
   // W6.0 — the mount gate. ONE gate, and it is derived.
@@ -301,6 +301,32 @@ const SimbaPlayerContent: React.FC = () => {
   if (!presentation.isExpanded) {
     return null;
   }
+
+  // W6.1 — `ChromeAutoHideProvider` is the SINGLE owner of chrome
+  // visibility, and it must sit ABOVE every chrome consumer. The
+  // compositor itself is a child, because the `VideoSurface` tap
+  // handler has to read the very state the tap is meant to toggle.
+  return (
+    <ChromeAutoHideProvider>
+      <ExpandedChrome />
+    </ChromeAutoHideProvider>
+  );
+};
+
+/**
+ * The expanded chrome compositor. Split out of `SimbaPlayerContent` so
+ * it can live INSIDE `ChromeAutoHideProvider` — the surface's tap
+ * handler and the two `ChromeAutoHideController`s must all observe the
+ * same `Animated.Value`.
+ *
+ * (Before this split they did not. `SimbaPlayerContent` called
+ * `useChromeAutoHide()` for `toggle` while each controller called it
+ * again for its own opacity: three independent visibility states, so a
+ * tap toggled a value that drove no pixels and the controls only ever
+ * moved on their own timers.)
+ */
+const ExpandedChrome: React.FC = () => {
+  const {toggle} = useChromeAutoHide();
 
   // EXPANDED: the chrome compositor, rendered as a TRANSPARENT
   // full-bleed overlay ABOVE the native video surface.

@@ -10,14 +10,14 @@
  *   usePlaybackState → useVideoController → react + lib + stores
  *
  * That is a cycle risk. `usePlaybackState` is itself re-exported by
- * the facade barrel, and the barrel re-exports `CHROME_AUTO_HIDE_MS`
+ * the facade barrel, and the barrel re-exports `useChromeAutoHide`
  * from `useChromeAutoHide`, which imports `usePlaybackState` — so
  * loading the barrel could reach `useChromeAutoHide` before its
  * module had finished initialising, and every re-exported binding
  * read back as `undefined`:
  *
  *   TypeError: Cannot read properties of undefined
- *     (reading 'CHROME_AUTO_HIDE_MS')
+ *     (reading 'useChromeAutoHide')
  *
  * Keeping the holder here means the access path is
  * `usePlaybackState → controllerSingleton` with no React, no lib, and

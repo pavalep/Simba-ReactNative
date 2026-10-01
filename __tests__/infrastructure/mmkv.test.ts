@@ -3,7 +3,6 @@
 // KV helpers. Run via `npx jest --forceExit`.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const {MMKV} = require('react-native-mmkv');
 import {
   sharedMMKVStorage,

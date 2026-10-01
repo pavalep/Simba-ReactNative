@@ -26,7 +26,6 @@ import {AdapterParseError} from '../../../../src/infrastructure/api/adapterError
 jest.mock('../../../../src/infrastructure/api/apiClient', () => ({
   apiFetch: jest.fn(),
 }));
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const {apiFetch} = require('../../../../src/infrastructure/api/apiClient');
 const mockedApiFetch = apiFetch as jest.MockedFunction<typeof apiFetch>;
 
