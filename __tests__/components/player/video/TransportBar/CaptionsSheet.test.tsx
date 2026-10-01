@@ -16,7 +16,7 @@
 
 import * as React from 'react';
 import {fireEvent, render} from '@testing-library/react-native';
-import {CaptionsSheet} from '../../../../../src/components/player/video/TransportBar/CaptionsSheet';
+import {CaptionsSheet, classifyCaptionKind} from '../../../../../src/components/player/video/TransportBar/CaptionsSheet';
 import type {CaptionTrack} from '../../../../../src/infrastructure/player';
 
 jest.mock('../../../../../src/theme', () => ({
@@ -169,5 +169,36 @@ describe('CaptionsSheet', () => {
     );
     expect(getByLabelText('Captions off')).toBeTruthy();
     expect(queryByLabelText('Captions: English')).toBeNull();
+  });
+});
+
+/**
+ * Per-track kind labelling (TRACKER Phase 3.6.1). Lives here because this
+ * sheet is the ONLY caption picker — a second unmounted picker used to
+ * exist and carried its own copy of this classifier.
+ */
+describe('classifyCaptionKind (pure helper)', () => {
+  it('classifies [CC] as caption', () => {
+    expect(classifyCaptionKind('English [CC]')).toBe('caption');
+  });
+
+  it('classifies [SDH] as sdh', () => {
+    expect(classifyCaptionKind('English [SDH]')).toBe('sdh');
+  });
+
+  it('classifies (Subtitles) as subtitle', () => {
+    expect(classifyCaptionKind('Español (Subtitles)')).toBe('subtitle');
+  });
+
+  it('defaults unlabeled to subtitle', () => {
+    expect(classifyCaptionKind('English')).toBe('subtitle');
+  });
+
+  it('[SDH] takes precedence over [CC] when both present', () => {
+    expect(classifyCaptionKind('English [CC] [SDH]')).toBe('sdh');
+  });
+
+  it('matches the marker regardless of case', () => {
+    expect(classifyCaptionKind('English [cc]')).toBe('caption');
   });
 });

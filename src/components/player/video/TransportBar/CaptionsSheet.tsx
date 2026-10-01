@@ -38,6 +38,32 @@ export interface CaptionsSheetOption {
   hint: string | null;
 }
 
+/**
+ * Per-track kind.
+ *
+ * Per TRACKER Phase 3.6.1 the lib was meant to carry
+ * `kind: 'subtitle' | 'caption' | 'sdh'`. It does not, so the kind is
+ * read off the label, where broadcasters and streaming services already
+ * encode it: `[SDH]` for hearing-impaired, `[CC]` for closed captions,
+ * and a bare track for an ordinary translation subtitle. The lib-side
+ * enum replaces this without any change to the sheet's surface.
+ */
+export type CaptionTrackKind = 'subtitle' | 'caption' | 'sdh';
+
+export function classifyCaptionKind(label: string): CaptionTrackKind {
+  const upper = label.toUpperCase();
+  // SDH first: some labels carry both markers, and SDH is the more
+  // specific claim (it includes non-speech description).
+  if (upper.includes('[SDH]')) return 'sdh';
+  if (upper.includes('[CC]')) return 'caption';
+  return 'subtitle';
+}
+
+/** Shown only when it adds information the label doesn't already carry. */
+function kindBadge(kind: CaptionTrackKind): string | null {
+  return kind === 'sdh' ? 'SDH' : null;
+}
+
 export interface CaptionsSheetProps {
   visible: boolean;
   captionTracks: CaptionTrack[];
@@ -117,6 +143,9 @@ export const CaptionsSheet: React.FC<CaptionsSheetProps> = ({
             />
             {options.map(opt => {
               const isActive = opt.trackId === activeTrackId;
+              const kind =
+                opt.trackId === null ? null : classifyCaptionKind(opt.label);
+              const badge = kind === null ? null : kindBadge(kind);
               return (
                 <TouchableOpacity
                   key={opt.trackId === null ? 'off' : `t-${opt.trackId}`}
@@ -148,6 +177,15 @@ export const CaptionsSheet: React.FC<CaptionsSheetProps> = ({
                     {opt.label}
                   </AppText>
                   <View style={styles.rightCluster}>
+                    {badge ? (
+                      <AppText
+                        variant="caption"
+                        color={isActive ? 'accent' : 'tertiary'}
+                        style={styles.badge}
+                      >
+                        {badge}
+                      </AppText>
+                    ) : null}
                     {opt.hint ? (
                       <AppText
                         variant="caption"
@@ -225,6 +263,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   hint: {
+    fontVariant: ['tabular-nums'],
+  },
+  badge: {
     fontVariant: ['tabular-nums'],
   },
   dot: {

@@ -36,6 +36,7 @@ import {
   type CaptionFontSize,
   type CaptionBackgroundOpacity,
   type CaptionPosition,
+  type CaptionBorder,
 } from '../../../../state/useCaptionSettingsStore';
 
 export interface CaptionCustomizerProps {
@@ -70,6 +71,12 @@ const POSITION_OPTIONS: ReadonlyArray<{
   {key: 'top', label: 'Top'},
 ];
 
+const BORDER_OPTIONS: ReadonlyArray<{key: CaptionBorder; label: string}> = [
+  {key: 'none', label: 'None'},
+  {key: 'thin', label: 'Thin'},
+  {key: 'thick', label: 'Thick'},
+];
+
 export const CaptionCustomizer: React.FC<CaptionCustomizerProps> = ({
   visible,
   onClose,
@@ -80,11 +87,13 @@ export const CaptionCustomizer: React.FC<CaptionCustomizerProps> = ({
   const fontSize = useCaptionSettingsStore(s => s.fontSize);
   const backgroundOpacity = useCaptionSettingsStore(s => s.backgroundOpacity);
   const position = useCaptionSettingsStore(s => s.position);
+  const border = useCaptionSettingsStore(s => s.border);
   const setFontSize = useCaptionSettingsStore(s => s.setFontSize);
   const setBackgroundOpacity = useCaptionSettingsStore(
     s => s.setBackgroundOpacity,
   );
   const setPosition = useCaptionSettingsStore(s => s.setPosition);
+  const setBorder = useCaptionSettingsStore(s => s.setBorder);
 
   if (!visible) return null;
 
@@ -154,6 +163,14 @@ export const CaptionCustomizer: React.FC<CaptionCustomizerProps> = ({
               options={POSITION_OPTIONS}
               selected={position}
               onSelect={key => setPosition(key as CaptionPosition)}
+              colors={colors}
+            />
+
+            <CaptionGroup
+              title="Outline"
+              options={BORDER_OPTIONS}
+              selected={border}
+              onSelect={key => setBorder(key as CaptionBorder)}
               colors={colors}
             />
           </View>

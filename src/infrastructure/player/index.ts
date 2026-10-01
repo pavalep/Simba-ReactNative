@@ -171,6 +171,15 @@ export {
 // transport buttons. Mount once, in the chrome compositor.
 export {usePipBridge} from './usePipBridge';
 
+// W6.2 — the single owner of caption rendering style. Pushed to mpv from
+// the chrome subtree; the store in `state/` holds the preference.
+export {
+  useCaptionStyleBridge,
+  captionSettingsToMpvProps,
+  toMpvColor,
+  type CaptionPalette,
+} from './useCaptionStyleBridge';
+
 // V19 W3.5 / W6.1 - chrome visibility. `ChromeAutoHideProvider` is the
 // single owner; `useChromeAutoHide()` reads the shared Animated.Value
 // and must be called under it. W6.1 removed the 3-second auto-hide

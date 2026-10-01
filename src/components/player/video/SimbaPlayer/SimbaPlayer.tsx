@@ -62,6 +62,7 @@ import {
   ChromeAutoHideProvider,
   useChromeAutoHide,
   usePipBridge,
+  useCaptionStyleBridge,
   usePresentation,
   useTransport,
 } from '../../../../infrastructure/player';
@@ -336,6 +337,12 @@ const ExpandedChrome: React.FC = () => {
   // be harmless, but "one owner" is the property that keeps it
   // harmless.
   usePipBridge();
+
+  // W6.2 — the single owner of caption rendering style. Mounted here for
+  // the same reason as the PiP bridge: the setting has to be pushed to
+  // mpv on every media change, and only a component that lives for the
+  // whole session is there when the next file loads.
+  useCaptionStyleBridge();
 
   // EXPANDED: the chrome compositor, rendered as a TRANSPARENT
   // full-bleed overlay ABOVE the native video surface.
