@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo} from 'react';
+import React, {useCallback, useMemo, useRef} from 'react';
 import {View, TouchableOpacity, FlatList, StyleSheet} from 'react-native';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
@@ -84,15 +84,21 @@ export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
     setTimeout(() => onCreateNew(), 350);
   }, [onClose, onCreateNew]);
 
+  // The list scrolls, so true-sheet needs a handle on it to size and
+  // scroll the sheet body. Without it the body measures to zero.
+  const listRef = useRef<FlatList<Playlist>>(null);
+
   return (
     <BottomSheet
       visible={visible}
       onClose={onClose}
       snapPoints={['50%']}
       dismissable
+      scrollableRef={listRef}
       title={sheetTitle}>
       <View style={styles.container}>
         <FlatList
+          ref={listRef}
           data={allPlaylists}
           keyExtractor={p => p.id}
           renderItem={({item: playlist}) => renderItem({playlist})}
@@ -130,12 +136,13 @@ export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  list: {
-    flex: 1,
-  },
+  // No `flex` on either the container or the list. true-sheet measures the
+  // sheet's content view UNCONSTRAINED (TrueSheetContentViewShadowNode), and
+  // a `flexBasis: 0` child measures to ZERO in that pass — so a `flex: 1`
+  // body collapses to nothing and only intrinsic-height siblings survive.
+  // A natural-height body is what lets the sheet size and scroll it.
+  container: {},
+  list: {},
   row: {
     flexDirection: 'row',
     alignItems: 'center',

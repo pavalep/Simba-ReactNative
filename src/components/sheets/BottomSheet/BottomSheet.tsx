@@ -14,14 +14,31 @@
 // uses (gorhom issue #2696). true-sheet ships native iOS / Android
 // sheets and bypasses that JS-side brokenness entirely.
 //
+// ── Why sheet bodies must NOT use `flex: 1` ───────────────────────────
+//
+// true-sheet 4.x sizes the sheet by measuring its content view with an
+// UNBOUNDED height (TrueSheetContentViewShadowNode.updateNaturalHeightIfNeeded).
+// In that pass there is no free space for `flexGrow` to distribute, so a
+// child styled `flex: 1` resolves to its `flexBasis` — which for the
+// shorthand `flex: 1` is 0. The body measures to zero, `naturalHeight`
+// collapses to whatever intrinsic-height siblings exist, and the sheet
+// renders as an empty panel with only those siblings visible. This is
+// what blacked out the Movies filter sheet.
+//
+// The two things a scrolling body needs, both required:
+//   1. NO `flex: 1` on the body — let it take its natural height, and
+//      let `scrollableRef` let the sheet cap + scroll it.
+//   2. `scrollableRef` — without it `findScrollView()` returns null and
+//      the sheet never discovers its own body.
+//
 //   - `snapPoints: ['40%', '75%']`  →  `detents: [0.4, 0.75]` (fractions)
 //   - `initialSnap`                 →  `initialDetentIndex`
 //   - `dismissable`                 →  `dismissible` (true-sheet spelling)
 //   - `onClose` callback            →  `onDidDismiss` event
 //   - `onSnapChange`                →  `onDetentChange` event
 
-import React, {useEffect, useMemo, useRef} from 'react';
-import {StyleSheet, View} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
+import {Dimensions, StyleSheet, View} from 'react-native';
 import {TrueSheet, type DetentChangeEvent} from '@lodev09/react-native-true-sheet';
 
 // The ref type exported by true-sheet is `TrueSheet` (the class); the
@@ -44,8 +61,12 @@ export interface BottomSheetProps<T = unknown> {
   visible: boolean;
   /** Called when the sheet requests close (backdrop tap, drag, back btn). */
   onClose: () => void;
-  /** Snap points as strings ('40%') or absolute numbers (pixels).
-   *  true-sheet only accepts fractions 0-1, so we coerce anything else. */
+  /**
+   * Snap points, smallest first. `'40%'` / `0.4` are screen fractions;
+   * `'auto'` sizes the sheet to its content; `'peek'` is the peek
+   * detent. `'auto'` is what a content-sized sheet should rest at — a
+   * fixed fraction either clips the body or leaves a dead panel below it.
+   */
   snapPoints?: Array<string | number>;
   /** Initial snap index (default 0 = first snap). */
   initialSnap?: number;
@@ -55,6 +76,22 @@ export interface BottomSheetProps<T = unknown> {
   title?: string | React.ReactNode;
   /** Backdrop tap / drag closes the sheet (default true). */
   dismissable?: boolean;
+  /**
+   * Ref to the scrollable the caller renders as the sheet body
+   * (`ScrollView` / `FlatList`). Required whenever the body scrolls.
+   *
+   * true-sheet 4.x resolves this to a React tag and hands it to the
+   * native content view, which is the ONLY way the sheet discovers its
+   * scrollable: `TrueSheetContentView.findScrollView()` returns null for
+   * a handle it never received. Without it the sheet cannot measure or
+   * scroll its body, and a `flex: 1` body collapses to zero height —
+   * an empty sheet with only its intrinsic-height footer showing.
+   *
+   * This is a straight pass-through of true-sheet's own prop; there is
+   * no inference or auto-discovery here, because the wrapper cannot see
+   * into the caller's children to find a ref.
+   */
+  scrollableRef?: React.RefObject<React.Component<unknown> | null>;
   /** Children rendered inside the sheet (after the header). */
   children: React.ReactNode;
   /** Typed data payload — opaque to the sheet itself. */
@@ -68,8 +105,15 @@ export interface BottomSheetHandle {
   resize: (index: number) => void;
 }
 
-/** Convert any snap-point format into a true-sheet fraction (0-1). */
-function snapToDetent(snap: string | number): number {
+/** true-sheet's own detent type: a screen fraction, or a keyword. */
+type SheetDetent = number | 'auto' | 'peek';
+
+/** Convert any snap-point format into a true-sheet detent. */
+function snapToDetent(snap: string | number): SheetDetent {
+  // Keywords pass straight through — they are already valid detents and
+  // carry meaning a fraction cannot (size to content, peek behind the
+  // screen edge).
+  if (snap === 'auto' || snap === 'peek') return snap;
   if (typeof snap === 'number') {
     return snap <= 1 ? snap : 0.5;
   }
@@ -91,6 +135,7 @@ function BottomSheetInner<T>(
     onSnapChange,
     title,
     dismissable = true,
+    scrollableRef,
     children,
   } = props;
 
@@ -100,25 +145,90 @@ function BottomSheetInner<T>(
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  // Coerce caller-provided snap points to true-sheet fractions. true-sheet
+  /**
+   * Whether the native sheet is presented, and the in-flight `present()`
+   * promise while it isn't yet.
+   *
+   * true-sheet's native methods are not idempotent in either direction:
+   * `dismiss()` on a sheet that was never presented warns and no-ops,
+   * and `resize()` before the sheet is presented is rejected outright
+   * ("Cannot resize. Sheet is not presented"). Both used to happen on
+   * every open, because a plain `visible` effect fires once on mount
+   * with `visible === false`, and because a consumer's resize effect
+   * runs in the same commit as our `present()` — which is still async.
+   *
+   * So we gate on real presentation, and defer a resize that arrives
+   * before presentation onto the present promise instead of dropping it.
+   */
+  const presentedRef = useRef(false);
+  const presentationRef = useRef<Promise<void> | null>(null);
+
+  // Coerce caller-provided snap points to true-sheet detents. true-sheet
   // caps detents at 3 — anything longer is silently trimmed.
   const detents = useMemo(
     () => snapPoints.map(snapToDetent).slice(0, 3),
     [snapPoints],
   );
 
+  /**
+   * Cap for the `'auto'` detent, in dp.
+   *
+   * `auto` has no intrinsic ceiling of its own: true-sheet only clamps it
+   * to the window height, so a long body would make detent 0 TALLER than
+   * detent 1 and invert the sheet's rest stops. Deriving the cap from the
+   * largest explicit detent keeps `auto` ≤ the expanded stop by
+   * construction, so a caller can write `['auto', '92%']` and get both
+   * "opens snug" and "never grows past the expanded stop, scrolls
+   * instead" without restating the ceiling.
+   *
+   * Undefined when the caller has no `auto` detent — the cap would then
+   * be meaningless, and would silently shrink a fixed-fraction sheet.
+   */
+  const maxContentHeight = useMemo(() => {
+    if (!detents.includes('auto')) return undefined;
+    const explicit = detents.filter(
+      (d): d is number => typeof d === 'number',
+    );
+    const largest = explicit.length ? Math.max(...explicit) : 0.9;
+    return Math.round(largest * Dimensions.get('window').height);
+  }, [detents]);
+
   // ── Drive show / hide imperatively ──
-  // true-sheet mounts but doesn't auto-present. We call present() on
-  // visible=true and dismiss() on visible=false. Detent index comes from
-  // `initialSnap` (default 0).
+  // true-sheet mounts but doesn't auto-present. We call present() on a
+  // false→true transition and dismiss() on true→false. The initial mount
+  // is deliberately NOT a transition: a sheet that starts hidden is
+  // already in its desired state, and dismissing it would warn.
   useEffect(() => {
     if (visible) {
-      sheetRef.current?.present(initialSnap);
+      if (presentedRef.current) return;
+      presentedRef.current = true;
+      presentationRef.current = sheetRef.current?.present(initialSnap) ?? null;
     } else {
+      if (!presentedRef.current) return;
+      presentedRef.current = false;
+      presentationRef.current = null;
       sheetRef.current?.dismiss();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
+
+  const handleDidDismiss = useCallback(() => {
+    // The user dismissed it natively (backdrop, drag, back button), so
+    // the native and JS views of "presented" are back in step before
+    // `onClose` asks the parent to flip `visible`.
+    presentedRef.current = false;
+    presentationRef.current = null;
+    onCloseRef.current();
+  }, []);
+
+  const resize = useCallback((index: number) => {
+    const pending = presentationRef.current;
+    if (pending) {
+      void pending.then(() => sheetRef.current?.resize(index));
+      return;
+    }
+    void sheetRef.current?.resize(index);
+  }, []);
 
   // ── Imperative handle for callers that want ref-based control ──
   React.useImperativeHandle(
@@ -126,11 +236,9 @@ function BottomSheetInner<T>(
     () => ({
       present: () => sheetRef.current?.present(),
       dismiss: () => sheetRef.current?.dismiss(),
-      resize: (i: number) => {
-        sheetRef.current?.resize(i);
-      },
+      resize,
     }),
-    [],
+    [resize],
   );
 
   return (
@@ -142,15 +250,14 @@ function BottomSheetInner<T>(
       detents={detents}
       dismissible={dismissable}
       grabber
-      // On Android, the `scrollableRef` prop (TrueSheet 4.x — was the
-      // boolean `scrollable` prop in 3.x) applies `flex: 1` to the native
-      // content view, which is REQUIRED for child ScrollViews (FilterSheet,
-      // QueueSheet, etc.) to size correctly. Without it the body collapses
-      // to zero height and only the title row is visible. We omit the
-      // prop for now since the consumer content provides its own
-      // ScrollView where needed; revisit if any sheet body collapses to
-      // zero height on Android after the 4.x bump.
-      // scrollableRef={sheetRef}
+      // The caller's ref to ITS scrollable. true-sheet resolves it to a
+      // React tag and uses it to find, measure and scroll the body — see
+      // the `scrollableRef` prop doc above. Omitting it is what produced
+      // the empty-sheet body (a `flex: 1` body with no discoverable
+      // scrollable measures to zero).
+      scrollableRef={scrollableRef}
+      // Ceiling for the 'auto' detent — see the `maxContentHeight` memo.
+      maxContentHeight={maxContentHeight}
       // We use "never" and let the consumer add insets.bottom to their
       // last child (footer / reset button / etc.). With "automatic"
       // true-sheet pulls the sheet above the gesture bar AND reports
@@ -160,7 +267,7 @@ function BottomSheetInner<T>(
       insetAdjustment="never"
       backgroundColor={colors.background.elevated}
       cornerRadius={radius.lg}
-      onDidDismiss={() => onCloseRef.current()}
+      onDidDismiss={handleDidDismiss}
       onDetentChange={(event: DetentChangeEvent) =>
         onSnapChange?.(event.nativeEvent.index)
       }
@@ -173,11 +280,11 @@ function BottomSheetInner<T>(
           ? {paddingBottom: spacing.md + insets.bottom}
           : undefined
       }>
-      {/* true-sheet wraps its children in a native content view. Pass the
-          ScrollView / content the caller supplied directly — NO flex:1
-          wrapper above it, because the native content view doesn't have
-          an explicit height for `flex:1` to resolve and the body collapses
-          to zero (the "empty sheet" symptom). */}
+      {/* true-sheet wraps children in a native content view sized to the
+          sheet's visible height. A `flex: 1` body fills that height only
+          once `scrollableRef` has let the sheet discover it, so the
+          caller passes its ScrollView/FlatList straight through — no
+          extra flex wrapper. */}
       {title ? (
         <View
           style={[

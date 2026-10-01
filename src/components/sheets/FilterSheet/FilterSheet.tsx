@@ -220,6 +220,10 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
     const {colors} = useTheme();
     const insets = useSafeAreaInsets();
     const sheetRef = useRef<BottomSheetHandle>(null);
+    // The sheet body scrolls, so true-sheet needs a handle on it to size
+    // and scroll the sheet. Without this the body measures to zero and
+    // the sheet shows only its footer.
+    const bodyRef = useRef<ScrollView>(null);
     // Per-group expansion state (ephemeral UI — resets when the sheet
     // unmounts; filter SELECTIONS live in the parent via `value`).
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
@@ -265,6 +269,10 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
 
     // Extend the sheet to its full detent while any group is expanded,
     // snap back to the compact detent when everything is hidden again.
+    //
+    // Keyed on `anyExpanded` alone: opening already presents at
+    // `initialSnap`, so re-resizing on the open transition would only
+    // race `present()`, which is still in flight at this point.
     useEffect(() => {
       if (!visible) return;
       sheetRef.current?.resize(anyExpanded ? 1 : 0);
@@ -276,9 +284,16 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
         visible={visible}
         onClose={onClose}
         title={undefined}
-        snapPoints={['48%', '88%']}
+        // Rest at 'auto' so the sheet is exactly as tall as its content:
+        // a fixed fraction either clips the last group plus the footer
+        // (too short) or leaves a dead panel below them (too tall).
+        // The wrapper caps 'auto' at the largest explicit detent, so a
+        // long body grows to 92% and scrolls from there.
+        snapPoints={['auto', '92%']}
+        scrollableRef={bodyRef}
         initialSnap={anyExpanded ? 1 : 0}>
         <ScrollView
+          ref={bodyRef}
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
@@ -347,7 +362,10 @@ export const FilterSheet: React.FC<FilterSheetProps> = React.memo(
 
 const styles = StyleSheet.create({
   scroll: {
-    flex: 1,
+    // No `flex: 1`. true-sheet measures the content view unconstrained,
+    // and a `flexBasis: 0` child measures to ZERO in that pass — the
+    // body disappears and only the intrinsic-height footer survives.
+    // A natural-height body is what lets the sheet size itself to it.
   },
   scrollContent: {
     paddingBottom: spacing.sm,
