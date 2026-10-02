@@ -27,6 +27,68 @@
 | 6 | PiP · Captions · MediaSession · system integration | ☐ PENDING | 0 | OS-level reach |
 | 7 | Acceptance matrix + accessibility + responsive QA | ☐ PENDING | 0 | The V11 §10 test grid |
 
+---
+
+## Wave 6.4 — Player correctness pass (2026-10-02)
+
+The "no jugaad" pass. Six defects, each found by observing the running
+app on a device rather than by reading the tests — every one of them had
+a **green** suite. Recorded here because the common thread is the reason
+the suite was useless: **the emitter, the store and the chrome are all
+mocked in jest, so a control that renders and does nothing is identical,
+to the suite, to a control that works.**
+
+| # | Defect | Root cause | Fix | Verified how |
+|---|---|---|---|---|
+| 1 | Seek bar permanently disabled — "Live stream — not seekable" on a seekable file | `event.cpp` blocked on `mpv_wait_event(g_mpv, -1)`, so `MPV_EVENT_PROPERTY_CHANGE` (coalesced, released only when the queue empties) was never returned. **Zero** property events reached JS. | Drain-then-block: poll with timeout `0` until `MPV_EVENT_NONE`, only then block on `-1`. The pattern mpv's own `client.h` mandates. | Device: `adb logcat -s MpvProperty` — all 12 observed properties now stream, incl. `name=seekable value=true`. Also added a `DEBUG` log because `TRACEI` is `#define TRACEI(...) do {} while (0)` — the whole native trace compiled to nothing. |
+| 2 | `setProperty` crashed on every caption bridge push | Value not stringified before crossing JNI | lib fix + 4 regression tests | Device |
+| 3 | All 4 vertical-swipe gestures threw | Worklets auto-workletized them onto the UI runtime | `.runOnJS(true)` on all four. Also fixed a latent bug where `width`/`height` started at 0, so the first LEFT pan drove **volume**. | New 14-test suite |
+| 4 | Chrome icons invisible in light theme | Frame is dark in **both** themes; light `text.primary` is `#1A1A1C` on black. Only the gold accent read, which looked like a partial render. | Player chrome pins `text.onMediaSoft` / `onMediaMuted` (tokens already existed, unused) | `onMediaChrome.test.tsx` |
+| 5 | `VideoTitleOverlay` was literally `() => null` **yet mounted** in `ExpandedChrome` | A stub in a live tree | Implemented from `useTransport()`; then rebuilt in W6.4 into the real header (see below) | 22 tests |
+| 6 | Caption selection retargeted the **video** track | `selectCaptionTrack` wrote mpv's `vid`, not `sid` | `setTrack('sub', id)` | lib + app tests |
+
+### 6.4 — The header (SPEC §3.2)
+
+The top bar shipped as title-only. The owner asked for the missing
+header, back arrow, orientation lock and settings/quality. Audit result:
+
+- **Back arrow — MISSING.** Implemented as **one** control. "Minimize",
+  "back" and "close" are the same transition: the player owns its
+  activity and the mini dock was removed in W6.0, so there is nothing to
+  minimize *to*. Wired to the lib's real `commands.exitPipAndFinish()`.
+  **No lib release was needed** — it already ships.
+- **Orientation lock — MISSING, and absent from both repos.** Wired to
+  the lib's real `commands.setOrientation('portrait'|'landscape'|'sensor')`,
+  which also already ships. Pins the **current** side (YouTube / Apple TV
+  / Plex), unlocks to `'sensor'`. State in a new MMKV-backed
+  `useOrientationLockStore` because `Activity.requestedOrientation` has
+  no getter.
+- **Settings / 3-dot with Quality — ALREADY BUILT** (`More` → `VideoMoreSheet`, §3.5.6). It was not missing; it had not been confirmed. SPEC §3.2 also listed `More`, so §3.2/§3.3 disagreed — resolved in favour of §3.3 (one entry point per sheet).
+- **PiP — ALREADY BUILT** (`PiPToggle`, row 3).
+- **Prev / Next / Rewind / Forward — ALREADY BUILT** (`TransportRow`, row 2). Prev/Next hide when unavailable *by design* (§3.3): they must not become dead spacers.
+- **Logo — REMOVED by explicit instruction.** The Home header's lion + Allura wordmark does not appear in the player.
+
+The two real UI bugs found while doing this:
+
+- `pointerEvents="none"` on the bar (correct when it was title-only and
+  non-interactive) would have made both new buttons **dead**. Changed to
+  `box-none`: transparent itself so the surface still toggles the chrome,
+  interactive children.
+- The entrance animation lived on the whole bar, so changing items faded
+  the back and lock buttons out and back. Scoped to the text column only.
+
+### 6.4 — Dead code removed
+
+`src/lib/flags.ts` deleted. Both `USE_DEDICATED_PLAYER_ACTIVITY` and
+`USE_UNIFIED_MEDIA_SESSION` had **zero** TS importers and zero test
+readers; every reference in the repo was prose in `md/`. The file's own
+docstring already recorded that both should have been deleted once the
+cutover was decided, and the V12 tracker's Phase 47 scheduled the same.
+
+---
+
+**Predecessor state** (V18 shipped): libmpv native bridge reaches mpv end-to-end (D-038/D-039/D-040 chain, fixed in commit `758ca25`); APK's `libc++_shared.so` is the lib's LLVM 17+ copy (`ReplaceLibCppSharedTask`); Movies API fetch works; MpvPlayer opens; the manager's "current UI is shit" review is the motivation.
+
 **Predecessor state** (V18 shipped): libmpv native bridge reaches mpv end-to-end (D-038/D-039/D-040 chain, fixed in commit `758ca25`); APK's `libc++_shared.so` is the lib's LLVM 17+ copy (`ReplaceLibCppSharedTask`); Movies API fetch works; MpvPlayer opens; the manager's "current UI is shit" review is the motivation.
 
 **V19 net expected `src/` LOC:** -800 to -1,200 (decompose 17.3 KB monolith + deletion of `NowPlayingScreen` placeholder hooks).

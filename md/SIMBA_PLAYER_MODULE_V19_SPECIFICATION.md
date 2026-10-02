@@ -83,6 +83,51 @@ V19 labels tracks correctly per the source's actual format. We do NOT collapse "
 
 ---
 
+### 0.3 Correctness invariants (binding on every wave)
+
+These are not aspirations. Each one exists because the player shipped a defect that the rest of this SPEC, the TRACKER and a fully green test suite all failed to catch. They are written so that a reviewer can check them mechanically rather than relying on whoever writes the next wave to remember them.
+
+**I1 — A gesture callback is on the UI runtime unless it says otherwise.**
+React Native Gesture Handler auto-workletizes callbacks passed inline in a gesture config chain, and the Worklets Babel plugin moves them to the Reanimated UI runtime. Any handler that touches React state, timers, or the mpv bridge must call `.runOnJS(true)`. Symptom when missed: `[Worklets] Tried to synchronously call a Remote Function` and the gesture silently does nothing.
+*Proven by:* `VerticalSwipeGestures.tsx` — all four gestures threw; brightness swipe, volume swipe, ±10 s double-tap and the chrome toggle were all dead.
+*Enforced by:* `__tests__/components/player/video/Gestures/VerticalSwipeGestures.test.tsx` fails if any `.runOnJS(true)` is removed.
+
+**I2 — A stub may not be mounted.**
+A component returning `null` is not permitted in the live chrome tree, even when a TRACKER wave says "filled in later". Either it is implemented, or it is not composed. A mounted stub is a silently missing feature that reads as working code.
+*Proven by:* `VideoTitleOverlay.tsx` is `() => null` and was composed in `ExpandedChrome` — the player displayed no title at all.
+*Enforced by:* a test asserting the chrome tree is non-empty from the real default state, with no mock that touches the gate.
+
+**I3 — A control must be able to act; otherwise it does not render.**
+No surface may ship a button, row, or chip whose underlying command does not exist or whose handler is a fallback. Render `null`. Silent no-ops are the failure mode this project rejects outright.
+*Proven by:* the A-B loop surface is specced as functional but performs no loop; `selectCaptionTrack` wrote mpv's `vid` instead of `sid`, so choosing any subtitle retargeted the **video** track.
+
+**I4 — The chrome is a dark surface, permanently.**
+Video is always dark. Every component drawn over the video frame resolves colour from `text.onMediaSoft` / `text.onMediaMuted`, never from `text.primary` / `text.secondary` / `text.tertiary`, which follow the app theme. A component used in both contexts takes the colour as an explicit prop.
+*Proven by:* in light theme `text.primary` is `#1A1A1C`; every icon, time label and the CC row rendered near-black on black video and was effectively invisible.
+
+**I5 — Every event the bridge emits must have a demonstrated end-to-end path.**
+An event counts as wired only when a real device has been observed receiving it. A mocked-emitter test proves nothing about the native boundary. If an event's delivery is unverified, any state it feeds is treated as non-existent.
+*Proven by:* the seek bar rendered permanently disabled ("Live stream — not seekable") on ordinary seekable files, because `progress.seekable` never left `DEFAULT_PROGRESS`. Registration succeeded (`mpv_observe_property` returned `result=0`), yet `onSeekable` never reached JS — see the TRACKER's open native defect.
+*Enforced by:* the W7 acceptance matrix must record device-observed event receipt, not unit-test status.
+
+**I6 — A mechanism that requires an explicit registration call must name its owner.**
+If a capability only works because something calls `observeProperty` / `addListener` / `registerX`, the SPEC names who calls it, when, and how the call is proven to have happened.
+*Proven by:* `observeProperty` was exposed by the lib and called by nobody, so every mpv property event was unreachable.
+
+**I9 — A green suite is not evidence when the seam is mocked.**
+If the unit under test crosses a mocked boundary — the native emitter, MMKV, a store, the SVG mapper — then a control that *renders and does nothing* is indistinguishable, to that suite, from one that works. The suite is a regression net for the logic between seams; it is not evidence about the seams themselves.
+*Proven by:* the entire W6.4 defect list below sat behind a fully green 68-suite / 779-test run. The seek bar was disabled on device while every test passed, because the emitter is mocked. Later, the global `\.svg$` jest mapper rendered *every* icon as the same anonymous `svg-placeholder` and dropped `color`, so a "this bar renders no logo" assertion and any icon-glyph assertion passed vacuously until the test mocked the real `SvgIcon` module path instead.
+*Enforced by:* an assertion about what was *rendered* (a glyph name, a colour, a node's presence) must mock the **real module path** the component imports — never a package barrel, never the underlying `.svg` — and must be shown to fail when the assertion's subject is removed. An assertion that cannot be written is an assertion that proves nothing; an assertion that passes against `undefined` is worse than none, because it reads as coverage.
+
+**I7 — A TypeScript signature must agree with the native reality it forwards to.**
+If Kotlin declares `value: String`, the TS boundary takes `string` and encodes at the command edge. A TS type that lies to the compiler converts a loud native failure into a silent one.
+*Proven by:* `setProperty(name, value: unknown)` forwarded raw to a Kotlin `String` and red-boxed the whole tree on every caption change.
+
+**I8 — No `catch {}` that swallows a user-visible failure.**
+A control that quietly does nothing is worse than one that fails visibly. Every catch either recovers, or logs with enough context to diagnose it.
+
+---
+
 ## 1. Product principles (inherited + tightened)
 
 | # | Principle | SIMBA interpretation |
@@ -254,22 +299,54 @@ The contract is symmetric with the lib boundary. The lib masks libmpv from the a
 - **Reads:** the parent's geometry constraints (only — the native surface is a true opaque region).
 - **Why:** a frame that knows about controls is a frame that fights them. The native `SurfaceView` (provided by `@simba-dev/react-native-media-player`'s `<SimbaPlayer>`) is the only surface that should ever render pixels.
 
-### 3.2 `VideoTitleOverlay` — the top bar
-- Sits on a gradient scrim (top → transparent over the media) so titles remain legible on any frame.
-- Contains: 1 minimize affordance, 1 title, 1 lock affordance (expanded only), 1 More affordance. Nothing else.
-- Behavior: title truncates rather than pushes actions off-screen.
-- Auto-hides in 3 s on `onLayout → bottom-of-stack`; reappears on tap-anywhere-within-chrome.
+### 3.2 `VideoTitleOverlay` — the top bar (header)
+
+> **Revised in W6.4 (2026-10-02).** The two most important decisions here
+> — *why there is one back affordance and not three*, and *why there is no
+> logo* — are not stylistic and would otherwise be re-litigated every wave.
+> Read the reasoning before changing this section.
+
+- **Owns:** the top bar layout — one **back** affordance (leading), the title with an optional artist line, one **orientation-lock** affordance (trailing). Nothing else.
+- **No logo, no wordmark, no brand mark.** The Home header already carries the engraved lion + Allura wordmark. Repeating it inside the video player is decoration competing with the title for the same ~44 px of attention, and it was explicitly rejected by the product owner. The bar's leading slot belongs to the back affordance.
+- **The back affordance is ONE control, and it is called "back".** "Minimize", "back" and "close" describe the same transition, so they get one button. The reason is architectural: the player runs in its own Android activity (`PlayerActivity`, `launchMode="singleTask"`) and the mini dock was removed in W6.0, so `presentation.mode` is **derived** from which activity this React tree is mounted in — `usePresentationStore` persists only `pipActive`. There is therefore no smaller player to minimize *to*; dismissing the activity IS the transition, and the mode re-derives itself.
+  - Backing command: `commands.exitPipAndFinish()` (exits the PiP window if one is up, finishes the activity, tears the `SurfaceView` down). Exposed as the facade's `exitPlayer()`.
+  - It performs the identical transition to the hardware back button, which is why the same verb names both.
+  - **Forbidden:** implementing this as `setPresentation('mini')`. That method was removed on purpose — the host immediately overwrites such a write, so it is a control that lies. See §0.3 invariant I3.
+- **The lock affordance follows the YouTube / Apple TV / Plex pattern:** engaging it **pins the video to the orientation it is in right now**; releasing it returns to free rotation. It never forces a side.
+  - Backing command: `commands.setOrientation('portrait' | 'landscape' | 'sensor')`. The *side* is derived at call time from the live layout; unlocking always sends `'sensor'`.
+  - State lives in `useOrientationLockStore` (MMKV, boolean intent only) because `Activity.requestedOrientation` has no getter — the platform cannot be asked what state it is in.
+  - Readable without colour: the glyph swaps `lock` ⇄ `unlock` and the label names the action (WCAG 1.4.1), so the state does not depend on the gold accent.
+- **Sits on a solid translucent scrim** (`background.scrimDeep`), not a gradient. *(Deliberate deviation — see the file's "DEVIATION" note in the implementation.)* Reached the actual requirement (legible on any frame) with no new native dependency.
+- Behaviour: the title **truncates** rather than pushing the actions off-screen (`flex: 1` + `numberOfLines={1}`).
+- **Hit-testing:** the bar overlays the video surface, and the surface's tap is what toggles the chrome. The container is therefore `pointerEvents="box-none"` — transparent itself, so the empty middle of the bar still reaches the surface, while its two `Pressable`s receive their own taps. (`"none"` would have made both buttons dead; `"auto"` would have created an invisible dead zone over the middle of the frame.)
+- **Visibility:** owned entirely by `ChromeAutoHideController` (§3.5.1). This component owns **no** visibility state of its own — a second timer would be exactly the competing-visibility-system defect that controller exists to prevent.
+- **Entrance animation:** fades the **text column only** when the title changes (a newly-loaded item re-announces itself), collapsed to 0 ms under `useReduceMotion` (WCAG 2.3.3). Deliberately *not* on the whole bar — when it lived on the bar it also faded the controls the user was reaching for, so switching items made the back and lock buttons flicker out and back.
+- Accessibility: the container carries **no** `accessibilityRole="header"` — it is a layout row that owns interactive controls, and labelling the whole cluster as a heading misdescribes it. Each control carries its own role (`button` / `switch`) and a state-aware label.
 
 ### 3.3 `TransportBar` — the bottom transport row
 - Three logical rows, drawn as a single fixed-position gradient scrim:
   - **Row 1 — Progress**: `TimeLabel + BufferedRangeFill + PlayedRangeFill + Thumb + TimeLabel`. The whole row is a `Pressable` whose `accessibilityRole="adjustable"` exposes `min/max` from `useTransport()`'s `seekability`. `onPanResponderMove` drives incremental seek; `onPanResponderRelease` commits (cancel-by-jump not supported; commit = seek).
   - **Row 2 — Transport controls**: exactly five controls in order `Rewind 10` `Previous` `Play/Pause` `Next` `Forward 10`. Previous/Next disappear when `currentItem?.hasPrev = false` / `hasNext = false` — they MUST NOT become dead spacers.
-  - **Row 3 — Mode + More**: `ModeControl (compact single-value)` + `CaptionsToggle (compact, optional)` + `PiPToggle (compact, optional)` + `More` (single entry point to the secondary surface).
+  - **Row 3 — Mode + More**: `ModeControl (compact single-value)` + `CaptionsToggle (compact, optional)` + `PiPToggle (compact, optional)` + `More` (single entry point to the secondary surface). Each optional control **collapses itself to `null`** when it has nothing to act on (no caption tracks / PiP unavailable) rather than rendering an inert button. **`More` appears here and nowhere else** — an earlier draft also listed it in the top bar (§3.2), which would have put two affordances on one sheet; the top bar now owns only back + lock.
 
-### 3.4 `VideoMiniPlayer` — the dock (NOT a second full player)
-- Composition: `artwork + title + state` · `expand` · `Play/Pause` · `close`. Up/down navigation arrows optional, but Previous/Next are NOT exposed — those are full-player features.
-- Critical: the track region and the explicit expand button are two separate hit targets, both calling the same `expandMini → 'expanded'` state transition. `Play/Pause`, `Previous`, `Next`, and `Close` cannot be nested inside the expand Pressable. (Inheritance from V11 §6.2.)
-- The mini-player is mounted ONCE and toggles its visibility — never destroys and remounts. This is the only way to guarantee one native session across the toggle.
+### 3.4 `VideoMiniPlayer` — the dock — **REMOVED in W6.0, retained here for history only**
+
+> **Superseded.** There is no video mini dock in V19. The player runs in
+> its own Android activity (`PlayerActivity`), and the only
+> shell-visible state is PiP. This section is kept because the design
+> reasoning still explains two live decisions, but nothing below it
+> describes current code:
+>
+> - **Why the player has its own activity** (relevant to §3.2's back
+>   affordance): the native `SurfaceView` must live outside the React
+>   tree — see the single-activity constraint below.
+> - **Why `setPresentation('mini')` no longer exists:** the mode is
+>   *derived* from the host activity, so a write would be immediately
+>   overwritten by the host — a control that lies (§0.3 invariant I3).
+>
+> Everything else (the expand/close hit-target separation, the
+> mounted-once rule, `expandMini → 'expanded'`) describes a dock that
+> was deliberately cut. Do not implement against this section.
 
 ### 3.4.1 The shell-mounting rule (navigation independence)
 
