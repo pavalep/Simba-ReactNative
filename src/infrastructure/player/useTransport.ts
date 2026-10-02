@@ -183,7 +183,12 @@ export interface TransportCommands {
   setRepeatMode(mode: RepeatMode): void;
   /**
    * V19 W3 — select a caption track by id. Pass `null` to
-   * disable captions (lib's `setTrack('sub', -1)` sentinel).
+   * disable captions.
+   *
+   * Backed by the lib's track-TYPED command `setTrack('sub', id)`,
+   * which mpv receives as `sid` (the SUBTITLE property). The lib's
+   * untyped `selectTrack(id)` is deliberately NOT used — it carries
+   * no track type and writes mpv's `vid` (video) property instead.
    */
   selectCaptionTrack(trackId: number | null): void;
   /** V19 W3.5 — skip to the next playlist entry. */
@@ -581,14 +586,26 @@ export function useTransport(): TransportHook {
       setRepeatMode: (mode: RepeatMode) => {
         commands.setLoopMode(repeatModeToMpv(mode));
       },
+      // BOTH branches go through `setTrack('sub', …)`.
+      //
+      // The lib's `selectTrack(trackId)` looks like the obvious call
+      // for the "pick a track" case, but it carries no track TYPE and
+      // lib 1.8.3 hard-wires it to mpv's VIDEO property:
+      //
+      //   android/src/main/cpp/main.cpp (nativeSelectTrack)
+      //     mpv_set_property(mpv, "vid", MPV_FORMAT_INT64, &trackId);
+      //
+      // so every `selectCaptionTrack(n)` retargeted the video stream
+      // and left the subtitle stream on whatever it was. mpv's
+      // subtitle property is `sid`.
+      //
+      // `setTrack` is the one lib command that takes the track TYPE.
+      // Its Kotlin mapping (`MpvBridgeModule.setTrack`) is
+      // 'sub' -> `sid`, 'audio' -> `aid`, 'video' -> `vid`, and a
+      // negative id is written as the literal `"no"` — which is why
+      // `-1` disables captions without a second code path.
       selectCaptionTrack: (trackId: number | null) => {
-        if (trackId === null) {
-          // Disable captions. The lib's `setTrack(type, -1)`
-          // sentinel clears the active track of that type.
-          commands.setTrack('sub', -1);
-        } else {
-          commands.selectTrack(trackId);
-        }
+        commands.setTrack('sub', trackId ?? -1);
       },
       next: () => {
         commands.next();

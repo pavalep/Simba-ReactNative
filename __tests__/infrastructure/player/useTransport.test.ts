@@ -364,6 +364,81 @@ describe('useTransport — W3.5 surface', () => {
   });
 });
 
+// ── Tests for caption-track selection (mpv property contract) ──────
+
+/**
+ * mpv keeps the three track selections in three SEPARATE properties:
+ * `vid` (video), `aid` (audio), `sid` (subtitle). A command that
+ * carries no track type can only pick one of them, and the lib's
+ * `selectTrack(trackId)` picks the wrong one — in lib 1.8.3 its
+ * native implementation is hard-wired to the video property:
+ *
+ *   node_modules/@simba-dev/react-native-media-player
+ *     /android/src/main/cpp/main.cpp:764
+ *       mpv_set_property(mpv, "vid", MPV_FORMAT_INT64, &trackId);
+ *
+ * So the app must select a caption through the lib's only track-TYPED
+ * command, `setTrack('sub', id)`, whose Kotlin mapping is
+ * 'video' -> `vid`, 'audio' -> `aid`, 'sub' -> `sid`.
+ *
+ * These tests pin the app-side half of that contract: what track TYPE
+ * the app asks for, and that the untyped `selectTrack` (the `vid`
+ * path) is never reached from a caption selection.
+ */
+describe('useTransport — caption track selection targets mpv `sid`', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockProgress.positionMs = 60_000;
+    mockProgress.durationMs = 600_000;
+  });
+
+  it("selectCaptionTrack(id) asks for the SUBTITLE track: setTrack('sub', id)", async () => {
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.selectCaptionTrack(2);
+    });
+    expect(mockCommands.setTrack).toHaveBeenCalledTimes(1);
+    expect(mockCommands.setTrack).toHaveBeenCalledWith('sub', 2);
+  });
+
+  it('selectCaptionTrack(null) disables captions with the -1 sentinel on the SAME sub type', async () => {
+    // Kotlin's `setTrack` writes the literal `"no"` for a negative id,
+    // so "off" is the same property with a sentinel value — not a
+    // different track type.
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.selectCaptionTrack(null);
+    });
+    expect(mockCommands.setTrack).toHaveBeenCalledTimes(1);
+    expect(mockCommands.setTrack).toHaveBeenCalledWith('sub', -1);
+  });
+
+  it('never routes a caption selection through the untyped selectTrack (the `vid` path)', async () => {
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.selectCaptionTrack(2);
+    });
+    await act(async () => {
+      result.current.commands.selectCaptionTrack(null);
+    });
+    expect(mockCommands.selectTrack).not.toHaveBeenCalled();
+  });
+
+  it('writes no mpv property at all while changing the caption track', async () => {
+    // `setProperty('vid', …)` would be the other way to corrupt the
+    // video track, so pin that the caption path never goes through the
+    // generic property writer either.
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.selectCaptionTrack(3);
+    });
+    await act(async () => {
+      result.current.commands.selectCaptionTrack(null);
+    });
+    expect(mockCommands.setProperty).not.toHaveBeenCalled();
+  });
+});
+
 // ── Tests for formatMsAsClock ────────────────────────────────────────
 
 describe('formatMsAsClock', () => {
