@@ -151,7 +151,10 @@ export const NextUpOverlay: React.FC = () => {
     >
       <AppText
         variant="overline"
-        color="secondary"
+        // On-media token: the card above is filled with
+        // `background.surfaceDark` (near-black in BOTH themes), so
+        // light theme's near-black `text.secondary` was invisible.
+        color={colors.text.onMediaMuted}
         style={styles.upNextLabel}
       >
         Up next

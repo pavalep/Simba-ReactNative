@@ -81,7 +81,10 @@ export const PiPToggle: React.FC = () => {
         <SvgIcon
           name="pictureInPicture"
           size={20}
-          color={colors.text.secondary}
+          // On-media token: the icon paints directly on the video
+          // (dark in BOTH themes), so light theme's near-black
+          // `text.secondary` would render it invisible.
+          color={colors.text.onMediaMuted}
         />
       </Pressable>
     </View>

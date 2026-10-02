@@ -115,7 +115,12 @@ export const ScrubPreview: React.FC<ScrubPreviewProps> = ({
       >
         <AppText
           variant="caption"
-          color="primary"
+          // On-media token: the pill is filled with
+          // `background.surfaceDark`, which is near-black in BOTH
+          // themes, so light theme's near-black `text.primary` was
+          // invisible on it. (Verified: lightColors and darkColors
+          // both define surfaceDark as rgba(18,18,22,0.92).)
+          color={colors.text.onMediaSoft}
           style={styles.timestamp}
         >
           {formatMsAsClock(positionMs)}

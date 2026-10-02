@@ -39,8 +39,11 @@ export const ModeControl: React.FC = () => {
 
   const isActive = state.repeatMode !== 'off';
   const label = MODE_LABEL[state.repeatMode];
-  const labelColor = isActive ? colors.accent.gold : colors.text.tertiary;
-  const iconColor = isActive ? colors.accent.gold : colors.text.secondary;
+  // On-media tokens: this control paints directly on the video, which
+  // is a dark surface in BOTH themes. `text.tertiary`/`text.secondary`
+  // are near-black in light theme — invisible on the frame.
+  const labelColor = isActive ? colors.accent.gold : colors.text.onMediaMuted;
+  const iconColor = isActive ? colors.accent.gold : colors.text.onMediaMuted;
 
   return (
     <View style={styles.container}>

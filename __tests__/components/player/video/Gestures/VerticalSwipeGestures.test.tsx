@@ -146,9 +146,26 @@ jest.mock('../../../../../src/infrastructure/player', () => ({
 }));
 
 import * as React from 'react';
-import {render, act} from '@testing-library/react-native';
+import {render, act, screen, within} from '@testing-library/react-native';
 import {Dimensions} from 'react-native';
 import {VerticalSwipeGestures} from '../../../../../src/components/player/video/Gestures/VerticalSwipeGestures';
+
+/** The real dark palette, for the colour assertion below. */
+const {darkTokens} = jest.requireActual(
+  '../../../../../src/theme/tokens',
+) as typeof import('../../../../../src/theme/tokens');
+
+/**
+ * `AppText` composes its colour and typography into one style array,
+ * so a single `{color}` read off `props.style` is undefined. Collapsing
+ * the array is what the platform does at paint time.
+ */
+function flattenStyle(style: unknown): {color?: string} {
+  const flat = (Array.isArray(style) ? style.flat(Infinity) : [style]).filter(
+    Boolean,
+  ) as Array<{color?: string}>;
+  return Object.assign({}, ...flat) as {color?: string};
+}
 
 // The component seeds its frame from the window (see `windowFrame` in
 // the component), so these are the numbers its pan maths actually uses.
@@ -349,6 +366,36 @@ describe('long press', () => {
       longPress.handlers.onFinalize?.({});
     });
     expect(mockCommands.setSpeed).toHaveBeenLastCalledWith(1.5);
+  });
+
+  /**
+   * `styles.speedBadge` has NO fill — the "2×" is painted straight
+   * onto the video, a dark surface in BOTH themes. It therefore
+   * cannot use `text.inverse` (near-black in both palettes, i.e.
+   * invisible in both) and must take the on-media pair instead.
+   * The two volume/brightness pills are the opposite case: they carry
+   * a `background.floating` fill that flips with the theme, so their
+   * inverse ink is correct and must stay.
+   */
+  it('paints the 2x badge with an on-media colour, not text.inverse', async () => {
+    await renderGestures();
+    const longPress = gestureOfKind('LongPress');
+    await act(async () => {
+      longPress.handlers.onStart?.({});
+    });
+
+    // The badge is `accessibilityElementsHidden` (it is a redundant
+    // visual echo of the speed change), so RNTL hides it from queries
+    // unless the test opts in.
+    const HIDDEN = {includeHiddenElements: true} as const;
+    const badge = screen.getByTestId('speed-preview-badge', HIDDEN);
+    const badgeText = within(badge).getByText('2×', HIDDEN);
+    expect(flattenStyle(badgeText.props.style).color).toBe(
+      darkTokens.colors.text.onMediaSoft,
+    );
+    expect(flattenStyle(badgeText.props.style).color).not.toBe(
+      darkTokens.colors.text.inverse,
+    );
   });
 });
 

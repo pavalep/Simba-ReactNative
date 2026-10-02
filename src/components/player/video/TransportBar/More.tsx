@@ -62,7 +62,10 @@ export const More: React.FC = () => {
           pressed ? {opacity: 0.7} : null,
         ]}
       >
-        <SvgIcon name="sliders" size={20} color={colors.text.secondary} />
+        {/* On-media token: the glyph paints directly on the video
+            (dark in BOTH themes), so light theme's near-black
+            `text.secondary` would render it invisible. */}
+        <SvgIcon name="sliders" size={20} color={colors.text.onMediaMuted} />
       </Pressable>
 
       <VideoMoreSheet

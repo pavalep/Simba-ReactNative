@@ -460,6 +460,12 @@ const BrightnessIndicator: React.FC<{visible: boolean; value: number; reduceMoti
       importantForAccessibility="no"
       testID="brightness-indicator"
     >
+      {/* `text.inverse` (NOT the on-media pair) because this pill
+          carries its own fill — `background.floating`, which is a
+          LIGHT parchment in light theme and a dark scrim in dark
+          theme. The inverse ink flips with it, so the pairing holds
+          in both. The on-media tokens are only correct for text
+          painted straight onto the video. */}
       <AppText variant="overline" color="inverse">
         ☀ {percent}%
       </AppText>
@@ -488,6 +494,7 @@ const VolumeIndicator: React.FC<{visible: boolean; value: number; reduceMotion: 
       importantForAccessibility="no"
       testID="volume-indicator"
     >
+      {/* Same fill + inverse-ink pairing as `BrightnessIndicator`. */}
       <AppText variant="overline" color="inverse">
         ♪ {percent}%
       </AppText>
@@ -498,6 +505,12 @@ const VolumeIndicator: React.FC<{visible: boolean; value: number; reduceMotion: 
 /** Top-center "2×" badge shown while the user holds the long-press. */
 const LongPressSpeedBadge: React.FC<{visible: boolean; reduceMotion: boolean}> = ({visible, reduceMotion}) => {
   const opacity = useFadingOpacity(visible, reduceMotion, 100, 150);
+  // Unlike the two pills above, `styles.speedBadge` has NO fill — the
+  // "2×" is painted straight onto the video, which is a dark surface
+  // in BOTH themes. `text.inverse` (near-black in both) therefore made
+  // the badge invisible in light AND dark; the on-media pair is what
+  // this surface needs.
+  const {colors} = useTheme();
   return (
     <Animated.View
       style={[styles.speedBadge, {opacity}]}
@@ -506,7 +519,7 @@ const LongPressSpeedBadge: React.FC<{visible: boolean; reduceMotion: boolean}> =
       importantForAccessibility="no"
       testID="speed-preview-badge"
     >
-      <AppText variant="h3" color="inverse">
+      <AppText variant="h3" color={colors.text.onMediaSoft}>
         2×
       </AppText>
     </Animated.View>

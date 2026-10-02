@@ -25,6 +25,13 @@
  *     → play vs pause vs replay (when finished); labels reflect
  *     the action, not the icon.
  *
+ * Colour: the four unfilled icons sit directly on the video, so
+ * they use `colors.text.onMediaSoft` (white 80%) — `text.primary`
+ * is near-black in light theme and vanished against the frame.
+ * Play/Pause keeps `text.inverse` on purpose: its background is
+ * the gold fill, and the dark "inverse" ink is the readable
+ * pairing on gold in BOTH themes.
+ *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.3 + TRACKER Phase 3.5.
  */
@@ -90,7 +97,7 @@ const TransportRow: React.FC = () => {
           pressed ? {opacity: 0.7} : null,
         ]}
       >
-        <SvgIcon name="rewind10" size={28} color={colors.text.primary} />
+        <SvgIcon name="rewind10" size={28} color={colors.text.onMediaSoft} />
       </Pressable>
 
       {/* Previous — Apple Music / Spotify smart-prev pattern (W3.6.11).
@@ -111,7 +118,7 @@ const TransportRow: React.FC = () => {
             pressed ? {opacity: 0.7} : null,
           ]}
         >
-          <SvgIcon name="skipBack" size={28} color={colors.text.primary} />
+          <SvgIcon name="skipBack" size={28} color={colors.text.onMediaSoft} />
         </Pressable>
       ) : null}
 
@@ -147,7 +154,7 @@ const TransportRow: React.FC = () => {
             pressed ? {opacity: 0.7} : null,
           ]}
         >
-          <SvgIcon name="skipForward" size={28} color={colors.text.primary} />
+          <SvgIcon name="skipForward" size={28} color={colors.text.onMediaSoft} />
         </Pressable>
       ) : null}
 
@@ -162,7 +169,7 @@ const TransportRow: React.FC = () => {
           pressed ? {opacity: 0.7} : null,
         ]}
       >
-        <SvgIcon name="forward10" size={28} color={colors.text.primary} />
+        <SvgIcon name="forward10" size={28} color={colors.text.onMediaSoft} />
       </Pressable>
     </View>
   );

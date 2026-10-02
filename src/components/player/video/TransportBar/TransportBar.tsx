@@ -45,6 +45,17 @@
  * track. The track IS the gesture target. We verified
  * `grep -c pointerEvents TransportBar.tsx` returns 0 below.
  *
+ * Note on colour: every element here paints OVER the video, and
+ * the video is a dark surface in BOTH themes. So the chrome takes
+ * its text from `colors.text.onMedia*` (white at 80%/70%), never
+ * from `colors.text.primary/secondary/tertiary` — in light theme
+ * those are near-black (`#1A1A1C` / `rgba(26,26,28,0.55)` /
+ * `rgba(26,26,28,0.30)`) and rendered near-black on black video,
+ * i.e. invisible. The sheets this bar OPENS (`ModeSheet`,
+ * `CaptionsSheet`, `VideoMoreSheet`) sit on their own elevated
+ * surface and keep normal text tokens; only what sits directly on
+ * the frame uses the on-media pair.
+ *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.7 + audit §4.B.
  */
@@ -178,7 +189,7 @@ export const TransportBar: React.FC = () => {
       <View style={styles.timeRow}>
         <AppText
           variant="caption"
-          color="tertiary"
+          color={colors.text.onMediaMuted}
           accessibilityLabel={`Elapsed ${formatMsAsClock(displayMs)}`}
           style={styles.timeLabel}
         >
@@ -303,7 +314,7 @@ export const TransportBar: React.FC = () => {
         */}
         <AppText
           variant="caption"
-          color="tertiary"
+          color={colors.text.onMediaMuted}
           accessibilityLabel={`Remaining ${formatMsAsClock(state.durationMs - displayMs)}`}
           style={styles.timeLabel}
         >

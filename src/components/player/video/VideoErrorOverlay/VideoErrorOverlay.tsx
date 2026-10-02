@@ -81,10 +81,14 @@ export const VideoErrorOverlay: React.FC = () => {
       accessibilityRole="alert"
     >
       <View style={styles.card}>
-        <AppText variant="h3" style={[styles.title, {color: colors.text.primary}]}>
+        {/* On-media tokens: the scrim above is filled with
+            `background.surfaceDark` (near-black in BOTH themes), so
+            light theme's near-black `text.primary`/`text.secondary`
+            rendered this card invisible over the video. */}
+        <AppText variant="h3" style={[styles.title, {color: colors.text.onMediaSoft}]}>
           {classified.title}
         </AppText>
-        <AppText variant="body1" style={[styles.message, {color: colors.text.secondary}]}>
+        <AppText variant="body1" style={[styles.message, {color: colors.text.onMediaMuted}]}>
           {classified.message}
         </AppText>
         <View style={styles.actions}>
@@ -114,6 +118,9 @@ export const VideoErrorOverlay: React.FC = () => {
             >
               <AppText
                 variant="button"
+                // `text.inverse` stays here on purpose: the button is
+                // filled gold, and the dark "inverse" ink is the
+                // readable pairing on gold in BOTH themes.
                 style={[styles.actionLabel, {color: colors.text.inverse}]}
               >
                 Retry
@@ -139,7 +146,7 @@ export const VideoErrorOverlay: React.FC = () => {
           >
             <AppText
               variant="button"
-              style={[styles.actionLabel, {color: colors.text.primary}]}
+              style={[styles.actionLabel, {color: colors.text.onMediaSoft}]}
             >
               Close
             </AppText>

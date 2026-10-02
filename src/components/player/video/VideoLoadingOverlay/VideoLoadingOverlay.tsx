@@ -58,7 +58,11 @@ export const VideoLoadingOverlay: React.FC = () => {
     >
       <ActivityIndicator
         size="large"
-        color={colors.text.primary}
+        // On-media token: this overlay is a TRANSPARENT full-bleed
+        // view over the video, which is a dark surface in BOTH themes.
+        // Light theme's near-black `text.primary` made the spinner
+        // invisible against the frame.
+        color={colors.text.onMediaSoft}
         // The spinner is decorative — the container above already
         // carries the role and the label, so announcing it separately
         // would double up.
@@ -67,7 +71,7 @@ export const VideoLoadingOverlay: React.FC = () => {
       />
       <AppText
         variant="body1"
-        style={[styles.label, {color: colors.text.secondary}]}
+        style={[styles.label, {color: colors.text.onMediaMuted}]}
       >
         {label}
       </AppText>

@@ -401,7 +401,15 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
                 );
               })}
             </ChipRow>
-            <AppText variant="caption" color="secondary" style={styles.descriptionText}>
+            {/* On-media token: the sheet body is filled with
+                `background.surfaceDark`, which is near-black in BOTH
+                themes, so light theme's near-black `text.secondary`
+                left these descriptions unreadable. */}
+            <AppText
+              variant="caption"
+              color={colors.text.onMediaMuted}
+              style={styles.descriptionText}
+            >
               {VIDEO_QUALITY_PRESETS.find(o => o.value === qualityPreset)
                 ?.description ?? ''}
             </AppText>
@@ -444,7 +452,15 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
                 testID="skip-silence-chip-on"
               />
             </ChipRow>
-            <AppText variant="caption" color="secondary" style={styles.descriptionText}>
+            {/* On-media token: the sheet body is filled with
+                `background.surfaceDark`, which is near-black in BOTH
+                themes, so light theme's near-black `text.secondary`
+                left these descriptions unreadable. */}
+            <AppText
+              variant="caption"
+              color={colors.text.onMediaMuted}
+              style={styles.descriptionText}
+            >
               {skipSilence.enabled
                 ? 'Silence is detected and skipped (mpv scaletempo2=max-speed=32.0).'
                 : 'Plays silence as-is.'}
@@ -463,7 +479,15 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
                 testID="auto-play-next-chip-on"
               />
             </ChipRow>
-            <AppText variant="caption" color="secondary" style={styles.descriptionText}>
+            {/* On-media token: the sheet body is filled with
+                `background.surfaceDark`, which is near-black in BOTH
+                themes, so light theme's near-black `text.secondary`
+                left these descriptions unreadable. */}
+            <AppText
+              variant="caption"
+              color={colors.text.onMediaMuted}
+              style={styles.descriptionText}
+            >
               {autoPlayNextEnabled
                 ? 'When on, the NextUp countdown auto-fires when it reaches zero.'
                 : 'Auto-play off; Cancel + Play now are always required.'}

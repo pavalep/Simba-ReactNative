@@ -45,8 +45,11 @@ export const CaptionsToggle: React.FC = () => {
   );
   const isActive = state.activeCaptionTrackId !== null;
   const label = activeTrack ? activeTrack.label : 'CC';
-  const labelColor = isActive ? colors.accent.gold : colors.text.tertiary;
-  const iconColor = isActive ? colors.accent.gold : colors.text.secondary;
+  // On-media tokens: the toggle paints directly on the video (a dark
+  // surface in BOTH themes), so the "CC" / track label must not
+  // resolve to light theme's near-black `text.tertiary`.
+  const labelColor = isActive ? colors.accent.gold : colors.text.onMediaMuted;
+  const iconColor = isActive ? colors.accent.gold : colors.text.onMediaMuted;
 
   return (
     <View style={styles.container}>
