@@ -49,6 +49,9 @@ export function makeTransportState(
     normalizedWindow: {startMs: 0, endMs: 120_000},
     seekable: true,
     canEnterPip: true,
+    // Orientation lock released by default: the common case, and it
+    // keeps the lock button rendering its `unlock` glyph.
+    isOrientationLocked: false,
     repeatMode: 'off',
     // Empty by default: several chrome components render nothing when
     // there are no caption tracks (`CaptionsToggle` returns null), so a
@@ -98,5 +101,8 @@ export function makeTransportCommands(): jest.Mocked<TransportCommands> {
     enterPip: fn(),
     exitPip: fn(),
     close: fn(),
+    // V19 W6.4 — the header's two real actions.
+    exitPlayer: fn(),
+    setOrientationLock: fn(),
   } as unknown as jest.Mocked<TransportCommands>;
 }

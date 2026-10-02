@@ -22,8 +22,9 @@
  */
 
 import * as React from 'react';
-import {Animated} from 'react-native';
-import {render} from '@testing-library/react-native';
+import type {ComponentProps} from 'react';
+import {Animated, type StyleProp, type ViewStyle} from 'react-native';
+import {fireEvent, render} from '@testing-library/react-native';
 import {renderChrome} from '../../../../helpers/renderChrome';
 import {
   makeTransportState,
@@ -51,6 +52,47 @@ jest.mock('../../../../../src/theme', () => {
       setTheme: jest.fn(),
       themeMode: 'dark',
     }),
+  };
+});
+
+// ── SvgIcon: a name-preserving stand-in ─────────────────────────────────
+//
+// The global `\.svg$` jest mapper (`__mocks__/svgMock.js`) renders
+// every icon as the SAME anonymous `svg-placeholder` node and drops
+// `color`. Under it, "which icon did this bar ask for?" is unobservable
+// — so a "there is no logo" assertion, and the lock/unlock glyph swap,
+// would both pass vacuously.
+//
+// Mocking the real module path (`components/utility/SvgIcon`, the same
+// specifier the header imports — not a package barrel) replaces it with
+// a host node keyed by `icon-${name}`, which is where the real
+// `SvgIcon` resolves the glyph. What the tests below read is therefore
+// the component's real decision, not a reimplementation.
+jest.mock('../../../../../src/components/utility/SvgIcon', () => {
+  const ReactActual = jest.requireActual('react') as typeof import('react');
+  const {View} = jest.requireActual('react-native') as typeof import('react-native');
+  return {
+    SvgIcon: ({
+      name,
+      size,
+      color,
+      style,
+    }: {
+      name: string;
+      size?: number;
+      color?: string;
+      style?: StyleProp<ViewStyle>;
+    }) => {
+      // `color` is not a `View` prop, hence the cast: the stand-in
+      // exists to SURFACE the glyph name and the ink the real
+      // `SvgIcon` would hand to the SVG.
+      const props = {
+        testID: `icon-${name}`,
+        color,
+        style: [{width: size, height: size}, style],
+      } as unknown as ComponentProps<typeof View>;
+      return ReactActual.createElement(View, props);
+    },
   };
 });
 
@@ -147,13 +189,13 @@ describe('VideoTitleOverlay', () => {
       artist: 'Some Channel',
     });
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
-    expect(getByTestId('video-title-overlay-artist')).toBeTruthy();
+    expect(getByTestId('video-header-artist')).toBeTruthy();
   });
 
   it('omits the artist row entirely when there is no artist', async () => {
     mockTransport.state = makeTransportState({title: 'Untitled Clip'});
     const {queryByTestId} = await renderChrome(<VideoTitleOverlay />);
-    expect(queryByTestId('video-title-overlay-artist')).toBeNull();
+    expect(queryByTestId('video-header-artist')).toBeNull();
   });
 
   it('renders nothing when the transport carries no title', async () => {
@@ -171,37 +213,166 @@ describe('VideoTitleOverlay', () => {
     expect(toJSON()).toBeNull();
   });
 
-  it('exposes a header role and a state-aware accessibility label', async () => {
+  it('does NOT claim a heading role for a container that owns buttons', async () => {
+    // The bar became an interactive header in V19 W6.4: it owns a back
+    // button and an orientation-lock button. An `accessibilityRole`
+    // of 'header' on a node containing interactive controls mislabels
+    // the whole cluster as a heading, so the container is a plain
+    // layout row and each control carries its own role + label.
     mockTransport.state = makeTransportState({
       title: 'A Documentary About Concrete',
     });
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
-    const node = getByTestId('video-title-overlay');
-    expect(node.props.accessibilityRole).toBe('header');
-    expect(node.props.accessibilityLabel).toBe(
-      'Now playing: A Documentary About Concrete',
+    expect(getByTestId('video-title-overlay').props.accessibilityRole).toBeUndefined();
+
+    // Both controls are discoverable with state-aware labels.
+    expect(
+      getByTestId('video-header-back').props.accessibilityLabel,
+    ).toBe('Back');
+    expect(getByTestId('video-header-lock').props.accessibilityLabel).toBe(
+      'Lock orientation',
     );
   });
 
-  it('includes the artist in the accessibility label when present', async () => {
+  it('announces the title and artist as text in reading order', async () => {
     mockTransport.state = makeTransportState({
       title: 'Clip',
       artist: 'Channel',
     });
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
-    expect(getByTestId('video-title-overlay').props.accessibilityLabel).toBe(
-      'Now playing: Clip. Channel',
+    expect(getByTestId('video-header-title').props.children).toBe('Clip');
+    expect(getByTestId('video-header-artist').props.children).toBe('Channel');
+  });
+
+  it('renders NO logo, wordmark or brand node anywhere in the bar', async () => {
+    // Explicit user requirement: the Home header carries the lion +
+    // Allura wordmark, and repeating it inside the video player is
+    // decoration competing with the title for the same attention. This
+    // pins the absence so a later "let's add branding" change has to
+    // delete this test on purpose rather than land silently.
+    //
+    // Meaningful only because the `SvgIcon` seam above preserves the
+    // glyph name — under the stock SVG mapper every icon is the same
+    // anonymous node and this would pass whatever the bar rendered.
+    mockTransport.state = makeTransportState({
+      title: 'Clip',
+      artist: 'Channel',
+    });
+    const {queryByTestId, toJSON} = await renderChrome(<VideoTitleOverlay />);
+    expect(queryByTestId('icon-lion')).toBeNull();
+    expect(JSON.stringify(toJSON())).not.toMatch(/lion|logo|wordmark|allura|Simba/i);
+  });
+
+  it('draws exactly the two affordances and nothing else', async () => {
+    // Locks the bar's composition down: a back chevron on the left, an
+    // orientation lock on the right, and no third icon. SPEC §3.2 says
+    // "Nothing else".
+    mockTransport.state = makeTransportState({title: 'Clip'});
+    const {queryByTestId} = await renderChrome(<VideoTitleOverlay />);
+    expect(queryByTestId('icon-chevronLeft')).toBeTruthy();
+    expect(queryByTestId('icon-unlock')).toBeTruthy(); // released state
+    expect(queryByTestId('icon-lock')).toBeNull(); // no duplicate
+  });
+
+  it('swaps the glyph with the state, so the toggle reads without colour', async () => {
+    // WCAG 1.4.1: the state must not depend on the gold accent alone.
+    mockTransport.state = makeTransportState({
+      title: 'Clip',
+      isOrientationLocked: true,
+    });
+    const {queryByTestId} = await renderChrome(<VideoTitleOverlay />);
+    expect(queryByTestId('icon-lock')).toBeTruthy();
+    expect(queryByTestId('icon-unlock')).toBeNull();
+  });
+
+  it('leaves the container transparent to touches so the surface still toggles chrome', async () => {
+    // The bar overlays the video surface, and the surface's tap is what
+    // toggles the chrome. But the bar now owns two buttons, so the
+    // container cannot be `none` (that would make the buttons dead) and
+    // must not be `auto` (that would create an invisible dead zone over
+    // the middle of the frame). `box-none` is the only value that
+    // satisfies both: transparent itself, interactive children.
+    mockTransport.state = makeTransportState({title: 'Clip'});
+    const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
+    expect(getByTestId('video-title-overlay').props.pointerEvents).toBe(
+      'box-none',
     );
   });
 
-  it('never swallows a tap meant for the surface beneath it', async () => {
-    // The overlay is mounted OVER the video surface, which owns the
-    // tap that toggles the chrome. A chrome that eats that tap is
-    // the "invisible dead zone" defect, so it must stay transparent
-    // to touches.
+  // ── V19 W6.4 — the back affordance ────────────────────────────────────
+
+  it('leaves the player via the real lib dismiss command, not a mode write', async () => {
+    // `exitPipAndFinish` is the lib's own primitive (exits PiP, finishes
+    // PlayerActivity, tears down the SurfaceView). The facade maps it
+    // 1:1 as `exitPlayer`.
     mockTransport.state = makeTransportState({title: 'Clip'});
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
-    expect(getByTestId('video-title-overlay').props.pointerEvents).toBe('none');
+    await fireEvent.press(getByTestId('video-header-back'));
+    expect(mockTransport.commands.exitPlayer).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fall back to any no-op when dismissing', async () => {
+    // The W5 reaudit removed this exact shape for `enterPip`: a
+    // `(commands as unknown as {...})` cast that always evaluated to
+    // undefined, so the button rendered inert. `exitPlayer` is a real
+    // member of `TransportCommands`, so the compiler already forbids
+    // the cast — this test pins that the press reaches it at all.
+    mockTransport.state = makeTransportState({title: 'Clip'});
+    const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
+    await fireEvent.press(getByTestId('video-header-back'));
+    expect(mockTransport.commands.exitPlayer).toHaveBeenCalled();
+    expect(mockTransport.commands.close).not.toHaveBeenCalled();
+  });
+
+  // ── V19 W6.4 — the orientation lock ───────────────────────────────────
+
+  it('engages the lock by asking for the CURRENT side, not a fixed one', async () => {
+    mockTransport.state = makeTransportState({
+      title: 'Clip',
+      isOrientationLocked: false,
+    });
+    const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
+    await fireEvent.press(getByTestId('video-header-lock'));
+    expect(mockTransport.commands.setOrientationLock).toHaveBeenCalledWith(
+      true,
+    );
+  });
+
+  it('releases the lock by asking for the same side it engaged with', async () => {
+    mockTransport.state = makeTransportState({
+      title: 'Clip',
+      isOrientationLocked: true,
+    });
+    const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
+    await fireEvent.press(getByTestId('video-header-lock'));
+    expect(mockTransport.commands.setOrientationLock).toHaveBeenCalledWith(
+      false,
+    );
+  });
+
+  it('reports the lock as a switch whose state matches the transport state', async () => {
+    mockTransport.state = makeTransportState({
+      title: 'Clip',
+      isOrientationLocked: true,
+    });
+    const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
+    const lock = getByTestId('video-header-lock');
+    expect(lock.props.accessibilityRole).toBe('switch');
+    expect(lock.props.accessibilityState).toEqual({checked: true});
+    // The label names the ACTION, so it flips with the state — this is
+    // what makes the toggle usable without reading colour.
+    expect(lock.props.accessibilityLabel).toBe('Unlock orientation');
+  });
+
+  it('names the lock action for the released state too', async () => {
+    mockTransport.state = makeTransportState({
+      title: 'Clip',
+      isOrientationLocked: false,
+    });
+    const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
+    const lock = getByTestId('video-header-lock');
+    expect(lock.props.accessibilityState).toEqual({checked: false});
+    expect(lock.props.accessibilityLabel).toBe('Lock orientation');
   });
 
   it('truncates the title rather than growing the top bar', async () => {

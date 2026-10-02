@@ -89,6 +89,9 @@ import HistorySvg from '../../../assets/svg/ic_history.svg';
 import FlameSvg from '../../../assets/svg/ic_flame.svg';
 import WandSvg from '../../../assets/svg/ic_wand.svg';
 import VideoCameraSvg from '../../../assets/svg/ic_video_camera.svg';
+// Player header: back affordance + orientation lock (locked/unlocked pair).
+import ChevronLeftSvg from '../../../assets/svg/ic_chevron_left.svg';
+import LockSvg from '../../../assets/svg/ic_lock.svg';
 
 const icons = {
   home: HomeSvg,
@@ -123,6 +126,12 @@ const icons = {
   chevronUp: ChevronUpSvg,
   chevronDown: ChevronDownSvg,
   chevronRight: ChevronRightSvg,
+  // Player header affordances. `chevronLeft` mirrors `chevronRight`
+  // (Lucide "chevron-left"); `lock` is the closed counterpart of the
+  // existing `unlock` glyph — the pair is how every video player
+  // signals "orientation is pinned" vs "free to rotate".
+  chevronLeft: ChevronLeftSvg,
+  lock: LockSvg,
   close: CloseSvg,
   search: SearchSvg,
   layoutGrid: LayoutGridSvg,

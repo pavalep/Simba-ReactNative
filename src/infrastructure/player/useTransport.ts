@@ -49,6 +49,7 @@
  */
 
 import {useMemo} from 'react';
+import {useWindowDimensions} from 'react-native';
 import {
   usePlayer,
   usePlayerProgress,
@@ -56,6 +57,7 @@ import {
   type PlayerCommands,
 } from '@simba-dev/react-native-media-player';
 import {getSkipPrevThresholdMs} from '../../state/useSkipPrevThresholdStore';
+import {useOrientationLockStore} from '../../state/useOrientationLockStore';
 
 /**
  * A contiguous buffered range, normalized to milliseconds.
@@ -105,6 +107,17 @@ export interface TransportState {
   normalizedWindow: NormalizedWindow;
   seekable: boolean;
   canEnterPip: boolean;
+  /**
+   * V19 W6.4 — whether the player header's orientation lock is engaged.
+   *
+   * Read from `useOrientationLockStore` (the user's persisted intent),
+   * NOT from the platform. `Activity.requestedOrientation` has no
+   * getter, so the platform cannot be asked what state it is in; the
+   * store is the record of what was requested, and
+   * `setOrientationLock` is what re-requests it. See that store's
+   * header for why that is sound inside the chrome's mount gate.
+   */
+  isOrientationLocked: boolean;
   /** V19 W3 — current repeat mode (V19 vocabulary). */
   repeatMode: RepeatMode;
   /** V19 W3 — subtitle/caption tracks for the current file. */
@@ -299,6 +312,57 @@ export interface TransportCommands {
    * it a genuine one instead of a button that does nothing.
    */
   close(): void;
+
+  // ── V19 W6.4 — the player header's two real actions ────────────────────
+  //
+  // Both were missing while the header that needs them shipped, and both
+  // were previously reachable only as `(commands as unknown as {...})`
+  // casts with `() => {}` fallbacks. That is the exact shape of the
+  // "silently inert control" the W5 reaudit removed for `enterPip`: the
+  // cast always evaluated to `undefined`, so the button rendered while
+  // doing nothing. Promoting the real lib methods here removes both the
+  // cast and the no-op, and keeps the "a control that cannot act renders
+  // null" invariant enforceable by the type system.
+
+  /**
+   * Leave the player: exit PiP if the PiP window is up, finish
+   * `PlayerActivity`, and return to the app.
+   *
+   * Backed by the lib's real `commands.exitPipAndFinish()`.
+   *
+   * **This is the ONE correct answer for "minimize", "back" and
+   * "close" — they are the same action, and the header therefore renders
+   * a single back affordance rather than three buttons for one effect.**
+   * The reason is structural: the player runs in its own Android
+   * activity (`PlayerActivity`, `launchMode="singleTask"`), and V6.0
+   * removed the mini dock — `usePresentationStore` keeps only
+   * `pipActive`, deriving `'mini' | 'expanded'` from which activity this
+   * React tree is mounted in. So there is no smaller player to minimize
+   * TO; dismissing the activity is the transition, and it re-derives the
+   * mode on its own.
+   *
+   * Do NOT implement this as `setPresentation('mini')`. That method was
+   * removed on purpose: the host immediately overwrites such a write,
+   * so it is a control that lies.
+   */
+  exitPlayer(): void;
+
+  /**
+   * Pin the player to the current orientation, or release it back to
+   * free rotation.
+   *
+   * Backed by the lib's real `commands.setOrientation(mode)`:
+   *   - locking   → `'landscape'` if the frame is currently landscape,
+   *                  else `'portrait'` (pin to CURRENT, the YouTube /
+   *                  Apple TV / Plex behaviour — never force a side)
+   *   - unlocking → `'sensor'`
+   *
+   * The side is derived at call time from the live layout rather than
+   * stored, so a lock engaged while rotated is not re-applied to a
+   * portrait window on the next open. `useOrientationLockStore` records
+   * only the boolean intent.
+   */
+  setOrientationLock(locked: boolean): void;
 }
 
 /**
@@ -443,6 +507,13 @@ function deriveCaptionTracks(tracks: ReadonlyArray<{id: number; type: string; ti
 
 export function useTransport(): TransportHook {
   const progress = usePlayerProgress();
+  // V19 W6.4 — the live window, used ONLY to resolve which side the
+  // orientation lock should pin to. Read as a hook (not
+  // `Dimensions.get`) so a rotation while unlocked updates the derived
+  // side the next time the lock is engaged.
+  const window = useWindowDimensions();
+  const isOrientationLocked = useOrientationLockStore(s => s.locked);
+  const setOrientationLocked = useOrientationLockStore(s => s.setLocked);
   const {state: playerState, commands: libCommands}: {
     state: {
       loopMode?: string;
@@ -532,6 +603,7 @@ export function useTransport(): TransportHook {
       // gesture on `presentation.mode === 'expanded'` already;
       // this is a belt-and-suspenders for the hook consumer.
       canEnterPip: isPlaying && !isEnded && !isBuffering,
+      isOrientationLocked,
       repeatMode,
       captionTracks,
       activeCaptionTrackId,
@@ -560,6 +632,7 @@ export function useTransport(): TransportHook {
     playerState.isMuted,
     playerState.title,
     playerState.artist,
+    isOrientationLocked,
   ]);
 
   const wrapped = useMemo<TransportCommands>(
@@ -658,12 +731,36 @@ export function useTransport(): TransportHook {
       },
       close: () => {
         // Release the native session, then clear the queue. Both are
-        // real lib commands — not a fabricated "close".
+        // real lib commands - not a fabricated "close".
         commands.stop();
         commands.clear();
       },
+
+      // ── V19 W6.4 — the header's two real actions ──────────────────────
+      exitPlayer: () => {
+        // The lib's own dismiss primitive. It exits the PiP window if
+        // one is up, finishes `PlayerActivity`, and tears the
+        // SurfaceView down with it. No cast, no `() => {}` fallback —
+        // both were how this used to be unreachable.
+        commands.exitPipAndFinish();
+      },
+      setOrientationLock: (locked: boolean) => {
+        // Pin to the side the video is in RIGHT NOW rather than forcing
+        // one: YouTube / Apple TV / Plex all lock to current. `width >
+        // height` is the live layout, so a video opened in portrait and
+        // rotated to landscape locks landscape.
+        //
+        // Unlock returns to `'sensor'` (free rotation) — the only mode
+        // that re-enables the device's own rotation behaviour.
+        commands.setOrientation(
+          locked ? (window.width > window.height ? 'landscape' : 'portrait') : 'sensor',
+        );
+        // Record the intent only AFTER the platform call, so a store can
+        // never claim a lock the platform was never asked for.
+        setOrientationLocked(locked);
+      },
     }),
-    [commands, state.durationMs],
+    [commands, state.durationMs, window.width, window.height, setOrientationLocked],
   );
 
   return {state, commands: wrapped};

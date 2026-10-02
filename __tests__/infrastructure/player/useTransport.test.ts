@@ -17,11 +17,27 @@
  */
 
 import {renderHook, act} from '@testing-library/react-native';
+import {Dimensions} from 'react-native';
 import {
   useTransport,
   formatMsAsClock,
   clampPosition,
 } from '../../../src/infrastructure/player';
+import {useOrientationLockStore} from '../../../src/state/useOrientationLockStore';
+
+/**
+ * Drive `useWindowDimensions()` by stubbing what it actually reads.
+ * RN's implementation returns `Dimensions.get('window')` and re-reads it
+ * on the 'change' event, so a spy is the honest seam - and it means the
+ * production code path is the one under test.
+ */
+function setWindowSize(width: number, height: number) {
+  jest
+    .spyOn(Dimensions, 'get')
+    .mockImplementation(() =>
+      ({width, height, scale: 2, fontScale: 1}) as never,
+    );
+}
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -53,6 +69,14 @@ const mockCommands = {
   setAudioFilter: jest.fn(),
   setVideoFilter: jest.fn(),
   setShuffle: jest.fn(),
+  setOrientation: jest.fn(),
+  exitPipAndFinish: jest.fn(),
+  // Declared so the header-action tests can prove `exitPlayer` does NOT
+  // tear the session down. Before they existed, `expect(mockCommands.stop)`
+  // was `undefined` and the matcher rejected it - an assertion that
+  // proves nothing because it cannot be written.
+  stop: jest.fn(),
+  clear: jest.fn(),
 };
 
 jest.mock('@simba-dev/react-native-media-player', () => ({
@@ -440,6 +464,107 @@ describe('useTransport — caption track selection targets mpv `sid`', () => {
 });
 
 // ── Tests for formatMsAsClock ────────────────────────────────────────
+
+// -- Tests for the player-header actions (V19 W6.4) ----------------------
+
+/**
+ * The player's top bar owns exactly two actions, and both used to be
+ * reachable only as `(commands as unknown as {...})` casts with
+ * `() => {}` fallbacks - the same shape the W5 reaudit removed for
+ * `enterPip`, where the cast always evaluated to `undefined` so the
+ * button rendered completely inert.
+ *
+ * `exitPlayer` and `setOrientationLock` are now real members of
+ * `TransportCommands`, so these tests pin what the facade DOES with
+ * them rather than merely that they exist.
+ */
+describe('useTransport - player header actions', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockProgress.positionMs = 60_000;
+    mockProgress.durationMs = 600_000;
+    useOrientationLockStore.getState().reset();
+    // RN's `useWindowDimensions` reads `Dimensions.get('window')`, so
+    // stubbing that is how the test drives the current side. Default to
+    // a landscape window - the orientation a video player is usually
+    // in - so a test that forgets to set one is not accidentally
+    // asserting the portrait branch.
+    setWindowSize(800, 400);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('leaves the player with the lib dismiss command, not a mode write', async () => {
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.exitPlayer();
+    });
+    expect(mockCommands.exitPipAndFinish).toHaveBeenCalledTimes(1);
+    // It must NOT tear down the session on the way out: dismissing the
+    // activity is enough, and stop+clear would kill playback that a
+    // minimise is supposed to preserve.
+    expect(mockCommands.stop).not.toHaveBeenCalled();
+    expect(mockCommands.clear).not.toHaveBeenCalled();
+  });
+
+  it('locks to LANDSCAPE when the video is currently landscape', async () => {
+    setWindowSize(800, 400);
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.setOrientationLock(true);
+    });
+    // Pin to CURRENT, never force a side - the YouTube / Apple TV /
+    // Plex behaviour.
+    expect(mockCommands.setOrientation).toHaveBeenCalledWith('landscape');
+  });
+
+  it('locks to PORTRAIT when the video is currently portrait', async () => {
+    setWindowSize(400, 800);
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.setOrientationLock(true);
+    });
+    expect(mockCommands.setOrientation).toHaveBeenCalledWith('portrait');
+  });
+
+  it('unlocks back to free rotation, never to a pinned side', async () => {
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.setOrientationLock(false);
+    });
+    // `'sensor'` is the only mode that restores the device's own
+    // rotation behaviour, so an unlock that asked for 'landscape' would
+    // leave the user unable to ever rotate again.
+    expect(mockCommands.setOrientation).toHaveBeenCalledWith('sensor');
+  });
+
+  it('records the intent in the store so the header can render the state', async () => {
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.isOrientationLocked).toBe(false);
+    await act(async () => {
+      result.current.commands.setOrientationLock(true);
+    });
+    expect(useOrientationLockStore.getState().locked).toBe(true);
+  });
+
+  it('asks the platform before recording the intent', async () => {
+    // Ordering matters: if the store were written first and the bridge
+    // call then failed, the UI would claim a lock the platform was
+    // never asked for - a control that lies.
+    const order: string[] = [];
+    mockCommands.setOrientation.mockImplementation(() => {
+      order.push('platform');
+    });
+    const {result} = await renderHook(() => useTransport());
+    await act(async () => {
+      result.current.commands.setOrientationLock(true);
+    });
+    expect(order).toEqual(['platform']);
+    expect(mockCommands.setOrientation).toHaveBeenCalled();
+  });
+});
 
 describe('formatMsAsClock', () => {
   it('formats sub-hour durations as M:SS', () => {
