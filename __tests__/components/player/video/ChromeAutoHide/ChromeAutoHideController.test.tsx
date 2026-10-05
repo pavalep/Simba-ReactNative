@@ -42,6 +42,20 @@ jest.mock('../../../../../src/infrastructure/player', () => ({
   ...jest.requireActual('../../../../../src/infrastructure/player/useTransport'),
   useChromeAutoHide: () => ({
     opacity: {_value: 1, setValue: jest.fn(), interpolate: jest.fn(), stopAnimation: jest.fn(), addListener: jest.fn(), removeListener: jest.fn(), resetAnimation: jest.fn()} as unknown as ReturnType<typeof Object> & {_value: number},
+    // W7.5 — the MOTION half. Separate from `opacity` so the two chrome
+    // bands can travel in OPPOSITE directions off one shared value
+    // (the header rises, the transport bar falls). `interpolate` is a
+    // real pass-through here so the controller's `progress.interpolate`
+    // call resolves and its output range can be asserted below.
+    progress: {
+      _value: 0,
+      setValue: jest.fn(),
+      stopAnimation: jest.fn(),
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      resetAnimation: jest.fn(),
+      interpolate: (config: {outputRange: [number, number]}) => config.outputRange,
+    } as unknown as ReturnType<typeof Object> & {_value: number},
     isVisible: true,
     toggle: jest.fn(),
     kick: jest.fn(),
@@ -74,5 +88,76 @@ describe('ChromeAutoHideController', () => {
     // ...and the child really does own the press.
     fireEvent.press(getByText('press me'));
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  // ── W7.5 — the chrome MOVES as well as fades ────────────────────────
+
+  /**
+   * Read the `translateY` output range off the wrapper's transform.
+   * The mocked `progress.interpolate` returns its own `outputRange`, so
+   * this reads back the SIGN and MAGNITUDE the controller asked for.
+   */
+  const travelRangeOf = (node: {props: {style?: unknown}}): number[] => {
+    const style = Array.isArray(node.props.style)
+      ? node.props.style.flat(Infinity)
+      : [node.props.style];
+    const merged = Object.assign({}, ...(style.filter(Boolean) as object[]));
+    const transform = (merged as {transform?: Array<{translateY?: unknown}>})
+      .transform;
+    return transform?.[0]?.translateY as number[];
+  };
+
+  // A pure opacity transition reads as two static images
+  // cross-dissolving, not as an element leaving the screen — which is a
+  // large part of why the chrome felt inert even when it worked.
+  it('travels as it hides, not only fades', async () => {
+    const {getByTestId} = await render(
+      <ChromeAutoHideController testID="chrome-wrapper">
+        <Text>chrome child</Text>
+      </ChromeAutoHideController>,
+    );
+    const range = travelRangeOf(getByTestId('chrome-wrapper'));
+    // Starts at rest (0) and ends displaced.
+    expect(range[0]).toBe(0);
+    expect(Math.abs(range[1])).toBeGreaterThan(0);
+  });
+
+  // The travel is signed per edge: the header rises as it hides and the
+  // transport bar falls, because a bar that exits toward the screen
+  // edge it belongs to looks intentional and one that exits the wrong
+  // way looks like it drifted. Both still read the SAME shared value,
+  // which is what keeps the two bands in sync.
+  it('the top band rises while the bottom band falls', async () => {
+    const top = await render(
+      <ChromeAutoHideController testID="top-band" edge="top">
+        <Text>header</Text>
+      </ChromeAutoHideController>,
+    );
+    const topRange = travelRangeOf(top.getByTestId('top-band'));
+    await top.unmount();
+
+    const bottom = await render(
+      <ChromeAutoHideController testID="bottom-band" edge="bottom">
+        <Text>transport</Text>
+      </ChromeAutoHideController>,
+    );
+    const bottomRange = travelRangeOf(bottom.getByTestId('bottom-band'));
+    await bottom.unmount();
+
+    expect(Math.sign(topRange[1])).toBe(-1);
+    expect(Math.sign(bottomRange[1])).toBe(1);
+    // Same magnitude, opposite direction — one value, two edges.
+    expect(Math.abs(topRange[1])).toBe(Math.abs(bottomRange[1]));
+  });
+
+  it('travels only a few pixels — a large slide reads as lag, not polish', async () => {
+    const {getByTestId} = await render(
+      <ChromeAutoHideController testID="chrome-wrapper">
+        <Text>chrome child</Text>
+      </ChromeAutoHideController>,
+    );
+    const range = travelRangeOf(getByTestId('chrome-wrapper'));
+    // On a 24 dp phone, anything past ~16 dp stops reading as polish.
+    expect(Math.abs(range[1])).toBeLessThanOrEqual(16);
   });
 });

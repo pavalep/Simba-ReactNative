@@ -379,7 +379,10 @@ const ExpandedChrome: React.FC = () => {
             that toggles the chrome — still lands. */}
         <PlayerScrim />
 
-        <ChromeAutoHideController style={StyleSheet.absoluteFill}>
+        <ChromeAutoHideController
+          edge="top"
+          style={StyleSheet.absoluteFill}
+        >
           <VideoTitleOverlay />
           <VideoLoadingOverlay />
           <VideoErrorOverlay />
@@ -387,7 +390,7 @@ const ExpandedChrome: React.FC = () => {
         </ChromeAutoHideController>
       </View>
 
-      <ChromeAutoHideController>
+      <ChromeAutoHideController edge="bottom">
         <TransportBar />
       </ChromeAutoHideController>
     </View>

@@ -72,6 +72,13 @@ export interface ChromeAutoHideApi {
   /** Animated.Value 0..1. Apply to chrome primitive opacity. */
   opacity: Animated.Value;
   /**
+   * V19 W7.5 — the MOTION half of the transition: 0 while shown, 1 while
+   * hidden. Each chrome band maps this through its own sign so the
+   * header rises as it leaves and the transport bar falls, while both
+   * stay driven by the SAME value.
+   */
+  progress: Animated.Value;
+  /**
    * Current visibility — the user's INTENT, not an animation phase. It
    * flips synchronously on toggle, which is what makes it safe for
    * `pointerEvents` to read.
@@ -119,6 +126,28 @@ export const ChromeAutoHideProvider: React.FC<ChromeAutoHideProviderProps> = ({
   const fadeMs = reduceMotion ? 0 : CHROME_HIDE_ANIM_MS;
 
   const opacity = useMemo(() => new Animated.Value(1), []);
+  /**
+   * V19 W7.5 — the MOTION half of the chrome transition: 0 while shown,
+   * 1 while hidden.
+   *
+   * Why a second value rather than interpolating off `opacity`: the two
+   * controllers sit at OPPOSITE edges of the screen, and they must move
+   * in opposite directions — the header rises as it leaves, the
+   * transport bar falls. One shared value keeps them perfectly in sync
+   * (the entire point of this provider, per the module docstring) while
+   * each controller maps it through its own sign.
+   *
+   * A pure opacity fade read as a cross-dissolve of two static images,
+   * which is why the chrome felt inert even when it worked. Motion is
+   * what makes an element read as leaving the screen rather than
+   * blinking out of it.
+   *
+   * `useNativeDriver` is used by both this and `opacity`, so the whole
+   * transition runs on the UI thread and survives a busy JS thread —
+   * which matters here, because the busiest moment in the player is
+   * exactly when a user is tapping to bring the chrome back.
+   */
+  const progress = useMemo(() => new Animated.Value(0), []);
   const [isVisible, setIsVisible] = useState(true);
 
   // See "Pinned vs. dismissible" in the module docstring.
@@ -130,8 +159,10 @@ export const ChromeAutoHideProvider: React.FC<ChromeAutoHideProviderProps> = ({
     // the chrome could finish fading to 0 after being re-shown.
     opacity.stopAnimation();
     opacity.setValue(1);
+    progress.stopAnimation();
+    progress.setValue(0);
     setIsVisible(true);
-  }, [opacity]);
+  }, [opacity, progress]);
 
   const hide = useCallback(() => {
     // `isVisible` is the user's INTENT, so it flips immediately — not
@@ -150,14 +181,23 @@ export const ChromeAutoHideProvider: React.FC<ChromeAutoHideProviderProps> = ({
     if (fadeMs === 0) {
       opacity.stopAnimation();
       opacity.setValue(0);
+      progress.stopAnimation();
+      progress.setValue(1);
       return;
     }
-    Animated.timing(opacity, {
-      toValue: 0,
-      duration: fadeMs,
-      useNativeDriver: true,
-    }).start();
-  }, [opacity, fadeMs]);
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: fadeMs,
+        useNativeDriver: true,
+      }),
+      Animated.timing(progress, {
+        toValue: 1,
+        duration: fadeMs,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [opacity, progress, fadeMs]);
 
   // Leaving the dismissible state always re-shows: a paused, buffering
   // or errored player must never hide the controls the user needs.
@@ -182,8 +222,8 @@ export const ChromeAutoHideProvider: React.FC<ChromeAutoHideProviderProps> = ({
   }, [show]);
 
   const value = useMemo<ChromeAutoHideApi>(
-    () => ({opacity, isVisible, isDismissible, toggle, kick}),
-    [opacity, isVisible, isDismissible, toggle, kick],
+    () => ({opacity, progress, isVisible, isDismissible, toggle, kick}),
+    [opacity, progress, isVisible, isDismissible, toggle, kick],
   );
 
   return (

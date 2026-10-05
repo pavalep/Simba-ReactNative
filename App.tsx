@@ -20,7 +20,6 @@ import {
   useQueueSync,
 } from './src/infrastructure/player';
 import {SimbaPlayer as V19SimbaPlayer} from './src/components/player/video/SimbaPlayer/SimbaPlayer';
-import {VideoMiniPlayer} from './src/components/player/video/VideoMiniPlayer/VideoMiniPlayer';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {QueryProvider} from './src/app/QueryProvider';
 import {SimbaStatusBar} from './src/components/StatusBar';
@@ -275,7 +274,16 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
             useIsPlayerActivity(). Sibling of SimbaPlayerRoot, never a
             child: see the docstring. */}
         <V19SimbaPlayer />
-        <VideoMiniPlayer />
+        {/* W7.6 — `<VideoMiniPlayer />` used to be mounted here. It was a
+            W0 stub whose whole body was `return null`, so it rendered
+            nothing at all: a live import and a live element in the tree
+            that could never draw. Worse than dead weight — a reader
+            (and a grep for "which chrome composites are mounted at the
+            shell?") found it and concluded the mini dock existed.
+
+            W6.0 already removed the dock itself, because playback lives
+            in its own activity and there is nothing for a mini player
+            to minimise to. The stub outlived that decision. Removed. */}
         {/* (2) The launch branch — owns the one-shot launch-params
             queue and renders <PlayerRoot> in PlayerActivity.
 
@@ -393,19 +401,19 @@ const App: React.FC<RootProps> = ({isPlayerActivity = false}) => {
                 and the V14 `<SimbaPlayer lookup={...}>` shape with
                 a single `<SimbaPlayer resumePolicy={...}>`.
 
-                V19 W4: V19 SimbaPlayer (chrome compositor) and
-                VideoMiniPlayer (mini dock) live as siblings of
-                AppContent INSIDE the V16 SimbaPlayer. The V19
+                V19 W4: V19 SimbaPlayer (chrome compositor) lives as a
+                sibling of AppContent INSIDE the V16 SimbaPlayer. The V19
                 chrome overlay reads lib hooks (usePlayer) so it
                 must be a child of the V16 SimbaPlayer; it is
                 rendered FIRST so it stacks ABOVE AppContent in
                 z-order (later siblings render on top in RN).
-                Audit §5: SimbaPlayer (V19) + VideoMiniPlayer are
-                the only chrome composites mounted at the shell —
-                all other chrome primitives (VideoSurface,
-                VerticalSwipeGestures, ChromeAutoHideController,
-                NextUpOverlay, TransportBar) live INSIDE V19
-                SimbaPlayer and never in src/screens. */}
+                Audit §5: SimbaPlayer (V19) is the ONLY chrome
+                composite mounted at the shell — all other chrome
+                primitives (VideoSurface, VerticalSwipeGestures,
+                ChromeAutoHideController, NextUpOverlay, TransportBar)
+                live INSIDE it and never in src/screens. W7.6 removed
+                the second one: `VideoMiniPlayer`, a `return null` stub
+                (see the note at its former render site). */}
             <SimbaPlayer resumePolicy={resumePolicy}>
               {/* W6.0 fix — `ActivityShell` owns the app-wide providers
                   (ErrorBoundary + ToastProvider) AND the activity split,
