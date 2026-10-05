@@ -14,18 +14,118 @@
 
 ---
 
-## Wave status at a glance (2026-09-25)
+## Wave status at a glance (updated 2026-10-05)
 
-| Wave | Theme | Status | Commits | Notes |
-|---|---|---|---:|---|
-| 0 | Decomposition · rip out the V18 monolith | ☐ NEXT | 0 | Five-boundary split |
-| 1 | `VideoSurface` · `VideoLoadingOverlay` · `VideoErrorOverlay` | ☐ PENDING | 0 | First chrome surfaces |
-| 2 | `TransportBar` · `BufferedRangeFill` · `useTransport()` | ☐ PENDING | 0 | The progress system |
-| 3 | `VideoTitleOverlay` · `TransportBar` mode row · `More` | ☐ PENDING | 0 | Top + secondary chrome |
-| 4 | `VideoMiniPlayer` + mini/full sync · `PlaybackContext` | ☐ PENDING | 0 | The presentation contract |
-| 5 | `VideoController` · repeat · finish · lane integrity | ☐ PENDING | 0 | The orchestrator |
-| 6 | PiP · Captions · MediaSession · system integration | ☐ PENDING | 0 | OS-level reach |
-| 7 | Acceptance matrix + accessibility + responsive QA | ☐ PENDING | 0 | The V11 §10 test grid |
+This table was stale — it still read `☐ PENDING` for every wave long
+after W0–W6.4 had shipped, which is the same failure mode the overhaul
+found in the code: a status artefact that nobody maintains stops
+carrying information, and then it actively misleads.
+
+| Wave | Theme | Status | Notes |
+|---|---|---|---|
+| 0 | Decomposition · rip out the V18 monolith | ✅ SHIPPED | Stubs only; four-boundary split |
+| 1 | `VideoSurface` · `VideoLoadingOverlay` · `VideoErrorOverlay` | ✅ SHIPPED | First chrome surfaces |
+| 2 | `TransportBar` · `BufferedRangeFill` · `useTransport()` | ✅ SHIPPED | The progress system |
+| 3 | `VideoTitleOverlay` · `TransportBar` mode row · `More` | ✅ SHIPPED | Top + secondary chrome; **rebuilt in W8** |
+| 3.5 | Chrome auto-hide · scrub preview · gestures | ✅ SHIPPED | **Auto-hide gained motion in W8.5** |
+| 3.6 | Accessibility + podcast-first features | 🟡 PARTIAL | Most shipped; see §3.6 for the deferred set |
+| 4 | Chrome fold into `SimbaPlayer` + presentation contract | ✅ SHIPPED | Mini dock **removed in W6.0**; its stub died in W8.6 |
+| 5 | `VideoController` · repeat · finish · lane integrity | ✅ SHIPPED | The orchestrator |
+| 6 | PiP · Captions · MediaSession · system integration | 🟡 PARTIAL | 6.0 shipped + device-verified; 6.1–6.3 pending |
+| 6.4 | Player correctness pass | ✅ SHIPPED | 7-defect ledger; see below |
+| 7 | Acceptance matrix + accessibility + responsive QA | ☐ PENDING | The V11 §10 test grid — **not started** |
+| 8 | **UI overhaul** (control system · scrim · sheet · motion) | ✅ SHIPPED | 2026-10-05; commits `c88944a`, `ef463c4` |
+
+> **Wave 8 exists because 7 was already taken.** The original Wave 7 is
+> the acceptance matrix, and it is still pending. The UI overhaul was
+> planned as "W7" in `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md` before this
+> collision was noticed; the code refers to it as W8 throughout. The
+> sub-phase labels in the source (`W7.1`, `W7.2` …) are left as-is
+> because renaming them would invalidate the comments that cite them,
+> but they all mean **Wave 8**.
+
+---
+
+## Wave 8 — UI overhaul (2026-10-05)
+
+**Driver:** the product owner reported the player at roughly 5% of the
+target bar, with a warning that the current UI could cost them their
+job. Four named complaints: no volume icon / bar / mute; no visible
+next-previous; some icons partially hidden; icons not clickable; the
+bottom sheet goes full screen and cannot be closed; the sheet's content
+is wrong; nothing feels smooth or premium.
+
+**Binding document:** `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md` — the audit,
+the four root causes, the target design and the migration plan. Where
+this tracker records *what shipped*, that document records *why it looks
+the way it does*.
+
+### Root causes (not a list of symptoms)
+
+| # | Root cause | What it produced |
+|---|---|---|
+| R1 | No shared definition of what a control is | Icon sizes drifted to 16 / 20 / 22 / 24 / 28 px in one screen |
+| R2 | No elevation or backdrop model | `TransportBar` had **no background at all**; the header had a hard `scrimDeep` slab |
+| R3 | `hitSlop={8}` on every control | Inflated touch areas 8 px past their bounds, so adjacent controls in a dense row competed for the same tap → "not clickable" |
+| R4 | The secondary sheet was never designed as an information architecture | A chip wall whose height grew with the option count, forcing `maxHeight: '90%'` |
+| R5 | The design was specified in prose with **not one number** | Nothing for an implementation to be wrong against, so every number was re-invented per component |
+
+### What shipped
+
+| Phase | Content | Commit |
+|---|---|---|
+| 8.0 | `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md` — audit + target design | `c88944a` |
+| 8.1 | `PlayerControl` primitive, two tiers, shared tokens; facade gains real `setMuted` | `c88944a` |
+| 8.2 | `PlayerScrim`; header's hard slab removed; on-media pill + scrim tokens | `c88944a` |
+| 8.3 | `TransportRow` centred cluster; `VolumeControl` (mute + persistent slider); `ModeControl` / `CaptionsToggle` / `PiPToggle` / `More` onto the primitive | `c88944a` |
+| 8.4 | `VideoMoreSheet` rebuilt: 62% detent, three exits, value rows, eyebrow headers | `ef463c4` |
+| 8.5 | Motion: chrome fades **and** travels, signed per edge | `ef463c4` |
+| 8.6 | 5 null stubs + superseded `MoreSheet` deleted; dead `VideoMiniPlayer` unmounted from `App.tsx` | `ef463c4` |
+
+### Defects found and fixed during W8 (not in the original list)
+
+| # | Defect | Class | Evidence |
+|---|---|---|---|
+| 1 | The volume control's button was labelled **"Mute"** but only expanded a hidden slider — it never muted | control that lies (I11) | Caught by the suite written alongside it, before it ever shipped |
+| 2 | `importantForAccessibility="no-hide-descendants"` on the volume container hid the mute **button** in the resting state | unreachable control | Same suite; a screen-reader user could not mute at all |
+| 3 | Skip silence was two chips, "Off" and "On", and **both** called `toggle()` — tapping "Off" turned it **on** | control that lies (I11) | In the shipped sheet since W3.6.5 |
+| 4 | The `Chip` primitive had `color={active ? 'inverse' : 'inverse'}` — identical branches | dead code masquerading as a style rule | Shipped since W3.5.6 |
+| 5 | Share hardcoded `route: 'SongScreen'` with **empty** params from the VIDEO player | wrong deep link | Sharing a movie opened the receiver's audio song screen with no file identity |
+| 6 | `VideoMiniPlayer` was a `return null` stub still **mounted** in `App.tsx` | dead code with a live import | A grep for mounted chrome composites implied the mini dock existed |
+| 7 | `TransportBar/MoreSheet.tsx` superseded by `VideoMoreSheet` but never deleted, with its own green 15-test suite | two owners of one surface | Per I14 |
+| 8 | Mode row ink was `onMediaMuted` (70%) on 16/20 px glyphs, while the 28 px transport row above used 80% | legibility scaling backwards | Smaller marks need *more* contrast, not less |
+
+### Tests
+
+74 suites / 909 passing at the close of W8 (70 / 834 at the start).
+
+New suites: `PlayerControl` (20), `PlayerScrim` (13), `VolumeControl`
+(15), `VideoMoreSheet` (20), `More` (5). Extended:
+`ChromeAutoHideController` (+3 motion), `TransportRow` (hit-area
+contract moved to the primitive and re-asserted on all five controls).
+
+Mutation-checked: `setMuted(true)` → `setVolume(0)`, and an opaque
+mid-scrim stop, each fail their suite.
+
+**A false alarm worth recording:** `ModeSheet` and `CaptionsSheet` timed
+out in a 12-file subset run and passed both in isolation (6.5 s) and in
+the full run (37 s total). That is the known one-time `Modal` init cost
+under parallel-worker contention. `testTimeout` was deliberately **not**
+raised — a subset run's timeouts are a clue about worker distribution,
+not about the code, and raising the ceiling would have hidden the next
+real hang.
+
+### Carried forward
+
+| Item | Why it is still open |
+|---|---|
+| `ModeSheet` / `CaptionsSheet` still use the W3 popover shape | They work, but they predate the W8.4 value-row treatment and the chip/eyebrow conventions. Cosmetic debt, not a defect. |
+| `reduceLaunchParams` / `resolveResumeMs` dead wiring | Pre-existing; unrelated to UI. |
+| A-B loop silent no-op | Pre-existing; unrelated to UI. |
+| `isInPipMode` unread in JS | Pre-existing; unrelated to UI. |
+| MediaSession adb verification matrix | Pre-existing; unrelated to UI. |
+| W7 acceptance matrix (the real Wave 7) | Never started. |
+| Device verification of the W8 chrome | Not yet run. |
 
 ---
 

@@ -1,10 +1,22 @@
 # SIMBA V19 — Player UI Research & Overhaul Specification
 
-> **Status:** binding. Wave 7 revises the player chrome against this document.
+> **Status:** binding. Wave 8 revises the player chrome against this document.
 > **Quality bar (owner-set, 2026-10-05):** *Huawei Video / Tencent Video (腾讯视频)
 > class.* Not "a working player" — a player that reads as product-grade the first
 > time it opens.
 > **Owner's assessment of the state we inherited:** ~5% complete.
+>
+> **On the wave number.** This document was written before the collision below
+> was noticed, and it labels its phases `W7.1`…`W7.6`. The TRACKER already had a
+> **Wave 7** (acceptance matrix + accessibility + responsive QA, still pending),
+> so the UI overhaul is **Wave 8**. The source code's `W7.x` comments were left
+> as they are rather than churned — renaming them would invalidate every comment
+> that cites a phase number, and the phase names still identify the work
+> unambiguously. The TRACKER's Wave 8 section is the execution log.
+>
+> **Outcome:** shipped in two commits, `c88944a` (phases 1–3) and `ef463c4`
+> (phases 4–6), 2026-10-05. 74 suites / 909 tests green. Carried-forward items
+> are listed at the end of the TRACKER's Wave 8 section.
 
 ---
 

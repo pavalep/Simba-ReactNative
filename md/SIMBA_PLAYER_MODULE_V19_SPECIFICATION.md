@@ -5,6 +5,8 @@
 **Builds on:** V12 native layer (libmpv + MpvBridgeModule), V18 API adapter layer, V11/V2 player UX lessons
 
 > **Architecture source of truth:** `md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md` (29.4 KB). Every architectural decision in this SPEC traces to a section of that audit. The audit enumerates the 10 mistakes in the V19 SPEC draft and the 10 architectural decisions that V19 locks in. **Read the audit first** if you want the rationale. This SPEC has been corrected against the audit's findings; the §2.1 isolation contract, §3 chrome primitives, §5 API surface, §6 state machine, §9 system integration, §10 acceptance matrix, §12 out-of-scope, and §13 references all reference back to it.
+>
+> **UI source of truth (added W7):** `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md`. Where this SPEC describes *what* the chrome contains, that document governs *how it looks and moves* — the control primitive, the two-tier sizing model, the scrim, the sheet's information architecture, and the motion rules. It is binding for the same reasons this SPEC is: it names real files, real numbers, and the specific defects each rule exists to prevent. Wave 7 in `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` is its execution log.
 
 ---
 
@@ -129,6 +131,30 @@ If Kotlin declares `value: String`, the TS boundary takes `string` and encodes a
 
 **I8 — No `catch {}` that swallows a user-visible failure.**
 A control that quietly does nothing is worse than one that fails visibly. Every catch either recovers, or logs with enough context to diagnose it.
+
+**I11 — A control must be able to do what its label says, or it must not render.** (Added W7.4.)
+A `Mute` affordance that reveals a panel and never mutes is worse than no affordance: the label is the promise the user acts on. Absence is an acceptable answer; dishonesty is not.
+*Proven by:* the volume control's first implementation had a speaker button labelled *"Mute"* whose only effect was expanding a hidden slider. The suite written alongside it caught it immediately. The same shape existed in the shipped sheet: Skip silence was two chips — "Off" and "On" — and **both** called `skipSilence.toggle()`, so tapping the chip labelled "Off" while already off turned it **on**. Separately, the `Chip` primitive carried `color={active ? 'inverse' : 'inverse'}`, a ternary whose branches were identical, so the "active" appearance was an accident of the background colour rather than a state.
+*Enforced by:* for any control whose accessible name is an action verb, there must be a test that presses it and asserts the named state changed. Two chips for a boolean are banned outright; a boolean gets one row that sets an explicit value, so the incorrect state is unrepresentable. Mutation check: replacing the handler with a no-op, or `setVolume(0)` for `setMuted(true)`, must fail the suite.
+
+**I12 — Legibility over unknown imagery is a property of the SURFACE, not the content.** (Added W7.2.)
+Controls painted straight onto an arbitrary film frame cannot be reliably legible, because no glyph tint works on every frame. The player designs the backdrop; it does not hope the frame underneath is dark.
+*Proven by:* `TransportBar` had **no background at all** — its root style was `row: {width: '100%'}`. On a bright frame the white-80% on-media ink washed out; on a dark frame only the gold accent read. That is what produced the reported "some icons are partially hidden". The header meanwhile painted a hard `background.scrimDeep` rectangle, on the stated grounds that `react-native-linear-gradient` was unusable — it is a declared dependency at `^2.8.3` and installed. The substitute was the "black slab bolted to the top while the bottom has nothing" look.
+*Enforced by:* one continuous scrim (`PlayerScrim`) is mounted once in the compositor, behind all chrome and above the video. Two properties are load-bearing and separately tested: it is **fully transparent through the middle** of the frame (a gradient that is dark everywhere is a black slab, however many stops it has), and its alphas come from `colors.background.playerScrim` tokens rather than raw literals, because a raw `rgba(0,0,0,0.55)` in a component is how a design system rots.
+
+**I13 — An on-media surface is ALWAYS dark, regardless of app theme.** (Added W7.2/W7.3.)
+The video frame is a dark surface in both themes, so any colour chosen to sit on it must not follow the theme.
+*Proven by:* the control row's pill surface was about to be built from `background.floating` (light theme → cream `rgba(245,240,232,0.90)`) and `background.highlight` (light theme → `rgba(0,0,0,0.05)`, effectively invisible). Both are near-identical API surface and both are wrong here. This is the same class of trap as `text.primary` resolving to near-black on black video, which is why `text.onMediaSoft` / `text.onMediaMuted` already existed.
+*Enforced by:* `background.onMediaPill`, `background.onMediaPillBorder` and `background.playerScrim` carry **identical values in both themes**, and a test asserts that equality directly. A test asserts a pill resolves to `onMediaPill` and *not* to `floating` or `highlight`.
+
+**I14 — Delete a superseded surface; a second implementation of one thing is two owners of one value.** (Added W7.6.)
+Keeping the old component after replacing it does not preserve history — it preserves a way for the two to disagree, and a green suite pointed at the wrong one.
+*Proven by:* `TransportBar/MoreSheet.tsx` (W3.4) was superseded by `VideoMoreSheet` (W3.5.6) but never deleted, so the repository held two complete implementations of the more menu and a 15-test suite asserting the one nothing renders. `VideoMiniPlayer` was worse: a `return null` stub that was still **mounted** in `App.tsx`, so a grep for "which chrome composites are mounted at the shell?" found it and implied the mini dock existed — long after W6.0 removed the dock itself.
+*Enforced by:* when a surface is replaced, the old file and its dedicated suite are removed in the same change. A `return null` component that is mounted is dead code with a live import, and is worse than an unused one: it makes a reader believe a feature exists.
+
+**I15 — A setting's height must not depend on how many values it has.** (Added W7.4.)
+*Proven by:* the more sheet rendered every setting as a wall of chips — 5 speed options, 7 sleep-timer options — so its height grew with the option count until `maxHeight: '90%'` covered the player, which is the reported *"it goes full screen and cannot be closed"* (the only close button was below the fold). Value rows (`label ……. value ›`, options revealed inline, one section expanded at a time) make a setting's height constant.
+*Enforced by:* a value row renders exactly one collapsed row regardless of option count; the sheet's resting detent is asserted relationally (`≤ 70%`), so it cannot quietly creep back toward covering the player.
 
 ---
 
