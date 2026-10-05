@@ -142,7 +142,7 @@ describe('CaptionsToggle', () => {
     mockTransport.state.activeCaptionTrackId = 100;
     const {getByLabelText} = await render(<CaptionsToggle />);
     expect(
-      getByLabelText('Captions: English. Tap to change.'),
+      getByLabelText('Captions: English'),
     ).toBeTruthy();
   });
 
@@ -150,15 +150,50 @@ describe('CaptionsToggle', () => {
     mockTransport.state.activeCaptionTrackId = null;
     const {getByLabelText} = await render(<CaptionsToggle />);
     expect(
-      getByLabelText('Captions off. Tap to choose a caption track.'),
+      getByLabelText('Captions off'),
     ).toBeTruthy();
+  });
+
+  // ── W7.3: label names the control, hint carries the instruction ─────
+  //
+  // The label used to be `Captions: English. Tap to change.`. A screen
+  // reader re-announces the label every time focus lands on the
+  // control, so the instruction was repeated as a side effect of
+  // navigating to it. W7.3 splits the two. Both are asserted so the
+  // instruction cannot be silently lost while the label is fixed.
+  it('the label names the track and the hint carries the instruction', async () => {
+    mockTransport.state.activeCaptionTrackId = 100;
+    const {getByLabelText} = await render(<CaptionsToggle />);
+    const control = getByLabelText('Captions: English');
+    expect(control.props.accessibilityHint).toBe(
+      'Opens the captions picker',
+    );
+  });
+
+  // "A track is rendering" is the state that matters, and gold ink
+  // alone does not convey it to a user who cannot distinguish the
+  // colour (WCAG 1.4.1). The switch role + checked state is the
+  // non-colour channel, so it is asserted directly.
+  it('exposes the active state as a switch, not just as gold ink', async () => {
+    mockTransport.state.activeCaptionTrackId = 100;
+    const {getByLabelText} = await render(<CaptionsToggle />);
+    const control = getByLabelText('Captions: English');
+    expect(control.props.accessibilityRole).toBe('switch');
+    expect(control.props.accessibilityState).toMatchObject({checked: true});
+  });
+
+  it('reports checked:false when captions are off', async () => {
+    mockTransport.state.activeCaptionTrackId = null;
+    const {getByLabelText} = await render(<CaptionsToggle />);
+    const control = getByLabelText('Captions off');
+    expect(control.props.accessibilityState).toMatchObject({checked: false});
   });
 
   it('opens the sheet on tap', async () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
     await act(async () => {
       fireEvent.press(
-        getByLabelText('Captions: English. Tap to change.'),
+        getByLabelText('Captions: English'),
       );
     });
     expect(getByLabelText('Captions: Español')).toBeTruthy();
@@ -169,7 +204,7 @@ describe('CaptionsToggle', () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
     await act(async () => {
       fireEvent.press(
-        getByLabelText('Captions: English. Tap to change.'),
+        getByLabelText('Captions: English'),
       );
     });
     fireEvent.press(getByLabelText('Captions: Español'));
@@ -180,7 +215,7 @@ describe('CaptionsToggle', () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
     await act(async () => {
       fireEvent.press(
-        getByLabelText('Captions: English. Tap to change.'),
+        getByLabelText('Captions: English'),
       );
     });
     fireEvent.press(getByLabelText('Captions off'));
@@ -191,7 +226,7 @@ describe('CaptionsToggle', () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
     await act(async () => {
       fireEvent.press(
-        getByLabelText('Captions: English. Tap to change.'),
+        getByLabelText('Captions: English'),
       );
     });
     fireEvent.press(getByLabelText('Close captions picker'));
@@ -203,7 +238,7 @@ describe('CaptionsToggle', () => {
       screen.queryByLabelText('Close captions picker'),
     ).toBeNull();
     expect(
-      getByLabelText('Captions: English. Tap to change.'),
+      getByLabelText('Captions: English'),
     ).toBeTruthy();
   });
 });

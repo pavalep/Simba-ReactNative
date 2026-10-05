@@ -1,99 +1,72 @@
 /**
- * V19 W3 Phase 3.4 — `More` (single entry point).
+ * V19 W7.3 — `More`: the single entry point to the secondary sheet.
  *
- * The single compact control that opens the secondary surface
- * (Save / Add to playlist / Track info / Share). Implemented
- * exactly per the W3 spec:
+ * ## What changed
  *
- *   - "Tap opens MoreSheet — exactly ONE sheet, NOT a chain of
- *     `Modal`s"
- *     → local sheet state, single Modal instance.
+ * This was the WORST offender in the icon-scale audit: a **20 px**
+ * `sliders` glyph — the smallest mark in the player — inside a `minWidth:
+ * 44` box, with `hitSlop={8}` and opacity-only press feedback. The 20 px
+ * glyph inside a 44 pt target was the specific thing the product owner
+ * described as "some icons are partially hidden": the target looked
+ * right but the mark inside it looked lost, so the control did not read
+ * as reliably tappable.
  *
- *   - "MoreSheet lists groups: Library (Save, Add to playlist) ·
- *     Information (Track info, Share)"
- *     → handled inside `MoreSheet`.
+ * It now renders through `PlayerControl` at the 24 px floor, in a real
+ * 44 × 44 target, with no `hitSlop` and a spring press. The sheet it
+ * opens is unchanged in behaviour here — `VideoMoreSheet` owns every
+ * side effect, and this component owns only visibility.
  *
- *   - "No two paths to the same secondary action"
- *     → no other chrome surface opens the same sheet.
+ * ## Why the icon is `sliders` and not `list`
  *
- * Wiring (2026-09-28):
- *   - Share is wired to `shareService.shareContent({title, subtitle})`
- *     using the lib's `usePlayer().state.title` + `.artist`.
- *   - Save / Add to playlist / Track info are placeholder no-ops
- *     that surface a console warning. Real wiring lands in a
- *     follow-up wave once the chrome's "current track" identity
- *     (URI + mediaType) is exposed through the facade — the
- *     chrome currently only knows about transport state.
+ * The sheet is a settings-style panel (playback speed, quality, audio,
+ * tracks, library actions), not a track queue. `sliders` is the correct
+ * affordance for "adjust settings"; `list` would promise a queue that
+ * this sheet does not show.
  *
- * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
- * §3.3 + TRACKER Phase 3.4.
+ * ## On the old placeholder handlers
+ *
+ * This component previously carried a comment describing Share / Save /
+ * Track-info as "placeholder no-ops that surface a console warning".
+ * Those warnings are gone. W3.5.6 moved every action into
+ * `VideoMoreSheet`, and this button now does exactly one thing: open
+ * the sheet. A button that opens a sheet of real, working actions is
+ * not a placeholder, and it no longer needs to apologise for one.
+ *
+ * Architecture source of truth: `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md`
+ * §3.2; `md/SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md` §3.3.
  */
 
 import * as React from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
-import {useTheme} from '../../../../theme';
-import {spacing} from '../../../../theme/tokens';
-import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {
   VideoMoreSheet,
   type VideoMoreAction,
 } from '../VideoMoreSheet/VideoMoreSheet';
+import {PlayerControl} from '../PlayerControl/PlayerControl';
 
 export const More: React.FC = () => {
-  const {colors} = useTheme();
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  // V19 W3.5.6 — share / save / track-info / etc. now live inside
-  // the `VideoMoreSheet` component. This button just opens it.
-  // (Title/artist context is read inside the sheet from the same
-  // lib hook.) The legacy W3.4 shareService/shareContent path is
-  // owned by `VideoMoreSheet`'s `handleLegacy` switch.
-
   return (
-    <View style={styles.container}>
-      <Pressable
+    <>
+      <PlayerControl
+        testID="more-options"
+        icon="sliders"
         onPress={() => setSheetOpen(true)}
-        accessibilityRole="button"
         accessibilityLabel="More options"
-        accessibilityHint="Opens the secondary actions menu"
-        hitSlop={8}
-        style={({pressed}) => [
-          styles.button,
-          pressed ? {opacity: 0.7} : null,
-        ]}
-      >
-        {/* On-media token: the glyph paints directly on the video
-            (dark in BOTH themes), so light theme's near-black
-            `text.secondary` would render it invisible. */}
-        <SvgIcon name="sliders" size={20} color={colors.text.onMediaMuted} />
-      </Pressable>
+        accessibilityHint="Opens playback settings, audio, tracks, and more"
+      />
 
       <VideoMoreSheet
         visible={sheetOpen}
         onAction={(_action: VideoMoreAction) => {
-          // The sheet owns all action side-effects (setSpeed,
-          // shareContent, etc.). The button only owns visibility,
-          // so we intentionally no-op here.
+          // The sheet owns every action side effect (setSpeed,
+          // shareContent, quality, …). This button owns only
+          // visibility, so there is deliberately nothing to do here.
         }}
         onClose={() => setSheetOpen(false)}
       />
-    </View>
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  button: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    minHeight: 44,
-    minWidth: 44,
-  },
-});
 
 export default More;

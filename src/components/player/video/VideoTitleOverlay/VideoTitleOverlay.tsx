@@ -81,43 +81,54 @@
  * `text.onMediaSoft` / `onMediaMuted`. Light theme's `text.primary`
  * (`#1A1A1C`) was near-black on black video.
  *
- * ## DELIBERATE DEVIATION from SPEC §3.2 ("gradient scrim")
+ * ## DELIBERATE DEVIATION from SPEC §3.2 ("gradient scrim") — RESOLVED
  *
- * The scrim is a solid translucent bar (`background.scrimDeep`), not a
- * gradient. The only gradient library in `package.json` is
- * `react-native-linear-gradient@2.8.3`, which has ZERO usages anywhere
- * in this app and predates the new architecture; pulling an unverified
- * native module into the live player chrome to satisfy a gradient is not
- * a change that can be validated without a device build. The token
- * chosen reaches the spec's actual requirement (legible on any frame)
- * with no new native dependency.
+ * This bar used to paint its own solid `background.scrimDeep`
+ * rectangle, on the stated grounds that `react-native-linear-gradient`
+ * was unusable. That reasoning was wrong: the package is a declared
+ * dependency at `^2.8.3` and it is installed. The hard rectangle was a
+ * substitute, and the substitute is what produced the "black slab
+ * bolted to the top while the bottom has no backdrop at all" look.
+ *
+ * W7.2 replaces it with `PlayerScrim` — ONE continuous gradient behind
+ * the entire chrome, mounted once in `SimbaPlayer`'s compositor. The
+ * header no longer paints any background of its own, which is also why
+ * there is no seam to line up: the gradient is a single surface that
+ * both bands belong to.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md`
- * §3.2 + `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` Phase 1.1 / 6.4.
+ * §3.2 + `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` Phase 1.1 / 6.4, and
+ * `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md` §1.1 / §3.1.
  */
 
 import * as React from 'react';
-import {Animated, Pressable, StyleSheet, View} from 'react-native';
+import {Animated, StyleSheet, View} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
-import {SvgIcon} from '../../../../components/utility/SvgIcon';
-import {useHaptic, useReduceMotion, useTransport} from '../../../../infrastructure/player';
+import {useReduceMotion, useTransport} from '../../../../infrastructure/player';
+import {PlayerControl, CONTROL_ICON_SIZE_COMPACT} from '../PlayerControl/PlayerControl';
 
-/** Entrance fade duration (ms). Collapsed to 0 under reduce-motion. */
-const FADE_IN_MS = 180;
+/**
+ * Entrance fade duration (ms). Collapsed to 0 under reduce-motion.
+ *
+ * EXPORTED, not just consumed: the test suite asserts the non-reduced
+ * duration rather than hardcoding a number, because a test that pins
+ * `180` does not fail when the design is retimed — it fails, and the
+ * obvious "fix" is to hardcode the new number, which is exactly how a
+ * test stops checking anything.
+ */
+export const FADE_IN_MS = 220;
+
 /** Entrance travel (px), resolved from a raised start position. */
-const RISE_PX = 8;
-/** Minimum touch target. WCAG 2.2 §2.5.8 (AA) asks 24; platform norm is 44. */
-const TOUCH_TARGET = 44;
+export const RISE_PX = 10;
 
 export const VideoTitleOverlay: React.FC = () => {
   const {state, commands} = useTransport();
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
-  const {haptic} = useHaptic();
 
   const title = state.title.trim();
   const artist = state.artist.trim();
@@ -152,14 +163,12 @@ export const VideoTitleOverlay: React.FC = () => {
   }, [title, opacity, rise, reduceMotion]);
 
   const onBack = React.useCallback(() => {
-    haptic('light');
     commands.exitPlayer();
-  }, [haptic, commands]);
+  }, [commands]);
 
   const onToggleLock = React.useCallback(() => {
-    haptic('light');
     commands.setOrientationLock(!state.isOrientationLocked);
-  }, [haptic, commands, state.isOrientationLocked]);
+  }, [commands, state.isOrientationLocked]);
 
   // No metadata yet AND no title → the bar would be a back button and a
   // lock button floating over nothing, which is not what the user came
@@ -175,32 +184,20 @@ export const VideoTitleOverlay: React.FC = () => {
       // `box-none`, not `none`: the container must not swallow the tap
       // the video surface owns, but the two buttons must still work.
       pointerEvents="box-none"
-      style={[
-        styles.container,
-        {
-          paddingTop: insets.top + spacing.xs,
-          backgroundColor: colors.background.scrimDeep,
-        },
-      ]}
+      style={[styles.container, {paddingTop: insets.top + spacing.xs}]}
     >
       {/* ── Back / dismiss ─────────────────────────────────────────── */}
-      <Pressable
+      <PlayerControl
         testID="video-header-back"
+        icon="chevronLeft"
         onPress={onBack}
-        accessibilityRole="button"
         // The action, not the icon: this leaves the player and returns
         // to the app. "Back" is the platform-correct verb for the
         // affordance, and it matches the hardware back button, which
         // performs the identical transition.
         accessibilityLabel="Back"
-        hitSlop={8}
-        style={({pressed}) => [
-          styles.iconButton,
-          pressed ? styles.pressed : null,
-        ]}
-      >
-        <SvgIcon name="chevronLeft" size={24} color={colors.text.onMediaSoft} />
-      </Pressable>
+        accessibilityHint="Closes the player and returns to the app"
+      />
 
       {/* ── Title / artist ─────────────────────────────────────────── */}
       <Animated.View
@@ -235,31 +232,22 @@ export const VideoTitleOverlay: React.FC = () => {
       </Animated.View>
 
       {/* ── Orientation lock ───────────────────────────────────────── */}
-      <Pressable
+      <PlayerControl
         testID="video-header-lock"
+        icon={locked ? 'lock' : 'unlock'}
+        iconSize={CONTROL_ICON_SIZE_COMPACT}
         onPress={onToggleLock}
         accessibilityRole="switch"
-        accessibilityState={{checked: locked}}
+        accessibilityChecked={locked}
         // State-aware: names the ACTION, and says which way it goes.
-        accessibilityLabel={
-          locked ? 'Unlock orientation' : 'Lock orientation'
-        }
-        hitSlop={8}
-        style={({pressed}) => [
-          styles.iconButton,
-          pressed ? styles.pressed : null,
-        ]}
-      >
-        <SvgIcon
-          name={locked ? 'lock' : 'unlock'}
-          size={22}
-          // Engaged reads gold so the state is legible at a glance;
-          // released stays on the standard on-media ink. The glyph swap
-          // (lock/unlock) carries the same information without relying
-          // on colour, which is the WCAG 1.4.1 requirement.
-          color={locked ? colors.accent.gold : colors.text.onMediaSoft}
-        />
-      </Pressable>
+        accessibilityLabel={locked ? 'Unlock orientation' : 'Lock orientation'}
+        accessibilityHint="Pins the video to its current orientation, or releases it"
+        // Engaged reads gold so the state is legible at a glance;
+        // released stays on the standard on-media ink. The glyph swap
+        // (lock/unlock) carries the same information without relying
+        // on colour, which is the WCAG 1.4.1 requirement.
+        tint={locked ? colors.accent.gold : colors.text.onMediaSoft}
+      />
     </View>
   );
 };
@@ -274,15 +262,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
-  },
-  iconButton: {
-    width: TOUCH_TARGET,
-    height: TOUCH_TARGET,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pressed: {
-    opacity: 0.6,
+    // No background. The scrim behind this bar is `PlayerScrim`,
+    // mounted once in the compositor — a per-bar background is what
+    // produced the black slab, and a second one would seam against it.
   },
   titleColumn: {
     flex: 1,

@@ -1,62 +1,59 @@
 /**
- * V19 W3 Phase 3.3 — `PiPToggle` (compact optional control).
+ * V19 W7.3 — `PiPToggle`: the picture-in-picture control (bare tier).
  *
- * Renders ONLY when `useTransport().state.canEnterPip === true`. When
- * the underlying activity can't enter PiP (paused, ended, mid-
- * buffer, or simply not supported on this device), the component
- * returns `null` — no inert button, no zero-width spacer (per the
- * W3 spec §"No inert button when unsupported").
+ * ## What changed
  *
- * The button itself is a compact icon button (Picture-in-Picture
- * glyph already in the icon set). Tap calls `commands.enterPip()`
- * which delegates to the lib's native `enterPip()` (which starts
- * the PiP window via PlayerActivity).
+ * A **20 px** glyph with `hitSlop={8}` and opacity-only press feedback.
+ * 20 px is under the 24 px legibility floor, and the `hitSlop` was
+ * inflating the touch area 8 px past its own bounds in every direction,
+ * so this control overlapped its neighbour in the mode row and the two
+ * competed for taps. It now renders through `PlayerControl`'s bare tier:
+ * a real 44 × 44 target with the 24 px glyph centred inside it, no
+ * `hitSlop`, spring press, haptic.
  *
- * **W5 reaudit fix.** This previously read
- * `(commands as unknown as {enterPip?: () => void}).enterPip` and
- * fell back to `() => {}` when that read `undefined` — which it
- * always did, because `TransportCommands` had no `enterPip`. The
- * button therefore RENDERED (visibility is gated on the
- * `canEnterPip` state flag, not on the command existing) and did
- * absolutely nothing on tap. `enterPip` / `exitPip` are now real
- * members of `TransportCommands`, so this calls them directly with
- * no cast and no no-op fallback.
+ * ## Why it is a bare target and not a chip
  *
- * Entering PiP is a TWO-part transition, not one call:
+ * PiP is an ACTION, not a state. There is nothing to label — the glyph
+ * says "picture in picture" as well as any word would — so a pill would
+ * be a wider target saying exactly what a square one says. The chip tier
+ * is reserved for controls that report a value (repeat mode, captions).
+ *
+ * ## Why it still returns `null` when PiP is unavailable
+ *
+ * SPEC invariant I3. `canEnterPip` is derived from real state (playing,
+ * not ended, not buffering). When it is false there is no window to
+ * enter, so rendering the button would produce a control that looks
+ * live and does nothing. Correct absence, not an oversight.
+ *
+ * ## Entering PiP is a TWO-part transition
+ *
  *   1. `commands.enterPip()` — the native PiP window.
- *   2. `setPipActive(true)`   — the JS-side chrome must go away too
- *      (`SimbaPlayerContent` renders nothing in `pip` mode). Doing
- *      only (1) leaves the full chrome painted over the PiP window.
+ *   2. `setPipActive(true)`   — the JS chrome must go away too.
  *
- * W6.0: step 2 used to be `setMode('pip')`, writing a `mode` into a
- * process-global zustand store. `App` is mounted once per activity
- * React root, and both roots ran the sync effect that owned `mode`,
- * so they fought over it (`expanded ⇄ mini`, forever) and the chrome
- * was torn down and rebuilt in a loop. `mode` is now derived from
- * the host activity, so the only genuinely global fact left is
- * whether the PiP window is up — which is what `setPipActive` is.
+ * Doing only (1) leaves the full chrome painted over the PiP window;
+ * doing only (2) leaves the activity black behind a floating window.
+ * Both halves are in this one handler, so the tap is one honest action.
  *
- * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
- * §3.3 + TRACKER Phase 3.3.
+ * W6.0 note: step (2) used to write a `mode` into a process-global
+ * zustand store. `App` mounts once per activity React root and both
+ * roots ran the effect that owned `mode`, so they overwrote each other
+ * forever and the chrome tore down and rebuilt in a loop. `mode` is now
+ * derived from the host activity, so the only genuinely global fact
+ * left is whether the PiP window is up — which is what `setPipActive`
+ * is.
+ *
+ * Architecture source of truth: `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md`
+ * §3.2; `md/SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md` §3.3.
  */
 
 import * as React from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
-import {useTheme} from '../../../../theme';
-import {spacing} from '../../../../theme/tokens';
-import {SvgIcon} from '../../../../components/utility/SvgIcon';
-import {
-  usePresentation,
-  useTransport,
-} from '../../../../infrastructure/player';
+import {usePresentation, useTransport} from '../../../../infrastructure/player';
+import {PlayerControl} from '../PlayerControl/PlayerControl';
 
 export const PiPToggle: React.FC = () => {
   const {state, commands} = useTransport();
   const {setPipActive} = usePresentation();
-  const {colors} = useTheme();
 
-  // Per the spec: render ONLY when canEnterPip is true.
-  // No inert button when unsupported (returns null, not opacity:0).
   if (!state.canEnterPip) return null;
 
   const onPress = () => {
@@ -66,44 +63,14 @@ export const PiPToggle: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel="Enter Picture-in-Picture"
-        accessibilityHint="Minimizes the player into a floating window"
-        hitSlop={8}
-        style={({pressed}) => [
-          styles.button,
-          pressed ? {opacity: 0.7} : null,
-        ]}
-      >
-        <SvgIcon
-          name="pictureInPicture"
-          size={20}
-          // On-media token: the icon paints directly on the video
-          // (dark in BOTH themes), so light theme's near-black
-          // `text.secondary` would render it invisible.
-          color={colors.text.onMediaMuted}
-        />
-      </Pressable>
-    </View>
+    <PlayerControl
+      testID="pip-toggle"
+      icon="pictureInPicture"
+      onPress={onPress}
+      accessibilityLabel="Enter Picture-in-Picture"
+      accessibilityHint="Minimizes the player into a floating window"
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  button: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    minHeight: 44,
-    minWidth: 44,
-  },
-});
 
 export default PiPToggle;

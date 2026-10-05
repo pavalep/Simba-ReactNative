@@ -1,43 +1,50 @@
 /**
- * V19 W3 Phase 3.2 — `CaptionsToggle` (compact optional control).
+ * V19 W7.3 — `CaptionsToggle`: the subtitle control (chip tier).
  *
- * Renders ONLY when the current file has at least one caption
- * track (`state.captionTracks.length > 0`). When no captions
- * exist, the component returns `null` so the TransportBar's
- * Row 3 collapses cleanly — no inert button, no zero-width
- * spacer (per the W3 spec §"No inert button when unsupported").
+ * ## What changed
  *
- * The button itself is a compact icon + label:
- *   - `subtitles` icon (a CC-bubble SVG already in the icon set)
- *   - Label: the active track's title/lang, or "CC" if no track
- *     is active (matches YouTube's convention)
+ * Same three defects as `ModeControl`, fixed the same way: a **16 px**
+ * glyph (the smallest icon anywhere in the player), `hitSlop={8}`
+ * inflating the touch area past its own bounds so it fought its
+ * neighbours in the mode row, and opacity-only press feedback that is
+ * near-invisible over a video frame. It now renders through
+ * `PlayerControl`'s chip tier — 22 px glyph, real 44 pt pill, spring
+ * press, haptic, accessibility role.
  *
- * Tap opens `CaptionsSheet`, which is mounted as a sibling
- * INSIDE this component so the open-state is local.
+ * ## Why it still returns `null` with no caption tracks
  *
- * Gold accent applies when a track is active (`activeTrackId !== null`).
+ * This is SPEC invariant I3 (a control that cannot act must not render)
+ * and it is deliberate, not an oversight. A file with no subtitle tracks
+ * has no captions to turn on, so a "CC" button here would be a control
+ * that looks live and does nothing — the exact defect class this
+ * overhaul exists to remove. The mode row collapses to its remaining
+ * pills instead, and `TransportRow` is a centred cluster so that
+ * collapse does not shift the primary CTA sideways.
  *
- * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
- * §3.3 + TRACKER Phase 3.2.
+ * ## Why the label shows the track, not just "CC"
+ *
+ * When a track is active, the pill names it ("English", "हिन्दी"). The
+ * user needs to know WHICH subtitle language is rendering, and a bare
+ * "CC" only tells them that captions are on. The glyph swap and the gold
+ * `active` state both carry the same information for anyone who cannot
+ * distinguish the colour (WCAG 1.4.1).
+ *
+ * Architecture source of truth: `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md`
+ * §3.2; `md/SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md` §3.3.
  */
 
 import * as React from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
-import {useTheme} from '../../../../theme';
-import {spacing} from '../../../../theme/tokens';
-import {AppText} from '../../../../components/core/AppText/AppText';
-import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {useTransport} from '../../../../infrastructure/player';
+import {PlayerControl, CONTROL_ICON_SIZE_COMPACT} from '../PlayerControl/PlayerControl';
 import {CaptionsSheet} from './CaptionsSheet';
 
 export const CaptionsToggle: React.FC = () => {
   const {state, commands} = useTransport();
-  const {colors} = useTheme();
   const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  // The spec says: render ONLY when there's at least one caption
-  // track. When no tracks exist, the component is absent — the
-  // TransportBar's Row 3 collapses the slot to ModeControl + More.
+  // Hooks run before this early return — `useState` above is already
+  // called, so returning `null` here is legal and the sheet's open
+  // state is simply discarded along with the control.
   if (state.captionTracks.length === 0) return null;
 
   const activeTrack = state.captionTracks.find(
@@ -45,38 +52,24 @@ export const CaptionsToggle: React.FC = () => {
   );
   const isActive = state.activeCaptionTrackId !== null;
   const label = activeTrack ? activeTrack.label : 'CC';
-  // On-media tokens: the toggle paints directly on the video (a dark
-  // surface in BOTH themes), so the "CC" / track label must not
-  // resolve to light theme's near-black `text.tertiary`.
-  const labelColor = isActive ? colors.accent.gold : colors.text.onMediaMuted;
-  const iconColor = isActive ? colors.accent.gold : colors.text.onMediaMuted;
 
   return (
-    <View style={styles.container}>
-      <Pressable
+    <>
+      <PlayerControl
+        testID="captions-toggle"
+        chip
+        icon="subtitles"
+        iconSize={CONTROL_ICON_SIZE_COMPACT}
+        label={label}
+        active={isActive}
         onPress={() => setSheetOpen(true)}
-        accessibilityRole="button"
+        accessibilityRole="switch"
+        accessibilityChecked={isActive}
         accessibilityLabel={
-          isActive
-            ? `Captions: ${label}. Tap to change.`
-            : 'Captions off. Tap to choose a caption track.'
+          isActive ? `Captions: ${label}` : 'Captions off'
         }
         accessibilityHint="Opens the captions picker"
-        hitSlop={8}
-        style={({pressed}) => [
-          styles.button,
-          pressed ? {opacity: 0.7} : null,
-        ]}
-      >
-        <SvgIcon name="subtitles" size={16} color={iconColor} />
-        <AppText
-          variant="caption"
-          style={[styles.label, {color: labelColor}]}
-          numberOfLines={1}
-        >
-          {label}
-        </AppText>
-      </Pressable>
+      />
 
       <CaptionsSheet
         visible={sheetOpen}
@@ -85,28 +78,8 @@ export const CaptionsToggle: React.FC = () => {
         onSelect={id => commands.selectCaptionTrack(id)}
         onClose={() => setSheetOpen(false)}
       />
-    </View>
+    </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    minHeight: 44,
-    minWidth: 44,
-    gap: spacing.xs,
-  },
-  label: {
-    fontVariant: ['tabular-nums'],
-    maxWidth: 100,
-  },
-});
 
 export default CaptionsToggle;

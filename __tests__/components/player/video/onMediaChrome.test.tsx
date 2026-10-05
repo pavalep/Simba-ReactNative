@@ -327,13 +327,22 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
       canEnterPip: true,
     });
     await withChrome(<TransportBar />, ({getByText, getByLabelText}) => {
-      expect(inkOfText(getByText('Off'))).toBe(ON_MEDIA_MUTED);
-      expect(inkOfText(getByText('CC'))).toBe(ON_MEDIA_MUTED);
+      // W7.3 moved these from `onMediaMuted` (70%) to `onMediaSoft`
+      // (80%). The reason is that their GLYPHS GREW — the repeat and
+      // captions marks went 16 px → 22 px, PiP and More 20 px → 24 px —
+      // and legibility scales inversely with size: a smaller mark needs
+      // MORE relative contrast to read, not less. Leaving them at 70%
+      // would have made the smaller row-3 glyphs dimmer than the 28 px
+      // transport icons directly above them, which is backwards. The
+      // chips also gained a dark `onMediaPill` fill, so 70% white on
+      // near-black is a genuinely dim combination for 22 px type.
+      expect(inkOfText(getByText('Off'))).toBe(ON_MEDIA_SOFT);
+      expect(inkOfText(getByText('CC'))).toBe(ON_MEDIA_SOFT);
       expect(
         inkOfIconWithin(getByLabelText('Enter Picture-in-Picture')),
-      ).toBe(ON_MEDIA_MUTED);
+      ).toBe(ON_MEDIA_SOFT);
       expect(inkOfIconWithin(getByLabelText('More options'))).toBe(
-        ON_MEDIA_MUTED,
+        ON_MEDIA_SOFT,
       );
     });
   });
@@ -369,12 +378,10 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
 
   it('ModeControl: label + icon are on-media when repeat is off', async () => {
     await withChrome(<ModeControl />, ({getByText, getByLabelText}) => {
-      expect(inkOfText(getByText('Off'))).toBe(ON_MEDIA_MUTED);
+      expect(inkOfText(getByText('Off'))).toBe(ON_MEDIA_SOFT);
       expect(
-        inkOfIconWithin(
-          getByLabelText('Repeat mode: Off. Tap to change.'),
-        ),
-      ).toBe(ON_MEDIA_MUTED);
+        inkOfIconWithin(getByLabelText('Repeat mode: Off')),
+      ).toBe(ON_MEDIA_SOFT);
     });
   });
 
@@ -391,12 +398,10 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
       activeCaptionTrackId: null,
     });
     await withChrome(<CaptionsToggle />, ({getByText, getByLabelText}) => {
-      expect(inkOfText(getByText('CC'))).toBe(ON_MEDIA_MUTED);
+      expect(inkOfText(getByText('CC'))).toBe(ON_MEDIA_SOFT);
       expect(
-        inkOfIconWithin(
-          getByLabelText('Captions off. Tap to choose a caption track.'),
-        ),
-      ).toBe(ON_MEDIA_MUTED);
+        inkOfIconWithin(getByLabelText('Captions off')),
+      ).toBe(ON_MEDIA_SOFT);
     });
   });
 
@@ -417,14 +422,14 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
     await withChrome(<PiPToggle />, ({getByLabelText}) => {
       expect(
         inkOfIconWithin(getByLabelText('Enter Picture-in-Picture')),
-      ).toBe(ON_MEDIA_MUTED);
+      ).toBe(ON_MEDIA_SOFT);
     });
   });
 
   it('More: the glyph is on-media', async () => {
     await withChrome(<More />, ({getByLabelText}) => {
       expect(inkOfIconWithin(getByLabelText('More options'))).toBe(
-        ON_MEDIA_MUTED,
+        ON_MEDIA_SOFT,
       );
     });
   });

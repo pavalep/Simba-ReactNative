@@ -51,6 +51,7 @@ import {SimbaStatusBar} from '../../../../components/StatusBar';
 import {presetToMpv, useQualityStore} from '../../../../state/useQualityStore';
 import {useSkipSilenceStore} from '../../../../state/useSkipSilenceStore';
 import {VideoSurface} from '../VideoSurface/VideoSurface';
+import {PlayerScrim} from '../PlayerScrim/PlayerScrim';
 import {VideoTitleOverlay} from '../VideoTitleOverlay/VideoTitleOverlay';
 import {VideoLoadingOverlay} from '../VideoLoadingOverlay/VideoLoadingOverlay';
 import {VideoErrorOverlay} from '../VideoErrorOverlay/VideoErrorOverlay';
@@ -365,6 +366,19 @@ const ExpandedChrome: React.FC = () => {
       <View style={styles.surfaceContainer}>
         <VideoSurface accessibilityLabel="Video" onPress={toggle} />
         <VerticalSwipeGestures />
+
+        {/* V19 W7.2 — the ONE backdrop for the whole chrome. Mounted
+            here, directly above the video surface and BELOW every
+            overlay, so the gradient sits between the picture and the
+            controls. Both chrome bands belong to this one surface: it
+            is what removes the "black slab at the top, nothing at the
+            bottom" split, and what makes white 80% ink legible on a
+            bright film frame.
+
+            It is `pointerEvents="none"`, so the surface's tap — the one
+            that toggles the chrome — still lands. */}
+        <PlayerScrim />
+
         <ChromeAutoHideController style={StyleSheet.absoluteFill}>
           <VideoTitleOverlay />
           <VideoLoadingOverlay />

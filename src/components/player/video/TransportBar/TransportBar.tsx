@@ -84,6 +84,7 @@ import {ModeControl} from './ModeControl';
 import {CaptionsToggle} from './CaptionsToggle';
 import {PiPToggle} from './PiPToggle';
 import {TransportRow} from './TransportRow';
+import {VolumeControl} from './VolumeControl';
 import {More} from './More';
 import {ScrubPreview} from '../ScrubPreview/ScrubPreview';
 
@@ -322,25 +323,28 @@ export const TransportBar: React.FC = () => {
         </AppText>
       </View>
 
-      {/* Row 2 — Transport controls (W3 Phase 3.5). Five
-          controls: Rewind 10 / Previous / Play-Pause / Next /
-          Forward 10. Previous + Next are conditionally rendered
-          (returns null when canGoPrev/canGoNext is false) so
-          they don't become dead spacers. */}
+      {/* Row 2 — Transport controls (W3 Phase 3.5, rebuilt in W7.3).
+          Five controls: Rewind 10 / Previous / Play-Pause / Next /
+          Forward 10, all through the shared `PlayerControl` primitive.
+          Previous + Next render `null` when the playlist has no such
+          entry, so they never become dead spacers; the row is a
+          CENTRED cluster so that collapse does not shift the primary
+          CTA sideways. See `TransportRow.tsx` for why absence is
+          correct rather than a gap to fill. */}
       <TransportRow />
 
-      {/* Row 3 — Mode + Captions + PiP + More (W3 Phases 3.1 +
-          3.2 + 3.3 + 3.4). CaptionsToggle self-collapses (returns
-          null) when no caption tracks exist. PiPToggle self-
-          collapses when canEnterPip is false. More opens a
-          single sheet wired to Save / Track info / Playlist /
-          Share. */}
+      {/* Row 3 — the secondary control row (W7.3). Repeats as a
+          labelled pill (it reports which mode is active); Captions
+          self-collapses when the file has no subtitle tracks; PiP
+          self-collapses when PiP is unavailable. Volume expands a
+          real slider on tap. `More` opens the single secondary sheet. */}
       <View style={styles.modeRow}>
         <View style={styles.modeLeft}>
           <ModeControl />
           <CaptionsToggle />
         </View>
         <View style={styles.modeRight}>
+          <VolumeControl />
           <PiPToggle />
           <More />
         </View>
@@ -358,6 +362,11 @@ function clampFraction(locationX: number, width: number): number {
 }
 
 const styles = StyleSheet.create({
+  // W7.2: this root STILL has no background of its own. The gradient
+  // that makes the chrome legible over arbitrary video is
+  // `PlayerScrim`, mounted once in the compositor behind everything.
+  // A second backdrop here would double the opacity in this band and
+  // seam against the header's.
   row: {
     width: '100%',
   },
@@ -371,21 +380,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
+  // W7.3: `space-between` kept, because the two clusters are genuinely
+  // independent groups pinned to opposite edges — the left one reports
+  // playback STATE, the right one reports OUTPUT and options. What
+  // changed is that the groups now have a defined rhythm internally
+  // (pills and 44 pt targets) instead of ragged `hitSlop` boxes.
   modeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
+    // A 44 pt row is the minimum, but the pills are 44 tall and the
+    // volume control can be 44 too — this reserves the band so the
+    // transport row above never gets visually pinched by it.
+    minHeight: 44,
   },
   modeLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    flexShrink: 1,
   },
   modeRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   trackHitArea: {
     flex: 1,

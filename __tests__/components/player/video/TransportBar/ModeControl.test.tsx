@@ -136,13 +136,53 @@ describe('ModeControl', () => {
     mockTransport.state.repeatMode = 'all';
     const {getByLabelText} = await render(<ModeControl />);
     expect(
-      getByLabelText('Repeat mode: Repeat all. Tap to change.'),
+      getByLabelText('Repeat mode: Repeat all'),
     ).toBeTruthy();
+  });
+
+  // ── W7.3: the label names the control; the HINT says what happens ────
+  //
+  // This used to read `Repeat mode: Off. Tap to change.` — the
+  // instruction was welded into the label. A screen reader announces the
+  // label on focus, so every pass over the control repeated "Tap to
+  // change", which is the screen reader's own default behaviour stated
+  // back at the user. W7.3 splits the two: the label identifies the
+  // control and its current value, the hint carries the instruction.
+  //
+  // Both halves are asserted, because the failure mode this guards
+  // against is SILENTLY LOSING the instruction while fixing the label.
+  it('the label names the control and the hint carries the instruction', async () => {
+    mockTransport.state.repeatMode = 'off';
+    const {getByLabelText} = await render(<ModeControl />);
+    const control = getByLabelText('Repeat mode: Off');
+    expect(control.props.accessibilityHint).toBe(
+      'Opens the repeat-mode picker',
+    );
+  });
+
+  // The repeat mode is one of three mutually-exclusive states, so the
+  // control is a switch whose checked-ness reports "not the default".
+  // Asserting the ROLE matters on its own: a plain button would announce
+  // identically whether repeat was on or off, which is the WCAG 1.4.1
+  // failure of conveying state by colour alone.
+  it('exposes the engaged state as a switch, not just as gold ink', async () => {
+    mockTransport.state.repeatMode = 'one';
+    const {getByLabelText} = await render(<ModeControl />);
+    const control = getByLabelText('Repeat mode: Repeat one');
+    expect(control.props.accessibilityRole).toBe('switch');
+    expect(control.props.accessibilityState).toMatchObject({checked: true});
+  });
+
+  it('reports checked:false for the default "off" mode', async () => {
+    mockTransport.state.repeatMode = 'off';
+    const {getByLabelText} = await render(<ModeControl />);
+    const control = getByLabelText('Repeat mode: Off');
+    expect(control.props.accessibilityState).toMatchObject({checked: false});
   });
 
   it('opens the ModeSheet on tap', async () => {
     const {getByLabelText} = await render(<ModeControl />);
-    const button = getByLabelText('Repeat mode: Off. Tap to change.');
+    const button = getByLabelText('Repeat mode: Off');
     // Wrapped in an awaited act(): the press flips `sheetOpen`, and
     // RNTL 14's async act needs the re-render flushed before the
     // sheet's rows are queryable. A bare `fireEvent.press` leaves the
@@ -164,7 +204,7 @@ describe('ModeControl', () => {
     const {getByLabelText} = await render(<ModeControl />);
     await act(async () => {
       fireEvent.press(
-        getByLabelText('Repeat mode: Off. Tap to change.'),
+        getByLabelText('Repeat mode: Off'),
       );
     });
     fireEvent.press(getByLabelText('Repeat one'));
@@ -175,7 +215,7 @@ describe('ModeControl', () => {
     const {getByLabelText} = await render(<ModeControl />);
     await act(async () => {
       fireEvent.press(
-        getByLabelText('Repeat mode: Off. Tap to change.'),
+        getByLabelText('Repeat mode: Off'),
       );
     });
     fireEvent.press(getByLabelText('Repeat all'));
@@ -186,7 +226,7 @@ describe('ModeControl', () => {
     const {getByLabelText, queryByLabelText} = await render(<ModeControl />);
     await act(async () => {
       fireEvent.press(
-        getByLabelText('Repeat mode: Off. Tap to change.'),
+        getByLabelText('Repeat mode: Off'),
       );
     });
     await act(async () => {
@@ -195,6 +235,6 @@ describe('ModeControl', () => {
     expect(mockSetRepeatMode).not.toHaveBeenCalled();
     // The menu items are unmounted after close.
     expect(queryByLabelText('Repeat one')).toBeNull();
-    expect(getByLabelText('Repeat mode: Off. Tap to change.')).toBeTruthy();
+    expect(getByLabelText('Repeat mode: Off')).toBeTruthy();
   });
 });

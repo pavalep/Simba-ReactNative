@@ -34,6 +34,51 @@ export interface ColorTokens {
     highlightDim: string;
     /** 55.2b: stronger white fill — media chips, progress tracks over artwork */
     highlightStrong: string;
+    /**
+     * V19 W7 — on-media PILL surface for the player's secondary control
+     * row (repeat mode, captions, speed, quality).
+     *
+     * ## Why this is not `background.floating` or `background.highlight`
+     *
+     * Both existing candidates are theme-DEPENDENT, and the video frame
+     * is a dark surface in BOTH themes:
+     *
+     *   - `floating`   light theme → `rgba(245,240,232,0.90)` (cream)
+     *   - `highlight`  light theme → `rgba(0,0,0,0.05)` (near-invisible)
+     *
+     * So a light-theme player would render cream pills floating over a
+     * black film frame, and the secondary row would wash out. These two
+     * tokens are the same class of fix as `text.onMediaSoft` /
+     * `text.onMediaMuted`, which already exist for the same reason: an
+     * on-media surface is ALWAYS dark, regardless of app theme.
+     *
+     * The fill is deliberately translucent so the frame still reads
+     * through it — an opaque pill reads as a separate panel glued to
+     * the video rather than as glass sitting on it.
+     */
+    onMediaPill: string;
+    /** V19 W7 — the thin light edge that makes the pill read as glass. */
+    onMediaPillBorder: string;
+    /**
+     * V19 W7 — the three alphas the player's gradient scrim is built
+     * from, so `PlayerScrim` carries no raw colour literals.
+     *
+     * `transport` is deliberately denser than `header` (0.72 vs 0.55):
+     * the transport band carries the scrub track and the densest row of
+     * icons, and the gold thumb needs a darker bed to read as a lit
+     * element rather than a smudge.
+     *
+     * Always-dark for the same reason as `onMediaPill` — this scrim
+     * only ever sits over a video frame.
+     */
+    playerScrim: {
+      /** Fully transparent — the middle of the frame stays untouched. */
+      none: string;
+      /** Alpha across the header band (back / title / lock). */
+      header: string;
+      /** Alpha across the transport band (scrub row + control rows). */
+      transport: string;
+    };
   };
   border: {
     subtle: string;
@@ -105,6 +150,16 @@ export const darkColors: ColorTokens = {
     highlight: 'rgba(255,255,255,0.08)',
     highlightDim: 'rgba(255,255,255,0.04)',
     highlightStrong: 'rgba(255,255,255,0.15)',
+    // V19 W7 — identical in BOTH themes on purpose. See the
+    // `onMediaPill` doc comment: the video frame is dark in both, so
+    // an on-media surface must not follow the app theme.
+    onMediaPill: 'rgba(0,0,0,0.42)',
+    onMediaPillBorder: 'rgba(255,255,255,0.16)',
+    playerScrim: {
+      none: 'rgba(0,0,0,0)',
+      header: 'rgba(0,0,0,0.55)',
+      transport: 'rgba(0,0,0,0.72)',
+    },
   },
   border: {
     subtle: 'rgba(255,255,255,0.06)',
@@ -160,6 +215,16 @@ export const lightColors: ColorTokens = {
     highlight: 'rgba(0,0,0,0.05)',
     highlightDim: 'rgba(0,0,0,0.03)',
     highlightStrong: 'rgba(0,0,0,0.12)',
+    // V19 W7 — same value as the dark block above, deliberately. The
+    // video frame is a dark surface in BOTH themes, so a light-theme
+    // player still needs a dark pill; these do not follow the theme.
+    onMediaPill: 'rgba(0,0,0,0.42)',
+    onMediaPillBorder: 'rgba(255,255,255,0.16)',
+    playerScrim: {
+      none: 'rgba(0,0,0,0)',
+      header: 'rgba(0,0,0,0.55)',
+      transport: 'rgba(0,0,0,0.72)',
+    },
   },
   border: {
     subtle: 'rgba(0,0,0,0.06)',

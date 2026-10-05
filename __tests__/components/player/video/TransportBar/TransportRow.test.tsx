@@ -232,17 +232,79 @@ describe('TransportRow', () => {
     expect(() => getByLabelText('Play')).toThrow();
   });
 
-  it('hit areas meet 44pt minimum', async () => {
+  // ── W7.3: the ≥44 pt guarantee now lives in `PlayerControl` ─────────
+  //
+  // This used to read `minHeight >= 44` off the button's own style,
+  // because each control used to hand-roll `minHeight/minWidth: 44` at
+  // the call site. W7.3 moved the sizing into the shared primitive,
+  // which sets an explicit `width`/`height` from `targetSize` — there
+  // is no `minHeight` to find any more.
+  //
+  // The PROPERTY is unchanged and is what this asserts: every control in
+  // the row resolves to a hit area of at least 44 × 44. It is now
+  // checked on ALL FIVE controls rather than just play/pause, because
+  // the defect being guarded against (a small or missing target) is
+  // per-control, and checking one control cannot catch the other four.
+  //
+  // Mutation check: dropping `targetSize` to 32, or setting it only on
+  // the play button, fails this test.
+  const resolvedSize = (node: {props: {style?: unknown}}) => {
+    const style = Array.isArray(node.props.style)
+      ? node.props.style.flat(Infinity)
+      : [node.props.style];
+    const merged = Object.assign({}, ...style.filter(Boolean));
+    return {
+      width: merged.width as number,
+      height: merged.height as number,
+    };
+  };
+
+  it('every control has a hit area of at least 44 × 44', async () => {
     const {getByLabelText} = await render(<TransportRow />);
-    const playBtn = getByLabelText('Play');
-    const style = Array.isArray(playBtn.props.style)
-      ? playBtn.props.style.flat(Infinity)
-      : [playBtn.props.style];
-    const minSize = style.find(
-      s => typeof (s as {minHeight?: number}).minHeight === 'number',
-    );
-    expect((minSize as {minHeight: number}).minHeight).toBeGreaterThanOrEqual(
-      44,
-    );
+    for (const label of [
+      'Rewind 10 seconds',
+      'Previous track',
+      'Play',
+      'Next track',
+      'Forward 10 seconds',
+    ]) {
+      const {width, height} = resolvedSize(getByLabelText(label));
+      expect({label, width, height}).toEqual({
+        label,
+        width: expect.any(Number),
+        height: expect.any(Number),
+      });
+      expect(width).toBeGreaterThanOrEqual(44);
+      expect(height).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  // Play/pause is the single primary CTA and is the only control allowed
+  // to be larger (CONTROL_PRIMARY_TARGET = 56). This pins the
+  // HIERARCHY, not just the floor: a row where every control is 56 would
+  // satisfy the test above while having no primary action at all.
+  it('play/pause is the largest target in the row', async () => {
+    const {getByLabelText} = await render(<TransportRow />);
+    const play = resolvedSize(getByLabelText('Play'));
+    const rewind = resolvedSize(getByLabelText('Rewind 10 seconds'));
+    expect(play.height).toBeGreaterThan(rewind.height);
+  });
+
+  // The reported "some icons are not clickable" defect was caused by
+  // `hitSlop={8}` inflating each control's touch area 8 px past its own
+  // bounds, so neighbours in a dense row overlapped and competed for the
+  // same tap. `PlayerControl` deliberately omits `hitSlop`; this asserts
+  // it stays omitted, so nobody "fixes" a future tap bug by reinstating it.
+  it('no control inflates its touch area with hitSlop', async () => {
+    const {getByLabelText} = await render(<TransportRow />);
+    for (const label of [
+      'Rewind 10 seconds',
+      'Previous track',
+      'Play',
+      'Next track',
+      'Forward 10 seconds',
+    ]) {
+      expect(getByLabelText(label).props.hitSlop).toBeUndefined();
+    }
   });
 });

@@ -31,7 +31,7 @@ import {
   makeTransportCommands,
 } from '../../../../helpers/transportState';
 import type {TransportState} from '../../../../../src/infrastructure/player';
-import {VideoTitleOverlay} from '../../../../../src/components/player/video/VideoTitleOverlay/VideoTitleOverlay';
+import {VideoTitleOverlay, FADE_IN_MS} from '../../../../../src/components/player/video/VideoTitleOverlay/VideoTitleOverlay';
 
 // ── Theme: real dark palette (the app's default lane) ──────────────────
 jest.mock('../../../../../src/theme', () => {
@@ -358,7 +358,17 @@ describe('VideoTitleOverlay', () => {
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
     const lock = getByTestId('video-header-lock');
     expect(lock.props.accessibilityRole).toBe('switch');
-    expect(lock.props.accessibilityState).toEqual({checked: true});
+    // `toMatchObject`, not `toEqual`: W7.3 moved this control onto the
+    // shared `PlayerControl` primitive, which declares `disabled` as
+    // well as `checked`, and React Native adds its own `busy` /
+    // `expanded` / `selected` keys. The property under test is the
+    // CHECKED state — the whole point of the switch role — and
+    // `toMatchObject` still fails loudly if `checked` is wrong.
+    expect(lock.props.accessibilityState).toMatchObject({checked: true});
+    // And the control must never report itself as disabled: the lock is
+    // available at all times, which is why it is not `disabled` when
+    // the title is missing (the bar returns null instead).
+    expect(lock.props.accessibilityState).toMatchObject({disabled: false});
     // The label names the ACTION, so it flips with the state — this is
     // what makes the toggle usable without reading colour.
     expect(lock.props.accessibilityLabel).toBe('Unlock orientation');
@@ -371,7 +381,7 @@ describe('VideoTitleOverlay', () => {
     });
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
     const lock = getByTestId('video-header-lock');
-    expect(lock.props.accessibilityState).toEqual({checked: false});
+    expect(lock.props.accessibilityState).toMatchObject({checked: false});
     expect(lock.props.accessibilityLabel).toBe('Lock orientation');
   });
 
@@ -456,9 +466,16 @@ describe('VideoTitleOverlay', () => {
     const {unmount} = await renderChrome(<VideoTitleOverlay />);
 
     expect(timings.length).toBeGreaterThan(0);
-    // The entrance fade the component declares (FADE_IN_MS = 180). A
-    // non-zero duration is what "reduce-motion is OFF" means here.
-    expect(timings).toContain(180);
+    // The entrance fade the component actually declares. W7.3 moved this
+    // from a hardcoded `180` to the exported `FADE_IN_MS`, because a
+    // test that pins the literal does not fail when the design is
+    // retimed — it fails, and the tempting fix is to hardcode the new
+    // number, which is how a test stops checking anything. Importing the
+    // constant keeps the assertion on the real property: "the duration
+    // is non-zero when reduce-motion is off, and exactly what the
+    // component declares".
+    expect(timings).toContain(FADE_IN_MS);
+    expect(FADE_IN_MS).toBeGreaterThan(0);
 
     spy.mockRestore();
     await unmount();

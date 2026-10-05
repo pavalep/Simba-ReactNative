@@ -204,6 +204,22 @@ export interface TransportCommands {
    * no track type and writes mpv's `vid` (video) property instead.
    */
   selectCaptionTrack(trackId: number | null): void;
+  /**
+   * V19 W7.3 — set playback volume, 0–100. Clamped here, because the
+   * slider can overshoot on a fast drag and an out-of-range value
+   * would reach mpv as a property write.
+   */
+  setVolume(volume: number): void;
+  /**
+   * V19 W7.3 — mute/unmute WITHOUT touching `volume`.
+   *
+   * `mute` and `volume` are separate mpv properties. Faking a mute with
+   * `setVolume(0)` would destroy the user's chosen level, so the real
+   * `setMuted` boolean is forwarded instead. A control that cannot
+   * preserve the level across a mute/unmute cycle is a control that
+   * lies about what it did.
+   */
+  setMuted(muted: boolean): void;
   /** V19 W3.5 — skip to the next playlist entry. */
   next(): void;
   /** V19 W3.5 — skip to the previous playlist entry. */
@@ -705,7 +721,26 @@ export function useTransport(): TransportHook {
         commands.setSpeed(rate);
       },
       setVolume: (volume: number) => {
-        commands.setVolume(volume);
+        // Clamp at the facade boundary. A fast slider drag can hand
+        // back a fraction outside the range, and an unclamped value
+        // becomes a raw mpv property write of e.g. 104.
+        if (!Number.isFinite(volume)) return;
+        commands.setVolume(Math.max(0, Math.min(100, Math.round(volume))));
+      },
+      /**
+       * V19 W7.3 — the real mute primitive, forwarded straight to the
+       * lib's `setMuted(boolean)`.
+       *
+       * Why this is forwarded and not simulated by `setVolume(0)`:
+       * `state.isMuted` and `state.volume` are two DIFFERENT mpv
+       * properties (`mute` and `volume`). Zeroing the volume to fake a
+       * mute makes the next unmute have to guess a level to restore,
+       * and it silently overwrites the user's chosen volume. The lib
+       * already ships `setMuted`, so the honest implementation was a
+       * one-line facade addition rather than a lib release.
+       */
+      setMuted: (muted: boolean) => {
+        commands.setMuted(muted);
       },
       setScreenBrightness: (value: number) => {
         commands.setScreenBrightness(value);
