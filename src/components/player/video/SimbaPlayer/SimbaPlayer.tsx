@@ -117,6 +117,15 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
         // Promise-returning (it mirrors the lib's async launch API).
         // Wrap so the public contract is honoured without inventing
         // an async boundary that does not exist.
+        //
+        // W9.3: EVERY void-returning member routes through `run`.
+        // They did not before — nine of them were plain arrows — and
+        // the mismatch stayed invisible because the whole object was
+        // closed with `as unknown as SimbaPlayerRef`. That double cast
+        // disabled the one check that would have caught it. It is now
+        // `satisfies SimbaPlayerRef`, so a future member that forgets
+        // `run` fails `tsc` instead of silently returning `undefined`
+        // to a caller that awaited it.
         const run = (fn: () => void) => async () => {
           fn();
         };
@@ -125,14 +134,17 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
           play: run(commands.play),
           pause: run(commands.pause),
           togglePlayPause: run(commands.togglePlayPause),
-          seek: (positionMs: number) => commands.seek(positionMs),
-          seekRelative: (deltaMs: number) => commands.seekBy(deltaMs),
+          seek: (positionMs: number) => run(() => commands.seek(positionMs))(),
+          seekRelative: (deltaMs: number) =>
+            run(() => commands.seekBy(deltaMs))(),
           skip: (direction: 'forward' | 'backward') =>
-            direction === 'forward' ? commands.forward10() : commands.rewind10(),
+            run(() =>
+              direction === 'forward' ? commands.forward10() : commands.rewind10(),
+            )(),
 
           // ── Output
-          setVolume: (volume: number) => commands.setVolume(volume),
-          setSpeed: (speed: number) => commands.setSpeed(speed),
+          setVolume: (volume: number) => run(() => commands.setVolume(volume))(),
+          setSpeed: (speed: number) => run(() => commands.setSpeed(speed))(),
           /**
            * Quality is applied through the SAME mpv mapping the
            * More sheet uses (`presetToMpv` → `hwdec` + `profile`),
@@ -141,14 +153,16 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
            * back to the balanced preset rather than silently doing
            * nothing.
            */
-          setVideoQuality: (quality: string) => {
-            const preset = (['battery-saver', 'balanced', 'high-quality'] as const)
-              .find(p => p === quality) ?? 'balanced';
-            const {hwdec, profile} = presetToMpv(preset);
-            commands.setProperty('hwdec', hwdec);
-            commands.setProperty('profile', profile);
-            setQualityPreset(preset);
-          },
+          setVideoQuality: (quality: string) =>
+            run(() => {
+              const preset = (
+                ['battery-saver', 'balanced', 'high-quality'] as const
+              ).find(p => p === quality) ?? 'balanced';
+              const {hwdec, profile} = presetToMpv(preset);
+              commands.setProperty('hwdec', hwdec);
+              commands.setProperty('profile', profile);
+              setQualityPreset(preset);
+            })(),
           /**
            * `setLoopMode` takes the lib's vocabulary
            * ('none' | 'file' | 'playlist'); the V19 chrome speaks
@@ -157,38 +171,38 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
            * routing through `commands.setRepeatMode` updates both
            * the native loop and the value the chrome reads back.
            */
-          setLoopMode: (mode: 'none' | 'file' | 'playlist') => {
-            const v19: Record<typeof mode, 'off' | 'one' | 'all'> = {
-              none: 'off',
-              file: 'one',
-              playlist: 'all',
-            };
-            commands.setRepeatMode(v19[mode]);
-          },
-          setShuffle: (enabled: boolean) => commands.setShuffle(enabled),
+          setLoopMode: (mode: 'none' | 'file' | 'playlist') =>
+            run(() => {
+              const v19: Record<typeof mode, 'off' | 'one' | 'all'> = {
+                none: 'off',
+                file: 'one',
+                playlist: 'all',
+              };
+              commands.setRepeatMode(v19[mode]);
+            })(),
+          setShuffle: (enabled: boolean) =>
+            run(() => commands.setShuffle(enabled))(),
           /**
            * The public ref takes a trackId STRING; the lib's
            * `selectCaptionTrack` takes a numeric id (null = off).
-           * A non-numeric id is therefore "no track" — passing it
-           * through as null rather than coercing NaN into the lib.
+           *
+           * W9.3: the `Number.isFinite` guard is NEW. The comment here
+           * claimed a non-numeric id becomes "no track" rather than
+           * being coerced into the lib, but the code did no such thing -
+           * `Number('not-a-number')` is `NaN`, and `NaN` was being passed
+           * straight into mpv's track selector. Found by
+           * `SimbaPlayerRef.test.tsx`, which was written from the comment
+           * and failed. A comment that describes a guard the code does
+           * not have is worse than no comment: it makes the next reader
+           * believe they are protected.
            */
           selectCaptionTrack: (trackId: string | null) =>
-            commands.selectCaptionTrack(
-              trackId === null ? null : Number(trackId),
-            ),
-          /**
-           * Audio-description selection is not exposed by the lib
-           * (there is no `selectAudioDescription` command), so the
-           * AudioDescriptionTrackSelector renders null rather than
-           * shipping a control that cannot act. This method
-           * therefore reports that explicitly instead of pretending.
-           */
-          selectAudioDescriptionTrack: async (_trackId: string | null) => {
-            throw new Error(
-              '[SimbaPlayer.selectAudioDescriptionTrack] the lib exposes no ' +
-                'audio-description selection command; the AD selector stays hidden.',
-            );
-          },
+            run(() => {
+              const numeric = trackId === null ? null : Number(trackId);
+              commands.selectCaptionTrack(
+                numeric === null || !Number.isFinite(numeric) ? null : numeric,
+              );
+            })(),
           setSkipSilence: async (enabled: boolean) => {
             // The hook's public surface is `{enabled, toggle}`, but
             // the ref must SET an explicit value rather than flip it,
@@ -196,25 +210,18 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
             useSkipSilenceStore.getState().setEnabled(enabled);
           },
 
-          // ── Launch (lib-bridge; owned by useOpenWithResume)
-          open: async () => {
-            throw new Error(
-              '[SimbaPlayer.open] launching is owned by useOpenWithResume(); ' +
-                'the chrome compositor does not launch media.',
-            );
-          },
-          openWithResume: async () => {
-            throw new Error(
-              '[SimbaPlayer.openWithResume] launching is owned by ' +
-                'useOpenWithResume(); the chrome compositor does not launch media.',
-            );
-          },
-          openPlaylist: async () => {
-            throw new Error(
-              '[SimbaPlayer.openPlaylist] launching is owned by ' +
-                'useOpenWithResume(); the chrome compositor does not launch media.',
-            );
-          },
+          // ── close
+          //
+          // W9.3: the launch trio (`open` / `openWithResume` /
+          // `openPlaylist`) and `selectAudioDescriptionTrack` were
+          // REMOVED, not kept as throwers. Each one compiled and then
+          // threw unconditionally, which is strictly worse than being
+          // absent: `tsc` endorsed the call site and the app died when
+          // the user pressed play. Launching belongs to the app's
+          // launch seam, and the lib exposes no AD-selection command at
+          // all. Neither had a single caller. See `types.ts` for the
+          // full account; this file set the precedent in W6.0 when
+          // `setPresentation` was removed for exactly this reason.
           close: run(commands.close),
 
           // ── PiP
@@ -248,7 +255,7 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
           getCurrentUri: () => state.currentUri,
           getCurrentTitle: () => state.title || null,
           getCurrentArtwork: () => null,
-        } as unknown as SimbaPlayerRef;
+        } satisfies SimbaPlayerRef;
       },
       [
         commands,

@@ -8,8 +8,13 @@
  * §5.3 + audit doc §4.
  */
 
-import type {MediaKind, MediaLane} from '../../../../types/media';
-import type {Result, StreamError} from '../../../../infrastructure/player';
+// W9.3: `MediaLane` and `Result` are no longer imported. They were
+// referenced only by the launch trio (`open` / `openWithResume` /
+// `openPlaylist`), which is removed — see the `SimbaPlayerRef`
+// docblock below. `StreamError` stays: `SimbaPlayerProps.onError`
+// still uses it.
+import type {MediaKind} from '../../../../types/media';
+import type {StreamError} from '../../../../infrastructure/player';
 
 /**
  * The declarative source for `<SimbaPlayer source={...} />`.
@@ -29,6 +34,23 @@ export type VideoSource = {
  *
  * Sourced from the lib's `usePlayer().commands` + facade wrappers.
  * V19 names them canonically so consumers never reach into the lib.
+ *
+ * **What is deliberately NOT here** (W9.3):
+ *
+ *   - `open` / `openWithResume` / `openPlaylist`. Launching is owned by
+ *     the app's launch seam (`useResumeAwarePlayerActivity`) and the
+ *     `usePlaybackFacade().launch` surface. The chrome compositor does
+ *     not launch media, so these three could only ever have thrown.
+ *   - `selectAudioDescriptionTrack`. The lib exposes no AD-selection
+ *     command, so `AudioDescriptionTrackSelector` renders `null`
+ *     rather than shipping a control that cannot act.
+ *
+ * All four previously type-checked and then threw at runtime — a
+ * method that compiles but always fails is a trap, strictly worse than
+ * a missing one: `tsc` agrees the code is fine, and the app dies at the
+ * moment the user presses play. This file already set the precedent in
+ * W6.0, when `setPresentation` was removed rather than kept as a
+ * setter that could only lie. Zero callers referenced any of them.
  */
 export interface SimbaPlayerRef {
   // ── Transport
@@ -46,20 +68,8 @@ export interface SimbaPlayerRef {
   setLoopMode(mode: 'none' | 'file' | 'playlist'): Promise<void>;
   setShuffle(enabled: boolean): Promise<void>;
   selectCaptionTrack(trackId: string | null): Promise<void>;
-  selectAudioDescriptionTrack(trackId: string | null): Promise<void>;
   setSkipSilence(enabled: boolean): Promise<void>;
 
-  // ── Launch (re-exposed from the lib)
-  open(input: {uri: string; title: string; mediaType: MediaKind}): Promise<Result<string, StreamError>>;
-  openWithResume(input: {uri: string; title: string; mediaType: MediaKind; positionSec: number}): Promise<Result<string, StreamError>>;
-  openPlaylist(input: {
-    entries: Array<{uri: string; title: string; mediaType: MediaKind}>;
-    title?: string;
-    mediaType: MediaLane;
-    startIndex?: number;
-    startPositionSec?: number;
-    shuffle?: boolean;
-  }): Promise<Result<string, StreamError>>;
   close(): Promise<void>;
 
   // ── PiP
