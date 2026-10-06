@@ -168,6 +168,26 @@ Keeping the old component after replacing it does not preserve history — it pr
 *Proven by:* `MpvPlayerModule.ts` declared `enterPip(chapterTitle?, progressPct?)` as optional, but a migration script had rewritten the codegen'd Kotlin to `enterPip(chapterTitle: String, progressPct: String)`. TurboModule enforces the **Kotlin** arity, so every PiP call red-boxed with `called with 0 arguments (expected argument count: 2)` — a crash from a signature that type-checked correctly at every TypeScript layer.
 *Enforced by:* any post-codegen rewrite of a generated spec must be an **assertion**, not a normalisation. A rule that mutates a generated signature to disagree with its source spec will silently reintroduce this class of bug the next time it runs.
 
+**I19 — A no-op guard must compare FIELDS, never object identity, when the reducer returns a fresh object.** (Added W9.)
+*Proven by:* `PlayerProvider` guarded with `if (nextState !== stateRef.current)`. `applyPlayerEvent` is pure spread-and-return, so it allocates a new object for every event — the guard compared a just-created object against itself and was **always true**. It never skipped anything, so every event replaced the state context and re-rendered all 12 chrome components, including on per-frame `time-pos`. The comment in the source claimed it prevented "re-render storms on `videoReconfig` / PiP no-ops"; it never did.
+*Enforced by:* `playerStateEqual()` compares fields, with the key list **derived from `DEFAULT_STATE` at runtime**. A hand-written field list goes stale the moment a field is added — the new field is simply not compared, the function reports "equal" when it is not, and the guard starts dropping real updates. That is worse than no guard, and it is invisible in tests.
+
+**I20 — Rate-limit at the cheapest point in the chain, and rate-limit rather than filter.** (Added W9.)
+*Proven by:* `time-pos` is mpv's per-frame property. Each frame built a C++ string, crossed JNI twice, allocated a `WritableMap`, dispatched a bridge event and forced a React re-render — while the UI samples at ~4 Hz. Dropping a frame in C++ before serialization costs one `strcmp`; dropping it in React costs the whole pipeline.
+*Enforced by:* `shouldForwardProperty()` in `event.cpp` rate-limits `time-pos` (250 ms) and `demuxer-cache-state` (500 ms) **before** serialisation and before the JNI crossing. It is a **rate limit, not a filter** — the most recent value always wins and is always delivered, so the UI stays truthful. Properties whose value *is* the signal (`pause`, `eof-reached`, `seekable`, `mute`, `speed`, `loop-mode`, `media-title`) are never rate-limited.
+
+**I21 — Hot-path logging is compile-time gated.** (Added W9.)
+*Proven by:* `__android_log_print` ran for every property change and every mpv log line. Android's `Log` docs note the message is built before filtering decides to discard it, and measured Android studies report up to ~3× response-time overhead when logging is hot — paid even when filtered. At one frame per second-times-60 that is a release defect, not a diagnostic.
+*Enforced by:* `SIMBA_MPV_TRACE` / `TRACE_PROPERTY_EVENTS`, both `false`, and `const val` rather than a runtime lookup so R8 can inline the branch away entirely. The diagnostic remains available (`-DSIMBA_MPV_TRACE`) because a `TRACEI` no-op is exactly what hid the `mute`/`seekable`/`media-title` defects.
+
+**I22 — One source of truth per field.** (Added W9.)
+*Proven by:* `PlayerProvider` observed `time-pos` **and** ran a 1 Hz `setInterval` over the synchronous `getPosition`/`getDuration` getters. Two writers to one field means the screen shows whichever landed last — which is how a seek bar jumps backwards. The poll also blocked the JS thread twice a second; RN guidance is that sync methods are for sub-5 ms work, never a recurring timer.
+*Enforced by:* the poll was removed, not tuned. Level fields that mpv emits as **edges** (`seekable`, `mute`) keep a mount-time seed, because an event-only provider mounted mid-session would never learn them.
+
+**I23 — A gesture's handlers must not depend on state the gesture itself mutates.** (Added W9.)
+*Proven by:* `TransportBar`'s `PanResponder` memo listed `scrubPreviewMs` and `durationMs`. Both change while a finger is down, so React rebuilt the responder and swapped `panHandlers` on the track several times per second mid-drag — forcing RN to detach and re-attach the gesture handlers underneath an active gesture. Fixing it exposed a second bug: reading the scrub target back out of a render-synced ref meant a batched grant→move→release (a fast flick) committed **no seek at all**.
+*Enforced by:* the responder is built once with an empty dependency list and reads live values through refs. The release handler derives the committed target from the **release event's own coordinates**, which is immune to React batching.
+
 ---
 
 ## 1. Product principles (inherited + tightened)

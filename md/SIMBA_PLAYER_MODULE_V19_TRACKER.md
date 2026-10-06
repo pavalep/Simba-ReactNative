@@ -1332,4 +1332,51 @@ At the close of V19, every deferred sub-task below moves forward unless explicit
 
 ---
 
+---
+
+## Wave 9 — Playback performance & event pipeline (lib `1.10.0`)
+
+**Report:** *"its a performance issue, previously i was able to watch video even in emulator, now as i take player page the page gets stuck"*
+
+Full analysis, citations and invariant list: **`md/SIMBA_PLAYER_V19_W9_PERFORMANCE.md`**.
+
+W8.7 was **not** the cause — it was UI-only. The regression sat in the event
+pipeline and had been there longer; the chrome changes made it visible.
+
+### Defects fixed
+
+| # | Layer | Defect | Fix |
+|---|---|---|---|
+| F1 | lib C++ | `time-pos` crosses the whole stack once per **video frame** (mpv manual); nothing sampled faster than 4 Hz | coalesce to 250 ms before serialization + JNI |
+| F2 | lib C++/Kotlin | unconditional logd write per property change = 30–60/s on the hottest thread | compile-time gate (`SIMBA_MPV_TRACE`, off) |
+| F3 | lib C++/Kotlin | `demuxer-cache-state` node map serialized every cache tick (1168 events measured) and emitted twice | coalesce to 500 ms; no duplicate generic event |
+| F4 | lib JS | 1 Hz poll over **synchronous** `getPosition`/`getDuration` — a second writer to observed fields | poll removed (event stream is authoritative) |
+| F5 | lib JS | `nextState !== stateRef.current` compared a fresh object to itself — **always true**, guard never fired | `playerStateEqual()` field-wise compare |
+| F6 | app | `useTransport` memo depended on the whole `progress` **object** | depend on the six fields read |
+| F7 | app | `useTransport` returned a fresh tuple every render | memoised |
+| F8 | app | `TransportBar` PanResponder memo depended on values that **change mid-drag** | built once, read via refs |
+| F9 | app | *(found while fixing F8)* release read the target from a render-synced ref — a fast flick committed **no seek** | derive target from the release event |
+
+### Rules added
+
+- **I19** — a no-op guard must compare FIELDS, never object identity, when the reducer returns a fresh object; derive the field list from the type's default so it cannot go stale.
+- **I20** — rate-limit at the cheapest point in the chain; rate-limit, never filter (latest value must always win).
+- **I21** — hot-path logging is compile-time gated.
+- **I22** — one source of truth per field (no observed property AND a poll writing the same value).
+- **I23** — a gesture's handlers must not depend on state the gesture itself mutates; derive committed values from the terminal event.
+
+### Gates
+
+- lib `1.10.0`: `tsc` clean · **11 suites / 183 tests** (6 new) · mutation-checked
+- app: `tsc` clean · `eslint --max-warnings 0` clean · **74 suites / 908 tests** (8 new)
+
+### Carried forward from W9
+
+- **W9-a [HIGH]** Device verification — **APK rebuild required** (C++ + Kotlin changed). A JS-only reload cannot exercise the coalescing or the logging gate.
+- **W9-b [MED]** PiP re-verification (no red-box) + orientation-lock behaviour — installed in 1.9.3/1.9.4, still unexercised.
+- **W9-c [MED]** W8.7 device matrix: tap-to-cycle repeat/captions, more-sheet three exits, header-rises/transport-falls.
+- **W9-d [LOW]** Music player (deferred by explicit instruction).
+
+---
+
 **End of V19 tracker.**
