@@ -25,14 +25,37 @@ import {secondsToMs, usePlayWithResume} from '../../../src/infrastructure/player
 
 const mockOpenPlayer = jest.fn().mockResolvedValue(true);
 
+
+// V19 W9.3 - stable identity, matching the real hook's useCallback. An
+// inline arrow would hand back a NEW function every render, which would
+// recompute the app seam's useMemo and break every 'same identity across
+// renders' assertion downstream for a reason that exists only in the mock.
+const mockOpenWithResume = (opts: Record<string, unknown>) =>
+  mockOpenPlayer(opts);
+
+// The lib's real `usePlayerActivity` memoises on `[]`, so BOTH of its
+// results are stable for the life of the component. A `jest.fn()` created
+// INSIDE the factory returns a new function on every render, which
+// recomputes the app seam's `useMemo` and breaks every "same identity
+// across renders" assertion for a reason that exists only in the mock.
+const mockGetLaunchParams = jest.fn(() => null);
+
 jest.mock('@simba-dev/react-native-media-player', () => {
   const actual =
     jest.requireActual('@simba-dev/react-native-media-player');
   return {
     ...actual,
+    // V19 W9.3: the app's launch seam routes through `useOpenWithResume`,
+    // which imports `usePlayerActivity` by RELATIVE path - so mocking the
+    // package root does not reach it and the real native bridge would be
+    // called instead. `usePlayWithResume` passes an EXPLICIT
+    // `startPositionMs`, so this hook's own contract is unaffected by
+    // resume lookup; the seam's contract is covered by
+    // `useResumeAwarePlayerActivity.test.tsx`.
+    useOpenWithResume: () => mockOpenWithResume,
     usePlayerActivity: () => ({
       openPlayer: mockOpenPlayer,
-      getLaunchParams: jest.fn().mockReturnValue(null),
+      getLaunchParams: mockGetLaunchParams,
     }),
   };
 });
@@ -55,6 +78,11 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
       title: 'Test Song',
       type: 'audio',
       startPositionMs: 60_000,
+      // V19 W9.3: the app launch seam adds `resumeId` (= the uri, the
+      // app's resume key) to every launch. `startPositionMs` above is
+      // still the value that will actually be used - an explicit
+      // position outranks a saved one.
+      resumeId: 'file:///music/song.mp3',
     });
   });
 
@@ -97,6 +125,7 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
       title: 'Episode 1',
       type: 'video',
       startPositionMs: 123_456,
+      resumeId: 'file:///video/episode.mp4',
     });
   });
 

@@ -30,14 +30,39 @@ import {usePlay} from '../../../src/infrastructure/player';
 
 const mockOpenPlayer = jest.fn();
 
+// V19 W9.3 - stable identity, matching the real hook's useCallback. An
+// inline arrow would hand back a NEW function every render, which would
+// recompute the app seam's useMemo and break every 'same identity across
+// renders' assertion downstream for a reason that exists only in the mock.
+const mockOpenWithResume = (opts: Record<string, unknown>) =>
+  mockOpenPlayer(opts);
+
+// The lib's real `usePlayerActivity` memoises on `[]`, so BOTH of its
+// results are stable for the life of the component. A `jest.fn()` created
+// INSIDE the factory returns a new function on every render, which
+// recomputes the app seam's `useMemo` and breaks "same identity across
+// renders" for a reason that exists only in the mock.
+const mockGetLaunchParams = jest.fn(() => null);
+
 jest.mock('@simba-dev/react-native-media-player', () => {
   const actual =
     jest.requireActual('@simba-dev/react-native-media-player');
   return {
     ...actual,
+    // V19 W9.3: the app's launch seam routes through `useOpenWithResume`.
+    // That hook imports `usePlayerActivity` by RELATIVE path, so mocking
+    // the package root does not reach it - it would call the real native
+    // bridge and `mockOpenPlayer` would record 0 calls.
+    //
+    // These tests are about `usePlay` (seconds->ms conversion, stream-type
+    // resolution, Result mapping), not about resume. So resume is routed
+    // around explicitly and visibly, rather than being silently faked:
+    // resumeId is forwarded untouched so nothing is misrepresented.
+    // `useResumeAwarePlayerActivity.test.tsx` owns the resume contract.
+    useOpenWithResume: () => mockOpenWithResume,
     usePlayerActivity: () => ({
       openPlayer: mockOpenPlayer,
-      getLaunchParams: jest.fn().mockReturnValue(null),
+      getLaunchParams: mockGetLaunchParams,
     }),
   };
 });

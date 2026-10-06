@@ -105,10 +105,20 @@ describe('Player Facade (V21 W3 P10) — re-exports', () => {
     // The P26 `usePlayWithResume` is intentionally NOT in this
     // list — it's a real wrapper (see the doc comment above),
     // not a re-export.
+    //
+    // W9.3 moved `usePlayerActivity` into that same "real wrapper"
+    // bucket. It is a deliberate, documented wrapper — it resolves a
+    // resume position for every launch that doesn't supply an explicit
+    // `startPositionMs` — so it is asserted NOT to be the lib identity
+    // below. `useResumeAwarePlayerActivity.test.tsx` covers its
+    // behaviour; this file only records that the wrap happened on
+    // purpose rather than by accident.
     const underlying = jest.requireActual(
       '@simba-dev/react-native-media-player',
     );
-    expect(Player.usePlayerActivity).toBe(underlying.usePlayerActivity);
+    expect(Player.usePlayerActivity).not.toBe(
+      underlying.usePlayerActivity,
+    );
     expect(Player.useOpenPlaylist).toBe(underlying.useOpenPlaylist);
     expect(Player.usePlayer).toBe(underlying.usePlayer);
     expect(Player.usePlayerProgress).toBe(underlying.usePlayerProgress);

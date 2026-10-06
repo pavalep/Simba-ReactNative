@@ -36,11 +36,25 @@ const mockCommands: Record<string, jest.Mock> = {
   seek: jest.fn(),
 };
 
+
+// V19 W9.3 - stable identity, matching the real hook's useCallback. An
+// inline arrow would hand back a NEW function every render, which would
+// recompute the app seam's useMemo and break every 'same identity across
+// renders' assertion downstream for a reason that exists only in the mock.
+const mockOpenWithResume = (opts: Record<string, unknown>) =>
+  mockOpenPlayer(opts);
+
 jest.mock('@simba-dev/react-native-media-player', () => {
-  const actual =
-    jest.requireActual('@simba-dev/react-native-media-player');
+  const actual = jest.requireActual('@simba-dev/react-native-media-player');
   return {
     ...actual,
+    // V19 W9.3: the facade's launch paths now share the app's
+    // resume-aware seam, which goes through `useOpenWithResume`. That
+    // hook imports `usePlayerActivity` by RELATIVE path, so mocking the
+    // package root does not reach it - without this line the real native
+    // bridge is called and `mockOpenPlayer` records nothing.
+    // resumeId is forwarded as-is so the recorded shape stays honest.
+    useOpenWithResume: () => mockOpenWithResume,
     usePlayer: () => ({state: mockState, commands: mockCommands}),
     usePlayerProgress: () => mockProgress,
     usePlayerActivity: () => ({
@@ -197,6 +211,7 @@ describe('usePlaybackFacade (V21 W22 D-023)', () => {
       title: 'Song',
       type: 'audio',
       startPositionMs: 90_000,
+      resumeId: 'file:///music/song.mp3',
     });
   });
 

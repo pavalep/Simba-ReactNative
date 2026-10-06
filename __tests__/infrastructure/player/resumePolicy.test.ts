@@ -10,7 +10,10 @@
  * seconds; the bridge field is ms).
  */
 
-import {resolveResumeMs} from '../../../src/infrastructure/player/resumePolicy';
+import {
+  RESUME_MAX_FRACTION,
+  resolveResumeMs,
+} from '../../../src/infrastructure/player/resumePolicy';
 import type {Bookmark} from '../../../src/state/bookmarksStore';
 import type {RecentHistoryEntry} from '../../../src/state/recentHistoryStore';
 
@@ -171,6 +174,117 @@ describe('resolveResumeMs (V21 W22 F/U #2)', () => {
         history: [],
       },
       'file:///x',
+    );
+    expect(ms).toBeUndefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// V19 W9.3 — the "already finished" cutoff
+// ═══════════════════════════════════════════════════════════════════════
+//
+// Resume only became reachable in W9.3 (the launch seam now passes a
+// resumeId). That made this rule load-bearing: without it, finishing a
+// film and tapping it again opens it on the last credits frame, plays a
+// few seconds and stops.
+//
+// The 90% value is not a guess - Plex ("Video played threshold") and
+// Jellyfin ("Maximum resume percentage") both document 90% as the
+// default. See the RESUME_MAX_FRACTION docblock.
+
+describe('resolveResumeMs — finished-item cutoff', () => {
+  const URI = 'file:///film.mkv';
+
+  it('refuses to resume history past the cutoff', () => {
+    // 95% of a 100s file: the user watched it through.
+    const ms = resolveResumeMs(
+      {bookmarks: [], history: [makeHistory({fileUri: URI, position: 95, duration: 100})]},
+      URI,
+    );
+    expect(ms).toBeUndefined();
+  });
+
+  it('resumes history just below the cutoff', () => {
+    // 89% of 100s. The mirror of the test above: a guard that never
+    // fires is a broken feature, and one that always fires deletes
+    // resume entirely. Both directions have to hold.
+    const ms = resolveResumeMs(
+      {bookmarks: [], history: [makeHistory({fileUri: URI, position: 89, duration: 100})]},
+      URI,
+    );
+    expect(ms).toBe(89_000);
+  });
+
+  it('treats exactly the cutoff as finished', () => {
+    const ms = resolveResumeMs(
+      {bookmarks: [], history: [makeHistory({fileUri: URI, position: 90, duration: 100})]},
+      URI,
+    );
+    expect(ms).toBeUndefined();
+  });
+
+  it('honours the exported constant rather than a magic number', () => {
+    // If someone retunes RESUME_MAX_FRACTION, the boundary test
+    // follows it. A hardcoded 90 here would pass while disagreeing
+    // with the shipped constant.
+    const duration = 1000;
+    const justPast = Math.floor(RESUME_MAX_FRACTION * duration) + 1;
+    const ms = resolveResumeMs(
+      {bookmarks: [], history: [makeHistory({fileUri: URI, position: justPast, duration})]},
+      URI,
+    );
+    expect(ms).toBeUndefined();
+  });
+
+  it('still resumes when the duration is unknown', () => {
+    // duration 0 is the same "no evidence" case as position 0. We
+    // cannot claim the user finished something whose length we do
+    // not know, so the position is trusted.
+    const ms = resolveResumeMs(
+      {bookmarks: [], history: [makeHistory({fileUri: URI, position: 5_400, duration: 0})]},
+      URI,
+    );
+    expect(ms).toBe(5_400_000);
+  });
+
+  it('does NOT apply the cutoff to bookmarks', () => {
+    // The asymmetry is deliberate. A bookmark is an explicit
+    // instruction - "come back to this exact moment". A user who
+    // bookmarked 58:00 of a 60:00 film wants 58:00, and a heuristic
+    // that overrides an explicit instruction is worse than the bug it
+    // guards against.
+    const ms = resolveResumeMs(
+      {
+        bookmarks: [makeBookmark({fileUri: URI, position: 58, duration: 60})],
+        history: [],
+      },
+      URI,
+    );
+    expect(ms).toBe(58_000);
+  });
+
+  it('falls through to history when a bookmark is at position 0', () => {
+    // Order is preserved: a degenerate bookmark must not shadow a
+    // usable history entry.
+    const ms = resolveResumeMs(
+      {
+        bookmarks: [makeBookmark({fileUri: URI, position: 0, duration: 600})],
+        history: [makeHistory({fileUri: URI, position: 120, duration: 600})],
+      },
+      URI,
+    );
+    expect(ms).toBe(120_000);
+  });
+
+  it('prefers a finished-item history over a stale bookmark of another uri', () => {
+    // Bookmarks are keyed per-fileUri, so a bookmark for a different
+    // file must not satisfy a lookup for this one.
+    const ms = resolveResumeMs(
+      {
+        bookmarks: [makeBookmark({fileUri: 'file:///other.mkv', position: 30, duration: 600})],
+        history: [makeHistory({fileUri: URI, position: 100, duration: 100})],
+      },
+      URI,
     );
     expect(ms).toBeUndefined();
   });

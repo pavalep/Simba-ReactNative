@@ -41,7 +41,7 @@
  */
 
 import {useEffect, useRef} from 'react';
-import {usePlayer, usePlayerActivity} from '@simba-dev/react-native-media-player';
+import {usePlayer} from '@simba-dev/react-native-media-player';
 import {usePlayerStore, type PlaylistEntry} from '../../state/playerStore';
 import type {MediaLane} from '../../types/media';
 
@@ -56,18 +56,21 @@ export function useQueueSync(): void {
   // effect below doesn't re-run when the hook returns new function
   // references on every render.
   //
-  // V19 W0 Phase 0.1: only the lib state hooks we actually CONSUME.
-  // `usePlayerProgress` and `useOpenPlaylist` are not used yet — they
-  // will be in V20 when the lib exposes typed events for queue
-  // inspection. The imports are removed until then (no `void x` stubs
-  // polluting the file).
+  // V19 W9.3: `usePlayerActivity()` is GONE here. It was imported,
+  // destructured, and then discarded with a bare `void openPlayer;`
+  // under an eslint-disable, on the stated grounds that it kept "the
+  // hook dependency stable". A variable that is never read has no
+  // dependency to keep stable — it was a placeholder waiting to be
+  // mistaken for real wiring.
+  //
+  // It was also the last file in `src/infrastructure/player/` reaching
+  // past the resume-aware launch seam (`useResumeAwarePlayerActivity`),
+  // so removing it was what completed that migration.
+  //
+  // `usePlayerProgress` and `useOpenPlaylist` are likewise absent —
+  // they land in V20 when the lib exposes typed events for queue
+  // inspection.
   const {state} = usePlayer();
-  const {openPlayer} = usePlayerActivity();
-  // openPlayer is recorded for analytics/debugging in W0; Wave 4+ will
-  // wire it to usePlayerStore.playFromPlaylist(idx) once the lib exposes
-  // typed events. For now we read it so the hook dependency is stable.
-  // eslint-disable-next-line no-void
-  void openPlayer;
 
   // Stable refs to the store actions (avoid stale closures).
   // V19 W0 Phase 0.1: only the actions we actually invoke from the
@@ -112,11 +115,4 @@ export function useQueueSync(): void {
   // For now, consumers call `usePlayerStore.playFromPlaylist(idx)`
   // directly when they know the index changed.
   // ──────────────────────────────────────────────────────────────
-
-  // Wire: when positionMs advances, no-op (1 Hz polling; we don't
-  // re-write the whole entry on every tick — selectors pick what they
-  // need). The Zustand consumer store carries the shape; position
-  // reads are scoped to consumers that need them.
-  // (Intentionally a no-op for now; reserved for V20 queue-event
-  // subscription.)
 }

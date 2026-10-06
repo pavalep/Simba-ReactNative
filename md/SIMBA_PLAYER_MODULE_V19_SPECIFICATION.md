@@ -188,6 +188,14 @@ Keeping the old component after replacing it does not preserve history — it pr
 *Proven by:* `TransportBar`'s `PanResponder` memo listed `scrubPreviewMs` and `durationMs`. Both change while a finger is down, so React rebuilt the responder and swapped `panHandlers` on the track several times per second mid-drag — forcing RN to detach and re-attach the gesture handlers underneath an active gesture. Fixing it exposed a second bug: reading the scrub target back out of a render-synced ref meant a batched grant→move→release (a fast flick) committed **no seek at all**.
 *Enforced by:* the responder is built once with an empty dependency list and reads live values through refs. The release handler derives the committed target from the **release event's own coordinates**, which is immune to React batching.
 
+**I24 — Resume is a launch-platform invariant, never a per-screen responsibility.** (Added W9.3.)
+*Proven by:* the resume chain was fully built — `resolveResumeMs` (tested, 18 cases), the `resumePolicy` prop on `<SimbaPlayer>` (`App.tsx:353`), `PlayerResumeProvider`, `PlayerResumeContext`, and the lib's `useOpenWithResume` hook — and **not one of the app's ~28 `openPlayer` call sites passed a `resumeId`**. Every one used the lib's pass-through `usePlayerActivity`, which forwards `startPositionMs ?? 0`. A film watched to 40 minutes opened at 0:00. The chain had no input; only the Bookmarks and History screens resumed, because they read the position themselves and passed it explicitly — precisely the per-screen bookkeeping the chain was built to replace.
+*Enforced by:* the resume-aware seam (`useResumeAwarePlayerActivity.ts`), which is the only launch surface screens import. It passes `resumeId` = the media uri and delegates explicit-position precedence to the lib. A screen cannot opt out of resume by accident, because there is nothing to opt into.
+
+**I25 — A heuristic must never override an explicit user instruction.** (Added W9.3.)
+*Proven by:* resume was about to become universal, which makes the "almost finished" cutoff load-bearing — without it, finishing a film and tapping it again opened it on the last credits frame, played a few seconds and stopped. The cutoff (90% of duration; Plex "Video played threshold" and Jellyfin "Maximum resume percentage" both document 90% as their default) is therefore applied to **history only**, never to **bookmarks**. A bookmark is an explicit instruction — "come back to this exact moment" — and a user who bookmarked 58:00 of a 60:00 film wants 58:00.
+*Enforced by:* `resolveResumeMs` branches on signal type, with the asymmetry documented at the decision site and pinned by a test per direction. A missing duration is never treated as evidence of completion, for the same reason a missing position is not.
+
 ---
 
 ## 1. Product principles (inherited + tightened)

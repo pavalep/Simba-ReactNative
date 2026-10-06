@@ -61,9 +61,62 @@ export interface ResumeLookupInput {
 }
 
 /**
+ * V19 W9.3 — the "already finished" cutoff, as a fraction of duration.
+ *
+ * Two independent shipping players agree on this number:
+ *
+ *   - **Plex** — Settings > Library > "Video played threshold".
+ *     Documented default: **90%**.
+ *   - **Jellyfin** — Dashboard > Playback > Resume > "Maximum resume
+ *     percentage". Documented default: **90%**; past it the item is
+ *     marked played and the position resets.
+ *
+ * Without the cutoff, finishing a film and tapping it again opens it
+ * on the last credits frame, plays a few seconds and stops — the worst
+ * outcome resume can produce, and the one that makes users turn the
+ * feature off rather than notice it exists.
+ *
+ * Jellyfin also refuses to save a position for anything shorter than
+ * 300s. That rule is deliberately NOT copied here: it is
+ * single-sourced, and SIMBA's library is full of short podcast
+ * episodes where resuming 20 seconds in is exactly right. The 90%
+ * ceiling already covers the genuinely-broken case.
+ */
+export const RESUME_MAX_FRACTION = 0.9;
+
+/**
+ * True when `positionSec` is far enough into `durationSec` that the
+ * user has effectively finished it.
+ *
+ * An unknown duration (`0`) can never be "near the end" — we have no
+ * basis to call it finished, so the position is trusted as-is. This
+ * is the same reasoning as the `> 0` guards below: a missing value is
+ * not evidence.
+ */
+function isEffectivelyFinished(positionSec: number, durationSec: number): boolean {
+  if (!(durationSec > 0)) return false;
+  return positionSec / durationSec >= RESUME_MAX_FRACTION;
+}
+
+/**
  * Returns the resume position in **milliseconds** for the given id,
  * or `undefined` if no saved position exists. See the module
  * docstring for the priority order (bookmark first, history fallback).
+ *
+ * **Bookmarks bypass the finished-check; history does not.** That
+ * asymmetry is the point, not an oversight:
+ *
+ *   - A **bookmark** is an explicit instruction — "come back to this
+ *     exact moment". A user who bookmarked 58:00 of a 60:00 film and
+ *     taps that bookmark wants 58:00. Applying a heuristic that
+ *     overrides the instruction they actually gave is worse than the
+ *     heuristic it would protect against.
+ *   - **History** is an implicit continuation signal, and it is the
+ *     one that produces the "it replayed the last 3 seconds" bug. So
+ *     it is the one the cutoff applies to.
+ *
+ * (See `RESUME_MAX_FRACTION` for the Plex/Jellyfin provenance of the
+ * 90% value.)
  */
 export function resolveResumeMs(
   input: ResumeLookupInput,
@@ -89,6 +142,11 @@ export function resolveResumeMs(
   //    `find` is sufficient.
   const historyEntry = input.history.find(h => h.fileUri === id);
   if (historyEntry && historyEntry.position > 0) {
+    // Past RESUME_MAX_FRACTION the user has finished this; treat it
+    // as "no saved position" so the launch starts from the top.
+    if (isEffectivelyFinished(historyEntry.position, historyEntry.duration)) {
+      return undefined;
+    }
     return Math.round(historyEntry.position * 1000);
   }
 

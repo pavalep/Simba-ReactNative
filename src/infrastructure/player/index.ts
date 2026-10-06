@@ -41,11 +41,13 @@
  */
 
 import {useCallback} from 'react';
-import {
-  resolveStreamType,
-  usePlayerActivity,
-} from '@simba-dev/react-native-media-player';
+import {resolveStreamType} from '@simba-dev/react-native-media-player';
 import type {MediaKind, MediaLane} from '../../types/media';
+// V19 W9.3 — the app's launch seam. NOT the lib's pass-through hook:
+// this one resolves a resume position for every launch that doesn't
+// supply an explicit `startPositionMs`. See its docblock for the
+// defect it fixes.
+import {usePlayerActivity} from './useResumeAwarePlayerActivity';
 import {secondsToMs} from './position';
 import {
   err,
@@ -59,7 +61,6 @@ import {mapBridgeLaunchError} from './bridgeErrors';
 import type {PlaybackId} from './playbackFacade';
 
 export {
-  usePlayerActivity,
   useOpenPlaylist,
   usePlayer,
   usePlayerProgress,
@@ -88,9 +89,54 @@ export {
   // unit-testing the lookup in isolation) opt in without
   // reaching into the module package.
   PlayerResumeProvider,
-  useOpenWithResume,
   usePlayItem,
 } from '@simba-dev/react-native-media-player';
+
+// ─── V19 W9.3 — resume-aware launch seam ─────────────────────
+
+/**
+ * V19 W9.3 — `usePlayerActivity`, with resume applied by default.
+ *
+ * ## The defect this replaces
+ *
+ * Every one of the app's ~28 `openPlayer({uri, title, type})` call
+ * sites went straight to the lib's `usePlayerActivity`, which forwards
+ * to the bridge with `startPositionMs ?? 0`. Not one of them passed a
+ * `resumeId`. So the resume chain —
+ *
+ * ```
+ * resolveResumeMs()      ← App.tsx resumePolicy prop      (worked)
+ *   → PlayerResumeProvider ← lib <SimbaPlayer>           (worked)
+ *     → PlayerResumeContext                             (worked)
+ *       → useOpenWithResume()                          (worked)
+ * ```
+ *
+ * — was fully built, fully connected, and had **no input**. Tap any
+ * film you had watched to 40 minutes and it started at 0:00. The two
+ * paths that did resume (Bookmarks, History) worked only because they
+ * read the position themselves and passed it explicitly — which is
+ * exactly the per-screen bookkeeping this was supposed to replace.
+ *
+ * ## Why it is fixed here and not at 28 call sites
+ *
+ * Resume is a property of the *platform*, not of a screen. Netflix,
+ * YouTube, Plex and Jellyfin all resume when you tap a title; no user
+ * has to opt in per screen, because no screen "implements" resume.
+ *
+ * This module is the seam that makes that true. It is the only
+ * directory allowed to import the player module (see the module
+ * docstring + `scripts/check-import-boundaries.js`), so behaviour
+ * added here reaches every call site by construction and cannot be
+ * forgotten by the next screen someone writes.
+ *
+ * The alternative — editing 28 files to swap the hook they call — is
+ * the same class of bug waiting to happen: screen 29 gets added and
+ * silently doesn't resume.
+ *
+ * Implementation lives in `./useResumeAwarePlayerActivity.ts` so
+ * `./playbackFacade.ts` can share it without a runtime import cycle.
+ */
+export {usePlayerActivity} from './useResumeAwarePlayerActivity';
 
 // V19 W0 Phase 0.1 — queue sync middleware. Wires the lib's native
 // queue ↔ usePlayerStore. Mounted ONCE at AppContent (App.tsx).

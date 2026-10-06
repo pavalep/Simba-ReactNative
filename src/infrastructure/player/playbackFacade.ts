@@ -40,10 +40,14 @@ import {
   resolveStreamType,
   useOpenPlaylist,
   usePlayer,
-  usePlayerActivity,
   usePlayerProgress,
 } from '@simba-dev/react-native-media-player';
 import {useIsPlayerActivity} from './playerHost';
+// V19 W9.3 — resume-aware launch seam. The facade used to reach the
+// lib hook directly, which meant `launch.open` silently bypassed
+// resume while every screen's `usePlayerActivity()` honoured it. Both
+// now share one implementation.
+import {usePlayerActivity} from './useResumeAwarePlayerActivity';
 import type {MediaKind, MediaLane} from '../../types/media';
 import {
   err,
