@@ -156,6 +156,18 @@ Keeping the old component after replacing it does not preserve history — it pr
 *Proven by:* the more sheet rendered every setting as a wall of chips — 5 speed options, 7 sleep-timer options — so its height grew with the option count until `maxHeight: '90%'` covered the player, which is the reported *"it goes full screen and cannot be closed"* (the only close button was below the fold). Value rows (`label ……. value ›`, options revealed inline, one section expanded at a time) make a setting's height constant.
 *Enforced by:* a value row renders exactly one collapsed row regardless of option count; the sheet's resting detent is asserted relationally (`≤ 70%`), so it cannot quietly creep back toward covering the player.
 
+**I16 — A control's affordance must come from a pattern that already ships.** (Added W8.7.)
+*Proven by:* W8.0–W8.6 invented affordances where proven ones existed — chip pills on every mode, expand-on-tap volume, a repeat **popup** listing Off / Repeat one / Repeat all. The product owner rejected the pattern outright: *"there is no need for popup, if we click loop icon rotate through each, that is the industry standard … dont imagine new way UI, but create from already existing best practice."* The popup was also visibly wrong: written in W3 against the app's elevated surface, never moved onto the on-media band, so it rendered a **cream panel over a black player**.
+*Enforced by:* before adding an affordance, name the shipping players that use it (YouTube / Apple TV / Plex / VLC / Tencent Video / Huawei Video). If none can be named, it is an invention and does not ship.
+
+**I17 — Removing a picker obliges the glyph to carry the state.** (Added W8.7.)
+*Proven by:* deleting the repeat popup left a single loop glyph, which renders "repeat one" and "repeat all" identically — a control that looks inert again, the very defect the deletion was meant to fix. Colour alone is not sufficient either: the gold tint fails WCAG 1.4.1.
+*Enforced by:* where a control lost a popup, it gains a **distinct glyph per state** (`repeat` vs `repeatOne`) and an accessibility label that names the current value. `ModeControl`'s suite asserts that no popup renders, so the pattern cannot be quietly restored.
+
+**I18 — A TS signature must agree with the native reality it forwards to.** (Added W8.7; extends I7.)
+*Proven by:* `MpvPlayerModule.ts` declared `enterPip(chapterTitle?, progressPct?)` as optional, but a migration script had rewritten the codegen'd Kotlin to `enterPip(chapterTitle: String, progressPct: String)`. TurboModule enforces the **Kotlin** arity, so every PiP call red-boxed with `called with 0 arguments (expected argument count: 2)` — a crash from a signature that type-checked correctly at every TypeScript layer.
+*Enforced by:* any post-codegen rewrite of a generated spec must be an **assertion**, not a normalisation. A rule that mutates a generated signature to disagree with its source spec will silently reintroduce this class of bug the next time it runs.
+
 ---
 
 ## 1. Product principles (inherited + tightened)

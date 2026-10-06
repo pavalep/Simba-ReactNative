@@ -34,7 +34,7 @@ carrying information, and then it actively misleads.
 | 6 | PiP · Captions · MediaSession · system integration | 🟡 PARTIAL | 6.0 shipped + device-verified; 6.1–6.3 pending |
 | 6.4 | Player correctness pass | ✅ SHIPPED | 7-defect ledger; see below |
 | 7 | Acceptance matrix + accessibility + responsive QA | ☐ PENDING | The V11 §10 test grid — **not started** |
-| 8 | **UI overhaul** (control system · scrim · sheet · motion) | ✅ SHIPPED | 2026-10-05; commits `c88944a`, `ef463c4` |
+| 8 | **UI overhaul** (control system · scrim · sheet · motion) | ✅ SHIPPED | 2026-10-05; commits `c88944a`, `ef463c4`, `f19dfd7`. Correction pass 2026-10-06 (W8.7) |
 
 > **Wave 8 exists because 7 was already taken.** The original Wave 7 is
 > the acceptance matrix, and it is still pending. The UI overhaul was
@@ -94,6 +94,66 @@ the way it does*.
 | 6 | `VideoMiniPlayer` was a `return null` stub still **mounted** in `App.tsx` | dead code with a live import | A grep for mounted chrome composites implied the mini dock existed |
 | 7 | `TransportBar/MoreSheet.tsx` superseded by `VideoMoreSheet` but never deleted, with its own green 15-test suite | two owners of one surface | Per I14 |
 | 8 | Mode row ink was `onMediaMuted` (70%) on 16/20 px glyphs, while the 28 px transport row above used 80% | legibility scaling backwards | Smaller marks need *more* contrast, not less |
+| 9 | **Mute did nothing visible.** `commands.setMuted(true)` muted the audio, but `mute` was absent from the lib's `OBSERVED_PROPERTIES`, so no `PROPERTY_CHANGE` ever reached JS, `state.isMuted` stayed `false`, and the button's glyph, label and slider all rendered from a frozen value | command surface wired, observation surface not | Caught only on device (emulator-5554): tapping "Mute" left the label reading "Mute" and the slider reading "Volume, 100 percent". The lib's own doc said "`onPropertyChanged('mute')` + hydration" and its reducer really handled `case 'mute'` — the registration was simply missing. Fixed in **lib 1.9.1**. See SPEC §0.3 I10. |
+| 10 | **The mute flag was INVERTED.** `applyPlayerEvent` read `isMuted: Boolean(value)`, but mpv serialises `MPV_FORMAT_FLAG` to the JSON literals `true` / `false`, which arrive as the **strings** `"true"` / `"false"`. `Boolean("false") === true`, so every mute event reported the opposite of reality | a coercion that silently lies | Found on device **after** 1.9.1 shipped, which is the uncomfortable part: 1.9.1 fixed the wiring and the event then landed in a handler that inverted it. Native logged `name=mute value=false` and the bridge dispatched `value=false`, yet the transport rendered "Unmute" on an audible player. Fixed in **lib 1.9.2**. |
+
+### The one that only the device could find
+
+Defects 9 and 10 are worth dwelling on, because they are two different
+bugs behind one symptom, and fixing only the first was not enough.
+
+`seekable` (lib 1.9.0) was **observed but edge-only** — mpv fired the
+event once and never again, so a provider mounting afterwards never
+learned it. `mute` (lib 1.9.1) was **not observed at all**. Different
+mechanisms, identical symptom from the UI: a control that looks inert.
+
+Both were invisible to the entire suite, for the same reason — the
+native emitter is mocked, so no handler test can fail when the
+*registration* that makes the handler reachable is missing. The tests
+that finally catch this class assert the **observation list itself**,
+not the handler:
+
+```ts
+expect(observed).toEqual(expect.arrayContaining([
+  'seekable', 'seeking', 'paused-for-cache', 'demuxer-cache-state', 'mute',
+]))
+```
+
+And once the event does arrive (1.9.1), a *second* defect was waiting:
+the flag is a **string**, and `Boolean("false")` is `true`. So a green
+suite plus a correctly-wired event still rendered the inverse of
+reality. The only thing that separated "the event never arrives" from
+"the event arrives and is misread" was instrumenting **both ends** and
+comparing them:
+
+```
+D MpvProperty     : name=mute format=6 value=false     ← native
+I MpvBridgeModule : listener:property] name=mute value=false  ← bridge
+W ReactNativeJS   : [DIAG-APP] isMuted= true            ← app
+```
+
+Three measurements, one wrong line. Without the third there is no way
+to tell that apart from a wiring failure, and the fix would ship as
+"done" while the control stayed broken.
+
+Three rules to carry forward:
+
+1. **For any control whose visual state comes from the engine**, the
+   property name in the observation list and the property name the UI
+   reads must be the same string, and a test must assert the list.
+2. **A flag crossing a JSON boundary is a string.** Never coerce one
+   with `Boolean()` / `!!`. Parse the literals, accept a real boolean,
+   and leave the field alone when it is unrecognised.
+3. **When a device measurement contradicts the code, measure both ends
+   of the boundary** before concluding anything. One side agreeing
+   with your hypothesis is not evidence.
+
+The W8.4 volume control was itself the thing that exposed this pair:
+building an honest mute control (rather than faking one with
+`setVolume(0)`) surfaced a state field the lib had never wired, and
+then a coercion that had been wrong since the field was added. That is
+an argument for doing the honest version — the shortcut would have
+shipped green.
 
 ### Tests
 
@@ -119,13 +179,103 @@ real hang.
 
 | Item | Why it is still open |
 |---|---|
-| `ModeSheet` / `CaptionsSheet` still use the W3 popover shape | They work, but they predate the W8.4 value-row treatment and the chip/eyebrow conventions. Cosmetic debt, not a defect. |
+| ~~`ModeSheet` / `CaptionsSheet` still use the W3 popover shape~~ | **CLOSED in W8.7.** Both deleted. They were not cosmetic debt — they were the reported defect: a light-themed popover over a black player, and an invented pattern that should not have been built at all. |
 | `reduceLaunchParams` / `resolveResumeMs` dead wiring | Pre-existing; unrelated to UI. |
 | A-B loop silent no-op | Pre-existing; unrelated to UI. |
 | `isInPipMode` unread in JS | Pre-existing; unrelated to UI. |
 | MediaSession adb verification matrix | Pre-existing; unrelated to UI. |
 | W7 acceptance matrix (the real Wave 7) | Never started. |
-| Device verification of the W8 chrome | Not yet run. |
+| **Device verification of the W8 chrome** | Done for boot, chrome presence, and mute. Still to verify on device: the more-sheet's three exits (backdrop / drag / ✕), the value-row accordion, and the header-rises / transport-falls motion. |
+
+---
+
+## Wave 8.7 — Correction pass (2026-10-06)
+
+**Driver:** device screenshots plus one decisive architectural
+correction from the product owner:
+
+> *"there is no need for popup, if we click loop icon rotate through
+> each, that is the industry standard, please create beautiful animated,
+> properly placed (industry standard) ui, dont imagine new way UI, but
+> create from already existing best practice"*
+
+This is a correction of method, not of taste. W8.0–W8.6 had invented
+affordances — chip pills, expand-on-tap volume, value-row accordions,
+and a repeat **popup** — where a proven pattern already existed. The
+rule going forward: **build from what YouTube / Apple TV / Plex / VLC /
+Tencent Video / Huawei Video already ship.**
+
+### The three native defects
+
+Found by cross-repo trace, and all three are the same shape: two layers
+of one feature disagreeing, with nothing failing loudly.
+
+| # | Symptom | Root cause | Fix | Release |
+|---|---|---|---|---|
+| 1 | Header reads `Simba Player` over any video | `openPlayer({uri, title})` has always accepted and delivered a title, and then **nothing applied it**. Three holes: `useLaunchPlayback` destructured only `uri` + `startPositionMs`; `onFileLoaded` read `file?.title` from a native payload with **no `file` key**; and `media-title`/`metadata` were **absent from `OBSERVED_PROPERTIES`**, so mpv's own title could not arrive either. | Apply mpv's `force-media-title` **before** the load (mpv's own option for overriding a URL-derived title), and register `media-title` + `metadata`. The `media-title` handler also gained the `"null"` sentinel guard the file-loaded path already had — registering it without that guard would have traded one wrong title for another. | lib **1.9.3** + **1.9.4** |
+| 2 | PiP red-boxes: `TurboModule method "enterPip" called with 0 arguments (expected argument count: 2)` | `MpvPlayerModule.ts` declares both params optional, but `scripts/override_react_methods.js` had **deliberately rewritten** the codegen'd Kotlin to strip the nullability. TurboModule enforces the Kotlin arity, so the legal zero-arg call was rejected before reaching the method body. | Keep the codegen nullability (SPEC **I7**). The old normalisation rule is replaced by an **assertion**, so re-running the migration script proves the signature is still fixed instead of silently reverting it. | lib **1.9.3** |
+| 3 | Orientation lock flips its glyph and does nothing | `setOrientation` mapped to `SCREEN_ORIENTATION_USER_PORTRAIT` / `_USER_LANDSCAPE`. The `USER_` variants **respect the system auto-rotate switch**, so with auto-rotate off the platform silently ignored the request. | An app pinning its own window is making an explicit decision about one activity, so it must win over a global device preference — use the plain constants. `"sensor"` keeps `FULL_SENSOR`, where honouring the user's rotation lock is the point. The `getCurrentActivity() ?: return` no-op now logs. | lib **1.9.3** |
+
+> **Note on 1.9.3 → 1.9.4.** The first release fixed `commands.loadFile`
+> and was tagged before the **launch path** was traced. `openPlayer` →
+> `PlayerActivity` → `getLaunchParams()` → `useLaunchPlayback` →
+> `bridge.loadFile(uri)` is a *different function* on a *different
+> route*, and it also discarded `title`. 1.9.4 extracts the shared
+> `applyForceMediaTitle` helper and pins the launch path, because a fix
+> asserted on only one of two routes to the same load is the same defect
+> class as before.
+
+### The UI corrections
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| 4 | Tapping repeat opens a light popup over a black player | `ModeSheet` was written in W3 against the app's elevated surface and never moved onto the on-media band when the player became its own dark band. | **Deleted.** Tap-to-cycle Off → Repeat all → Repeat one (YouTube's order). `ic_repeat_one` added so the **glyph** carries the mode — a non-colour channel (WCAG 1.4.1). |
+| 5 | Captions had the same popup problem | `CaptionsSheet`, same lineage. | **Deleted.** Cycle off → track 1 → … → off. Returns `null` with no tracks (SPEC **I3**). |
+| 6 | More sheet renders **empty** | Every label used `colors.text.inverse` = `#0A0A0C` in the dark palette — "inverse of the theme BACKGROUND". Black on black. A violation of this project's own **I13**. | `text.bright` / `text.onMediaSoft`. |
+| 7 | Transport shows **through** the More sheet | Surface was `background.surfaceDark` at 92%. | New opaque `background.onMediaSheet`. A panel that covers the controls has to actually cover them. |
+| 8 | *"seek bar should have grayed under color, missing"* | Empty track painted `border.subtle` = 6% white on a **3 px** line over video. Buffered painted 12%. Both invisible. | New always-dark `background.seekTrack` family (28% / 52%), plus reference-player geometry: **4 px rail, 14 px thumb** scaling to 22 px. |
+| 9 | Thumb jumped inward on touch | The dot was measured against the ACTIVE radius, then rendered from one of two static size styles. | One layout box + a transform, clamped by the **resting** radius. |
+| 10 | Controls overlap the home indicator; speaker floats mid-row | Volume — the only wide control, because it has a slider — sat on the RIGHT between PiP and More, so `space-between` shoved the others into the edge. And `insets.bottom` is **0** when the player window is not the window the inset provider measured. | Output left, affordance cluster right, each pinned from its own side, neither shrinkable. Plus a hard minimum bottom gap: a zero inset is not evidence there is nothing to clear. |
+| 11 | *"UI still reads kiddish"* | A fully saturated 56 pt gold disc is the loudest thing on screen; saturation is a toy signal. | Primary transport action is a **white circle with dark ink**, as every reference player draws it. Gold is kept for small state accents. Ink unchanged and pinned by test. |
+
+### Rules this wave added
+
+1. **Build from shipped patterns; do not invent affordances.** If a
+   reference player solves it with a cycle, it is a cycle. A pattern
+   invented because it seemed nicer is the failure mode, not the
+   solution.
+2. **If deleting a popup, the glyph must carry the state.** Otherwise
+   the control becomes unreadable and the deletion is a regression
+   dressed as a simplification.
+3. **Assert the OBSERVATION LIST, not the handler.** Defect 1 is the
+   third instance of a correctly-written handler wired to a property
+   nobody registered (after `mute` and `seekable`). It is invisible to
+   jest because the emitter is mocked.
+4. **A layout constant chosen for "aesthetic hairline" is a constant
+   chosen for the wrong domain.** A 3 px rail is right for a divider and
+   wrong for a control the user must see continuously.
+5. **A zero inset is not evidence of nothing to clear.** Guarantee a
+   floor.
+6. **Test theme mocks must be built from `jest.requireActual`.** Two
+   hand-written 7-colour stubs broke with a bare "Cannot read properties
+   of undefined" instead of a legible assertion — a partial stub cannot
+   fail when the contract grows, which is the one thing it must do.
+
+### Carried forward from W8.7
+
+| Item | Why it is still open |
+|---|---|
+| **Device verification of the W8.7 chrome** | Nothing in this wave has been seen on a device yet. The 1.9.3/1.9.4 native fixes in particular cannot be confirmed by jest at all. |
+| Music player | Deferred by explicit instruction until after the video player. |
+| Single-`MainActivity` migration | Still pending; blocks the PiP "whole app collapses" class. |
+| lib haptics + hardware keys | Still pending. |
+| `resolveLaunchParams` / `resolveResumeMs` dead wiring | Pre-existing; unrelated to UI. |
+| A-B loop silent no-op | Pre-existing; unrelated to UI. |
+| `isInPipMode` unread in JS | Pre-existing; unrelated to UI. |
+| MediaSession adb verification matrix | Pre-existing; unrelated to UI. |
+| InteractiveTranscript | W8.5 scope, not started. |
+| BookmarkSheet device verification | Deferred until after the video player. |
+| W7 acceptance matrix (the real Wave 7) | Never started. |
 
 ---
 
