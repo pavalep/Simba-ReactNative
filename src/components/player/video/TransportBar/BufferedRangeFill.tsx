@@ -1,10 +1,19 @@
 /**
- * V19 W2 Phase 2.2 — `BufferedRangeFill` (the slate-color renderer).
+ * V19 W2 Phase 2.2 — `BufferedRangeFill` (the buffered-range renderer).
  *
  * Renders a flat-fill rectangle inside the TransportBar's progress
  * row, showing the contiguous buffered range that contains the
- * playhead. Visibly darker than the played fill (gold) but lighter
- * than the empty track (slate / `border.emphasis`).
+ * playhead — visibly lighter than the played fill (gold) and
+ * clearly lighter than the empty track.
+ *
+ * V19 W8.7 — this used to paint `colors.border.emphasis`, which is
+ * `rgba(255,255,255,0.12)` in the dark palette and `rgba(0,0,0,0.10)`
+ * in the light one. On a 3 px line over a video frame BOTH are
+ * effectively invisible, so the buffered range could not be
+ * distinguished from the empty track (or from nothing at all). It now
+ * uses `background.seekTrack.buffered`, an always-dark always-dark-on-
+ * media token family — see the doc comment on `seekTrack` in
+ * `src/theme/tokens.ts`.
  *
  * Geometry contract:
  *   - `width` prop is the parent track width (the TransportBar
@@ -82,7 +91,7 @@ export const BufferedRangeFill: React.FC<BufferedRangeFillProps> = ({
           left: startPx,
           width: fillWidth,
           height,
-          backgroundColor: colors.border.emphasis,
+          backgroundColor: colors.background.seekTrack.buffered,
         },
       ]}
     />

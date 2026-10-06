@@ -37,21 +37,27 @@ import {TransportBar} from '../../../../../src/components/player/video/Transport
 const mockSeek = jest.fn();
 const mockSeekBy = jest.fn();
 
-jest.mock('../../../../../src/theme', () => ({
-  useTheme: () => ({
-    colors: {
-      background: {surfaceDark: '#000000', primary: '#0A0A0C'},
-      border: {subtle: '#1A1A1C', emphasis: '#3A3A3E'},
-      text: {primary: '#EDEDED', secondary: '#80EDEDED', tertiary: '#4DEDEDED'},
-      accent: {gold: '#C9A84C', goldDim: '#26C9A84C', goldGlow: '#40C9A84C'},
-    },
-    spacing: {xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32},
-    typography: {
-      caption: {fontSize: 13, lineHeight: 18},
-      body1: {fontSize: 17, lineHeight: 24},
-    },
-  }),
-}));
+jest.mock('../../../../../src/theme', () => {
+  // Built from the REAL palette, not a hand-written stub.
+  //
+  // W8.7: this suite carried a seven-colour stub, so adding
+  // `background.seekTrack` broke it with a bare "Cannot read properties
+  // of undefined" instead of a legible assertion — twice, because the
+  // whole mock block below was duplicated verbatim. A theme mock built
+  // from the real tokens cannot drift from the contract it stands in
+  // for; a test that needs one specific colour can still reach
+  // `darkTokens.colors.<group>.<name>` directly.
+  const {darkTokens} = jest.requireActual(
+    '../../../../../src/theme/tokens',
+  );
+  return {
+    useTheme: () => ({
+      colors: darkTokens.colors,
+      spacing: {xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32},
+      typography: darkTokens.typography,
+    }),
+  };
+});
 
 // Mock useSafeAreaInsets (RN modules that RNTL doesn't fully cover).
 jest.mock('react-native-safe-area-context', () => ({
@@ -70,26 +76,6 @@ let mockTransport: {
   state: makeTransportState(),
   commands: makeTransportCommands(),
 };
-jest.mock('../../../../../src/theme', () => ({
-  useTheme: () => ({
-    colors: {
-      background: {surfaceDark: '#000000', primary: '#0A0A0C'},
-      border: {subtle: '#1A1A1C', emphasis: '#3A3A3E'},
-      text: {primary: '#EDEDED', secondary: '#80EDEDED', tertiary: '#4DEDEDED'},
-      accent: {gold: '#C9A84C', goldDim: '#26C9A84C', goldGlow: '#40C9A84C'},
-    },
-    spacing: {xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32},
-    typography: {
-      caption: {fontSize: 13, lineHeight: 18},
-      body1: {fontSize: 17, lineHeight: 24},
-    },
-  }),
-}));
-
-// Mock useSafeAreaInsets (RN modules that RNTL doesn't fully cover).
-jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({top: 0, bottom: 0, left: 0, right: 0}),
-}));
 
 
 jest.mock('../../../../../src/infrastructure/player', () => {

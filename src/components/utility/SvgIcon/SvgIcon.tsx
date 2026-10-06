@@ -17,6 +17,11 @@ import Rewind10Svg from '../../../assets/svg/ic_rewind_10.svg';
 import Forward10Svg from '../../../assets/svg/ic_forward_10.svg';
 import ShuffleSvg from '../../../assets/svg/ic_shuffle.svg';
 import RepeatSvg from '../../../assets/svg/ic_repeat.svg';
+// V19 W8.7 — the repeat loop carrying a "1", which is how YouTube,
+// Netflix and Plex mark "repeat this one file" without a label or a
+// colour change. W8.7 removed the repeat popup, and this glyph is the
+// half of the control that keeps the state readable from the icon.
+import RepeatOneSvg from '../../../assets/svg/ic_repeat_one.svg';
 import VolumeSvg from '../../../assets/svg/ic_volume.svg';
 import VolumeMuteSvg from '../../../assets/svg/ic_volume_mute.svg';
 import SunSvg from '../../../assets/svg/ic_sun.svg';
@@ -111,6 +116,7 @@ const icons = {
   nextTrack: NextTrackSvg,
   shuffle: ShuffleSvg,
   repeat: RepeatSvg,
+  repeatOne: RepeatOneSvg,
   volume: VolumeSvg,
   volumeMute: VolumeMuteSvg,
   sun: SunSvg,

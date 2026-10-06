@@ -322,22 +322,28 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
     // One tree, every row-3 control that can render. Each of these
     // self-collapses when its state flag is false, so all three flags
     // must be set for the assertion to mean anything.
+    //
+    // W8.7: repeat and captions are ICON-ONLY now — their labelled
+    // chips were removed along with the two popovers. So these are
+    // asserted through the accessibility label that names the mode,
+    // which is where the state moved to.
     mockTransport.state = makeTransportState({
       captionTracks: [{id: 1, label: 'English', lang: 'en', active: false}],
       canEnterPip: true,
     });
-    await withChrome(<TransportBar />, ({getByText, getByLabelText}) => {
+    await withChrome(<TransportBar />, ({getByLabelText}) => {
       // W7.3 moved these from `onMediaMuted` (70%) to `onMediaSoft`
-      // (80%). The reason is that their GLYPHS GREW — the repeat and
-      // captions marks went 16 px → 22 px, PiP and More 20 px → 24 px —
-      // and legibility scales inversely with size: a smaller mark needs
-      // MORE relative contrast to read, not less. Leaving them at 70%
-      // would have made the smaller row-3 glyphs dimmer than the 28 px
-      // transport icons directly above them, which is backwards. The
-      // chips also gained a dark `onMediaPill` fill, so 70% white on
-      // near-black is a genuinely dim combination for 22 px type.
-      expect(inkOfText(getByText('Off'))).toBe(ON_MEDIA_SOFT);
-      expect(inkOfText(getByText('CC'))).toBe(ON_MEDIA_SOFT);
+      // (80%). The reason is that their GLYPHS GREW, and legibility
+      // scales inversely with size: a smaller mark needs MORE relative
+      // contrast to read, not less. Leaving them at 70% would have made
+      // the row-3 glyphs dimmer than the 28 px transport icons directly
+      // above them, which is backwards.
+      expect(
+        inkOfIconWithin(getByLabelText('Repeat mode: Off')),
+      ).toBe(ON_MEDIA_SOFT);
+      expect(inkOfIconWithin(getByLabelText('Captions off'))).toBe(
+        ON_MEDIA_SOFT,
+      );
       expect(
         inkOfIconWithin(getByLabelText('Enter Picture-in-Picture')),
       ).toBe(ON_MEDIA_SOFT);
@@ -363,10 +369,13 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
     });
   });
 
-  it('TransportRow: play/pause KEEPS text.inverse on its gold fill', async () => {
-    // The deliberate exception, pinned so nobody "fixes" the one
-    // control that is already correct: dark ink on the gold CTA is the
-    // readable pairing in BOTH themes.
+  it('TransportRow: play/pause keeps text.inverse ink on its fill', async () => {
+    // W8.7 changed the FILL from saturated brand gold to white, because
+    // a 56 px fully-saturated disc was the single loudest thing on
+    // screen and read as a toy. The INK did not change and must not:
+    // `text.inverse` is dark in both palettes, so dark-on-white is the
+    // readable pairing in light AND dark theme. Pinned so nobody
+    // "restores the gold fill" by also flipping the glyph to white.
     await withChrome(<TransportRow />, ({getByLabelText}) => {
       expect(inkOfIconWithin(getByLabelText('Pause'))).toBe(
         lightColors.text.inverse,
@@ -374,11 +383,29 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
     });
   });
 
+  it('TransportRow: the play/pause fill is the on-media white, not brand gold', async () => {
+    // The whole point of the W8.7 colour change, asserted on the paint
+    // itself rather than on a comment.
+    await withChrome(<TransportRow />, ({getByLabelText}) => {
+      const control = getByLabelText('Pause');
+      const style = Array.isArray(control.props.style)
+        ? control.props.style.flat(Infinity)
+        : [control.props.style];
+      const fills = style
+        .map(s => (s as {backgroundColor?: string})?.backgroundColor)
+        .filter(Boolean);
+      expect(fills).toContain(lightColors.text.bright);
+      expect(fills).not.toContain(lightColors.accent.gold);
+    });
+  });
+
   // ── Row-3 controls, standalone ───────────────────────────────────────
 
-  it('ModeControl: label + icon are on-media when repeat is off', async () => {
-    await withChrome(<ModeControl />, ({getByText, getByLabelText}) => {
-      expect(inkOfText(getByText('Off'))).toBe(ON_MEDIA_SOFT);
+  it('ModeControl: the glyph is on-media when repeat is off', async () => {
+    // W8.7 removed the "Off" chip, so there is no text to check any
+    // more — the mode is carried by the accessibility label and the
+    // glyph, and this asserts the glyph is legible on the frame.
+    await withChrome(<ModeControl />, ({getByLabelText}) => {
       expect(
         inkOfIconWithin(getByLabelText('Repeat mode: Off')),
       ).toBe(ON_MEDIA_SOFT);
@@ -387,21 +414,22 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
 
   it('ModeControl: the active mode keeps gold', async () => {
     mockTransport.state = makeTransportState({repeatMode: 'all'});
-    await withChrome(<ModeControl />, ({getByText}) => {
-      expect(inkOfText(getByText('Repeat all'))).toBe(lightColors.accent.gold);
+    await withChrome(<ModeControl />, ({getByLabelText}) => {
+      expect(
+        inkOfIconWithin(getByLabelText('Repeat mode: Repeat all')),
+      ).toBe(lightColors.accent.gold);
     });
   });
 
-  it('CaptionsToggle: the "CC" caption is on-media when no track is active', async () => {
+  it('CaptionsToggle: the glyph is on-media when no track is active', async () => {
     mockTransport.state = makeTransportState({
       captionTracks: [{id: 1, label: 'English', lang: 'en', active: false}],
       activeCaptionTrackId: null,
     });
-    await withChrome(<CaptionsToggle />, ({getByText, getByLabelText}) => {
-      expect(inkOfText(getByText('CC'))).toBe(ON_MEDIA_SOFT);
-      expect(
-        inkOfIconWithin(getByLabelText('Captions off')),
-      ).toBe(ON_MEDIA_SOFT);
+    await withChrome(<CaptionsToggle />, ({getByLabelText}) => {
+      expect(inkOfIconWithin(getByLabelText('Captions off'))).toBe(
+        ON_MEDIA_SOFT,
+      );
     });
   });
 
@@ -410,8 +438,8 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
       captionTracks: [{id: 1, label: 'English', lang: 'en', active: false}],
       activeCaptionTrackId: 1,
     });
-    await withChrome(<CaptionsToggle />, ({getByText}) => {
-      expect(inkOfText(getByText('English'))).toBe(
+    await withChrome(<CaptionsToggle />, ({getByLabelText}) => {
+      expect(inkOfIconWithin(getByLabelText('Captions: English'))).toBe(
         lightColors.accent.gold,
       );
     });

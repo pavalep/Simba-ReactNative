@@ -308,8 +308,25 @@ export const PlayerControl: React.FC<PlayerControlProps> = ({
         gap: spacing.xs,
       }
     : {
+        // V19 W8.7 — the filled control was `accent.gold`, a fully
+        // saturated brand disc at 56 pt, and it was the single loudest
+        // thing on screen. The user's read was that the player "looks
+        // kiddish", and this is why: a saturated fill reads as a toy,
+        // because saturation is a toy signal.
+        //
+        // Every reference player resolves this control the same way —
+        // YouTube, Apple TV, Plex, Tencent Video and Huawei Video all
+        // draw the primary transport action as a WHITE circle with dark
+        // ink. It is the highest-contrast pair available on video
+        // (which is what a primary CTA needs), it is what the eye is
+        // conditioned to read as "play", and it leaves the brand gold to
+        // do the work it is actually good at: small state accents.
+        //
+        // `filledTint` still defaults to `text.inverse`, which is dark
+        // ink in BOTH palettes — so white-on-dark-ink holds in light
+        // theme too, without a second branch.
         backgroundColor:
-          filled && !disabled ? colors.accent.gold : 'transparent',
+          filled && !disabled ? colors.text.bright : 'transparent',
         width: size,
         height: size,
         borderRadius: filled ? size / 2 : undefined,

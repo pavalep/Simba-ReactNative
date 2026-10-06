@@ -450,7 +450,7 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
             styles.sheet,
             {
               maxHeight: SHEET_MAX_HEIGHT,
-              backgroundColor: colors.background.surfaceDark,
+              backgroundColor: colors.background.onMediaSheet,
             },
           ]}
         >
@@ -464,7 +464,13 @@ export const VideoMoreSheet: React.FC<VideoMoreSheetProps> = ({
             <View style={styles.titleRow}>
               <AppText
                 variant="h3"
-                color={colors.text.inverse}
+                // V19 W8.7 — was `colors.text.inverse`, which is
+                // "#0A0A0C" in the dark palette: "inverse of the theme
+                // BACKGROUND". On this sheet's near-black surface that
+                // is black text on black, which is exactly why the whole
+                // menu read as empty in the screenshot. An on-media
+                // surface takes `onMedia*` ink (SPEC I13).
+                color={colors.text.onMediaSoft}
                 style={styles.sheetTitle}
               >
                 More
@@ -670,7 +676,7 @@ const ValueRow: React.FC<ValueRowProps> = ({
         accessibilityHint={expanded ? 'Hides the options' : 'Shows the options'}
         accessibilityState={{expanded}}
       >
-        <AppText variant="body1" color={colors.text.inverse}>
+        <AppText variant="body1" color={colors.text.bright}>
           {label}
         </AppText>
         <View style={styles.settingValueGroup}>
@@ -777,7 +783,7 @@ const ToggleRow: React.FC<ToggleRowProps> = ({
       accessibilityHint={description}
       accessibilityState={{checked: value}}
     >
-      <AppText variant="body1" color={colors.text.inverse}>
+      <AppText variant="body1" color={colors.text.bright}>
         {label}
       </AppText>
       <View style={styles.settingValueGroup}>
@@ -803,7 +809,12 @@ const ToggleRow: React.FC<ToggleRowProps> = ({
           <View
             style={[
               styles.switchThumb,
-              {backgroundColor: colors.text.inverse},
+              // W8.7: was `text.inverse`, i.e. the near-black ink. On
+              // a GOLD track that happened to be the right contrast by
+              // accident, but on the OFF track it is a black dot on a
+              // 16%-white pill — invisible. `text.bright` is correct on
+              // both states and reads as one switch, not two.
+              {backgroundColor: colors.text.bright},
               value ? styles.switchThumbOn : styles.switchThumbOff,
             ]}
           />
@@ -841,7 +852,7 @@ const ActionRow: React.FC<ActionRowProps> = ({
         accessibilityRole="button"
         accessibilityLabel={label}
       >
-        <AppText variant="body1" color={colors.text.inverse}>
+        <AppText variant="body1" color={colors.text.bright}>
           {label}
         </AppText>
         <SvgChevron open={false} color={colors.text.onMediaMuted} />

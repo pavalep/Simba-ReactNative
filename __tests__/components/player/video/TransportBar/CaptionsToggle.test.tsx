@@ -1,41 +1,45 @@
 /// <reference types="node" />
 /**
- * V19 W3 Phase 3.2 — `CaptionsToggle` unit tests.
+ * V19 W8.7 — `CaptionsToggle` unit tests.
  *
- * Source of truth: `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` Phase 3.2.
+ * ## What changed
  *
- * Covers:
- *   - returns null when no caption tracks exist
- *   - renders the "CC" label when no track is active
- *   - renders the active track's label when one is active
- *   - tap on the toggle opens the CaptionsSheet
- *   - tapping a track in the sheet calls commands.selectCaptionTrack(id)
- *   - tapping "Off" in the sheet calls commands.selectCaptionTrack(null)
- *   - the a11y label reflects the current state
+ * W8.7 deleted the captions PICKER (`CaptionsSheet`), along with the
+ * repeat popup. The control now CYCLES: off → track 1 → track 2 → off,
+ * advanced by a single tap — the behaviour Plex and VLC ship.
+ *
+ * So the assertions changed shape. Where this suite used to press once
+ * and then pick a row out of a menu, it now presses once and asserts
+ * the exact next track, plus asserts that no menu appears at all.
+ *
+ * `nextCaptionTrackId` is tested on its own because it is where the
+ * interesting failures live: the wrap from the last track back to off,
+ * and the case where nothing is active.
  */
 
 import * as React from 'react';
-import {act, fireEvent, render, screen} from '@testing-library/react-native';
-import {CaptionsToggle} from '../../../../../src/components/player/video/TransportBar/CaptionsToggle';
+import {fireEvent, render} from '@testing-library/react-native';
+import {
+  CaptionsToggle,
+  nextCaptionTrackId,
+} from '../../../../../src/components/player/video/TransportBar/CaptionsToggle';
 import type {CaptionTrack} from '../../../../../src/infrastructure/player';
 
-jest.mock('../../../../../src/theme', () => ({
-  useTheme: () => ({
-    colors: {
-      background: {elevated: '#141416', scrimDim: 'rgba(0,0,0,0.45)'},
-      border: {subtle: '#1A1A1C', emphasis: 'rgba(255,255,255,0.12)'},
-      accent: {gold: '#C9A84C', goldSoft: 'rgba(201,168,76,0.10)'},
-      text: {primary: '#EDEDED', secondary: '#80EDEDED', tertiary: '#4DEDEDED', accent: '#C9A84C'},
-      shadow: '#000000',
-    },
-    spacing: {xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24},
-    radius: {lg: 16},
-    typography: {
-      body2: {fontSize: 15, lineHeight: 22},
-      caption: {fontSize: 13, lineHeight: 18},
-    },
-  }),
-}));
+// ── Mocks ────────────────────────────────────────────────────────────
+
+jest.mock('../../../../../src/theme', () => {
+  const {darkTokens} = jest.requireActual(
+    '../../../../../src/theme/tokens',
+  );
+  return {
+    useTheme: () => ({
+      colors: darkTokens.colors,
+      spacing: {xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24},
+      radius: {lg: 16},
+      typography: darkTokens.typography,
+    }),
+  };
+});
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({top: 0, bottom: 0, left: 0, right: 0}),
@@ -112,7 +116,9 @@ jest.mock('../../../../../src/infrastructure/player', () => {
   };
 });
 
-describe('CaptionsToggle', () => {
+// ── Tests ────────────────────────────────────────────────────────────
+
+describe('CaptionsToggle — the caption cycle (W8.7)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTransport.state = {
@@ -121,53 +127,97 @@ describe('CaptionsToggle', () => {
     };
   });
 
+  describe('nextCaptionTrackId', () => {
+    it('turns captions ON with the first track when nothing is active', () => {
+      expect(nextCaptionTrackId(TRACKS, null)).toBe(TRACKS[0].id);
+    });
+
+    it('advances to the next track', () => {
+      expect(nextCaptionTrackId(TRACKS, TRACKS[0].id)).toBe(TRACKS[1].id);
+    });
+
+    it('wraps the LAST track back to captions off', () => {
+      // `null` is the "captions off" state. If the last track wrapped
+      // back to itself instead, captions could never be switched off
+      // from a single-track file without opening a picker — which is
+      // the control-that-cannot-act defect.
+      expect(nextCaptionTrackId(TRACKS, TRACKS[1].id)).toBeNull();
+    });
+
+    it('visits every track exactly once before returning to off', () => {
+      const visited: (number | null)[] = [];
+      let active: number | null = null;
+      for (let i = 0; i < TRACKS.length; i++) {
+        active = nextCaptionTrackId(TRACKS, active);
+        visited.push(active);
+      }
+      expect(visited).toEqual(TRACKS.map(t => t.id));
+    });
+
+    it('selects nothing when the file has no tracks', () => {
+      expect(nextCaptionTrackId([], null)).toBeNull();
+    });
+
+    it('falls back to the first track when the active id is unknown', () => {
+      // mpv can report a `selected` track the facade never listed (a
+      // track that appeared after the list was built). An unknown id
+      // must still resolve somewhere legal.
+      expect(nextCaptionTrackId(TRACKS, 999)).toBe(TRACKS[0].id);
+    });
+  });
+
   it('returns null when no caption tracks exist', async () => {
+    // SPEC I3: a control that cannot act must not render.
     mockTransport.state = {captionTracks: [], activeCaptionTrackId: null};
     const {toJSON} = await render(<CaptionsToggle />);
     expect(toJSON()).toBeNull();
   });
 
-  it('renders the active track label when a track is active', async () => {
-    const {getByText} = await render(<CaptionsToggle />);
-    expect(getByText('English')).toBeTruthy();
-  });
-
-  it('renders "CC" when no track is active', async () => {
-    mockTransport.state.activeCaptionTrackId = null;
-    const {getByText} = await render(<CaptionsToggle />);
-    expect(getByText('CC')).toBeTruthy();
-  });
-
-  it('the a11y label reflects the current state', async () => {
-    mockTransport.state.activeCaptionTrackId = 100;
+  it('one tap advances to the next track — no picker involved', async () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
-    expect(
-      getByLabelText('Captions: English'),
-    ).toBeTruthy();
+    fireEvent.press(getByLabelText('Captions: English'));
+    expect(mockSelectCaptionTrack).toHaveBeenCalledTimes(1);
+    expect(mockSelectCaptionTrack).toHaveBeenCalledWith(TRACKS[1].id);
+  });
+
+  it('tapping from the last track turns captions OFF', async () => {
+    mockTransport.state.activeCaptionTrackId = TRACKS[1].id;
+    const {getByLabelText} = await render(<CaptionsToggle />);
+    fireEvent.press(getByLabelText('Captions: Español'));
+    expect(mockSelectCaptionTrack).toHaveBeenCalledWith(null);
+  });
+
+  it('tapping while off turns the first track on', async () => {
+    mockTransport.state.activeCaptionTrackId = null;
+    const {getByLabelText} = await render(<CaptionsToggle />);
+    fireEvent.press(getByLabelText('Captions off'));
+    expect(mockSelectCaptionTrack).toHaveBeenCalledWith(TRACKS[0].id);
+  });
+
+  it('renders NO popup — the picker pattern stays deleted', async () => {
+    const {getByLabelText, queryByLabelText} =
+      await render(<CaptionsToggle />);
+    fireEvent.press(getByLabelText('Captions: English'));
+    expect(queryByLabelText('Off')).toBeNull();
+    expect(queryByLabelText('Close captions')).toBeNull();
+    // One press must select exactly one track, not open a surface.
+    expect(mockSelectCaptionTrack).toHaveBeenCalledTimes(1);
+  });
+
+  it('the a11y label names the rendering track, the hint says it cycles', async () => {
+    const {getByLabelText} = await render(<CaptionsToggle />);
+    const control = getByLabelText('Captions: English');
+    expect(control.props.accessibilityHint).toBe(
+      'Switches between captions off and each available subtitle track',
+    );
+    // The hint must not still advertise the deleted picker.
+    expect(control.props.accessibilityHint).not.toMatch(/picker|menu/i);
   });
 
   it('the a11y label says "off" when no track is active', async () => {
     mockTransport.state.activeCaptionTrackId = null;
     const {getByLabelText} = await render(<CaptionsToggle />);
-    expect(
-      getByLabelText('Captions off'),
-    ).toBeTruthy();
-  });
-
-  // ── W7.3: label names the control, hint carries the instruction ─────
-  //
-  // The label used to be `Captions: English. Tap to change.`. A screen
-  // reader re-announces the label every time focus lands on the
-  // control, so the instruction was repeated as a side effect of
-  // navigating to it. W7.3 splits the two. Both are asserted so the
-  // instruction cannot be silently lost while the label is fixed.
-  it('the label names the track and the hint carries the instruction', async () => {
-    mockTransport.state.activeCaptionTrackId = 100;
-    const {getByLabelText} = await render(<CaptionsToggle />);
-    const control = getByLabelText('Captions: English');
-    expect(control.props.accessibilityHint).toBe(
-      'Opens the captions picker',
-    );
+    expect(getByLabelText('Captions off')).toBeTruthy();
   });
 
   // "A track is rendering" is the state that matters, and gold ink
@@ -175,7 +225,6 @@ describe('CaptionsToggle', () => {
   // colour (WCAG 1.4.1). The switch role + checked state is the
   // non-colour channel, so it is asserted directly.
   it('exposes the active state as a switch, not just as gold ink', async () => {
-    mockTransport.state.activeCaptionTrackId = 100;
     const {getByLabelText} = await render(<CaptionsToggle />);
     const control = getByLabelText('Captions: English');
     expect(control.props.accessibilityRole).toBe('switch');
@@ -187,58 +236,5 @@ describe('CaptionsToggle', () => {
     const {getByLabelText} = await render(<CaptionsToggle />);
     const control = getByLabelText('Captions off');
     expect(control.props.accessibilityState).toMatchObject({checked: false});
-  });
-
-  it('opens the sheet on tap', async () => {
-    const {getByLabelText} = await render(<CaptionsToggle />);
-    await act(async () => {
-      fireEvent.press(
-        getByLabelText('Captions: English'),
-      );
-    });
-    expect(getByLabelText('Captions: Español')).toBeTruthy();
-    expect(getByLabelText('Captions off')).toBeTruthy();
-  });
-
-  it('selecting a track calls commands.selectCaptionTrack(id)', async () => {
-    const {getByLabelText} = await render(<CaptionsToggle />);
-    await act(async () => {
-      fireEvent.press(
-        getByLabelText('Captions: English'),
-      );
-    });
-    fireEvent.press(getByLabelText('Captions: Español'));
-    expect(mockSelectCaptionTrack).toHaveBeenCalledWith(101);
-  });
-
-  it('selecting "Off" calls commands.selectCaptionTrack(null)', async () => {
-    const {getByLabelText} = await render(<CaptionsToggle />);
-    await act(async () => {
-      fireEvent.press(
-        getByLabelText('Captions: English'),
-      );
-    });
-    fireEvent.press(getByLabelText('Captions off'));
-    expect(mockSelectCaptionTrack).toHaveBeenCalledWith(null);
-  });
-
-  it('tapping the scrim closes the sheet WITHOUT changing the track', async () => {
-    const {getByLabelText} = await render(<CaptionsToggle />);
-    await act(async () => {
-      fireEvent.press(
-        getByLabelText('Captions: English'),
-      );
-    });
-    fireEvent.press(getByLabelText('Close captions picker'));
-    expect(mockSelectCaptionTrack).not.toHaveBeenCalled();
-    // The sheet is torn down — the toggle is the only thing left, and
-    // it carries the same a11y label it had before opening.
-    await act(async () => {});
-    expect(
-      screen.queryByLabelText('Close captions picker'),
-    ).toBeNull();
-    expect(
-      getByLabelText('Captions: English'),
-    ).toBeTruthy();
   });
 });

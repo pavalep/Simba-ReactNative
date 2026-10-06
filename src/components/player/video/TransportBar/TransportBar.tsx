@@ -92,13 +92,40 @@ import {ScrubPreview} from '../ScrubPreview/ScrubPreview';
  *  rather than a tap. Apple's AVPlayer uses ~5px; we mirror. */
 const PAN_THRESHOLD_PX = 5;
 
-/** Thumb diameter at rest vs under-finger. The active thumb is
- *  ~33% larger and gets the gold-glow shadow. */
-const THUMB_REST_PX = 12;
-const THUMB_ACTIVE_PX = 18;
+/**
+ * V19 W8.7 — scrub geometry.
+ *
+ * These were 3 px / 12 px / 18 px and read as a hairline with a speck on
+ * it. Every shipping player (YouTube, Plex, Tencent, Huawei Video, VLC)
+ * uses a visibly thicker rail with a thumb roughly three-to-four times
+ * the rail's own height: a 14 px thumb on a 4 px rail is the ratio you
+ * see in all of them. The thumb is the only part of the seek control the
+ * user's finger ever has to acquire, so it is the part that has to be
+ * findable without looking twice.
+ */
+const THUMB_REST_PX = 14;
+const THUMB_ACTIVE_PX = 22;
 
-/** Height of the empty track. Matches Apple's hairline aesthetic. */
-const TRACK_HEIGHT_PX = 3;
+/**
+ * V19 W8.7 — the empty rail. 3 px was chosen to match an "Apple hairline
+ * aesthetic", which is the correct rule for a hairline and the wrong one
+ * for a rail the user is meant to see continuously: at 3 px it is a
+ * scanning hazard on a bright frame and invisible on a dark one. 4 px
+ * with a 2 px radius is what the reference players actually ship.
+ */
+const TRACK_HEIGHT_PX = 4;
+
+/**
+ * V19 W8.7 — the floor under the chrome, in dp, applied IN ADDITION to the
+ * bottom inset.
+ *
+ * `useSafeAreaInsets().bottom` is 0 whenever the player window is not the
+ * window the inset provider measured, which is exactly the case that
+ * produced the reported "controls sit on top of the home indicator".
+ * A zero inset is not evidence that there is nothing to clear, so the
+ * layout guarantees a minimum breathing gap regardless.
+ */
+const MIN_BOTTOM_GAP_PX = 12;
 
 export const TransportBar: React.FC = () => {
   const {state, commands} = useTransport();
@@ -171,14 +198,28 @@ export const TransportBar: React.FC = () => {
   const playedFraction =
     state.durationMs > 0 ? displayMs / state.durationMs : 0;
   const playedWidth = Math.round(trackWidth * playedFraction);
+  // The thumb is centred on the playhead, but it is a ROUND dot sitting
+  // on a thin rail — so at the two ends half of it overhangs. Clamping
+  // its centre so the dot stays fully inside the rail is what every
+  // reference player does; letting it hang off the edge reads as a
+  // rendering glitch rather than as "you are at the start".
+  //
+  // Clamped against the RESTING radius, not the active one: the box has
+  // a fixed layout size and only a transform scales it, so measuring
+  // against the scaled size would make the dot JUMP inward the instant
+  // you touched it and jump back on release.
+  const thumbRadius = THUMB_REST_PX / 2;
   const thumbLeft = Math.max(
-    0,
-    Math.min(trackWidth, playedWidth) - THUMB_REST_PX / 2,
+    thumbRadius,
+    Math.min(trackWidth - thumbRadius, playedWidth - thumbRadius),
   );
 
   const rowStyle = [
     styles.row,
-    {paddingHorizontal: spacing.lg, paddingBottom: spacing.sm + insets.bottom},
+    {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: MIN_BOTTOM_GAP_PX + insets.bottom,
+    },
   ];
 
   return (
@@ -249,9 +290,14 @@ export const TransportBar: React.FC = () => {
             style={({pressed}) => [
               styles.track,
               {
-                backgroundColor: state.seekable
-                  ? colors.border.subtle
-                  : colors.border.subtle,
+                // V19 W8.7 — `background.seekTrack.empty`. This was
+                // `colors.border.subtle`, which in the dark palette is
+                // `rgba(255,255,255,0.06)`: on a 3 px rail over video
+                // that is not a grey track, it is nothing. The ternary
+                // that used to sit here returned `border.subtle` on
+                // BOTH branches, so it never expressed the live-stream
+                // case it appeared to.
+                backgroundColor: colors.background.seekTrack.empty,
                 opacity: state.seekable ? 1 : 0.5,
                 transform: [{scaleY: pressed ? 1.4 : 1}],
               },
@@ -283,11 +329,17 @@ export const TransportBar: React.FC = () => {
               pointerEvents="none"
               style={[
                 styles.thumb,
-                isScrubbing ? styles.thumbActive : styles.thumbRest,
                 {
                   left: thumbLeft,
-                  backgroundColor: colors.accent.gold,
-                  shadowColor: colors.accent.gold,
+                  backgroundColor: colors.text.bright,
+                  shadowColor: colors.background.seekTrack.empty,
+                  transform: [
+                    {
+                      scale: isScrubbing
+                        ? THUMB_ACTIVE_PX / THUMB_REST_PX
+                        : 1,
+                    },
+                  ],
                 },
               ]}
             />
@@ -333,18 +385,32 @@ export const TransportBar: React.FC = () => {
           correct rather than a gap to fill. */}
       <TransportRow />
 
-      {/* Row 3 — the secondary control row (W7.3). Repeats as a
-          labelled pill (it reports which mode is active); Captions
-          self-collapses when the file has no subtitle tracks; PiP
-          self-collapses when PiP is unavailable. Volume expands a
-          real slider on tap. `More` opens the single secondary sheet. */}
+      {/* Row 3 — the secondary control row (W8.7 layout).
+
+          W8.7 corrected the ARRANGEMENT as well as the widgets. The
+          previous order put volume on the RIGHT between PiP and More,
+          and volume is the one control in this row with real width —
+          it carries a slider. A slider on the right of a
+          `space-between` row therefore shoved PiP and More into the
+          screen edge, and because the bottom inset was the only
+          clearance they ended up sitting under the gesture bar. That
+          is the reported "speaker floating mid-left, huge gap, PiP and
+          More crammed on the right".
+
+          The arrangement now matches every shipping player (YouTube,
+          Plex, Tencent Video, Huawei Video): OUTPUT on the left —
+          volume, the one wide control — and the mode/affordance
+          CLUSTER on the right, where four equally-sized icon buttons
+          line up on a common edge. Both groups are laid out from their
+          own side, so a wide volume slider grows into the empty middle
+          and can never push the icon cluster anywhere. */}
       <View style={styles.modeRow}>
         <View style={styles.modeLeft}>
-          <ModeControl />
-          <CaptionsToggle />
+          <VolumeControl />
         </View>
         <View style={styles.modeRight}>
-          <VolumeControl />
+          <CaptionsToggle />
+          <ModeControl />
           <PiPToggle />
           <More />
         </View>
@@ -380,11 +446,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
-  // W7.3: `space-between` kept, because the two clusters are genuinely
-  // independent groups pinned to opposite edges — the left one reports
-  // playback STATE, the right one reports OUTPUT and options. What
-  // changed is that the groups now have a defined rhythm internally
-  // (pills and 44 pt targets) instead of ragged `hitSlop` boxes.
+  // W8.7: `space-between` kept, because the two groups are genuinely
+  // independent clusters pinned to opposite edges — the left one is
+  // OUTPUT (volume), the right one is the affordance cluster. The left
+  // group may not shrink (a clipped volume slider is a broken control)
+  // and the right one may not either, so the slack between them absorbs
+  // the difference instead of the controls losing width.
   modeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -394,17 +461,22 @@ const styles = StyleSheet.create({
     // volume control can be 44 too — this reserves the band so the
     // transport row above never gets visually pinched by it.
     minHeight: 44,
+    gap: spacing.sm,
   },
   modeLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    flexShrink: 1,
+    flexShrink: 0,
   },
   modeRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    // W8.7 — every member of this cluster is the same size (a 44 pt
+    // icon target), so an EQUAL gap is what makes them read as one
+    // group rather than as four unrelated buttons that happen to share
+    // a row.
     gap: spacing.xs,
+    flexShrink: 0,
   },
   trackHitArea: {
     flex: 1,
@@ -426,23 +498,20 @@ const styles = StyleSheet.create({
   },
   thumb: {
     position: 'absolute',
+    // One physical size, scaled under the finger. The previous version
+    // swapped width/height between two static styles, which meant the
+    // resting dot and the grabbed dot were two separate layout boxes —
+    // so the left offset had to be recomputed for a size that was only
+    // known at render time, and it was wrong at both ends of the rail.
+    // A single box plus a transform removes that class of error.
     top: -THUMB_REST_PX / 2,
-    borderRadius: 9999,
-    shadowOffset: {width: 0, height: 0},
-  },
-  thumbRest: {
     width: THUMB_REST_PX,
     height: THUMB_REST_PX,
-    shadowOpacity: 0.3,
+    borderRadius: 9999,
+    shadowOffset: {width: 0, height: 0},
+    shadowOpacity: 0.45,
     shadowRadius: 4,
-    elevation: 2,
-  },
-  thumbActive: {
-    width: THUMB_ACTIVE_PX,
-    height: THUMB_ACTIVE_PX,
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 6,
+    elevation: 3,
   },
 });
 

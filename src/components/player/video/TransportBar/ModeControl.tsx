@@ -1,81 +1,91 @@
 /**
- * V19 W7.3 — `ModeControl`: the repeat-mode control (chip tier).
+ * V19 W8.7 — `ModeControl`: the repeat control. ONE TAP CYCLES.
  *
- * ## What changed
+ * ## Why there is no popup
  *
- * This used to hand-roll a `Pressable` with a **16 px** `repeat` glyph,
- * a text label, `hitSlop={8}`, and an opacity-only press. All four were
- * wrong:
+ * This used to open a `ModeSheet` popover listing Off / Repeat one /
+ * Repeat all. That was a design invention, not a pattern — and the user
+ * called it out: *"there is no need for popup, if we click loop icon
+ * rotate through each, that is the industry standard"*.
  *
- *   - 16 px is below every legibility floor, and it sat 12 px below the
- *     transport row's 28 px icons directly above it in the same screen.
- *   - `hitSlop={8}` inflated the touch area 8 px past its own bounds on
- *     every side, so this pill and its neighbour in the mode row
- *     overlapped and competed for taps — the "some icons are not
- *     clickable" symptom.
- *   - Opacity-only feedback over a video frame is close to invisible.
+ * Tap-to-cycle is what YouTube, Netflix, Apple TV, Plex and VLC all
+ * ship. The reason it wins is not fewer taps in the average case, it is
+ * that the control is **unambiguous from the icon alone**. A menu
+ * forces the user to open a surface, read a list, and match it against
+ * a glyph they already understood. A cycling icon reports its own state
+ * in the chrome, permanently, with no navigation at all.
  *
- * It now renders through `PlayerControl`'s chip tier, which supplies a
- * 22 px glyph, a real 44 pt pill, a spring press, a haptic, and the
- * accessibility role — so the numbers cannot drift back.
+ * ## Why the ORDER is Off → Repeat all → Repeat one
  *
- * ## Why the label stays
- *
- * The label ("Off" / "Repeat one" / "Repeat all") is the reason this is
- * a pill and not a bare icon. The control's whole job is to report
- * which of three mutually-exclusive modes is active; a bare glyph would
- * have to encode that in colour and shape alone, which fails WCAG 1.4.1
- * for anyone who cannot distinguish the gold state, and is genuinely
- * ambiguous for everyone else.
- *
- * Architecture source of truth: `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md`
- * §3.2; `md/SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md` §3.3.
+ * That is YouTube's order and it is the order users' fingers already
+ * know. It also puts the two "repeat" states adjacent, so the cycle
+ * reads as a progression rather than as three unrelated settings.
  */
-
 import * as React from 'react';
 import {useTransport, type RepeatMode} from '../../../../infrastructure/player';
-import {PlayerControl, CONTROL_ICON_SIZE_COMPACT} from '../PlayerControl/PlayerControl';
-import {ModeSheet} from './ModeSheet';
+import {PlayerControl} from '../PlayerControl/PlayerControl';
 
-const MODE_LABEL: Record<RepeatMode, string> = {
+/**
+ * The cycle, in order. This array is the single source of truth for
+ * "what comes next" — the tests assert against it rather than against a
+ * hardcoded successor, so re-ordering the cycle cannot silently break
+ * the contract.
+ */
+export const REPEAT_CYCLE: readonly RepeatMode[] = ['off', 'all', 'one'] as const;
+
+export const MODE_LABEL: Record<RepeatMode, string> = {
   off: 'Off',
   one: 'Repeat one',
   all: 'Repeat all',
 };
 
+/**
+ * The next mode in the cycle. Unknown modes fall back to `'off'`
+ * (i.e. wrap to the start) rather than throwing or returning `null` —
+ * a control that can be handed a value it was not written for must
+ * still land somewhere legal.
+ */
+export function nextRepeatMode(current: RepeatMode): RepeatMode {
+  const index = REPEAT_CYCLE.indexOf(current);
+  if (index < 0) return REPEAT_CYCLE[0];
+  return REPEAT_CYCLE[(index + 1) % REPEAT_CYCLE.length];
+}
+
 export const ModeControl: React.FC = () => {
   const {state, commands} = useTransport();
-  const [sheetOpen, setSheetOpen] = React.useState(false);
 
-  const isActive = state.repeatMode !== 'off';
-  const label = MODE_LABEL[state.repeatMode];
+  const mode = state.repeatMode;
+  const label = MODE_LABEL[mode];
+  const isActive = mode !== 'off';
+
+  // One press, one whole cycle step. There is no "hold for more" and no
+  // secondary menu: a three-state setting does not need one, and a
+  // long-press gesture nobody discovers is not a control.
+  const onPress = React.useCallback(() => {
+    commands.setRepeatMode(nextRepeatMode(mode));
+  }, [commands, mode]);
 
   return (
-    <>
-      <PlayerControl
-        testID="repeat-mode"
-        chip
-        icon="repeat"
-        iconSize={CONTROL_ICON_SIZE_COMPACT}
-        label={label}
-        active={isActive}
-        onPress={() => setSheetOpen(true)}
-        accessibilityRole="switch"
-        accessibilityChecked={isActive}
-        accessibilityLabel={`Repeat mode: ${label}`}
-        accessibilityHint="Opens the repeat-mode picker"
-      />
-
-      {/* The sheet is mounted here so the open-state is local: the
-          TransportBar embeds this control once and never has to know a
-          sheet exists. */}
-      <ModeSheet
-        visible={sheetOpen}
-        currentMode={state.repeatMode}
-        onSelect={mode => commands.setRepeatMode(mode)}
-        onClose={() => setSheetOpen(false)}
-      />
-    </>
+    <PlayerControl
+      testID="repeat-mode"
+      // The glyph CARRIES the state, which is the whole point of
+      // deleting the popup: `repeat` = loop the queue, `repeatOne` =
+      // loop this file, both shown plain while off. So the current mode
+      // is legible at a glance from the icon itself, with no surface to
+      // open and no dependence on the gold tint (WCAG 1.4.1).
+      icon={mode === 'one' ? 'repeatOne' : 'repeat'}
+      onPress={onPress}
+      accessibilityRole="switch"
+      accessibilityChecked={isActive}
+      accessibilityLabel={`Repeat mode: ${label}`}
+      accessibilityHint="Switches between repeat off, repeat all and repeat one"
+      // Engaged turns the glyph gold — the same "small state accent" use
+      // of the brand colour that W8.7 kept it for after removing the
+      // saturated CTA fill. It is a SECOND channel, never the only one:
+      // the glyph swap and the a11y switch state both carry the mode
+      // without it (WCAG 1.4.1).
+      active={isActive}
+    />
   );
 };
 

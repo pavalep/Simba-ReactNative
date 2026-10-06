@@ -79,6 +79,45 @@ export interface ColorTokens {
       /** Alpha across the transport band (scrub row + control rows). */
       transport: string;
     };
+    /**
+     * V19 W8.7 — the three tones of the SCRUB TRACK.
+     *
+     * ## Why this is not `border.subtle` / `border.emphasis`
+     *
+     * The seek bar painted its empty track with `border.subtle`
+     * (`rgba(255,255,255,0.06)` in dark) and its buffered range with
+     * `border.emphasis` (`rgba(255,255,255,0.12)`). On a light surface
+     * those are sensible hairlines. Over a video frame 6% white on a
+     * 3 px line is invisible — which is the reported *"seek bar should
+     * have grey under colour, missing"*. The whole point of the empty
+     * track is that it shows you how much of the file is LEFT, so it has
+     * to be continuously visible, not a hint.
+     *
+     * `empty` also has to stay clearly darker than `buffered`, or the
+     * buffered range has nothing to be read against.
+     *
+     * Always-dark family (identical in both themes) for the same reason
+     * as `onMediaPill`: this only ever sits on a video frame.
+     */
+    seekTrack: {
+      /** The unplayed remainder — a visible neutral grey. */
+      empty: string;
+      /** The contiguous buffered range, clearly lighter than `empty`. */
+      buffered: string;
+    };
+    /**
+     * V19 W8.7 — the surface of a panel that opens over the video
+     * (`VideoMoreSheet`).
+     *
+     * OPAQUE, unlike `background.surfaceDark` (92%). This sheet used
+     * that 92% token, so the transport row stayed visible THROUGH the
+     * menu — two overlapping control surfaces, and the menu's own rows
+     * competed with the player's seek bar for the same band of screen.
+     *
+     * A panel that covers the controls has to actually cover them, or
+     * it is not a panel.
+     */
+    onMediaSheet: string;
   };
   border: {
     subtle: string;
@@ -160,6 +199,15 @@ export const darkColors: ColorTokens = {
       header: 'rgba(0,0,0,0.55)',
       transport: 'rgba(0,0,0,0.72)',
     },
+    // V19 W8.7 — see the seekTrack doc comment. "empty" is a real grey,
+    // not a 6% white hairline: over a video frame that was invisible,
+    // which is the reported "grey under colour missing". "buffered" sits
+    // clearly above "empty" so the two are distinguishable.
+    seekTrack: {
+      empty: 'rgba(255,255,255,0.28)',
+      buffered: 'rgba(255,255,255,0.52)',
+    },
+    onMediaSheet: '#121216',
   },
   border: {
     subtle: 'rgba(255,255,255,0.06)',
@@ -225,6 +273,15 @@ export const lightColors: ColorTokens = {
       header: 'rgba(0,0,0,0.55)',
       transport: 'rgba(0,0,0,0.72)',
     },
+    // V19 W8.7 — identical to the dark block above, deliberately, for the
+    // same reason: the seek track only ever sits on a video frame, and a
+    // video frame is dark in BOTH themes. A light theme must not produce
+    // a light seek track.
+    seekTrack: {
+      empty: 'rgba(255,255,255,0.28)',
+      buffered: 'rgba(255,255,255,0.52)',
+    },
+    onMediaSheet: '#121216',
   },
   border: {
     subtle: 'rgba(0,0,0,0.06)',
