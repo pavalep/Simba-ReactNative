@@ -633,8 +633,24 @@ export function useTransport(): TransportHook {
       title: playerState.title ?? '',
       artist: playerState.artist ?? '',
     };
+  // V19 W9 (v1.10.0) — dependency list is FIELD-based, not object-based.
+  //
+  // This used to list `progress` (the whole object). `progress` gets a new
+  // identity on every event that touches ANY progress field, so this memo
+  // — and therefore the entire 24-field `TransportHook` object that all 12
+  // chrome components consume — was rebuilt on every position tick, every
+  // cache update, and every buffering flag flip.
+  //
+  // `progress.positionMs` genuinely changes ~4x/second during playback, so
+  // this memo still recomputes at 4Hz — but it now recomputes for the ONE
+  // reason the value actually changed, and the deps below are exactly the
+  // fields read in the body above.
   }, [
-    progress,
+    progress.positionMs,
+    progress.durationMs,
+    progress.isBuffering,
+    progress.isSeeking,
+    progress.seekable,
     bufferedRanges,
     repeatMode,
     captionTracks,
@@ -798,7 +814,13 @@ export function useTransport(): TransportHook {
     [commands, state.durationMs, window.width, window.height, setOrientationLocked],
   );
 
-  return {state, commands: wrapped};
+  // V19 W9 (v1.10.0) — the returned object is memoised too.
+  //
+  // `return {state, commands: wrapped}` allocated a fresh hook object on
+  // EVERY render, so even a consumer whose `state` memo had correctly
+  // bailed out still received a new reference from `useTransport()` and
+  // re-rendered. Both halves are stable now, so the tuple is too.
+  return useMemo(() => ({state, commands: wrapped}), [state, wrapped]);
 }
 
 /**

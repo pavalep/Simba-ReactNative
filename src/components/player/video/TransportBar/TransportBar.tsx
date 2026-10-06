@@ -155,18 +155,54 @@ export const TransportBar: React.FC = () => {
   // react-native-safe-area-context, and adding RNGH would mean
   // a native rebuild. PanResponder is fine for a single-axis
   // scrub track.
+  // Live gesture inputs, held in a ref so the PanResponder below can stay
+// // MOUNTED for the component's lifetime.
+  //
+  // V19 W9 (v1.10.0): the responder used to be rebuilt whenever
+  // `seekable`, `durationMs`, `trackWidth` or `scrubPreviewMs` changed.
+  // Two of those change DURING the gesture (`scrubPreviewMs` on every
+  // touch move, `durationMs` on every position tick), so RN was
+  // detaching and re-attaching the responder handlers several times per
+  // second in the middle of a drag — losing the active gesture and
+  // reallocating the handler closures for nothing.
+  //
+  // The ref is written during render (a write, not a render) so the
+  // responder closures read the CURRENT value at event time without
+  // becoming a dependency. Same pattern as `useLatestRef` in
+  // react-native-webview, and the reason the deps list can be `[]`.
+  const scrubRef = React.useRef({
+    seekable: state.seekable,
+    durationMs: state.durationMs,
+    trackWidth,
+    previewMs: scrubPreviewMs,
+  });
+  scrubRef.current = {
+    seekable: state.seekable,
+    durationMs: state.durationMs,
+    trackWidth,
+    previewMs: scrubPreviewMs,
+  };
+
+  // Same treatment for the commands object, which is stable in practice
+  // but must not be read through a stale closure.
+  const commandsRef = React.useRef(commands);
+  commandsRef.current = commands;
+
+  // Pan responder wired ONCE. See the note above the memo for why this
+  // cannot depend on the scrub or position state.
   const panResponder = React.useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => state.seekable,
+        onStartShouldSetPanResponder: () => scrubRef.current.seekable,
         onMoveShouldSetPanResponder: (
           _e: GestureResponderEvent,
           g: PanResponderGestureState,
-        ) => state.seekable && Math.abs(g.dx) > PAN_THRESHOLD_PX,
+        ) =>
+          scrubRef.current.seekable && Math.abs(g.dx) > PAN_THRESHOLD_PX,
         onPanResponderGrant: (e: GestureResponderEvent) => {
-          if (!state.seekable) return;
-          const x = clampFraction(e.nativeEvent.locationX, trackWidth);
-          setScrubPreviewMs(Math.round(x * state.durationMs));
+          if (!scrubRef.current.seekable) return;
+          const x = clampFraction(e.nativeEvent.locationX, scrubRef.current.trackWidth);
+          setScrubPreviewMs(Math.round(x * scrubRef.current.durationMs));
           setScrubPreviewX(e.nativeEvent.locationX);
           setIsScrubbing(true);
         },
@@ -174,14 +210,30 @@ export const TransportBar: React.FC = () => {
           e: GestureResponderEvent,
           _g: PanResponderGestureState,
         ) => {
-          if (!state.seekable) return;
-          const x = clampFraction(e.nativeEvent.locationX, trackWidth);
-          setScrubPreviewMs(Math.round(x * state.durationMs));
+          if (!scrubRef.current.seekable) return;
+          const x = clampFraction(e.nativeEvent.locationX, scrubRef.current.trackWidth);
+          setScrubPreviewMs(Math.round(x * scrubRef.current.durationMs));
           setScrubPreviewX(e.nativeEvent.locationX);
         },
-        onPanResponderRelease: () => {
-          if (scrubPreviewMs !== null && state.seekable) {
-            commands.seek(clampPosition(scrubPreviewMs, state.durationMs));
+        onPanResponderRelease: (e: GestureResponderEvent) => {
+          // The target is recomputed from the RELEASE EVENT rather than
+          // read back out of `scrubRef.previewMs`.
+          //
+          // `scrubRef.current` is synced during render, so it always
+          // reflects the last COMMITTED state. Grant/move/release can
+          // arrive inside one React batch (fast flick, or a synthetic
+          // event sequence), in which case the ref still holds the
+          // pre-grab value and the seek would be silently dropped —
+          // the gesture would appear to do nothing.
+          //
+          // The release event carries the final touch position, which is
+          // exactly what the preview was showing, so deriving it here is
+          // both correct and immune to batching.
+          const {seekable, durationMs, trackWidth: trackWidthNow} = scrubRef.current;
+          if (seekable && trackWidthNow > 0) {
+            const x = clampFraction(e.nativeEvent.locationX, trackWidthNow);
+            const targetMs = Math.round(x * durationMs);
+            commandsRef.current.seek(clampPosition(targetMs, durationMs));
           }
           setScrubPreviewMs(null);
           setIsScrubbing(false);
@@ -192,7 +244,12 @@ export const TransportBar: React.FC = () => {
           setIsScrubbing(false);
         },
       }),
-    [state.seekable, state.durationMs, trackWidth, scrubPreviewMs, commands],
+    // The empty dependency list IS the contract, and
+    // react-hooks/exhaustive-deps has nothing to report here because the
+    // memo body references only refs and setState functions — both of
+    // which are stable and deliberately absent from the list. Hence no
+    // rule-disable comment (an unused one is itself an eslint error here).
+    [],
   );
 
   const playedFraction =
