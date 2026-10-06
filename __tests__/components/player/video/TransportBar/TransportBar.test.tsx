@@ -211,6 +211,65 @@ describe('TransportBar', () => {
     );
   });
 
+  // ── Unknown duration (found on device during W9 verification) ────────────
+  //
+  // mpv had not reported a duration yet, so `durationMs` was 0 while the
+  // position was already 1:18. The remaining label rendered the literal
+  // `-0:00` — asserting that NO TIME REMAINS while the film was visibly
+  // playing — and the accessibility value announced "position 78000 of 0".
+  //
+  // `formatMsAsClock(0 - 78000)` returns `'0:00'` by design (negative input
+  // collapses to zero), so the `-` template produced `-0:00`.
+  //
+  // The fix follows VLC's documented pattern,
+  // `remainingTime?.stringValue ?? "--:--"`. A gap is honest; a wrong
+  // number is not.
+
+  it('shows a placeholder, never "-0:00", when duration is unknown', async () => {
+    mockTransport.state.durationMs = 0;
+    mockTransport.state.positionMs = 78_000;
+    const {getByText, queryByText} = await renderChrome(<TransportBar />);
+
+    expect(queryByText('-0:00')).toBeNull();
+    expect(getByText('--:--')).toBeTruthy();
+  });
+
+  it('omits the accessibility range when duration is unknown', async () => {
+    mockTransport.state.durationMs = 0;
+    mockTransport.state.positionMs = 78_000;
+    const {getByRole, getByTestId} = await renderChrome(<TransportBar />);
+    const track = getByRole('adjustable');
+    await measureTrack(getByTestId);
+
+    // `{min: 0, max: 0, now: 78000}` is the same lie as `-0:00` in a
+    // different font. RN normalises `accessibilityValue={undefined}` into an
+    // all-undefined object, so the assertion is that NO BOUND is announced
+    // rather than that the prop is literally absent.
+    const value = track.props.accessibilityValue as Record<string, unknown>;
+    expect(value?.max).toBeUndefined();
+    expect(value?.now).toBeUndefined();
+    expect(track.props.accessibilityLabel).toBe('Playback position');
+  });
+
+  it('still renders a real remaining time once duration is known', async () => {
+    // The mirror of the two tests above: the placeholder must not become a
+    // permanent "unknown" once mpv reports a duration.
+    mockTransport.state.durationMs = 240_000;
+    mockTransport.state.positionMs = 78_000;
+    const {getByText, queryByText, getByRole} = await renderChrome(
+      <TransportBar />,
+    );
+
+    // 240000 - 78000 = 162000ms -> 2:42 remaining.
+    expect(getByText('-2:42')).toBeTruthy();
+    expect(queryByText('--:--')).toBeNull();
+    expect(getByRole('adjustable').props.accessibilityValue).toEqual({
+      min: 0,
+      max: 240_000,
+      now: 78_000,
+    });
+  });
+
   it('taps at 50% of the track commit to durationMs / 2', async () => {
     const {getByRole, getByTestId} = await renderChrome(<TransportBar />);
     const track = getByRole('adjustable');

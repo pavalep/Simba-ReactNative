@@ -156,24 +156,36 @@ jest.mock('../../../../../src/components/player/video/TransportBar/More', () => 
 }));
 
 // ═══════════════════════════════════════════════════════════════════════
+// Helpers
+// ═══════════════════════════════════════════════════════════════════════
 
 /**
- * Capture the responder CONFIG objects handed to `PanResponder.create`
- * without ever invoking the real factory.
+ * Capture the responder CONFIG objects handed to `PanResponder.create`.
  *
- * `create` is stubbed to return a minimal stand-in — the component only
- * spreads `.panHandlers` onto the view, and the gesture itself is never
- * simulated here (see the file header). Counting calls and comparing the
- * captured configs is enough to prove the responder is built once.
+ * `create` is replaced (never spied) with a stub returning a minimal
+ * stand-in, so the real factory — whose `_gestureState` bookkeeping is not
+ * re-entrant through a wrapper — never runs. The component only spreads
+ * `.panHandlers` onto the view, and the gesture is driven by invoking the
+ * component's OWN callbacks straight out of the captured config, which is
+ * the same code path the native responder invokes.
+ *
+ * This is also why `fireEvent(track, 'responderMove', …)` is unusable: RN's
+ * real responder reads `gestureState.touchHistory` (native-only) on every
+ * move and throws "Cannot read properties of undefined (reading
+ * 'touchBank')" under jest, regardless of the component.
  */
-type ResponderConfig = Record<string, (...a: never[]) => unknown>;
+type ResponderConfig = {
+  onPanResponderGrant?: (e: unknown) => void;
+  onPanResponderMove?: (e: unknown) => void;
+  onPanResponderRelease?: (e: unknown) => void;
+};
 
 function captureResponderConfigs() {
   const configs: ResponderConfig[] = [];
   const original = PanResponder.create;
   (PanResponder as {create: unknown}).create = (config: ResponderConfig) => {
     configs.push(config);
-    return {panHandlers: {__fromConfig: config}};
+    return {panHandlers: {}};
   };
   return {
     configs,
@@ -183,11 +195,22 @@ function captureResponderConfigs() {
   };
 }
 
+/** Restore the mutable transport-state fixture between tests. */
+function resetTransportState() {
+  mockTransportState.durationMs = 60000;
+  mockTransportState.positionMs = 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// Gesture stability
+// ═══════════════════════════════════════════════════════════════════════
+
 describe('TransportBar scrub gesture stability', () => {
+  beforeEach(resetTransportState);
+
   it('builds the PanResponder configuration exactly once', async () => {
-    // Pre-W9 the memo listed `scrubPreviewMs` + `durationMs`, so this
-    // count climbed while the scrub preview moved. With an empty
-    // dependency list it stays at one, forever.
+    // Pre-W9 the memo listed `scrubPreviewMs` + `durationMs`, so this count
+    // climbed while the scrub preview moved.
     const {configs, restore} = captureResponderConfigs();
     try {
       await render(<TransportBar />);
@@ -197,33 +220,21 @@ describe('TransportBar scrub gesture stability', () => {
     }
   });
 
-  it('does not rebuild the responder when the transport state advances', async () => {
-    // The position tick changes `durationMs`-bearing state four times a
-    // second during playback. That must not rebuild the responder.
+  it('does not rebuild the responder as the scrub preview moves', async () => {
+    // Each move calls `setScrubPreviewMs` — exactly the state that used to
+    // be a dependency of the PanResponder memo.
     const {configs, restore} = captureResponderConfigs();
     try {
       const view = await render(<TransportBar />);
-      expect(configs).toHaveLength(1);
-
-      // Drive the component's own state through the scrub callbacks in the
-      // captured config. These are the component's handlers, invoked
-      // directly — the same functions the native responder would call —
-      // so this exercises the real setState path without needing a native
-      // touch history.
       const config = configs[0];
-      const grant = config.onPanResponderGrant as unknown as (
-        e: unknown,
-      ) => void;
-      const move = config.onPanResponderMove as unknown as (
-        e: unknown,
-      ) => void;
-      const release = config.onPanResponderRelease as unknown as () => void;
-
-      grant({nativeEvent: {locationX: 100}});
-      move({nativeEvent: {locationX: 180}});
-      move({nativeEvent: {locationX: 240}});
-      move({nativeEvent: {locationX: 300}});
-      release();
+      await act(async () => {
+        config.onPanResponderGrant?.({nativeEvent: {locationX: 100}});
+        config.onPanResponderMove?.({nativeEvent: {locationX: 150}});
+        config.onPanResponderMove?.({nativeEvent: {locationX: 200}});
+        config.onPanResponderMove?.({nativeEvent: {locationX: 250}});
+        config.onPanResponderMove?.({nativeEvent: {locationX: 300}});
+        config.onPanResponderRelease?.({nativeEvent: {locationX: 300}});
+      });
 
       expect(configs).toHaveLength(1);
       view.unmount();
@@ -234,43 +245,26 @@ describe('TransportBar scrub gesture stability', () => {
 
   it('commits a seek on release using the CURRENT duration', async () => {
     // Proves the ref indirection is wired correctly: holding the responder
-    // stable must not have frozen it on stale values. A "stable" responder
-    // that seeks to a stale position would be worse than a rebuilt one.
+    // stable must not have frozen it on stale values.
     mockCommands.seek.mockClear();
     const {configs, restore} = captureResponderConfigs();
     try {
       const view = await render(<TransportBar />);
       const track = view.getByTestId('scrub-track-hit-area');
 
-      // The scrub maps an X coordinate onto `trackWidth`, which comes from
-      // `onLayout`. Without a measured width the fraction is 0 and the
-      // clamped seek is legitimately a no-op — so the layout has to happen
-      // before the gesture is meaningful.
       await act(async () => {
+        // The scrub maps X onto `trackWidth`, which comes from `onLayout`.
         track.props.onLayout({
           nativeEvent: {layout: {width: 300, height: 20, x: 0, y: 0}},
         });
       });
 
       const config = configs[0];
-      const grant = config.onPanResponderGrant as unknown as (
-        e: unknown,
-      ) => void;
-      const move = config.onPanResponderMove as unknown as (
-        e: unknown,
-      ) => void;
-      const release = config.onPanResponderRelease as unknown as (
-        e: unknown,
-      ) => void;
-
       await act(async () => {
-        grant({nativeEvent: {locationX: 100}});
-        move({nativeEvent: {locationX: 200}});
-        move({nativeEvent: {locationX: 300}});
-        // The release event carries the final touch position — the handler
-        // derives the target from it rather than from committed state, so a
-        // batched grant/move/release still commits the right seek.
-        release({nativeEvent: {locationX: 300}});
+        config.onPanResponderGrant?.({nativeEvent: {locationX: 100}});
+        config.onPanResponderMove?.({nativeEvent: {locationX: 200}});
+        config.onPanResponderMove?.({nativeEvent: {locationX: 300}});
+        config.onPanResponderRelease?.({nativeEvent: {locationX: 300}});
       });
 
       expect(mockCommands.seek).toHaveBeenCalledTimes(1);

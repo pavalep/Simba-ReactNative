@@ -127,6 +127,17 @@ const TRACK_HEIGHT_PX = 4;
  */
 const MIN_BOTTOM_GAP_PX = 12;
 
+/**
+ * W9 — placeholder for a duration mpv has not reported yet.
+ *
+ * VLC's documented convention is `remainingTime?.stringValue ?? "--:--"`
+ * and iOS/Apple Music use the same shape. Rendering `0:00` here is what
+ * produced the on-screen `-0:00`: it reads as "no time remains", which is
+ * a claim the player cannot actually make. A gap is honest; a wrong number
+ * is not.
+ */
+const UNKNOWN_DURATION_LABEL = '--:--';
+
 export const TransportBar: React.FC = () => {
   const {state, commands} = useTransport();
   const {colors} = useTheme();
@@ -146,6 +157,10 @@ export const TransportBar: React.FC = () => {
   const {samples: keyframes} = useKeyframes();
 
   const displayMs = scrubPreviewMs ?? state.positionMs;
+
+// A duration of 0 means "mpv has not reported one yet" (or the source has
+// no fixed duration). Remaining time is meaningless until it is known.
+const hasKnownDuration = state.durationMs > 0;
 
   // Pan responder wired via useMemo so the closure captures the
   // current `state.durationMs` once per render. PanResponder is
@@ -309,11 +324,20 @@ export const TransportBar: React.FC = () => {
                 ? 'Playback position'
                 : 'Live stream — not seekable'
             }
-            accessibilityValue={{
-              min: 0,
-              max: Math.round(state.durationMs),
-              now: Math.round(displayMs),
-            }}
+            // W9 — the range is omitted entirely while the duration is
+            // unknown. `max: 0, now: 78000` announces "position 78000 of 0"
+            // to a screen reader, which is the same lie as the `-0:00`
+            // label in a different font. No value is better than a wrong
+            // one.
+            accessibilityValue={
+              hasKnownDuration
+                ? {
+                    min: 0,
+                    max: Math.round(state.durationMs),
+                    now: Math.round(displayMs),
+                  }
+                : undefined
+            }
             accessibilityHint={
               state.seekable
                 ? 'Swipe up or down with one finger to adjust position. Tap to seek to that point.'
@@ -421,14 +445,33 @@ export const TransportBar: React.FC = () => {
           component's own documented contract. The implementation had
           drifted to a bare `3:45`, so the label read as elapsed time
           sitting next to the real elapsed time.
+
+          W9 — UNKNOWN DURATION. `durationMs` is 0 until mpv has parsed
+          the media (and permanently 0 for a source with no fixed
+          duration). `formatMsAsClock(0 - 78000)` returns `'0:00'`, so the
+          old template produced the literal `-0:00`: the label asserted
+          that NO TIME REMAINS while the film was visibly playing. Caught
+          on device during W9 verification.
+
+          The fix follows VLC's own documented pattern —
+          `remainingTime?.stringValue ?? "--:--"` — which is also what
+          iOS/Apple Music uses for an unknown duration: a placeholder,
+          never a zero. A wrong number is worse than no number; the user
+          cannot tell a lie from a gap.
         */}
         <AppText
           variant="caption"
           color={colors.text.onMediaMuted}
-          accessibilityLabel={`Remaining ${formatMsAsClock(state.durationMs - displayMs)}`}
+          accessibilityLabel={
+            hasKnownDuration
+              ? `Remaining ${formatMsAsClock(state.durationMs - displayMs)}`
+              : 'Remaining time unknown'
+          }
           style={styles.timeLabel}
         >
-          {`-${formatMsAsClock(state.durationMs - displayMs)}`}
+          {hasKnownDuration
+            ? `-${formatMsAsClock(state.durationMs - displayMs)}`
+            : UNKNOWN_DURATION_LABEL}
         </AppText>
       </View>
 
