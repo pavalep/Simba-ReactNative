@@ -33,6 +33,25 @@ jest.mock('../../../src/features/recentHistory', () => ({
   addRecent: (entry: unknown) => mockAddRecent(entry),
 }));
 
+// W9.5 — the resume frame. Mocked at the LIB's public entry, which is
+// where the production code imports it from, so a rename or a move to
+// the bridge layer fails these tests rather than silently skipping the
+// capture.
+const mockCaptureFrame = jest.fn(
+  async (
+    _uri: string,
+    _positionMs: number,
+    _options?: {width: number; height: number},
+  ): Promise<string | null> => '/data/simba-resume-thumbs/frame.jpg',
+);
+jest.mock('@simba-dev/react-native-media-player', () => ({
+  captureFrame: (
+    uri: string,
+    positionMs: number,
+    options?: {width: number; height: number},
+  ) => mockCaptureFrame(uri, positionMs, options),
+}));
+
 interface FakeTransport {
   positionMs: number;
   durationMs: number;
@@ -53,7 +72,7 @@ jest.mock('../../../src/infrastructure/player/useTransport', () => ({
 
 import {usePlaybackCheckpointSync} from '../../../src/infrastructure/player/usePlaybackCheckpointSync';
 import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
-import {CHECKPOINT_INTERVAL_MS} from '../../../src/infrastructure/player/playbackProgress';
+import {CHECKPOINT_INTERVAL_MS, RESUME_THUMB_HEIGHT, RESUME_THUMB_WIDTH} from '../../../src/infrastructure/player/playbackProgress';
 
 const URI = 'file:///movies/film.mkv';
 
@@ -86,6 +105,8 @@ describe('usePlaybackCheckpointSync', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     mockAddRecent.mockClear();
+    mockCaptureFrame.mockClear();
+    mockCaptureFrame.mockResolvedValue('/data/simba-resume-thumbs/frame.jpg');
     mockTransportState = {...base};
     useNowPlayingStore.getState().reset();
     clock = {now: 1_000_000};
@@ -219,9 +240,14 @@ describe('usePlaybackCheckpointSync', () => {
   });
 
   it('restarts the cadence for a NEW session of the same media', async () => {
-    // Without this, relaunching a film immediately after closing it
-    // skips its first 30s, because the previous session's timestamp is
-    // still in the ref and the URI matches.
+    // W9.5: this test previously asserted `toHaveBeenCalledTimes(2)`
+    // after the relaunch's first tick — and that count came from the
+    // periodic write plus the PREVIOUS session's teardown flush. The
+    // final tick, the one that actually demonstrates the claim, was
+    // being rate-limited out and nothing checked it. Keying the
+    // rate-limit on the session (not the URI) is what makes the
+    // relaunch write promptly, and the assertion below is the claim
+    // itself rather than a tally.
     launch();
     const view = await render(
       <Harness clock={clock} transport={mockTransportState} />,
@@ -235,10 +261,13 @@ describe('usePlaybackCheckpointSync', () => {
       useNowPlayingStore.getState().begin({uri: URI, title: 'Film'});
     });
     await setTransport(view, {positionMs: 30_000});
+    // Only ONE second after the previous session's checkpoint — well
+    // inside the 30 s window that would suppress a same-URI write.
     clock.now += 1_000;
     tick();
 
-    expect(mockAddRecent).toHaveBeenCalledTimes(2);
+    // The new session wrote promptly, at its OWN position.
+    expect(mockAddRecent.mock.calls.at(-1)![0]).toMatchObject({position: 30});
   });
 
   it('flushes the final position when the session is torn down', async () => {
@@ -272,6 +301,97 @@ describe('usePlaybackCheckpointSync', () => {
     expect(mockAddRecent).not.toHaveBeenCalled();
 
     await view.unmount();
-    expect(mockAddRecent).toHaveBeenCalledTimes(1);
+    // Two writes on teardown, both for the SAME media: the position,
+    // then that entry again with the captured frame. The claim is that
+    // a re-render adds nothing — the three rerenders above produced no
+    // write at all, and teardown produces a fixed two, not one per
+    // render.
+    expect(mockAddRecent).toHaveBeenCalledTimes(2);
+    expect(mockAddRecent.mock.calls[0]![0]).not.toHaveProperty(
+      'resumeThumbnailPath',
+    );
+    expect(mockAddRecent.mock.calls[1]![0]).toMatchObject({
+      resumeThumbnailPath: '/data/simba-resume-thumbs/frame.jpg',
+    });
+  });
+
+  // ── W9.5 — the resume frame ────────────────────────────────────
+  describe('resume thumbnail', () => {
+    const mountedAt = async (positionMs: number) => {
+      launch();
+      const view = await render(
+        <Harness clock={clock} transport={mockTransportState} />,
+      );
+      await setTransport(view, {positionMs});
+      return view;
+    };
+
+    it('captures the frame at the position the user actually left at', async () => {
+      const view = await mountedAt(90_000);
+
+      await view.unmount();
+      await act(async () => {await Promise.resolve();});
+
+      expect(mockCaptureFrame).toHaveBeenCalledTimes(1);
+      expect(mockCaptureFrame.mock.calls[0]![0]).toBe(URI);
+      // MILLISECONDS, matching the bridge's units. Passing the
+      // position in seconds here would ask for a frame 1000x earlier
+      // than the resume point and quietly produce the wrong picture.
+      expect(mockCaptureFrame.mock.calls[0]![1]).toBe(90_000);
+    });
+
+    it('asks for a 16:9 frame sized for the rail card', async () => {
+      const view = await mountedAt(90_000);
+
+      await view.unmount();
+      await act(async () => {await Promise.resolve();});
+
+      expect(mockCaptureFrame.mock.calls[0]![2]).toEqual({
+        width: RESUME_THUMB_WIDTH,
+        height: RESUME_THUMB_HEIGHT,
+      });
+    });
+
+    it('writes the position FIRST, so a failed capture cannot cost it', async () => {
+      mockCaptureFrame.mockRejectedValue(new Error('no decoder'));
+      const view = await mountedAt(90_000);
+
+      await view.unmount();
+      await act(async () => {await Promise.resolve();});
+
+      // The capture rejected, and the position is still there. This is
+      // the whole reason the capture is fired after the write rather
+      // than awaited in front of it.
+      expect(mockAddRecent).toHaveBeenCalledWith(
+        expect.objectContaining({position: 90}),
+      );
+    });
+
+    it('treats "no frame available" as normal and keeps the poster fallback', async () => {
+      // captureFrame resolves null for a live stream or an unsupported
+      // container. That is an outcome, not a failure.
+      mockCaptureFrame.mockResolvedValue(null);
+      const view = await mountedAt(90_000);
+
+      await view.unmount();
+      await act(async () => {await Promise.resolve();});
+
+      expect(mockAddRecent).toHaveBeenCalledWith(
+        expect.objectContaining({position: 90}),
+      );
+      expect(mockAddRecent).not.toHaveBeenCalledWith(
+        expect.objectContaining({resumeThumbnailPath: expect.anything()}),
+      );
+    });
+
+    it('does NOT capture on the periodic cadence', async () => {
+      const view = await mountedAt(90_000);
+
+      tick(CHECKPOINT_INTERVAL_MS * 4);
+
+      // Re-decoding the same picture every 30 s costs a byte range and
+      // a decoder for a frame that looks identical to the last one.
+      expect(mockCaptureFrame).not.toHaveBeenCalled();
+    });
   });
 });

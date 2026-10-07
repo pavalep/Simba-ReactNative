@@ -179,6 +179,21 @@ export const CHECKPOINT_INTERVAL_MS = 30_000;
  */
 export const MIN_CHECKPOINT_POSITION_SEC = 5;
 
+/**
+ * Size of the frame captured for the continue-watching rail.
+ *
+ * These live here, next to the checkpoint rule, rather than at the two
+ * ends that use them, so the writer cannot start capturing a size the
+ * card cannot show well (and neither can silently disagree with the
+ * library's own defaults).
+ *
+ * 640x360 is 16:9, matching `MediaRailCard`'s 160x90 thumbnail, so the
+ * captured picture fills the card with no letterboxing — which would
+ * otherwise crop to a stripe across the middle of the frame.
+ */
+export const RESUME_THUMB_WIDTH = 640;
+export const RESUME_THUMB_HEIGHT = 360;
+
 export interface CheckpointAdmissionInput {
   /** Session position in **seconds**. */
   readonly positionSec: number;

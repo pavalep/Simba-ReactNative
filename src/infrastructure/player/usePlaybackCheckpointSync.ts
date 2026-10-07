@@ -1,8 +1,12 @@
 import {useEffect, useRef} from 'react';
+import {captureFrame} from '@simba-dev/react-native-media-player';
 import {useNowPlayingStore, type NowPlaying} from '../../state/nowPlayingStore';
 import {addRecent} from '../../features/recentHistory';
+import {logger} from '../../lib/logger';
 import {
   CHECKPOINT_INTERVAL_MS,
+  RESUME_THUMB_HEIGHT,
+  RESUME_THUMB_WIDTH,
   shouldRecordCheckpoint,
 } from './playbackProgress';
 import {useTransport} from './useTransport';
@@ -67,8 +71,12 @@ interface Snapshot {
  *
  * Returns whether a write happened, so the caller can update its
  * rate-limit bookkeeping only when the store was actually touched.
+ *
+ * `resumeThumbnailPath` is optional because the two callers that write
+ * arrive in order: the synchronous write that guarantees the position
+ * lands, then the async one that adds the captured frame.
  */
-function writeCheckpoint(snapshot: Snapshot): boolean {
+function writeCheckpoint(snapshot: Snapshot, resumeThumbnailPath?: string): boolean {
   const {session} = snapshot;
   if (!session || !snapshot.isPlaying) return false;
 
@@ -82,11 +90,44 @@ function writeCheckpoint(snapshot: Snapshot): boolean {
     position: positionSec,
     duration: durationSec,
     ...(session.thumbnailPath ? {thumbnailPath: session.thumbnailPath} : {}),
+    ...(resumeThumbnailPath ? {resumeThumbnailPath} : {}),
     ...(session.type ? {type: session.type} : {}),
     ...(session.mediaLane ? {mediaType: session.mediaLane} : {}),
     ...(session.provider ? {provider: session.provider} : {}),
   });
   return true;
+}
+
+/**
+ * Grab a still at the session's final position.
+ *
+ * Returns `undefined` for every failure. That is not a silent catch for
+ * its own sake — `captureFrame` is specified to RESOLVE `null` for
+ * "there is no frame here" (a live stream, an unsupported container, an
+ * unreachable URL), which is an ordinary outcome, not an error. A
+ * continue-watching card without a frame still resumes; it just shows
+ * the poster instead. The rejection path is for programmer error and
+ * belongs in the console, not in a swallowed expression.
+ *
+ * Only ever called on the teardown flush. Capturing on the 30 s cadence
+ * as well would open a decoder and re-fetch a byte range every thirty
+ * seconds to produce a picture that looks identical to the one from the
+ * previous tick — real cost for no visible difference.
+ */
+async function captureResumeThumbnail(snapshot: Snapshot): Promise<string | undefined> {
+  const session = snapshot.session;
+  if (!session || !(snapshot.positionMs > 0)) return undefined;
+
+  try {
+    const path = await captureFrame(session.uri, snapshot.positionMs, {
+      width: RESUME_THUMB_WIDTH,
+      height: RESUME_THUMB_HEIGHT,
+    });
+    return path ?? undefined;
+  } catch (error) {
+    logger.warn('[checkpoint] resume thumbnail capture failed', error);
+    return undefined;
+  }
 }
 
 /** Injected so tests can drive the clock without fake timers. */
@@ -114,7 +155,9 @@ export function usePlaybackCheckpointSync(now: Clock = Date.now): void {
     session: nowPlaying,
   };
 
-  const lastWriteRef = useRef<{uri: string; at: number} | null>(null);
+  const lastWriteRef = useRef<{uri: string; sessionId: number; at: number} | null>(
+    null,
+  );
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -124,19 +167,32 @@ export function usePlaybackCheckpointSync(now: Clock = Date.now): void {
 
       const at = now();
       const last = lastWriteRef.current;
-      // Keyed on URI as well as time: relaunching the same film right
-      // after closing it must not inherit the previous session's
-      // timestamp and skip its first 30 s of checkpoints.
+      // Keyed on the SESSION, not on the URI. The previous version
+      // compared `last.uri === session.uri` with a comment claiming
+      // that this lets "relaunching the same film right after closing
+      // it" start a fresh countdown — it does the opposite. Replaying
+      // the film you just closed is precisely the case where the URIs
+      // MATCH, so the new session inherited the old timestamp and sat
+      // out its first 30 s of checkpoints. The test named for this
+      // behaviour passed without ever checking it, because the tick it
+      // meant to assert on was silently rate-limited out and the count
+      // it did check came from the teardown flush instead.
+      //
+      // A session id is monotonic per launch, so a new session always
+      // writes its first checkpoint on time — and the previous
+      // session's final position has already been flushed by its own
+      // teardown, so nothing is lost by writing early.
       if (
         last &&
         last.uri === session.uri &&
+        last.sessionId === session.sessionId &&
         at - last.at < CHECKPOINT_INTERVAL_MS
       ) {
         return;
       }
 
       if (writeCheckpoint(snapshot)) {
-        lastWriteRef.current = {uri: session.uri, at};
+        lastWriteRef.current = {uri: session.uri, sessionId: session.sessionId, at};
       }
     }, CHECKPOINT_INTERVAL_MS);
 
@@ -147,11 +203,23 @@ export function usePlaybackCheckpointSync(now: Clock = Date.now): void {
   // resume at 29:30. Cleanup-only, so this runs exactly once per
   // session — on switch, on close, or on the activity going away — and
   // never duplicates the periodic path's last write.
+  //
+  // W9.5: the teardown is also the only place a resume frame is
+  // captured, because it is the only moment whose position is the one
+  // the user actually left at. It is captured AFTER the synchronous
+  // write and written as a second, idempotent update rather than
+  // awaited in front of it: a capture that is slow, or that never
+  // resolves because the activity is going away, must not be able to
+  // cost the user their resume position.
   const sessionId = nowPlaying?.sessionId ?? null;
 
   useEffect(() => {
     return () => {
-      writeCheckpoint(snapshotRef.current);
+      const snapshot = snapshotRef.current;
+      if (!writeCheckpoint(snapshot)) return;
+      void captureResumeThumbnail(snapshot).then(path => {
+        if (path) writeCheckpoint(snapshot, path);
+      });
     };
   }, [sessionId]);
 }
