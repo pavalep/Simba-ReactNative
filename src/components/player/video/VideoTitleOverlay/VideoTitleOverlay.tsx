@@ -109,6 +109,7 @@ import {spacing} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
 import {useReduceMotion, useTransport} from '../../../../infrastructure/player';
 import {PlayerControl, CONTROL_ICON_SIZE_COMPACT} from '../PlayerControl/PlayerControl';
+import {BookmarkControl} from '../BookmarkControl/BookmarkControl';
 
 /**
  * Entrance fade duration (ms). Collapsed to 0 under reduce-motion.
@@ -248,6 +249,13 @@ export const VideoTitleOverlay: React.FC = () => {
         // on colour, which is the WCAG 1.4.1 requirement.
         tint={locked ? colors.accent.gold : colors.text.onMediaSoft}
       />
+
+      {/* ── Bookmark ──────────────────────────────────────────────── */}
+      {/* W9.4. Beside the lock because both are *state* actions on the
+          media rather than transport, and because YouTube places its
+          save control in this same corner of the player. Self-removing
+          when there is no session — see BookmarkControl. */}
+      <BookmarkControl />
     </View>
   );
 };

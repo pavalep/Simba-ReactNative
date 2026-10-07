@@ -24,6 +24,24 @@
  *
  * `render` is async in `@testing-library/react-native` v14, so callers
  * must `await renderChrome(...)`.
+ *
+ * ── Why the providers go in `wrapper`, not in the element ──────────
+ *
+ * This was `render(<ToastProvider>{ui}</ToastProvider>)`, which works
+ * for the initial render and then **silently breaks on `rerender`**.
+ *
+ * RNTL's `rerender(next)` replaces the rendered tree with `next`. When
+ * the providers are part of the element, `rerender(<VideoTitleOverlay
+ * />)` therefore drops them — and the suite dies on the next render
+ * with "useToast must be used within a ToastProvider", several
+ * assertions after the one that introduced the dependency.
+ *
+ * Passing the providers as RNTL's `wrapper` option fixes it once, for
+ * every suite: `rerender` re-applies the wrapper, so a component tree
+ * keeps its providers across re-renders the way the real app does.
+ * Any future chrome component that reaches for an app context is then
+ * covered by construction rather than by the next person's rerender
+ * test.
  */
 
 import * as React from 'react';
@@ -44,12 +62,15 @@ export async function renderChrome(
   ui: React.ReactElement,
   {theme = false}: RenderChromeOptions = {},
 ) {
-  const inner = theme ? (
-    <ThemeProvider>
-      <ToastProvider>{ui}</ToastProvider>
-    </ThemeProvider>
-  ) : (
-    <ToastProvider>{ui}</ToastProvider>
-  );
-  return render(inner);
+  const Providers: React.FC<{children: React.ReactNode}> = ({children}) =>
+    theme ? (
+      <ThemeProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </ThemeProvider>
+    ) : (
+      <ToastProvider>{children}</ToastProvider>
+    );
+
+  // `wrapper`, not a wrapping element — see the note above.
+  return render(ui, {wrapper: Providers});
 }

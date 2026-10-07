@@ -52,6 +52,7 @@
 
 import type {Bookmark} from '../../state/bookmarksStore';
 import type {RecentHistoryEntry} from '../../state/recentHistoryStore';
+import {isEffectivelyFinished, mediaKey} from './playbackProgress';
 
 export interface ResumeLookupInput {
   /** Bookmarks from `useBookmarksStore.getState().items`. Read-only. */
@@ -61,42 +62,17 @@ export interface ResumeLookupInput {
 }
 
 /**
- * V19 W9.3 — the "already finished" cutoff, as a fraction of duration.
+ * The "already finished" cutoff lives in `./playbackProgress` now, next
+ * to the other half of the contract.
  *
- * Two independent shipping players agree on this number:
- *
- *   - **Plex** — Settings > Library > "Video played threshold".
- *     Documented default: **90%**.
- *   - **Jellyfin** — Dashboard > Playback > Resume > "Maximum resume
- *     percentage". Documented default: **90%**; past it the item is
- *     marked played and the position resets.
- *
- * Without the cutoff, finishing a film and tapping it again opens it
- * on the last credits frame, plays a few seconds and stops — the worst
- * outcome resume can produce, and the one that makes users turn the
- * feature off rather than notice it exists.
- *
- * Jellyfin also refuses to save a position for anything shorter than
- * 300s. That rule is deliberately NOT copied here: it is
- * single-sourced, and SIMBA's library is full of short podcast
- * episodes where resuming 20 seconds in is exactly right. The 90%
- * ceiling already covers the genuinely-broken case.
+ * W9.4 moved it: the resume **reader** (this file) and the resume
+ * **writer** (`usePlaybackCheckpointSync`) sit at opposite ends of a
+ * chain that had never been joined. Two copies of the 90% rule that
+ * agree by coincidence is the same defect as two sources of truth for
+ * one field — it holds until somebody edits one side. Re-exported here
+ * because callers already import it from this module.
  */
-export const RESUME_MAX_FRACTION = 0.9;
-
-/**
- * True when `positionSec` is far enough into `durationSec` that the
- * user has effectively finished it.
- *
- * An unknown duration (`0`) can never be "near the end" — we have no
- * basis to call it finished, so the position is trusted as-is. This
- * is the same reasoning as the `> 0` guards below: a missing value is
- * not evidence.
- */
-function isEffectivelyFinished(positionSec: number, durationSec: number): boolean {
-  if (!(durationSec > 0)) return false;
-  return positionSec / durationSec >= RESUME_MAX_FRACTION;
-}
+export {RESUME_MAX_FRACTION, isEffectivelyFinished} from './playbackProgress';
 
 /**
  * Returns the resume position in **milliseconds** for the given id,
@@ -122,11 +98,18 @@ export function resolveResumeMs(
   input: ResumeLookupInput,
   id: string,
 ): number | undefined {
+  // W9.4: every comparison goes through `mediaKey`, so a bookmark saved
+  // as `/a/b.mkv` still matches a shelf entry stored as
+  // `file:///a/b.mkv`. Before this, a single URI spelling difference
+  // silently produced "no saved position" — a resume that looked like
+  // it had simply never worked.
+  const key = mediaKey(id);
+
   // 1. Bookmarks (explicit user signal). Multiple positions per URI
   //    are allowed (A14: each id encodes `(fileUri, position)`) so
   //    we take the LATEST — the most recently created wins, since
   //    that's the "freshest" explicit signal.
-  const matches = input.bookmarks.filter(b => b.fileUri === id);
+  const matches = input.bookmarks.filter(b => mediaKey(b.fileUri) === key);
   if (matches.length > 0) {
     const latest = matches.reduce<Bookmark | null>(
       (acc, b) => (acc && acc.createdAt > b.createdAt ? acc : b),
@@ -140,7 +123,7 @@ export function resolveResumeMs(
   // 2. History (implicit recent-play signal). The history store
   //    upserts on every play, so at most 1 entry per fileUri —
   //    `find` is sufficient.
-  const historyEntry = input.history.find(h => h.fileUri === id);
+  const historyEntry = input.history.find(h => mediaKey(h.fileUri) === key);
   if (historyEntry && historyEntry.position > 0) {
     // Past RESUME_MAX_FRACTION the user has finished this; treat it
     // as "no saved position" so the launch starts from the top.

@@ -1,6 +1,10 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
 import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
+// W9.4 — identity is normalised so `file:///a/b.mkv` and `/a/b.mkv`
+// are one bookmark. Shared with the resume reader and the history store
+// so all three key media on exactly the same string.
+import {mediaKey} from '../infrastructure/player/playbackProgress';
 import type {MediaKind, MediaLane, MediaSource} from '../types/media';
 import {normalizeMediaClassification} from '../types/media';
 
@@ -21,6 +25,19 @@ import {normalizeMediaClassification} from '../types/media';
  */
 
 export const MAX_BOOKMARK_ENTRIES = 20;
+
+/**
+ * Two bookmarks count as "the same moment" when they are within this
+ * many seconds of each other.
+ *
+ * Lives here, under the store, rather than in the feature layer: the
+ * store's dedup and the player chrome's toggle both need it, and
+ * defining it in the feature would point a dependency from `state` back
+ * into `features`. A second, separately-invented tolerance on the UI
+ * side is how a toggle ends up reporting "not bookmarked" on a
+ * position the store already considers bookmarked.
+ */
+export const BOOKMARK_POSITION_TOLERANCE_SEC = 1;
 
 export interface Bookmark {
   /**
@@ -100,8 +117,8 @@ function buildBookmark(input: BookmarkInput, existing?: Bookmark): Bookmark {
   });
 
   return {
-    id: existing?.id ?? input.id ?? `bookmark-${encodeURIComponent(input.fileUri)}`,
-    fileUri: input.fileUri,
+    id: existing?.id ?? input.id ?? `bookmark-${encodeURIComponent(mediaKey(input.fileUri))}-${Math.floor(Math.max(0, input.position))}`,
+    fileUri: mediaKey(input.fileUri),
     title: input.title || existing?.title || 'Untitled',
     position: Math.max(0, Number(input.position) || 0),
     duration: Math.max(0, Number(input.duration) || 0),
@@ -142,6 +159,11 @@ export const useBookmarksStore = create<BookmarksState & BookmarksActions>()(
 
       addBookmark: ({bookmark: input, evictId}) =>
         set((s) => {
+          // W9.4 — match on the NORMALISED uri. The player launches with
+          // `file:///a/b.mkv` while some call sites carry `/a/b.mkv`;
+          // on a raw compare the second never matched the first, so the
+          // same bookmark was appended twice instead of updated.
+          const inputKey = mediaKey(input.fileUri);
           const sameId = input.id
             ? s.items.findIndex(item => item.id === input.id)
             : -1;
@@ -149,8 +171,9 @@ export const useBookmarksStore = create<BookmarksState & BookmarksActions>()(
             ? s.items[sameId]
             : s.items.find(
                 item =>
-                  item.fileUri === input.fileUri &&
-                  Math.abs(item.position - input.position) < 1,
+                  mediaKey(item.fileUri) === inputKey &&
+                  Math.abs(item.position - input.position) <
+                    BOOKMARK_POSITION_TOLERANCE_SEC,
               );
           const existing = sameId >= 0 ? s.items[sameId] : samePosition;
           const bookmark = buildBookmark(input, existing);

@@ -142,7 +142,32 @@ export {usePlayerActivity} from './useResumeAwarePlayerActivity';
 // queue ↔ usePlayerStore. Mounted ONCE at AppContent (App.tsx).
 // Source of truth: md/SIMBA_PLAYER_V19_SPECIFICATION.md §3.22 +
 // md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md §3.C.
+//
+// W9.4 NOTE: this is mounted in `AppContent`, which does NOT render in
+// the player activity, so it has never observed a real playback session.
+// `usePlaybackCheckpointSync` below is mounted in `ActivityShell`
+// instead, which does. Revisiting this file's placement is V20 work.
 export {useQueueSync} from './useQueueSync';
+
+// W9.4 — the resume checkpoint writer. The producer half of the
+// "Recently Played" / resume chain that `resolveResumeMs` reads.
+// Mount once, in `ActivityShell` (see its docstring for why not
+// `AppContent`).
+export {usePlaybackCheckpointSync} from './usePlaybackCheckpointSync';
+
+// W9.4 — the shared media vocabulary (identity normalisation, the
+// finished-item cutoff, checkpoint admission). Exported so the resume
+// reader, the checkpoint writer and the history store cannot drift
+// apart on what "the same media" or "finished" means.
+export {
+  CHECKPOINT_INTERVAL_MS,
+  MIN_CHECKPOINT_POSITION_SEC,
+  RESUME_MAX_FRACTION,
+  isEffectivelyFinished,
+  mediaKey,
+  normalizeMediaUri,
+  shouldRecordCheckpoint,
+} from './playbackProgress';
 
 // V19 W6.0 — the PER-TREE player-host fact, published from the root
 // component's `initialProps` (each activity supplies its own value in

@@ -1,10 +1,15 @@
 import {useCallback, useImperativeHandle, useMemo, type ForwardedRef} from 'react';
-import {useBookmarksStore, MAX_BOOKMARK_ENTRIES} from '../../state';
+import {
+  useBookmarksStore,
+  MAX_BOOKMARK_ENTRIES,
+  BOOKMARK_POSITION_TOLERANCE_SEC,
+} from '../../state';
 import type {
   Bookmark,
   BookmarkInput,
   BookmarkPositionUpdate,
 } from '../../state';
+import {mediaKey} from '../../infrastructure/player/playbackProgress';
 
 export type {
   Bookmark,
@@ -43,6 +48,42 @@ function oldestBookmark(items: Bookmark[]): Bookmark | undefined {
     const itemTime = Date.parse(item.createdAt);
     return itemTime < oldestTime ? item : oldest;
   }, undefined);
+}
+
+/**
+ * Two bookmarks count as "the same moment" when they are within this
+ * many seconds of each other.
+ *
+ * Defined in the store, re-exported here. It used to exist twice — the
+ * store compared `< 1`, and the player's toggle would have had to
+ * re-derive it. When two sides disagree, the toggle reports "not
+ * bookmarked" on a position the store considers bookmarked, and
+ * pressing it silently creates a duplicate. Putting the definition
+ * under the store keeps the dependency pointing one way (feature →
+ * state), not both.
+ */
+export {BOOKMARK_POSITION_TOLERANCE_SEC} from '../../state/bookmarksStore';
+
+/** Do these two positions refer to the same bookmarked moment? */
+export function isSameBookmarkPosition(a: number, b: number): boolean {
+  return Math.abs(a - b) < BOOKMARK_POSITION_TOLERANCE_SEC;
+}
+
+/**
+ * Bookmarks belonging to one media item.
+ *
+ * Compares on the **normalised** URI (W9.4), matching how the resume
+ * reader and the history store key media. A raw comparison would miss a
+ * bookmark saved as `/a/b.mkv` when the player is playing
+ * `file:///a/b.mkv` — the same file, one entry, invisible.
+ */
+export function bookmarksForUri(
+  items: readonly Bookmark[],
+  uri: string | undefined,
+): Bookmark[] {
+  if (!uri) return [];
+  const key = mediaKey(uri);
+  return items.filter(b => mediaKey(b.fileUri) === key);
 }
 
 /** A14: bookmark id is now `(fileUri, position)`-derived so multiple

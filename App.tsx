@@ -17,6 +17,7 @@ import {
   resolveResumeMs,
   PlayerHostProvider,
   useIsPlayerActivity,
+  usePlaybackCheckpointSync,
   useQueueSync,
 } from './src/infrastructure/player';
 import {SimbaPlayer as V19SimbaPlayer} from './src/components/player/video/SimbaPlayer/SimbaPlayer';
@@ -254,6 +255,16 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
 }) => {
   const {colors} = useTheme();
   const isPlayerActivity = useIsPlayerActivity();
+
+  // W9.4 — the resume checkpoint writer.
+  //
+  // Mounted HERE, not in `AppContent`, and that placement is the whole
+  // point. `AppContent` renders as `{isPlayerActivity ? null :
+  // <AppContent />}`, so anything mounted there does not run in the
+  // player activity — which is precisely where playback happens.
+  // `useQueueSync` is mounted in `AppContent` today and has therefore
+  // never observed a real playback session.
+  usePlaybackCheckpointSync();
 
   const fallbackColors = useMemo(
     () => ({

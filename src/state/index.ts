@@ -78,6 +78,9 @@ export {
 export {
   useBookmarksStore,
   MAX_BOOKMARK_ENTRIES,
+  // W9.4 — the single definition of "same bookmarked moment", shared by
+  // the store's dedup and the player chrome's toggle.
+  BOOKMARK_POSITION_TOLERANCE_SEC,
   normalizeBookmarks,
   type Bookmark,
   type BookmarkInput,
