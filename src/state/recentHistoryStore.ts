@@ -14,13 +14,29 @@ import {normalizeMediaClassification} from '../types/media';
  * whitelist) with `useRecentHistoryStore` (Zustand + persist, key
  * 'recentHistory' to match the old redux-persist whitelist).
  *
- * The state holds a 20-entry "recently played" cap keyed by
- * `fileUri`; on every upsert the existing entry is evicted and
- * the new one becomes the head. Persisted via the shared
+ * The state holds a "recently played" cap keyed by `fileUri`; on
+ * every upsert the existing entry is evicted and the new one becomes
+ * the head, so the list is newest-first by construction and the
+ * furthest-oldest entry falls off the tail. Persisted via the shared
  * AsyncStorage helper.
  */
 
-export const MAX_RECENT_HISTORY_ENTRIES = 20;
+/**
+ * How many entries "Recently Played" keeps.
+ *
+ * Ten, not twenty, and not "as many as fit". This is a recency list,
+ * not an archive — its job is to answer "what did I just watch", and a
+ * list that still surfaces something from a month ago stops answering
+ * that question. Ten is also roughly what fits in two horizontal
+ * swipes on a phone, so the rail never has to silently truncate (which
+ * is exactly what it used to do: this constant was 20 while the rail
+ * defaulted to rendering 8).
+ *
+ * Eviction is positional, not sorted: the upsert prepends and slices,
+ * so an entry only survives while it stays inside the newest N. That
+ * is LRU on recency, and it costs one array operation.
+ */
+export const MAX_RECENT_HISTORY_ENTRIES = 10;
 
 export interface RecentHistoryEntry {
   fileUri: string;
@@ -29,6 +45,16 @@ export interface RecentHistoryEntry {
   duration: number;
   lastPlayedAt: string;
   thumbnailPath: string;
+  /**
+   * A frame captured from the video at `position`, on this device.
+   *
+   * Distinct from `thumbnailPath`, which is catalogue artwork and says
+   * what the film is. This says *where in it you were*, which is the
+   * only thing a continue-watching rail is actually promising. It is
+   * absent until playback has run long enough to be worth resuming
+   * from, and absent for live streams, which have no seekable position.
+   */
+  resumeThumbnailPath?: string;
   mediaType: MediaLane;
   type: MediaKind;
   source: MediaSource;
@@ -42,6 +68,8 @@ export interface RecentHistoryEntryInput {
   position: number;
   duration: number;
   thumbnailPath?: string;
+  /** See `RecentHistoryEntry.resumeThumbnailPath`. */
+  resumeThumbnailPath?: string;
   mediaType?: MediaLane;
   type?: MediaKind;
   source?: MediaSource;
@@ -119,6 +147,14 @@ export const useRecentHistoryStore = create<RecentHistoryState & RecentHistoryAc
             duration: Math.max(0, payload.duration || 0),
             lastPlayedAt: payload.lastPlayedAt ?? new Date().toISOString(),
             thumbnailPath: payload.thumbnailPath || existing?.thumbnailPath || '',
+            // Carried across an update, not re-derived. A checkpoint
+            // that arrives without a captured frame (a live stream, a
+            // capture that failed, a position too near the start to be
+            // worth resuming to) must not DELETE the frame a previous
+            // session captured — the newest frame is always the most
+            // useful one, and losing it would blank the card.
+            resumeThumbnailPath:
+              payload.resumeThumbnailPath ?? existing?.resumeThumbnailPath,
             ...classification,
           };
 

@@ -40,7 +40,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     sections,
     greeting,
     userFirstName,
-    removeBookmark,
+    handleRemoveRecent,
+    handleRemoveBookmark,
     user,
     handleOpenMedia,
     handleItemPress,
@@ -120,6 +121,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
               title={item.title}
               items={item.items}
               onItemPress={handleItemPress}
+              onItemLongPress={handleRemoveRecent}
               onSeeAll={item.seeAllRoute ? () => handleSeeAll(item.seeAllRoute!) : undefined}
             />
           );
@@ -149,8 +151,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           return (
             <HomeBookmarksList
               items={item.items}
-              onPress={bookmark => handleItemPress({...bookmark, startPosition: bookmark.position})}
-              onRemove={removeBookmark}
+              onPress={handleItemPress}
+              onRemove={handleRemoveBookmark}
               onSeeAll={handleBookmarksSeeAll}
             />
           );
@@ -168,7 +170,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
       // and the section structure are doing the visual work now.
       return sectionContent;
     },
-    [, greeting, userFirstName, handleItemPress, handlePlaylistPress, handleGenrePress, handleSeeAll, handleFollowedPodcastPress, handleFollowedPodcastsSeeAll, handlePlaylistsSeeAll],
+    // W9.5: this array started with a HOLE (`, greeting`), omitted
+    // `sections` — the very thing the memo body iterates — and ended
+    // with a string literal instead of a handler. `react-hooks` cannot
+    // check a malformed array, so nothing flagged it and every handler
+    // added since would have closed over a stale reference. Rebuilt
+    // from the identifiers the body actually reads.
+    [
+      sections,
+      handleItemPress,
+      handleRemoveRecent,
+      handleRemoveBookmark,
+      handlePlaylistPress,
+      handleGenrePress,
+      handleSeeAll,
+      handleFollowedPodcastPress,
+      handleFollowedPodcastsSeeAll,
+      handlePlaylistsSeeAll,
+    ],
   );
 
   if (hasError) {

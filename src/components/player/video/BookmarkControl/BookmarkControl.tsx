@@ -6,6 +6,7 @@ import {
 } from '../PlayerControl/PlayerControl';
 import {useBookmarkToggle} from '../../../../infrastructure/player/useBookmarkToggle';
 import {formatMsAsClock} from '../../../../infrastructure/player';
+import {BookmarkOverflowDialog} from '../../../bookmark/BookmarkOverflowDialog/BookmarkOverflowDialog';
 
 /**
  * W9.4 — the player's bookmark control.
@@ -45,8 +46,10 @@ export const BookmarkControl: React.FC = () => {
     isBookmarkedHere,
     hasAnyBookmark,
     count,
+    all,
     onToggle,
     confirmEviction,
+    cancelEviction,
     needsEviction,
     positionSec,
     unavailable,
@@ -55,38 +58,37 @@ export const BookmarkControl: React.FC = () => {
   const at = formatMsAsClock(positionSec * 1000);
 
   const handlePress = React.useCallback(() => {
-    if (needsEviction) {
-      confirmEviction();
-      return;
-    }
+    // `needsEviction` is settled by the dialog's own effect below, so
+    // there is nothing to do here for a full list — `onToggle` has
+    // already parked the request.
+    if (needsEviction) return;
 
     const wasBookmarked = isBookmarkedHere;
     onToggle();
     show(
-      wasBookmarked
-        ? 'Bookmark removed'
-        : `Bookmarked at ${at}`,
+      wasBookmarked ? 'Bookmark removed' : `Bookmarked at ${at}`,
       'success',
     );
-  }, [needsEviction, confirmEviction, onToggle, isBookmarkedHere, at, show]);
+  }, [needsEviction, onToggle, isBookmarkedHere, at, show]);
 
-  // A full list parks the write instead of performing it. That has to be
-  // asked about, and it can only be asked about once the hook reports
-  // it — so the toast is raised from the effect, not from `onToggle`.
+  const handleReplace = React.useCallback(
+    (evictId: string) => {
+      confirmEviction(evictId);
+      show(`Bookmarked at ${at}`, 'success');
+    },
+    [confirmEviction, at, show],
+  );
+
+  // W9.5: a full list parks the write and asks which bookmark to give
+  // up. It used to resolve itself by evicting the oldest and offering
+  // "Replace" in a toast — a policy the user never chose, applied to
+  // their data, with a 6-second window to notice. `onToggle` can only
+  // park the request, so the dialog is raised from the effect that
+  // observes the park, once.
   React.useEffect(() => {
     if (!needsEviction) return;
-    show(`Bookmark list is full (${count}). Replace the oldest?`, 'warning', {
-      action: {
-        label: 'Replace',
-        onPress: () => {
-          confirmEviction();
-          show(`Bookmarked at ${at}`, 'success');
-        },
-      },
-      duration: 6000,
-    });
-    // Re-raise only when the parked request actually changes.
-  }, [needsEviction]); // eslint-disable-line react-hooks/exhaustive-deps
+    show(`Bookmark list is full (${count}). Choose one to replace.`, 'warning');
+  }, [needsEviction, count, show]);
 
   if (unavailable) return null;
 
@@ -97,19 +99,32 @@ export const BookmarkControl: React.FC = () => {
       : `Adds a bookmark at ${at}`;
 
   return (
-    <PlayerControl
-      testID="video-header-bookmark"
-      icon={isBookmarkedHere ? 'bookmarkFilled' : 'bookmark'}
-      iconSize={CONTROL_ICON_SIZE_COMPACT}
-      onPress={handlePress}
-      // `switch`, not `button`: this is a two-state control and the
-      // accessibility tree should say so rather than report a bare
-      // button.
-      accessibilityRole="switch"
-      accessibilityChecked={isBookmarkedHere}
-      accessibilityLabel={isBookmarkedHere ? 'Bookmarked' : 'Bookmark'}
-      accessibilityHint={hint}
-    />
+    <>
+      <PlayerControl
+        testID="video-header-bookmark"
+        icon={isBookmarkedHere ? 'bookmarkFilled' : 'bookmark'}
+        iconSize={CONTROL_ICON_SIZE_COMPACT}
+        onPress={handlePress}
+        // `switch`, not `button`: this is a two-state control and the
+        // accessibility tree should say so rather than report a bare
+        // button.
+        accessibilityRole="switch"
+        accessibilityChecked={isBookmarkedHere}
+        accessibilityLabel={isBookmarkedHere ? 'Bookmarked' : 'Bookmark'}
+        accessibilityHint={hint}
+      />
+      {/* Rendered by this control because only this control knows a
+          request is parked. It is a Dialog (an RN Modal), so it paints
+          above the player chrome regardless of where the chrome sits in
+          the tree. */}
+      <BookmarkOverflowDialog
+        visible={needsEviction}
+        bookmarks={all}
+        pendingTitle={undefined}
+        onRemove={handleReplace}
+        onCancel={cancelEviction}
+      />
+    </>
   );
 };
 

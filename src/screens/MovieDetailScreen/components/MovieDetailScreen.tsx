@@ -16,7 +16,6 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
-import {useBookmarks} from '../../../features/bookmarks';
 
 import type {MovieDetailScreenProps} from '../types';
 import {ScreenContainer} from '../../../components/layout/ScreenContainer/ScreenContainer';
@@ -61,12 +60,14 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
 
-  // W5.6: read the saved bookmark for this movie so "Play" honours
-  // the resume position. The bookmark system is file-scoped; the
-  // movie's identifier IS the file URI for the API source.
-  const movieFileUri = item?.streamingUrl ?? `movie:${identifier}`;
-  const {bookmarksForFile} = useBookmarks(movieFileUri);
-  const savedBookmark = bookmarksForFile[0] ?? null;
+  // W9.5: this screen used to read its own bookmark and pass
+  // `startPositionMs: savedBookmark.position ?? 0`. That was wrong
+  // twice over — `Bookmark.position` is SECONDS and the field is
+  // MILLISECONDS (a 1000x seek bug), and the `?? 0` meant the central
+  // resume policy was bypassed on EVERY launch from this screen, which
+  // is why tapping a bookmarked film ignored the bookmark and followed
+  // history instead. Resume is now decided once, at the launch seam.
+  //
   // W5.6: subtitle selection. Tapping a chip marks it as the
   // "subtitle to enable when the player starts". The openPlayer call
   // below passes the chosen track id; the player auto-selects it.
@@ -397,10 +398,10 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
           accessibilityRole="button"
           accessibilityLabel={`Play ${item.title}`}
           onPress={() => {
-            // W5.6: pass the saved bookmark's position as the resume
-            // point. If there's no bookmark, the player starts at 0.
-            // The selected subtitle index drives the caption track;
-            // the player auto-selects it on load.
+            // No `startPositionMs`: the seam resolves resume and, when a
+            // saved position exists, asks Continue / Start over. The
+            // selected subtitle index drives the caption track; the
+            // player auto-selects it on load.
             const chosenSubtitle =
               selectedSubtitleIndex !== null && item.subtitles
                 ? item.subtitles[selectedSubtitleIndex]
@@ -408,8 +409,15 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
             openPlayer({
               uri: item.streamingUrl,
               title: item.title,
-              startPositionMs: savedBookmark?.position ?? 0,
               type: resolveStreamType('movie'),
+              // W9.5 — the identity fields. Without these the launch
+              // recorded no lane and no kind, the checkpoint writer
+              // forwarded neither, and the store defaulted both to
+              // 'audio' — which is why a FILM was rendered with a
+              // music-note badge on the Recently Played shelf.
+              mediaKind: 'movie',
+              mediaLane: 'video',
+              ...(heroArtwork ? {thumbnailPath: heroArtwork} : {}),
               // The IA subtitle shape is `{language, url, format}` — no
               // stable id. We use the language string as the
               // selector and let the player match by language. If a

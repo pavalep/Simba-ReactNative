@@ -192,11 +192,16 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
                     <TouchableOpacity
                       style={[styles.topRow, {borderBottomColor: colors.border.subtle}]}
                       onPress={() => {
+                        // W9.5 — `entry.position` is SECONDS and the
+                        // bridge field is MILLISECONDS, so this was a
+                        // 1000x-seek bug that also bypassed the resume
+                        // policy. The seam resolves the position.
                         openPlayer({
                           uri: entry.fileUri,
                           title: entry.title,
-                          startPositionMs: entry.position,
                           type: resolveStreamType(entry.type),
+                          ...(entry.mediaType ? {mediaLane: entry.mediaType} : {}),
+                          ...(entry.type ? {mediaKind: entry.type} : {}),
                         });
                       }}
                       activeOpacity={0.7}

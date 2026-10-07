@@ -340,6 +340,29 @@ export {secondsToMs} from './position';
 // for the priority order (bookmark first, history fallback).
 export {resolveResumeMs, type ResumeLookupInput} from './resumePolicy';
 
+// W9.5 — the launch-time resume DECISION, split out of the lookup.
+//
+// `resolveResumeMs` answers "what position is saved?"; these answer
+// "what do we do about it?", which is a different question and was
+// previously re-decided (wrongly, in seconds) by four separate screens.
+// The seam (`useResumeAwarePlayerActivity`) is the only caller that acts
+// on them; `App.tsx` exports them so the ConfirmDialog prompt can be
+// typed against the same `ResumeCandidate` the policy produced.
+export {
+  planResume,
+  resolvePlanStartMs,
+  resolveResumeCandidate,
+  type ResumeCandidate,
+  type ResumeChoice,
+  type ResumePlan,
+} from './resumePolicy';
+
+export {
+  ResumePromptContext,
+  type PromptResume,
+  type UsePlayerActivityOptions,
+} from './useResumeAwarePlayerActivity';
+
 // W7 P28 — typed `play()` facade + Result/StreamError re-exports.
 export {
   type StreamError,

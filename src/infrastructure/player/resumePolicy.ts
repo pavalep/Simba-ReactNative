@@ -94,21 +94,13 @@ export {RESUME_MAX_FRACTION, isEffectivelyFinished} from './playbackProgress';
  * (See `RESUME_MAX_FRACTION` for the Plex/Jellyfin provenance of the
  * 90% value.)
  */
-export function resolveResumeMs(
+export function resolveResumeCandidate(
   input: ResumeLookupInput,
   id: string,
-): number | undefined {
-  // W9.4: every comparison goes through `mediaKey`, so a bookmark saved
-  // as `/a/b.mkv` still matches a shelf entry stored as
-  // `file:///a/b.mkv`. Before this, a single URI spelling difference
-  // silently produced "no saved position" — a resume that looked like
-  // it had simply never worked.
+): ResumeCandidate | null {
   const key = mediaKey(id);
 
-  // 1. Bookmarks (explicit user signal). Multiple positions per URI
-  //    are allowed (A14: each id encodes `(fileUri, position)`) so
-  //    we take the LATEST — the most recently created wins, since
-  //    that's the "freshest" explicit signal.
+  // 1. Bookmarks — explicit user signal, wins outright.
   const matches = input.bookmarks.filter(b => mediaKey(b.fileUri) === key);
   if (matches.length > 0) {
     const latest = matches.reduce<Bookmark | null>(
@@ -116,24 +108,130 @@ export function resolveResumeMs(
       null,
     );
     if (latest && latest.position > 0) {
-      return Math.round(latest.position * 1000);
+      return {
+        positionMs: Math.round(latest.position * 1000),
+        source: 'bookmark',
+        title: latest.title,
+      };
     }
   }
 
-  // 2. History (implicit recent-play signal). The history store
-  //    upserts on every play, so at most 1 entry per fileUri —
-  //    `find` is sufficient.
-  const historyEntry = input.history.find(h => mediaKey(h.fileUri) === key);
-  if (historyEntry && historyEntry.position > 0) {
-    // Past RESUME_MAX_FRACTION the user has finished this; treat it
-    // as "no saved position" so the launch starts from the top.
-    if (isEffectivelyFinished(historyEntry.position, historyEntry.duration)) {
-      return undefined;
-    }
-    return Math.round(historyEntry.position * 1000);
+  // 2. History — implicit continuation, subject to the finished cutoff.
+  const entry = input.history.find(h => mediaKey(h.fileUri) === key);
+  if (entry && entry.position > 0 && !isEffectivelyFinished(entry.position, entry.duration)) {
+    return {
+      positionMs: Math.round(entry.position * 1000),
+      source: 'history',
+      title: entry.title,
+    };
   }
 
-  // 3. No saved position — `useOpenWithResume` will fall back to
-  //    the consumer-provided `startPositionMs` (or 0).
-  return undefined;
+  return null;
 }
+
+/**
+ * The resume position in **milliseconds**, or `undefined` when nothing is
+ * saved.
+ *
+ * Thin wrapper over {@link resolveResumeCandidate} so there is exactly ONE
+ * implementation of the priority rules. A second copy here would be the
+ * same defect as two copies of `RESUME_MAX_FRACTION`: correct today,
+ * divergent the first time either side is edited.
+ */
+export function resolveResumeMs(
+  input: ResumeLookupInput,
+  id: string,
+): number | undefined {
+  return resolveResumeCandidate(input, id)?.positionMs;
+}
+
+// ─── The launch-time decision ────────────────────────────────────
+
+/**
+ * A resume position that could be offered to the user, with enough
+ * context to write the prompt.
+ *
+ * `source` is not decoration — the prompt is worded differently for an
+ * explicit bookmark ("continue from where you marked") than for an
+ * implicit history position, because they are different kinds of signal
+ * and conflating them would be a lie about where the number came from.
+ */
+export interface ResumeCandidate {
+  /** Milliseconds — the bridge's shape. */
+  readonly positionMs: number;
+  readonly source: 'bookmark' | 'history';
+  /** Title of the saved record, for the prompt's message line. */
+  readonly title: string;
+}
+
+/** What the user chose when asked. */
+export type ResumeChoice = 'resume' | 'start';
+
+export type ResumePlan =
+  /** The caller already decided. Forwarded verbatim, never questioned. */
+  | {readonly kind: 'explicit'; readonly startPositionMs: number}
+  /** A saved position exists and a prompt is available: ask. */
+  | {readonly kind: 'prompt'; readonly candidate: ResumeCandidate}
+  /** Nothing saved, or no prompt wired: resume silently if possible. */
+  | {readonly kind: 'auto'; readonly startPositionMs: number};
+
+export interface PlanResumeInput {
+  /**
+   * A `startPositionMs` the CALLER passed, including `0`.
+   *
+   * `0` counts as explicit, and that is load-bearing: it is how "start
+   * from the beginning" is expressed. The lib gates its own policy on
+   * `providedStartMs == null` (`useOpenWithResume.tsx:128`), so an
+   * explicit zero suppresses resume — and an implicit zero would not.
+   */
+  readonly explicitStartMs: number | undefined;
+  readonly candidate: ResumeCandidate | null;
+  /** Whether a UI prompt is actually available in this tree. */
+  readonly prompt: boolean;
+}
+
+/**
+ * Decide how a launch should be resolved, before anything opens.
+ *
+ * ## Why the prompt is not unconditional
+ *
+ * An explicit `startPositionMs` means the caller already made the choice
+ * — the Song screen jumping to a bookmark the user tapped, or a caller
+ * deliberately restarting. Asking again would be asking the same
+ * question twice, and the second dialog would contradict the first.
+ *
+ * ## Why `prompt: false` still resumes
+ *
+ * A missing prompt provider degrades to the Netflix/YouTube behaviour
+ * (resume silently), never to "never resume". Losing the prompt is a
+ * presentation regression; losing resume would be a functional one, and
+ * the caller would have no way to tell.
+ */
+export function planResume(input: PlanResumeInput): ResumePlan {
+  if (input.explicitStartMs !== undefined) {
+    return {kind: 'explicit', startPositionMs: input.explicitStartMs};
+  }
+  if (input.candidate && input.prompt) {
+    return {kind: 'prompt', candidate: input.candidate};
+  }
+  return {kind: 'auto', startPositionMs: input.candidate?.positionMs ?? 0};
+}
+
+/**
+ * Collapse a plan (and the answer, if one was asked for) into the single
+ * number the bridge wants.
+ *
+ * "Start from beginning" becomes an explicit `0` on purpose: it must
+ * suppress the lib's policy rather than merely omit a position, or the
+ * policy would resume the very thing the user just declined to resume.
+ */
+export function resolvePlanStartMs(
+  plan: ResumePlan,
+  choice?: ResumeChoice,
+): number {
+  if (plan.kind === 'prompt') {
+    return choice === 'resume' ? plan.candidate.positionMs : 0;
+  }
+  return plan.startPositionMs;
+}
+

@@ -16,10 +16,13 @@ import {linking} from './src/navigation/linking';
 import {
   resolveResumeMs,
   PlayerHostProvider,
+  ResumePromptContext,
   useIsPlayerActivity,
   usePlaybackCheckpointSync,
   useQueueSync,
+  type PromptResume,
 } from './src/infrastructure/player';
+import {useConfirmDialog} from './src/components/core/Dialog';
 import {SimbaPlayer as V19SimbaPlayer} from './src/components/player/video/SimbaPlayer/SimbaPlayer';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {QueryProvider} from './src/app/QueryProvider';
@@ -32,6 +35,7 @@ import {useAuthSession} from './src/hooks/useAuthSession';
 import {downloadService} from './src/services/downloadService';
 import {mark} from './src/utils/startupPerf';
 import {configureGoogleSignin} from './src/services/authService';
+import {formatDuration} from './src/utils/timeAgo';
 
 // Initialize GoogleSignin once at app startup — calling configure() every
 // time on the sign-in path was breaking the post-revoke flow (the account
@@ -256,6 +260,42 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
   const {colors} = useTheme();
   const isPlayerActivity = useIsPlayerActivity();
 
+  // W9.5 — the Continue / Start-over prompt, supplied ONCE here and
+  // reached by every launch through `ResumePromptContext`.
+  //
+  // The pattern is Plex's, documented in its Android TV / mobile guide:
+  // "if you had started a title, a dialog offers Resume or From the
+  // beginning". VLC reaches the same prompt through a Continue playback?
+  // preference whose default is Ask, and Kodi offers "Resume from
+  // hh:mm:ss" alongside "Play from beginning". Three shipping players,
+  // one shape — a binary choice, with resume as the affirmative.
+  //
+  // It lives here, not in a screen, because the seam is called from ~34
+  // screens and a per-screen prompt is a prompt the next screen forgets.
+  const {confirm, dialog} = useConfirmDialog();
+
+  const promptResume = React.useCallback<PromptResume>(async candidate => {
+    const at = formatDuration(candidate.positionMs / 1000);
+    // The wording differs by source because the two are different kinds
+    // of signal. A bookmark is something the user chose; a history
+    // position is something we inferred. Saying "you marked" about an
+    // inferred position would be a lie about where the number came from.
+    const resume = await confirm({
+      title:
+        candidate.source === 'bookmark'
+          ? 'Resume from your bookmark?'
+          : 'Continue watching?',
+      message: `Continue at ${at} or start from the beginning.`,
+      confirmLabel: 'Continue',
+      cancelLabel: 'Start from beginning',
+    });
+    // Dismissing the dialog resolves `false` too, and that maps to
+    // "start from beginning" — never to "do nothing". A player launch
+    // that resolves to no launch at all leaves the user on a screen
+    // that did nothing when they tapped something.
+    return resume ? 'resume' : 'start';
+  }, [confirm]);
+
   // W9.4 — the resume checkpoint writer.
   //
   // Mounted HERE, not in `AppContent`, and that placement is the whole
@@ -281,6 +321,7 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
   return (
     <ErrorBoundary fallbackColors={fallbackColors}>
       <ToastProvider>
+        <ResumePromptContext.Provider value={promptResume}>
         {/* (1) V19 chrome — always mounted, self-gates on
             useIsPlayerActivity(). Sibling of SimbaPlayerRoot, never a
             child: see the docstring. */}
@@ -312,6 +353,12 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
           {/* (3) Navigation + screens — MainActivity only. */}
           {isPlayerActivity ? null : <AppContent />}
         </SimbaPlayerRoot>
+        {/* (4) The resume prompt's own Dialog. Rendered HERE, inside the
+            providers and above the activity split, so it exists in every
+            React root — the same reason ToastProvider sits above the
+            split (see this component's docstring). */}
+        {dialog}
+      </ResumePromptContext.Provider>
       </ToastProvider>
     </ErrorBoundary>
   );

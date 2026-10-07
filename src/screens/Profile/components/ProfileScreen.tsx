@@ -148,11 +148,18 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
 
   const handleRecentPress = useCallback(
     (entry: (typeof recentFiles)[number]) => {
+      // W9.5 — `entry.position` is SECONDS; `startPositionMs` is
+      // MILLISECONDS. Passing it straight through sought to ~1/1000th
+      // of the saved spot AND bypassed the seam's resume policy. The
+      // lane and kind travel with the launch now, so the entry is
+      // classified correctly when it is written back on close.
       openPlayer({
         uri: entry.fileUri,
         title: entry.title,
-        startPositionMs: entry.position,
         type: entry.mediaType === 'video' ? 'video' : 'audio',
+        mediaLane: entry.mediaType,
+        ...(entry.type ? {mediaKind: entry.type} : {}),
+        ...(entry.thumbnailPath ? {thumbnailPath: entry.thumbnailPath} : {}),
       });
     },
     [openPlayer],

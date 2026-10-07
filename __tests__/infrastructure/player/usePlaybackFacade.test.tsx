@@ -215,7 +215,11 @@ describe('usePlaybackFacade (V21 W22 D-023)', () => {
     });
   });
 
-  it('launch.openWithResume() omits startPositionMs when positionSec is 0', async () => {
+  it('launch.openWithResume() resolves to an explicit 0 at positionSec 0', async () => {
+    // W9.5: was `not.toHaveProperty('startPositionMs')` — a claim about
+    // the mechanism. The seam now sends an explicit 0 so the lib's own
+    // resume policy cannot re-resolve the launch underneath it. The
+    // outcome under test is the same: start from the beginning.
     mockOpenPlayer.mockResolvedValueOnce(true);
     const {result} = await renderHook(() => usePlaybackFacade());
     await result.current.launch.openWithResume({
@@ -224,9 +228,7 @@ describe('usePlaybackFacade (V21 W22 D-023)', () => {
       mediaType: 'audio',
       positionSec: 0,
     });
-    expect(mockOpenPlayer.mock.calls[0][0]).not.toHaveProperty(
-      'startPositionMs',
-    );
+    expect(mockOpenPlayer.mock.calls[0][0].startPositionMs).toBe(0);
   });
 
   it('launch.openPlaylist() calls useOpenPlaylist with the right shape', async () => {

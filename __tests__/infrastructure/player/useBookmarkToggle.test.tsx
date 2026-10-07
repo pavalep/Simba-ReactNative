@@ -187,7 +187,7 @@ describe('useBookmarkToggle', () => {
     expect(useBookmarksStore.getState().items).toHaveLength(before);
   });
 
-  it('confirming the eviction replaces the oldest bookmark', async () => {
+  it('confirming the eviction replaces exactly the bookmark the user chose', async () => {
     for (let i = 0; i < MAX_BOOKMARK_ENTRIES; i++) {
       seedBookmark({
         fileUri: `file:///other/film-${i}.mkv`,
@@ -201,11 +201,64 @@ describe('useBookmarkToggle', () => {
     const {result} = await renderHook(() => useBookmarkToggle());
 
     await act(async () => {result.current.onToggle();});
-    await act(async () => {result.current.confirmEviction();});
+
+    // Deliberately NOT the oldest. The old implementation picked the
+    // oldest for the user; the whole point of the chooser is that the
+    // user picks. This assertion is what fails if someone reinstates
+    // the automatic policy behind the dialog's back.
+    //
+    // Selected by id, not by a hand-written `fileUri` literal: the store
+    // persists the NORMALISED spelling (`mediaKey`), so matching on a
+    // bare path finds nothing and the assertion below would pass for
+    // the wrong reason — which is exactly how the previous version of
+    // this test was green while asserting nothing.
+    const itemsBefore = useBookmarksStore.getState().items;
+    // film-0 is absent: seeding 20 "other" bookmarks and then one more
+    // on the played URI is 21 adds, so the store's own cap evicted the
+    // tail. `oldest` below is therefore the oldest SURVIVING bookmark,
+    // which is what the old policy would have picked.
+    const victim = itemsBefore.find(b => b.fileUri === 'file:///other/film-7.mkv');
+    const oldest = itemsBefore
+      .filter(b => b.fileUri.startsWith('file:///other/'))
+      .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))[0];
+    expect(victim).toBeDefined();
+    expect(oldest).toBeDefined();
+    expect(victim!.id).not.toBe(oldest!.id);
+
+    await act(async () => {result.current.confirmEviction(victim!.id);});
 
     const items = useBookmarksStore.getState().items;
-    expect(items.some(b => b.fileUri === '/other/film-0.mkv')).toBe(false);
+    // The chosen one is gone...
+    expect(items.some(b => b.id === victim!.id)).toBe(false);
+    // ...the oldest, which the user did NOT choose, survives...
+    expect(items.some(b => b.id === oldest!.id)).toBe(true);
+    // ...and the new bookmark landed.
     expect(items.some(b => b.position === 120)).toBe(true);
+    expect(items).toHaveLength(MAX_BOOKMARK_ENTRIES);
+  });
+
+  it('abandoning a parked request writes nothing at all', async () => {
+    for (let i = 0; i < MAX_BOOKMARK_ENTRIES; i++) {
+      seedBookmark({
+        fileUri: `file:///other/film-${i}.mkv`,
+        position: i,
+        createdAt: new Date(Date.UTC(2020, 0, i + 1)).toISOString(),
+      });
+    }
+    seedBookmark({position: 60, createdAt: '2020-01-01T00:00:00.000Z'});
+    const before = useBookmarksStore.getState().items;
+
+    mockTransportState = {...mockTransportState, positionMs: 120_000};
+    const {result} = await renderHook(() => useBookmarkToggle());
+
+    await act(async () => {result.current.onToggle();});
+    expect(result.current.needsEviction).toBe(true);
+    await act(async () => {result.current.cancelEviction();});
+
+    expect(result.current.needsEviction).toBe(false);
+    // Dismissing the chooser must leave the list EXACTLY as it was —
+    // neither a new bookmark nor a victim.
+    expect(useBookmarksStore.getState().items).toEqual(before);
   });
 
   it('exposes markers normalised to 0…1 for the timeline', async () => {

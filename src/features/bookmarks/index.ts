@@ -111,9 +111,18 @@ function dispatchAddBookmark(
         item => item.fileUri === input.fileUri && Math.abs(item.position - input.position) < 1,
       );
   const existing = sameId >= 0 ? items[sameId] : samePosition;
-  if (!existing && items.length >= MAX_BOOKMARK_ENTRIES) {
+
+  // A full list is only worth interrupting the user for when WE are the
+  // ones choosing what to drop. An `evictId` means the caller already
+  // asked, and what it wants to remove — the 21st-bookmark flow has the
+  // user pick the victim from a list. The old gate compared the
+  // requested id against `oldestBookmark` and refused anything that
+  // wasn't the oldest, so a user who deliberately chose which bookmark
+  // to give up would silently get "requires-confirmation" again and the
+  // bookmark would never be saved.
+  if (!existing && items.length >= MAX_BOOKMARK_ENTRIES && options?.evictId == null) {
     const candidate = oldestBookmark(items);
-    if (candidate && options?.evictId !== candidate.id) {
+    if (candidate) {
       return {status: 'requires-confirmation', candidate, requested: input};
     }
   }

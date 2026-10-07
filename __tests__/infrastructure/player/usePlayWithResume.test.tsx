@@ -86,7 +86,14 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
     });
   });
 
-  it('omits startPositionMs when positionSec is 0 (start from beginning)', async () => {
+  it('resolves to an explicit 0 at positionSec 0 (start from beginning)', async () => {
+    // W9.5: this used to assert `not.toHaveProperty('startPositionMs')`,
+    // which was a claim about the MECHANISM (let the field be absent so
+    // the bridge defaults it). It is now an explicit 0, because the seam
+    // is the single authority for resume and the lib's own policy is
+    // gated on `providedStartMs == null` — omitting the field would let
+    // that policy run and possibly resume, which is the opposite of what
+    // this test is for. The outcome under test is unchanged: position 0.
     const {result} = await renderHook(() => usePlayWithResume());
     result.current!({
       uri: 'file:///music/song.mp3',
@@ -94,12 +101,10 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
       mediaType: 'audio',
       positionSec: 0,
     });
-    expect(mockOpenPlayer.mock.calls[0][0]).not.toHaveProperty(
-      'startPositionMs',
-    );
+    expect(mockOpenPlayer.mock.calls[0][0].startPositionMs).toBe(0);
   });
 
-  it('omits startPositionMs when positionSec is negative (defensive)', async () => {
+  it('resolves to an explicit 0 for a negative positionSec (defensive)', async () => {
     const {result} = await renderHook(() => usePlayWithResume());
     result.current!({
       uri: 'file:///music/song.mp3',
@@ -107,9 +112,7 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
       mediaType: 'video',
       positionSec: -5,
     });
-    expect(mockOpenPlayer.mock.calls[0][0]).not.toHaveProperty(
-      'startPositionMs',
-    );
+    expect(mockOpenPlayer.mock.calls[0][0].startPositionMs).toBe(0);
   });
 
   it('rounds fractional seconds to the nearest ms', async () => {

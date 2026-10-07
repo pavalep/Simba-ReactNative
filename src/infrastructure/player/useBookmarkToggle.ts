@@ -64,12 +64,20 @@ export interface BookmarkToggle {
   readonly positionSec: number;
   /**
    * The list is full and this is a new bookmark. `onToggle` deliberately
-   * wrote nothing and parked the request; the caller asks the user, then
-   * calls `confirmEviction`.
+   * wrote nothing and parked the request; the caller shows
+   * {@link BookmarkOverflowDialog}, then calls `confirmEviction` with
+   * the bookmark the user chose to give up.
    */
   readonly needsEviction: boolean;
-  /** Run the parked request, replacing the oldest bookmark. */
-  readonly confirmEviction: () => void;
+  /**
+   * Run the parked request, replacing the bookmark the user chose.
+   *
+   * Takes the victim explicitly. It used to evict the oldest
+   * un-asked-for, which is a policy the user never agreed to — the
+   * oldest bookmark is not necessarily the one they care least about,
+   * and they are standing right there.
+   */
+  readonly confirmEviction: (evictId: string) => void;
   /** Abandon the parked request. */
   readonly cancelEviction: () => void;
   /** True when there is no session to bookmark. */
@@ -148,23 +156,16 @@ export function useBookmarkToggle(): BookmarkToggle {
   // the user's oldest bookmark the moment a 21st was added anywhere.
   const atCapacity = items.length >= MAX_BOOKMARK_ENTRIES;
 
-  const confirmEviction = React.useCallback(() => {
-    const input = pending;
-    if (!input) return;
-    setPending(null);
-
-    const oldest = items.reduce<Bookmark | null>((acc, item) => {
-      if (!acc) return item;
-      return Date.parse(item.createdAt) < Date.parse(acc.createdAt) ? item : acc;
-    }, null);
-
-    if (!oldest) {
-      add.add(input);
-      return;
-    }
-    remove(oldest.id);
-    add.add(input, {evictId: oldest.id});
-  }, [pending, items, remove, add]);
+  const confirmEviction = React.useCallback(
+    (evictId: string) => {
+      const input = pending;
+      if (!input) return;
+      setPending(null);
+      remove(evictId);
+      add.add(input, {evictId});
+    },
+    [pending, remove, add],
+  );
 
   const cancelEviction = React.useCallback(() => setPending(null), []);
 

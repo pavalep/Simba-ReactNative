@@ -14,7 +14,7 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {LrcLine} from '../../../utils/lrcParser';
 import {isRemoteUri} from '../../../utils/mediaUri';
-import { resolveStreamType, usePlayerActivity, useQueue } from '../../../infrastructure/player';
+import { resolveStreamType, secondsToMs, usePlayerActivity, useQueue } from '../../../infrastructure/player';
 import {useMediaStore} from '../../../state';
 
 type SongRoute = RouteProp<RootStackParamList, 'SongScreen'>;
@@ -127,11 +127,19 @@ export function useSongScreen() {
 
   const handleJumpToBookmark = useCallback(
     (position: number) => {
+      // An explicit position IS the user's instruction — this is the
+      // one caller that should bypass the resume prompt entirely, and
+      // `startPositionMs` being present is what tells the seam so. But
+      // `position` is a bookmark's position: SECONDS. Converted here
+      // rather than inline so the one place that knows the source unit
+      // is the place that converts it.
       openPlayer({
         uri: fileUri,
         title: displayTitle,
-        startPositionMs: position,
+        startPositionMs: secondsToMs(position) ?? 0,
         type: resolveStreamType('music'),
+        mediaLane: 'audio',
+        mediaKind: 'music',
       });
     },
     [openPlayer, fileUri, displayTitle, displayDuration],

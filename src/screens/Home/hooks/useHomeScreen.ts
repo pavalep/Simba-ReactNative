@@ -14,6 +14,10 @@ import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
 import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import {MAX_RECENT_HISTORY_ENTRIES} from '../../../state/recentHistoryStore';
+import {useConfirmDialog} from '../../../components/core/Dialog';
+import {useToast} from '../../../components/feedback/Toast';
+import {formatDuration} from '../../../utils/timeAgo';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import {useAuth} from '../../../hooks/useAuth';
 import {useWeather} from '../../../hooks/useWeather';
@@ -81,10 +85,14 @@ function buildGreeting(snapshot: WeatherSnapshot | null, isFirstLoad: boolean): 
   return {text, condition, weather, isFirstLoad};
 }
 
-function isInProgress(item: RecentHistoryEntry): boolean {
-  return item.position > 30 && item.position < item.duration - 5;
-}
-
+// W9.5: `isInProgress(item)` used to live here — "position > 30s and
+// more than 5s from the end" — with a docblock claiming it drove a
+// "time left" badge on the shelf card. It had zero call sites, and no
+// such badge existed. Deleted rather than wired: the card expresses
+// progress directly (a 0…1 bar plus the elapsed/total line), and a
+// second rule deciding what counts as in-progress would have been a
+// second answer to a question the card already answers.
+//
 // P61: extract a first name for the greeting. The auth user carries
 // `name` as a single string ("Paval EP", "Sundar Pichai"); we want
 // just the first token. Falls back to "there" so the salutation
@@ -113,8 +121,10 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   }, []);
 
   // ── Data from Redux ──
-  const {list: recentFiles} = useRecentHistory();
+  const {list: recentFiles, removeRecent} = useRecentHistory();
   const {allBookmarks: bookmarks, remove: removeBookmark} = useBookmarks();
+  const {confirm} = useConfirmDialog();
+  const toast = useToast();
   
   const {list: playlists} = usePlaylists();
   const allTracks = useMediaStore(s => s.tracks);
@@ -161,21 +171,75 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       fileUri: string;
       title: string;
       thumbnailPath?: string;
-      startPosition?: number;
       position?: number;
       source?: MediaSource;
       type?: MediaKind;
       provider?: string;
       folderId?: string;
     }) => {
+      // W9.5 — this handler feeds BOTH library shelves, and it used to
+      // pass `startPositionMs: item.startPosition ?? item.position`.
+      // `position` is SECONDS and the field is MILLISECONDS, so every
+      // shelf tap asked for a ~1000x-too-early seek, and it bypassed
+      // the resume policy outright — a user who bookmarked a moment got
+      // the raw history position instead. Resume is decided at the
+      // seam; a shelf only says WHAT it is.
+      const streamType = resolveStreamType(item.type ?? item.mediaType ?? 'video');
+      // The lane is what the shelves and the checkpoint writer branch on.
+      // It used to be absent entirely, so `normalizeMediaClassification`
+      // defaulted it to 'audio' and every film rendered with a music
+      // badge. Derive it from the resolved stream type so an item with
+      // no stored lane still classifies correctly.
+      const lane: MediaLane = item.mediaType ?? (streamType === 'audio' ? 'audio' : 'video');
+
       openPlayer({
         uri: item.fileUri,
         title: item.title,
-        startPositionMs: item.startPosition ?? item.position,
-        type: resolveStreamType(item.type ?? 'audio'),
+        type: streamType,
+        mediaKind: item.type,
+        mediaLane: lane,
+        ...(item.provider ? {provider: item.provider} : {}),
+        ...(item.thumbnailPath ? {thumbnailPath: item.thumbnailPath} : {}),
       });
     },
     [openPlayer],
+  );
+
+  const handleRemoveRecent = useCallback(
+    async (item: {fileUri: string; title: string}) => {
+      // Destructive, so it is confirmed rather than undone. The
+      // History screen has always done this with `useConfirmDialog`
+      // (`HistoryScreen.tsx:141`); the shelf reuses the same primitive
+      // rather than deleting on the first long-press, because a rail
+      // is a scrolling surface and a stray long-press is easy.
+      const ok = await confirm({
+        title: 'Remove from Recently Played?',
+        message: `"${item.title}" will leave your history. The file itself is not deleted.`,
+        confirmLabel: 'Remove',
+        cancelLabel: 'Keep',
+        destructive: true,
+      });
+      if (!ok) return;
+      removeRecent(item.fileUri);
+      toast.show(`Removed "${item.title}" from Recently Played`, 'success');
+    },
+    [confirm, removeRecent, toast],
+  );
+
+  const handleRemoveBookmark = useCallback(
+    async (item: {id: string; title: string; position: number}) => {
+      const ok = await confirm({
+        title: 'Remove bookmark?',
+        message: `The bookmark at ${formatDuration(item.position)} of "${item.title}" will be deleted.`,
+        confirmLabel: 'Remove',
+        cancelLabel: 'Keep',
+        destructive: true,
+      });
+      if (!ok) return;
+      removeBookmark(item.id);
+      toast.show('Bookmark removed', 'success');
+    },
+    [confirm, removeBookmark, toast],
   );
 
   const handlePlaylistPress = useCallback(
@@ -248,7 +312,11 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       {
         type: 'SHELF',
         title: 'Recently Played',
-        items: recentFiles.slice(0, 10),
+        // The cap lives in the store, and the section reads it rather
+        // than repeating the number. The rail used to slice to 10 here
+        // AND default to rendering 8, so the two limits disagreed and
+        // the visible list silently lost two entries.
+        items: recentFiles.slice(0, MAX_RECENT_HISTORY_ENTRIES),
         seeAllRoute: 'History',
       },
       {type: 'BOOKMARKS', items: bookmarks},
@@ -304,6 +372,8 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
      */
     userFirstName: deriveFirstName(user),
     removeBookmark,
+    handleRemoveRecent,
+    handleRemoveBookmark,
     user: user ? user : null,
     genres,
     handleOpenMedia,
