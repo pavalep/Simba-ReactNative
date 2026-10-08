@@ -118,8 +118,19 @@ export interface TransportState {
    * header for why that is sound inside the chrome's mount gate.
    */
   isOrientationLocked: boolean;
-  /** V19 W3 — current repeat mode (V19 vocabulary). */
+  /** V19 W3 - current repeat mode (V19 vocabulary). */
   repeatMode: RepeatMode;
+  /**
+   * Whether playlist shuffle is on. Mirrors mpv's `playlist-shuffle`.
+   *
+   * Added with the audio player (V20 Phase C). `setShuffle` existed
+   * since 1.6.0 but nothing could read the result back through this
+   * facade, so a shuffle control built on it would have been able to
+   * fire a command and never show its own state — the "control that
+   * may or may not be the real one" ambiguity. The lib already owns
+   * the value (`state.shuffle`); this only forwards it.
+   */
+  shuffle: boolean;
   /** V19 W3 — subtitle/caption tracks for the current file. */
   captionTracks: CaptionTrack[];
   /** V19 W3 — id of the currently-active subtitle track (or null). */
@@ -290,10 +301,11 @@ export interface TransportCommands {
   /**
    * V19 W3.6.12 / lib 1.6.0 — enable or disable playlist
    * shuffle. Backed by mpv's `playlist-shuffle` property.
-   * State mirrored on `state.shuffle`. Not currently consumed
-   * by chrome (W3.6.12 AutoPlayNextToggle ships later) but
-   * promoted onto `PlayerCommands` in 1.6.0 and routed through
-   * here for the next chrome piece.
+   *
+   * Read the current value from `state.shuffle` and pass the opposite.
+   * There is deliberately no `toggleShuffle()` here: the lib owns the
+   * value (`state.shuffle`, mirrored from mpv via `onPropertyChanged`
+   * and on hydration), so this facade forwards it rather than guessing.
    */
   setShuffle(enabled: boolean): void;
   /**
@@ -545,6 +557,8 @@ export function useTransport(): TransportHook {
        * derivation below for why this hook could not simply re-derive it.
        */
       isPlaying?: boolean;
+      /** mpv `playlist-shuffle`, mirrored by the lib. */
+      shuffle?: boolean;
       title?: string;
       artist?: string;
     };
@@ -647,6 +661,7 @@ export function useTransport(): TransportHook {
       canEnterPip: isPlaying && !isEnded && !isBuffering,
       isOrientationLocked,
       repeatMode,
+      shuffle: playerState.shuffle === true,
       captionTracks,
       activeCaptionTrackId,
       canGoPrev,
@@ -689,6 +704,7 @@ export function useTransport(): TransportHook {
     playerState.volume,
     playerState.isMuted,
     playerState.isPlaying,
+    playerState.shuffle,
     playerState.title,
     playerState.artist,
     isOrientationLocked,

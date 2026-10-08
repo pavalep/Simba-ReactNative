@@ -42,6 +42,7 @@ export function makeTransportState(
     positionMs: 60_000,
     durationMs: 240_000,
     isPlaying: true,
+    shuffle: false,
     isBuffering: false,
     isSeeking: false,
     isEnded: false,

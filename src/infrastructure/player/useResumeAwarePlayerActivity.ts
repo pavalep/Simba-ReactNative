@@ -19,6 +19,7 @@ import type {
   UsePlayerActivityResult,
 } from '@simba-dev/react-native-media-player';
 import {useNowPlayingStore} from '../../state/nowPlayingStore';
+import {useAudioPresentationStore} from '../../state/useAudioPresentationStore';
 // Imported from the concrete store modules rather than the `state`
 // barrel: `resumePolicy` already depends on those two types, and the
 // barrel re-exports enough of the app that routing through it here
@@ -163,6 +164,7 @@ export function usePlayerActivity(
   const openWithResume = useOpenWithResume();
   const beginSession = useNowPlayingStore(s => s.begin);
   const endSession = useNowPlayingStore(s => s.end);
+  const expandAudioPlayer = useAudioPresentationStore(s => s.expand);
   const contextPrompt = React.useContext(ResumePromptContext);
   const promptResume = options.promptResume ?? contextPrompt;
 
@@ -216,6 +218,22 @@ export function usePlayerActivity(
           ...(thumbnailPath ? {thumbnailPath} : {}),
         });
 
+        // V20 Phase C — an audio launch shows the full player.
+        //
+        // Spotify, YouTube Music, Apple Music and Plex all open the
+        // now-playing screen when a track is tapped from a list, so this
+        // is observed behaviour rather than a preference.
+        //
+        // Written HERE, once, and only for audio. It must not become a
+        // per-tree sync effect: `App` is mounted once per Activity React
+        // root, so two writers of one value is the W6.0 ping-pong that
+        // shipped a black player screen (see `usePresentationStore`).
+        // Screens live in the MainActivity tree, and so does this seam,
+        // so there is exactly one writer.
+        if (bridgeOpts.type === 'audio') {
+          expandAudioPlayer();
+        }
+
         return openWithResume({
           ...bridgeOpts,
           startPositionMs,
@@ -228,6 +246,13 @@ export function usePlayerActivity(
       },
       getLaunchParams,
     }),
-    [openWithResume, getLaunchParams, beginSession, endSession, promptResume],
+    [
+      openWithResume,
+      getLaunchParams,
+      beginSession,
+      endSession,
+      expandAudioPlayer,
+      promptResume,
+    ],
   );
 }

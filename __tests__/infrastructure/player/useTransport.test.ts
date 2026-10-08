@@ -88,7 +88,10 @@ const mockCommands = {
  * contract, so it is part of the mock — with a default of `true`,
  * because most of these tests are about a track that is playing.
  */
-const mockPlayerState: {isPlaying: boolean} = {isPlaying: true};
+const mockPlayerState: {isPlaying: boolean; shuffle: boolean} = {
+  isPlaying: true,
+  shuffle: false,
+};
 
 jest.mock('@simba-dev/react-native-media-player', () => ({
   usePlayerProgress: () => mockProgress,
@@ -285,6 +288,56 @@ describe('useTransport — derivations', () => {
 });
 
 /**
+ * The lib owns shuffle (`state.shuffle`, mirrored from mpv's
+ * `playlist-shuffle`). This facade used to expose only the COMMAND
+ * (`setShuffle`), so any shuffle control built on it could fire a
+ * change and never read the result back — a toggle that cannot show
+ * whether it is on.
+ *
+ * Mutation check: delete `shuffle:` from the returned state and both
+ * tests fail.
+ */
+describe('useTransport — shuffle is readable state (V20 Phase C)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockProgress.positionMs = 30_000;
+    mockProgress.durationMs = 300_000;
+    mockProgress.isBuffering = false;
+    mockProgress.isSeeking = false;
+    mockProgress.seekable = true;
+    mockProgress.cacheFill = 0;
+    mockProgress.cacheRanges = [];
+    mockPlayerState.isPlaying = true;
+    mockPlayerState.shuffle = false;
+  });
+
+  it('reports shuffle off when mpv says off', async () => {
+    mockPlayerState.shuffle = false;
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.shuffle).toBe(false);
+  });
+
+  it('reports shuffle on when mpv says on, and setShuffle sends the opposite', async () => {
+    mockPlayerState.shuffle = true;
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.shuffle).toBe(true);
+
+    // The chrome reads `state.shuffle` and passes the opposite — the
+    // facade must not guess the next value itself.
+    //
+    // `act` is awaited because RNTL 14 returns a Promise from it. An
+    // unawaited `act` leaves a pending act queue behind, and every
+    // LATER renderHook in the file then resolves with `result.current
+    // === null` — which reads as 20 unrelated failures, not as one
+    // missed await.
+    await act(async () => {
+      result.current.commands.setShuffle(!result.current.state.shuffle);
+    });
+    expect(mockCommands.setShuffle).toHaveBeenCalledWith(false);
+  });
+});
+
+/**
  * V20 Phase C — the pause term.
  *
  * Before this, `isPlaying` was `!isEnded && !isBuffering && !isSeeking`,
@@ -293,8 +346,8 @@ describe('useTransport — derivations', () => {
  * known duration, so it satisfied all three remaining terms and reported
  * `isPlaying: true`.
  *
- * These three tests are the mutation check: revert line ~602 to the old
- * expression and each one fails.
+ * Mutation check: revert the derivation to the old expression and the
+ * first and third of these fail.
  */
 describe('useTransport — isPlaying respects pause (V20 Phase C)', () => {
   beforeEach(() => {

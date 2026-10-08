@@ -1,0 +1,73 @@
+V20 Phase D/E: the audio player, in-app
+
+Audio used to be launched by opening `PlayerActivity` with
+`type="audio"` — a full-screen window whose render view was set GONE,
+so it had nothing to show and existed only so its `onCreate` could
+start the media service. With lib 1.13.0 the service starts without any
+Activity, so audio now has no window at all and this is the UI for it.
+
+New: src/components/player/audio/
+  AudioChrome.tsx     mini vs full switch; owns the close verb
+  AudioMiniBar        docked bar: artwork, title/artist, play/pause, X,
+                      hairline progress, tap to expand
+  AudioPlayer         artwork, title/artist, seek, and a five-button
+                      transport row (shuffle/prev/play/next/repeat),
+                      chevron-down to minimize, X to close
+  AudioSeekBar        purpose-built: track, fill, thumb, drag-to-seek
+
+New: src/state/useAudioPresentationStore.ts — `mini` | `expanded`.
+
+Why audio stores this and video does not: video's presentation is
+derived from `useIsPlayerActivity()` because its full screen IS the
+Activity. Audio has no Activity, so there is no per-tree fact to
+derive from — the choice is a real user decision. It is written ONLY by
+gestures and by the launch seam. There is deliberately no sync effect,
+because W6.0 shipped a black player screen from exactly that: `App` is
+mounted once per Activity React root, so two writers of one value
+ping-pong forever.
+
+Layout provenance — nothing invented: Spotify, YouTube Music, Apple
+Music, Plex and Jellyfin all put artwork first, then title/artist, then
+progress with elapsed/remaining, then the five-button row, with
+chevron-down top-left. Spotify documents chevron-down as "Minimize".
+
+## Every control either acts or is disabled
+
+  shuffle   reads state.shuffle (mpv `playlist-shuffle`, mirrored by the
+            lib) so it can show whether it is on. `setShuffle` existed
+            since 1.6.0 with no readable state behind it — a toggle that
+            cannot show its own state. Surfaced through useTransport
+            and mutation-checked.
+  next/prev driven by canGoNext/canGoPrev from the ENGINE's playlist,
+            not usePlayerStore: useQueueSync writes a phantom entry
+            with `uri: ''` for single-file launches (its own comment
+            flags it as a V20 gap), and a next button aimed at an empty
+            URI is a dead control.
+  seek bar  disabled outright when durationMs === 0. A live stream has
+            no position to seek to, and a bar that moves but cannot
+            seek is the commonest fake control in a media app.
+
+## Close is a teardown, not a dismissal
+
+X calls the native `stopAudioPlayback()`, which stops the engine AND
+sends ACTION_STOP so the session is released and the notification is
+dismissed. Not `commands.stop()`, which would silence the engine while
+leaving the media session registered and the notification posted. If the
+native stop throws, the UI stays up and the error is surfaced —
+dismissing the player while audio keeps playing is a lie the user cannot
+detect.
+
+Minimize is a store write and nothing else: no Activity is finished, no
+window is touched, playback is uninterrupted.
+
+## Break an import cycle
+
+The audio components import `useTransport` from its defining module and
+`getMpvPlayerModule` from the lib, not from the app's
+`infrastructure/player` barrel. That barrel re-exports `VideoPlayer`
+(index.ts:218) and `VideoPlayer` imports the barrel back (line 69), so
+anything importing it sits on a cycle — which surfaced on device as a
+redbox reading "Property 'AudioChrome' doesn't exist", because Metro's
+ESM->CJS interop hands a cycle a partially-initialised module.
+
+Gates: TSC:0 ESLINT:0 JEST:0 — 80 suites, 999 passed / 1000 (1 todo).
