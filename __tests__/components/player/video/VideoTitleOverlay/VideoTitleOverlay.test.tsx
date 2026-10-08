@@ -4,7 +4,7 @@
  *
  * The file used to be `export const VideoTitleOverlay = () => null`
  * while still being mounted in the live chrome
- * (`SimbaPlayer/ExpandedChrome`), so the player showed no title at
+ * (`VideoPlayer/ExpandedChrome`), so the player showed no title at
  * all. These tests pin the behaviour that replaced the stub:
  *
  *   - renders the title from `useTransport().state.title` (the value

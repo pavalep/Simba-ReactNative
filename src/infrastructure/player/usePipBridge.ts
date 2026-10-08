@@ -14,14 +14,14 @@
  * the system Back / Home on it). Android destroys the PiP window and
  * restores the fullscreen activity, but only the native side learns
  * about it. The JS `pipActive` flag stayed `true`, so
- * `presentation.mode` stayed `'pip'` and `SimbaPlayerContent` kept
+ * `presentation.mode` stayed `'pip'` and `VideoPlayer` kept
  * returning `null` — a black activity with no chrome and no way back
  * except killing the app.
  *
  * ## Two sources of truth, one reconciliation
  *
  * `pipActive` is set optimistically by our own button and by
- * `SimbaPlayerRef.enterPip`, and authoritatively by `onPipModeChanged`.
+ * `VideoPlayerRef.enterPip`, and authoritatively by `onPipModeChanged`.
  * Both write the same flag with the same meaning, so they converge:
  * the button is instant feedback, the event is the truth. No tie-break
  * needed, and the event arriving second is a no-op.

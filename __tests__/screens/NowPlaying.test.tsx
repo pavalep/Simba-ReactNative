@@ -18,7 +18,7 @@
  * W4 note — this route used to render the chrome itself
  * (a `<Placeholder>` empty state, the `fileTitle` heading and
  * an `Unknown Track` fallback). W4's chrome hoist moved ALL of
- * that into V19 SimbaPlayer at the App.tsx shell.
+ * that into VideoPlayer at the App.tsx shell.
  *
  * W6.0 — the route's remaining "job" (write `expanded` on mount,
  * `mini` on unmount) was removed too, because the presentation mode

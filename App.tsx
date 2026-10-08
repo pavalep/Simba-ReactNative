@@ -23,7 +23,7 @@ import {
   type PromptResume,
 } from './src/infrastructure/player';
 import {useConfirmDialog} from './src/components/core/Dialog';
-import {SimbaPlayer as V19SimbaPlayer} from './src/components/player/video/SimbaPlayer/SimbaPlayer';
+import {VideoPlayer} from './src/components/player/video/VideoPlayer';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {QueryProvider} from './src/app/QueryProvider';
 import {SimbaStatusBar} from './src/components/StatusBar';
@@ -91,7 +91,7 @@ const AppContent: React.FC = () => {
 
   // V19 W0 Phase 0.1: useQueueSync middleware. Wires the lib's native
   // queue ↔ usePlayerStore. Mounted once at the app shell (W4+
-  // migration: this lives inside the V19 SimbaPlayer once V19
+  // migration: this lives inside the VideoPlayer once V19
   // replaces the V16 root). Source of truth:
   // md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md §3.C + §5.
   useQueueSync();
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
  *      background, which would cover the native `MpvRenderView` that
  *      sits beneath the React root along with the chrome on top of it.
  *
- * The V19 chrome sits OUTSIDE `SimbaPlayerRoot` on purpose:
+ * The video chrome sits OUTSIDE `SimbaPlayerRoot` on purpose:
  * `SimbaPlayerRoot` returns `<PlayerRoot>` *instead of* its children
  * when launch params exist, so a chrome rendered as a child would be
  * discarded exactly when the player is active. As a sibling it is
@@ -322,10 +322,10 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
     <ErrorBoundary fallbackColors={fallbackColors}>
       <ToastProvider>
         <ResumePromptContext.Provider value={promptResume}>
-        {/* (1) V19 chrome — always mounted, self-gates on
+        {/* (1) Video chrome — always mounted, self-gates on
             useIsPlayerActivity(). Sibling of SimbaPlayerRoot, never a
             child: see the docstring. */}
-        <V19SimbaPlayer />
+        <VideoPlayer />
         {/* W7.6 — `<VideoMiniPlayer />` used to be mounted here. It was a
             W0 stub whose whole body was `return null`, so it rendered
             nothing at all: a live import and a live element in the tree
@@ -343,10 +343,10 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
             Without it, <SimbaPlayerRoot> returns <PlayerRoot> INSTEAD
             of its children whenever launch params exist, so the
             module's default UI ("Simba Player", ✕, yellow play) took
-            over the screen and the V19 chrome — mounted above, but
+            over the screen and the video chrome — mounted above, but
             painted underneath — was never seen. With `headless` the
             module keeps the load lifecycle (`useLaunchPlayback`, so
-            the payload is still loaded exactly once) and the V19 chrome
+            the payload is still loaded exactly once) and the video chrome
             is the player UI. Children render unconditionally; the split
             below keeps the navigator out of the player activity. */}
         <SimbaPlayerRoot headless>
@@ -459,7 +459,7 @@ const App: React.FC<RootProps> = ({isPlayerActivity = false}) => {
                 and the V14 `<SimbaPlayer lookup={...}>` shape with
                 a single `<SimbaPlayer resumePolicy={...}>`.
 
-                V19 W4: V19 SimbaPlayer (chrome compositor) lives as a
+                V19 W4: VideoPlayer (chrome compositor) lives as a
                 sibling of AppContent INSIDE the V16 SimbaPlayer. The V19
                 chrome overlay reads lib hooks (usePlayer) so it
                 must be a child of the V16 SimbaPlayer; it is

@@ -166,7 +166,7 @@ export interface UseVideoControllerApi {
 /**
  * Bind the `VideoController` singleton to a React view.
  *
- * Mount once — in `SimbaPlayerContent` (V19 chrome compositor) or
+ * Mount once — in `VideoPlayer` (V19 chrome compositor) or
  * at the App shell. The controller outlives any single screen
  * (always-mount per audit §4.D), so the singleton persists across
  * navigations; unmounting only unsubscribes the view.
@@ -243,6 +243,6 @@ export function useVideoController(): UseVideoControllerApi {
     // The PiP intent that IS still a real user action is exposed as
     // `setPipActive` on `usePresentation()`, and the full enter/exit
     // transition (native window + chrome suppression) is owned by
-    // `SimbaPlayerRef.enterPip` / `.exitPip`.
+    // `VideoPlayerRef.enterPip` / `.exitPip`.
   };
 }

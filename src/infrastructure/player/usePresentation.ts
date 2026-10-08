@@ -59,7 +59,7 @@ export interface Presentation {
 }
 
 /**
- * Usage in V19 SimbaPlayer (W4+):
+ * Usage in VideoPlayer (W4+):
  *   const {isExpanded} = usePresentation();
  *   if (!isExpanded) return null;
  */

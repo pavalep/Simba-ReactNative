@@ -52,7 +52,7 @@
  *
  * ## Visibility — this component owns NO visibility state
  *
- * It is mounted inside `ChromeAutoHideController` (SimbaPlayer.tsx),
+ * It is mounted inside `ChromeAutoHideController` (VideoPlayer.tsx),
  * the single owner of chrome opacity, so the bar fades in and out with
  * the transport controls for free. A second timer here would be the
  * "competing visibility system" that controller exists to prevent.
@@ -91,7 +91,7 @@
  * bolted to the top while the bottom has no backdrop at all" look.
  *
  * W7.2 replaces it with `PlayerScrim` — ONE continuous gradient behind
- * the entire chrome, mounted once in `SimbaPlayer`'s compositor. The
+ * the entire chrome, mounted once in `VideoPlayer`'s compositor. The
  * header no longer paints any background of its own, which is also why
  * there is no seam to line up: the gradient is a single surface that
  * both bands belong to.

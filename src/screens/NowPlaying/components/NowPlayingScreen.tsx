@@ -2,9 +2,9 @@
  * V19 W4 — `NowPlayingScreen` (thin viewer post-fold).
  *
  * After W4's chrome hoist (audit §5 + SPEC §5.2-§5.4), the chrome
- * composition moved into V19 SimbaPlayer at the App.tsx shell. The
+ * composition moved into VideoPlayer at the App.tsx shell. The
  * NowPlayingScreen route is now a thin viewer: all visual chrome
- * lives in V19 SimbaPlayer, and the route itself has no body.
+ * lives in VideoPlayer, and the route itself has no body.
  *
  * ## Why there is no presentation effect here any more
  *
@@ -55,7 +55,7 @@ import * as React from 'react';
 import type {NowPlayingScreenProps} from '../types';
 
 export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = () => {
-  // All chrome primitives live in V19 SimbaPlayer at the shell, and
+  // All chrome primitives live in VideoPlayer at the shell, and
   // the presentation mode is derived from the host activity. There is
   // nothing for this route to do.
   return null;

@@ -389,7 +389,7 @@ export interface TransportCommands {
  *   - `'one'`  → lib `'file'`    — repeat the current file
  *   - `'all'`  → lib `'playlist'`— repeat the entire playlist
  *
- * Why a V19 enum separate from `MpvLoopMode`: the V19 chrome
+ * Why a V19 enum separate from `MpvLoopMode`: the video chrome
  * renders Apple-Music-style labels ("Repeat one" / "Repeat all"),
  * and decoupling the chrome vocabulary from the native vocabulary
  * means a future lib-side rename doesn't cascade through the UI.
@@ -539,6 +539,12 @@ export function useTransport(): TransportHook {
       speed?: number;
       volume?: number;
       isMuted?: boolean;
+      /**
+       * mpv's own play/pause, driven by `onPlaybackStateChanged`.
+       * The one pause-aware signal in the stack — see the `isPlaying`
+       * derivation below for why this hook could not simply re-derive it.
+       */
+      isPlaying?: boolean;
       title?: string;
       artist?: string;
     };
@@ -599,7 +605,27 @@ export function useTransport(): TransportHook {
     const {positionMs, durationMs, isBuffering, isSeeking, seekable} = progress;
     const isEnded =
       durationMs > 0 && positionMs >= durationMs - ENDED_EPSILON_MS;
-    const isPlaying = !isEnded && !isBuffering && !isSeeking;
+    // `!isPaused && hasFile`, as documented at the top of this file —
+    // which is what the previous `!isEnded && !isBuffering && !isSeeking`
+    // was NOT. It had no pause term at all, so it stayed `true` after a
+    // pause: a frozen position with `durationMs > 0` reads as "not
+    // ended, not buffering, not seeking" no matter what mpv is doing.
+    //
+    // Three consumers were quietly wrong because of it:
+    //   - `usePipBridge` does `isPlaying ? pause() : play()`, so its
+    //     PiP play/pause button could only ever pause.
+    //   - `usePlaybackCheckpointSync` gates on `isPlaying` to avoid
+    //     writing a checkpoint for a paused player, and so kept
+    //     overwriting one.
+    //   - a play/pause button renders "Pause" for a stopped track.
+    //
+    // The pause term comes from the lib's own `state.isPlaying`
+    // (`onPlaybackStateChanged` → `mpv get-playback-state`), which is
+    // the authoritative signal and the one `usePlaybackState` already
+    // reads. Deriving it here instead gave the file two owners of the
+    // same fact, which is how they came to disagree.
+    const isPlaying =
+      playerState.isPlaying === true && !isEnded && !isBuffering && !isSeeking;
     return {
       positionMs,
       durationMs,
@@ -662,6 +688,7 @@ export function useTransport(): TransportHook {
     playerState.speed,
     playerState.volume,
     playerState.isMuted,
+    playerState.isPlaying,
     playerState.title,
     playerState.artist,
     isOrientationLocked,

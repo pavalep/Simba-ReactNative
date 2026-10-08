@@ -1,9 +1,9 @@
 /**
- * W9.3 — the `SimbaPlayer` imperative ref contract.
+ * W9.3 — the `VideoPlayer` imperative ref contract.
  *
  * ## Why this test exists
  *
- * The ref object used to be closed with `as unknown as SimbaPlayerRef`.
+ * The ref object used to be closed with `as unknown as VideoPlayerRef`.
  * That double cast is not a style nit — it disabled the single check
  * that would have caught two real defects:
  *
@@ -22,7 +22,7 @@
  *      app dies when the user presses play.
  *
  * Both are now closed: every void-returning member routes through
- * `run`, the object uses `satisfies SimbaPlayerRef` instead of the
+ * `run`, the object uses `satisfies VideoPlayerRef` instead of the
  * double cast, and the four throwers are gone.
  *
  * ## What is asserted
@@ -136,8 +136,8 @@ jest.mock('../../../../../src/components/StatusBar', () => ({
   SimbaStatusBar: passthrough,
 }));
 
-import {SimbaPlayer} from '../../../../../src/components/player/video/SimbaPlayer/SimbaPlayer';
-import type {SimbaPlayerRef} from '../../../../../src/components/player/video/SimbaPlayer/types';
+import {VideoPlayer} from '../../../../../src/components/player/video/VideoPlayer/VideoPlayer';
+import type {VideoPlayerRef} from '../../../../../src/components/player/video/VideoPlayer/types';
 
 const SOURCE = {
   uri: 'file:///movies/film.mkv',
@@ -145,14 +145,14 @@ const SOURCE = {
   kind: 'movie' as const,
 };
 
-async function mountRef(): Promise<SimbaPlayerRef> {
-  const ref = React.createRef<SimbaPlayerRef>();
-  await render(<SimbaPlayer ref={ref} source={SOURCE} />);
+async function mountRef(): Promise<VideoPlayerRef> {
+  const ref = React.createRef<VideoPlayerRef>();
+  await render(<VideoPlayer ref={ref} source={SOURCE} />);
   await waitFor(() => expect(ref.current).not.toBeNull());
-  return ref.current as SimbaPlayerRef;
+  return ref.current as VideoPlayerRef;
 }
 
-describe('SimbaPlayer ref — contract', () => {
+describe('VideoPlayer ref — contract', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -179,7 +179,7 @@ describe('SimbaPlayer ref — contract', () => {
     // Asserted over the whole surface at once, so dropping a single
     // `run(...)` fails here and names that member.
     const ref = await mountRef();
-    // `SimbaPlayerRef` types every command as `Promise<void>`, so calling
+    // `VideoPlayerRef` types every command as `Promise<void>`, so calling
     // it is already known to be safe - this table exists to iterate them,
     // not to re-prove their types. Cast through a callable record so the
     // loop can index by name.

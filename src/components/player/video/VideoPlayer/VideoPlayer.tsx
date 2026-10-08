@@ -1,7 +1,7 @@
 /**
- * V19 W4 — `SimbaPlayer` (chrome composition orchestrator).
+ * V19 W4 — `VideoPlayer` (chrome composition orchestrator).
  *
- * W4 fills in the W0 stub: the V19 chrome compositor that owns
+ * W4 fills in the W0 stub: the video chrome compositor that owns
  * the chrome subtree (ChromeAutoHideController, VerticalSwipeGestures,
  * NextUpOverlay, Title/Loading/Error overlays, TransportBar) so it
  * survives screen navigation. Per audit §5, this is the load-bearing
@@ -21,8 +21,8 @@
  *                        mini dock, and there cannot be one while
  *                        playback lives in its own activity.
  *   - `forwardRef` + `useImperativeHandle` exposes the canonical
- *     `SimbaPlayerRef` shape (SPEC §5.3) — consumers can write
- *     `simbaPlayerRef.current?.play()` etc. (W0 had an empty
+ *     `VideoPlayerRef` shape (SPEC §5.3) — consumers can write
+ *     `videoPlayerRef.current?.play()` etc. (W0 had an empty
  *     imperative surface; W4 keeps the shape stable but only
  *     implements the chrome-side hooks the chrome actually
  *     needs today; the rest stay as `throw new Error('W22+')`
@@ -30,8 +30,8 @@
  *     they reach for them ahead of the binding).
  *
  * What W4 explicitly does NOT change (carried forward):
- *   - The V16 SimbaPlayer (lib) still wraps AppContent in App.tsx.
- *     V19 SimbaPlayer sits as a SIBLING of AppContent inside V16.
+ *   - The V16 VideoPlayer (lib) still wraps AppContent in App.tsx.
+ *     V19 VideoPlayer sits as a SIBLING of AppContent inside V16.
  *     Per audit §5: V19 chrome compositor shouldn't depend on V16's
  *     PlayerActivity lifecycle (the chrome's auto-hide timer +
  *     NextUpOverlay + VerticalSwipeGestures want to keep ticking
@@ -68,12 +68,12 @@ import {
   useTransport,
 } from '../../../../infrastructure/player';
 import {forwardRef, useImperativeHandle} from 'react';
-import type {SimbaPlayerProps, SimbaPlayerRef} from './types';
+import type {VideoPlayerProps, VideoPlayerRef} from './types';
 
-export type {SimbaPlayerProps, SimbaPlayerRef, VideoSource} from './types';
+export type {VideoPlayerProps, VideoPlayerRef, VideoSource} from './types';
 
 /**
- * SimbaPlayer — the V19 chrome composition orchestrator. Always-mounted
+ * VideoPlayer — the video chrome composition orchestrator. Always-mounted
  * at App.tsx (W4 contract). Owns the chrome subtree; no consumer
  * composes chrome (audit §5 Rule 6).
  *
@@ -99,13 +99,13 @@ export type {SimbaPlayerProps, SimbaPlayerRef, VideoSource} from './types';
  * compositor is not the right owner for launching. They are the
  * documented remaining gap.
  */
-export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
+export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
   // The function is named (rather than anonymous) so React DevTools
-  // shows `SimbaPlayer` for the component. The inner name shadows
+  // shows `VideoPlayer` for the component. The inner name shadows
   // the outer const, which is intentional — that's why the warning
   // is suppressed for this file.
   // eslint-disable-next-line @typescript-eslint/no-shadow
-  function SimbaPlayer(_props: SimbaPlayerProps, ref) {
+  function VideoPlayer(_props: VideoPlayerProps, ref) {
     const {state, commands} = useTransport();
     const {setPipActive} = usePresentation();
     const setQualityPreset = useQualityStore(s => s.setPreset);
@@ -121,9 +121,9 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
         // W9.3: EVERY void-returning member routes through `run`.
         // They did not before — nine of them were plain arrows — and
         // the mismatch stayed invisible because the whole object was
-        // closed with `as unknown as SimbaPlayerRef`. That double cast
+        // closed with `as unknown as VideoPlayerRef`. That double cast
         // disabled the one check that would have caught it. It is now
-        // `satisfies SimbaPlayerRef`, so a future member that forgets
+        // `satisfies VideoPlayerRef`, so a future member that forgets
         // `run` fails `tsc` instead of silently returning `undefined`
         // to a caller that awaited it.
         const run = (fn: () => void) => async () => {
@@ -165,7 +165,7 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
             })(),
           /**
            * `setLoopMode` takes the lib's vocabulary
-           * ('none' | 'file' | 'playlist'); the V19 chrome speaks
+           * ('none' | 'file' | 'playlist'); the video chrome speaks
            * 'off' | 'one' | 'all'. `repeatMode` is derived from the
            * lib's `loopMode` (there is no separate store), so
            * routing through `commands.setRepeatMode` updates both
@@ -191,7 +191,7 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
            * being coerced into the lib, but the code did no such thing -
            * `Number('not-a-number')` is `NaN`, and `NaN` was being passed
            * straight into mpv's track selector. Found by
-           * `SimbaPlayerRef.test.tsx`, which was written from the comment
+           * `VideoPlayerRef.test.tsx`, which was written from the comment
            * and failed. A comment that describes a guard the code does
            * not have is worse than no comment: it makes the next reader
            * believe they are protected.
@@ -255,7 +255,7 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
           getCurrentUri: () => state.currentUri,
           getCurrentTitle: () => state.title || null,
           getCurrentArtwork: () => null,
-        } satisfies SimbaPlayerRef;
+        } satisfies VideoPlayerRef;
       },
       [
         commands,
@@ -266,7 +266,7 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
       ],
     );
 
-    return <SimbaPlayerContent />;
+    return <VideoPlayerChrome />;
   },
 );
 
@@ -274,8 +274,12 @@ export const SimbaPlayer = forwardRef<SimbaPlayerRef, SimbaPlayerProps>(
  * The actual chrome composition. Separated from the forwardRef so
  * `usePresentation` / `usePlaybackState` hooks can subscribe without
  * being entangled with the imperative ref's empty-stub closure.
+ *
+ * Named `VideoPlayerChrome`, not `VideoPlayer`: the exported forwardRef
+ * is the public surface, and an inner component sharing that name is a
+ * merged declaration as far as TypeScript is concerned.
  */
-const SimbaPlayerContent: React.FC = () => {
+const VideoPlayerChrome: React.FC = () => {
   const presentation = usePresentation();
 
   // W6.0 — the mount gate. ONE gate, and it is derived.
@@ -324,12 +328,12 @@ const SimbaPlayerContent: React.FC = () => {
 };
 
 /**
- * The expanded chrome compositor. Split out of `SimbaPlayerContent` so
+ * The expanded chrome compositor. Split out of `VideoPlayer` so
  * it can live INSIDE `ChromeAutoHideProvider` — the surface's tap
  * handler and the two `ChromeAutoHideController`s must all observe the
  * same `Animated.Value`.
  *
- * (Before this split they did not. `SimbaPlayerContent` called
+ * (Before this split they did not. `VideoPlayer` called
  * `useChromeAutoHide()` for `toggle` while each controller called it
  * again for its own opacity: three independent visibility states, so a
  * tap toggled a value that drove no pixels and the controls only ever
@@ -360,9 +364,9 @@ const ExpandedChrome: React.FC = () => {
   // `background.surfaceDark`. Both are opaque, so the overlay painted
   // over the `MpvRenderView` that `PlayerActivity` inserts at content
   // index 0: the user would have seen a flat panel where the video
-  // should be. The old comment claimed "the V16 SimbaPlayer's
+  // should be. The old comment claimed "the V16 VideoPlayer's
   // PlayerSurface is the actual mpv render" — no such component
-  // exists on this path (the V16 `SimbaPlayer` only renders
+  // exists on this path (the V16 `VideoPlayer` only renders
   // `PlayerProvider`; the surface is purely native). Nothing paints
   // here now; the only opaque chrome is the deliberate scrims
   // (gesture feedback, auto-hide fade) and the overlays themselves.
@@ -424,4 +428,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SimbaPlayer;
+export default VideoPlayer;

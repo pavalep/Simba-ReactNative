@@ -1,7 +1,7 @@
 /**
- * V19 W0 Phase 0.4 — `SimbaPlayer` public types.
+ * V19 W0 Phase 0.4 — `VideoPlayer` public types.
  *
- * W0 stub: types only. The component is in `SimbaPlayer.tsx`. Wave 4
+ * W0 stub: types only. The component is in `VideoPlayer.tsx`. Wave 4
  * fills in the chrome composition.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
@@ -10,14 +10,14 @@
 
 // W9.3: `MediaLane` and `Result` are no longer imported. They were
 // referenced only by the launch trio (`open` / `openWithResume` /
-// `openPlaylist`), which is removed — see the `SimbaPlayerRef`
-// docblock below. `StreamError` stays: `SimbaPlayerProps.onError`
+// `openPlaylist`), which is removed — see the `VideoPlayerRef`
+// docblock below. `StreamError` stays: `VideoPlayerProps.onError`
 // still uses it.
 import type {MediaKind} from '../../../../types/media';
 import type {StreamError} from '../../../../infrastructure/player';
 
 /**
- * The declarative source for `<SimbaPlayer source={...} />`.
+ * The declarative source for `<VideoPlayer source={...} />`.
  *
  * V19 introduces this; the V16 lib uses an ad-hoc `{uri, title,
  * type}` shape. V19 normalizes to a stable union.
@@ -30,7 +30,7 @@ export type VideoSource = {
 };
 
 /**
- * The imperative ref API exposed by `<SimbaPlayer ref={ref} />`.
+ * The imperative ref API exposed by `<VideoPlayer ref={ref} />`.
  *
  * Sourced from the lib's `usePlayer().commands` + facade wrappers.
  * V19 names them canonically so consumers never reach into the lib.
@@ -52,7 +52,7 @@ export type VideoSource = {
  * W6.0, when `setPresentation` was removed rather than kept as a
  * setter that could only lie. Zero callers referenced any of them.
  */
-export interface SimbaPlayerRef {
+export interface VideoPlayerRef {
   // ── Transport
   play(): Promise<void>;
   pause(): Promise<void>;
@@ -90,18 +90,18 @@ export interface SimbaPlayerRef {
 }
 
 /**
- * The declarative props for `<SimbaPlayer source={...} ref={ref} />`.
+ * The declarative props for `<VideoPlayer source={...} ref={ref} />`.
  *
  * V19 SPEC §5.2 — this is what consumers write.
  *
  * W4 note: `source` is OPTIONAL in W4 because the chrome
  * composition doesn't yet route the source to the lib's
- * PlayerSurface — the V16 SimbaPlayer's PlayerSurface handles
+ * PlayerSurface — the V16 VideoPlayer's PlayerSurface handles
  * that. The V19 component renders chrome on top of the lib's
  * surface; the `source` prop becomes load-bearing once V19
  * replaces the V16 root in W22+.
  */
-export interface SimbaPlayerProps {
+export interface VideoPlayerProps {
   /** Optional. W4: the chrome ignores this (V16 owns the surface).
    *  W22+: load-bearing; `null` = unload + reset to idle. */
   source?: VideoSource | null;

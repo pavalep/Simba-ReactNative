@@ -6,7 +6,7 @@
  * nothing in the app subscribed. So when Android dismissed the PiP
  * window (swipe-away, system Back, Home), only the native side knew —
  * the JS `pipActive` flag stayed `true`, `presentation.mode` stayed
- * `'pip'`, and `SimbaPlayerContent` kept returning `null`. A black
+ * `'pip'`, and `VideoPlayerChrome` kept returning `null`. A black
  * activity with no chrome and no way back short of killing the app.
  *
  * Mocked at the real lib path so `subscribePlayerEvent` is the only

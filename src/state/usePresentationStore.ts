@@ -82,7 +82,7 @@ import {create} from 'zustand';
  *
  * - `mini`: no chrome above the foreground screen (there is no video
  *   mini dock — playback happens in its own activity, so nothing to
- *   dock beneath; see `SimbaPlayerContent`).
+ *   dock beneath; see `VideoPlayerChrome`).
  * - `expanded`: the full chrome compositor over the player surface.
  * - `pip`: the native PiP window owns the surface; the chrome is
  *   suppressed.

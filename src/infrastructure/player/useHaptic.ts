@@ -20,7 +20,7 @@
  * Why a hook + not a Provider: the chrome is small (~3 chrome
  * primitives call haptic); a hook keeps each primitive's
  * surface untouched. Mount the hook ONCE in the chrome shell
- * (NowPlayingScreen for W3.6.13, future SimbaPlayer shell for
+ * (NowPlayingScreen for W3.6.13, future VideoPlayer shell for
  * W4); call `hapticLight()` / `hapticMedium()` / `hapticHeavy()`
  * from the chrome's tap handlers.
  *

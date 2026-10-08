@@ -1,0 +1,61 @@
+Rename V19SimbaPlayer to VideoPlayer; fix a pause-blind isPlaying
+
+Two things, both found while wiring V20 Phase C's audio launch.
+
+1. The chrome compositor's name
+
+`<V19SimbaPlayer />` in App.tsx was an import ALIAS:
+
+    import {SimbaPlayer as V19SimbaPlayer} from '.../video/SimbaPlayer/SimbaPlayer';
+
+The alias existed because the lib already exports a `SimbaPlayer` (the
+V16 root that owns the load lifecycle), so V19 shipped a second symbol
+with the same name and disambiguated at the one call site. `V19` there
+was our internal wave number, not a description — it told a reader
+nothing, and was already wrong a wave later.
+
+Renamed the app's component by what it is: `VideoPlayer`
+(`VideoPlayerProps` / `VideoPlayerRef`), directory
+`video/SimbaPlayer/` -> `video/VideoPlayer/`. That pairs symmetrically
+with the `AudioPlayer` the shell is about to get, and leaves exactly one
+`SimbaPlayer` in the codebase — the lib's.
+
+The internal composition component was `SimbaPlayerContent`; it is now
+`VideoPlayerChrome`, which is what its own docblock already called it.
+Sharing the exported name would be a merged declaration.
+
+The lib's own `SimbaPlayer` and the `simbaplayer://` scheme are
+untouched, and comments referring to them still say `SimbaPlayer`.
+
+2. useTransport's isPlaying had no pause term
+
+    const isPlaying = !isEnded && !isBuffering && !isSeeking;
+
+The file's own docblock documents this as `!isPaused && hasFile`. A
+paused track has a frozen position and a known duration, so it
+satisfied all three remaining terms and reported `isPlaying: true`.
+
+Three consumers were quietly wrong because of it:
+  - usePipBridge picks its command with `isPlaying ? pause() : play()`,
+    so the PiP play/pause button could only ever pause.
+  - usePlaybackCheckpointSync gates on `isPlaying` to avoid writing a
+    checkpoint for a paused player, and so kept overwriting one.
+  - a play/pause button renders "Pause" for a stopped track.
+
+The pause term now comes from the lib's `state.isPlaying`
+(onPlaybackStateChanged -> mpv get-playback-state), which is
+authoritative and the signal `usePlaybackState` already read. This
+file had two owners of the same fact, which is how they disagreed.
+
+Mutation-checked: revert the expression and 2 of the new tests fail.
+
+Also: the launch seam forwards `thumbnailPath` as `artworkPath` so the
+media notification has an image now that audio no longer routes through
+PlayerActivity (which hardcoded artwork to "").
+
+Consumes @simba-dev/react-native-media-player 1.13.0 (audio with no
+window). Note the seam's artwork forward was invisible to tsc until
+1.13.0 was installed: the conditional spread slipped past excess-property
+checking, so tsc reported clean while the field did not exist.
+
+Gates: TSC:0 ESLINT:0 JEST:0 — 79 suites, 987 passed / 988 (1 todo).

@@ -3,7 +3,7 @@
  *
  * Renders the surface area for the video frame. The native surface
  * itself is provided by the lib's `SimbaPlayer` (in the V16 root,
- * which V19 SimbaPlayer replaces in W4). The surface view is bound
+ * which VideoPlayer replaces in W4). The surface view is bound
  * via the lib's bridge; this component is the JS-side wrapper that
  * guarantees geometry + a placeholder color when the surface has no
  * pixel yet.

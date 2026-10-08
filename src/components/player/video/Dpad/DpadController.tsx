@@ -162,7 +162,7 @@ export function useFocusRing(): {
 
 /**
  * The mount point for the chrome subtree. Mount in
- * NowPlayingScreen (or SimbaPlayer shell in W4) — it's an
+ * NowPlayingScreen (or VideoPlayer shell) — it's an
  * always-present component that subscribes to hardware keys.
  *
  * Today: no observable behavior (useHardwareMediaKeys only

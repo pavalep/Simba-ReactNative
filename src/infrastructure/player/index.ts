@@ -200,17 +200,22 @@ export {
   type LaneStreamError,
 } from './validateLane';
 
-// V19 W0 Phase 0.5 — the V19 chrome component (STUB in W0; Wave 4
-// fills in). Source of truth: SPEC §3 + audit §5. Migration note
-// (audit §5): the V16 lib also exports a `SimbaPlayer`. V19's NEW
-// `SimbaPlayer` REPLACES the V16 root in W4+. Until then, both
-// coexist; consumers keep using the V16 root.
+// The app's full-screen VIDEO chrome compositor.
+//
+// Named `VideoPlayer`, not `SimbaPlayer`: the lib already exports a
+// `SimbaPlayer` (the V16 root provider that owns the load lifecycle),
+// and V19 briefly shipped a second symbol with the same name. That
+// collision was papered over at the App.tsx call site with a `V19`
+// alias, which told a reader nothing except that our version numbering
+// had leaked into the component tree — and was already wrong a wave
+// later. `VideoPlayer` says what it is, and it pairs symmetrically with
+// the `AudioPlayer` that now sits beside it in the shell.
 export {
-  SimbaPlayer,
-  type SimbaPlayerProps,
-  type SimbaPlayerRef,
+  VideoPlayer,
+  type VideoPlayerProps,
+  type VideoPlayerRef,
   type VideoSource,
-} from '../../components/player/video/SimbaPlayer';
+} from '../../components/player/video/VideoPlayer';
 
 // V19 W1 — `usePlaybackState()` helper. Derives the V19 VideoState
 // enum from the lib's existing hooks. Used by VideoLoadingOverlay,
@@ -291,7 +296,7 @@ export {useReduceMotion} from './useReduceMotion';
 // iOS today: no-op (the lib doesn't yet expose a proper
 // UIImpactFeedbackGenerator surface; W3.6.13 follow-up widens
 // lib facade). Mount ONCE in the chrome shell (NowPlayingScreen
-// for now; SimbaPlayer shell in W4); call from chrome tap
+// for now; VideoPlayer shell); call from chrome tap
 // handlers. Source of truth: TRACKER Phase 3.6.13.
 export {useHaptic, HAPTIC_DURATION_MS, type HapticIntensity, type HapticApi} from './useHaptic';
 

@@ -11,7 +11,7 @@
  *
  * Mounted ONCE at AppContent (inside the existing V16 SimbaPlayer's
  * children) — see `md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md` §5 for
- * the W4 migration when V19 SimbaPlayer replaces the V16 root.
+ * the W4 migration when VideoPlayer replaces the V16 root.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.22 + the audit doc §3.C.

@@ -169,11 +169,17 @@ export function usePlayerActivity(
   return useMemo<AppPlayerActivityResult>(
     () => ({
       openPlayer: async (opts: AppOpenPlayerOptions) => {
-        // Identity fields are ours; the bridge must not see them, so
-        // they are destructured off before delegating. Forwarding an
+        // Identity fields are ours; the bridge must not see most of them,
+        // so they are destructured off before delegating. Forwarding an
         // unknown key across the bridge is how argument-shape drift
         // starts. `type` is deliberately NOT destructured — it belongs
         // to the bridge and is required there.
+        //
+        // `thumbnailPath` is the exception: it becomes the media
+        // notification's artwork on the audio path, which now runs
+        // without a window. Nothing else would put an image on the
+        // notification, because before V20 that was `PlayerActivity`'s
+        // job and it was hardcoded to an empty string.
         const {mediaKind, mediaLane, provider, thumbnailPath, ...bridgeOpts} = opts;
 
         const candidate = resolveResumeCandidate(
@@ -210,12 +216,15 @@ export function usePlayerActivity(
           ...(thumbnailPath ? {thumbnailPath} : {}),
         });
 
-        return openWithResume({...bridgeOpts, startPositionMs, resumeId: bridgeOpts.uri}).catch(
-          error => {
-            endSession();
-            throw error;
-          },
-        );
+        return openWithResume({
+          ...bridgeOpts,
+          startPositionMs,
+          resumeId: bridgeOpts.uri,
+          ...(thumbnailPath ? {artworkPath: thumbnailPath} : {}),
+        }).catch(error => {
+          endSession();
+          throw error;
+        });
       },
       getLaunchParams,
     }),

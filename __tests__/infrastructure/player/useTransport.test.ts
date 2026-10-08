@@ -79,9 +79,20 @@ const mockCommands = {
   clear: jest.fn(),
 };
 
+/**
+ * mpv's own play/pause signal, as the lib reports it.
+ *
+ * This was a `state: {}` literal until V20 Phase C. `useTransport` never
+ * read a pause term, so an empty state was indistinguishable from
+ * "playing" and the derivations looked correct. It is now part of the
+ * contract, so it is part of the mock — with a default of `true`,
+ * because most of these tests are about a track that is playing.
+ */
+const mockPlayerState: {isPlaying: boolean} = {isPlaying: true};
+
 jest.mock('@simba-dev/react-native-media-player', () => ({
   usePlayerProgress: () => mockProgress,
-  usePlayer: () => ({commands: mockCommands, state: {}}),
+  usePlayer: () => ({commands: mockCommands, state: mockPlayerState}),
 }));
 
 // ── Tests for derivations ────────────────────────────────────────────
@@ -96,6 +107,7 @@ describe('useTransport — derivations', () => {
     mockProgress.seekable = true;
     mockProgress.cacheFill = 0;
     mockProgress.cacheRanges = [];
+    mockPlayerState.isPlaying = true;
   });
 
   it('exposes the full TransportState shape', async () => {
@@ -269,6 +281,63 @@ describe('useTransport — derivations', () => {
     mockProgress.positionMs = 299_900; // ended
     const {result: r3} = await renderHook(() => useTransport());
     expect(r3.current.state.canEnterPip).toBe(false);
+  });
+});
+
+/**
+ * V20 Phase C — the pause term.
+ *
+ * Before this, `isPlaying` was `!isEnded && !isBuffering && !isSeeking`,
+ * which is what this file's docblock describes as `!isPaused && hasFile`
+ * except for the pause. A paused track has a frozen position and a
+ * known duration, so it satisfied all three remaining terms and reported
+ * `isPlaying: true`.
+ *
+ * These three tests are the mutation check: revert line ~602 to the old
+ * expression and each one fails.
+ */
+describe('useTransport — isPlaying respects pause (V20 Phase C)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockProgress.positionMs = 30_000;
+    mockProgress.durationMs = 300_000;
+    mockProgress.isBuffering = false;
+    mockProgress.isSeeking = false;
+    mockProgress.seekable = true;
+    mockProgress.cacheFill = 0;
+    mockProgress.cacheRanges = [];
+    mockPlayerState.isPlaying = true;
+  });
+
+  it('is false while paused, even though nothing is buffering, seeking or ended', async () => {
+    // The exact shape of the bug: mid-track, so `isEnded` is false and
+    // there is no buffering or seeking to trip the other terms.
+    mockPlayerState.isPlaying = false;
+    const {result} = await renderHook(() => useTransport());
+
+    expect(result.current.state.isEnded).toBe(false);
+    expect(result.current.state.isBuffering).toBe(false);
+    expect(result.current.state.isSeeking).toBe(false);
+    expect(result.current.state.isPlaying).toBe(false);
+  });
+
+  it('is true while mpv reports playing', async () => {
+    mockPlayerState.isPlaying = true;
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.isPlaying).toBe(true);
+  });
+
+  // The consequence that made this worth fixing: `usePipBridge` picks its
+  // command with `isPlaying ? pause() : play()`, so a constant `true`
+  // made the PiP play/pause button incapable of ever resuming playback.
+  it('flips back to true when mpv resumes, so a toggle can round-trip', async () => {
+    mockPlayerState.isPlaying = false;
+    const {result, rerender} = await renderHook(() => useTransport());
+    expect(result.current.state.isPlaying).toBe(false);
+
+    mockPlayerState.isPlaying = true;
+    await rerender(undefined);
+    expect(result.current.state.isPlaying).toBe(true);
   });
 });
 
