@@ -71,6 +71,7 @@
         android:launchMode="singleTop"
         android:windowSoftInputMode="adjustResize"
         android:resizeableActivity="true"
+        android:supportsPictureInPicture="true"
         android:exported="true">
         <!-- Accept shared video/audio files from other apps -->
         <intent-filter>
@@ -95,6 +96,21 @@
         will pull in this activity declaration when building the AAR.
         Fully-qualified because the activity class lives in the library's
         com.simba.player package, not the app's.
+
+        V21: this activity is being REMOVED. MainActivity above already
+        carries every PiP prerequisite — resizeableActivity, the wide
+        configChanges set, and now supportsPictureInPicture. What actually
+        kept video in a second window was a misdiagnosis: PlayerActivity.kt
+        blamed the SurfaceView being nested in RN's view tree for the V11
+        PiP black screen, while the real root cause recorded in this file
+        was a missing resizeableActivity. That wrong attribution is why a
+        second Activity exists, and therefore the root of every two-window
+        defect since.
+
+        Kept here until V21 F5 so the video launch path can be flipped back
+        with one change if the collapse regresses. See
+        md/SIMBA_PLAYER_V21_SPECIFICATION.md and
+        md/SIMBA_PLAYER_V21_TRACKER.md.
 
         Attributes mirror the mpvKt reference PlayerActivity:
           - configChanges includes `navigation` so we don't recreate the
