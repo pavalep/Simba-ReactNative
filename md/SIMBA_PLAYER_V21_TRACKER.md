@@ -53,25 +53,42 @@ zero matches for `stopPlayback|nativeStop|handleStop` across the capture.
 
 ---
 
-### F1 — `setVideoBounds` on `MpvRenderView` — NOT STARTED
+### F1 — `setVideoBounds` on `MpvRenderView` — ✅ `CODE` GATES GREEN (lib commit `2e6f03d`)
 
 Lib repo. One new method wrapping `FrameLayout.LayoutParams`.
 
-- [ ] `@ReactMethod fun setVideoBounds(x: Int, y: Int, w: Int, h: Int)` on `MpvBridgeModule`
-- [ ] Mutates the existing `MpvRenderView` layout params — **must not** `removeView`/`addView`
-      (that destroys the Surface)
-- [ ] Rejects non-positive w/h **loudly** (log + no-op), never silently
-- [ ] Hides/shows via `View.GONE` for audio, matching `PlayerActivity.kt:496-498`
-- [ ] `MpvPlayerModule.ts` web fallback renders `null`, not a fake no-op
-- [ ] `src/types/player.ts` — `PlayerCommands` gains the method
-- [ ] Test: bounds are forwarded verbatim; **mutation check** — mutating to `MATCH_PARENT`
-      fails
-- [ ] Gates: lib `tsc`, lib `jest`, `compileDebugKotlin`
-- [ ] Cut `v1.13.3`, annotated tag, push, wait for Actions, `npm install` in app
+- [x] `@ReactMethod setVideoBounds(x, y, width, height, promise)` on `MpvBridgeModule`
+- [x] Mutates the existing `MpvRenderView` layout params — **does not** `removeView`/`addView`
+- [x] Refuses non-positive w/h **loudly** (`Log.w` + no-op), never silently
+- [x] `setSurfaceVisible` / `fillVideoBounds` / `isSurfaceMounted` added alongside
+- [x] `MpvPlayerModule.ts` NOOP fallback resolves `false` — never claims success
+- [x] `NativeMpvPlayer.ts` spec + `PlayerCommands` in `src/types/player.ts`
+- [x] Tests: rect forwarded verbatim; `false` propagates; visibility both ways;
+      NOOP honesty (**mutation-checked** — flipping the fallback to `true` fails it)
+- [x] Gates: lib `tsc` 0 · lib `jest` **12 suites / 204 passed** · `compileDebugKotlin` 0
+- [ ] Cut `v1.13.3`, annotated tag, push, Actions, `npm install` in app
 
-**Why this method is the whole trick:** see spec §3. `LayoutParams` change ≠ surface
-destruction. THEOPLAYER needed a native re-parenting library for this; a layout-param
-mutation needs one method.
+**Two design decisions that must not be reverted:**
+
+1. **These return `Promise<boolean>`, not `isBlockingSynchronousMethod`.** View mutation is
+   main-thread-only; a blocking sync method runs on the module queue. The boolean is
+   load-bearing — `false` means "no surface to move", and a caller that can't see that
+   renders mini-player chrome over a surface that was never mounted.
+
+2. **`PlayerSurface` holds a `WeakReference`, not a strong one.** A `View` retains its
+   `Context`, which for a mounted surface is the Activity. A strong field leaks the
+   Activity and its view tree for the process lifetime. `detach()` is identity-checked so
+   an outgoing Activity's `onDestroy` cannot unregister the incoming Activity's
+   replacement during a configuration change.
+
+**Latent attach bug found and fixed here** — `MpvRenderView.attachSurfaceLocked` deferred on
+`!isAttachedToWindow`, and its comment claimed that meant "audio mode / GONE". False: a
+GONE view IS attached to its window. The real damage is that once `setNativePtr` gave up,
+nothing re-evaluated the binding — `setNativePtr` runs once and `surfaceChanged` only
+publishes `android-surface-size`. An audio → video handoff had no reliable path back to a
+bound surface and would have rendered black. `ensureSurfaceAttached()` now re-runs on
+`setNativePtr`, `setSurfaceVisible(true)`, `onAttachedToWindow` and `onVisibilityChanged`.
+**This was found by reading the code, not by a crash — F4 depends on it.**
 
 ---
 
@@ -179,14 +196,118 @@ Only after F2–F4 are `DEVICE`-verified.
 
 ---
 
+## Deep-scan findings (2026-10-09) — these change the plan
+
+Two read-only sweeps covered every `PlayerActivity` / `MpvRenderView` / PiP reference in the
+lib and every video launch, lane-inference and dead-code site in the app.
+
+### ✅ Refines scope: audio already left `PlayerActivity`
+
+Audio never goes through `PlayerActivity` — it runs in-app via `AudioChrome` /
+`AudioPlayer` and the foreground service. **Video is the only remaining consumer.** So the
+collapse is one lane, not two, and the "one `MiniPlayer` for both lanes" goal in F4 is an
+*extension of the existing audio mini bar*, not a rewrite.
+
+### 🔴 P0 — deleting `PlayerActivity` breaks the service silently
+
+`MediaPlaybackService.kt` targets the Activity by **string literal**, not by class reference:
+
+- `MediaPlaybackService.kt:206`
+- `MediaPlaybackService.kt:395`
+
+Both `setClassName(context, "com.simba.player.PlayerActivity")`. **Nothing fails at compile
+time when the class is deleted.** PiP entry and the notification's "expand" action would
+throw `ActivityNotFoundException` at runtime, on device, with a green build. These are the
+first two lines to change in F5, and they must be repointed at `MainActivity` **before** the
+class goes.
+
+### ✅ `MpvRenderViewManager` is dead code
+
+`PlayerPackage` never registers any view manager, so the JS `<MpvRenderView>` component is
+unreachable from JS. F1 correctly used a bridge method (`setVideoBounds`) rather than a
+props-driven view manager. **Delete `MpvRenderViewManager` in F5** — it is 100% unreachable.
+
+### 🔴 `seekable` root cause found — do **not** apply the obvious fix
+
+The suggested app-side patch `state.seekable || state.durationMs > 0` in `TransportBar` is
+**jugaad**: it would make a genuinely non-seekable live stream that happens to report a
+duration look seekable. The real cause is in the lib:
+
+- `src/components/PlayerProvider.tsx:688` seeds `seekable` from a mount-time
+  `getProperty('seekable')` read.
+- mpv emits `seekable` as an **edge**, not a pollable. A provider that mounts after the
+  edge never observes it, and `PlayerProvider.tsx:1167` states there is no polling fallback.
+
+Fix at the root: re-seed `seekable` on file load rather than once at mount. Track in F5 —
+it is independent of the Activity collapse and can land first.
+
+### Other confirmed lib defects (independent of F)
+
+| Defect | Location | Note |
+|---|---|---|
+| `openPlayer` sets **no** intent flags | `MpvBridgeModule.kt:245` | Docblock claims `FLAG_ACTIVITY_NEW_TASK`; the code does not set it |
+| `setOrientation` logs the value *after* writing it | `MpvBridgeModule.kt:2256-2264` | `was ${requestedOrientation}` reads the new value, so the log always looks like it did nothing |
+| `enterPip` arity mismatch | Kotlin params nullable vs `NativeMpvPlayer.ts:293` non-nullable | Latent |
+| Stale z-order claim | `MpvBridgeModule.kt:245` vs `MpvRenderView.kt` | One says `setZOrderMediaOverlay` is required, the other forbids it |
+
+---
+
+## Jugaad inventory (31 items, app scan)
+
+Everything here exists because of the two-Activity split, or is a workaround that was
+added on top of it. Deleting these is the point of the refactor.
+
+**Lane inference — guessing what should be recorded**
+1. `HistoryScreen.tsx:99` 2. `fileService.ts:58` 3. `QueueScreen.tsx:197`
+4. `useHomeScreen.ts:187` 5. `useHomeScreen.ts:366` 6. `useSearchScreen.ts:143`
+7. `useOpenWithResume.ts:118` 8. `useResumeAwarePlayerActivity.ts:70`
+9. `useQueueSync.ts:107` 10. `useBookmarkToggle.ts:135`
+
+**Window / PiP split**
+11. `usePresentation.ts` (`isFullscreen` collapsing onto Activity identity)
+12. `usePlayerActivity.ts:205` (PiP sizing writes to a different view than the one mounted)
+13. `AudioChrome.tsx` `streamType` gate (`b52d462`)
+14. `AudioMiniBar.tsx` replaying audio-only because the video mini bar never existed
+
+**Duplicated transport**
+15. `useTransport.ts:223` and `:260` — **two** `setVolume` declarations; both docblocks
+    claim a different wave introduced it
+16. `AudioPlayer.tsx:339` — a third volume path calling a different `setVolume`
+
+**Dead / fake**
+17. `MpvRenderViewManager` — unreachable
+18. `openPlaylist` bypassing the app seam (`C-17`)
+19. `useQueueSync.ts:101` — phantom `uri: ''`
+20. `useQueueSync.ts:108` — hardcoded `'audio'` lane
+
+**Corrections to earlier audit claims — both were wrong, both are now verified:**
+- `textContent.ts` was recorded as "0 call sites" — it has **4** real import sites.
+- `NowPlayingScreen` was recorded as a `return null` stub — it is **live**, with 1 call site.
+
+---
+
 ## Carried forward
 
-- [ ] `C-07` recents/bookmarks artwork — **not started**
-- [ ] `C-16` store-version migration for persisted mis-tagged rows — **not started**
-- [ ] Video seek bar shows *"Live stream — not seekable"* and is disabled while
-      "Remaining 1:35:48" is known — `TransportBar.tsx:320` gates on `state.seekable`;
-      **the derivation of `TransportState.seekable` in `useTransport.ts` was never located.**
-      Two different duration sources are in play (`getDuration result=-10 duration=0.0`).
+- [ ] **P0** `MediaPlaybackService.kt:206` / `:395` — `setClassName` string literals target
+      `PlayerActivity`. Must be repointed at `MainActivity` **before** the class is deleted,
+      or PiP and the notification expand action throw `ActivityNotFoundException` at runtime
+      on a green build.
+- [ ] Cut lib `v1.13.3` (F1) → annotated tag → push → Actions → `npm install` in app
+- [ ] F2: manifest PiP on `MainActivity`; move the surface mount; transparent RN root;
+      port the PiP lifecycle (`setAutoEnterEnabled` / `onUserLeaveHint` /
+      `onPictureInPictureModeChanged`); re-apply bounds on every layout pass
+- [ ] F3: video as an in-app route; seam stops calling `openPlayer` for video
+- [ ] F4: one `MiniPlayer` for both lanes, driven by `setVideoBounds`
+- [ ] F5: delete `PlayerActivity`, `MpvRenderViewManager`, 2nd React root, duplicated
+      teardown; work the 31-item jugaad inventory
+- [ ] `seekable` root fix in `PlayerProvider.tsx:688` — re-seed on file load, **not** the
+      app-side `|| durationMs > 0` band-aid
+- [ ] `C-16` store-version migration for persisted mis-tagged rows — no migration mechanism
+      exists in `AsyncStoragePersister` today
+- [ ] `C-07` recents/bookmarks artwork wiring
+- [ ] Lib: `openPlayer` missing `FLAG_ACTIVITY_NEW_TASK`; `setOrientation` logs after write;
+      `enterPip` arity mismatch; stale z-order comment
+- [ ] `useQueueScreen.ts:197` reads `entry.type` where `entry.mediaType` is written
 - [ ] Jest worker force-exit flake: `[checkpoint] resume thumbnail capture failed Error: no decoder`
 - [ ] PiP, Next/Prev with a real playlist, Bluetooth — never device-verified
 - [ ] Argent 0.25.0 → 0.27.0 — notice surfaced, **not applied**, awaiting consent
