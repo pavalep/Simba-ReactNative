@@ -35,12 +35,24 @@ export function useEpisodeActions({podcast, navigation}: Options) {
   const [sheetItem, setSheetItem] = useState<SheetItem>(null);
 
   // 35.2: play an episode with art + origin metadata
+  //
+  // The art was the missing half of "with art". Every other branch below
+  // resolves `ep.image || podcast?.image` and threads it through as
+  // `thumbnailPath`; tap-to-play did not, so the episode launched with no
+  // artwork and the audio player drew its honest "No artwork" placeholder
+  // — for a podcast whose own artwork renders two rails away on the same
+  // home screen. The comment described behaviour the code did not have.
+  //
+  // The seam forwards this to the bridge as `artworkPath`, whose contract
+  // accepts an http(s) URL as readily as a local file, so a catalogue
+  // image is the right thing to hand over here.
   const handleEpisodePress = useCallback(
     (episode: PodcastEpisodeResult) => {
       openPlayer({
         uri: episode.enclosureUrl,
         title: episode.title,
         type: resolveStreamType('podcast'),
+        thumbnailPath: episode.image || podcast?.image || undefined,
       });
     },
     [openPlayer, podcast],

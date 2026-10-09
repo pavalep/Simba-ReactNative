@@ -12,9 +12,10 @@ import {
   Animated,
   TextStyle,
   FlatList,
+  Image,
 } from 'react-native';
 import {useTheme} from '../../../theme';
-import {ColorTokens} from '../../../theme/tokens';
+import {ColorTokens, spacing} from '../../../theme/tokens';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {AppText} from '../AppText/AppText';
 import {KeyboardAwareView} from '../KeyboardAwareView/KeyboardAwareView';
@@ -33,6 +34,12 @@ interface DialogProps {
   message?: string;
   children?: React.ReactNode;
   actions?: DialogAction[];
+  /**
+   * Artwork above the title. Remote URL or local file path. Omitted
+   * entirely when absent, so a dialog without artwork is not padded
+   * around an empty gap.
+   */
+  imageUri?: string;
   /** If true, tapping backdrop dismisses dialog */
   dismissable?: boolean;
 }
@@ -44,6 +51,7 @@ export const Dialog: React.FC<DialogProps> = ({
   message,
   children,
   actions,
+  imageUri,
   dismissable = true,
 }) => {
   const {colors, radius: r} = useTheme();
@@ -129,6 +137,22 @@ export const Dialog: React.FC<DialogProps> = ({
           accessibilityRole="alert"
           accessibilityLiveRegion="polite"
           importantForAccessibility="yes">
+          {/* Artwork, above the title.
+              Netflix, YouTube and Plex all lead a resume card with the
+              title's own image — it is how the user confirms at a glance
+              that the dialog is about the thing they just tapped. Put in
+              `children` it would render BELOW the message, which reads as
+              a caption rather than a header. Accepts a remote URL or a
+              local file path; both go through `{uri}`. */}
+          {imageUri ? (
+            <Image
+              source={{uri: imageUri}}
+              style={[styles.image, {backgroundColor: colors.background.elevated}]}
+              resizeMode="cover"
+              accessibilityIgnoresInvertColors
+            />
+          ) : null}
+
           {/* Title */}
           <AppText variant="displaySans" color="primary" style={styles.title}>
             {title}
@@ -243,6 +267,12 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 24,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  image: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: spacing.sm,
+    marginBottom: spacing.md,
   },
   title: {
     marginBottom: 8,

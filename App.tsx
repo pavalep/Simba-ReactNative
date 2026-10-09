@@ -289,11 +289,26 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
       message: `Continue at ${at} or start from the beginning.`,
       confirmLabel: 'Continue',
       cancelLabel: 'Start from beginning',
+      // Netflix, YouTube and Plex all lead a resume card with the title's
+      // own image — it is how the user confirms at a glance that the card
+      // is about the thing they just tapped. `captureFrame` writes
+      // `resumeThumbnailPath`; catalogue artwork is the fallback for a
+      // first play, where no frame has been captured yet.
+      imageUri:
+        candidate.resumeThumbnailPath || candidate.thumbnailPath || undefined,
+      // V19 spec (SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md:604-611):
+      // "Auto-dismisses after 8 s; default action is Resume."
+      //
+      // The spec was right and the implementation had this inverted.
+      // Dismissing used to resolve `false`, which maps to "start from the
+      // beginning" — so eight seconds of silence silently discarded the
+      // resume point the card existed to offer. Auto-dismiss is the right
+      // behaviour; auto-dismiss onto the DESTRUCTIVE option never is.
+      autoDismissMs: 8000,
     });
-    // Dismissing the dialog resolves `false` too, and that maps to
-    // "start from beginning" — never to "do nothing". A player launch
-    // that resolves to no launch at all leaves the user on a screen
-    // that did nothing when they tapped something.
+    // `false` means the user actively chose "Start from beginning". It
+    // must never be what a timeout produces — `autoDismissMs` resolves
+    // through the confirm path, so silence continues rather than restarts.
     return resume ? 'resume' : 'start';
   }, [confirm]);
 

@@ -112,6 +112,11 @@ export function resolveResumeCandidate(
         positionMs: Math.round(latest.position * 1000),
         source: 'bookmark',
         title: latest.title,
+        // Conditional spreads, not `|| undefined` — the candidate's
+        // artwork fields are optional and a key that is present with
+        // value `undefined` still reads as "this record has artwork" to
+        // anything doing `'thumbnailPath' in candidate`.
+        ...(latest.thumbnailPath ? {thumbnailPath: latest.thumbnailPath} : {}),
       };
     }
   }
@@ -123,6 +128,13 @@ export function resolveResumeCandidate(
       positionMs: Math.round(entry.position * 1000),
       source: 'history',
       title: entry.title,
+      // The captured-at-the-resume-position frame wins over poster
+      // artwork: it is the picture of *where you left off*, which is what
+      // a resume card is actually selling.
+      ...(entry.resumeThumbnailPath
+        ? {resumeThumbnailPath: entry.resumeThumbnailPath}
+        : {}),
+      ...(entry.thumbnailPath ? {thumbnailPath: entry.thumbnailPath} : {}),
     };
   }
 
@@ -162,6 +174,21 @@ export interface ResumeCandidate {
   readonly source: 'bookmark' | 'history';
   /** Title of the saved record, for the prompt's message line. */
   readonly title: string;
+  /**
+   * Artwork for the resume card — the title's own image, or a frame
+   * captured at the resume position.
+   *
+   * Optional because neither record is guaranteed to carry one: a row
+   * written before artwork was threaded through, or a first play where no
+   * frame has been captured yet. The card renders title-only when absent,
+   * which is a truthful fallback rather than a placeholder.
+   *
+   * A remote URL and a local file path both arrive here, and both work:
+   * the card renders through `{uri}`.
+   */
+  readonly thumbnailPath?: string;
+  /** A frame captured at the resume position. Wins over `thumbnailPath`. */
+  readonly resumeThumbnailPath?: string;
 }
 
 /** What the user chose when asked. */

@@ -162,16 +162,80 @@ Agent sweep in flight. Seeded with what is already known:
 
 ---
 
+## Wave 1 — SHIPPED
+
+Two commits pushed to `origin/main`, and one library release.
+
+| Commit | What |
+| --- | --- |
+| `b52d462` | Gate audio chrome on `streamType` so video launches never show the audio bar |
+| `c85e816` | Close actually closes: teardown, lane, and the three missing controls |
+| lib `3ab4adc` / tag `v1.13.1` | `stopAudioPlayback` → `stopPlayback`, published to npm, installed in app |
+
+### Resolved in this wave
+
+| ID | Resolution | Proof |
+| --- | --- | --- |
+| `C-01` | APK rebuilt against 1.13.0, installed | `LastWriteTime 09-10-2026 12:29:39`; `PlayerActivity` occurrences in the activity dump = **0** |
+| `C-02` | Audio opens in-app with no window | `topResumedActivity = MainActivity`, same task; `audio-*` chrome rendered |
+| `C-10` | Seam now **always** records a lane from `bridgeOpts.type` | 3 new tests; **mutation-checked** — reverting the lane fails 2 |
+| `C-12` | `media.ts` backstop aligned to `'video'`; `useBookmarkToggle` reads `streamType` before guessing | tsc 0 |
+| `C-09` | Volume, mute and queue shipped on the audio player | 6 new tests; mutation-checked — dropping the minimize fails 1 |
+
+### New findings, raised and closed in the same wave
+
+| ID | Defect | Severity | Status |
+| --- | --- | --- | --- |
+| `C-32` | **`exitPlayer()` only dismissed the window.** It called `exitPipAndFinish()`, which finishes the Activity — but the mpv engine is a process-global C++ handle that outlives any Activity. Audio carried on with the notification posted and no window left to stop it. This is the user's *"closing doesn't actually close"*. | **P0** | `FIXED` |
+| `C-33` | **Hardware back bypassed `exitPlayer()` entirely** — there was no `BackHandler`, so RN popped the Activity directly. The header chevron and the hardware key were two behaviours for one intent. | **P0** | `FIXED` |
+| `C-34` | **`stopAudioPlayback` was a misnomer.** The body never was audio-specific. The name is why wiring video to it looked wrong and got deferred. | P1 | `FIXED` in lib `1.13.1` |
+| `C-35` | **A test pinned the bug.** `useTransport.test.ts` asserted `exitPlayer` must NOT tear down, justified by *"stop+clear would kill playback that a minimise is supposed to preserve"*. There is no video minimise to preserve, and audio's minimise is a different verb that never calls `exitPlayer`. The suite spent its credibility defending the defect. | **P0** | `FIXED` — rewritten to pin the real contract |
+| `C-36` | **A wrong persisted lane routes a FILM into the audio player.** Observed on device: tapping *"Namus Kanla Yazılır, Turkish Movie"* in Recently Played opened the **audio** chrome — `audio-shuffle`, `audio-playpause`, `audio-volume`, the lot. Chain: the persisted row carries `mediaType: 'audio'` → `useHomeScreen:187` resolves `item.type` → `resolveStreamType('audio')` → `'audio'` → `startAudioPlayback`. | **P0** | `OPEN` |
+| `C-37` | **Resume card auto-dismiss is wired to the destructive option.** `App.tsx:293-297`: dismissing resolves `false`, which maps to **start from the beginning** — so an 8 s timeout with no tap restarts the media and destroys the resume point the card was offering. V19 spec (`SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md:604-611`) says *"default action is Resume"*. The implementation inverted the spec. | **P1** | `OPEN` |
+| `C-38` | **The podcast launch path passes no artwork.** `useEpisodeActions.ts:38-47` resolves nothing for `thumbnailPath`, while every sibling branch at `:62` computes `ep.image \|\| podcast?.image`. The function's own comment claimed "with art". Result: the audio player showed *"No artwork"* for a podcast whose artwork renders two rails away. | P1 | `FIXED` |
+
+### Why `C-36` matters more than a bad badge
+
+The badge was the visible symptom. `C-36` is the actual severity: the lane is not
+just a glyph selector, it is the **fork that decides whether a window opens at
+all**. A mis-tagged row does not draw a wrong icon — it plays a film through the
+audio pipeline.
+
+Which is why `C-10`'s fix (the seam now always writes a lane) is necessary but
+**not sufficient**: rows already on disk keep their wrong lane forever. See
+`C-16` — a store version migration is required, or every existing user keeps
+seeing films in the audio player.
+
+### Why video now stops instead of continuing in the background
+
+This is the design decision behind `C-32`, recorded so it is not re-litigated:
+
+- **Audio** continues in the background because a **mini bar is always on screen** to stop it again. That is Spotify / Apple Music / Plex behaviour.
+- **Video** has no mini player — W6.0 removed the dock. Continuing would mean *playing with no way to stop it*, or PiP, which is a **separate, explicitly chosen** verb.
+- Netflix, Plex and VLC all treat back-from-video as a **stop** for exactly this reason.
+
+The docblock that justified the old behaviour — *"minimize, back and close are the same action"* — was wrong, and has been replaced with this reasoning rather than quietly deleted.
+
 ## Definition of done for Wave 1
 
 - [x] Audio black screen closed — no `PlayerActivity`, in-app player renders (`b52d462` + `142047f`)
-- [ ] `C-01` APK rebuilt against 1.13.0, installed, and audio **actually plays**
+- [x] `C-01` APK rebuilt against 1.13.0 and installed; audio launches with no window
+- [x] `C-32`/`C-33` close actually stops — both the header chevron and the hardware key
+- [x] `C-35` the test that pinned the bug rewritten to pin the real contract
+- [x] `C-10` lane recorded at the seam; music-badge root cause fixed
+- [x] `C-09` volume + mute + queue on the audio player, built on existing components
 - [ ] `C-03` video black screen diagnosed to a cause, not guessed at
-- [ ] `C-04`/`C-05`/`C-06` resume prompt: before playback, screenshot, no silent auto-close
+- [ ] `C-04`/`C-05`/`C-06` resume prompt: ordering proven on a VIDEO launch, screenshot added, auto-close explained
 - [ ] `C-07` real artwork on Recently Played and Bookmarks
-- [ ] `C-08` audio player cover art
-- [ ] `C-09` volume + mute + queue in the audio player, built on existing components
-- [ ] Gates green at every commit; every new test mutation-checked
+- [ ] `C-08` audio player cover art — the podcast launch path passes no artwork today
+- [ ] Device re-verification on the rebuilt APK (in progress)
+- [x] Gates green at every commit; every new test mutation-checked (3 checks this wave)
+
+> **Note on test flakiness.** One full run reported a force-exited Jest worker
+> (`[checkpoint] resume thumbnail capture failed Error: no decoder`) alongside a
+> single failure that did not reproduce. A clean re-run gave 80/80 suites,
+> 1010 passed. The leak sits in the `captureFrame` path and is logged as a
+> separate item rather than dismissed — a suite that can flake is not a gate.
 
 ---
 

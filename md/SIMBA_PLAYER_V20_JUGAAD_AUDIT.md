@@ -114,18 +114,42 @@ So the *observed* "prompt after playback starts" is not explained by this seam. 
 device reproduction against a **video** launch specifically. Audio was verified to prompt
 first-hand and correctly. Recorded as `UNVERIFIED` rather than guessed.
 
-### 2b. Auto-close — there is no timer
+### 2b. Auto-dismiss — correction to an earlier claim in this document
 
-Swept both `ConfirmDialog.tsx` (103 lines) and `Dialog.tsx` (281 lines) in full.
-**Neither contains a `setTimeout`, auto-hide, or dismiss-after.** There is no timer to remove.
+> **Retracted.** This section previously read *"the spec's 'auto-dismisses after
+> 8 s' is itself questionable and should **not** be implemented as written."* That
+> was me over-reading the complaint. The user clarified: auto-hiding the resume
+> card after a period of no interaction **is** the industry approach and is
+> wanted. Netflix, YouTube and Plex all dismiss it.
+>
+> What was objected to was never the auto-hide. It was that the card appeared
+> **after playback had already started**, so it read as a post-hoc
+> interruption rather than a choice made before anything played.
 
-What *can* dismiss it is a **remount**: `useConfirmDialog`'s `state` lives in `ActivityShell`.
-If `ActivityShell` unmounts, `dialog` becomes `null` and the pending promise never resolves.
-`ActivityShell` re-renders on `isPlayerActivity` and on theme, so a remount during a video
-launch is plausible — and would look exactly like "it closed by itself".
+So the real defects are:
 
-This is a **hypothesis, not a finding**, until reproduced. It is recorded because it is
-testable in one tap sequence rather than a code change.
+**The dismissal target is wrong, not the dismissal itself.** `App.tsx:293-297`
+records: *"Dismissing the dialog resolves `false` too, and that maps to start
+from the beginning."* So a card that auto-hides — no tap, no decision, just a
+timeout — **restarts the media from zero and destroys the exact resume point
+the card was offering to restore.**
+
+The V19 spec (`md/SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md:604-611`) says the
+opposite: *"Auto-dismisses after 8 s; **default action is Resume**."* The spec is
+right and the implementation inverted it. A timeout must never be a
+**destructive** default — Netflix, YouTube and Plex all resolve a dismissed
+resume card to *continue*, never to restart.
+
+**There is still no timer.** Swept `ConfirmDialog.tsx` (103 lines) and
+`Dialog.tsx` (281 lines) in full — neither contains a `setTimeout`, auto-hide,
+or dismiss-after. So the auto-close that was observed remains unexplained by
+code. An `ActivityShell` remount would clear `useConfirmDialog`'s state and
+make the card vanish with its promise unresolved — a hypothesis, untested,
+recorded as such rather than asserted.
+
+**Target behaviour:** card appears **before** playback, shows artwork, offers
+two buttons, and after ~8 s of no interaction resolves to **Continue** — never
+to restart.
 
 ### 2c. No screenshot — structural, and real
 
