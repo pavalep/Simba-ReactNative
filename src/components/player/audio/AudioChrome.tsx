@@ -68,6 +68,14 @@ export const AudioChrome: React.FC = () => {
 
   if (isPlayerActivity || !nowPlaying) return null;
 
+  // A VIDEO launch also records a session — it just happens to have one,
+  // because video lives in its own Activity and has no in-app chrome.
+  // Without this the audio player drew over the video player's Home
+  // screen, which is exactly what the first device run showed: a movie
+  // ("Turkish Movie", 1:06:31) opened PlayerActivity correctly, and the
+  // audio chrome mounted over MainActivity regardless.
+  if (nowPlaying.streamType !== 'audio') return null;
+
   return mode === 'expanded' ? (
     <AudioPlayer onClose={onClose} />
   ) : (

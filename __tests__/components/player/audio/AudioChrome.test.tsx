@@ -137,11 +137,11 @@ ull and
  * every getByTestId fails for reasons that look nothing like the
  * cause.
  */
-async function seedSession() {
+async function seedSession(streamType: 'video' | 'audio' = 'audio') {
   await act(async () => {
     useNowPlayingStore
       .getState()
-      .begin({uri: 'file:///a.mp3', title: 'Track Title'});
+      .begin({uri: 'file:///a.mp3', title: 'Track Title', streamType});
   });
 }
 
@@ -184,6 +184,21 @@ describe('AudioChrome — visibility', () => {
     mockIsPlayerActivity.mockReturnValue(true);
     const {toJSON} = await render(<AudioChrome />);
     expect(toJSON()).toBeNull();
+  });
+
+  // A video launch writes a session too — it just has its own window.
+  // Drawing the audio player over MainActivity for a film is the bug
+  // this gate exists for; it was caught on the first device run.
+  it('renders nothing for a VIDEO launch, even though a session exists', async () => {
+    await seedSession('video');
+    const {toJSON} = await render(<AudioChrome />);
+    expect(toJSON()).toBeNull();
+  });
+
+  it('renders for an AUDIO launch', async () => {
+    await seedSession('audio');
+    const {getByTestId} = await render(<AudioChrome />);
+    expect(getByTestId('audio-minimize')).toBeTruthy();
   });
 });
 

@@ -51,6 +51,24 @@ export interface NowPlaying {
   readonly title: string;
   /** Semantic kind when the launching screen knew it. */
   readonly type?: MediaKind;
+  /**
+   * The STREAM type the launch actually used — `'video' | 'audio'`.
+   *
+   * Not the same fact as `mediaLane`, and not derivable from `type`:
+   * `type` is a catalogue kind (`'movie'`, `'music'`, `'podcast'`),
+   * `mediaLane` is a display lane a screen may or may not pass, and
+   * this is the `'video' | 'audio'` the bridge was actually asked for.
+   * It is the same value `usePlayerActivity` branches on, so it decides
+   * which native path ran — a video opened `PlayerActivity`, audio
+   * started the media service with no window.
+   *
+   * V20 Phase C: the audio chrome gates on THIS. Gating on
+   * `mediaLane` would hide the player for the many launch sites that
+   * pass a stream type but no lane, and gating on "is anything loaded"
+   * would draw the audio player over a video, which is what happened
+   * before this field existed.
+   */
+  readonly streamType?: 'video' | 'audio';
   readonly mediaLane?: MediaLane;
   /** Catalogue name, when known. */
   readonly provider?: string;

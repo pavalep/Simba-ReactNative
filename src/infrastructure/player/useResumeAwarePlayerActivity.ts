@@ -212,6 +212,11 @@ export function usePlayerActivity(
         beginSession({
           uri: bridgeOpts.uri,
           title: bridgeOpts.title,
+          // The stream type the bridge is about to be asked for. Recorded
+          // so the audio chrome can tell an audio launch from a video one:
+          // both write a session here, but only audio has no window and
+          // therefore needs in-app chrome.
+          streamType: bridgeOpts.type,
           ...(mediaKind ? {type: mediaKind} : {}),
           ...(mediaLane ? {mediaLane} : {}),
           ...(provider ? {provider} : {}),
