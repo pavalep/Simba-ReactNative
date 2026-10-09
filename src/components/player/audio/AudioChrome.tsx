@@ -53,7 +53,13 @@ export const AudioChrome: React.FC = () => {
       // Stops the engine and sends ACTION_STOP, so the session is
       // released and the notification is dismissed. A plain
       // `commands.stop()` would leave both.
-      getMpvPlayerModule().stopAudioPlayback();
+      //
+      // `stopPlayback` is named for what it does, not for a lane: the
+      // same primitive is what the VIDEO player's back button calls.
+      // Video and audio share one process-global engine, so there is one
+      // teardown, and the old `stopAudioPlayback` name was only ever true
+      // for the lane that happened to use it first.
+      getMpvPlayerModule().stopPlayback();
     } catch (error) {
       toast.show(
         error instanceof Error ? error.message : 'Could not stop playback',

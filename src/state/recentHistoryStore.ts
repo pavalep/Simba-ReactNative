@@ -109,7 +109,7 @@ export interface RecentHistoryState {
  * time remains visible in History and Stats."*
  */
 export interface RecentHistoryActions {
-  /** Upsert the newest playback checkpoint and evict the oldest entry past the 20-item cap. */
+  /** Upsert the newest playback checkpoint and evict the oldest entry past the cap. */
   upsertRecentHistoryEntry: (input: RecentHistoryEntryInput) => void;
   removeRecentHistoryEntry: (fileUri: string) => void;
   clearRecentHistory: () => void;

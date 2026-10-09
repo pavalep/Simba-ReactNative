@@ -120,16 +120,19 @@ export function useBookmarkToggle(): BookmarkToggle {
       // claims `source: 'api'` for a file that is plainly on disk.
       source: session?.provider ? 'api' : 'local',
       label: '',
-      // Required too. Defaults to `video` because this control only
-      // ships on the video player today; the audio lanes are wired in
-      // the same place when the music player lands, and they pass their
-      // own lane through `session.mediaLane`.
-      mediaType: session?.mediaLane ?? 'video',
-      // Required as well. A deep link or the file picker launches
-      // without a semantic kind, and defaulting to `video` is the
-      // honest floor for a control that only renders on the video
-      // player — the audio lanes pass their own kind when they arrive.
-      type: session?.type ?? 'video',
+      // The lane and the kind are now ALWAYS written by the launch seam
+      // from `bridgeOpts.type`, so these are reads of real data rather
+      // than guesses. `streamType` is kept as the intermediate fallback
+      // because it is the same fact at a coarser resolution — preferring
+      // it beats inventing a lane.
+      //
+      // The trailing `'video'` is a type backstop for a session that
+      // carries neither field at all, which the seam no longer permits.
+      // It is deliberately the LAST resort and not the first: an earlier
+      // revision reached for 'video' first, which tagged every audio
+      // launch that arrived without a lane as video.
+      mediaType: session?.mediaLane ?? session?.streamType ?? 'video',
+      type: session?.type ?? session?.streamType ?? 'video',
       ...(session?.thumbnailPath ? {thumbnailPath: session.thumbnailPath} : {}),
       ...(session?.provider ? {provider: session.provider} : {}),
     }),

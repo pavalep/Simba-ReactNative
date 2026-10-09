@@ -46,7 +46,7 @@
  */
 
 import * as React from 'react';
-import {StyleSheet, View} from 'react-native';
+import {BackHandler, StyleSheet, View} from 'react-native';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
 import {presetToMpv, useQualityStore} from '../../../../state/useQualityStore';
 import {useSkipSilenceStore} from '../../../../state/useSkipSilenceStore';
@@ -312,6 +312,32 @@ const VideoPlayerChrome: React.FC = () => {
   //     path rather than an empty screen" and then returned `null` —
   //     a comment describing behaviour the code did not have. Removed
   //     rather than kept as fiction.
+
+  // Hardware back must be the SAME verb as the header's back chevron.
+  //
+  // Without this, RN's default pops `PlayerActivity` directly and
+  // `exitPlayer()` never runs — so the window closed while the
+  // process-global engine kept playing, with the notification still
+  // posted and no window left to stop it. The header button and the
+  // hardware key were two different behaviours for one user intent.
+  //
+  // Registered only while expanded, so the background `MainActivity`
+  // root (which also mounts this component) does not swallow back
+  // presses that belong to the navigation stack. Returning `true`
+  // consumes the event so the OS does not also pop.
+  const {commands} = useTransport();
+  React.useEffect(() => {
+    if (!presentation.isExpanded) return undefined;
+    const sub = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        commands.exitPlayer();
+        return true;
+      },
+    );
+    return () => sub.remove();
+  }, [commands, presentation.isExpanded]);
+
   if (!presentation.isExpanded) {
     return null;
   }

@@ -136,6 +136,12 @@ function dispatchAddBookmark(
     createdAt: existing?.createdAt ?? input.createdAt ?? new Date().toISOString(),
     label: input.label || existing?.label || '',
     thumbnailPath: input.thumbnailPath || existing?.thumbnailPath,
+    // Both lanes default to the SAME lane. They previously defaulted to
+    // 'video' here and to 'audio' in `normalizeMediaClassification`, so
+    // one omitted field produced two opposite answers depending on the
+    // route into the store — and both were persisted. Anything genuinely
+    // unclassified is the store's business to reject, not something to
+    // guess differently at each door.
     mediaType: input.mediaType ?? existing?.mediaType ?? 'video',
     type: input.type ?? existing?.type ?? 'video',
     source: input.source ?? existing?.source ?? 'api',

@@ -33,16 +33,19 @@ jest.mock('../../../../src/components/feedback/Toast', () => ({
 }));
 
 const mockIsPlayerActivity = jest.fn(() => false);
-const mockStopAudioPlayback = jest.fn();
+const mockStopPlayback = jest.fn();
 
 jest.mock('@simba-dev/react-native-media-player', () => ({
   useIsPlayerActivity: () => mockIsPlayerActivity(),
   getMpvPlayerModule: () => ({
-    stopAudioPlayback: mockStopAudioPlayback,
+    stopPlayback: mockStopPlayback,
   }),
 }));
 
 const mockCommandsStop = jest.fn();
+const mockSetVolume = jest.fn();
+const mockSetMuted = jest.fn();
+const mockNavigate = jest.fn();
 
 const mockTransportState = {
   positionMs: 60_000,
@@ -78,7 +81,6 @@ const mockCommands = {
   play: jest.fn(),
   pause: jest.fn(),
   setSpeed: jest.fn(),
-  setVolume: jest.fn(),
   setScreenBrightness: jest.fn(),
   getScreenBrightness: jest.fn(() => 0.5),
   setProperty: jest.fn(),
@@ -93,7 +95,25 @@ const mockCommands = {
   exitPipAndFinish: jest.fn(),
   stop: mockCommandsStop,
   clear: jest.fn(),
+  // The audio player's volume + mute verbs. Present here because the
+  // controls were added to the audio player and these are the only thing
+  // they can legitimately do — a mute button wired to nothing is exactly
+  // the "jugaad feature" this audit is removing.
+  setVolume: mockSetVolume,
+  setMuted: mockSetMuted,
 };
+
+jest.mock('../../../../src/navigation/navigationHelper', () => ({
+  navigate: (...args: unknown[]) => mockNavigate(...args),
+}));
+
+jest.mock('@react-native-community/slider', () => {
+  const {View} = require('react-native');
+  return {
+    __esModule: true,
+    default: (props: Record<string, unknown>) => <View {...props} />,
+  };
+});
 
 jest.mock('../../../../src/infrastructure/player/useTransport', () => ({
   useTransport: () => ({state: mockTransportState, commands: mockCommands}),
@@ -148,7 +168,7 @@ async function seedSession(streamType: 'video' | 'audio' = 'audio') {
 beforeEach(async () => {
   jest.clearAllMocks();
   mockIsPlayerActivity.mockReturnValue(false);
-  mockStopAudioPlayback.mockReset();
+  mockStopPlayback.mockReset();
   await act(async () => {
     useNowPlayingStore.getState().reset();
     useAudioPresentationStore.setState({mode: 'expanded'});
@@ -203,7 +223,7 @@ describe('AudioChrome — visibility', () => {
 });
 
 describe('AudioChrome — close is a real teardown', () => {
-  it('calls the native stopAudioPlayback primitive', async () => {
+  it('calls the native stopPlayback primitive', async () => {
     await seedSession();
     const {getByTestId} = await render(<AudioChrome />);
 
@@ -211,7 +231,7 @@ describe('AudioChrome — close is a real teardown', () => {
       fireEvent.press(getByTestId('audio-close'));
     });
 
-    expect(mockStopAudioPlayback).toHaveBeenCalledTimes(1);
+    expect(mockStopPlayback).toHaveBeenCalledTimes(1);
   });
 
   it('does NOT fall back to the lib stop command, which leaves the session posted', async () => {
@@ -243,7 +263,7 @@ describe('AudioChrome — close is a real teardown', () => {
   // behind a dismissed player and the user has no way to tell.
   it('keeps the player up and reports the error when the native stop fails', async () => {
     await seedSession();
-    mockStopAudioPlayback.mockImplementation(() => {
+    mockStopPlayback.mockImplementation(() => {
       throw new Error('service refused to stop');
     });
     const {getByTestId} = await render(<AudioChrome />);
@@ -271,7 +291,7 @@ describe('AudioChrome — close is a real teardown', () => {
       fireEvent.press(getByTestId('mini-close'));
     });
 
-    expect(mockStopAudioPlayback).toHaveBeenCalledTimes(1);
+    expect(mockStopPlayback).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -285,8 +305,99 @@ describe('AudioChrome — minimize does not touch playback', () => {
     });
 
     expect(getByTestId('audio-mini-bar')).toBeTruthy();
-    expect(mockStopAudioPlayback).not.toHaveBeenCalled();
+    expect(mockStopPlayback).not.toHaveBeenCalled();
     expect(mockCommandsStop).not.toHaveBeenCalled();
     expect(useNowPlayingStore.getState().current).not.toBeNull();
+  });
+});
+/**
+ * Volume, mute and queue — the three controls the player was missing.
+ *
+ * `HelpScreen.tsx:79` has been telling users to "tap the queue/list icon"
+ * since before it existed. These pin that each control reaches a real
+ * verb, because a button that renders and does nothing is the precise
+ * definition of the jugaad this audit is removing.
+ */
+describe('AudioChrome — volume, mute and queue', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockTransportState.isMuted = false;
+    mockTransportState.volume = 100;
+  });
+
+  it('renders all three controls on the expanded audio player', async () => {
+    await seedSession('audio');
+    const {getByTestId} = await render(<AudioChrome />);
+
+    expect(getByTestId('audio-mute')).toBeTruthy();
+    expect(getByTestId('audio-queue')).toBeTruthy();
+    expect(getByTestId('audio-volume')).toBeTruthy();
+  });
+
+  it('mute mutes — it does not stop', async () => {
+    await seedSession('audio');
+    const {getByTestId} = await render(<AudioChrome />);
+
+    await act(async () => {
+      fireEvent.press(getByTestId('audio-mute'));
+    });
+
+    expect(mockSetMuted).toHaveBeenCalledWith(true);
+    // The distinct verbs matter: mute silences, close tears down.
+    expect(mockCommandsStop).not.toHaveBeenCalled();
+    expect(mockStopPlayback).not.toHaveBeenCalled();
+  });
+
+  it('unmutes when already muted', async () => {
+    mockTransportState.isMuted = true;
+    await seedSession('audio');
+    const {getByTestId} = await render(<AudioChrome />);
+
+    await act(async () => {
+      fireEvent.press(getByTestId('audio-mute'));
+    });
+
+    expect(mockSetMuted).toHaveBeenCalledWith(false);
+  });
+
+  it('the queue minimizes first, then navigates with from:audio', async () => {
+    await seedSession('audio');
+    const {getByTestId} = await render(<AudioChrome />);
+
+    await act(async () => {
+      fireEvent.press(getByTestId('audio-queue'));
+    });
+
+    // Navigating without minimizing would push a route BEHIND an opaque
+    // full-screen player, so the tap would look broken.
+    expect(getByTestId('audio-mini-bar')).toBeTruthy();
+    expect(mockNavigate).toHaveBeenCalledWith('Queue', {from: 'audio'});
+  });
+
+  it('dragging the volume up from muted unmutes as well as sets level', async () => {
+    mockTransportState.isMuted = true;
+    mockTransportState.volume = 0;
+    await seedSession('audio');
+    const {getByTestId} = await render(<AudioChrome />);
+
+    await act(async () => {
+      fireEvent(getByTestId('audio-volume'), 'valueChange', 40);
+    });
+
+    // Without the unmute, the slider would look pinned at 0 while being
+    // dragged, which reads as a dead control.
+    expect(mockSetMuted).toHaveBeenCalledWith(false);
+    expect(mockSetVolume).toHaveBeenCalledWith(40);
+  });
+
+  it('does not offer queue or mute on a video session', async () => {
+    await seedSession('video');
+    const {queryByTestId} = await render(<AudioChrome />);
+
+    // Video renders no audio chrome at all, so these cannot appear.
+    expect(queryByTestId('audio-mute')).toBeNull();
+    expect(queryByTestId('audio-queue')).toBeNull();
+    expect(queryByTestId('audio-minimize')).toBeNull();
+    expect(queryByTestId('audio-mini-bar')).toBeNull();
   });
 });

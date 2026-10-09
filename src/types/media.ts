@@ -73,7 +73,21 @@ export function normalizeMediaClassification(input: {
   provider?: string;
   folderId?: string;
 }): MediaClassification {
-  const type = input.type ?? input.mediaType ?? 'audio';
+  // The backstop lane is 'video', matching `features/bookmarks`' writer.
+  //
+  // It used to be 'audio' here while the bookmark path used 'video', so a
+  // single omitted field produced two OPPOSITE answers depending on which
+  // door a record came through — and both were persisted. That is how a
+  // Turkish film ended up wearing a music note in Recently Played while
+  // Bookmarks showed it correctly: same record, two defaults.
+  //
+  // Neither value is actually correct for unclassified media, and that is
+  // the point. The real fix is one layer up: the launch seam now always
+  // writes a lane derived from `bridgeOpts.type`, so this branch is only
+  // reachable for a genuinely unclassified legacy row. Consistency
+  // matters more than the choice — a single guess is debuggable, two are
+  // not.
+  const type = input.type ?? input.mediaType ?? 'video';
   const mediaType = input.mediaType ?? mediaKindToLane(type);
   return {
     source: input.source ?? 'local',

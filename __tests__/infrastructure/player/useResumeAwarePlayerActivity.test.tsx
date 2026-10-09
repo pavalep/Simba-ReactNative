@@ -64,6 +64,7 @@ jest.mock('@simba-dev/react-native-media-player', () => ({
 import {usePlayerActivity} from '../../../src/infrastructure/player/useResumeAwarePlayerActivity';
 import {useBookmarksStore} from '../../../src/state/bookmarksStore';
 import {useRecentHistoryStore} from '../../../src/state/recentHistoryStore';
+import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
 
 const OPTS = {
   uri: 'file:///movies/namus-kanla-yazilir.mkv',
@@ -317,5 +318,65 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       expect(promptResume).not.toHaveBeenCalled();
       expect(mockOpenWithResume.mock.calls[0]![0].startPositionMs).toBe(0);
     });
+  });
+});
+/**
+ * The lane the seam records, for callers that pass no identity at all.
+ *
+ * This is the Turkish-film-with-a-music-note bug. `bridgeOpts.type` is
+ * `'video' | 'audio'` at every one of the ~31 launch sites, and the seam
+ * was DISCARDING it — `...(mediaKind ? {type: mediaKind} : {})` left both
+ * fields off the session unless a screen happened to pass them, which
+ * only 4 of 31 did. The checkpoint writer then forwarded no lane, and
+ * `normalizeMediaClassification` filled the hole with `'audio'`
+ * (`media.ts:76`). Every badge consumer reads the lane, so a film drew a
+ * music note in Recently Played while Bookmarks showed it correctly.
+ *
+ * These pin the outcome — the lane is ALWAYS present and correct — rather
+ * than the mechanism, because the mechanism has already changed shape
+ * once (conditional spreads became direct assignment).
+ */
+describe('usePlayerActivity - the session always records a lane', () => {
+  beforeEach(() => {
+    mockOpenWithResume.mockClear();
+    useNowPlayingStore.getState().reset();
+  });
+
+  it('records video for a video launch that passes no mediaKind or mediaLane', async () => {
+    const {result} = await renderHook(() => usePlayerActivity());
+    await result.current.openPlayer(OPTS);
+
+    const session = useNowPlayingStore.getState().current;
+    expect(session?.mediaLane).toBe('video');
+    expect(session?.streamType).toBe('video');
+  });
+
+  it('records audio for an audio launch that passes no mediaKind or mediaLane', async () => {
+    // The regression that matters most: an unclassified AUDIO launch must
+    // not be able to land in the video lane either.
+    const {result} = await renderHook(() => usePlayerActivity());
+    await result.current.openPlayer({
+      uri: 'file:///podcasts/can-ai.mp3',
+      title: 'Can AI Take the Repetitive Work Out?',
+      type: 'audio',
+    });
+
+    const session = useNowPlayingStore.getState().current;
+    expect(session?.mediaLane).toBe('audio');
+    expect(session?.streamType).toBe('audio');
+  });
+
+  it("a catalogue lane still wins — it is more specific than 'it's audio'", async () => {
+    const {result} = await renderHook(() => usePlayerActivity());
+    await result.current.openPlayer({
+      ...OPTS,
+      type: 'audio',
+      mediaLane: 'audio',
+      mediaKind: 'podcast',
+    });
+
+    const session = useNowPlayingStore.getState().current;
+    expect(session?.mediaLane).toBe('audio');
+    expect(session?.type).toBe('podcast');
   });
 });

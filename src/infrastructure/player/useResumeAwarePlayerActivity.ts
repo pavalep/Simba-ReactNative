@@ -217,8 +217,21 @@ export function usePlayerActivity(
           // both write a session here, but only audio has no window and
           // therefore needs in-app chrome.
           streamType: bridgeOpts.type,
-          ...(mediaKind ? {type: mediaKind} : {}),
-          ...(mediaLane ? {mediaLane} : {}),
+          // The LANE is NOT optional, and that is the whole point of this
+          // change. `bridgeOpts.type` is `'video' | 'audio'` at every one
+          // of the ~31 launch sites and was being discarded here — the
+          // conditional spreads below left both fields off the session
+          // unless a screen happened to pass `mediaKind`/`mediaLane`,
+          // which only 4 did. The checkpoint writer then forwarded no
+          // lane, and `normalizeMediaClassification` filled the hole with
+          // `'audio'` (media.ts:76). That is the Turkish film with a
+          // music note in Recently Played.
+          //
+          // A catalogue lane still wins when a screen supplies one: it is
+          // more specific than "it's audio". But its absence is no longer
+          // allowed to become a fact.
+          type: mediaKind ?? bridgeOpts.type,
+          mediaLane: mediaLane ?? bridgeOpts.type,
           ...(provider ? {provider} : {}),
           ...(thumbnailPath ? {thumbnailPath} : {}),
         });

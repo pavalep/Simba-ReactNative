@@ -71,10 +71,11 @@ const mockCommands = {
   setShuffle: jest.fn(),
   setOrientation: jest.fn(),
   exitPipAndFinish: jest.fn(),
-  // Declared so the header-action tests can prove `exitPlayer` does NOT
-  // tear the session down. Before they existed, `expect(mockCommands.stop)`
-  // was `undefined` and the matcher rejected it - an assertion that
-  // proves nothing because it cannot be written.
+  // The FULL teardown: engine + foreground service. `stop`/`clear` are
+  // still declared because `commands.close()` uses them, and because the
+  // header-action test below needs to prove which of the three this verb
+  // does and does NOT reach for.
+  stopPlayback: jest.fn(),
   stop: jest.fn(),
   clear: jest.fn(),
 };
@@ -618,15 +619,47 @@ describe('useTransport - player header actions', () => {
     jest.restoreAllMocks();
   });
 
-  it('leaves the player with the lib dismiss command, not a mode write', async () => {
+  /**
+   * This test used to assert the OPPOSITE, and it passed while the app
+   * was broken.
+   *
+   * It read: "It must NOT tear down the session on the way out:
+   * dismissing the activity is enough, and stop+clear would kill playback
+   * that a minimise is supposed to preserve."
+   *
+   * The premise was wrong. There is no video minimise to preserve —
+   * W6.0 removed the mini dock, and audio's minimise is a different verb
+   * entirely (`useAudioPresentationStore.minimize`), which never calls
+   * `exitPlayer` at all. So nothing was being preserved by staying
+   * silent; `exitPipAndFinish()` merely finished the Activity while the
+   * process-global engine kept playing. Users reported exactly this:
+   * closing the video left audio going with the notification still
+   * posted and no window left to stop it.
+   *
+   * A green test that pins a bug is worse than no test, because it
+   * spends the suite's credibility defending the behaviour.
+   */
+  it('stops playback AND dismisses the window, in that order', async () => {
     const {result} = await renderHook(() => useTransport());
     await act(async () => {
       result.current.commands.exitPlayer();
     });
+
+    // The full teardown, not the bare engine stop.
+    expect(mockCommands.stopPlayback).toHaveBeenCalledTimes(1);
     expect(mockCommands.exitPipAndFinish).toHaveBeenCalledTimes(1);
-    // It must NOT tear down the session on the way out: dismissing the
-    // activity is enough, and stop+clear would kill playback that a
-    // minimise is supposed to preserve.
+
+    // ORDER is the contract. `stopPlayback` must land before the window
+    // goes: finishing first tears the SurfaceView down while the engine
+    // still holds a decoded frame, and leaves ACTION_STOP racing the
+    // Activity's own teardown.
+    const stopAt = mockCommands.stopPlayback.mock.invocationCallOrder[0];
+    const finishAt = mockCommands.exitPipAndFinish.mock.invocationCallOrder[0];
+    expect(stopAt).toBeLessThan(finishAt);
+
+    // `stop()` + `clear()` belong to `commands.close()`, which clears the
+    // queue as well. `exitPlayer` stops the engine and the service; it
+    // does not additionally wipe the playlist.
     expect(mockCommands.stop).not.toHaveBeenCalled();
     expect(mockCommands.clear).not.toHaveBeenCalled();
   });

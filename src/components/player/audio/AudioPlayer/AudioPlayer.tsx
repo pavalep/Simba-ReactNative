@@ -51,8 +51,10 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
+import {navigate} from '../../../../navigation/navigationHelper';
 import {
   useTransport,
   type RepeatMode,
@@ -100,6 +102,49 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({onClose}) => {
     [commands, toast],
   );
 
+  const onSetVolume = useCallback(
+    (next: number) => {
+      try {
+        // Dragging up out of a muted state implies "I want sound again",
+        // so unmuting on the way up is what the user meant. Without this
+        // the slider looks stuck at 0 while being dragged.
+        if (state.isMuted && next > 0) commands.setMuted(false);
+        commands.setVolume(next);
+      } catch (error) {
+        toast.show(
+          error instanceof Error ? error.message : 'Could not set volume',
+          'error',
+        );
+      }
+    },
+    [commands, state.isMuted, toast],
+  );
+
+  const onToggleMute = useCallback(() => {
+    try {
+      commands.setMuted(!state.isMuted);
+    } catch (error) {
+      toast.show(
+        error instanceof Error ? error.message : 'Could not change mute',
+        'error',
+      );
+    }
+  }, [commands, state.isMuted, toast]);
+
+  const onOpenQueue = useCallback(() => {
+    // Minimizing first, because the queue is a screen inside the
+    // navigator and this player is painted ON TOP of the navigator.
+    // Navigating without leaving the player would stack a route behind
+    // an opaque full-screen view — the tap would appear to do nothing.
+    // (Spotify and Apple Music both drop to the mini bar when you open
+    // the queue from now-playing, for the same reason.)
+    minimize();
+    // `from: 'audio'` is not a formality — the Queue route documents it
+    // as the record of which surface opened it, so tap-to-jump stays in
+    // the audio player instead of switching lanes mid-queue.
+    navigate('Queue', {from: 'audio'});
+  }, [minimize]);
+
   const title = nowPlaying?.title ?? state.title;
   // mpv's metadata, not a launch-time guess: an untagged file has no
   // artist, and an empty line of grey text is worse than no line.
@@ -118,12 +163,38 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({onClose}) => {
           onPress={minimize}
           testID="audio-minimize"
         />
+        {/* Right-hand group. Wrapped rather than left as loose siblings:
+            the bar is `space-between`, which would push four children to
+            four corners instead of holding the three secondary controls
+            together on the right. */}
+        <View style={styles.topBarRight}>
+        <PlayerControl
+          icon={state.isMuted ? 'volumeMute' : 'volume'}
+          accessibilityRole="switch"
+          accessibilityChecked={state.isMuted}
+          accessibilityLabel={state.isMuted ? 'Unmute' : 'Mute'}
+          accessibilityHint="Mutes playback without changing the volume level"
+          active={state.isMuted}
+          onPress={onToggleMute}
+          testID="audio-mute"
+        />
+        {/* The queue. `HelpScreen.tsx:79` has been telling users to "tap
+            the queue/list icon" since before the control existed — this
+            is that icon, not a new invention. */}
+        <PlayerControl
+          icon="listMusic"
+          accessibilityLabel="Open queue"
+          accessibilityHint="Shows what plays next"
+          onPress={onOpenQueue}
+          testID="audio-queue"
+        />
         <PlayerControl
           icon="close"
           accessibilityLabel="Close player and stop playback"
           onPress={onClose}
           testID="audio-close"
         />
+        </View>
       </View>
 
       <View style={styles.body}>
@@ -232,6 +303,41 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({onClose}) => {
             testID="audio-repeat"
           />
         </View>
+
+        {/* Volume. A slider, not another button: Apple Music and YouTube
+            Music both expose continuous volume on the now-playing screen,
+            and mpv reads it as a 0..100 value, so a binary control could
+            not express it. Muted shows the slider pinned at 0 — the same
+            convention the video player's VolumeControl uses, so the two
+            players do not disagree about what a muted volume looks like.
+
+            The track is 44px tall to clear the touch-target floor; the
+            video control's 40px row is a landscape budget and would not
+            survive a portrait layout. */}
+        <View style={[styles.volumeRow, {paddingHorizontal: spacing.lg}]}>
+          <PlayerControl
+            icon={state.isMuted ? 'volumeMute' : 'volume'}
+            accessibilityRole="switch"
+            accessibilityChecked={state.isMuted}
+            accessibilityLabel={state.isMuted ? 'Unmute' : 'Mute'}
+            onPress={onToggleMute}
+            testID="audio-volume-mute"
+          />
+          <Slider
+            style={styles.volumeSlider}
+            minimumValue={0}
+            maximumValue={100}
+            step={1}
+            value={state.isMuted ? 0 : state.volume}
+            onValueChange={onSetVolume}
+            minimumTrackTintColor={colors.accent.gold}
+            maximumTrackTintColor={colors.background.seekTrack.empty}
+            thumbTintColor={colors.accent.gold}
+            accessibilityLabel="Volume"
+            accessibilityValue={{min: 0, max: 100, now: state.isMuted ? 0 : state.volume}}
+            testID="audio-volume"
+          />
+        </View>
       </View>
     </View>
   );
@@ -251,6 +357,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: spacing.xxl,
+  },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  volumeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.lg,
+  },
+  volumeSlider: {
+    flex: 1,
+    // 44 clears the touch-target floor for a slider in a portrait
+    // layout. The video player's VolumeControl uses a 40px row, which
+    // is a landscape horizontal-space budget and does not carry over.
+    height: 44,
   },
   body: {
     flex: 1,

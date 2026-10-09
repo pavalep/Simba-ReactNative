@@ -353,21 +353,32 @@ export interface TransportCommands {
   // null" invariant enforceable by the type system.
 
   /**
-   * Leave the player: exit PiP if the PiP window is up, finish
-   * `PlayerActivity`, and return to the app.
+   * Leave the player — and stop it.
    *
-   * Backed by the lib's real `commands.exitPipAndFinish()`.
+   * **This used to only dismiss the window, and that was the bug.**
+   * `exitPipAndFinish()` finishes `PlayerActivity` and tears the
+   * SurfaceView down, but the mpv engine is a process-global C++ handle
+   * that outlives any Activity. So back closed the screen while the media
+   * carried on — audio still coming out, notification still posted,
+   * engine still advancing — with no window left to stop it. Users
+   * described it as "it doesn't actually close".
    *
-   * **This is the ONE correct answer for "minimize", "back" and
-   * "close" — they are the same action, and the header therefore renders
-   * a single back affordance rather than three buttons for one effect.**
-   * The reason is structural: the player runs in its own Android
-   * activity (`PlayerActivity`, `launchMode="singleTask"`), and V6.0
-   * removed the mini dock — `usePresentationStore` keeps only
-   * `pipActive`, deriving `'mini' | 'expanded'` from which activity this
-   * React tree is mounted in. So there is no smaller player to minimize
-   * TO; dismissing the activity is the transition, and it re-derives the
-   * mode on its own.
+   * ## Why video stops rather than continuing in the background
+   *
+   * Background continuation is the right behaviour for AUDIO, where a
+   * mini bar is always on screen to stop it again (Spotify, Apple Music,
+   * Plex). It is not available for VIDEO: W6.0 removed the mini dock, so
+   * dismissing the Activity leaves no surface behind. The only ways to
+   * keep playing are "no window to stop it" or PiP, which is a separate,
+   * explicitly-chosen verb. Netflix, Plex and VLC all treat back from a
+   * video as a stop for exactly this reason.
+   *
+   * ## The order is the contract
+   *
+   * `stopPlayback()` first, so the engine and the foreground service are
+   * gone by the time the window is. Finishing first would tear down the
+   * surface while the engine still held a decoded frame, and would leave
+   * `ACTION_STOP` racing the Activity's own teardown.
    *
    * Do NOT implement this as `setPresentation('mini')`. That method was
    * removed on purpose: the host immediately overwrites such a write,
@@ -832,10 +843,11 @@ export function useTransport(): TransportHook {
 
       // ── V19 W6.4 — the header's two real actions ──────────────────────
       exitPlayer: () => {
-        // The lib's own dismiss primitive. It exits the PiP window if
-        // one is up, finishes `PlayerActivity`, and tears the
-        // SurfaceView down with it. No cast, no `() => {}` fallback —
-        // both were how this used to be unreachable.
+        // Order is the contract: engine + foreground service first,
+        // window second. See the docblock above for why the previous
+        // order (or the previous lack of a stop) left audio playing
+        // behind a closed screen.
+        commands.stopPlayback();
         commands.exitPipAndFinish();
       },
       setOrientationLock: (locked: boolean) => {
