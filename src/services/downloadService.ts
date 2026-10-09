@@ -386,7 +386,7 @@ export async function startDownload(request: DownloadRequest): Promise<void> {
 
   const downloadHeaders: Record<string, string> = {};
   if (existingSize > 0) {
-    downloadHeaders['Range'] = `bytes=${existingSize}-`;
+    downloadHeaders.Range = `bytes=${existingSize}-`;
   }
 
   const job = RNFS.downloadFile({

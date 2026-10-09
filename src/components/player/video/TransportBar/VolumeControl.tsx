@@ -62,8 +62,20 @@ import {useTheme} from '../../../../theme';
 import {useTransport} from '../../../../infrastructure/player';
 import {PlayerControl, CONTROL_ICON_SIZE} from '../PlayerControl/PlayerControl';
 
-/** Width of the slider track, in dp. */
-const SLIDER_WIDTH = 96;
+/**
+ * Width of the slider track, in dp.
+ *
+ * W8.7: was 96. The mode row holds the volume group on the LEFT and a
+ * four-button affordance cluster on the RIGHT, and neither group may
+ * shrink — so the two together are a fixed budget. At 96 the row needed
+ * ~362 dp of content, which fits a 411 dp phone with almost nothing to
+ * spare and overflows a 360 dp one outright.
+ *
+ * 80 is still comfortably above the point where a volume slider becomes
+ * imprecise to hit, and it is what the compact rows in Plex and YouTube
+ * ship.
+ */
+const SLIDER_WIDTH = 80;
 
 /** Minimum width of the mute toggle, so the row never reflows. */
 const TOGGLE_WIDTH = 44;

@@ -1,0 +1,62 @@
+Resume card: artwork, and a timeout that cannot destroy the resume point
+
+Three defects in one prompt.
+
+1. Auto-dismiss was wired to the destructive option.
+
+   App.tsx carried the comment: "Dismissing the dialog resolves `false`
+   too, and that maps to start from the beginning." So an 8s timeout
+   with no tap restarted the media from zero and destroyed the exact
+   resume point the card existed to offer.
+
+   The V19 spec says the opposite - "Auto-dismisses after 8 s; default
+   action is Resume" (SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md:604-611).
+   The spec was right; the implementation inverted it.
+
+   Auto-dismiss is now 8s and resolves to CONTINUE. Netflix, YouTube and
+   Plex all default a dismissed resume card to carrying on. An explicit
+   "Start from beginning" tap still works - the destructive path is not
+   swallowed, it is just unreachable by accident.
+
+   Wired into the hook rather than ConfirmDialog so the timer is owned by
+   the state that resolves the promise. A timer in the presentational
+   component needs a callback prop to do the same job, and a second
+   source of truth for "is it still open" is how double-resolve bugs
+   start. Four tests pin it, mutation-checked: pointing the timer at
+   handleCancel fails "RESUMES on timeout - never restarts".
+
+2. No artwork, and the Dialog had nowhere to put it.
+
+   Dialog accepted `children` but ConfirmDialog never passed any, and
+   ConfirmDialogProps had no image field at all. Added `imageUri` to
+   Dialog, rendering ABOVE the title - Netflix, YouTube and Plex all
+   lead a resume card with the title's own image, and it is how a user
+   confirms at a glance that the card is about the thing they tapped.
+   In `children` it would have sat below the message and read as a
+   caption.
+
+   ResumeCandidate now carries the artwork. resolveResumeCandidate
+   already had both sources in hand - Bookmark.thumbnailPath and
+   RecentHistoryEntry.resumeThumbnailPath / thumbnailPath - and threw
+   them away.
+
+   Precedence matches MediaRailCard's documented rule: a frame captured
+   at the resume position wins over poster artwork, because it is the
+   picture of WHERE YOU LEFT OFF, which is what a resume card is selling.
+
+3. The podcast launch passed no artwork at all.
+
+   useEpisodeActions' own comment claimed "play an episode with art";
+   the handler resolved nothing for thumbnailPath while every sibling
+   branch at :62 computed `ep.image || podcast?.image`. The audio
+   player showed "No artwork" for a podcast whose artwork renders two
+   rails away on the same screen.
+
+Also records two corrections to the audit rather than quietly fixing
+them: the earlier claim that auto-dismiss should not be implemented at
+all (wrong - the user clarified it IS the industry approach and only
+the TIMEOUT TARGET was broken), and the agent narration that
+ResumePromptContext had no Provider (also wrong - App.tsx:325 mounts
+one). Both would have sent the next hour deleting working code.
+
+Gates: tsc 0, eslint 0, jest 81 suites / 1014 passed / 1015.

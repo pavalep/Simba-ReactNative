@@ -81,7 +81,14 @@ interface RawFeed {
   description: string;
   image: string;
   url: string;
-  episodeCount: number;
+  // V23 W24 D-040c: Podcast Index's recent API responses no longer
+  // include `episodeCount` on lightweight feed summaries (trending,
+  // search, by-tag). Podcast Index treated it as required until
+  // ~2024, then made it optional server-side. The field is now
+  // genuinely absent on real responses; treating its absence as
+  // a parse error breaks every list view. Default to 0 so the UI
+  // renders an "unknown" badge rather than crashing the screen.
+  episodeCount?: number;
   categories: Record<string, string>;
 }
 
@@ -199,12 +206,16 @@ function parseRawFeed(raw: unknown, path: string): RawFeed {
     ),
     image: assertShape(rec.image, `${path}.image`, 'podcastIndex', isString),
     url: assertShape(rec.url, `${path}.url`, 'podcastIndex', isString),
-    episodeCount: assertShape(
-      rec.episodeCount,
-      `${path}.episodeCount`,
-      'podcastIndex',
-      isFiniteNumber,
-    ),
+    // V23 W24 D-040c: see RawFeed.episodeCount note. Podcast Index
+    // stopped returning `episodeCount` on feed summary endpoints,
+    // so the field is genuinely optional today. Default to 0 so
+    // domain shape stays stable (PodcastResult.episodeCount:
+    // number); the UI renders "Unknown" for 0 (style already
+    // exists).
+    episodeCount:
+      typeof rec.episodeCount === 'number' && Number.isFinite(rec.episodeCount)
+        ? rec.episodeCount
+        : 0,
     categories: isRecord(rec.categories)
       ? (rec.categories as Record<string, string>)
       : {},
@@ -292,7 +303,10 @@ export function podcastResultFromRaw(
     description: raw.description,
     image: raw.image,
     feedUrl: raw.url,
-    episodeCount: raw.episodeCount,
+    // V23 W24 D-040c: RawFeed.episodeCount is now optional (API
+    // often omits it on summary endpoints). padResult() cast keeps
+    // the optional width; downstream consumers can use `?? 0`.
+    episodeCount: raw.episodeCount ?? 0,
     categories: raw.categories,
   };
 }

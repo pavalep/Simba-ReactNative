@@ -1,5 +1,6 @@
-import React, {useState, useCallback} from 'react';
+import React, {useCallback, useRef, useState} from 'react';
 import {
+  Dimensions,
   View,
   TouchableOpacity,
   StyleSheet,
@@ -76,12 +77,22 @@ export const BookmarkSheet: React.FC<Props> = ({
 
   const canSave = currentPosition >= 1;
 
+  // The bookmark list scrolls, so true-sheet needs a handle on it to
+  // size and scroll the sheet body. Without this the sheet never
+  // discovers its own body, and a `flex: 1` body measures to zero.
+  const listRef = useRef<FlatList<Bookmark>>(null);
+
   return (
     <BottomSheet
       visible={visible}
       onClose={onClose}
-      snapPoints={['40%', '65%']}
+      // Rest at 'auto' so the sheet is as tall as the form plus whatever
+      // the list is showing, capped at 85% (the wrapper derives the cap
+      // from the largest explicit detent). A fixed fraction would either
+      // clip the list or leave a dead panel under it.
+      snapPoints={['auto', '85%']}
       initialSnap={0}
+      scrollableRef={listRef}
       title={
         <View style={styles.titleRow}>
           <SvgIcon name="bookmark" size={20} color={colors.accent.gold} />
@@ -156,6 +167,7 @@ export const BookmarkSheet: React.FC<Props> = ({
           ) : (
             /* 59.1: virtualized bookmark rows */
             <FlatList
+              ref={listRef}
               data={bookmarks}
               keyExtractor={item => item.id}
               renderItem={({item}) => (
@@ -165,8 +177,6 @@ export const BookmarkSheet: React.FC<Props> = ({
                   onDelete={handleDelete}
                 />
               )}
-              scrollEnabled={false}
-              initialNumToRender={bookmarks.length}
             />
           )}
         </View>
@@ -183,9 +193,13 @@ export const MemoizedBookmarkSheet = React.memo(BookmarkSheet);
 export default MemoizedBookmarkSheet;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  // No `flex` here or on `listSection`. true-sheet measures the sheet's
+  // content view UNCONSTRAINED (TrueSheetContentViewShadowNode), and a
+  // `flexBasis: 0` child measures to ZERO in that pass — so a `flex: 1`
+  // body collapses and only the save section survives. An EXPLICIT
+  // maxHeight on the list is what lets it be measured, capped, and
+  // scrolled, all at once.
+  container: {},
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -213,7 +227,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   listSection: {
-    flex: 1,
+    // The list is user-generated and unbounded in length, so it gets a
+    // ceiling rather than a fixed height: a short list is fully shown and
+    // the sheet hugs it, a long one caps and scrolls. 45% of the window
+    // leaves room for the save form above it and for the expanded stop.
+    maxHeight: Dimensions.get('window').height * 0.45,
   },
   empty: {
     alignItems: 'center',

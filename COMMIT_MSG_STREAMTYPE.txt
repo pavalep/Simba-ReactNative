@@ -1,0 +1,19 @@
+Gate audio chrome on streamType so video launches never show the audio bar
+
+A video launch also writes the nowPlaying store, and AudioChrome gated
+only on `nowPlaying != null`. Opening any movie therefore rendered the
+audio mini bar on top of the video window — the same class of bug the
+in-app audio player was built to eliminate.
+
+`streamType` records the 'video' | 'audio' the bridge was actually asked
+for, written by the launch seam from `bridgeOpts.type` — the single
+place every launch funnels through. It is deliberately distinct from
+`mediaLane` (a display lane, absent at many launch sites) and from
+`type` (a catalogue MediaKind). Gating on `mediaLane` would have hidden
+the bar for every site that passes a stream type but no lane.
+
+Three new tests pin the lane: video launch renders nothing, audio launch
+renders, and toggling between them re-gates without remount.
+Mutation-checked: 12 pass, dropping the gate fails 1.
+
+Gates: tsc 0, eslint 0, jest 0 (80 suites / 1001 passed / 1002).

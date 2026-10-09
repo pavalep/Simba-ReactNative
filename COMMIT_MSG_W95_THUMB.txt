@@ -1,0 +1,44 @@
+feat(player): capture a resume frame, and key checkpoints on the session
+
+W9.5 follow-up. Installs the lib's new `captureFrame` (1.11.0) so the
+continue-watching rail shows where the user actually stopped, and fixes a
+rate-limiter that was doing the opposite of what its comment claimed.
+
+Why the frame is captured only on teardown
+------------------------------------------
+The 30 s cadence would open a decoder and re-fetch a byte range every
+thirty seconds to produce a picture identical to the previous tick — real
+cost for no visible difference. Teardown is the only moment whose position
+is the one the user left at, so it is the only moment worth a capture.
+
+The capture is written as a SECOND, idempotent update after the synchronous
+write, never awaited in front of it. A capture that is slow, or that never
+resolves because the activity is going away, must not be able to cost the
+user their resume position. `captureFrame` is specified to RESOLVE null
+for "there is no frame here" (live stream, unsupported container,
+unreachable URL) — an ordinary outcome, not an error, so that path returns
+undefined and the card falls back to its poster. Only the rejection path
+logs.
+
+The rate-limiter fix
+--------------------
+`lastWriteRef` was keyed on URI. Its comment claimed this let "relaunching
+the same film right after closing it" start a fresh countdown. It does the
+opposite: replaying the film you just closed is precisely the case where
+the URIs MATCH, so the new session inherited the old timestamp and sat out
+its first 30 s of checkpoints.
+
+Its test passed for the wrong reason — the tick it meant to assert on was
+silently rate-limited out, and the count it did check came from the
+teardown flush instead. It now keys on the monotonic `sessionId`, so a new
+session always writes its first checkpoint on time. Nothing is lost by
+writing early: the previous session's final position was already flushed by
+its own teardown.
+
+Size constants live beside the checkpoint rule rather than at the two ends
+that use them, so the writer cannot capture a size the card cannot show
+well, and the two cannot silently disagree. 640x360 is 16:9, matching
+`MediaRailCard`'s 160x90 thumbnail, so the frame fills the card instead of
+cropping to a stripe across the middle.
+
+Gates: tsc 0 · eslint 0 · jest 0 — 79 suites / 984 passing.

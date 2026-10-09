@@ -1,0 +1,88 @@
+Close actually closes: teardown, lane, and the three missing controls
+
+Four user-reported defects, one commit. All four are visible on the
+home screen without opening anything.
+
+1. "Closing doesn't actually close."
+
+   VideoTitleOverlay's back called commands.exitPlayer(), which was
+   only commands.exitPipAndFinish() - it finishes PlayerActivity and
+   tears the SurfaceView down. The mpv engine is a process-global C++
+   handle that outlives any Activity, so the window closed while the
+   media carried on: audio still audible, notification still posted,
+   engine still advancing, and no window left to stop it.
+
+   exitPlayer() now calls commands.stopPlayback() FIRST, then
+   dismisses. Order is the contract and is pinned by a test:
+   finishing first tears the surface down while the engine still holds
+   a decoded frame.
+
+   The hardware back button had the same hole by a different route -
+   there was no BackHandler at all, so RN popped the Activity and
+   exitPlayer() never ran. Added, registered only while expanded so the
+   background root does not swallow navigation back presses.
+
+   Why video stops rather than continuing: audio has a mini bar
+   always on screen to stop it again. Video has none - W6.0 removed the
+   dock - so continuing means "playing with no way to stop it", or PiP,
+   which is a separate chosen verb. Netflix, Plex and VLC all treat
+   back-from-video as a stop for exactly this reason.
+
+   The docblock that justified the old behaviour said minimize, back
+   and close were "the ONE correct answer... the same action". It was
+   wrong, and it is replaced with the reasoning rather than deleted.
+
+2. A test that pinned the bug.
+
+   useTransport.test.ts asserted the OPPOSITE - "stop+clear would kill
+   playback that a minimise is supposed to preserve". The premise was
+   false: there is no video minimise to preserve, and audio's minimise
+   is a different verb that never calls exitPlayer. The suite spent
+   its credibility defending the defect. Rewritten to pin the real
+   contract.
+
+3. The Turkish film with a music note.
+
+   The seam discarded bridgeOpts.type, which is 'video' | 'audio' at
+   every one of the ~31 launch sites, unless a screen happened to pass
+   mediaKind/mediaLane - which 4 did. The checkpoint writer then
+   forwarded no lane and normalizeMediaClassification filled the hole
+   with 'audio'. Every badge consumer reads the lane, so a film drew a
+   music note while Bookmarks showed it correctly.
+
+   Fixed at the seam, not the card: the seam already had the truth and
+   threw it away. A catalogue lane still wins when supplied.
+
+   media.ts's backstop is now 'video' to match the bookmark writer.
+   They previously defaulted the same omitted field to OPPOSITE values
+   and both persisted it - one record, two answers, which is what made
+   this unexplainable from the UI.
+
+4. Volume, mute and queue in the audio player.
+
+   HelpScreen.tsx:79 already told users to "tap the queue/list icon".
+   No such control existed. It is not an invented affordance - Spotify,
+   Apple Music, Plex, YouTube Music, VLC and Tencent Video all ship
+   exactly this, and the app's own copy had been advertising it.
+
+   Nothing needed building: TransportState already carried volume and
+   isMuted, commands already had setVolume/setMuted, SvgIcon already
+   had volume/volumeMute/listMusic, and the Queue route already existed.
+
+   The queue minimizes before navigating - the player is painted over
+   the navigator, so navigating without leaving it would stack a route
+   behind an opaque view and the tap would look broken.
+
+   Volume slider row is 44px tall; the video VolumeControl's 40px row
+   is a landscape budget and does not survive portrait.
+
+Also drops the duplicated "20-item cap" claim from the recent-history
+docblock, which contradicted the 10 the code enforces.
+
+Requires @simba-dev/react-native-media-player@1.13.1, which renames
+stopAudioPlayback to stopPlayback - the body was never audio-specific
+and the name became a lie the moment video needed it.
+
+Gates: tsc 0, eslint 0, jest 80 suites / 1010 passed / 1011. Three
+mutation-checks: reverting the lane fails 2, reversing the teardown
+order fails 1, dropping the queue minimize fails 1.
