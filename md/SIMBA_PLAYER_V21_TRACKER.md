@@ -247,7 +247,42 @@ Fix: factored into `reseedEdgeLevels(reason)` and called at mount **and** on
 Mutation-checked — removing the `onFileLoaded` re-seed fails the test.
 Gates: lib `tsc` 0 · jest **12 suites / 206 passed**.
 
-### Other confirmed lib defects (independent of F)
+### Other confirmed lib defects — ✅ FIXED (`5308019`)
+
+| Defect | Status |
+|---|---|
+| `setOrientation` logged the value *after* writing it, so every rotation printed as a no-op | ✅ fixed |
+| `openPlayer` docblock claimed `FLAG_ACTIVITY_NEW_TASK` that was never set | ✅ **comment** fixed, deliberately **not** the code |
+| Stale z-order claim: comment credited `setZOrderMediaOverlay(true)` for PiP, which `MpvRenderView` forbids and never calls | ✅ fixed |
+
+**On `FLAG_ACTIVITY_NEW_TASK`:** the comment called the flag "harmless". It is not —
+from an Activity context it starts the target in a new task, which breaks the
+`singleTask` reuse that stops a second `openPlayer` stacking a duplicate player window,
+and leaves the video in a task the user's back gesture does not return from. The code was
+right and the comment was wrong, so only the comment changed. Adding the flag would have
+introduced the bug the comment described.
+
+---
+
+### App bug fixed — MediaKind/MediaLane type confusion
+
+`QueueScreen/hooks/useQueueScreen.ts:197` passed `mediaType: entry.type ?? 'video'` to
+`play()`. But on `PlaylistEntry` (see `state/playerStore.ts:35-45`):
+
+- `type` is a **`MediaKind`** — 'movie' | 'episode' | …
+- `mediaType` is a **`MediaLane`** — 'audio' | 'video'
+
+Two different axes, adjacent on the type, both `string`. Every queue jump handed `play()`
+a value that is not a lane at all, and because `type` is **required** the `?? 'video'`
+fallback could never fire, so the garbage went straight through. Fixed to
+`entry.mediaType`.
+
+**This is the same confusion that put music notes on film posters** (the `C-36` badge bug).
+The two fields being adjacent string aliases is why nothing caught it.
+
+---
+
+## Carried forward
 
 | Defect | Location | Note |
 |---|---|---|

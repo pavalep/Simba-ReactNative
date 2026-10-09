@@ -194,7 +194,17 @@ export function useQueueScreen(): UseQueueScreenResult {
         void play({
           uri: entry.uri,
           title: entry.title,
-          mediaType: entry.type ?? 'video',
+          // `entry.mediaType` is the LANE ('audio' | 'video'). `entry.type`
+          // is the content KIND ('movie' | 'episode' | ...) — a different
+          // axis. Passing the kind into the lane slot made every jump hand
+          // `play()` a value that is not a lane at all, and because `type`
+          // is a required field the `?? 'video'` fallback could never fire,
+          // so the garbage went straight through.
+          //
+          // This is the same MediaKind/MediaLane confusion that put music
+          // notes on film posters. The two fields are adjacent on the type
+          // and both are `string`, so nothing caught it.
+          mediaType: entry.mediaType,
         }).then(r => {
           if (r.ok) return;
           if (isNetworkError(r.error)) {
