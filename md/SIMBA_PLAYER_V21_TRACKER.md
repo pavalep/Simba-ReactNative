@@ -227,19 +227,25 @@ class goes.
 unreachable from JS. F1 correctly used a bridge method (`setVideoBounds`) rather than a
 props-driven view manager. **Delete `MpvRenderViewManager` in F5** — it is 100% unreachable.
 
-### 🔴 `seekable` root cause found — do **not** apply the obvious fix
+### 🔴 `seekable` root cause — ✅ FIXED (`CODE`, lib commit `c1019ff`)
 
-The suggested app-side patch `state.seekable || state.durationMs > 0` in `TransportBar` is
-**jugaad**: it would make a genuinely non-seekable live stream that happens to report a
-duration look seekable. The real cause is in the lib:
+**Do NOT apply the obvious fix.** The suggested app-side patch
+`state.seekable || state.durationMs > 0` in `TransportBar` is jugaad: a live stream can
+report a duration and still have no seekable range, so it lights up a seek bar that cannot
+work. A test now pins that a file with a duration and no seekable range stays unseekable.
 
-- `src/components/PlayerProvider.tsx:688` seeds `seekable` from a mount-time
-  `getProperty('seekable')` read.
-- mpv emits `seekable` as an **edge**, not a pollable. A provider that mounts after the
-  edge never observes it, and `PlayerProvider.tsx:1167` states there is no polling fallback.
+Actual cause, in the lib:
 
-Fix at the root: re-seed `seekable` on file load rather than once at mount. Track in F5 —
-it is independent of the Activity collapse and can land first.
+- `PlayerProvider.tsx:688` seeded `seekable` once at mount.
+- In the ordinary launch order the file is not yet loaded at mount, so mpv correctly
+  reports `false`. The seed could never do the job it was written for.
+- mpv emits `seekable` only as an **edge**. Measured on device (Android 37):
+  `onCacheState` reached JS 827 times, `onSeekable` **zero**.
+
+Fix: factored into `reseedEdgeLevels(reason)` and called at mount **and** on
+`onFileLoaded`. One implementation, two call sites, so they cannot drift.
+Mutation-checked — removing the `onFileLoaded` re-seed fails the test.
+Gates: lib `tsc` 0 · jest **12 suites / 206 passed**.
 
 ### Other confirmed lib defects (independent of F)
 
