@@ -65,7 +65,30 @@ export function mediaKindToLane(kind: MediaKind): MediaLane {
   return AUDIO_KINDS.has(kind) ? 'audio' : 'video';
 }
 
-/** Normalize a legacy or partially populated record at a state boundary. */
+/**
+ * Normalize a legacy or partially populated record at a state boundary.
+ *
+ * ## The lane is DERIVED, never stored independently
+ *
+ * `MediaLane` is not a second piece of truth — it is a pure function of
+ * `MediaKind`. This implementation used to do
+ * `input.mediaType ?? mediaKindToLane(type)`, which let a persisted lane
+ * WIN over the kind it was derived from. That made the normalizer a
+ * faithful preserver of a bad value rather than a repair of one: a record
+ * persisted as `{type: 'movie', mediaType: 'audio'}` normalised straight
+ * back to `mediaType: 'audio'`, forever. Every consumer that trusted the
+ * lane then routed a film through the audio pipeline — which is exactly
+ * the observed defect (a Turkish film wearing a music badge, and playing
+ * through the audio player).
+ *
+ * Deriving unconditionally means a disagreeing pair self-heals on the next
+ * read, and a pair that agrees is unaffected.
+ *
+ * Note `MediaKind` deliberately includes `'audio'` and `'video'` as broad
+ * fallbacks and both are in `AUDIO_KINDS`/not, so `mediaKindToLane` is
+ * total over `MediaKind` — including when `input.type` is absent and the
+ * type was itself taken from `input.mediaType`.
+ */
 export function normalizeMediaClassification(input: {
   source?: MediaSource;
   type?: MediaKind;
@@ -73,13 +96,15 @@ export function normalizeMediaClassification(input: {
   provider?: string;
   folderId?: string;
 }): MediaClassification {
+  // `input.type` first, so a real kind is never overwritten by a lane
+  // spelling. When it is absent the lane is the only thing we have, and
+  // both are valid `MediaKind` values, so this round-trips correctly.
+  const type = input.type ?? input.mediaType ?? 'video';
+
   // The backstop lane is 'video', matching `features/bookmarks`' writer.
-  //
   // It used to be 'audio' here while the bookmark path used 'video', so a
   // single omitted field produced two OPPOSITE answers depending on which
-  // door a record came through — and both were persisted. That is how a
-  // Turkish film ended up wearing a music note in Recently Played while
-  // Bookmarks showed it correctly: same record, two defaults.
+  // door a record came through — and both were persisted.
   //
   // Neither value is actually correct for unclassified media, and that is
   // the point. The real fix is one layer up: the launch seam now always
@@ -87,8 +112,7 @@ export function normalizeMediaClassification(input: {
   // reachable for a genuinely unclassified legacy row. Consistency
   // matters more than the choice — a single guess is debuggable, two are
   // not.
-  const type = input.type ?? input.mediaType ?? 'video';
-  const mediaType = input.mediaType ?? mediaKindToLane(type);
+  const mediaType = mediaKindToLane(type);
   return {
     source: input.source ?? 'local',
     type,

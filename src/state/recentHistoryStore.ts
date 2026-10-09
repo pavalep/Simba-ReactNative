@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
-import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION, repairPersistedLanes} from './persistence';
 // W9.4: identity is normalised, so `file:///a/b.mkv` and `/a/b.mkv` are
 // one entry. Imported from the player facade's shared vocabulary rather
 // than reimplemented here — the resume reader must key on exactly the
@@ -182,6 +182,16 @@ export const useRecentHistoryStore = create<RecentHistoryState & RecentHistoryAc
       name: 'recentHistory',
       version: CURRENT_PERSIST_VERSION,
       storage: createJSONStorage(() => sharedMMKVStorage),
+      /**
+       * V21: repair rows persisted with a lane that disagrees with their
+       * kind. Without this, a film saved before the seam recorded a lane
+       * keeps routing into the audio player forever — the writer fix
+       * prevents new rows but cannot reach rows already on disk.
+       */
+      migrate: (persisted: unknown) => {
+        const state = (persisted ?? {}) as {entries?: RecentHistoryEntry[]};
+        return {...state, entries: repairPersistedLanes(state.entries) ?? []};
+      },
     },
   ),
 );

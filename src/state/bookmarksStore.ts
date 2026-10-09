@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
-import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
+import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION, repairPersistedLanes} from './persistence';
 // W9.4 — identity is normalised so `file:///a/b.mkv` and `/a/b.mkv`
 // are one bookmark. Shared with the resume reader and the history store
 // so all three key media on exactly the same string.
@@ -229,6 +229,17 @@ export const useBookmarksStore = create<BookmarksState & BookmarksActions>()(
       name: 'bookmark',
       version: CURRENT_PERSIST_VERSION,
       storage: createJSONStorage(() => sharedMMKVStorage),
+      /**
+       * V21: repair rows persisted with a lane that disagrees with their
+       * kind. Bookmarks defaulted to 'video' here while
+       * `normalizeMediaClassification` defaulted to 'audio', so an omitted
+       * field produced two opposite answers depending on the door a record
+       * came through — and both were written to disk.
+       */
+      migrate: (persisted: unknown) => {
+        const state = (persisted ?? {}) as {items?: Bookmark[]};
+        return {...state, items: repairPersistedLanes(state.items) ?? []};
+      },
     },
   ),
 );
