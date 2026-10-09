@@ -2,8 +2,45 @@
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
-**Status:** F0 shipped (device verification in progress). F1 not started.
+**Last updated:** 2026-10-09, end of session 2
+**Status:** F1 shipped · F2a (manifest) shipped · C-16 root fix shipped · `resolveStreamType` fixed. F2b onward not started.
 **Confidence marks:** `DEVICE` = observed on device · `CODE` = read/verified in source · `PENDING` = assumed or planned
+
+---
+
+## Where things stand at the end of 2026-10-09
+
+**Shipped and gate-green (all committed, nothing pushed):**
+
+| Commit | Repo | What |
+|---|---|---|
+| `9879a3e` | app | `MainActivity` carries `supportsPictureInPicture`; manifest records why `PlayerActivity` exists |
+| `2e85a4d` | app | Queue jump passed a `MediaKind` into the `MediaLane` slot |
+| `a11f6f8` | app | **Lane is now DERIVED from kind** + persist v2 migration repairs mis-tagged rows |
+| `343ccd6` | lib | Release 1.13.3 (tag `v1.13.3`, Actions published) |
+| `2e6f03d` | lib | F1: `setVideoBounds` / `fillVideoBounds` / `setSurfaceVisible` / `isSurfaceMounted` + `PlayerSurface` |
+| `5308019` | lib | Three comments that described code that did not exist |
+| `c1019ff` | lib | `seekable` re-seeded on `onFileLoaded` |
+| `bd699d4` | lib | `resolveStreamType`: `'episode'` and `'archive-video'` opened the wrong window |
+| `0827609` | app | Pin lib `1.13.3` |
+
+**Gate status:** app `tsc` 0 · `eslint --max-warnings 0` 0 · `jest` **82 suites / 1034 passed** ·
+lib `tsc` 0 · `jest` **13 suites / 229 passed** · `compileDebugKotlin` BUILD SUCCESSFUL · APK built
+`18:15:57` (368,972,822 bytes).
+
+**Not pushed.** lib is 4 commits ahead of `origin/main`, app is 6. Push whenever.
+
+### Blocked on one observation
+`C-07` (artwork). The rails read `resumeThumbnailPath || thumbnailPath`; the chain
+Home → `useHomeScreen.ts:202` → seam `:236` → `writeCheckpoint` all carry the field, so the gap is
+**upstream of all of them**. To pick the correct end: play a film, let it checkpoint, screenshot
+Recently Played. Grey circle → the catalogue never returns artwork, fix the producer. Poster shown →
+the captured frame is the gap, fix the capture timing.
+
+### Noted, not fixed
+The gold play FAB on Home renders **on top of** the Explore Contents carousel, covering the Music
+card's artwork and label. Components located (`BrowseAllShelf.tsx` / `CategoryCard`); no layout
+change written yet.
 
 ---
 
@@ -282,8 +319,6 @@ The two fields being adjacent string aliases is why nothing caught it.
 
 ---
 
-## Carried forward
-
 | Defect | Location | Note |
 |---|---|---|
 | `openPlayer` sets **no** intent flags | `MpvBridgeModule.kt:245` | Docblock claims `FLAG_ACTIVITY_NEW_TASK`; the code does not set it |
@@ -327,29 +362,46 @@ added on top of it. Deleting these is the point of the refactor.
 
 ---
 
-## Carried forward
 
-- [ ] **P0** `MediaPlaybackService.kt:206` / `:395` — `setClassName` string literals target
+## Carried forward — as of 2026-10-09 session close
+
+**Do first tomorrow**
+- [ ] **P0** `MediaPlaybackService.kt:206` / `:395` - `setClassName` string literals target
       `PlayerActivity`. Must be repointed at `MainActivity` **before** the class is deleted,
       or PiP and the notification expand action throw `ActivityNotFoundException` at runtime
       on a green build.
-- [ ] Cut lib `v1.13.3` (F1) → annotated tag → push → Actions → `npm install` in app
-- [ ] F2: manifest PiP on `MainActivity`; move the surface mount; transparent RN root;
-      port the PiP lifecycle (`setAutoEnterEnabled` / `onUserLeaveHint` /
-      `onPictureInPictureModeChanged`); re-apply bounds on every layout pass
-- [ ] F3: video as an in-app route; seam stops calling `openPlayer` for video
+- [ ] `C-07` artwork - blocked on ONE screenshot of Recently Played **with data in it**
+
+**F2 - the risky phase. Exit gate is device PiP proof, not a green build.**
+- [ ] F2b: MainActivity mounts + owns `MpvRenderView` at `android.R.id.content` index 0;
+      React root transparent while video is presented. **This is the explicit V11 failure mode -
+      do not skip it, and never "fix" a black screen with an opaque background.**
+- [ ] F2c: `MainActivity.onResume` re-pins to `USER_PORTRAIT` unconditionally (`MainActivity.kt:83`).
+      Harmless today (video lives in `PlayerActivity`); once video moves here, rotating to
+      landscape snaps straight back to portrait. MainActivity will own the surface as a field,
+      so it can check visibility directly.
+- [ ] F2d: port the PiP lifecycle - `setAutoEnterEnabled(true)` (API 31+) / `onUserLeaveHint`
+      (<31), `onPictureInPictureModeChanged`; re-apply bounds on **every** layout pass
+- [ ] F2e: the `setClassName` P0 above
+- [ ] F3: video as an in-app route; seam stops calling `openPlayer` for video; one feature flag
+      with `PlayerActivity` as fallback so a regression is one flag flip
 - [ ] F4: one `MiniPlayer` for both lanes, driven by `setVideoBounds`
-- [ ] F5: delete `PlayerActivity`, `MpvRenderViewManager`, 2nd React root, duplicated
-      teardown; work the 31-item jugaad inventory
-- [ ] `seekable` root fix in `PlayerProvider.tsx:688` — re-seed on file load, **not** the
-      app-side `|| durationMs > 0` band-aid
-- [ ] `C-16` store-version migration for persisted mis-tagged rows — no migration mechanism
-      exists in `AsyncStoragePersister` today
-- [ ] `C-07` recents/bookmarks artwork wiring
-- [ ] Lib: `openPlayer` missing `FLAG_ACTIVITY_NEW_TASK`; `setOrientation` logs after write;
-      `enterPip` arity mismatch; stale z-order comment
-- [ ] `useQueueScreen.ts:197` reads `entry.type` where `entry.mediaType` is written
+- [ ] F5: delete `PlayerActivity`, `MpvRenderViewManager`, the 2nd React root, the duplicated
+      teardown; work the 31-item inventory. **Verify every row absent, not "probably gone".**
+
+**Other open work**
+- [ ] FAB on Home renders **on top of** the Explore Contents carousel, covering the Music card
+- [ ] Lane-inference sites - **live now**, not blocked on F3, because F3 has not landed and video
+      still launches `PlayerActivity`: `HistoryScreen.tsx:99`, `fileService.ts:58`,
+      `useHomeScreen.ts:187`, `useHomeScreen.ts:366`, `useSearchScreen.ts:143`,
+      `useOpenWithResume.ts:118`, `useResumeAwarePlayerActivity.ts:70`, `useQueueSync.ts:107`,
+      `useBookmarkToggle.ts:135`. (`QueueScreen.ts:197` fixed in `2e85a4d`.)
+- [ ] `openPlaylist` bypasses the app seam (`C-17`); `useQueueSync` phantom `uri: ''` + hardcoded lane
+- [ ] Dead code: `AudioLyricsView` (525 lines, 0 call sites), `AudioVisualizer` (143, 0),
+      13 x `textContent.ts` (**4 real import sites** - an earlier "0" was wrong),
+      `handleViewFullLyrics` lie. `NowPlayingScreen` is **live**, not a null stub.
+- [ ] Lib: `enterPip` arity - Kotlin params nullable vs `NativeMpvPlayer.ts:293` non-nullable
 - [ ] Jest worker force-exit flake: `[checkpoint] resume thumbnail capture failed Error: no decoder`
-- [ ] PiP, Next/Prev with a real playlist, Bluetooth — never device-verified
-- [ ] Argent 0.25.0 → 0.27.0 — notice surfaced, **not applied**, awaiting consent
-- [ ] `useTransport.ts` duplicate `setVolume` declaration at `:223` / `:260`
+- [ ] `useTransport.ts` duplicate `setVolume` at `:223` / `:260`; third path at `AudioPlayer.tsx:339`
+- [ ] PiP, Next/Prev with a real playlist, Bluetooth - never device-verified
+- [ ] Argent 0.25.0 -> 0.27.0 - notice surfaced, **not applied**, awaiting consent
