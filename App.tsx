@@ -18,8 +18,10 @@ import {
   PlayerHostProvider,
   ResumePromptContext,
   useIsPlayerActivity,
+  useInWindowVideoLaunch,
   usePlaybackCheckpointSync,
   useQueueSync,
+  useVideoSurface,
   type PromptResume,
 } from './src/infrastructure/player';
 import {useConfirmDialog} from './src/components/core/Dialog';
@@ -321,6 +323,18 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
   // `useQueueSync` is mounted in `AppContent` today and has therefore
   // never observed a real playback session.
   usePlaybackCheckpointSync();
+
+  // V21 F3 — the in-window video path. Both hooks belong here, above the
+  // split, for the same reason the checkpoint writer does: this component
+  // is mounted once per Activity React root and must keep working once
+  // there is only one root and no `PlayerActivity` to branch on.
+  //
+  // `useInWindowVideoLaunch` loads the current video session into the
+  // surface `MainActivity` mounted. `useVideoSurface` is the single writer
+  // of "is the surface actually showing", which `usePresentation()` reads
+  // to decide whether to mount the video chrome.
+  useInWindowVideoLaunch();
+  useVideoSurface();
 
   const fallbackColors = useMemo(
     () => ({

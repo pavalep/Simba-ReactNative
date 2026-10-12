@@ -72,14 +72,38 @@ const OPTS = {
   type: 'video' as const,
 };
 
+// Same shape, audio lane. Kept as its own constant rather than
+// `{...OPTS, type: 'audio'}` inline so that a future change to the video
+// fixture cannot silently become an audio test.
+const AUDIO_OPTS = {
+  uri: 'file:///podcasts/can-ai.mp3',
+  title: 'Can AI Take the Repetitive Work Out?',
+  type: 'audio' as const,
+};
+
 describe('usePlayerActivity — resume-aware launch seam', () => {
   beforeEach(() => {
     mockOpenWithResume.mockClear();
     mockLibOpenPlayer.mockClear();
     mockGetLaunchParams.mockClear();
+    // The session is module-global, so a test that asserts on what a
+    // launch RECORDED needs a clean one to read. Without this the file
+    // only passes in declaration order.
+    useNowPlayingStore.getState().reset();
   });
 
-  it('passes the media uri as resumeId AND an explicit position', async () => {
+  // V21 F3 split these two by lane, because "the position reaches the
+  // engine" stopped being one code path.
+  //
+  // AUDIO still goes out through `useOpenWithResume` -> `bridge.openPlayer`
+  // -> `startActivity` (audio has no window, so the Activity only carries
+  // the notification). VIDEO does not: the session records the position and
+  // `useInWindowVideoLaunch` replays it through `useLaunchPlayback` into the
+  // surface `MainActivity` already mounted. Asserting both shapes is the
+  // point — an assertion that only covers one lane passes just as well if
+  // the other lane silently regresses.
+
+  it('audio: passes the media uri as resumeId AND an explicit position', async () => {
     // W9.5: the seam now ALWAYS sends `startPositionMs`, including an
     // explicit 0. That is deliberate and load-bearing: the lib gates
     // its own resume policy on `providedStartMs == null`
@@ -87,30 +111,60 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
     // would be re-decided by a second rule. One authority, one launch.
     const {result} = await renderHook(() => usePlayerActivity());
 
-    await result.current.openPlayer(OPTS);
+    await result.current.openPlayer(AUDIO_OPTS);
 
     expect(mockOpenWithResume).toHaveBeenCalledTimes(1);
     expect(mockOpenWithResume).toHaveBeenCalledWith({
-      ...OPTS,
+      ...AUDIO_OPTS,
       startPositionMs: 0,
-      resumeId: 'file:///movies/namus-kanla-yazilir.mkv',
+      resumeId: AUDIO_OPTS.uri,
     });
   });
 
-  it('forwards an explicit startPositionMs untouched', async () => {
+  it('audio: forwards an explicit startPositionMs untouched', async () => {
     // Precedence between an explicit position and a saved one belongs
     // to the lib's useOpenWithResume. Re-deciding it here would create
     // two sources of truth for one rule - which is how the earlier
     // 1000x-seek bug happened. So the seam must forward, not judge.
     const {result} = await renderHook(() => usePlayerActivity());
 
-    await result.current.openPlayer({...OPTS, startPositionMs: 78_000});
+    await result.current.openPlayer({...AUDIO_OPTS, startPositionMs: 78_000});
 
     expect(mockOpenWithResume).toHaveBeenCalledWith({
-      ...OPTS,
+      ...AUDIO_OPTS,
       startPositionMs: 78_000,
-      resumeId: OPTS.uri,
+      resumeId: AUDIO_OPTS.uri,
     });
+  });
+
+  it('video: records the start position on the session instead of launching an Activity', async () => {
+    // The F3 contract, stated as an outcome. The session is the ONLY
+    // payload an in-window launch has, so "the position is remembered" and
+    // "no second window is started" are one property, not two.
+    const {result} = await renderHook(() => usePlayerActivity());
+
+    await expect(result.current.openPlayer(OPTS)).resolves.toBe(true);
+
+    // Starts at 0 because there is no bookmark and no history for this
+    // uri - the same resolution `planResume` performs for the audio lane.
+    expect(useNowPlayingStore.getState().current).toMatchObject({
+      uri: OPTS.uri,
+      startPositionMs: 0,
+    });
+    // The failure this pins: a video launch that still opens an Activity
+    // cannot host an in-app mini player at all, because the Surface would
+    // belong to the other window.
+    expect(mockOpenWithResume).not.toHaveBeenCalled();
+    expect(mockLibOpenPlayer).not.toHaveBeenCalled();
+  });
+
+  it('video: forwards an explicit startPositionMs onto the session untouched', async () => {
+    const {result} = await renderHook(() => usePlayerActivity());
+
+    await result.current.openPlayer({...OPTS, startPositionMs: 78_000});
+
+    expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(78_000);
+    expect(mockOpenWithResume).not.toHaveBeenCalled();
   });
 
   it('keeps getLaunchParams working', async () => {
@@ -177,7 +231,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
         positionMs: 17_000,
         source: 'bookmark',
       });
-      expect(mockOpenWithResume.mock.calls[0]![0].startPositionMs).toBe(17_000);
+      expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(17_000);
     });
 
     it('sends an explicit 0 when the user chooses to start over', async () => {
@@ -203,7 +257,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       // Explicit 0, not an omitted field. Omitting it would let the
       // lib's policy find the very bookmark the user just declined to
       // resume from.
-      expect(mockOpenWithResume.mock.calls[0]![0].startPositionMs).toBe(0);
+      expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(0);
     });
 
     it('does not ask when the caller already chose a position', async () => {
@@ -230,7 +284,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       await result.current.openPlayer({...OPTS, startPositionMs: 120_000});
 
       expect(promptResume).not.toHaveBeenCalled();
-      expect(mockOpenWithResume.mock.calls[0]![0].startPositionMs).toBe(120_000);
+      expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(120_000);
     });
 
     it('does not ask when the caller explicitly restarted from zero', async () => {
@@ -255,7 +309,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       await result.current.openPlayer({...OPTS, startPositionMs: 0});
 
       expect(promptResume).not.toHaveBeenCalled();
-      expect(mockOpenWithResume.mock.calls[0]![0].startPositionMs).toBe(0);
+      expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(0);
     });
 
     it('resumes silently when no prompt is wired', async () => {
@@ -278,7 +332,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
 
       // No prompt provider is a presentation regression, never a
       // functional one: the saved position must still be honoured.
-      expect(mockOpenWithResume.mock.calls[0]![0].startPositionMs).toBe(17_000);
+      expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(17_000);
     });
 
     it('reads a history position when there is no bookmark', async () => {
@@ -296,7 +350,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       await result.current.openPlayer(OPTS);
 
       expect(promptResume.mock.calls[0]![0]).toMatchObject({source: 'history'});
-      expect(mockOpenWithResume.mock.calls[0]![0].startPositionMs).toBe(130_000);
+      expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(130_000);
     });
 
     it('never asks about media that is effectively finished', async () => {
@@ -316,7 +370,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       await result.current.openPlayer(OPTS);
 
       expect(promptResume).not.toHaveBeenCalled();
-      expect(mockOpenWithResume.mock.calls[0]![0].startPositionMs).toBe(0);
+      expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(0);
     });
   });
 });

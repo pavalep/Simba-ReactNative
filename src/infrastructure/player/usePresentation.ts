@@ -9,15 +9,23 @@
  *
  * The short version:
  *
- *   mode = pipActive          → 'pip'       (a window state)
- *         isPlayerActivity    → 'expanded'  (this tree has a surface)
- *         otherwise           → 'mini'      (browsing screens)
+ *   mode = pipActive             → 'pip'       (a window state)
+ *         videoSurfacePresented  → 'expanded'  (the surface is really showing)
+ *         otherwise              → 'mini'      (browsing screens)
  *
- * `isPlayerActivity` is lib 1.7.0's synchronous, idempotent answer
- * to "is there a native `MpvRenderView` beneath this React tree?".
- * Because each activity's tree asks the question about ITSELF, two
- * mounted roots cannot disagree — which is exactly what the old
- * shared-store design invited.
+ * V21 F3: the second input was `isPlayerActivity` — "is this React tree
+ * the dedicated `PlayerActivity`'s tree". Collapsing to one Activity
+ * deleted the question rather than answering it differently: there is one
+ * tree and one mounted surface, always, so the predicate would have said
+ * 'mini' everywhere and the chrome would never have mounted.
+ *
+ * `videoSurfacePresented` replaces it, and it is a better question: not
+ * "is there a surface" but "is the surface actually showing video". That
+ * cannot be derived here — it is the boolean the native mutation returned —
+ * so it is stored, written by exactly one hook (`useVideoSurface`). The
+ * lesson this module exists to carry still holds: it is not that storage is
+ * forbidden, it is that a DERIVED value written by every tree is a race.
+ * One writer reporting a real outcome is not that.
  *
  * The `useLaunchParams()`-based alternative is wrong for this: it is
  * a ONE-SHOT queue (the first consumer drains it, so a chrome
@@ -64,14 +72,27 @@ export interface Presentation {
  *   if (!isExpanded) return null;
  */
 export function usePresentation(): Presentation {
-  const isPlayerActivity = useIsPlayerActivity();
+  // V21 F3. This used to be `useIsPlayerActivity()` — "is this React tree
+  // the dedicated PlayerActivity's tree", i.e. "is there a native surface
+  // beneath me". With playback in `MainActivity` that question has no
+  // answer any more: there is exactly one tree and one surface, always.
+  // Asking it anyway would report 'mini' everywhere and the video chrome
+  // would never mount.
+  //
+  // What replaced it is the better question: is the surface ACTUALLY
+  // showing video? That is not derivable from app state — it is the boolean
+  // the native call returned — so `useVideoSurface` (its only writer) sets
+  // it and this reads it. `false` means 'mini', which is the honest
+  // rendering: no chrome over a window with no video, instead of a full
+  // player UI painted on nothing.
+  const videoSurfacePresented = usePresentationStore((s) => s.videoSurfacePresented);
   const pipActive = usePresentationStore((s) => s.pipActive);
   const setPipActive = usePresentationStore((s) => s.setPipActive);
   const togglePip = usePresentationStore((s) => s.togglePip);
 
   const mode: PresentationMode = pipActive
     ? 'pip'
-    : isPlayerActivity
+    : videoSurfacePresented
       ? 'expanded'
       : 'mini';
 

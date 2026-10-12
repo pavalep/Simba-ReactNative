@@ -262,6 +262,27 @@ export function usePlayerActivity(
           expandAudioPlayer();
         }
 
+        // V21 F3 — video does NOT launch an Activity any more.
+        //
+        // `openWithResume` → `bridge.openPlayer` → `startActivity` is the
+        // mechanism this phase removes. The session written just above is
+        // the payload: `useInWindowVideoLaunch` rebuilds it and calls the
+        // library's own `useLaunchPlayback`, and the surface already mounted
+        // in `MainActivity` renders it. A `SurfaceView`'s Surface belongs
+        // to its window, so video in a second Activity is also what makes an
+        // in-app mini player impossible — this is not a preference.
+        //
+        // Resolves `true` on the same terms `openPlayer` used: the app has
+        // taken responsibility for this launch and the session is recorded.
+        // It is NOT a claim that pixels are on screen — that is what the
+        // surface actually reporting is for, and a failed load surfaces
+        // through mpv's own `end-file` event rather than through this
+        // promise. Returning `false` here would mean "nothing was
+        // attempted", which would be untrue.
+        if (bridgeOpts.type === 'video') {
+          return Promise.resolve(true);
+        }
+
         return openWithResume({
           ...bridgeOpts,
           startPositionMs,

@@ -37,10 +37,13 @@
 
 import {useCallback, useMemo} from 'react';
 import {
+  getMpvPlayerModule,
   resolveStreamType,
+  useLaunchPlayback,
   useOpenPlaylist,
   usePlayer,
   usePlayerProgress,
+  type LaunchParams,
 } from '@simba-dev/react-native-media-player';
 import {useIsPlayerActivity} from './playerHost';
 // V19 W9.3 — resume-aware launch seam. The facade used to reach the
@@ -74,6 +77,17 @@ export type PlaybackId = string;
  * root too. See `playerHost.tsx` for the full account.
  */
 export {useIsPlayerActivity};
+
+// ─── V21 F3: in-window video ─────────────────────────────────────────
+//
+// Re-exported so the in-window loader and the surface owner each need one
+// import, and so neither reaches past the facade into the package barrel.
+// `useLaunchPlayback` is the library's OWN load half, exported for exactly
+// this use ("a payload the module did not originate"); the surface methods
+// are the only way to make the mounted render surface visible, and every one
+// of them resolves a real boolean rather than assuming success.
+export {useLaunchPlayback, getMpvPlayerModule};
+export type {LaunchParams};
 
 /** Read-state surface (the "static-ish" player state). */
 export interface PlaybackState {

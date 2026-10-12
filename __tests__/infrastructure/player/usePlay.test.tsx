@@ -87,12 +87,17 @@ describe('usePlay (V21 W7 P28)', () => {
   });
 
   it('returns err(launchError) when the bridge returns false', async () => {
+    // AUDIO, deliberately. V21 F3 moved video off `openPlayer` entirely —
+    // an in-window launch has no synchronous bridge call that can refuse, so
+    // there is no `false` for the seam to observe. Audio still goes through
+    // `openWithResume`, so the bridge-refusal contract is pinned where it
+    // can still happen rather than being silently deleted.
     mockOpenPlayer.mockResolvedValueOnce(false);
     const {result} = await renderHook(() => usePlay());
     const r = await result.current({
       uri: 'file:///x',
       title: 'X',
-      mediaType: 'video',
+      mediaType: 'audio',
     });
     expect(r.ok).toBe(false);
     if (!r.ok) {
@@ -107,13 +112,20 @@ describe('usePlay (V21 W7 P28)', () => {
     // A `network` kind here would drive the call site
     // (MoviesDataProvider) into a "No connection, this will open when
     // you're online" toast — advice that cannot fix a refused launch.
+    //
+    // Audio rather than video, and not only for the F3 reason above: this
+    // assertion is `expect(!r.ok && r.error.kind).not.toBe('network')`,
+    // which SHORT-CIRCUITS to `false` whenever `r.ok` is true. Asserted
+    // against a lane whose launches always succeed, it would pass for
+    // having evaluated nothing at all.
     mockOpenPlayer.mockResolvedValueOnce(false);
     const {result} = await renderHook(() => usePlay());
     const r = await result.current({
       uri: 'file:///x',
       title: 'X',
-      mediaType: 'video',
+      mediaType: 'audio',
     });
+    expect(r.ok).toBe(false);
     expect(!r.ok && r.error.kind).not.toBe('network');
   });
 
@@ -146,17 +158,26 @@ describe('usePlay (V21 W7 P28)', () => {
     );
   });
 
-  it('passes mediaType through resolveStreamType (movie → video)', async () => {
-    mockOpenPlayer.mockResolvedValueOnce(true);
+  it('resolves a VIDEO launch in-window without opening an Activity', async () => {
+    // V21 F3. `openPlayer` used to be `startActivity(PlayerActivity)`; a
+    // video launch must not reach it any more, because that second Activity
+    // is what the whole collapse exists to remove — and a SurfaceView's
+    // Surface belongs to its window, so video in another Activity also
+    // makes an in-app mini player impossible.
+    //
+    // The lane is still derived and still reaches the session, which is
+    // what `useInWindowVideoLaunch` reads to load. Asserting the ABSENCE of
+    // the Activity call is the contract; the resolution being `true` means
+    // "the app accepted this launch", not "pixels are on screen".
+    mockOpenPlayer.mockResolvedValue(true);
     const {result} = await renderHook(() => usePlay());
-    await result.current({
+    const r = await result.current({
       uri: 'file:///movies/film.mp4',
       title: 'Film',
       mediaType: 'movie',
     });
-    expect(mockOpenPlayer).toHaveBeenCalledWith(
-      expect.objectContaining({type: 'video'}),
-    );
+    expect(r.ok).toBe(true);
+    expect(mockOpenPlayer).not.toHaveBeenCalled();
   });
 
   it('each call produces a unique playbackId (timestamp-based)', async () => {

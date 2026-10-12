@@ -22,6 +22,7 @@
 
 import {renderHook} from '@testing-library/react-native';
 import {secondsToMs, usePlayWithResume} from '../../../src/infrastructure/player';
+import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
 
 const mockOpenPlayer = jest.fn().mockResolvedValue(true);
 
@@ -112,7 +113,7 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
       mediaType: 'video',
       positionSec: -5,
     });
-    expect(mockOpenPlayer.mock.calls[0][0].startPositionMs).toBe(0);
+    expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(0);
   });
 
   it('rounds fractional seconds to the nearest ms', async () => {
@@ -123,13 +124,12 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
       mediaType: 'video',
       positionSec: 123.456,
     });
-    expect(mockOpenPlayer).toHaveBeenCalledWith({
-      uri: 'file:///video/episode.mp4',
-      title: 'Episode 1',
-      type: 'video',
-      startPositionMs: 123_456,
-      resumeId: 'file:///video/episode.mp4',
-    });
+    // V21 F3: a video launch no longer goes through `openPlayer` — that is
+    // the `startActivity(PlayerActivity)` the collapse removes. The
+    // seconds→ms conversion still happens, and still has to be exact: it is
+    // what "resume from 2:03" resolves to, and it is now recorded on the
+    // session, which is where `useInWindowVideoLaunch` reads it from.
+    expect(useNowPlayingStore.getState().current?.startPositionMs).toBe(123_456);
   });
 
   it('resolves mediaType via resolveStreamType (music → audio)', async () => {
@@ -145,7 +145,7 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
     );
   });
 
-  it('resolves mediaType via resolveStreamType (movie → video)', async () => {
+  it('resolves mediaType via resolveStreamType (movie → video) onto the session', async () => {
     const {result} = await renderHook(() => usePlayWithResume());
     result.current!({
       uri: 'file:///movies/film.mp4',
@@ -153,9 +153,16 @@ describe('usePlayWithResume (V21 W7 P26)', () => {
       mediaType: 'movie',
       positionSec: 0,
     });
-    expect(mockOpenPlayer).toHaveBeenCalledWith(
-      expect.objectContaining({type: 'video'}),
-    );
+    // The lane is still derived, and it is still the fact that decides
+    // which path runs: a video session is loaded in-window by
+    // `useInWindowVideoLaunch`, an audio one by `openWithResume`. Asserted
+    // on the session rather than on the bridge call, because the bridge call
+    // is exactly what F3 removed for this lane.
+    const session = useNowPlayingStore.getState().current;
+    expect(session?.streamType).toBe('video');
+    expect(session?.mediaLane).toBe('video');
+    // And it must NOT have opened an Activity.
+    expect(mockOpenPlayer).not.toHaveBeenCalled();
   });
 
   it('reuses the same callback identity across renders (useCallback)', async () => {

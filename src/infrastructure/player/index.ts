@@ -155,6 +155,19 @@ export {useQueueSync} from './useQueueSync';
 // `AppContent`).
 export {usePlaybackCheckpointSync} from './usePlaybackCheckpointSync';
 
+// V21 F3 — the in-window video path. Both are mounted once, in
+// `ActivityShell`:
+//   - `useInWindowVideoLaunch` loads the current video session into the
+//     surface `MainActivity` mounted, replacing the `openPlayer` →
+//     `startActivity` launch that used to open a second Activity.
+//   - `useVideoSurface` is the SINGLE writer of "is the surface actually
+//     showing video", which `usePresentation()` reads. It is deliberately
+//     not derived: it is the boolean the native mutation returned, and no
+//     pure function of app state can know it.
+export {useInWindowVideoLaunch} from './useInWindowVideoLaunch';
+export {useVideoSurface} from './useVideoSurface';
+export type {LaunchParams} from './playbackFacade';
+
 // W9.4 — the shared media vocabulary (identity normalisation, the
 // finished-item cutoff, checkpoint admission). Exported so the resume
 // reader, the checkpoint writer and the history store cannot drift

@@ -91,9 +91,9 @@ export type PresentationMode = 'mini' | 'expanded' | 'pip';
 
 export interface PresentationState {
   /**
-   * Whether the PiP window is currently up. The ONLY stored
-   * presentation state — everything else is derived in
-   * `usePresentation()`.
+   * Whether the PiP window is currently up.
+   *
+   * Genuinely global: the PiP window is a window state, not a tree state.
    */
   pipActive: boolean;
 
@@ -108,10 +108,42 @@ export interface PresentationState {
 
   /** Flip `pipActive`. */
   togglePip: () => void;
+
+  /**
+   * V21 F3 — is the native video surface actually showing video right now?
+   *
+   * This one IS stored, and the distinction matters. `pipActive` and the
+   * old `mode` were DERIVED from per-tree facts, which is why every tree
+   * writing one of them was a race (see the module docstring). This is
+   * neither derived nor guessed: it is the boolean a native call actually
+   * returned. `setVideoBounds` / `setSurfaceVisible` resolve `false` when
+   * there is no surface, when the caller is off the main thread, or when
+   * the mutation threw — and "we asked and it did not happen" is not
+   * something any pure function of app state can know.
+   *
+   * It has exactly ONE writer (`useVideoSurface`, mounted once, in
+   * `ActivityShell`), which is what makes it safe: the rule this file
+   * exists to enforce is about *multiple writers of a derived value*, not
+   * about storage as such.
+   *
+   * The reason the answer is needed: `usePresentation()` decides whether
+   * to render the video chrome. If it answered from the SESSION instead,
+   * an unpresentable surface (no mount, refused mutation) would still
+   * report 'expanded' and paint the full chrome over a window with no
+   * video in it. Reading the real outcome means that case falls back to
+   * 'mini' — chrome off, no lie on screen.
+   */
+  videoSurfacePresented: boolean;
+
+  /** Record the outcome of a native surface presentation attempt. */
+  setVideoSurfacePresented: (presented: boolean) => void;
 }
 
 export const usePresentationStore = create<PresentationState>()(set => ({
   pipActive: false,
   setPipActive: (pipActive: boolean) => set({pipActive}),
   togglePip: () => set(state => ({pipActive: !state.pipActive})),
+  videoSurfacePresented: false,
+  setVideoSurfacePresented: (videoSurfacePresented: boolean) =>
+    set({videoSurfacePresented}),
 }));
