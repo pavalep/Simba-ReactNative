@@ -2,8 +2,8 @@
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
-**Last updated:** 2026-10-12, session 3 start (refreshed against git)
-**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed. **F2b onward not started.**
+**Last updated:** 2026-10-12, session 4 (P0 host-Activity resolution + F2c orientation guard)
+**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · **F2c shipped** · P0 `setClassName` landmine removed · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed. **F2b/F2d/F2e not started.**
 **Confidence marks:** `DEVICE` = observed on device · `CODE` = read/verified in source · `PENDING` = assumed or planned
 
 ---
@@ -22,6 +22,7 @@
 | `5308019` | lib | Three comments that described code that did not exist |
 | `c1019ff` | lib | `seekable` re-seeded on `onFileLoaded` |
 | `bd699d4` | lib | `resolveStreamType`: `'episode'` and `'archive-video'` opened the wrong window |
+| `035f611` | lib | **P0**: notification/PiP host Activity is *resolved* from the manifest, not hardcoded |
 | `0827609` | app | Pin lib `1.13.3` |
 
 **Gate status:** app `tsc` 0 · `eslint --max-warnings 0` 0 · `jest` **82 suites / 1034 passed** ·
@@ -47,6 +48,40 @@ the captured frame is the gap, fix the capture timing.
 The gold play FAB on Home renders **on top of** the Explore Contents carousel, covering the Music
 card's artwork and label. Components located (`BrowseAllShelf.tsx` / `CategoryCard`); no layout
 change written yet.
+
+### OPEN — "Recently Played is empty after playing a movie" (reported 2026-10-12)
+
+**NOT yet root-caused. Do not guess a fix for this.** What was eliminated, by reading:
+
+| Suspect | Verdict | Evidence |
+|---|---|---|
+| Reader-side filter | **Ruled out** | `useHomeScreen.ts:319` is `recentFiles.slice(0, MAX)` — a slice, no filter |
+| Store write broken | **Ruled out** | `recentHistoryStore.ts:127-167` upsert is a plain prepend+evict |
+| Writer logic | **Ruled out** | `usePlaybackCheckpointSync.test.tsx` — 13 tests green |
+| Writer not mounted | **Ruled out** | `App.tsx:323`, inside `ActivityShell`, above the `isPlayerActivity` split |
+| Session never published | **Ruled out** | `useResumeAwarePlayerActivity.ts:212` calls `beginSession` before the launch |
+| `PlayerProvider` absent in root | **Ruled out** | `SimbaPlayer` mounts it (`hooks/SimbaPlayer.tsx:110`); `ActivityShell` is its child |
+| `durationMs` never observed | **Ruled out** | `'duration'` is in `OBSERVED_PROPERTIES` (`PlayerProvider.tsx:289`) *and* polled at 1 Hz |
+| Launch params stolen by MainActivity | **Ruled out** | `useLaunchParams` is mount-once + `isCurrentActivityPlayer()`-guarded |
+| **`isPlaying` never true in the hook's root** | **LEADING** | not yet proven |
+| **Two roots × two `PlayerProvider`s on one process-global mpv** | **STRUCTURAL** | see below |
+
+**The structural finding — this is why it belongs to the collapse, not to a ticket.**
+`usePlaybackCheckpointSync` runs in **two React roots simultaneously**. Each root mounts its
+**own `PlayerProvider`**, and each subscribes to the same **process-global** mpv engine
+(`PlaybackHost`). Every provider's cleanup calls `bridge.unobserveProperty(...)`, which is a
+*global* mpv operation, not a per-provider one. So two providers observe one engine, and either
+can unobserve the other's properties. This is not a bug that can be pinpointed by reading one
+file — it is a **class** of bug that only exists *because* there are two Activities. Collapsing
+to one root deletes the ambiguity rather than debugging around it.
+
+**Also note:** the existing writer suite mocks `useTransport` wholesale
+(`jest.mock('.../useTransport')`). It therefore proves the hook's logic and proves **nothing**
+about the transport values it will actually see. Any future fix here needs a test that drives
+the real `useTransport`, not another mocked one.
+
+**Deferred to F4** (which is where playback state has one owner): re-verify whether a row lands
+once there is a single root.
 
 ---
 
@@ -146,19 +181,52 @@ Highest-risk phase. **Exit gate is device PiP proof, not a green build.**
       — done in `9879a3e`, **verified in the regenerated merged manifest**, not by exit code.
       Two of the three manifest intermediates on disk were stale and still lacked the attribute,
       so the exit code would have lied.
+- [x] Guard the `USER_PORTRAIT` re-pin in `onResume` — **shipped 2026-10-12.**
+      The unconditional re-pin was a workaround for the two-Activity architecture: video
+      lived in `PlayerActivity`, so "MainActivity resumed" always meant "the user is
+      browsing". Once video plays *here* the same line fights the session's own
+      orientation and snaps a landscape film to portrait on return.
+      Now `onResume` restores portrait **only when mpv has no media loaded**, answered by
+      a live read through `PlaybackHost.handle()` → `MPVLib.nativeGetProperty(ptr,
+      "playback-state")`. `idle`/`stopped` ⇒ portrait; `loading`/`play`/`pause`/`eof-reached`
+      ⇒ leave the session's orientation alone. Read is never cached, and every failure
+      degrades to "no media", which is the conservative answer for this question: it can
+      restore portrait a moment early, but it can never strand a browsing app in landscape.
+      **Residual, owned by F4:** if a session ends *while backgrounded*, nothing restores
+      portrait until the next resume. F4's close path must own that.
 - [ ] Move the `MpvRenderView` mount from `PlayerActivity.kt:463-487` to `MainActivity`
       (`android.R.id.content`, index 0)
 - [ ] `ReactRootView` background transparent while video presented, opaque otherwise
       — **this is the explicit V11 failure mode, do not skip it**
-- [ ] Guard the `USER_PORTRAIT` re-pin in `onResume` (`MainActivity.kt:83`) so it does not snap a
-      landscape video back to portrait once video lives here
+- [x] **P0 — remove the `setClassName("com.simba.player.PlayerActivity")` landmine** (lib
+      `035f611`). `MediaPlaybackService` named its notification content intent *and* its
+      MediaSession activity by string literal. Nothing fails at compile time, so F5 would have
+      shipped a green build with two notification paths that throw `ActivityNotFoundException`
+      when tapped. Replaced with `hostPlayerActivityIntent()`: `ACTION_MAIN` +
+      `CATEGORY_LAUNCHER` + `setPackage`, i.e. "what does the launcher icon resolve to" — the
+      player host *is* the app entry point after the collapse. Unresolvable ⇒ logs and returns
+      null; the notification gets no content intent and `setSessionActivity(null)`, which is
+      its documented "no UI target" value. **Both sites share one builder** so the policy
+      cannot drift. *Not yet in the app — needs tag + publish + `npm install`.*
+- [x] **Research: is "full video in `MainActivity`, PiP in `PlayerActivity`" viable? — NO.**
+      PiP is not a destination you navigate to; the *top* activity enters it ("only the top
+      activity enters picture-in-picture", developer.android.com), so there is no separate PiP
+      activity to point at. Android's own recipe for this exact case is single-Activity +
+      `launchMode="singleTask"`: *"To ensure a single activity is used for video playback
+      requests and switched into or out of PiP mode as needed…"*. Google Developer Training
+      13.1: *"you usually implement the components of the media architecture in a video app
+      as a single Android Activity"* — listing PiP as a state of that one activity. YouTube
+      ships both the in-app Miniplayer *and* OS PiP from one app; different features, not
+      different Activities. AOSP names the split-Activity failure mode (the details page gets
+      put into PiP because it shares the task). And the SurfaceView constraint makes the split
+      impossible regardless: a Surface belongs to its window, so one video cannot render into
+      both activities. **Decision: the collapse stands.**
 - [ ] Port the PiP lifecycle: `setAutoEnterEnabled(true)` (API 31+) /
       `onUserLeaveHint` (API 26–30); `onPictureInPictureModeChanged` → re-apply bounds
 - [ ] Re-apply `setVideoBounds` on **every** layout pass, not once
 - [ ] Hide app chrome in PiP
 - [ ] `MainActivity` teardown on destroy uses the native rule (spec §4.1)
 - [ ] Video launch flag: in-app route vs `PlayerActivity` (default `PlayerActivity`)
-- [ ] **P0** repoint `MediaPlaybackService.kt:206` / `:395` `setClassName` at `MainActivity`
 - [ ] Gates: Kotlin, `tsc`/eslint/jest
 - [ ] **DEVICE:** video plays in `MainActivity`; home gesture → PiP with picture (not black);
       PiP close → teardown; rotate in fullscreen and in PiP

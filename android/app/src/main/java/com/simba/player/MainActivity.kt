@@ -10,20 +10,24 @@
 //     (the V11-era diagnostic from the PiP black-screen investigation)
 //   • Documented in [`SIMBA_PLAYER_MODULE_V12_DEBUG_LOG_CLEANUP.md`](file:///x:/Development/SIMBA/MOBILE_APP_REACT_NATIVE/md/SIMBA_PLAYER_MODULE_V12_DEBUG_LOG_CLEANUP.md) §3.1
 //
-// **V21 W4 P15 (2026-09-10) — half of the V11 surface retired:**
-//   • `MediaNotificationService.kt` (387 lines) — REMOVED. Manifest
-//     registration deleted. The library's `MediaPlaybackService` is
-//     now the sole foreground-notification owner.
-//   • `android:supportsPictureInPicture="true"` on MainActivity — REMOVED
-//     from the manifest. MainActivity has zero PiP consumers since
-//     Phase 44 retired the inline-mount hooks.
-//   • This file (MainActivity.kt) — REMAINS. It's the JS bundle host —
-//     deleting it would break the entire app launch flow.
-//   • Remaining V11 cleanup deferred to V22:
-//       - `PipActionReceiver`, `onPictureInPictureModeChanged`,
-//         `onBackPressed`-to-PiP exit handler are dead code (T15.06).
-//       - The `USE_DEDICATED_PLAYER_ACTIVITY = false` rollback path is
-//         itself likely dead (NowPlayingScreen.tsx has zero callers).
+// **V21 (2026-10-12) — this file is now the ONLY player activity.**
+//   The statements below described the V11/V12 rollback path. Two of them
+//   were still being read as current fact, and both were wrong:
+//   • `android:supportsPictureInPicture="true"` is **PRESENT** on
+//     MainActivity (re-added in 9879a3e). It was removed in Phase 44 and
+//     restored when the collapse to one Activity made MainActivity the
+//     PiP host. Android's guidance is that PiP is entered by the *top*
+//     activity, so once video plays here, this is the activity that must
+//     declare it — see `md/SIMBA_PLAYER_V21_SPECIFICATION.md`.
+//   • `onPictureInPictureModeChanged` / the PiP back handler below are NOT
+//     dead code. They only become the live path in this commit series, once
+//     MainActivity renders video. They are load-bearing.
+//   What actually is still deferred:
+//       - `USE_DEDICATED_PLAYER_ACTIVITY = false` rollback path references
+//         elsewhere point at a constant this file no longer has.
+//       - `NowPlayingScreen.tsx` is NOT dead (F5's earlier note claiming
+//         zero callers was wrong — it has one live call site, so deleting
+//         it breaks navigation).
 package com.simba.player
 
 import android.app.PictureInPictureParams
@@ -40,6 +44,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.simba.player.mpv.MPVLib
 import com.simba.player.mpv.MpvBridgeModule
 
 class MainActivity : ReactActivity() {
@@ -71,16 +76,50 @@ class MainActivity : ReactActivity() {
 
   override fun onResume() {
     super.onResume()
-    // v11 T8.2: re-pin to USER_PORTRAIT on every resume. This
-    // catches the "user went to home screen in landscape, then
-    // returned to the app" case — the manifest pin no longer
-    // exists, so the activity would otherwise stay in whatever
-    // orientation the user left it in. The JS layer's unmount
-    // cleanup (T8.1) also calls setOrientation('portrait') on
-    // close, but the resume path is the safety net for any
-    // other backgrounding flow (notification panel, recent
-    // apps, in-app modal that pauses the activity).
-    requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+    // V21 — this used to pin USER_PORTRAIT unconditionally on every
+    // resume. That was a workaround for the TWO-Activity architecture:
+    // video lived in `PlayerActivity`, so "MainActivity resumed" always
+    // meant "the user is browsing", and forcing portrait was harmless.
+    //
+    // Once video plays *here*, the same line becomes the opposite of
+    // correct — it fights the session's own orientation, so returning to
+    // the app snaps a landscape film to portrait mid-playback.
+    //
+    // Orientation during a session is owned by the session
+    // (`MpvBridgeModule.setOrientation`), so the only thing resume owes is
+    // the safety net: never come back to a landscape app that has nothing
+    // playing. That is answered by asking mpv, not by guessing from our own
+    // flags — `PlaybackHost` is the process-global owner of the libmpv
+    // handle and is documented as the read path for exactly this.
+    //
+    // `idle` and `stopped` are mpv's "no media" states. `loading`, `play`,
+    // `pause` and `eof-reached` all mean something is still loaded, so the
+    // session's orientation is left alone.
+    if (!isMediaLoaded()) {
+      requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+    }
+  }
+
+  /**
+   * Whether mpv currently has media loaded.
+   *
+   * A live read through [PlaybackHost], never cached — the same rule that
+   * file documents ("read it at the moment of use"). Everything that can go
+   * wrong here degrades to "no media", which is the conservative answer for
+   * this one question: it can restore portrait a moment early, but it can
+   * never leave a browsing app stuck in landscape.
+   */
+  private fun isMediaLoaded(): Boolean {
+    val ptr = PlaybackHost.handle()
+    if (ptr == 0L) return false
+    return try {
+      val state = MPVLib.nativeGetProperty(ptr, "playback-state").trim().trim('"')
+      state.isNotEmpty() && state != "idle" && state != "stopped"
+    } catch (e: Exception) {
+      // The native lease guard refuses calls against a destroyed engine;
+      // that is a normal outcome, not a crash.
+      false
+    }
   }
 
   override fun onDestroy() {
