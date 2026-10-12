@@ -2,8 +2,8 @@
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
-**Last updated:** 2026-10-12, session 4 (P0 host-Activity resolution + F2c orientation guard)
-**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · **F2c shipped** · P0 `setClassName` landmine removed · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed. **F2b/F2d/F2e not started.**
+**Last updated:** 2026-10-12, session 4 (P0 shipped as lib 1.13.4 + installed; F2c shipped; surface mount refactor landed)
+**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · **F2c shipped** · P0 shipped (`035f611` → npm **1.13.4** → app `d5b933b`, verified in `node_modules`) · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed · **surface mount refactored** (lib `366d0fd`). **F2b / F2d / F2e not started — F2b is now the next step.**
 **Confidence marks:** `DEVICE` = observed on device · `CODE` = read/verified in source · `PENDING` = assumed or planned
 
 ---
@@ -194,8 +194,20 @@ Highest-risk phase. **Exit gate is device PiP proof, not a green build.**
       restore portrait a moment early, but it can never strand a browsing app in landscape.
       **Residual, owned by F4:** if a session ends *while backgrounded*, nothing restores
       portrait until the next resume. F4's close path must own that.
-- [ ] Move the `MpvRenderView` mount from `PlayerActivity.kt:463-487` to `MainActivity`
-      (`android.R.id.content`, index 0)
+- [x] **Lib: give the surface a mount point at all** (lib `366d0fd`). `PlayerSurface.attach()`
+      was **never called by anything** — F1 shipped the registry, the four mutators, the bridge
+      methods and the tests with no caller, so `isSurfaceMounted()` answered `false` and all four
+      surface methods refused *on a fully working video path*. This is the exact jugaad shape the
+      series exists to kill: wired-looking from JS because every method exists, is typed and is
+      mocked in `jest.setup.ts`, while the one call that would make it true is absent. Tests that
+      mock the boundary cannot see it.
+      `PlayerSurface.mount(activity)` / `unmount(view)` are now the only sanctioned path, and
+      `PlayerActivity` was refactored onto them (its inline mount block deleted), so there is one
+      implementation of "where does the surface go". Mount leaves the view **GONE at 0x0**, so
+      showing video is always two explicit acts — size it, then show it — and no host can end up
+      with an accidental full-bleed surface over its own UI. Every refusal logs its reason.
+- [ ] Mount the surface in `MainActivity` — call `PlayerSurface.mount(this)` (no app-side view
+      construction). **Lib side is ready; this is the last blocker before F3.**
 - [ ] `ReactRootView` background transparent while video presented, opaque otherwise
       — **this is the explicit V11 failure mode, do not skip it**
 - [x] **P0 — remove the `setClassName("com.simba.player.PlayerActivity")` landmine** (lib
