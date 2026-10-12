@@ -1,6 +1,6 @@
 /// <reference types="node" />
 /**
- * `AudioChrome` — the mini bar / full player switch, and the close verb.
+ * `PlayerChrome` — the mini bar / full player switch, and the close verb.
  *
  * The close path is the important half. It is the one control that can
  * look like it worked while the native side kept playing: dismissing the
@@ -20,7 +20,7 @@
  * `VideoPlayer` -> `infrastructure/player/index.ts:69`. Metro's
  * ESM->CJS interop hands a cycle a partially-initialised module, which
  * surfaced on device as a redbox reading
- * "Property 'AudioChrome' doesn't exist".
+ * "Property 'PlayerChrome' doesn't exist".
  */
 
 import React from 'react';
@@ -28,7 +28,7 @@ import {render, fireEvent, act} from '@testing-library/react-native';
 
 const mockToastShow = jest.fn();
 
-jest.mock('../../../../src/components/feedback/Toast', () => ({
+jest.mock('../../../src/components/feedback/Toast', () => ({
   useToast: () => ({show: mockToastShow, hide: jest.fn()}),
 }));
 
@@ -103,7 +103,7 @@ const mockCommands = {
   setMuted: mockSetMuted,
 };
 
-jest.mock('../../../../src/navigation/navigationHelper', () => ({
+jest.mock('../../../src/navigation/navigationHelper', () => ({
   navigate: (...args: unknown[]) => mockNavigate(...args),
 }));
 
@@ -115,7 +115,7 @@ jest.mock('@react-native-community/slider', () => {
   };
 });
 
-jest.mock('../../../../src/infrastructure/player/useTransport', () => ({
+jest.mock('../../../src/infrastructure/player/useTransport', () => ({
   useTransport: () => ({state: mockTransportState, commands: mockCommands}),
   formatMsAsClock: (ms: number) => {
     const s = Math.max(0, Math.floor(ms / 1000));
@@ -123,7 +123,7 @@ jest.mock('../../../../src/infrastructure/player/useTransport', () => ({
   },
 }));
 
-jest.mock('../../../../src/theme', () => ({
+jest.mock('../../../src/theme', () => ({
   useTheme: () => ({
     colors: {
       accent: {gold: '#C9A84C'},
@@ -145,9 +145,9 @@ jest.mock('../../../../src/theme', () => ({
   }),
 }));
 
-import {AudioChrome} from '../../../../src/components/player/audio/AudioChrome';
-import {useNowPlayingStore} from '../../../../src/state/nowPlayingStore';
-import {useAudioPresentationStore} from '../../../../src/state/useAudioPresentationStore';
+import {PlayerChrome} from '../../../src/components/player/PlayerChrome';
+import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
+import {useAudioPresentationStore} from '../../../src/state/useAudioPresentationStore';
 
 /**
  * RNTL 14 returns a Promise from ct, and it MUST be awaited. An
@@ -180,15 +180,15 @@ beforeEach(async () => {
   });
 });
 
-describe('AudioChrome — visibility', () => {
+describe('PlayerChrome — visibility', () => {
   it('renders nothing when no track is loaded', async () => {
-    const {toJSON} = await render(<AudioChrome />);
+    const {toJSON} = await render(<PlayerChrome />);
     expect(toJSON()).toBeNull();
   });
 
   it('renders the full player when a session exists and mode is expanded', async () => {
     await seedSession();
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
     expect(getByTestId('audio-minimize')).toBeTruthy();
   });
 
@@ -197,8 +197,8 @@ describe('AudioChrome — visibility', () => {
     await act(async () => {
       useAudioPresentationStore.setState({mode: 'mini'});
     });
-    const {getByTestId, queryByTestId} = await render(<AudioChrome />);
-    expect(getByTestId('audio-mini-bar')).toBeTruthy();
+    const {getByTestId, queryByTestId} = await render(<PlayerChrome />);
+    expect(getByTestId('mini-player')).toBeTruthy();
     expect(queryByTestId('audio-minimize')).toBeNull();
   });
 
@@ -207,7 +207,7 @@ describe('AudioChrome — visibility', () => {
   it('renders nothing inside the player Activity', async () => {
     await seedSession();
     mockIsPlayerActivity.mockReturnValue(true);
-    const {toJSON} = await render(<AudioChrome />);
+    const {toJSON} = await render(<PlayerChrome />);
     expect(toJSON()).toBeNull();
   });
 
@@ -216,21 +216,21 @@ describe('AudioChrome — visibility', () => {
   // this gate exists for; it was caught on the first device run.
   it('renders nothing for a VIDEO launch, even though a session exists', async () => {
     await seedSession('video');
-    const {toJSON} = await render(<AudioChrome />);
+    const {toJSON} = await render(<PlayerChrome />);
     expect(toJSON()).toBeNull();
   });
 
   it('renders for an AUDIO launch', async () => {
     await seedSession('audio');
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
     expect(getByTestId('audio-minimize')).toBeTruthy();
   });
 });
 
-describe('AudioChrome — close is a real teardown', () => {
+describe('PlayerChrome — close is a real teardown', () => {
   it('calls the native stopPlayback primitive', async () => {
     await seedSession();
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent.press(getByTestId('audio-close'));
@@ -241,7 +241,7 @@ describe('AudioChrome — close is a real teardown', () => {
 
   it('does NOT fall back to the lib stop command, which leaves the session posted', async () => {
     await seedSession();
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent.press(getByTestId('audio-close'));
@@ -255,7 +255,7 @@ describe('AudioChrome — close is a real teardown', () => {
 
   it('clears the session only after the native stop succeeded', async () => {
     await seedSession();
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent.press(getByTestId('audio-close'));
@@ -271,7 +271,7 @@ describe('AudioChrome — close is a real teardown', () => {
     mockStopPlayback.mockImplementation(() => {
       throw new Error('service refused to stop');
     });
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent.press(getByTestId('audio-close'));
@@ -290,7 +290,7 @@ describe('AudioChrome — close is a real teardown', () => {
     await act(async () => {
       useAudioPresentationStore.setState({mode: 'mini'});
     });
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent.press(getByTestId('mini-close'));
@@ -300,16 +300,16 @@ describe('AudioChrome — close is a real teardown', () => {
   });
 });
 
-describe('AudioChrome — minimize does not touch playback', () => {
+describe('PlayerChrome — minimize does not touch playback', () => {
   it('collapses to the mini bar without stopping anything', async () => {
     await seedSession();
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent.press(getByTestId('audio-minimize'));
     });
 
-    expect(getByTestId('audio-mini-bar')).toBeTruthy();
+    expect(getByTestId('mini-player')).toBeTruthy();
     expect(mockStopPlayback).not.toHaveBeenCalled();
     expect(mockCommandsStop).not.toHaveBeenCalled();
     expect(useNowPlayingStore.getState().current).not.toBeNull();
@@ -323,7 +323,7 @@ describe('AudioChrome — minimize does not touch playback', () => {
  * verb, because a button that renders and does nothing is the precise
  * definition of the jugaad this audit is removing.
  */
-describe('AudioChrome — volume, mute and queue', () => {
+describe('PlayerChrome — volume, mute and queue', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockTransportState.isMuted = false;
@@ -332,7 +332,7 @@ describe('AudioChrome — volume, mute and queue', () => {
 
   it('renders all three controls on the expanded audio player', async () => {
     await seedSession('audio');
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     expect(getByTestId('audio-mute')).toBeTruthy();
     expect(getByTestId('audio-queue')).toBeTruthy();
@@ -341,7 +341,7 @@ describe('AudioChrome — volume, mute and queue', () => {
 
   it('mute mutes — it does not stop', async () => {
     await seedSession('audio');
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent.press(getByTestId('audio-mute'));
@@ -356,7 +356,7 @@ describe('AudioChrome — volume, mute and queue', () => {
   it('unmutes when already muted', async () => {
     mockTransportState.isMuted = true;
     await seedSession('audio');
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent.press(getByTestId('audio-mute'));
@@ -367,7 +367,7 @@ describe('AudioChrome — volume, mute and queue', () => {
 
   it('the queue minimizes first, then navigates with from:audio', async () => {
     await seedSession('audio');
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent.press(getByTestId('audio-queue'));
@@ -375,7 +375,7 @@ describe('AudioChrome — volume, mute and queue', () => {
 
     // Navigating without minimizing would push a route BEHIND an opaque
     // full-screen player, so the tap would look broken.
-    expect(getByTestId('audio-mini-bar')).toBeTruthy();
+    expect(getByTestId('mini-player')).toBeTruthy();
     expect(mockNavigate).toHaveBeenCalledWith('Queue', {from: 'audio'});
   });
 
@@ -383,7 +383,7 @@ describe('AudioChrome — volume, mute and queue', () => {
     mockTransportState.isMuted = true;
     mockTransportState.volume = 0;
     await seedSession('audio');
-    const {getByTestId} = await render(<AudioChrome />);
+    const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
       fireEvent(getByTestId('audio-volume'), 'valueChange', 40);
@@ -397,12 +397,12 @@ describe('AudioChrome — volume, mute and queue', () => {
 
   it('does not offer queue or mute on a video session', async () => {
     await seedSession('video');
-    const {queryByTestId} = await render(<AudioChrome />);
+    const {queryByTestId} = await render(<PlayerChrome />);
 
     // Video renders no audio chrome at all, so these cannot appear.
     expect(queryByTestId('audio-mute')).toBeNull();
     expect(queryByTestId('audio-queue')).toBeNull();
     expect(queryByTestId('audio-minimize')).toBeNull();
-    expect(queryByTestId('audio-mini-bar')).toBeNull();
+    expect(queryByTestId('mini-player')).toBeNull();
   });
 });

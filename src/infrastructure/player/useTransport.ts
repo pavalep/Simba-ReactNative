@@ -363,15 +363,23 @@ export interface TransportCommands {
    * engine still advancing — with no window left to stop it. Users
    * described it as "it doesn't actually close".
    *
-   * ## Why video stops rather than continuing in the background
+   * ## Why this is a STOP and not a minimise (revised in V21 F4)
    *
-   * Background continuation is the right behaviour for AUDIO, where a
-   * mini bar is always on screen to stop it again (Spotify, Apple Music,
-   * Plex). It is not available for VIDEO: W6.0 removed the mini dock, so
-   * dismissing the Activity leaves no surface behind. The only ways to
-   * keep playing are "no window to stop it" or PiP, which is a separate,
-   * explicitly-chosen verb. Netflix, Plex and VLC all treat back from a
-   * video as a stop for exactly this reason.
+   * This verb used to argue that video could not continue in the
+   * background, because "W6.0 removed the mini dock, so dismissing the
+   * Activity leaves no surface behind". F4 adds the dock — a `MiniPlayer`
+   * holding live video — so that argument no longer holds, and the verb
+   * back-press used to reach it no longer does either: back now minimises.
+   *
+   * It is still correct for what DOES reach it. A dock's X means "stop
+   * this", and so does the audio player's close. Spotify, Apple Music,
+   * Plex, YouTube and VLC all treat an explicit close as ending playback
+   * rather than hiding the controls, and background continuation is still
+   * right for AUDIO where the dock is always on screen to stop it again.
+   * So: back navigates, X stops, and neither is reachable as the other.
+   *
+   * PiP remains the separately-chosen way to keep watching while doing
+   * something else.
    *
    * ## The order is the contract
    *
@@ -380,9 +388,14 @@ export interface TransportCommands {
    * surface while the engine still held a decoded frame, and would leave
    * `ACTION_STOP` racing the Activity's own teardown.
    *
-   * Do NOT implement this as `setPresentation('mini')`. That method was
-   * removed on purpose: the host immediately overwrites such a write,
-   * so it is a control that lies.
+   * The paragraph this replaces warned against implementing this as
+   * `setPresentation('mini')`, because "the host immediately overwrites
+   * such a write, so it is a control that lies". That remains true of the
+   * OLD host. The value written today is `videoPresentation`, a real input
+   * to the derived mode with discrete event writers, so minimising is a
+   * different verb rather than a broken stand-in for stopping — and the
+   * two are no longer interchangeable, which is the whole reason they are
+   * separate methods.
    */
   exitPlayer(): void;
 

@@ -315,28 +315,34 @@ const VideoPlayerChrome: React.FC = () => {
 
   // Hardware back must be the SAME verb as the header's back chevron.
   //
-  // Without this, RN's default pops `PlayerActivity` directly and
-  // `exitPlayer()` never runs — so the window closed while the
-  // process-global engine kept playing, with the notification still
-  // posted and no window left to stop it. The header button and the
-  // hardware key were two different behaviours for one user intent.
+  // V21 F3/F4: both are now `setVideoPresentation('mini')`. The reasoning
+  // below records what the two verbs used to be, because the difference is
+  // exactly what F4 changed.
   //
-  // Registered only while expanded, so the background `MainActivity`
-  // root (which also mounts this component) does not swallow back
-  // presses that belong to the navigation stack. Returning `true`
-  // consumes the event so the OS does not also pop.
-  const {commands} = useTransport();
+  // Before F3, back had to reach the same verb as the header button, because
+  // RN's default popped `PlayerActivity` directly: the window closed while
+  // the process-global engine kept playing, with the notification posted and
+  // no window left to stop it. Two behaviours for one user intent.
+  //
+  // After F3 there is no window to pop — video plays in `MainActivity` — so
+  // the OS default now navigates the app's own back stack. That is correct
+  // and must be intercepted, or back from a fullscreen video silently lands
+  // the user on the previous screen with the video still playing fullscreen
+  // underneath.
+  //
+  // Registered only while expanded, so back from the browsing stack — or
+  // from the mini dock, where navigation is what the user means — is not
+  // swallowed. Returning `true` consumes the event so the OS does not also
+  // navigate.
+  const {setVideoPresentation} = usePresentation();
   React.useEffect(() => {
     if (!presentation.isExpanded) return undefined;
-    const sub = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        commands.exitPlayer();
-        return true;
-      },
-    );
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setVideoPresentation('mini');
+      return true;
+    });
     return () => sub.remove();
-  }, [commands, presentation.isExpanded]);
+  }, [setVideoPresentation, presentation.isExpanded]);
 
   if (!presentation.isExpanded) {
     return null;

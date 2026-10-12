@@ -26,17 +26,26 @@
  * runs in its own Android activity (`PlayerActivity`,
  * `launchMode="singleTask"`), and V6.0 removed the mini dock.
  * `usePresentationStore` persists only `pipActive`; `'mini' | 'expanded'`
- * are DERIVED at read time from which activity this React tree is
- * mounted in. There is therefore no smaller player to minimize *to* —
- * dismissing the activity IS the transition, and the mode re-derives on
- * its own.
+ * are DERIVED at read time.
+ *
+ * ## V21 F4 — back minimises instead of stopping
+ *
+ * The paragraph this replaced argued that there was "no smaller player to
+ * minimize *to*", because W6.0 had removed the dock, so dismissing the
+ * Activity WAS the transition. It also recorded why the control did not call
+ * `setPresentation('mini')`: the host overwrote such a write immediately, so
+ * it was "a control that lies".
+ *
+ * Both statements were true of the code and false about the product. F4 adds
+ * the dock — a `MiniPlayer` that keeps live video on screen — so a smaller
+ * presentation exists, and the write is no longer overwritten because the
+ * value it writes (`videoPresentation`) is now a real input to the mode
+ * rather than a per-tree reconciliation. Back minimises; the dock's X is the
+ * stop.
  *
  * Three buttons for one effect would be three names for one action, and
- * one of them would inevitably become a no-op. The single control calls
- * the lib's real `commands.exitPipAndFinish()` via the facade's
- * `exitPlayer()`. It deliberately does NOT call `setPresentation('mini')`
- * — that method was removed because the host immediately overwrites
- * such a write, which makes it a control that lies.
+ * one of them would inevitably become a no-op — so there is still exactly
+ * one back control, and it now performs the one verb that is true.
  *
  * ## The lock affordance
  *
@@ -107,7 +116,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
-import {useReduceMotion, useTransport} from '../../../../infrastructure/player';
+import {useReduceMotion, usePresentation, useTransport} from '../../../../infrastructure/player';
 import {PlayerControl, CONTROL_ICON_SIZE_COMPACT} from '../PlayerControl/PlayerControl';
 import {BookmarkControl} from '../BookmarkControl/BookmarkControl';
 
@@ -127,6 +136,7 @@ export const RISE_PX = 10;
 
 export const VideoTitleOverlay: React.FC = () => {
   const {state, commands} = useTransport();
+  const {setVideoPresentation} = usePresentation();
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
@@ -164,8 +174,21 @@ export const VideoTitleOverlay: React.FC = () => {
   }, [title, opacity, rise, reduceMotion]);
 
   const onBack = React.useCallback(() => {
-    commands.exitPlayer();
-  }, [commands]);
+    // V21 F4: back MINIMISES, it does not stop.
+    //
+    // This used to be `commands.exitPlayer()`, and the reasoning written
+    // next to it was explicit: "W6.0 removed the mini dock, so dismissing
+    // the Activity leaves no surface behind" — background continuation was
+    // therefore unavailable for video, and Netflix/Plex/VLC were cited for
+    // treating back-from-video as a stop.
+    //
+    // F4 is what invalidates that paragraph: there IS a dock now, with live
+    // video in it. YouTube's miniplayer, Plex's mini player and VLC's
+    // minimise all take back-to-minimise while keeping playback, precisely
+    // because a control to return to exists. Stopping stays reachable, on
+    // the dock's X — one verb per control, as before.
+    setVideoPresentation('mini');
+  }, [setVideoPresentation]);
 
   const onToggleLock = React.useCallback(() => {
     commands.setOrientationLock(!state.isOrientationLocked);

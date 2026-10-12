@@ -20,6 +20,7 @@ import type {
 } from '@simba-dev/react-native-media-player';
 import {useNowPlayingStore} from '../../state/nowPlayingStore';
 import {useAudioPresentationStore} from '../../state/useAudioPresentationStore';
+import {usePresentationStore} from '../../state/usePresentationStore';
 // Imported from the concrete store modules rather than the `state`
 // barrel: `resumePolicy` already depends on those two types, and the
 // barrel re-exports enough of the app that routing through it here
@@ -165,6 +166,9 @@ export function usePlayerActivity(
   const beginSession = useNowPlayingStore(s => s.begin);
   const endSession = useNowPlayingStore(s => s.end);
   const expandAudioPlayer = useAudioPresentationStore(s => s.expand);
+  const expandVideo = usePresentationStore(s =>
+    s.setVideoPresentation,
+  );
   const contextPrompt = React.useContext(ResumePromptContext);
   const promptResume = options.promptResume ?? contextPrompt;
 
@@ -262,6 +266,20 @@ export function usePlayerActivity(
           expandAudioPlayer();
         }
 
+        // V21 F4 — and a video launch asks for the fullscreen
+        // presentation, by the same rule.
+        //
+        // Without this, tapping a film while a previous film sat in the
+        // dock would open it minimised: `videoPresentation` survives the
+        // session, so the new video would inherit the old one's request and
+        // land in a 44pt dock instead of opening fullscreen the way every
+        // video app does. It is a discrete event write, not an effect that
+        // depends on the value it writes — the W6.0 shape is a per-tree
+        // reconciliation, and this is neither.
+        if (bridgeOpts.type === 'video') {
+          expandVideo('expanded');
+        }
+
         // V21 F3 — video does NOT launch an Activity any more.
         //
         // `openWithResume` → `bridge.openPlayer` → `startActivity` is the
@@ -301,6 +319,7 @@ export function usePlayerActivity(
       beginSession,
       endSession,
       expandAudioPlayer,
+      expandVideo,
       promptResume,
     ],
   );

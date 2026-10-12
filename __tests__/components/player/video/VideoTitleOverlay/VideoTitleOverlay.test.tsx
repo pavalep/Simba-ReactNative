@@ -32,6 +32,7 @@ import {
 } from '../../../../helpers/transportState';
 import type {TransportState} from '../../../../../src/infrastructure/player';
 import {VideoTitleOverlay, FADE_IN_MS} from '../../../../../src/components/player/video/VideoTitleOverlay/VideoTitleOverlay';
+import {usePresentationStore} from '../../../../../src/state/usePresentationStore';
 
 // ── Theme: real dark palette (the app's default lane) ──────────────────
 jest.mock('../../../../../src/theme', () => {
@@ -299,28 +300,39 @@ describe('VideoTitleOverlay', () => {
     );
   });
 
-  // ── V19 W6.4 — the back affordance ────────────────────────────────────
+  // ── V21 F4 — the back affordance ──────────────────────────────────────
+  //
+  // This verb CHANGED in F4, and the two tests below are the record of
+  // why. Both previously asserted `exitPlayer` — stop the engine and
+  // finish the Activity — justified by "there is no smaller player to
+  // minimise to". F4 adds the dock, so back minimises and stopping stays
+  // on the dock's X.
 
-  it('leaves the player via the real lib dismiss command, not a mode write', async () => {
-    // `exitPipAndFinish` is the lib's own primitive (exits PiP, finishes
-    // PlayerActivity, tears down the SurfaceView). The facade maps it
-    // 1:1 as `exitPlayer`.
+  it('minimises rather than stopping, because the dock exists', async () => {
+    // Asserted on the REAL store, not a mocked setter: the value is the
+    // outcome `useVideoSurface` reads to decide between filling the window
+    // and placing the surface in the dock. Asserting a mock call would
+    // pass even if the store write were dropped.
+    usePresentationStore.getState().setVideoPresentation('expanded');
     mockTransport.state = makeTransportState({title: 'Clip'});
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
+
     await fireEvent.press(getByTestId('video-header-back'));
-    expect(mockTransport.commands.exitPlayer).toHaveBeenCalledTimes(1);
+
+    expect(usePresentationStore.getState().videoPresentation).toBe('mini');
   });
 
-  it('does not fall back to any no-op when dismissing', async () => {
-    // The W5 reaudit removed this exact shape for `enterPip`: a
-    // `(commands as unknown as {...})` cast that always evaluated to
-    // undefined, so the button rendered inert. `exitPlayer` is a real
-    // member of `TransportCommands`, so the compiler already forbids
-    // the cast — this test pins that the press reaches it at all.
+  it('does not stop playback when leaving the player', async () => {
+    // The failure this pins: back reaching the stop verb. It played
+    // through — one press and the video ends, with no dock to restart it
+    // from — which is exactly what the user does not mean by "go back".
+    usePresentationStore.getState().setVideoPresentation('expanded');
     mockTransport.state = makeTransportState({title: 'Clip'});
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
+
     await fireEvent.press(getByTestId('video-header-back'));
-    expect(mockTransport.commands.exitPlayer).toHaveBeenCalled();
+
+    expect(mockTransport.commands.exitPlayer).not.toHaveBeenCalled();
     expect(mockTransport.commands.close).not.toHaveBeenCalled();
   });
 

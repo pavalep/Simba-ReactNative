@@ -26,7 +26,7 @@ import {
 } from './src/infrastructure/player';
 import {useConfirmDialog} from './src/components/core/Dialog';
 import {VideoPlayer} from './src/components/player/video/VideoPlayer';
-import {AudioChrome} from './src/components/player/audio/AudioChrome';
+import {PlayerChrome} from './src/components/player/PlayerChrome';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {QueryProvider} from './src/app/QueryProvider';
 import {SimbaStatusBar} from './src/components/StatusBar';
@@ -356,15 +356,16 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
             useIsPlayerActivity(). Sibling of SimbaPlayerRoot, never a
             child: see the docstring. */}
         <VideoPlayer />
-        {/* (1b) Audio chrome — the mini bar / full player for the audio
-            lane. Audio no longer opens a window (lib 1.13.0), so this is
-            the ONLY thing the user sees for it. Sibling of VideoPlayer
-            and below it in z-order, because when the video window is up
-            the audio chrome self-gates off via `useIsPlayerActivity()`.
-            It renders nothing when no track is loaded — see
-            `AudioChrome`'s note on why that is `useNowPlayingStore`'s
-            job and not a third presentation mode. */}
-        <AudioChrome />
+        {/* (1b) Player chrome — the shared dock / full player. Audio no
+            longer opens a window (lib 1.13.0) and video no longer opens a
+            second Activity (V21 F3), so both lanes' in-app chrome lives
+            here. Sibling of VideoPlayer and below it in z-order, because
+            when video is expanded `VideoPlayer` owns the presentation and
+            this renders nothing for that lane. It renders nothing when no
+            media is loaded — see `PlayerChrome`'s note on why that is
+            `useNowPlayingStore`'s job and not a third presentation
+            mode. */}
+        <PlayerChrome />
         {/* W7.6 — `<VideoMiniPlayer />` used to be mounted here. It was a
             W0 stub whose whole body was `return null`, so it rendered
             nothing at all: a live import and a live element in the tree

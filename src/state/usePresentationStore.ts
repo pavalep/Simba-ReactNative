@@ -89,6 +89,39 @@ import {create} from 'zustand';
  */
 export type PresentationMode = 'mini' | 'expanded' | 'pip';
 
+/**
+ * What the APP has asked of the video, independently of whether the
+ * surface managed to do it.
+ *
+ * This is a request, not an outcome, and keeping the two apart is the whole
+ * point. `videoSurfacePresented` below records what the native call actually
+ * returned; this records what the user asked for. Collapsing them into one
+ * value is what makes "the app claims a video is on screen when nothing is"
+ * impossible — and it is also what lets a minimise request that the surface
+ * cannot honour fall back to a truthful 'mini' rather than being overwritten
+ * by the failure.
+ */
+export type VideoPresentation = 'expanded' | 'mini';
+
+/**
+ * The mini player's live on-screen rect, in WINDOW pixels.
+ *
+ * `setVideoBounds` places the native `SurfaceView` inside the host
+ * container, not inside a React node, so a React-relative layout value is
+ * not enough — the surface needs window coordinates. `measureInWindow` is
+ * what produces them, and this is where the result is published.
+ *
+ * One writer (the `MiniPlayer`'s own layout pass), one reader
+ * (`useVideoSurface`). It is a measurement, not a derivation: no pure
+ * function of app state can know where a view ended up on screen.
+ */
+export interface VideoMiniRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface PresentationState {
   /**
    * Whether the PiP window is currently up.
@@ -137,6 +170,37 @@ export interface PresentationState {
 
   /** Record the outcome of a native surface presentation attempt. */
   setVideoSurfacePresented: (presented: boolean) => void;
+
+  /**
+   * V21 F4 — has the app been asked to show video fullscreen or minimised?
+   *
+   * Written by discrete events only: the launch seam (every video launch
+   * resets it to `'expanded'`, mirroring how it already calls
+   * `expandAudioPlayer()` for audio), the minimise verb, and tapping the
+   * mini bar. Never written from an effect that depends on the value it
+   * writes — that is the W6.0 ping-pong described in the module docstring,
+   * and it shipped a black player screen. One tree writes it after F5, and
+   * even before that, the writers are user/launch events rather than
+   * per-tree reconcilers.
+   */
+  videoPresentation: VideoPresentation;
+
+  /** Record the requested video presentation. */
+  setVideoPresentation: (presentation: VideoPresentation) => void;
+
+  /**
+   * The mini player's measured window rect, or `null` when it has not been
+   * measured (or has been torn down).
+   *
+   * `null` is the honest answer for "we cannot place the surface", and
+   * `useVideoSurface` refuses to reveal a surface it cannot place — a
+   * 0x0 `SurfaceView` is an invalid libmpv render target, so guessing here
+   * would trade a missing mini player for a black rectangle.
+   */
+  videoMiniRect: VideoMiniRect | null;
+
+  /** Publish (or clear, with `null`) the mini player's measured rect. */
+  setVideoMiniRect: (rect: VideoMiniRect | null) => void;
 }
 
 export const usePresentationStore = create<PresentationState>()(set => ({
@@ -146,4 +210,10 @@ export const usePresentationStore = create<PresentationState>()(set => ({
   videoSurfacePresented: false,
   setVideoSurfacePresented: (videoSurfacePresented: boolean) =>
     set({videoSurfacePresented}),
+  videoPresentation: 'expanded',
+  setVideoPresentation: (videoPresentation: VideoPresentation) =>
+    set({videoPresentation}),
+  videoMiniRect: null,
+  setVideoMiniRect: (videoMiniRect: VideoMiniRect | null) =>
+    set({videoMiniRect}),
 }));

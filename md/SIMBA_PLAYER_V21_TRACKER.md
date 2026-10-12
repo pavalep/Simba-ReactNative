@@ -2,9 +2,89 @@
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
-**Last updated:** 2026-10-12, session 6 (PiP sourceRectHint; F3 groundwork: LaunchParams.requestId + session startPositionMs)
-**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · **F2c shipped** · **F2b shipped** (app `87e9f12`) · **F2d shipped** (lib `001f352`) · P0 shipped (`035f611` → npm **1.13.4** → app `d5b933b`, verified in `node_modules`) · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed · **surface mount refactored** (lib `366d0fd`) · **F3 confirmed unblocked with no new lib API** (`commands.loadFile` already loads without an Activity). **Next: F3. F2e, F4, F5 not started.**
+**Last updated:** 2026-10-14, session 7 (F3 shipped in-window launch; F4 dock shipped; lib 1.13.8 window-pixel bounds)
+**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · **F2c shipped** · **F2b shipped** (app `87e9f12`) · **F2d shipped** (lib `001f352`) · P0 shipped (`035f611` → npm **1.13.4** → app `d5b933b`, verified in `node_modules`) · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed · **surface mount refactored** (lib `366d0fd`) · **F3 SHIPPED** (app `756d372`) · **F4 dock shipped** (lib `344d29c` = npm **1.13.8**). **F2e: reclassified — see session 7. Next: F5.**
 **Confidence marks:** `DEVICE` = observed on device · `CODE` = read/verified in source · `PENDING` = assumed or planned
+
+---
+
+## Session 7 (2026-10-14) — F3 shipped, F4 dock shipped, F2e reclassified
+
+### What shipped
+
+| Commit | Repo | What |
+|---|---|---|
+| `756d372` | app | **F3** — video launches in-window. `useVideoSurface` (single owner of surface presentation) + `useInWindowVideoLaunch`; the seam no longer calls `openWithResume` for video. `videoSurfacePresented` stored, not derived. |
+| `344d29c` | lib | **F4 enabler** — `setVideoBounds` takes **window** pixels and converts to content-relative margins natively. npm **1.13.8**. |
+
+### F2e reclassified — it was never a bug in the path it was written for
+
+F2e asked for bounds to be re-applied on every layout pass so the surface follows rotation. Read
+against the code, that premise does not hold for the fullscreen path:
+
+- `fillBounds()` sets `MATCH_PARENT`, so Android's own layout pass keeps the surface correct across
+  rotation with no help.
+- `MainActivity` declares `configChanges="…|orientation|screenLayout|screenSize|smallestScreenSize"`,
+  so the Activity is **not** recreated on rotation — there is no remount to survive.
+
+So the expanded path needed nothing. The requirement became real the moment F4 introduced
+`setVideoBounds` (explicit pixels, which do *not* track the parent), and it is satisfied there:
+
+> **The dock's `onLayout`, not the slot's.** The bar is `left: 0, right: 0`, so its width changes on
+> rotation. The slot is a fixed-size square whose own layout does **not** change — so a slot-level
+> `onLayout` would never fire and the surface would stay at portrait coordinates.
+> `__tests__/components/player/mini/MiniPlayer.test.tsx` pins this; mutation-checked (removing
+> `onLayout={onBarLayout}` kills exactly that test).
+
+### The one thing in F4 that was not obvious, and cost the most thought
+
+`PlayerSurface.mount` adds the `MpvRenderView` at index 0 of `android.R.id.content`, and a
+`SurfaceView` with default z-order is a separate SurfaceFlinger layer composited **behind** the
+window. Therefore **every opaque React pixel between the camera and the video hides it**, and
+reordering the view hierarchy cannot change that — the layer is behind the window either way.
+
+That rules out the obvious design and rules out z-order games entirely: `setZOrderMediaOverlay`
+would lift it, and is forbidden because PiP's VRI compositor samples the activity window and would
+no longer see the video — the documented reason `MpvRenderView` keeps default z-order. A
+`TextureView` would allow both and is rejected for the same reason.
+
+So the dock is transparent and rebuilt from **three opaque plates around a transparent rectangle**,
+and both the hole and the rect handed to `setVideoBounds` come from **one `measureInWindow` pass**.
+That single-source property is the point: they cannot disagree, so the video cannot land beside its
+own hole. Constants computed from the stylesheet would be one refactor away from drifting.
+
+**Known cosmetic limitation:** the video thumbnail is square, because a `SurfaceView` cannot round
+its own corners and a rounded frame drawn around a rectangular video would be a lie.
+
+### F4 verb changes, and the stale reasoning that had to be corrected
+
+Back from a video used to **stop** playback. Its docblock justified that with "W6.0 removed the mini
+dock, so dismissing the Activity leaves no surface behind", citing Netflix/Plex/VLC. F4 removes that
+premise. Back now minimises; stopping lives on the dock's X. Three places asserted or documented the
+old contract and all three were updated rather than left to rot:
+
+- `VideoTitleOverlay` docblock claimed it "deliberately does NOT call `setPresentation('mini')`".
+- `useTransport.exitPlayer` docblock ("Why video stops rather than continuing in the background").
+- `VideoPlayerChrome` back handler (and it now intercepts RN's navigation, since there is no
+  window left to pop).
+
+### Regression caught by writing the tests
+
+`usePresentation().isExpanded` was briefly computed as its own expression rather than read off
+`mode`, so PiP reported `expanded` — the PiP branch lived in `mode` only and the parallel expression
+silently disagreed. Both flags are read off `mode` again. This is the W6.0 shape in miniature: two
+expressions for one fact.
+
+### Gates
+
+- App: `tsc` 0 · `eslint --max-warnings 0` 0 · **84 suites / 1057 passed / 1 todo**.
+- Lib: `tsc` 0 · **13 suites / 231 tests** · `compileDebugKotlin` BUILD SUCCESSFUL
+  (compiled from the working copy via the example junction — verified in the warning paths).
+
+### Still not device-verified
+
+Everything above is `CODE`. PiP, the dock, next/prev with a real playlist and Bluetooth remain
+unproven on hardware, and a green build was exactly what the V11 black screen had too.
 
 ---
 
@@ -303,26 +383,41 @@ background over the surface — that is exactly the V11 mistake.
 
 ---
 
-### F3 — Video as an in-app route — NOT STARTED
+### F3 — Video as an in-app route — CODE SHIPPED, device verification PENDING
 
-- [ ] `VideoPlayer` becomes a route in the existing navigation stack
-- [ ] `useResumeAwarePlayerActivity` seam stops calling `openPlayer` for video
-- [ ] Back handler: minimise, not stop — until MiniPlayer exists (F4) back must still
-      stop, otherwise there is a state with no UI
+- [ ] `VideoPlayer` becomes a route in the existing navigation stack — **deliberately not done.**
+      It is mounted as an always-present sibling of `AppContent` and gated on
+      `presentation.isExpanded`. A route would put it inside the navigator, which owns back
+      navigation; as a sibling it owns the back press itself while expanded and steps aside
+      otherwise. Worth revisiting if the chrome ever needs to participate in a stack transition.
+- [x] `useResumeAwarePlayerActivity` seam stops calling `openPlayer` for video
+- [x] Back handler: minimise, not stop — enabled by F4's dock. Before the dock existed this
+      *had* to stop, because minimising to a state with no UI is worse than stopping. Mutation-
+      checked: disabling the short-circuit kills exactly the 2 video tests in
+      `useResumeAwarePlayerActivity.test.tsx`.
 - [ ] Deep links / "open with" still reach video (`MainActivity` already has the
       shared-file intent filters at `AndroidManifest.xml:75-76`)
 - [ ] **DEVICE:** play → back → home → PiP → expand → back, all sane
 
 ---
 
-### F4 — One `MiniPlayer`, both lanes — NOT STARTED
+### F4 — One `MiniPlayer`, both lanes — CODE SHIPPED, device verification PENDING
 
-- [ ] Extend `AudioMiniBar` to render video (artwork → live surface rect)
-- [ ] `setVideoBounds` driven by the mini player's measured layout
-- [ ] Same component, same `exitPlayer`, same teardown — **no lane branch duplicating controls**
-- [ ] MiniPlayer X: engine + service + notification, all of it
-- [ ] Audio↔video handoff does not restart the engine
-- [ ] **DEVICE:** audio→video→audio handoff; expand/collapse; X during playback
+- [x] `AudioMiniBar` folded into `MiniPlayer` (and deleted). The lanes differ only in the leading
+      square: artwork for audio, live video for video. One set of play/pause, close and progress
+      controls — no lane branch duplicating them.
+- [x] `setVideoBounds` driven by the mini player's measured layout — the **bar's** `onLayout`, not
+      the slot's. See session 7: a fixed-size slot's layout does not change on rotation, so a
+      slot-level `onLayout` would never fire and the surface would stay at portrait coordinates.
+- [x] Same component, same close verb, same teardown. `PlayerChrome` owns the switch; `AudioChrome`
+      renamed because it is no longer audio-only.
+- [x] MiniPlayer X: engine + service + notification, all of it (`stopPlayback` → `endSession`).
+- [ ] Audio↔video handoff does not restart the engine — not built. Both lanes share one
+      process-global mpv handle, so this is a device-matrix question, not a code change.
+- [ ] **DEVICE:** audio→video→audio handoff; expand/collapse; X during playback; dock across rotation
+- [ ] `setAutoEnterEnabled(true)` — **held deliberately.** A product-visible behaviour change that
+      cannot be verified without a device.
+- [ ] Portrait restore when a session ends while the app is backgrounded (still owned by F4).
 
 ---
 

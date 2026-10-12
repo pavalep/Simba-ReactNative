@@ -25,6 +25,24 @@
  * and this hook publishes that `false`. `usePresentation()` then reports
  * 'mini' and the video chrome renders `null` — rather than the app claiming a
  * video is on screen when nothing is.
+ *
+ * ## Where the surface goes, and why this hook decides
+ *
+ * V21 F4: placement depends on the requested presentation. Expanded fills
+ * the window (`MATCH_PARENT`, which Android's own layout then keeps correct
+ * across rotation for free). Minimised places the surface at the mini
+ * player's measured window rect.
+ *
+ * It is decided here rather than by the `MiniPlayer` because this hook is
+ * already the single owner of every mutation to this surface, and a second
+ * component with its own idea of the geometry is how the W5/W6 disagreeing
+ * state fields happened. The `MiniPlayer` therefore only *measures* — it
+ * publishes a rect and this hook consumes it.
+ *
+ * A minimised launch with no measured rect reveals nothing. `setVideoBounds`
+ * refuses non-positive extents because a 0x0 `SurfaceView` is an invalid
+ * libmpv target, so silently falling back to "fill the window" here would
+ * turn a missing dock into a fullscreen video the user cannot dismiss.
  */
 
 import {useCallback, useEffect} from 'react';
@@ -36,6 +54,8 @@ import {usePresentationStore} from '../../state/usePresentationStore';
 export function useVideoSurface(): void {
   const session = useNowPlayingStore(s => s.current);
   const pipActive = usePresentationStore(s => s.pipActive);
+  const videoPresentation = usePresentationStore(s => s.videoPresentation);
+  const videoMiniRect = usePresentationStore(s => s.videoMiniRect);
   const setVideoSurfacePresented = usePresentationStore(
     s => s.setVideoSurfacePresented,
   );
@@ -79,17 +99,46 @@ export function useVideoSurface(): void {
 
       // Size first, then reveal — see the module docstring.
       let sized = false;
-      try {
-        sized = await bridge.fillVideoBounds();
-      } catch (e) {
-        logger.warn('[videoSurface] fillVideoBounds failed', e);
-      }
-      if (!sized) {
-        // No bounds ⇒ no area ⇒ mpv has nothing valid to render into.
-        // Refuse to reveal rather than showing a surface that cannot work.
-        logger.warn('[videoSurface] fillVideoBounds refused; not revealing');
-        if (!cancelled) setVideoSurfacePresented(false);
-        return;
+      if (videoPresentation === 'mini') {
+        // V21 F4. The mini player's rect is the ONLY correct placement: the
+        // surface composites at `android.R.id.content` index 0, i.e. beneath
+        // the whole React tree, so "wherever the dock is" has to be told to
+        // it in window pixels. There is no fallback to filling the window —
+        // a full-bleed surface while the user asked for a 44pt dock is
+        // exactly the lie this hook exists to avoid.
+        if (videoMiniRect == null) {
+          logger.warn('[videoSurface] minimised with no measured rect; not revealing');
+          if (!cancelled) setVideoSurfacePresented(false);
+          return;
+        }
+        try {
+          sized = await bridge.setVideoBounds(
+            videoMiniRect.x,
+            videoMiniRect.y,
+            videoMiniRect.width,
+            videoMiniRect.height,
+          );
+        } catch (e) {
+          logger.warn('[videoSurface] setVideoBounds failed', e);
+        }
+        if (!sized) {
+          logger.warn('[videoSurface] setVideoBounds refused; not revealing');
+          if (!cancelled) setVideoSurfacePresented(false);
+          return;
+        }
+      } else {
+        try {
+          sized = await bridge.fillVideoBounds();
+        } catch (e) {
+          logger.warn('[videoSurface] fillVideoBounds failed', e);
+        }
+        if (!sized) {
+          // No bounds ⇒ no area ⇒ mpv has nothing valid to render into.
+          // Refuse to reveal rather than showing a surface that cannot work.
+          logger.warn('[videoSurface] fillVideoBounds refused; not revealing');
+          if (!cancelled) setVideoSurfacePresented(false);
+          return;
+        }
       }
 
       let shown = false;
@@ -108,7 +157,13 @@ export function useVideoSurface(): void {
     return () => {
       cancelled = true;
     };
-  }, [shouldShow, hide, setVideoSurfacePresented]);
+  }, [
+    shouldShow,
+    hide,
+    setVideoSurfacePresented,
+    videoPresentation,
+    videoMiniRect,
+  ]);
 
   // Teardown: leaving this tree must not leave a visible surface behind a
   // window that is going away. The cleanup returns void deliberately — an
