@@ -67,6 +67,7 @@ describe('useBookmarkToggle', () => {
       useNowPlayingStore.getState().begin({
         uri: URI,
         title: 'Namus Kanla Yazilir',
+        startPositionMs: 0,
         type: 'movie',
         mediaLane: 'video',
       });

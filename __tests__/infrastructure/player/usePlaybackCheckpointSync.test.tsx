@@ -121,6 +121,7 @@ describe('usePlaybackCheckpointSync', () => {
       useNowPlayingStore.getState().begin({
         uri,
         title,
+        startPositionMs: 0,
         type: 'movie',
         mediaLane: 'video',
       });
@@ -258,7 +259,11 @@ describe('usePlaybackCheckpointSync', () => {
     expect(mockAddRecent).toHaveBeenCalledTimes(1);
 
     act(() => {
-      useNowPlayingStore.getState().begin({uri: URI, title: 'Film'});
+      useNowPlayingStore.getState().begin({
+        uri: URI,
+        title: 'Film',
+        startPositionMs: 0,
+      });
     });
     await setTransport(view, {positionMs: 30_000});
     // Only ONE second after the previous session's checkpoint — well

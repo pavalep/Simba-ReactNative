@@ -212,6 +212,16 @@ export function usePlayerActivity(
         beginSession({
           uri: bridgeOpts.uri,
           title: bridgeOpts.title,
+          // V21 F3: the position this session actually begins at.
+          //
+          // It used to exist only as an argument to `openWithResume` and
+          // was gone one call later, which meant an in-window video load
+          // had no way to honour "continue from 12:04" — there was no
+          // second Activity to carry the position in as an Intent extra,
+          // and the session did not record it. Required rather than
+          // optional for that reason: a launch that cannot state where it
+          // starts is a launch that will silently start over.
+          startPositionMs,
           // The stream type the bridge is about to be asked for. Recorded
           // so the audio chrome can tell an audio launch from a video one:
           // both write a session here, but only audio has no window and

@@ -70,6 +70,23 @@ export interface NowPlaying {
    */
   readonly streamType?: 'video' | 'audio';
   readonly mediaLane?: MediaLane;
+  /**
+   * Where this session actually began, in milliseconds.
+   *
+   * Added for V21 F3. The in-window video loader rebuilds a launch payload
+   * from this session alone — `{uri, title, startPositionMs}` — because it
+   * runs in `MainActivity` where there is no `PlayerActivity` to carry the
+   * payload in as an Intent extra. Without the resume position on the
+   * session, an in-window launch had no way to honour "continue from 12:04";
+   * the position was computed by the resume policy and then only ever handed
+   * to `openWithResume`, so it lived for exactly one call and was gone.
+   *
+   * `0` means "start from the beginning", which is the honest encoding of
+   * "the resume policy decided to start over" — not "unknown". The session
+   * is not persisted (see the module docstring), so a stale value cannot
+   * survive a cold start.
+   */
+  readonly startPositionMs: number;
   /** Catalogue name, when known. */
   readonly provider?: string;
   /** Artwork URI, when known — carried so the shelf can render a thumb. */

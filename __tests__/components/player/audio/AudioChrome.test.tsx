@@ -161,7 +161,12 @@ async function seedSession(streamType: 'video' | 'audio' = 'audio') {
   await act(async () => {
     useNowPlayingStore
       .getState()
-      .begin({uri: 'file:///a.mp3', title: 'Track Title', streamType});
+      .begin({
+        uri: 'file:///a.mp3',
+        title: 'Track Title',
+        startPositionMs: 0,
+        streamType,
+      });
   });
 }
 
