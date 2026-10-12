@@ -2,8 +2,8 @@
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
-**Last updated:** 2026-10-09, end of session 2
-**Status:** F1 shipped · F2a (manifest) shipped · C-16 root fix shipped · `resolveStreamType` fixed. F2b onward not started.
+**Last updated:** 2026-10-12, session 3 start (refreshed against git)
+**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed. **F2b onward not started.**
 **Confidence marks:** `DEVICE` = observed on device · `CODE` = read/verified in source · `PENDING` = assumed or planned
 
 ---
@@ -28,7 +28,13 @@
 lib `tsc` 0 · `jest` **13 suites / 229 passed** · `compileDebugKotlin` BUILD SUCCESSFUL · APK built
 `18:15:57` (368,972,822 bytes).
 
-**Not pushed.** lib is 4 commits ahead of `origin/main`, app is 6. Push whenever.
+**Not pushed — verified 2026-10-12:** app is **8 commits ahead** of `origin/main`
+(`git rev-list --left-right --count origin/main...HEAD` → `0 8`), lib is **2 ahead**
+(`0 2` — `5308019`, `bd699d4`; `2e6f03d`/`c1019ff`/`343ccd6` went out with the
+`v1.13.3` push). App has lib `1.13.3` installed and pinned; npm `latest` = `1.13.3`.
+
+Only untracked files in either repo are scratch `COMMIT_MSG_*.txt`. **No uncommitted
+source changes in either repo.**
 
 ### Blocked on one observation
 `C-07` (artwork). The rails read `resumeThumbnailPath || thumbnailPath`; the chain
@@ -103,7 +109,10 @@ Lib repo. One new method wrapping `FrameLayout.LayoutParams`.
 - [x] Tests: rect forwarded verbatim; `false` propagates; visibility both ways;
       NOOP honesty (**mutation-checked** — flipping the fallback to `true` fails it)
 - [x] Gates: lib `tsc` 0 · lib `jest` **12 suites / 204 passed** · `compileDebugKotlin` 0
-- [ ] Cut `v1.13.3`, annotated tag, push, Actions, `npm install` in app
+- [x] Cut `v1.13.3`, annotated tag (`^{}` verified), pushed, Actions published
+- [x] `npm install` in app + pinned in `package.json` / `package-lock.json` (`0827609`)
+- [x] Symbol verified present in `node_modules` (`PlayerSurface.setBounds`), not assumed
+      from the version number
 
 **Two design decisions that must not be reverted:**
 
@@ -133,17 +142,23 @@ bound surface and would have rendered black. `ensureSurfaceAttached()` now re-ru
 
 Highest-risk phase. **Exit gate is device PiP proof, not a green build.**
 
-- [ ] `AndroidManifest.xml:67-74` → add `android:supportsPictureInPicture="true"` to `MainActivity`
+- [x] `AndroidManifest.xml:67-74` → add `android:supportsPictureInPicture="true"` to `MainActivity`
+      — done in `9879a3e`, **verified in the regenerated merged manifest**, not by exit code.
+      Two of the three manifest intermediates on disk were stale and still lacked the attribute,
+      so the exit code would have lied.
 - [ ] Move the `MpvRenderView` mount from `PlayerActivity.kt:463-487` to `MainActivity`
       (`android.R.id.content`, index 0)
 - [ ] `ReactRootView` background transparent while video presented, opaque otherwise
       — **this is the explicit V11 failure mode, do not skip it**
+- [ ] Guard the `USER_PORTRAIT` re-pin in `onResume` (`MainActivity.kt:83`) so it does not snap a
+      landscape video back to portrait once video lives here
 - [ ] Port the PiP lifecycle: `setAutoEnterEnabled(true)` (API 31+) /
       `onUserLeaveHint` (API 26–30); `onPictureInPictureModeChanged` → re-apply bounds
 - [ ] Re-apply `setVideoBounds` on **every** layout pass, not once
 - [ ] Hide app chrome in PiP
 - [ ] `MainActivity` teardown on destroy uses the native rule (spec §4.1)
 - [ ] Video launch flag: in-app route vs `PlayerActivity` (default `PlayerActivity`)
+- [ ] **P0** repoint `MediaPlaybackService.kt:206` / `:395` `setClassName` at `MainActivity`
 - [ ] Gates: Kotlin, `tsc`/eslint/jest
 - [ ] **DEVICE:** video plays in `MainActivity`; home gesture → PiP with picture (not black);
       PiP close → teardown; rotate in fullscreen and in PiP
@@ -190,9 +205,12 @@ Only after F2–F4 are `DEVICE`-verified.
 - [ ] `useQueueSync.ts:101-108` — drop hardcoded audio lane + phantom `uri: ''` (D-9)
 - [ ] `openPlaylist` routed through the app seam (D-10, `C-17`)
 - [ ] Full device matrix re-run
-- [ ] **Delete dead code:** `AudioLyricsView` (525 lines, 0 call sites),
-      `AudioVisualizer` (143, 0), 13 × `textContent.ts`, `NowPlayingScreen` `return null`,
-      `handleViewFullLyrics` lie
+- [ ] **Delete dead code** — re-verify each call count before deleting:
+      `AudioLyricsView` (525 lines, 0 call sites), `AudioVisualizer` (143, 0),
+      13 × `textContent.ts` (**4 real import sites** — the "0" in an earlier audit was wrong),
+      `handleViewFullLyrics` lie.
+      **`NowPlayingScreen` is NOT a stub** — an earlier audit called it a `return null`
+      placeholder; it is live with 1 call site. Do not delete it.
 
 **Every row must be verified absent.** "Probably gone" is not done.
 
@@ -203,11 +221,22 @@ Only after F2–F4 are `DEVICE`-verified.
 | ID | Defect | Fate under V21 |
 |---|---|---|
 | `C-03` | Video black screen (unexplained earlier captures) | F2 device proof should settle it |
-| `C-07` | Recently Played / Bookmarks have no artwork | Independent — do in F5 |
-| `C-16` | Persisted rows mis-tagged as audio route films to the audio player | Independent — needs a store-version migration |
+| `C-07` | Recently Played / Bookmarks have no artwork | **Independent of V21.** Blocked on one screenshot. |
+| `C-16` | Persisted rows mis-tagged as audio route films to the audio player | ✅ **FIXED** `a11f6f8` — lane derived from kind + persist v2 migration |
 | `C-17` | `openPlaylist` bypasses the seam | D-10, F5 |
-| `C-18`–`C-24` | Lane-routing defects, incl. `resolveStreamType` `'episode'`→`'video'` and `'archive-video'` missing from the video branch | Mostly D-8, F5 |
+| `C-18`–`C-24` | Lane-routing defects. `resolveStreamType` `'episode'`→video and `'archive-video'` missing: ✅ **FIXED** `bd699d4`. The rest: D-8, F5 | Mostly F5 |
 | `C-36` | The lane decides whether a window opens at all, not just a badge | F3 removes the window decision entirely |
+
+### Resolved since the last session, for the record
+
+| Defect | Fixed in |
+|---|---|
+| Film persisted `{type:'movie', mediaType:'audio'}` → music badge + audio pipeline | `a11f6f8` (app) |
+| Queue jump passed a `MediaKind` into the `MediaLane` slot | `2e85a4d` (app) |
+| Seek bar permanently disabled ("Live stream — not seekable") | `c1019ff` (lib) |
+| `'episode'` / `'archive-video'` opened the wrong player window | `bd699d4` (lib) |
+| `setOrientation` logged after writing; `openPlayer` flag claim; stale z-order claim | `5308019` (lib) |
+| Audio→video surface handoff had no path back to a bound surface | `2e6f03d` (lib) |
 
 ---
 
@@ -319,25 +348,20 @@ The two fields being adjacent string aliases is why nothing caught it.
 
 ---
 
-| Defect | Location | Note |
-|---|---|---|
-| `openPlayer` sets **no** intent flags | `MpvBridgeModule.kt:245` | Docblock claims `FLAG_ACTIVITY_NEW_TASK`; the code does not set it |
-| `setOrientation` logs the value *after* writing it | `MpvBridgeModule.kt:2256-2264` | `was ${requestedOrientation}` reads the new value, so the log always looks like it did nothing |
-| `enterPip` arity mismatch | Kotlin params nullable vs `NativeMpvPlayer.ts:293` non-nullable | Latent |
-| Stale z-order claim | `MpvBridgeModule.kt:245` vs `MpvRenderView.kt` | One says `setZOrderMediaOverlay` is required, the other forbids it |
-
----
-
 ## Jugaad inventory (31 items, app scan)
 
 Everything here exists because of the two-Activity split, or is a workaround that was
 added on top of it. Deleting these is the point of the refactor.
 
 **Lane inference — guessing what should be recorded**
-1. `HistoryScreen.tsx:99` 2. `fileService.ts:58` 3. `QueueScreen.tsx:197`
+1. `HistoryScreen.tsx:99` 2. `fileService.ts:58` 3. ~~`QueueScreen.ts:197`~~ **FIXED `2e85a4d`**
 4. `useHomeScreen.ts:187` 5. `useHomeScreen.ts:366` 6. `useSearchScreen.ts:143`
 7. `useOpenWithResume.ts:118` 8. `useResumeAwarePlayerActivity.ts:70`
 9. `useQueueSync.ts:107` 10. `useBookmarkToggle.ts:135`
+
+**These are LIVE NOW, not deferred to F5.** F3 has not landed, so video still launches
+`PlayerActivity` and every one of these paths executes in production today. Fixing them is
+not throwaway work that the refactor supersedes.
 
 **Window / PiP split**
 11. `usePresentation.ts` (`isFullscreen` collapsing onto Activity identity)
