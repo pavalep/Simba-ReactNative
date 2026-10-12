@@ -2,8 +2,8 @@
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
-**Last updated:** 2026-10-12, session 4 (P0 shipped as lib 1.13.4 + installed; F2c shipped; surface mount refactor landed)
-**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · **F2c shipped** · P0 shipped (`035f611` → npm **1.13.4** → app `d5b933b`, verified in `node_modules`) · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed · **surface mount refactored** (lib `366d0fd`). **F2b / F2d / F2e not started — F2b is now the next step.**
+**Last updated:** 2026-10-12, session 5 (F2b surface mounted in MainActivity; F2d PiP aspect + seamless resize; F3 confirmed unblocked)
+**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · **F2c shipped** · **F2b shipped** (app `87e9f12`) · **F2d shipped** (lib `001f352`) · P0 shipped (`035f611` → npm **1.13.4** → app `d5b933b`, verified in `node_modules`) · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed · **surface mount refactored** (lib `366d0fd`) · **F3 confirmed unblocked with no new lib API** (`commands.loadFile` already loads without an Activity). **Next: F3. F2e, F4, F5 not started.**
 **Confidence marks:** `DEVICE` = observed on device · `CODE` = read/verified in source · `PENDING` = assumed or planned
 
 ---
@@ -23,7 +23,12 @@
 | `c1019ff` | lib | `seekable` re-seeded on `onFileLoaded` |
 | `bd699d4` | lib | `resolveStreamType`: `'episode'` and `'archive-video'` opened the wrong window |
 | `035f611` | lib | **P0**: notification/PiP host Activity is *resolved* from the manifest, not hardcoded |
-| `0827609` | app | Pin lib `1.13.3` |
+| `366d0fd` | lib | `PlayerSurface.mount`/`unmount` — the only sanctioned mount path; `PlayerActivity` refactored onto it |
+| `e76eafc` | lib | Finish the `enterPip` arity fix — the TurboModule spec was never updated |
+| `001f352` | lib | F2d: PiP window takes the video's real aspect (was hardcoded 16:9) + seamless resize |
+| `cecc167` | app | F2c: `onResume` pins portrait only when mpv has no media loaded |
+| `87e9f12` | app | **F2b**: `MainActivity` mounts the video surface via `PlayerSurface.mount(this)`; clears 3 V11-era comment/dead-code items |
+| `d5b933b` | app | Bump lib `1.13.4` (P0) |
 
 **Gate status:** app `tsc` 0 · `eslint --max-warnings 0` 0 · `jest` **82 suites / 1034 passed** ·
 lib `tsc` 0 · `jest` **13 suites / 229 passed** · `compileDebugKotlin` BUILD SUCCESSFUL · APK built
@@ -206,10 +211,19 @@ Highest-risk phase. **Exit gate is device PiP proof, not a green build.**
       implementation of "where does the surface go". Mount leaves the view **GONE at 0x0**, so
       showing video is always two explicit acts — size it, then show it — and no host can end up
       with an accidental full-bleed surface over its own UI. Every refusal logs its reason.
-- [ ] Mount the surface in `MainActivity` — call `PlayerSurface.mount(this)` (no app-side view
-      construction). **Lib side is ready; this is the last blocker before F3.**
-- [ ] `ReactRootView` background transparent while video presented, opaque otherwise
-      — **this is the explicit V11 failure mode, do not skip it**
+- [x] Mount the surface in `MainActivity` — `PlayerSurface.mount(this)`, no app-side view
+      construction (app `87e9f12`). The surface comes up **GONE at 0x0**, so this window is pure
+      app UI until something explicitly sizes *and* shows it. The V11 "opaque React root covers
+      the video" failure is therefore prevented by construction, not by every call site getting
+      a background right. Unmount goes through the library too, so removal + deregistration stay
+      one identity-checked step. Refused mounts log the concrete reason at both the lib and host
+      level rather than silently degrading.
+- [ ] React root background transparent while video presented, opaque otherwise.
+      **Re-scoped, and no longer a background problem.** With the surface mounted GONE at 0x0,
+      the app root keeps its normal opaque background and the surface is simply not visible
+      under it until it is given bounds. If video still does not read through, the cause is
+      layer order or a still-opaque ancestor — **not** the window background. Do not "fix" it by
+      making the window transparent; that was V11's failure mode.
 - [x] **P0 — remove the `setClassName("com.simba.player.PlayerActivity")` landmine** (lib
       `035f611`). `MediaPlaybackService` named its notification content intent *and* its
       MediaSession activity by string literal. Nothing fails at compile time, so F5 would have
@@ -233,12 +247,32 @@ Highest-risk phase. **Exit gate is device PiP proof, not a green build.**
       put into PiP because it shares the task). And the SurfaceView constraint makes the split
       impossible regardless: a Surface belongs to its window, so one video cannot render into
       both activities. **Decision: the collapse stands.**
-- [ ] Port the PiP lifecycle: `setAutoEnterEnabled(true)` (API 31+) /
-      `onUserLeaveHint` (API 26–30); `onPictureInPictureModeChanged` → re-apply bounds
+- [x] PiP window takes the video's real shape (lib `001f352`). `enterPip` never passed an
+      aspect, so `buildPipParams`'s `16f / 9f` default applied to everything — every PiP window
+      was 16:9 regardless of what was playing, and since the shape is fixed at entry the system
+      animated to a shape that did not match the picture inside it. Now reads the same
+      `width` / `height` properties `getVideoParams` already reads (`currentVideoAspect()`),
+      null for "no file" / "audio only", with the 16:9 fallback logged rather than silent.
+      `buildPipParams` still clamps to Android's documented 0.42–2.38 range.
+- [x] `setSeamlessResizeEnabled(true)` (API 31+) — rendering-quality only; changes how the
+      transition is drawn, never whether PiP is entered.
+- [ ] `setAutoEnterEnabled(true)` (API 31+) — **deliberately held for F4.** Every shipping
+      player auto-enters PiP on a home swipe (YouTube, Plex, Netflix), so this app will want it,
+      but auto-enter means the *whole app window* enters PiP and whether the JS chrome
+      suppression is correct in the collapsed architecture is exactly what device verification
+      would confirm. Deferred by instruction, and it is a product-visible behaviour change, so
+      it waits for F4 where the chrome path is owned end to end.
 - [ ] Re-apply `setVideoBounds` on **every** layout pass, not once
 - [ ] Hide app chrome in PiP
 - [ ] `MainActivity` teardown on destroy uses the native rule (spec §4.1)
 - [ ] Video launch flag: in-app route vs `PlayerActivity` (default `PlayerActivity`)
+- [x] **F3 unblocked with NO new lib API.** The library already exposes a direct programmatic
+      load path that never starts an Activity — `commands.loadFile(...)`, alongside
+      `useLaunchPlayback`. `MpvPlayerModule.ts:919` states it plainly: *"two genuinely
+      different entry points (`openPlayer` → activity → launch params versus a direct
+      programmatic load)"*. So video can load into `MainActivity`'s own window, the surface
+      mounted in F2b renders it, and `PlayerActivity` stops being on the video path at all.
+      This is the whole of F3 — **do not build a new launch mechanism.**
 - [ ] Gates: Kotlin, `tsc`/eslint/jest
 - [ ] **DEVICE:** video plays in `MainActivity`; home gesture → PiP with picture (not black);
       PiP close → teardown; rotate in fullscreen and in PiP
