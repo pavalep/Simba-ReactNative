@@ -2,7 +2,7 @@
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
-**Last updated:** 2026-10-12, session 5 (F2b surface mounted in MainActivity; F2d PiP aspect + seamless resize; F3 confirmed unblocked)
+**Last updated:** 2026-10-12, session 6 (PiP sourceRectHint; F3 groundwork: LaunchParams.requestId + session startPositionMs)
 **Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · **F2c shipped** · **F2b shipped** (app `87e9f12`) · **F2d shipped** (lib `001f352`) · P0 shipped (`035f611` → npm **1.13.4** → app `d5b933b`, verified in `node_modules`) · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed · **surface mount refactored** (lib `366d0fd`) · **F3 confirmed unblocked with no new lib API** (`commands.loadFile` already loads without an Activity). **Next: F3. F2e, F4, F5 not started.**
 **Confidence marks:** `DEVICE` = observed on device · `CODE` = read/verified in source · `PENDING` = assumed or planned
 
@@ -26,9 +26,12 @@
 | `366d0fd` | lib | `PlayerSurface.mount`/`unmount` — the only sanctioned mount path; `PlayerActivity` refactored onto it |
 | `e76eafc` | lib | Finish the `enterPip` arity fix — the TurboModule spec was never updated |
 | `001f352` | lib | F2d: PiP window takes the video's real aspect (was hardcoded 16:9) + seamless resize |
+| `e7899c4` | lib | PiP entry gets the surface's live rect (`sourceRectHint`) — animates the real frame, and matches the aspect so it cannot arrive stretched |
+| `4886eb7` | lib | `LaunchParams.requestId` — a launch gets its own identity (F3 enabler) |
 | `cecc167` | app | F2c: `onResume` pins portrait only when mpv has no media loaded |
 | `87e9f12` | app | **F2b**: `MainActivity` mounts the video surface via `PlayerSurface.mount(this)`; clears 3 V11-era comment/dead-code items |
 | `d5b933b` | app | Bump lib `1.13.4` (P0) |
+| `8c3062d` | app | `startPositionMs` on the session — an in-window launch can honour resume |
 
 **Gate status:** app `tsc` 0 · `eslint --max-warnings 0` 0 · `jest` **82 suites / 1034 passed** ·
 lib `tsc` 0 · `jest` **13 suites / 229 passed** · `compileDebugKotlin` BUILD SUCCESSFUL · APK built
@@ -247,6 +250,13 @@ Highest-risk phase. **Exit gate is device PiP proof, not a green build.**
       put into PiP because it shares the task). And the SurfaceView constraint makes the split
       impossible regardless: a Surface belongs to its window, so one video cannot render into
       both activities. **Decision: the collapse stands.**
+- [x] **F3 mechanism identified: `useLaunchPlayback` is already public and already intended for
+      this.** `index.ts:115` exports it *"so a consumer using `<SimbaPlayerRoot headless>` can
+      call it directly for a payload the module did not originate"* — the lib anticipated the
+      in-window path. `MpvPlayerModule.ts:919` names the two entry points: `openPlayer` →
+      activity → launch params, versus a direct programmatic load. **Do not build a new launch
+      mechanism.** What remains in F3 is the app wiring: call it from the session, size the
+      surface, and keep `openPlayer` reachable until proven.
 - [x] PiP window takes the video's real shape (lib `001f352`). `enterPip` never passed an
       aspect, so `buildPipParams`'s `16f / 9f` default applied to everything — every PiP window
       was 16:9 regardless of what was playing, and since the shape is fixed at entry the system
@@ -266,13 +276,24 @@ Highest-risk phase. **Exit gate is device PiP proof, not a green build.**
 - [ ] Hide app chrome in PiP
 - [ ] `MainActivity` teardown on destroy uses the native rule (spec §4.1)
 - [ ] Video launch flag: in-app route vs `PlayerActivity` (default `PlayerActivity`)
-- [x] **F3 unblocked with NO new lib API.** The library already exposes a direct programmatic
-      load path that never starts an Activity — `commands.loadFile(...)`, alongside
-      `useLaunchPlayback`. `MpvPlayerModule.ts:919` states it plainly: *"two genuinely
-      different entry points (`openPlayer` → activity → launch params versus a direct
-      programmatic load)"*. So video can load into `MainActivity`'s own window, the surface
-      mounted in F2b renders it, and `PlayerActivity` stops being on the video path at all.
-      This is the whole of F3 — **do not build a new launch mechanism.**
+- [x] **F3 groundwork: a launch now has an identity, and the session records where it begins.**
+      Two things were blocking an in-window load, and neither was obvious from the seam:
+      - `useLaunchPlayback` keys its effect on `uri|startPositionSec`, which is **not a unique
+        identity for a launch**. That was sound only because every launch started a fresh
+        `PlayerActivity` — new React root, fresh mount, effect always fires. In-window the hook
+        stays mounted, so *"back out of a film, tap it again"* (same URI, resume hands back the
+        same position) would skip the load entirely and the user would press play and see
+        nothing. `LaunchParams.requestId` (lib `4886eb7`) is optional and additive — absent, the
+        key is exactly what it was. **Mutation-checked**: dropping it fails the re-launch test
+        and nothing else.
+      - The resume position existed only as an argument to `openWithResume`, because its entire
+        job was to become an Intent extra for an Activity that did not exist yet. In-window
+        there is no second Activity to carry it, so "continue from 12:04" would have silently
+        become "start over". `startPositionMs` is now **required** on the session (app
+        `8c3062d`) — required, not optional, because an optional field is precisely how that
+        failure returns. `tsc` caught all 4 test call sites missing it, which is the point: the
+        lane bug survived because its field came from a conditional spread, which skips
+        excess-property checking.
 - [ ] Gates: Kotlin, `tsc`/eslint/jest
 - [ ] **DEVICE:** video plays in `MainActivity`; home gesture → PiP with picture (not black);
       PiP close → teardown; rotate in fullscreen and in PiP
