@@ -60,8 +60,37 @@ import {
 import {mapBridgeLaunchError} from './bridgeErrors';
 import type {PlaybackId} from './playbackFacade';
 
+// V21 F5 A1 — the APP's `useOpenPlaylist`, not the lib's.
+//
+// This used to re-export the lib's hook straight from the package, which
+// made it the one launch path that bypassed `useResumeAwarePlayerActivity`
+// and therefore the last live route to `bridge.openPlayer` →
+// `startActivity(PlayerActivity)`. `PlaylistEntry` already carries `type`
+// and `mediaType` on every entry and both were being dropped, so playlists
+// recorded no lane — and `OpenPlaylistOptions.type` permits `'video'`, so
+// one video playlist would re-open the second window F5 deletes.
+//
+// Ordering, shuffle and the `false`-on-empty contract are unchanged; only
+// the seam the start track is launched through is. See
+// `./usePlaylistLaunch.ts`.
+import {useOpenPlaylist} from './usePlaylistLaunch';
+
+// Exported on its own, NOT inside the `export {...} from '@simba-dev/...'`
+// list below. An export-from names its own binding, so leaving
+// `useOpenPlaylist` in that list kept re-exporting the LIB's hook and
+// silently ignored this import — `tsc` reported no conflict and the barrel
+// went on handing callers the wrong implementation.
+export {useOpenPlaylist};
+
 export {
-  useOpenPlaylist,
+  // `useOpenPlaylist` is DELIBERATELY NOT in this list. It used to be, and
+  // that `export {...} from '@simba-dev/...'` re-export is exactly why the
+  // app's own import of it (added by F5 A1) was silently ignored: an
+  // export-from names its own binding, so the local import of the same name
+  // never gets a chance to win. `tsc` reported no conflict and the barrel
+  // kept handing callers the lib hook.
+  //
+  // It is exported separately, from `./usePlaylistLaunch`, just above.
   usePlayer,
   usePlayerProgress,
   useQueue,

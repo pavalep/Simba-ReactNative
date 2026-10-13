@@ -159,8 +159,16 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
       type: resolveStreamType(first.type),
       startExtras: {
         ...(first.provider ? {provider: first.provider} : {}),
-        ...(first.folderId ? {folderId: first.folderId} : {}),
-        ...(first.thumbnailPath ? {artworkUri: first.thumbnailPath} : {}),
+        // `thumbnailPath`, not `artworkUri`. The launch options are typed
+        // against what the seam actually consumes, and `artworkUri` matched
+        // nothing — the artwork was forwarded onto the bridge and dropped
+        // with no error, which is why playlist launches had no notification
+        // artwork while every single-track launch did.
+        //
+        // `folderId` is gone rather than translated: it is read from the
+        // queue item set by `loadPlaylistToPlayer` above, never from launch
+        // options, so passing it here never did anything.
+        ...(first.thumbnailPath ? {thumbnailPath: first.thumbnailPath} : {}),
       },
     });
   }, [items, isOnline, openPlaylist, toast]);

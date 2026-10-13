@@ -113,13 +113,23 @@ describe('Player Facade (V21 W3 P10) — re-exports', () => {
     // below. `useResumeAwarePlayerActivity.test.tsx` covers its
     // behaviour; this file only records that the wrap happened on
     // purpose rather than by accident.
+    //
+    // V21 F5 A1 moved `useOpenPlaylist` into that bucket too, for the same
+    // reason and with more force. It used to be a pure re-export of the
+    // lib's hook, which made playlist launches the one path that bypassed
+    // the seam — no lane on the session, no resume, and a live route to
+    // `bridge.openPlayer` → `startActivity(PlayerActivity)`, the class F5
+    // deletes. Its behaviour is covered by `usePlaylistLaunch.test.tsx`
+    // and `playerBarrel.test.ts`.
     const underlying = jest.requireActual(
       '@simba-dev/react-native-media-player',
     );
     expect(Player.usePlayerActivity).not.toBe(
       underlying.usePlayerActivity,
     );
-    expect(Player.useOpenPlaylist).toBe(underlying.useOpenPlaylist);
+    expect(Player.useOpenPlaylist).not.toBe(
+      underlying.useOpenPlaylist,
+    );
     expect(Player.usePlayer).toBe(underlying.usePlayer);
     expect(Player.usePlayerProgress).toBe(underlying.usePlayerProgress);
     expect(Player.useQueue).toBe(underlying.useQueue);
