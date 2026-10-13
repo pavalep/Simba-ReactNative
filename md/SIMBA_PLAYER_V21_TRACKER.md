@@ -2,8 +2,8 @@
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
-**Last updated:** 2026-10-14, session 7 (F3 shipped in-window launch; F4 dock shipped; lib 1.13.8 window-pixel bounds)
-**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a shipped · **F2c shipped** · **F2b shipped** (app `87e9f12`) · **F2d shipped** (lib `001f352`) · P0 shipped (`035f611` → npm **1.13.4** → app `d5b933b`, verified in `node_modules`) · C-16 root fix shipped · `resolveStreamType` fixed · `seekable` fixed · **surface mount refactored** (lib `366d0fd`) · **F3 SHIPPED** (app `756d372`) · **F4 dock shipped** (lib `344d29c` = npm **1.13.8**). **F2e: reclassified — see session 7. Next: F5.**
+**Last updated:** 2026-10-14, session 8 (F5 execution order recorded; `C-17` promoted to a F5 blocker; stale rollback + lane lists corrected)
+**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a–e `CODE` shipped · P0 shipped · C-16 root fix shipped · surface mount refactored · **F3 SHIPPED** (app `756d372`) · **F4 SHIPPED** (app `e66b012` + lib `344d29c` = npm **1.13.8**) · **F2e reclassified** (see session 7) · **F5 IN PROGRESS — next: A1.** Device verification deferred by the user; tracked as debt, not skipped silently.
 **Confidence marks:** `DEVICE` = observed on device · `CODE` = read/verified in source · `PENDING` = assumed or planned
 
 ---
@@ -176,8 +176,15 @@ once there is a single root.
 ## Rules of engagement
 
 1. **One phase at a time.** Do not start F(n+1) until F(n) is `DEVICE`-verified.
-2. **`PlayerActivity` stays in the manifest behind a flag until F5.** One flag flip must
-   return the app to the working two-Activity path.
+   **AMENDED 2026-10-14 (session 7→8):** device verification has been deferred by the user, so
+   rule 1 no longer blocks. The gate for each phase is now **CODE gates green + mutation-checked**,
+   and the outstanding device matrix is tracked explicitly as debt rather than as a silent skip.
+2. ~~**`PlayerActivity` stays in the manifest behind a flag until F5.** One flag flip must
+   return the app to the working two-Activity path.~~ **OBSOLETE.** The flag was never
+   implemented and the path it would switch no longer exists — F3 stopped calling
+   `bridge.openPlayer` for video and F4 removed the Activity-backed dock. Rollback is now a code
+   revert; for F5 **A2** specifically it also means reverting the lib and reinstalling. See
+   spec §5.1.
 3. **Gates before every commit.** App: `npx tsc --noEmit`, `npx eslint . --ext .ts,.tsx --max-warnings 0`,
    `npx jest`. Lib: `npx tsc --noEmit`, `npx jest`,
    `gradlew :simba-dev_react-native-media-player:compileDebugKotlin`.
@@ -421,19 +428,59 @@ background over the surface — that is exactly the V11 mistake.
 
 ---
 
-### F5 — Delete the second Activity — NOT STARTED
+### F5 — Delete the second Activity — IN PROGRESS
 
-Only after F2–F4 are `DEVICE`-verified.
+Device verification is deferred, so the old "only after F2–F4 are `DEVICE`-verified" gate is
+amended: the gate is now **CODE gates green + mutation-checked**, with the device matrix tracked as
+debt below.
 
-- [ ] Delete `PlayerActivity` from the lib
-- [ ] Delete `EXTRA_IS_PLAYER_ACTIVITY`, `MAIN_COMPONENT_NAME` reuse (D-2, D-3)
-- [ ] Delete the manifest entry, drop the feature flag
-- [ ] Delete the duplicated teardown (D-5)
-- [ ] Delete `AudioChrome` `streamType` gate (D-7) — verify it is genuinely redundant first
-- [ ] Delete lane-inference backstops (D-8): `HistoryScreen.tsx:99`,
-      `fileService.ts:58`, `QueueScreen.tsx:197`, `useHomeScreen.ts:187`
-- [ ] `useQueueSync.ts:101-108` — drop hardcoded audio lane + phantom `uri: ''` (D-9)
-- [ ] `openPlaylist` routed through the app seam (D-10, `C-17`)
+#### ⚠ `C-17` / D-10 is a BLOCKER, not cleanup — found 2026-10-13
+
+Traced while sizing F5:
+
+```
+app facade openPlaylist
+  → lib useOpenPlaylist
+      → lib usePlayerActivity().openPlayer      ← NOT the app seam
+          → type 'audio' → startAudioPlayback   (no Activity)
+          → type 'video' → bridge.openPlayer    → startActivity(PlayerActivity)
+```
+
+After F3 the app seam no longer calls `bridge.openPlayer` for video, so it has **no live caller** —
+*except* through `openPlaylist`. All current call sites pass `{type: 'audio'}`:
+
+- `useLibraryScreen.ts:250, :267`
+- `useAlbumScreen.ts:107, :115, :121`
+- `useArtistScreen.ts:112, :118`
+
+So the video branch is dormant today — but `OpenPlaylistOptions.type` **permits `'video'`** and
+defaults to `'audio'`. One video-playlist call restores the second window this whole refactor
+exists to remove, and deleting `PlayerActivity` first would leave it throwing
+`ActivityNotFoundException` on a green build (the same shape as the P0 `setClassName` landmine).
+
+#### Execution order — load-bearing
+
+- [ ] **A1 — route `openPlaylist` through the app seam.** Closes the last live path to
+      `PlayerActivity`. Also gives playlists a session, a lane and an in-window video path, none of
+      which they have today. Pure app change; rollback is a code revert.
+- [ ] **A2 — delete `PlayerActivity` from the lib + release.** Class, manifest entry,
+      `useIsPlayerActivity`, `isCurrentActivityPlayer` / `currentActivityIsPlayer`, the
+      `useLaunchParams` activity guard, `EXTRA_IS_PLAYER_ACTIVITY`, `MAIN_COMPONENT_NAME` reuse,
+      the duplicated teardown (D-5), and `bridge.openPlayer` itself.
+      **Verify the symbols are ABSENT in `node_modules` after install** — do not trust the version
+      number.
+      ⚠ **This is the irreversible step.** No in-app rollback exists; see spec §5.1.
+- [ ] **A3 — app de-plumbing.** `App.tsx`: drop `useIsPlayerActivity` (import, the
+      `{isPlayerActivity ? null : <AppContent />}` ternary at `:394`, the `RootProps.isPlayerActivity`
+      prop, and the `PlayerHostProvider` wrapper at `:484`). Delete `playerHost.tsx`. Delete
+      `EXTRA_IS_PLAYER_ACTIVITY` from `MainActivity.kt`. Fix `onBackPressed` (`:231`) — it still
+      calls `super.onBackPressed()`, which after the collapse would finish the app instead of
+      minimising.
+- [ ] **A4 — re-verify Recently Played.** One root + one `PlayerProvider` removes the structural
+      cause. Its existing writer suite mocks `useTransport` wholesale, so it proves nothing about
+      real transport values — needs real coverage before it can be called fixed.
+- [ ] Delete `PlayerChrome`'s `isPlayerActivity` gate (D-7) — **verify it is genuinely redundant**
+      once there is one root, do not assume it.
 - [ ] Full device matrix re-run
 - [ ] **Delete dead code** — re-verify each call count before deleting:
       `AudioLyricsView` (525 lines, 0 call sites), `AudioVisualizer` (143, 0),
@@ -443,6 +490,23 @@ Only after F2–F4 are `DEVICE`-verified.
       placeholder; it is live with 1 call site. Do not delete it.
 
 **Every row must be verified absent.** "Probably gone" is not done.
+
+#### Lane-inference sites — list corrected 2026-10-13
+
+The earlier list is stale. `QueueScreen.tsx:197` was fixed in `2e85a4d` and must not be re-listed.
+These are the live ones:
+
+- [ ] `HistoryScreen.tsx:99`
+- [ ] `fileService.ts:58`
+- [ ] `useHomeScreen.ts:187`
+- [ ] `useHomeScreen.ts:366`
+- [ ] `useSearchScreen.tsx:143`
+- [ ] `useOpenWithResume.ts:118`
+- [ ] `useResumeAwarePlayerActivity.ts:70`
+- [ ] `useQueueSync.ts:107` — plus the phantom `uri: ''` and the hardcoded audio lane (D-9)
+- [ ] `useBookmarkToggle.ts:135`
+- [ ] **NEW, surfaced by the C-17 trace:** the three `openPlaylist` call sites above bypass the
+      seam entirely, so they record no lane and no `startPositionMs` today. A1 fixes all three.
 
 ---
 

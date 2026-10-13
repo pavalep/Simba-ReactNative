@@ -173,24 +173,65 @@ because predictive back (API 33+) never calls `onBackPressed`.
 
 ## 5. Migration phases
 
-Each phase is independently shippable and independently revertible. `PlayerActivity`
-stays in the manifest behind a feature flag until F5.
+Each phase is independently shippable and independently revertible.
 
-| # | Phase | Repo | Gate |
-|---|---|---|---|
-| **F0** | Back-press teardown native | lib `1.13.2` | ✅ shipped, device verification pending |
-| **F1** | `setVideoBounds` on `MpvRenderView` | lib | `compileDebugKotlin` + lib jest |
-| **F2** | Surface + PiP lifecycle move to `MainActivity` | lib + app manifest | Kotlin + `tsc`/eslint/jest + **device PiP proof** |
-| **F3** | Video opens as an in-app route | app | gates + device: play, PiP, back, rotate |
-| **F4** | One `MiniPlayer`, both lanes | app | gates + device: audio→video→audio handoff |
-| **F5** | Delete `PlayerActivity`, second React root, duplicated teardown | lib + app | gates + **full device matrix** |
+| # | Phase | Repo | Gate | Status (2026-10-14) |
+|---|---|---|---|---|
+| **F0** | Back-press teardown native | lib `1.13.2` | ✅ shipped | `CODE`, device proof outstanding |
+| **F1** | `setVideoBounds` on `MpvRenderView` | lib | `compileDebugKotlin` + lib jest | ✅ shipped (`2e6f03d`) |
+| **F2** | Surface + PiP lifecycle move to `MainActivity` | lib + app manifest | Kotlin + `tsc`/eslint/jest + **device PiP proof** | `CODE` shipped (F2a–e); **device proof outstanding** |
+| **F3** | Video opens in-window | app | gates + device: play, PiP, back, rotate | ✅ `CODE` shipped (`756d372`); device pending |
+| **F4** | One `MiniPlayer`, both lanes | app | gates + device: audio→video→audio handoff | ✅ `CODE` shipped (`e66b012` + lib `344d29c` / npm **1.13.8**); device pending |
+| **F5** | Delete `PlayerActivity`, second React root, duplicated teardown | lib + app | gates + **full device matrix** | **in progress** — see §5.2 |
 
-### 5.1 Rollback
+### 5.1 Rollback — **CORRECTED, the flag no longer exists**
 
-A single flag selects video launch path (`PlayerActivity` vs in-app route). If F2/F3
-produce a black screen that cannot be diagnosed in one session, flip the flag. Do **not**
-attempt to fix a black screen by adding an opaque background over the surface — that is
-the V11 mistake.
+This section previously said: *"A single flag selects video launch path (`PlayerActivity` vs
+in-app route). If F2/F3 produce a black screen that cannot be diagnosed in one session, flip the
+flag."*
+
+**That flag was never implemented, and the path it would have switched no longer exists.** F3
+changed the seam so that `bridge.openPlayer` is never called for video, and F4 removed the `X` that
+made an Activity-backed video dock reachable. There is no runtime toggle to flip, and reverting F5
+means a code revert plus a lib release, not a setting.
+
+**What replaces it, per step:**
+
+| Step | How to roll back |
+|---|---|
+| F3, F4 | Code revert in the app repo. No native change, no reinstall — nothing to re-link. |
+| **F5 A1** (route `openPlaylist` through the seam) | Code revert. Pure app change. |
+| **F5 A2** (delete `PlayerActivity`, lib release) | **No in-app rollback.** Requires reverting the lib to `1.13.8`, a reinstall, and an app revert. This is the irreversible step, and it is why A1–A3 should land first. |
+
+The V11 rule still stands unchanged and still outranks every convenience below it: do **not** fix a
+black screen by adding an opaque background over the surface. That was the original defect.
+
+### 5.2 F5 execution order — **C-17 is a blocker, not cleanup**
+
+D-10 (`openPlaylist` seam bypass) was filed as cleanup. It is not. Traced 2026-10-13:
+
+```
+app facade openPlaylist
+  → lib useOpenPlaylist
+      → lib usePlayerActivity().openPlayer      ← NOT the app seam
+          → type 'audio' → startAudioPlayback   (no Activity)
+          → type 'video' → bridge.openPlayer    → startActivity(PlayerActivity)
+```
+
+All three current call sites (`useLibraryScreen.ts:250,267`, `useAlbumScreen.ts:107,115,121`,
+`useArtistScreen.ts:112,118`) pass `{type: 'audio'}`, so the video branch is **dormant today** —
+`bridge.openPlayer` has no live caller after F3. But `OpenPlaylistOptions.type` **permits `'video'`**
+and defaults to `'audio'`, so one video-playlist call restores the second window that this entire
+refactor exists to remove.
+
+Therefore F5 runs in this order, and the order is load-bearing:
+
+| Step | Change | Repo |
+|---|---|---|
+| **A1** | Route `openPlaylist` through the app seam — last live path to `PlayerActivity` closes | lib + app |
+| **A2** | Delete `PlayerActivity`, `useIsPlayerActivity`, `isCurrentActivityPlayer`/`currentActivityIsPlayer`, the `useLaunchParams` activity guard, and `bridge.openPlayer`. Release + install + verify absent in `node_modules`. | lib |
+| **A3** | App de-plumbing: drop `useIsPlayerActivity`, the `{isPlayerActivity ? null : <AppContent />}` ternary, `PlayerHostProvider`, `playerHost.tsx`, `EXTRA_IS_PLAYER_ACTIVITY`; fix `MainActivity.onBackPressed` | app |
+| **A4** | Re-verify Recently Played with one root and one `PlayerProvider` — its structural cause is gone | app |
 
 ---
 
@@ -210,7 +251,11 @@ success, not scope creep.
 | D-7 | `AudioChrome` `streamType` gate | app `b52d462` | audio chrome drawn over video because roots disagreed |
 | D-8 | Lane-inference backstops | `HistoryScreen.tsx:99`, `fileService.ts:58`, `QueueScreen.tsx:197`, `useHomeScreen.ts:187` | guessing the lane when the window choice already encoded it |
 | D-9 | `useQueueSync` hardcoded audio lane + phantom `uri: ''` | `useQueueSync.ts:101-108` | queue had no lane of its own |
-| D-10 | `openPlaylist` seam bypass | `C-17` | playlist launch had no session/lane |
+| D-10 | `openPlaylist` seam bypass | `C-17` | playlist launch had no session/lane. **BLOCKER for D-1** — it is the last live path to `PlayerActivity`; see §5.2 |
+
+**D-10 is ordered before D-1, not after it.** Deleting `PlayerActivity` while `openPlaylist` still
+routes through the lib's own `usePlayerActivity` leaves a type-checked, compiler-clean call that
+throws `ActivityNotFoundException` on device — the same shape as the P0 `setClassName` landmine.
 
 ---
 
@@ -221,8 +266,9 @@ success, not scope creep.
 | V11 PiP black screen recurs on `MainActivity` | The V11 root cause was a missing `resizeableActivity`, which `MainActivity` already has. Second half of the V11 fix — transparent React root — must be implemented, not skipped. Device-verify PiP as F2's exit gate. |
 | RN root opaque covers the surface | React root background must be transparent while video is presented. This is the explicit V11 failure mode. |
 | Predictive back bypasses `onBackPressed` | Keep the JS `BackHandler`. Decide `enableOnBackInvokedCallback` for `MainActivity` in F2 — default is to keep predictive back **on** and make the JS path correct. |
-| `PlayerActivity` deletion breaks deep links / `open with` | `MainActivity` already carries the shared-file intent filters (`AndroidManifest.xml:75-76`). Re-verify `openPlaylist` and `open with` in F5. |
-| Surface rect stale on rotation / PiP resize | `setVideoBounds` must be re-applied on every layout pass; F2 adds a `ComponentCallbacks2`-style listener rather than assuming one-shot application. |
+| `PlayerActivity` deletion breaks deep links / `open with` | `MainActivity` already carries the shared-file intent filters (`AndroidManifest.xml:75-76`). `openPlaylist` is the real exposure and is now ordered **before** the deletion (§5.2). |
+| Surface rect stale on rotation / PiP resize | **RESOLVED in F4.** The expanded path needed nothing — `fillBounds()` sets `MATCH_PARENT` and `MainActivity` declares `configChanges="…\|orientation\|screenLayout\|screenSize"`, so the Activity is not recreated. The minimised path uses explicit pixels and re-measures on the **bar's** `onLayout`, not the slot's (a fixed-size slot's layout does not change on rotation, so a slot-level handler would never fire). Mutation-checked. |
+| `openPlaylist({type:'video'})` silently restores the second window | Dormant today, permitted by the type. Closed by A1 before `PlayerActivity` is deleted (§5.2). |
 
 ---
 
