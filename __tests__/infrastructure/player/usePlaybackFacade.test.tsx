@@ -4,8 +4,8 @@
  * The facade composes 5 lower-level hooks (`usePlayer` +
  * `usePlayerProgress` + `usePlayerActivity` + `usePlay` +
  * `useOpenPlaylist`) into a single `PlaybackFacade` object
- * with 5 sub-surfaces: state / progress / commands / launch
- * / activity. These tests assert the composition is correct
+ * with 4 sub-surfaces: state / progress / commands / launch. These
+ * tests assert the composition is correct
  * (each sub-surface pulls from the right hook) and that the
  * launchers return `Result<PlaybackId, StreamError>`.
  *
@@ -22,7 +22,6 @@ import {renderHook} from '@testing-library/react-native';
 import {usePlaybackFacade} from '../../../src/infrastructure/player';
 
 const mockOpenPlayer = jest.fn();
-const mockGetLaunchParams = jest.fn<unknown, []>(() => null);
 const mockOpenPlaylistRaw = jest.fn();
 
 let mockState: Record<string, unknown> = {};
@@ -59,7 +58,6 @@ jest.mock('@simba-dev/react-native-media-player', () => {
     usePlayerProgress: () => mockProgress,
     usePlayerActivity: () => ({
       openPlayer: mockOpenPlayer,
-      getLaunchParams: mockGetLaunchParams,
     }),
     useOpenPlaylist: () => ({openPlaylist: mockOpenPlaylistRaw}),
   };
@@ -100,8 +98,6 @@ beforeEach(() => {
   Object.values(mockCommands).forEach(fn => fn.mockClear());
   mockOpenPlayer.mockReset();
   mockOpenPlaylistRaw.mockReset();
-  mockGetLaunchParams.mockReset();
-  mockGetLaunchParams.mockReturnValue(null);
 });
 
 describe('usePlaybackFacade (V21 W22 D-023)', () => {
@@ -111,7 +107,13 @@ describe('usePlaybackFacade (V21 W22 D-023)', () => {
     expect(result.current.progress).toBeDefined();
     expect(result.current.commands).toBeDefined();
     expect(result.current.launch).toBeDefined();
-    expect(result.current.activity).toBeDefined();
+    // V21 F5: `facade.activity.getLaunchParams` is gone with the
+    // launch-params handoff. It read a one-shot native queue that only
+    // the deleted PlayerActivity ever filled, so it would have resolved
+    // null forever. Asserting it is ABSENT is the point.
+    expect(
+      (result.current as unknown as Record<string, unknown>).activity,
+    ).toBeUndefined();
   });
 
   it('state maps the underlying PlayerState fields', async () => {
@@ -265,14 +267,6 @@ describe('usePlaybackFacade (V21 W22 D-023)', () => {
       entries: [{uri: 'file:///a', title: 'A'}],
     });
     expect(r.ok).toBe(false);
-  });
-
-  it('activity.getLaunchParams proxies to usePlayerActivity', async () => {
-    const params = {uri: 'file:///x', fileTitle: 'X'};
-    mockGetLaunchParams.mockReturnValueOnce(params);
-    const {result} = await renderHook(() => usePlaybackFacade());
-    expect(result.current.activity.getLaunchParams()).toBe(params);
-    expect(mockGetLaunchParams).toHaveBeenCalledTimes(1);
   });
 
   it('returns a stable facade object across renders (useMemo)', async () => {

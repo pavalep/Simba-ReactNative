@@ -45,7 +45,7 @@
  */
 
 import React, {useCallback} from 'react';
-import {getMpvPlayerModule, useIsPlayerActivity} from '@simba-dev/react-native-media-player';
+import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
 import {useToast} from '../feedback/Toast';
 import {useNowPlayingStore} from '../../state/nowPlayingStore';
 import {useAudioPresentationStore} from '../../state/useAudioPresentationStore';
@@ -54,10 +54,6 @@ import {AudioPlayer} from './audio/AudioPlayer/AudioPlayer';
 import {MiniPlayer} from './mini/MiniPlayer';
 
 export const PlayerChrome: React.FC = () => {
-  // Until F5 there are still two React roots in the process. While the
-  // dedicated `PlayerActivity` is up, this tree is behind it, so rendering
-  // a dock would animate something nobody can see.
-  const isPlayerActivity = useIsPlayerActivity();
   const toast = useToast();
   const nowPlaying = useNowPlayingStore(s => s.current);
   const endSession = useNowPlayingStore(s => s.end);
@@ -88,7 +84,13 @@ export const PlayerChrome: React.FC = () => {
     endSession();
   }, [endSession, toast]);
 
-  if (isPlayerActivity || !nowPlaying) return null;
+  // V21 F5: this used to also bail when `useIsPlayerActivity()` was true —
+  // "the dedicated player Activity is up, this tree is behind it, so a
+  // dock here would animate something nobody can see". There is now one
+  // React root and one Activity, so that condition can never be true and
+  // the gate was dropped rather than left as a branch that reads as a
+  // live check.
+  if (!nowPlaying) return null;
 
   if (nowPlaying.streamType === 'video') {
     // The dock only. `isMini` is not `!isExpanded`: during PiP the mode is

@@ -10,10 +10,7 @@
  */
 
 import React, {useMemo} from 'react';
-import {
-  useOpenWithResume,
-  usePlayerActivity as useLibPlayerActivity,
-} from '@simba-dev/react-native-media-player';
+import {useOpenWithResume} from '@simba-dev/react-native-media-player';
 import type {
   OpenPlayerOptions,
   UsePlayerActivityResult,
@@ -161,7 +158,6 @@ export interface UsePlayerActivityOptions {
 export function usePlayerActivity(
   options: UsePlayerActivityOptions = {},
 ): AppPlayerActivityResult {
-  const {getLaunchParams} = useLibPlayerActivity();
   const openWithResume = useOpenWithResume();
   const beginSession = useNowPlayingStore(s => s.begin);
   const endSession = useNowPlayingStore(s => s.end);
@@ -311,11 +307,9 @@ export function usePlayerActivity(
           throw error;
         });
       },
-      getLaunchParams,
     }),
     [
       openWithResume,
-      getLaunchParams,
       beginSession,
       endSession,
       expandAudioPlayer,

@@ -2,8 +2,8 @@
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
-**Last updated:** 2026-10-14, session 8 (F5 execution order recorded; `C-17` promoted to a F5 blocker; stale rollback + lane lists corrected)
-**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a–e `CODE` shipped · P0 shipped · C-16 root fix shipped · surface mount refactored · **F3 SHIPPED** (app `756d372`) · **F4 SHIPPED** (app `e66b012` + lib `344d29c` = npm **1.13.8**) · **F2e reclassified** (see session 7) · **F5 IN PROGRESS — next: A1.** Device verification deferred by the user; tracked as debt, not skipped silently.
+**Last updated:** 2026-10-14, session 9 (**F5 A2 + A3 SHIPPED** — `PlayerActivity` deleted, lib **1.14.0** published; A2 scope corrected, A2b merged in)
+**Status:** F0 shipped (device proof outstanding) · F1 shipped · F2a–e `CODE` shipped · P0 shipped · C-16 root fix shipped · surface mount refactored · **F3 SHIPPED** (app `756d372`) · **F4 SHIPPED** (app `e66b012` + lib `344d29c` = npm **1.13.8**) · **F2e reclassified** (see session 7) · **F5 A1 SHIPPED** (app `2a80ba1`) · **F5 A2+A3 SHIPPED** (lib `c433ce2` + `085680f` = npm **1.14.0**) — the two-Activity architecture is gone. Device verification deferred by the user; tracked as debt, not skipped silently.
 **Confidence marks:** `DEVICE` = observed on device · `CODE` = read/verified in source · `PENDING` = assumed or planned
 
 ---
@@ -463,7 +463,7 @@ exists to remove, and deleting `PlayerActivity` first would leave it throwing
 - [ ] **A1 — route `openPlaylist` through the app seam.** Closes the last live path to
       `PlayerActivity`. Also gives playlists a session, a lane and an in-window video path, none of
       which they have today. Pure app change; rollback is a code revert.
-- [ ] **A2 — delete `PlayerActivity` from the lib + release. SCOPE CORRECTED 2026-10-14 — A2b is
+- [x] **A2 — delete `PlayerActivity` from the lib + release. SCOPE CORRECTED 2026-10-14 — A2b is
       merged in.** Class, manifest entry, `useIsPlayerActivity`,
       `isCurrentActivityPlayer` / `currentActivityIsPlayer`, the `useLaunchParams` activity guard,
       `EXTRA_IS_PLAYER_ACTIVITY`, `MAIN_COMPONENT_NAME` reuse, the duplicated teardown (D-5), and
@@ -473,37 +473,47 @@ exists to remove, and deleting `PlayerActivity` first would leave it throwing
       `commands.getLaunchParams`) and the two module-side contracts that only `PlayerActivity`
       consumed (`IMpvConfigProvider`, `IPipModeChangeEmitter`).
 
+      **SHIPPED** — lib `c433ce2` + `085680f`, npm **1.14.0**, annotated tag verified
+      (object `af72627` ≠ commit `085680f`). Symbols verified **absent** in `node_modules`;
+      `PlayerActivity.kt` verified absent from the installed package.
+      **21 files, −2729 / +379.**
+
       **Why the deferral was dropped:** `lastLaunchParams` is written by exactly two sites —
       `openPlayer` and `setLaunchParamsFromIntent` (called only from `PlayerActivity.onCreate`).
       A2 deletes both, so deferring the read side means shipping a public API that resolves
       `null` forever while pretending to work. No coherent half-deleted state exists.
       Full reasoning in spec §5.2.
-      **Verify the symbols are ABSENT in `node_modules` after install** — do not trust the version
-      number.
-      ⚠ **This is the irreversible step, and A3 must land in the same app commit.** No in-app
-      rollback exists; see spec §5.1.
-- [ ] **A3 — app de-plumbing. Atomic with A2** (the app has five functional dependencies on symbols
-      A2 removes). `App.tsx`: drop `useIsPlayerActivity` (import, the
-      `{isPlayerActivity ? null : <AppContent />}` ternary at `:394`, the `RootProps.isPlayerActivity`
-      prop, and the `PlayerHostProvider` wrapper at `:484`). Delete `playerHost.tsx`. Delete
-      `EXTRA_IS_PLAYER_ACTIVITY` from `MainActivity.kt`. Remove the dangling
-      `AndroidManifest.xml` `<activity android:name="com.simba.player.PlayerActivity">` block.
-      Fix `onBackPressed` (`:231`) — it still
-      calls `super.onBackPressed()`, which after the collapse would finish the app instead of
-      minimising.
-      **Also newly required by A2** (found in the A2 trace, not in the original list):
-      - `PlayerChrome.tsx:48` imports the **lib's** `useIsPlayerActivity` (not the app's `playerHost`
-        copy) — a second, distinct dependency that A2 deletes.
-      - `usePlaybackState.ts:27` likewise imports the lib's `useIsPlayerActivity`.
-      - `playbackFacade.ts:217,334` — destructures `getLaunchParams` from `usePlayerActivity()` and
-        re-exposes it as `facade.activity.getLaunchParams`.
-      - `useResumeAwarePlayerActivity.ts:164,314,318` — `getLaunchParams` in the seam's returned
-        surface.
+      ⚠ **This is the irreversible step, and A3 lands in the same app commit.**
+- [x] **A3 — app de-plumbing. Atomic with A2.** `App.tsx`: dropped `useIsPlayerActivity` (import,
+      the `{isPlayerActivity ? null : <AppContent />}` ternary, the `RootProps.isPlayerActivity`
+      prop, and the `PlayerHostProvider` wrapper). Deleted `playerHost.tsx` + its test + its barrel
+      export. Deleted `EXTRA_IS_PLAYER_ACTIVITY` and the whole `createReactActivityDelegate`
+      override from `MainActivity.kt` (plus 7 imports that became provably unused).
+      Removed the dangling `AndroidManifest.xml` `<activity android:name="com.simba.player.PlayerActivity">`
+      block. **Fixed `onBackPressed`** — it fell through to `super.onBackPressed()`, which after
+      the collapse would close the app instead of minimising; it now dispatches the BACK key to
+      the view hierarchy first so the JS `BackHandler` can consume it, falling through to `super`
+      when nothing does. PiP still short-circuits first (a PiP window has no JS handler behind it).
+      **Also newly required by A2** — all four found in the A2 trace:
+      - `PlayerChrome.tsx` imported the **lib's** `useIsPlayerActivity` (not the app's `playerHost`
+        copy) — a second, distinct dependency that A2 deletes. Gate removed (D-7, resolved by
+        evidence: with one root it is permanently `false`).
+      - `usePlaybackState.ts` likewise. Its `hasSession = isPlayerActivity || hasPlaylistEntry`
+        is now just `hasPlaylistEntry`.
+      - `playbackFacade.ts` destructured `getLaunchParams` and re-exposed it as
+        `facade.activity.getLaunchParams`; `PlaybackActivity` interface deleted.
+      - `useResumeAwarePlayerActivity.ts` carried `getLaunchParams` in the seam's surface.
+      - `App.tsx:392` used `<SimbaPlayerRoot headless>` — **missed by the A2 grep, which only
+        searched `src/`**. Replaced with `<AppContent />`, which is exactly equivalent: headless
+        mode reduced to "render children" once launch params had no source.
 - [ ] **A4 — re-verify Recently Played.** One root + one `PlayerProvider` removes the structural
       cause. Its existing writer suite mocks `useTransport` wholesale, so it proves nothing about
       real transport values — needs real coverage before it can be called fixed.
-- [ ] Delete `PlayerChrome`'s `isPlayerActivity` gate (D-7) — **verify it is genuinely redundant**
-      once there is one root, do not assume it.
+- [x] ~~Delete `PlayerChrome`'s `isPlayerActivity` gate (D-7)~~ — **DONE in A3, verified rather than
+      assumed.** Two distinct dependencies existed: `PlayerChrome.tsx` and `usePlaybackState.ts`
+      imported the **lib's** hook; `App.tsx` imported the app's own `playerHost` copy. All three
+      are gone and `hasSession` is now purely the structural playlist check. **Removing the gate
+      exposed a test passing for the wrong reason** — see session 9.
 - [ ] Full device matrix re-run
 - [ ] **Delete dead code** — re-verify each call count before deleting:
       `AudioLyricsView` (525 lines, 0 call sites), `AudioVisualizer` (143, 0),
@@ -514,7 +524,34 @@ exists to remove, and deleting `PlayerActivity` first would leave it throwing
 
 **Every row must be verified absent.** "Probably gone" is not done.
 
-#### Lane-inference sites — list corrected 2026-10-13
+#### Session 9 — two tests that passed for the wrong reason
+
+A gate's removal changes what a test proves even when the test still
+passes. Two cases in A3, recorded because both would have survived a
+green run and taught the next reader something false.
+
+**1. `PlayerChrome.test.tsx` — "renders nothing for a VIDEO launch".**
+Its comment said the `isPlayerActivity` gate existed to stop the audio
+player being drawn over MainActivity during a film. That gate is deleted.
+The test still passes — because the video lane returns `null` for a
+completely unrelated reason: `presentation.isMini` is false. The assertion
+was green for a mechanism that no longer exists. **A comment naming a
+deleted mechanism is not a comment, it is a trap.** Renamed and rewritten
+to state the real branch, plus a counterpart test for the `mini` case so
+the pair pins `isMini` rather than an accident.
+
+**2. `MpvBridgeModuleTest.kt` — `emitPictureInPictureModeChanged_delegatesToCompanion`.**
+Deleted, but worth noting: its own comments admitted it could not call the
+instance method it was named for and settled for "no exception thrown" on
+a companion path three other tests already cover. It was a comment with a
+`.test.tsx` suffix.
+
+**Also: a mutation that proves nothing.** My first mutant for the new
+video-dock test appended an unreachable `return null` after the real
+return — the branch still ran, so the mutant "passed" and looked like a
+weak test. It was a broken mutant, not a weak test. The faithful mutant
+(branch returns `null` for both arms) fails as expected. **When a mutant
+survives, first ask whether the mutant was faithful.**
 
 The earlier list is stale. `QueueScreen.tsx:197` was fixed in `2e85a4d` and must not be re-listed.
 These are the live ones:

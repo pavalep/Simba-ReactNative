@@ -24,7 +24,7 @@
  */
 
 import {useEffect, useSyncExternalStore} from 'react';
-import {useIsPlayerActivity, usePlayer, usePlayerProgress} from '@simba-dev/react-native-media-player';
+import {usePlayer, usePlayerProgress} from '@simba-dev/react-native-media-player';
 // Import the DEPENDENCY-FREE singleton holder, not `useVideoController`
 // (which pulls in React + the lib + the app stores). Routing through
 // the barrel from here forms the cycle
@@ -78,10 +78,6 @@ export interface PlaybackStateDerived {
 export function usePlaybackState(): PlaybackStateDerived {
   const {state} = usePlayer();
   const progress = usePlayerProgress();
-  // V19 W6.0 (lib 1.7.0) — synchronous, idempotent "is there a player
-  // surface under this tree?". Not a subscription: the value is fixed
-  // for the lifetime of an activity's React tree.
-  const isPlayerActivity = useIsPlayerActivity();
 
   // **Session detection is structural, not title-based.**
   //
@@ -107,14 +103,21 @@ export function usePlaybackState(): PlaybackStateDerived {
   // The placeholder title is not a usable signal, and string-matching
   // it would duplicate a lib internal the app cannot import
   // (`DEFAULT_STATE` is not part of the lib's public surface). So the
-  // structural question is answered structurally instead: the native
-  // side knows which activity hosts a player surface, and lib 1.7.0
-  // exposes that as a synchronous predicate.
+  // structural question is answered structurally instead: a session
+  // exists iff the engine is holding a playlist entry at a valid index.
+  // (This line used to add "…or this tree is the player Activity". One
+  // Activity, one root — that half cannot be true anymore.)
   const hasPlaylistEntry =
     Array.isArray(state.playlist) &&
     state.currentIndex >= 0 &&
     state.currentIndex < state.playlist.length;
-  const hasSession = isPlayerActivity || hasPlaylistEntry;
+  // V21 F5: this used to be `isPlayerActivity || hasPlaylistEntry`.
+  // `isPlayerActivity` came from the lib's `useIsPlayerActivity()`, which
+  // asked which Activity hosts a player surface — a question that only
+  // had two possible answers while there were two Activities. There is
+  // one root now, so that disjunct was permanently false and the
+  // predicate is simply the structural playlist check.
+  const hasSession = hasPlaylistEntry;
 
   const positionMs = progress.positionMs;
   const durationMs = progress.durationMs;

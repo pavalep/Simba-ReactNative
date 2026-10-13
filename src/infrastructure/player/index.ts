@@ -105,11 +105,6 @@ export {
   // `services/audioSettingsService.ts`, which has no `commands` in scope)
   // encode through this rather than each inventing their own rule.
   toMpvPropertyString,
-  // W6.0 — `useIsPlayerActivity` is exported BELOW, from `./playerHost`
-  // (the app's per-tree context hook), NOT from the lib. The lib's
-  // version reads a process-wide native flag and therefore answers a
-  // different — and for the chrome, wrong — question. See the export
-  // next to `PlayerHostProvider`.
   // W22 F/U #2: V13/V14 resume-lookup surface. `SimbaPlayer` (the
   // V16 root) already mounts `<PlayerResumeProvider>` internally
   // and translates the `resumePolicy` prop into the V13
@@ -211,14 +206,11 @@ export {
   shouldRecordCheckpoint,
 } from './playbackProgress';
 
-// V19 W6.0 — the PER-TREE player-host fact, published from the root
-// component's `initialProps` (each activity supplies its own value in
-// `ReactActivityDelegate.getLaunchOptions()`). This is what the
-// presentation mode is derived from; see `usePresentation` below.
-export {PlayerHostProvider, useIsPlayerActivity} from './playerHost';
-
 // V19 W6.0 — the chrome's presentation read model. `mode` is DERIVED
-// from `useIsPlayerActivity()` + the PiP flow flag; it is not stored.
+// from the surface's actual presentation state + the PiP flow flag; it
+// is not stored. (It used to be derived from `useIsPlayerActivity()`,
+// which meant one React root asking "am I the player Activity?" — a
+// question with a single possible answer once F5 collapsed to one.)
 // The `usePresentationSync` effect that used to write a shared
 // `mode` is GONE: it was mounted once per activity React root, and
 // two roots writing one process-global zustand store ping-ponged
@@ -449,7 +441,6 @@ export {
   type PlaybackProgress,
   type PlaybackCommands,
   type PlaybackLauncher,
-  type PlaybackActivity,
   type OpenInput,
   type OpenWithResumeInput,
   type OpenPlaylistInput,

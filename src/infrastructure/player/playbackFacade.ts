@@ -45,7 +45,6 @@ import {
   usePlayerProgress,
   type LaunchParams,
 } from '@simba-dev/react-native-media-player';
-import {useIsPlayerActivity} from './playerHost';
 // V19 W9.3 — resume-aware launch seam. The facade used to reach the
 // lib hook directly, which meant `launch.open` silently bypassed
 // resume while every screen's `usePlayerActivity()` honoured it. Both
@@ -67,16 +66,6 @@ import {secondsToMs} from './position';
 
 /** Stable identity returned on a successful launch. */
 export type PlaybackId = string;
-
-/**
- * V19 W6.0 — re-exported so chrome needs exactly one import for the
- * player-host question. This is the app's PER-TREE context-backed hook
- * (`./playerHost`), NOT the lib's `useIsPlayerActivity`, which answers
- * a process-wide question ("is a player activity alive in this
- * process") and therefore reads `true` in the background `MainActivity`
- * root too. See `playerHost.tsx` for the full account.
- */
-export {useIsPlayerActivity};
 
 // ─── V21 F3: in-window video ─────────────────────────────────────────
 //
@@ -157,19 +146,12 @@ export interface PlaybackLauncher {
   openPlaylist: (input: OpenPlaylistInput) => Promise<Result<PlaybackId, StreamError>>;
 }
 
-/** Activity surface — entry-point helpers. */
-export interface PlaybackActivity {
-  /** Returns the cold-start launch parameters (deep link, etc.). */
-  getLaunchParams: () => unknown;
-}
-
 /** The unified facade — the 1-import-1-wrapper for new consumers. */
 export interface PlaybackFacade {
   state: PlaybackState;
   progress: PlaybackProgress;
   commands: PlaybackCommands;
   launch: PlaybackLauncher;
-  activity: PlaybackActivity;
 }
 
 // ─── Hook ───────────────────────────────────────────────────
@@ -214,7 +196,7 @@ export interface PlaybackFacade {
 export function usePlaybackFacade(): PlaybackFacade {
   const {state, commands} = usePlayer();
   const progress = usePlayerProgress();
-  const {openPlayer, getLaunchParams} = usePlayerActivity();
+  const {openPlayer} = usePlayerActivity();
   const {openPlaylist: openPlaylistRaw} = useOpenPlaylist();
 
   // ── Launchers (typed) ───────────────────────────────────
@@ -331,8 +313,7 @@ export function usePlaybackFacade(): PlaybackFacade {
         seek: commands.seek,
       },
       launch: {open, openWithResume, openPlaylist},
-      activity: {getLaunchParams},
     }),
-    [state, progress, commands, open, openWithResume, openPlaylist, getLaunchParams],
+    [state, progress, commands, open, openWithResume, openPlaylist],
   );
 }

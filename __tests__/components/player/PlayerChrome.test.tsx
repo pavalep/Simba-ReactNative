@@ -32,11 +32,12 @@ jest.mock('../../../src/components/feedback/Toast', () => ({
   useToast: () => ({show: mockToastShow, hide: jest.fn()}),
 }));
 
-const mockIsPlayerActivity = jest.fn(() => false);
 const mockStopPlayback = jest.fn();
 
+// V21 F5: `useIsPlayerActivity` is no longer mocked here because the lib
+// no longer exports it. Mocking a deleted export would keep the seam
+// looking wired when nothing reads it any more.
 jest.mock('@simba-dev/react-native-media-player', () => ({
-  useIsPlayerActivity: () => mockIsPlayerActivity(),
   getMpvPlayerModule: () => ({
     stopPlayback: mockStopPlayback,
   }),
@@ -148,6 +149,7 @@ jest.mock('../../../src/theme', () => ({
 import {PlayerChrome} from '../../../src/components/player/PlayerChrome';
 import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
 import {useAudioPresentationStore} from '../../../src/state/useAudioPresentationStore';
+import {usePresentationStore} from '../../../src/state/usePresentationStore';
 
 /**
  * RNTL 14 returns a Promise from ct, and it MUST be awaited. An
@@ -172,11 +174,18 @@ async function seedSession(streamType: 'video' | 'audio' = 'audio') {
 
 beforeEach(async () => {
   jest.clearAllMocks();
-  mockIsPlayerActivity.mockReturnValue(false);
   mockStopPlayback.mockReset();
   await act(async () => {
     useNowPlayingStore.getState().reset();
     useAudioPresentationStore.setState({mode: 'expanded'});
+    // The presentation store is process-global, so a test that sets a
+    // mini video presentation leaks into every later test in this file
+    // unless it is put back here.
+    usePresentationStore.setState({
+      videoPresentation: 'expanded',
+      videoSurfacePresented: false,
+      pipActive: false,
+    });
   });
 });
 
@@ -202,22 +211,42 @@ describe('PlayerChrome — visibility', () => {
     expect(queryByTestId('audio-minimize')).toBeNull();
   });
 
-  // The video player owns its own Activity window. While it is up this
-  // tree is behind it, so audio chrome must not be mounted at all.
-  it('renders nothing inside the player Activity', async () => {
-    await seedSession();
-    mockIsPlayerActivity.mockReturnValue(true);
+
+  // A video launch writes a session too.
+  //
+  // V21 F5: this test used to pass because of the `isPlayerActivity` gate
+  // ("this tree is behind the player Activity, draw nothing"). That gate
+  // is gone with the second Activity, so the test now passes for a
+  // completely different reason — the video lane returns null unless the
+  // presentation is `mini`:
+  //
+  //     return presentation.isMini ? <MiniPlayer onClose={onClose} /> : null;
+  //
+  // Asserting null here without naming that branch would have left a test
+  // whose comment described a mechanism that no longer exists, which is
+  // how the next reader would "fix" it back into the two-Activity shape.
+  it('renders nothing for a VIDEO launch that is not in the mini dock', async () => {
+    await seedSession('video');
     const {toJSON} = await render(<PlayerChrome />);
     expect(toJSON()).toBeNull();
   });
 
-  // A video launch writes a session too — it just has its own window.
-  // Drawing the audio player over MainActivity for a film is the bug
-  // this gate exists for; it was caught on the first device run.
-  it('renders nothing for a VIDEO launch, even though a session exists', async () => {
+  it('renders the dock for a VIDEO launch once presentation is mini', async () => {
+    // The counterpart to the case above, and the reason that one is
+    // allowed to assert null: video is not absent, it is undocked.
+    // `isMini` needs BOTH halves (usePresentation.ts):
+    //   mode === 'mini'  → videoPresentation !== 'expanded' && !pipActive
+    //   && videoSurfacePresented — the boolean the native call returned
     await seedSession('video');
-    const {toJSON} = await render(<PlayerChrome />);
-    expect(toJSON()).toBeNull();
+    await act(async () => {
+      usePresentationStore.setState({
+        videoPresentation: 'mini',
+        videoSurfacePresented: true,
+      });
+    });
+    const {toJSON, getByTestId} = await render(<PlayerChrome />);
+    expect(toJSON()).not.toBeNull();
+    expect(getByTestId('mini-player')).toBeTruthy();
   });
 
   it('renders for an AUDIO launch', async () => {

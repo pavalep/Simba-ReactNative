@@ -5,7 +5,6 @@ import {NavigationContainer} from '@react-navigation/native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {
   SimbaPlayer,
-  SimbaPlayerRoot,
   useOpenFromUrl,
 } from '@simba-dev/react-native-media-player';
 import {useAuthStore, useBookmarksStore, useDownloadsStore, useRecentHistoryStore} from './src/state';
@@ -15,9 +14,7 @@ import {navigationRef} from './src/navigation/navigationHelper';
 import {linking} from './src/navigation/linking';
 import {
   resolveResumeMs,
-  PlayerHostProvider,
   ResumePromptContext,
-  useIsPlayerActivity,
   useInWindowVideoLaunch,
   usePlaybackCheckpointSync,
   useQueueSync,
@@ -261,7 +258,6 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
   resumePolicy,
 }) => {
   const {colors} = useTheme();
-  const isPlayerActivity = useIsPlayerActivity();
 
   // W9.5 — the Continue / Start-over prompt, supplied ONCE here and
   // reached by every launch through `ResumePromptContext`.
@@ -316,12 +312,11 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
 
   // W9.4 — the resume checkpoint writer.
   //
-  // Mounted HERE, not in `AppContent`, and that placement is the whole
-  // point. `AppContent` renders as `{isPlayerActivity ? null :
-  // <AppContent />}`, so anything mounted there does not run in the
-  // player activity — which is precisely where playback happens.
-  // `useQueueSync` is mounted in `AppContent` today and has therefore
-  // never observed a real playback session.
+  // Mounted HERE, not in `AppContent`, because it must observe every real
+  // playback session rather than only the sessions that happen to be on
+  // screen while a navigator is up. `useQueueSync` lives in `AppContent`
+  // and, for as long as the app ran two React roots, therefore never saw a
+  // session at all — that is what left Recently Played permanently empty.
   usePlaybackCheckpointSync();
 
   // V21 F3 — the in-window video path. Both hooks belong here, above the
@@ -376,23 +371,24 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
             W6.0 already removed the dock itself, because playback lives
             in its own activity and there is nothing for a mini player
             to minimise to. The stub outlived that decision. Removed. */}
-        {/* (2) The launch branch — owns the one-shot launch-params
-            queue and renders <PlayerRoot> in PlayerActivity.
+        {/* (2)+(3) Navigation + screens.
 
-            `headless` (lib 1.8.0) splits that component's two jobs.
-            Without it, <SimbaPlayerRoot> returns <PlayerRoot> INSTEAD
-            of its children whenever launch params exist, so the
-            module's default UI ("Simba Player", ✕, yellow play) took
-            over the screen and the video chrome — mounted above, but
-            painted underneath — was never seen. With `headless` the
-            module keeps the load lifecycle (`useLaunchPlayback`, so
-            the payload is still loaded exactly once) and the video chrome
-            is the player UI. Children render unconditionally; the split
-            below keeps the navigator out of the player activity. */}
-        <SimbaPlayerRoot headless>
-          {/* (3) Navigation + screens — MainActivity only. */}
-          {isPlayerActivity ? null : <AppContent />}
-        </SimbaPlayerRoot>
+            This used to be `<SimbaPlayerRoot headless>{isPlayerActivity
+            ? null : <AppContent />}</SimbaPlayerRoot>`. Both halves are
+            gone with the two-Activity architecture:
+
+              - the wrapper existed to branch on launch params handed to a
+                second Activity. There is no second Activity and no launch
+                queue, so `headless` reduced it to "render children".
+              - the ternary existed to keep the navigator out of the player
+                Activity. There is one tree, and the navigator belongs in
+                it.
+
+            The load lifecycle `SimbaPlayerRoot` was keeping has a better
+            owner: `useInWindowVideoLaunch()` above drives the current
+            session into the surface, keyed on a real requestId so
+            re-launching the same file still reloads. */}
+        <AppContent />
         {/* (4) The resume prompt's own Dialog. Rendered HERE, inside the
             providers and above the activity split, so it exists in every
             React root — the same reason ToastProvider sits above the
@@ -409,22 +405,15 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
  * comes from the hosting activity's
  * `ReactActivityDelegate.getLaunchOptions()`.
  *
- * `isPlayerActivity` is the ONLY piece of app state that has to be
- * per-activity rather than per-process, and it arrives here precisely
- * because it cannot be derived in JS: the app and the player run the
- * same `App` component, and the native flag behind
- * `isCurrentActivityPlayer()` is process-wide (see
- * `src/infrastructure/player/playerHost.tsx`).
- *
- * Defaults to `false` — "no player surface here" — which is the safe
- * direction: chrome mounted over a surface that is not there is worse
- * than a video without controls.
+ * V21 F5: this used to carry `isPlayerActivity`, which arrived here
+ * because it could not be derived in JS — the app and the player ran the
+ * same `App` component and the native flag behind it was process-wide.
+ * One Activity means one root means nothing to disambiguate, so the prop
+ * and its default are gone rather than left reading `false` forever.
  */
-export interface RootProps {
-  isPlayerActivity?: boolean;
-}
+export interface RootProps {}
 
-const App: React.FC<RootProps> = ({isPlayerActivity = false}) => {
+const App: React.FC<RootProps> = () => {
   // V16 Phase 71 + W22 F/U #2: bookmark-aware resume lookup is a
   // single `resumePolicy` function prop on `<SimbaPlayer>`. Replaces
   // the V13 `lookup` object prop + V14 `useSimbaPlayerLookup`
@@ -474,19 +463,11 @@ const App: React.FC<RootProps> = ({isPlayerActivity = false}) => {
   // `src/state/usePresentationStore.ts`.
 
   return (
-    // W6.0 — the per-tree player-host fact goes in FIRST, above every
-    // provider, because `PlayerHostProvider` must wrap anything that
-    // asks "is there a player surface under me?". The value comes from
-    // this root's `initialProps`, which each activity supplies in its
-    // `ReactActivityDelegate.getLaunchOptions()` — per ROOT, so the
-    // background `MainActivity` tree can never read the player
-    // activity's `true`. See `src/infrastructure/player/playerHost.tsx`.
-    <PlayerHostProvider isPlayerActivity={isPlayerActivity}>
-      {/* GestureHandlerRootView is required by
-          @lodev09/react-native-true-sheet (its drag-to-dismiss
-          gesture uses the gesture-handler runtime) and by any nested
-          navigation gesture support. */}
-      <GestureHandlerRootView style={styles.root}>
+    // GestureHandlerRootView is required by
+    // @lodev09/react-native-true-sheet (its drag-to-dismiss
+    // gesture uses the gesture-handler runtime) and by any nested
+    // navigation gesture support.
+    <GestureHandlerRootView style={styles.root}>
         <SafeAreaProvider>
           {/* V18.1.2: QueryProvider wraps the data layer. Placed
               inside SafeAreaProvider (consistent with other global
@@ -523,7 +504,6 @@ const App: React.FC<RootProps> = ({isPlayerActivity = false}) => {
           </QueryProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
-    </PlayerHostProvider>
   );
 };
 

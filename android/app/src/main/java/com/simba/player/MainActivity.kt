@@ -30,19 +30,12 @@
 //         it breaks navigation).
 package com.simba.player
 
-import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
-import android.util.Rational
 import com.facebook.react.ReactActivity
-import com.facebook.react.ReactActivityDelegate
-import com.facebook.react.ReactApplication
-import com.facebook.react.bridge.Arguments
-import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
-import com.facebook.react.defaults.DefaultReactActivityDelegate
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.simba.player.mpv.MPVLib
 import com.simba.player.mpv.MpvBridgeModule
@@ -171,38 +164,20 @@ class MainActivity : ReactActivity() {
 
   override fun getMainComponentName(): String = "SimbaPlayer"
 
-  /**
-   * W6.0 — hand the React root a PER-TREE "am I the player activity?"
-   * fact.
-   *
-   * The lib's `MpvBridgeModule.isCurrentActivityPlayer()` cannot answer
-   * this question honestly: its backing field is a process-wide
-   * `@Volatile @JvmStatic` on the companion object, so while
-   * `PlayerActivity` is alive EVERY React root in the process — including
-   * this background one — reads `true`. That is the right answer for the
-   * lib's own "don't steal launch params" guard, but it is the wrong
-   * answer for the app's chrome gate, which needs to know whether
-   * *this* tree has a player surface underneath it.
-   *
-   * React context and `initialProps` are per-ROOT, so the launch
-   * options are the correct channel: each activity's delegate supplies
-   * the flag when it creates its own React root, and the flag can never
-   * be observed by the other activity's tree. `App.tsx` reads it from
-   * the root component's props and publishes it through
-   * `PlayerHostProvider`.
-   */
-  override fun createReactActivityDelegate(): ReactActivityDelegate =
-      object : DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled) {
-        override fun getLaunchOptions(): Bundle = Bundle().apply {
-          putBoolean(EXTRA_IS_PLAYER_ACTIVITY, false)
-        }
-      }
+
+  // V21 F5: `createReactActivityDelegate()` is gone. Its only job was to
+  // hand the React root a per-tree "am I the player activity?" fact via
+  // `initialProps`, which `PlayerHostProvider` published to the chrome.
+  // Both ends are deleted: one Activity means one React root, so there is
+  // nothing for the flag to disambiguate. RN's default delegate applies.
+  //
+  // What this file still owns, and must keep: `onPictureInPictureModeChanged`
+  // (below) and the PiP-aware back handler. Android enters PiP from the
+  // *top* activity, so this Activity is the PiP host and these are
+  // load-bearing, not rollback leftovers.
 
   companion object {
     private const val TAG = "MainActivity"
-
-    /** Initial-prop key read by `App.tsx` → `PlayerHostProvider`. */
-    const val EXTRA_IS_PLAYER_ACTIVITY = "isPlayerActivity"
   }
 
   // ── PiP mode change callback ──
@@ -228,12 +203,34 @@ class MainActivity : ReactActivity() {
   }
 
   // ── Back button while in PiP: exit PiP mode to return to app ──
+  //
+  // V21 F5: the fallback below is `super.onBackPressed()`, which finishes
+  // the Activity and closes the app. That was correct when this file was
+  // one of two Activities and the player lived in the other one. It is
+  // wrong now: this is the only Activity, and back on a video screen is
+  // "minimise to the dock", which is a JS concern — the JS layer already
+  // owns that gesture via the presentation store.
+  //
+  // Dispatching the key to the view hierarchy lets the JS `BackHandler`
+  // registered by `MiniPlayer` consume it. If JS does not handle it (for
+  // example on the Home screen), `super` still runs and the app closes as
+  // the user expects. The order matters: PiP is checked first because a
+  // PiP window has no JS back handler behind it.
   override fun onBackPressed() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
       // Finish exits PiP mode and restores the activity to foreground
       finish()
       return
     }
+    // V21 F5 — hand the press to React Native first so the JS back
+    // handler can act on it; fall through to the platform default when
+    // nothing consumes it.
+    val handled = window.decorView.dispatchKeyEvent(
+      android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_BACK),
+    ) || window.decorView.dispatchKeyEvent(
+      android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_BACK),
+    )
+    if (handled) return
     super.onBackPressed()
   }
 }

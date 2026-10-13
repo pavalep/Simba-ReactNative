@@ -26,7 +26,6 @@
  *   2. An explicit `startPositionMs` is still forwarded untouched, so
  *      the lib's `useOpenWithResume` keeps sole ownership of the
  *      "explicit position wins" precedence rule.
- *   3. `getLaunchParams` still passes through.
  *
  * These are the assertions that FAIL if the wrapper is reverted to the
  * lib hook - which is the point. A test that cannot fail is a
@@ -42,7 +41,6 @@ import {renderHook} from '@testing-library/react-native';
 const mockOpenWithResume = jest.fn(
   async (_opts: Record<string, unknown>): Promise<boolean> => true,
 );
-const mockGetLaunchParams = jest.fn(() => null);
 // The LIB's `usePlayerActivity` also returns an `openPlayer`. It has to
 // be modelled, or a mutation that routes back to the lib hook fails on
 // `undefined is not a function` instead of on the missing resumeId -
@@ -57,7 +55,6 @@ jest.mock('@simba-dev/react-native-media-player', () => ({
   useOpenWithResume: () => mockOpenWithResume,
   usePlayerActivity: () => ({
     openPlayer: mockLibOpenPlayer,
-    getLaunchParams: mockGetLaunchParams,
   }),
 }));
 
@@ -85,7 +82,6 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
   beforeEach(() => {
     mockOpenWithResume.mockClear();
     mockLibOpenPlayer.mockClear();
-    mockGetLaunchParams.mockClear();
     // The session is module-global, so a test that asserts on what a
     // launch RECORDED needs a clean one to read. Without this the file
     // only passes in declaration order.
@@ -167,14 +163,6 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
     expect(mockOpenWithResume).not.toHaveBeenCalled();
   });
 
-  it('keeps getLaunchParams working', async () => {
-    // The seam replaces one method of the result; the other must be
-    // untouched or deep-link cold start breaks.
-    const {result} = await renderHook(() => usePlayerActivity());
-
-    expect(result.current.getLaunchParams()).toBeNull();
-    expect(mockGetLaunchParams).toHaveBeenCalledTimes(1);
-  });
 
   it('returns a stable result object across re-renders', async () => {
     // Consumers put `openPlayer` in useCallback/useMemo dependency
