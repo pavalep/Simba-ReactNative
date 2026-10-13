@@ -463,19 +463,42 @@ exists to remove, and deleting `PlayerActivity` first would leave it throwing
 - [ ] **A1 — route `openPlaylist` through the app seam.** Closes the last live path to
       `PlayerActivity`. Also gives playlists a session, a lane and an in-window video path, none of
       which they have today. Pure app change; rollback is a code revert.
-- [ ] **A2 — delete `PlayerActivity` from the lib + release.** Class, manifest entry,
-      `useIsPlayerActivity`, `isCurrentActivityPlayer` / `currentActivityIsPlayer`, the
-      `useLaunchParams` activity guard, `EXTRA_IS_PLAYER_ACTIVITY`, `MAIN_COMPONENT_NAME` reuse,
-      the duplicated teardown (D-5), and `bridge.openPlayer` itself.
+- [ ] **A2 — delete `PlayerActivity` from the lib + release. SCOPE CORRECTED 2026-10-14 — A2b is
+      merged in.** Class, manifest entry, `useIsPlayerActivity`,
+      `isCurrentActivityPlayer` / `currentActivityIsPlayer`, the `useLaunchParams` activity guard,
+      `EXTRA_IS_PLAYER_ACTIVITY`, `MAIN_COMPONENT_NAME` reuse, the duplicated teardown (D-5), and
+      `bridge.openPlayer` itself — **plus the whole launch-params handoff**
+      (`lastLaunchParams`, `setLaunchParamsFromIntent`, `getLaunchParams`, `useLaunchParams`,
+      `SimbaPlayerRoot`'s activity branch, `PlayerRoot`'s `launchParams` fallback,
+      `commands.getLaunchParams`) and the two module-side contracts that only `PlayerActivity`
+      consumed (`IMpvConfigProvider`, `IPipModeChangeEmitter`).
+
+      **Why the deferral was dropped:** `lastLaunchParams` is written by exactly two sites —
+      `openPlayer` and `setLaunchParamsFromIntent` (called only from `PlayerActivity.onCreate`).
+      A2 deletes both, so deferring the read side means shipping a public API that resolves
+      `null` forever while pretending to work. No coherent half-deleted state exists.
+      Full reasoning in spec §5.2.
       **Verify the symbols are ABSENT in `node_modules` after install** — do not trust the version
       number.
-      ⚠ **This is the irreversible step.** No in-app rollback exists; see spec §5.1.
-- [ ] **A3 — app de-plumbing.** `App.tsx`: drop `useIsPlayerActivity` (import, the
+      ⚠ **This is the irreversible step, and A3 must land in the same app commit.** No in-app
+      rollback exists; see spec §5.1.
+- [ ] **A3 — app de-plumbing. Atomic with A2** (the app has five functional dependencies on symbols
+      A2 removes). `App.tsx`: drop `useIsPlayerActivity` (import, the
       `{isPlayerActivity ? null : <AppContent />}` ternary at `:394`, the `RootProps.isPlayerActivity`
       prop, and the `PlayerHostProvider` wrapper at `:484`). Delete `playerHost.tsx`. Delete
-      `EXTRA_IS_PLAYER_ACTIVITY` from `MainActivity.kt`. Fix `onBackPressed` (`:231`) — it still
+      `EXTRA_IS_PLAYER_ACTIVITY` from `MainActivity.kt`. Remove the dangling
+      `AndroidManifest.xml` `<activity android:name="com.simba.player.PlayerActivity">` block.
+      Fix `onBackPressed` (`:231`) — it still
       calls `super.onBackPressed()`, which after the collapse would finish the app instead of
       minimising.
+      **Also newly required by A2** (found in the A2 trace, not in the original list):
+      - `PlayerChrome.tsx:48` imports the **lib's** `useIsPlayerActivity` (not the app's `playerHost`
+        copy) — a second, distinct dependency that A2 deletes.
+      - `usePlaybackState.ts:27` likewise imports the lib's `useIsPlayerActivity`.
+      - `playbackFacade.ts:217,334` — destructures `getLaunchParams` from `usePlayerActivity()` and
+        re-exposes it as `facade.activity.getLaunchParams`.
+      - `useResumeAwarePlayerActivity.ts:164,314,318` — `getLaunchParams` in the seam's returned
+        surface.
 - [ ] **A4 — re-verify Recently Played.** One root + one `PlayerProvider` removes the structural
       cause. Its existing writer suite mocks `useTransport` wholesale, so it proves nothing about
       real transport values — needs real coverage before it can be called fixed.

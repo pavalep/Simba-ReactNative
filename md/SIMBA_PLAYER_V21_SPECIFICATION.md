@@ -201,7 +201,7 @@ means a code revert plus a lib release, not a setting.
 |---|---|
 | F3, F4 | Code revert in the app repo. No native change, no reinstall — nothing to re-link. |
 | **F5 A1** (route `openPlaylist` through the seam) | Code revert. Pure app change. |
-| **F5 A2** (delete `PlayerActivity`, lib release) | **No in-app rollback.** Requires reverting the lib to `1.13.8`, a reinstall, and an app revert. This is the irreversible step, and it is why A1–A3 should land first. |
+| **F5 A2 + A3** (delete `PlayerActivity`, lib release, app de-plumbing) | **No in-app rollback.** The two are one atomic unit — the app has five functional dependencies on symbols A2 removes, and the manifest entry would dangle otherwise. Rollback means reverting the lib to `1.13.8`, republishing, reinstalling, and reverting the app. This is the irreversible step, and it is why A1 lands first. |
 
 The V11 rule still stands unchanged and still outranks every convenience below it: do **not** fix a
 black screen by adding an opaque background over the surface. That was the original defect.
@@ -229,9 +229,50 @@ Therefore F5 runs in this order, and the order is load-bearing:
 | Step | Change | Repo |
 |---|---|---|
 | **A1** | Route `openPlaylist` through the app seam — last live path to `PlayerActivity` closes | lib + app |
-| **A2** | Delete `PlayerActivity`, `useIsPlayerActivity`, `isCurrentActivityPlayer`/`currentActivityIsPlayer`, the `useLaunchParams` activity guard, and `bridge.openPlayer`. Release + install + verify absent in `node_modules`. | lib |
+| **A2** | Delete `PlayerActivity`, `useIsPlayerActivity`, `isCurrentActivityPlayer`/`currentActivityIsPlayer`, `bridge.openPlayer`, **and the launch-params handoff** (`lastLaunchParams`, `setLaunchParamsFromIntent`, `getLaunchParams`, `useLaunchParams`, `SimbaPlayerRoot`'s activity branch, `PlayerRoot`'s `launchParams` fallback, `commands.getLaunchParams`). Release + install + verify absent in `node_modules`. | lib |
 | **A3** | App de-plumbing: drop `useIsPlayerActivity`, the `{isPlayerActivity ? null : <AppContent />}` ternary, `PlayerHostProvider`, `playerHost.tsx`, `EXTRA_IS_PLAYER_ACTIVITY`; fix `MainActivity.onBackPressed` | app |
 | **A4** | Re-verify Recently Played with one root and one `PlayerProvider` — its structural cause is gone | app |
+
+#### A2 scope CORRECTED 2026-10-14 — the handoff is part of the delete, not a follow-on
+
+This plan originally deferred the launch-params handoff (`getLaunchParams` / `lastLaunchParams` /
+`useLaunchParams`) to an "A2b". **That deferral was wrong, and following it would have violated the
+no-jugaad rule.** Traced before writing any A2 code:
+
+```
+MpvBridgeModule.lastLaunchParams  ← written by exactly TWO sites
+  1. openPlayer(...)                        — deleted by A2
+  2. setLaunchParamsFromIntent(...)         — called ONLY from PlayerActivity.onCreate
+```
+
+`openPlayer` is deleted by A2 and `setLaunchParamsFromIntent` has no other caller, so **A2 removes
+both writers**. After A2 the field is written by nothing, `getLaunchParams()` resolves `null` for
+the life of the process, and every consumer built on it goes permanently inert:
+
+| Consumer | After A2 |
+|---|---|
+| `useLaunchParams()` | always `null` |
+| `SimbaPlayerRoot` | always renders `children`; the `PlayerRoot` branch and the `headless` load lifecycle are unreachable |
+| `PlayerRoot`'s `launchParams` fallback | always `null` |
+| `commands.getLaunchParams()` | a public API that resolves successfully and always lies |
+
+A public method that resolves `null` forever is precisely "a control that looks live and is not" —
+the failure mode this whole refactor exists to remove. **There is no coherent half-deleted state**,
+so A2b is merged into A2 and the handoff goes with the Activity that fed it.
+
+Two module-side Kotlin contracts go with it, because their only consumer was `PlayerActivity`:
+`IMpvConfigProvider` (`getCurrentConfig`, read at `PlayerActivity.kt:575`) and
+`IPipModeChangeEmitter` (`emitPictureInPictureModeChanged`, called at `PlayerActivity.kt:1106`).
+Both are implemented by `MpvBridgeModule` and called by nothing else — the app reaches the same PiP
+path directly via `MpvBridgeModule.onPictureInPictureModeChanged` from `MainActivity.kt:227`, so the
+cast-based indirection has no reason to exist once there is one Activity. `IMpvConfigProvider`'s own
+docblock sets the precedent: its sibling contract *"was deleted rather than left as fiction."*
+
+**A2/A3 are one atomic unit across both repos.** The app has five functional dependencies on symbols
+A2 removes — `PlayerChrome.tsx:48`, `usePlaybackState.ts:27` (lib `useIsPlayerActivity`), and
+`playbackFacade.ts:217,334` + `useResumeAwarePlayerActivity.ts:164,314,318` (`getLaunchParams`) — so
+the app must de-plumb in the same commit that installs the release, together with the now-dangling
+`AndroidManifest.xml` `<activity android:name="com.simba.player.PlayerActivity">` entry.
 
 ---
 
