@@ -597,6 +597,65 @@ These are the live ones:
 - [ ] **NEW, surfaced by the C-17 trace:** the three `openPlaylist` call sites above bypass the
       seam entirely, so they record no lane and no `startPositionMs` today. A1 fixes all three.
 
+#### ✅ F5 A5 — `C-17` verified, and it was NOT closed
+
+The tracker recorded A1 as closing `C-17`. Verified 2026-10-14: **it did not.**
+
+`useLibraryScreen.ts:250,267` and `PlaylistDetailScreen.tsx:158` do derive the lane
+(`resolveStreamType(first.type)`). But the other three `openPlaylist` sites hardcoded it:
+
+| Site | Before | After |
+|---|---|---|
+| `useAlbumScreen.ts:107` (`playTrack`) | `{type: 'audio'}` | `resolveStreamType(tapped.type)` |
+| `useAlbumScreen.ts:115` (`playAll`) | `{type: 'audio'}` | `resolveStreamType(sortedTracks[0]!.type)` |
+| `useAlbumScreen.ts:121` (`shuffleAll`) | `{type: 'audio'}` | same |
+| `useArtistScreen.ts:103` (`playTrack`) | `{type: 'audio'}` | `resolveStreamType(item.type)` |
+| `useArtistScreen.ts:112` (`playAll`) | `{type: 'audio'}` | `resolveStreamType(allTracks[0]!.type)` |
+| `useArtistScreen.ts:118` (`shuffleAll`) | `{type: 'audio'}` | same |
+
+**Not a hypothetical.** `useMediaStore.tracks` holds both lanes —
+`fileEntriesToTracks` (`fileService.ts:691`) sets `type` from the extension
+(`isScanVideoExt(ext) ? 'video' : 'audio'`) and neither hook filters by it; both select
+purely on artist/album name. A music video in an artist's album folder appears in the
+track list and opened the **audio** player.
+
+The seam makes it worse than a caller bug: `usePlaylistLaunch.ts:176` is
+`type: opts.type ?? 'audio'`, so omitting the field silently picks audio too.
+
+`startPositionMs` is a separate finding — `useLibraryScreen` passes `first.resumePosition`,
+but `playlistItemsToEntries` (`playerStore.ts:109`) never populates `resumePosition`, so it
+is **always `undefined`**. Harmless (the seam omits null), but it is dead code that reads as
+if it resumes. **Not fixed in A5** — recorded below.
+
+#### ✅ Also fixed in A5 — unbounded re-render loop in both hooks
+
+Both hooks built a **new array inside the zustand selector**:
+
+```ts
+const tracks = useMediaStore(s => s.tracks.filter(...).sort(...));  // new array every call
+```
+
+The selector result never compares equal, so the store could drive an unbounded re-render.
+The first run of the new test died with *"Maximum update depth exceeded"* — the loop was
+real, not a mock artifact. Fixed by selecting the stable array and deriving in `useMemo`.
+
+#### New suite: `__tests__/screens/albumArtistLane.test.tsx` — 9 tests
+
+Mocks **only** `useResumeAwarePlayerActivity` (the app's launch boundary). Above it: the
+real screen hook, the real `useOpenPlaylist`, the real `orderPlaylist` (shuffle included),
+and the **real `resolveStreamType`**. Stubbing `resolveStreamType` would have made every
+assertion tautological.
+
+Each video assertion is **paired with its audio counterpart** — without the pair, a fix that
+always returned `'video'` would pass.
+
+**Mutation:** hardcode `'audio'` back into all six sites →
+**3 of 9 fail** (both "tapped VIDEO" cases + "play-all lane when it is a video").
+The 6 that pass are the audio-lane counterparts, which is the correct outcome.
+
+Gates: `tsc` 0, `eslint --max-warnings 0` 0, jest **87 suites / 1084 passed / 1 todo**
+(was 86 / 1075).
+
 ---
 
 ## Open defects this refactor touches
@@ -606,7 +665,7 @@ These are the live ones:
 | `C-03` | Video black screen (unexplained earlier captures) | F2 device proof should settle it |
 | `C-07` | Recently Played / Bookmarks have no artwork | **Independent of V21.** Blocked on one screenshot. |
 | `C-16` | Persisted rows mis-tagged as audio route films to the audio player | ✅ **FIXED** `a11f6f8` — lane derived from kind + persist v2 migration |
-| `C-17` | `openPlaylist` bypasses the seam | D-10, F5 |
+| `C-17` | `openPlaylist` bypasses the seam | ✅ **PARTIALLY FIXED.** A1 (`2a80ba1`) routed all sites through the seam, but the lane was still hardcoded `'audio'` at 6 of 9 sites. **F5 A5** derives it everywhere. `startPositionMs` still dead at `useLibraryScreen` — see A5. |
 | `C-18`–`C-24` | Lane-routing defects. `resolveStreamType` `'episode'`→video and `'archive-video'` missing: ✅ **FIXED** `bd699d4`. The rest: D-8, F5 | Mostly F5 |
 | `C-36` | The lane decides whether a window opens at all, not just a badge | F3 removes the window decision entirely |
 
@@ -759,7 +818,7 @@ not throwaway work that the refactor supersedes.
 
 **Dead / fake**
 17. `MpvRenderViewManager` — unreachable
-18. `openPlaylist` bypassing the app seam (`C-17`)
+18. `openPlaylist` bypassing the app seam (`C-17`) — ✅ routed in A1, lane fixed in A5
 19. `useQueueSync.ts:101` — phantom `uri: ''`
 20. `useQueueSync.ts:108` — hardcoded `'audio'` lane
 
@@ -802,7 +861,12 @@ not throwaway work that the refactor supersedes.
       still launches `PlayerActivity`: `HistoryScreen.tsx:99`, `fileService.ts:58`,
       `useHomeScreen.ts:187`, `useHomeScreen.ts:366`, `useSearchScreen.ts:143`,
       `useOpenWithResume.ts:118`, `useResumeAwarePlayerActivity.ts:70`, `useQueueSync.ts:107`,
-      `useBookmarkToggle.ts:135`. (`QueueScreen.ts:197` fixed in `2e85a4d`.)
+      `useBookmarkToggle.ts:135`. (`QueueScreen.ts:197` fixed in `2e85a4d`; the Album/Artist
+      `openPlaylist` sites fixed in **A5**.)
+- [ ] `useLibraryScreen.ts:252` — `startPositionMs: first.resumePosition` is **always
+      `undefined`**: `playlistItemsToEntries` (`playerStore.ts:109`) never populates
+      `resumePosition`. Harmless (the seam omits null) but dead — it reads as if the launch
+      resumes. Found by A5, deliberately not fixed there.
 - [ ] `openPlaylist` bypasses the app seam (`C-17`); `useQueueSync` phantom `uri: ''` + hardcoded lane
 - [ ] Dead code: `AudioLyricsView` (525 lines, 0 call sites), `AudioVisualizer` (143, 0),
       13 x `textContent.ts` (**4 real import sites** - an earlier "0" was wrong),

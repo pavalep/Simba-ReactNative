@@ -6,7 +6,12 @@ import {useMemo, useCallback} from 'react';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useOpenPlaylist, usePlayer, usePlayerActivity} from '../../../infrastructure/player';
+import {
+  resolveStreamType,
+  useOpenPlaylist,
+  usePlayer,
+  usePlayerActivity,
+} from '../../../infrastructure/player';
 import {useMediaStore} from '../../../state';
 import {usePlayerStore, type PlaylistEntry} from '../../../state';
 
@@ -23,10 +28,17 @@ export function useArtistScreen() {
 
   const {artistName} = route.params;
 
-  const tracks = useMediaStore(s =>
-    s.tracks.filter(
-      t => (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
-    ),
+  // V21 F5 A5 — select the stable array, derive outside the selector.
+  // Filtering inside the selector built a NEW array on every call, so the
+  // selector result never compared equal and the store could drive an
+  // unbounded re-render loop ("Maximum update depth exceeded").
+  const allLibraryTracks = useMediaStore(s => s.tracks);
+  const tracks = useMemo(
+    () =>
+      allLibraryTracks.filter(
+        t => (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
+      ),
+    [allLibraryTracks, artistName],
   );
 
   const currentFile = usePlayerStore(state => state.currentFile);
@@ -100,7 +112,9 @@ export function useArtistScreen() {
       openPlayer({
         uri: item.uri,
         title: item.title,
-        type: 'audio',
+        // V21 F5 A5 — derive the lane. It was a literal `'audio'`, so a
+        // scanned video in this artist's catalogue opened the audio player.
+        type: resolveStreamType(item.type),
       });
     },
     [openPlayer],
@@ -109,13 +123,18 @@ export function useArtistScreen() {
   const handlePlayAll = useCallback(() => {
     if (allTracks.length === 0) return;
     usePlayerStore.getState().loadPlaylistToPlayer(allTracks);
-    openPlaylist(allTracks, {type: 'audio'});
+    openPlaylist(allTracks, {type: resolveStreamType(allTracks[0]!.type)});
   }, [allTracks, openPlaylist]);
 
   const handleShuffleAll = useCallback(() => {
     if (allTracks.length === 0) return;
     usePlayerStore.getState().loadPlaylistToPlayer(allTracks);
-    openPlaylist(allTracks, {type: 'audio', shuffle: true});
+    openPlaylist(allTracks, {
+      // See the Album hook: the seam picks its own start index when
+      // shuffling, so entry 0 is the only lane knowable up front.
+      type: resolveStreamType(allTracks[0]!.type),
+      shuffle: true,
+    });
   }, [allTracks, openPlaylist]);
 
   const handleNavigateToAlbum = useCallback(

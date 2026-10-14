@@ -6,7 +6,12 @@ import {useMemo, useCallback} from 'react';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useOpenPlaylist, usePlayer, usePlayerActivity} from '../../../infrastructure/player';
+import {
+  resolveStreamType,
+  useOpenPlaylist,
+  usePlayer,
+  usePlayerActivity,
+} from '../../../infrastructure/player';
 import {useMediaStore} from '../../../state';
 import {usePlayerStore} from '../../../state';
 
@@ -23,14 +28,21 @@ export function useAlbumScreen() {
 
   const {albumName, artistName} = route.params;
 
-  const tracks = useMediaStore(s =>
-    s.tracks
-      .filter(
-        t =>
-          (t.album || 'Unknown Album').toLowerCase() === albumName.toLowerCase() &&
-          (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
-      )
-      .sort((a, b) => a.trackNumber - b.trackNumber),
+  // V21 F5 A5 — select the stable array, derive outside the selector.
+  // Filtering inside the selector built a NEW array on every call, so the
+  // selector result never compared equal and the store could drive an
+  // unbounded re-render loop ("Maximum update depth exceeded").
+  const allLibraryTracks = useMediaStore(s => s.tracks);
+  const tracks = useMemo(
+    () =>
+      allLibraryTracks
+        .filter(
+          t =>
+            (t.album || 'Unknown Album').toLowerCase() === albumName.toLowerCase() &&
+            (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
+        )
+        .sort((a, b) => a.trackNumber - b.trackNumber),
+    [allLibraryTracks, albumName, artistName],
   );
   const currentFile = usePlayerStore(state => state.currentFile);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
@@ -104,7 +116,15 @@ export function useAlbumScreen() {
       if (indexInAlbum > 0) {
         usePlayerStore.getState().playFromPlaylist(indexInAlbum);
       }
-      openPlaylist(sortedTracks, {type: 'audio', startIndex: indexInAlbum});
+      // V21 F5 A5 — derive the lane from the track the user tapped.
+      // It used to be a literal `'audio'`, which sent a scanned video file
+      // (the media store holds both lanes; `fileEntriesToTracks` sets
+      // `type` from the extension) to the audio player.
+      const tapped = sortedTracks[indexInAlbum] ?? sortedTracks[0];
+      openPlaylist(sortedTracks, {
+        type: resolveStreamType(tapped.type),
+        startIndex: indexInAlbum,
+      });
     },
     [sortedTracks, openPlaylist],
   );
@@ -112,13 +132,19 @@ export function useAlbumScreen() {
   const handlePlayAll = useCallback(() => {
     if (sortedTracks.length === 0) return;
     usePlayerStore.getState().loadPlaylistToPlayer(sortedTracks);
-    openPlaylist(sortedTracks, {type: 'audio'});
+    openPlaylist(sortedTracks, {type: resolveStreamType(sortedTracks[0]!.type)});
   }, [sortedTracks, openPlaylist]);
 
   const handleShuffleAll = useCallback(() => {
     if (sortedTracks.length === 0) return;
     usePlayerStore.getState().loadPlaylistToPlayer(sortedTracks);
-    openPlaylist(sortedTracks, {type: 'audio', shuffle: true});
+    openPlaylist(sortedTracks, {
+      // The seam shuffles internally and picks its own start index, so the
+      // first entry is the only lane we can know before it runs. It is the
+      // same lane `loadPlaylistToPlayer` filtered the queue to.
+      type: resolveStreamType(sortedTracks[0]!.type),
+      shuffle: true,
+    });
   }, [sortedTracks, openPlaylist]);
 
   const handleGoToArtist = useCallback(() => {
