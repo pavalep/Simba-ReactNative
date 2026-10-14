@@ -59,8 +59,9 @@ export interface NowPlaying {
    * `mediaLane` is a display lane a screen may or may not pass, and
    * this is the `'video' | 'audio'` the bridge was actually asked for.
    * It is the same value `usePlayerActivity` branches on, so it decides
-   * which native path ran — a video opened `PlayerActivity`, audio
-   * started the media service with no window.
+   * which native path ran - V21 F5 changed that from "video opened a
+   * second Activity" to "video loads into the surface already mounted";
+   * audio started the media service with no window, and still does.
    *
    * V20 Phase C: the audio chrome gates on THIS. Gating on
    * `mediaLane` would hide the player for the many launch sites that

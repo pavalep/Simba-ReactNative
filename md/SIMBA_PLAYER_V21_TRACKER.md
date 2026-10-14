@@ -506,9 +506,38 @@ exists to remove, and deleting `PlayerActivity` first would leave it throwing
       - `App.tsx:392` used `<SimbaPlayerRoot headless>` — **missed by the A2 grep, which only
         searched `src/`**. Replaced with `<AppContent />`, which is exactly equivalent: headless
         mode reduced to "render children" once launch params had no source.
-- [ ] **A4 — re-verify Recently Played.** One root + one `PlayerProvider` removes the structural
-      cause. Its existing writer suite mocks `useTransport` wholesale, so it proves nothing about
-      real transport values — needs real coverage before it can be called fixed.
+- [x] **A4 — re-verify Recently Played. SHIPPED.** The structural cause is gone and the
+      chain is now provably complete:
+
+      - **One** `usePlaybackCheckpointSync` mount (`App.tsx:320`), **one** `useQueueSync`
+        (`App.tsx:97`), **one** `<SimbaPlayer>` (`App.tsx:496`). Verified by grep across
+        `src/` **and** the repo root.
+      - The writer's inputs are real: `useTransport` sources `positionMs`/`durationMs` from
+        `usePlayerProgress()` and `isPlaying` from the lib's `state.isPlaying`. Its own suite
+        already pins those derivations behaviourally.
+      - `addRecent` is exported (`features/recentHistory/index.ts:76`) and reaches the real
+        `useRecentHistoryStore`.
+
+      **The tracker's original claim was partly wrong, and the correction matters.** It said the
+      suite "mocks `useTransport` wholesale, so it proves nothing about real transport values."
+      `useTransport.test.ts` *does* pin that seam. But the writer suite mocks **both ends** —
+      `useTransport` *and* `features/recentHistory` — so nothing tested the chain between them.
+
+      **Proven, not asserted.** New `checkpointToRecentlyPlayed.integration.test.tsx` mocks
+      ONLY the lib, so real `useTransport` → real writer → real `addRecent` → real store all
+      run. Mutant: force `useTransport`'s `positionMs` to `0`.
+      - new suite → **3 of 6 fail**
+      - existing `usePlaybackCheckpointSync.test.tsx` → **15 of 15 PASS**
+
+      So the pre-existing suite genuinely cannot see a transport that stopped reporting
+      position — which is the exact shape of "Recently Played is empty and nothing errors".
+      That is the regression this file now pins.
+
+      ⚠ **Cost recorded:** the new suite pulls the whole `useTransport` graph, adding ~7 s warm
+      (~30 s cold). One cold full-suite run tipped `onMediaChrome.test.tsx` over the 15 s
+      `testTimeout` (41 s under load; 10 s isolated). Warm re-run is **86 suites / 1075 passed /
+      1 todo**. Load-sensitive, not a regression — but it eats headroom the jest config comment
+      claims exists, and the next suite added will break it again.
 - [x] ~~Delete `PlayerChrome`'s `isPlayerActivity` gate (D-7)~~ — **DONE in A3, verified rather than
       assumed.** Two distinct dependencies existed: `PlayerChrome.tsx` and `usePlaybackState.ts`
       imported the **lib's** hook; `App.tsx` imported the app's own `playerHost` copy. All three

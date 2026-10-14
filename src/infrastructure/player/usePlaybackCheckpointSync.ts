@@ -34,11 +34,19 @@ import {useTransport} from './useTransport';
  *
  * ## Where it is mounted, and why it matters
  *
- * Mounted in `ActivityShell`, **not** in `AppContent`. `AppContent`
- * renders as `{isPlayerActivity ? null : <AppContent />}`, so a hook
- * mounted there does not run in the player activity — which is exactly
- * where playback happens. `useQueueSync` is mounted there today and has
- * therefore never observed a real playback session.
+ * Mounted in `ActivityShell`, next to `useQueueSync`'s sibling hooks and
+ * above `AppContent`.
+ *
+ * It used to be mounted in a tree that rendered as
+ * `{isPlayerActivity ? null : <AppContent />}`, so the copy inside
+ * `AppContent` did not run while the player Activity was in front — which
+ * is exactly where playback happened. `useQueueSync` lived there and
+ * therefore never observed a real session.
+ *
+ * V21 F5 deleted the second Activity and that ternary with it, so every
+ * one of these hooks now runs in the single React tree, on every screen,
+ * for the whole session. `checkpointToRecentlyPlayed.integration.test.tsx`
+ * is what keeps that claim honest.
  *
  * ## Rate limiting
  *
