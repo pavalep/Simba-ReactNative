@@ -135,3 +135,16 @@ scratch/
 # all ignored.
 delete_me/
 delete_me/**
+
+# ── Root-level scratch (F5 A7, 2026-10-14) ────────────────────────────
+# Commit-message drafts (git commit -F COMMIT_MSG_<id>.txt) and captured
+# gate output (
+px jest | Out-File jest_<run>.txt). Both are written at
+# the repo root by the commit workflow. They were previously untracked but
+# NOT ignored, so every git status listed 26 of them and every git add
+# was a place one could slip into a commit. Ignoring them removes that
+# hazard entirely; nothing here is ever meant to be committed.
+COMMIT_MSG_*.txt
+jest_*.txt
+kotlin_*.txt
+lint_*.txt
