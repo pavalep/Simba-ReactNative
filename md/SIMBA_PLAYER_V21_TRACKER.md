@@ -1,4 +1,51 @@
 # SIMBA Player V21 — Single-Activity Tracker
+- [ ] Argent 0.25.0 -> 0.27.0 - notice surfaced, **not applied**, awaiting consent
+
+---
+
+## Handoff — end of session, 2026-10-14
+
+**Both repos are clean and pushed. Nothing is mid-flight.** App `59a734e`, lib `9ad7b0b`
+(lib source unchanged since the `1.14.0` release at `085680f`).
+
+### Shipped today
+
+| Commit | What | Gates |
+|---|---|---|
+| `f4aa9d0` | **A4** — Recently Played pinned end-to-end. The old suite mocked both ends of the chain, so it was blind to a transport that stopped reporting position. New suite mocks only the lib; **mutation: 3 of 6 fail**, the old suite **15 of 15 pass**. | tsc 0, eslint 0, 86/1075 |
+| `a5fcaed` | **A5** — `C-17` was NOT closed by A1. Six launch sites in Album/Artist hardcoded `type: 'audio'`; a scanned music video opened the AUDIO player. Also fixed an unbounded re-render loop in both hooks (new array built inside the zustand selector). | tsc 0, eslint 0, 87/1084 |
+| `2722657` | **A6** — D-9. `useQueueSync` rebuilt `currentFile` with `uri: ''`, which **overwrote the real value on every launch**, so the now-playing indicator went dark everywhere. Now derived from `useNowPlayingStore`. Lane-inference list closed: **6 of its 9 entries were stale**. | tsc 0, eslint 0, 88/1093 |
+| `89d5c53` | **A7** — jest ceiling. Two independent problems, not one. `maxWorkers: '50%'` fixed warm oversubscription (43.97 → 33.70 s; **fewer workers was faster**); `testTimeout: 30000` fixed cold under-provisioning (3 suites failed cold at 15 s, green at 30 s). Neither substitutes for the other. | tsc 0, eslint 0, cold+warm green |
+| `59a734e` | chore — ignore root scratch so it cannot slip into a commit | 88/1093 |
+
+A7's full measurement table lives in the `jest.config.js` comment beside `testTimeout`
+and `maxWorkers` — that is the durable copy, not this summary.
+
+### Start here tomorrow
+
+1. **Duplicate `setVolume`** — `useTransport.ts:223` and `:260` both declare
+   `setVolume(volume: number): void` in `TransportCommands`, and each docblock claims a
+   different wave introduced it. Plus a third path at `AudioPlayer.tsx:339` calling a
+   different `setVolume`. Smallest remaining item; good one to open on.
+2. **RENAME `useResumeAwarePlayerActivity.ts`** — named for an Activity F5 deleted. Pure
+   rename, no behaviour change, but it is the last file in that folder still speaking about
+   an Activity that does not exist.
+3. **`useLibraryScreen.ts:252`** — `startPositionMs: first.resumePosition` is always
+   `undefined` because `playlistItemsToEntries` never populates that field. Harmless today
+   (the seam omits null) but it reads as if the launch resumes. Deciding what SHOULD populate
+   it is a resume-design question — needs a decision, not a patch.
+
+### Constraints still in force
+
+- Device proof is still outstanding for **everything**. All of A4–A7 is CODE, not DEVICE.
+- Lib is released at **1.14.0**; the app pins it. Never wire it via `file:`/`link:`/`workspace:` —
+  commit, push, annotated tag `v<version>`, let Actions publish, THEN `npm install`.
+- Argent 0.25.0 → 0.27.0 is **still awaiting explicit consent** — do not apply.
+- Full gates before every commit. App: `tsc`, `eslint --max-warnings 0`, `jest`. Lib: `tsc`,
+  `jest`, `gradlew :simba-dev_react-native-media-player:compileDebugKotlin` from `example/android`.
+- The lib has **no** ESLint config — that gate is app-only.
+
+# SIMBA Player V21 — Single-Activity Tracker
 
 **Spec:** `SIMBA_PLAYER_V21_SPECIFICATION.md`
 **Started:** 2026-10-09
@@ -857,44 +904,6 @@ not throwaway work that the refactor supersedes.
 
 **Other open work**
 
-#### ✅ F5 A7 — the jest ceiling: two problems, two fixes, neither a substitute
-
-The A4 integration suite was blamed for tipping onMediaChrome.test.tsx over 	estTimeout.
-It was not the cause. Measured on this machine (16 logical cores, 13.3 GB RAM):
-
-| Config | Warm | Cold (cache cleared) |
-|---|---|---|
-| default workers / 15 s | 43.97 s green | **3 suites FAILED, 6 timeouts** |
-| maxWorkers 50% / 15 s | 41.20 s green | **3 suites FAILED, 6 timeouts** |
-| maxWorkers 50% / 30 s | **33.70 s green** | **96.05 s green** |
-
-**Two independent problems that were being treated as one.**
-
-1. **Warm runs were oversubscribed.** Jest defaults to cores - 1 = 15 workers, and 15
-   concurrent React Native test environments is roughly this machine's whole memory budget.
-   The heaviest suites measured 33.7 s WALL against ~10 s unloaded - a ~3.3x contention
-   multiplier on per-test cost. Capping at maxWorkers: '50%' took onMediaChrome 33.7 ->
-   19.5 s, NowPlaying 31.0 -> 19.8 s, TransportBar 30.6 -> 19.2 s, VideoMoreSheet 26.6 ->
-   16.3 s. Fewer workers was **faster overall** (43.97 -> 33.70 s), so 15 was thrashing,
-   not using spare capacity.
-
-2. **Cold runs were under-provisioned.** With the cache cleared every worker transforms
-   simultaneously: 114.6 s cold against 41.2 s warm. Under that, PlayerControl, PlayerChrome
-   and onMediaChrome blew a 15 s ceiling doing *legitimate* work - no single test is that slow
-   unloaded (onMediaChrome runs 23 tests in ~10 s), so 15 s was a **false-failure ceiling**,
-   not a hang detector. 30 s absorbs the cold regime and still bounds a real hang at a
-   finite cost.
-
-Neither fix substitutes for the other: maxWorkers made the warm case fast and left the cold
-case broken; raising the timeout fixed cold and would have papered over the thrashing. Both
-are now in jest.config.js with the measurements in the comment.
-
-**The config comment claimed something false and the measurement caught it.** The first
-draft asserted that capping workers would also clear the "worker process failed to exit
-gracefully" warning. It did not - that warning appears at 15 workers and at 8. It is leaked
-handles in the suites themselves and is tracked separately below. I corrected the comment
-rather than leaving a claim in the config that the next person would have to disprove.
-**Other open work**
 - [ ] FAB on Home renders **on top of** the Explore Contents carousel, covering the Music card
 - [x] Lane-inference sites — ✅ **CLOSED in A6.** The list was substantially stale; every entry was
       re-verified. `useResumeAwarePlayerActivity.ts:70` and `fileService.ts:58` were ALREADY
