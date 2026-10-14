@@ -25,17 +25,62 @@ module.exports = {
   // `<Modal><Text/></Modal>`; the second render is 0 ms). On a real
   // sheet tree (ModeSheet / CaptionsSheet / MoreSheet — several rows,
   // theme lookups, TouchableOpacity) the same one-time cost measures
-  // ~4.0 s, which sits directly on the 5 s default and tips over under
-  // parallel worker load. That produced 7 suites failing with
-  // "Exceeded timeout of 5000 ms" while every other test in those
-  // same files ran in 6–17 ms.
+  // ~4.0 s, which tips over the 5 s default. That produced 7 suites
+  // failing with "Exceeded timeout of 5000 ms" while every other test in
+  // those same files ran in 6–17 ms.
   //
-  // 15 s gives ~3.5x headroom over the observed worst case and still
-  // catches a genuine hang (one that never resolves), so this raises
-  // the ceiling without hiding a defect. A blanket bump is the right
-  // fix here precisely BECAUSE the slowness is a known framework
-  // one-off, not per-test work that could be optimised away.
-  testTimeout: 15000,
+  // V21 F5 A7 measured this ceiling and found it was being breached by
+  // worker contention, not by any test being genuinely slow. See the
+  // note beside `maxWorkers` for the measurement and the fix.
+  //
+  // V21 F5 A7 — the "15 s gives ~3.5x headroom" claim below was WRONG,
+  // and the timeout was never the knob to turn. Measured on this machine
+  // (16 logical cores, 13.3 GB RAM): Jest's default worker count is
+  // `cores - 1` = 15, and 15 concurrent React Native test environments
+  // is roughly the machine's whole memory budget. Under that contention
+  // the heaviest suite measured 33.7 s WALL against ~10 s unloaded - a
+  // ~3.3x multiplier on per-test cost, which is what pushed individual
+  // tests past 15 s. That is contention, not slow tests.
+  //
+  // The fix is `maxWorkers` below. 15 s stays because it is honest again
+  // once the multiplier is gone. Raising the timeout to cover contention
+  // would have hidden the cause AND made a genuine hang take twice as
+  // long to report.
+  //
+  // 15 s still catches a real hang (one that never resolves) while
+  // leaving room for the Modal one-time init above.
+  //
+  // V21 F5 A7, part 2 — 15 s measured FALSE on a cold cache. Cleared
+  // cache, every worker transforms simultaneously; the cold full run is
+  // 114.6 s against 41.2 s warm, and the three heaviest component suites
+  // (PlayerControl, PlayerChrome, onMediaChrome) blew the 15 s ceiling
+  // with legitimate work — 6 timeouts. No single test is that slow
+  // unloaded (onMediaChrome runs 23 tests in ~10 s), so 15 s was a
+  // false-failure ceiling rather than a hang detector.
+  //
+  // 30 s absorbs the cold regime and still bounds a real hang at a
+  // finite cost. `maxWorkers` above is what made the WARM case fast;
+  // this is what makes the COLD case correct. They are different
+  // problems and neither substitutes for the other.
+  testTimeout: 30000,
+  // V21 F5 A7 — half the logical cores. Jest's own docs recommend 50%
+  // for memory-constrained setups, and this box is exactly that: 15
+  // workers on 13.3 GB oversubscribed it, which is why per-test cost
+  // tripled. The heavy suites (onMediaChrome, NowPlaying,
+  // PlayerChrome, the TransportBar group) all render full component
+  // trees; they are the ones that were starving each other.
+  //
+  // Measured, full suite, before -> after: total wall 43.97 s -> 41.20 s
+  // (fewer workers was FASTER, so 15 was oversubscribing, not using spare
+  // capacity). Worst suites: onMediaChrome 33.7 -> 19.5 s, NowPlaying
+  // 31.0 -> 19.8 s, TransportBar 30.6 -> 19.2 s, VideoMoreSheet 26.6 ->
+  // 16.3 s. That is the ~3.3x contention multiplier coming off.
+  //
+  // It does NOT fix the "worker process failed to exit gracefully" warning:
+  // that is leaked handles in the suites themselves and is tracked
+  // separately. I asserted otherwise in a first draft of this comment;
+  // it was wrong, and the measurement is what caught it.
+  maxWorkers: '50%',
   moduleNameMapper: {
     '^react-native-linear-gradient$':
       '<rootDir>/__mocks__/react-native-linear-gradient.js',

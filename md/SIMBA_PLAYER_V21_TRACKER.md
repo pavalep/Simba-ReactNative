@@ -856,6 +856,45 @@ not throwaway work that the refactor supersedes.
       teardown; work the 31-item inventory. **Verify every row absent, not "probably gone".**
 
 **Other open work**
+
+#### ✅ F5 A7 — the jest ceiling: two problems, two fixes, neither a substitute
+
+The A4 integration suite was blamed for tipping onMediaChrome.test.tsx over 	estTimeout.
+It was not the cause. Measured on this machine (16 logical cores, 13.3 GB RAM):
+
+| Config | Warm | Cold (cache cleared) |
+|---|---|---|
+| default workers / 15 s | 43.97 s green | **3 suites FAILED, 6 timeouts** |
+| maxWorkers 50% / 15 s | 41.20 s green | **3 suites FAILED, 6 timeouts** |
+| maxWorkers 50% / 30 s | **33.70 s green** | **96.05 s green** |
+
+**Two independent problems that were being treated as one.**
+
+1. **Warm runs were oversubscribed.** Jest defaults to cores - 1 = 15 workers, and 15
+   concurrent React Native test environments is roughly this machine's whole memory budget.
+   The heaviest suites measured 33.7 s WALL against ~10 s unloaded - a ~3.3x contention
+   multiplier on per-test cost. Capping at maxWorkers: '50%' took onMediaChrome 33.7 ->
+   19.5 s, NowPlaying 31.0 -> 19.8 s, TransportBar 30.6 -> 19.2 s, VideoMoreSheet 26.6 ->
+   16.3 s. Fewer workers was **faster overall** (43.97 -> 33.70 s), so 15 was thrashing,
+   not using spare capacity.
+
+2. **Cold runs were under-provisioned.** With the cache cleared every worker transforms
+   simultaneously: 114.6 s cold against 41.2 s warm. Under that, PlayerControl, PlayerChrome
+   and onMediaChrome blew a 15 s ceiling doing *legitimate* work - no single test is that slow
+   unloaded (onMediaChrome runs 23 tests in ~10 s), so 15 s was a **false-failure ceiling**,
+   not a hang detector. 30 s absorbs the cold regime and still bounds a real hang at a
+   finite cost.
+
+Neither fix substitutes for the other: maxWorkers made the warm case fast and left the cold
+case broken; raising the timeout fixed cold and would have papered over the thrashing. Both
+are now in jest.config.js with the measurements in the comment.
+
+**The config comment claimed something false and the measurement caught it.** The first
+draft asserted that capping workers would also clear the "worker process failed to exit
+gracefully" warning. It did not - that warning appears at 15 workers and at 8. It is leaked
+handles in the suites themselves and is tracked separately below. I corrected the comment
+rather than leaving a claim in the config that the next person would have to disprove.
+**Other open work**
 - [ ] FAB on Home renders **on top of** the Explore Contents carousel, covering the Music card
 - [x] Lane-inference sites — ✅ **CLOSED in A6.** The list was substantially stale; every entry was
       re-verified. `useResumeAwarePlayerActivity.ts:70` and `fileService.ts:58` were ALREADY
