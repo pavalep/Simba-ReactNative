@@ -857,17 +857,25 @@ not throwaway work that the refactor supersedes.
 
 **Other open work**
 - [ ] FAB on Home renders **on top of** the Explore Contents carousel, covering the Music card
-- [ ] Lane-inference sites - **live now**, not blocked on F3, because F3 has not landed and video
-      still launches `PlayerActivity`: `HistoryScreen.tsx:99`, `fileService.ts:58`,
-      `useHomeScreen.ts:187`, `useHomeScreen.ts:366`, `useSearchScreen.ts:143`,
-      `useOpenWithResume.ts:118`, `useResumeAwarePlayerActivity.ts:70`, `useQueueSync.ts:107`,
-      `useBookmarkToggle.ts:135`. (`QueueScreen.ts:197` fixed in `2e85a4d`; the Album/Artist
-      `openPlaylist` sites fixed in **A5**.)
+- [x] Lane-inference sites — ✅ **CLOSED in A6.** The list was substantially stale; every entry was
+      re-verified. `useResumeAwarePlayerActivity.ts:70` and `fileService.ts:58` were ALREADY
+      correct (stale line numbers). `useQueueSync.ts:107` fixed in **A6**. The Album/Artist
+      `openPlaylist` sites — the ones that actually WERE wrong — were missing from this list and
+      were fixed in **A5**. `HistoryScreen.tsx:99` is a **dead branch**, not a defect:
+      `RecentHistoryEntry.mediaType` is a required `MediaLane` stored normalised, so
+      `item.mediaType` (`:176`) is always defined and `?? 'video'` cannot fire.
+      `useHomeScreen:187/366`, `useSearchScreen:143`, `useOpenWithResume:118` and
+      `useBookmarkToggle:135` contain **no lane literal at all**; a repo-wide sweep for
+      `(type|mediaType|streamType): '(audio|video)'` returns only legitimate values (ID3
+      tagger, Jamendo, video sheet) plus type declarations.
+      **Net: the real lane defects were 6 sites in Album/Artist (A5) and 1 hook (A6); this
+      nine-item list named six sites that were already correct.**
 - [ ] `useLibraryScreen.ts:252` — `startPositionMs: first.resumePosition` is **always
       `undefined`**: `playlistItemsToEntries` (`playerStore.ts:109`) never populates
       `resumePosition`. Harmless (the seam omits null) but dead — it reads as if the launch
       resumes. Found by A5, deliberately not fixed there.
-- [ ] `openPlaylist` bypasses the app seam (`C-17`); `useQueueSync` phantom `uri: ''` + hardcoded lane
+- [ ] ✅ CLOSED in **A6** — see the A6 section. The list named six sites that were already correct;
+      the sites that were actually wrong (Album/Artist `openPlaylist`) were missing from it.
 - [ ] Dead code: `AudioLyricsView` (525 lines, 0 call sites), `AudioVisualizer` (143, 0),
       13 x `textContent.ts` (**4 real import sites** - an earlier "0" was wrong),
       `handleViewFullLyrics` lie. `NowPlayingScreen` is **live**, not a null stub.

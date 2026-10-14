@@ -1,118 +1,119 @@
 /**
  * V19 W0 Phase 0.1 — `useQueueSync()` middleware (FOUNDATIONAL).
  *
- * The single wire between the lib's native queue + the consumer's
- * `usePlayerStore` Zustand state. Without it, every consumer has its
- * own view of "what's playing" and they drift. The Home screen's "Now
- * Playing" tile, the Queue screen, the PlaylistDetail screen, and the
- * player's own chrome all need to read the same `currentFile` — and
- * that single source of truth is the lib's native session, not the
- * consumer's Zustand store.
+ * The wire between the launch seam's session record and the consumer's
+ * `usePlayerStore.currentFile`. Every consumer that asks "is this track
+ * the one playing?" reads `currentFile?.uri` — the Library waveform
+ * (`useLibraryScreen.ts:103`), Album and Artist (`isCurrentTrack`), and
+ * ArtistDetail all compare against it.
  *
- * Mounted ONCE at AppContent (inside the existing V16 SimbaPlayer's
- * children) — see `md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md` §5 for
- * the W4 migration when VideoPlayer replaces the V16 root.
+ * Mounted ONCE at `ActivityShell`, next to `usePlaybackCheckpointSync`.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.22 + the audit doc §3.C.
  *
- * Subscribes to:
- *  - `usePlayer().state` (isPlaying, title, artist, loopMode, etc.)
- *  - `usePlayerProgress().positionMs` (1 Hz polling)
- *  - `usePlayerActivity().openPlayer` (launch surface)
- *  - `useOpenPlaylist()` (multi-item launch surface)
+ * ## V21 F5 A6 — the entry is DERIVED from the session, not fabricated
  *
- * Writes to:
- *  - `usePlayerStore.setCurrentFile(...)` on every launch
- *  - `usePlayerStore.playFromPlaylist(idx)` on next/previous
- *  - `usePlayerStore.clearPlaylist()` on session empty
+ * This hook used to rebuild `currentFile` out of the lib's lossy session
+ * state and three literals:
  *
- * Uses Zustand selector slices (`usePlayerStore(s => s.currentFile)`)
- * in dependent components to avoid re-render storms.
+ * ```ts
+ * {uri: '', duration: 0, source: 'local', type: 'audio',
+ *  mediaType: 'audio' as MediaLane}
+ * ```
  *
- * Failure modes:
- *  - Lib's queue contents are opaque (audit §4). If the lib exposes
- *    "what's next", `useQueueSync` upgrades its subscription. Until
- *    then, `usePlayerStore.playlist` is the maintained queue — set
- *    by `useOpenPlaylist` argument + advanced on `next()` /
- *    `previous()`.
- *  - If the lib exposes a richer queue API in V20+, this hook upgrades
- *    without breaking consumers.
+ * Three things were wrong with that, and the first one broke the UI.
+ *
+ *  1. **`uri: ''` destroyed the value it was supposed to mirror.**
+ *     `loadPlaylistToPlayer` writes a real `currentFile` on every
+ *     playlist launch — then the very first lib state tick replaced it
+ *     with this entry, whose `uri` was the empty string. Every consumer
+ *     compares `currentFile?.uri` against a real track URI, and `''`
+ *     matches none, so the "now playing" indicator went dark on every
+ *     playlist launch and every single-track launch. It also made
+ *     `currentAudioUri` (`useLibraryScreen.ts:103`) `''` rather than
+ *     `null`, i.e. non-null-but-empty.
+ *
+ *  2. **`type`/`mediaType` were hardcoded to audio.** A video session
+ *     produced an entry claiming `audio`, so `activeLane`
+ *     (`playerStore.ts:104`) reported the wrong lane for video.
+ *
+ *  3. **`duration: 0` was never true**, and the docblock claimed the
+ *     lib "doesn't expose the original URI". Both statements were false:
+ *     `PlayerState` carries `durationMs`, and `useResumeAwarePlayerActivity`
+ *     — which owns the URI by construction, since it is what `openPlayer`
+ *     was called with — records it in `useNowPlayingStore`.
+ *
+ * The fix is not a better guess. It is to read the record that already
+ * exists. `useNowPlayingStore.current` is written by the launch seam on
+ * every launch, for both lanes, and cleared by `end()`. This hook was
+ * the last place still inventing playback metadata it could simply ask
+ * for.
+ *
+ * ## Lane is derived, never stored
+ *
+ * The entry is classified through `normalizeMediaClassification`, so
+ * `mediaType` remains a pure function of `type` — the same authority the
+ * rest of the app uses. `session.type` is the semantic kind when the
+ * launching screen knew it; `session.streamType` is the `'audio' |
+ * 'video'` the bridge was actually asked for, and is a valid `MediaKind`
+ * spelling, so it round-trips through the normaliser unchanged.
  */
 
 import {useEffect, useRef} from 'react';
 import {usePlayer} from '@simba-dev/react-native-media-player';
 import {usePlayerStore, type PlaylistEntry} from '../../state/playerStore';
-import type {MediaLane} from '../../types/media';
+import {useNowPlayingStore} from '../../state/nowPlayingStore';
+import {normalizeMediaClassification} from '../../types/media';
 
 /**
  * Mounted once. Returns nothing — side-effect-only hook.
  *
- * Usage (App.tsx, inside AppContent):
+ * Usage (`ActivityShell`):
  *   useQueueSync();
  */
 export function useQueueSync(): void {
-  // Subscriptions — capture the latest references via refs so the
-  // effect below doesn't re-run when the hook returns new function
-  // references on every render.
-  //
-  // V19 W9.3: `usePlayerActivity()` is GONE here. It was imported,
-  // destructured, and then discarded with a bare `void openPlayer;`
-  // under an eslint-disable, on the stated grounds that it kept "the
-  // hook dependency stable". A variable that is never read has no
-  // dependency to keep stable — it was a placeholder waiting to be
-  // mistaken for real wiring.
-  //
-  // It was also the last file in `src/infrastructure/player/` reaching
-  // past the resume-aware launch seam (`useResumeAwarePlayerActivity`),
-  // so removing it was what completed that migration.
-  //
-  // `usePlayerProgress` and `useOpenPlaylist` are likewise absent —
-  // they land in V20 when the lib exposes typed events for queue
-  // inspection.
   const {state} = usePlayer();
+  // The session record the launch seam wrote. `null` means nothing is
+  // loaded — the same condition `PlayerChrome` gates on, so there is one
+  // owner of "is a track loaded" and this hook reads it rather than
+  // re-deriving it from the lib's `state.title` heuristic.
+  const session = useNowPlayingStore(s => s.current);
 
   // Stable refs to the store actions (avoid stale closures).
-  // V19 W0 Phase 0.1: only the actions we actually invoke from the
-  // effects below. `playFromPlaylist` + the next/previous event
-  // subscription are V20 work (the lib doesn't expose typed events
-  // today — audit §4 "lib's queue contents are opaque").
   const setCurrentFileRef = useRef(usePlayerStore.getState().setCurrentFile);
   const clearPlaylistRef = useRef(usePlayerStore.getState().clearPlaylist);
 
-  // Wire: every state tick writes `currentFile` to the consumer store.
-  // The lib exposes `state.title` + `state.artist` + the underlying
-  // `uri` only when a session is active. When state.isPlaying goes from
-  // true -> false AND `state.title` is empty, we treat that as "session
-  // ended" and clear the playlist.
+  // V21 F5 A6 — derive `currentFile` from the session.
+  //
+  // `duration` is derived from the lib's `durationMs` and rounded to
+  // SECONDS, which is the unit `ScannedTrack.duration` and
+  // `PlaylistItem.duration` both use. No consumer reads `duration` off
+  // `currentFile` today, so this is honest rather than load-bearing —
+  // but `0` was never true, and a field that always lies is how the next
+  // consumer gets it wrong.
   useEffect(() => {
-    const titleEmpty = !state.title;
-    if (titleEmpty && !state.isPlaying) {
+    if (session == null) {
       clearPlaylistRef.current();
       return;
     }
-    if (titleEmpty) return;
 
-    // Build a minimal PlaylistEntry from the lib's session state.
-    // The lib doesn't expose the original URI here directly — that's a
-    // V20 follow-up. For W0, the entry carries `title + artist + isPlaying`
-    // so consumers (Home's "Now Playing" tile, NowPlayingScreen)
-    // render correctly even without the URI.
     const entry: PlaylistEntry = {
-      uri: '', // V20: lib exposes `getCurrentUri()` (audit §4)
-      title: state.title,
-      duration: 0,
-      source: 'local',
-      type: 'audio',
-      mediaType: 'audio' as MediaLane,
+      uri: session.uri,
+      title: session.title,
+      duration: Math.round(state.durationMs / 1000),
+      ...normalizeMediaClassification({
+        // `type` first; `streamType` is the fallback and is itself a
+        // valid `MediaKind` spelling, so it round-trips unchanged.
+        type: session.type ?? session.streamType,
+      }),
     };
     setCurrentFileRef.current(entry);
-  }, [state.isPlaying, state.title, state.artist]);
+  }, [session, state.durationMs]);
 
   // ── next/previous: the lib's `commands.next` / `commands.previous`
-  // fire internally. Without an event subscription, we can't observe
-  // them in W0. V20 follow-up: add a typed event subscription.
-  // For now, consumers call `usePlayerStore.playFromPlaylist(idx)`
-  // directly when they know the index changed.
-  // ──────────────────────────────────────────────────────────────
+  // fire internally and this hook does not observe them. Consumers that
+  // know the index changed call `usePlayerStore.playFromPlaylist(idx)`.
+  // `usePlayerStore.playlist` — not the lib's queue — is what the Queue
+  // screen renders.
 }
