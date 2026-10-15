@@ -21,6 +21,49 @@
 A7's full measurement table lives in the `jest.config.js` comment beside `testTimeout`
 and `maxWorkers` — that is the durable copy, not this summary.
 
+### F5 A8 — 2026-10-15: duplicate `setVolume` removed, and the clamp finally pinned
+
+Item 1 from the handoff below. The tracker had recorded three things; only one was real, and
+the one that was real led to a worse one.
+
+**The duplicate was real.** `TransportCommands` declared `setVolume(volume: number): void`
+TWICE — `:223` (docblock: "V19 W7.3, clamped here") and `:260` (docblock: "V19 W3.5.3,
+backed by lib `commands.setVolume`") — each claiming a different wave introduced it.
+TypeScript accepts an identical overload silently, so no gate ever flagged it. There has
+only ever been ONE implementation (`:812`). Merged into one declaration that keeps the
+richer W7.3 rationale and absorbs the W3.5.3 detail.
+
+**The "third volume path" was not real.** `AudioPlayer.tsx:339` is a `<Slider>`'s closing
+tag, and `AudioPlayer` calls `useTransport().commands.setVolume` — the same one. Checked
+every volume site: `AudioPlayer:112`, `VolumeControl:108`, `VerticalSwipeGestures:272`,
+`VideoPlayer:146`. All four route through the single facade method, so all of them inherit
+its clamp. There is no third path and no un-clamped sibling.
+
+**The gap that mattered: the clamp was never pinned.** The only test passed `72` — an
+in-range value. An implementation with the entire clamp deleted would have passed it just as
+happily. The surviving declaration now documents the clamp and that every volume control
+inherits it, so the contract needed something holding it. Added 5 tests: clamps high
+(104 → 100), clamps low (-7 → 0), rounds (72.6 → 73), and writes NOTHING for `NaN` and
+`Infinity` — the last because `Math.max(0, Math.min(100, NaN))` is `NaN`, so clamping alone
+would forward `NaN` to mpv as a property write.
+
+**Mutation:** delete the clamp (`commands.setVolume(volume)`) → **5 of 5 new tests fail**.
+The pre-existing pass-through test still passes, which is the point: it was never holding
+this down.
+
+**Also corrected:** `App.tsx:351` said `<VideoPlayer />` "self-gates on
+`useIsPlayerActivity()`" and is a "Sibling of `SimbaPlayerRoot`". F5 A2/A3 deleted both; it
+now gates on `usePresentation().isExpanded` (`VideoPlayer.tsx:347`) and is a sibling of
+`<ActivityShell />` inside `<SimbaPlayer>`.
+
+**Near-miss worth recording.** I first concluded `<VideoPlayer>` was entirely unrendered and
+its whole imperative ref API was dead — because the grep was scoped to `src/` and `App.tsx`
+sits at the repo root. That is the same miss that hid `<SimbaPlayerRoot headless>` from the
+A2 sweep. `<VideoPlayer />` is live at `App.tsx:353`. **A scoped grep that finds nothing is
+evidence about the scope, not about the codebase.**
+
+Gates: tsc 0, eslint 0 (--max-warnings 0), jest 88 suites / 1098 passed / 1 todo.
+
 ### Start here tomorrow
 
 1. **Duplicate `setVolume`** — `useTransport.ts:223` and `:260` both declare
@@ -859,9 +902,15 @@ not throwaway work that the refactor supersedes.
 14. `AudioMiniBar.tsx` replaying audio-only because the video mini bar never existed
 
 **Duplicated transport**
-15. `useTransport.ts:223` and `:260` — **two** `setVolume` declarations; both docblocks
-    claim a different wave introduced it
-16. `AudioPlayer.tsx:339` — a third volume path calling a different `setVolume`
+15. `useTransport.ts` — ✅ **FIXED in A8.** Two identical `setVolume(volume: number): void`
+    declarations in `TransportCommands` (:223 and :260), each docblock claiming a different
+    wave introduced it. TypeScript accepts an identical overload silently, so nothing flagged
+    it, and there has only ever been ONE implementation. Merged into one declaration.
+16. `AudioPlayer.tsx:339` — ❌ **THE CLAIM WAS WRONG.** :339 is a `<Slider>`'s closing tag, and
+    `AudioPlayer` calls `useTransport().commands.setVolume` — the SAME one. There is no third
+    path. Verified every volume site: `AudioPlayer:112`, `VolumeControl:108`,
+    `VerticalSwipeGestures:272` and `VideoPlayer:146` all route through the one facade method,
+    so all of them inherit its clamp.
 
 **Dead / fake**
 17. `MpvRenderViewManager` — unreachable

@@ -482,6 +482,66 @@ describe('useTransport — W3.5 surface', () => {
     expect(mockCommands.setVolume).toHaveBeenCalledWith(72);
   });
 
+  /**
+   * The clamp is the load-bearing part of `setVolume`, and it is the ONE
+   * volume path in the app — the audio slider, the video `VolumeControl`,
+   * the right-half swipe pill and `<VideoPlayer>`'s ref all route
+   * through here. If the clamp is dropped, every one of those becomes
+   * able to hand mpv a raw property write of e.g. 104.
+   *
+   * The pre-existing test only passed 72, an in-range value, so the
+   * clamp was entirely unpinned: an implementation with the clamp
+   * deleted passed it just as happily.
+   */
+  describe('setVolume — clamped at the facade boundary', () => {
+    beforeEach(() => {
+      mockCommands.setVolume.mockClear();
+    });
+
+    it('clamps above the range to 100', async () => {
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        // What a fast drag up the slider actually produces.
+        result.current.commands.setVolume(104);
+      });
+      expect(mockCommands.setVolume).toHaveBeenCalledWith(100);
+    });
+
+    it('clamps below the range to 0', async () => {
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        result.current.commands.setVolume(-7);
+      });
+      expect(mockCommands.setVolume).toHaveBeenCalledWith(0);
+    });
+
+    it('rounds a fractional value — mpv volume is an integer', async () => {
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        result.current.commands.setVolume(72.6);
+      });
+      expect(mockCommands.setVolume).toHaveBeenCalledWith(73);
+    });
+
+    it('writes nothing at all for NaN', async () => {
+      // A guard, not a clamp: `Math.max(0, Math.min(100, NaN))` is NaN,
+      // so clamping alone would forward NaN to mpv as a property write.
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        result.current.commands.setVolume(Number.NaN);
+      });
+      expect(mockCommands.setVolume).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing at all for Infinity', async () => {
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        result.current.commands.setVolume(Number.POSITIVE_INFINITY);
+      });
+      expect(mockCommands.setVolume).not.toHaveBeenCalled();
+    });
+  });
+
   it('setScreenBrightness(value) passes through to the lib commands (W3.5.3)', async () => {
     const {result} = await renderHook(() => useTransport());
     await act(async () => {

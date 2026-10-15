@@ -348,8 +348,15 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
       <ToastProvider>
         <ResumePromptContext.Provider value={promptResume}>
         {/* (1) Video chrome — always mounted, self-gates on
-            useIsPlayerActivity(). Sibling of SimbaPlayerRoot, never a
-            child: see the docstring. */}
+            `usePresentation().isExpanded` (`VideoPlayer.tsx:347` returns
+            null when video is not expanded).
+
+            V21 F5: this comment used to say it "self-gates on
+            useIsPlayerActivity()" and was a "Sibling of
+            SimbaPlayerRoot". Both of those are gone — F5 A2/A3 deleted
+            them. It is now a sibling of `<ActivityShell />` INSIDE
+            `<SimbaPlayer>`, because the compositor reads lib hooks and
+            must be a child of the SimbaPlayer root. */}
         <VideoPlayer />
         {/* (1b) Player chrome — the shared dock / full player. Audio no
             longer opens a window (lib 1.13.0) and video no longer opens a

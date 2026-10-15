@@ -219,6 +219,18 @@ export interface TransportCommands {
    * V19 W7.3 — set playback volume, 0–100. Clamped here, because the
    * slider can overshoot on a fast drag and an out-of-range value
    * would reach mpv as a property write.
+   *
+   * Backed by the lib's `commands.setVolume`. This is the ONLY volume
+   * path in the app: the audio slider (`AudioPlayer`), the video
+   * `VolumeControl`, the right-half vertical swipe pill
+   * (`VerticalSwipeGestures`), and `<VideoPlayer>`'s imperative ref all
+   * route through here, so every one of them inherits the clamp.
+   *
+   * It was previously declared TWICE in this interface — once as W7.3
+   * (here) and again as W3.5.3 further down, each docblock claiming a
+   * different wave introduced it. TypeScript accepts an identical
+   * overload silently, so nothing flagged it; there has only ever been
+   * one implementation. The second declaration is gone.
    */
   setVolume(volume: number): void;
   /**
@@ -252,12 +264,6 @@ export interface TransportCommands {
    * (which writes 2 and restores) and by the More menu Speed chips.
    */
   setSpeed(rate: number): void;
-  /**
-   * V19 W3.5.3 — set mpv volume (0..100). Backed by lib
-   * `commands.setVolume`. Drives the volume indicator pill on
-   * right-half vertical swipes.
-   */
-  setVolume(volume: number): void;
   /**
    * V19 W3.5.3 — set the OS screen brightness (0..1) via the lib.
    * Backed by lib `commands.setScreenBrightness` (Android
