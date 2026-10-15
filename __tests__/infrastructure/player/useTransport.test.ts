@@ -542,6 +542,68 @@ describe('useTransport — W3.5 surface', () => {
     });
   });
 
+  /**
+   * The same defect `setVolume` had, in its sibling method.
+   *
+   * `setScreenBrightness` is documented `(0..1)` and forwarded straight to
+   * Android `Window.LayoutParams.screenBrightness` — but nothing enforced the range.
+   * The only caller clamps on its own, so the facade clamp was entirely
+   * unpinned: an implementation with it deleted passed the pre-existing
+   * test just as happily, because that test passes 0.42, an in-range value.
+   */
+  describe('setScreenBrightness — clamped at the facade boundary', () => {
+    beforeEach(() => {
+      mockCommands.setScreenBrightness.mockClear();
+    });
+
+    it('clamps above the range to 1', async () => {
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        // What an over-long upward swipe produces. The caller has its own
+        // `clamp01`; the facade must not depend on that being there.
+        result.current.commands.setScreenBrightness(1.4);
+      });
+      expect(mockCommands.setScreenBrightness).toHaveBeenCalledWith(1);
+    });
+
+    it('clamps below the range to 0', async () => {
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        result.current.commands.setScreenBrightness(-0.3);
+      });
+      expect(mockCommands.setScreenBrightness).toHaveBeenCalledWith(0);
+    });
+
+    it('does NOT round — brightness is a continuous 0..1 float', async () => {
+      // The deliberate difference from `setVolume`, which rounds because
+      // mpv volume is an integer. Rounding here would leave the user two
+      // brightness levels, so this pins the ABSENCE of a rounding step.
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        result.current.commands.setScreenBrightness(0.4237);
+      });
+      expect(mockCommands.setScreenBrightness).toHaveBeenCalledWith(0.4237);
+    });
+
+    it('writes nothing at all for NaN', async () => {
+      // A guard, not a clamp: `Math.max(0, Math.min(1, NaN))` is NaN,
+      // so clamping alone would forward NaN to the platform.
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        result.current.commands.setScreenBrightness(Number.NaN);
+      });
+      expect(mockCommands.setScreenBrightness).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing at all for Infinity', async () => {
+      const {result} = await renderHook(() => useTransport());
+      await act(async () => {
+        result.current.commands.setScreenBrightness(Number.POSITIVE_INFINITY);
+      });
+      expect(mockCommands.setScreenBrightness).not.toHaveBeenCalled();
+    });
+  });
+
   it('setScreenBrightness(value) passes through to the lib commands (W3.5.3)', async () => {
     const {result} = await renderHook(() => useTransport());
     await act(async () => {

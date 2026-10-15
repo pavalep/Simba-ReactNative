@@ -268,6 +268,15 @@ export interface TransportCommands {
    * V19 W3.5.3 — set the OS screen brightness (0..1) via the lib.
    * Backed by lib `commands.setScreenBrightness` (Android
    * `Window.LayoutParams.screenBrightness`).
+   *
+   * Clamped here, for the same reason `setVolume` is: the
+   * declared range is the contract, and nothing enforced it. The one
+   * caller (`VerticalSwipeGestures`) clamps on its own, but a
+   * facade method that is safe only because its present callers behave
+   * is not a facade — it is a convention, and the next caller
+   * inherits the native call unfiltered.
+   *
+   * Deliberately NOT rounded — brightness is a continuous 0..1 float.
    */
   setScreenBrightness(value: number): void;
   /**
@@ -832,7 +841,17 @@ export function useTransport(): TransportHook {
         commands.setMuted(muted);
       },
       setScreenBrightness: (value: number) => {
-        commands.setScreenBrightness(value);
+        // Clamp at the facade boundary, for the same reason `setVolume`
+        // does. `Window.LayoutParams.screenBrightness` is a native OS
+        // call, so an out-of-range value is handed straight to the
+        // platform rather than degrading the way an mpv property write
+        // would.
+        //
+        // Deliberately NOT rounded, unlike volume: brightness is a
+        // continuous 0..1 float, and rounding it would leave the user
+        // with two brightness levels.
+        if (!Number.isFinite(value)) return;
+        commands.setScreenBrightness(Math.max(0, Math.min(1, value)));
       },
       getScreenBrightness: () => commands.getScreenBrightness(),
       setProperty: (name: string, value: unknown) => {

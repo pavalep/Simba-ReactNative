@@ -164,6 +164,43 @@ it because they checked field counts, not comment well-formedness. A later inlin
 then silently failed to match on CRLF and printed `anchor missing` while the shell moved on.
 Both were caught only by reading the file back. **Verify what landed, not that the command
 returned** — and make the guard assert the thing you actually care about.
+### F5 A11 — 2026-10-15: `setScreenBrightness` had the same unpinned clamp as `setVolume`
+
+Carried forward from A8 as "same class as the volume clamp, likely also unpinned". It was.
+
+**The gap.** `useTransport.ts:834` forwarded `setScreenBrightness` straight to the lib — no clamp, no `Number.isFinite` guard — while its sibling `setVolume`
+ten lines above had been hardened in A8. The interface declares `(0..1)`; nothing
+enforced it, and the destination is a native OS call — Android
+`Window.LayoutParams.screenBrightness` — not an mpv property write that degrades gracefully.
+
+**It looked safe and was not.** The only caller (`VerticalSwipeGestures:263`) clamps with
+`clamp01` before calling, and the read path at `:127` already guards
+(`Number.isFinite(v) ? clamp01(v) : 0.5`). So the code *reads* defended. But a facade method
+that is safe only because its present callers behave is not a facade — it is a
+convention, and the next caller inherits the native call unfiltered. `setVolume` is now the
+defence-in-depth case and this was the single-layer one.
+
+**Fixed** with a clamp and guard identical in shape to `setVolume`, and one deliberate
+difference: **no rounding.** Brightness is a continuous 0..1 float; rounding it would leave
+the user with two brightness levels. Volume rounds because mpv volume is an integer.
+
+**5 new tests, both mutants killed.**
+
+| Mutant | Killed by |
+|---|---|
+| clamp + guard deleted (the original defect) | 4 of 5 — both clamps, NaN, Infinity |
+| `Math.round` copied over from `setVolume` | 2 — the new "does NOT round" AND the pre-existing pass-through |
+
+**The important result is the first row.** Under the clamp-deleted mutant the *pre-existing*
+`setScreenBrightness(value) passes through` test **still passed** — exactly as
+`setVolume`'s did in A8, because it passes `0.42`, an in-range value. That is the proof the
+new tests pin something the old one did not, rather than restating it.
+
+Note the second row kills two tests for one mutant: rounding also breaks the old pass-through
+test, because `0.42` is fractional. So that test was sensitive to rounding while being blind
+to the missing clamp — which is why "it already had a test" was not sufficient here.
+
+Gates: tsc 0, eslint 0 (--max-warnings 0), jest 88 suites / **1103** passed / 1 todo (+5).
 ### Start here tomorrow
 
 1. ~~Duplicate `setVolume`~~ — **DONE, F5 A8** (`5a41396`). The duplicate was
@@ -1064,17 +1101,26 @@ not throwaway work that the refactor supersedes.
       tagger, Jamendo, video sheet) plus type declarations.
       **Net: the real lane defects were 6 sites in Album/Artist (A5) and 1 hook (A6); this
       nine-item list named six sites that were already correct.**
-- [ ] `useLibraryScreen.ts:252` — `startPositionMs: first.resumePosition` is **always
-      `undefined`**: `playlistItemsToEntries` (`playerStore.ts:109`) never populates
-      `resumePosition`. Harmless (the seam omits null) but dead — it reads as if the launch
-      resumes. Found by A5, deliberately not fixed there.
-- [ ] ✅ CLOSED in **A6** — see the A6 section. The list named six sites that were already correct;
+- [x] ~~`useLibraryScreen.ts:252`~~ — **CLOSED in A10.** Both sites removed (there were **two**, not one — the shuffle
+      handler too). Already inert twice over, and the shuffle variant was aimed at
+      `entries[0]` while `orderPlaylist` picks a different start, so it had a live failure mode one
+      refactor away. No replacement: the seam owns resume. See the A10 section.
+- [x] ✅ CLOSED in **A6** — see the A6 section. The list named six sites that were already correct;
       the sites that were actually wrong (Album/Artist `openPlaylist`) were missing from it.
 - [ ] Dead code: `AudioLyricsView` (525 lines, 0 call sites), `AudioVisualizer` (143, 0),
       13 x `textContent.ts` (**4 real import sites** - an earlier "0" was wrong),
       `handleViewFullLyrics` lie. `NowPlayingScreen` is **live**, not a null stub.
 - [ ] Lib: `enterPip` arity - Kotlin params nullable vs `NativeMpvPlayer.ts:293` non-nullable
-- [ ] Jest worker force-exit flake: `[checkpoint] resume thumbnail capture failed Error: no decoder`
-- [ ] `useTransport.ts` duplicate `setVolume` at `:223` / `:260`; third path at `AudioPlayer.tsx:339`
+- [ ] Jest worker force-exit flake: leaked handles. Present at BOTH 15 and 8 workers,
+      so it is isolated from the A7 `maxWorkers` fix and not addressed by it. Needs `--detectOpenHandles`.
+- [ ] Separate, benign: `[checkpoint] resume thumbnail capture failed Error: no decoder` — the path is
+      deliberately covered. Do not "fix" this one.
+- [x] ~~`useTransport.ts` duplicate `setVolume`~~ — **CLOSED in A8.** The duplicate was real; the "third path at
+      `AudioPlayer.tsx:339`" claim was **wrong** (`<Slider>` closing tag). Every volume site routes through the one
+      facade method. The clamp it owns was then unpinned — 5 tests, mutant-checked.
+- [x] ~~`setScreenBrightness` clamp~~ — **CLOSED in A11.** It WAS unpinned, exactly as predicted:
+      `useTransport.ts` forwarded straight through while `setVolume` ten lines above had been hardened. Destination
+      is a native OS call, so "it degrades gracefully" was not available as a defence.
+      5 tests, 2 mutants. Not rounded — brightness is a continuous 0..1 float. See the A11 section.
 - [ ] PiP, Next/Prev with a real playlist, Bluetooth - never device-verified
 - [ ] Argent 0.25.0 -> 0.27.0 - notice surfaced, **not applied**, awaiting consent
