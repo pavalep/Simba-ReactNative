@@ -39,8 +39,8 @@ jest.mock('@simba-dev/react-native-media-player', () => ({
   usePlayerActivity: () => ({openPlayer: mockLibStartActivity}),
 }));
 
-jest.mock('../../../src/infrastructure/player/useResumeAwarePlayerActivity', () => ({
-  usePlayerActivity: () => ({openPlayer: mockOpenPlayer}),
+jest.mock('../../../src/infrastructure/player/useResumeAwareLaunch', () => ({
+  useResumeAwareLaunch: () => ({openPlayer: mockOpenPlayer}),
 }));
 
 import {renderHook} from '@testing-library/react-native';

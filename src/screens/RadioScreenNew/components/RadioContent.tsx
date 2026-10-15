@@ -33,7 +33,7 @@ import {shareContent} from '../../../services/shareService';
 import {useBookmarks} from '../../../hooks/useBookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {styles} from '../styles';
@@ -111,7 +111,7 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const haptics = useHaptics();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   const {add: addBookmark} = useBookmarks();
 
   const {

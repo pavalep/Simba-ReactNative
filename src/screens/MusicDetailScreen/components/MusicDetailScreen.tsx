@@ -22,7 +22,7 @@ import {StreamingRow} from '../../../components/media/StreamingRow/StreamingRow'
 import type {JamendoTrackResult, AudiusTrackResult} from '../../../types/api';
 import {shareContent} from '../../../services/shareService';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 
 type Props = MusicDetailScreenProps;
 
@@ -37,7 +37,7 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {trackId, source} = route.params;
   const {track, isLoading, error} = useMusicDetailScreen(trackId, source);
   const {colors} = useTheme();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   // P34.1: add-to-playlist sheet for streaming tracks
   const [sheetVisible, setSheetVisible] = useState(false);
 

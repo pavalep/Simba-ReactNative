@@ -3,7 +3,7 @@
  *
  * The V21 player facade (W3 P10) is a re-export surface. Each
  * consumer wires its own subset of the 9+ symbols (usePlayer +
- * usePlayerProgress + usePlayerActivity + usePlay + useOpenPlaylist
+ * usePlayerProgress + useResumeAwareLaunch + usePlay + useOpenPlaylist
  * + …). For a 1-import-1-wrapper integration (the user's durable
  * "junior-dev rule" — see user memory), a single hook that
  * composes them all is the canonical entry point.
@@ -21,12 +21,10 @@
  *   - state       ← usePlayer().state (isPlaying, title, volume, ...)
  *   - progress    ← usePlayerProgress() (positionMs, durationMs, ...)
  *   - commands    ← usePlayer().commands (play, pause, seek, ...)
- *   - launch      ← usePlay() + usePlayerActivity().openPlayer
+ *   - launch      ← usePlay() + useResumeAwareLaunch().openPlayer
  *                  (typed `Result<PlaybackId, StreamError>` for
  *                  the 3 launch paths: open / openWithResume /
  *                  openPlaylist)
- *   - activity    ← usePlayerActivity().getLaunchParams
- *                  (deep-link cold-start parameters)
  *
  * W22 follow-up note: the V12 bridge can't surface rich error
  * codes, so the launch surface maps every failure to
@@ -47,9 +45,9 @@ import {
 } from '@simba-dev/react-native-media-player';
 // V19 W9.3 — resume-aware launch seam. The facade used to reach the
 // lib hook directly, which meant `launch.open` silently bypassed
-// resume while every screen's `usePlayerActivity()` honoured it. Both
+// resume while every screen's `useResumeAwareLaunch()` honoured it. Both
 // now share one implementation.
-import {usePlayerActivity} from './useResumeAwarePlayerActivity';
+import {useResumeAwareLaunch} from './useResumeAwareLaunch';
 import type {MediaKind, MediaLane} from '../../types/media';
 import {
   err,
@@ -160,7 +158,7 @@ export interface PlaybackFacade {
  * V21 W22 D-023 — The unified player facade.
  *
  * Composes the 5 lower-level hooks (`usePlayer` + `usePlayerProgress`
- * + `usePlayerActivity` + `useOpenPlaylist` + `usePlay`) into a
+ * + `useResumeAwareLaunch` + `useOpenPlaylist` + `usePlay`) into a
  * single `PlaybackFacade` object. The `launch` sub-surface is
  * the new typed entry point — every launch path returns
  * `Result<PlaybackId, StreamError>` so call sites can branch
@@ -196,7 +194,7 @@ export interface PlaybackFacade {
 export function usePlaybackFacade(): PlaybackFacade {
   const {state, commands} = usePlayer();
   const progress = usePlayerProgress();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   const {openPlaylist: openPlaylistRaw} = useOpenPlaylist();
 
   // ── Launchers (typed) ───────────────────────────────────

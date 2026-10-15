@@ -1,7 +1,7 @@
 /**
  * V21 W7 P28 — `usePlay` hook tests.
  *
- * `usePlay` is the typed successor to `usePlayerActivity().openPlayer`.
+ * `usePlay` is the typed successor to `useResumeAwareLaunch().openPlayer`.
  * The V12 bridge returns `Promise<boolean>` — `false` for any failure,
  * no error code, no retry hint. The W7 P28 wrapper turns that into
  * `Promise<Result<PlaybackId, StreamError>>` with the 4 typed
@@ -42,7 +42,6 @@ const mockOpenWithResume = (opts: Record<string, unknown>) =>
 // INSIDE the factory returns a new function on every render, which
 // recomputes the app seam's `useMemo` and breaks "same identity across
 // renders" for a reason that exists only in the mock.
-const mockGetLaunchParams = jest.fn(() => null);
 
 jest.mock('@simba-dev/react-native-media-player', () => {
   const actual =
@@ -58,11 +57,10 @@ jest.mock('@simba-dev/react-native-media-player', () => {
     // resolution, Result mapping), not about resume. So resume is routed
     // around explicitly and visibly, rather than being silently faked:
     // resumeId is forwarded untouched so nothing is misrepresented.
-    // `useResumeAwarePlayerActivity.test.tsx` owns the resume contract.
+    // `useResumeAwareLaunch.test.tsx` owns the resume contract.
     useOpenWithResume: () => mockOpenWithResume,
     usePlayerActivity: () => ({
-      openPlayer: mockOpenPlayer,
-      getLaunchParams: mockGetLaunchParams,
+      openPlayer: mockOpenPlayer,
     }),
   };
 });

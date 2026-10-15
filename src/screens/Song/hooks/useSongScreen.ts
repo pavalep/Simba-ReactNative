@@ -14,7 +14,7 @@ import {useApiQuery} from '../../../hooks/useApiQuery';
 import type {RootStackParamList} from '../../../navigation/types';
 import type {LrcLine} from '../../../utils/lrcParser';
 import {isRemoteUri} from '../../../utils/mediaUri';
-import { resolveStreamType, secondsToMs, usePlayerActivity, useQueue } from '../../../infrastructure/player';
+import { resolveStreamType, secondsToMs, useResumeAwareLaunch, useQueue } from '../../../infrastructure/player';
 import {useMediaStore} from '../../../state';
 
 type SongRoute = RouteProp<RootStackParamList, 'SongScreen'>;
@@ -43,7 +43,7 @@ export function useSongScreen() {
   const navigation = useNavigation<SongNav>();
   const {addToQueue} = useQueue();
   const {show: showToast} = useToast();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   const {fileUri, title: titleParam, artist: artistParam, album: albumParam} = route.params;
 

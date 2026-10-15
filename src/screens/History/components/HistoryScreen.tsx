@@ -56,7 +56,7 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   const toast = useToast();
   const {confirm, dialog} = useConfirmDialog();
   const {list: recentFiles, removeRecent, clearRecent} = useRecentHistory();
-  // W7 P26: `usePlayWithResume` replaces the direct `usePlayerActivity().openPlayer`
+  // W7 P26: `usePlayWithResume` replaces the direct `useResumeAwareLaunch().openPlayer`
   // call. Pre-P26, the `handlePress` below was passing `startPositionMs: position`
   // where `position` was in SECONDS (the history store's convention) but the
   // bridge field expects MILLISECONDS — every resume seek was 1000x too small.

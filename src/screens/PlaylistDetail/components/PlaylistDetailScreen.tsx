@@ -41,7 +41,7 @@ import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {isRemoteUri} from '../../../utils/mediaUri';
 import {useNetworkStatus} from '../../../hooks/useNetworkStatus';
-import { resolveStreamType, useOpenPlaylist, usePlayerActivity, useQueue } from '../../../infrastructure/player';
+import { resolveStreamType, useOpenPlaylist, useResumeAwareLaunch, useQueue } from '../../../infrastructure/player';
 import {usePlayerStore, playlistItemsToEntries} from '../../../state';
 
 type Props = PlaylistDetailScreenProps;
@@ -116,7 +116,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {confirm, dialog} = useConfirmDialog();
   // P34.5: offline guard for remote/streaming playlist items
   const {isOnline} = useNetworkStatus();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
   // pattern (entries extraction + start-track dispatch + openPlayer).
   const {openPlaylist} = useOpenPlaylist();

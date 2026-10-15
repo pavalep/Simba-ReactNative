@@ -24,7 +24,7 @@ export interface UseBookmarksScreenResult {
 }
 
 export function useBookmarksScreen(): UseBookmarksScreenResult {
-  // W7 P26: `usePlayWithResume` replaces the direct `usePlayerActivity().openPlayer`
+  // W7 P26: `usePlayWithResume` replaces the direct `useResumeAwareLaunch().openPlayer`
   // call. Pre-P26, `handlePress` did not pass `startPositionMs` at all — every
   // bookmark open played from the beginning, silently ignoring the saved position.
   // The new hook threads the position through (with the seconds→ms conversion).

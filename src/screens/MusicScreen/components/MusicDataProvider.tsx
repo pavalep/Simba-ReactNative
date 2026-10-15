@@ -66,7 +66,7 @@ export const MusicDataProvider: React.FC<{
       // V21 typed facade — awaited + Result pattern-match so the
       // 4 failure variants (network / unsupported / expired /
       // blocked) surface as toasts instead of being swallowed.
-      // Pre-V21: direct usePlayerActivity().openPlayer() call
+      // Pre-V21: direct useResumeAwareLaunch().openPlayer() call
       // returned a Promise<boolean>; rejection became unhandled
       // promise rejection, `false` was discarded silently.
       const result = await play({

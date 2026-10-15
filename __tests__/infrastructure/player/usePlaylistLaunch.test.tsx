@@ -4,7 +4,7 @@
  * ## What is pinned, and why each one earns its place
  *
  * A1 exists because playlist launches were the one path that skipped
- * `useResumeAwarePlayerActivity`. Three defects came from that, and each
+ * `useResumeAwareLaunch`. Three defects came from that, and each
  * has its own test below:
  *
  *   1. no lane/kind on the session → the `C-16` badge bug for playlists
@@ -25,8 +25,8 @@ const mockOpenPlayer = jest.fn(
 );
 const mockLibOpenPlayer = jest.fn(async () => true);
 
-jest.mock('../../../src/infrastructure/player/useResumeAwarePlayerActivity', () => ({
-  usePlayerActivity: () => ({openPlayer: mockOpenPlayer}),
+jest.mock('../../../src/infrastructure/player/useResumeAwareLaunch', () => ({
+  useResumeAwareLaunch: () => ({openPlayer: mockOpenPlayer}),
 }));
 
 // Modelled so that a regression — someone re-exporting the LIB's

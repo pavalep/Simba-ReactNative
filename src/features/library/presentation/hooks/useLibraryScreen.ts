@@ -12,7 +12,7 @@ import {ViewMode} from '../components/ViewToggle';
 import type {PlaylistKind} from '../../../../types/playlist';
 import type {LibraryScreenProps} from '../../../../navigation/types';
 import {normalizeMediaClassification} from '../../../../types/media';
-import { resolveStreamType, useOpenPlaylist, usePlayer, usePlayerActivity } from '../../../../infrastructure/player';
+import { resolveStreamType, useOpenPlaylist, usePlayer, useResumeAwareLaunch } from '../../../../infrastructure/player';
 import {useMediaStore, usePlayerStore, playlistItemsToEntries, type ScannedTrack} from '../../../../state';
 import type {
   ContentMode,
@@ -59,7 +59,7 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
   const bottomChromeInset = insets.bottom + 104;
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
   // pattern (entries extraction + start-track dispatch + openPlayer).
   const {openPlaylist} = useOpenPlaylist();

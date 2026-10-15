@@ -15,7 +15,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 
 import type {MovieDetailScreenProps} from '../types';
 import {ScreenContainer} from '../../../components/layout/ScreenContainer/ScreenContainer';
@@ -54,7 +54,7 @@ const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 // ─── Component ──────────────────────────────────────────────────────────
 export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   const {identifier, title: routeTitle} = route.params;
   const {item, isLoading, error, retry} = useMovieDetailScreen(identifier);
   const {colors} = useTheme();

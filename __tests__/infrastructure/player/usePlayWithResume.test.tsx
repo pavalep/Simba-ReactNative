@@ -39,7 +39,6 @@ const mockOpenWithResume = (opts: Record<string, unknown>) =>
 // INSIDE the factory returns a new function on every render, which
 // recomputes the app seam's `useMemo` and breaks every "same identity
 // across renders" assertion for a reason that exists only in the mock.
-const mockGetLaunchParams = jest.fn(() => null);
 
 jest.mock('@simba-dev/react-native-media-player', () => {
   const actual =
@@ -52,11 +51,10 @@ jest.mock('@simba-dev/react-native-media-player', () => {
     // called instead. `usePlayWithResume` passes an EXPLICIT
     // `startPositionMs`, so this hook's own contract is unaffected by
     // resume lookup; the seam's contract is covered by
-    // `useResumeAwarePlayerActivity.test.tsx`.
+    // `useResumeAwareLaunch.test.tsx`.
     useOpenWithResume: () => mockOpenWithResume,
     usePlayerActivity: () => ({
-      openPlayer: mockOpenPlayer,
-      getLaunchParams: mockGetLaunchParams,
+      openPlayer: mockOpenPlayer,
     }),
   };
 });

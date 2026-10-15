@@ -12,7 +12,7 @@
 import {useCallback, useMemo, useState} from 'react';
 // V17 Phase 86: `createSelector` from `@reduxjs/toolkit` removed.
 import {useMediaScanner} from '../../../hooks/useMediaScanner';
-import {usePlayerActivity} from '../../../infrastructure/player';
+import {useResumeAwareLaunch} from '../../../infrastructure/player';
 import {useMediaAudioTracks} from '../../../state';
 
 export type SortMode = 'title' | 'artist';
@@ -34,7 +34,7 @@ export interface UseAllAudioScreenResult {
 }
 
 export function useAllAudioScreen(): UseAllAudioScreenResult {
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('title');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');

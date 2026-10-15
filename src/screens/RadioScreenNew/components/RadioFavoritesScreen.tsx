@@ -23,7 +23,7 @@ import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSh
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {shareContent} from '../../../services/shareService';
 import {useBookmarks} from '../../../features/bookmarks';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 import {useLiveFavoritesStore} from '../../../state';
 
 type Props = RootStackScreenProps<'RadioFavoritesScreen'>;
@@ -33,7 +33,7 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const haptics = useHaptics();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   const {add: addBookmark} = useBookmarks();
 
   const favorites = useLiveFavoritesStore(s =>

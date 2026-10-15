@@ -3,7 +3,7 @@
  *
  * ## What was wrong
  *
- * Every single-track launch in the app goes through `useResumeAwarePlayerActivity`,
+ * Every single-track launch in the app goes through `useResumeAwareLaunch`,
  * which records the session, derives the lane, honours resume and — since F3 —
  * loads video in-window. Playlist launches did not. `useAlbumScreen`,
  * `useArtistScreen` and `useLibraryScreen` called the **lib's**
@@ -45,7 +45,7 @@
 
 import {useCallback, useMemo} from 'react';
 import type {MediaKind, MediaLane} from '../../types/media';
-import {usePlayerActivity} from './useResumeAwarePlayerActivity';
+import {useResumeAwareLaunch} from './useResumeAwareLaunch';
 
 /**
  * The minimum an entry must carry to be launched.
@@ -150,7 +150,7 @@ export function orderPlaylist(
  * track now goes through the same seam every other launch uses.
  */
 export function useOpenPlaylist(): UseOpenPlaylistResult {
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   const openPlaylist = useCallback(
     async (

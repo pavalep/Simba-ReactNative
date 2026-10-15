@@ -25,7 +25,7 @@
  *      which symbols are used and dead-code-eliminate the rest.
  *
  * Symbol organization (6 facade API surfaces):
- *   - **read-state**:        usePlayerActivity
+ *   - **read-state**:        useResumeAwareLaunch
  *   - **open-in-player**:    useOpenPlaylist
  *   - **play-with-resume**:  usePlayWithResume (P26 — explicit position in seconds)
  *   - **stream-resolution**: resolveStreamType  (pure function)
@@ -47,7 +47,7 @@ import type {MediaKind, MediaLane} from '../../types/media';
 // this one resolves a resume position for every launch that doesn't
 // supply an explicit `startPositionMs`. See its docblock for the
 // defect it fixes.
-import {usePlayerActivity} from './useResumeAwarePlayerActivity';
+import {useResumeAwareLaunch} from './useResumeAwareLaunch';
 import {secondsToMs} from './position';
 import {
   err,
@@ -63,7 +63,7 @@ import type {PlaybackId} from './playbackFacade';
 // V21 F5 A1 — the APP's `useOpenPlaylist`, not the lib's.
 //
 // This used to re-export the lib's hook straight from the package, which
-// made it the one launch path that bypassed `useResumeAwarePlayerActivity`
+// made it the one launch path that bypassed `useResumeAwareLaunch`
 // and therefore the last live route to `bridge.openPlayer` →
 // `startActivity(PlayerActivity)`. `PlaylistEntry` already carries `type`
 // and `mediaType` on every entry and both were being dropped, so playlists
@@ -119,7 +119,7 @@ export {
 // ─── V19 W9.3 — resume-aware launch seam ─────────────────────
 
 /**
- * V19 W9.3 — `usePlayerActivity`, with resume applied by default.
+ * V19 W9.3 — `useResumeAwareLaunch`, with resume applied by default.
  *
  * ## The defect this replaces
  *
@@ -157,10 +157,10 @@ export {
  * the same class of bug waiting to happen: screen 29 gets added and
  * silently doesn't resume.
  *
- * Implementation lives in `./useResumeAwarePlayerActivity.ts` so
+ * Implementation lives in `./useResumeAwareLaunch.ts` so
  * `./playbackFacade.ts` can share it without a runtime import cycle.
  */
-export {usePlayerActivity} from './useResumeAwarePlayerActivity';
+export {useResumeAwareLaunch} from './useResumeAwareLaunch';
 
 // V19 W0 Phase 0.1 — queue sync middleware. Wires the lib's native
 // queue ↔ usePlayerStore. Mounted ONCE at AppContent (App.tsx).
@@ -384,7 +384,7 @@ export {resolveResumeMs, type ResumeLookupInput} from './resumePolicy';
 // `resolveResumeMs` answers "what position is saved?"; these answer
 // "what do we do about it?", which is a different question and was
 // previously re-decided (wrongly, in seconds) by four separate screens.
-// The seam (`useResumeAwarePlayerActivity`) is the only caller that acts
+// The seam (`useResumeAwareLaunch`) is the only caller that acts
 // on them; `App.tsx` exports them so the ConfirmDialog prompt can be
 // typed against the same `ResumeCandidate` the policy produced.
 export {
@@ -399,8 +399,8 @@ export {
 export {
   ResumePromptContext,
   type PromptResume,
-  type UsePlayerActivityOptions,
-} from './useResumeAwarePlayerActivity';
+  type UseResumeAwareLaunchOptions,
+} from './useResumeAwareLaunch';
 
 // W7 P28 — typed `play()` facade + Result/StreamError re-exports.
 export {
@@ -506,7 +506,7 @@ export interface PlayWithResumeInput {
 export function usePlayWithResume(): (
   input: PlayWithResumeInput,
 ) => Promise<Result<PlaybackId, StreamError>> {
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   return useCallback(
     async (input: PlayWithResumeInput): Promise<Result<PlaybackId, StreamError>> => {
       const startPositionMs = secondsToMs(input.positionSec);
@@ -578,7 +578,7 @@ export interface PlayInput {
  * is for `podcastIndex`).
  */
 export function usePlay(): (input: PlayInput) => Promise<Result<PlaybackId, StreamError>> {
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   return useCallback(
     async (input: PlayInput): Promise<Result<PlaybackId, StreamError>> => {
       // Hand-rolled try/catch instead of `capture()` so we can

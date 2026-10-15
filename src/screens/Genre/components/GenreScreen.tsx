@@ -29,7 +29,7 @@ import {ErrorState} from '../../../components/feedback/ErrorState/ErrorState';
 import {Placeholder} from '../../../components/feedback/Placeholder';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {StreamingRow} from '../../../components/media/StreamingRow/StreamingRow';
-import {resolveStreamType, usePlayerActivity} from '../../../infrastructure/player';
+import {resolveStreamType, useResumeAwareLaunch} from '../../../infrastructure/player';
 import type {GenreScreenProps} from '../types';
 import type {JamendoTrackResult} from '../../../types/api';
 import {useGenreScreen} from '../hooks/useGenreScreen';
@@ -51,7 +51,7 @@ const SOURCE_TOGGLE: Array<{id: 'local' | 'streaming'; label: string}> = [
 export const GenreScreen: React.FC<GenreScreenProps> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   const {genre: routeGenre, initialTab} = route.params ?? {};
   const genre = routeGenre ?? '';
 

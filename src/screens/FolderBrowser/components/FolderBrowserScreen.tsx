@@ -26,7 +26,7 @@ import {PlaylistCreateModal} from '../../../components/playlist/PlaylistCreateMo
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {logger} from '../../../lib/logger';
 import {usePlaylists} from '../../../features/playlists';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 
 import type {PlaylistItem, PlaylistKind} from '../../../types/playlist';
 
@@ -60,7 +60,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const {playlists, addItem, createPlaylist} = usePlaylists();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   // Initialize breadcrumbs from initialPath param
   const initialPath = route.params?.initialPath ?? '';

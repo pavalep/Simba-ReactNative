@@ -123,7 +123,7 @@ describe('VideoLoadingOverlay', () => {
 
   it('does NOT call any playback command', async () => {
     // The overlay is purely informational. The component imports only
-    // `usePlaybackState` from the facade — no `usePlayerActivity`,
+    // `usePlaybackState` from the facade — no `useResumeAwareLaunch`,
     // no `usePlayer`, no command functions. Static import check is
     // the cheapest way to assert the contract.
     const fs = require('fs');

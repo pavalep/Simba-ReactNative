@@ -16,7 +16,7 @@ import {useSessionStore} from '../../../state';
 import {useRecentHistory} from '../../../features/recentHistory';
 import {formatDuration} from '../../../utils/timeAgo';
 import type {StatsScreenProps} from '../types';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 
 type Props = StatsScreenProps;
 
@@ -28,7 +28,7 @@ function dayKey(d: Date): string {
 export const StatsScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
     const insets = useSafeAreaInsets();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   const {list: recentFiles} = useRecentHistory();
   // V17 Phase 77: session.mediaLibrary + session.playCounts moved

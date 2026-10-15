@@ -9,7 +9,7 @@
  * re-exports the 12 symbols documented in
  * `md/SIMBA_V21_W3_P09_INVENTORY.md` (P10) + P25 + P26 + P28 + D-023:
  *
- *   - 11 functions: usePlayerActivity, useOpenPlaylist, usePlayer,
+ *   - 11 functions: useResumeAwareLaunch, useOpenPlaylist, usePlayer,
  *     usePlayerProgress, useQueue, useQueueItemsAs,
  *     usePlaybackHistoryAs, resolveStreamType, getMpvPlayerModule,
  *     usePlayWithResume, usePlay, usePlaybackFacade
@@ -35,8 +35,8 @@ import * as Player from '../../src/infrastructure/player';
 import type {PlayerQueueItem} from '../../src/infrastructure/player';
 
 describe('Player Facade (V21 W3 P10) — re-exports', () => {
-  it('exports usePlayerActivity as a function', () => {
-    expect(typeof Player.usePlayerActivity).toBe('function');
+  it('exports useResumeAwareLaunch as a function', () => {
+    expect(typeof Player.useResumeAwareLaunch).toBe('function');
   });
 
   it('exports useOpenPlaylist as a function', () => {
@@ -106,11 +106,11 @@ describe('Player Facade (V21 W3 P10) — re-exports', () => {
     // list — it's a real wrapper (see the doc comment above),
     // not a re-export.
     //
-    // W9.3 moved `usePlayerActivity` into that same "real wrapper"
+    // W9.3 moved `useResumeAwareLaunch` into that same "real wrapper"
     // bucket. It is a deliberate, documented wrapper — it resolves a
     // resume position for every launch that doesn't supply an explicit
     // `startPositionMs` — so it is asserted NOT to be the lib identity
-    // below. `useResumeAwarePlayerActivity.test.tsx` covers its
+    // below. `useResumeAwareLaunch.test.tsx` covers its
     // behaviour; this file only records that the wrap happened on
     // purpose rather than by accident.
     //
@@ -124,7 +124,7 @@ describe('Player Facade (V21 W3 P10) — re-exports', () => {
     const underlying = jest.requireActual(
       '@simba-dev/react-native-media-player',
     );
-    expect(Player.usePlayerActivity).not.toBe(
+    expect(Player.useResumeAwareLaunch).not.toBe(
       underlying.usePlayerActivity,
     );
     expect(Player.useOpenPlaylist).not.toBe(

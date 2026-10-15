@@ -2,7 +2,7 @@
  * V21 W22 D-023 — `usePlaybackFacade` hook tests.
  *
  * The facade composes 5 lower-level hooks (`usePlayer` +
- * `usePlayerProgress` + `usePlayerActivity` + `usePlay` +
+ * `usePlayerProgress` + `useResumeAwareLaunch` + `usePlay` +
  * `useOpenPlaylist`) into a single `PlaybackFacade` object
  * with 4 sub-surfaces: state / progress / commands / launch. These
  * tests assert the composition is correct

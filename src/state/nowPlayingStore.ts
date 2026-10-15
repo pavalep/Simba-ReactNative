@@ -58,7 +58,7 @@ export interface NowPlaying {
    * `type` is a catalogue kind (`'movie'`, `'music'`, `'podcast'`),
    * `mediaLane` is a display lane a screen may or may not pass, and
    * this is the `'video' | 'audio'` the bridge was actually asked for.
-   * It is the same value `usePlayerActivity` branches on, so it decides
+   * It is the same value `useResumeAwareLaunch` branches on, so it decides
    * which native path ran - V21 F5 changed that from "video opened a
    * second Activity" to "video loads into the surface already mounted";
    * audio started the media service with no window, and still does.

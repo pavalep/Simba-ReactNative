@@ -38,7 +38,7 @@ export type VideoSource = {
  * **What is deliberately NOT here** (W9.3):
  *
  *   - `open` / `openWithResume` / `openPlaylist`. Launching is owned by
- *     the app's launch seam (`useResumeAwarePlayerActivity`) and the
+ *     the app's launch seam (`useResumeAwareLaunch`) and the
  *     `usePlaybackFacade().launch` surface. The chrome compositor does
  *     not launch media, so these three could only ever have thrown.
  *   - `selectAudioDescriptionTrack`. The lib exposes no AD-selection

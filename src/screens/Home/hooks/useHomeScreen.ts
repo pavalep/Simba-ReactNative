@@ -13,7 +13,7 @@ import {logger} from '../../../lib/logger';
 import {useFollowedPodcasts} from '../../../features/followedPodcasts';
 
 import {useRecentHistory, type RecentHistoryEntry} from '../../../features/recentHistory';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 import {MAX_RECENT_HISTORY_ENTRIES} from '../../../state/recentHistoryStore';
 import {useConfirmDialog} from '../../../components/core/Dialog';
 import {useToast} from '../../../components/feedback/Toast';
@@ -111,7 +111,7 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
   const [refreshing, setRefreshing] = useState(false);
   const [isSettled, setIsSettled] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
   const {user} = useAuth();
   const {snapshot: weatherSnapshot, isFirstLoad: weatherFirstLoad} = useWeather();
 

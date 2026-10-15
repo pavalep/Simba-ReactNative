@@ -23,7 +23,7 @@
  *
  * ## Why mock only the seam
  *
- * `useResumeAwarePlayerActivity` is mocked, which is the app's launch
+ * `useResumeAwareLaunch` is mocked, which is the app's launch
  * boundary. Above it everything runs for real: the screen hook, the real
  * `useOpenPlaylist`, the real `orderPlaylist` (including its shuffle), and
  * the REAL `resolveStreamType`. Stubbing `resolveStreamType` instead would
@@ -44,8 +44,8 @@ jest.mock('@react-navigation/native', () => ({
 
 // The app seam. Mocking it here captures exactly what the screen asked to
 // launch; the lib hook underneath it is never reached.
-jest.mock('../../src/infrastructure/player/useResumeAwarePlayerActivity', () => ({
-  usePlayerActivity: () => ({openPlayer: mockOpenPlayer}),
+jest.mock('../../src/infrastructure/player/useResumeAwareLaunch', () => ({
+  useResumeAwareLaunch: () => ({openPlayer: mockOpenPlayer}),
 }));
 
 // `usePlayer` is read for `isPlaying` only, and it needs the native module.
@@ -63,7 +63,7 @@ jest.mock('../../src/infrastructure/player', () => {
   return {
     resolveStreamType: realLib.resolveStreamType,
     useOpenPlaylist: realLaunch.useOpenPlaylist,
-    usePlayerActivity: () => ({openPlayer: mockOpenPlayer}),
+    useResumeAwareLaunch: () => ({openPlayer: mockOpenPlayer}),
     usePlayer: () => ({state: {isPlaying: false}}),
   };
 });

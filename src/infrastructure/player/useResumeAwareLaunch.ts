@@ -1,7 +1,7 @@
 /**
  * V19 W9.3 — resume-aware launch seam.
  *
- * @see the `usePlayerActivity` wrapper in `./index.ts` for the full
+ * @see the `useResumeAwareLaunch` wrapper in `./index.ts` for the full
  * account of the defect this fixes. That docblock is the canonical
  * one; this file exists only so `./index.ts` and `./playbackFacade.ts`
  * can share ONE implementation without importing each other
@@ -86,7 +86,7 @@ export type AppOpenPlayerOptions = OpenPlayerOptions & LaunchIdentity;
  * unclassified, why the history store defaulted to the audio lane, and
  * why films rendered with a music badge.
  */
-export type AppPlayerActivityResult = Omit<UsePlayerActivityResult, 'openPlayer'> & {
+export type AppPlayerLaunchResult = Omit<UsePlayerActivityResult, 'openPlayer'> & {
   openPlayer: (opts: AppOpenPlayerOptions) => Promise<boolean>;
 };
 
@@ -118,12 +118,12 @@ export const ResumePromptContext = React.createContext<PromptResume | undefined>
  * prompt (or none) for one launch. Rare enough that the common path is
  * the context.
  */
-export interface UsePlayerActivityOptions {
+export interface UseResumeAwareLaunchOptions {
   readonly promptResume?: PromptResume;
 }
 
 /**
- * `usePlayerActivity` with resume resolved — and, when a prompt is
+ * `useResumeAwareLaunch` with resume resolved — and, when a prompt is
  * available, asked about — by default.
  *
  * Replaces the lib's pass-through hook for every app call site. See
@@ -155,9 +155,9 @@ export interface UsePlayerActivityOptions {
  *     place that can publish it. `usePlaybackCheckpointSync` reads it
  *     to write resume checkpoints.
  */
-export function usePlayerActivity(
-  options: UsePlayerActivityOptions = {},
-): AppPlayerActivityResult {
+export function useResumeAwareLaunch(
+  options: UseResumeAwareLaunchOptions = {},
+): AppPlayerLaunchResult {
   const openWithResume = useOpenWithResume();
   const beginSession = useNowPlayingStore(s => s.begin);
   const endSession = useNowPlayingStore(s => s.end);
@@ -168,7 +168,7 @@ export function usePlayerActivity(
   const contextPrompt = React.useContext(ResumePromptContext);
   const promptResume = options.promptResume ?? contextPrompt;
 
-  return useMemo<AppPlayerActivityResult>(
+  return useMemo<AppPlayerLaunchResult>(
     () => ({
       openPlayer: async (opts: AppOpenPlayerOptions) => {
         // Identity fields are ours; the bridge must not see most of them,

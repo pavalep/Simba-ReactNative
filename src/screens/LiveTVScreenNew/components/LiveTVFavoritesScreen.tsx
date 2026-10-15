@@ -25,7 +25,7 @@ import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
-import { resolveStreamType, usePlayerActivity } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 import {useLiveFavoritesStore} from '../../../state';
 import {
   ChannelCard,
@@ -41,7 +41,7 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
   const toast = useToast();
   const haptics = useHaptics();
   const {add: addBookmark} = useBookmarks();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   const favorites = useLiveFavoritesStore(s =>
     s.items.filter(f => f.kind === 'tv'),

@@ -24,7 +24,7 @@ import type {JamendoTrackResult} from '../../../../types/api';
 import type {RootStackScreenProps} from '../types';
 type AlbumDetailScreenProps = RootStackScreenProps<'AlbumDetail'>;
 import {shareContent} from '../../../../services/shareService';
-import { resolveStreamType, usePlayerActivity } from '../../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch } from '../../../../infrastructure/player';
 import {useMediaStore} from '../../../../state';
 
 type Props = AlbumDetailScreenProps;
@@ -49,7 +49,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   const tracks = useMediaStore(s =>
     s.tracks

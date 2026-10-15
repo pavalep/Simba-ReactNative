@@ -17,7 +17,7 @@
  * forwards `startPositionMs ?? 0` and never consults the context.
  * Tap a film you had watched 40 minutes into and it opened at 0:00.
  *
- * The fix is at the seam (`useResumeAwarePlayerActivity`), so this test
+ * The fix is at the seam (`useResumeAwareLaunch`), so this test
  * asserts the SEAM's contract, not any individual screen's:
  *
  *   1. `openPlayer` passes `resumeId` = the media uri (the app's
@@ -58,7 +58,7 @@ jest.mock('@simba-dev/react-native-media-player', () => ({
   }),
 }));
 
-import {usePlayerActivity} from '../../../src/infrastructure/player/useResumeAwarePlayerActivity';
+import {useResumeAwareLaunch} from '../../../src/infrastructure/player/useResumeAwareLaunch';
 import {useBookmarksStore} from '../../../src/state/bookmarksStore';
 import {useRecentHistoryStore} from '../../../src/state/recentHistoryStore';
 import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
@@ -78,7 +78,7 @@ const AUDIO_OPTS = {
   type: 'audio' as const,
 };
 
-describe('usePlayerActivity — resume-aware launch seam', () => {
+describe('useResumeAwareLaunch — resume-aware launch seam', () => {
   beforeEach(() => {
     mockOpenWithResume.mockClear();
     mockLibOpenPlayer.mockClear();
@@ -105,7 +105,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
     // its own resume policy on `providedStartMs == null`
     // (`useOpenWithResume.tsx:128`), so a launch with the field absent
     // would be re-decided by a second rule. One authority, one launch.
-    const {result} = await renderHook(() => usePlayerActivity());
+    const {result} = await renderHook(() => useResumeAwareLaunch());
 
     await result.current.openPlayer(AUDIO_OPTS);
 
@@ -122,7 +122,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
     // to the lib's useOpenWithResume. Re-deciding it here would create
     // two sources of truth for one rule - which is how the earlier
     // 1000x-seek bug happened. So the seam must forward, not judge.
-    const {result} = await renderHook(() => usePlayerActivity());
+    const {result} = await renderHook(() => useResumeAwareLaunch());
 
     await result.current.openPlayer({...AUDIO_OPTS, startPositionMs: 78_000});
 
@@ -137,7 +137,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
     // The F3 contract, stated as an outcome. The session is the ONLY
     // payload an in-window launch has, so "the position is remembered" and
     // "no second window is started" are one property, not two.
-    const {result} = await renderHook(() => usePlayerActivity());
+    const {result} = await renderHook(() => useResumeAwareLaunch());
 
     await expect(result.current.openPlayer(OPTS)).resolves.toBe(true);
 
@@ -155,7 +155,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
   });
 
   it('video: forwards an explicit startPositionMs onto the session untouched', async () => {
-    const {result} = await renderHook(() => usePlayerActivity());
+    const {result} = await renderHook(() => useResumeAwareLaunch());
 
     await result.current.openPlayer({...OPTS, startPositionMs: 78_000});
 
@@ -169,7 +169,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
     // arrays. A new object every render would re-run those effects on
     // every player state tick - the exact render-cascade class the W9
     // performance work removed.
-    const {result, rerender} = await renderHook(() => usePlayerActivity());
+    const {result, rerender} = await renderHook(() => useResumeAwareLaunch());
     const first = result.current;
 
     await rerender({});
@@ -207,7 +207,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       });
       const promptResume = jest.fn(async (_c: {positionMs: number; source: string; title: string}) => 'resume' as const);
       const {result} = await renderHook(() =>
-        usePlayerActivity({promptResume}),
+        useResumeAwareLaunch({promptResume}),
       );
 
       await result.current.openPlayer(OPTS);
@@ -237,7 +237,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
         },
       });
       const {result} = await renderHook(() =>
-        usePlayerActivity({promptResume: async () => 'start'}),
+        useResumeAwareLaunch({promptResume: async () => 'start'}),
       );
 
       await result.current.openPlayer(OPTS);
@@ -264,7 +264,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       });
       const promptResume = jest.fn(async (_c: {positionMs: number; source: string; title: string}) => 'resume' as const);
       const {result} = await renderHook(() =>
-        usePlayerActivity({promptResume}),
+        useResumeAwareLaunch({promptResume}),
       );
 
       // The Song screen's bookmark jump: an explicit position IS the
@@ -291,7 +291,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       });
       const promptResume = jest.fn(async (_c: {positionMs: number; source: string; title: string}) => 'resume' as const);
       const {result} = await renderHook(() =>
-        usePlayerActivity({promptResume}),
+        useResumeAwareLaunch({promptResume}),
       );
 
       await result.current.openPlayer({...OPTS, startPositionMs: 0});
@@ -314,7 +314,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
           source: 'api',
         },
       });
-      const {result} = await renderHook(() => usePlayerActivity());
+      const {result} = await renderHook(() => useResumeAwareLaunch());
 
       await result.current.openPlayer(OPTS);
 
@@ -332,7 +332,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       });
       const promptResume = jest.fn(async (_c: {positionMs: number; source: string; title: string}) => 'resume' as const);
       const {result} = await renderHook(() =>
-        usePlayerActivity({promptResume}),
+        useResumeAwareLaunch({promptResume}),
       );
 
       await result.current.openPlayer(OPTS);
@@ -352,7 +352,7 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
       });
       const promptResume = jest.fn(async (_c: {positionMs: number; source: string; title: string}) => 'resume' as const);
       const {result} = await renderHook(() =>
-        usePlayerActivity({promptResume}),
+        useResumeAwareLaunch({promptResume}),
       );
 
       await result.current.openPlayer(OPTS);
@@ -378,14 +378,14 @@ describe('usePlayerActivity — resume-aware launch seam', () => {
  * than the mechanism, because the mechanism has already changed shape
  * once (conditional spreads became direct assignment).
  */
-describe('usePlayerActivity - the session always records a lane', () => {
+describe('useResumeAwareLaunch - the session always records a lane', () => {
   beforeEach(() => {
     mockOpenWithResume.mockClear();
     useNowPlayingStore.getState().reset();
   });
 
   it('records video for a video launch that passes no mediaKind or mediaLane', async () => {
-    const {result} = await renderHook(() => usePlayerActivity());
+    const {result} = await renderHook(() => useResumeAwareLaunch());
     await result.current.openPlayer(OPTS);
 
     const session = useNowPlayingStore.getState().current;
@@ -396,7 +396,7 @@ describe('usePlayerActivity - the session always records a lane', () => {
   it('records audio for an audio launch that passes no mediaKind or mediaLane', async () => {
     // The regression that matters most: an unclassified AUDIO launch must
     // not be able to land in the video lane either.
-    const {result} = await renderHook(() => usePlayerActivity());
+    const {result} = await renderHook(() => useResumeAwareLaunch());
     await result.current.openPlayer({
       uri: 'file:///podcasts/can-ai.mp3',
       title: 'Can AI Take the Repetitive Work Out?',
@@ -409,7 +409,7 @@ describe('usePlayerActivity - the session always records a lane', () => {
   });
 
   it("a catalogue lane still wins — it is more specific than 'it's audio'", async () => {
-    const {result} = await renderHook(() => usePlayerActivity());
+    const {result} = await renderHook(() => useResumeAwareLaunch());
     await result.current.openPlayer({
       ...OPTS,
       type: 'audio',

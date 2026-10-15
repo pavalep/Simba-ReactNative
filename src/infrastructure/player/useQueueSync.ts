@@ -40,7 +40,7 @@
  *
  *  3. **`duration: 0` was never true**, and the docblock claimed the
  *     lib "doesn't expose the original URI". Both statements were false:
- *     `PlayerState` carries `durationMs`, and `useResumeAwarePlayerActivity`
+ *     `PlayerState` carries `durationMs`, and `useResumeAwareLaunch`
  *     — which owns the URI by construction, since it is what `openPlayer`
  *     was called with — records it in `useNowPlayingStore`.
  *

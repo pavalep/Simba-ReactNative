@@ -20,7 +20,7 @@ import FastImage from 'react-native-fast-image';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useRecentHistory} from '../../../features/recentHistory';
-import { resolveStreamType, usePlayerActivity, useQueue } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch, useQueue } from '../../../infrastructure/player';
 
 import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
@@ -51,7 +51,7 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
   const toast = useToast();
   const haptics = useHaptics();
     const {add: addBookmark} = useBookmarks();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [menuTrack, setMenuTrack] = useState<ArchiveTrack | null>(null);

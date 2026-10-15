@@ -34,7 +34,7 @@ import {formatDuration} from '../../../utils/timeAgo';
 import {clearCache} from '../../../services/cacheService';
 import type {RootStackScreenProps} from '../../../navigation/types';
 import {normalizeMediaClassification} from '../../../types/media';
-import {usePlayerActivity} from '../../../infrastructure/player';
+import {useResumeAwareLaunch} from '../../../infrastructure/player';
 import {useSettingsStore} from '../../../state';
 import {useMediaStore} from '../../../state';
 
@@ -56,7 +56,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   const {user, isLoading, signIn, signOut, revokeAccess} =
     useAuth();

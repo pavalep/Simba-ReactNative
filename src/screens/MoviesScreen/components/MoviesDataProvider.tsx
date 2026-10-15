@@ -121,7 +121,7 @@ export const MoviesDataProvider: React.FC<{
         // bridge call and returns `Result<PlaybackId, StreamError>`
         // so the 4 failure variants (network / unsupported /
         // expired / blocked) can surface as distinct toasts.
-        // The pre-facade direct `usePlayerActivity().openPlayer()`
+        // The pre-facade direct `useResumeAwareLaunch().openPlayer()`
         // call was not awaited (rejections became unhandled
         // promise rejections) and the `false` return was discarded
         // (silent no-op when the bridge refused launch).

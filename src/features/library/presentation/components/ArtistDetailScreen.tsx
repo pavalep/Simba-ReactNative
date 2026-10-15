@@ -25,7 +25,7 @@ import type {JamendoTrackResult} from '../../../../types/api';
 import type {RootStackScreenProps} from '../types';
 type ArtistDetailScreenProps = RootStackScreenProps<'ArtistDetail'>;
 import {shareContent} from '../../../../services/shareService';
-import { resolveStreamType, usePlayer, usePlayerActivity } from '../../../../infrastructure/player';
+import { resolveStreamType, usePlayer, useResumeAwareLaunch } from '../../../../infrastructure/player';
 import {useMediaStore, usePlayerStore} from '../../../../state';
 
 type Props = ArtistDetailScreenProps;
@@ -157,7 +157,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
     [tracks],
   );
 
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   const handlePlayTrack = (uri: string, title: string) => {
     openPlayer({

@@ -64,15 +64,65 @@ evidence about the scope, not about the codebase.**
 
 Gates: tsc 0, eslint 0 (--max-warnings 0), jest 88 suites / 1098 passed / 1 todo.
 
+### F5 A9 — 2026-10-15: `useResumeAwarePlayerActivity` → `useResumeAwareLaunch` (file AND symbol)
+
+Item 2 from the handoff, which said "rename the file". That would have been the half-fix.
+
+**Why the symbol had to go too.** The developer-facing name is `usePlayerActivity()` at 27 screen
+call sites — that is the name that still refers to an Android Activity F5 deleted. Renaming
+the file, which nobody types, fixes nothing visible. Worse, the app's symbol was **identical to the
+lib's** `usePlayerActivity`, and both appeared in the same test file: the seam's own suite mocked
+the lib at one line and imported the app's three lines later. Same name, two meanings — a live
+"passes for the wrong reason" hazard. `UsePlayerActivityOptions` also collided with the lib's
+`UsePlayerActivityResult`.
+
+**Name: `useResumeAwareLaunch`, not `usePlayerLaunch`.** The dropped word is the load-bearing one.
+The seam exists because ~28 screens each re-implemented resume; a call site reading
+`usePlayerLaunch()` tells the next screen author nothing about that, and hand-rolling resume is
+precisely how W9.3 happened. `useResumeAwareLaunch()` states the contract at every call site.
+
+**Renamed:** the module and its suite; `UsePlayerActivityOptions` → `UseResumeAwareLaunchOptions`;
+`AppPlayerActivityResult` → `AppPlayerLaunchResult`; 27 screens plus `index.ts` /
+`playbackFacade.ts` / `usePlaylistLaunch.ts`; 8 test files. 43 files, pure rename.
+
+**Deliberately NOT renamed: the lib's hook.** Four suites mock the lib's `usePlayerActivity` and
+must keep that name. Every surviving reference is pinned and checked by an occurrence-count guard.
+
+**Two collateral fixes found while in there.**
+
+1. `playbackFacade.ts` documented a fifth sub-surface,
+   `activity → useResumeAwareLaunch().getLaunchParams`. The lib's `UsePlayerActivityResult`
+   has only `openPlayer`, and the facade returns `{state, progress, commands, launch}`.
+   `usePlaybackFacade.test.tsx:110` already asserted this surface is gone, so the docblock
+   contradicted its own test. Removed.
+2. `mockGetLaunchParams` in `usePlay.test.tsx` / `usePlayWithResume.test.tsx` was declared, wired
+   into the lib mock, and **never asserted**. Dead plumbing for a method that no longer exists —
+   it would have let a regression reintroducing it pass unnoticed. Removed.
+
+**Two mistakes worth recording, both caught by the gates rather than by me.**
+
+1. The first pass inverted app-vs-lib in `albumArtistLane.test.tsx` and `playerBarrel.test.ts`.
+   Both suites mock the app seam AND the lib with the *same* `mockOpenPlayer` shape, so the
+   mock's name cannot discriminate them — only the `jest.mock(...)` path on the preceding
+   line can. I inferred from the name and got it backwards twice. Jest caught both
+   (`useResumeAwareLaunch is not a function`, 12 then 3 tests); the alternative was a silently
+   unmocked seam passing for coverage.
+2. `playerBarrel.test.ts` is **CRLF** while every other file in the set is LF, so a
+   newline-anchored match silently found nothing. A guard that matches zero records is a broken
+   guard, not a clean bill of health — the same trap as the Sheets `read` parser.
+
+Gates: tsc 0, eslint 0 (--max-warnings 0), jest 88 suites / 1098 passed / 1 todo — identical to
+the A8 baseline. A rename that moved a test count would have meant it moved behaviour.
+Integrity audit: 3 seam mock paths resolve, 0 stale old-name references in `src`, 43 files
+scanned for control-char / BOM corruption with 0 problems.
+
 ### Start here tomorrow
 
-1. **Duplicate `setVolume`** — `useTransport.ts:223` and `:260` both declare
-   `setVolume(volume: number): void` in `TransportCommands`, and each docblock claims a
-   different wave introduced it. Plus a third path at `AudioPlayer.tsx:339` calling a
-   different `setVolume`. Smallest remaining item; good one to open on.
-2. **RENAME `useResumeAwarePlayerActivity.ts`** — named for an Activity F5 deleted. Pure
-   rename, no behaviour change, but it is the last file in that folder still speaking about
-   an Activity that does not exist.
+1. ~~Duplicate `setVolume`~~ — **DONE, F5 A8** (`5a41396`). The duplicate was
+   real; the tracker's "third path at `AudioPlayer.tsx:339`" claim was wrong (a `Slider`
+   closing tag). Real gap: the clamp was unpinned. 5 new tests pin it.
+2. ~~RENAME `useResumeAwarePlayerActivity.ts`~~ — **DONE, F5 A9** (file AND
+   symbol → `useResumeAwareLaunch`). See the record above.
 3. **`useLibraryScreen.ts:252`** — `startPositionMs: first.resumePosition` is always
    `undefined` because `playlistItemsToEntries` never populates that field. Harmless today
    (the seam omits null) but it reads as if the launch resumes. Deciding what SHOULD populate
@@ -80,7 +130,7 @@ Gates: tsc 0, eslint 0 (--max-warnings 0), jest 88 suites / 1098 passed / 1 todo
 
 ### Constraints still in force
 
-- Device proof is still outstanding for **everything**. All of A4–A7 is CODE, not DEVICE.
+- Device proof is still outstanding for **everything**. All of A4–A9 is CODE, not DEVICE.
 - Lib is released at **1.14.0**; the app pins it. Never wire it via `file:`/`link:`/`workspace:` —
   commit, push, annotated tag `v<version>`, let Actions publish, THEN `npm install`.
 - Argent 0.25.0 → 0.27.0 is **still awaiting explicit consent** — do not apply.

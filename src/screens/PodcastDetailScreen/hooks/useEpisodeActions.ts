@@ -10,7 +10,7 @@ import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {shareContent} from '../../../services/shareService';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
-import { resolveStreamType, usePlayerActivity, useQueue } from '../../../infrastructure/player';
+import { resolveStreamType, useResumeAwareLaunch, useQueue } from '../../../infrastructure/player';
 import text from '../related/textContent.json';
 
 type Navigation = PodcastDetailScreenProps['navigation'];
@@ -25,7 +25,7 @@ export function useEpisodeActions({podcast, navigation}: Options) {
   const {addToQueue, prependToQueue} = useQueue();
   const toast = useToast();
   const {add: addBookmark} = useBookmarks();
-  const {openPlayer} = usePlayerActivity();
+  const {openPlayer} = useResumeAwareLaunch();
 
   // 35.6: episode long-press actions
   const [menuEpisode, setMenuEpisode] = useState<PodcastEpisodeResult | null>(
