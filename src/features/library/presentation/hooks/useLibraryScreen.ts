@@ -247,9 +247,15 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
         usePlayerStore.getState().loadPlaylistToPlayer(entries);
         const first = entries[0];
         if (!first) return;
+        // No `startPositionMs`. The seam resolves resume from bookmarks and
+        // history for the track it actually starts, which is the only authority
+        // that can be right once the caller is one screen among eight.
+        // `first.resumePosition` was read here and is ALWAYS
+        // undefined — `playlistItemsToEntries` never populates it. It
+        // did nothing except read as if this launch resumed. The other six
+        // `openPlaylist` call sites pass nothing; this one did not.
         openPlaylist(entries, {
           type: resolveStreamType(first.type),
-          startPositionMs: first.resumePosition,
         });
       }
     },
@@ -264,9 +270,13 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
         usePlayerStore.getState().loadPlaylistToPlayer(entries);
         const first = entries[0];
         if (!first) return;
+        // No `startPositionMs` here either, and this is the site where it
+        // could not be correct even if it were populated: the seam picks its
+        // own start index when shuffling, so `entries[0]` is not the track
+        // that plays. A position read off entry 0 would resume a different
+        // file than the one audio comes from.
         openPlaylist(entries, {
           type: resolveStreamType(first.type),
-          startPositionMs: first.resumePosition,
           shuffle: true,
         });
       }

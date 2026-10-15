@@ -116,6 +116,54 @@ the A8 baseline. A rename that moved a test count would have meant it moved beha
 Integrity audit: 3 seam mock paths resolve, 0 stale old-name references in `src`, 43 files
 scanned for control-char / BOM corruption with 0 problems.
 
+### F5 A10 — 2026-10-15: the playlist launch's dead `resumePosition`
+
+Item 3 from the handoff. The tracker called it "a resume-design question" needing a decision.
+The evidence settled it without one.
+
+**The claim checked out.** `playlistItemsToEntries` (`playerStore.ts:109-119`) maps seven
+fields and never sets `resumePosition`, so `first.resumePosition` was always `undefined`.
+There were TWO sites, not one: `:252` (play-all) and `:269` (shuffle). The tracker only named
+the first.
+
+**It was already inert, twice over.** `usePlaylistLaunch.ts:177-179` omits the key entirely
+when the value is null, so an `undefined` never reached the bridge. And six of the eight
+`openPlaylist` call sites (Album x3, Artist x2, PlaylistDetail) already pass no position at
+all — `useLibraryScreen` was the lone outlier. Album and Artist carry explicit comments
+saying the seam picks its own start index, so they deliberately pass nothing.
+
+**The real find is the shuffle site.** It is not merely dead: it is aimed at `entries[0]`
+while `orderPlaylist` chooses a *different* start when shuffling. The day anything populated
+`resumePosition`, that line would have resumed a different file from the one audio came from.
+Dead code with a live failure mode one refactor away.
+
+**Decision: delete both fields, add no replacement.** Resume is resolved by the seam from
+bookmarks and history for the track it actually starts. Populating `resumePosition` at the
+screen would re-create the per-screen bookkeeping W9.3 was written to remove. Note the type
+system already prevents the bug: `PlaylistLaunchEntry` declares no `resumePosition`, so the
+seam structurally cannot forward one — stronger than any test.
+
+**No new test, and that is a considered choice rather than a skip.** The seam-level contract is
+already pinned by `usePlaylistLaunch.test.tsx:102` (forwards a caller-supplied position) and
+`:112` (omits the key when none is given). The screen half cannot be pinned there:
+`usePlaylistLaunch` never reads the entry field, so a seam-level test provably cannot catch
+the screen bug. A screen-level pin needs a new mock harness for `useLibraryScreen` (8 module
+deps: theme, safe-area, settings, playlists, scanner, toast, player barrel, state barrel).
+That is disproportionate for a dead field; carried forward as an option. The comments at both
+sites record the reasoning, which is the same mechanism Album/Artist already use to prevent
+reintroduction.
+
+**This deletion has no behavioural mutant.** The field was unobservable — always
+`undefined`, and the seam dropped null anyway. So the gate is the count: jest held at
+**88 suites / 1098 passed / 1 todo**, identical to A9. A change to dead code that moved that
+number would have meant it was not dead.
+
+**Process note.** The first write of this change landed a corrupted comment line (a stray
+backtick where `//` belonged) while still exiting 0, and the guards I had written did not catch
+it because they checked field counts, not comment well-formedness. A later inline `node -e`
+then silently failed to match on CRLF and printed `anchor missing` while the shell moved on.
+Both were caught only by reading the file back. **Verify what landed, not that the command
+returned** — and make the guard assert the thing you actually care about.
 ### Start here tomorrow
 
 1. ~~Duplicate `setVolume`~~ — **DONE, F5 A8** (`5a41396`). The duplicate was
@@ -123,10 +171,9 @@ scanned for control-char / BOM corruption with 0 problems.
    closing tag). Real gap: the clamp was unpinned. 5 new tests pin it.
 2. ~~RENAME `useResumeAwarePlayerActivity.ts`~~ — **DONE, F5 A9** (file AND
    symbol → `useResumeAwareLaunch`). See the record above.
-3. **`useLibraryScreen.ts:252`** — `startPositionMs: first.resumePosition` is always
-   `undefined` because `playlistItemsToEntries` never populates that field. Harmless today
-   (the seam omits null) but it reads as if the launch resumes. Deciding what SHOULD populate
-   it is a resume-design question — needs a decision, not a patch.
+3. ~~`useLibraryScreen.ts:252` `startPositionMs`~~ — **DONE, F5 A10**. Both sites
+   deleted (there were two, not one). Already inert, and the shuffle variant was aimed at the
+   wrong track. No replacement — the seam owns resume. See the record above.
 
 ### Constraints still in force
 
