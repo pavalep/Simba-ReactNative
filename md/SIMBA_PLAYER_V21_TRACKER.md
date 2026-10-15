@@ -771,7 +771,11 @@ exists to remove, and deleting `PlayerActivity` first would leave it throwing
 - [ ] **Delete dead code** — re-verify each call count before deleting:
       `AudioLyricsView` (525 lines, 0 call sites), `AudioVisualizer` (143, 0),
       13 × `textContent.ts` (**4 real import sites** — the "0" in an earlier audit was wrong),
-      `handleViewFullLyrics` lie.
+      `handleViewFullLyrics` is **LIVE, not dead** (corrected 2026-10-15) — do not delete. It is
+      defined at `useSongScreen.ts:229`, returned at `:280`, and bound to a button at
+      `SongScreen.tsx:132`. This was the third "dead" claim in this tracker that was wrong,
+      after `NowPlayingScreen` and the six stale lane-inference sites. **Grep for call sites
+      before deleting; the tracker is not a substitute for the search.**
       **`NowPlayingScreen` is NOT a stub** — an earlier audit called it a `return null`
       placeholder; it is live with 1 call site. Do not delete it.
 
@@ -1107,10 +1111,24 @@ not throwaway work that the refactor supersedes.
       refactor away. No replacement: the seam owns resume. See the A10 section.
 - [x] ✅ CLOSED in **A6** — see the A6 section. The list named six sites that were already correct;
       the sites that were actually wrong (Album/Artist `openPlaylist`) were missing from it.
-- [ ] Dead code: `AudioLyricsView` (525 lines, 0 call sites), `AudioVisualizer` (143, 0),
-      13 x `textContent.ts` (**4 real import sites** - an earlier "0" was wrong),
-      `handleViewFullLyrics` lie. `NowPlayingScreen` is **live**, not a null stub.
-- [ ] Lib: `enterPip` arity - Kotlin params nullable vs `NativeMpvPlayer.ts:293` non-nullable
+- [ ] Dead code, re-verified 2026-10-15 (call sites grepped, not assumed):
+      - `AudioLyricsView` (525 lines) — **genuinely 0 external call sites.** Only self-references.
+      - `AudioVisualizer` (143 lines) — **genuinely 0 external call sites.** Only self-references.
+      - 13 x `textContent.ts` — **4 real import sites** (`LibraryFoldersSegment`, `BookmarksScreen`,
+        `Home/related/index.ts`, `AboutScreen`), so 9 unused. Note the `.json` files are a DIFFERENT and LIVE
+        set (~14 imports across Podcasts/Music/Movies/PodcastDetail) — do not touch those.
+      - `handleViewFullLyrics` — **NOT dead**, see below. Do not delete it.
+      `handleViewFullLyrics` is **LIVE, not dead** (corrected 2026-10-15) — do not delete. It is
+      defined at `useSongScreen.ts:229`, returned at `:280`, and bound to a button at
+      `SongScreen.tsx:132`. This was the third "dead" claim in this tracker that was wrong,
+      after `NowPlayingScreen` and the six stale lane-inference sites. **Grep for call sites
+      before deleting; the tracker is not a substitute for the search.**
+- [x] ~~Lib: `enterPip` arity~~ — **ALREADY FIXED in v1.9.3** (verified 2026-10-15).
+      Both sides already agree: `NativeMpvPlayer.ts:316` declares
+      `enterPip(chapterTitle?: string, progressPct?: string)` and
+      `MpvBridgeModule.kt:2066` declares `enterPip(chapterTitle: String?, progressPct: String?)`.
+      The comments there record the original exception (TurboModule rejecting a 0-arg call with
+      "expected argument count: 2"). This entry was stale — close it, do not "fix" it again.
 - [ ] Jest worker force-exit flake: leaked handles. Present at BOTH 15 and 8 workers,
       so it is isolated from the A7 `maxWorkers` fix and not addressed by it. Needs `--detectOpenHandles`.
 - [ ] Separate, benign: `[checkpoint] resume thumbnail capture failed Error: no decoder` — the path is
