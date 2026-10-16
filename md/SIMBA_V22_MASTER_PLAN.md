@@ -291,6 +291,111 @@ device: video **visible** expanded · header-back → dock shows live video in t
 dock rect · dock → expanded restores · PiP in/out · back at each level.
 Rollback is `git checkout f5/video-view-component` if the swap regresses.
 
+#### Stage 6+7 progress — 2026-10-16, app `04a35ad` (pushed)
+
+**Landed (committed, gated):**
+
+- `VideoSurface` renders `<SimbaVideo>` — a real `codegenNativeComponent`
+  child — plus a tap layer, and paints nothing over it.
+- `PlayerSurface.mount/unmount` deleted from `MainActivity.kt`, with the
+  field, both imports and the `onDestroy` teardown.
+- `useVideoSurface.ts` (178) and its suite (212) deleted.
+- `videoSurfacePresented` / `setVideoSurfacePresented` deleted from the store.
+- Derivation collapsed exactly as written above.
+
+**Gates:** `tsc` 0 · `eslint --max-warnings 0` · `jest` **88 suites / 1105
+passed / 1 todo** (was 89/1107 — one suite deleted with its module).
+**Mutation check 4/4 killed**, each by its intended test: transparent `<View>`
+placeholder, `isMini` computed from the request instead of `mode`, a re-added
+stored `mode`, and a session read in the derivation.
+
+**Two things this stage settled that the plan did not anticipate:**
+
+1. `VideoSurface`'s tap layer had inherited the picture's
+   `accessibilityLabel`, so a screen reader announced "Video" **twice**. It is
+   now hidden from the a11y tree (`accessibilityElementsHidden` +
+   `importantForAccessibility="no-hide-descendants"`). Every action it
+   triggers is already a real button in the chrome, so nothing is lost — and
+   it avoids inventing a "Toggle player controls" affordance. Pinned by
+   `getAllByLabelText('Video')` having length 1.
+2. `videoMiniRect` now has **one writer and no reader** — `useVideoSurface`
+   was its only consumer. It is deliberately kept: trap 2 above still needs
+   it, as the `style` that positions the single view. The docstring says so
+   rather than implying a consumer exists.
+
+**Device verification — 2026-10-16, `emulator-5554`, `BUILD SUCCESSFUL` 9m15s**
+
+Debug APK built and installed. Results, in the order they were found:
+
+1. 🔴 **P0, now fixed — red screen on every cold start.** Eight consecutive
+   native `IllegalStateException: MpvPlayerModule not initialized. Call
+   initPlayer() first.` from `ensurePtr` (`MpvBridgeModule.kt:2354`),
+   surfaced through `ReactHost.handleHostException`.
+
+   Cause, read off the log rather than guessed:
+   `PlayerProvider` calls `initPlayer()` in its **mount effect**
+   (`PlayerProvider.tsx:542`). React runs **child effects before parent
+   effects**, so any component that calls the bridge from its own mount
+   effect beats the engine's creation. The video chrome was mounting on cold
+   start because `videoPresentation` initialised to `'expanded'` — a value
+   that was only ever survivable because the deleted
+   `videoSurfacePresented: false` had been masking it. The mask hid a value
+   that was simply wrong: on a cold start no writer has run, there is no
+   video, and nothing can be expanded.
+
+   Fixed by making the cold-start value `'mini'`. Re-measured on device:
+   **0 `ensurePtr` failures**, `initPlayer` clean, home screen renders.
+
+   *Latent lib defect, not fixed here:* `PlayerProvider` cannot win this race
+   by construction. The honest lib-side fix is to call the idempotent
+   `initPlayer()` during the provider's **render**, not in an effect, so the
+   handle exists before any child effect. Worth a lib release; the app-side
+   fix only avoids the situation, it does not remove the hazard.
+
+2. ✅ **The in-tree surface works.** From logcat on a video launch:
+   `surfaceCreated` → `Attaching Surface to mpv` → **`surfaceChanged: 1080x1907`**.
+   Non-zero extents, so the Yoga↔`SurfaceView` guard from Stage 4 is doing its
+   job. The a11y tree independently agrees: `Image "Video"` at
+   `(0.000, 0.000, 1.000, 0.795)` plus `video-surface-tap` — the picture is
+   genuinely mounted and laid out.
+
+3. 🔴 **The black frame is a LOAD failure, not a render failure.**
+   `MPV_EVENT_END_FILE reason=4 error=-13`, and mpv error **-13 is
+   `MPV_ERROR_LOADING_FAILED`**. The source is
+   `IAccuseMyParents.avi` — **733 MB**, a format whose index lives at the
+   *end* of the file. Nothing ever reached the renderer, so the black screen
+   is fully explained. Device→archive.org ICMP succeeds, and audio over HTTPS
+   worked before, so this is not "the emulator has no network".
+
+   **This retires the "video is black" P0's framing.** The remaining unknown is
+   no longer "does the surface work" — it is "does the renderer paint once
+   media actually arrives", which the control file answers.
+
+4. 🔴 **New P0 — a load failure renders as a silent black screen.**
+   mpv emitted `onError` (`code=-13 recoverable=false`) and the UI shows no
+   `VideoErrorOverlay`, no message, nothing. That is the "control that lies"
+   failure this wave exists to remove, and it is now above the render question
+   in priority.
+
+5. 🟠 **Lib defect: the error is mislabelled.** The bridge maps this to
+   `E_RENDERER_GONE` (`MpvBridgeModule`), but -13 is
+   `MPV_ERROR_LOADING_FAILED`. The UI is told the renderer crashed when the
+   file simply failed to download. Every load failure will read as a GPU
+   crash.
+
+6. ⚪ Confirmed still live, from the a11y tree, unchanged by this stage:
+   `SeekBar "Live stream — not seekable"` disabled with `Remaining time
+   unknown "--:--"` (the P1 duration bug); `StaticText ""I Accuse My Parents""`
+   with literal quotes; stray `2×` / `☀ 100%` / `♪ 100%` chips floating
+   mid-frame.
+
+**The control test that closes this out:** play
+`.scratch-test-video.mp4` (960×540, 5.05 s, 1.1 MB, already proven to render
+in Google Photos on this emulator) *through SIMBA's own pipeline*. Until that
+runs, "video renders" is unproven — but note the bar is now much lower than it
+was, because every layer between React and the renderer has been measured
+working.
+
 ### Stage 7 — `A` remove the invariant
 Delete `BrowsingStack` · delete `MainActivity` surface mount · delete
 `PlayerSurface` import surface · revise the 17 test files.

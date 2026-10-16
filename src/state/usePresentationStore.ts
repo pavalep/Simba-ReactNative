@@ -162,6 +162,32 @@ export interface PresentationState {
    * and it shipped a black player screen. One tree writes it after F5, and
    * even before that, the writers are user/launch events rather than
    * per-tree reconcilers.
+   *
+   * ## Why this starts `'mini'` (2026-10-16)
+   *
+   * It used to start `'expanded'`, and that was only ever survivable because
+   * a second gate hid it: the old derivation was
+   * `videoSurfacePresented ? 'expanded' : 'mini'`, and that flag is `false`
+   * on a cold start, so `'expanded'` never actually took effect until a real
+   * video launch happened.
+   *
+   * `videoSurfacePresented` is deleted now — the picture is a view in the
+   * tree, so the mode is structural. Removing the mask exposed the value
+   * underneath, and it was simply wrong: on a cold start **no writer has
+   * run**, there is no video, and nothing can be expanded.
+   *
+   * This is not cosmetic. With `'expanded'` as the cold-start value,
+   * `VideoPlayerChrome` mounted the entire expanded video chrome over an
+   * empty player on every cold start. Each of those components calls the
+   * bridge in its own mount effect, and React runs **child effects before
+   * parent effects** — so they beat `PlayerProvider`'s own
+   * `initPlayer()` effect. The result, on device, was eight consecutive
+   * `MpvPlayerModule not initialized. Call initPlayer() first.` native
+   * exceptions and a red screen at launch.
+   *
+   * `'mini'` is the honest cold-start value: it mounts no video chrome, so
+   * nothing races the engine, and the launch seam promotes it to
+   * `'expanded'` the moment a video actually starts.
    */
   videoPresentation: VideoPresentation;
 
@@ -190,7 +216,7 @@ export const usePresentationStore = create<PresentationState>()(set => ({
   pipActive: false,
   setPipActive: (pipActive: boolean) => set({pipActive}),
   togglePip: () => set(state => ({pipActive: !state.pipActive})),
-  videoPresentation: 'expanded',
+  videoPresentation: 'mini',
   setVideoPresentation: (videoPresentation: VideoPresentation) =>
     set({videoPresentation}),
   videoMiniRect: null,
