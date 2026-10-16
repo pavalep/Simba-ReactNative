@@ -1,5 +1,71 @@
 # SIMBA Player V21 — Single-Activity Tracker
+
+> 🟢 **START HERE:** [`md/SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md) — the
+> dated single index. Decisions, execution order, gates, risks, carried-forward
+> register. This tracker remains the per-finding state of record.
 - [ ] Argent 0.25.0 -> 0.27.0 - notice surfaced, **not applied**, awaiting consent
+
+---
+
+## Handoff — 2026-10-16, architecture research (supersedes the 2026-10-15 handoff below)
+
+**Corrected architecture:**
+[`md/SIMBA_V22_RN_MEDIA_MODULE_INTEGRATION_RESEARCH.md`](SIMBA_V22_RN_MEDIA_MODULE_INTEGRATION_RESEARCH.md)
+
+Read `react-native-video` v6.19.3 + master, `expo-video`, and `vision-camera`
+**source**, and compared them against the lib. Three findings change the plan:
+
+1. **`TextureView` is withdrawn as the target.** SIMBA's own `MpvRenderView.kt`
+   records having tested it: on PiP, *"PiP shows black."* react-native-video's
+   surface-type switch is a literal `// TODO`. The 2026-10-15 brief recommended
+   it; that recommendation was wrong and the brief has been edited.
+
+2. **`SurfaceView` in-tree is proven, not a trap.** react-native-video puts a
+   `SurfaceView` inside a `ViewGroupManager<ReactExoplayerView>` and ships
+   working PiP. What breaks is being a **sibling of the React root**, which is
+   what `BrowsingStack` was patching over.
+
+3. **The lib has no view component at all.** `codegenConfig.type` is
+   `"modules"`. `PlayerSurface` is a no-op transparent `<View>`. And
+   `MpvRenderViewManager` — which *looks* like the right shape — is registered
+   **nowhere**: `PlayerPackage` has no `createViewManagers`, and its own
+   docstring says the ViewManager side is "left empty".
+
+Also newly identified, and the most likely cause of the black video:
+react-native-video explicitly overrides `requestLayout()` because **"React
+Native (Yoga) can sometimes defer layout passes that are required by … surface
+view"**. SIMBA mutates the surface's `LayoutParams` directly from Kotlin,
+bypassing Yoga entirely, with no equivalent guard.
+
+Target shape: headless `MpvPlayerModule` (audio, exists) **+** a new
+`SimbaVideoView` Fabric component (video, missing) **+** ref-addressed commands.
+Deletes `useVideoSurface`, `BrowsingStack`, `PlayerSurface.mount`, and
+`setVideoBounds`. Requires a lib release cycle.
+
+---
+
+## Handoff — 2026-10-15, device verification (supersedes the 2026-10-14 handoff below)
+
+**Full findings + React Native architecture brief:**
+[`md/SIMBA_V22_DEVICE_FINDINGS_AND_RN_ARCHITECTURE_BRIEF.md`](SIMBA_V22_DEVICE_FINDINGS_AND_RN_ARCHITECTURE_BRIEF.md)
+
+First real device pass on the single-Activity build. **A P0 was found, fixed and
+verified on device**; two further P0/P1 were found and left open.
+
+| Sev | Finding | State |
+|---|---|---|
+| P0 | Video completely invisible — opaque `AppContent` painted over the native `SurfaceView` at content index 0. The two-Activity guard `isPlayerActivity ? null : <AppContent />` was deleted by F5 along with the flag. | **Fixed** — `src/app/BrowsingStack.tsx`, verified on device |
+| P0 | Hardware back dead app-wide. `targetSdk 36` enables predictive back; RN 0.86 registers no `OnBackInvokedCallback`, so `MainActivity.onBackPressed()` is never called. In-app back buttons work; hardware key does nothing. | **Open** — native fix + rebuild |
+| P1 | Video picture black. Surface reports presented, playback advances, audio fine, no frames. Possibly emulator SwiftShader. | **Open** — needs local-MP4 control test first |
+| P1 | Duration never reported on **both** lanes — `--:--`, false `LIVE` badge, seek bar disabled, **prev/next greyed out**. | **Open** — cross into the lib |
+
+Also: the `zIndex` comment at `App.tsx` claimed FIRST-rendered stacks ABOVE
+(later siblings render on top) — it contradicted the rule it cited and survived
+because two Activities meant two windows.
+
+**Uncommitted:** `App.tsx`, `src/app/BrowsingStack.tsx`, `__tests__/app/`.
+Gates at that state: tsc 0, eslint 0, jest **89 suites / 1107 passed / 1 todo**
+(baseline 88/1103). 3 mutants killed by the intended assertions.
 
 ---
 
