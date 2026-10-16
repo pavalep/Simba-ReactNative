@@ -102,6 +102,44 @@ screens instead of over the video. Recorded in `App.tsx`.
 D3 exists because this was skipped once. A repo comment saying "X was tested, it
 broke Y" outranks any external source, including mine.
 
+### D9 — One mounted player per lane; presentation is style, not component identity ✅ locked 2026-10-16
+
+**Full and mini are the same React tree. They are never two components taking
+turns.** The instance stays mounted and its `style` (and per-part visibility)
+changes. No `cond ? <Full/> : <Mini/>`.
+
+This is the rule for both lanes. `PlayerChrome.tsx:93-106` is what it replaces:
+
+```tsx
+if (!nowPlaying) return null;                     // the ONLY legal unmount
+if (streamType === 'video') {
+  return presentation.isMini ? <MiniPlayer/> : null;
+}
+return audioMode === 'expanded' ? <AudioPlayer/> : <MiniPlayer/>;
+```
+
+Five outcomes, each mounting a *different component*. Every switch is an
+unmount/remount: subscriptions re-run, `Animated.Value`s reset, and — for video
+— a `SurfaceView` is destroyed and recreated, which is a black frame. The
+component identity is not incidental to the problem; it is the problem.
+
+**What may change with presentation:** the root `style` (geometry), and
+per-part visibility (which sub-elements are shown). Both are props of a mounted
+tree.
+
+**What may NOT change:** which component is mounted. If two different
+components have to exist for two sizes, they are children of one mounted
+parent, not alternatives to it.
+
+**The one legal unmount** is `nowPlaying == null` — nothing is loaded. That is
+the absence of a session, not a presentation. It stays.
+
+**Why it matters beyond tidiness:** D2 already made the video picture a real
+view. If the dock got its own `SimbaVideo`, two views would bind one mpv handle
+(`attachSurfaceLocked` rebinds on every `setNativePtr`) — the exact conflict
+Stage 6's design avoids. One tree is not a style preference here; it is what
+makes the dock possible at all.
+
 ---
 
 ## 3. The target public API
@@ -261,6 +299,36 @@ hardware back at each level, next/prev with a real playlist.
 
 ### Stage 8 — P0 back + P1 duration
 Both need instrumentation, not guesswork — see §7.
+
+### Stage 9 — `A` collapse both lanes onto D9 *(appended 2026-10-16)*
+
+Stage 6 fixes the video picture. This makes the same guarantee for the *rest*
+of both lanes, so that "mini" and "expanded" stop being two components.
+
+**Target tree** — one host, mounted while a session exists:
+
+```
+<PlayerHost>                 // ONE instance. Unmounts only on nowPlaying == null.
+  <SimbaVideo/>              // video picture     — style: expanded | dock rect
+  <ArtworkSquare/>           // audio leading art — style: expanded | 44pt
+  <FullChrome/>              // titles, queue, big transport — visibility
+  <DockControls/>            // 44pt bar           — visibility
+</PlayerHost>
+```
+
+- Video picture moves by `style` (`absoluteFill` ⇄ `videoMiniRect`). Same
+  instance — no Surface recreate.
+- The existing `ChromeAutoHideController` already animates chrome visibility on
+  an `Animated.Value`, so full↔mini reuses the mechanism that exists rather
+  than adding a second one.
+- `usePresentation` and `useAudioPresentationStore` stay as the single writers
+  per lane, per their existing "gestures only" rule. D9 changes how the value
+  is *consumed* — never which component is mounted.
+
+**Gate:** `tsc` 0 · `eslint --max-warnings 0` · `jest` no regressions · device:
+expand→minimize→expand on BOTH lanes with no black frame, no re-subscribe
+flash, and live video in the dock. Confirm by instrumentation, not by eye:
+`useTransport().state` identity must not change across a presentation change.
 
 ---
 
