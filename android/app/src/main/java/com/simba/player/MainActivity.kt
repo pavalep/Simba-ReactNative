@@ -39,22 +39,10 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.simba.player.mpv.MPVLib
 import com.simba.player.mpv.MpvBridgeModule
-import com.simba.player.mpv.MpvRenderView
-import com.simba.player.mpv.PlayerSurface
 
 class MainActivity : ReactActivity() {
 
   private var pipReceiver: PipActionReceiver? = null
-
-  /**
-   * The mounted video surface, or `null` when [PlayerSurface.mount] refused.
-   *
-   * Held only so [onDestroy] can unmount the exact view it mounted. It is not
-   * a cache of "is there a surface" — the library's `PlayerSurface.current()`
-   * is the authority for that, and it is deliberately read at the moment of
-   * use rather than mirrored here.
-   */
-  private var videoSurface: MpvRenderView? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     // Switch from splash theme to app theme before RN renders
@@ -67,28 +55,27 @@ class MainActivity : ReactActivity() {
     // player (MpvBridgeModule.setOrientation) is the only
     // authority that can change it during a session.
     requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-    // V21 F2b — mount the video surface in THIS window.
+    // 2026-10-16: no surface is mounted here any more.
     //
-    // `PlayerSurface.mount()` is the library's single implementation of
-    // "create the render view, place it beneath the React root, register it".
-    // It is the same call `PlayerActivity` makes, so there is one mount path
-    // rather than two that can drift — the app never constructs a lib view,
-    // it only hands over an Activity.
+    // This window used to call `PlayerSurface.mount(this)`, which created an
+    // `MpvRenderView`, inserted it at `android.R.id.content` index 0 and
+    // registered it — a SIBLING of the React root, not a descendant. That
+    // arrangement is why an opaque React root could paint over every decoded
+    // frame (the V11 bug this block was written to "prevent by
+    // construction"), why presenting video took two explicit calls in a fixed
+    // order (size, then reveal, because a 0x0 SurfaceView is an invalid libmpv
+    // target), and why the dock had to hand window pixels to the engine.
     //
-    // The surface comes up GONE at 0x0. Presenting video is therefore always
-    // two explicit calls — size it (`setVideoBounds` / `fillBounds`), then
-    // show it (`setSurfaceVisible(true)`) — which is what F3's in-app route and
-    // F4's mini player will drive. Until then this window is pure app UI with
-    // no full-bleed surface over it, so the V11 "opaque React root covers the
-    // video" failure is prevented by construction rather than by anyone
-    // remembering to set a background correctly.
-    videoSurface = PlayerSurface.mount(this)
-    if (videoSurface == null) {
-      // mount() already logged the concrete reason (no content root, wrong
-      // container type, wrong thread). Say it again at the host level: from
-      // the app's point of view this window simply cannot present video.
-      android.util.Log.e(TAG, "no render surface mounted; this window cannot present video")
-    }
+    // The picture is now `<SimbaVideo>` from the player library: a real
+    // `codegenNativeComponent` view registered by the library's
+    // `PlayerPackage`, rendered inside the React tree. React Native owns its
+    // layout, its z-order and its lifecycle.
+    //
+    // Mounting it here as well would be actively wrong, not merely redundant:
+    // both views bind the SAME mpv handle, and `attachSurfaceLocked` rebinds on
+    // every `setNativePtr`, so two surfaces would fight over one engine and the
+    // symptom would be a black picture with nothing in the log.
+    //
     // Register PiP action broadcast receiver (API 33+ requires flag)
     pipReceiver = PipActionReceiver()
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -153,13 +140,8 @@ class MainActivity : ReactActivity() {
     super.onDestroy()
     pipReceiver?.let { unregisterReceiver(it) }
     pipReceiver = null
-    // V21 F2b — tear the surface down through the same library call that
-    // mounted it, so removing the view and withdrawing it from the registry
-    // stay one identity-checked step. Unmounting without clearing the
-    // registration would leave `PlayerSurface` publishing a detached view and
-    // the surface mutators reporting success against a surface with no window.
-    videoSurface?.let { PlayerSurface.unmount(it) }
-    videoSurface = null
+    // Nothing to unmount: the video picture is a React view now, so React
+    // Native owns its teardown along with every other view in the tree.
   }
 
   override fun getMainComponentName(): String = "SimbaPlayer"

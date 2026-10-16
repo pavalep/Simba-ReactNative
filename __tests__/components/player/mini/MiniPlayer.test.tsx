@@ -150,7 +150,6 @@ describe('MiniPlayer', () => {
     usePresentationStore.setState({
       videoPresentation: 'mini',
       videoMiniRect: null,
-      videoSurfacePresented: true,
     });
   });
 

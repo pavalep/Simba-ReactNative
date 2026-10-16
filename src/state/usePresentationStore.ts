@@ -93,27 +93,36 @@ export type PresentationMode = 'mini' | 'expanded' | 'pip';
  * What the APP has asked of the video, independently of whether the
  * surface managed to do it.
  *
- * This is a request, not an outcome, and keeping the two apart is the whole
- * point. `videoSurfacePresented` below records what the native call actually
- * returned; this records what the user asked for. Collapsing them into one
- * value is what makes "the app claims a video is on screen when nothing is"
- * impossible — and it is also what lets a minimise request that the surface
- * cannot honour fall back to a truthful 'mini' rather than being overwritten
- * by the failure.
+ * This is a request, not an outcome.
+ *
+ * It was originally kept apart from an outcome value (`videoSurfacePresented`,
+ * what the native surface mutation returned) so a request that could not be
+ * honoured fell back to a truthful 'mini' instead of being overwritten by the
+ * failure. That separation is still the right instinct, but the outcome side
+ * no longer exists: the picture is a real view component in this tree, so
+ * whether it is on screen is structural rather than reported.
  */
 export type VideoPresentation = 'expanded' | 'mini';
 
 /**
  * The mini player's live on-screen rect, in WINDOW pixels.
  *
- * `setVideoBounds` places the native `SurfaceView` inside the host
- * container, not inside a React node, so a React-relative layout value is
- * not enough — the surface needs window coordinates. `measureInWindow` is
- * what produces them, and this is where the result is published.
+ * It used to exist for a hand-off that no longer happens:
+ * `useVideoSurface` read it and passed it to the lib's `setVideoBounds`,
+ * because a `SurfaceView` mounted at `android.R.id.content` sits outside any
+ * React node and could only be positioned in window coordinates. That is why
+ * the unit here is WINDOW pixels and not a React-relative layout value.
  *
- * One writer (the `MiniPlayer`'s own layout pass), one reader
- * (`useVideoSurface`). It is a measurement, not a derivation: no pure
- * function of app state can know where a view ended up on screen.
+ * `<SimbaVideo>` is a React child now, so React Native positions it directly
+ * and nothing needs a coordinate hand-off. `useVideoSurface` is deleted and
+ * **this field currently has one writer and no reader** — `MiniPlayer`
+ * publishes it, nothing consumes it.
+ *
+ * It is kept because Stage 9 gives it its reader: collapsing the video lane
+ * onto D9 means ONE mounted `<SimbaVideo>` that fullscreen and the dock
+ * differ by `style` on, and this measured rect is exactly the dock's
+ * geometry. Stated plainly so the next reader does not go looking for a
+ * consumer that does not exist yet.
  */
 export interface VideoMiniRect {
   x: number;
@@ -143,35 +152,6 @@ export interface PresentationState {
   togglePip: () => void;
 
   /**
-   * V21 F3 — is the native video surface actually showing video right now?
-   *
-   * This one IS stored, and the distinction matters. `pipActive` and the
-   * old `mode` were DERIVED from per-tree facts, which is why every tree
-   * writing one of them was a race (see the module docstring). This is
-   * neither derived nor guessed: it is the boolean a native call actually
-   * returned. `setVideoBounds` / `setSurfaceVisible` resolve `false` when
-   * there is no surface, when the caller is off the main thread, or when
-   * the mutation threw — and "we asked and it did not happen" is not
-   * something any pure function of app state can know.
-   *
-   * It has exactly ONE writer (`useVideoSurface`, mounted once, in
-   * `ActivityShell`), which is what makes it safe: the rule this file
-   * exists to enforce is about *multiple writers of a derived value*, not
-   * about storage as such.
-   *
-   * The reason the answer is needed: `usePresentation()` decides whether
-   * to render the video chrome. If it answered from the SESSION instead,
-   * an unpresentable surface (no mount, refused mutation) would still
-   * report 'expanded' and paint the full chrome over a window with no
-   * video in it. Reading the real outcome means that case falls back to
-   * 'mini' — chrome off, no lie on screen.
-   */
-  videoSurfacePresented: boolean;
-
-  /** Record the outcome of a native surface presentation attempt. */
-  setVideoSurfacePresented: (presented: boolean) => void;
-
-  /**
    * V21 F4 — has the app been asked to show video fullscreen or minimised?
    *
    * Written by discrete events only: the launch seam (every video launch
@@ -192,10 +172,13 @@ export interface PresentationState {
    * The mini player's measured window rect, or `null` when it has not been
    * measured (or has been torn down).
    *
-   * `null` is the honest answer for "we cannot place the surface", and
-   * `useVideoSurface` refuses to reveal a surface it cannot place — a
-   * 0x0 `SurfaceView` is an invalid libmpv render target, so guessing here
-   * would trade a missing mini player for a black rectangle.
+   * `null` remains the honest answer for "we cannot place the picture". It
+   * used to be load-bearing because `useVideoSurface` refused to reveal a
+   * surface it could not place — a 0x0 `SurfaceView` is an invalid libmpv
+   * render target, so guessing traded a missing mini player for a black
+   * rectangle. With the picture laid out by React Native, a zero-extent
+   * result is simply a node that has not been measured, and `MiniPlayer`
+   * already refuses to publish one.
    */
   videoMiniRect: VideoMiniRect | null;
 
@@ -207,9 +190,6 @@ export const usePresentationStore = create<PresentationState>()(set => ({
   pipActive: false,
   setPipActive: (pipActive: boolean) => set({pipActive}),
   togglePip: () => set(state => ({pipActive: !state.pipActive})),
-  videoSurfacePresented: false,
-  setVideoSurfacePresented: (videoSurfacePresented: boolean) =>
-    set({videoSurfacePresented}),
   videoPresentation: 'expanded',
   setVideoPresentation: (videoPresentation: VideoPresentation) =>
     set({videoPresentation}),

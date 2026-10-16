@@ -183,7 +183,6 @@ beforeEach(async () => {
     // unless it is put back here.
     usePresentationStore.setState({
       videoPresentation: 'expanded',
-      videoSurfacePresented: false,
       pipActive: false,
     });
   });
@@ -234,14 +233,17 @@ describe('PlayerChrome — visibility', () => {
   it('renders the dock for a VIDEO launch once presentation is mini', async () => {
     // The counterpart to the case above, and the reason that one is
     // allowed to assert null: video is not absent, it is undocked.
-    // `isMini` needs BOTH halves (usePresentation.ts):
-    //   mode === 'mini'  → videoPresentation !== 'expanded' && !pipActive
-    //   && videoSurfacePresented — the boolean the native call returned
+    // `isMini` is simply `mode === 'mini'` (usePresentation.ts):
+    //   mode = pipActive ? 'pip' : videoPresentation === 'expanded' ? 'expanded' : 'mini'
+    // so asking for 'mini' with no PiP window is the whole condition. It
+    // used to also require `videoSurfacePresented` — a boolean the
+    // Kotlin-mounted surface returned. That is gone: the picture is an
+    // ordinary child of the tree now, so "there is something to put in
+    // the dock" is structural, not a reported fact.
     await seedSession('video');
     await act(async () => {
       usePresentationStore.setState({
         videoPresentation: 'mini',
-        videoSurfacePresented: true,
       });
     });
     const {toJSON, getByTestId} = await render(<PlayerChrome />);

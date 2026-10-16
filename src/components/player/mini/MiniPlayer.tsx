@@ -114,8 +114,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
       if (rootW <= 0 || rootH <= 0) return;
       slot.measureInWindow((slotX, slotY, slotW, slotH) => {
         if (slotW <= 0 || slotH <= 0) return;
-        // WINDOW pixels — the space `setVideoBounds` now takes, so this is
-        // a pass-through with no coordinate translation in the middle.
+        // WINDOW pixels, matching `VideoMiniRect`'s unit. No consumer reads
+        // this yet (Stage 9 places the mounted view with it); it is measured
+        // here because this layout pass is the only place the dock's real
+        // geometry exists.
         setVideoMiniRect({x: slotX, y: slotY, width: slotW, height: slotH});
         // The same rectangle, relative to the bar, for the plates.
         setHole({
@@ -156,7 +158,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
 
   const onExpand = useCallback(() => {
     // One verb, chosen by lane: audio has its own presentation store, video
-    // writes the request that `useVideoSurface` reads to re-fill the window.
+    // writes the request that `usePresentation()` derives `mode` from.
     if (isVideo) {
       setVideoPresentation('expanded');
       return;

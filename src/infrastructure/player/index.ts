@@ -179,17 +179,16 @@ export {useQueueSync} from './useQueueSync';
 // `AppContent`).
 export {usePlaybackCheckpointSync} from './usePlaybackCheckpointSync';
 
-// V21 F3 — the in-window video path. Both are mounted once, in
-// `ActivityShell`:
-//   - `useInWindowVideoLaunch` loads the current video session into the
-//     surface `MainActivity` mounted, replacing the `openPlayer` →
-//     `startActivity` launch that used to open a second Activity.
-//   - `useVideoSurface` is the SINGLE writer of "is the surface actually
-//     showing video", which `usePresentation()` reads. It is deliberately
-//     not derived: it is the boolean the native mutation returned, and no
-//     pure function of app state can know it.
+// V21 F3 — the in-window video path. Mounted once, in `ActivityShell`.
+// It loads the current video session into the player's surface, replacing
+// the `openPlayer` → `startActivity` launch that used to open a second
+// Activity.
+//
+// 2026-10-16: `useVideoSurface` is deleted. It sized and revealed a surface
+// that Kotlin mounted OUTSIDE the React tree, and published "is it actually
+// showing?" for `usePresentation()` to read. The picture is now a view in the
+// tree, so React Native sizes it, reveals it and answers structurally.
 export {useInWindowVideoLaunch} from './useInWindowVideoLaunch';
-export {useVideoSurface} from './useVideoSurface';
 export type {LaunchParams} from './playbackFacade';
 
 // W9.4 — the shared media vocabulary (identity normalisation, the

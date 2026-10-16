@@ -1,70 +1,91 @@
 /**
- * V19 W1 — `VideoSurface` unit tests.
+ * `VideoSurface` — the video picture is a REAL view in the React tree.
  *
- * Mirrors TRACKER Phase 1.1 verifications. The surface itself is a
- * thin wrapper around `<View flex:1>`; the test asserts (a) the
- * container renders with absoluteFill geometry, (b) the placeholder
- * background uses the theme's `surfaceDark` token, (c) the
- * accessibility role + label are correct, (d) the component does not
- * import any chrome primitive (chrome is a sibling, never a child).
+ * ## What this file is actually pinning
  *
- * Source of truth: `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` Phase 1.1.
+ * This component used to render a **transparent placeholder** for a native
+ * `MpvRenderView` that Kotlin mounted at `android.R.id.content` index 0 — a
+ * sibling of the React root. It could only reserve space and forward taps,
+ * because React Native had no view to own. Every test in this file therefore
+ * described a stand-in, and the assertions were correspondingly weak: "the
+ * placeholder is transparent" was the best it could say, because the thing
+ * being asserted on was not the picture.
+ *
+ * The picture is now `<SimbaVideo>` — a real native view component in this
+ * tree (`codegenNativeComponent('SimbaVideoView')`). The tree contains the
+ * video, and that is directly assertable.
+ *
+ * ## Why the first test matters more than the rest
+ *
+ * `usePresentation()` used to need a third input, `videoSurfacePresented` —
+ * the boolean the native surface mutation returned — because "is video on
+ * screen?" was not derivable from the React tree when the surface lived
+ * outside it. That boolean is deleted now, and this test is the reason it is
+ * safe to delete: the picture and the chrome that renders it are mounted by
+ * the same commit, so chrome-without-picture is not an expressible state.
+ *
+ * If someone reintroduces a placeholder here, that test fails, and the
+ * deletion of `videoSurfacePresented` is visibly unsafe again.
  */
 
 import * as React from 'react';
-import {render, screen} from '@testing-library/react-native';
+import {fireEvent, render, screen} from '@testing-library/react-native';
 import {VideoSurface} from '../../../../src/components/player/video/VideoSurface/VideoSurface';
 
-// Mock the theme so we don't depend on the full theme tree.
-jest.mock('../../../../src/theme', () => ({
-  useTheme: () => ({
-    colors: {
-      background: {surfaceDark: '#000000'},
-      text: {primary: '#FFFFFF'},
-      accent: {gold: '#C9A84C'},
-    },
-    spacing: {md: 16, sm: 8, lg: 24},
-    typography: {
-      body1: {fontSize: 16, lineHeight: 22, fontWeight: '400'},
-    },
-  }),
-}));
+/** Flatten React Native's nested style arrays into one list of objects. */
+function flattenStyle(style: unknown): Record<string, unknown>[] {
+  if (Array.isArray(style)) {
+    return style.flatMap(flattenStyle);
+  }
+  return style ? [style as Record<string, unknown>] : [];
+}
 
 describe('VideoSurface', () => {
-  it('renders the absoluteFill container with the placeholder color', async () => {
-    await render(<VideoSurface />);
-    const surface = screen.getByLabelText('Video');
-    expect(surface).toBeTruthy();
-    expect(surface.props.style).toEqual(
+  it('renders the native picture AS A CHILD OF THIS TREE', async () => {
+    // THE load-bearing assertion. `SimbaVideoView` is the native component
+    // name from the lib's codegen spec, surfaced as the host element type.
+    // A transparent `<View>` placeholder — the old behaviour — would report
+    // `"View"` here and fail.
+    const {toJSON} = await render(<VideoSurface />);
+    expect(toJSON()).not.toBeNull();
+    expect((toJSON() as {type: string}).type).toBe('SimbaVideoView');
+  });
+
+  it('fills its parent by default', async () => {
+    // A zero-height native view renders no frames and reports no error
+    // anywhere, which is the worst possible failure mode for a video
+    // component. Geometry must be non-negotiable by default.
+    const {toJSON} = await render(<VideoSurface />);
+    const style = flattenStyle((toJSON() as {props: {style?: unknown}}).props.style);
+    expect(style).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({position: 'absolute', top: 0, left: 0, right: 0, bottom: 0}),
+        expect.objectContaining({
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        }),
       ]),
     );
   });
 
-  it('is TRANSPARENT so the native MpvRenderView shows through (W6.0)', async () => {
-    // W6.0. The surface used to paint `background.surfaceDark` as a
-    // "placeholder colour when the surface has no pixel yet" — but it
-    // had no way to know whether a pixel existed, so the placeholder
-    // was permanent and covered the video completely. The real frame
-    // is a native `MpvRenderView` under this React tree; nothing here
-    // may paint over it.
+  it('PAINTS NOTHING over the picture', async () => {
+    // The surface used to paint `background.surfaceDark` as a "placeholder
+    // colour when the surface has no pixel yet" — but it had no way to know
+    // whether a pixel existed, so the placeholder was permanent and covered
+    // every decoded frame. That bug is structurally impossible now (the
+    // component IS the picture), but a background here would still cover
+    // every decoded frame, so the guard stands.
     //
-    // "No pixel yet" is owned by `VideoLoadingOverlay`, which is the
-    // component that can actually tell (it reads the lib's buffering
-    // state). Assert the ABSENCE of any background so a future
-    // "just add a subtle scrim" change has to be deliberate.
-    await render(<VideoSurface />);
-    const surface = screen.getByLabelText('Video');
-    const flattened = (
-      Array.isArray(surface.props.style)
-        ? surface.props.style.flat(Infinity)
-        : [surface.props.style]
-    ).filter(Boolean);
-    const painters = flattened.filter(
-      (s: object) =>
-        (s as {backgroundColor?: string}).backgroundColor !== undefined,
-    );
+    // Assert the ABSENCE of any background so a future "just add a subtle
+    // scrim" change has to be deliberate.
+    //
+    // "No pixel yet" is owned by `VideoLoadingOverlay`, the one component
+    // that can actually tell (it reads the lib's buffering state).
+    const {toJSON} = await render(<VideoSurface />);
+    const style = flattenStyle((toJSON() as {props: {style?: unknown}}).props.style);
+    const painters = style.filter(s => s.backgroundColor !== undefined);
     expect(painters).toEqual([]);
   });
 
@@ -80,10 +101,62 @@ describe('VideoSurface', () => {
     expect(screen.getByLabelText('Video')).toBeTruthy();
   });
 
+  describe('the tap layer', () => {
+    // `includeHiddenElements: true` is required on EVERY query in this block.
+    //
+    // The layer is hidden from the accessibility tree, and RNTL excludes
+    // hidden elements from queries by default. Without the flag the first
+    // test below would pass whether or not the layer existed — the default
+    // query cannot see it either way — which is exactly a test that cannot
+    // fail. The flag turns each of these back into a real assertion.
+    it('is absent when no handler is supplied — the picture stays passive', async () => {
+      await render(<VideoSurface />);
+      expect(
+        screen.queryByTestId('video-surface-tap', {includeHiddenElements: true}),
+      ).toBeNull();
+    });
+
+    it('fires the handler when supplied', async () => {
+      const onPress = jest.fn();
+      await render(<VideoSurface onPress={onPress} />);
+
+      await fireEvent.press(
+        screen.getByTestId('video-surface-tap', {includeHiddenElements: true}),
+      );
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('carries NO label, so the picture is announced exactly once', async () => {
+      // A screen reader reading "Video" twice — once for the content, once
+      // for a control that says nothing more — is a defect, not a detail.
+      // Every action this tap triggers is already a real button in the
+      // chrome, so nothing is lost by keeping the layer touch-only.
+      await render(<VideoSurface onPress={jest.fn()} />);
+
+      // `getAllByLabelText` throws on a second match; one match means the
+      // tap layer is genuinely unlabelled.
+      expect(screen.getAllByLabelText('Video')).toHaveLength(1);
+    });
+
+    it('is hidden from the accessibility tree, so it is not a phantom control', async () => {
+      await render(<VideoSurface onPress={jest.fn()} />);
+      const layer = screen.getByTestId('video-surface-tap', {
+        includeHiddenElements: true,
+      });
+
+      // Default queries cannot see it, which is the definition of hidden.
+      expect(screen.queryByTestId('video-surface-tap')).toBeNull();
+      expect(layer.props.accessibilityElementsHidden).toBe(true);
+      expect(layer.props.importantForAccessibility).toBe('no-hide-descendants');
+    });
+  });
+
   it('does NOT import any chrome primitive (chrome is sibling-only)', async () => {
     // Static check: the file's import surface is limited to react /
-    // react-native / theme. Enforced by ESLint `no-restricted-imports`
-    // at CI time; this test is a runtime guard for the same contract.
+    // react-native / the lib's SimbaVideo. Enforced by ESLint
+    // `no-restricted-imports` at CI time; this test is a runtime guard for
+    // the same contract.
     //
     // Scanning the WHOLE file would be wrong: the module docstring
     // names every chrome primitive precisely to state that this

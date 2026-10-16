@@ -1,24 +1,55 @@
 /**
- * V19 W1 Phase 1.1 — `VideoSurface` primitive (the frame, only the frame).
+ * `VideoSurface` — the video picture, and the tap target over it.
  *
- * Renders the surface area for the video frame. The native surface
- * itself is provided by the lib's `SimbaPlayer` (in the V16 root,
- * which VideoPlayer replaces in W4). The surface view is bound
- * via the lib's bridge; this component is the JS-side wrapper that
- * guarantees geometry + a placeholder color when the surface has no
- * pixel yet.
+ * ## What changed on 2026-10-16, and why
  *
- * Does NOT compose chrome (no `TransportBar`, `VideoTitleOverlay`,
- * `VideoLoadingOverlay`, etc.). Chrome is a sibling, NOT a child.
- * That separation lets the chrome auto-hide without unmounting the
- * surface.
+ * This used to render a **transparent placeholder** for a native
+ * `MpvRenderView` that Kotlin mounted at `android.R.id.content` index 0 —
+ * a *sibling* of the React root. The placeholder could only reserve layout
+ * space and forward taps, because React Native had no view to own. It
+ * therefore had to guess: it used to paint a placeholder colour, had no way
+ * to know whether a frame existed, and the colour stayed forever, covering
+ * every decoded frame.
  *
- * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
- * §3.1 + audit doc §4.
+ * The picture is now `<SimbaVideo>` — a real native view component in the
+ * React tree (`codegenNativeComponent('SimbaVideoView')`, registered by the
+ * lib's `PlayerPackage`). React Native owns its layout, its z-order and its
+ * lifecycle. That is what removes the whole class of bug this component used
+ * to be a workaround for:
+ *
+ *   - no sibling surface for an opaque root to paint over
+ *   - no `measureInWindow` -> window-pixel -> `setVideoBounds` hand-off, and
+ *     with it the coordinate translation and the "refused: extents must be > 0"
+ *     failure mode that hid a real layout bug behind a black frame
+ *   - no manual 0x0 hide/show lifecycle
+ *
+ * The transparent placeholder is gone because there is nothing left to
+ * stand in for.
+ *
+ * ## The tap layer
+ *
+ * `SimbaVideo` is a native view; it has no `onPress`. Taps are therefore a
+ * sibling `Pressable` laid over the picture, rendered only when a handler is
+ * supplied so the surface stays a passive primitive when nobody wants taps.
+ * It sits directly above the picture and below the gestures and chrome, so a
+ * vertical swipe still reaches `VerticalSwipeGestures` and the chrome's
+ * tap-to-toggle still lands.
+ *
+ * The tap layer is hidden from the accessibility tree, and that is deliberate
+ * rather than an omission. It carries no label of its own, so giving it the
+ * picture's label would announce "Video" twice — once for the content and
+ * once for a control that says nothing the content does not. Every action the
+ * tap triggers is already reachable as a real button in the chrome (minimise,
+ * close, play/pause), so nothing is lost by keeping this one for touch only.
+ *
+ * That is also why this layer must not grow a label: inventing "Toggle
+ * player controls" here would duplicate what the chrome's own buttons
+ * already announce, and would add an affordance no shipping player needs.
  */
 
 import * as React from 'react';
-import {Pressable, StyleSheet, View} from 'react-native';
+import {Pressable, StyleSheet} from 'react-native';
+import {SimbaVideo} from '@simba-dev/react-native-media-player';
 
 export interface VideoSurfaceProps {
   /** Optional override style. Geometry is owned by the parent layout. */
@@ -26,11 +57,9 @@ export interface VideoSurfaceProps {
   /** Optional accessibility label — defaults to `"Video"` for screen readers. */
   accessibilityLabel?: string;
   /**
-   * V19 W3.5.1 — optional tap handler. When provided, the
-   * surface becomes Pressable (chrome tap-anywhere toggle).
-   * When absent, the surface stays a plain View (zero gesture
-   * cost). The chrome's auto-hide controller owns the toggle
-   * logic; the surface just forwards taps.
+   * Optional tap handler. When provided, a tap target is laid over the
+   * picture so a tap anywhere toggles the chrome. When absent, the picture
+   * stays a passive visual primitive with zero gesture cost.
    */
   onPress?: () => void;
 }
@@ -39,54 +68,33 @@ export const VideoSurface: React.FC<VideoSurfaceProps> = ({
   style,
   accessibilityLabel = 'Video',
   onPress,
-}) => {
-  // W6.0 — the frame is TRANSPARENT, deliberately.
-  //
-  // The real video is a native `MpvRenderView` inserted at content
-  // index 0 of `PlayerActivity`, underneath this React tree. This
-  // component used to paint `background.surfaceDark` here as a
-  // "placeholder colour when the surface has no pixel yet", but it
-  // had no way to know whether a pixel existed, so the placeholder
-  // was permanent — it covered the video completely. A placeholder
-  // that can never yield is not a placeholder, it is an opaque wall.
-  //
-  // "No pixel yet" is a real state, and it already has an owner:
-  // `VideoLoadingOverlay`. Loading is that overlay's job (it owns the
-  // `progressbar` role and the spinner); the surface's job is
-  // geometry plus the tap target. Keeping one owner per concern is
-  // what lets the overlay disappear the instant a frame arrives.
-  //
-  // The component therefore no longer reads the theme at all.
-
-  // When onPress is provided, render a Pressable so taps bubble
-  // to the chrome's auto-hide toggle. Otherwise render a plain
-  // View — the surface stays a passive visual primitive.
-  if (onPress) {
-    return (
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="image"
-        accessibilityLabel={accessibilityLabel}
-        accessibilityHint="Tap to toggle player controls"
-        style={[StyleSheet.absoluteFill, styles.surface, style]}
-      />
-    );
-  }
-
-  return (
-    <View
-      accessible
-      accessibilityLabel={accessibilityLabel}
+}) => (
+  <>
+    <SimbaVideo
       accessibilityRole="image"
+      accessibilityLabel={accessibilityLabel}
       style={[StyleSheet.absoluteFill, styles.surface, style]}
     />
-  );
-};
+
+    {onPress ? (
+      <Pressable
+        testID="video-surface-tap"
+        onPress={onPress}
+        // See the module docstring: this layer is for touch only. Hiding it
+        // from the a11y tree is what keeps the picture's label unique.
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={StyleSheet.absoluteFill}
+      />
+    ) : null}
+  </>
+);
 
 const styles = StyleSheet.create({
   surface: {
-    // Geometry is owned by the parent layout (`flex:1` or
-    // `absoluteFill`). The surface itself fills its parent.
+    // Geometry is owned by the parent layout (`flex:1` or `absoluteFill`).
+    // The picture fills its parent; `overflow` clips a video whose aspect
+    // does not match the frame to the resizeMode's letterbox/crop anyway.
     overflow: 'hidden',
   },
 });

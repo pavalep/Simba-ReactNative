@@ -19,7 +19,6 @@ import {
   usePlaybackCheckpointSync,
   usePresentation,
   useQueueSync,
-  useVideoSurface,
   type PromptResume,
 } from './src/infrastructure/player';
 import {useConfirmDialog} from './src/components/core/Dialog';
@@ -321,17 +320,19 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
   // session at all — that is what left Recently Played permanently empty.
   usePlaybackCheckpointSync();
 
-  // V21 F3 — the in-window video path. Both hooks belong here, above the
-  // split, for the same reason the checkpoint writer does: this component
-  // is mounted once per Activity React root and must keep working once
-  // there is only one root and no `PlayerActivity` to branch on.
+  // V21 F3 — the in-window video path. Mounted here, above the split, for
+  // the same reason the checkpoint writer is: this component is mounted once
+  // per Activity React root and must keep working now that there is only one
+  // root and no `PlayerActivity` to branch on.
   //
-  // `useInWindowVideoLaunch` loads the current video session into the
-  // surface `MainActivity` mounted. `useVideoSurface` is the single writer
-  // of "is the surface actually showing", which `usePresentation()` reads
-  // to decide whether to mount the video chrome.
+  // 2026-10-16: `useVideoSurface` is gone. It existed to drive a surface
+  // mounted by Kotlin OUTSIDE this tree — sizing it in window pixels, then
+  // revealing it, in that order because a 0x0 SurfaceView is an invalid
+  // libmpv target, and publishing "is it actually showing?" for
+  // `usePresentation()` to read. The picture is now `<SimbaVideo>`, a view
+  // in this tree, so React Native sizes it, reveals it and answers the
+  // question structurally. There is nothing left for a hook to report.
   useInWindowVideoLaunch();
-  useVideoSurface();
 
   // V21 F5 follow-up — whether the BROWSING STACK may paint.
   //

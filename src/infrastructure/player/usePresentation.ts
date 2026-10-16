@@ -10,22 +10,25 @@
  * The short version:
  *
  *   mode = pipActive             → 'pip'       (a window state)
- *         videoSurfacePresented  → 'expanded'  (the surface is really showing)
- *         otherwise              → 'mini'      (browsing screens)
+ *         videoPresentation      → 'expanded'  (the user asked for fullscreen)
+ *         otherwise              → 'mini'      (the dock, or browsing screens)
  *
- * V21 F3: the second input was `isPlayerActivity` — "is this React tree
- * the dedicated `PlayerActivity`'s tree". Collapsing to one Activity
- * deleted the question rather than answering it differently: there is one
- * tree and one mounted surface, always, so the predicate would have said
- * 'mini' everywhere and the chrome would never have mounted.
+ * V21 F3 briefly made the second input `isPlayerActivity` — "is this React
+ * tree the dedicated `PlayerActivity`'s tree". Collapsing to one Activity
+ * deleted the question rather than answering it differently.
  *
- * `videoSurfacePresented` replaces it, and it is a better question: not
- * "is there a surface" but "is the surface actually showing video". That
- * cannot be derived here — it is the boolean the native mutation returned —
- * so it is stored, written by exactly one hook (`useVideoSurface`). The
- * lesson this module exists to carry still holds: it is not that storage is
- * forbidden, it is that a DERIVED value written by every tree is a race.
- * One writer reporting a real outcome is not that.
+ * 2026-10-16: the second input was `videoSurfacePresented` — "is the surface
+ * ACTUALLY showing video", the boolean a native mutation returned. That
+ * existed only because the surface was mounted OUTSIDE the React tree, so no
+ * React-side fact could answer it. With `<SimbaVideo>` now a real view
+ * component in the tree, the answer is structural: the picture is mounted
+ * exactly when the chrome that renders it is mounted. See the note at the
+ * derivation below.
+ *
+ * The lesson this module exists to carry still holds: it is not that storage is
+ * forbidden, it is that a DERIVED value written by every tree is a race. One
+ * writer reporting a real outcome is not that. It is also not a reason to keep
+ * storing a value that is no longer derived from anything.
  *
  * The `useLaunchParams()`-based alternative is wrong for this: it is
  * a ONE-SHOT queue (the first consumer drains it, so a chrome
@@ -96,20 +99,24 @@ export interface Presentation {
  *   if (!isExpanded) return null;
  */
 export function usePresentation(): Presentation {
-  // V21 F3. This used to be `useIsPlayerActivity()` — "is this React tree
-  // the dedicated PlayerActivity's tree", i.e. "is there a native surface
-  // beneath me". With playback in `MainActivity` that question has no
-  // answer any more: there is exactly one tree and one surface, always.
-  // Asking it anyway would report 'mini' everywhere and the video chrome
-  // would never mount.
+  // 2026-10-16. `videoSurfacePresented` is GONE from this derivation.
   //
-  // What replaced it is the better question: is the surface ACTUALLY
-  // showing video? That is not derivable from app state — it is the boolean
-  // the native call returned — so `useVideoSurface` (its only writer) sets
-  // it and this reads it. `false` means 'mini', which is the honest
-  // rendering: no chrome over a window with no video, instead of a full
-  // player UI painted on nothing.
-  const videoSurfacePresented = usePresentationStore(s => s.videoSurfacePresented);
+  // It existed to answer "is the surface ACTUALLY showing video?", which was
+  // not derivable while the surface was a Kotlin-mounted SIBLING of the React
+  // root: React rendered a transparent placeholder and the real picture lived
+  // outside the tree, so the only evidence was the boolean the native mutation
+  // returned.
+  //
+  // `<SimbaVideo>` is now a real view component IN the tree, so the question
+  // became structural rather than reported: the picture is mounted exactly
+  // when the chrome that renders it is mounted. There is nothing left to
+  // report, so nothing is stored and nothing is waited a render late — which
+  // also removes the one-frame chrome flash the async answer could cause.
+  //
+  // What is deliberately NOT reintroduced: a mount gate here. The gate would
+  // read "should the picture be showing", and the picture's own presence in
+  // this tree already is that answer. Re-asking it is how two owners of one
+  // fact get built.
   const videoPresentation = usePresentationStore(s => s.videoPresentation);
   const videoMiniRect = usePresentationStore(s => s.videoMiniRect);
   const setVideoPresentation = usePresentationStore(
@@ -120,14 +127,11 @@ export function usePresentation(): Presentation {
   const setPipActive = usePresentationStore(s => s.setPipActive);
   const togglePip = usePresentationStore(s => s.togglePip);
 
-  // V21 F4. `videoSurfacePresented` alone cannot express "minimised",
-  // because a minimised surface IS presented — it is on screen, in a dock.
-  // Before F4 that was harmless because minimising video did not exist: the
-  // only way out of a video window was to stop. Now it does, so the request
-  // is a second input rather than an override of the first.
+  // Two inputs, both facts about the app's own state: did the user ask for
+  // fullscreen video, and is the OS PiP window owning it.
   const mode: PresentationMode = pipActive
     ? 'pip'
-    : videoSurfacePresented && videoPresentation === 'expanded'
+    : videoPresentation === 'expanded'
       ? 'expanded'
       : 'mini';
 
@@ -136,14 +140,15 @@ export function usePresentation(): Presentation {
   // expanded: the PiP branch lives in `mode` only, so a parallel expression
   // silently disagrees with it. One derivation, one answer.
   //
-  // `isMini` additionally requires the surface to really be presented. An
-  // un-presentable surface has nothing to put in a dock, and rendering one
-  // anyway would advertise a video that is not there.
+  // `isMini` is simply the other half of `mode`. It used to additionally
+  // require `videoSurfacePresented`, to avoid advertising a video in a dock
+  // that had nothing to put in it — a guard against an un-presentable
+  // surface, which is no longer a state that can exist.
   return {
     mode,
     isPip: mode === 'pip',
     isExpanded: mode === 'expanded',
-    isMini: mode === 'mini' && videoSurfacePresented,
+    isMini: mode === 'mini',
     videoPresentation,
     setVideoPresentation,
     videoMiniRect,
