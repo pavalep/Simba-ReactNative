@@ -205,11 +205,53 @@ Commit → push → **annotated** tag `v<version>` → Actions → verify
 **Gate:** app resolves the published symbol; verify in `node_modules`, never
 let `tsc` pass on a lib that isn't installed.
 
-### Stage 6 — `A` swap
-`VideoSurface` → `SimbaVideo` in `VideoPlayer`; chrome becomes an ordinary
-sibling; delete `useVideoSurface` and the `measureInWindow` → bounds path.
-**Gate:** `tsc` 0 · `eslint` 0 · `jest` no regressions · **video visible on
-device** · header-back → mini dock → browsing stack restores.
+### Stage 6 — `A` swap *(design settled 2026-10-16 — read before coding)*
+
+**The design: ONE `SimbaVideo` at shell level, repositioned by `style`.**
+
+Two traps, both discovered by reading the existing code rather than assuming:
+
+1. **The Fabric surface and the Kotlin-mounted surface cannot coexist.** Both
+   bind the same mpv handle via `nativeAttachSurface`; `attachSurfaceLocked`
+   rebinds on every `setNativePtr`. So removing
+   `PlayerSurface.mount(activity)` is *not* optional cleanup — until it is
+   gone, adding `SimbaVideo` creates two surfaces fighting over one engine.
+   Stage 6 and Stage 7 are therefore one coupled change, not two.
+
+2. **The mini dock currently reuses the global surface.** `MiniPlayer` measures
+   its rect and publishes `videoMiniRect`; `useVideoSurface` then calls
+   `setVideoBounds(...)` in **window pixels** because the surface composites at
+   `android.R.id.content` index 0 and therefore has no idea where the dock is.
+   That hand-off disappears entirely once the view is in the tree — but it
+   raises the real question: **does the dock get a second `SimbaVideo`?**
+
+   It must not. Two `SimbaVideo`s both bound to one handle is trap 1 again.
+
+   So: one `SimbaVideo`, mounted once at the shell, whose **`style`** changes
+   with presentation —
+
+   ```
+   expanded → absoluteFill
+   mini     → position absolute at videoMiniRect
+   ```
+
+   Same component instance, so no unmount/remount, no Surface
+   destroy/recreate, no black flash. React owns the geometry, which is the
+   entire point of D2. `videoMiniRect` survives — it stops being "window pixels
+   to hand the engine" and becomes "a style", which is what it always should
+   have been.
+
+**Also in this stage:** `videoSurfacePresented` becomes structurally true
+whenever the chrome renders the view, so `usePresentation`'s derivation
+(`pipActive ? 'pip' : videoSurfacePresented && videoPresentation === 'expanded'
+? 'expanded' : 'mini'`) collapses to `pipActive ? 'pip' : videoPresentation ===
+'expanded' ? 'expanded' : 'mini'`, and `setVideoSurfacePresented` /
+`useVideoSurface.ts` are deleted.
+
+**Gate:** `tsc` 0 · `eslint --max-warnings 0` · `jest` no regressions · on
+device: video **visible** expanded · header-back → dock shows live video in the
+dock rect · dock → expanded restores · PiP in/out · back at each level.
+Rollback is `git checkout f5/video-view-component` if the swap regresses.
 
 ### Stage 7 — `A` remove the invariant
 Delete `BrowsingStack` · delete `MainActivity` surface mount · delete
