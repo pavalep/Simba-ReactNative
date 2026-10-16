@@ -17,6 +17,7 @@ import {
   ResumePromptContext,
   useInWindowVideoLaunch,
   usePlaybackCheckpointSync,
+  usePresentation,
   useQueueSync,
   useVideoSurface,
   type PromptResume,
@@ -26,6 +27,7 @@ import {VideoPlayer} from './src/components/player/video/VideoPlayer';
 import {PlayerChrome} from './src/components/player/PlayerChrome';
 import {ErrorBoundary} from './src/app/ErrorBoundary';
 import {QueryProvider} from './src/app/QueryProvider';
+import {BrowsingStack} from './src/app/BrowsingStack';
 import {SimbaStatusBar} from './src/components/StatusBar';
 import {ToastProvider} from './src/components/feedback/Toast';
 import {OfflineBanner} from './src/components/status/OfflineBanner/OfflineBanner';
@@ -331,6 +333,24 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
   useInWindowVideoLaunch();
   useVideoSurface();
 
+  // V21 F5 follow-up — whether the BROWSING STACK may paint.
+  //
+  // `isExpanded` is the single derived answer to "does the video own this
+  // window". The surface sits at `android.R.id.content` index 0 — beneath the
+  // whole React root — so an expanded video is visible only if the React tree
+  // above it paints nothing.
+  //
+  // The two-Activity design enforced that with `isPlayerActivity ? null :
+  // <AppContent />`. F5 deleted the flag, and deleted that ternary with it,
+  // without putting a replacement in place: the activity no longer exists,
+  // so the *reason* for the guard outlived the *flag* that carried it. Every
+  // layer of the app that paints a background then covered the video, which
+  // is why playback was fully live and completely invisible.
+  //
+  // Read here, not inside `AppContent`, so the navigator does not have to
+  // know a video player exists. See `src/app/BrowsingStack.tsx`.
+  const {isExpanded} = usePresentation();
+
   const fallbackColors = useMemo(
     () => ({
       background: colors.background.primary,
@@ -388,14 +408,24 @@ const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}
                 second Activity. There is no second Activity and no launch
                 queue, so `headless` reduced it to "render children".
               - the ternary existed to keep the navigator out of the player
-                Activity. There is one tree, and the navigator belongs in
-                it.
+                Activity. There is one tree now, so the navigator is mounted
+                unconditionally — but MOUNTED is not PAINTED, and reading
+                that sentence as "the navigator always paints" is what
+                reopened the V11 opaque-root failure. `BrowsingStack` below
+                keeps the navigator mounted and takes it out of the
+                compositing while a video owns the window.
 
             The load lifecycle `SimbaPlayerRoot` was keeping has a better
             owner: `useInWindowVideoLaunch()` above drives the current
             session into the surface, keyed on a real requestId so
             re-launching the same file still reloads. */}
-        <AppContent />
+        {/* V21 F5 follow-up. `hidden` is `isExpanded`, and it is the reason
+            a video is visible at all: the native surface is composited
+            below this whole tree, so anything opaque painted here is painted
+            over the picture. */}
+        <BrowsingStack hidden={isExpanded}>
+          <AppContent />
+        </BrowsingStack>
         {/* (4) The resume prompt's own Dialog. Rendered HERE, inside the
             providers and above the activity split, so it exists in every
             React root — the same reason ToastProvider sits above the
@@ -489,10 +519,26 @@ const App: React.FC<RootProps> = () => {
 
                 V19 W4: VideoPlayer (chrome compositor) lives as a
                 sibling of AppContent INSIDE the V16 SimbaPlayer. The V19
-                chrome overlay reads lib hooks (usePlayer) so it
-                must be a child of the V16 SimbaPlayer; it is
-                rendered FIRST so it stacks ABOVE AppContent in
-                z-order (later siblings render on top in RN).
+                chrome overlay reads lib hooks so it
+                must be a child of the V16 SimbaPlayer.
+
+                This comment used to continue "it is rendered FIRST so it
+                stacks ABOVE AppContent in z-order (later siblings render on
+                top in RN)". Both halves of that were wrong, and the sentence
+                contradicted itself: rendered FIRST stacks it BELOW, because
+                later siblings render on top. It survived because in the
+                two-Activity design `VideoPlayer` and `AppContent` lived in
+                different windows, where sibling order means nothing.
+
+                They are siblings in ONE window now, so order is the whole
+                story — and the order is right, but not for that reason.
+                `VideoPlayer` composites over the picture because it is
+                transparent and `BrowsingStack` has stopped the browsing
+                stack from painting, not because of where it sits in this
+                tree. So do not "correct" this ordering by moving
+                `VideoPlayer` below `BrowsingStack`, and do not give it a
+                `zIndex`: either would put the chrome over the browsing
+                screens instead of over the video.
                 Audit §5: SimbaPlayer (V19) is the ONLY chrome
                 composite mounted at the shell — all other chrome
                 primitives (VideoSurface, VerticalSwipeGestures,
