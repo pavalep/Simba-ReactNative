@@ -7,7 +7,7 @@
  * (`useLibraryScreen.ts:103`), Album and Artist (`isCurrentTrack`), and
  * ArtistDetail all compare against it.
  *
- * Mounted ONCE at `ActivityShell`, next to `usePlaybackCheckpointSync`.
+ * Mounted ONCE, in `AppContent` (`src/app/AppContent.tsx`).
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.22 + the audit doc §3.C.
@@ -69,7 +69,7 @@ import {normalizeMediaClassification} from '../../types/media';
 /**
  * Mounted once. Returns nothing — side-effect-only hook.
  *
- * Usage (`ActivityShell`):
+ * Usage (`AppContent`):
  *   useQueueSync();
  */
 export function useQueueSync(): void {

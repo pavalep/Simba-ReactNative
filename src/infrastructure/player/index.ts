@@ -163,23 +163,20 @@ export {
 export {useResumeAwareLaunch} from './useResumeAwareLaunch';
 
 // V19 W0 Phase 0.1 — queue sync middleware. Wires the lib's native
-// queue ↔ usePlayerStore. Mounted ONCE at AppContent (App.tsx).
+// queue ↔ usePlayerStore. Mounted ONCE, in `AppContent`
+// (`src/app/AppContent.tsx`).
 // Source of truth: md/SIMBA_PLAYER_V19_SPECIFICATION.md §3.22 +
 // md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md §3.C.
-//
-// W9.4 NOTE: this is mounted in `AppContent`, which does NOT render in
-// the player activity, so it has never observed a real playback session.
-// `usePlaybackCheckpointSync` below is mounted in `ActivityShell`
-// instead, which does. Revisiting this file's placement is V20 work.
 export {useQueueSync} from './useQueueSync';
 
 // W9.4 — the resume checkpoint writer. The producer half of the
 // "Recently Played" / resume chain that `resolveResumeMs` reads.
-// Mount once, in `ActivityShell` (see its docstring for why not
-// `AppContent`).
+// Mount once, in `AppRoot` (`src/app/AppRoot.tsx`) — above the browsing
+// stack, so it observes every session rather than only the ones that
+// happen to be on screen.
 export {usePlaybackCheckpointSync} from './usePlaybackCheckpointSync';
 
-// V21 F3 — the in-window video path. Mounted once, in `ActivityShell`.
+// V21 F3 — the in-window video path. Mounted once, in `AppRoot`.
 // It loads the current video session into the player's surface, replacing
 // the `openPlayer` → `startActivity` launch that used to open a second
 // Activity.

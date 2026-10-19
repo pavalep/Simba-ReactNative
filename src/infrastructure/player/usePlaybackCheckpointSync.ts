@@ -34,8 +34,7 @@ import {useTransport} from './useTransport';
  *
  * ## Where it is mounted, and why it matters
  *
- * Mounted in `ActivityShell`, next to `useQueueSync`'s sibling hooks and
- * above `AppContent`.
+ * Mounted in `AppRoot` (`src/app/AppRoot.tsx`), above `AppContent`.
  *
  * It used to be mounted in a tree that rendered as
  * `{isPlayerActivity ? null : <AppContent />}`, so the copy inside

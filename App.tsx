@@ -1,42 +1,35 @@
-import React, {useMemo, useEffect, useRef} from 'react';
-import {Linking, View, StyleSheet} from 'react-native';
+/**
+ * The app root.
+ *
+ * This file is a provider stack and nothing else. Everything that does
+ * actual work lives in a named module beside it: `src/app/AppRoot.tsx`
+ * (the content tree), `src/app/AppContent.tsx` (the browsing UI).
+ *
+ * The providers, outermost first:
+ *
+ *   `GestureHandlerRootView` — required by react-native-gesture-handler
+ *       (its drag-to-dismiss gesture uses the gesture-handler runtime) and
+ *       by any nested navigation gesture support.
+ *   `SafeAreaProvider`        — insets for the whole tree.
+ *   `QueryProvider`           — the data layer. A sibling of the UI, not
+ *       a dependency of it, so it sits outside `ThemeProvider`.
+ *   `ThemeProvider`           — the design tokens.
+ *   `SimbaPlayer`             — the lib's player context. App-wide for
+ *       the same reason `GestureHandlerRootView` is: the navigator's
+ *       screens launch playback through it, so it has to be above the
+ *       navigator.
+ */
+import React from 'react';
+import {StyleSheet} from 'react-native';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
-import {NavigationContainer} from '@react-navigation/native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
-import {
-  SimbaPlayer,
-  useOpenFromUrl,
-} from '@simba-dev/react-native-media-player';
-import {useAuthStore, useBookmarksStore, useDownloadsStore, useRecentHistoryStore} from './src/state';
-import {ThemeProvider, useTheme} from './src/theme';
-import {RootNavigator} from './src/navigation';
-import {navigationRef} from './src/navigation/navigationHelper';
-import {linking} from './src/navigation/linking';
-import {
-  resolveResumeMs,
-  ResumePromptContext,
-  useInWindowVideoLaunch,
-  usePlaybackCheckpointSync,
-  usePresentation,
-  useQueueSync,
-  type PromptResume,
-} from './src/infrastructure/player';
-import {useConfirmDialog} from './src/components/core/Dialog';
-import {VideoPlayer} from './src/components/player/video/VideoPlayer';
-import {PlayerChrome} from './src/components/player/PlayerChrome';
-import {ErrorBoundary} from './src/app/ErrorBoundary';
+import {SimbaPlayer} from '@simba-dev/react-native-media-player';
+import {useBookmarksStore, useRecentHistoryStore} from './src/state';
+import {ThemeProvider} from './src/theme';
 import {QueryProvider} from './src/app/QueryProvider';
-import {BrowsingStack} from './src/app/BrowsingStack';
-import {SimbaStatusBar} from './src/components/StatusBar';
-import {ToastProvider} from './src/components/feedback/Toast';
-import {OfflineBanner} from './src/components/status/OfflineBanner/OfflineBanner';
-import {GlobalOperationProgress} from './src/components/status/GlobalOperationProgress/GlobalOperationProgress';
-import {lockToPortrait} from './src/utils/orientation';
-import {useAuthSession} from './src/hooks/useAuthSession';
-import {downloadService} from './src/services/downloadService';
-import {mark} from './src/utils/startupPerf';
+import {AppRoot} from './src/app/AppRoot';
+import {resolveResumeMs} from './src/infrastructure/player';
 import {configureGoogleSignin} from './src/services/authService';
-import {formatDuration} from './src/utils/timeAgo';
 
 // Initialize GoogleSignin once at app startup — calling configure() every
 // time on the sign-in path was breaking the post-revoke flow (the account
@@ -44,521 +37,59 @@ import {formatDuration} from './src/utils/timeAgo';
 configureGoogleSignin();
 
 /**
- * 56.6: wait until the auth restore has settled (isRestoring flips false) so a
- * cold-start deep link is only honored for an authenticated session.
- * Bails out after the timeout to never block app launch.
+ * The resume lookup the lib calls when a launch carries a `resumeId` but
+ * no explicit start position.
+ *
+ * The module cannot know how an app persists bookmarks and history —
+ * Redux, SQLite, MMKV, AsyncStorage, a server — so the consumer provides
+ * one small adapter, and the lib's `<PlayerResumeProvider>` hands it back
+ * at `openPlayer` time. That is the whole reason this is a prop and not
+ * something the lib resolves internally.
+ *
+ * **Priority** (bookmark first, history fallback):
+ *
+ *   1. Bookmarks — the explicit user signal. Multiple positions can
+ *      exist per URI (each id encodes `(fileUri, position)`), so the most
+ *      recently created one wins. `resolveResumeMs` does the reduction.
+ *   2. History — the implicit recent-play signal. One entry per fileUri
+ *      (upsert on every play), so `find` is sufficient.
+ *   3. `undefined` if neither — the launch falls back to the
+ *      consumer-provided `startPositionMs` (or 0).
+ *
+ * Both stores persist `position` in seconds; the bridge wants ms. The
+ * conversion, the priority and the defensive `> 0` check all live in the
+ * pure helper `resolveResumeMs` (see
+ * `__tests__/infrastructure/player/resumePolicy.test.ts`).
+ *
+ * Module-level rather than a `useCallback`: it reads the stores through
+ * `getState()` at CALL time, so it never needs to be re-created, and a
+ * stable identity is what keeps the lib's memoized `PlayerResumeContext`
+ * value from churning on every root render.
  */
-function waitForAuthSettle(timeoutMs = 10000): Promise<void> {
-  return new Promise(resolve => {
-    // V17 Phase 78: auth.isRestoring moved to `useAuthStore`. The
-    // subscription API is the same shape as zustand's `subscribe`
-    // (called on every state change, returns an unsubscribe fn).
-    if (!useAuthStore.getState().isRestoring) {
-      resolve();
-      return;
-    }
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      unsubscribe();
-      resolve();
-    };
-    const timer = setTimeout(finish, timeoutMs);
-    const unsubscribe = useAuthStore.subscribe(() => {
-      if (!useAuthStore.getState().isRestoring) finish();
-    });
-  });
-}
-
-const AppContent: React.FC = () => {
-  const {colors} = useTheme();
-  // V14 Phase 60: `useOpenFromUrl` replaces V13's hand-rolled
-  // `handleIncomingUri` (URI-scheme filter + basename → title + file
-  // extension → type, then `openPlayer({...})`). The hook absorbs
-  // all of that; the consumer just wires `Linking.addEventListener`
-  // to the returned function.
-  const openFromUrl = useOpenFromUrl();
-
-  // V14 Phase 59: the activity-launch branch (rendering <PlayerRoot />
-  // when the activity was launched with playback params) is now owned
-  // by <SimbaPlayerRoot> below. The 12-line `if (launchParams) ...`
-  // branch in V13's App.tsx is gone — `<SimbaPlayerRoot>` calls
-  // `useLaunchParams()` internally and switches between the two.
-
-  // 43.1/43.2: cold-start silent restore + foreground session expiry
-  useAuthSession();
-
-  // V19 W0 Phase 0.1: useQueueSync middleware. Wires the lib's native
-  // queue ↔ usePlayerStore. Mounted once at the app shell (W4+
-  // migration: this lives inside the VideoPlayer once V19
-  // replaces the V16 root). Source of truth:
-  // md/SIMBA_PLAYER_V19_ARCHITECTURE_AUDIT.md §3.C + §5.
-  useQueueSync();
-
-  // 49.1: hydrate downloads once at boot — the service owns the manifest, the
-  // store mirrors it so badges/buttons/Downloads screen render instantly.
-  useEffect(() => {
-    downloadService.ensureLoaded().then(records => {
-      useDownloadsStore.getState().hydrateDownloads(records);
-    });
-  }, []);
-
-  // V17 Phase 85: redux-persist is gone. Zustand persist hydrates each
-  // store synchronously at module-load (the AsyncStorage read happens
-  // lazily but the default state is available immediately, so the
-  // first render is consistent). We mark 'rehydrated' on the first
-  // paint so the cold-start timing chain stays meaningful.
-  useEffect(() => {
-    mark('rehydrated');
-  }, []);
-
-  // P64: removed navigation-state persistence. The auth gate in
-  // RootNavigator (Splash → Login → Home based on hasLaunched and
-  // isAuthenticated) is now the single source of truth for where the
-  // user lands on cold start. Persisting the last screen broke that
-  // contract — a signed-in user could re-open the app on a stale
-  // detail page from before they signed out, and vice versa. Every
-  // cold start now resolves fresh from auth state.
-
-  // V21 / W3 P12 / D-009: the cold-start hook is the SINGLE source
-  // of truth for `Linking.getInitialURL()` (it dispatches via the
-  // V14 `useOpenFromUrl` hook, which already handles the
-  // content:// / file:// bypass + the simbaplayer:// auth-gating +
-  // the basename-derivation + the extension-classification).
-  //
-  // Before P12: the React Navigation `linking.getInitialURL` below
-  // ALSO called `Linking.getInitialURL()` and re-implemented the
-  // auth-gating. The two paths fired on every cold-start, so the
-  // user saw the shared file twice (D-009).
-  //
-  // P12 fix: the Promise returned by `Linking.getInitialURL()` is
-  // created ONCE (synchronously, in the render body) and shared
-  // between the React Navigation config (it just returns the
-  // Promise) and the cold-start hook (it awaits the Promise and
-  // dispatches via `useOpenFromUrl`). The Promise's resolution
-  // value is used both for routing (React Navigation) and for
-  // playback (`useOpenFromUrl`).
-  const deepLinkPromiseRef = useRef<Promise<string | null> | null>(null);
-  if (deepLinkPromiseRef.current === null) {
-    deepLinkPromiseRef.current = Linking.getInitialURL();
-  }
-  const linkingConfig = useMemo(
-    () => ({
-      ...linking,
-      getInitialURL: () => deepLinkPromiseRef.current!,
-    }),
-    [],
-  );
-
-  // ── Deep linking: handle incoming content:// URIs ──
-  useEffect(() => {
-    // Lock to portrait globally (PlayerScreen toggles to landscape on demand)
-    lockToPortrait();
-  }, []);
-
-  useEffect(() => {
-    // V14 Phase 60: the URI-scheme filter, basename-derivation, and
-    // extension-classification are all inside `useOpenFromUrl`. The
-    // consumer owns only the `Linking` plumbing (cold-start + warm
-    // listener).
-    deepLinkPromiseRef.current!.then(url => {
-      if (url) void openFromUrl(url);
-    });
-
-    const subscription = Linking.addEventListener('url', ({url}) => {
-      void openFromUrl(url);
-    });
-    return () => subscription.remove();
-  }, [openFromUrl]);
-
-  // V14 Phase 59: `<SimbaPlayerRoot>` owns the activity-launch branch
-  // (renders `<PlayerRoot />` when launchParams is set, otherwise
-  // children).
-  //
-  // W6.0 fix: it is NOT rendered here. It lives in `ActivityShell`,
-  // ABOVE the `isPlayerActivity` split, because it is the single
-  // owner of the lib's one-shot `useLaunchParams()` queue and the only
-  // component that calls `loadFile` / binds the native surface in
-  // `PlayerActivity`. Rendering it only in MainActivity left the
-  // player activity blank. Only navigation + screens belong below the
-  // split.
-  return (
-    <>
-      <SimbaStatusBar variant="home" />
-      <View style={styles.root}>
-        <NavigationContainer
-          ref={navigationRef}
-          linking={linkingConfig}>
-          <RootNavigator />
-          {/* V13: V11 <PlaybackOverlayHost /> removed in Phase 54.
-              The module's player surface is rendered by PlayerRoot
-              via <SimbaPlayerRoot> in the activity branch. The
-              MainActivity no longer needs an inline player overlay. */}
-        </NavigationContainer>
-        {/* 54.1: global offline banner overlays every screen */}
-        <OfflineBanner />
-        {/* 54.5: global long-operation progress (media scan) */}
-        <GlobalOperationProgress />
-      </View>
-    </>
-  );
+const resumePolicy = (resumeId: string): number | undefined => {
+  const bookmarks = useBookmarksStore.getState().items;
+  const history = useRecentHistoryStore.getState().entries;
+  return resolveResumeMs({bookmarks, history}, resumeId);
 };
+
+const App: React.FC = () => (
+  <GestureHandlerRootView style={styles.root}>
+    <SafeAreaProvider>
+      <QueryProvider>
+        <ThemeProvider>
+          <SimbaPlayer resumePolicy={resumePolicy}>
+            <AppRoot />
+          </SimbaPlayer>
+        </ThemeProvider>
+      </QueryProvider>
+    </SafeAreaProvider>
+  </GestureHandlerRootView>
+);
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
   },
 });
-
-/**
- * W6.0 fix — the app-wide providers that must survive the activity
- * split, plus the split itself.
- *
- * This is its own component (rather than inline in `App`) for one
- * concrete reason: it needs `useTheme()` to build the ErrorBoundary's
- * fallback palette, and `App` is the component that RENDERS
- * `ThemeProvider` — so `App` cannot read the theme context. A child
- * of `ThemeProvider` can.
- *
- * ## The three layers, and why the split sits where it does
- *
- *   1. **App-wide providers** (`ErrorBoundary`, `ToastProvider`) —
- *      ABOVE everything. Each Android activity hosts its own React
- *      root, and each root gets its own context tree, so a provider
- *      mounted below the split simply does not exist in
- *      `PlayerActivity`. `useToast()` THROWS without its provider and
- *      is called unconditionally by `VideoMoreSheet` inside the player
- *      chrome; that throw tore down the whole compositor and left a
- *      blank black screen with no controls, no topbar, nothing.
- *
- *   2. **The launch branch** (`SimbaPlayerRoot`) — the ONE thing that
- *      must be mounted in BOTH activities. It is the single owner of
- *      the lib's one-shot `useLaunchParams()` queue, and it renders
- *      `<PlayerRoot>` (which calls `loadFile` and binds the native
- *      `MpvRenderView` surface) whenever the activity was launched
- *      with playback params. W6.0 originally hid it along with
- *      `AppContent`, so in `PlayerActivity` nothing ever called
- *      `loadFile` — the activity came up, the session was created, and
- *      the screen stayed black.
- *
- *   3. **Navigation and screens** (`NavigationContainer`,
- *      `RootNavigator`) — BELOW the split. These must not render in
- *      `PlayerActivity`: `AppContent` paints an opaque screen
- *      background, which would cover the native `MpvRenderView` that
- *      sits beneath the React root along with the chrome on top of it.
- *
- * The video chrome sits OUTSIDE `SimbaPlayerRoot` on purpose:
- * `SimbaPlayerRoot` returns `<PlayerRoot>` *instead of* its children
- * when launch params exist, so a chrome rendered as a child would be
- * discarded exactly when the player is active. As a sibling it is
- * always mounted and self-gates on `useIsPlayerActivity()`.
- */
-const ActivityShell: React.FC<{resumePolicy: (id: string) => number | undefined}> = ({
-  resumePolicy,
-}) => {
-  const {colors} = useTheme();
-
-  // W9.5 — the Continue / Start-over prompt, supplied ONCE here and
-  // reached by every launch through `ResumePromptContext`.
-  //
-  // The pattern is Plex's, documented in its Android TV / mobile guide:
-  // "if you had started a title, a dialog offers Resume or From the
-  // beginning". VLC reaches the same prompt through a Continue playback?
-  // preference whose default is Ask, and Kodi offers "Resume from
-  // hh:mm:ss" alongside "Play from beginning". Three shipping players,
-  // one shape — a binary choice, with resume as the affirmative.
-  //
-  // It lives here, not in a screen, because the seam is called from ~34
-  // screens and a per-screen prompt is a prompt the next screen forgets.
-  const {confirm, dialog} = useConfirmDialog();
-
-  const promptResume = React.useCallback<PromptResume>(async candidate => {
-    const at = formatDuration(candidate.positionMs / 1000);
-    // The wording differs by source because the two are different kinds
-    // of signal. A bookmark is something the user chose; a history
-    // position is something we inferred. Saying "you marked" about an
-    // inferred position would be a lie about where the number came from.
-    const resume = await confirm({
-      title:
-        candidate.source === 'bookmark'
-          ? 'Resume from your bookmark?'
-          : 'Continue watching?',
-      message: `Continue at ${at} or start from the beginning.`,
-      confirmLabel: 'Continue',
-      cancelLabel: 'Start from beginning',
-      // Netflix, YouTube and Plex all lead a resume card with the title's
-      // own image — it is how the user confirms at a glance that the card
-      // is about the thing they just tapped. `captureFrame` writes
-      // `resumeThumbnailPath`; catalogue artwork is the fallback for a
-      // first play, where no frame has been captured yet.
-      imageUri:
-        candidate.resumeThumbnailPath || candidate.thumbnailPath || undefined,
-      // V19 spec (SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md:604-611):
-      // "Auto-dismisses after 8 s; default action is Resume."
-      //
-      // The spec was right and the implementation had this inverted.
-      // Dismissing used to resolve `false`, which maps to "start from the
-      // beginning" — so eight seconds of silence silently discarded the
-      // resume point the card existed to offer. Auto-dismiss is the right
-      // behaviour; auto-dismiss onto the DESTRUCTIVE option never is.
-      autoDismissMs: 8000,
-    });
-    // `false` means the user actively chose "Start from beginning". It
-    // must never be what a timeout produces — `autoDismissMs` resolves
-    // through the confirm path, so silence continues rather than restarts.
-    return resume ? 'resume' : 'start';
-  }, [confirm]);
-
-  // W9.4 — the resume checkpoint writer.
-  //
-  // Mounted HERE, not in `AppContent`, because it must observe every real
-  // playback session rather than only the sessions that happen to be on
-  // screen while a navigator is up. `useQueueSync` lives in `AppContent`
-  // and, for as long as the app ran two React roots, therefore never saw a
-  // session at all — that is what left Recently Played permanently empty.
-  usePlaybackCheckpointSync();
-
-  // V21 F3 — the in-window video path. Mounted here, above the split, for
-  // the same reason the checkpoint writer is: this component is mounted once
-  // per Activity React root and must keep working now that there is only one
-  // root and no `PlayerActivity` to branch on.
-  //
-  // 2026-10-16: `useVideoSurface` is gone. It existed to drive a surface
-  // mounted by Kotlin OUTSIDE this tree — sizing it in window pixels, then
-  // revealing it, in that order because a 0x0 SurfaceView is an invalid
-  // libmpv target, and publishing "is it actually showing?" for
-  // `usePresentation()` to read. The picture is now `<SimbaVideo>`, a view
-  // in this tree, so React Native sizes it, reveals it and answers the
-  // question structurally. There is nothing left for a hook to report.
-  useInWindowVideoLaunch();
-
-  // V21 F5 follow-up — whether the BROWSING STACK may paint.
-  //
-  // `isExpanded` is the single derived answer to "does the video own this
-  // window". The surface sits at `android.R.id.content` index 0 — beneath the
-  // whole React root — so an expanded video is visible only if the React tree
-  // above it paints nothing.
-  //
-  // The two-Activity design enforced that with `isPlayerActivity ? null :
-  // <AppContent />`. F5 deleted the flag, and deleted that ternary with it,
-  // without putting a replacement in place: the activity no longer exists,
-  // so the *reason* for the guard outlived the *flag* that carried it. Every
-  // layer of the app that paints a background then covered the video, which
-  // is why playback was fully live and completely invisible.
-  //
-  // Read here, not inside `AppContent`, so the navigator does not have to
-  // know a video player exists. See `src/app/BrowsingStack.tsx`.
-  const {isExpanded} = usePresentation();
-
-  const fallbackColors = useMemo(
-    () => ({
-      background: colors.background.primary,
-      text: colors.text.primary,
-      textSecondary: colors.text.secondary,
-      accent: colors.accent.gold,
-      border: colors.border.emphasis,
-      accentDim: colors.accent.goldDim,
-    }),
-    [colors],
-  );
-
-  return (
-    <ErrorBoundary fallbackColors={fallbackColors}>
-      <ToastProvider>
-        <ResumePromptContext.Provider value={promptResume}>
-        {/* (1) Video chrome — always mounted, self-gates on
-            `usePresentation().isExpanded` (`VideoPlayer.tsx:347` returns
-            null when video is not expanded).
-
-            V21 F5: this comment used to say it "self-gates on
-            useIsPlayerActivity()" and was a "Sibling of
-            SimbaPlayerRoot". Both of those are gone — F5 A2/A3 deleted
-            them. It is now a sibling of `<ActivityShell />` INSIDE
-            `<SimbaPlayer>`, because the compositor reads lib hooks and
-            must be a child of the SimbaPlayer root. */}
-        <VideoPlayer />
-        {/* (1b) Player chrome — the shared dock / full player. Audio no
-            longer opens a window (lib 1.13.0) and video no longer opens a
-            second Activity (V21 F3), so both lanes' in-app chrome lives
-            here. Sibling of VideoPlayer and below it in z-order, because
-            when video is expanded `VideoPlayer` owns the presentation and
-            this renders nothing for that lane. It renders nothing when no
-            media is loaded — see `PlayerChrome`'s note on why that is
-            `useNowPlayingStore`'s job and not a third presentation
-            mode. */}
-        <PlayerChrome />
-        {/* W7.6 — `<VideoMiniPlayer />` used to be mounted here. It was a
-            W0 stub whose whole body was `return null`, so it rendered
-            nothing at all: a live import and a live element in the tree
-            that could never draw. Worse than dead weight — a reader
-            (and a grep for "which chrome composites are mounted at the
-            shell?") found it and concluded the mini dock existed.
-
-            W6.0 already removed the dock itself, because playback lives
-            in its own activity and there is nothing for a mini player
-            to minimise to. The stub outlived that decision. Removed. */}
-        {/* (2)+(3) Navigation + screens.
-
-            This used to be `<SimbaPlayerRoot headless>{isPlayerActivity
-            ? null : <AppContent />}</SimbaPlayerRoot>`. Both halves are
-            gone with the two-Activity architecture:
-
-              - the wrapper existed to branch on launch params handed to a
-                second Activity. There is no second Activity and no launch
-                queue, so `headless` reduced it to "render children".
-              - the ternary existed to keep the navigator out of the player
-                Activity. There is one tree now, so the navigator is mounted
-                unconditionally — but MOUNTED is not PAINTED, and reading
-                that sentence as "the navigator always paints" is what
-                reopened the V11 opaque-root failure. `BrowsingStack` below
-                keeps the navigator mounted and takes it out of the
-                compositing while a video owns the window.
-
-            The load lifecycle `SimbaPlayerRoot` was keeping has a better
-            owner: `useInWindowVideoLaunch()` above drives the current
-            session into the surface, keyed on a real requestId so
-            re-launching the same file still reloads. */}
-        {/* V21 F5 follow-up. `hidden` is `isExpanded`, and it is the reason
-            a video is visible at all: the native surface is composited
-            below this whole tree, so anything opaque painted here is painted
-            over the picture. */}
-        <BrowsingStack hidden={isExpanded}>
-          <AppContent />
-        </BrowsingStack>
-        {/* (4) The resume prompt's own Dialog. Rendered HERE, inside the
-            providers and above the activity split, so it exists in every
-            React root — the same reason ToastProvider sits above the
-            split (see this component's docstring). */}
-        {dialog}
-      </ResumePromptContext.Provider>
-      </ToastProvider>
-    </ErrorBoundary>
-  );
-};
-
-/**
- * The props React Native hands the root component. `initialProps`
- * comes from the hosting activity's
- * `ReactActivityDelegate.getLaunchOptions()`.
- *
- * V21 F5: this used to carry `isPlayerActivity`, which arrived here
- * because it could not be derived in JS — the app and the player ran the
- * same `App` component and the native flag behind it was process-wide.
- * One Activity means one root means nothing to disambiguate, so the prop
- * and its default are gone rather than left reading `false` forever.
- */
-export interface RootProps {}
-
-const App: React.FC<RootProps> = () => {
-  // V16 Phase 71 + W22 F/U #2: bookmark-aware resume lookup is a
-  // single `resumePolicy` function prop on `<SimbaPlayer>`. Replaces
-  // the V13 `lookup` object prop + V14 `useSimbaPlayerLookup`
-  // factory hook pair (31 lines collapsed to 6).
-  //
-  // **W22 F/U #2 priority** (bookmark first, history fallback):
-  //   1. Bookmarks — the explicit user signal. Multiple positions
-  //      can exist per URI (A14: each id encodes `(fileUri, position)`),
-  //      so we take the most recently created. `resolveResumeMs`
-  //      handles the latest-wins reduction.
-  //   2. History — the implicit recent-play signal. 1 entry per
-  //      fileUri (upsert on every play), so `find` is sufficient.
-  //   3. `undefined` if neither — `useOpenWithResume` falls back to
-  //      the consumer-provided `startPositionMs` (or 0).
-  //
-  // Both stores persist `position` in seconds; the module expects
-  // ms. The conversion + the priority + the defensive `> 0` check
-  // are all in the pure helper `resolveResumeMs` (10 unit tests
-  // cover the branches — see `__tests__/infrastructure/player/resumePolicy.test.ts`).
-  //
-  // The function is `useCallback`-ed so the `<SimbaPlayer>` memo
-  // (line 102 of the module's SimbaPlayer.tsx) doesn't churn the
-  // inner `<PlayerResumeContext>` value on every render.
-  const resumePolicy = React.useCallback((resumeId: string) => {
-    const bookmarks = useBookmarksStore.getState().items;
-    const history = useRecentHistoryStore.getState().entries;
-    return resolveResumeMs({bookmarks, history}, resumeId);
-  }, []);
-
-  // V19 W6.0 — the presentation mode is DERIVED, not synced.
-  //
-  // This call used to be `usePresentationSync()`: an effect that
-  // wrote `isPlayerActivity ? 'expanded' : 'mini'` into a shared
-  // zustand store. It had to be removed rather than moved, because
-  // `App` is mounted ONCE PER ACTIVITY REACT ROOT — so while the
-  // player was up, the background `MainActivity` tree and the
-  // foreground `PlayerActivity` tree both ran this effect against the
-  // same process-global store. Each write re-triggered the other
-  // root's effect (the mode was a dependency) and they fought:
-  // `expanded → mini → expanded → mini`, forever. The chrome gate
-  // returns `null` in `'mini'`, so the whole compositor was torn down
-  // and rebuilt several times a second over a playing video.
-  //
-  // `usePresentation()` now computes the mode at read time from
-  // `useIsPlayerActivity()` — a question each tree asks about ITSELF
-  // — plus the PiP flow flag. With no writer, there is no race. See
-  // `src/state/usePresentationStore.ts`.
-
-  return (
-    // GestureHandlerRootView is required by
-    // @lodev09/react-native-true-sheet (its drag-to-dismiss
-    // gesture uses the gesture-handler runtime) and by any nested
-    // navigation gesture support.
-    <GestureHandlerRootView style={styles.root}>
-        <SafeAreaProvider>
-          {/* V18.1.2: QueryProvider wraps the data layer. Placed
-              inside SafeAreaProvider (consistent with other global
-              providers) and outside ThemeProvider (data layer is
-              a sibling of UI; no dependency on theme). */}
-          <QueryProvider>
-          <ThemeProvider>
-            {/* V16: one wrapper, one prop. Replaces the V13
-                `<PlayerProvider>` + `<PlayerResumeProvider>` pair
-                and the V14 `<SimbaPlayer lookup={...}>` shape with
-                a single `<SimbaPlayer resumePolicy={...}>`.
-
-                V19 W4: VideoPlayer (chrome compositor) lives as a
-                sibling of AppContent INSIDE the V16 SimbaPlayer. The V19
-                chrome overlay reads lib hooks so it
-                must be a child of the V16 SimbaPlayer.
-
-                This comment used to continue "it is rendered FIRST so it
-                stacks ABOVE AppContent in z-order (later siblings render on
-                top in RN)". Both halves of that were wrong, and the sentence
-                contradicted itself: rendered FIRST stacks it BELOW, because
-                later siblings render on top. It survived because in the
-                two-Activity design `VideoPlayer` and `AppContent` lived in
-                different windows, where sibling order means nothing.
-
-                They are siblings in ONE window now, so order is the whole
-                story — and the order is right, but not for that reason.
-                `VideoPlayer` composites over the picture because it is
-                transparent and `BrowsingStack` has stopped the browsing
-                stack from painting, not because of where it sits in this
-                tree. So do not "correct" this ordering by moving
-                `VideoPlayer` below `BrowsingStack`, and do not give it a
-                `zIndex`: either would put the chrome over the browsing
-                screens instead of over the video.
-                Audit §5: SimbaPlayer (V19) is the ONLY chrome
-                composite mounted at the shell — all other chrome
-                primitives (VideoSurface, VerticalSwipeGestures,
-                ChromeAutoHideController, NextUpOverlay, TransportBar)
-                live INSIDE it and never in src/screens. W7.6 removed
-                the second one: `VideoMiniPlayer`, a `return null` stub
-                (see the note at its former render site). */}
-            <SimbaPlayer resumePolicy={resumePolicy}>
-              {/* W6.0 fix — `ActivityShell` owns the app-wide providers
-                  (ErrorBoundary + ToastProvider) AND the activity split,
-                  so both branches have the providers they need. See its
-                  docstring for why the split must sit below them. */}
-              <ActivityShell resumePolicy={resumePolicy} />
-            </SimbaPlayer>
-          </ThemeProvider>
-          </QueryProvider>
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-  );
-};
 
 export default App;
