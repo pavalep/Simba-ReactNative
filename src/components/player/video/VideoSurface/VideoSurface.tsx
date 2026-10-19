@@ -57,6 +57,18 @@ export interface VideoSurfaceProps {
   /** Optional accessibility label — defaults to `"Video"` for screen readers. */
   accessibilityLabel?: string;
   /**
+   * How the frame is fitted to the view. `contain` letterboxes (the whole
+   * frame, with bars), `cover` fills (cropping the overflow), `stretch`
+   * distorts.
+   *
+   * This exists because the SAME view is now sized two different ways: the
+   * fullscreen lane is wide, and the dock's slot is a square. `contain` in a
+   * square leaves transparent bars inside the dock's hole, and what shows
+   * through those bars is the browsing screen behind — so the dock uses
+   * `cover` and the fullscreen lane uses `contain`.
+   */
+  resizeMode?: 'contain' | 'cover' | 'stretch';
+  /**
    * Optional tap handler. When provided, a tap target is laid over the
    * picture so a tap anywhere toggles the chrome. When absent, the picture
    * stays a passive visual primitive with zero gesture cost.
@@ -67,12 +79,14 @@ export interface VideoSurfaceProps {
 export const VideoSurface: React.FC<VideoSurfaceProps> = ({
   style,
   accessibilityLabel = 'Video',
+  resizeMode = 'contain',
   onPress,
 }) => (
   <>
     <SimbaVideo
       accessibilityRole="image"
       accessibilityLabel={accessibilityLabel}
+      resizeMode={resizeMode}
       style={[StyleSheet.absoluteFill, styles.surface, style]}
     />
 

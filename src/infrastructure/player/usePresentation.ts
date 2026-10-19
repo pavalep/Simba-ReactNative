@@ -51,6 +51,7 @@ import {
   usePresentationStore,
   type PresentationMode,
   type PresentationState,
+  type VideoLaneOrigin,
   type VideoMiniRect,
   type VideoPresentation,
 } from '../../state/usePresentationStore';
@@ -59,6 +60,7 @@ export {
   usePresentationStore,
   type PresentationMode,
   type PresentationState,
+  type VideoLaneOrigin,
   type VideoMiniRect,
   type VideoPresentation,
 };
@@ -87,6 +89,10 @@ export interface Presentation {
   videoMiniRect: VideoMiniRect | null;
   /** Publish (or clear) the mini player's measured rect. */
   setVideoMiniRect: (rect: VideoMiniRect | null) => void;
+  /** The video lane's own window origin, or `null` before it measured. */
+  videoLaneOrigin: VideoLaneOrigin | null;
+  /** Publish (or clear) the video lane's window origin. */
+  setVideoLaneOrigin: (origin: VideoLaneOrigin | null) => void;
   /** Enter/leave PiP. Pair with the native `enterPip`/`exitPip`. */
   setPipActive: (active: boolean) => void;
   /** Flip PiP on the JS side. */
@@ -119,10 +125,12 @@ export function usePresentation(): Presentation {
   // fact get built.
   const videoPresentation = usePresentationStore(s => s.videoPresentation);
   const videoMiniRect = usePresentationStore(s => s.videoMiniRect);
+  const videoLaneOrigin = usePresentationStore(s => s.videoLaneOrigin);
   const setVideoPresentation = usePresentationStore(
     s => s.setVideoPresentation,
   );
   const setVideoMiniRect = usePresentationStore(s => s.setVideoMiniRect);
+  const setVideoLaneOrigin = usePresentationStore(s => s.setVideoLaneOrigin);
   const pipActive = usePresentationStore(s => s.pipActive);
   const setPipActive = usePresentationStore(s => s.setPipActive);
   const togglePip = usePresentationStore(s => s.togglePip);
@@ -153,6 +161,8 @@ export function usePresentation(): Presentation {
     setVideoPresentation,
     videoMiniRect,
     setVideoMiniRect,
+    videoLaneOrigin,
+    setVideoLaneOrigin,
     setPipActive,
     togglePip,
   };

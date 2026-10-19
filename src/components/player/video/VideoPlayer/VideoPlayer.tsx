@@ -47,9 +47,12 @@
 
 import * as React from 'react';
 import {BackHandler, StyleSheet, View} from 'react-native';
+import type {ViewStyle} from 'react-native';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
 import {presetToMpv, useQualityStore} from '../../../../state/useQualityStore';
 import {useSkipSilenceStore} from '../../../../state/useSkipSilenceStore';
+import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
+import {dockStyleFor} from '../../../../infrastructure/player/dockPlacement';
 import {VideoSurface} from '../VideoSurface/VideoSurface';
 import {PlayerScrim} from '../PlayerScrim/PlayerScrim';
 import {VideoTitleOverlay} from '../VideoTitleOverlay/VideoTitleOverlay';
@@ -280,44 +283,13 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
  * merged declaration as far as TypeScript is concerned.
  */
 const VideoPlayerChrome: React.FC = () => {
-  const presentation = usePresentation();
-
-  // W6.0 — the mount gate. ONE gate, and it is derived.
-  //
-  // `presentation.isExpanded` is true exactly when
-  // `isPlayerActivity && !pipActive` — i.e. when there is a native
-  // `MpvRenderView` beneath THIS tree and the PiP window is not
-  // owning it. Both inputs are read per-tree, so the background
-  // `MainActivity` root and the foreground `PlayerActivity` root
-  // cannot disagree, and nothing anywhere writes the mode.
-  //
-  // This replaces four stacked gates (`!isPlayerActivity`,
-  // `hasNothingToPlay`, `'mini'`, `'pip'`), which became redundant
-  // the moment the mode stopped being stored:
-  //
-  //   - `!isPlayerActivity` ⟹ `mode === 'mini'`, so it was already
-  //     covered by the mini branch. Kept separate it only gave the
-  //     two a chance to drift apart.
-  //   - `'mini'` and `'pip'` are precisely the two ways
-  //     `isExpanded` is false, so all three collapse to one branch.
-  //   - `hasNothingToPlay` (`videoState === 'idle' && mode ===
-  //     'expanded'`) was UNREACHABLE, and actively harmful. In the
-  //     player activity `hasSession` is structurally true
-  //     (`usePlaybackState`: `isPlayerActivity || hasPlaylistEntry`),
-  //     so the hook can never DERIVE `'idle'` — the only way to read
-  //     it here was the `VideoController`'s own initial state, which
-  //     is `'idle'` until its first `observePlayback` effect runs. So
-  //     this gate blanked the chrome for one commit on every launch.
-  //     Its comment promised to "render the composer's own error/empty
-  //     path rather than an empty screen" and then returned `null` —
-  //     a comment describing behaviour the code did not have. Removed
-  //     rather than kept as fiction.
+  const {isExpanded, setVideoPresentation} = usePresentation();
 
   // Hardware back must be the SAME verb as the header's back chevron.
   //
   // V21 F3/F4: both are now `setVideoPresentation('mini')`. The reasoning
   // below records what the two verbs used to be, because the difference is
-  // exactly what F4 changed.
+  // exactly what F5 turned into a single owner.
   //
   // Before F3, back had to reach the same verb as the header button, because
   // RN's default popped `PlayerActivity` directly: the window closed while
@@ -334,28 +306,141 @@ const VideoPlayerChrome: React.FC = () => {
   // from the mini dock, where navigation is what the user means — is not
   // swallowed. Returning `true` consumes the event so the OS does not also
   // navigate.
-  const {setVideoPresentation} = usePresentation();
   React.useEffect(() => {
-    if (!presentation.isExpanded) return undefined;
+    if (!isExpanded) return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       setVideoPresentation('mini');
       return true;
     });
     return () => sub.remove();
-  }, [setVideoPresentation, presentation.isExpanded]);
+  }, [setVideoPresentation, isExpanded]);
 
-  if (!presentation.isExpanded) {
-    return null;
-  }
-
-  // W6.1 — `ChromeAutoHideProvider` is the SINGLE owner of chrome
-  // visibility, and it must sit ABOVE every chrome consumer. The
-  // compositor itself is a child, because the `VideoSurface` tap
-  // handler has to read the very state the tap is meant to toggle.
+  // D9 — ONE mounted picture per lane.
+  //
+  // `ChromeAutoHideProvider` sits ABOVE every chrome consumer, and the
+  // compositor is a child of it, because the surface's tap handler has to
+  // read the very state the tap is meant to toggle.
   return (
     <ChromeAutoHideProvider>
-      <ExpandedChrome />
+      <VideoLane />
     </ChromeAutoHideProvider>
+  );
+};
+
+/**
+ * The video lane: ONE `<SimbaVideo>`, mounted for as long as a video is
+ * loaded, and MOVED rather than replaced.
+ *
+ * ## Why this is not a conditional switch
+ *
+ * Before D9 this component returned `null` unless the video was expanded, so
+ * minimising it unmounted the picture and expanding it mounted a second one.
+ * Two `SimbaVideo` views would then have existed at different moments,
+ * both bound to the same mpv handle — and the lib's
+ * `attachSurfaceLocked` rebinds on every `setNativePtr`, so the second mount
+ * would steal the surface from the first. Two owners of one picture is the
+ * defect D9 exists to remove.
+ *
+ * The one legal unmount is `nowPlaying == null`: there is no video, so there
+ * is no picture to keep.
+ *
+ * ## How the two presentations are expressed
+ *
+ * The picture is a child of a wrapper `View`, and the WRAPPER carries the
+ * geometry. React Native lays the wrapper out, so the picture is resized and
+ * repositioned by an ordinary style change:
+ *
+ *   - expanded / PiP → the wrapper is full-bleed
+ *   - mini           → the wrapper is the dock's measured slot
+ *
+ * `VideoSurface` itself is unchanged by this: it fills whatever box it is
+ * given, and the wrapper is what moves.
+ *
+ * ## The coordinate translation, and why it is measured rather than assumed
+ *
+ * The dock publishes its slot in WINDOW pixels (`measureInWindow`), because
+ * that is the only space a view that lives in a different subtree can be
+ * described in. This lane's wrapper is positioned relative to ITS OWN
+ * parent, which is not necessarily the window origin — a status-bar inset or
+ * a non-edge-to-edge window would make the two spaces differ.
+ *
+ * So the lane measures its own window origin once per layout and subtracts.
+ * Assuming the root sits at (0, 0) would be a silent assumption, and this
+ * codebase has been bitten by exactly that class of assumption before.
+ *
+ * The window→lane translation is done HERE, in JavaScript, because the native
+ * side no longer has a `setVideoBounds` to convert into. That hand-off is
+ * gone along with the Kotlin-mounted surface.
+ */
+const VideoLane: React.FC = () => {
+  const {toggle} = useChromeAutoHide();
+  const presentation = usePresentation();
+  const nowPlaying = useNowPlayingStore(s => s.current);
+  const videoMiniRect = presentation.videoMiniRect;
+  const videoLaneOrigin = presentation.videoLaneOrigin;
+  const {setVideoLaneOrigin} = presentation;
+
+  const laneRef = React.useRef<View>(null);
+  const [dockStyle, setDockStyle] = React.useState<ViewStyle | null>(null);
+
+  // This lane's own window origin. Re-measured on layout and published to
+  // the store, which is where the dock's slot also lives — the two
+  // measurements are the inputs to `dockStyleFor`, and they only make
+  // sense next to each other.
+  //
+  // It is published rather than kept as local state on purpose: the store
+  // makes the placement a pure function of two published facts, which is
+  // what lets a test drive it. `measureInWindow` is a native call, and
+  // React Native Testing Library v14 removed `createNodeMock`, so a test
+  // cannot give a host component a `measureInWindow` at all — a local
+  // `useState` would be permanently `null` under test and the wiring
+  // between the two measurements would go unverified.
+  const handleLaneLayout = React.useCallback(() => {
+    const lane = laneRef.current;
+    if (!lane) return;
+    lane.measureInWindow((x, y) => {
+      setVideoLaneOrigin({x, y});
+    });
+  }, [setVideoLaneOrigin]);
+
+  // The dock placement, once the dock has published a slot AND this lane
+  // knows where it is.
+  //
+  // Until both are true the picture stays where it was. That is deliberate:
+  // a 0x0 picture is an invalid libmpv render target (the old
+  // "refused: extents must be > 0" failure), so a placeholder rectangle is
+  // not an option, and parking it off-screen would be a lie about where the
+  // video is.
+  React.useEffect(() => {
+    if (!presentation.isMini) {
+      setDockStyle(null);
+      return;
+    }
+    const style = dockStyleFor(videoMiniRect, videoLaneOrigin);
+    if (style) setDockStyle(style);
+  }, [presentation.isMini, videoMiniRect, videoLaneOrigin]);
+
+  // The one legal unmount: no video, so no picture.
+  if (nowPlaying?.streamType !== 'video') return null;
+
+  return (
+    <View
+      ref={laneRef}
+      style={styles.lane}
+      pointerEvents="box-none"
+      onLayout={handleLaneLayout}>
+      {/* The picture. Always mounted; only its geometry changes. */}
+      <View style={dockStyle ?? styles.picture} pointerEvents="box-none">
+        <VideoSurface
+          accessibilityLabel="Video"
+          resizeMode={presentation.isMini ? 'cover' : 'contain'}
+          onPress={toggle}
+        />
+      </View>
+
+      {/* The chrome. It comes and goes; the picture does not. */}
+      {presentation.isExpanded ? <ExpandedChrome /> : null}
+    </View>
   );
 };
 
@@ -370,10 +455,11 @@ const VideoPlayerChrome: React.FC = () => {
  * again for its own opacity: three independent visibility states, so a
  * tap toggled a value that drove no pixels and the controls only ever
  * moved on their own timers.)
+ *
+ * It no longer contains the picture. The picture is a sibling, below it,
+ * so that the picture can stay mounted while this comes and goes.
  */
 const ExpandedChrome: React.FC = () => {
-  const {toggle} = useChromeAutoHide();
-
   // W6.1 — the single owner of PiP reconciliation. Mounted here, inside
   // the mount gate, because PiP only exists while a player surface
   // does. It must be the one place that subscribes: two subscribers
@@ -389,25 +475,28 @@ const ExpandedChrome: React.FC = () => {
   useCaptionStyleBridge();
 
   // EXPANDED: the chrome compositor, rendered as a TRANSPARENT
-  // full-bleed overlay ABOVE the native video surface.
+  // full-bleed overlay ABOVE the picture.
   //
   // W6.0 — this root used to carry `backgroundColor:
-  // colors.background.primary`, and `VideoSurface` below it carried
+  // colors.background.primary`, and the surface below it carried
   // `background.surfaceDark`. Both are opaque, so the overlay painted
-  // over the `MpvRenderView` that `PlayerActivity` inserts at content
-  // index 0: the user would have seen a flat panel where the video
-  // should be. The old comment claimed "the V16 VideoPlayer's
-  // PlayerSurface is the actual mpv render" — no such component
-  // exists on this path (the V16 `VideoPlayer` only renders
-  // `PlayerProvider`; the surface is purely native). Nothing paints
-  // here now; the only opaque chrome is the deliberate scrims
-  // (gesture feedback, auto-hide fade) and the overlays themselves.
+  // over the video and the user saw a flat panel where the picture
+  // should be. Nothing paints here now; the only opaque chrome is the
+  // deliberate scrims (gesture feedback, auto-hide fade) and the
+  // overlays themselves.
+  //
+  // `pointerEvents="box-none"` on both this root and the surface
+  // container: the chrome is an overlay ABOVE the picture, and a plain
+  // full-size View would swallow the picture's tap-to-toggle before it
+  // ever reached the surface. `box-none` keeps the container itself out
+  // of hit-testing while its children (gestures, overlays, transport)
+  // still receive touches — and a tap that nothing above claims falls
+  // through to the picture beneath.
   return (
-    <View style={styles.expandedRoot} pointerEvents="box-none">
+    <View style={styles.chrome} pointerEvents="box-none">
       <SimbaStatusBar variant="player" />
 
-      <View style={styles.surfaceContainer}>
-        <VideoSurface accessibilityLabel="Video" onPress={toggle} />
+      <View style={styles.surfaceContainer} pointerEvents="box-none">
         <VerticalSwipeGestures />
 
         {/* V19 W7.2 — the ONE backdrop for the whole chrome. Mounted
@@ -441,15 +530,21 @@ const ExpandedChrome: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  // Full-bleed, transparent chrome overlay. W6.0: no background
-  // colour — the native `MpvRenderView` shows through from beneath.
-  expandedRoot: {
+  // The lane: full-bleed and transparent. It is the positioning context for
+  // the picture, so the dock's window-pixel rect can be expressed in this
+  // tree's coordinates.
+  lane: {
+    ...StyleSheet.absoluteFill,
+  },
+  // The picture's default box: the whole lane.
+  picture: {
+    ...StyleSheet.absoluteFill,
+  },
+  // The expanded chrome overlay. Above the picture, transparent.
+  chrome: {
     ...StyleSheet.absoluteFill,
     paddingTop: 0, // safe-area inset is already in the V16 root
   },
-  // W6.0: no `miniRoot` any more — the `mini` branch returns `null`
-  // because there is no video dock to render. Reintroduce a style here
-  // if the audio lane grows a real mini player.
   surfaceContainer: {
     // W6.0: was `margin: spacing.md + borderRadius + overflow:
     // hidden`, i.e. a rounded inset "card". The video is a full-bleed

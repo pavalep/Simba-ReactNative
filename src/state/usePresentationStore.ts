@@ -131,6 +131,33 @@ export interface VideoMiniRect {
   height: number;
 }
 
+/**
+ * The video lane's own origin in WINDOW pixels.
+ *
+ * The sibling of `VideoMiniRect`, and the same kind of fact: a measurement
+ * of where a piece of player geometry sits, taken in window coordinates
+ * because that is the only space two different subtrees can be compared in.
+ *
+ * The dock measures its slot. The lane measures its own origin. Neither
+ * one alone can place the picture — the picture's box is relative to the
+ * lane, and the dock's slot is relative to the window — so the
+ * difference between them is the answer. See
+ * `src/infrastructure/player/dockPlacement.ts`.
+ *
+ * It is published here rather than kept as the lane's local state so that
+ * the placement is a pure function of two published measurements. That is
+ * what makes it testable: `measureInWindow` is a native call, and React
+ * Native Testing Library v14 removed `createNodeMock`, so a test cannot
+ * give a host component a `measureInWindow` at all. A local
+ * `useState` inside the lane would be permanently `null` under test, and
+ * the wiring between the two measurements — the part that can actually be
+ * wrong — would go untested.
+ */
+export interface VideoLaneOrigin {
+  x: number;
+  y: number;
+}
+
 export interface PresentationState {
   /**
    * Whether the PiP window is currently up.
@@ -210,6 +237,26 @@ export interface PresentationState {
 
   /** Publish (or clear, with `null`) the mini player's measured rect. */
   setVideoMiniRect: (rect: VideoMiniRect | null) => void;
+
+  /**
+   * The video lane's own window origin, or `null` before it has measured
+   * itself.
+   *
+   * `null` is the honest answer for "we do not know where we are", and it
+   * is what keeps the picture where it was rather than placing it
+   * somewhere guessed.
+   */
+  videoLaneOrigin: VideoLaneOrigin | null;
+
+  /**
+   * Publish the lane's window origin.
+   *
+   * The equality guard lives here rather than at the call site: a
+   * re-layout must not churn the store, and zustand notifies every
+   * subscriber on every `set`, so "set it to the same value" is not a
+   * no-op unless the setter says so.
+   */
+  setVideoLaneOrigin: (origin: VideoLaneOrigin | null) => void;
 }
 
 export const usePresentationStore = create<PresentationState>()(set => ({
@@ -222,4 +269,19 @@ export const usePresentationStore = create<PresentationState>()(set => ({
   videoMiniRect: null,
   setVideoMiniRect: (videoMiniRect: VideoMiniRect | null) =>
     set({videoMiniRect}),
+  videoLaneOrigin: null,
+  setVideoLaneOrigin: (origin: VideoLaneOrigin | null) =>
+    set(state => {
+      const current = state.videoLaneOrigin;
+      const unchanged =
+        current === origin ||
+        (current !== null &&
+          origin !== null &&
+          current.x === origin.x &&
+          current.y === origin.y);
+      // Returning the SAME state object tells zustand nothing changed, so
+      // it does not notify a single subscriber. Returning a partial would
+      // merge into a new object and re-render every reader of this store.
+      return unchanged ? state : {videoLaneOrigin: origin};
+    }),
 }));
