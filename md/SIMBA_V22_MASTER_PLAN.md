@@ -532,6 +532,47 @@ expand→minimize→expand on BOTH lanes with no black frame, no re-subscribe
 flash, and live video in the dock. Confirm by instrumentation, not by eye:
 `useTransport().state` identity must not change across a presentation change.
 
+### Progress — 2026-10-19
+
+**Stage 6 + 7 (video lane) — DONE, device-verified.** `SimbaVideo` is in the
+tree, `MainActivity` no longer mounts a surface, `useVideoSurface` is deleted,
+`BrowsingStack` blanks and never unmounts. Two P0s were found on device and
+fixed:
+
+- **The cold-start red screen.** `videoPresentation` initialised to
+  `'expanded'`, which was only ever survivable because the deleted
+  `videoSurfacePresented` mask hid it. Removing the mask exposed a value that
+  was simply wrong. `PlayerProvider` calls `initPlayer()` in a **mount effect**
+  and React runs **child effects before parent effects**, so the chrome's
+  bridge calls beat it — 8 × `IllegalStateException: MpvPlayerModule not
+  initialized. Call initPlayer() first.`
+- **The black video was never a surface problem.** The Fabric view mounted,
+  the surface attached with real extents (`surfaceChanged: 1080x1907`),
+  `vo=gpu` was set, and the renderer worked. The cause was the archive.org
+  adapter: it filtered on `source === 'original'`, which excluded exactly the
+  files that exist to be streamed, preferred the LARGEST candidate, and made
+  AVI-only items unplayable. It streamed a 733 MB Cinepack AVI; mpv reported
+  `MPV_ERROR_LOADING_FAILED (-13)`. Fixed: h.264 derivative by SUBSTRING
+  match, smallest file wins, AVI demoted to a last-resort fallback. Decoded
+  frames paint.
+
+**Stage 9 (video lane) — DONE, not yet device-verified.** One mounted
+`<SimbaVideo>` per lane; fullscreen and the dock differ by a `style` on the
+picture's wrapper, never by which component is in the tree. The dock publishes
+its slot in WINDOW pixels and the lane publishes its own WINDOW origin;
+`dockStyleFor` converts one into the other. Both are published to the store
+rather than held as local state, because RNTL v14 removed `createNodeMock`
+and a local `useState` would be permanently `null` under test — the wiring
+between the two measurements would go unverified. 19 new tests; mutation
+check 11/11.
+
+**App shell — DONE.** `App.tsx` is a provider stack again (`App.tsx` /
+`src/app/AppRoot.tsx` / `src/app/AppContent.tsx`). `ActivityShell` is
+dissolved: it existed for the two-Activity split, and the only thing that
+still forces a component boundary is the React rule that a component cannot
+consume a context it provides itself — `App` renders `ThemeProvider`, and the
+ErrorBoundary's fallback palette is built from the theme.
+
 ---
 
 ## 6. What deletes vs. what stays
@@ -573,6 +614,30 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
 3. Duration `P1` on both lanes.
 4. mpv-handle survival across Fabric view remount — needs a test.
 5. `force-window` re-verification under layout churn.
+6. **Stage 9 device verification** — the video lane's D9 rewrite is unit-tested
+   but not yet seen on a device. PiP in/out, the dock showing live video, back
+   at each level, and no black frame on expand↔mini.
+7. **Stage 9 audio lane** — the video lane is on D9; the audio lane still
+   switches component identity (`audioMode === 'expanded' ? <AudioPlayer/> :
+   <MiniPlayer/>`). The full-screen audio player and the dock are two
+   components, so the audio lane still has the unmount the video lane just
+   lost.
+8. **Buffering cannot be shown yet** — `MPV_EVENT_PROPERTY_CHANGE` is never
+   delivered (the lib's own "OPEN NATIVE DEFECT (1.8.4)"), and the 1 Hz poll
+   that backstopped position/duration was removed in lib v1.10.0. `isBuffering`,
+   `seekable`, `isSeeking` and `cacheRanges` have **no fallback at all**.
+   Separately, `deriveBufferedRanges` maps mpv's cache ranges straight into
+   `startMs`/`endMs` while the native side sends `seekable-ranges` in SECONDS
+   with a fallback to byte OFFSETS — the bridge does not record which unit it
+   sent, so a 60 s range becomes 60 ms and a byte offset becomes a clamped
+   whole-file bar. See `md/SIMBA_V22_BUFFERING_UI_RESEARCH.md`.
+9. **The deep-link path bypasses the app's session seam.** `useOpenFromUrl`
+   (lib) calls the lib's `openPlayer` directly, not the app's
+   `useResumeAwareLaunch`, so a deep-linked file gets no now-playing entry,
+   no history checkpoint and no dock — and it is the one path where the
+   `<SimbaPlayer resumePolicy>` lookup still fires. Needs a lib-side
+   derive-only export (1.15.1) so the app can route the URI through its own
+   seam.
 
 **Migration mechanics**
 6. `codegenConfig` `"modules"` → `"all"`.
