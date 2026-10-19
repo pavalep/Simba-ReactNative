@@ -447,6 +447,52 @@ Still broken: `Remaining time unknown --:--`. Position reports and duration
 does not, so this is now a narrow bug in the `duration` property rather than
 the general "nothing loaded" state it used to be lost in.
 
+#### 2026-10-19 — the duration bug, measured rather than guessed
+
+With a video genuinely playing, the events that actually arrive are:
+
+```
+startFile · surfaceAttached · audioReconfig ×3 · fileLoaded
+videoReconfig ×2 · playbackRestart
+```
+
+The events that never arrive are `onPositionChanged`, `onDurationChanged`,
+`onPlaybackStateChanged`, `onSeekable`, `onBuffering`, `onCacheState` —
+i.e. **every `MPV_EVENT_PROPERTY_CHANGE`-derived event.**
+
+That is not a new discovery: the lib's own `PlayerProvider` docstring
+records it — *"`onSeekable` / `onPositionChanged` / `onDurationChanged` …
+arrive **0 times**. `MPV_EVENT_PROPERTY_CHANGE` is therefore never delivered
+to this native side."* The lib had a 1 Hz poll as a backstop for exactly
+these fields and **removed it in v1.10.0** (`PlayerProvider.tsx:767` — "This
+used to be a 1Hz `setInterval`"), on the belief that the event stream is
+authoritative. The event stream is dead, so the backstop is gone too.
+
+Measured: `getDuration` and `getPosition` are called **exactly twice each**,
+both at app start. There is no poll running in the lib *or* in the app —
+`useTransport.ts` contains no `setInterval` at all.
+
+**Consequence.** `duration` is never read after startup, so it stays 0 and
+the transport renders `Remaining time unknown --:--` and treats the file as
+live. Elapsed does display a live value, so the app is deriving it from
+somewhere that still works — the asymmetry is the bug, and it is now
+narrow enough to fix deliberately.
+
+**The fix belongs in the lib**, in one of two honest ways:
+
+1. Restore the 1 Hz poll for `position`/`duration`/`volume`/`speed`/
+   `playback-state`. The lib's own history has it; it was removed on a
+   premise that turned out to be false.
+2. Fix `MPV_EVENT_PROPERTY_CHANGE` delivery at the native layer, so the
+   event stream is authoritative as intended.
+
+Option 1 is smaller and can be shipped immediately; option 2 is the real fix
+and also restores `seekable`, `isBuffering` and `cacheRanges`, which have
+**no poll fallback** and are therefore currently dead on both lanes.
+
+The app's `useTransport` docstring also claims the lib populates these
+"at 1Hz" — a comment describing behaviour that stopped existing in v1.10.0.
+
 ### Stage 7 — `A` remove the invariant
 Delete `BrowsingStack` · delete `MainActivity` surface mount · delete
 `PlayerSurface` import surface · revise the 17 test files.
