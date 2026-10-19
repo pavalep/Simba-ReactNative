@@ -13,6 +13,19 @@
  * replaced with assertions for the real one: the copy comes from
  * `classifyError()`, Retry is hidden unless a real retry target
  * exists, and Close releases the session.
+ *
+ * ## The retry target
+ *
+ * Retry used to be gated on `VideoController.getState().currentItem`,
+ * which is ALWAYS null: `currentItem` is only set by
+ * `controller.loadFile()`, and `loadFile` has zero call sites — the
+ * LIB loads the file. So the gate was a permanent `false`, the Retry
+ * button never rendered, and a load failure was a dead end.
+ *
+ * The real target is the app's own now-playing session, which is
+ * written by the launch seam that started this playback. Retrying
+ * re-launches that session through the same seam, so there is one
+ * launch authority and no second path.
  */
 
 import * as React from 'react';
@@ -30,13 +43,7 @@ const mockCommands = {
   stop: jest.fn(),
   clear: jest.fn(),
 };
-const mockController = {
-  getState: jest.fn(() => ({currentItem: null})),
-  // Returns a real promise: the overlay chains `.catch(...)` on the
-  // result, so a bare `jest.fn()` returning undefined throws
-  // "Cannot read properties of undefined (reading 'catch')".
-  retry: jest.fn(() => Promise.resolve()),
-};
+const mockOpenPlayer = jest.fn((_opts: unknown) => Promise.resolve(true));
 
 jest.mock('../../../../src/infrastructure/player', () => ({
   usePlaybackState: () => ({
@@ -44,18 +51,44 @@ jest.mock('../../../../src/infrastructure/player', () => ({
     error: mockVideoState.error,
   }),
   useTransport: () => ({state: {}, commands: mockCommands}),
-  useVideoController: () => ({controller: mockController}),
+  useResumeAwareLaunch: () => ({openPlayer: mockOpenPlayer}),
+  // The REAL `usePresentation`, so the dock shape is driven by the real
+  // store rather than by a mocked boolean.
+  ...jest.requireActual('../../../../src/infrastructure/player/usePresentation'),
   classifyError: jest.requireActual(
     '../../../../src/infrastructure/player/video/errorClassifier',
   ).classifyError,
 }));
+
+import {useNowPlayingStore} from '../../../../src/state/nowPlayingStore';
+import {usePresentationStore} from '../../../../src/state/usePresentationStore';
+
+/** A video session — the retry target. */
+function setVideoSession(overrides: Record<string, unknown> = {}) {
+  useNowPlayingStore.setState({
+    current: {
+      uri: 'file:///movies/film.mkv',
+      title: 'Film',
+      startPositionMs: 0,
+      streamType: 'video',
+      sessionId: 7,
+      ...overrides,
+    },
+  } as never);
+}
 
 describe('VideoErrorOverlay', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockVideoState.current = 'idle';
     mockVideoState.error = null;
-    mockController.getState.mockReturnValue({currentItem: null} as never);
+    useNowPlayingStore.setState({current: null} as never);
+    usePresentationStore.setState({
+      pipActive: false,
+      videoPresentation: 'expanded',
+      videoMiniRect: null,
+      videoLaneOrigin: null,
+    });
   });
 
   it('renders nothing when videoState is not "error"', async () => {
@@ -95,39 +128,72 @@ describe('VideoErrorOverlay', () => {
     expect(screen.getByText('Sign in again')).toBeTruthy();
   });
 
-  it('hides Retry when there is no loaded item to retry', async () => {
+  it('hides Retry when there is no session to retry', async () => {
     // No-inert-control rule: a Retry button that cannot retry must
-    // not render at all.
+    // not render at all. And there IS a case where it cannot: no
+    // session means nothing was launched, so nothing can be re-launched.
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 500');
-    mockController.getState.mockReturnValue({currentItem: null} as never);
     await renderChrome(<VideoErrorOverlay />, {theme: true});
     expect(screen.queryByLabelText('Retry loading')).toBeNull();
     expect(screen.getByLabelText('Close player')).toBeTruthy();
   });
 
-  it('renders Retry when a loaded item gives a real retry target', async () => {
+  it('hides Retry for an AUDIO session — the audio chrome owns that', async () => {
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 500');
-    mockController.getState.mockReturnValue({
-      currentItem: {uri: 'a.mp4', title: 'A', lane: 'video'},
-    } as never);
+    setVideoSession({streamType: 'audio', uri: 'file:///podcasts/ep.mp3'});
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
+    expect(screen.queryByLabelText('Retry loading')).toBeNull();
+  });
+
+  it('renders Retry when a video session gives a real retry target', async () => {
+    mockVideoState.current = 'error';
+    mockVideoState.error = new Error('HTTP 500');
+    setVideoSession();
     await renderChrome(<VideoErrorOverlay />, {theme: true});
     expect(screen.getByLabelText('Retry loading')).toBeTruthy();
   });
 
-  it('Retry calls controller.retry() — NOT openPlayer with an empty URI', async () => {
+  it('Retry re-launches the session through the app’s launch seam', async () => {
+    // The old Retry called `controller.retry()`, whose target was
+    // always null, and before that it called
+    // `openPlayer({uri: '', title: '', type: 'video'})` — an EMPTY URI
+    // that could not re-load anything.
     mockVideoState.current = 'error';
     mockVideoState.error = new Error('HTTP 500');
-    mockController.getState.mockReturnValue({
-      currentItem: {uri: 'a.mp4', title: 'A', lane: 'video'},
-    } as never);
+    setVideoSession({startPositionMs: 1500});
     await renderChrome(<VideoErrorOverlay />, {theme: true});
+
     // `fireEvent.press` rather than calling `props.onPress()`:
     // Pressable wraps the handler, so invoking the raw prop bypasses
     // the pressability plumbing and never runs the callback.
     fireEvent.press(screen.getByLabelText('Retry loading'));
-    expect(mockController.retry).toHaveBeenCalled();
+
+    expect(mockOpenPlayer).toHaveBeenCalledTimes(1);
+    expect(mockOpenPlayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        uri: 'file:///movies/film.mkv',
+        title: 'Film',
+        type: 'video',
+        // The position the session BEGAN at, passed explicitly so the
+        // resume policy does not ask again about a position the user
+        // already answered.
+        startPositionMs: 1500,
+      }),
+    );
+  });
+
+  it('Retry never launches an empty URI', async () => {
+    mockVideoState.current = 'error';
+    mockVideoState.error = new Error('HTTP 500');
+    setVideoSession();
+    await renderChrome(<VideoErrorOverlay />, {theme: true});
+    fireEvent.press(screen.getByLabelText('Retry loading'));
+
+    const call = mockOpenPlayer.mock.calls[0][0] as {uri?: string};
+    expect(call.uri).toBeTruthy();
+    expect(call.uri).not.toBe('');
   });
 
   it('Close releases the session via commands.close()', async () => {
@@ -137,5 +203,49 @@ describe('VideoErrorOverlay', () => {
     await renderChrome(<VideoErrorOverlay />, {theme: true});
     fireEvent.press(screen.getByLabelText('Close player'));
     expect(mockCommands.close).toHaveBeenCalled();
+  });
+
+  describe('the dock shape', () => {
+    beforeEach(() => {
+      usePresentationStore.setState({videoPresentation: 'mini'});
+    });
+
+    it('shows the error title in the dock — a failure is never a black square', async () => {
+      // A cold-start video begins minimised, so a cold-start LOAD
+      // FAILURE happens in the dock. When the overlay lived only in the
+      // expanded chrome, that failure was invisible: a black square in
+      // the dock with no error and nothing to do about it.
+      mockVideoState.current = 'error';
+      mockVideoState.error = new Error('HTTP 503 Service Unavailable');
+      setVideoSession();
+      await renderChrome(<VideoErrorOverlay />, {theme: true});
+
+      expect(screen.getByText("Couldn't reach the server")).toBeTruthy();
+    });
+
+    it('drops the action buttons — the dock slot is 44×44', async () => {
+      // A button smaller than 44 pt is below the touch-target floor,
+      // and the card does not fit. The actions are one tap away:
+      // tapping the dock expands the player, where the full card is.
+      mockVideoState.current = 'error';
+      mockVideoState.error = new Error('HTTP 500');
+      setVideoSession();
+      await renderChrome(<VideoErrorOverlay />, {theme: true});
+
+      expect(screen.queryByLabelText('Retry loading')).toBeNull();
+      expect(screen.queryByLabelText('Close player')).toBeNull();
+    });
+
+    it('does not swallow the tap that expands the player', async () => {
+      // The dock shape is `pointerEvents="none"`, so the tap that
+      // expands the player still lands on the mini bar.
+      mockVideoState.current = 'error';
+      mockVideoState.error = new Error('HTTP 500');
+      setVideoSession();
+      await renderChrome(<VideoErrorOverlay />, {theme: true});
+
+      const scrim = screen.getByLabelText("Couldn't reach the server");
+      expect(scrim.props.pointerEvents).toBe('none');
+    });
   });
 });

@@ -436,6 +436,29 @@ const VideoLane: React.FC = () => {
           resizeMode={presentation.isMini ? 'cover' : 'contain'}
           onPress={toggle}
         />
+        {/* The loading and error overlays live ON THE PICTURE, not in
+            the expanded chrome.
+
+            They used to be inside `ExpandedChrome`, which only renders
+            when the player is expanded — so a video that was loading,
+            stalled, or FAILED while the player sat in the dock showed
+            nothing at all. A cold-start video begins minimised
+            (`videoPresentation` starts at `'mini'`), which means a
+            cold-start LOAD FAILURE was a black square in the dock
+            with no error and no way to act. That is the "silent black
+            screen" defect, and it was structural, not a missing
+            condition.
+
+            Inside the picture's box they cover the picture wherever the
+            picture is — fullscreen AND the 44 pt dock slot — and they
+            are not subject to the chrome's auto-hide, which is correct:
+            a spinner that hides itself while the video is still
+            stalled is not a spinner.
+
+            They are siblings of `VideoSurface`, so they paint above it
+            and do not affect the picture's mount — D9 holds. */}
+        <VideoLoadingOverlay />
+        <VideoErrorOverlay />
       </View>
 
       {/* The chrome. It comes and goes; the picture does not. */}
@@ -516,8 +539,6 @@ const ExpandedChrome: React.FC = () => {
           style={StyleSheet.absoluteFill}
         >
           <VideoTitleOverlay />
-          <VideoLoadingOverlay />
-          <VideoErrorOverlay />
           <NextUpOverlay />
         </ChromeAutoHideController>
       </View>

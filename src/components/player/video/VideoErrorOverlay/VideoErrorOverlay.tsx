@@ -24,15 +24,52 @@
  *      `commands.close()` (lib `stop()` + `clear()`).
  *
  * **The no-inert-control rule.** Retry is rendered ONLY when there
- * is a real retry target — a loaded item on the `VideoController`.
- * Rendering a Retry button that cannot retry is the exact defect
- * class this project already forbids elsewhere: `PiPToggle` returns
- * `null` when unsupported, `AudioDescriptionTrackSelector` returns
- * `null` rather than ship an "AD not available" stub, and
+ * is a real retry target. Rendering a Retry button that cannot retry
+ * is the exact defect class this project already forbids elsewhere:
+ * `PiPToggle` returns `null` when unsupported, `AudioDescriptionTrackSelector`
+ * returns `null` rather than ship an "AD not available" stub, and
  * `BufferedRangeFill` renders nothing instead of a zero-width
  * placeholder. The overlay follows the same rule.
  *
- * Retry MUST remain an explicit user action — no auto-retry loop.
+ * ## Where the retry target comes from
+ *
+ * It used to come from `VideoController.getState().currentItem` — and
+ * that was ALWAYS null. `currentItem` is only set by
+ * `controller.loadFile()`, and `loadFile` has ZERO call sites: the
+ * LIB loads the file, not the controller. So the gate was a
+ * permanent `false`, the Retry button never rendered, and a load
+ * failure was a dead end — the user saw an error and could do
+ * nothing about it.
+ *
+ * The real target is the app's own now-playing session
+ * (`useNowPlayingStore`), which is written by the launch seam that
+ * started this playback and therefore knows exactly what is playing.
+ * Retrying re-launches that session through the same seam
+ * (`useResumeAwareLaunch().openPlayer`), so the retry inherits the
+ * resume policy, the session record, and the in-window loader —
+ * one launch authority, no second path.
+ *
+ * The retry is explicit: no auto-retry loop.
+ *
+ * ## It lives on the PICTURE, not in the expanded chrome
+ *
+ * This overlay used to be mounted inside `ExpandedChrome`, which only
+ * renders when the player is expanded. A video that failed to load
+ * while the player sat in the DOCK — which is where a cold-start
+ * video starts, because `videoPresentation` begins at `'mini'` —
+ * showed a black square and no error at all. It is now a sibling of
+ * `<VideoSurface>` inside the picture's box, so the failure is shown
+ * wherever the picture is.
+ *
+ * ## Two shapes, because the dock slot is 44 pt
+ *
+ * The dock's video slot is a fixed 44×44 square. A card with two
+ * buttons does not fit in it, and a button smaller than 44 pt is
+ * below the touch-target floor. So in the dock the overlay shows the
+ * error TITLE only — the state is communicated, and the actions are
+ * one tap away (tapping the dock expands the player, where the full
+ * card is). The dock shape is `pointerEvents="none"`, so the
+ * tap-to-expand still lands.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.5 + §9.4 + `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` Phase 1.3.
@@ -43,9 +80,11 @@ import {Pressable, StyleSheet, View} from 'react-native';
 import {
   classifyError,
   usePlaybackState,
+  usePresentation,
+  useResumeAwareLaunch,
   useTransport,
-  useVideoController,
 } from '../../../../infrastructure/player';
+import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
 import {useTheme} from '../../../../theme';
 import {spacing, radius} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
@@ -53,7 +92,9 @@ import {AppText} from '../../../../components/core/AppText/AppText';
 export const VideoErrorOverlay: React.FC = () => {
   const {videoState, error: rawError} = usePlaybackState();
   const {commands} = useTransport();
-  const {controller} = useVideoController();
+  const {isMini} = usePresentation();
+  const {openPlayer} = useResumeAwareLaunch();
+  const session = useNowPlayingStore(s => s.current);
   const {colors} = useTheme();
 
   // Classify the REAL failure. `classifyError` is total — it never
@@ -66,10 +107,60 @@ export const VideoErrorOverlay: React.FC = () => {
 
   if (videoState !== 'error') return null;
 
-  // Retry is only honest when there is something to retry. The
-  // controller caches the URI it last loaded, so a non-null
-  // `currentItem` means `controller.retry()` has a real target.
-  const canRetry = controller.getState().currentItem !== null;
+  // Retry is only honest when there is something to retry: a session
+  // the app recorded for a VIDEO. An audio session cannot be retried
+  // from here (the audio chrome owns that), and no session at all
+  // means there is nothing to re-launch.
+  const canRetry = session !== null && session.streamType === 'video';
+
+  const handleRetry = () => {
+    if (!session) return;
+    // A video launch records the session SYNCHRONOUSLY and resolves
+    // `true`; the load itself is mpv's business and a failure comes
+    // back as mpv's own error event, which this overlay re-renders
+    // from. So there is no rejected promise to handle here.
+    //
+    // `startPositionMs` is the position the session BEGAN at, passed
+    // explicitly so the resume policy does not ask the user again
+    // about a position they already answered.
+    openPlayer({
+      uri: session.uri,
+      title: session.title,
+      type: 'video',
+      startPositionMs: session.startPositionMs,
+      ...(session.type ? {mediaKind: session.type} : {}),
+      ...(session.mediaLane ? {mediaLane: session.mediaLane} : {}),
+      ...(session.provider ? {provider: session.provider} : {}),
+      ...(session.thumbnailPath ? {thumbnailPath: session.thumbnailPath} : {}),
+    });
+  };
+
+  if (isMini) {
+    // The dock shape: the title only. 44×44 has no room for a card,
+    // and a sub-44 pt button is below the touch-target floor.
+    return (
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          styles.miniScrim,
+          {backgroundColor: colors.background.surfaceDark},
+        ]}
+        // The dock shape must not swallow the tap that expands the
+        // player — the actions live on the expanded card.
+        pointerEvents="none"
+        accessibilityRole="alert"
+        accessibilityLabel={classified.title}
+      >
+        <AppText
+          variant="caption"
+          numberOfLines={3}
+          style={[styles.miniTitle, {color: colors.text.onMediaSoft}]}
+        >
+          {classified.title}
+        </AppText>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -96,18 +187,7 @@ export const VideoErrorOverlay: React.FC = () => {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Retry loading"
-              onPress={() => {
-                // Real retry: re-issues the cached URI through the
-                // same loadFile path (and applies the codec
-                // software-decode recovery when the classifier asked
-                // for it). No empty-URI launch.
-                controller.retry().catch(() => {
-                  // The controller already classifies and stores any
-                  // failure; the overlay re-renders from that state.
-                  // Swallow here only to avoid an unhandled rejection
-                  // — the error surface is the controller's.
-                });
-              }}
+              onPress={handleRetry}
               style={({pressed}) => [
                 styles.actionButton,
                 {
@@ -162,6 +242,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
+  },
+  /** The dock shape: no card, no buttons — the title alone. */
+  miniScrim: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xs,
+  },
+  miniTitle: {
+    textAlign: 'center',
   },
   card: {
     width: '100%',

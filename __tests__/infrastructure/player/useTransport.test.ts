@@ -205,7 +205,17 @@ describe('useTransport — derivations', () => {
     expect(result.current.state.normalizedWindow).toBeNull();
   });
 
-  it('normalizedWindow picks the range containing the playhead', async () => {
+  it('normalizedWindow is the FIRST range, not the playhead’s island', async () => {
+    // The window is the BUFFER, not the island the playhead is in.
+    //
+    // ExoPlayer exposes one number — `getBufferedPosition()`, "the
+    // absolute position up to which data is buffered" — and YouTube,
+    // Netflix and Plex all draw ONE continuous bar from 0 to it, with
+    // the playhead on top. Nobody draws a segment map.
+    //
+    // The old rule picked the range CONTAINING the playhead, so the
+    // bar jumped forward and backward as the playhead crossed a gap,
+    // and showed nothing at all while the playhead was in one.
     mockProgress.durationMs = 300_000;
     mockProgress.cacheRanges = [
       {start: 0, end: 60_000},
@@ -214,38 +224,16 @@ describe('useTransport — derivations', () => {
     mockProgress.positionMs = 100_000;
     const {result} = await renderHook(() => useTransport());
     expect(result.current.state.normalizedWindow).toEqual({
-      startMs: 90_000,
-      endMs: 200_000,
-    });
-  });
-
-  it('normalizedWindow tolerates 1s slop on the lower bound', async () => {
-    // playhead at 0; range starts at exactly 1000ms — the boundary of
-    // PLAYHEAD_TOLERANCE_MS. The tolerance exists to absorb the 1Hz
-    // position-tick vs higher-rate cache-event skew, so a range that
-    // starts one second after the reported playhead is still "this one".
-    mockProgress.durationMs = 300_000;
-    mockProgress.cacheRanges = [{start: 1000, end: 60_000}];
-    mockProgress.positionMs = 0;
-    const {result} = await renderHook(() => useTransport());
-    expect(result.current.state.normalizedWindow).toEqual({
-      startMs: 1000,
+      startMs: 0,
       endMs: 60_000,
     });
   });
 
-  it('normalizedWindow does NOT tolerate slop past the 1s bound', async () => {
-    // 1500ms > the 1000ms tolerance, so the range does not contain the
-    // playhead and the window is null (BufferedRangeFill renders
-    // nothing rather than a stale fill).
-    mockProgress.durationMs = 300_000;
-    mockProgress.cacheRanges = [{start: 1500, end: 60_000}];
-    mockProgress.positionMs = 0;
-    const {result} = await renderHook(() => useTransport());
-    expect(result.current.state.normalizedWindow).toBeNull();
-  });
-
-  it('normalizedWindow is null when the playhead is in a gap', async () => {
+  it('normalizedWindow still shows the prefix when the playhead is in a gap', async () => {
+    // The honest picture: "we have data up to here, and we are past
+    // it". The bar is painted and the playhead is drawn visibly
+    // BEYOND it. Returning null here made the bar VANISH whenever the
+    // playhead crossed a gap, which reads as "nothing is buffered".
     mockProgress.durationMs = 300_000;
     mockProgress.cacheRanges = [
       {start: 0, end: 60_000},
@@ -253,22 +241,96 @@ describe('useTransport — derivations', () => {
     ];
     mockProgress.positionMs = 75_000; // between the two ranges
     const {result} = await renderHook(() => useTransport());
-    expect(result.current.state.normalizedWindow).toBeNull();
+    expect(result.current.state.normalizedWindow).toEqual({
+      startMs: 0,
+      endMs: 60_000,
+    });
   });
 
-  it('falls back to a single contiguous range from cacheFill percent when cacheRanges is empty', async () => {
+  it('merges ranges separated by a sub-second gap', async () => {
+    // mpv's demuxer opens and closes gaps of a few tens of ms as it
+    // reads ahead. Rendering each range separately makes the bar
+    // FLICKER, so gaps under 500 ms are merged. (Video.js uses the
+    // same 500 ms figure for its buffering indicator's onset delay.)
     mockProgress.durationMs = 300_000;
-    mockProgress.cacheFill = 25; // 25% → 0..75s
-    mockProgress.cacheRanges = [];
+    mockProgress.cacheRanges = [
+      {start: 0, end: 60_000},
+      {start: 60_400, end: 200_000}, // 400 ms gap
+    ];
     mockProgress.positionMs = 30_000;
     const {result} = await renderHook(() => useTransport());
     expect(result.current.state.bufferedRanges).toEqual([
-      {startMs: 0, endMs: 75_000},
+      {startMs: 0, endMs: 60_000},
+      {startMs: 60_400, endMs: 200_000},
     ]);
     expect(result.current.state.normalizedWindow).toEqual({
       startMs: 0,
-      endMs: 75_000,
+      endMs: 200_000,
     });
+  });
+
+  it('does NOT merge ranges separated by a gap of 1s or more', async () => {
+    // A 1 s gap is a real island. Merging it would claim that
+    // unbuffered data is buffered, and a user who seeks into the
+    // "buffered" region then stalls — worse than showing less.
+    mockProgress.durationMs = 300_000;
+    mockProgress.cacheRanges = [
+      {start: 0, end: 60_000},
+      {start: 61_000, end: 200_000}, // 1 s gap
+    ];
+    mockProgress.positionMs = 30_000;
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.normalizedWindow).toEqual({
+      startMs: 0,
+      endMs: 60_000,
+    });
+  });
+
+  it('shows the held window when mpv has evicted the start of the file', async () => {
+    // A seek makes mpv drop the cached range at the head of the file,
+    // so there is no prefix from 0 at all. The remaining range IS the
+    // data that is buffered, so painting it is not a lie — and
+    // painting nothing would understate the buffer.
+    mockProgress.durationMs = 300_000;
+    mockProgress.cacheRanges = [{start: 120_000, end: 200_000}];
+    mockProgress.positionMs = 130_000;
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.normalizedWindow).toEqual({
+      startMs: 120_000,
+      endMs: 200_000,
+    });
+  });
+
+  it('clamps the ranges to the duration and drops inverted ones', async () => {
+    mockProgress.durationMs = 300_000;
+    mockProgress.cacheRanges = [
+      {start: 0, end: 400_000}, // past the end
+      {start: 50_000, end: 40_000}, // inverted
+      {start: 70_000, end: 70_000}, // zero-length
+    ];
+    mockProgress.positionMs = 30_000;
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.bufferedRanges).toEqual([
+      {startMs: 0, endMs: 300_000},
+    ]);
+  });
+
+  it('does NOT invent a time range from the cacheFill percentage', async () => {
+    // The old fallback turned `cacheFill` (a LEVEL) into a time range:
+    // "40% of the cache is full" was painted as "the first 40% of the
+    // film is buffered". That is not what the number means — the cache
+    // fills FORWARD FROM THE PLAYHEAD and the bitrate varies, so the
+    // percentage says nothing about WHICH part of the timeline is
+    // buffered. The bar claimed data was buffered when it was not.
+    //
+    // There is no fallback now: no ranges means nothing is buffered.
+    mockProgress.durationMs = 300_000;
+    mockProgress.cacheFill = 25; // 25% → would have been 0..75s
+    mockProgress.cacheRanges = [];
+    mockProgress.positionMs = 30_000;
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.bufferedRanges).toEqual([]);
+    expect(result.current.state.normalizedWindow).toBeNull();
   });
 
   it('canEnterPip is true only when playing, not ended, not buffering', async () => {

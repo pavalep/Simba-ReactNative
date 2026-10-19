@@ -11,28 +11,23 @@
  * finished | error`. Two owners, two vocabularies, and they
  * disagreed on exactly the states the chrome reacts to.
  *
- * Now: the **controller owns the phase** (TRACKER 5.1), and this
- * hook is the bridge that (a) reads the raw lib values, (b) feeds
- * the controller the real observation, and (c) reads the single
- * owned phase back out. When no controller is mounted (isolated
- * unit tests that mock only the lib), it falls back to its own
- * derivation so the hook stays independently testable.
+ * Now: the **phase is DERIVED from the lib** and the controller
+ * keeps POLICY, not phase. It used to be the other way round — this
+ * hook fed the controller its observation and read the controller's
+ * phase back out — but the controller DISCARDED every observation
+ * (its guard required a `currentItem`, and only `controller.loadFile()`
+ * sets one, and nothing calls that: the LIB loads the file). So the
+ * controller's phase stayed `'idle'` forever and, because the
+ * controller's phase won, the loading overlay and the error overlay
+ * could never appear. The derivation below is the phase; nothing
+ * round-trips through the controller.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §5.4 + audit doc §3.G + `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md`
  * Phase 5.1.
  */
 
-import {useEffect, useSyncExternalStore} from 'react';
 import {usePlayer, usePlayerProgress} from '@simba-dev/react-native-media-player';
-// Import the DEPENDENCY-FREE singleton holder, not `useVideoController`
-// (which pulls in React + the lib + the app stores). Routing through
-// the barrel from here forms the cycle
-//   barrel → useChromeAutoHide → usePlaybackState → useVideoController
-// whose re-exported bindings then read back as `undefined`
-// ("Cannot read properties of undefined (reading
-// 'CHROME_AUTO_HIDE_MS')"). See `video/controllerSingleton.ts`.
-import {getVideoController} from './video/controllerSingleton';
 import type {VideoState} from './video/VideoController';
 
 export type {VideoState};
@@ -125,9 +120,8 @@ export function usePlaybackState(): PlaybackStateDerived {
   const isAtEnd =
     durationMs > 0 && Math.abs(durationMs - positionMs) < 500;
 
-  // The OBSERVATION derived from the lib. This is what we tell the
-  // controller; the controller then owns the phase the chrome
-  // renders.
+  // The OBSERVATION, derived from the lib. This IS the phase the chrome
+  // renders — there is no second owner and no round-trip.
   const observed: VideoState = state.error
     ? 'error'
     : isBuffering
@@ -142,26 +136,37 @@ export function usePlaybackState(): PlaybackStateDerived {
               ? 'paused'
               : 'preparing';
 
-  const controller = getVideoController();
-
-  // Feed the observation. Done in an effect (not during render) so
-  // the controller is never mutated as a render side effect.
-  useEffect(() => {
-    controller?.observePlayback(observed);
-  }, [controller, observed]);
-
-  // Read the single owned phase back out, re-rendering the chrome
-  // whenever the controller transitions.
-  const controllerState = useSyncExternalStore(
-    controller ? controller.subscribeState : () => () => {},
-    controller ? controller.getState : () => undefined,
-    controller ? controller.getState : () => undefined,
-  );
-
-  // Fall back to the local derivation when no controller is mounted
-  // (isolated unit tests) or before its first sync.
-  const videoState: VideoState =
-    controller && controllerState ? controllerState.videoState : observed;
+  // The phase is DERIVED from the lib, and the lib owns it.
+  //
+  // It used to be handed to the `VideoController`, which then owned the
+  // phase the chrome renders — and the controller DISCARDED every
+  // observation, because its guard was `if (!this.state.currentItem)
+  // return;` and `currentItem` is only set by `controller.loadFile()`,
+  // which nothing calls (the LIB loads the file; the app's launch seam
+  // hands the URI to the lib and the lib's engine takes it from there).
+  //
+  // So the controller's phase stayed `'idle'` forever, and because the
+  // controller's phase WON, `videoState` was `'idle'` forever too. Two
+  // things were dead because of it, and both were reported as bugs:
+  //
+  //   - the loading overlay (`videoState === 'preparing' || isBuffering`)
+  //     could never appear, so a buffering video showed NOTHING;
+  //   - the error overlay (`videoState === 'error'`) could never appear,
+  //     so a file that failed to load was a silent black screen.
+  //
+  // The controller's stickiness — "a late 'ready' must not downgrade an
+  // error" — is not lost. The lib clears `state.error` on the next
+  // `onFileLoaded` (`player.ts` `case 'onFileLoaded'`), so the error is
+  // already scoped to the session it happened in. That was a second owner
+  // of a fact the lib already owned, and the stale one was winning.
+  //
+  // The controller keeps its POLICY role — what is loaded, what comes
+  // next, the repeat mode. It no longer owns the phase, and it is no
+  // longer the retry target either: `VideoErrorOverlay` re-launches the
+  // app's now-playing session through the launch seam, because the
+  // controller's `currentItem` is only set by `controller.loadFile()`,
+  // and nothing calls that.
+  const videoState: VideoState = observed;
 
   return {
     videoState,

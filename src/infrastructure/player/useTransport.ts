@@ -5,16 +5,15 @@
  * the lib's existing `usePlayerProgress()` + `usePlayer()` hooks
  * (which already subscribe to the native mpv event stream and
  * populate the position / duration / buffered / seeking / seekable
- * fields at 1Hz) and adds the V19-specific derivations:
+ * fields from it) and adds the V19-specific derivations:
  *
  *   - `isPlaying`         — `!isPaused && hasFile`
  *   - `isEnded`           — `positionMs >= durationMs - epsilon`
- *   - `normalizedWindow`  — the contiguous buffered range containing
- *                           the playhead (or the single full range
- *                           if there's no gap near the playhead,
- *                           or null if the playhead is in a gap or
- *                           there are no buffered ranges). Drives
- *                           the `BufferedRangeFill` width.
+ *   - `normalizedWindow`  — the contiguous buffered PREFIX (see
+ *                           `NormalizedWindow` for the rule and why
+ *                           it is the prefix and not the playhead's
+ *                           island). Drives the `BufferedRangeFill`
+ *                           width.
  *   - `canEnterPip`       — true while the media is actively playing,
  *                           not ended and not buffering. This used
  *                           to be documented as
@@ -60,13 +59,19 @@ import {getSkipPrevThresholdMs} from '../../state/useSkipPrevThresholdStore';
 import {useOrientationLockStore} from '../../state/useOrientationLockStore';
 
 /**
- * A contiguous buffered range, normalized to milliseconds.
+ * A contiguous buffered range, in milliseconds.
  *
- * mpv's `cacheRanges` field exposes byte offsets (`{start, end}`
- * in bytes), but for the TransportBar's visual progress fill we
- * need the SAME time-space as `positionMs` / `durationMs`. The
- * facade converts bytes → ms at the boundary so the chrome never
- * has to think about byte-space.
+ * The lib's `cacheRanges` is ALREADY in milliseconds. mpv's
+ * `demuxer-cache-state` carries `seekable-ranges`, and mpv derives
+ * those from the demux queue's packet extent
+ * (`update_seek_ranges()` in mpv's `demux/demux.c`) — so they are the
+ * time spans of the data mpv currently holds, which is exactly the
+ * "buffer islands" a seek bar has to draw. mpv reports them in
+ * seconds; the native bridge converts to milliseconds because it is
+ * the only layer that knows which unit the payload carried.
+ *
+ * So this facade does NOT convert anything. It clamps to the media's
+ * duration and drops inverted ranges, and that is all.
  */
 export interface BufferedRange {
   startMs: number;
@@ -74,22 +79,45 @@ export interface BufferedRange {
 }
 
 /**
- * The single contiguous range containing the playhead, OR the
- * single full-coverage range, OR null if the playhead is in a gap.
+ * The buffered window the TransportBar paints: the contiguous PREFIX
+ * of the buffer, or null when there is no buffer.
  *
- * Algorithm (SPEC §4.2):
- *   1. If `bufferedRanges.length === 0`            → `null`
- *   2. If `positionMs === 0 && durationMs === 0`    → `null` (no file)
- *   3. Find the range whose `[start, end]` contains `positionMs`
- *      (with a 1s tolerance on the lower bound to absorb the
- *      playhead-vs-buffered slop during live playback)
- *   4. If no range contains the playhead, return null
- *   5. Otherwise return that range as `BufferedRange`
+ * ## Why the prefix, and not the playhead's island
  *
- * `BufferedRangeFill` reads this and renders a flat-fill rectangle
- * whose left edge is `(startMs / durationMs) * width` and right
- * edge is `(endMs / durationMs) * width`. When null, it renders
- * nothing — no fake placeholder.
+ * ExoPlayer exposes one number — `getBufferedPosition()`, "the absolute
+ * position up to which data is buffered" — and YouTube, Netflix and Plex
+ * all draw ONE continuous grey bar from 0 to that position, with the
+ * playhead drawn on top of it. Nobody draws a segment map.
+ *
+ * The islands are therefore NOT merged into one span. Merging `[0,10s]`
+ * and `[20s,30s]` into `[0,30s]` would claim that 10–20 s is buffered,
+ * and it is not. A user who seeks into the "buffered" region then
+ * stalls, which is worse than showing less of the buffer.
+ *
+ * The rule:
+ *   1. clamp the ranges to the duration and drop inverted ones
+ *   2. sort them by start
+ *   3. merge ranges separated by less than ~0.5 s — mpv's demuxer
+ *      opens and closes gaps of a few tens of ms as it reads ahead,
+ *      and rendering each range separately makes the bar FLICKER. 0.5 s
+ *      is the same threshold Video.js uses for its indicator's onset
+ *      delay, and it is well under a frame of perceptual noise on a
+ *      3 px track.
+ *   4. the window is the FIRST merged range
+ *
+ * Step 4 is the prefix from 0 in the normal case: while a progressive
+ * download is running, mpv's cached range grows forward from the start
+ * of the file, so the first range starts at 0 and extends to the end of
+ * the buffer.
+ *
+ * When the playhead sits in a gap, the first range is still painted and
+ * the playhead is drawn visibly BEYOND it. That is the honest picture:
+ * "we have data up to here, and we are past it".
+ *
+ * And when mpv has evicted the start of the file — a seek does that —
+ * there is no prefix from 0 at all. The first range is then the window
+ * mpv holds around the playhead, and that is what gets painted: it is
+ * the data that IS buffered, so painting it is not a lie.
  */
 export type NormalizedWindow = BufferedRange | null;
 
@@ -481,69 +509,104 @@ export interface TransportHook {
   commands: TransportCommands;
 }
 
-/** Tolerance for playhead-vs-buffered match (ms). 1s absorbs
- *  the 1Hz position-tick vs higher-rate cache-event skew. */
-const PLAYHEAD_TOLERANCE_MS = 1000;
-
 /** Minimum duration to consider a file "ended" instead of
  *  "still playing near the end". Below this we can't reliably
  *  distinguish paused-at-end from still-loading. */
 const ENDED_EPSILON_MS = 250;
 
 /**
- * Convert the lib's `cacheRanges` (byte space) to V19
- * `BufferedRange[]` (millisecond space).
+ * The largest gap that is treated as "the same range" for display.
  *
- * V13.5 placeholder: the lib currently exposes `cacheRanges` in
- * bytes via `cacheFill` percent, not as a true ms-space time
- * range. The current derivation treats the cache fill % as a
- * single contiguous range from 0 to `durationMs * cacheFill / 100`.
- * That's enough for the TransportBar's progress fill; a future
- * bridge update will expose time-space ranges (mpv's
- * `demuxer-cache-range` event carries time-space tuples directly).
+ * 500 ms — the same number Video.js uses for its buffering
+ * indicator's onset delay, and comfortably under a frame of
+ * perceptual noise on a 3 px track. mpv's demuxer opens and closes
+ * gaps of a few tens of milliseconds as it reads ahead, so a smaller
+ * threshold would make the bar flicker; a larger one would start
+ * claiming that a real island is contiguous.
+ */
+const BUFFER_GAP_MERGE_MS = 500;
+
+/**
+ * The lib's `cacheRanges` → V19 `BufferedRange[]`.
  *
- * For empty / zero-fill cache, returns `[]`.
+ * A PASS-THROUGH in milliseconds, which is the whole point of the
+ * change: the native bridge converts mpv's seconds to milliseconds
+ * because it is the only layer that knows which unit the payload
+ * carried, and the consumer receives one unit — the same one
+ * `positionMs` and `durationMs` use.
+ *
+ * This used to do two things that made the bar lie:
+ *
+ *   1. It described `cacheRanges` as BYTE OFFSETS. mpv's legacy
+ *      `ranges` field was byte offsets, and the bridge used to forward
+ *      them unlabelled; the consumer read the numbers as milliseconds.
+ *      A 60-second range arrived as 60 ms, and a byte range was
+ *      clamped to the duration and painted as a full-width "100%
+ *      buffered" bar — a bar claiming that data is buffered when it
+ *      is not. The bridge no longer forwards byte offsets at all
+ *      (lib 1.16.0), so there is nothing to convert here any more.
+ *
+ *   2. It FELL BACK to the `cacheFill` percentage when `cacheRanges`
+ *      was empty, inventing a range from 0 to
+ *      `durationMs * cacheFill / 100`. That is not a time range at
+ *      all: the cache fills FORWARD FROM THE PLAYHEAD, and the
+ *      bitrate varies, so "40% of the cache is full" says nothing
+ *      about which 40% of the timeline is buffered. It painted a bar
+ *      claiming the first 40% of the film was buffered when the
+ *      buffered data was somewhere else entirely. The fallback is
+ *      GONE: a percentage is a level, and a level is not a position.
+ *
+ * The only work left here is clamping to the duration and dropping
+ * inverted ranges.
  */
 function deriveBufferedRanges(progress: PlayerProgress): BufferedRange[] {
-  const {durationMs, cacheFill, cacheRanges} = progress;
+  const {durationMs, cacheRanges} = progress;
   if (durationMs <= 0) return [];
-  // Prefer time-space ranges if the lib ever ships them; fall
-  // back to the percent-fill approximation otherwise.
-  if (cacheRanges.length > 0) {
-    return cacheRanges.map(r => ({
-      startMs: Math.max(0, r.start),
-      endMs: Math.min(durationMs, r.end),
-    }));
-  }
-  if (cacheFill > 0) {
-    return [
-      {
-        startMs: 0,
-        endMs: Math.min(durationMs, Math.round((durationMs * cacheFill) / 100)),
-      },
-    ];
-  }
-  return [];
+  if (!Array.isArray(cacheRanges) || cacheRanges.length === 0) return [];
+  return cacheRanges
+    .map(r => ({
+      startMs: Math.max(0, Math.min(durationMs, r.start)),
+      endMs: Math.max(0, Math.min(durationMs, r.end)),
+    }))
+    .filter(r => r.endMs > r.startMs)
+    .sort((a, b) => a.startMs - b.startMs);
 }
 
+/**
+ * Merge ranges separated by less than `BUFFER_GAP_MERGE_MS`.
+ *
+ * The input is already sorted by start. The output preserves that
+ * order and is contiguous within each entry: a merged entry's `endMs`
+ * is the furthest end of the ranges it absorbed.
+ */
+function mergeSubSecondGaps(ranges: BufferedRange[]): BufferedRange[] {
+  const merged: BufferedRange[] = [];
+  for (const range of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && range.startMs - last.endMs <= BUFFER_GAP_MERGE_MS) {
+      last.endMs = Math.max(last.endMs, range.endMs);
+      continue;
+    }
+    merged.push({startMs: range.startMs, endMs: range.endMs});
+  }
+  return merged;
+}
+
+/**
+ * The buffered window: the first merged range, or null.
+ *
+ * See `NormalizedWindow` for the rule and the shipping precedent.
+ * The playhead plays no part in it — the window is the BUFFER, not
+ * the island the playhead happens to be sitting in.
+ */
 function deriveNormalizedWindow(
   ranges: BufferedRange[],
-  positionMs: number,
   durationMs: number,
 ): NormalizedWindow {
   if (ranges.length === 0) return null;
   if (durationMs <= 0) return null;
-  // Playhead in a range: pick the first range whose [start, end]
-  // contains positionMs (with tolerance on the lower bound).
-  const match = ranges.find(
-    r =>
-      positionMs >= r.startMs - PLAYHEAD_TOLERANCE_MS &&
-      positionMs <= r.endMs,
-  );
-  if (match) return match;
-  // No containing range — playhead is in a gap. Return null so
-  // BufferedRangeFill renders nothing (not a stale "100%" fill).
-  return null;
+  const merged = mergeSubSecondGaps(ranges);
+  return merged.length > 0 ? merged[0] : null;
 }
 
 function deriveCaptionTracks(tracks: ReadonlyArray<{id: number; type: string; title?: string; lang?: string; selected: boolean}> | undefined): {
@@ -607,7 +670,7 @@ export function useTransport(): TransportHook {
 
   const bufferedRanges = useMemo(
     () => deriveBufferedRanges(progress),
-    [progress.durationMs, progress.cacheFill, progress.cacheRanges],
+    [progress.durationMs, progress.cacheRanges],
   );
 
   const repeatMode = useMemo<RepeatMode>(
@@ -687,11 +750,7 @@ export function useTransport(): TransportHook {
       isSeeking,
       isEnded,
       bufferedRanges,
-      normalizedWindow: deriveNormalizedWindow(
-        bufferedRanges,
-        positionMs,
-        durationMs,
-      ),
+      normalizedWindow: deriveNormalizedWindow(bufferedRanges, durationMs),
       seekable,
       // PiP only makes sense for an actively playing, expanded
       // player. The chrome auto-hide timer (W3.5) gates the

@@ -38,7 +38,7 @@
 import * as React from 'react';
 import {Text} from 'react-native';
 import type {StyleProp, ViewStyle} from 'react-native';
-import {render} from '@testing-library/react-native';
+import {act, render} from '@testing-library/react-native';
 import type {TestInstance} from 'test-renderer';
 import {AppText} from '../../../../src/components/core/AppText/AppText';
 import {renderChrome} from '../../../helpers/renderChrome';
@@ -59,6 +59,8 @@ import {VideoErrorOverlay} from '../../../../src/components/player/video/VideoEr
 import {NextUpOverlay} from '../../../../src/components/player/video/NextUp/NextUpOverlay';
 import {VideoMoreSheet} from '../../../../src/components/player/video/VideoMoreSheet/VideoMoreSheet';
 import {VideoTitleOverlay} from '../../../../src/components/player/video/VideoTitleOverlay/VideoTitleOverlay';
+import {useNowPlayingStore} from '../../../../src/state/nowPlayingStore';
+import {usePresentationStore} from '../../../../src/state/usePresentationStore';
 import {
   useQualityStore,
   VIDEO_QUALITY_PRESETS,
@@ -165,6 +167,13 @@ jest.mock('../../../../src/infrastructure/player', () => {
     usePlaybackState: () => mockPlayback,
     // No native keyframe sampler under jest.
     useKeyframes: () => ({samples: []}),
+    // The error overlay's Retry re-launches the now-playing session
+    // through the app's launch seam. The seam itself reaches for the
+    // lib's native bridge, so it is stubbed here — this suite is about
+    // INK, not about the launch.
+    useResumeAwareLaunch: () => ({
+      openPlayer: jest.fn().mockResolvedValue(true),
+    }),
     useVideoController: () => ({
       controller: {
         getState: () => ({currentItem: {uri: 'file:///video.mp4'}}),
@@ -281,9 +290,19 @@ function inkOfIconWithin(node: TestInstance | string): string | undefined {
 async function withChrome(
   ui: React.ReactElement,
   assertion: (result: Awaited<ReturnType<typeof render>>) => void,
+  advanceMs = 0,
 ): Promise<void> {
   const result = await renderChrome(ui);
   try {
+    if (advanceMs > 0) {
+      // The buffering overlay has a 500 ms onset delay (Video.js's
+      // rule), so it is not on screen the instant it is rendered.
+      // `advanceMs` exists for those two cases; the rest of the suite
+      // needs no clock movement.
+      await act(async () => {
+        jest.advanceTimersByTime(advanceMs);
+      });
+    }
     assertion(result);
   } finally {
     await result.unmount();
@@ -301,6 +320,16 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
       videoState: 'idle',
       isBuffering: false,
       error: null,
+    });
+    // The fullscreen presentation. The overlays have a DOCK shape
+    // (a 44×44 slot has no room for a caption or a button), and the
+    // store's default is the dock — so without this the overlay would
+    // render its compact form and the ink under test would not exist.
+    usePresentationStore.setState({
+      pipActive: false,
+      videoPresentation: 'expanded',
+      videoMiniRect: null,
+      videoLaneOrigin: null,
     });
   });
 
@@ -487,21 +516,41 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
   });
 
   it('VideoLoadingOverlay: the label is on-media while preparing', async () => {
-    mockPlayback.videoState = 'preparing';
-    await withChrome(<VideoLoadingOverlay />, ({getByText}) => {
-      expect(inkOfText(getByText('Preparing video'))).toBe(ON_MEDIA_MUTED);
-    });
+    // The overlay has a 500 ms onset delay, so the clock is faked and
+    // advanced before the label can exist.
+    jest.useFakeTimers();
+    try {
+      mockPlayback.videoState = 'preparing';
+      await withChrome(
+        <VideoLoadingOverlay />,
+        ({getByText}) => {
+          expect(inkOfText(getByText('Preparing video'))).toBe(ON_MEDIA_MUTED);
+        },
+        500,
+      );
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('VideoLoadingOverlay: the spinner tint is on-media', async () => {
-    mockPlayback.isBuffering = true;
-    // `ActivityIndicator` carries its tint on a PROP (no style), so it
-    // is read through the icon/prop path, not the text path. The
-    // overlay's own label sits on a STYLE colour, so the two do not
-    // collide.
-    await withChrome(<VideoLoadingOverlay />, ({getByLabelText}) => {
-      expect(inkOfIconWithin(getByLabelText('Loading'))).toBe(ON_MEDIA_SOFT);
-    });
+    jest.useFakeTimers();
+    try {
+      mockPlayback.isBuffering = true;
+      // `ActivityIndicator` carries its tint on a PROP (no style), so it
+      // is read through the icon/prop path, not the text path. The
+      // overlay's own label sits on a STYLE colour, so the two do not
+      // collide.
+      await withChrome(
+        <VideoLoadingOverlay />,
+        ({getByLabelText}) => {
+          expect(inkOfIconWithin(getByLabelText('Loading'))).toBe(ON_MEDIA_SOFT);
+        },
+        500,
+      );
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('VideoErrorOverlay: the Close label is on-media on its dark scrim', async () => {
@@ -515,6 +564,18 @@ describe('chrome over the media surface — LIGHT theme ink', () => {
   it('VideoErrorOverlay: the Retry label KEEPS text.inverse on its gold fill', async () => {
     mockPlayback.videoState = 'error';
     mockPlayback.error = {code: 'NETWORK', recoverable: true, message: 'boom'};
+    // Retry is rendered only when there is a real retry target, and the
+    // target is the app's now-playing session. Without one there is no
+    // Retry button, and no Retry ink to check.
+    useNowPlayingStore.setState({
+      current: {
+        uri: 'file:///video.mp4',
+        title: 'Video',
+        startPositionMs: 0,
+        streamType: 'video',
+        sessionId: 1,
+      },
+    } as never);
     await withChrome(<VideoErrorOverlay />, ({getByText}) => {
       expect(inkOfText(getByText('Retry'))).toBe(lightColors.text.inverse);
     });

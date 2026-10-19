@@ -18,22 +18,61 @@
  *
  * No Play/Pause affordance — this overlay is purely informational.
  *
+ * ## It lives on the PICTURE, not in the expanded chrome
+ *
+ * This overlay used to be mounted inside `ExpandedChrome`, which only
+ * renders when the player is expanded. A video that was loading (or
+ * stalled) in the dock therefore showed NOTHING — the dock showed a
+ * black square, which is the same silent-black-screen failure the
+ * error overlay had. It is now a sibling of `<VideoSurface>` inside
+ * the picture's box, so it covers the picture wherever the picture
+ * is: fullscreen AND the 44 pt dock slot.
+ *
+ * ## Two sizes, because the dock slot is 44 pt
+ *
+ * The dock's video slot is a fixed 44×44 square. A 36 pt spinner and
+ * a "Buffering" caption do not fit in it — they overflow the slot and
+ * spill over the mini bar's artwork. So the overlay renders a SMALL
+ * spinner with no caption in the dock, and the full spinner + caption
+ * when expanded. Same affordance, sized to the box it is in.
+ *
+ * The caption is dropped rather than shrunk because a 6 pt caption is
+ * unreadable; the accessibility label still carries the state
+ * ("Loading" on the container), so a screen-reader user is not left
+ * with less than a sighted one.
+ *
+ * ## The spinner is DELAYED
+ *
+ * The spinner is not shown the instant the player stalls. See
+ * `useDelayedVisibility` for the two rules (Video.js's 500 ms onset
+ * delay, UX Tigers' 500 ms minimum visible time) and why a spinner
+ * that flickers is worse than no spinner.
+ *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.6.
  */
 
 import * as React from 'react';
 import {ActivityIndicator, StyleSheet, View} from 'react-native';
-import {usePlaybackState} from '../../../../infrastructure/player';
+import {usePlaybackState, usePresentation} from '../../../../infrastructure/player';
+import {useDelayedVisibility} from '../../../../hooks/useDelayedVisibility';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
 
 export const VideoLoadingOverlay: React.FC = () => {
   const {videoState, isBuffering} = usePlaybackState();
+  const {isMini} = usePresentation();
   const {colors} = useTheme();
 
-  const visible = videoState === 'preparing' || isBuffering;
+  const stalled = videoState === 'preparing' || isBuffering;
+
+  // 500 ms onset, 500 ms minimum visible. Video.js's buffering
+  // indicator and UX Tigers' minimum-visible-time, in one hook.
+  const visible = useDelayedVisibility(stalled, {
+    onsetDelayMs: 500,
+    minimumVisibleMs: 500,
+  });
 
   if (!visible) return null;
 
@@ -57,7 +96,7 @@ export const VideoLoadingOverlay: React.FC = () => {
       accessibilityLiveRegion="polite"
     >
       <ActivityIndicator
-        size="large"
+        size={isMini ? 'small' : 'large'}
         // On-media token: this overlay is a TRANSPARENT full-bleed
         // view over the video, which is a dark surface in BOTH themes.
         // Light theme's near-black `text.primary` made the spinner
@@ -69,12 +108,14 @@ export const VideoLoadingOverlay: React.FC = () => {
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       />
-      <AppText
-        variant="body1"
-        style={[styles.label, {color: colors.text.onMediaMuted}]}
-      >
-        {label}
-      </AppText>
+      {isMini ? null : (
+        <AppText
+          variant="body1"
+          style={[styles.label, {color: colors.text.onMediaMuted}]}
+        >
+          {label}
+        </AppText>
+      )}
     </View>
   );
 };
