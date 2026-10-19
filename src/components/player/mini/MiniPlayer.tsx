@@ -23,30 +23,23 @@
  * there is one component and the lanes differ only in what occupies the
  * leading square: artwork for audio, live video for video.
  *
- * The hole is the load-bearing part, and it exists for a physical reason.
- * `PlayerSurface.mount` adds the `MpvRenderView` at index 0 of
- * `android.R.id.content`, i.e. beneath the entire React tree, and a
- * `SurfaceView` with default z-order is a separate SurfaceFlinger layer
- * composited BEHIND the window. So **every opaque React pixel between the
- * camera and the video hides it**, and reordering the view hierarchy cannot
- * change that. `setZOrderMediaOverlay` could lift it, and is forbidden:
- * PiP's VRI compositor samples the activity window and would no longer see
- * the video — the documented reason the view keeps default z-order.
+ * The hole is the load-bearing part. The picture is `<SimbaVideo>`, a view
+ * IN this React tree, and it is composited by the same surface that draws
+ * the dock — so **every opaque React pixel between the camera and the
+ * video hides it**, and reordering the view hierarchy cannot change that.
  *
  * The bar is therefore transparent and rebuilt from three opaque plates
  * around a transparent rectangle exactly where the video is. Both the hole
- * and the rect handed to `setVideoBounds` come from ONE `measureInWindow`
+ * and the rect published for the picture come from ONE `measureInWindow`
  * pass, which is the property that matters: they cannot disagree, so the
  * video cannot land beside its own hole. Constants computed from the
  * stylesheet would be one refactor away from silently drifting.
  *
  * ## Square corners, deliberately
  *
- * The video is a rectangle because a `SurfaceView` cannot round its own
- * corners; the artwork beside it is rounded. Rounding the hole without
- * rounding the video would be a frame drawn around a rectangle that does not
- * fit it. A `TextureView` would allow both, and is rejected for the reason
- * already recorded on `MpvRenderView`: PiP shows black for it.
+ * The video is a rectangle and the artwork beside it is rounded, so
+ * rounding the hole without rounding the video would be a frame drawn
+ * around a rectangle that does not fit it.
  */
 
 import React, {useCallback, useEffect, useRef, useState} from 'react';
@@ -96,14 +89,15 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
   /**
    * Measure the leading square and the bar in the same pass.
    *
-   * The bar's rect is measured too, even though the surface only needs the
+   * The bar's rect is measured too, even though the picture only needs the
    * slot, because the plates are positioned against the bar. One pass means
    * one consistent set of numbers; measuring them at different moments
    * during a rotation could capture a bar and a slot that disagree.
    *
    * Zero-size results mean "not laid out yet" and are ignored rather than
-   * published: a 0x0 rect would make `setVideoBounds` refuse, and the
-   * refusal log would describe a layout bug that does not exist.
+   * published: a 0x0 picture is an invalid libmpv render target, so
+   * publishing one would trade a layout timing question for a broken
+   * render.
    */
   const publishGeometry = useCallback(() => {
     const root = rootRef.current;
@@ -114,10 +108,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
       if (rootW <= 0 || rootH <= 0) return;
       slot.measureInWindow((slotX, slotY, slotW, slotH) => {
         if (slotW <= 0 || slotH <= 0) return;
-        // WINDOW pixels, matching `VideoMiniRect`'s unit. No consumer reads
-        // this yet (Stage 9 places the mounted view with it); it is measured
-        // here because this layout pass is the only place the dock's real
-        // geometry exists.
+        // WINDOW pixels, matching `VideoMiniRect`'s unit. `VideoPlayer`
+        // reads it (`presentation.videoMiniRect`) and turns it into the
+        // dock placement with `dockStyleFor(...)`, so the picture's box
+        // and this hole come from one measurement.
         setVideoMiniRect({x: slotX, y: slotY, width: slotW, height: slotH});
         // The same rectangle, relative to the bar, for the plates.
         setHole({

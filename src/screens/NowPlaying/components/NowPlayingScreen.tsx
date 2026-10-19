@@ -13,19 +13,19 @@
  * on unmount. W6.0 removed the whole idea, and with it this effect.
  *
  * The mode is a function of WHERE THE MEDIA IS, not of a screen
- * transition: playback happens in `PlayerActivity`, and
- * `usePresentation()` derives `'expanded'` from
- * `useIsPlayerActivity()`. So the effect was not just redundant, it
- * was actively wrong in both directions:
+ * transition: playback happens in the single Activity, and
+ * `usePresentation()` derives `'expanded'` from `videoPresentation`.
+ * So the effect was not just redundant, it was actively wrong in both
+ * directions:
  *
  *   - On mount it forced `'expanded'` even in the `MainActivity`
  *     tree, where there is no player surface for a chrome to sit on.
- *   - On unmount it forced `'mini'` regardless of which activity was
- *     actually hosting. Nothing in the app ever navigates to this
- *     route (its only entry point is the `simba://now-playing` deep
- *     link), so the mount path effectively never ran and the unmount
- *     path could fire at any arbitrary time — including while the
- *     player was fully expanded.
+ *   - On unmount it forced `'mini'` regardless of what was actually
+ *     showing. Nothing in the app ever navigates to this route (its
+ *     only entry point is the `simba://now-playing` deep link), so the
+ *     mount path effectively never ran and the unmount path could fire
+ *     at any arbitrary time — including while the player was fully
+ *     expanded.
  *
  * Keeping it would have meant reintroducing exactly the cross-root
  * write that shipped a black player screen: `mode` written into a
@@ -56,8 +56,8 @@ import type {NowPlayingScreenProps} from '../types';
 
 export const NowPlayingScreen: React.FC<NowPlayingScreenProps> = () => {
   // All chrome primitives live in VideoPlayer at the shell, and
-  // the presentation mode is derived from the host activity. There is
-  // nothing for this route to do.
+  // the presentation mode is derived from the video presentation
+  // request. There is nothing for this route to do.
   return null;
 };
 

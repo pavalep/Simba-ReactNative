@@ -3,20 +3,13 @@
  *
  * ## Why audio needs this store and video does not
  *
- * Video's presentation is DERIVED, never stored. `PlayerActivity` is the
- * full-screen video player; there is no video mini dock, so "is the
- * video player showing" is answered by asking the host tree
- * (`useIsPlayerActivity()`) and nothing has to be written anywhere. See
+ * Video's presentation is DERIVED, never stored — see
  * `usePresentationStore` for the full account, and for the black-screen
- * incident that removed the stored version: `App` is mounted once per
- * Android Activity React root, so while the player is up there are two
- * live roots writing the same process-global store, and `mode` ping-
- * ponged between them forever.
+ * incident that removed the stored version.
  *
- * Audio has no Activity, so there is no per-tree fact to derive from —
- * the full player and the mini bar both live in the MainActivity tree,
- * and which one is showing is a genuine user decision. It has to be
- * stored.
+ * Audio has no Activity and no per-tree fact to derive from — the full
+ * player and the mini bar both live in the MainActivity tree, and which
+ * one is showing is a genuine user decision. It has to be stored.
  *
  * ## The rule this store still obeys: gestures only
  *

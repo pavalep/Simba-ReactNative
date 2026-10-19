@@ -95,41 +95,26 @@ export interface BlockedStreamError {
 }
 
 /**
- * V22 — A `launch` error — the `PlayerActivity` couldn't be launched.
+ * V22 — A `launch` error — the player could not be started.
  *
- * The native `MpvBridgeModule.openPlayer` rejects with one of 5
- * documented codes when the launch fails for reasons unrelated to
- * the content:
- *   - `E_INVALID_TYPE`        — the `type` arg wasn't 'video' or 'audio'
- *                              (defensive guard, JS-side type system
- *                              normally prevents this)
- *   - `E_NO_ACTIVITY`         — no current activity available (bridge
- *                              called from headless context)
- *   - `E_ACTIVITY_NOT_FOUND`  — `PlayerActivity` not declared in the
- *                              AndroidManifest (broken manifest)
- *   - `E_SECURITY`            — manifest restriction refused the launch
- *   - `E_OPEN_PLAYER_FAILED`  — catch-all (e.g. startActivity threw)
- *
- * All five are app-side / device-state issues, not content/credential
- * problems, so they map to a dedicated variant (not `network` / `blocked`).
+ * A launch failure is an app-side / device-state problem, not a
+ * content/credential one, so it gets a dedicated variant (not
+ * `network` / `blocked`).
  *
  * **B-009**: the pre-V22 facade collapsed every bridge rejection to
  * `network`, so the user saw "No connection" toasts even when the
- * player launch was the failure (e.g. when archive.org's stream URL
- * was correct but `startActivity` threw `SecurityException`). Call
- * sites that need a per-launch-message UI can branch on `code` and
- * `userFixable`.
+ * launch was the failure. Call sites that need a per-launch-message UI
+ * can branch on `code` and `userFixable`.
  */
 export interface LaunchStreamError {
   readonly kind: 'launch';
   readonly message: string;
-  /** The native error code (E_INVALID_TYPE / E_NO_ACTIVITY / E_ACTIVITY_NOT_FOUND / E_SECURITY / E_OPEN_PLAYER_FAILED). */
+  /** The native error code the bridge carried, when it had one. */
   readonly code?: string;
-  /** Underlying cause (e.g. startActivity exception message). */
+  /** Underlying cause (e.g. the bridge's own exception message). */
   readonly cause?: string;
-  /** True when the user can fix this themselves (E_NO_ACTIVITY when
-   *  the app is misconfigured mid-use). False for app-side bugs
-   *  (E_ACTIVITY_NOT_FOUND, E_INVALID_TYPE). */
+  /** True when the user can fix this themselves. False for app-side
+   *  bugs (a misconfigured build, a refused manifest entry). */
   readonly userFixable: boolean;
 }
 

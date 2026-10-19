@@ -1,39 +1,20 @@
 /**
  * V21 F5 A1 — playlist launches go through the app seam.
  *
- * ## What was wrong
- *
- * Every single-track launch in the app goes through `useResumeAwareLaunch`,
- * which records the session, derives the lane, honours resume and — since F3 —
- * loads video in-window. Playlist launches did not. `useAlbumScreen`,
- * `useArtistScreen` and `useLibraryScreen` called the **lib's**
- * `useOpenPlaylist`, which resolves to the lib's own `usePlayerActivity`:
+ * ## The live routing
  *
  * ```
- * app useOpenPlaylist  ->  lib usePlayerActivity().openPlayer
- *                              type 'audio' -> startAudioPlayback
- *                              type 'video' -> bridge.openPlayer -> startActivity
+ * app useOpenPlaylist  ->  app useResumeAwareLaunch().openPlayer
  * ```
  *
- * Three consequences, all live today:
- *
- *   1. **No lane, no kind.** The seam never runs, so the session records no
- *      `mediaLane`. `PlaylistEntry` carries `type` (kind) and `mediaType`
- *      (lane) on every entry and both were dropped on the floor — the same
- *      class of defect as `C-16`, where an absent lane let
- *      `normalizeMediaClassification` fill the hole with `'audio'`.
- *   2. **No resume.** The lib hook takes `startPositionMs` and nothing else;
- *      it never consults the resume policy, so "play all" from an album you
- *      were halfway through started from zero.
- *   3. **A live path to `PlayerActivity`.** `OpenPlaylistOptions.type`
- *      permits `'video'`, so one video playlist would re-open the second
- *      window that the entire V21 refactor exists to remove — and it would
- *      do so after F5 deleted the class, throwing `ActivityNotFoundException`
- *      on a green build. This is why A1 runs before A2 (spec §5.2).
+ * The app never calls the lib's `usePlayerActivity` itself: the seam owns
+ * the session, the lane and the resume policy before anything is handed
+ * on, and a video load happens in-window — no `startActivity`, no second
+ * Activity anywhere in this path.
  *
  * ## What it deliberately does NOT do
  *
- * It does not manage the queue. All three call sites already call
+ * It does not manage the queue. The call sites already call
  * `usePlayerStore.getState().loadPlaylistToPlayer(...)` before launching, and
  * that ordering is the app's, not the lib's. Folding queue ownership in here
  * would be a second owner for one fact.
@@ -145,7 +126,7 @@ export function orderPlaylist(
  * Launch a playlist through the app seam.
  *
  * Replaces the lib's `useOpenPlaylist` in the app's barrel. Same name, same
- * call shape — the three existing call sites need no edit, and the name stays
+ * call shape — the existing call sites need no edit, and the name stays
  * accurate because the verb did not change. What changed is that the start
  * track now goes through the same seam every other launch uses.
  */

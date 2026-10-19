@@ -1,15 +1,14 @@
 /**
  * V22 B-009 — Bridge error code → typed `StreamError` mapper.
  *
- * `MpvBridgeModule.openPlayer` (Kotlin side) rejects with one of 5
- * documented codes (see `MpvBridgeModule.kt:1235-1239`):
+ * The bridge has no `openPlayer` method any more — video loads in-window
+ * and audio starts a foreground service — so there is no "launch an
+ * Activity" step for a code to describe. What the bridge does have is an
+ * error-code registry (`MpvBridgeModule.codeToNumeric`), and the codes
+ * below are the launch-range ones still registered there:
  *
- *   - `E_INVALID_TYPE`        → unsupported (the type arg was bad;
- *                              normally caught at the TS type boundary)
- *   - `E_NO_ACTIVITY`         → launch (no current activity to launch from)
- *   - `E_ACTIVITY_NOT_FOUND`  → launch (PlayerActivity missing from manifest)
  *   - `E_SECURITY`            → blocked (manifest restriction refused)
- *   - `E_OPEN_PLAYER_FAILED`  → launch (catch-all startActivity failure)
+ *   - `E_OPEN_PLAYER_FAILED`  → launch (catch-all launch failure)
  *
  * Pre-V22 the facade collapsed every rejection to `network`, so users
  * saw "No connection" toasts even when the launch itself was the
@@ -27,14 +26,18 @@ import {
   blockedError,
   launchError,
   networkError,
-  unsupportedError,
   type StreamError,
 } from './streamErrors';
 
-/** Native error codes surfaced by `MpvBridgeModule.openPlayer`. */
+/**
+ * Native error codes the lib's bridge still registers for the launch
+ * range (`MpvBridgeModule.codeToNumeric`).
+ *
+ * The mapper gives some of them their own variant; the rest fall through
+ * to the default branch, which treats an unrecognised-but-registered code
+ * as a launch failure rather than mislabelling it as a network error.
+ */
 export type BridgeLaunchErrorCode =
-  | 'E_INVALID_TYPE'
-  | 'E_NO_ACTIVITY'
   | 'E_ACTIVITY_NOT_FOUND'
   | 'E_SECURITY'
   | 'E_OPEN_PLAYER_FAILED';
@@ -55,28 +58,6 @@ export function mapBridgeLaunchError(e: unknown): StreamError {
   const cause = e instanceof Error ? e.message : String(e);
 
   switch (code) {
-    case 'E_INVALID_TYPE':
-      return unsupportedError('Player does not support this media type', {
-        format: cause,
-      });
-
-    case 'E_NO_ACTIVITY':
-      // Bridge called from a context with no current activity —
-      // usually a headless / background path. Retryable: the user
-      // can foreground the app and try again.
-      return launchError(
-        'Player is not ready — open the app and try again',
-        {code, cause, userFixable: true},
-      );
-
-    case 'E_ACTIVITY_NOT_FOUND':
-      // PlayerActivity missing from AndroidManifest — app-side bug,
-      // not user-fixable. Reinstall or file a bug.
-      return launchError(
-        'Player screen is not installed in this build',
-        {code, cause, userFixable: false},
-      );
-
     case 'E_SECURITY':
       // Manifest restriction refused the launch — usually a build
       // / signing issue, not user-fixable.
@@ -86,7 +67,7 @@ export function mapBridgeLaunchError(e: unknown): StreamError {
       );
 
     case 'E_OPEN_PLAYER_FAILED':
-      // Catch-all from `startActivity` — surface the cause verbatim
+      // Catch-all from the bridge — surface the cause verbatim
       // so users can report it.
       return launchError(
         `Player could not start — ${cause}`,

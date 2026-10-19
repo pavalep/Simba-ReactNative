@@ -1,10 +1,10 @@
 /**
  * V19 W6.0 — `usePresentationStore`: PiP flow state ONLY.
  *
- * `presentation` is an app-side concept, not a lib concept. The lib's
- * `PlayerActivity` is `launchMode="singleTask"` — there's only one
- * presentation at the native level (fullscreen activity).
- * Mini/expanded/pip is a JS-side decision the chrome reads.
+ * `presentation` is an app-side concept, not a lib concept. The app has
+ * ONE Android Activity and ONE React root, so there is no second native
+ * presentation to be in — mini/expanded/pip is a JS-side decision the
+ * chrome reads.
  *
  * ## Why this store holds `pipActive` and NOT `mode`
  *
@@ -14,15 +14,13 @@
  * shipped a black player screen with no chrome at all, and the cause
  * was structural, not a typo:
  *
- * Each Android activity hosts its OWN React root, so `App` — and
- * with it `usePresentationSync` — is mounted TWICE while the player
- * is up: once in the background `MainActivity` tree
- * (`isPlayerActivity === false`) and once in the foreground
- * `PlayerActivity` tree (`isPlayerActivity === true`). Both roots
- * write the SAME process-global zustand store, and `mode` was in the
- * effect's dependency array, so each root's write re-triggered the
- * other's effect, which wrote back. The store ping-ponged
- * `expanded → mini → expanded → mini` forever.
+ * At the time, each Android activity hosted its OWN React root, so
+ * `App` — and with it `usePresentationSync` — was mounted TWICE while
+ * the player was up: once in the background activity tree and once in
+ * the foreground player tree. Both roots wrote the SAME process-global
+ * zustand store, and `mode` was in the effect's dependency array, so
+ * each root's write re-triggered the other's effect, which wrote back.
+ * The store ping-ponged `expanded → mini → expanded → mini` forever.
  *
  * The visible symptom was worse than a lost toggle. The chrome gate
  * returns `null` in `'mini'`, so the entire compositor was mounted
@@ -42,11 +40,11 @@
  * So `mode` is not state. It is computed at read time in
  * `usePresentation()` from exactly two inputs:
  *
- *   1. `isPlayerActivity` — a fact about THIS React tree, already
- *      answered synchronously by lib 1.7.0's `useIsPlayerActivity()`.
- *      Correct on the first render, so there is no frame of wrong
- *      chrome, and impossible for two trees to disagree about
- *      because each tree asks about itself.
+ *   1. `videoPresentation` — a fact about THIS React tree: has the app
+ *      been asked to show video fullscreen? It is written only by user
+ *      gestures and by the launch seam, so it is correct on the first
+ *      render (no frame of wrong chrome), and two trees cannot disagree
+ *      about it because there is only one tree.
  *   2. `pipActive` — below. Genuinely global: the PiP window is a
  *      window state, not a tree state.
  *
@@ -107,22 +105,9 @@ export type VideoPresentation = 'expanded' | 'mini';
 /**
  * The mini player's live on-screen rect, in WINDOW pixels.
  *
- * It used to exist for a hand-off that no longer happens:
- * `useVideoSurface` read it and passed it to the lib's `setVideoBounds`,
- * because a `SurfaceView` mounted at `android.R.id.content` sits outside any
- * React node and could only be positioned in window coordinates. That is why
- * the unit here is WINDOW pixels and not a React-relative layout value.
- *
- * `<SimbaVideo>` is a React child now, so React Native positions it directly
- * and nothing needs a coordinate hand-off. `useVideoSurface` is deleted and
- * **this field currently has one writer and no reader** — `MiniPlayer`
- * publishes it, nothing consumes it.
- *
- * It is kept because Stage 9 gives it its reader: collapsing the video lane
- * onto D9 means ONE mounted `<SimbaVideo>` that fullscreen and the dock
- * differ by `style` on, and this measured rect is exactly the dock's
- * geometry. Stated plainly so the next reader does not go looking for a
- * consumer that does not exist yet.
+ * The unit is WINDOW pixels because the dock's geometry is read from the
+ * window, not from React layout, and it is consumed by `VideoPlayer`,
+ * which uses it to place the picture in the dock's slot.
  */
 export interface VideoMiniRect {
   x: number;
@@ -190,31 +175,11 @@ export interface PresentationState {
    * even before that, the writers are user/launch events rather than
    * per-tree reconcilers.
    *
-   * ## Why this starts `'mini'` (2026-10-16)
+   * ## Why this starts `'mini'`
    *
-   * It used to start `'expanded'`, and that was only ever survivable because
-   * a second gate hid it: the old derivation was
-   * `videoSurfacePresented ? 'expanded' : 'mini'`, and that flag is `false`
-   * on a cold start, so `'expanded'` never actually took effect until a real
-   * video launch happened.
-   *
-   * `videoSurfacePresented` is deleted now — the picture is a view in the
-   * tree, so the mode is structural. Removing the mask exposed the value
-   * underneath, and it was simply wrong: on a cold start **no writer has
-   * run**, there is no video, and nothing can be expanded.
-   *
-   * This is not cosmetic. With `'expanded'` as the cold-start value,
-   * `VideoPlayerChrome` mounted the entire expanded video chrome over an
-   * empty player on every cold start. Each of those components calls the
-   * bridge in its own mount effect, and React runs **child effects before
-   * parent effects** — so they beat `PlayerProvider`'s own
-   * `initPlayer()` effect. The result, on device, was eight consecutive
-   * `MpvPlayerModule not initialized. Call initPlayer() first.` native
-   * exceptions and a red screen at launch.
-   *
-   * `'mini'` is the honest cold-start value: it mounts no video chrome, so
-   * nothing races the engine, and the launch seam promotes it to
-   * `'expanded'` the moment a video actually starts.
+   * `'mini'` is the honest cold-start value: on a cold start no writer has
+   * run and there is no video, so nothing can be expanded. The removed mask
+   * was hiding a value that was simply wrong.
    */
   videoPresentation: VideoPresentation;
 

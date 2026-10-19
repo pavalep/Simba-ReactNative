@@ -50,9 +50,8 @@
  * store therefore records what the user asked for, and the header
  * re-applies it on mount. That is sound here because of a structural
  * guarantee, not luck: the header only mounts inside `ExpandedChrome`,
- * whose mount gate is `presentation.isExpanded === isPlayerActivity`.
- * So by the time anything reads this store, `getCurrentActivity()` is
- * the `PlayerActivity` and the request cannot be dropped for want of an
+ * whose mount gate is `presentation.isExpanded`. There is ONE Activity,
+ * so the orientation request cannot be dropped for want of a host
  * activity. If a future caller needs the lock outside that gate, it
  * must re-apply on its own mount rather than assume this one did.
  *
