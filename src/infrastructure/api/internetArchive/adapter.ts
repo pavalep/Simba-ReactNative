@@ -102,6 +102,13 @@ interface IAMetadataResponse {
     title?: string;
     track?: string;
     length?: string;
+    /**
+     * Size in bytes, as a decimal string. Used to pick a streamable file
+     * rather than merely the first acceptable one — on archive.org the
+     * original and its own h.264 transcodes for the same title routinely
+     * differ by an order of magnitude.
+     */
+    size?: string;
   }[];
 }
 
@@ -173,19 +180,62 @@ function extractSubtitleLanguage(filename: string): string {
   return 'Unknown';
 }
 
-/** Ordered list of video formats we can stream (broadest device support first). */
+/**
+ * Video formats we can stream, best first.
+ *
+ * Matching is by SUBSTRING, not equality, because archive.org decorates these
+ * names: the same codec arrives as `h.264`, `h.264 HD`, `h.264 IA`, `MPEG4`,
+ * `MPEG-4`. An `includes()` on the raw string silently misses most of them.
+ *
+ * ## What is deliberately NOT here
+ *
+ * `Cinepack` and `AVI` are absent. They are listed last as a fallback only
+ * (see `VIDEO_FALLBACK_FORMATS`), because an AVI cannot stream:
+ * its index lives at the END of the file, so a player must fetch the tail of
+ * a 700 MB file before it can play the first frame. Measured on device —
+ * a 699 MB Cinepack AVI raised `MPV_EVENT_END_FILE reason=4 error=-13`
+ * (`MPV_ERROR_LOADING_FAILED`), and the app showed a silent black frame.
+ */
 const VIDEO_FORMATS: readonly string[] = [
   'h.264',
   'h264',
-  'MPEG4',
-  'MPEG-4',
-  'Matroska',
-  'WebM',
-  'Ogg Theora',
-  'Ogg Video',
-  'Cinepack',
-  'AVI',
+  'mpeg4',
+  'mpeg-4',
+  'matroska',
+  'webm',
+  'ogg theora',
+  'ogg video',
 ];
+
+/**
+ * Last-resort formats: playable in principle, hostile in practice. Ranked
+ * after every format above so an item that ships ONLY a Cinepack AVI still
+ * plays rather than being declared unavailable — but it is never chosen when
+ * an h.264 file exists for the same item.
+ */
+const VIDEO_FALLBACK_FORMATS: readonly string[] = ['cinepack', 'avi', 'mpeg2'];
+
+/** Rank of a file's format, or `-1` when it is not a video we can stream. */
+function videoFormatRank(format: string): number {
+  const f = (format || '').toLowerCase();
+  const idx = VIDEO_FORMATS.findIndex(candidate => f.includes(candidate));
+  if (idx !== -1) return idx;
+  const fb = VIDEO_FALLBACK_FORMATS.findIndex(c => f.includes(c));
+  // Past the end of the preferred list, but still a candidate.
+  return fb === -1 ? -1 : VIDEO_FORMATS.length + fb;
+}
+
+/**
+ * Size in bytes, or `Infinity` when the file list did not say.
+ *
+ * `Infinity` rather than a large constant on purpose: a file whose size is
+ * unknown must not outrank one whose size IS known, because the whole point
+ * of the comparison is to avoid committing to a download we cannot size.
+ */
+function fileSizeBytes(f: {size?: string}): number {
+  const n = Number(f.size);
+  return Number.isFinite(n) && n >= 0 ? n : Infinity;
+}
 
 /** Build the universal thumbnail URL for an item identifier. */
 function imageUrlFor(identifier: string): string {
@@ -425,17 +475,44 @@ export const internetArchiveVideoDetailsFromRaw = (
   const md = data.metadata;
   const files = data.files ?? [];
 
-  const videoFiles = files.filter(
-    f => f.source === 'original' && VIDEO_FORMATS.includes(f.format),
-  );
-  // Prefer h.264 → MPEG4 → anything video-shaped
-  const primaryVideo =
-    videoFiles.find(f => f.format === 'h.264' || f.format === 'h264') ||
-    videoFiles.find(f => f.format === 'MPEG4' || f.format === 'MPEG-4') ||
-    videoFiles.find(f => f.format === 'Matroska') ||
-    videoFiles.find(f => f.format === 'WebM') ||
-    videoFiles[0] ||
-    null;
+  /**
+   * Candidate video files: BOTH the uploaded original and archive.org's own
+   * transcodes.
+   *
+   * This used to read `f.source === 'original'`, which was wrong in three
+   * separate ways, all measured against the live API:
+   *
+   *   1. It EXCLUDED items that only have derivatives. `e_history_..._01`
+   *      ships a single `derivative` h.264 MP4 and no original at all, so
+   *      `videoFiles` was empty, the partial-replication guard below fired,
+   *      and an entirely playable film was reported as unplayable.
+   *   2. It ignored the transcode archive.org exists precisely so clients can
+   *      stream. `IAccuseMyParents` has a 389 MB h.264 derivative and a
+   *      699 MB Cinepack AVI original; only the AVI was ever considered.
+   *   3. It picked the LARGEST file. `cpa_000031` has a 66 MB h.264
+   *      derivative and an 837 MB `h.264 HD` original; the original won, and
+   *      the client committed to 12x the download.
+   *
+   * The comment beside the old code claimed it "prefers h.264 -> MPEG4". It
+   * could not: every h.264 on archive.org is a derivative, and derivatives
+   * had already been filtered out. That is a comment describing behaviour the
+   * code did not have.
+   */
+  const videoFiles = files
+    .map((f, index) => ({file: f, rank: videoFormatRank(f.format), index}))
+    .filter(c => c.rank !== -1)
+    .sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      // Same format: the smaller file streams. Ties fall back to the order
+      // archive.org listed them, so the result stays deterministic.
+      const sa = fileSizeBytes(a.file);
+      const sb = fileSizeBytes(b.file);
+      if (sa !== sb) return sa - sb;
+      return a.index - b.index;
+    })
+    .map(c => c.file);
+
+  const primaryVideo = videoFiles[0] ?? null;
 
   const subtitles: InternetArchiveSubtitleFile[] = files
     .filter(f => {

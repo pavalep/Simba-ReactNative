@@ -396,6 +396,57 @@ runs, "video renders" is unproven — but note the bar is now much lower than it
 was, because every layer between React and the renderer has been measured
 working.
 
+#### 2026-10-19 — 🟢 VIDEO RENDERS. The cause was the file, not the surface.
+
+The P1 control test turned out to be unnecessary, and it is worth recording
+why: **the app's own archive.org adapter was choosing the wrong file.**
+
+`internetArchiveVideoDetailsFromRaw` filtered candidates with
+`f.source === 'original'`. Measured against the live metadata API, that is
+wrong in three independent ways:
+
+| item | on archive.org | what the filter did |
+|---|---|---|
+| `e_history_StreamRoot_…` | `derivative` h.264 50.9 MB **only** | no candidates → item declared unplayable |
+| `cpa_000031` | derivative 66.3 MB vs original `h.264 HD` **837 MB** | picked the 837 MB |
+| `IAccuseMyParents` | derivative h.264 389 MB vs original **Cinepack** 699 MB | picked the Cinepack AVI |
+
+archive.org publishes every upload twice: the original, and its own h.264
+transcode made for streaming. Filtering to `original` excluded the transcodes,
+preferred the largest file, and made AVI-only items unplayable. AVI is the
+worst possible streaming source — its index sits at the *end*, so mpv must
+fetch the tail of a 700 MB file before the first frame. The old code's comment
+claimed it "prefers h.264 → MPEG4"; it could not, because every h.264 on
+archive.org is a derivative and derivatives had already been filtered out.
+A comment describing behaviour the code did not have.
+
+Format matching was also `VIDEO_FORMATS.includes(f.format)` — exact equality,
+so `h.264 HD` and `h.264 IA` matched nothing.
+
+**Fixed:** candidates are every video-shaped file regardless of `source`;
+format matching is by substring; `Cinepack`/`AVI` rank last as a fallback so
+an item shipping *only* an AVI still plays; and within a format the smallest
+file wins. Unknown size ranks behind known size.
+
+**Proven on device.** `The Battle of Midway, 1942` now loads
+`Battle.of.Midway.1942.mp4`, `videoReconfig` fires twice, and **decoded frames
+paint** — two different frames observed (a cockpit shot, then a seagull).
+
+**Everything below the file selection was already correct.** The Fabric view
+mounted, the surface attached with real extents (`1080x1907`), `vo=gpu` was
+set, and the renderer worked. The TextureView question, the Yoga guard, and
+two days of surface architecture were answering a question the logs had
+already answered.
+
+Two P1 symptoms also resolved as a side effect of media actually loading:
+`Elapsed` went `0:00` → `2:28`, and the seek bar went from
+`"Live stream — not seekable"` `[disabled]` to `"Playback position"`
+`[clickable]` — **the false LIVE badge is gone**.
+
+Still broken: `Remaining time unknown --:--`. Position reports and duration
+does not, so this is now a narrow bug in the `duration` property rather than
+the general "nothing loaded" state it used to be lost in.
+
 ### Stage 7 — `A` remove the invariant
 Delete `BrowsingStack` · delete `MainActivity` surface mount · delete
 `PlayerSurface` import surface · revise the 17 test files.
