@@ -52,6 +52,12 @@ export interface PlaybackStateDerived {
    * show the copy the classifier prescribes, instead of the
    * hardcoded "Connection problem" the W1 stub used to render for
    * every failure.
+   *
+   * `recoverable` means "playback continued" (lib v1.17.0): `false` is
+   * the terminal case that the error card renders, `true` is a
+   * degradation the engine complained about while the picture kept
+   * playing. A non-terminal failure is NOT the phase — it is exposed
+   * here for the classifier, not to paint over a moving picture.
    */
   error: unknown;
 }
@@ -60,15 +66,14 @@ export interface PlaybackStateDerived {
  * Hook that derives playback state from the lib and keeps the
  * `VideoController` in sync.
  *
- * Derivation rules for the *observation* fed to the controller
- * (SPEC §6 playback axis):
- *  - `error`     — lib reported a failure (`state.error !== null`)
+ * Derivation rules for the phase the chrome renders:
+ *  - `error`     — a TERMINAL failure (`state.error.recoverable === false`)
  *  - `buffering` — `usePlayerProgress().isBuffering === true`
+ *  - `preparing` — the file is OPENING (`state.isLoading`, lib v1.17.0)
  *  - `playing`   — `state.isPlaying === true`
  *  - `idle`      — no session
  *  - `finished`  — has session, !isPlaying, position ≈ duration
  *  - `paused`    — has session, !isPlaying, position > 0
- *  - `preparing` — has session, !isPlaying, at position 0
  */
 export function usePlaybackState(): PlaybackStateDerived {
   const {state} = usePlayer();
@@ -120,21 +125,63 @@ export function usePlaybackState(): PlaybackStateDerived {
   const isAtEnd =
     durationMs > 0 && Math.abs(durationMs - positionMs) < 500;
 
+  // **The file is OPENING** (lib v1.17.0's `state.isLoading`).
+  //
+  // This has to be its own phase, and it has to come from the lib,
+  // because neither of the two facts this hook used to derive from is
+  // the truth while a file is opening:
+  //
+  //   - `state.isPlaying` — mpv's core state is "playing" from the
+  //     moment `loadfile` is called until the file has been parsed. So
+  //     "playing" during a load means "the engine was told to play",
+  //     not "the file is playing".
+  //   - `hasSession` — the playlist is not populated until the file
+  //     arrives, so "idle" during a load means "no playlist entry yet".
+  //
+  // Device evidence (2026-10-20, Android 37): a 9-second load over a
+  // throttled link showed NOTHING at all — no spinner, no message —
+  // because "preparing" was unreachable and both available phases were
+  // wrong. The lib now owns the fact: `isLoading` is true from
+  // `onLoadRequested` until the file arrives (or the file ends).
+  const isLoading = state.isLoading === true;
+
+  // **A TERMINAL failure is the only one that ends playback.**
+  //
+  // The lib's `recoverable` flag means "playback continued":
+  //
+  //   - `recoverable: false` — mpv's END_FILE path. The file failed;
+  //     playback stopped. This is the case the error card is for.
+  //   - `recoverable: true` — a fatal-level mpv LOG line. The engine
+  //     complained (an audio-track init failure, say) but the picture
+  //     kept playing.
+  //
+  // Device evidence (2026-10-20): on the emulator (no audio device) mpv
+  // logged "AudioTrack Init failed" at fatal level while the video
+  // played on — and the error card covered the WORKING video, offering
+  // a Retry for a file that was playing. A degradation is not a
+  // failure, and it must not paint over a picture that is moving.
+  const terminalError =
+    state.error != null && state.error.recoverable === false
+      ? state.error
+      : null;
+
   // The OBSERVATION, derived from the lib. This IS the phase the chrome
   // renders — there is no second owner and no round-trip.
-  const observed: VideoState = state.error
+  const observed: VideoState = terminalError
     ? 'error'
     : isBuffering
       ? 'buffering'
-      : state.isPlaying
-        ? 'playing'
-        : !hasSession
-          ? 'idle'
-          : isAtEnd
-            ? 'finished'
-            : positionMs > 0
-              ? 'paused'
-              : 'preparing';
+      : isLoading
+        ? 'preparing'
+        : state.isPlaying
+          ? 'playing'
+          : !hasSession
+            ? 'idle'
+            : isAtEnd
+              ? 'finished'
+              : positionMs > 0
+                ? 'paused'
+                : 'preparing';
 
   // The phase is DERIVED from the lib, and the lib owns it.
   //

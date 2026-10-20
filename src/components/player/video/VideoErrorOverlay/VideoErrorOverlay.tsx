@@ -145,6 +145,10 @@ export const VideoErrorOverlay: React.FC = () => {
           styles.miniScrim,
           {backgroundColor: colors.background.surfaceDark},
         ]}
+        // The z-order of this overlay is load-bearing: it must sit ABOVE
+        // the video's gesture layer, or its buttons stop receiving
+        // touches. See `VideoPlayer.tsx`.
+        testID="video-error-overlay"
         // The dock shape must not swallow the tap that expands the
         // player — the actions live on the expanded card.
         pointerEvents="none"
@@ -169,6 +173,10 @@ export const VideoErrorOverlay: React.FC = () => {
         styles.scrim,
         {backgroundColor: colors.background.surfaceDark},
       ]}
+      // The z-order of this overlay is load-bearing: it must sit ABOVE
+      // the video's gesture layer, or its buttons stop receiving
+      // touches. See `VideoPlayer.tsx`.
+      testID="video-error-overlay"
       accessibilityRole="alert"
     >
       <View style={styles.card}>

@@ -380,6 +380,11 @@ export const VerticalSwipeGestures: React.FC<{
         pointerEvents="box-none"
         accessibilityElementsHidden
         importantForAccessibility="no"
+        // The z-order of this layer is load-bearing: it is a native
+        // gesture view, so it CLAIMS the touches in its bounds. It must
+        // therefore sit BELOW the loading/error overlays, or their
+        // controls become unpressable. See `VideoPlayer.tsx`.
+        testID="video-gesture-layer"
       >
         <GestureDetector gesture={composed}>
           <View style={styles.gestureSurface} collapsable={false} />

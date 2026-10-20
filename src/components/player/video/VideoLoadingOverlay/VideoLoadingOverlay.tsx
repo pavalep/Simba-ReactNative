@@ -82,6 +82,10 @@ export const VideoLoadingOverlay: React.FC = () => {
     <View
       pointerEvents="none"
       style={styles.container}
+      // The z-order of this overlay is load-bearing: it must sit ABOVE
+      // the video's gesture layer, or anything interactive under it
+      // stops receiving touches. See `VideoPlayer.tsx`.
+      testID="video-loading-overlay"
       // `accessible` is what makes this View an accessibility element
       // at all. Without it, iOS VoiceOver skips the node entirely and
       // BOTH `accessibilityRole="progressbar"` and

@@ -140,9 +140,15 @@ jest.mock('../../../../../src/components/player/video/TransportBar/TransportBar'
 jest.mock('../../../../../src/components/player/video/ChromeAutoHide/ChromeAutoHideController', () => ({
   ChromeAutoHideController: passthrough,
 }));
-jest.mock('../../../../../src/components/player/video/Gestures/VerticalSwipeGestures', () => ({
-  VerticalSwipeGestures: passthrough,
-}));
+// The gesture layer is mocked as a VISIBLE host element so the test can
+// ask WHERE it sits. It is a native gesture view, so its z-order is
+// load-bearing — see the test that pins it.
+jest.mock('../../../../../src/components/player/video/Gestures/VerticalSwipeGestures', () => {
+  const {createElement} = require('react');
+  return {
+    VerticalSwipeGestures: () => createElement('GestureLayer', {testID: 'gesture-layer'}),
+  };
+});
 jest.mock('../../../../../src/components/player/video/NextUp/NextUpOverlay', () => ({
   NextUpOverlay: passthrough,
 }));
@@ -222,6 +228,60 @@ describe('the video lane carries the loading and error overlays', () => {
 
     expect(screen.getByTestId('loading-overlay')).toBeTruthy();
     expect(screen.getByTestId('error-overlay')).toBeTruthy();
+    result.unmount();
+  });
+
+  /**
+   * The z-order claim.
+   *
+   * `VerticalSwipeGestures` is an RNGH `GestureDetector` — a NATIVE view
+   * that claims the touches in its bounds. It used to live in
+   * `ExpandedChrome`, a later sibling of the picture's box, so it was
+   * painted ABOVE the picture and above both overlays.
+   *
+   * Device evidence (2026-10-20, emulator-5554): with the error card up,
+   * pressing "Retry" produced no second `loadFile` in the native trace,
+   * and "Close" did not stop playback — while the transport bar's "Mute",
+   * which is a LATER sibling of the gesture layer, worked. The card's
+   * buttons were dead because the gesture layer was above them.
+   *
+   * The fix is the layering every shipping video player uses:
+   * picture → gesture layer → transient overlays → chrome.
+   */
+  it('puts the gesture layer BELOW the overlays, so their controls are pressable', async () => {
+    const result = await render(<VideoPlayer />);
+    const tree = result.toJSON() as {
+      children: Array<{props: {testID?: string}; children: unknown[]}>;
+    };
+    const pictureBox = tree.children[0];
+
+    const childTestIDs = pictureBox.children.map(
+      child => (child as {props: {testID?: string}}).props.testID,
+    );
+
+    const gestureIndex = childTestIDs.indexOf('gesture-layer');
+    const loadingIndex = childTestIDs.indexOf('loading-overlay');
+    const errorIndex = childTestIDs.indexOf('error-overlay');
+
+    // The gesture layer must be IN the picture's box...
+    expect(gestureIndex).toBeGreaterThanOrEqual(0);
+    // ...and BELOW both overlays.
+    expect(gestureIndex).toBeLessThan(loadingIndex);
+    expect(gestureIndex).toBeLessThan(errorIndex);
+    result.unmount();
+  });
+
+  it('does not mount the gesture layer in the dock', async () => {
+    const result = await render(<VideoPlayer />);
+
+    await act(async () => {
+      usePresentationStore.getState().setVideoPresentation('mini');
+    });
+
+    // In the dock the picture is a 44 pt slot with no chrome to toggle,
+    // so a full-screen gesture layer there would be a gesture surface
+    // the size of a thumbnail.
+    expect(screen.queryByTestId('gesture-layer')).toBeNull();
     result.unmount();
   });
 });

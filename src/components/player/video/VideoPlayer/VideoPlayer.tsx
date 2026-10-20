@@ -436,6 +436,40 @@ const VideoLane: React.FC = () => {
           resizeMode={presentation.isMini ? 'cover' : 'contain'}
           onPress={toggle}
         />
+
+        {/* The gesture layer sits ON THE PICTURE, BELOW the overlays.
+
+            It used to live inside `ExpandedChrome`, which is a LATER
+            sibling of this box — so it was painted ABOVE the picture
+            and above everything in this box. It is a full-screen native
+            gesture view (RNGH `GestureDetector`), and a native gesture
+            view claims the touches in its bounds. That made it swallow
+            every touch aimed at the picture, INCLUDING the error
+            card's "Retry" and "Close" buttons.
+
+            Verified on device (2026-10-20): with the card up, "Retry"
+            and "Close" produced NO second `loadFile` in the native
+            trace, while the transport bar's "Mute" (a LATER sibling of
+            the gesture layer, so above it) worked perfectly. A recovery
+            UI whose controls cannot be pressed is worse than no card
+            at all, because it promises a way out and does not deliver.
+
+            The layering that actually works is the one every shipping
+            video player uses:
+
+                picture < gesture layer < transient overlays < chrome
+
+            so the gesture layer belongs to the PICTURE — it is "touch
+            on the video" — not to the chrome. Moving it here puts the
+            loading and error overlays above it, so their controls are
+            live, and leaves the chrome's controls above everything
+            else.
+
+            Expanded-only, exactly as it was inside `ExpandedChrome`:
+            in the dock the picture is a 44 pt slot and there is no
+            chrome to toggle. */}
+        {presentation.isExpanded ? <VerticalSwipeGestures /> : null}
+
         {/* The loading and error overlays live ON THE PICTURE, not in
             the expanded chrome.
 
@@ -520,7 +554,11 @@ const ExpandedChrome: React.FC = () => {
       <SimbaStatusBar variant="player" />
 
       <View style={styles.surfaceContainer} pointerEvents="box-none">
-        <VerticalSwipeGestures />
+        {/* The gesture layer is NOT here. It lives in the picture's box,
+            one level down and one layer BELOW the loading/error
+            overlays — see the note there. Mounted here it was a
+            full-screen native gesture view above the picture, and it
+            ate the error card's Retry/Close presses. */}
 
         {/* V19 W7.2 — the ONE backdrop for the whole chrome. Mounted
             here, directly above the video surface and BELOW every
