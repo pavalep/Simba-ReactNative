@@ -767,6 +767,96 @@ now fixed and awaiting its re-verification. `lib 1.17.0`'s first-arrival
 logging and the `demuxer-cache-state` observation were both confirmed live on
 the device.
 
+### Progress — 2026-10-20 (night): "the buffer indicator in the progress bar is missing"
+
+The report was one line and one screenshot, and the screenshot was the whole
+case: a seek bar with a grey track, a thumb parked at ~4 %, the elapsed time
+`25:23` and the remaining time `--:--`. **No gold played fill, no buffered
+segment.** The bar was not "showing the buffer badly" — it was showing
+**nothing at all**, because the app had no length of file to draw against.
+
+**The cause was in the library, not the app.** The lib publishes the same
+playback facts through two contexts, and they disagreed:
+
+```
+state.durationMs    = 7673792   (correct)
+progress.durationMs = 0         (wrong)
+```
+
+`stateRef.current` was written **synchronously**, in the event handler.
+`progressRef.current` was written **inside the `setProgress` updater**, which
+React defers to the render phase — so the progress ref was one flush behind
+the state ref. mpv delivers `duration` and `time-pos` inside **one batch**
+(measured on device: `fileLoaded` 19:29:59.615, `time-pos` 19:29:59.616,
+`duration` 19:29:59.619), so the second event of the batch computed its next
+progress from a **stale** progress that did not yet contain the duration, and
+overwrote it with `0`.
+
+The damage cascaded exactly as the screenshot shows: the app gates the
+buffered window on `durationMs > 0` (a buffered range is a *window* into the
+file, so it has to be normalised against the length), so a zero duration made
+the window empty — **no buffered indicator was drawn at all** — and the played
+fill and the remaining time went with it.
+
+**Lib 1.18.0 — released, published, installed.** `progressRef.current` is now
+written synchronously, in the event handler, in lockstep with
+`stateRef.current`. This also makes the `setProgress` updater *pure*: it used
+to write the ref from inside a function React may invoke more than once.
+
+*Tests:* new `PlayerProvider.progressContext.test.tsx` (5 tests) — the
+duration survives in the progress context when duration and position arrive
+in one batch, in either order, across a long interleaved run, and together
+with the buffered ranges. *Mutation check:* **5/5 killed**, and the harness
+now verifies its own restore by hash and re-runs the suite green afterwards —
+because the first run of that harness left the **mutant in the working tree**
+(`process.exit()` inside a `try` skips the `finally` that restores the file).
+The "fix is pinned" claim was worth nothing until the harness could prove it
+had put the source back.
+
+**Device proof.** A fresh provider (app restarted, no file) → a movie loads →
+`duration` arrives **by event**, not by hydration:
+
+```
+property:first name=duration  20:55:24.674
+progress.durationMs = 4918962   (1:21:58)
+seek bar: "Remaining -1:19:38", gold played fill present
+```
+
+The remaining time, the played fill and the buffered band are all back.
+
+**What the screenshot could not show, and the measurement that did.** The
+buffered band is drawn (proved with a temporary `rgba(255,0,0,1)` token and a
+pixel sample of the track), but on a feature-length film it is *always* under
+the thumb, and therefore invisible:
+
+| quantity | measured |
+|---|---|
+| track width | 690 px (230 dp) |
+| buffered band (mpv's `cache-secs=120` ⇒ ~120 s ahead) | 16 px (2.4 % of 1:21:58) |
+| thumb | 14 dp = 42 px, so its **half** is 21 px |
+
+The band is `[0, bufferEnd]`; the gold played fill covers `[0, playhead]`; the
+thumb covers `[playhead ± 21 px]`. The band is only visible between the
+playhead and `bufferEnd` — and that gap is **16 px wide while the thumb's half
+is 21 px**, so the thumb covers the whole of it. The app's own spec already
+matches the shipping precedent ("YouTube, Netflix and Plex all draw ONE
+continuous grey bar from 0 to that position, **with the playhead drawn on top
+of it**"), so the rendering is right and the *cache* is the thing that is too
+small: the band can only be seen if the buffer is larger than the thumb.
+
+**Left open:** raise the lib's `cache-secs` / `demuxer-readahead-secs` from
+120 s to ~300 s (the byte cap `demuxer-max-bytes=150MiB` already bounds the
+memory, so 300 s of a ~1 Mbps stream is ~37 MB), which makes the band ~42 px
+and therefore visible next to a 21 px thumb-half. It is a **native** option,
+so it needs lib 1.19.0 + an APK rebuild.
+
+**Also learned, and worth keeping:** replacing a package under `node_modules`
+with `npm install` can leave **Metro serving a stale transform** of the
+replaced file — the app then silently ran the old library code and the fix
+"did not work" on device. The tell was that the *same* commit behaved
+differently across two app restarts. Touching the file's contents (not just
+its mtime) forces the re-transform.
+
 ---
 
 ## 6. What deletes vs. what stays
@@ -805,7 +895,16 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
 **Blocking the video lane**
 1. Black video — control test (Stage 1) precedes all render work.
 2. Hardware back P0 — instrument, do not guess.
-3. Duration `P1` on both lanes.
+3. ~~**Duration `P1` on both lanes.**~~ — **RESOLVED 2026-10-20 (night) by
+   lib 1.18.0.** The lib's **progress** context was losing `durationMs` (the
+   state context kept it), because `progressRef.current` was written inside the
+   deferred `setProgress` updater while `stateRef.current` was written
+   synchronously, and mpv delivers `duration` and `time-pos` in one batch.
+   Measured on device before the fix: `state.durationMs = 7673792` but
+   `progress.durationMs = 0`, so the app drew **no played fill, no buffered
+   segment and `--:--` for the remaining time** on a video that was playing.
+   After: `progress.durationMs = 4918962` and the seek bar reads
+   `-1:19:38`. See the 2026-10-20 (night) progress block.
 4. mpv-handle survival across Fabric view remount — needs a test.
 5. `force-window` re-verification under layout churn.
 6. **Stage 9 device verification** — the video lane's D9 rewrite is unit-tested
@@ -831,6 +930,15 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    renders the card. See the 2026-10-19 evening and 2026-10-20 evening
    progress blocks. **Still open:** the on-device re-verification of the
    spinner and of the now-live Retry (register item 6).
+   **Update 2026-10-20 (night):** the "buffer indicator is missing" report was
+   a *second* defect, and it was in the library too — the same lost
+   `durationMs` made the buffered window empty, so **nothing** was drawn.
+   Fixed by lib 1.18.0 and device-proven. **One piece still open:** the band
+   is now drawn but is ~16 px on a 690 px track, and the 14 dp thumb's half
+   is 21 px, so on a feature-length film the thumb covers the whole visible
+   band. The band can only be seen if the buffer is larger than the thumb ⇒
+   raise the lib's `cache-secs` / `demuxer-readahead-secs` from 120 s to
+   ~300 s (lib 1.19.0 + an APK rebuild).
 9. **The deep-link path bypasses the app's session seam.** `useOpenFromUrl`
    (lib) calls the lib's `openPlayer` directly, not the app's
    `useResumeAwareLaunch`, so a deep-linked file gets no now-playing entry,
