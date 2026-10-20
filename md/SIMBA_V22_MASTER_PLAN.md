@@ -573,6 +573,200 @@ still forces a component boundary is the React rule that a component cannot
 consume a context it provides itself — `App` renders `ThemeProvider`, and the
 ErrorBoundary's fallback palette is built from the theme.
 
+### Progress — 2026-10-19 (evening): the buffering wave
+
+**Lib 1.16.0 — released, published, installed.** The buffering signal had
+three mpv properties tangled into two events with contradictory rules. Now
+one owner per fact: `paused-for-cache` → `isBuffering` (a stall),
+`cache-buffering-state` → `cacheFill` (a level), `demuxer-cache-state` →
+`cacheRanges` (the buffered timeline). `cache-buffering-state` used to write
+`isBuffering = percent < 100`, which is true for most of a stream's life, so
+the spinner could latch on during healthy playback. The bridge now also
+converts mpv's seconds to **milliseconds** and **refuses** to forward the
+legacy byte offsets as a time range. `onCacheFill` is a new public event.
+
+**The "property events never arrive" claim was FALSE, and is now measured.**
+The app's elapsed time advanced 0:00 → 2:28 on device, which can only happen
+if `time-pos` property events arrive. The lib's "OPEN NATIVE DEFECT (1.8.4)"
+note is replaced with the measurement and its evidence. The bridge also logs
+the **first arrival of each property once per session**, so the property path
+is observable in every build — the reason the stale note survived so long is
+that it was not.
+
+**What mpv's cache ranges actually are — read from mpv's source, not assumed.**
+`demuxer-cache-state.seekable-ranges` is **not** the file's seekable extent.
+mpv derives it in `update_seek_ranges()` (mpv `demux/demux.c`) from the demux
+queue's **packet extent**, so each entry is a time span of the data mpv
+currently holds — the buffer islands a seek bar has to draw. Each entry is
+`{start, end}` and nothing else (mpv `player/command.c`); the bridge comment
+that claimed `{start, end, flags}` was false and is corrected. **No 1.17.0 is
+needed** — the 1.16.0 payload is correct, and the app was the part that was
+wrong.
+
+**App: the phase is derived from the lib.** `usePlaybackState` derived the
+phase and then **handed it to `VideoController`**, which owned the phase the
+chrome renders. The controller discarded every observation — its guard was
+`if (!this.state.currentItem) return;`, and `currentItem` is only set by
+`controller.loadFile()`, which has **zero call sites** (the LIB loads the
+file). So the controller's phase stayed `'idle'` forever, and because the
+controller's phase won, so did `videoState`. Two things were dead because of
+it, and both had been reported as separate bugs:
+
+- the **loading overlay could never appear** → a buffering video showed nothing;
+- the **error overlay could never appear** → a failed load was a silent black
+  screen.
+
+The phase is now derived from the lib and nothing round-trips through the
+controller. The controller's stickiness is not lost: the lib clears
+`state.error` on the next `onFileLoaded`, so the error was already scoped to
+its session — a second owner of a fact the lib already owned, and the stale
+one was winning.
+
+**App: the buffered bar lied in two different ways.** `deriveBufferedRanges`
+described `cacheRanges` as byte offsets, and fell back to the `cacheFill`
+percentage, inventing a range from 0 to `durationMs * cacheFill / 100`. That
+fallback is not a time range: the cache fills **forward from the playhead**
+and the bitrate varies, so "40% of the cache is full" says nothing about which
+40% of the timeline is buffered. **A percentage is a level, and a level is not
+a position.** The fallback is gone. The window is now the contiguous
+**prefix** of the buffer — ExoPlayer's `getBufferedPosition()`, YouTube,
+Netflix and Plex all draw one continuous bar from 0 — with **sub-second gaps
+merged** (mpv's demuxer opens and closes gaps of a few tens of ms while
+reading ahead, so separate ranges make the bar flicker). Islands are **not**
+merged into one span: that claims unbuffered data is buffered, and a user who
+seeks into the "buffered" region then stalls.
+
+**App: the overlays were in the wrong place, and the Retry had no target.**
+Both overlays lived inside `ExpandedChrome`, which renders only when expanded.
+A cold-start video begins minimised, so a cold-start **load failure happened
+in the dock**, where the error overlay was not mounted — the dock showed a
+black square with no error and nothing to do. Both overlays are now siblings
+of `<VideoSurface>` inside the picture's box, so they cover the picture
+wherever the picture is: fullscreen **and** the 44 pt dock slot. They are also
+out of the chrome's auto-hide, which is correct — a spinner that hides itself
+while the video is still stalled is not a spinner. The dock slot is 44×44, so
+the dock shape is a small spinner with no caption, and the error's dock shape
+is the title alone (a button under 44 pt is below the touch-target floor;
+the actions are one tap away). The accessibility label still carries the
+state, so a screen-reader user is not left with less than a sighted one.
+
+**The Retry button never rendered.** It was gated on
+`VideoController.getState().currentItem`, which is always null. The real
+target is the app's own now-playing session, written by the launch seam that
+started the playback; the retry re-launches it through that same seam, so
+there is one launch authority and no second path.
+
+**The spinner flickered.** Video.js's buffering indicator has a 500 ms onset
+delay (a stall shorter than that is never shown) and UX Tigers asks for a
+~0.5 s minimum visible time. Both are in `useDelayedVisibility`, which keeps
+its timers in refs so an unrelated re-render cannot push the onset forward
+forever.
+
+**Gates.** App: `tsc` 0 · `eslint --max-warnings 0` 0 · `jest` 94 suites /
+1168 passed / 1 todo. Mutation check **14/14 killed** — and the harness found
+a real gap on the way: a zero-length range was not covered, so the "inverted
+ranges are dropped" test could not fail until it was added. Lib: `tsc` 0 ·
+`jest` 14 suites / 250 tests · `compileDebugKotlin` BUILD SUCCESSFUL.
+
+---
+
+### Progress — 2026-10-20 (evening): the movie test, and the three defects it found
+
+The right test is the obvious one: *play a movie and check the buffer state*.
+Doing exactly that — Movies → archive.org → a 1971 short, over a throttled
+link (`adb emu network speed edge`, 240 kbps) — found three defects that no
+unit test could see, because all three are about what the app **does** with
+the facts, not about the facts.
+
+**1. The error card's buttons were DEAD.** The card rendered perfectly:
+"Something went wrong", "Retry", "Close", on the picture — with the video
+*playing* behind it. And pressing them did nothing:
+
+| Pressed | Result |
+|---|---|
+| `Retry` | **no second `loadFile`** in the native trace |
+| `Close` | playback did not stop |
+| `Mute` (transport bar, in the chrome) | **worked** — label flipped to "Unmute" |
+
+The difference is z-order. `VerticalSwipeGestures` is an RNGH
+`GestureDetector` — a **native** view — and a native gesture view **claims
+the touches in its bounds**. It lived in `ExpandedChrome`, a *later* sibling
+of the picture's box, so it was painted above the picture and above both
+overlays, and it swallowed every touch aimed at the picture. The transport
+bar is a later sibling of the gesture layer, so it still worked. A recovery
+UI whose controls cannot be pressed is worse than no card at all: it
+promises a way out and does not deliver.
+
+The layering every shipping video player uses is
+
+```
+picture  <  gesture layer  <  transient overlays  <  chrome controls
+```
+
+so the gesture layer belongs to the **picture** (it is "touch on the video"),
+not to the chrome. It has moved into the picture's box, between
+`<VideoSurface>` and the overlays: the overlay's controls are live again,
+and the chrome's controls stay above everything.
+
+**2. There was no spinner, because there was no "the file is opening" phase.**
+The load took **9 seconds** (`loadFile` 15:36:51 → `fileLoaded` 15:37:00)
+and showed **nothing**. Two facts were both wrong during that window:
+
+- `state.isPlaying` — mpv's core state is "playing" from the moment
+  `loadfile` is called until the file has been parsed. "playing" during a
+  load means "the engine was told to play", not "the file is playing".
+- `hasSession` — the playlist is not populated until the file arrives, so
+  "idle" during a load means "no playlist entry yet".
+
+So "preparing" was unreachable, and the loading overlay — which was correct
+all along — was never given a phase it could act on. The fact is not
+derivable from anything mpv reports: **the lib is the only layer that knows
+a load was *asked for***. **Lib 1.17.0** therefore emits `onLoadRequested`
+the moment a load is requested (before the native call, so the consumer sees
+"opening" for the whole of the load) and exposes `PlayerState.isLoading` —
+true until `onFileLoaded` (the file arrived) or `onEndFile` (it ended, or
+failed). The app's phase derivation now has a real "preparing".
+
+**3. Every failure said `E_RENDERER_GONE`, and the code was `NaN`.** One
+device log line showed all of it:
+
+```
+[listener:error] code=-1 recoverable=false message=AudioTrack Init failed
+[error] code=E_RENDERER_GONE numeric=0 message=AudioTrack Init failed
+```
+
+- The native bridge emitted `onError` **twice**: once with a numeric `code`,
+  then again with a **string** `code`, where the contract says `code: number`.
+  The second emission won, so the app read `Number("E_RENDERER_GONE")` → `NaN`.
+- The mapping collapsed every terminal failure into "the video output died" —
+  including a plain load failure. mpv's numeric code is now the primary signal
+  (`mpv/include/mpv/client.h`'s `mpv_error`: `-13` LOADING_FAILED,
+  `-14` AO_INIT_FAILED, `-17` UNKNOWN_FORMAT, `-20` GENERIC, …).
+- The `-1` was a **fabricated sentinel**, not an mpv code: it came from a
+  fatal-level mpv *log line*, and `-1` is `MPV_ERROR_EVENT_QUEUE_FULL`. A log
+  line is not proof that playback stopped — on the emulator (no audio device)
+  mpv logged "AudioTrack Init failed" while the video played on, and the card
+  covered the **working** picture.
+
+So `recoverable` now means **"playback continued"**: mpv's `END_FILE` (the
+file failed) is `false`; a fatal-level log line is `true`. Only a terminal
+failure renders the card. And a non-terminal failure can no longer mask a
+terminal one — mpv can report a log line *after* the file has already failed.
+
+**Gates.** App: `tsc` 0 · `eslint --max-warnings 0` 0 · `jest` 95 suites /
+1180 passed / 1 todo. Mutation check **8/8 killed** (four app, four lib) — and
+the harness's self-test caught a stale expected count **in the harness
+itself**, which is the whole point of having one. Lib: `tsc` 0 · `jest`
+15 suites / 258 tests · `compileDebugKotlin` BUILD SUCCESSFUL, verified
+against the patched source (the example's `node_modules` copy is a junction
+to the repo, and the compiler's warning line numbers match the patched file).
+
+**Device proof so far.** The error card renders on the picture with its copy
+and both actions; the card was dead because of the z-order above, which is
+now fixed and awaiting its re-verification. `lib 1.17.0`'s first-arrival
+logging and the `demuxer-cache-state` observation were both confirmed live on
+the device.
+
 ---
 
 ## 6. What deletes vs. what stays
@@ -622,50 +816,110 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    <MiniPlayer/>`). The full-screen audio player and the dock are two
    components, so the audio lane still has the unmount the video lane just
    lost.
-8. **Buffering cannot be shown yet** — `MPV_EVENT_PROPERTY_CHANGE` is never
-   delivered (the lib's own "OPEN NATIVE DEFECT (1.8.4)"), and the 1 Hz poll
-   that backstopped position/duration was removed in lib v1.10.0. `isBuffering`,
-   `seekable`, `isSeeking` and `cacheRanges` have **no fallback at all**.
-   Separately, `deriveBufferedRanges` maps mpv's cache ranges straight into
-   `startMs`/`endMs` while the native side sends `seekable-ranges` in SECONDS
-   with a fallback to byte OFFSETS — the bridge does not record which unit it
-   sent, so a 60 s range becomes 60 ms and a byte offset becomes a clamped
-   whole-file bar. See `md/SIMBA_V22_BUFFERING_UI_RESEARCH.md`.
+8. ~~**Buffering cannot be shown yet**~~ — **RESOLVED 2026-10-19**, and the
+   remaining piece was resolved on **2026-10-20** too. The
+   "property events never arrive" claim was false (measured: the elapsed time
+   advanced 0:00 → 2:28 on device). Lib **1.16.0** splits the signal into one
+   owner per fact, converts the cache ranges to milliseconds, and refuses to
+   forward byte offsets as a time range. The app now derives the phase from
+   the lib (the controller's stale phase was winning and had killed both
+   overlays), paints the contiguous prefix with sub-second gap merging, and
+   has no percent fallback. **Lib 1.17.0 + app `463188a` follow-up:** the
+   "the file is OPENING" phase now exists (`PlayerState.isLoading`), so a
+   slow load shows the spinner; the error card's buttons work (the chrome's
+   gesture layer was eating their touches); and only a **terminal** failure
+   renders the card. See the 2026-10-19 evening and 2026-10-20 evening
+   progress blocks. **Still open:** the on-device re-verification of the
+   spinner and of the now-live Retry (register item 6).
 9. **The deep-link path bypasses the app's session seam.** `useOpenFromUrl`
    (lib) calls the lib's `openPlayer` directly, not the app's
    `useResumeAwareLaunch`, so a deep-linked file gets no now-playing entry,
    no history checkpoint and no dock — and it is the one path where the
    `<SimbaPlayer resumePolicy>` lookup still fires. Needs a lib-side
-   derive-only export (1.15.1) so the app can route the URI through its own
+   derive-only export (1.17.0) so the app can route the URI through its own
    seam.
+10. **The `VideoController` is now dead** (new, 2026-10-19). Its last
+    consumer was `VideoErrorOverlay`, and the retry now goes through the
+    app's launch seam instead. `useVideoController()` has **zero** call
+    sites, so the controller is never constructed and `getVideoController()`
+    always returns null. Decision needed: delete the subsystem
+    (`VideoController.ts` + `useVideoController.ts` + `controllerSingleton.ts`
+    + its barrel exports + `__tests__/infrastructure/player/video/
+    VideoController.test.ts`), or keep it and say plainly that it is inert.
+    It is a real orchestrator, not a stub, so deleting it removes the
+    "video-lane policy owner" that Stage 9 may want.
+11. **`lib PlayerSurface` registry is dead** (new, 2026-10-19).
+    `PlayerSurface.mount()` has **zero** call sites, so `isSurfaceMounted()`
+    is always false and the lib's `openPlayer({type:'video'})` **always
+    returns false** — the deep-link defect. `setVideoBounds` /
+    `fillVideoBounds` / `setSurfaceVisible` / `boundsInWindow` are permanent
+    no-ops. Decision + a further release.
 
 **Migration mechanics**
-6. `codegenConfig` `"modules"` → `"all"`.
-7. Fabric `ViewManager` for `MpvRenderView`; register in `PlayerPackage`.
-8. Presentation commands on the view ref.
-9. Yoga `requestLayout()` guard.
-10. Release cycle + `npm install` (Stage 5).
-11. App swap + `BrowsingStack` removal (Stages 6-7).
-12. Revise 17 test files / 4 956 lines.
+12. `codegenConfig` `"modules"` → `"all"` — **DONE** (Stage 2).
+13. Fabric `ViewManager` for `MpvRenderView`; register in `PlayerPackage` — **DONE**
+    (Stage 2; the lib publishes the Fabric component).
+14. Presentation commands on the view ref — **DONE**, superseded by **D4**: engine
+    ops *and* window ops (PiP) both live on `usePlayer().commands`, so
+    `SimbaVideo` carries no ref.
+15. Yoga `requestLayout()` guard — **DONE** (Stage 4; the surface attaches with
+    real extents, `surfaceChanged: 1080x1907`).
+16. Release cycle + `npm install` (Stage 5) — **DONE**, and the cycle is proven:
+    1.15.0 and 1.16.0 both went commit → push → annotated tag → Actions →
+    `npm install`, verified with `npm view`.
+17. App swap + `BrowsingStack` removal (Stages 6-7) — **DONE**.
+18. Revise 17 test files / 4 956 lines — **DONE** (the suite is 95 suites /
+    1180 tests).
 
 **Dead code (verified)**
-13. `MpvRenderViewManager` — registered nowhere; `PlayerPackage` has no `createViewManagers`.
-14. `AudioLyricsView` (525 lines) — 0 call sites.
-15. `AudioVisualizer` (143 lines) — 0 call sites.
-16. `lib PlayerSurface.kt` + mount path — deleted at Stage 7.
+19. `MpvRenderViewManager` — registered nowhere — **DELETED**.
+20. **`VideoController` + `useVideoController` + `controllerSingleton`** — now
+    dead (register item 10). Decision needed.
+21. **`lib PlayerSurface.kt`** — the register previously said "deleted at Stage 7".
+    **That was false**: the file is still there (256 lines) and
+    `PlayerSurface.mount()` has zero call sites. See register item 11.
+22. `AudioLyricsView` (525 lines) — 0 call sites.
+23. `AudioVisualizer` (143 lines) — 0 call sites.
+24. `DpadController` (187 lines) — 0 call sites; it also exports
+    `useHardwareMediaKeys` and `useFocusRing`, both with 0 consumers.
+25. `BufferingBar` (113 lines) — 0 call sites.
+26. `AudioDescriptionTrackSelector` (50 lines) — 0 call sites, and its body is
+    `() => null`.
+27. Dead exports `useBookmarkMarkers` and `deriveNextUpView` — 0 call sites.
+28. `DefaultControls.tsx` (563 lines) — violates locked **D5** (the library draws
+    no chrome). **DECISION required** before a public export is removed.
 
 **Product / UI**
-17. Title renders literal quotes — `"El Ciclo ( 1964)"` (feed data bug).
-18. Stray `2×` and `☀ 100%` / `♪ 100%` chips floating mid-frame in video chrome.
-19. FAB overlapping the Music card.
-20. Full device matrix — PiP in/out, dock rotation, a→v→a, back at each level, next/prev.
-21. C-07 artwork + `setAutoEnterEnabled` / `setExpandedAspectRatio` / portrait restore.
+29. Title renders literal quotes — `"El Ciclo ( 1964)"` (feed data bug).
+30. Stray `2×` and `☀ 100%` / `♪ 100%` chips floating mid-frame in video chrome.
+31. FAB overlapping the Music card.
+32. Full device matrix — PiP in/out, dock rotation, a→v→a, back at each level, next/prev.
+33. C-07 artwork + `setAutoEnterEnabled` / `setExpandedAspectRatio` / portrait restore.
+
+**Library defects**
+34. `PlayerProvider` calls `initPlayer()` in a **mount effect**, and React runs
+    child effects before parent effects, so the chrome's bridge calls beat it —
+    8 × `IllegalStateException: MpvPlayerModule not initialized`. Move the
+    idempotent call into render.
+35. ~~The bridge maps `MPV_ERROR_LOADING_FAILED (-13)` to `E_RENDERER_GONE`, so
+    every load failure reads as a GPU crash. Also the `onError` payload's
+    `code` is a **string** in the second emission ⇒ `Number("E_RENDERER_GONE")`
+    ⇒ `NaN`, and `codeToNumeric("E_RENDERER_GONE")` is `0`.~~ —
+    **RESOLVED by lib 1.17.0** (2026-10-20). The mapping is now driven by
+    mpv's numeric code, the error is emitted **once** with a numeric `code`,
+    `codeName`, the raw `nativeCode` and `recoverable`, and the `3xxx`
+    numeric range is in use. Measured on device before the fix:
+    `code=-1 … AudioTrack Init failed` → `code=E_RENDERER_GONE numeric=0`.
+36. Verify the lib's consumer `postinstall` links the `.so` in a **clean
+    checkout** — CI skips the native download, so that path is untested. This
+    now applies to 1.17.0 as well.
 
 **Housekeeping**
-22. LogBox "Open debugger to view warnings" — CDP `Runtime.enable` times out; blocked.
-23. 9 unused `textContent.ts` entries + `HistoryScreen:99` dead branch.
-24. Jest force-exit flake (leaked handles) — needs `--detectOpenHandles`.
-25. Emulator `-wipe-data` escalation if it recurs.
+37. LogBox "Open debugger to view warnings" — CDP `Runtime.enable` times out; blocked.
+38. 9 unused `textContent.ts` entries + `HistoryScreen:99` dead branch.
+39. Jest force-exit flake (leaked handles) — needs `--detectOpenHandles`; plus
+    the `useLaunchPlayback` 5 s timeout under cold-cache parallel load.
+40. Emulator `-wipe-data` escalation if it recurs.
 
 ---
 
