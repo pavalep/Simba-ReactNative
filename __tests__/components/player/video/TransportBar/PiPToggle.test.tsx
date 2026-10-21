@@ -33,7 +33,7 @@ jest.mock('../../../../../src/theme', () => ({
   }),
 }));
 
-const mockEnterPip = jest.fn();
+const mockEnterPip = jest.fn(() => true);
 const mockSetPipActive = jest.fn();
 const mockTogglePip = jest.fn();
 const mockTransport: {
@@ -41,7 +41,11 @@ const mockTransport: {
   // `enterPip` is a REQUIRED member of `TransportCommands` (lib 1.5.x+),
   // so the mock declares it required too — an optional key here would
   // let this suite pass against the very cast the W5 reaudit removed.
-  commands: {enterPip: () => void};
+  //
+  // It returns `boolean` since lib 1.21.0: the native side ANSWERS
+  // whether the OS accepted the request, and the chrome follows that
+  // answer.
+  commands: {enterPip: () => boolean};
 } = {
   state: {canEnterPip: false},
   commands: {enterPip: mockEnterPip},
@@ -118,6 +122,8 @@ jest.mock('../../../../../src/infrastructure/player', () => {
 describe('PiPToggle', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // The default is a SUCCESSFUL entry — the native side's answer.
+    mockEnterPip.mockReturnValue(true);
     mockTransport.state.canEnterPip = false;
   });
 
@@ -135,7 +141,7 @@ describe('PiPToggle', () => {
   it('tap calls commands.enterPip()', async () => {
     mockTransport.state.canEnterPip = true;
     const {getByLabelText} = await render(<PiPToggle />);
-    fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
+    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
     expect(mockEnterPip).toHaveBeenCalledTimes(1);
   });
 
@@ -152,7 +158,7 @@ describe('PiPToggle', () => {
     // destructive. See `src/state/usePresentationStore.ts`.
     mockTransport.state.canEnterPip = true;
     const {getByLabelText} = await render(<PiPToggle />);
-    fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
+    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
     expect(mockEnterPip).toHaveBeenCalledTimes(1);
     expect(mockSetPipActive).toHaveBeenCalledWith(true);
   });
@@ -164,6 +170,7 @@ describe('PiPToggle', () => {
     const order: string[] = [];
     mockEnterPip.mockImplementationOnce(() => {
       order.push('native');
+      return true;
     });
     mockSetPipActive.mockImplementationOnce(() => {
       order.push('chrome');
@@ -171,9 +178,51 @@ describe('PiPToggle', () => {
 
     mockTransport.state.canEnterPip = true;
     const {getByLabelText} = await render(<PiPToggle />);
-    fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
+    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
 
     expect(order).toEqual(['native', 'chrome']);
+  });
+
+  /**
+   * A REFUSED PiP request must leave the chrome exactly where it was.
+   *
+   * The button used to call `setPipActive(true)` unconditionally, on the
+   * assumption that the request had worked — but the native side used to
+   * swallow every refusal, so a refused request looked identical to a
+   * successful one. The app then hid its own chrome for a PiP window
+   * that would never exist, and the only thing that brings the chrome
+   * back is the PiP-EXIT event, which for a request that never happened
+   * never comes.
+   *
+   * Since lib 1.21.0 the native side ANSWERS, and the chrome follows the
+   * answer. `false` must mean "PiP did not happen" — not "hide the
+   * chrome anyway".
+   */
+  it('a REFUSED PiP request does NOT hide the chrome', async () => {
+    mockEnterPip.mockReturnValue(false);
+    mockTransport.state.canEnterPip = true;
+    const {getByLabelText} = await render(<PiPToggle />);
+
+    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
+
+    expect(mockEnterPip).toHaveBeenCalledTimes(1);
+    expect(mockSetPipActive).toHaveBeenCalledWith(false);
+  });
+
+  it('the chrome state is the native answer, not a hard-coded true', async () => {
+    // Guards against a regression to `setPipActive(true)` — the exact
+    // shape of the defect. Two different native answers, two different
+    // chrome states.
+    mockTransport.state.canEnterPip = true;
+    const {getByLabelText} = await render(<PiPToggle />);
+
+    mockEnterPip.mockReturnValueOnce(true);
+    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
+    expect(mockSetPipActive).toHaveBeenLastCalledWith(true);
+
+    mockEnterPip.mockReturnValueOnce(false);
+    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
+    expect(mockSetPipActive).toHaveBeenLastCalledWith(false);
   });
 
   it('has no defensive cast that could make enterPip a silent no-op', async () => {

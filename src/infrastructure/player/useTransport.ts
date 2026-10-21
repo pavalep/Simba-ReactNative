@@ -400,8 +400,13 @@ export interface TransportCommands {
    * method onto the facade removes both the cast and the no-op
    * fallback, and is the correct alternative to bolting on a
    * third-party PiP package.
+   *
+   * Returns whether the OS ACCEPTED the request. The chrome is only
+   * suppressed when the answer is `true`, because a refused request used
+   * to be indistinguishable from a successful one and the app would then
+   * hide its own chrome for a PiP window that would never exist.
    */
-  enterPip(): void;
+  enterPip(): boolean;
   /**
    * Exit the native PiP window, returning to the pre-PiP
    * presentation. Backed by lib `commands.exitPip()`.
@@ -998,7 +1003,11 @@ export function useTransport(): TransportHook {
           live.durationMs > 0
             ? `${Math.round((live.positionMs / live.durationMs) * 100)} %`
             : null;
-        commands.enterPip(live.title || null, progressPct);
+        // The native side ANSWERS whether PiP happened. That answer is
+        // relayed, not swallowed: the caller suppresses its chrome on
+        // the strength of it, so a refused request must be visible as
+        // `false` rather than as silence.
+        return commands.enterPip(live.title || null, progressPct);
       },
       exitPip: () => {
         commands.exitPip();

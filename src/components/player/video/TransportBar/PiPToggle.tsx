@@ -27,12 +27,25 @@
  *
  * ## Entering PiP is a TWO-part transition
  *
- *   1. `commands.enterPip()` — the native PiP window.
+ *   1. `commands.enterPip()` — the native PiP window. It ANSWERS whether
+ *      the OS accepted the request.
  *   2. `setPipActive(true)`   — the JS chrome must go away too.
  *
  * Doing only (1) leaves the full chrome painted over the PiP window;
  * doing only (2) leaves the activity black behind a floating window.
  * Both halves are in this one handler, so the tap is one honest action.
+ *
+ * The handler is driven by the ANSWER, not by a guess. It used to call
+ * `setPipActive(true)` unconditionally, on the assumption that the request
+ * had worked — but the native side used to swallow every refusal (no
+ * activity, PiP not permitted, bad `PictureInPictureParams`), so a
+ * refused request looked identical to a successful one. The app then
+ * suppressed its own chrome for a PiP window that would never exist, and
+ * the only thing that could bring the chrome back was the PiP-exit event
+ * — which, for a request that never happened, never came.
+ *
+ * So: the chrome follows the OS's answer. `false` means PiP did not
+ * happen, and the chrome stays exactly where it was.
  *
  * W6.0 note: step (2) used to write a `mode` into a process-global
  * zustand store. `App` mounts once per activity React root and both
@@ -57,9 +70,10 @@ export const PiPToggle: React.FC = () => {
   if (!state.canEnterPip) return null;
 
   const onPress = () => {
-    // Native PiP window first, then suppress the JS chrome.
-    commands.enterPip();
-    setPipActive(true);
+    // Native PiP window first, then suppress the JS chrome — but only if
+    // the native side says PiP actually happened.
+    const accepted = commands.enterPip();
+    setPipActive(accepted);
   };
 
   return (

@@ -971,6 +971,191 @@ code, so Metro serves it as JS.
 
 ---
 
+### Progress — 2026-10-21 (midday): the band is proven, and PiP turned out to be a latch
+
+Two device proofs landed, and one of them turned into a defect hunt.
+
+#### The band IS drawn — measured, not eyeballed
+
+`emulator-5554`, a 1971 public-domain short from archive.org, playing. The
+transport track row is **y 1949–1958** in the 1080×2400 frame, and the
+track spans **x 189–891**. Sampled at 1 px:
+
+| x | colour | what it is |
+|---|---|---|
+| 190–199 | `#C9A84C` | the **played** fill — brand gold, 100 % |
+| 200–206 | `#96824B` | the **buffered** island — brand gold at 60 % |
+| 207–243 | `#FFFFFF` | the 14 dp thumb (38.5 physical px at 2.75× density) |
+| 244–255 | `#95814A` | the **buffered** island, ahead of the playhead |
+| 256+ | `#474747` | the **empty** track |
+
+The arithmetic is the proof. The empty track is `rgba(255,255,255,0.28)` on
+black ⇒ `255 × 0.28 = 71 = 0x47` ✔. The buffered band is
+`rgba(201,168,76,0.60)` over that track ⇒ `201×0.6 + 71×0.4 = 149`,
+`168×0.6 + 71×0.4 = 129`, `76×0.6 + 71×0.4 = 74` ⇒ `#95814A` ✔ **exactly**
+what the pixels say. So the three-strength ladder — empty 28 % neutral,
+buffered 60 % brand gold, played 100 % brand gold — is on the device, and
+the band sits **ahead of** the playhead, not behind it.
+
+The lib's own trace agrees, live:
+
+```
+[PlaybackTrace][Bridge][cacheWindow] new load → cache-secs=300 demuxer-readahead-secs=300
+[PlaybackTrace][Bridge][cacheWindow] trim level=40 → cache-secs=10 demuxer-readahead-secs=10
+```
+
+The first line is the 300 s prefetch of lib 1.19.0. The second is the
+memory-pressure trim — and it is the first time that trim has ever been
+seen to do anything, because the `ComponentCallbacks2` registration only
+landed in 1.19.0. It moves **both** options, as it must.
+
+#### PiP: entering works, leaving was a one-way door
+
+The user entered PiP and it worked (no arity crash — lib 1.20.0's fix). Then
+they came back and got *"stuck in fullscreen, no trackbar, no top bar"*.
+
+The native side was provably innocent. From logcat:
+
+```
+I/MainActivity(29060): onPictureInPictureModeChanged: isInPip=false
+I/MpvBridgeModule(29060): companion.onPictureInPictureModeChanged: isInPip=false instance=true
+I/MpvBridgeModule(29060): companion.onPictureInPictureModeChanged: emit succeeded
+```
+
+The event was emitted. **Nobody was listening.** And the reason is a
+self-latching deadlock in the app:
+
+```
+pipActive === true  →  mode = 'pip'  →  isExpanded = false
+                                          →  <ExpandedChrome /> unmounts
+                                          →  usePipBridge() unmounts
+                                          →  the onPipModeChanged subscriber dies
+```
+
+`usePipBridge()` was mounted inside `ExpandedChrome` — the component that
+the PiP state itself unmounts. Entering PiP destroyed the listener whose
+job was to report that PiP had ended. The flag then stayed `true` for
+good, the derived mode stayed `'pip'`, and the fullscreen player came back
+with no transport bar, no top bar and no way out.
+
+**The rule, now written into the code:** *a listener that reconciles a state
+must not be mounted inside a subtree that the state unmounts.* The bridge
+moved to `VideoPlayerChrome`, which `AppRoot` mounts unconditionally for
+the whole app session.
+
+Why the unit test could not see it: `__tests__/infrastructure/player/
+usePipBridge.test.ts` tests the hook in isolation, and the hook is correct
+in isolation. The bug is in **where** it is mounted, and a hook test has
+no tree to mount it in. So the regression test is a composition test —
+`__tests__/components/player/video/VideoPlayer/VideoPlayerPipExit.test.tsx`
+renders the real `<VideoPlayer />` with the real bridge and the real
+presentation derivation, and only replaces the lib's event emitter.
+
+*Mutation check: 3/3 killed* (moving the hook back into `ExpandedChrome`),
+source restored and hash-verified, suite green after the restore.
+
+#### A second road to the same latch: the request that was never answered
+
+While fixing that, the second half of the same contract turned out to be
+missing. The native `enterPip` returned `Unit` and swallowed every failure
+— no activity (silent `return`), SDK < N (silent `return`),
+`enterPictureInPictureMode` returning `false` (**the boolean discarded**),
+and a throw (caught, logged, swallowed). A **refused** request was
+therefore indistinguishable from a successful one, and the app suppressed
+its chrome on the strength of a guess. The only thing that brings the
+chrome back is the PiP-**exit** event, which for a request that never
+happened never comes.
+
+The old code even named the recovery it expected: *"let the JS-side 5 s
+recovery timer in `VideoPipAdapter` take over"*. **There is no
+`VideoPipAdapter` in this repository** — it was removed with the V12
+single-activity architecture — so nothing was taking over and the comment
+was simply false.
+
+**Lib 1.21.0 — released, published, installed.** `enterPip` now returns
+the OS's own answer, all the way out:
+
+| case | old | now |
+|---|---|---|
+| no activity | silent `return` | `false` |
+| SDK < N | silent `return` | `false` |
+| `enterPictureInPictureMode` returned `false` | boolean discarded | `false`, relayed |
+| it threw | caught, logged, swallowed | `false`, relayed |
+
+`PlayerCommands.enterPip` returns `boolean` through the codegen spec, the
+facade and the command implementation; the NOOP bridge answers `false`,
+because a stub that does nothing did not enter PiP. The app's
+`PiPToggle` and the imperative ref now drive `setPipActive()` from that
+answer instead of hard-coding `true`. The 1.20.0 arity contract is
+unchanged — the call still always passes two arguments.
+
+*Lib mutation check: 3/3 killed* (dropping the `return` from the command
+implementation, which is exactly what the old `void` contract did).
+
+Two Kotlin details worth recording, because both cost a build:
+`try`/`catch` in **statement** position is not a function's return value in
+Kotlin — only an **expression** `try` (`return try { … }`) produces one,
+and the compiler's "Missing return statement" was the tell. And the
+example app's `node_modules/@simba-dev/react-native-media-player` is a
+**junction** to the repo, so the gradle gate really does compile the
+edited source — verified rather than assumed.
+
+#### Device proof: PiP in → out → the chrome comes back
+
+On the rebuilt APK (lib 1.21.0's native code, 8 m 01 s, four ABIs):
+
+```
+I/MainActivity: onPictureInPictureModeChanged: isInPip=true
+I/MpvBridgeModule: companion.onPictureInPictureModeChanged: isInPip=true
+I/MpvBridgeModule: companion.onPictureInPictureModeChanged: emit succeeded
+```
+
+and the PiP params carried the app's real values, not the native's blank
+fallbacks: `title="The Rifle - USMC Training Film 1960s" subtitle="20 %"`.
+
+Exiting PiP:
+
+```
+I/MainActivity: onPictureInPictureModeChanged: isInPip=false
+I/MpvBridgeModule: companion.onPictureInPictureModeChanged: isInPip=false
+I/MpvBridgeModule: companion.onPictureInPictureModeChanged: emit succeeded
+```
+
+…and the chrome came back — top bar (back chevron, title, lock, bookmark),
+transport bar (elapsed, seek bar, remaining), and every control. The
+playback ran through the whole round trip (3:29 → 5:28). **The exact
+symptom the user reported is gone.**
+
+The same frame is also the best proof yet of the buffering policy, because
+the playhead is now well past the start and the three bands are cleanly
+separated. Sampled at 1 px on the track row (y 1953):
+
+| x | colour | band |
+|---|---|---|
+| 191–335 | `#C9A84C` (201,168,76) | **played** — brand gold, 100 % |
+| 341–377 | `#FFFFFF` | the thumb |
+| 383–~500 | `#95814A` (149,129,74) | **buffered** — brand gold, 60 % |
+| ~521+ | `#474747` (71,71,71) | **empty** — neutral, 28 % |
+
+The arithmetic again, and it is exact: the empty track is
+`rgba(255,255,255,0.28)` on black ⇒ `255 × 0.28 = 71 = 0x47`; the buffered
+band is `rgba(201,168,76,0.60)` **over** that track ⇒
+`201×0.6 + 71×0.4 = 149`, `168×0.6 + 71×0.4 = 129`,
+`76×0.6 + 71×0.4 = 74` ⇒ `#95814A`. So the policy is one hue at three
+strengths, and the buffered band sits **ahead of** the playhead.
+
+#### Where this leaves the register
+
+- **Item 8 (buffering)** — the band, the prefetch and the trim are all
+  device-proven. What is still open is the *spinner* and the *Retry*
+  re-launch, which need a throttled link and a terminal failure.
+- **Item 6 / item 32 (device matrix)** — PiP in/out is now exercised on a
+  device; the rest of the matrix is not.
+- **New, from this wave:** the `enterPip` answer contract is now pinned by
+  the lib's test *and* the app's test, so neither half can drift again.
+
+---
+
 ## 6. What deletes vs. what stays
 
 **Gone:** the "content index 0" invariant and its four-paragraph defence · the
@@ -1022,6 +1207,15 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
 6. **Stage 9 device verification** — the video lane's D9 rewrite is unit-tested
    but not yet seen on a device. PiP in/out, the dock showing live video, back
    at each level, and no black frame on expand↔mini.
+   **Update 2026-10-21 (midday):** PiP in/out is now on the device, and it
+   found a real defect — leaving PiP was a one-way door (the reconciliation
+   listener was mounted inside the subtree the PiP state unmounts). Fixed,
+   with the composition-level regression test and a 3/3 mutation check; see
+   the midday progress block. **Verified on device:** PiP enters, PiP exits,
+   the chrome comes back, and playback runs through the round trip.
+   **Still open:** the dock showing live video, back at each level, no black
+   frame on expand↔mini, the spinner during a slow load, and the error
+   card's Retry re-launching a real load.
 7. **Stage 9 audio lane** — the video lane is on D9; the audio lane still
    switches component identity (`audioMode === 'expanded' ? <AudioPlayer/> :
    <MiniPlayer/>`). The full-screen audio player and the dock are two
@@ -1051,6 +1245,14 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    band. The band can only be seen if the buffer is larger than the thumb ⇒
    raise the lib's `cache-secs` / `demuxer-readahead-secs` from 120 s to
    ~300 s (lib 1.19.0 + an APK rebuild).
+   **CLOSED 2026-10-21 (midday).** Lib 1.19.0's 300 s window is live on the
+   device (`cacheWindow new load → cache-secs=300 demuxer-readahead-secs=300`),
+   the memory-pressure trim is seen firing for the first time
+   (`trim level=40 → cache-secs=10 demuxer-readahead-secs=10` — both options,
+   as mpv's `MPMAX` requires), and the band is measured on the pixel row
+   itself: played `#C9A84C`, buffered `#95814A` (brand gold at exactly 60 %),
+   empty `#474747`. The band is AHEAD of the playhead. What remains open in
+   this item is the *spinner* and the *Retry* re-launch — see item 6.
 9. **The deep-link path bypasses the app's session seam.** `useOpenFromUrl`
    (lib) calls the lib's `openPlayer` directly, not the app's
    `useResumeAwareLaunch`, so a deep-linked file gets no now-playing entry,

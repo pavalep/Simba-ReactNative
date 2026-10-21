@@ -237,6 +237,14 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           // halves are therefore owned here, so `enterPip()` is one
           // honest call.
           //
+          // The chrome follows the OS's ANSWER, not an assumption. The
+          // native side used to swallow every refusal, so a request that
+          // never produced a PiP window looked identical to one that did
+          // — and hiding the chrome for a window that does not exist is
+          // a one-way door: the only thing that brings the chrome back
+          // is the PiP-exit event, and for a request that never happened
+          // that event never comes.
+          //
           // W6.0: the previous surface also exposed
           // `setPresentation(mode)` taking `'mini' | 'expanded' |
           // 'pip'`. With the mode derived from the host activity, only
@@ -246,8 +254,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           // overrides would be a control that lies, so it is removed
           // rather than kept as a no-op.
           enterPip: async () => {
-            commands.enterPip();
-            setPipActive(true);
+            setPipActive(commands.enterPip());
           },
           exitPip: async () => {
             commands.exitPip();
@@ -284,6 +291,36 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
  */
 const VideoPlayerChrome: React.FC = () => {
   const {isExpanded, setVideoPresentation} = usePresentation();
+
+  // W6.1 — the single owner of PiP reconciliation.
+  //
+  // It lives HERE, and not in the expanded chrome, because this is the only
+  // component in the player subtree that is mounted for the whole app
+  // session: `AppRoot` renders `<VideoPlayer />` unconditionally, and
+  // nothing below this point is conditional on the presentation mode.
+  //
+  // That matters because of what PiP does to the tree. `pipActive` is an
+  // input to the DERIVED presentation mode:
+  //
+  //     mode = pipActive ? 'pip' : (expanded ? 'expanded' : 'mini')
+  //
+  // so `pipActive === true` makes the mode `'pip'`, which makes
+  // `isExpanded` false, which unmounts the expanded chrome. If the PiP
+  // reconciliation lived in the expanded chrome, entering PiP would tear
+  // down the listener that reports PiP ending — and the app would latch:
+  // the native side would correctly announce `isInPip=false` to nobody,
+  // `pipActive` would stay `true`, and the fullscreen player would come
+  // back with no transport bar, no top bar and no way out.
+  //
+  // That is not a hypothetical: it is what the PiP exit did on device. The
+  // native log said `onPictureInPictureModeChanged: isInPip=false` and
+  // `emit succeeded`, and the user came back to a fullscreen player with
+  // no chrome at all.
+  //
+  // The rule: a listener that reconciles a state must not be mounted inside
+  // a subtree that the state unmounts. One owner, one subscriber, and it
+  // outlives every mode the state can put the tree into.
+  usePipBridge();
 
   // Hardware back must be the SAME verb as the header's back chevron.
   //
@@ -517,13 +554,24 @@ const VideoLane: React.FC = () => {
  * so that the picture can stay mounted while this comes and goes.
  */
 const ExpandedChrome: React.FC = () => {
-  // W6.1 — the single owner of PiP reconciliation. Mounted here, inside
-  // the mount gate, because PiP only exists while a player surface
-  // does. It must be the one place that subscribes: two subscribers
-  // would each call `setPipActive` with the same value, which happens to
-  // be harmless, but "one owner" is the property that keeps it
-  // harmless.
-  usePipBridge();
+  // W6.1 — the PiP reconciliation used to be mounted HERE, and that was a
+  // deadlock. This component is gated on `presentation.isExpanded`, and
+  // `pipActive === true` makes the derived mode `'pip'`, which makes
+  // `isExpanded` false — so entering PiP UNMOUNTED the very listener whose
+  // job was to tell the app that PiP had ended. The native side was
+  // provably correct (`onPictureInPictureModeChanged: isInPip=false` →
+  // "emit succeeded"), and the event still had no subscriber, so
+  // `pipActive` stayed `true` for good: the fullscreen activity came back
+  // with no transport bar, no top bar, and no way out.
+  //
+  // The rule this encodes: a listener that reconciles a state must not live
+  // inside a subtree that the state unmounts. `usePipBridge` now lives in
+  // `VideoPlayerChrome`, which is mounted for the whole app session.
+  //
+  // The caption style bridge stays here, and the asymmetry is deliberate: it
+  // re-pushes the whole style on mount, so a remount after PiP restores it.
+  // The PiP bridge has no such self-healing — the event it waits for is the
+  // one thing that can only arrive while it is listening.
 
   // W6.2 — the single owner of caption rendering style. Mounted here for
   // the same reason as the PiP bridge: the setting has to be pushed to

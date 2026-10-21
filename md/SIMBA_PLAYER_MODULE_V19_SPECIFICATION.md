@@ -196,6 +196,14 @@ Keeping the old component after replacing it does not preserve history — it pr
 *Proven by:* resume was about to become universal, which makes the "almost finished" cutoff load-bearing — without it, finishing a film and tapping it again opened it on the last credits frame, played a few seconds and stopped. The cutoff (90% of duration; Plex "Video played threshold" and Jellyfin "Maximum resume percentage" both document 90% as their default) is therefore applied to **history only**, never to **bookmarks**. A bookmark is an explicit instruction — "come back to this exact moment" — and a user who bookmarked 58:00 of a 60:00 film wants 58:00.
 *Enforced by:* `resolveResumeMs` branches on signal type, with the asymmetry documented at the decision site and pinned by a test per direction. A missing duration is never treated as evidence of completion, for the same reason a missing position is not.
 
+**I26 — A control that changes a NATIVE WINDOW's state must act on the OS's answer, never on the assumption that it worked.** (Added W22.)
+*Proven by:* the PiP button called `setPipActive(true)` unconditionally, while the native `enterPip` swallowed every refusal — no activity, SDK < N, `enterPictureInPictureMode` returning `false`, or a throw. A **refused** request was therefore indistinguishable from a successful one, so the app hid its own chrome for a PiP window that would never exist. This is principle 4 ("State truth, never optimistic") applied to a *window* rather than to a transport value, and it was violated the same way. The native code even named the recovery it expected — *"let the JS-side 5 s recovery timer in `VideoPipAdapter` take over"* — and there is no `VideoPipAdapter` in this repository, so nothing was taking over and the comment was simply false.
+*Enforced by:* `enterPip` returns the OS's own answer as a `boolean`, relayed through the codegen spec, the facade and the command implementation; the `NOOP_BRIDGE` stub answers `false`, because a stub that does nothing did not enter PiP. `PiPToggle` and the imperative ref drive `setPipActive()` from that answer. The lib's `player.pipAnswer` suite pins the answer, and the app's `PiPToggle` suite pins that a refused request does NOT hide the chrome.
+
+**I27 — A listener that reconciles a state must not be mounted inside a subtree that the state unmounts.** (Added W22.)
+*Proven by:* `usePipBridge()` was mounted inside `ExpandedChrome`, which is gated on `presentation.isExpanded`. The derived mode is `pipActive ? 'pip' : (expanded ? 'expanded' : 'mini')`, so entering PiP made `isExpanded` false, which unmounted `ExpandedChrome`, which unmounted the only subscriber to `onPipModeChanged`. The native side did everything right — `onPictureInPictureModeChanged: isInPip=false` and `emit succeeded` — and the event still had no listener, so `pipActive` stayed `true` for good: the fullscreen player came back with no transport bar, no top bar and no way out. Entering PiP destroyed the listener whose job was to report that PiP had ended.
+*Enforced by:* the bridge is mounted in `VideoPlayerChrome`, which `AppRoot` mounts unconditionally for the whole app session. The regression test is a **composition** test (`VideoPlayerPipExit.test.tsx`) that renders the real `<VideoPlayer />` with the real bridge and the real presentation derivation — the hook's own unit test was green throughout, because the defect was never in the hook. Any future move of a reconciliation hook into a conditional subtree breaks that test. The general form: *a subscriber that must outlive a state transition has to be mounted at a level the state cannot reach.*
+
 ---
 
 ## 1. Product principles (inherited + tightened)
@@ -695,7 +703,7 @@ return <FullChrome ... />;
 - Default on cold start: `mode === 'expanded'` if there's an active session, else `mode === 'mini'` (no chrome visible).
 - User taps mini dock → `setMode('expanded')`. The SimbaPlayer at the shell re-renders to show full chrome. **No navigation. No mount/unmount. The chrome is the same view, just bigger.**
 - User taps "minimize" in chrome → `setMode('mini')`. Re-renders to dock.
-- PiP: `setMode('pip')` triggers `enterPip()`. On PiP exit, the lib fires a callback → `setMode('expanded')` (or `mini` if no session).
+- PiP: the mode is **derived**, not written. `pipActive` is the one global fact, and `mode = pipActive ? 'pip' : (expanded ? 'expanded' : 'mini')`. Tapping PiP calls `enterPip()` and sets `pipActive` from the OS's **answer** (invariant I26); leaving PiP is reported by the lib's `onPipModeChanged` event, which the reconciliation bridge owns (invariant I27).
 - Survives app kill (MMKV-persisted). On relaunch, if a session is active, the chrome opens in `expanded` (not `mini`) so the user sees their video.
 - Survives navigation: this is the whole point of the shell-mounting rule (§3.4.1).
 
@@ -874,8 +882,12 @@ interface SimbaPlayerRef {
   // Writes to usePresentationStore. Native PlayerActivity stays the same instance.
 
   // ── PiP (lib command)
-  enterPip(): Promise<void>;
-  exitPip(): Promise<void>;
+  // `enterPip` answers whether the OS accepted the request (lib 1.21.0).
+  // It is NOT a Promise: the native call is synchronous, and the question
+  // it answers is a fact, not an operation. `false` means PiP did NOT
+  // happen — the caller keeps its chrome. See invariant I26.
+  enterPip(): boolean;
+  exitPip(): void;
 
   // ── Read-only for the mini player dock
   getCurrentUri(): string | null;
@@ -1011,8 +1023,8 @@ mini ──setPresentation('expanded')──▶ expanded ──setPresentation('
 
 - On `usePlayer().state.isPlaying` going from `false` to `true` AND `usePresentationStore.mode === 'mini'` AND app is foregrounded → keep mini (user is browsing)
 - On cold start with active session → `mode === 'expanded'` (user expects to see their video)
-- On PiP enter (`enterPip()` resolves) → `setMode('pip')`
-- On PiP exit callback → `setMode('expanded')` (or `'mini'` if no session)
+- On PiP enter → `pipActive = true`, and only if the OS accepted the request (I26). The `mode` is derived from it; nothing writes a mode.
+- On PiP exit callback (`onPipModeChanged {isInPip: false}`) → `pipActive = false`, and the derived mode returns to `expanded` (or `mini` if no session). The subscriber for that event must be mounted OUTSIDE the subtree the flag unmounts (I27).
 - App-backgrounded while playing on Android 12+ → `setMode('pip')` via `setAutoEnterEnabled(true)` (already in `AndroidManifest.xml`)
 - App-foregrounded while pip + still playing → `setMode('expanded')`
 
