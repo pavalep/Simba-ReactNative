@@ -1156,6 +1156,133 @@ strengths, and the buffered band sits **ahead of** the playhead.
 
 ---
 
+### Progress — 2026-10-21 (late afternoon): the resume that never resumed, and the card that never had a frame
+
+The report was two lines: *"when resumed after restarting app video position
+is correct, but the left side time is wrong, check right side also"* and
+*"if you look at recent, there is no the screen position image"*. Both were
+real, and both were **worse than they looked**.
+
+#### The clock was telling the truth — the RESUME was what failed
+
+The elapsed clock, the remaining clock and the seek thumb all read ONE value
+(`displayMs = scrubPreviewMs ?? state.positionMs`), so they cannot disagree
+with each other. They can only disagree with mpv. The obvious suspect was
+therefore not the clock but the **resume**.
+
+Measured on the device (emulator-5554, a 21:58 archive.org training film):
+
+| what | result |
+|---|---|
+| play from 0:00, let it run | elapsed `2:05`, remaining `-19:52` — consistent, correct |
+| **scrub the track to 72.8 %** | elapsed **`16:06`**, remaining `-14:06` — the clock tracks mpv exactly |
+| resume at a stored `17:40` | elapsed counted from **`0:00`**, and the picture was the film's **opening title card** |
+
+A manual scrub — a seek issued *after* the file is open — landed to the
+second. A resume — a seek issued in the same tick as the load — did not
+happen at all. The clock was right; the resume was the thing that silently
+did not happen.
+
+The native trace says it outright:
+
+```
+[Bridge][loadFile] requested=https://archive.org/download/…/UsmcRifleVideo1960s.mp4
+[Native][loadFile] result=0 pathLength=83 token=none
+[Bridge][listener:event] name=startFile payload={}
+[Bridge][seekAbsolute] position=1060.727        ← the resume seek IS issued
+[Bridge][play] ptr=…
+…
+[Bridge][listener:event] name=playbackRestart payload={}
+```
+
+**There is no `name=seek` event.** For the manual scrub the log shows
+`name=seek` immediately before `name=playbackRestart`. The resume's seek was
+issued and never happened.
+
+#### Why — against mpv's own source, not from memory
+
+mpv 0.41 was cloned and read (`player/command.c`, `player/loadfile.c`):
+
+- `cmd_seek` bails out with `cmd->success = false` while
+  `!mpctx->playback_initialized`.
+- `playback_initialized` is set immediately **before** `MPV_EVENT_FILE_LOADED`
+  is emitted — i.e. only once the file has actually opened.
+- The lib's `main.cpp` **discards mpv's return code** for `seek`, so the
+  refusal was invisible: no event, no log, no error.
+
+So `loadfile` + `seek` in the same tick is a **racy command that mpv can
+refuse**, and the refusal is silent.
+
+mpv's own answer for "start this file at 12:34" is the `start` option, and
+mpv reads it **while the file opens** (`player/loadfile.c` reads
+`opts->play_start` and queues the seek there). The shipped `libmpv.so` is
+mpv 0.41.0, and mpv's own bundled script does the same thing
+(`player/lua/ytdl_hook.lua`: `mp.set_property("file-local-options/start", …)`).
+
+**⇒ Lib 1.22.0** writes mpv's `start` option **before** the load, through
+the documented `options/start` property path. The start position becomes
+part of the load: no race, no dropped command, and the first frame is
+already the resumed frame. The option is written on **every** load, `0`
+included, because mpv's `start` is persistent — skipping the write would
+carry the last resume position into the next file.
+
+`onPlaybackRestart` also no longer zeroes the position: mpv fires it right
+after a seek, and the handler was restarting the transport bar's clock at
+0:00 while the video sat at the position the user had just seeked to. The
+position belongs to `time-pos`.
+
+#### The card had no frame because no frame was ever captured
+
+`files/simba-resume-thumbs/` **did not exist** on the device — not one frame
+had ever been captured, so the Recently Played card showed its grey
+placeholder for a completely different reason than "the capture failed".
+
+The chain had three breaks:
+
+1. **The teardown flush never wrote.** The cleanup read the *current*
+   snapshot — but the render that ENDS a session also nulls the session, and
+   that render runs **before** React runs the effect cleanup. So the cleanup
+   found a null session, wrote nothing, and lost both the final position and
+   the frame. The suite was green because it only exercised the tree
+   **unmount**, where no nulling render happens first; the device path
+   (close the player → the session ends) was never covered. Fixed with a
+   per-session snapshot map, and the flush is no longer gated on the session
+   still playing — the player is stopped *before* the session ends.
+2. **A local path is not a URI.** The native returns a bare absolute path;
+   an image loader parses `/data/user/0/…` as a scheme-less URI and fails.
+   `toRenderableImageUri` gives a local path `file://` and leaves a remote
+   catalogue URL alone (`file://https://…` names no file).
+3. **The capture itself** — mpv-independent, `MediaMetadataRetriever` on the
+   media URI, writing into `filesDir`.
+
+#### What the audit turned up alongside it
+
+A sweep of every place the app displays a playback-derived value found two
+more of the same class:
+
+- **`skipPrev` read a frozen playhead.** The `wrapped` commands memo is
+  deliberately stable (it only rebuilds when the DURATION changes), so the
+  closed-over `state.positionMs` was the position **at launch**. Pressing
+  skip-back three minutes into a film jumped to the **previous track**
+  instead of restarting the film.
+- **The `file://` prefix was applied the wrong way round** in the search
+  tile (`'file://' + thumbnailPath` on a *remote* URL). Recorded below.
+
+#### Where this leaves the register
+
+- **New invariants:** **I28** (a start position must be part of the load),
+  **I29** (a teardown flush must read the state it was created for),
+  **I30** (a command that decides from a live value must read it live).
+- **Lib 1.22.0** — released, published, installed. `tsc` 0 · `jest` 19
+  suites / 278 tests · mutation check 4/4.
+- **App** — `tsc` 0 · `eslint --max-warnings 0` · `jest` 97 suites / 1199
+  passed / 1 todo · mutation check 4/4.
+- **Still open on the device:** the buffered-band and PiP proofs are
+  unaffected (1.22.0 changed no native code, so Metro serves it as JS), but
+  the resume and the captured frame need their own re-verification.
+
+---
+
 ## 6. What deletes vs. what stays
 
 **Gone:** the "content index 0" invariant and its four-paragraph defence · the

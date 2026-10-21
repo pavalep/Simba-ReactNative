@@ -933,7 +933,14 @@ export function useTransport(): TransportHook {
       },
       skipPrev: () => {
         const threshold = getSkipPrevThresholdMs();
-        const position = state.positionMs;
+        // The LIVE position, not `state.positionMs` from the closure. The
+        // `wrapped` memo only rebuilds when the DURATION changes, so the
+        // closed-over position is the one the memo was built with — the
+        // position at launch. After that, "previous" decided "restart this
+        // item" or "go to the previous item" from a stale number, so
+        // pressing ⏮ three minutes into a film jumped to the previous
+        // track instead of restarting the film.
+        const position = livePlaybackRef.current.positionMs;
         if (position > threshold) {
           commands.seek(0);
         } else {

@@ -952,3 +952,45 @@ describe('clampPosition', () => {
     expect(clampPosition(-Infinity, 300_000)).toBe(0);
   });
 });
+
+// ── skipPrev reads the LIVE position ─────────────────────────────────
+
+describe('skipPrev', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockProgress.positionMs = 0;
+    mockProgress.durationMs = 600_000;
+  });
+
+  it('restarts the current item when the LIVE playhead is past the threshold', async () => {
+    // The `wrapped` commands memo is deliberately stable — it only
+    // rebuilds when the DURATION changes — so a command that closed over
+    // `state.positionMs` read the position the memo was built with (the
+    // position at launch). Pressing ⏮ three minutes into a film then
+    // jumped to the PREVIOUS TRACK instead of restarting the film, and
+    // nothing on screen said so.
+    const {result, rerender} = await renderHook(() => useTransport());
+
+    // The playhead moves. The duration does not, so the memo is NOT
+    // rebuilt — which is exactly the condition that froze the value.
+    mockProgress.positionMs = 60_000;
+    await rerender(undefined);
+
+    result.current.commands.skipPrev();
+
+    expect(mockCommands.seek).toHaveBeenCalledWith(0);
+    expect(mockCommands.previous).not.toHaveBeenCalled();
+  });
+
+  it('goes to the previous item when the LIVE playhead is before the threshold', async () => {
+    const {result, rerender} = await renderHook(() => useTransport());
+
+    mockProgress.positionMs = 1_000;
+    await rerender(undefined);
+
+    result.current.commands.skipPrev();
+
+    expect(mockCommands.previous).toHaveBeenCalled();
+    expect(mockCommands.seek).not.toHaveBeenCalled();
+  });
+});

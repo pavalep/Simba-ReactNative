@@ -290,6 +290,57 @@ describe('usePlaybackCheckpointSync', () => {
     );
   });
 
+  it('flushes the final position when the SESSION ENDS — not only when the tree unmounts', async () => {
+    // The device path, and the one the test above never exercised:
+    // the player closes, the store's `current` becomes null, the hook
+    // re-renders with a session-LESS snapshot, and only THEN does React
+    // run the effect cleanup.
+    //
+    // Reading the CURRENT snapshot in the cleanup found that null
+    // session, wrote nothing, and lost both the final position and the
+    // resume frame — so "Recently Played" kept a stale position and the
+    // card never showed the picture you left off at. (On device:
+    // `files/simba-resume-thumbs/` was never created.)
+    launch();
+    const view = await render(
+      <Harness clock={clock} transport={mockTransportState} />,
+    );
+    await setTransport(view, {positionMs: 90_000});
+
+    act(() => {
+      useNowPlayingStore.getState().end();
+    });
+    await act(async () => {await Promise.resolve();});
+
+    expect(mockAddRecent).toHaveBeenCalledWith(
+      expect.objectContaining({position: 90}),
+    );
+    expect(mockCaptureFrame).toHaveBeenCalledTimes(1);
+    expect(mockCaptureFrame.mock.calls[0]![0]).toBe(URI);
+  });
+
+  it('flushes the final position even when the player has already stopped', async () => {
+    // Stop, then close — that is the normal order, and the player is
+    // idle by the time the session ends. A position the user actually
+    // reached is worth keeping whether or not the file is still running,
+    // and the resume frame is captured at that position.
+    launch();
+    const view = await render(
+      <Harness clock={clock} transport={mockTransportState} />,
+    );
+    await setTransport(view, {positionMs: 90_000, isPlaying: false});
+
+    act(() => {
+      useNowPlayingStore.getState().end();
+    });
+    await act(async () => {await Promise.resolve();});
+
+    expect(mockAddRecent).toHaveBeenCalledWith(
+      expect.objectContaining({position: 90}),
+    );
+    expect(mockCaptureFrame).toHaveBeenCalledTimes(1);
+  });
+
   it('does not double-write when the tree re-renders', async () => {
     // The flush lives in the effect CLEANUP keyed on the session id, so a
     // re-render (4x/second while playing) must not trigger it. If it

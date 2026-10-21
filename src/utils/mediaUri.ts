@@ -24,6 +24,31 @@ export function isRemoteUri(uri: string | null | undefined): boolean {
 }
 
 /**
+ * Turn a stored image path into something an image loader can fetch.
+ *
+ * The history store holds BOTH kinds of image:
+ *
+ *  - catalogue artwork — a remote `https://` URL (archive.org's
+ *    `services/img/{id}`, a CDN cover), and
+ *  - the resume frame — a LOCAL file path, written by the native capture
+ *    into the app's `filesDir`.
+ *
+ * A local path is not a URI. An image loader parses `/data/user/0/…` as a
+ * scheme-less URI and fails, so a card that had a perfectly good captured
+ * frame fell back to its grey placeholder. A local path needs the
+ * `file://` scheme; a remote URL must be left exactly as it is — prefixing
+ * `file://` to an `https://` URL produces a path that names no file.
+ */
+export function toRenderableImageUri(
+  path: string | null | undefined,
+): string | undefined {
+  if (!path) return undefined;
+  // Already carries a scheme (`file:`, `http:`, `https:`, `content:`…).
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path)) return path;
+  return `file://${path}`;
+}
+
+/**
  * Best-effort human-readable source label for a URI (host for remote URIs,
  * otherwise undefined). Used to tag recents/bookmarks/playlist entries.
  */

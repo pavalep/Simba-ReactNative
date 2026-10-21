@@ -82,10 +82,23 @@ interface Snapshot {
  * `resumeThumbnailPath` is optional because the two callers that write
  * arrive in order: the synchronous write that guarantees the position
  * lands, then the async one that adds the captured frame.
+ *
+ * `requirePlaying` is true for the periodic path and false for the final
+ * flush. The periodic path only records a MOVING session, so a paused
+ * video does not rewrite the same position every thirty seconds. The
+ * final flush must not: the player is usually stopped before the session
+ * ends, and a position the user actually reached is worth keeping either
+ * way — it is the position the resume will use, and the position the
+ * captured frame is taken at.
  */
-function writeCheckpoint(snapshot: Snapshot, resumeThumbnailPath?: string): boolean {
+function writeCheckpoint(
+  snapshot: Snapshot,
+  resumeThumbnailPath?: string,
+  requirePlaying = true,
+): boolean {
   const {session} = snapshot;
-  if (!session || !snapshot.isPlaying) return false;
+  if (!session) return false;
+  if (requirePlaying && !snapshot.isPlaying) return false;
 
   const positionSec = snapshot.positionMs / 1000;
   const durationSec = snapshot.durationMs / 1000;
@@ -162,6 +175,28 @@ export function usePlaybackCheckpointSync(now: Clock = Date.now): void {
     session: nowPlaying,
   };
 
+  // The last snapshot of EACH live session, keyed by session id.
+  //
+  // The teardown cleanup cannot use `snapshotRef.current`: the render that
+  // ENDS a session also nulls it, and that render runs BEFORE React runs
+  // the effect cleanup — so the cleanup found a null session, wrote
+  // nothing, and lost both the final position and the resume frame.
+  // (On device: `files/simba-resume-thumbs/` was never created, and the
+  // Recently Played card showed a grey placeholder for ever.)
+  //
+  // A map rather than a single ref, because replacing one session with
+  // another (tapping a second film while the first is playing) must flush
+  // the OLD session's position, not the new one's.
+  const sessionSnapshotsRef = useRef<Map<number, Snapshot>>(new Map());
+  if (nowPlaying) {
+    sessionSnapshotsRef.current.set(nowPlaying.sessionId, {
+      positionMs: state.positionMs,
+      durationMs: state.durationMs,
+      isPlaying: state.isPlaying,
+      session: nowPlaying,
+    });
+  }
+
   const lastWriteRef = useRef<{uri: string; sessionId: number; at: number} | null>(
     null,
   );
@@ -221,11 +256,21 @@ export function usePlaybackCheckpointSync(now: Clock = Date.now): void {
   const sessionId = nowPlaying?.sessionId ?? null;
 
   useEffect(() => {
+    const ownedSessionId = sessionId;
     return () => {
-      const snapshot = snapshotRef.current;
-      if (!writeCheckpoint(snapshot)) return;
+      if (ownedSessionId == null) return;
+      // This session's OWN last snapshot, not the current one: the render
+      // that ended it already replaced the current snapshot with a
+      // session-less one.
+      const snapshot = sessionSnapshotsRef.current.get(ownedSessionId);
+      sessionSnapshotsRef.current.delete(ownedSessionId);
+      if (!snapshot) return;
+      // The final flush is NOT gated on the session still playing — the
+      // player is stopped before the session ends, and that is exactly
+      // when the final position and the frame are worth keeping.
+      if (!writeCheckpoint(snapshot, undefined, false)) return;
       void captureResumeThumbnail(snapshot).then(path => {
-        if (path) writeCheckpoint(snapshot, path);
+        if (path) writeCheckpoint(snapshot, path, false);
       });
     };
   }, [sessionId]);

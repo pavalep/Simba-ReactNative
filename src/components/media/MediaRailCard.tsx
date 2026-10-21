@@ -32,6 +32,7 @@ import FastImage from 'react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
+import {toRenderableImageUri} from '../../utils/mediaUri';
 import {AppText} from '../core/AppText/AppText';
 import {SvgIcon} from '../utility/SvgIcon';
 import type {MediaLane} from '../../types/media';
@@ -102,7 +103,12 @@ export const MediaRailCard: React.FC<MediaRailCardProps> = ({
         style={[styles.thumbnailContainer, {backgroundColor: colors.background.elevated}]}>
         {imageUri ? (
           <FastImage
-            source={{uri: imageUri}}
+            // A captured resume frame is a LOCAL path, and a local path
+            // is not a URI — an image loader reads `/data/user/0/…` as a
+            // scheme-less URI and fails, so the card fell back to its
+            // grey placeholder while holding a perfectly good frame.
+            // Catalogue artwork is a remote URL and must be left alone.
+            source={{uri: toRenderableImageUri(imageUri)}}
             style={StyleSheet.absoluteFill}
             resizeMode={FastImage.resizeMode.cover}
           />
