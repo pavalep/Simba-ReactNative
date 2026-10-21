@@ -33,6 +33,7 @@ import {
 import type {TransportState} from '../../../../../src/infrastructure/player';
 import {VideoTitleOverlay, FADE_IN_MS} from '../../../../../src/components/player/video/VideoTitleOverlay/VideoTitleOverlay';
 import {usePresentationStore} from '../../../../../src/state/usePresentationStore';
+import {useNowPlayingStore} from '../../../../../src/state/nowPlayingStore';
 
 // ── Theme: real dark palette (the app's default lane) ──────────────────
 jest.mock('../../../../../src/theme', () => {
@@ -94,6 +95,23 @@ jest.mock('../../../../../src/components/utility/SvgIcon', () => {
       } as unknown as ComponentProps<typeof View>;
       return ReactActual.createElement(View, props);
     },
+  };
+});
+
+// ── The native bridge ───────────────────────────────────────────────────
+//
+// V22 W22: the back control is the CLOSE verb, and the close is owned by
+// `useClosePlayback()`, which calls the native `stopPlayback` primitive.
+// Mocking the bridge is what makes "did it really tear down?" observable.
+const mockStopPlayback = jest.fn();
+
+jest.mock('@simba-dev/react-native-media-player', () => {
+  const actual = jest.requireActual('@simba-dev/react-native-media-player');
+  return {
+    ...actual,
+    getMpvPlayerModule: () => ({
+      stopPlayback: mockStopPlayback,
+    }),
   };
 });
 
@@ -300,39 +318,62 @@ describe('VideoTitleOverlay', () => {
     );
   });
 
-  // ── V21 F4 — the back affordance ──────────────────────────────────────
+  // ── V22 W22 — the back affordance ────────────────────────────────────
   //
-  // This verb CHANGED in F4, and the two tests below are the record of
-  // why. Both previously asserted `exitPlayer` — stop the engine and
-  // finish the Activity — justified by "there is no smaller player to
-  // minimise to". F4 adds the dock, so back minimises and stopping stays
-  // on the dock's X.
+  // This verb CHANGED again in W22. F4 made back MINIMISE (the dock
+  // existed, so back-to-minimise was safe). W22 made back CLOSE, because
+  // minimise became a control of its own — the mini-player button in the
+  // transport bar, in both lanes — and back is the platform's "leave this
+  // screen" verb. The control's accessibility label had said "Closes the
+  // player" the whole time; now the handler agrees with it.
 
-  it('minimises rather than stopping, because the dock exists', async () => {
-    // Asserted on the REAL store, not a mocked setter: the value is the
-    // outcome `useVideoSurface` reads to decide between filling the window
-    // and placing the surface in the dock. Asserting a mock call would
-    // pass even if the store write were dropped.
+  it('closes rather than minimising — back is the platform leave verb', async () => {
     usePresentationStore.getState().setVideoPresentation('expanded');
     mockTransport.state = makeTransportState({title: 'Clip'});
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
 
     await fireEvent.press(getByTestId('video-header-back'));
 
-    expect(usePresentationStore.getState().videoPresentation).toBe('mini');
+    // The native teardown ran.
+    expect(mockStopPlayback).toHaveBeenCalledTimes(1);
+    // And the video was NOT minimised — minimise is the transport bar's
+    // button now, and two paths to one verb is how one of them becomes a
+    // no-op.
+    expect(usePresentationStore.getState().videoPresentation).toBe(
+      'expanded',
+    );
   });
 
-  it('does not stop playback when leaving the player', async () => {
-    // The failure this pins: back reaching the stop verb. It played
-    // through — one press and the video ends, with no dock to restart it
-    // from — which is exactly what the user does not mean by "go back".
+  it('ends the session, so nothing is left playing behind the closed player', async () => {
+    usePresentationStore.getState().setVideoPresentation('expanded');
+    // A real session, so "the session ended" is an observation and not a
+    // tautology — `end()` on an empty store is a no-op.
+    useNowPlayingStore.getState().begin({
+      uri: 'file:///movies/film.mkv',
+      title: 'Clip',
+      startPositionMs: 0,
+      streamType: 'video',
+    });
+    mockTransport.state = makeTransportState({title: 'Clip'});
+    const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
+
+    await fireEvent.press(getByTestId('video-header-back'));
+
+    expect(useNowPlayingStore.getState().current).toBeNull();
+  });
+
+  it('does not reach the lib stop+clear command, which leaves the session posted', async () => {
+    // `commands.close()` is the lib's `stop()` + `clear()`: it stops the
+    // ENGINE but leaves the MediaSession registered and the notification in
+    // the shade — a "closed" player that still owns the media button. The
+    // close verb is the native `stopPlayback()`, which tears the service
+    // down too.
     usePresentationStore.getState().setVideoPresentation('expanded');
     mockTransport.state = makeTransportState({title: 'Clip'});
     const {getByTestId} = await renderChrome(<VideoTitleOverlay />);
 
     await fireEvent.press(getByTestId('video-header-back'));
 
-    expect(mockTransport.commands.exitPlayer).not.toHaveBeenCalled();
     expect(mockTransport.commands.close).not.toHaveBeenCalled();
   });
 

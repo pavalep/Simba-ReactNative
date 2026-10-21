@@ -140,6 +140,33 @@ view. If the dock got its own `SimbaVideo`, two views would bind one mpv handle
 Stage 6's design avoids. One tree is not a style preference here; it is what
 makes the dock possible at all.
 
+**Applied to BOTH lanes in W22 (2026-10-21).** The video lane was already D9
+(the `<SimbaVideo>` view is mounted once and only its geometry changes), but
+the audio lane still switched component identity
+(`audioMode === 'expanded' ? <AudioPlayer/> : <MiniPlayer/>`). W22 collapsed
+it: `AudioPlayer` now mounts ONCE and owns both its expanded page and its
+dock — the root's style switches between the two geometries and only
+per-part visibility changes. The shared `MiniPlayer` component was deleted
+outright. Each lane renders its own mini form inside ONE mounted tree:
+`VideoDock` inside the video lane, the dock inside `AudioPlayer`.
+
+**The dock is never a second picture.** The video dock is a transparent
+overlay rebuilt from opaque plates around a measured hole; the live video
+shows through it. It never renders a `<SimbaVideo />`, because the lib's
+`attachSurfaceLocked` rebinds the mpv surface on every `setNativePtr` — a
+second view would STEAL the picture from the first. That is the same
+two-owners-one-handle conflict D9 exists to prevent, reached from the other
+direction.
+
+**CLOSE and MINIMISE are different verbs now.** They used to be one control
+(back minimised). They are not: back **closes** — the native
+`stopPlayback()` (engine stops, service released, notification dismissed)
+followed by `endSession()`; the chevron-down in the bottom transport row
+**minimises** — the same mounted lane, restyled, still playing. One owner
+per verb: `useClosePlayback()` in `src/infrastructure/player/` is the only
+thing that tears playback down, and every close affordance in both lanes
+routes through it. Two owners of one teardown drift.
+
 ---
 
 ## 3. The target public API
@@ -1281,6 +1308,118 @@ more of the same class:
   unaffected (1.22.0 changed no native code, so Metro serves it as JS), but
   the resume and the captured frame need their own re-verification.
 
+### Progress — 2026-10-21 (night): the close verb, the minimise control, and the dock that stopped being a rival
+
+#### What was asked
+
+Three sentences from the product owner, in order:
+
+1. *"if back is press do close"* — back should **close**, not minimise.
+2. *"add a mini plyaer icon near bottom in track bar for miniplyer, for both
+   auido and video"* — a **minimise** control in the **bottom** row, in
+   **both** lanes.
+3. *"remove the minimplayer extra, let audioplayer and video palyer with
+   react antive ui handle the miniplayer version, without attatching or
+   reattatching mpv module"* — the standalone mini player goes; **each lane
+   renders its own mini form**, and **the mpv surface is never re-attached**.
+
+The third sentence is the load-bearing one. It is the same requirement as
+**D9** and as D2's "one picture, one owner", stated by the product owner
+without the vocabulary.
+
+#### The three decisions this produced
+
+**1. The close verb has ONE owner.** `src/infrastructure/player/useClosePlayback.ts`
+is the only thing in the app that tears playback down: the native
+`stopPlayback()` (engine stops, foreground service released, notification
+dismissed), then `endSession()` so `nowPlaying.current` is null. If the
+native stop throws, the error is surfaced through `useToast()` and **nothing
+is cleared** — the UI stays standing rather than pretending the teardown
+happened.
+
+It deliberately does **not** write the presentation store. The presentation is
+the user's standing request for the *next* video; a close is not a request
+for the next video to start minimised. Writing it there is how a player ends
+up opening the next title into a dock the user never asked for.
+
+Every close affordance now routes through it: the video header's back, the
+hardware back, the audio player's X, and both docks' X. Two owners of one
+teardown is how a close ends up stopping the engine but leaving the session
+behind (or the reverse).
+
+**2. CLOSE and MINIMISE are different verbs with different controls.**
+
+| Verb | Control | Effect |
+|---|---|---|
+| **CLOSE** | back (header + hardware), X on the player, X on the dock | stops the engine for real, releases the service, dismisses the notification, ends the session |
+| **MINIMISE** | chevron-down in the **bottom** transport row, **both lanes** | the same mounted lane, restyled to the dock; **still playing** |
+| **EXPAND** | the dock's leading square and title | the same mounted lane, restyled to the full player; still playing |
+
+The audio lane's old **top-left** chevron-down was **removed**, so each lane
+has exactly one minimise path. The glyph is not invented: Spotify documents
+this exact control as "Minimize" on its now-playing screen, and Apple Music
+and YouTube Music collapse the same way.
+
+The withdrawn W21 F4 rule — "back minimises" — is recorded in the SPEC's
+§3.2 as withdrawn, and its backing command `commands.exitPlayer()` is
+documented as **unusable** (bug `B-008`): it calls
+`finishAndRemoveTask()` on the *current* activity, and under D1 there is one
+activity, so it would finish `MainActivity` and remove the app's task.
+
+**3. The standalone `MiniPlayer` is deleted.** Each lane owns its own mini
+form inside ONE mounted tree:
+
+- The **video lane's** dock is `VideoDock`, mounted as a child of `VideoLane`.
+- The **audio lane's** dock is inside `AudioPlayer`.
+
+`PlayerChrome.tsx` is now the **audio lane's host** — `null` for a video
+session, `<AudioPlayer />` otherwise.
+
+#### The mpv surface is never re-attached
+
+The dock is the dangerous part, because it wants to show the video. It must
+not have its own `<SimbaVideo />`: the lib's `attachSurfaceLocked` rebinds the
+mpv surface on every `setNativePtr`, so a second view would **steal** the
+picture from the first — two owners of one handle.
+
+So the video dock is a **transparent overlay rebuilt from three opaque plates
+around a measured hole**, and the live video shows through that hole. The
+picture stays in `VideoLane`, outside the dock, and the dock is asserted by
+test never to render one.
+
+Both the hole and the window rect published for the picture come from **ONE**
+`measureInWindow` pass, so they cannot disagree — the video cannot land
+beside its own hole. Constants computed from the stylesheet would be one
+refactor away from silently drifting.
+
+#### The dock is always laid out, so there is no flash
+
+The dock's opacity toggles; it is never mounted on demand. That is what lets
+the slot's window rect be published **before** the user taps minimise, so the
+picture moves into the dock in the *same commit* that flips the presentation.
+When the dock used to mount on demand, its rect arrived one render later and
+the picture was still fullscreen for a frame — a visible jump on every
+minimise. The trade is an invisible bar over the bottom of the window in the
+expanded presentation; it is `pointerEvents="none"` there, so it cannot
+swallow a tap meant for the transport bar underneath it.
+
+#### Where this leaves the register
+
+- **D9 is now applied to both lanes** (register item 7 **RESOLVED**).
+- **New register group** "Player chrome (new, 2026-10-21 night)", items
+  **48–52** — everything in this wave that still owes a device proof.
+- **The SPEC was corrected, not just extended.** §3.3 gained
+  `MiniPlayerToggle`; §3.4 said "there is no video mini dock in V19" while a
+  dock was on screen, so it was rewritten; rules 6 and 9 still named a
+  deleted `<VideoMiniPlayer />`; the §3.4.1 architectural shape still showed
+  a branch on `presentation === 'mini'` returning a *different component* —
+  the exact thing D9 forbids; and the §3.4.1 native paragraph still claimed
+  the session is owned by a separate `PlayerActivity`, which D1 made
+  obsolete on 2026-10-16.
+- **Gates:** `tsc` 0 · `eslint --max-warnings 0` · `jest` 97 suites / 1202
+  passed / 1 todo.
+- **Still open on the device:** everything in items 48–51.
+
 ---
 
 ## 6. What deletes vs. what stays
@@ -1343,11 +1482,22 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    **Still open:** the dock showing live video, back at each level, no black
    frame on expand↔mini, the spinner during a slow load, and the error
    card's Retry re-launching a real load.
-7. **Stage 9 audio lane** — the video lane is on D9; the audio lane still
-   switches component identity (`audioMode === 'expanded' ? <AudioPlayer/> :
-   <MiniPlayer/>`). The full-screen audio player and the dock are two
-   components, so the audio lane still has the unmount the video lane just
-   lost.
+   **Update 2026-10-21 (night, W22):** the dock IS the lane's own component
+   now — `VideoDock` inside `VideoLane`, the audio dock inside `AudioPlayer`
+   — and the minimise control lives in the bottom transport row of **both**
+   lanes. Back now **closes**; it used to minimise. **Still open:** the device
+   proof — the dock showing live video, back closing for real, no black frame
+   on expand↔mini, the spinner during a slow load, and the error card's Retry
+   re-launching a real load.
+7. ~~**Stage 9 audio lane**~~ — **RESOLVED 2026-10-21 (W22).** The audio
+   lane is on D9 now. `AudioPlayer` mounts ONCE and owns both its expanded
+   page and its dock; the root's style switches between the two geometries
+   and only per-part visibility changes. The shared `MiniPlayer` component
+   was **deleted** — it was a second player competing with the audio lane
+   for the session, and it rendered a different UI from the player it
+   minimised. The video lane's own dock (`VideoDock`) is mounted inside
+   `VideoLane`. **Still open:** the device proof of the audio lane's
+   expand/collapse (register item 6).
 8. ~~**Buffering cannot be shown yet**~~ — **RESOLVED 2026-10-19**, and the
    remaining piece was resolved on **2026-10-20** too. The
    "property events never arrive" claim was false (measured: the elapsed time
@@ -1443,7 +1593,87 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
 30. Stray `2×` and `☀ 100%` / `♪ 100%` chips floating mid-frame in video chrome.
 31. FAB overlapping the Music card.
 32. Full device matrix — PiP in/out, dock rotation, a→v→a, back at each level, next/prev.
+   **Update 2026-10-21 (afternoon):** the resume and the captured-frame
+   round trip are on the device now (see the new items 41-42). Still
+   open: the dock showing live video, back at each level, no black frame
+   on expand↔mini, next/prev, and the audio lane.
+   **Update 2026-10-21 (night, W22):** back now **closes** instead of
+   minimising, and the minimise control moved into the bottom transport row
+   of both lanes — so "back at each level" has one meaning per level
+   (close), and the dock has a control of its own. Still open: the whole
+   matrix.
 33. C-07 artwork + `setAutoEnterEnabled` / `setExpandedAspectRatio` / portrait restore.
+
+**Playback truth (new, 2026-10-21 afternoon)**
+41. ~~**A resume never resumed — the start position was a `seek` mpv silently refused.**~~
+   — **RESOLVED by lib 1.22.0 + app `ba8e17d`.** A resuming launch did
+   `loadFile(uri)` and then `seekAbsolute(seconds)`. mpv refuses a seek
+   until the file has actually opened (`cmd_seek` →
+   `!mpctx->playback_initialized` → `cmd->success = false`), and the
+   native side discarded that return code, so the refusal was completely
+   silent: the file played from 0:00 and the clock truthfully showed
+   0:00. Device proof: `seekAbsolute position=1060.727` was logged and
+   mpv **never** emitted a `seek` event, while a manual scrub — a seek
+   issued after the file was open — landed to the second. The start
+   position is now mpv's own `start` option, written **before** the load,
+   so it is part of the load. New invariant **I28**.
+42. ~~**The Recently Played card had no frame — the capture never ran.**~~
+   — **RESOLVED by app `ba8e17d`.** The teardown flush read the *current*
+   snapshot, but the render that ends a session also nulls the session and
+   that render runs before React runs the effect cleanup — so the flush
+   wrote nothing and the frame was never captured. `files/simba-resume-thumbs/`
+   did not exist on the device. The suite was green because it only
+   exercised the tree *unmount*. Fixed with a per-session snapshot map and
+   a flush that is not gated on the session still playing. New invariant
+   **I29**. **Still open:** whether `MediaMetadataRetriever` can decode a
+   frame from an `https://` archive.org source on a real device — the
+   capture is a byte-range request, not a local file.
+43. ~~**`skipPrev` read a frozen playhead.**~~ — **RESOLVED by app
+   `ba8e17d`.** The `wrapped` commands memo only rebuilds when the
+   DURATION changes, so the closed-over position was the one at launch:
+   pressing skip-back three minutes into a film jumped to the **previous
+   track** instead of restarting the film. New invariant **I30**.
+44. **The search tile applies `file://` to a REMOTE thumbnail URL.**
+   `ResultTile.tsx` does `'file://' + item.thumbnailPath` unconditionally,
+   which names no file when the path is an `https://` catalogue URL. The
+   new `toRenderableImageUri` helper is scheme-aware; the tile should use
+   it. **OPEN.**
+45. **`formatDuration(0)` returns `''`.** A card with no position then
+   reads `" / 21:58"`. The resume prompt cannot reach it (a resume is
+   only offered above 5 s), so this is cosmetic. **OPEN.**
+46. **The transport bar freezes the elapsed label for 600 ms after a
+   tap-to-seek**, and the timeout is not cleared on unmount. **OPEN.**
+47. **The native discards mpv's return code** for `seek`, relative `seek`
+   and `playlist clear` (`main.cpp`), so a refusal there is silent too —
+   the same class as the resume defect, on the paths that remain.
+   **OPEN — needs a native wave** (an APK rebuild).
+
+**Player chrome (new, 2026-10-21 night)**
+48. **The close verb has no device proof yet.** `useClosePlayback()` is the
+   ONE owner of the teardown (native `stopPlayback()` → `endSession()`), and
+   the header's back, the hardware back, the audio player's X and both
+   docks' X all route through it. It is unit-tested; it has not been
+   observed on a device. **OPEN.**
+49. **The minimise control has no device proof yet**, on either lane. The
+   chevron-down is a *new* affordance in the bottom row (the audio lane's
+   old top-left chevron-down was removed, so there is exactly one minimise
+   path per lane). **OPEN.**
+50. **Expand ⇔ mini is unproven for black frames and for an mpv re-attach.**
+   The dock is always laid out precisely so the slot rect is published
+   BEFORE the tap, which is supposed to remove the one-frame jump — a claim
+   only the device can confirm. **OPEN.**
+51. **The video dock's transparent hole is unproven on device.** It is
+   rebuilt from three opaque plates around a measured rectangle, and the
+   live video is supposed to show through it. The unit tests prove the
+   geometry is published and that the dock never renders a picture; only
+   the device can prove the video lands IN the hole. **OPEN.**
+52. **`commands.exitPlayer()` is unusable and must stay unwired.** It routes
+   to the lib's `exitPipAndFinish()`, which calls
+   `activity.finishAndRemoveTask()` on the CURRENT activity — and under D1
+   there is one Activity, so it would finish `MainActivity` and remove the
+   app's task. It has no call site; that is the only reason it has not done
+   damage. See bug `B-008`. **OPEN — decide whether to delete it from the
+   lib.**
 
 **Library defects**
 34. `PlayerProvider` calls `initPlayer()` in a **mount effect**, and React runs

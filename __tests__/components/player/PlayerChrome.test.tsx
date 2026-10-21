@@ -1,6 +1,6 @@
 /// <reference types="node" />
 /**
- * `PlayerChrome` — the mini bar / full player switch, and the close verb.
+ * `PlayerChrome` — the audio lane's host, and the close verb.
  *
  * The close path is the important half. It is the one control that can
  * look like it worked while the native side kept playing: dismissing the
@@ -9,6 +9,14 @@
  * registered and the notification posted.
  *
  * Every "must not" here is mutation-checked against the real source.
+ *
+ * ## V22 W22 (2026-10-21) — the shared `MiniPlayer` is gone
+ *
+ * There used to be a second player component that took turns with this
+ * one: the expanded `AudioPlayer` mounted, then the `MiniPlayer` dock
+ * mounted, then the expanded player again. The audio lane is now ONE tree
+ * that renders both, and `PlayerChrome` hosts it. A video session renders
+ * nothing here at all — the video lane is hosted by `VideoPlayer`.
  *
  * ## Why the mocks point at defining modules
  *
@@ -34,14 +42,15 @@ jest.mock('../../../src/components/feedback/Toast', () => ({
 
 const mockStopPlayback = jest.fn();
 
-// V21 F5: `useIsPlayerActivity` is no longer mocked here because the lib
-// no longer exports it. Mocking a deleted export would keep the seam
-// looking wired when nothing reads it any more.
-jest.mock('@simba-dev/react-native-media-player', () => ({
-  getMpvPlayerModule: () => ({
-    stopPlayback: mockStopPlayback,
-  }),
-}));
+jest.mock('@simba-dev/react-native-media-player', () => {
+  const actual = jest.requireActual('@simba-dev/react-native-media-player');
+  return {
+    ...actual,
+    getMpvPlayerModule: () => ({
+      stopPlayback: mockStopPlayback,
+    }),
+  };
+});
 
 const mockCommandsStop = jest.fn();
 const mockSetVolume = jest.fn();
@@ -152,10 +161,9 @@ import {useAudioPresentationStore} from '../../../src/state/useAudioPresentation
 import {usePresentationStore} from '../../../src/state/usePresentationStore';
 
 /**
- * RNTL 14 returns a Promise from ct, and it MUST be awaited. An
- * unawaited ct leaves a pending act queue behind, which silently
- * swallows the next render — the component tree comes back 
-ull and
+ * RNTL 14 returns a Promise from `act`, and it MUST be awaited. An
+ * unawaited `act` leaves a pending act queue behind, which silently
+ * swallows the next render — the component tree comes back null and
  * every getByTestId fails for reasons that look nothing like the
  * cause.
  */
@@ -194,67 +202,97 @@ describe('PlayerChrome — visibility', () => {
     expect(toJSON()).toBeNull();
   });
 
-  it('renders the full player when a session exists and mode is expanded', async () => {
+  it('renders the audio player when a session exists', async () => {
     await seedSession();
     const {getByTestId} = await render(<PlayerChrome />);
-    expect(getByTestId('audio-minimize')).toBeTruthy();
+    expect(getByTestId('audio-playpause')).toBeTruthy();
   });
 
-  it('renders the mini bar when mode is mini', async () => {
+  it('renders the dock and hides the full page when the mode is mini', async () => {
     await seedSession();
     await act(async () => {
       useAudioPresentationStore.setState({mode: 'mini'});
     });
     const {getByTestId, queryByTestId} = await render(<PlayerChrome />);
-    expect(getByTestId('mini-player')).toBeTruthy();
-    expect(queryByTestId('audio-minimize')).toBeNull();
-  });
 
+    expect(getByTestId('audio-dock')).toBeTruthy();
+    // The full page is still MOUNTED — that is D9 — but it is not
+    // exposed: `display: none` takes it out of the accessibility tree,
+    // which is what a hidden control has to mean on a device.
+    expect(
+      queryByTestId('audio-playpause', {includeHiddenElements: false}),
+    ).toBeNull();
+  });
 
   // A video launch writes a session too.
   //
   // V21 F5: this test used to pass because of the `isPlayerActivity` gate
   // ("this tree is behind the player Activity, draw nothing"). That gate
   // is gone with the second Activity, so the test now passes for a
-  // completely different reason — the video lane returns null unless the
-  // presentation is `mini`:
-  //
-  //     return presentation.isMini ? <MiniPlayer onClose={onClose} /> : null;
-  //
-  // Asserting null here without naming that branch would have left a test
-  // whose comment described a mechanism that no longer exists, which is
-  // how the next reader would "fix" it back into the two-Activity shape.
-  it('renders nothing for a VIDEO launch that is not in the mini dock', async () => {
+  // completely different reason — the video lane is hosted by
+  // `VideoPlayer`, and this host is the AUDIO lane's host.
+  it('renders nothing for a VIDEO launch — the video lane is hosted elsewhere', async () => {
     await seedSession('video');
     const {toJSON} = await render(<PlayerChrome />);
     expect(toJSON()).toBeNull();
   });
 
-  it('renders the dock for a VIDEO launch once presentation is mini', async () => {
-    // The counterpart to the case above, and the reason that one is
-    // allowed to assert null: video is not absent, it is undocked.
-    // `isMini` is simply `mode === 'mini'` (usePresentation.ts):
-    //   mode = pipActive ? 'pip' : videoPresentation === 'expanded' ? 'expanded' : 'mini'
-    // so asking for 'mini' with no PiP window is the whole condition. It
-    // used to also require `videoSurfacePresented` — a boolean the
-    // Kotlin-mounted surface returned. That is gone: the picture is an
-    // ordinary child of the tree now, so "there is something to put in
-    // the dock" is structural, not a reported fact.
+  it('does not offer audio chrome on a video session', async () => {
     await seedSession('video');
-    await act(async () => {
-      usePresentationStore.setState({
-        videoPresentation: 'mini',
-      });
-    });
-    const {toJSON, getByTestId} = await render(<PlayerChrome />);
-    expect(toJSON()).not.toBeNull();
-    expect(getByTestId('mini-player')).toBeTruthy();
+    const {queryByTestId} = await render(<PlayerChrome />);
+
+    expect(queryByTestId('audio-mute')).toBeNull();
+    expect(queryByTestId('audio-queue')).toBeNull();
+    expect(queryByTestId('audio-mini-toggle')).toBeNull();
+    expect(queryByTestId('audio-dock')).toBeNull();
+  });
+});
+
+describe('PlayerChrome — D9: one mounted tree per lane', () => {
+  it('the dock and the full page are the SAME mounted tree', async () => {
+    // The dock is not a rival component that takes turns — it is a part of
+    // the audio lane, and it is mounted in both presentations. If the lane
+    // ever went back to two components, the dock would be absent from the
+    // expanded tree and this would fail.
+    //
+    // `includeHiddenElements` is on because the dock is `display: none`
+    // while the page is up: RNTL hides it from queries by default, which
+    // is exactly right for what the USER can reach and exactly wrong for
+    // "is it still mounted?".
+    await seedSession();
+    const {getByTestId} = await render(<PlayerChrome />);
+
+    expect(getByTestId('audio-dock', {includeHiddenElements: true})).toBeTruthy();
+    expect(getByTestId('audio-playpause')).toBeTruthy();
   });
 
-  it('renders for an AUDIO launch', async () => {
-    await seedSession('audio');
+  it('survives a presentation change without losing either part', async () => {
+    await seedSession();
     const {getByTestId} = await render(<PlayerChrome />);
-    expect(getByTestId('audio-minimize')).toBeTruthy();
+
+    await act(async () => {
+      useAudioPresentationStore.setState({mode: 'mini'});
+    });
+
+    expect(getByTestId('audio-dock')).toBeTruthy();
+    expect(
+      getByTestId('audio-playpause', {includeHiddenElements: true}),
+    ).toBeTruthy();
+  });
+
+  it('hides the page from the accessibility tree while the dock is up', async () => {
+    // `display: none` is not just a visual state: it takes the hidden
+    // controls out of the accessibility tree, so a screen reader does not
+    // announce a full player that the user cannot see.
+    await seedSession();
+    await act(async () => {
+      useAudioPresentationStore.setState({mode: 'mini'});
+    });
+    const {queryByTestId} = await render(<PlayerChrome />);
+
+    expect(
+      queryByTestId('audio-playpause', {includeHiddenElements: false}),
+    ).toBeNull();
   });
 });
 
@@ -316,7 +354,7 @@ describe('PlayerChrome — close is a real teardown', () => {
     );
   });
 
-  it('the mini bar closes through the same native path', async () => {
+  it('the dock closes through the same native path', async () => {
     await seedSession();
     await act(async () => {
       useAudioPresentationStore.setState({mode: 'mini'});
@@ -324,7 +362,7 @@ describe('PlayerChrome — close is a real teardown', () => {
     const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
-      fireEvent.press(getByTestId('mini-close'));
+      fireEvent.press(getByTestId('audio-dock-close'));
     });
 
     expect(mockStopPlayback).toHaveBeenCalledTimes(1);
@@ -332,15 +370,15 @@ describe('PlayerChrome — close is a real teardown', () => {
 });
 
 describe('PlayerChrome — minimize does not touch playback', () => {
-  it('collapses to the mini bar without stopping anything', async () => {
+  it('collapses to the dock without stopping anything', async () => {
     await seedSession();
     const {getByTestId} = await render(<PlayerChrome />);
 
     await act(async () => {
-      fireEvent.press(getByTestId('audio-minimize'));
+      fireEvent.press(getByTestId('audio-mini-toggle'));
     });
 
-    expect(getByTestId('mini-player')).toBeTruthy();
+    expect(useAudioPresentationStore.getState().mode).toBe('mini');
     expect(mockStopPlayback).not.toHaveBeenCalled();
     expect(mockCommandsStop).not.toHaveBeenCalled();
     expect(useNowPlayingStore.getState().current).not.toBeNull();
@@ -406,7 +444,7 @@ describe('PlayerChrome — volume, mute and queue', () => {
 
     // Navigating without minimizing would push a route BEHIND an opaque
     // full-screen player, so the tap would look broken.
-    expect(getByTestId('mini-player')).toBeTruthy();
+    expect(useAudioPresentationStore.getState().mode).toBe('mini');
     expect(mockNavigate).toHaveBeenCalledWith('Queue', {from: 'audio'});
   });
 
@@ -424,16 +462,5 @@ describe('PlayerChrome — volume, mute and queue', () => {
     // dragged, which reads as a dead control.
     expect(mockSetMuted).toHaveBeenCalledWith(false);
     expect(mockSetVolume).toHaveBeenCalledWith(40);
-  });
-
-  it('does not offer queue or mute on a video session', async () => {
-    await seedSession('video');
-    const {queryByTestId} = await render(<PlayerChrome />);
-
-    // Video renders no audio chrome at all, so these cannot appear.
-    expect(queryByTestId('audio-mute')).toBeNull();
-    expect(queryByTestId('audio-queue')).toBeNull();
-    expect(queryByTestId('audio-minimize')).toBeNull();
-    expect(queryByTestId('mini-player')).toBeNull();
   });
 });

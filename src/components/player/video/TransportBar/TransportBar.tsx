@@ -83,6 +83,7 @@ import {BufferedRangeFill} from './BufferedRangeFill';
 import {ModeControl} from './ModeControl';
 import {CaptionsToggle} from './CaptionsToggle';
 import {PiPToggle} from './PiPToggle';
+import {MiniPlayerToggle} from './MiniPlayerToggle';
 import {TransportRow} from './TransportRow';
 import {VolumeControl} from './VolumeControl';
 import {More} from './More';
@@ -506,7 +507,7 @@ const hasKnownDuration = state.durationMs > 0;
           The arrangement now matches every shipping player (YouTube,
           Plex, Tencent Video, Huawei Video): OUTPUT on the left —
           volume, the one wide control — and the mode/affordance
-          CLUSTER on the right, where four equally-sized icon buttons
+          CLUSTER on the right, where five equally-sized icon buttons
           line up on a common edge. Both groups are laid out from their
           own side, so a wide volume slider grows into the empty middle
           and can never push the icon cluster anywhere. */}
@@ -518,6 +519,12 @@ const hasKnownDuration = state.durationMs > 0;
           <CaptionsToggle />
           <ModeControl />
           <PiPToggle />
+          {/* V22 W22: the minimise control. It used to be the header's
+              back button, which meant "back" and "minimise" were the same
+              verb wearing two names — and the back button's own label
+              said "closes the player", which it did not do. Now back
+              closes, and this is the single minimise path. */}
+          <MiniPlayerToggle />
           <More />
         </View>
       </View>

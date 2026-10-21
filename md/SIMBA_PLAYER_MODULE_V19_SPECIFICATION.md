@@ -293,7 +293,7 @@ V11's `player UI UX.md` §6 named four boundaries, but the V18 audio rewrite did
 │  • `TransportBar.tsx`           — seek + skip + play/pause     │
 │  • `VideoTitleOverlay.tsx`      — top bar with title + back    │
 │  • `ModeAndMoreOverlay.tsx`     — bottom: mode + captions + ⋯ │
-│  • `VideoMiniPlayer.tsx`         — compact dock                 │
+│  • `VideoDock.tsx`              — the lane's own mini form     │
 │  • `VideoErrorOverlay.tsx`       — terminal error with retry    │
 │  • `VideoLoadingOverlay.tsx`     — initial-spinner + skeleton   │
 │  Each owns only its SVG geometry, its hit regions, and its       │
@@ -318,10 +318,10 @@ The contract compiles to **nine rules**, all enforced:
 | 3 | **No native-knowledge reach-through.** The consumer must not import `MpvBridgeModule`, `libmpv`, `mpv` properties, demuxer events, JNI types, NDK modules, or AGP classes. | If we ever swap libmpv for Media3 / ExoPlayer / a custom decoder, the consumer code does not change. |
 | 4 | **No internal state ownership.** No `useState` for `isPlaying`/`positionMs`/`durationMs`/etc. in the consumer. Everything reads from `usePlayer()` + `usePlayerProgress()` (or via the facade's higher-level wrappers). | Two sources of truth = bugs. |
 | 5 | **No command functions outside the ref.** No `setVolume`/`pause`/`seek` calls outside `playerRef.current.*` or the imperative `commands` returned by the hook. | Same reason. |
-| 6 | **No chrome composition by the consumer.** The consumer does not compose `<VideoSurface />` + `<TransportBar />` themselves. `<SimbaPlayer />` is the chrome. The **only** layout-level exception is `<VideoMiniPlayer />` because it is a layout participant (sits over app content), not a modal. | The chrome is the player's job. The page is for the page. |
+| 6 | **No chrome composition by the consumer.** The consumer does not compose `<VideoSurface />` + `<TransportBar />` themselves. `<SimbaPlayer />` is the chrome. The **only** layout-level exception is the lane's own dock (`VideoDock` for video, the dock inside `AudioPlayer` for audio), because it is a layout participant (sits over app content), not a modal. | The chrome is the player's job. The page is for the page. |
 | 7 | **No gesture handlers in the consumer.** Double-tap, long-press, vertical-swipe volume/brightness, tap-to-toggle-chrome - all internal. The consumer only sees the imperative `playerRef.current.*` and the declarative `<SimbaPlayer />` props. | Gestures compose poorly across boundaries. The player owns the gesture detector tree. |
 | 8 | **`SimbaPlayer` mounted ONLY in `App.tsx`.** ESLint rule + CI grep: `grep -rn "<SimbaPlayer" src/ | grep -v "App.tsx"` returns 0 hits. | The shell-mounting rule (SPEC §3.4.1). One bridge bind forever. |
-| 9 | **`<VideoMiniPlayer />` imported only by `App.tsx`** (or the chrome primitives themselves). Same ESLint + CI grep pattern. | Same reason. The dock is a shell-level overlay, not a screen-level component. |
+| 9 | **The dock is a CHILD of the lane, never a shell-level overlay.** *(Revised W22, 2026-10-21.)* This rule used to name `<VideoMiniPlayer />` as an `App.tsx`-only import, because the dock was a separate component mounted at the shell that took turns with the player. W22 deleted that component: the video lane's dock is `VideoDock`, mounted inside `VideoLane`, and the audio lane's dock is inside `AudioPlayer`. Each lane renders its own mini form inside ONE mounted tree (D9), so no lane may import another lane's dock. | The dock belongs to the lane it minimises. One shared dock component is how the two lanes ended up rendering two different UIs for the same action. |
 
 **What this means for a Movies page** (the entire integration, end-to-end):
 
@@ -396,12 +396,14 @@ The contract is symmetric with the lib boundary. The lib masks libmpv from the a
 > logo* — are not stylistic and would otherwise be re-litigated every wave.
 > Read the reasoning before changing this section.
 
-- **Owns:** the top bar layout — one **back** affordance (leading), the title with an optional artist line, one **orientation-lock** affordance (trailing). Nothing else.
+- **Owns:** the top bar layout — one **back** affordance (leading), the title with an optional artist line, one **orientation-lock** affordance (trailing), and the **bookmark** control (trailing, beside the lock).
+- **The bookmark control stays.** *(Revised W22, 2026-10-21.)* An earlier revision of this section said the top bar owns "back + title + lock, and **nothing else**", which would have put the bookmark somewhere else. The product decision is that the bookmark is fine where it is, so the **spec** moves rather than the control: the top bar's own list now includes it. See the bug tracker's `A-001`.
 - **No logo, no wordmark, no brand mark.** The Home header already carries the engraved lion + Allura wordmark. Repeating it inside the video player is decoration competing with the title for the same ~44 px of attention, and it was explicitly rejected by the product owner. The bar's leading slot belongs to the back affordance.
-- **The back affordance is ONE control, and it is called "back".** "Minimize", "back" and "close" describe the same transition, so they get one button. The reason is architectural: the player runs in its own Android activity (`PlayerActivity`, `launchMode="singleTask"`) and the mini dock was removed in W6.0, so `presentation.mode` is **derived** from which activity this React tree is mounted in — `usePresentationStore` persists only `pipActive`. There is therefore no smaller player to minimize *to*; dismissing the activity IS the transition, and the mode re-derives itself.
-  - Backing command: `commands.exitPipAndFinish()` (exits the PiP window if one is up, finishes the activity, tears the `SurfaceView` down). Exposed as the facade's `exitPlayer()`.
-  - It performs the identical transition to the hardware back button, which is why the same verb names both.
-  - **Forbidden:** implementing this as `setPresentation('mini')`. That method was removed on purpose — the host immediately overwrites such a write, so it is a control that lies. See §0.3 invariant I3.
+- **The back affordance is ONE control, and it CLOSES.** *(Revised W22, 2026-10-21.)* Back is the platform's "leave this screen" verb, and this control's accessibility label has said "Closes the player" throughout — the handler now matches the label.
+  - Backing command: the facade's `useClosePlayback()` — the **native `stopPlayback()` primitive** (engine stops, foreground service released, notification dismissed) followed by `endSession()`. One owner, so the dock's X, the audio player's X, the header's back and the hardware back cannot drift apart.
+  - **It performs the identical transition to the hardware back button**, which is why the same verb names both. *(The old paragraph here claimed the hardware back "performs the identical transition" — it was device-proven not to leave the player at all. That is bug `B-011`, and it is re-checked after this wave.)*
+  - **The old backing command `commands.exitPlayer()` is NOT usable.** It routes to the lib's `exitPipAndFinish()`, which calls `activity.finishAndRemoveTask()` on the **current** activity — and since D1 there is one Activity, that would finish `MainActivity` and remove the app's task. It has no call site, which is the only reason it has not done damage. See bug `B-008`.
+  - **Forbidden:** implementing this as `setPresentation('mini')`. That was the W21 F4 behaviour — back minimises — and it is withdrawn: minimise is now a control of its own, in the transport bar (§3.3), in both lanes. Two paths to one verb is how one of them becomes a no-op (§3.4).
 - **The lock affordance follows the YouTube / Apple TV / Plex pattern:** engaging it **pins the video to the orientation it is in right now**; releasing it returns to free rotation. It never forces a side.
   - Backing command: `commands.setOrientation('portrait' | 'landscape' | 'sensor')`. The *side* is derived at call time from the live layout; unlocking always sends `'sensor'`.
   - State lives in `useOrientationLockStore` (MMKV, boolean intent only) because `Activity.requestedOrientation` has no getter — the platform cannot be asked what state it is in.
@@ -417,117 +419,100 @@ The contract is symmetric with the lib boundary. The lib masks libmpv from the a
 - Three logical rows, drawn as a single fixed-position gradient scrim:
   - **Row 1 — Progress**: `TimeLabel + BufferedRangeFill + PlayedRangeFill + Thumb + TimeLabel`. The whole row is a `Pressable` whose `accessibilityRole="adjustable"` exposes `min/max` from `useTransport()`'s `seekability`. `onPanResponderMove` drives incremental seek; `onPanResponderRelease` commits (cancel-by-jump not supported; commit = seek).
   - **Row 2 — Transport controls**: exactly five controls in order `Rewind 10` `Previous` `Play/Pause` `Next` `Forward 10`. Previous/Next disappear when `currentItem?.hasPrev = false` / `hasNext = false` — they MUST NOT become dead spacers.
-  - **Row 3 — Mode + More**: `ModeControl (compact single-value)` + `CaptionsToggle (compact, optional)` + `PiPToggle (compact, optional)` + `More` (single entry point to the secondary surface). Each optional control **collapses itself to `null`** when it has nothing to act on (no caption tracks / PiP unavailable) rather than rendering an inert button. **`More` appears here and nowhere else** — an earlier draft also listed it in the top bar (§3.2), which would have put two affordances on one sheet; the top bar now owns only back + lock.
+  - **Row 3 — Mode + More**: `ModeControl (compact single-value)` + `CaptionsToggle (compact, optional)` + `PiPToggle (compact, optional)` + `MiniPlayerToggle (compact)` + `More` (single entry point to the secondary surface). Each optional control **collapses itself to `null`** when it has nothing to act on (no caption tracks / PiP unavailable) rather than rendering an inert button. **`More` appears here and nowhere else** — an earlier draft also listed it in the top bar (§3.2), which would have put two affordances on one sheet; the top bar now owns back + lock + bookmark.
+  - **`MiniPlayerToggle` is the MINIMISE verb** *(added W22, 2026-10-21)*: a chevron-down that collapses the player to the dock and keeps playing. It is the **only** minimise control in the video lane, and the audio lane puts its own chevron-down in the bottom row too — one position, both lanes. Spotify documents this exact glyph as "Minimize" on its now-playing screen, and Apple Music and YouTube Music collapse the same way. **It is not the back button**: back closes (§3.2); minimise does not.
 
-### 3.4 `VideoMiniPlayer` — the dock — **REMOVED in W6.0, retained here for history only**
+### 3.4 The dock — one per lane, inside the lane's own mounted tree *(revised W22, 2026-10-21)*
 
-> **Superseded.** There is no video mini dock in V19. The player runs in
-> its own Android activity (`PlayerActivity`), and the only
-> shell-visible state is PiP. This section is kept because the design
-> reasoning still explains two live decisions, but nothing below it
-> describes current code:
+> **Revised in W22.** This section used to read "there is no video mini dock
+> in V19" and describe a dock that was "deliberately cut". That was true
+> while the dock was a **separate component** (`VideoMiniPlayer`) mounted at
+> the shell and taking turns with the full player. It stopped being true the
+> moment the dock came back, and a spec that denies a dock while a dock is on
+> screen is worse than no spec.
 >
-> - **Why the player has its own activity** (relevant to §3.2's back
->   affordance): the native `SurfaceView` must live outside the React
->   tree — see the single-activity constraint below.
-> - **Why `setPresentation('mini')` no longer exists:** the mode is
->   *derived* from the host activity, so a write would be immediately
->   overwritten by the host — a control that lies (§0.3 invariant I3).
+> **What the dock is now:**
 >
-> Everything else (the expand/close hit-target separation, the
-> mounted-once rule, `expandMini → 'expanded'`) describes a dock that
-> was deliberately cut. Do not implement against this section.
+> - The **video lane's** dock is `VideoDock`, mounted as a child of `VideoLane`
+>   and always laid out. The picture lives in the lane too, so the dock is a
+>   transparent overlay rebuilt from opaque plates around a measured hole — the
+>   live video shows through it. The dock **never renders a `<SimbaVideo />`**:
+>   the lib's `attachSurfaceLocked` rebinds the mpv surface on every
+>   `setNativePtr`, so a second view would STEAL the picture from the first.
+> - The **audio lane's** dock lives inside `AudioPlayer`, also always mounted.
+>   An audio lane has no surface, so its dock is an ordinary opaque bar.
+> - Both docks are **always laid out** and only their visibility changes. That
+>   is not a nicety: the video dock's slot rect must be published *before* the
+>   user taps minimise, or the picture is still fullscreen for one frame when
+>   it moves into the bar.
+>
+> **The shell-mounting rule below still holds** — the dock survives navigation
+> — but it is now satisfied by *the lane being mounted*, not by a separate
+> shell-level overlay.
 
 ### 3.4.1 The shell-mounting rule (navigation independence)
 
 The mini player's survival across navigation is the **defining correctness property** of V19. Without it, the dock disappears every time the user leaves a screen, and audio actually does pause (because the JS-side `<SimbaPlayer />` remounts the native bridge).
 
-**The rule: SimbaPlayer is ALWAYS mounted at the app shell, and toggles its own visibility based on `presentation` state. It does NOT mount inside any screen route.**
+**The rule: the player is ALWAYS mounted at the app shell — `<VideoPlayer />` and `<PlayerChrome />` are siblings of the browsing stack — and each lane toggles its own visibility based on the `presentation` state. Neither mounts inside any screen route.**
 
 This is the **always-mount with conditional rendering** pattern (correcting an earlier draft that proposed mount/unmount — that pattern had visible glitches and unnecessary calculations from re-binding the native bridge on every open). YouTube, Netflix, and Apple Music use the always-mount pattern for the same reason: chrome that toggles visibility is the **same view at different sizes**, not a different screen.
 
-**Architectural shape (corrected):**
+**Architectural shape (as built — revised W22, 2026-10-21):**
 
 ```
-App.tsx                                  ← shell, always mounted
-  ├── SafeAreaProvider
-  ├── NavigationContainer
-  │    └── RootNavigator                  ← navigation for screens
-  │         ├── TabsNavigator
-  │         │    ├── HomeScreen
-  │         │    ├── SearchScreen
-  │         │    ├── MoviesScreen          ← user browses here
-  │         │    └── LibraryScreen
-  │         └── ModalStack
-  │              └── (movie detail, etc.)
-  └── SimbaPlayer                         ← ALWAYS mounted, ALWAYS bound
-       ├── presentation === 'idle'   → null
-       ├── presentation === 'mini'   → <VideoMiniPlayer />
-       └── presentation === 'expanded' → <VideoSurface /> + full chrome
+AppRoot                                     ← shell, always mounted
+  ├── ToastProvider
+  ├── ResumePromptContext.Provider
+  ├── BrowsingStack                         ← the browsing screens
+  ├── VideoPlayer                           ← the VIDEO lane (picture + chrome + its own dock)
+  └── PlayerChrome                          ← the AUDIO lane (page + its own dock)
 ```
 
-**Single-instance SimbaPlayer (no remount):**
+Both lanes are **shell-level siblings of the browsing stack**, so neither unmounts when the user navigates. And each lane renders its own mini form **inside its own mounted tree** — there is no separate "mini player" component any more:
 
-```tsx
-// SimbaPlayer.tsx — a true shell-level overlay
-const SimbaPlayer = forwardRef<SimbaPlayerRef>((_, ref) => {
-  const innerRef = useRef<SimbaPlayerRef>(null);
-  useImperativeHandle(ref, () => innerRef.current!, []);
+```
+VideoPlayer (video lane)                    ← always mounted
+  ├── VideoSurface / <SimbaVideo />          ← the ONLY picture; never re-created
+  ├── ExpandedChrome
+  │     ├── VideoTitleOverlay               ← back (closes) + title + lock + bookmark
+  │     └── TransportBar                    ← progress + transport + mode row (incl. minimise)
+  └── VideoDock                             ← this lane's mini form; never a picture
 
-  const { videoState, presentation } = usePlayerActivity();
-
-  if (videoState === 'idle') return null;
-
-  if (presentation === 'mini') {
-    return (
-      <VideoMiniPlayer
-        playerRef={innerRef}
-        onExpand={() => innerRef.current?.setPresentation('expanded')}
-      />
-    );
-  }
-
-  return (
-    <View style={StyleSheet.absoluteFill}>
-      <VideoSurface />
-      <ChromeAutoHideController playerRef={innerRef}>
-        <VideoTitleOverlay />
-        <TransportBar />
-        <VideoMoreSheet />
-      </ChromeAutoHideController>
-      <VideoLoadingOverlay />
-      <VideoErrorOverlay />
-    </View>
-  );
-});
+PlayerChrome (audio lane)                   ← always mounted
+  └── AudioPlayer
+        ├── the expanded page               ← always mounted
+        └── the dock                        ← always mounted
 ```
 
-**Navigation lifecycle (corrected):**
+**Why the shape changed (D9):** the old shape branched on `presentation === 'mini'` and returned a *different component*. Every expand and every collapse was therefore an unmount of one tree and a mount of another — subscriptions re-ran, `Animated.Value`s reset, and for video a `SurfaceView` was destroyed and recreated, which is a black frame. The presentation is now **style**: the same mounted lane, with its geometry and per-part visibility changed.
+
+**Navigation lifecycle (as built):**
 
 | User action | JS tree change | Native state |
 |---|---|---|
 | Open app, browse Movies | `MoviesScreen` mounts | idle |
 | Tap a movie | `setPresentation('expanded')` + `loadFile(uri)` — **no navigation** | playing |
-| Tap "minimize" in chrome | `setPresentation('mini')` — **no navigation** | **playing unchanged** |
-| Navigate Movies → Search → Movies | screens swap; SimbaPlayer stays mounted | **playing unchanged** |
+| Tap the minimise control in the transport bar | `setPresentation('mini')` — **no navigation** | **playing unchanged** |
+| Navigate Movies → Search → Movies | screens swap; the lane stays mounted | **playing unchanged** |
 | Background app | Android 12+ auto-PiP via `setAutoEnterEnabled(true)` | **playing unchanged** |
-| Tap mini dock | `setPresentation('expanded')` — **no navigation** | **playing unchanged**, position continues |
+| Tap the dock's leading square | `setPresentation('expanded')` — **no navigation** | **playing unchanged**, position continues |
 
 **Why this works at the native level:**
 
-`com.simba.player.PlayerActivity` is a separate Android activity with `launchMode="singleTask"` (verified at `android/app/src/main/AndroidManifest.xml:116`). The native session is owned by PlayerActivity. JS-side SimbaPlayer is a thin conditional renderer over the same native session — it never unmounts the bridge.
+**One Activity, not two.** *(Revised W22, 2026-10-21.)* This section used to say the native session is owned by a separate `PlayerActivity` with `launchMode="singleTask"`. That is **obsolete**: decision **D1** (locked 2026-10-16) puts everything in **one** Activity with **one** React root, and the picture is a Fabric view **in** that tree. The always-mount rule still matters, but for a different reason now: a re-created `SurfaceView` is a **black frame** (D2/D3), so the tree that owns the picture must not be torn down and rebuilt. JS-side, the lane is a thin renderer over the native session — it never unmounts the bridge.
 
 **ESLint enforcement (additions to Phase 0.0):**
 
 - **Rule 6**: Consumer must NOT import chrome primitives. (Existing.)
 - **Rule 8** (new): `<SimbaPlayer />` MUST be rendered only inside `App.tsx`. ESLint rule: `no-restricted-imports` blocks `SimbaPlayer` from any path matching `src/screens/**`. CI grep: `grep -rn "<SimbaPlayer" src/ | grep -v "App.tsx"` returns 0.
-- **Rule 9** (removed — was about restricting SimbaPlayer to FullPlayerScreen; obsolete because SimbaPlayer is no longer in FullPlayerScreen at all).
+- **Rule 9** (revised W22): the dock is a **child of its lane**, never a shell-level overlay — see the rule table above. The old wording (a `<VideoMiniPlayer />` import restricted to `App.tsx`) described a component that no longer exists.
 
 **Edge cases V19 handles:**
 
 - **App backgrounding**: Android 12+ auto-PiP via `setAutoEnterEnabled(true)` (already in `AndroidManifest.xml`). User continues using other apps while watching.
-- **App killed**: Playback stops (expected). On relaunch, `SmartResumePrompt` fires if saved progress > 30%.
-- **Native bridge crash**: Native session in `PlayerActivity` survives. Audio continues; JS observers stop. Recovery: re-bind JS observer on bridge reconnect (the always-mount SimbaPlayer does this automatically).
+- **App killed**: Playback stops (expected). On relaunch, the app's resume prompt offers the saved position — `useResumeAwareLaunch` + `ResumePromptContext`, the Plex "Resume / From the beginning" pattern.
+- **Native bridge crash**: the engine and its foreground service are native, so audio continues while the JS observers are gone. Recovery: re-bind the JS observer on bridge reconnect — the always-mounted lane does this automatically.
 - **Multiple `SimbaPlayer` mounts**: FORBIDDEN by Rule 8. The lib's `PlayerActivity` is a singleton (`launchMode="singleTask"`); mounting two `<SimbaPlayer />` instances would race for the same native session. ESLint + grep enforce this at CI time.
 
 ### 3.5 `VideoErrorOverlay` — only ever terminal
@@ -701,14 +686,14 @@ interface PresentationState {
 }
 ```
 
-**`usePresentation()`** is the hook the chrome reads. SimbaPlayer reads it and conditionally renders:
+**`usePresentation()`** is the hook the chrome reads. The lane reads it and changes **style**, not component identity (D9):
 
 ```tsx
 const { mode } = usePresentation();
 const { videoState } = usePlayer();
-if (videoState === 'idle') return null;
-if (mode === 'mini') return <VideoMiniPlayer ... />;
-return <FullChrome ... />;
+if (videoState === 'idle') return null;   // the ONE legal unmount: no session
+// 'mini' is NOT a different component — the same mounted lane, restyled.
+return <VideoLane mode={mode} />;
 ```
 
 **Behavior:**
@@ -968,23 +953,25 @@ function usePlayerActivity(): {
 
 ### 5.5 Internal composition (invisible to the consumer)
 
-Inside `<SimbaPlayer />`:
+Inside the video lane (W22, 2026-10-21 — the dock is a child of the lane, not a sibling component that takes turns with it):
 
 ```
-<VideoSurface />                                  ← the only place that draws frames
-<VideoTitleOverlay />                             ← top bar
-<ChromeAutoHideController>                        ← visibility state
-  <TransportBar>                                  ← bottom transport row
-    <ScrubPreview />                              ← seek tooltip
-    <TransportRow />                              ← 5 controls
-    <ModeRow />                                   ← mode + captions + pip
-    <More />                                      ← secondary sheet entry
-  </TransportBar>
-  <VideoMoreSheet />                              ← speed / quality / captions / sleep
-  <VideoLoadingOverlay />                         ← spinner
-  <VideoErrorOverlay />                           ← terminal error
-  <VideoMiniPlayer />                             ← dock (always mounted, visibility toggled)
-</ChromeAutoHideController>
+<VideoLane>                                        ← always mounted for the session
+  <VideoSurface />                                 ← the only place that draws frames
+  <ChromeAutoHideController>                       ← visibility state
+    <VideoTitleOverlay />                          ← top bar: back (closes) + title + lock + bookmark
+    <TransportBar>                                 ← bottom transport row
+      <ScrubPreview />                             ← seek tooltip
+      <TransportRow />                             ← 5 controls
+      <ModeRow />                                  ← mode + captions + pip + minimise + more
+      <More />                                     ← secondary sheet entry
+    </TransportBar>
+    <VideoMoreSheet />                             ← speed / quality / captions / sleep
+    <VideoLoadingOverlay />                        ← spinner
+    <VideoErrorOverlay />                          ← terminal error
+  </ChromeAutoHideController>
+  <VideoDock />                                    ← this lane's mini form (always laid out; never a picture)
+</VideoLane>
 ```
 
 **The consumer never sees this tree.** The `VideoSurface` is the only thing that paints. Every other primitive composes inside `<SimbaPlayer />`. If a junior dev opens the lib source, they should be able to ship a working integration without reading the internals.

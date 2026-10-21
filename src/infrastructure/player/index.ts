@@ -221,6 +221,19 @@ export {
   type PresentationState,
 } from './usePresentation';
 
+// V22 W22 (2026-10-21) — the ONE owner of the close verb.
+//
+// "Close" is a precise verb here: stop the engine for real (so the media
+// session and the notification are released), end the session, and leave
+// the expanded presentation. It used to be spelled out inline in
+// `PlayerChrome`'s X, which left the video player's options sheet with no
+// close at all. Two owners of one teardown drift; one owner does not.
+//
+// It lives here because this is the only directory allowed to import the
+// player module — `PlayerChrome.tsx` importing it directly was itself a
+// PLAYER-rule violation.
+export {useClosePlayback} from './useClosePlayback';
+
 // V19 W0 Phase 0.3 — lane integrity guard on every launch path.
 // JS-side enforcement (native-level is V20). Source of truth:
 // SPEC §3.24 + audit §3.D.

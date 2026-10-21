@@ -6,10 +6,31 @@
  * the shared `MiniPlayer` dock for BOTH lanes, so the name would have been
  * the first thing to mislead the next reader.
  *
- * One component owns the switch so that "is anything showing", "which
- * surface", and "what does close do" have exactly one answer. The dock and
- * the full player never both mount, and neither is mounted when there is
- * nothing playing.
+ * ## V22 W22 (2026-10-21) — this is now the AUDIO lane's host, and the
+ * shared `MiniPlayer` is gone
+ *
+ * There used to be a second player component — the `MiniPlayer` dock —
+ * and the two of them TOOK TURNS: the full audio player mounted, then the
+ * dock mounted, then the full player again. Every presentation change was
+ * an unmount of one and a mount of the other, so the audio lane re-ran its
+ * subscriptions, reset its animations and threw away its scroll position
+ * each time — and the app had a "mini player" that was a separate UI from
+ * the player it minimised, which is the opposite of the decision the app
+ * had already made for the video picture (SPEC D9: one mounted player per
+ * lane, presentation is style not component identity).
+ *
+ * So each lane now owns its whole life:
+ *
+ *   • the AUDIO lane is `AudioPlayer`, mounted here, which renders both
+ *     the full page and the dock and switches between them with style and
+ *     per-part visibility.
+ *   • the VIDEO lane is `VideoPlayer`, whose `VideoLane` holds the picture
+ *     AND the video dock. It is mounted by `AppRoot` for the whole app
+ *     session, because the PiP reconciliation listener has to outlive
+ *     every presentation mode (see `VideoPlayerChrome`).
+ *
+ * This host is therefore the audio lane's gate: nothing is rendered when
+ * there is no session, which is the ONE legal unmount.
  *
  * ## The visibility gate
  *
@@ -28,10 +49,6 @@
  * chrome in this same tree, and rendering a second compositor over the same
  * surface would be two owners of one presentation.
  *
- * The dock, by contrast, is shared. One component, one set of play/pause,
- * close and progress controls, and the lanes differ only in whether the
- * leading square shows artwork or live video.
- *
  * ## Close is a real teardown, not a UI dismissal
  *
  * X stops the engine AND tears down the foreground service, through the
@@ -42,66 +59,28 @@
  * standing and the failure is surfaced, because dismissing the player
  * while audio keeps playing is a lie the user cannot detect until they
  * wonder why sound is coming from a closed screen.
+ *
+ * V22 W22 (2026-10-21): that teardown now lives in ONE place —
+ * `useClosePlayback()` in `src/infrastructure/player/` — because the
+ * video player's back button offers the same close, and two owners of
+ * one teardown drift. The step-by-step meaning of "close" is documented
+ * on the hook.
  */
 
-import React, {useCallback} from 'react';
-import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
-import {useToast} from '../feedback/Toast';
+import React from 'react';
 import {useNowPlayingStore} from '../../state/nowPlayingStore';
-import {useAudioPresentationStore} from '../../state/useAudioPresentationStore';
-import {usePresentation} from '../../infrastructure/player';
 import {AudioPlayer} from './audio/AudioPlayer/AudioPlayer';
-import {MiniPlayer} from './mini/MiniPlayer';
 
 export const PlayerChrome: React.FC = () => {
-  const toast = useToast();
   const nowPlaying = useNowPlayingStore(s => s.current);
-  const endSession = useNowPlayingStore(s => s.end);
-  const audioMode = useAudioPresentationStore(s => s.mode);
-  const presentation = usePresentation();
 
-  const onClose = useCallback(() => {
-    try {
-      // Stops the engine and sends ACTION_STOP, so the session is
-      // released and the notification is dismissed. A plain
-      // `commands.stop()` would leave both.
-      //
-      // `stopPlayback` is named for what it does, not for a lane: the
-      // same primitive is what the VIDEO dock's X calls. Video and audio
-      // share one process-global engine, so there is one teardown, and the
-      // old `stopAudioPlayback` name was only ever true for the lane that
-      // happened to use it first.
-      getMpvPlayerModule().stopPlayback();
-    } catch (error) {
-      toast.show(
-        error instanceof Error ? error.message : 'Could not stop playback',
-        'error',
-      );
-      return;
-    }
-    // Only now is it true that nothing is playing. Clearing first would
-    // hide a player whose audio is still going.
-    endSession();
-  }, [endSession, toast]);
-
-  // V21 F5: this used to also bail when `useIsPlayerActivity()` was true —
-  // "the dedicated player Activity is up, this tree is behind it, so a
-  // dock here would animate something nobody can see". There is now one
-  // React root and one Activity, so that condition can never be true and
-  // the gate was dropped rather than left as a branch that reads as a
-  // live check.
+  // The one legal unmount: nothing is loaded, so there is nothing to show.
   if (!nowPlaying) return null;
 
-  if (nowPlaying.streamType === 'video') {
-    // The dock only. `isMini` is not `!isExpanded`: during PiP the mode is
-    // also not-expanded, but the OS window owns the surface and a second
-    // dock underneath it would be a competing presentation of one video.
-    return presentation.isMini ? <MiniPlayer onClose={onClose} /> : null;
-  }
+  // The video lane is hosted by `VideoPlayer`, which `AppRoot` mounts for
+  // the whole app session. Rendering it here as well would be two owners
+  // of one video — and the picture's surface would be bound twice.
+  if (nowPlaying.streamType === 'video') return null;
 
-  return audioMode === 'expanded' ? (
-    <AudioPlayer onClose={onClose} />
-  ) : (
-    <MiniPlayer onClose={onClose} />
-  );
+  return <AudioPlayer />;
 };

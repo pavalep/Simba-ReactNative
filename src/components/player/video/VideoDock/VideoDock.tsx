@@ -1,39 +1,55 @@
 /**
- * V21 F4 — the mini player dock. One component, both lanes.
+ * V22 W22 (2026-10-21) — `VideoDock`: the video lane's mini presentation.
  *
- * ## Shape, and where it comes from
+ * ## Why this component exists
  *
- * Plex's and Jellyfin's mini player, Spotify's, YouTube Music's: a bar
- * docked above the content with artwork, title/artist, and play/pause,
- * tappable to open the full player, with a hairline progress line along its
- * top edge.
+ * This used to be the `MiniPlayer` — ONE component that rendered the dock
+ * for BOTH lanes, and that took turns with the full player: when the
+ * video lane expanded, the dock unmounted; when it collapsed, the dock
+ * mounted. Two components taking turns is SPEC decision D9's "presentation
+ * is style, not component identity" in reverse, and it is what the user
+ * noticed: the app had a mini player that was a separate UI from the
+ * player it minimised.
  *
- * It is a React overlay in the `MainActivity` tree, NOT a window operation.
- * Minimise and expand are two values of one request; nothing touches an
- * Activity, playback is never interrupted by either. That is the entire
- * reason audio stopped opening a window, and the reason video can now
- * minimise at all.
+ * So the dock became a PART of the video lane instead of a rival to it.
+ * It is mounted inside `VideoLane`, always, and the presentation decides
+ * whether it is visible.
  *
- * ## Why there is only ONE of these, and why the video lane has a hole
+ * ## The picture is never remounted
  *
- * Before F4 the answer to "what does the dock look like for video" was
- * "nothing" — `AudioMiniBar` returned null for a video session, and back
- * from a video stopped playback outright. Two components would now mean two
- * copies of play/pause, close and the progress hairline to keep in step, so
- * there is one component and the lanes differ only in what occupies the
- * leading square: artwork for audio, live video for video.
+ * This is the part that must not regress. The lib's `attachSurfaceLocked`
+ * rebinds the mpv surface on every `setNativePtr`, so a SECOND
+ * `<SimbaVideo>` view would STEAL the surface from the first — two owners
+ * of one picture, which is the defect D9 exists to remove. The picture
+ * lives in `VideoLane`, outside this component, and this component never
+ * renders one.
  *
- * The hole is the load-bearing part. The picture is `<SimbaVideo>`, a view
- * IN this React tree, and it is composited by the same surface that draws
- * the dock — so **every opaque React pixel between the camera and the
- * video hides it**, and reordering the view hierarchy cannot change that.
+ * ## The hole, and why it is still measured
  *
- * The bar is therefore transparent and rebuilt from three opaque plates
- * around a transparent rectangle exactly where the video is. Both the hole
- * and the rect published for the picture come from ONE `measureInWindow`
- * pass, which is the property that matters: they cannot disagree, so the
- * video cannot land beside its own hole. Constants computed from the
- * stylesheet would be one refactor away from silently drifting.
+ * The picture is a native view in this tree and the dock is a React
+ * overlay, so every opaque React pixel between the camera and the video
+ * HIDES it. The dock is therefore transparent and rebuilt from three
+ * opaque plates around a transparent rectangle exactly where the video
+ * is.
+ *
+ * Both the hole and the rect published for the picture come from ONE
+ * `measureInWindow` pass, which is the property that matters: they cannot
+ * disagree, so the video cannot land beside its own hole. Constants
+ * computed from the stylesheet would be one refactor away from silently
+ * drifting.
+ *
+ * ## Always mounted, so there is no flash
+ *
+ * The dock is laid out at all times and only its OPACITY changes. That
+ * is deliberate: the slot's window rect is therefore already published
+ * when the user taps minimise, so the picture moves into the dock in the
+ * SAME commit that flips the presentation. When the dock used to mount
+ * on demand, its rect arrived one render later and the picture was still
+ * fullscreen for a frame — a visible jump on every minimise.
+ *
+ * The trade is that an invisible bar sits over the bottom of the window
+ * in the expanded presentation. It is `pointerEvents="none"` there, so it
+ * cannot swallow a tap meant for the transport bar.
  *
  * ## Square corners, deliberately
  *
@@ -44,19 +60,18 @@
 
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
-  Image,
   LayoutChangeEvent,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import {useTheme} from '../../../theme';
-import {spacing} from '../../../theme/tokens';
-import {usePresentation, useTransport} from '../../../infrastructure/player';
-import {useNowPlayingStore} from '../../../state/nowPlayingStore';
-import {useAudioPresentationStore} from '../../../state/useAudioPresentationStore';
-import {PlayerControl} from '../video/PlayerControl/PlayerControl';
+import {useTheme} from '../../../../theme';
+import {spacing} from '../../../../theme/tokens';
+import {usePresentation, useTransport} from '../../../../infrastructure/player';
+import {useClosePlayback} from '../../../../infrastructure/player/useClosePlayback';
+import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
+import {PlayerControl} from '../PlayerControl/PlayerControl';
 
 const ART_SIZE = 44;
 const PROGRESS_HEIGHT = 2;
@@ -68,19 +83,12 @@ interface Rect {
   height: number;
 }
 
-export interface MiniPlayerProps {
-  /** Stop playback and tear down the service. The X verb. */
-  readonly onClose: () => void;
-}
-
-export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
+export const VideoDock: React.FC = () => {
   const {colors} = useTheme();
-  const expandAudio = useAudioPresentationStore(s => s.expand);
-  const nowPlaying = useNowPlayingStore(s => s.current);
   const {state, commands} = useTransport();
-  const {setVideoPresentation, setVideoMiniRect} = usePresentation();
-
-  const isVideo = nowPlaying?.streamType === 'video';
+  const nowPlaying = useNowPlayingStore(s => s.current);
+  const {isMini, setVideoMiniRect, setVideoPresentation} = usePresentation();
+  const closePlayback = useClosePlayback();
 
   const rootRef = useRef<View>(null);
   const slotRef = useRef<View>(null);
@@ -108,7 +116,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
       if (rootW <= 0 || rootH <= 0) return;
       slot.measureInWindow((slotX, slotY, slotW, slotH) => {
         if (slotW <= 0 || slotH <= 0) return;
-        // WINDOW pixels, matching `VideoMiniRect`'s unit. `VideoPlayer`
+        // WINDOW pixels, matching `VideoMiniRect`'s unit. `VideoLane`
         // reads it (`presentation.videoMiniRect`) and turns it into the
         // dock placement with `dockStyleFor(...)`, so the picture's box
         // and this hole come from one measurement.
@@ -134,31 +142,30 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
   // surface follow the screen instead of staying at portrait coordinates.
   const onBarLayout = useCallback(
     (_e: LayoutChangeEvent) => {
-      if (isVideo) publishGeometry();
+      publishGeometry();
     },
-    [isVideo, publishGeometry],
+    [publishGeometry],
   );
+
+  useEffect(() => {
+    publishGeometry();
+  }, [publishGeometry]);
 
   // Leaving the video lane must retract the published rect, or a later
   // audio session would leave a video rect sitting in the store.
-  useEffect(() => {
-    if (!isVideo) {
+  useEffect(
+    () => () => {
       setHole(null);
       setVideoMiniRect(null);
-      return;
-    }
-    publishGeometry();
-  }, [isVideo, publishGeometry, setVideoMiniRect]);
+    },
+    [setVideoMiniRect],
+  );
 
   const onExpand = useCallback(() => {
-    // One verb, chosen by lane: audio has its own presentation store, video
-    // writes the request that `usePresentation()` derives `mode` from.
-    if (isVideo) {
-      setVideoPresentation('expanded');
-      return;
-    }
-    expandAudio();
-  }, [isVideo, setVideoPresentation, expandAudio]);
+    // Minimise and expand are two values of one request; nothing touches
+    // an Activity, and playback is never interrupted by either.
+    setVideoPresentation('expanded');
+  }, [setVideoPresentation]);
 
   const hasDuration = state.durationMs > 0;
   const ratio =
@@ -168,7 +175,6 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
 
   const title = nowPlaying?.title ?? state.title;
   const artist = state.artist;
-  const artwork = nowPlaying?.thumbnailPath;
 
   const plate = {
     backgroundColor: colors.background.onMediaSheet,
@@ -178,14 +184,12 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
     <View
       ref={rootRef}
       onLayout={onBarLayout}
-      // Transparent for video so the plates can carve out the hole. Opaque
-      // for audio, where nothing needs to show through and a transparent
-      // bar would let the content behind it bleed into the title.
-      style={[
-        styles.root,
-        isVideo ? styles.rootVideo : {...plate, borderTopColor: colors.border.subtle},
-      ]}
-      testID="mini-player">
+      // Transparent for video so the plates can carve out the hole.
+      style={[styles.root, isMini ? null : styles.rootHidden]}
+      // While hidden the bar must not eat a tap meant for the transport
+      // bar underneath it.
+      pointerEvents={isMini ? 'auto' : 'none'}
+      testID="video-dock">
       <View
         style={[
           styles.progressTrack,
@@ -199,7 +203,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
         />
       </View>
 
-      {isVideo && hole != null ? (
+      {hole != null ? (
         <>
           {/* The bar, rebuilt around a transparent rectangle. Until the
               first measurement lands there is no hole and no video rect
@@ -235,32 +239,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
           accessibilityRole="button"
           accessibilityLabel={`Open player for ${title}`}
           style={styles.expandTarget}>
-          {isVideo ? (
-            // The hole. No background, no children — every pixel here has
-            // to stay see-through or the video is covered.
-            <View
-              ref={slotRef}
-              style={styles.videoSlot}
-              testID="mini-video-slot"
-            />
-          ) : artwork ? (
-            <Image
-              source={{uri: artwork}}
-              style={[styles.artwork, {backgroundColor: colors.background.elevated}]}
-              accessibilityIgnoresInvertColors
-            />
-          ) : (
-            <View
-              style={[
-                styles.artwork,
-                styles.artworkEmpty,
-                {
-                  backgroundColor: colors.background.elevated,
-                  borderColor: colors.border.subtle,
-                },
-              ]}
-            />
-          )}
+          {/* The hole. No background, no children — every pixel here has
+              to stay see-through or the video is covered. */}
+          <View
+            ref={slotRef}
+            style={styles.videoSlot}
+            testID="video-dock-slot"
+          />
 
           <View style={styles.text}>
             <Text
@@ -285,13 +270,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({onClose}) => {
             icon={state.isPlaying ? 'pause' : 'play'}
             accessibilityLabel={state.isPlaying ? 'Pause' : 'Play'}
             onPress={commands.togglePlayPause}
-            testID="mini-playpause"
+            testID="video-dock-playpause"
           />
           <PlayerControl
             icon="close"
             accessibilityLabel="Close player and stop playback"
-            onPress={onClose}
-            testID="mini-close"
+            onPress={closePlayback}
+            testID="video-dock-close"
           />
         </View>
       </View>
@@ -310,14 +295,14 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 30,
-    borderTopWidth: StyleSheet.hairlineWidth,
     paddingBottom: spacing.xs,
   },
-  // No hairline border for the video lane: it would draw an opaque line
-  // across the top of the plates and reintroduce a seam the hole is meant
-  // to avoid.
-  rootVideo: {
-    borderTopWidth: 0,
+  // The dock is always laid out — only its visibility changes. That is
+  // what lets the slot's window rect be published BEFORE the user taps
+  // minimise, so the picture moves into the dock in the same commit that
+  // flips the presentation.
+  rootHidden: {
+    opacity: 0,
   },
   plateTop: {
     position: 'absolute',
@@ -355,14 +340,6 @@ const styles = StyleSheet.create({
     // 44 tall: the artwork itself is 44, so the row meets the same
     // target floor the artwork does.
     minHeight: ART_SIZE,
-  },
-  artwork: {
-    width: ART_SIZE,
-    height: ART_SIZE,
-    borderRadius: spacing.sm,
-  },
-  artworkEmpty: {
-    borderWidth: StyleSheet.hairlineWidth,
   },
   videoSlot: {
     width: ART_SIZE,

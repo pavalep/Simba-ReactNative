@@ -60,6 +60,15 @@ const mockSetPipActive = jest.fn();
 const mockSetPreset = jest.fn();
 const mockSetSkipSilence = jest.fn();
 
+// V22 W22 (2026-10-21): the CLOSE verb is owned by `useClosePlayback()`,
+// and it reports a refused native stop through the app's toast. The app
+// ALWAYS renders the player chrome inside the root `ToastProvider`, so a
+// suite that renders the chrome without one is rendering a state the app
+// cannot be in — and `useToast` throws rather than pretending. These
+// suites are not about toasts.
+jest.mock('../../../../../src/components/feedback/Toast', () => ({
+  useToast: () => ({show: jest.fn(), hide: jest.fn()}),
+}));
 jest.mock('../../../../../src/infrastructure/player', () => ({
   useTransport: () => ({
     state: {
@@ -77,7 +86,13 @@ jest.mock('../../../../../src/infrastructure/player', () => ({
     },
     commands: mockCommands,
   }),
-  usePresentation: () => ({setPipActive: mockSetPipActive}),
+  usePresentation: () => ({
+    setPipActive: mockSetPipActive,
+    // V22 W22: the transport bar's mini-player control reads this. A mock
+    // that omits it fails as "setVideoPresentation is not a function",
+    // which reads like a broken component rather than an incomplete mock.
+    setVideoPresentation: jest.fn(),
+  }),
   useChromeAutoHide: () => ({}),
   usePipBridge: () => ({}),
   useCaptionStyleBridge: () => ({}),

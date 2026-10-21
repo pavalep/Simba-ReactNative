@@ -102,6 +102,15 @@ jest.mock('../../../../../src/infrastructure/player/useTransport', () => ({
  * test assert against a fiction, exactly as the sibling
  * `VideoLanePresentation` suite says of itself.
  */
+// V22 W22 (2026-10-21): the CLOSE verb is owned by `useClosePlayback()`,
+// and it reports a refused native stop through the app's toast. The app
+// ALWAYS renders the player chrome inside the root `ToastProvider`, so a
+// suite that renders the chrome without one is rendering a state the app
+// cannot be in — and `useToast` throws rather than pretending. These
+// suites are not about toasts.
+jest.mock('../../../../../src/components/feedback/Toast', () => ({
+  useToast: () => ({show: jest.fn(), hide: jest.fn()}),
+}));
 jest.mock('../../../../../src/infrastructure/player', () => {
   const actualPipBridge = jest.requireActual(
     '../../../../../src/infrastructure/player/usePipBridge',
@@ -197,6 +206,12 @@ jest.mock('../../../../../src/components/player/video/Gestures/VerticalSwipeGest
 }));
 jest.mock('../../../../../src/components/player/video/NextUp/NextUpOverlay', () => ({
   NextUpOverlay: passthrough,
+}));
+// V22 W22 (2026-10-21): the video lane's own dock. It is chrome, and
+// this suite is about the PiP reconciliation — so it renders null here,
+// exactly like the other chrome primitives above.
+jest.mock('../../../../../src/components/player/video/VideoDock/VideoDock', () => ({
+  VideoDock: passthrough,
 }));
 jest.mock('../../../../../src/components/StatusBar', () => ({
   SimbaStatusBar: passthrough,

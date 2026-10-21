@@ -53,6 +53,7 @@ import {presetToMpv, useQualityStore} from '../../../../state/useQualityStore';
 import {useSkipSilenceStore} from '../../../../state/useSkipSilenceStore';
 import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
 import {dockStyleFor} from '../../../../infrastructure/player/dockPlacement';
+import {useClosePlayback} from '../../../../infrastructure/player/useClosePlayback';
 import {VideoSurface} from '../VideoSurface/VideoSurface';
 import {PlayerScrim} from '../PlayerScrim/PlayerScrim';
 import {VideoTitleOverlay} from '../VideoTitleOverlay/VideoTitleOverlay';
@@ -62,6 +63,7 @@ import {TransportBar} from '../TransportBar/TransportBar';
 import {ChromeAutoHideController} from '../ChromeAutoHide/ChromeAutoHideController';
 import {VerticalSwipeGestures} from '../Gestures/VerticalSwipeGestures';
 import {NextUpOverlay} from '../NextUp/NextUpOverlay';
+import {VideoDock} from '../VideoDock/VideoDock';
 import {
   ChromeAutoHideProvider,
   useChromeAutoHide,
@@ -290,7 +292,8 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
  * merged declaration as far as TypeScript is concerned.
  */
 const VideoPlayerChrome: React.FC = () => {
-  const {isExpanded, setVideoPresentation} = usePresentation();
+  const {isExpanded} = usePresentation();
+  const closePlayback = useClosePlayback();
 
   // W6.1 — the single owner of PiP reconciliation.
   //
@@ -324,9 +327,13 @@ const VideoPlayerChrome: React.FC = () => {
 
   // Hardware back must be the SAME verb as the header's back chevron.
   //
-  // V21 F3/F4: both are now `setVideoPresentation('mini')`. The reasoning
-  // below records what the two verbs used to be, because the difference is
-  // exactly what F5 turned into a single owner.
+  // V22 W22 (2026-10-21): both are now the CLOSE. The header's back
+  // stopped minimising when the minimise verb moved into the transport
+  // bar (in both lanes), and back is the platform's "leave this screen"
+  // verb — so back closes.
+  //
+  // The reasoning below records what the two verbs used to be, because the
+  // difference is exactly what F5 turned into a single owner.
   //
   // Before F3, back had to reach the same verb as the header button, because
   // RN's default popped `PlayerActivity` directly: the window closed while
@@ -346,11 +353,11 @@ const VideoPlayerChrome: React.FC = () => {
   React.useEffect(() => {
     if (!isExpanded) return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      setVideoPresentation('mini');
+      closePlayback();
       return true;
     });
     return () => sub.remove();
-  }, [setVideoPresentation, isExpanded]);
+  }, [closePlayback, isExpanded]);
 
   // D9 — ONE mounted picture per lane.
   //
@@ -534,6 +541,18 @@ const VideoLane: React.FC = () => {
 
       {/* The chrome. It comes and goes; the picture does not. */}
       {presentation.isExpanded ? <ExpandedChrome /> : null}
+
+      {/* V22 W22 (2026-10-21) — the video lane's OWN mini presentation.
+          It used to be the shared `MiniPlayer`, a separate component
+          mounted by `PlayerChrome` that took turns with this lane. Now it
+          is a part of the lane: always mounted, visible only in the dock,
+          and it never renders a picture — the `<SimbaVideo>` above is the
+          only one, which is what keeps the mpv surface bound to a single
+          view.
+
+          It is the LAST child so it paints above the picture, which is
+          what lets the plates carve the hole the video shows through. */}
+      <VideoDock />
     </View>
   );
 };

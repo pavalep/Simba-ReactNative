@@ -28,24 +28,28 @@
  * `usePresentationStore` persists only `pipActive`; `'mini' | 'expanded'`
  * are DERIVED at read time.
  *
- * ## V21 F4 — back minimises instead of stopping
+ * ## V22 W22 (2026-10-21) — back CLOSES; minimise is its own control
  *
- * The paragraph this replaced argued that there was "no smaller player to
- * minimize *to*", because W6.0 had removed the dock, so dismissing the
- * Activity WAS the transition. It also recorded why the control did not call
- * `setPresentation('mini')`: the host overwrote such a write immediately, so
- * it was "a control that lies".
+ * The paragraph this replaced (V21 F4) argued that back should minimise,
+ * citing YouTube's miniplayer, Plex's mini player and VLC's minimise.
+ * That is withdrawn.
  *
- * Both statements were true of the code and false about the product. F4 adds
- * the dock — a `MiniPlayer` that keeps live video on screen — so a smaller
- * presentation exists, and the write is no longer overwritten because the
- * value it writes (`videoPresentation`) is now a real input to the mode
- * rather than a per-tree reconciliation. Back minimises; the dock's X is the
- * stop.
+ * F4's own reasoning was that back-minimises is safe "precisely because a
+ * control to return to exists" — the dock's X. That is still true, but it
+ * is not why back should minimise: back is the platform's "leave this
+ * screen" verb, and this control's accessibility label has always said
+ * "Closes the player and returns to the app". The label was the lie.
  *
- * Three buttons for one effect would be three names for one action, and
- * one of them would inevitably become a no-op — so there is still exactly
- * one back control, and it now performs the one verb that is true.
+ * So the verbs are now split by what they MEAN, and each has one owner:
+ *
+ *   • back  → CLOSE. Stops the engine, releases the foreground service,
+ *              dismisses the notification, ends the session. `useClosePlayback`
+ *              owns the teardown, because the dock's X and the audio player's
+ *              X are the same verb and must not drift.
+ *   • the mini-player control in the transport bar → MINIMISE. Keeps playing,
+ *              moves the player to the dock. In BOTH lanes, and it is the only
+ *              minimise path — a second one next to the close would be two
+ *              names for one action, and one of them would become a no-op.
  *
  * ## The lock affordance
  *
@@ -116,7 +120,8 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
-import {useReduceMotion, usePresentation, useTransport} from '../../../../infrastructure/player';
+import {useReduceMotion, useTransport} from '../../../../infrastructure/player';
+import {useClosePlayback} from '../../../../infrastructure/player/useClosePlayback';
 import {PlayerControl, CONTROL_ICON_SIZE_COMPACT} from '../PlayerControl/PlayerControl';
 import {BookmarkControl} from '../BookmarkControl/BookmarkControl';
 
@@ -136,7 +141,7 @@ export const RISE_PX = 10;
 
 export const VideoTitleOverlay: React.FC = () => {
   const {state, commands} = useTransport();
-  const {setVideoPresentation} = usePresentation();
+  const closePlayback = useClosePlayback();
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();
@@ -174,21 +179,26 @@ export const VideoTitleOverlay: React.FC = () => {
   }, [title, opacity, rise, reduceMotion]);
 
   const onBack = React.useCallback(() => {
-    // V21 F4: back MINIMISES, it does not stop.
+    // V22 W22 (2026-10-21): back CLOSES.
     //
-    // This used to be `commands.exitPlayer()`, and the reasoning written
-    // next to it was explicit: "W6.0 removed the mini dock, so dismissing
-    // the Activity leaves no surface behind" — background continuation was
-    // therefore unavailable for video, and Netflix/Plex/VLC were cited for
-    // treating back-from-video as a stop.
+    // It used to MINIMISE, and the paragraph that used to sit here argued
+    // for that with YouTube's miniplayer, Plex's mini player and VLC's
+    // minimise as precedent. That paragraph is withdrawn, for two reasons.
     //
-    // F4 is what invalidates that paragraph: there IS a dock now, with live
-    // video in it. YouTube's miniplayer, Plex's mini player and VLC's
-    // minimise all take back-to-minimise while keeping playback, precisely
-    // because a control to return to exists. Stopping stays reachable, on
-    // the dock's X — one verb per control, as before.
-    setVideoPresentation('mini');
-  }, [setVideoPresentation]);
+    // First, the verb: back is the platform's "leave this screen" verb, and
+    // the control's own accessibility label already said so — "Back …
+    // Closes the player and returns to the app" — while the handler did
+    // something else. The label was the lie, and now the handler matches it.
+    //
+    // Second, the reason minimise is not back any more: minimise is a
+    // control of its own now. It lives in the transport bar, at the bottom,
+    // in BOTH lanes, and it is the single minimise path. Back is free to be
+    // the thing the platform says it is.
+    //
+    // The close is the real one: the engine stops, the foreground service
+    // is released, the notification is dismissed, and the session ends.
+    closePlayback();
+  }, [closePlayback]);
 
   const onToggleLock = React.useCallback(() => {
     commands.setOrientationLock(!state.isOrientationLocked);
@@ -210,17 +220,21 @@ export const VideoTitleOverlay: React.FC = () => {
       pointerEvents="box-none"
       style={[styles.container, {paddingTop: insets.top + spacing.xs}]}
     >
-      {/* ── Back / dismiss ─────────────────────────────────────────── */}
+      {/* ── Back / close ───────────────────────────────────────────── */}
       <PlayerControl
         testID="video-header-back"
         icon="chevronLeft"
         onPress={onBack}
         // The action, not the icon: this leaves the player and returns
         // to the app. "Back" is the platform-correct verb for the
-        // affordance, and it matches the hardware back button, which
-        // performs the identical transition.
+        // affordance, and the handler now does exactly what the label
+        // has always said — it closes, it does not minimise.
+        //
+        // It is NOT the hardware back button's twin: that one is
+        // device-proven broken (it does not leave the player at all),
+        // so this control cannot claim to match it.
         accessibilityLabel="Back"
-        accessibilityHint="Closes the player and returns to the app"
+        accessibilityHint="Closes the player and stops playback"
       />
 
       {/* ── Title / artist ─────────────────────────────────────────── */}

@@ -99,11 +99,19 @@ const mockCommands = {
  * the player graph and produces a partial-initialisation cycle
  * (`CHROME_HIDE_ANIM_MS` undefined).
  */
+const mockSetVideoPresentation = jest.fn();
 jest.mock('../../../../../src/infrastructure/player', () => ({
   useTransport: () => ({state: mockTransportState, commands: mockCommands}),
   formatMsAsClock: () => '0:00',
   clampPosition: (ms: number, durationMs: number) =>
     Math.max(0, Math.min(ms, durationMs)),
+  // The mini-player control in the mode row reads the presentation store.
+  // V22 W22: the transport bar owns the MINIMISE verb, so the mock has to
+  // answer the store — a mock that omits it fails as "usePresentation is
+  // not a function", which reads like a broken component.
+  usePresentation: () => ({
+    setVideoPresentation: mockSetVideoPresentation,
+  }),
   useHaptic: () => ({
     impact: jest.fn(),
     selection: jest.fn(),
