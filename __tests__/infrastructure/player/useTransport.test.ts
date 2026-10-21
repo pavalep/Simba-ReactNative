@@ -125,6 +125,7 @@ describe('useTransport — derivations', () => {
         isSeeking: expect.any(Boolean),
         isEnded: expect.any(Boolean),
         bufferedRanges: expect.any(Array),
+        bufferedSegments: expect.any(Array),
         seekable: expect.any(Boolean),
         canEnterPip: expect.any(Boolean),
         canGoPrev: expect.any(Boolean),
@@ -134,12 +135,10 @@ describe('useTransport — derivations', () => {
         isMuted: expect.any(Boolean),
         repeatMode: expect.any(String),
         captionTracks: expect.any(Array),
-        // `normalizedWindow` is null until a buffered range contains the
-        // playhead, and `currentUri`/`nextTrack` are null before a
-        // playlist is attached. `expect.anything()` would be wrong here:
-        // it rejects `null` as well as `undefined`, so assert the real
-        // defaults instead.
-        normalizedWindow: null,
+        // `currentUri`/`nextTrack` are null before a playlist is
+        // attached. `expect.anything()` would be wrong here: it rejects
+        // `null` as well as `undefined`, so assert the real defaults
+        // instead.
         currentUri: null,
         nextTrack: null,
         activeCaptionTrackId: null,
@@ -196,26 +195,24 @@ describe('useTransport — derivations', () => {
     expect(r3.current.state.isPlaying).toBe(false);
   });
 
-  it('normalizedWindow is null when there are no buffered ranges', async () => {
+  it('bufferedSegments is empty when there are no buffered ranges', async () => {
     mockProgress.cacheFill = 0;
     mockProgress.cacheRanges = [];
     mockProgress.positionMs = 30_000;
     mockProgress.durationMs = 300_000;
     const {result} = await renderHook(() => useTransport());
-    expect(result.current.state.normalizedWindow).toBeNull();
+    expect(result.current.state.bufferedSegments).toEqual([]);
   });
 
-  it('normalizedWindow is the FIRST range, not the playhead’s island', async () => {
-    // The window is the BUFFER, not the island the playhead is in.
+  it('bufferedSegments keeps EVERY island, not just the first', async () => {
+    // mpv holds a LIST of cached regions (`demux/demux.c`,
+    // `in->ranges[]`), so a seek that jumps away leaves the old region
+    // cached and starts a new one. The old rule painted only the first
+    // range, so the region the user had actually seeked TO was
+    // invisible.
     //
-    // ExoPlayer exposes one number — `getBufferedPosition()`, "the
-    // absolute position up to which data is buffered" — and YouTube,
-    // Netflix and Plex all draw ONE continuous bar from 0 to it, with
-    // the playhead on top. Nobody draws a segment map.
-    //
-    // The old rule picked the range CONTAINING the playhead, so the
-    // bar jumped forward and backward as the playhead crossed a gap,
-    // and showed nothing at all while the playhead was in one.
+    // Video.js's `LoadProgressBar` draws one element per buffered
+    // range, so this is the shipping behaviour, not an invention.
     mockProgress.durationMs = 300_000;
     mockProgress.cacheRanges = [
       {start: 0, end: 60_000},
@@ -223,17 +220,18 @@ describe('useTransport — derivations', () => {
     ];
     mockProgress.positionMs = 100_000;
     const {result} = await renderHook(() => useTransport());
-    expect(result.current.state.normalizedWindow).toEqual({
-      startMs: 0,
-      endMs: 60_000,
-    });
+    expect(result.current.state.bufferedSegments).toEqual([
+      {startMs: 0, endMs: 60_000},
+      {startMs: 90_000, endMs: 200_000},
+    ]);
   });
 
-  it('normalizedWindow still shows the prefix when the playhead is in a gap', async () => {
-    // The honest picture: "we have data up to here, and we are past
-    // it". The bar is painted and the playhead is drawn visibly
-    // BEYOND it. Returning null here made the bar VANISH whenever the
-    // playhead crossed a gap, which reads as "nothing is buffered".
+  it('keeps an island the playhead has left AND the one it is in', async () => {
+    // The playhead plays no part in the derivation: these are the spans
+    // the demux cache holds. The z-order in the TransportBar is what
+    // turns them into "played" and "buffered ahead of the playhead", so
+    // the segment BEHIND the playhead is covered by the opaque played
+    // fill and the one AHEAD of it is visible.
     mockProgress.durationMs = 300_000;
     mockProgress.cacheRanges = [
       {start: 0, end: 60_000},
@@ -241,17 +239,36 @@ describe('useTransport — derivations', () => {
     ];
     mockProgress.positionMs = 75_000; // between the two ranges
     const {result} = await renderHook(() => useTransport());
-    expect(result.current.state.normalizedWindow).toEqual({
-      startMs: 0,
-      endMs: 60_000,
-    });
+    expect(result.current.state.bufferedSegments).toEqual([
+      {startMs: 0, endMs: 60_000},
+      {startMs: 90_000, endMs: 200_000},
+    ]);
   });
 
-  it('merges ranges separated by a sub-second gap', async () => {
-    // mpv's demuxer opens and closes gaps of a few tens of ms as it
-    // reads ahead. Rendering each range separately makes the bar
-    // FLICKER, so gaps under 500 ms are merged. (Video.js uses the
-    // same 500 ms figure for its buffering indicator's onset delay.)
+  it('merges OVERLAPPING ranges into one segment', async () => {
+    // Plex web's rule, read from the shipped client: a range is merged
+    // into the previous one iff `next.start < previous.end` — a strict
+    // overlap. This is the one merge rule with a shipping precedent.
+    mockProgress.durationMs = 300_000;
+    mockProgress.cacheRanges = [
+      {start: 0, end: 60_000},
+      {start: 50_000, end: 200_000}, // overlaps
+    ];
+    mockProgress.positionMs = 30_000;
+    const {result} = await renderHook(() => useTransport());
+    expect(result.current.state.bufferedSegments).toEqual([
+      {startMs: 0, endMs: 200_000},
+    ]);
+  });
+
+  it('does NOT merge ranges separated by a gap, however small', async () => {
+    // The old rule merged anything within 500 ms. That threshold was
+    // invented — no shipping player uses a seconds-based merge
+    // threshold (Video.js merges nothing, Plex merges only on overlap,
+    // Shaka merges everything, hls.js merges nothing and uses a 2 px
+    // minimum width instead). A 400 ms merge claims 400 ms of data
+    // that is not there, and a user who seeks into the "buffered"
+    // region then stalls — worse than showing less of the buffer.
     mockProgress.durationMs = 300_000;
     mockProgress.cacheRanges = [
       {start: 0, end: 60_000},
@@ -263,27 +280,10 @@ describe('useTransport — derivations', () => {
       {startMs: 0, endMs: 60_000},
       {startMs: 60_400, endMs: 200_000},
     ]);
-    expect(result.current.state.normalizedWindow).toEqual({
-      startMs: 0,
-      endMs: 200_000,
-    });
-  });
-
-  it('does NOT merge ranges separated by a gap of 1s or more', async () => {
-    // A 1 s gap is a real island. Merging it would claim that
-    // unbuffered data is buffered, and a user who seeks into the
-    // "buffered" region then stalls — worse than showing less.
-    mockProgress.durationMs = 300_000;
-    mockProgress.cacheRanges = [
-      {start: 0, end: 60_000},
-      {start: 61_000, end: 200_000}, // 1 s gap
-    ];
-    mockProgress.positionMs = 30_000;
-    const {result} = await renderHook(() => useTransport());
-    expect(result.current.state.normalizedWindow).toEqual({
-      startMs: 0,
-      endMs: 60_000,
-    });
+    expect(result.current.state.bufferedSegments).toEqual([
+      {startMs: 0, endMs: 60_000},
+      {startMs: 60_400, endMs: 200_000},
+    ]);
   });
 
   it('shows the held window when mpv has evicted the start of the file', async () => {
@@ -295,10 +295,9 @@ describe('useTransport — derivations', () => {
     mockProgress.cacheRanges = [{start: 120_000, end: 200_000}];
     mockProgress.positionMs = 130_000;
     const {result} = await renderHook(() => useTransport());
-    expect(result.current.state.normalizedWindow).toEqual({
-      startMs: 120_000,
-      endMs: 200_000,
-    });
+    expect(result.current.state.bufferedSegments).toEqual([
+      {startMs: 120_000, endMs: 200_000},
+    ]);
   });
 
   it('clamps the ranges to the duration and drops inverted ones', async () => {
@@ -330,7 +329,7 @@ describe('useTransport — derivations', () => {
     mockProgress.positionMs = 30_000;
     const {result} = await renderHook(() => useTransport());
     expect(result.current.state.bufferedRanges).toEqual([]);
-    expect(result.current.state.normalizedWindow).toBeNull();
+    expect(result.current.state.bufferedSegments).toEqual([]);
   });
 
   it('canEnterPip is true only when playing, not ended, not buffering', async () => {

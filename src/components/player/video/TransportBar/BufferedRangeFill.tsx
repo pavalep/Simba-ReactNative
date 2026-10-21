@@ -1,50 +1,83 @@
 /**
- * V19 W2 Phase 2.2 — `BufferedRangeFill` (the buffered-range renderer).
+ * V19 W2 Phase 2.2 — `BufferedRangeFill` (the buffered-island renderer).
  *
- * Renders a flat-fill rectangle inside the TransportBar's progress
- * row, showing the contiguous buffered range that contains the
- * playhead — visibly lighter than the played fill (gold) and
- * clearly lighter than the empty track.
+ * Renders one flat-fill rectangle per buffered island inside the
+ * TransportBar's progress row, so the user can see the data that is
+ * DOWNLOADED BUT NOT YET PLAYED. The colour is the brand gold at a
+ * reduced alpha — Plex's pattern, where the buffered fill is the same
+ * hue as the played fill rather than a neutral grey, so the two read
+ * as one family and the difference reads as "played" vs "buffered".
  *
  * V19 W8.7 — this used to paint `colors.border.emphasis`, which is
  * `rgba(255,255,255,0.12)` in the dark palette and `rgba(0,0,0,0.10)`
  * in the light one. On a 3 px line over a video frame BOTH are
  * effectively invisible, so the buffered range could not be
  * distinguished from the empty track (or from nothing at all). It now
- * uses `background.seekTrack.buffered`, an always-dark always-dark-on-
- * media token family — see the doc comment on `seekTrack` in
+ * uses `background.seekTrack.buffered`, an always-dark always-on-media
+ * token family — see the doc comment on `seekTrack` in
  * `src/theme/tokens.ts`.
  *
- * Geometry contract:
+ * ## It draws EVERY island, not one window
+ *
+ * mpv holds a LIST of cached regions (`demux/demux.c`, `in->ranges[]`),
+ * so a seek that jumps away leaves the old region cached and starts a
+ * new one. Drawing only the first region hid the one the user had
+ * actually seeked to. Video.js's `LoadProgressBar` draws one element
+ * per buffered range; this does the same. See `BufferedSegments` in
+ * `src/infrastructure/player/useTransport.ts` for the full rule and
+ * the shipping-precedent table.
+ *
+ * ## Geometry contract
  *   - `width` prop is the parent track width (the TransportBar
  *     measures it via `onLayout` and passes it down so this
  *     primitive is layout-pure)
- *   - left edge = `(normalizedWindow.startMs / durationMs) * width`
- *   - right edge = `(normalizedWindow.endMs / durationMs) * width`
- *   - when `normalizedWindow === null`, renders nothing
+ *   - each segment's left edge = `(segment.startMs / durationMs) * width`
+ *   - each segment's right edge = `(segment.endMs / durationMs) * width`
+ *   - when there are no segments, renders nothing
  *
- * Why null instead of a zero-width placeholder: a stale "0% fill"
- * would flicker during gap transitions (the playhead briefly leaves
- * a buffered range while the next range is still loading). The
- * spec (TRACKER Phase 2.2 §"When normalizedWindow === null") is
- * explicit: render nothing.
+ * Why render nothing rather than a zero-width placeholder: a stale
+ * "0% fill" would flicker during gap transitions (the playhead briefly
+ * leaves a buffered range while the next range is still loading).
+ *
+ * ## The z-order IS the "played vs buffered" rule
+ *
+ * These fills sit ON TOP of the empty track (which the TransportBar
+ * owns) and BENEATH the opaque played fill and the thumb. The played
+ * fill covers 0 → playhead, so:
+ *
+ *   - a segment entirely BEHIND the playhead is completely covered
+ *   - a segment that STRADDLES the playhead shows only the part ahead
+ *     of it
+ *   - a segment AHEAD of the playhead shows in full
+ *
+ * That is exactly ExoPlayer's partition (`DefaultTimeBar` clips its
+ * buffered rect to `scrubberBar.right`), generalised to islands, and it
+ * is why no explicit clip is needed here.
+ *
+ * ## The 2 px floor
+ *
+ * A segment narrower than 2 px would render as a sub-pixel smudge, so
+ * a segment is drawn at least `MIN_SEGMENT_PX` wide. This is hls.js's
+ * rule (`Math.max(2, end - start)` in its reference player). It can
+ * over-claim by at most 2 px of track — under 0.3 % of a feature
+ * film — and it is what keeps a freshly-created island visible at all.
  *
  * The component is layout-pure: no animation hooks, no gesture
  * handlers, no state. TransportBar owns the pan/tap gesture and
- * re-renders this primitive when `normalizedWindow` mutates.
- *
- * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
- * §3.7 + audit §4.B.
+ * re-renders this primitive when the segments mutate.
  */
 
 import * as React from 'react';
 import {StyleSheet, View} from 'react-native';
 import {useTheme} from '../../../../theme';
-import type {NormalizedWindow} from '../../../../infrastructure/player';
+import type {BufferedRange} from '../../../../infrastructure/player';
+
+/** The narrowest a buffered island is ever drawn. See the doc above. */
+const MIN_SEGMENT_PX = 2;
 
 export interface BufferedRangeFillProps {
-  /** The normalized window containing the playhead, or null. */
-  normalizedWindow: NormalizedWindow;
+  /** Every buffered island, already merged. */
+  segments: readonly BufferedRange[];
   /** Total track width in pixels (from `onLayout`). */
   width: number;
   /** Total media duration in ms. Required so we can normalize the
@@ -53,14 +86,14 @@ export interface BufferedRangeFillProps {
   /** Track height in pixels. Defaults to 3 (the Apple-Music-style
    *  hairline). */
   height?: number;
-  /** Test seam: when true, renders an absolutely-positioned fill
-   *  span at the computed left/right edges with a `testID` for the
-   *  unit tests' `getByTestId`. Defaults to undefined (no testID). */
+  /** Test seam: when set, each segment is rendered with the testID
+   *  `<testID>-<index>` so a test can address the islands
+   *  individually. Defaults to undefined (no testID). */
   testID?: string;
 }
 
 export const BufferedRangeFill: React.FC<BufferedRangeFillProps> = ({
-  normalizedWindow,
+  segments,
   width,
   durationMs,
   height = 3,
@@ -68,33 +101,46 @@ export const BufferedRangeFill: React.FC<BufferedRangeFillProps> = ({
 }) => {
   const {colors} = useTheme();
 
-  if (normalizedWindow === null) return null;
+  if (segments.length === 0) return null;
   if (width <= 0 || durationMs <= 0) return null;
 
-  const startPx = (normalizedWindow.startMs / durationMs) * width;
-  const endPx = (normalizedWindow.endMs / durationMs) * width;
-  const fillWidth = Math.max(0, endPx - startPx);
-
-  // Geometry note: the buffer fill sits ON TOP of the empty track
-  // (which the TransportBar owns) and BENEATH the played-fill +
-  // thumb. So this View only needs to be the right offset + width;
-  // it does not need to clip itself to the track.
   return (
-    <View
-      pointerEvents="none"
-      testID={testID}
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      style={[
-        styles.fill,
-        {
-          left: startPx,
-          width: fillWidth,
-          height,
-          backgroundColor: colors.background.seekTrack.buffered,
-        },
-      ]}
-    />
+    <>
+      {segments.map((segment, index) => {
+        const startPx = (segment.startMs / durationMs) * width;
+        const endPx = (segment.endMs / durationMs) * width;
+        const rawWidth = endPx - startPx;
+        // An inverted or empty range is a DATA ERROR, not a sliver: paint
+        // nothing rather than claim 2 px of buffer that is not there.
+        // The floor only applies to a range that really has length.
+        const fillWidth =
+          rawWidth <= 0
+            ? 0
+            : Math.max(
+                0,
+                Math.min(width - startPx, Math.max(MIN_SEGMENT_PX, rawWidth)),
+              );
+
+        return (
+          <View
+            key={`${segment.startMs}-${segment.endMs}`}
+            pointerEvents="none"
+            testID={testID ? `${testID}-${index}` : undefined}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            style={[
+              styles.fill,
+              {
+                left: startPx,
+                width: fillWidth,
+                height,
+                backgroundColor: colors.background.seekTrack.buffered,
+              },
+            ]}
+          />
+        );
+      })}
+    </>
   );
 };
 

@@ -234,7 +234,7 @@ V11's `player UI UX.md` §6 named four boundaries, but the V18 audio rewrite did
 │                TransportContext (the source of truth)         │
 │  Owns: positionMs, durationMs, isPlaying, isBuffering,        │
 │  isSeeking, isEnded, bufferedRanges[], seekability,           │
-│  normalizedWindow{start,end} containing the playhead.           │
+│  bufferedSegments[] — every cached island, overlapping ones    │
 │  Normalizes raw mpv events; never invents state. Clears          │
 │  bufferedRanges[] only on `onFileLoaded` (media-identity         │
 │  boundary); never on pause / EOF / seek / collapse / expand.    │
@@ -740,18 +740,25 @@ V18's `NowPlayingScreen` has a `seekTrackFill` width animated from transport's `
 
 ### 4.2 What V19 ships
 
-`TransportContext` exposes `bufferedRanges: ReadonlyArray<{startMs: number; endMs: number}>` (raw, possibly disconnected) and `normalizedWindow: {startMs: number; endMs: number}` (the single contiguous window containing the playhead, OR the full range if playhead is in a gap, OR `null` if no file is loaded). The `BufferedRangeFill` primitive consumes `normalizedWindow` and renders it as a slate-colored region behind the played fill. The rendering rules — strict, no cheating:
+`TransportContext` exposes `bufferedRanges: ReadonlyArray<{startMs: number; endMs: number}>` (raw, possibly disconnected) and `bufferedSegments: ReadonlyArray<{startMs: number; endMs: number}>` (every cached island, with OVERLAPPING ones merged). The `BufferedRangeFill` primitive consumes `bufferedSegments` and renders one region per island, in the brand gold at a reduced alpha, **under** the opaque played fill. The rendering rules — strict, no cheating:
 
 | Scenario | Render |
 |---|---|
 | Empty buffer (no file loaded) | No buffered region |
 | Single contiguous window covering the whole media | One buffered region |
-| Window containing the playhead | One buffered region, drawn up to `endMs` even if there are beyond-the-playhead islands |
-| Playhead in a gap between two windows | The active window (containing playhead); the other windows are **suppressed** (not painted) so the user doesn't see a misleading bridge |
-| Playhead beyond all windows (file ended, seek into non-buffered region) | No buffered region (would be misleading) |
+| Several disconnected islands | **One region per island** — a segment map, as Video.js's `LoadProgressBar` draws it |
+| An island behind the playhead | Painted, but covered by the opaque played fill, so it is not visible |
+| An island ahead of the playhead | Painted, in the buffered tone |
+| An island straddling the playhead | Painted; only the part ahead of the playhead is visible |
+| Two islands separated by a gap | **Not merged** — the gap is not buffered, and painting across it would be a lie |
+| Two islands that OVERLAP | Merged into one (Plex's strict-overlap rule) |
 | File ended at duration | Buffer up to `duration`, played at `duration`; thumb sits at the right edge |
 
 **Rule 0:** a UI bar that stretches to the seek target is a lie. The bar paints exactly what native reported, normalized.
+
+**Rule 1 (2026-10-21):** the buffered region is never painted BEHIND the playhead. ExoPlayer clips its buffered rect to the playhead (`bufferedLeft = Math.max(bufferedLeft, scrubberBar.right)`), YouTube and Plex paint the played fill over the buffered element, and Shaka paints the played colour there. The paint order in `TransportBar` gives the same result.
+
+**Rule 2 (2026-10-21):** the buffered tone and the played tone are the SAME hue — the brand gold — at two strengths. Plex web's buffered fill is `rgba(204,123,25,.3)` against an opaque `#cc7b19` played fill; a neutral grey next to a gold played fill reads as unrelated system chrome rather than as "the same thing, not yet played". The old `rgba(255,255,255,0.52)` neutral grey was Rule 2's violation.
 
 ### 4.3 Buffer retention
 
@@ -912,7 +919,7 @@ function usePlayerActivity(): {
   positionMs: number;
   durationMs: number;
   bufferedRanges: ReadonlyArray<{ startMs: number; endMs: number }>;
-  normalizedWindow: { startMs: number; endMs: number } | null;
+  bufferedSegments: ReadonlyArray<{ startMs: number; endMs: number }>;
   error: PlayerError | null;
   canEnterPip: boolean;
   captionTracks: ReadonlyArray<CaptionTrack>;

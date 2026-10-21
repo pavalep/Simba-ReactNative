@@ -838,11 +838,17 @@ the thumb, and therefore invisible:
 The band is `[0, bufferEnd]`; the gold played fill covers `[0, playhead]`; the
 thumb covers `[playhead ± 21 px]`. The band is only visible between the
 playhead and `bufferEnd` — and that gap is **16 px wide while the thumb's half
-is 21 px**, so the thumb covers the whole of it. The app's own spec already
-matches the shipping precedent ("YouTube, Netflix and Plex all draw ONE
-continuous grey bar from 0 to that position, **with the playhead drawn on top
-of it**"), so the rendering is right and the *cache* is the thing that is too
-small: the band can only be seen if the buffer is larger than the thumb.
+is 21 px**, so the thumb covers the whole of it.
+
+> **Corrected 2026-10-21.** This paragraph used to say the app's rule was
+> "right" because *"YouTube, Netflix and Plex all draw ONE continuous grey bar
+> from 0 to that position, with the playhead drawn on top of it"*, and that
+> *"nobody draws a segment map"*. That claim was checked against each
+> player's own source and it is **wrong in the parts that matter** — Video.js
+> draws one element per buffered range, and Plex's buffered fill is brand
+> amber, not grey. The rendering was therefore not "right"; it was
+> under-specified. See the 2026-10-21 progress block below, and
+> `md/SIMBA_V22_BUFFERING_UI_RESEARCH.md` §3.2–3.4 for the full table.
 
 **Left open:** raise the lib's `cache-secs` / `demuxer-readahead-secs` from
 120 s to ~300 s (the byte cap `demuxer-max-bytes=150MiB` already bounds the
@@ -856,6 +862,112 @@ replaced file — the app then silently ran the old library code and the fix
 "did not work" on device. The tell was that the *same* commit behaved
 differently across two app restarts. Touching the file's contents (not just
 its mtime) forces the re-transform.
+
+### Progress — 2026-10-21: the buffering policy, done properly
+
+The user's question was not "is the band drawn" but **"what IS the policy"**:
+prefetch, buffer islands when you seek, what happens when you seek back, the
+merging rule, and the colours — *"not only the played portion, but yet to be
+played buffer space, its colour for indication from already played, track bar
+colour and buffer colour"*.
+
+**The rule this codebase was built on was wrong, and it was wrong in the code
+as well as in the docs.** It said:
+
+> ExoPlayer exposes one number … and YouTube, Netflix and Plex all draw ONE
+> continuous grey bar from 0 to that position … **Nobody draws a segment map.**
+
+Every part of that was then checked against each player's **own source**:
+
+| implementation | segments | merge rule | buffered colour |
+|---|---|---|---|
+| ExoPlayer / media3 `DefaultTimeBar` | one number, drawn **playhead → end** | n/a | white 80 % |
+| YouTube (2026 build) | one — the end of the range **containing the playhead** | n/a | white 40 % |
+| Plex web (v4.163.0) | one, from 0 | Plex's own merged array | **brand amber 30 %** |
+| Shaka Player | one envelope | envelope | white 54 % |
+| **Video.js 8.x / VHS** | **one element per buffered range** | **none** | slate 75 % |
+| hls.js reference player | one rect per range | none | grey, **2 px minimum** |
+
+So: **"nobody draws a segment map" is false** (Video.js does exactly that), and
+**"grey" is false for Plex** (its buffered fill is the brand colour at 30 %).
+Netflix, Apple TV, Apple Music, Spotify and the Plex TV app are closed source
+and were **not** verified — no claim is made about them.
+
+**What changed in the app**
+
+1. **Every island is drawn.** `TransportState.normalizedWindow` (ONE range) is
+   replaced by `bufferedSegments` (a list). mpv really does hold a list —
+   `demux/demux.c`'s `in->ranges[]`, one `demux_cached_range` per contiguous
+   cached region — so a seek that jumps away leaves the old region cached and
+   starts a new one. The old rule threw every range but the first away, so the
+   region the user had actually seeked **to** was invisible, and so was the
+   answer to *"what happens when I seek back"* (the data is still there, so
+   seeking back is instant — and now the bar can show that it is).
+2. **The merge rule is Plex's, not an invented one.** Overlapping ranges merge
+   (`next.start < prev.end`); a gap stays a gap. The old 0.5 s "merge small
+   gaps" threshold was invented — no shipping player uses a seconds-based
+   merge threshold.
+3. **A sub-pixel island is drawn at hls.js's 2 px floor**, so a freshly-created
+   island is visible at all. An *inverted* range is a data error and paints
+   nothing, rather than a 2 px sliver that claims buffer that is not there.
+4. **The colours are one hue at three strengths** — Plex's pattern, and the
+   one-hue ladder ExoPlayer (20/80/100 %), YouTube (20/40/100 %), Shaka
+   (30/54/100 %) and Video.js (50/75/100 %) all use. `seekTrack` is now
+   `empty` (neutral 28 %) → `buffered` (**brand gold 60 %**) → `played`
+   (**brand gold 100 %**). The old neutral grey next to a gold played fill read
+   as unrelated system chrome, which is the defect the user reported.
+5. **The played fill is on-media.** It used `accent.gold`, so a light theme
+   produced a *different hue* for the played fill than the buffered fill
+   sitting right under it. The seek rail only ever sits on a video frame, so
+   the whole `seekTrack` family is now identical in both palettes, like
+   `onMediaPill` already was.
+6. **Nothing is painted behind the playhead.** ExoPlayer clips its buffered
+   rect to the playhead, YouTube and Plex paint the played fill over it, Shaka
+   paints the played colour there. The paint order gives the same result: the
+   opaque played fill covers 0 → playhead, so an island behind the playhead is
+   hidden and one ahead of it is visible. **That is ExoPlayer's partition,
+   generalised to islands.**
+7. **`src/utils/bufferedRanges.ts` is deleted** — dead code with a *second*
+   merge policy (50 ms), contradicting the one it duplicated.
+
+**Lib 1.19.0 — released, published.** `cache-secs` and
+`demuxer-readahead-secs` 120 s → **300 s**, so the band is 42 px against a
+21 px thumb-half and is finally visible. The two options are not independent:
+mpv takes the **maximum** of them (`demux/demux.c`, `update_opts()`:
+`in->min_secs = MPMAX(in->min_secs, opts->min_secs_cache)`), so the existing
+memory-pressure trim — which moved only `cache-secs` — would have had **no
+effect at all** once the read-ahead was raised. Both now move together.
+
+That trim was also **dead**: its docstring said *"Registered as a
+ComponentCallbacks2 listener in `PlayerActivity.onCreate`"*, and no such
+registration existed anywhere in the lib. The module now implements
+`ComponentCallbacks2` and registers itself, and loading a file restores the
+base window so a trim is a reaction to pressure rather than a permanent
+ratchet.
+
+**Lib 1.20.0 — released, published.** The PiP button threw instead of
+entering PiP:
+
+```
+Exception in HostFunction: TurboModule method "enterPip"
+called with 0 arguments (expected argument count: 2)
+```
+
+The native method has **arity 2** and TurboModule checks the argument count
+on every call. The native side had been made nullable in v1.9.3 and the
+codegen spec had already been given two parameters — but the **call site**
+still passed none. The call now always passes two arguments (`null` for a
+value that was not supplied), the spec declares them required-and-nullable
+because that is what the boundary is, and the app supplies the real title and
+progress percentage so the PiP notification is not the native's blank
+fallbacks. New test asserts the call's **arity**, not merely that it was
+called — a "was it called?" test would have passed with the broken call.
+*Mutation check: 3/3 killed*, source restored and hash-verified.
+
+**Still open:** the device proofs — the band visible ahead of the playhead
+with the 300 s prefetch, and PiP entering without the crash. The APK with
+lib 1.19.0's native code is built and installed; 1.20.0 changed no native
+code, so Metro serves it as JS.
 
 ---
 

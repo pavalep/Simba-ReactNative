@@ -189,79 +189,80 @@ So "buffer islands" are simply **the ranges in that array** — contiguous
 spans of data with gaps between them, which is what a seek or a cache
 eviction leaves behind.
 
-### 3.2 What shipping players do with them: they collapse them
+### 3.2 What shipping players do with them
 
-**ExoPlayer does not expose islands at all.**
+**CORRECTED 2026-10-21.** This section originally claimed that "ExoPlayer,
+YouTube, Netflix and Plex all draw one continuous grey bar from 0 to the
+buffered position … You do not get a segment map", and that claim was used
+to justify painting only the first range. Every part of it was then checked
+against the players' own source, and it is wrong in the parts that matter.
 
-> `long getBufferedPosition()` — Gets an estimate of the absolute position in
-> milliseconds up to which data is buffered, or `UNKNOWN_TIME` if no estimate
-> is available.
-> — [ExoPlayer API](https://javadoc.io/static/com.google.android.exoplayer/exoplayer/r1.4.1/com/google/android/exoplayer/ExoPlayer.html)
+| implementation | segments drawn | merge rule | buffered geometry | buffered colour | played colour |
+|---|---|---|---|---|---|
+| **ExoPlayer / media3** `DefaultTimeBar` | **one** (`setBufferedPosition(long)`) | n/a — one number | same rect height as track and played; drawn **playhead → bufferedEnd**, clipped by `bufferedLeft = Math.max(bufferedLeft, scrubberBar.right)` | `0xCCFFFFFF` (white 80 %) | `0xFFFFFFFF` (white 100 %) |
+| **YouTube** (2026 build, `67288f35`) | **one** — the end of the range **containing the playhead** | n/a | a separate `.ytp-load-progress` element painted **under** the played fill, same thickness | `rgba(255,255,255,.4)` | brand gradient |
+| **Plex web** (v4.163.0) | **one**, from 0 | internally keeps a merged `bufferedRanges` array; merge iff `next.start < prev.end` | 4 px, same height as the played fill | `rgba(204,123,25,.3)` — **brand amber**, not grey | `#cc7b19` |
+| **Shaka Player** | **one** envelope (first start → last end) | envelope when idle; while dragging, only the range containing the target | one `linear-gradient`: played behind the playhead, buffered ahead | `rgba(255,255,255,0.54)` | `rgb(255,255,255)` |
+| **Video.js 8.x / VHS** | **MANY — one DOM element per buffered range** | **none** | one absolutely-positioned child per range, all `height:100%` | `rgba($secondary-bg,0.75)` | `#fff` |
+| **hls.js** reference player | **MANY — one rect per range** | none | `Math.max(2, end - start)` — a 2 px minimum | grey | n/a (debug overlay) |
 
-One number. "Absolute position up to which data is buffered" — i.e. the
-**contiguous prefix** from zero. The islands behind the playhead are not
-surfaced.
+So:
 
-YouTube, Netflix and Plex all do the same thing: **one continuous grey bar**
-extending from 0 to the buffered position, with the playhead drawn on top of
-it. You do not get a segment map.
+- **"Nobody draws a segment map" is FALSE.** Video.js's `LoadProgressBar`
+  renders one element per buffered range, and the hls.js reference player
+  draws one rectangle per range. The old claim was read off ExoPlayer's
+  single-number API and generalised to every player.
+- **"One continuous GREY bar" is FALSE for Plex.** Its buffered fill is the
+  brand amber at 30 % alpha against an opaque amber played fill — the
+  pattern that actually reads as "the same thing as the played fill, but not
+  played yet".
+- **Netflix, Apple TV, Apple Music, Spotify and the Plex TV app are closed
+  source and were NOT verified.** No claim is made about them.
 
-**That is the answer to "how to combine islands": you do not combine them
-into one span.** Merging `[0,10]` and `[20,30]` into `[0,30]` would claim
-that 10–20 s is buffered, and it is not. Lying about the buffer is worse
-than showing less of it, because the user's next action (seek into the
-"buffered" region) then stalls.
+### 3.3 The merge rule: strict overlap, not a time threshold
 
-The shipping rule is:
+The only merge rule with a shipping precedent is **Plex web's**, read from
+the shipped client: after quantising to whole seconds and sorting by start, a
+range is merged into the previous one **iff `next.start < previous.end`** — a
+strict overlap. Ranges that merely touch, or that are separated by any real
+gap, stay separate.
 
-> **Render the contiguous prefix from 0.** Islands behind the playhead are
-> not shown. When the playhead is in a gap, the bar still shows the prefix
-> and the playhead sits visibly *beyond* it — which is exactly the honest
-> picture: "we have data up to here, and we are past it".
+The 0.5 s "merge gaps below a threshold" rule this repo used was **invented**:
+no shipping player uses a seconds-based merge threshold. Video.js merges
+nothing, Plex merges only on overlap, Shaka merges everything into one
+envelope, and hls.js merges nothing and instead enforces a **2 px minimum
+width** so a sliver is still visible.
 
-### 3.3 The one thing you may merge: sub-second gaps
+A gap is a gap. Merging `[0,10]` and `[20,30]` into `[0,30]` would claim that
+10–20 s is buffered, and it is not. Lying about the buffer is worse than
+showing less of it, because the user's next action (seek into the "buffered"
+region) then stalls.
 
-mpv's ranges are not perfectly contiguous — the demuxer can open and close a
-gap of a few tens of milliseconds as it reads ahead. Rendering each range as
-its own segment makes the bar *flicker* as those gaps open and close.
+### 3.4 What this repo does now
 
-The fix is not to merge islands, but to merge **gaps below a threshold**:
-ranges separated by less than ~0.5 s are one range for display purposes.
-0.5 s is the same number Video.js uses for the indicator's onset delay, and
-it is well under a frame of perceptual noise on a 3 px track.
-
-### 3.4 What this repo does today, and why it is not the shipping behaviour
-
-`src/infrastructure/player/useTransport.ts`:
+`src/infrastructure/player/useTransport.ts` derives EVERY island:
 
 ```ts
-// useTransport.ts:529-547
-function deriveNormalizedWindow(ranges, positionMs, durationMs) {
-  if (ranges.length === 0) return null;
-  if (durationMs <= 0) return null;
-  // Playhead in a range: pick the first range whose [start, end] contains positionMs
-  const match = ranges.find(
-    r => positionMs >= r.startMs - PLAYHEAD_TOLERANCE_MS && positionMs <= r.endMs,
-  );
-  if (match) return match;
-  // No containing range — playhead is in a gap. Return null so
-  // BufferedRangeFill renders nothing (not a stale "100%" fill).
-  return null;
+// useTransport.ts — deriveBufferedSegments()
+function deriveBufferedSegments(ranges: BufferedRange[]): BufferedRange[] {
+  if (ranges.length === 0) return [];
+  return mergeOverlappingRanges(ranges);   // Plex's strict-overlap rule
 }
 ```
 
-Two differences from the shipping behaviour:
+and `src/components/player/video/TransportBar/BufferedRangeFill.tsx` renders
+one rectangle per merged segment, **under** the opaque played fill.
 
-1. **It renders the island under the playhead, not the prefix.** When the
-   playhead is in a gap it renders *nothing* — so a user with 40 minutes
-   buffered is told "nothing is buffered". YouTube shows the prefix and lets
-   the playhead sit past it.
-2. **It renders ONE range.** There is no island map, and no merging of
-   sub-second gaps.
+That paint order IS the "played vs buffered" rule, and it is exactly
+ExoPlayer's partition generalised to islands: the played fill covers
+0 → playhead, so a segment behind the playhead is hidden and a segment ahead
+of it is visible. **Nothing is painted behind the playhead** — ExoPlayer
+clips its buffered rect to the playhead, YouTube and Plex paint the played
+fill over it, and Shaka paints the played colour there.
 
-The docstring at `useTransport.ts:26-28` says the intent was *"the contiguous
-buffered range that contains the playhead"*, so the current behaviour is
-intentional — but it is not what ExoPlayer, YouTube, Netflix or Plex do.
+The colour is the brand gold for both tones — Plex's rule — so the buffered
+fill reads as "the same thing as the played fill, but not played yet", and
+the buffered islands read as "downloaded but not yet played".
 
 ### 3.5 🟠 A unit bug, waiting behind the dead event
 

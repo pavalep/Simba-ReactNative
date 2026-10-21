@@ -96,14 +96,31 @@ export interface ColorTokens {
      * `empty` also has to stay clearly darker than `buffered`, or the
      * buffered range has nothing to be read against.
      *
+     * `buffered` and `played` are the SAME hue — the brand gold — at two
+     * strengths. That is Plex web's pattern: its buffered fill is
+     * `rgba(204,123,25,.3)` against an opaque `#cc7b19` played fill, so
+     * the two read as one family and the difference reads as "played"
+     * vs "downloaded but not yet played". A neutral grey next to a gold
+     * played fill reads as unrelated system chrome, which is what the
+     * old `rgba(255,255,255,0.52)` did. ExoPlayer, YouTube, Shaka and
+     * Video.js all use the same one-hue ladder (ExoPlayer 20 % / 80 % /
+     * 100 % white, YouTube 20 % / 40 % / 100 %, Shaka 30 % / 54 % / 100 %,
+     * Video.js 50 % / 75 % / 100 %).
+     *
      * Always-dark family (identical in both themes) for the same reason
-     * as `onMediaPill`: this only ever sits on a video frame.
+     * as `onMediaPill`: this only ever sits on a video frame. That
+     * includes `played` — the played fill used to follow the app theme
+     * through `accent.gold`, which meant a light theme produced a
+     * DIFFERENT hue for the played fill than the buffered fill sitting
+     * right underneath it.
      */
     seekTrack: {
       /** The unplayed remainder — a visible neutral grey. */
       empty: string;
-      /** The contiguous buffered range, clearly lighter than `empty`. */
+      /** The buffered islands: the brand gold, dimmer than `played`. */
       buffered: string;
+      /** The played portion: the brand gold, full strength. */
+      played: string;
     };
     /**
      * V19 W8.7 — the surface of a panel that opens over the video
@@ -201,11 +218,13 @@ export const darkColors: ColorTokens = {
     },
     // V19 W8.7 — see the seekTrack doc comment. "empty" is a real grey,
     // not a 6% white hairline: over a video frame that was invisible,
-    // which is the reported "grey under colour missing". "buffered" sits
-    // clearly above "empty" so the two are distinguishable.
+    // which is the reported "grey under colour missing". "buffered" and
+    // "played" are the same brand gold at two strengths, so the buffered
+    // islands read as "downloaded but not yet played".
     seekTrack: {
       empty: 'rgba(255,255,255,0.28)',
-      buffered: 'rgba(255,255,255,0.52)',
+      buffered: 'rgba(201,168,76,0.60)',
+      played: '#C9A84C',
     },
     onMediaSheet: '#121216',
   },
@@ -276,10 +295,12 @@ export const lightColors: ColorTokens = {
     // V19 W8.7 — identical to the dark block above, deliberately, for the
     // same reason: the seek track only ever sits on a video frame, and a
     // video frame is dark in BOTH themes. A light theme must not produce
-    // a light seek track.
+    // a light seek track, and it must not produce a different HUE for
+    // the played fill than the buffered fill sitting under it.
     seekTrack: {
       empty: 'rgba(255,255,255,0.28)',
-      buffered: 'rgba(255,255,255,0.52)',
+      buffered: 'rgba(201,168,76,0.60)',
+      played: '#C9A84C',
     },
     onMediaSheet: '#121216',
   },

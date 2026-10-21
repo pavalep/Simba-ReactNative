@@ -47,7 +47,7 @@ export function makeTransportState(
     isSeeking: false,
     isEnded: false,
     bufferedRanges: [{startMs: 0, endMs: 120_000}],
-    normalizedWindow: {startMs: 0, endMs: 120_000},
+    bufferedSegments: [{startMs: 0, endMs: 120_000}],
     seekable: true,
     canEnterPip: true,
     // Orientation lock released by default: the common case, and it

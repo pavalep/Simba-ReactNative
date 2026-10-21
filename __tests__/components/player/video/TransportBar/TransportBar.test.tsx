@@ -12,7 +12,7 @@
  *   - tap at 50% commits to durationMs / 2
  *   - pan from 25% to 60% lands at 60% (release commits)
  *   - cancellation on pan start (no commit) reverts to position
- *   - the buffered fill is mounted (when normalizedWindow is set)
+ *   - the buffered islands are mounted (one span per island)
  *
  * The pan-responder + onLayout flow is integration-tested here
  * with RNTL's `fireEvent` — not e2e-tested on a real device.
@@ -145,6 +145,26 @@ jest.mock('../../../../../src/infrastructure/player', () => {
  * opt in explicitly.
  */
 const HIDDEN = {includeHiddenElements: true} as const;
+
+/**
+ * The testIDs in a rendered tree, in DOCUMENT ORDER.
+ *
+ * The buffered-vs-played rule is a PAINT ORDER rule: the opaque played
+ * fill has to be painted after the buffered islands so that it covers
+ * the part of the buffer that lies BEHIND the playhead — which is what
+ * ExoPlayer does by clipping its buffered rect to the playhead. An
+ * order assertion needs the document order, which a `getByTestId`
+ * lookup cannot give.
+ */
+function testIdOrder(node: unknown, out: string[] = []): string[] {
+  if (!node || typeof node !== 'object') return out;
+  const record = node as {props?: {testID?: string}; children?: unknown[]};
+  if (record.props?.testID) out.push(record.props.testID);
+  if (Array.isArray(record.children)) {
+    for (const child of record.children) testIdOrder(child, out);
+  }
+  return out;
+}
 
 /**
  * RNTL performs no layout, so `setTrackWidth` never runs and every tap
@@ -295,16 +315,38 @@ describe('TransportBar', () => {
     expect(mockTransport.commands.seek).toHaveBeenCalledWith(180_000);
   });
 
-  it('renders the buffered-fill span when normalizedWindow is set', async () => {
-    const {getByTestId} = await renderChrome(<TransportBar />);
+  it('renders a buffered-fill span per buffered island', async () => {
+    const {getByTestId, getAllByTestId} = await renderChrome(<TransportBar />);
     await measureTrack(getByTestId);
-    expect(getByTestId('buffered-fill', HIDDEN)).toBeTruthy();
+    expect(getAllByTestId(/^buffered-fill-\d+$/, HIDDEN)).toHaveLength(1);
+    expect(getByTestId('buffered-fill-0', HIDDEN)).toBeTruthy();
   });
 
-  it('does NOT render the buffered-fill when normalizedWindow is null', async () => {
-    mockTransport.state.normalizedWindow = null;
+  it('does NOT render a buffered-fill when there are no segments', async () => {
+    mockTransport.state.bufferedSegments = [];
     const {queryByTestId} = await renderChrome(<TransportBar />);
-    expect(queryByTestId('buffered-fill', HIDDEN)).toBeNull();
+    expect(queryByTestId('buffered-fill-0', HIDDEN)).toBeNull();
+  });
+
+  it('paints the buffered islands UNDER the opaque played fill', async () => {
+    // This z-order IS the "played vs buffered" rule.
+    //
+    // ExoPlayer clips its buffered rect to `scrubberBar.right` — the
+    // buffered colour is only ever painted AHEAD of the playhead.
+    // YouTube and Plex get the same result by painting the played fill
+    // OVER the buffered element; Shaka paints the played colour there.
+    //
+    // SIMBA gets it from the paint order: the played fill covers
+    // 0 → playhead, so a buffered island BEHIND the playhead is hidden
+    // and one AHEAD of it is visible. If the order ever flips, the rail
+    // starts showing a back-cached band that no shipping player shows.
+    const {getByTestId, toJSON} = await renderChrome(<TransportBar />);
+    await measureTrack(getByTestId);
+    const order = testIdOrder(toJSON());
+    expect(order).toContain('buffered-fill-0');
+    expect(order.indexOf('played-fill')).toBeGreaterThan(
+      order.indexOf('buffered-fill-0'),
+    );
   });
 
   it('renders the played-fill and thumb spans', async () => {

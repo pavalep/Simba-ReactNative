@@ -57,7 +57,7 @@ const mockTransportState = {
   isSeeking: false,
   isEnded: false,
   bufferedRanges: [],
-  normalizedWindow: null,
+  bufferedSegments: [],
   seekable: true,
   canEnterPip: false,
   isOrientationLocked: false,

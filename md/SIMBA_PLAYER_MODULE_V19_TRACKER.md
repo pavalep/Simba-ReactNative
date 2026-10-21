@@ -547,34 +547,43 @@ Before W0 closes, ALL of the following must be true:
 
 ### Phase 2.1 — `TransportContext` (the source of truth)
 
-- [x] `src/infrastructure/player/useTransport.ts` defines `useTransport()` returning `{positionMs, durationMs, isPlaying, isBuffering, isSeeking, isEnded, bufferedRanges, normalizedWindow, seekable, canEnterPip, commands}`
+- [x] `src/infrastructure/player/useTransport.ts` defines `useTransport()` returning `{positionMs, durationMs, isPlaying, isBuffering, isSeeking, isEnded, bufferedRanges, bufferedSegments, seekable, canEnterPip, commands}`
 - [x] Subscribes to mpv events via the lib's `<PlayerProvider>` (delegated; no double-subscription)
 - [x] Properties are normalized: `positionMs = max(0, lib.progress.positionMs)`, `durationMs = max(0, lib.progress.durationMs)`
-- [x] `normalizedWindow` returns the contiguous range containing the playhead (with 1s tolerance), OR `null` if playhead is in a gap or no buffered ranges
-- [x] Unit test: no-buffering file → `normalizedWindow === null`
-- [x] Unit test: contiguous window covering the whole media → `normalizedWindow = bufferedRanges[0]`
-- [x] Unit test: playhead in a gap → `normalizedWindow === null` (suppressed — spec says playhead-in-gap returns null)
-- [x] Unit test: playhead beyond all windows → `normalizedWindow = null`
-- [x] Unit test: 1s slop tolerance on the lower bound of the playhead match
-- [ ] Unit test: file ended at duration → `normalizedWindow` is the full cache up to `duration` (deferred — W7 acceptance matrix)
+- [x] **SUPERSEDED 2026-10-21** — `normalizedWindow` (the single contiguous range containing the playhead) is replaced by `bufferedSegments`: EVERY cached island, with OVERLAPPING ones merged by Plex's strict-overlap rule. The single-window rule was derived from the claim that "nobody draws a segment map", which is false — Video.js's `LoadProgressBar` draws one element per buffered range and the hls.js reference player draws one rect per range. See `md/SIMBA_V22_BUFFERING_UI_RESEARCH.md` §3.2–3.4.
+- [x] Unit test: no-buffering file → `bufferedSegments` is `[]`
+- [x] Unit test: every island is kept, not just the first
+- [x] Unit test: an island the playhead has left AND the one it is in are both kept
+- [x] Unit test: OVERLAPPING ranges merge into one segment
+- [x] Unit test: ranges separated by ANY gap (400 ms included) are NOT merged
+- [x] Unit test: the held window is still shown when mpv has evicted the head of the file
+- [ ] Unit test: file ended at duration → `bufferedSegments` is the full cache up to `duration` (deferred — W7 acceptance matrix)
 - [ ] Property: `bufferedRanges` survives a pause → play round-trip (deferred — needs native-event spy in jest)
 - [ ] Property: `bufferedRanges` is CLEARED on a new file load (deferred — same)
 - [x] Pure helpers exported: `formatMsAsClock(ms)`, `clampPosition(positionMs, durationMs)`
 - [ ] `useTransport()` throws if called outside a `<TransportProvider>` (programmer-error contract) — **DEVIATION**: the V19 facade wraps the lib's hooks, which already null-fall-back to `DEFAULT_PROGRESS`. Adding a parallel `<TransportProvider>` would double the subscription cost without adding value. The throwing contract was rewritten as "usePlaybackState-style guard" — the chrome primitives short-circuit on `durationMs === 0`. Documented in `useTransport.ts` header.
 
-### Phase 2.2 — `BufferedRangeFill` (the slate-color renderer)
+### Phase 2.2 — `BufferedRangeFill` (the buffered-island renderer)
 
 - [x] `src/components/player/video/TransportBar/BufferedRangeFill.tsx` exists
-- [x] Reads `useTransport().normalizedWindow` + the parent's `width` prop
-- [x] Renders a flat-fill rectangle in `colors.border.emphasis` (deep slate, visibly darker than the played fill but lighter than the empty track)
-- [x] The rectangle's left edge is `(normalizedWindow.startMs / durationMs) * width`; right edge is `(normalizedWindow.endMs / durationMs) * width`
-- [x] When `normalizedWindow === null`, renders nothing (no fake bridge, no zero-width placeholder)
+- [x] **SUPERSEDED 2026-10-21** — reads `useTransport().bufferedSegments` (was `normalizedWindow`) + the parent's `width` prop
+- [x] **SUPERSEDED 2026-10-21** — renders ONE flat-fill rectangle per buffered island, in `colors.background.seekTrack.buffered` (the brand gold at a reduced alpha). It was `colors.border.emphasis` (deep slate) and then a neutral grey, both of which read as unrelated chrome next to the gold played fill — Plex web's rule is the same hue at two strengths.
+- [x] Each rectangle's left edge is `(segment.startMs / durationMs) * width`; right edge is `(segment.endMs / durationMs) * width`
+- [x] When there are no segments, renders nothing (no fake bridge, no zero-width placeholder)
+- [x] A sub-pixel island is drawn at hls.js's 2 px floor, so a freshly-created island is visible; an INVERTED range is a data error and paints nothing rather than a 2 px sliver
+- [x] The rectangles are painted UNDER the opaque played fill, which is what makes the buffered region read as "ahead of the playhead only" — ExoPlayer's partition
 - [x] Animation: when the right edge moves, ease it over 200 ms with the existing `react-native-reanimated` worklet setup — **DEVIATION**: animation deferred. The fill width jumps on each 1Hz tick which is imperceptible at normal playback. Reanimated worklets can be wired in W3.5 polish if scrubbing feels stuttery on real devices.
-- [x] Unit test: renders nothing when `normalizedWindow === null`
+- [x] Unit test: renders nothing when there are no segments
 - [x] Unit test: rendered width equals `(endMs - startMs) / durationMs * parentWidth`
-- [x] Unit test: re-renders when `normalizedWindow` mutates
-- [x] Unit test: does NOT render any kind of filled bar when the playhead is in a gap (suppressed range)
-- [x] Unit test: uses the theme `border.emphasis` token (no raw hex)
+- [x] Unit test: re-renders when the segments mutate
+- [x] Unit test: ONE view per buffered island
+- [x] Unit test: a sub-pixel island is drawn at the 2 px floor
+- [x] Unit test: an island is never painted past the right edge of the track
+- [x] Unit test: an inverted range paints nothing
+- [x] Unit test: uses the theme `seekTrack.buffered` token (no raw hex)
+- [x] Unit test: the buffered tone sits BETWEEN the empty rail and the played fill
+- [x] Unit test: the buffered tone and the played tone are the SAME hue
+- [x] Unit test (`TransportBar`): the buffered islands are painted UNDER the played fill
 
 ### Phase 2.3 — `TransportBar` (the progress row)
 

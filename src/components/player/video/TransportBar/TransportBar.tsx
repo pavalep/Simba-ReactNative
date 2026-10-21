@@ -385,7 +385,7 @@ const hasKnownDuration = state.durationMs > 0;
             ]}
           >
             <BufferedRangeFill
-              normalizedWindow={state.normalizedWindow}
+              segments={state.bufferedSegments}
               width={trackWidth}
               durationMs={state.durationMs}
               height={TRACK_HEIGHT_PX}
@@ -399,7 +399,13 @@ const hasKnownDuration = state.durationMs > 0;
                 styles.fill,
                 {
                   width: Math.max(0, playedWidth),
-                  backgroundColor: colors.accent.gold,
+                  // The ON-MEDIA brand gold, not the app theme's accent:
+                  // this rail only ever sits on a video frame, so it must
+                  // not change with the app theme — and the played fill has
+                  // to be the same hue as the buffered fill underneath it,
+                  // or the two read as unrelated colours instead of
+                  // "played" and "downloaded but not yet played".
+                  backgroundColor: colors.background.seekTrack.played,
                   height: TRACK_HEIGHT_PX,
                 },
               ]}

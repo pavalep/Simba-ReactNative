@@ -9,11 +9,11 @@
  *
  *   - `isPlaying`         — `!isPaused && hasFile`
  *   - `isEnded`           — `positionMs >= durationMs - epsilon`
- *   - `normalizedWindow`  — the contiguous buffered PREFIX (see
- *                           `NormalizedWindow` for the rule and why
- *                           it is the prefix and not the playhead's
- *                           island). Drives the `BufferedRangeFill`
- *                           width.
+ *   - `bufferedSegments`  — every buffered ISLAND the demux cache
+ *                           currently holds, with overlapping ones
+ *                           merged (see `BufferedSegments` for the
+ *                           rule and the shipping precedent). Drives
+ *                           the `BufferedRangeFill` segments.
  *   - `canEnterPip`       — true while the media is actively playing,
  *                           not ended and not buffering. This used
  *                           to be documented as
@@ -47,7 +47,7 @@
  * `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` Phase 2.1.
  */
 
-import {useMemo} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import {useWindowDimensions} from 'react-native';
 import {
   usePlayer,
@@ -79,47 +79,73 @@ export interface BufferedRange {
 }
 
 /**
- * The buffered window the TransportBar paints: the contiguous PREFIX
- * of the buffer, or null when there is no buffer.
+ * The buffered SEGMENTS the TransportBar paints — every island the
+ * demux cache currently holds, with overlapping ones merged.
  *
- * ## Why the prefix, and not the playhead's island
+ * ## What the shipping players actually do
  *
- * ExoPlayer exposes one number — `getBufferedPosition()`, "the absolute
- * position up to which data is buffered" — and YouTube, Netflix and Plex
- * all draw ONE continuous grey bar from 0 to that position, with the
- * playhead drawn on top of it. Nobody draws a segment map.
+ * This replaces an earlier rule that painted only the FIRST range and
+ * called it "the contiguous buffered PREFIX". That rule rested on the
+ * claim that "ExoPlayer, YouTube, Netflix and Plex all draw ONE
+ * continuous grey bar from 0 to that position … Nobody draws a segment
+ * map." Each part of that was checked against the player's own source
+ * on 2026-10-20, and it is only half right — and the half that is
+ * wrong is the half that matters here:
  *
- * The islands are therefore NOT merged into one span. Merging `[0,10s]`
- * and `[20s,30s]` into `[0,30s]` would claim that 10–20 s is buffered,
- * and it is not. A user who seeks into the "buffered" region then
- * stalls, which is worse than showing less of the buffer.
+ * | player | what it draws |
+ * |---|---|
+ * | ExoPlayer / media3 `DefaultTimeBar` | ONE number (`setBufferedPosition(long)`), painted FROM the playhead forward — `bufferedLeft = Math.max(bufferedLeft, scrubberBar.right)` |
+ * | YouTube (2026 build) | ONE number — the end of the range CONTAINING the playhead — as a separate `.ytp-load-progress` element painted UNDER the played fill, in white at 40 % |
+ * | Plex web (v4.163.0) | ONE bar from 0, in brand amber `rgba(204,123,25,.3)` over an opaque amber played fill; internally it keeps a merged `bufferedRanges` array |
+ * | Shaka Player | ONE envelope (first range start → last range end); played colour behind the playhead, buffered colour ahead of it |
+ * | **Video.js 8.x / VHS** | **A SEGMENT MAP — one DOM element per buffered range, with no merge at all** |
+ * | hls.js demo | one canvas rect per range, `Math.max(2, end - start)` — a 2 px minimum |
  *
- * The rule:
+ * So "nobody draws a segment map" is FALSE: Video.js is a shipping
+ * player that draws exactly that, and it is the one that keeps a
+ * multi-range API. And "grey" is wrong too — Plex's buffered fill is
+ * the BRAND colour at 30 % alpha, which is the pattern that actually
+ * reads as "the same thing as the played fill, but not played yet".
+ *
+ * ## Why SIMBA draws the islands
+ *
+ * mpv really does hold a LIST of ranges: one `demux_cached_range` per
+ * contiguous cached region (`demux/demux.c`, `in->ranges[]`), so a seek
+ * that jumps away leaves the old region cached and starts a new one.
+ * The old rule threw every range but the first away, so the region the
+ * user had actually seeked TO was invisible — and so was the answer to
+ * "what happens when I seek back": the data is still there, seeking
+ * back into it is instant, and now the bar can show that it is.
+ *
+ * Drawing every island is honest: a drawn segment is a span mpv holds
+ * right now. It is also Plex's rule that keeps a GAP a gap — merging
+ * `[0,10s]` and `[20s,30s]` into `[0,30s]` would claim that 10–20 s is
+ * buffered, and it is not. A user who seeks into the "buffered" region
+ * then stalls, which is worse than showing less of the buffer.
+ *
+ * ## The rules
  *   1. clamp the ranges to the duration and drop inverted ones
  *   2. sort them by start
- *   3. merge ranges separated by less than ~0.5 s — mpv's demuxer
- *      opens and closes gaps of a few tens of ms as it reads ahead,
- *      and rendering each range separately makes the bar FLICKER. 0.5 s
- *      is the same threshold Video.js uses for its indicator's onset
- *      delay, and it is well under a frame of perceptual noise on a
- *      3 px track.
- *   4. the window is the FIRST merged range
+ *   3. merge a range into the previous one only when it OVERLAPS it
+ *      (Plex's rule: `next.start < prev.end`)
+ *   4. paint every merged segment
  *
- * Step 4 is the prefix from 0 in the normal case: while a progressive
- * download is running, mpv's cached range grows forward from the start
- * of the file, so the first range starts at 0 and extends to the end of
- * the buffer.
+ * ## What is NOT painted: the region behind the playhead
  *
- * When the playhead sits in a gap, the first range is still painted and
- * the playhead is drawn visibly BEYOND it. That is the honest picture:
- * "we have data up to here, and we are past it".
+ * Every implementation with a playhead clips the buffered region to
+ * start AT it — ExoPlayer clips it explicitly, YouTube and Plex paint
+ * the played fill over it, Shaka paints the played colour there. A
+ * visible back-cached band behind the playhead is not the standard and
+ * reads as a rendering bug.
  *
- * And when mpv has evicted the start of the file — a seek does that —
- * there is no prefix from 0 at all. The first range is then the window
- * mpv holds around the playhead, and that is what gets painted: it is
- * the data that IS buffered, so painting it is not a lie.
+ * SIMBA gets that from the z-order instead of a clip: the segments
+ * are painted UNDER the opaque played fill, which covers 0 →
+ * playhead. A segment entirely behind the playhead is therefore
+ * covered, and a segment that straddles it shows only the part ahead
+ * of it. That is exactly ExoPlayer's partition, generalised to
+ * islands.
  */
-export type NormalizedWindow = BufferedRange | null;
+export type BufferedSegments = readonly BufferedRange[];
 
 /**
  * V19 transport state — what chrome primitives read.
@@ -132,7 +158,15 @@ export interface TransportState {
   isSeeking: boolean;
   isEnded: boolean;
   bufferedRanges: BufferedRange[];
-  normalizedWindow: NormalizedWindow;
+  /**
+   * Every buffered island the demux cache holds, overlapping ones
+   * merged. Painted UNDER the opaque played fill, so what the user
+   * sees ahead of the playhead is the part of the buffer that is
+   * downloaded but not yet played.
+   *
+   * See `BufferedSegments` for the rule and the shipping precedent.
+   */
+  bufferedSegments: BufferedSegments;
   seekable: boolean;
   canEnterPip: boolean;
   /**
@@ -515,18 +549,6 @@ export interface TransportHook {
 const ENDED_EPSILON_MS = 250;
 
 /**
- * The largest gap that is treated as "the same range" for display.
- *
- * 500 ms — the same number Video.js uses for its buffering
- * indicator's onset delay, and comfortably under a frame of
- * perceptual noise on a 3 px track. mpv's demuxer opens and closes
- * gaps of a few tens of milliseconds as it reads ahead, so a smaller
- * threshold would make the bar flicker; a larger one would start
- * claiming that a real island is contiguous.
- */
-const BUFFER_GAP_MERGE_MS = 500;
-
-/**
  * The lib's `cacheRanges` → V19 `BufferedRange[]`.
  *
  * A PASS-THROUGH in milliseconds, which is the whole point of the
@@ -573,17 +595,34 @@ function deriveBufferedRanges(progress: PlayerProgress): BufferedRange[] {
 }
 
 /**
- * Merge ranges separated by less than `BUFFER_GAP_MERGE_MS`.
+ * Merge ranges that OVERLAP, and only those.
+ *
+ * The rule is Plex web's, read from the shipped client
+ * (`plex-4.163.0`): after quantising to whole seconds and sorting by
+ * start, a range is merged into the previous one **iff
+ * `next.startSeconds < previous.endSeconds`** — a strict overlap. A
+ * range that merely TOUCHES the previous one stays separate, and so
+ * does a range separated by any real gap.
+ *
+ * The earlier rule here merged anything within 500 ms of the previous
+ * range, on the theory that mpv's demuxer opens and closes gaps of a
+ * few tens of milliseconds while reading ahead. That threshold was
+ * invented: no shipping player uses a seconds-based merge threshold
+ * (Video.js merges nothing at all, Plex merges only on overlap, Shaka
+ * merges everything into one envelope, hls.js merges nothing and
+ * instead enforces a 2 px minimum width). A 500 ms merge claims half
+ * a second of data that is not there, which is exactly the lie the
+ * prefix rule was written to avoid.
  *
  * The input is already sorted by start. The output preserves that
  * order and is contiguous within each entry: a merged entry's `endMs`
  * is the furthest end of the ranges it absorbed.
  */
-function mergeSubSecondGaps(ranges: BufferedRange[]): BufferedRange[] {
+function mergeOverlappingRanges(ranges: BufferedRange[]): BufferedRange[] {
   const merged: BufferedRange[] = [];
   for (const range of ranges) {
     const last = merged[merged.length - 1];
-    if (last && range.startMs - last.endMs <= BUFFER_GAP_MERGE_MS) {
+    if (last && range.startMs < last.endMs) {
       last.endMs = Math.max(last.endMs, range.endMs);
       continue;
     }
@@ -593,20 +632,18 @@ function mergeSubSecondGaps(ranges: BufferedRange[]): BufferedRange[] {
 }
 
 /**
- * The buffered window: the first merged range, or null.
+ * The buffered segments to paint: every island, with overlapping ones
+ * merged.
  *
- * See `NormalizedWindow` for the rule and the shipping precedent.
- * The playhead plays no part in it — the window is the BUFFER, not
- * the island the playhead happens to be sitting in.
+ * See `BufferedSegments` for the rule and the shipping precedent.
+ * The playhead plays no part in it — these are the spans the demux
+ * cache holds, not the island the playhead happens to be sitting in.
+ * The z-order in `TransportBar` is what turns them into "played" and
+ * "buffered ahead of the playhead".
  */
-function deriveNormalizedWindow(
-  ranges: BufferedRange[],
-  durationMs: number,
-): NormalizedWindow {
-  if (ranges.length === 0) return null;
-  if (durationMs <= 0) return null;
-  const merged = mergeSubSecondGaps(ranges);
-  return merged.length > 0 ? merged[0] : null;
+function deriveBufferedSegments(ranges: BufferedRange[]): BufferedRange[] {
+  if (ranges.length === 0) return [];
+  return mergeOverlappingRanges(ranges);
 }
 
 function deriveCaptionTracks(tracks: ReadonlyArray<{id: number; type: string; title?: string; lang?: string; selected: boolean}> | undefined): {
@@ -750,7 +787,7 @@ export function useTransport(): TransportHook {
       isSeeking,
       isEnded,
       bufferedRanges,
-      normalizedWindow: deriveNormalizedWindow(bufferedRanges, durationMs),
+      bufferedSegments: deriveBufferedSegments(bufferedRanges),
       seekable,
       // PiP only makes sense for an actively playing, expanded
       // player. The chrome auto-hide timer (W3.5) gates the
@@ -807,6 +844,30 @@ export function useTransport(): TransportHook {
     playerState.artist,
     isOrientationLocked,
   ]);
+
+  /**
+   * A LIVE snapshot of what is playing, for the commands that need the
+   * value at the moment they are CALLED rather than the value at the
+   * moment their memo was built.
+   *
+   * The `wrapped` commands memo is deliberately stable — it only
+   * rebuilds when the DURATION changes — so a command that closed over
+   * `state.positionMs` would read a position that is minutes old. The
+   * PiP notification is the case that matters: "0 %" because the memo
+   * was built when the film started is worse than no percentage.
+   *
+   * Written in an effect rather than during render: a ref written
+   * during render is a side effect in the render phase, and React may
+   * render a component without ever committing it.
+   */
+  const livePlaybackRef = useRef({positionMs: 0, durationMs: 0, title: ''});
+  useEffect(() => {
+    livePlaybackRef.current = {
+      positionMs: progress.positionMs,
+      durationMs: progress.durationMs,
+      title: playerState.title ?? '',
+    };
+  });
 
   const wrapped = useMemo<TransportCommands>(
     () => ({
@@ -926,7 +987,18 @@ export function useTransport(): TransportHook {
         commands.setShuffle(enabled);
       },
       enterPip: () => {
-        commands.enterPip();
+        // The native PiP notification shows a title and a progress
+        // percentage, and the native method takes BOTH as arguments —
+        // its arity is 2 and TurboModule enforces it. Its own fallbacks
+        // are "Simba Player" and "0 %", so a real title and a real
+        // percentage have to be supplied here: this is the app's
+        // session, and the app is what knows what is playing.
+        const live = livePlaybackRef.current;
+        const progressPct =
+          live.durationMs > 0
+            ? `${Math.round((live.positionMs / live.durationMs) * 100)} %`
+            : null;
+        commands.enterPip(live.title || null, progressPct);
       },
       exitPip: () => {
         commands.exitPip();
