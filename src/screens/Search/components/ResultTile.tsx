@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
 import FastImage from 'react-native-fast-image';
 import {useTheme} from '../../../theme';
@@ -8,6 +8,7 @@ import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/Me
 import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
 import type {SearchResultItem} from '../../../hooks/useSearch';
 import {radius} from '../../../theme/tokens';
+import {toRenderableImageUri, withCacheToken} from '../../../utils/mediaUri';
 
 interface ResultTileProps {
   item: SearchResultItem;
@@ -37,6 +38,17 @@ export const ResultTile: React.FC<ResultTileProps> = ({
       ? Math.round(((item.position ?? 0) / item.duration) * 100)
       : 0;
 
+  // The thumbnail is EITHER a remote catalogue URL or a LOCAL captured
+  // frame, and the two need different spellings: `file://https://…` names
+  // no file at all, so the scheme is only added when one is missing.
+  // `MediaRailCard` has always done exactly this; the search tile did
+  // not, which is why remote artwork in the search results never
+  // rendered.
+  const thumbnailUri = useMemo(() => {
+    const base = toRenderableImageUri(item.thumbnailPath);
+    return base ? withCacheToken(base, item.lastPlayedAt ?? '') : undefined;
+  }, [item.thumbnailPath, item.lastPlayedAt]);
+
   return (
     <>
       <TouchableOpacity
@@ -61,15 +73,9 @@ export const ResultTile: React.FC<ResultTileProps> = ({
             styles.resultThumb,
             {backgroundColor: colors.accent.goldDim},
           ]}>
-          {item.thumbnailPath ? (
+          {thumbnailUri ? (
             <FastImage
-              source={{
-                uri:
-                  'file://' +
-                  item.thumbnailPath +
-                  '?t=' +
-                  encodeURIComponent(item.lastPlayedAt ?? ''),
-              }}
+              source={{uri: thumbnailUri}}
               style={styles.resultThumbImg}
               resizeMode={FastImage.resizeMode.cover}
             />

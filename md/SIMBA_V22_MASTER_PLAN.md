@@ -30,6 +30,7 @@ here, or history.
 
 | Document | Date | Status |
 |---|---|---|
+| **`SIMBA_BUG_TRACKER_2026_10_21.md`** | opened 2026-10-21, live | 🟢 **LIVE — the finding record.** Every defect, fix, product decision and external non-defect, with its evidence. The file name is the day it was OPENED, not the day it was last touched. |
 | **`SIMBA_V22_RN_MEDIA_MODULE_INTEGRATION_RESEARCH.md`** | 2026-10-16 | 🟢 **LIVE — authority on integration pattern.** Primary-source comparison of react-native-video v6/v7, expo-video, vision-camera. |
 | `SIMBA_V22_DEVICE_FINDINGS_AND_RN_ARCHITECTURE_BRIEF.md` | 2026-10-16 | 🟡 **LIVE-PARTIAL.** §1–§3, §5 device findings valid. §4.2 **corrected** — TextureView withdrawn. |
 | **`SIMBA_PLAYER_V21_TRACKER.md`** | rolling, top handoff 2026-10-16 | 🟢 **LIVE — per-finding state.** Newest handoff block at top. |
@@ -1480,6 +1481,85 @@ frame in the prompt is the frame that was on screen when the film was closed.
 **99 suites / 1214 passed / 1 todo**. Mutation-checked: **4/4** for the
 blank-screen fix, **5/5** for the artwork fix.
 
+#### 2026-10-26 (W23) — the cards stop lying
+
+Two register items, one wave, and the same shape of defect in both: **a card
+that composed something it did not have.** The search tile prefixed `file://`
+onto a REMOTE URL; the position line printed a leading separator for a
+position that was not there. Both were the renderer being asked to describe a
+value nobody gave it.
+
+**1. `ResultTile` mangled the remote URL.** `'file://' + item.thumbnailPath`,
+unconditionally. `toRenderableImageUri` already existed and was already
+scheme-aware — `MediaRailCard` used it; the search tile did not. The fix
+splits the two jobs: `toRenderableImageUri` decides the **scheme**,
+`withCacheToken` decides only the **separator and the encoding**. The split
+is the point — a helper that looks authoritative about image URIs must not be
+able to invent a scheme.
+
+**2. The card line was `" / 21:58"`.** `formatDuration(0)` returns `''`, and
+that is **correct**: "unknown duration" is a real state, and a `0:00` badge
+would claim zero-length media on a grid tile, a stats card and a history row
+alike. The formatter was therefore **not** changed — the cards were. A card
+now asks one question (*is there a position?*) and prints the position segment
+only when the answer is yes, through `formatPositionLine` /
+`formatPositionAccessibility`. The history screen's spoken label changed from
+"resume at 1:37" to "1:37 of 21:58" so the **spoken** line matches the
+**visible** line.
+
+**3. A test mock that matched a NAME, not an API.** The first run of the new
+`ResultTile` test failed 4/6 with *"Cannot read properties of undefined
+(reading 'cover')"* — the global `react-native-fast-image` mock was the bare
+string `'FastImage'`, so `FastImage.resizeMode.cover` threw for any component
+taking the image branch. The mock was rewritten to carry the library's **API
+surface** (`resizeMode`, `priority`, `cacheControl` statics). A mock that only
+matches the element name hid that the code under test could not run at all.
+
+**The device, honestly.** The WITH-position line is device-proven (`4:14 /
+21:58`, `5:14 / 21:58`, `1:29 / 21:58` on the Recently Played card). The
+**no-position** branch is **not** device-provable on this emulator: every
+playback advances the checkpoint past 0 before the card re-renders, and adb
+latency makes it impossible to close the player inside the load window. It is
+proven by the unit + component tests and the mutation kills only.
+
+**Item 44 is not device-provable either, and the reason is a finding of its
+own.** Reading every play entry point showed that the launch seam **accepts**
+artwork (`useResumeAwareLaunch` takes `thumbnailPath` and forwards it as
+`artworkPath`) but no catalogue surface supplies it:
+`ArchiveItemDetailScreen` passes it only to the bookmark and add-to-playlist
+sheet items, `MusicDetailScreen.handlePlay` **computes** `artwork` and then
+does not pass it to `openPlayer`, and `SearchScreen`'s `playWithToast` input
+type has **no artwork field at all**. So the history entry's `thumbnailPath` —
+documented as "catalogue artwork" — is always empty, and the captured frame is
+the only artwork the history ever has. Logged as `B-026`.
+
+**A measured non-defect, recorded so it is not re-investigated.** The resume
+prompt auto-dismisses after 8 s and the silence resolves as **RESUME**
+(`autoDismissMs: 8000`, `return resume ? 'resume' : 'start'`). A slow tap on
+"Start from the beginning" therefore lands on the player, not the button — so
+the button *looks* broken. It is not: a **fast** tap read `1:35 / -20:22`, and
+1:35 + 20:22 = 21:57 ≈ the 21:58 duration, so the film **did** start at zero.
+Logged as `A-003`.
+
+**Gates for this increment:** `tsc` 0 · `eslint --max-warnings 0` · `jest`
+**103 suites / 1246 passed / 1 todo**. Mutation-checked **7/7** (baseline
+29/29 green, final 29/29 green).
+
+#### Where this leaves the register
+
+- **Register items 44 and 45 are RESOLVED** (`F-018`, `F-019`), both by the
+  W23 wave on `f5/w22-close-minimise-d9`.
+- **New bug `B-026`** (P3): no catalogue surface hands its artwork to the
+  history entry, so the search tile has nothing to show — and that is why
+  item 44 cannot be device-proved.
+- **New decision `A-003`**: the resume prompt's 8-second auto-dismiss resolves
+  as RESUME. Measured; kept deliberately.
+- **`formatDuration(0) === ''` stays.** It is load-bearing, and the cards were
+  the defect — this is the rule the wave established: *the position segment
+  appears only when there IS a position.*
+- **Still open:** item 46 (`B-006`, the 600 ms transport-label freeze) and
+  everything else in the register.
+
 ---
 
 ## 6. What deletes vs. what stays
@@ -1693,14 +1773,24 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    DURATION changes, so the closed-over position was the one at launch:
    pressing skip-back three minutes into a film jumped to the **previous
    track** instead of restarting the film. New invariant **I30**.
-44. **The search tile applies `file://` to a REMOTE thumbnail URL.**
-   `ResultTile.tsx` does `'file://' + item.thumbnailPath` unconditionally,
-   which names no file when the path is an `https://` catalogue URL. The
-   new `toRenderableImageUri` helper is scheme-aware; the tile should use
-   it. **OPEN.**
-45. **`formatDuration(0)` returns `''`.** A card with no position then
-   reads `" / 21:58"`. The resume prompt cannot reach it (a resume is
-   only offered above 5 s), so this is cosmetic. **OPEN.**
+44. ~~**The search tile applies `file://` to a REMOTE thumbnail URL.**~~
+   **RESOLVED (2026-10-26, W23) — `F-018`.** `ResultTile` now resolves the
+   URI through `toRenderableImageUri` and adds the cache token through a new
+   `withCacheToken`, which owns **only the separator and the encoding** — the
+   scheme decision stays in one place, so it cannot be re-introduced inside
+   the token helper. Mutation-checked 7/7.
+   **Not device-provable**, and the reason is its own finding (`B-026`): no
+   catalogue surface hands its artwork to the history entry, so the tile the
+   user can reach has nothing to show.
+45. ~~**`formatDuration(0)` returns `''`.**~~ **RESOLVED (2026-10-26, W23) —
+   `F-019`.** The formatter's contract is **unchanged** and is load-bearing:
+   "unknown duration" is a real state, and a `0:00` badge would claim
+   zero-length media. The **cards** were the defect — they composed a
+   position that was not there. A new `src/utils/mediaTime.ts` prints the
+   position segment only when there IS a position, and the spoken label now
+   matches the visible line. Mutation-checked 7/7.
+   **Not device-provable**: every playback advances the checkpoint past 0
+   before the card re-renders.
 46. **The transport bar freezes the elapsed label for 600 ms after a
    tap-to-seek**, and the timeout is not cleared on unmount. **OPEN.**
 47. **The native discards mpv's return code** for `seek`, relative `seek`

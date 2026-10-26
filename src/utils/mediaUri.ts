@@ -49,6 +49,23 @@ export function toRenderableImageUri(
 }
 
 /**
+ * Append a cache-busting token to an image URI.
+ *
+ * The search tile busts its thumbnail cache on `lastPlayedAt`, so the same
+ * poster is fetched again when an item is played a second time. The token
+ * goes on the END of the URI, and it goes on with the right separator: a
+ * URL that already carries a query needs `&`, not a second `?`.
+ *
+ * Whether a scheme is needed is NOT this function's decision —
+ * `toRenderableImageUri` makes it, because `file://https://…` names no
+ * file at all.
+ */
+export function withCacheToken(uri: string, token: string): string {
+  const separator = uri.includes('?') ? '&' : '?';
+  return `${uri}${separator}t=${encodeURIComponent(token)}`;
+}
+
+/**
  * Best-effort human-readable source label for a URI (host for remote URIs,
  * otherwise undefined). Used to tag recents/bookmarks/playlist entries.
  */

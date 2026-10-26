@@ -1,18 +1,24 @@
 /**
- * `toRenderableImageUri` — a stored image path is not yet a URI.
+ * `withCacheToken` — the cache-busting token goes on the END of the URI,
+ * with the right separator.
  *
- * The history store holds BOTH kinds of image: catalogue artwork (a
- * remote `https://` URL) and the resume frame (a LOCAL path written by
- * the native capture into the app's `filesDir`).
+ * ## Why it exists
  *
- * An image loader parses `/data/user/0/…` as a scheme-less URI and
- * fails, so a card holding a perfectly good captured frame fell back to
- * its grey placeholder. A local path needs the `file://` scheme; a remote
- * URL must be left exactly as it is, because `file://https://…` names no
- * file at all.
+ * The search tile builds its thumbnail URI as
+ * `'file://' + thumbnailPath + '?t=' + lastPlayedAt`. Two things were wrong
+ * with that, and they were fixed in two places:
+ *
+ *  1. the `file://` prefix — `file://https://…` names no file at all, so
+ *     every REMOTE catalogue thumbnail in the search results failed to
+ *     render. `toRenderableImageUri` decides whether a scheme is needed;
+ *  2. the separator — a URL that already carries a query needs `&`, not a
+ *     second `?`.
+ *
+ * This function owns (2). It deliberately does NOT touch the scheme: adding
+ * `file://` here would put the bug back in a place that looks authoritative.
  */
 
-import {toRenderableImageUri} from '../../src/utils/mediaUri';
+import {toRenderableImageUri, withCacheToken} from '../../src/utils/mediaUri';
 
 describe('toRenderableImageUri', () => {
   it('leaves a remote URL alone', () => {
@@ -48,5 +54,61 @@ describe('toRenderableImageUri', () => {
     expect(toRenderableImageUri(undefined)).toBeUndefined();
     expect(toRenderableImageUri(null)).toBeUndefined();
     expect(toRenderableImageUri('')).toBeUndefined();
+  });
+});
+
+describe('withCacheToken', () => {
+  it('appends the token with ? when the URI has no query', () => {
+    expect(withCacheToken('file:///data/a.jpg', '2026-10-26T10:00:00Z')).toBe(
+      'file:///data/a.jpg?t=2026-10-26T10%3A00%3A00Z',
+    );
+  });
+
+  it('appends the token with & when the URI already carries a query', () => {
+    // A second `?` would name a query parameter called
+    // `?t`, which is not a thing.
+    expect(withCacheToken('https://example.test/a.jpg?w=200', 'x')).toBe(
+      'https://example.test/a.jpg?w=200&t=x',
+    );
+  });
+
+  it('encodes the token', () => {
+    expect(withCacheToken('file:///data/a.jpg', 'a b&c=d')).toBe(
+      'file:///data/a.jpg?t=a%20b%26c%3Dd',
+    );
+  });
+
+  it('does NOT add a file:// scheme', () => {
+    // The scheme is `toRenderableImageUri`'s decision. Adding it here would
+    // put `file://https://…` — a path that names no file — back into the
+    // one function that looks authoritative about image URIs.
+    const uri = withCacheToken('https://example.test/a.jpg', 'x');
+
+    expect(uri).toBe('https://example.test/a.jpg?t=x');
+    expect(uri).not.toMatch(/^file:/i);
+  });
+
+  it('composes with toRenderableImageUri into a URI an image loader can fetch', () => {
+    // The whole point: a LOCAL frame gets a scheme, a REMOTE url does not,
+    // and both end up as a fetchable URI.
+    //
+    // `toRenderableImageUri` returns `string | undefined` — undefined
+    // means "there is no image at all" — so the composition is guarded
+    // exactly as the tile guards it.
+    const local = toRenderableImageUri(
+      '/data/user/0/com.simba.player/files/x.jpg',
+    );
+    const remote = toRenderableImageUri(
+      'https://archive.org/services/img/TheRifle',
+    );
+
+    expect(local).toBeDefined();
+    expect(remote).toBeDefined();
+    expect(withCacheToken(local!, 'v1')).toBe(
+      'file:///data/user/0/com.simba.player/files/x.jpg?t=v1',
+    );
+    expect(withCacheToken(remote!, 'v1')).toBe(
+      'https://archive.org/services/img/TheRifle?t=v1',
+    );
   });
 });

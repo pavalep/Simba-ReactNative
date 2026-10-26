@@ -10,6 +10,8 @@ verb/layout restructure that followed it.
 **Still live.** Last updated **2026-10-26** — the file name is the day it was
 OPENED, not the day it was last touched. Entries carry their own dates. New
 entries since 2026-10-21 are `B-022` onward; new fixes are `F-015` onward.
+**Latest:** the W23 wave ("the cards stop lying") added `B-026` and `A-003`,
+and resolved `B-004` / `B-005` as `F-018` / `F-019`.
 
 ## How to read this file
 
@@ -121,7 +123,7 @@ read at call time. Same discipline as SPEC invariant I30.
 
 ---
 
-### B-004 · P1 · app · `ResultTile` mangles a remote thumbnail URL
+### B-004 · P1 · app · `ResultTile` mangles a remote thumbnail URL — **RESOLVED (F-018)**
 
 **Symptom.** A search result's poster does not load.
 
@@ -133,18 +135,67 @@ file.
 scheme-bearing URL is left alone; a bare local path gets the `file://`
 scheme. `MediaRailCard` already uses it.
 
-**State:** `ResultTile` was **not** migrated in this wave. Still open.
+**State: RESOLVED (F-018) — the tile now uses it.** `ResultTile` resolves
+the URI in one place and adds the cache token through a second helper that
+owns **only the separator and the encoding** (`withCacheToken`), so the
+scheme decision stays in `toRenderableImageUri` and cannot be re-introduced
+inside the token helper:
+
+```tsx
+const thumbnailUri = useMemo(() => {
+  const base = toRenderableImageUri(item.thumbnailPath);
+  return base ? withCacheToken(base, item.lastPlayedAt ?? '') : undefined;
+}, [item.thumbnailPath, item.lastPlayedAt]);
+```
+
+**Evidence (source + tests, mutation-checked).** 7/7 mutants killed,
+including "prefixes `file://` unconditionally", "always uses `?`", "drops the
+cache token" and "adds no scheme at all". The mutant that removes the scheme
+check from `toRenderableImageUri` is killed by "leaves a remote URL alone".
+
+**Honest limitation.** The defect is **not** device-provable, and the reason
+is itself a finding — see `B-026`: no catalogue surface hands its artwork to
+the history entry, so the tile the user can actually reach has nothing to
+show. The fix is proven by code + tests, not by a screenshot.
 
 ---
 
-### B-005 · P2 · app · a zero duration renders as an empty string
+### B-005 · P2 · app · a card with no position reads `" / 21:58"` — **RESOLVED (F-019)**
 
 **Symptom.** A card with no position reads `" / 21:58"` — the elapsed slot is
 blank and the leading separator dangles.
 
-**Root cause.** `formatDuration(0)` returns `''`.
+**Root cause.** The card composed a position segment and a duration segment
+and joined them **unconditionally**. `formatDuration(0)` returns `''` — and
+that is **correct and load-bearing**: "unknown duration" is a real state, and
+a `0:00` badge would claim zero-length media on a grid tile, a stats card and
+a history row alike.
 
-**State:** open. Low severity, but it is a visible blank.
+**State: RESOLVED (F-019) — the formatter was NOT the defect; the CARDS
+were.** The formatter's contract is unchanged. What changed is that a card
+now asks one question — *is there a position?* — and prints the position
+segment only when the answer is yes. New module `src/utils/mediaTime.ts`:
+
+- `formatPositionLine(position?, duration?)` → `"1:37 / 21:58"`, `"21:58"`
+  (no position), `undefined` (duration unknown).
+- `formatPositionAccessibility(title, position?, duration?)` → `"The Rifle,
+  1:37 of 21:58"`, `"The Rifle, 21:58 long"`, `"The Rifle"`.
+
+Both the home shelf and the history screen use them, so the **spoken** line
+now matches the **visible** line. (The history label used to say "resume at
+1:37" while its caption said "1:37 / 21:58" — accepted churn, recorded for
+consistency.)
+
+**Evidence (source + tests, mutation-checked).** 7/7 mutants killed,
+including "always prints both segments", "always prints the position
+segment", "leaves a dangling separator" and "prints a 0:00 duration".
+
+**Honest limitation.** The no-position branch is **not** device-provable on
+this emulator: every playback advances the checkpoint past 0 before the card
+re-renders, and adb latency makes it impossible to close the player inside
+the load window. The device proves the WITH-position line (`4:14 / 21:58`,
+`5:14 / 21:58`, `1:29 / 21:58`); the no-position branch is proven by the
+unit + component tests and the mutation kills only.
 
 ---
 
@@ -578,6 +629,40 @@ suite that fails reproducibly is a bug, and this one is not that.
 
 ---
 
+### B-026 · P3 · app · no catalogue surface hands its artwork to the history entry, so the search tile has nothing to show
+
+**Symptom.** A search result for a film the user has already watched shows a
+**placeholder** instead of a poster — even though the catalogue plainly has
+artwork for it.
+
+**Root cause (source-proven, 2026-10-26 — every play entry point read).** The
+launch seam **accepts** artwork: `useResumeAwareLaunch`'s `openPlayer` takes
+`thumbnailPath` ("Artwork URI, when the screen has one"), puts it on the
+resume candidate and forwards it as `artworkPath`. The seam works. The
+**callers** never supply it:
+
+| Surface | Hands artwork to the launch? |
+|---|---|
+| `useHomeScreen`'s shelf handler | **Yes** — `...(item.thumbnailPath ? {thumbnailPath: item.thumbnailPath} : {})` — but the history entry's own value is `''`, so nothing is passed |
+| `ArchiveItemDetailScreen.handleTrackPress` | **No** — `openPlayer({uri, title, type:'audio'})`. The image reaches only the **bookmark** and **add-to-playlist** sheet items |
+| `MusicDetailScreen.handlePlay` | **No** — it *computes* `artwork` from `imageUrl`/`artworkUrl` and then does not pass it to `openPlayer`. The image reaches only the More sheet's `currentItem` |
+| `SearchScreen` | **No, and it cannot** — `playWithToast`'s input type is `{uri, title, mediaType}`; there is no artwork field to pass |
+
+`useSearch` feeds the grid only `track.albumArtUri` (media store),
+`album.albumArtUri` (album) and `entry.thumbnailPath` (history store) — so a
+history-backed video has no image to render.
+
+**State:** open. This is **not** a rendering defect — the renderer is correct
+and is now scheme-aware (`F-018`). The **producer** side is missing: whichever
+surface writes the history entry has to carry the catalogue artwork across,
+and the Search play seam needs an artwork field to carry it.
+
+**Why it is recorded at all.** It is the reason `B-004` cannot be
+device-proved: the input the thumbnail bug was about never arrives. It is
+also a visible blank on a real screen — the tile is not broken, it is empty.
+
+---
+
 ## FIXED
 
 | ID | Sev | Lane | One line | Where |
@@ -599,6 +684,8 @@ suite that fails reproducibly is a bug, and this one is not that.
 | F-015 | P0 | app | Closing the video left a blank white screen — the browsing stack was blanked by the user's REQUEST for a fullscreen video, which outlives the session → the window is now owned by the request AND a session (`useVideoOwnsWindow()`), and both the stack and the hardware-back gate ask that one question | app `f5/w22-close-minimise-d9` |
 | F-016 | P1 | app | The resume dialog's artwork box was empty — a bare `filesDir` path is not a URI → normalised at the render site with `toRenderableImageUri` | app `f5/w22-close-minimise-d9` |
 | F-017 | P0 | app+native | The Android back button was dead everywhere — `MainActivity.onBackPressed()` swallowed the press before RN's route to the JS `BackHandler` could run → the synthetic dispatch is deleted, `super.onBackPressed()` is RN's path, and the audio lane's expanded page got the same close verb the SPEC gives it | app `f5/w22-close-minimise-d9` |
+| F-018 | P1 | app | The search tile prefixed `file://` onto a REMOTE thumbnail URL → `ResultTile` resolves the URI through `toRenderableImageUri` and adds the cache token through `withCacheToken`, which owns only the separator and the encoding | app `f5/w22-close-minimise-d9` |
+| F-019 | P2 | app | A card with no position read `" / 21:58"` → the position segment is printed only when there IS a position, via the new `formatPositionLine` / `formatPositionAccessibility`; `formatDuration(0) === ''` stays, because "unknown duration" is a real state | app `f5/w22-close-minimise-d9` |
 
 ---
 
@@ -619,6 +706,28 @@ Considered and rejected: a "close playback" row in the video player's More
 sheet. The close is now reachable from the header's back and from the dock's
 X, and a third path to the same verb is what SPEC §3.4 ("no two paths to the
 same secondary action") forbids.
+
+### A-003 · the resume prompt's 8-second auto-dismiss resolves as RESUME
+
+The prompt auto-dismisses after **8 s**, and the silence resolves as
+**CONFIRM ('resume')** — `autoDismissMs: 8000` and `return resume ? 'resume'
+: 'start'` in `AppRoot.tsx`. The SPEC says the same thing
+(`SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md:604-611`: *"Auto-dismisses after
+8 s; default action is Resume."*), and the code comment records why it was
+changed: dismissing used to resolve `false`, which mapped to "start from the
+beginning", so eight seconds of silence silently discarded the resume point
+the card existed to offer.
+
+**Decision (2026-10-26): keep it.** Silence continuing is right; silence
+discarding the offer is not.
+
+**Why it is recorded — it is a measurement trap.** A tap that takes longer
+than 8 s lands on the player, not on the button, and the film has already
+resumed, so "Start from the beginning" *looks* broken when it is not.
+**Device-proven (emulator-5554):** a **fast** tap read `1:35 / -20:22` on
+the transport, and 1:35 + 20:22 = 21:57 ≈ the 21:58 duration — so the film
+**did** start at zero. An earlier reading of "it resumed at 4:14 / 5:14" was
+the same tap arriving after the auto-dismiss.
 
 ---
 
@@ -652,6 +761,11 @@ clip was pushed to the device instead.
 3. Is the "Maximum update depth exceeded" loop in the lib's progress
    subscriber? (B-009.)
 4. Why does a second movie tap produce no `loadFile`? (B-012.)
+5. Which surface should own handing catalogue artwork to the history entry?
+   The launch seam already accepts `thumbnailPath` and forwards it as
+   `artworkPath` — but `SearchScreen`'s `playWithToast` input type has no
+   artwork field at all, and the catalogue surfaces drop the image they
+   already have in hand. (B-026.)
 
 ---
 

@@ -31,7 +31,10 @@ import {
 } from '../../../infrastructure/player';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
-import {formatDuration} from '../../../utils/timeAgo';
+import {
+  formatPositionAccessibility,
+  formatPositionLine,
+} from '../../../utils/mediaTime';
 import type {HistoryScreenProps} from '../types';
 
 type Props = HistoryScreenProps;
@@ -178,7 +181,11 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
           onLongPress={() => setMenuItem(item)}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel={`${item.title}, resume at ${formatDuration(item.position)}`}>
+          accessibilityLabel={formatPositionAccessibility(
+            item.title,
+            item.position,
+            item.duration,
+          )}>
           <View style={[styles.rowIcon, {backgroundColor: colors.border.subtle}]}>
             <SvgIcon
               name={item.mediaType === 'audio' ? 'music' : 'video'}
@@ -191,7 +198,7 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
               {item.title}
             </AppText>
             <AppText variant="caption" color="tertiary">
-              {formatDuration(item.position)} / {formatDuration(item.duration)}
+              {formatPositionLine(item.position, item.duration)}
             </AppText>
             {/* 47.2: row progress bar */}
             <View

@@ -1,6 +1,9 @@
 import React from 'react';
 import {MAX_RECENT_HISTORY_ENTRIES} from '../../../state/recentHistoryStore';
-import {formatDuration} from '../../../utils/timeAgo';
+import {
+  formatPositionAccessibility,
+  formatPositionLine,
+} from '../../../utils/mediaTime';
 import {MediaRail} from '../../../components/media/MediaRail';
 import {MediaRailCard} from '../../../components/media/MediaRailCard';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
@@ -88,21 +91,15 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
           title={item.title}
           lane={item.mediaType ?? 'video'}
           imageUri={item.resumeThumbnailPath || item.thumbnailPath}
-          subtitle={
-            hasDuration
-              ? `${formatDuration(item.position ?? 0)} / ${formatDuration(item.duration as number)}`
-              : undefined
-          }
+          subtitle={formatPositionLine(item.position, item.duration)}
           progress={progress}
           onPress={() => onItemPress(item)}
           onLongPress={onItemLongPress ? () => onItemLongPress(item) : undefined}
-          accessibilityLabel={
-            hasDuration
-              ? `${item.title}, ${formatDuration(item.position ?? 0)} of ${formatDuration(
-                  item.duration as number,
-                )}`
-              : item.title
-          }
+          accessibilityLabel={formatPositionAccessibility(
+            item.title,
+            item.position,
+            item.duration,
+          )}
           accessibilityHint={onItemLongPress ? 'Long press to remove from Recently Played' : undefined}
         />
       );
