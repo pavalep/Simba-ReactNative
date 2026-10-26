@@ -1919,6 +1919,13 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
 - **Tests pin the contract** and must fail without the fix. Mutation-check every
   "must not do X" test. A harness that cannot prove it saw a result must print
   `HARNESS-ERROR`, not a verdict.
+- **A jest mock must match the library's API SURFACE, not just its element
+  name.** A bare-string mock (`'FastImage'`) made `FastImage.resizeMode.cover`
+  throw and hid the fact that the branch under test never ran — the failure
+  looks like a product bug, so it sends you to the wrong file. Mock the statics,
+  enums and helpers the code actually calls. Likewise, a fixture must carry
+  every field the code branches on: a missing optional field is a silent
+  contract violation, not a no-op.
 - **Never let `tsc` pass on a lib that isn't installed.** Verify the symbol in
   `node_modules`.
 - **Tags must be annotated** (`git -a`). Verify with `git ls-remote --tags origin`.
@@ -1930,3 +1937,9 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
 - **Windows:** PowerShell only; `;` not `&&`; no `grep`/heredocs; commit via
   message file + `git commit -F <file>`. Single-quoted PowerShell strings —
   double quotes eat markdown backticks.
+- **A tracker's `State:` line can go stale and contradict its own later
+  section.** `B-015` read "open. Unverified — no remote capture has been
+  exercised" while open question 1 in the same file answered it **YES** two
+  days earlier. When you answer a question in a tracker, update the older
+  entry's state **in the same commit** — and check a status line against the
+  **device**, never against the document.
