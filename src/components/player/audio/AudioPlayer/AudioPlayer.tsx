@@ -79,6 +79,7 @@
 
 import React, {useCallback} from 'react';
 import {
+  BackHandler,
   Image,
   Pressable,
   StyleSheet,
@@ -131,6 +132,32 @@ export const AudioPlayer: React.FC = () => {
   // is the dock. Both are rendered at all times; only their visibility
   // and the root's geometry differ. See the module docstring.
   const isMini = mode === 'mini';
+
+  // The hardware back is the platform's "leave this screen" verb, and the
+  // SPEC gives it exactly ONE meaning: CLOSE. SPEC §3.2 withdrew the older
+  // "back minimises" rule on purpose, and it names `useClosePlayback()` as
+  // the single owner so "the dock's X, the audio player's X, the header's
+  // back and the hardware back cannot drift apart".
+  //
+  // So the expanded audio page owes the platform the same verb its own X
+  // offers — through that same owner, not a second teardown.
+  //
+  // It is registered only while the PAGE is up. As the dock, the audio lane
+  // is a bar over the browsing stack, not a screen of its own, so back
+  // belongs to the stack (and, at its root, to the platform). The dock's own
+  // X is the way to close from there.
+  //
+  // `AudioPlayer` is mounted only while a session exists (`PlayerChrome`
+  // returns null otherwise), so this handler cannot swallow a back press
+  // with nothing to close.
+  React.useEffect(() => {
+    if (isMini) return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      closePlayback();
+      return true;
+    });
+    return () => sub.remove();
+  }, [closePlayback, isMini]);
 
   const onSeek = useCallback(
     (positionMs: number) => {

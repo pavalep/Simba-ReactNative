@@ -33,6 +33,7 @@
 
 import React from 'react';
 import {render, fireEvent, act} from '@testing-library/react-native';
+import {BackHandler} from 'react-native';
 
 const mockToastShow = jest.fn();
 
@@ -382,6 +383,93 @@ describe('PlayerChrome — minimize does not touch playback', () => {
     expect(mockStopPlayback).not.toHaveBeenCalled();
     expect(mockCommandsStop).not.toHaveBeenCalled();
     expect(useNowPlayingStore.getState().current).not.toBeNull();
+  });
+});
+
+/**
+ * The hardware back, in the audio lane.
+ *
+ * The Android back button is the platform's "leave this screen" verb, and
+ * SPEC §3.2 gives it exactly ONE meaning: CLOSE. The older "back
+ * minimises" rule was withdrawn on purpose, and the SPEC names
+ * `useClosePlayback()` as the single owner precisely so "the dock's X, the
+ * audio player's X, the header's back and the hardware back cannot drift
+ * apart".
+ *
+ * So the expanded audio page owes the platform the same verb its own X
+ * offers — and the DOCK does not, because as a bar over the browsing stack
+ * it is not a screen of its own; back there belongs to the stack.
+ *
+ * `BackHandler` is a no-op stub under the jest preset's default platform, so
+ * the subscription is captured with a spy and the handler is invoked by
+ * hand. What is asserted is the CONTRACT: is a handler registered, and what
+ * does it do.
+ */
+describe('PlayerChrome — the hardware back closes the expanded audio page', () => {
+  // The real signature, taken from RN's own type so the mock cannot drift
+  // from it.
+  type BackPressEventName = Parameters<
+    typeof BackHandler.addEventListener
+  >[0];
+  type BackPressHandler = Parameters<typeof BackHandler.addEventListener>[1];
+
+  let backHandlers: Array<() => boolean | null | undefined>;
+
+  beforeEach(() => {
+    backHandlers = [];
+    jest
+      .spyOn(BackHandler, 'addEventListener')
+      .mockImplementation((event: BackPressEventName, handler: BackPressHandler) => {
+        if (event === 'hardwareBackPress') {
+          backHandlers.push(() =>
+            handler({type: 'hardwareBackPress', timeStamp: 0}),
+          );
+        }
+        return {remove: () => {}};
+      });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('closes the session through the same native teardown as the X', async () => {
+    await seedSession();
+    await render(<PlayerChrome />);
+
+    expect(backHandlers).toHaveLength(1);
+
+    let consumed: boolean | null | undefined = false;
+    await act(async () => {
+      consumed = backHandlers[0]();
+    });
+
+    // The press is CONSUMED — returning false would let it fall through to
+    // the platform and close the whole app while a track is on screen.
+    expect(consumed).toBe(true);
+    expect(mockStopPlayback).toHaveBeenCalledTimes(1);
+    expect(useNowPlayingStore.getState().current).toBeNull();
+  });
+
+  it('does NOT swallow the back press while the dock is up', async () => {
+    await seedSession();
+    await act(async () => {
+      useAudioPresentationStore.setState({mode: 'mini'});
+    });
+    await render(<PlayerChrome />);
+
+    // As a bar over the browsing stack the dock is not a screen of its own:
+    // back belongs to the stack, and at the stack's root to the platform.
+    expect(backHandlers).toHaveLength(0);
+  });
+
+  it('does not register a handler for a video session', async () => {
+    // The video lane is hosted elsewhere and owns its own back handler.
+    // Two owners of one press is how one of them becomes a no-op.
+    await seedSession('video');
+    await render(<PlayerChrome />);
+
+    expect(backHandlers).toHaveLength(0);
   });
 });
 /**

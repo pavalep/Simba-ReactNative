@@ -199,20 +199,52 @@ class MainActivity : ReactActivity() {
   // the user expects. The order matters: PiP is checked first because a
   // PiP window has no JS back handler behind it.
   override fun onBackPressed() {
+    // PiP is checked FIRST: a PiP window has no JS behind it, so the
+    // Activity has to close itself.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) {
       // Finish exits PiP mode and restores the activity to foreground
       finish()
       return
     }
-    // V21 F5 — hand the press to React Native first so the JS back
-    // handler can act on it; fall through to the platform default when
-    // nothing consumes it.
-    val handled = window.decorView.dispatchKeyEvent(
-      android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_BACK),
-    ) || window.decorView.dispatchKeyEvent(
-      android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_BACK),
-    )
-    if (handled) return
+    // Everything else goes to React Native, and ONLY to React Native.
+    //
+    // `super.onBackPressed()` IS `ReactActivity.onBackPressed()` ->
+    // `mDelegate.onBackPressed()` -> `ReactHostImpl.onBackPressed()` ->
+    // `DeviceEventManagerModule.emitHardwareBackPressed()` -> the JS
+    // `hardwareBackPress` event -> the app's `BackHandler` subscribers.
+    // The JS side then decides what the press means: a subscriber that
+    // returns true has consumed it (the player lanes close), and if nobody
+    // consumes it RN calls `exitApp()`, which finishes the Activity — the
+    // platform default.
+    //
+    // V22 W22c (2026-10-26) — this override used to dispatch a SYNTHETIC
+    // `KEYCODE_BACK` into the view hierarchy first, and returned early when
+    // the hierarchy said it had handled the key. The file's own comment
+    // said the dispatch existed "so the JS BackHandler can consume it".
+    //
+    // It could never do that. The JS `BackHandler` is not a key-event
+    // listener: it subscribes to the `hardwareBackPress` DEVICE EVENT, and
+    // that event is emitted only by `emitHardwareBackPressed()`. A
+    // view-level `dispatchKeyEvent` does not emit it. So the dispatch never
+    // gave the press to JS, and its early return stopped RN's own route
+    // from ever running.
+    //
+    // Measured on device (emulator-5554, API 37), 2026-10-26, with
+    // `Log.i` on each branch:
+    //
+    //   [BACKPROBE] onBackPressed entered pip=false sdk=37
+    //   [BACKPROBE] synthetic dispatch down=true up=false
+    //   [BACKPROBE] EARLY RETURN — super.onBackPressed() was NOT called
+    //
+    // and the JS probe never fired. The Android back button was DEAD
+    // everywhere in the app — in the player and on Home alike, where it
+    // should have closed the app. The header chevron closed the player
+    // correctly in the same state, so the close verb itself was fine; only
+    // the hardware path into it was missing.
+    //
+    // See bug `B-011` in md/SIMBA_BUG_TRACKER_2026_10_21.md, and
+    // `__tests__/app/MainActivityBackPress.test.ts` for the guard that keeps
+    // this from coming back.
     super.onBackPressed()
   }
 }

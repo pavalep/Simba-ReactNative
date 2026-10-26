@@ -218,6 +218,10 @@ in-app back control (at ~90,68) did.
 **Re-observed 2026-10-26 — and it is worse than "does not leave the player":
 the Android back button is DEAD everywhere in the app.**
 
+**RESOLVED (F-017).** The full account is below; the entry stays because
+its evidence is the reason the next reader will not re-introduce the same
+workaround.
+
 **Evidence (device-proven, emulator-5554, API 37).**
 
 1. In the player: `input keyevent 4` → the transport kept running, and
@@ -270,10 +274,62 @@ That override is also the only entry point, not a side door: RN 0.86's
 the device is API 37), and that callback calls `onBackPressed()` — the app's
 override. Every back press on Android 16 lands there and nowhere else.
 
-**State:** open, **root-caused**. The fix is to delete the synthetic dispatch
-and call `super.onBackPressed()` (RN's path), keeping the PiP branch — a PiP
-window has no JS behind it and must `finish()` on its own. The fix needs an
-APK rebuild, so it lands in its own increment after this one.
+**The instrumented measurement.** The master plan's risk table says: do NOT
+fix this from static reading — instrument each branch, rebuild, read logcat.
+So it was instrumented (`Log.i` per branch in `MainActivity.onBackPressed()`),
+the APK was rebuilt, and the press was reproduced. The logcat, verbatim:
+
+```
+I/MainActivity(  660): [BACKPROBE] onBackPressed entered pip=false sdk=37
+I/MainActivity(  660): [BACKPROBE] synthetic dispatch down=true up=false
+I/MainActivity(  660): [BACKPROBE] EARLY RETURN — the view hierarchy consumed
+                                    the synthetic key, so super.onBackPressed()
+                                    (RN's route to the JS BackHandler) was NOT called
+```
+
+and the JS probe — a temporary `BackHandler` listener that logged every
+`hardwareBackPress` arrival — **never fired**.
+
+So the measurement confirms the reading exactly: the synthetic dispatch was
+consumed by the view hierarchy (`down=true`), the method returned early, and
+RN's route to the JS handler never ran. The press could not have reached JS
+by any other path, because `super.onBackPressed()` is that path.
+
+**Fix.** The synthetic dispatch is deleted. `onBackPressed()` now does two
+things: the PiP branch (a PiP window has no JS behind it, so the Activity
+closes itself), and `super.onBackPressed()` — which IS
+`ReactActivity.onBackPressed()` → `mDelegate.onBackPressed()` →
+`ReactHostImpl.onBackPressed()` → `emitHardwareBackPressed()` → the JS
+`hardwareBackPress` event. The JS side then decides: a subscriber that
+returns true has consumed the press, and if nobody consumes it RN calls
+`exitApp()` and the Activity finishes.
+
+**The audio lane was given the same verb.** Fixing the native path made the
+press reachable in the audio lane for the first time, and the audio lane had
+no handler — so a back press on the expanded now-playing page would have
+closed the whole app. SPEC §3.2 settles what it should do: back CLOSES
+("back minimises" was withdrawn on purpose), through `useClosePlayback()`,
+the same owner as the audio player's own X. `AudioPlayer` now registers that
+handler while the PAGE is up. As the DOCK it does not: the dock is a bar
+over the browsing stack, not a screen of its own, so back belongs to the
+stack.
+
+**State:** RESOLVED (F-017). `android/app/src/main/java/com/simba/player/MainActivity.kt`,
+`src/components/player/audio/AudioPlayer/AudioPlayer.tsx`,
+`__tests__/app/MainActivityBackPress.test.ts` (new, 5 tests) and three new
+tests in `__tests__/components/player/PlayerChrome.test.tsx`.
+Mutation-checked: 6/6 killed.
+
+**Device re-proof (emulator-5554, API 37, the rebuilt APK):**
+- Home → back → the JS event arrives (`[BACKPROBE] JS hardwareBackPress
+  fired`) and the app closes to the launcher. Before the fix, nothing
+  happened at all.
+- In the player → back → `[PlaybackTrace][Bridge][stopPlayback] service not
+  running; engine stopped`, the chrome unmounted, the app returned to Home
+  (no white screen — the `B-022` fix holds), and the teardown flush wrote the
+  new checkpoint (the card read 1:37 / 21:58 with the captured frame). The
+  app stayed in the foreground: the press was CONSUMED by the close verb,
+  not passed to the platform.
 
 ---
 
@@ -542,6 +598,7 @@ suite that fails reproducibly is a bug, and this one is not that.
 | F-014 | P2 | docs | The SPEC's §3.4.1 still said the native session is owned by a separate `PlayerActivity` with `launchMode="singleTask"` — obsolete since **D1** (one Activity, one React root) was locked on 2026-10-16 → corrected, and the always-mount rule re-explained for the reason that still holds (a re-created `SurfaceView` is a black frame) | this wave |
 | F-015 | P0 | app | Closing the video left a blank white screen — the browsing stack was blanked by the user's REQUEST for a fullscreen video, which outlives the session → the window is now owned by the request AND a session (`useVideoOwnsWindow()`), and both the stack and the hardware-back gate ask that one question | app `f5/w22-close-minimise-d9` |
 | F-016 | P1 | app | The resume dialog's artwork box was empty — a bare `filesDir` path is not a URI → normalised at the render site with `toRenderableImageUri` | app `f5/w22-close-minimise-d9` |
+| F-017 | P0 | app+native | The Android back button was dead everywhere — `MainActivity.onBackPressed()` swallowed the press before RN's route to the JS `BackHandler` could run → the synthetic dispatch is deleted, `super.onBackPressed()` is RN's path, and the audio lane's expanded page got the same close verb the SPEC gives it | app `f5/w22-close-minimise-d9` |
 
 ---
 
@@ -586,11 +643,12 @@ clip was pushed to the device instead.
    binary-safely with `adb exec-out run-as … cat` (magic `FFD8`), and it is a
    real colour frame of the film. The Recently Played card and the resume
    prompt now both show it.
-2. Does the hardware back leave the player after the verb change?
-   (B-011 — **root-caused 2026-10-26**: the Android back button is dead
-   everywhere because `MainActivity.onBackPressed()` swallows it before
-   `super.onBackPressed()` can reach RN's JS `BackHandler`. Fix pending an
-   APK rebuild.)
+2. ~~Does the hardware back leave the player after the verb change?~~
+   **Answered 2026-10-26: it never left, and now it does.** The back button
+   was dead app-wide; the cause was `MainActivity.onBackPressed()` swallowing
+   the press before RN's route to the JS `BackHandler` could run. Instrumented
+   (not fixed from static reading), measured, fixed, and re-proved on the
+   device. See `B-011` / `F-017`.
 3. Is the "Maximum update depth exceeded" loop in the lib's progress
    subscriber? (B-009.)
 4. Why does a second movie tap produce no `loadFile`? (B-012.)

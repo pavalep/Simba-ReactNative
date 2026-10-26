@@ -1413,8 +1413,8 @@ swallow a tap meant for the transport bar underneath it.
   a lib decision, not a device proof.
 - **A third group was added on 2026-10-26**, "Found on device, 2026-10-26",
   items **53–55** — the blank white screen (fixed), the empty resume-dialog
-  artwork (fixed), and the app-wide dead back button (root-caused, fix
-  pending an APK rebuild).
+  artwork (fixed), and the app-wide dead back button (fixed: instrumented,
+  measured, corrected, and re-proved on the device).
 - **The SPEC was corrected, not just extended.** §3.3 gained
   `MiniPlayerToggle`; §3.4 said "there is no video mini dock in V19" while a
   dock was on screen, so it was rewritten; rules 6 and 9 still named a
@@ -1452,11 +1452,15 @@ the render site, so every caller inherits the correction.
 **3. The Android back button is dead app-wide.** Not just in the player — on
 Home too, where it should have closed the app. The plan's risk table had
 already flagged this as **cause unresolved, do not fix from static reading**,
-and named the two candidates inside `MainActivity.onBackPressed()`. The
-source reading now rules one of them out on paper — the JS `BackHandler` is
-not a key-event listener, so the synthetic dispatch could never reach it —
-but the plan's instruction stands: instrument, rebuild, read logcat. That is
-the next increment, and it needs an APK rebuild.
+and named the two candidates inside `MainActivity.onBackPressed()`. That
+instruction was followed literally: the method was instrumented with `Log.i`
+per branch, the APK was rebuilt, and the press was reproduced. The
+measurement (`down=true` → early return → `super` never called, and the JS
+probe never firing) confirmed the reading and named the culprit. The
+synthetic dispatch is deleted, `super.onBackPressed()` is RN's path, and the
+audio lane was given the same close verb — because the fixed native path made
+the press reachable there for the first time, and a back press on the
+now-playing page would otherwise have closed the whole app.
 
 **The resume round trip, measured end to end (the original ask: "the left
 side time is wrong, check right side also").**
@@ -1497,7 +1501,7 @@ service / queue.
 | Risk | Status |
 |---|---|
 | **Black video is not yet attributed.** | The Yoga↔SurfaceView finding makes D2 the strongest hypothesis, but Stage 1 decides. **Do not claim the migration fixes it before the control test runs.** |
-| **Hardware back is dead app-wide.** | Cause **narrowed 2026-10-26, still to be instrumented.** Source-proven: the JS `BackHandler` subscribes to the `hardwareBackPress` DEVICE EVENT, which only `ReactHostImpl.onBackPressed()` emits — a view-level `dispatchKeyEvent` cannot reach it, so the synthetic dispatch inside `MainActivity.onBackPressed()` could never hand the press to JS, and its early `if (handled) return` skips `super.onBackPressed()` (RN's route to the JS handler). **Per the standing rule in this table, do not ship the fix from static reading: instrument with `Log.i` per branch, rebuild, read logcat.** Device evidence so far: `input keyevent 4` does nothing in the player AND on Home; the header chevron closes correctly; the same key event closes the system Settings app, so the harness is sound. |
+| **Hardware back is dead app-wide.** | **CLOSED 2026-10-26.** The instruction in this row was followed literally: the fix was NOT written from static reading. `MainActivity.onBackPressed()` was instrumented with `Log.i` per branch, the APK was rebuilt, and the press was reproduced — `down=true` → early return → `super.onBackPressed()` never called, and the JS probe never fired. The synthetic dispatch is deleted; `super.onBackPressed()` is RN's route to the JS `BackHandler`. Device re-proofed on both sides of the app. The audio lane was given the same close verb, because the fixed native path made the press reachable there for the first time and the lane had no handler — a back press on the now-playing page would have closed the whole app. Guarded by `__tests__/app/MainActivityBackPress.test.ts` (a source check, since the repo has no native test harness); mutation-checked 6/6. |
 | **Duration never reported on BOTH lanes.** | `--:--`, false `LIVE` badge, seek bar disabled, prev/next greyed out — while the feed knows the episode is 55 min. Untouched since 2026-10-15. |
 | **Fabric can drop and recreate a view** under memory pressure. | mpv handle must survive. `setNativePtr` already resets `attachedSurface` and re-binds — designed for, but needs a **test, not an assumption**. |
 | **`force-window` stickiness.** | `attachSurfaceLocked` sets `force-window=yes`; the class comment forbids toggling it mid-frame. Must be re-verified under RN layout churn. |
@@ -1761,16 +1765,23 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    normalised it. **FIXED at the render site** (`Dialog.tsx` is the only
    place a stored path becomes an image source), so every caller inherits the
    correction. See bug `B-023`.
-55. **The Android back button is dead everywhere in the app.** Not just in
-   the player — on Home too, where it should have closed the app. Root
-   cause: `MainActivity.onBackPressed()` dispatches a synthetic
-   `KEYCODE_BACK` into the view hierarchy before `super.onBackPressed()`,
-   but the JS `BackHandler` is not a key-event listener — it subscribes to
-   the `hardwareBackPress` DEVICE EVENT, which only
-   `ReactHostImpl.onBackPressed()` emits. The dispatch could never reach it
-   by construction, and the early return meant RN's own route to the JS
-   handler never ran. **OPEN — the fix needs an APK rebuild.** See bug
-   `B-011`.
+55. ~~**The Android back button is dead everywhere in the app.**~~ **RESOLVED
+   (2026-10-26).** Not just in the player — on Home too, where it should
+   have closed the app. `MainActivity.onBackPressed()` dispatched a
+   synthetic `KEYCODE_BACK` into the view hierarchy before
+   `super.onBackPressed()`, but the JS `BackHandler` is not a key-event
+   listener: it subscribes to the `hardwareBackPress` DEVICE EVENT, which
+   only `ReactHostImpl.onBackPressed()` emits. The dispatch could never
+   reach it by construction, and the early return stopped RN's own route
+   from ever running. **Instrumented, not fixed from static reading** — the
+   plan's risk table says so, and it was right to: `Log.i` on each branch
+   measured `down=true` → early return → `super` never called, and the JS
+   probe never fired. Fixed by deleting the synthetic dispatch; `super` IS
+   RN's path. The audio lane was given the same close verb the SPEC gives
+   it, because fixing the native path made the press reachable there for
+   the first time. Device re-proofed: Home → back closes the app; in the
+   player → back closes the player (`[stopPlayback] service not running`)
+   and returns to Home. See bug `B-011` / fix `F-017`.
 
 **Library defects**
 34. `PlayerProvider` calls `initPlayer()` in a **mount effect**, and React runs
