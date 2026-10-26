@@ -62,7 +62,7 @@ import {
   ResumePromptContext,
   useInWindowVideoLaunch,
   usePlaybackCheckpointSync,
-  usePresentation,
+  useVideoOwnsWindow,
   type PromptResume,
 } from '../infrastructure/player';
 import {formatDuration} from '../utils/timeAgo';
@@ -141,8 +141,8 @@ export const AppRoot: React.FC = () => {
 
   // Whether the BROWSING STACK may paint.
   //
-  // `isExpanded` is the single derived answer to "does the video own this
-  // window". The two-Activity design enforced that with
+  // `useVideoOwnsWindow()` is the single derived answer to "does the video
+  // own this window". The two-Activity design enforced that with
   // `isPlayerActivity ? null : <AppContent />`. F5 deleted the flag, and
   // deleted that ternary with it, without putting a replacement in place:
   // the activity no longer exists, so the *reason* for the guard outlived
@@ -150,9 +150,16 @@ export const AppRoot: React.FC = () => {
   // background then covered the video, which is why playback was fully
   // live and completely invisible.
   //
+  // It used to read `presentation.isExpanded` — the user's REQUEST for a
+  // fullscreen video. The request outlives the session on purpose (a close
+  // must not rewrite it), so keying the WINDOW on it left the window owned
+  // by a video that was gone: the chrome unmounted, the feed stayed blanked,
+  // and the app sat on white. Measured on device, 2026-10-26. The window's
+  // owner is now the request AND a session that can honour it.
+  //
   // Read here, not inside `AppContent`, so the navigator does not have to
   // know a video player exists. See `src/app/BrowsingStack.tsx`.
-  const {isExpanded} = usePresentation();
+  const videoOwnsWindow = useVideoOwnsWindow();
 
   const fallbackColors = useMemo(
     () => ({
@@ -170,7 +177,7 @@ export const AppRoot: React.FC = () => {
     <ErrorBoundary fallbackColors={fallbackColors}>
       <ToastProvider>
         <ResumePromptContext.Provider value={promptResume}>
-          <BrowsingStack hidden={isExpanded}>
+          <BrowsingStack hidden={videoOwnsWindow}>
             <AppContent />
           </BrowsingStack>
 

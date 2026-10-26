@@ -18,6 +18,7 @@ import {useTheme} from '../../../theme';
 import {ColorTokens, spacing} from '../../../theme/tokens';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {AppText} from '../AppText/AppText';
+import {toRenderableImageUri} from '../../../utils/mediaUri';
 import {KeyboardAwareView} from '../KeyboardAwareView/KeyboardAwareView';
 
 export interface DialogAction {
@@ -38,6 +39,9 @@ interface DialogProps {
    * Artwork above the title. Remote URL or local file path. Omitted
    * entirely when absent, so a dialog without artwork is not padded
    * around an empty gap.
+   *
+   * A local path is not yet a URI. It is normalised at the render site,
+   * below — see the note on the artwork.
    */
   imageUri?: string;
   /** If true, tapping backdrop dismisses dialog */
@@ -86,6 +90,10 @@ export const Dialog: React.FC<DialogProps> = ({
   const handleBackdropPress = () => {
     if (dismissable) onClose();
   };
+
+  // The one place a stored image path becomes an image source. See the
+  // note at the artwork below.
+  const artworkUri = toRenderableImageUri(imageUri);
 
   return (
     <Modal
@@ -142,11 +150,21 @@ export const Dialog: React.FC<DialogProps> = ({
               title's own image — it is how the user confirms at a glance
               that the dialog is about the thing they just tapped. Put in
               `children` it would render BELOW the message, which reads as
-              a caption rather than a header. Accepts a remote URL or a
-              local file path; both go through `{uri}`. */}
-          {imageUri ? (
+              a caption rather than a header.
+
+              The URI is normalised HERE, at the render site, because this
+              is where a stored path becomes an image source. The native
+              capture writes the resume frame into the app's `filesDir` and
+              returns a bare absolute path (`/data/user/0/.../frame_1_30000.jpg`);
+              an image loader parses that as a scheme-less URI and fails, so
+              the box rendered EMPTY — the resume dialog showed a blank
+              rectangle where the captured frame should have been. A local
+              path needs the `file://` scheme; a remote catalogue URL must
+              be left exactly as it is, because `file://https://...` names
+              no file at all. `toRenderableImageUri` makes that split. */}
+          {artworkUri ? (
             <Image
-              source={{uri: imageUri}}
+              source={{uri: artworkUri}}
               style={[styles.image, {backgroundColor: colors.background.elevated}]}
               resizeMode="cover"
               accessibilityIgnoresInvertColors

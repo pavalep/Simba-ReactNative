@@ -7,6 +7,10 @@ Started: **2026-10-21** (late afternoon → evening), during the W22 wave
 ("the resume that never resumed, and the card that never had a frame") and the
 verb/layout restructure that followed it.
 
+**Still live.** Last updated **2026-10-26** — the file name is the day it was
+OPENED, not the day it was last touched. Entries carry their own dates. New
+entries since 2026-10-21 are `B-022` onward; new fixes are `F-015` onward.
+
 ## How to read this file
 
 | Column | Meaning |
@@ -211,9 +215,65 @@ and would close the *app*. Either delete it or re-point it at the close verb.
 **Symptom.** `adb shell input keyevent 4` did **not** leave the player. The
 in-app back control (at ~90,68) did.
 
-**State:** open. **Re-check required after this wave** — the hardware back is
-now wired to the CLOSE verb (it used to be wired to minimise), so the
-behaviour must be re-observed on the device.
+**Re-observed 2026-10-26 — and it is worse than "does not leave the player":
+the Android back button is DEAD everywhere in the app.**
+
+**Evidence (device-proven, emulator-5554, API 37).**
+
+1. In the player: `input keyevent 4` → the transport kept running, and
+   logcat recorded **no** `[stopPlayback]` trace at all — the close verb was
+   never invoked. The header chevron at (89, 66) in the same state produced
+   `[PlaybackTrace][Bridge][stopPlayback] service not running; engine stopped,
+   nothing to tear down`, the chrome unmounted, and the app returned to Home.
+   So the CLOSE verb works; only the HARDWARE path into it is missing.
+2. On Home — no player, no chrome, no JS subscriber — `input keyevent 4`
+   left `topResumedActivity=com.simba.player/.MainActivity`. At the root of
+   the stack the app should have finished.
+3. The harness is not at fault: the same `input keyevent 4` closed the
+   system Settings app (`com.android.settings/.homepage.SettingsHomepageActivity`
+   → back to Simba).
+
+**Root cause (source-proven, RN 0.86 read from `node_modules`).**
+
+`android/app/src/main/java/com/simba/player/MainActivity.kt:201-217` overrides
+`onBackPressed()` and dispatches a **synthetic `KEYCODE_BACK`** into
+`window.decorView` before falling through to `super.onBackPressed()`:
+
+```kotlin
+val handled = window.decorView.dispatchKeyEvent(
+  android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_BACK),
+) || window.decorView.dispatchKeyEvent(
+  android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_BACK),
+)
+if (handled) return
+super.onBackPressed()
+```
+
+The file's own comment says the dispatch exists so "the JS `BackHandler`
+… can consume it". **It cannot.** The JS `BackHandler` is not a key-event
+listener at all — it subscribes to the `hardwareBackPress` DEVICE EVENT
+(`Libraries/Utilities/BackHandler.android.js:23`), and that event is emitted
+by `DeviceEventManagerModule.emitHardwareBackPressed()`, which is reachable
+**only** from `ReactHostImpl.onBackPressed()`
+(`ReactAndroid/src/main/java/com/facebook/react/runtime/ReactHostImpl.kt:356-365`),
+which `ReactActivityDelegate.onBackPressed()` calls. A view-level
+`dispatchKeyEvent` never emits it.
+
+So the dispatch could not reach the `BackHandler` by construction. What it did
+reach was the view hierarchy, which answered "yes, I want this key", so
+`handled` was true, the method returned, and `super.onBackPressed()` — RN's
+own route to the JS `BackHandler` — **never ran**.
+
+That override is also the only entry point, not a side door: RN 0.86's
+`ReactActivity` registers an `OnBackPressedCallback` when
+`AndroidVersion.isAtLeastTargetSdk36(context)` (`targetSdk = 36` here, and
+the device is API 37), and that callback calls `onBackPressed()` — the app's
+override. Every back press on Android 16 lands there and nowhere else.
+
+**State:** open, **root-caused**. The fix is to delete the synthetic dispatch
+and call `super.onBackPressed()` (RN's path), keeping the PiP branch — a PiP
+window has no JS behind it and must `finish()` on its own. The fix needs an
+APK rebuild, so it lands in its own increment after this one.
 
 ---
 
@@ -348,6 +408,120 @@ decision, not an accident.
 
 ---
 
+### B-022 · P0 · app · closing the video left a blank white screen — **RESOLVED (F-015)**
+
+**Symptom.** Found on device 2026-10-26 while proving the W22 close verb.
+Launch a film, press the header's back. The native teardown ran
+(`[stopPlayback] service not running; engine stopped`), the chrome unmounted
+— and the app sat on a **blank white screen**. Still white two minutes later.
+The app was unusable until the process was restarted.
+
+**Evidence (device-proven, emulator-5554, API 37).** 12:24 → 12:28, a
+persistent white screen after the close. The close itself was correct: the
+media notification was gone (`dumpsys notification`) and no media session was
+active (`dumpsys media_session`).
+
+**Root cause (source-proven).** `AppRoot` blanked the browsing stack with
+`<BrowsingStack hidden={isExpanded}>` — the user's **REQUEST** for a
+fullscreen video. The request outlives the session by design (a close must
+not rewrite it), so after the close the window stayed owned by a video that
+was gone. The same keying also kept the **hardware-back handler registered**,
+so back presses were swallowed on the browsing stack.
+
+**The two facts.** The WINDOW is owned by the video only when the request is
+`expanded` **AND** a video session exists. The request is what the user
+asked for; the session is what can honour it. Keying the window on the
+request alone produced the blank screen; keying the hardware-back gate on it
+produced the swallowed back press.
+
+**Fix.** A new derivation, `useVideoOwnsWindow()` = `isExpanded &&
+streamType === 'video'`, used by BOTH the browsing stack's `hidden` and the
+hardware-back gate, so they can no longer disagree.
+
+It is deliberately **not** folded into `usePresentation`: that module is
+forbidden from reading the session (a static test fails if it does), and it
+answers a different question — "is the video ON SCREEN", not "is there a
+video session".
+
+**State:** resolved. `src/infrastructure/player/useVideoOwnsWindow.ts` (new),
+`__tests__/infrastructure/player/useVideoOwnsWindow.test.tsx` (new, 7 tests).
+Mutation-checked: 4/4 killed. Device re-proofed — the close returns to Home
+with the feed painted, and the Recently Played card shows the captured frame
+and the saved position.
+
+---
+
+### B-023 · P1 · app · the resume dialog's artwork box was empty — **RESOLVED (F-016)**
+
+**Symptom.** Found on device 2026-10-26. The resume prompt — "Continue
+watching? Continue at 10:04 or start from the beginning." — showed a **blank
+white rectangle** where the title's own image should be. The very same frame
+rendered correctly on the Recently Played card behind it.
+
+**Root cause (source-proven).** The native capture writes the resume frame
+into the app's `filesDir` and returns a **bare absolute path**
+(`/data/user/0/com.simba.player/files/simba-resume-thumbs/frame_*.jpg`).
+`Dialog.tsx` passed that path straight into `<Image source={{uri: …}} />`.
+An image loader parses a scheme-less string as a URI and fails, so the box
+rendered empty. `MediaRailCard` already normalised the same value through
+`toRenderableImageUri` — which is exactly why the card was right and the
+dialog was wrong.
+
+**Fix.** Normalise at the **render site** — `Dialog.tsx` is the only place a
+stored path becomes an image source, so fixing it there covers every caller
+(the resume prompt, `ConfirmDialog`, anything added later). A remote
+catalogue URL must be left alone: `file://https://…` names no file at all.
+
+**State:** resolved. `src/components/core/Dialog/Dialog.tsx`,
+`__tests__/components/core/Dialog/Dialog.test.tsx` (new, 5 tests).
+Mutation-checked: 5/5 killed. Device re-proofed — the prompt now leads with
+the captured frame.
+
+---
+
+### B-024 · P3 · app+lib · Bridgeless `getJSModule(RCTEventEmitter)` noise, and a LogBox toast that sits over the transport
+
+**Symptom.** Every run of the app on the emulator shows a LogBox toast at the
+bottom: *"Open debugger to view warnings."* It covers the play/pause button
+and the bottom transport row for as long as it is up.
+
+**Evidence (device-proven, 2026-10-26).** logcat, repeated on every launch:
+
+```
+getJSModule(RCTEventEmitter) is not recommended on the new architecture
+new NativeEventEmitter() was called without addListener/removeListeners
+```
+
+**Why it matters beyond the noise.** A LogBox toast is a real, tappable view
+over the bottom of the screen. Any device proof that taps the transport row
+has to dismiss it first or it will tap the toast instead — which is a trap
+for the next person measuring on a device.
+
+**State:** open. Not a player defect; it is the lib's event plumbing on the
+new architecture. The fix belongs in the lib (an `addListener`/`removeListeners`
+pair on the emitter, or the `RCTDeviceEventEmitter` route), not in the app.
+
+---
+
+### B-025 · P3 · tooling · one jest suite failed once under CPU contention and never again
+
+**Symptom.** During the 2026-10-26 gates, one full run reported 2 failed
+suites / 2 failed tests with a stack frame at
+`__tests__/components/player/video/onMediaChrome.test.tsx:314`, while
+another jest process was competing for the same CPU.
+
+**Evidence.** The suite then passed **4/4** in isolation, and the full suite
+passed **three consecutive times** with identical counts
+(99 suites / 1214 passed / 1 todo).
+
+**State:** open, recorded so it is not mistaken for a code defect next time.
+It is the same contention multiplier `jest.config.js` already documents for
+the worker count — the failure mode is a timeout, not a wrong assertion. A
+suite that fails once in isolation and never reproduces is worth logging; a
+suite that fails reproducibly is a bug, and this one is not that.
+
+---
+
 ## FIXED
 
 | ID | Sev | Lane | One line | Where |
@@ -366,6 +540,8 @@ decision, not an accident.
 | F-012 | P2 | app | The video's minimise was the header's back → it is a transport-bar control now | this wave |
 | F-013 | P2 | docs | The SPEC said "there is no video mini dock in V19" while a dock was on screen; §3.4.1's shape still showed a branch on `presentation === 'mini'` returning a *different component* — the exact thing D9 forbids — and rules 6/9 still named the deleted `<VideoMiniPlayer />` → §3.4 rewritten, the shape corrected, the rules re-pointed at the lane-owned dock | this wave |
 | F-014 | P2 | docs | The SPEC's §3.4.1 still said the native session is owned by a separate `PlayerActivity` with `launchMode="singleTask"` — obsolete since **D1** (one Activity, one React root) was locked on 2026-10-16 → corrected, and the always-mount rule re-explained for the reason that still holds (a re-created `SurfaceView` is a black frame) | this wave |
+| F-015 | P0 | app | Closing the video left a blank white screen — the browsing stack was blanked by the user's REQUEST for a fullscreen video, which outlives the session → the window is now owned by the request AND a session (`useVideoOwnsWindow()`), and both the stack and the hardware-back gate ask that one question | app `f5/w22-close-minimise-d9` |
+| F-016 | P1 | app | The resume dialog's artwork box was empty — a bare `filesDir` path is not a URI → normalised at the render site with `toRenderableImageUri` | app `f5/w22-close-minimise-d9` |
 
 ---
 
@@ -403,10 +579,18 @@ clip was pushed to the device instead.
 
 ## Open questions this tracker does not answer
 
-1. Does `MediaMetadataRetriever` decode a frame from an `https://` source?
-   (B-015 — blocks the remote resume-thumbnail path.)
-2. Does the hardware back now leave the player after the verb change?
-   (B-011 — must be re-observed.)
+1. ~~Does `MediaMetadataRetriever` decode a frame from an `https://` source?~~
+   **Answered 2026-10-26: YES.** The teardown flush wrote
+   `files/simba-resume-thumbs/frame_877507528_1290000.jpg` (22,427 bytes,
+   position `1290000` ms) from an `https://` archive.org source, pulled
+   binary-safely with `adb exec-out run-as … cat` (magic `FFD8`), and it is a
+   real colour frame of the film. The Recently Played card and the resume
+   prompt now both show it.
+2. Does the hardware back leave the player after the verb change?
+   (B-011 — **root-caused 2026-10-26**: the Android back button is dead
+   everywhere because `MainActivity.onBackPressed()` swallows it before
+   `super.onBackPressed()` can reach RN's JS `BackHandler`. Fix pending an
+   APK rebuild.)
 3. Is the "Maximum update depth exceeded" loop in the lib's progress
    subscriber? (B-009.)
 4. Why does a second movie tap produce no `loadFile`? (B-012.)

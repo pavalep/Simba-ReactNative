@@ -72,6 +72,15 @@ import {
   usePresentation,
   useTransport,
 } from '../../../../infrastructure/player';
+// Imported from its MODULE, not from the facade barrel, and deliberately.
+//
+// The barrel is mocked wholesale by 23 suites (the facade exists to be the
+// one place that imports the player MODULE; this hook imports no player
+// module at all — it reads two of the app's own stores). Routing it through
+// the barrel would mean every one of those mocks had to learn about it, and
+// a mock that forgets is a crash in a suite that has nothing to do with the
+// window. `useClosePlayback` is imported the same way, for the same reason.
+import {useVideoOwnsWindow} from '../../../../infrastructure/player/useVideoOwnsWindow';
 import {forwardRef, useImperativeHandle} from 'react';
 import type {VideoPlayerProps, VideoPlayerRef} from './types';
 
@@ -292,7 +301,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
  * merged declaration as far as TypeScript is concerned.
  */
 const VideoPlayerChrome: React.FC = () => {
-  const {isExpanded} = usePresentation();
+  const videoOwnsWindow = useVideoOwnsWindow();
   const closePlayback = useClosePlayback();
 
   // W6.1 — the single owner of PiP reconciliation.
@@ -346,18 +355,26 @@ const VideoPlayerChrome: React.FC = () => {
   // the user on the previous screen with the video still playing fullscreen
   // underneath.
   //
-  // Registered only while expanded, so back from the browsing stack — or
-  // from the mini dock, where navigation is what the user means — is not
-  // swallowed. Returning `true` consumes the event so the OS does not also
-  // navigate.
+  // Registered only while the video OWNS the window, so back from the
+  // browsing stack — or from the mini dock, where navigation is what the user
+  // means — is not swallowed. Returning `true` consumes the event so the OS
+  // does not also navigate.
+  //
+  // The gate is `videoOwnsWindow`, not `isExpanded`. The REQUEST for a
+  // fullscreen video outlives the session on purpose: the close verb ends the
+  // session without rewriting it. Keying the gate on the request therefore
+  // kept swallowing back presses after the player was gone — the user was on
+  // the browsing stack and the hardware back did nothing at all.
+  // `useVideoOwnsWindow()` asks the question the window actually needs
+  // answered: is there a video here to be left?
   React.useEffect(() => {
-    if (!isExpanded) return undefined;
+    if (!videoOwnsWindow) return undefined;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       closePlayback();
       return true;
     });
     return () => sub.remove();
-  }, [closePlayback, isExpanded]);
+  }, [closePlayback, videoOwnsWindow]);
 
   // D9 — ONE mounted picture per lane.
   //

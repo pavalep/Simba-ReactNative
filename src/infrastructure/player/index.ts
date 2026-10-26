@@ -234,6 +234,19 @@ export {
 // PLAYER-rule violation.
 export {useClosePlayback} from './useClosePlayback';
 
+// V22 W22 (2026-10-21) — "does the video own the window?"
+//
+// The browsing stack's blanking and the hardware-back handler both need this
+// answer, and they used to ask it in two different ways — which is how they
+// came to disagree and leave the app on a blank white screen after a close.
+// One derivation, one answer.
+//
+// It reads the session, which `usePresentation` is forbidden to do, and that
+// is not a contradiction: the presentation answers "what did the user ask
+// for?", and this answers "is there a video to honour it?". See the hook's
+// docblock.
+export {useVideoOwnsWindow} from './useVideoOwnsWindow';
+
 // V19 W0 Phase 0.3 — lane integrity guard on every launch path.
 // JS-side enforcement (native-level is V20). Source of truth:
 // SPEC §3.24 + audit §3.D.

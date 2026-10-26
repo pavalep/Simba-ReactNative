@@ -47,10 +47,18 @@ import {StyleSheet, View} from 'react-native';
 export interface BrowsingStackProps {
   /**
    * `true` when the video owns the window and the browsing stack must
-   * not take touches. Pass `presentation.isExpanded` — NOT "a video is
+   * not take touches. Pass `useVideoOwnsWindow()` — NOT "a video is
    * loaded": while a video is minimised the feed is meant to be visible,
    * and during PiP the app is meant to be fully interactive behind the
    * floating window.
+   *
+   * And NOT the user's *request* for a fullscreen video, either. The
+   * request outlives the session on purpose — a close must not rewrite it
+   * — so keying the window on the request left the window owned by a
+   * video that was gone: the chrome unmounted, the feed stayed blanked,
+   * and the app sat on a blank white screen. Measured on device,
+   * 2026-10-26. The owner is the request AND a session that can honour
+   * it.
    */
   hidden: boolean;
   children?: React.ReactNode;

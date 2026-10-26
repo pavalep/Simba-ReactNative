@@ -102,11 +102,25 @@ export function useClosePlayback(): () => void {
     // Clearing the session is also what takes the chrome down: the video
     // lane and the audio lane both live inside a subtree that renders
     // nothing when there is no session, so the fullscreen player and the
-    // dock both go with it. Nothing here has to "leave the expanded
-    // presentation" — and it must NOT write the presentation store on
-    // the way out, because that store is the user's standing request
-    // ("what did I ask for the video"), and a close is not a request for
-    // the next video to start minimised.
+    // dock both go with it.
+    //
+    // And it is what RELEASES THE WINDOW. The browsing stack is blanked
+    // while a fullscreen video owns it, and the owner is derived from the
+    // request AND a session that can honour it (`useVideoOwnsWindow`), not
+    // from the request alone. So ending the session hands the window back
+    // to the feed, and nothing here has to rewrite the request to do it.
+    //
+    // That separation matters, and it was learned the hard way. An earlier
+    // version of this hook keyed the window on the request alone, so after a
+    // close the chrome went away and the feed stayed blanked: the app sat
+    // on a blank white screen until it was restarted. Measured on device,
+    // 2026-10-26.
+    //
+    // So: do NOT write the presentation store on the way out. It is the
+    // user's standing request ("what did I ask for the video"), and a close
+    // is not a request for the next video to start minimised. The launch
+    // seam writes 'expanded' on every video launch, so the next video opens
+    // fullscreen either way.
     endSession();
   }, [endSession, toast]);
 }

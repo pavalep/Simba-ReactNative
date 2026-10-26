@@ -1407,7 +1407,14 @@ swallow a tap meant for the transport bar underneath it.
 
 - **D9 is now applied to both lanes** (register item 7 **RESOLVED**).
 - **New register group** "Player chrome (new, 2026-10-21 night)", items
-  **48–52** — everything in this wave that still owes a device proof.
+  **48–52**. Items **48–51 are RESOLVED** by the 2026-10-26 device proof
+  (the close verb, the minimise control, expand ⇔ mini with no mpv
+  re-attach, and the dock's transparent hole); item **52** stays open — it is
+  a lib decision, not a device proof.
+- **A third group was added on 2026-10-26**, "Found on device, 2026-10-26",
+  items **53–55** — the blank white screen (fixed), the empty resume-dialog
+  artwork (fixed), and the app-wide dead back button (root-caused, fix
+  pending an APK rebuild).
 - **The SPEC was corrected, not just extended.** §3.3 gained
   `MiniPlayerToggle`; §3.4 said "there is no video mini dock in V19" while a
   dock was on screen, so it was rewritten; rules 6 and 9 still named a
@@ -1419,6 +1426,55 @@ swallow a tap meant for the transport bar underneath it.
 - **Gates:** `tsc` 0 · `eslint --max-warnings 0` · `jest` 97 suites / 1202
   passed / 1 todo.
 - **Still open on the device:** everything in items 48–51.
+
+#### 2026-10-26 — the device caught three things the tests could not
+
+The unit tests were green and the wave looked finished. The device said
+otherwise. All three findings below are recorded in
+`md/SIMBA_BUG_TRACKER_2026_10_21.md` (`B-022`, `B-023`, `B-011`).
+
+**1. The close left a blank white screen.** The chrome unmounted and the
+native teardown ran — and the app sat on white, unusable, until the process
+was restarted. The browsing stack was blanked by the user's **REQUEST** for a
+fullscreen video, and the request outlives the session by design. The window
+is owned by the video only when the request is `expanded` **AND** a video
+session exists; keying it on the request alone produced the white screen, and
+keying the hardware-back gate on it swallowed back presses on the browsing
+stack. Both now ask one question — `useVideoOwnsWindow()` — so they cannot
+disagree again.
+
+**2. The resume dialog's artwork box was empty.** The native capture returns
+a bare `filesDir` path; an image loader parses a scheme-less string as a URI
+and fails. The same frame rendered correctly on the Recently Played card,
+because `MediaRailCard` already normalised it and `Dialog` did not. Fixed at
+the render site, so every caller inherits the correction.
+
+**3. The Android back button is dead app-wide.** Not just in the player — on
+Home too, where it should have closed the app. The plan's risk table had
+already flagged this as **cause unresolved, do not fix from static reading**,
+and named the two candidates inside `MainActivity.onBackPressed()`. The
+source reading now rules one of them out on paper — the JS `BackHandler` is
+not a key-event listener, so the synthetic dispatch could never reach it —
+but the plan's instruction stands: instrument, rebuild, read logcat. That is
+the next increment, and it needs an APK rebuild.
+
+**The resume round trip, measured end to end (the original ask: "the left
+side time is wrong, check right side also").**
+
+| Stage | Reading |
+|---|---|
+| Card after the close | **10:04 / 21:58**, with the real captured frame and the progress bar at ~44 % |
+| Resume prompt | *"Continue watching? Continue at **10:04** or start from the beginning."* |
+| Player after Continue | **10:04 elapsed / -11:53 remaining** |
+
+10:04 + 11:53 = 21:57 ≈ the 21:58 duration, so **both** sides of the transport
+agree with each other and with the film. A second round trip later in the
+session read **11:09 → 17:03 / -4:54** with the same self-consistency. The
+frame in the prompt is the frame that was on screen when the film was closed.
+
+**Gates for this increment:** `tsc` 0 · `eslint --max-warnings 0` · `jest`
+**99 suites / 1214 passed / 1 todo**. Mutation-checked: **4/4** for the
+blank-screen fix, **5/5** for the artwork fix.
 
 ---
 
@@ -1441,7 +1497,7 @@ service / queue.
 | Risk | Status |
 |---|---|
 | **Black video is not yet attributed.** | The Yoga↔SurfaceView finding makes D2 the strongest hypothesis, but Stage 1 decides. **Do not claim the migration fixes it before the control test runs.** |
-| **Hardware back is dead app-wide.** | Cause **unresolved**. Do **not** write a fix from static reading. Two candidates inside `MainActivity.onBackPressed()` (lines 219-235): the `dispatchKeyEvent` guard `if (handled) return`; and `ReactHostImpl.onBackPressed()` returning `true` unconditionally. Instrument with `Log.i` per branch, rebuild, read logcat. |
+| **Hardware back is dead app-wide.** | Cause **narrowed 2026-10-26, still to be instrumented.** Source-proven: the JS `BackHandler` subscribes to the `hardwareBackPress` DEVICE EVENT, which only `ReactHostImpl.onBackPressed()` emits — a view-level `dispatchKeyEvent` cannot reach it, so the synthetic dispatch inside `MainActivity.onBackPressed()` could never hand the press to JS, and its early `if (handled) return` skips `super.onBackPressed()` (RN's route to the JS handler). **Per the standing rule in this table, do not ship the fix from static reading: instrument with `Log.i` per branch, rebuild, read logcat.** Device evidence so far: `input keyevent 4` does nothing in the player AND on Home; the header chevron closes correctly; the same key event closes the system Settings app, so the harness is sound. |
 | **Duration never reported on BOTH lanes.** | `--:--`, false `LIVE` badge, seek bar disabled, prev/next greyed out — while the feed knows the episode is 55 min. Untouched since 2026-10-15. |
 | **Fabric can drop and recreate a view** under memory pressure. | mpv handle must survive. `setNativePtr` already resets `attachedSurface` and re-binds — designed for, but needs a **test, not an assumption**. |
 | **`force-window` stickiness.** | `attachSurfaceLocked` sets `force-window=yes`; the class comment forbids toggling it mid-frame. Must be re-verified under RN layout churn. |
@@ -1649,24 +1705,36 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    **OPEN — needs a native wave** (an APK rebuild).
 
 **Player chrome (new, 2026-10-21 night)**
-48. **The close verb has no device proof yet.** `useClosePlayback()` is the
-   ONE owner of the teardown (native `stopPlayback()` → `endSession()`), and
-   the header's back, the hardware back, the audio player's X and both
-   docks' X all route through it. It is unit-tested; it has not been
-   observed on a device. **OPEN.**
-49. **The minimise control has no device proof yet**, on either lane. The
-   chevron-down is a *new* affordance in the bottom row (the audio lane's
-   old top-left chevron-down was removed, so there is exactly one minimise
-   path per lane). **OPEN.**
-50. **Expand ⇔ mini is unproven for black frames and for an mpv re-attach.**
-   The dock is always laid out precisely so the slot rect is published
-   BEFORE the tap, which is supposed to remove the one-frame jump — a claim
-   only the device can confirm. **OPEN.**
-51. **The video dock's transparent hole is unproven on device.** It is
-   rebuilt from three opaque plates around a measured rectangle, and the
-   live video is supposed to show through it. The unit tests prove the
-   geometry is published and that the dock never renders a picture; only
-   the device can prove the video lands IN the hole. **OPEN.**
+48. ~~**The close verb has no device proof yet.**~~ **RESOLVED (2026-10-26).**
+   `useClosePlayback()` is the ONE owner of the teardown (native
+   `stopPlayback()` → `endSession()`), and the header's back, the audio
+   player's X and both docks' X all route through it. **Device-proven on
+   emulator-5554 (API 37):** the header's back logged
+   `[PlaybackTrace][Bridge][stopPlayback] service not running; engine
+   stopped`, the chrome unmounted entirely, `dumpsys notification` showed no
+   live media notification, `dumpsys media_session` showed no active
+   session, and the teardown flush wrote the checkpoint
+   (`files/simba-resume-thumbs/frame_877507528_1290000.jpg`, 22,427 bytes).
+   **The HARDWARE back path is a separate, open defect — see item 55.**
+49. ~~**The minimise control has no device proof yet**, on either lane.~~
+   **RESOLVED (2026-10-26).** The chevron-down is a *new* affordance in the
+   bottom row (the audio lane's old top-left chevron-down was removed, so
+   there is exactly one minimise path per lane). **Device-proven:** tapping
+   `video-mini-toggle` produced the bottom dock with a **live colour video
+   frame in the dock hole**, the title, play and X, and the home screen
+   visible behind it.
+50. ~~**Expand ⇔ mini is unproven for black frames and for an mpv
+   re-attach.**~~ **RESOLVED (2026-10-26).** The dock is always laid out
+   precisely so the slot rect is published BEFORE the tap, which is supposed
+   to remove the one-frame jump. **Device-proven:** expanding restored the
+   full chrome and the position (21:58) with **no black-frame flash**, and
+   across minimise→expand logcat showed **only one `surfaceChanged` — no
+   `surfaceCreated`, no `surfaceDestroyed`, no "Attaching Surface to mpv"**.
+   The mpv surface is never re-attached.
+51. ~~**The video dock's transparent hole is unproven on device.**~~ **RESOLVED
+   (2026-10-26).** **Device-proven:** the live video shows through the hole
+   in the minimised state (a colour frame of the film, not the home screen
+   behind it).
 52. **`commands.exitPlayer()` is unusable and must stay unwired.** It routes
    to the lib's `exitPipAndFinish()`, which calls
    `activity.finishAndRemoveTask()` on the CURRENT activity — and under D1
@@ -1674,6 +1742,35 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    app's task. It has no call site; that is the only reason it has not done
    damage. See bug `B-008`. **OPEN — decide whether to delete it from the
    lib.**
+
+**Found on device, 2026-10-26**
+53. **Closing the video left a blank white screen.** The browsing stack was
+   blanked by the user's **REQUEST** for a fullscreen video, and the request
+   outlives the session by design — so after the close the window stayed
+   owned by a video that was gone. The same keying kept the hardware-back
+   handler registered, so back presses were swallowed on the browsing stack.
+   **FIXED:** a new derivation, `useVideoOwnsWindow()` = `isExpanded &&
+   streamType === 'video'`, used by BOTH the browsing stack's `hidden` and
+   the hardware-back gate, so they can no longer disagree. It is deliberately
+   NOT folded into `usePresentation` — that module is forbidden from reading
+   the session, and it answers a different question. See bug `B-022`.
+54. **The resume dialog's artwork box was empty.** The native capture returns
+   a bare `filesDir` path; an image loader parses a scheme-less string as a
+   URI and fails, so the box rendered blank — while the same frame rendered
+   correctly on the Recently Played card, because `MediaRailCard` already
+   normalised it. **FIXED at the render site** (`Dialog.tsx` is the only
+   place a stored path becomes an image source), so every caller inherits the
+   correction. See bug `B-023`.
+55. **The Android back button is dead everywhere in the app.** Not just in
+   the player — on Home too, where it should have closed the app. Root
+   cause: `MainActivity.onBackPressed()` dispatches a synthetic
+   `KEYCODE_BACK` into the view hierarchy before `super.onBackPressed()`,
+   but the JS `BackHandler` is not a key-event listener — it subscribes to
+   the `hardwareBackPress` DEVICE EVENT, which only
+   `ReactHostImpl.onBackPressed()` emits. The dispatch could never reach it
+   by construction, and the early return meant RN's own route to the JS
+   handler never ran. **OPEN — the fix needs an APK rebuild.** See bug
+   `B-011`.
 
 **Library defects**
 34. `PlayerProvider` calls `initPlayer()` in a **mount effect**, and React runs
