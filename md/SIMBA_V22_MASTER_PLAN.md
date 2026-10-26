@@ -1533,6 +1533,16 @@ type has **no artwork field at all**. So the history entry's `thumbnailPath` —
 documented as "catalogue artwork" — is always empty, and the captured frame is
 the only artwork the history ever has. Logged as `B-026`.
 
+**The tracker contradicted itself, and that was worth catching.** `B-015`
+("a remote frame capture is unproven") still read *"open. Unverified — no
+remote capture has been exercised"*, while open question 1 in the same file
+answered it **YES** two days earlier. The device settles it: `files/
+simba-resume-thumbs/` holds **seven** captures from the same remote
+archive.org media (`877507528`), and the newest was pulled binary-safely with
+`adb exec-out run-as … cat` and checked byte-wise — **29,724 bytes, magic
+`FFD8FF`**. Corrected as `F-020`. (`E-001`'s archive.org outage was a
+*different*, earlier attempt; the capture path itself is sound.)
+
 **A measured non-defect, recorded so it is not re-investigated.** The resume
 prompt auto-dismisses after 8 s and the silence resolves as **RESUME**
 (`autoDismissMs: 8000`, `return resume ? 'resume' : 'start'`). A slow tap on
@@ -1554,6 +1564,9 @@ Logged as `A-003`.
   item 44 cannot be device-proved.
 - **New decision `A-003`**: the resume prompt's 8-second auto-dismiss resolves
   as RESUME. Measured; kept deliberately.
+- **New fix `F-020`**: `B-015`'s stale state was corrected — the remote frame
+  capture **is** proven (seven captures on the device; the newest verified
+  byte-wise, 29,724 bytes, magic `FFD8FF`).
 - **`formatDuration(0) === ''` stays.** It is load-bearing, and the cards were
   the defect — this is the rule the wave established: *the position segment
   appears only when there IS a position.*

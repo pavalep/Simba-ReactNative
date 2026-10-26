@@ -11,7 +11,8 @@ verb/layout restructure that followed it.
 OPENED, not the day it was last touched. Entries carry their own dates. New
 entries since 2026-10-21 are `B-022` onward; new fixes are `F-015` onward.
 **Latest:** the W23 wave ("the cards stop lying") added `B-026` and `A-003`,
-and resolved `B-004` / `B-005` as `F-018` / `F-019`.
+and resolved `B-004` / `B-005` as `F-018` / `F-019`. `B-015`'s stale state was
+also corrected (`F-020`) — the remote frame capture **is** proven.
 
 ## How to read this file
 
@@ -411,13 +412,38 @@ surface-registry path is unreachable.
 
 ---
 
-### B-015 · P1 · app+lib · a remote frame capture is unproven
+### B-015 · P1 · app+lib · a remote frame capture is unproven — **RESOLVED (F-020)**
 
 **Symptom.** `MediaMetadataRetriever` may refuse to decode a frame from an
 `https://` source, in which case the resume thumbnail only works for local
 files.
 
-**State:** open. Unverified — no remote capture has been exercised.
+**State: RESOLVED (F-020) — it decodes.** The frame is pulled from the
+**remote** source and written locally, and it is a real frame of the film.
+The device now holds **seven** captures from the same remote archive.org
+media (id `877507528`):
+
+```
+-rw------- 22427 2026-10-26 16:19 frame_877507528_1290000.jpg
+-rw------- 25777 2026-10-26 19:20 frame_877507528_240000.jpg
+-rw------- 19588 2026-10-26 20:57 frame_877507528_300000.jpg
+-rw------- 20666 2026-10-26 15:20 frame_877507528_390000.jpg
+-rw------- 29724 2026-10-26 21:18 frame_877507528_60000.jpg
+-rw------- 37096 2026-10-26 15:25 frame_877507528_600000.jpg
+-rw------- 25878 2026-10-26 21:15 frame_877507528_90000.jpg
+```
+
+The newest was pulled binary-safely with `adb exec-out run-as … cat` and
+checked byte-wise: **29,724 bytes, magic `FFD8FF`** — a real JPEG, not a
+placeholder. The Recently Played card and the resume prompt both show it.
+
+**Note.** `E-001` records an *earlier* attempt that failed — archive.org was
+down at that moment, so mpv's load failed and a local clip was pushed to the
+device instead. The outage was external; the capture path is not.
+
+**Why this entry was still marked open.** The state line was written before
+the capture was exercised and never corrected when open question 1 answered
+it — the tracker contradicted itself. Corrected on 2026-10-26.
 
 ---
 
@@ -686,6 +712,7 @@ also a visible blank on a real screen — the tile is not broken, it is empty.
 | F-017 | P0 | app+native | The Android back button was dead everywhere — `MainActivity.onBackPressed()` swallowed the press before RN's route to the JS `BackHandler` could run → the synthetic dispatch is deleted, `super.onBackPressed()` is RN's path, and the audio lane's expanded page got the same close verb the SPEC gives it | app `f5/w22-close-minimise-d9` |
 | F-018 | P1 | app | The search tile prefixed `file://` onto a REMOTE thumbnail URL → `ResultTile` resolves the URI through `toRenderableImageUri` and adds the cache token through `withCacheToken`, which owns only the separator and the encoding | app `f5/w22-close-minimise-d9` |
 | F-019 | P2 | app | A card with no position read `" / 21:58"` → the position segment is printed only when there IS a position, via the new `formatPositionLine` / `formatPositionAccessibility`; `formatDuration(0) === ''` stays, because "unknown duration" is a real state | app `f5/w22-close-minimise-d9` |
+| F-020 | P1 | app+lib | A remote frame capture was unproven — `MediaMetadataRetriever` **does** decode a frame from an `https://` source; the device holds seven captures from the same remote archive.org media, and the newest was pulled binary-safely and checked byte-wise (29,724 bytes, magic `FFD8FF`) | docs — a stale state corrected, app `f5/w22-close-minimise-d9` |
 
 ---
 
