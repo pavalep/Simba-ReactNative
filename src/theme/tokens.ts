@@ -617,8 +617,7 @@ export interface LegacyThemeTokens {
   disabled: string;
   overlay: string;
   shadow: string;
-  tabBar: string;
-  tabBarInactive: string;
+
   playerControls: string;
   progressBar: string;
   progressBarTrack: string;
@@ -687,8 +686,7 @@ export function legacyFromTokens(tokens: FullThemeTokens): LegacyThemeTokens {
     disabled: colors.text.tertiary,
     overlay: colors.background.overlay,
     shadow: tokens.isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)',
-    tabBar: colors.background.floating,
-    tabBarInactive: colors.text.tertiary,
+
     playerControls: colors.background.floating,
     progressBar: colors.accent.gold,
     progressBarTrack: colors.text.tertiary,

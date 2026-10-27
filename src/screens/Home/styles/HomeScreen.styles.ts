@@ -1,6 +1,10 @@
 import {StyleSheet} from 'react-native';
 import {spacing} from '../../../theme/tokens';
 
+/** The Home FAB's own edge length (dp). Matches `homeScreenStyles.fab`. */
+export const HOME_FAB_SIZE = 56;
+
+
 export const homeScreenStyles = StyleSheet.create({
   root: {flex: 1},
   scrollContent: {paddingTop: spacing.md},

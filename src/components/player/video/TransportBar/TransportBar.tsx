@@ -139,6 +139,28 @@ const MIN_BOTTOM_GAP_PX = 12;
  */
 const UNKNOWN_DURATION_LABEL = '--:--';
 
+/**
+ * W24 (register item 46 / tracker B-006) — how close the engine's
+ * reported position must be to the seek target before the seek counts
+ * as confirmed.
+ *
+ * The position is coalesced to 4 Hz and reported in milliseconds, so a
+ * confirmed seek lands within a tick of the target. Half a second is
+ * two ticks of slack — wide enough that a keyframe-accurate decode
+ * cannot miss it, narrow enough that the clock is never more than half
+ * a second away from the truth.
+ */
+const SEEK_CONFIRM_TOLERANCE_MS = 500;
+
+/**
+ * The bound on a pending confirmation. Four position ticks: the
+ * position arrives at 4 Hz, so a seek that has not confirmed within a
+ * second is either refused or never going to land. When the bound
+ * expires the clock goes back to the engine's position — which is the
+ * truth, because a refused seek leaves the player where it was.
+ */
+const SEEK_CONFIRM_FALLBACK_MS = 1000;
+
 export const TransportBar: React.FC = () => {
   const {state, commands} = useTransport();
   const {colors} = useTheme();
@@ -190,14 +212,111 @@ const hasKnownDuration = state.durationMs > 0;
     seekable: state.seekable,
     durationMs: state.durationMs,
     trackWidth,
-    previewMs: scrubPreviewMs,
   });
   scrubRef.current = {
     seekable: state.seekable,
     durationMs: state.durationMs,
     trackWidth,
-    previewMs: scrubPreviewMs,
   };
+
+  // ── W24 (register item 46 / tracker B-006) — seek CONFIRMATION ────
+  //
+  // The engine's new position reaches JS on ONE carrier: mpv's
+  // `time-pos`, observed natively and coalesced to 4 Hz (250 ms).
+  // There is no seek-completion event that carries a position — the
+  // lib's `onPlaybackRestart` explicitly refuses to own it, and the
+  // native `seek` event carries an empty payload. So after a seek the
+  // new position is not available for one tick plus the seek latency.
+  //
+  // The old code bridged that gap with a FIXED 600 ms timer: the clock
+  // was pinned to the seek TARGET for 600 ms and then dropped back to
+  // whatever the engine had reported. When the seek took longer than
+  // 600 ms the clock went BACKWARDS — from the target to the old
+  // position — and then jumped forward again when the position tick
+  // finally arrived. A media clock that runs backwards is a lie the
+  // user can see.
+  //
+  // The preview is now CLOSED LOOP: it is held until the engine's own
+  // position reaches the target, and the timer is only a BOUND for a
+  // seek that never confirms (refused, or the media ended). The handle
+  // lives in a ref, so it is cleared on unmount and re-armed on every
+  // commit — the old code did neither, so a second tap inside the
+  // first tap's window had its preview cleared by the first tap's
+  // timer.
+  const [pendingSeekMs, setPendingSeekMs] = React.useState<number | null>(
+    null,
+  );
+  const confirmTimerRef = React.useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+
+  /**
+   * Drop the seek preview and hand the clock back to the engine. The
+   * bound is cleared here as well as on unmount, so a pending timer can
+   * never outlive the thing it was bounding.
+   */
+  const releaseScrubPreview = React.useCallback(() => {
+    if (confirmTimerRef.current !== null) {
+      clearTimeout(confirmTimerRef.current);
+      confirmTimerRef.current = null;
+    }
+    setPendingSeekMs(null);
+    setScrubPreviewMs(null);
+    setIsScrubbing(false);
+  }, []);
+
+  /**
+   * Commit a seek: show the target, ask the engine for it, and wait for
+   * the engine to CONFIRM. The bound is re-armed on every commit, so a
+   * second tap cannot be clobbered by the first tap's timer.
+   */
+  const commitSeek = React.useCallback(
+    (targetMs: number) => {
+      if (confirmTimerRef.current !== null) {
+        clearTimeout(confirmTimerRef.current);
+      }
+      setPendingSeekMs(targetMs);
+      setScrubPreviewMs(targetMs);
+      setIsScrubbing(true);
+      confirmTimerRef.current = setTimeout(() => {
+        confirmTimerRef.current = null;
+        releaseScrubPreview();
+      }, SEEK_CONFIRM_FALLBACK_MS);
+    },
+    [releaseScrubPreview],
+  );
+
+  // The PanResponder is built once and can never close over these, so
+  // it reaches them through refs — the same pattern as `commandsRef`.
+  const commitSeekRef = React.useRef(commitSeek);
+  commitSeekRef.current = commitSeek;
+  const releaseScrubPreviewRef = React.useRef(releaseScrubPreview);
+  releaseScrubPreviewRef.current = releaseScrubPreview;
+
+  // The engine CONFIRMED the seek: its reported position has reached
+  // the target. The clock now shows the engine's position, which IS the
+  // target — so the value does not change, and it never runs backwards.
+  React.useEffect(() => {
+    if (pendingSeekMs === null) return;
+    if (
+      Math.abs(state.positionMs - pendingSeekMs) >
+      SEEK_CONFIRM_TOLERANCE_MS
+    ) {
+      return;
+    }
+    releaseScrubPreview();
+  }, [state.positionMs, pendingSeekMs, releaseScrubPreview]);
+
+  // A pending bound must not outlive the component: an unmounted tree
+  // must never be written to.
+  React.useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current !== null) {
+        clearTimeout(confirmTimerRef.current);
+        confirmTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Same treatment for the commands object, which is stable in practice
   // but must not be read through a stale closure.
@@ -217,6 +336,11 @@ const hasKnownDuration = state.durationMs > 0;
           scrubRef.current.seekable && Math.abs(g.dx) > PAN_THRESHOLD_PX,
         onPanResponderGrant: (e: GestureResponderEvent) => {
           if (!scrubRef.current.seekable) return;
+          // A new gesture supersedes a pending confirmation: the finger
+          // is now the authority on where the playhead goes. Without
+          // this, a confirmation landing mid-drag would clear the
+          // drag's own preview.
+          releaseScrubPreviewRef.current();
           const x = clampFraction(e.nativeEvent.locationX, scrubRef.current.trackWidth);
           setScrubPreviewMs(Math.round(x * scrubRef.current.durationMs));
           setScrubPreviewX(e.nativeEvent.locationX);
@@ -233,7 +357,7 @@ const hasKnownDuration = state.durationMs > 0;
         },
         onPanResponderRelease: (e: GestureResponderEvent) => {
           // The target is recomputed from the RELEASE EVENT rather than
-          // read back out of `scrubRef.previewMs`.
+          // read back out of the scrub preview.
           //
           // `scrubRef.current` is synced during render, so it always
           // reflects the last COMMITTED state. Grant/move/release can
@@ -248,16 +372,22 @@ const hasKnownDuration = state.durationMs > 0;
           const {seekable, durationMs, trackWidth: trackWidthNow} = scrubRef.current;
           if (seekable && trackWidthNow > 0) {
             const x = clampFraction(e.nativeEvent.locationX, trackWidthNow);
-            const targetMs = Math.round(x * durationMs);
-            commandsRef.current.seek(clampPosition(targetMs, durationMs));
+            const targetMs = clampPosition(
+              Math.round(x * durationMs),
+              durationMs,
+            );
+            commandsRef.current.seek(targetMs);
+            // The same confirmation the tap path uses: one seek, one
+            // clock. The preview is held until the engine confirms, so
+            // the clock cannot snap back to the pre-drag position.
+            commitSeekRef.current(targetMs);
+          } else {
+            releaseScrubPreviewRef.current();
           }
-          setScrubPreviewMs(null);
-          setIsScrubbing(false);
         },
         onPanResponderTerminate: () => {
           // Cancellation: revert preview. No seek committed.
-          setScrubPreviewMs(null);
-          setIsScrubbing(false);
+          releaseScrubPreviewRef.current();
         },
       }),
     // The empty dependency list IS the contract, and
@@ -354,20 +484,16 @@ const hasKnownDuration = state.durationMs > 0;
                 Math.round(fraction * state.durationMs),
                 state.durationMs,
               );
-              // W3.5.2: show the scrub preview for ~600ms after a
-              // tap so the user sees confirmation of the seek
-              // target. The preview disappears naturally on the
-              // next position-tick because `scrubPreviewMs` is
-              // null and `displayMs` falls back to `state.positionMs`.
-              setScrubPreviewMs(targetMs);
+              // W3.5.2 kept the scrub preview up for a fixed 600 ms so
+              // the user saw confirmation of the seek target. A fixed
+              // window is the wrong shape for that: the engine confirms
+              // the seek when it reports the new position, and until
+              // then the clock has nothing true to show. `commitSeek`
+              // holds the preview until that confirmation and bounds it
+              // if the seek never lands.
               setScrubPreviewX(e.nativeEvent.locationX);
-              setIsScrubbing(true);
+              commitSeek(targetMs);
               commands.seek(targetMs);
-              // Clear the preview after a short delay.
-              setTimeout(() => {
-                setScrubPreviewMs(null);
-                setIsScrubbing(false);
-              }, 600);
             }}
             style={({pressed}) => [
               styles.track,

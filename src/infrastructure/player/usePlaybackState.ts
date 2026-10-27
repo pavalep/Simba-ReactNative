@@ -28,9 +28,25 @@
  */
 
 import {usePlayer, usePlayerProgress} from '@simba-dev/react-native-media-player';
-import type {VideoState} from './video/VideoController';
 
-export type {VideoState};
+/**
+ * The video lane's phase vocabulary.
+ *
+ * It used to live in `src/infrastructure/player/video/VideoController.ts`,
+ * which the V22 W22 cleanup (item 20 / B-014) deleted along with the
+ * dead controller. This hook is now its only owner: the derivation
+ * below is the phase, and the controller that used to compete with it
+ * is gone, so there is exactly ONE vocabulary and ONE owner left.
+ */
+export type VideoState =
+  | 'idle'
+  | 'preparing'
+  | 'playing'
+  | 'paused'
+  | 'seeking'
+  | 'buffering'
+  | 'finished'
+  | 'error';
 
 export interface PlaybackStateDerived {
   videoState: VideoState;

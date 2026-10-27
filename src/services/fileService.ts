@@ -32,10 +32,24 @@ const MEDIA_EXTENSIONS = new Set([
   'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', // images
 ]);
 
-function getExtension(uri: string): string {
-  const name = decodeURIComponent(uri.split(/[/\\]/).pop() || '');
+/**
+ * The lowercased extension of a name or path, or null when it has none.
+ *
+ * `null` and `''` are different answers: `''` means "the name ends in a
+ * dot", `null` means "there is no extension at all" — which is what a
+ * `content://` URI has, and the distinction is what a picked file's
+ * classification turns on.
+ */
+function extensionOf(nameOrPath: string): string | null {
+  const name = decodeURIComponent(nameOrPath.split(/[/\\]/).pop() || '');
   const dot = name.lastIndexOf('.');
-  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
+  if (dot < 0) return null;
+  const ext = name.slice(dot + 1).toLowerCase();
+  return ext.length > 0 ? ext : null;
+}
+
+function getExtension(uri: string): string {
+  return extensionOf(uri) ?? '';
 }
 
 /** Audio-only file extensions */
@@ -55,6 +69,48 @@ export function getMediaType(uri: string): MediaType {
   const ext = getExtension(uri);
   if (VIDEO_EXTENSIONS.has(ext)) return 'video';
   if (AUDIO_EXTENSIONS.has(ext)) return 'audio';
+  return 'video';
+}
+
+/**
+ * Classify a file the user PICKED into the audio or the video lane.
+ *
+ * ## Why the URI cannot answer this
+ *
+ * `getMediaType(uri)` reads the extension out of the URI. A picked
+ * file's URI is a `content://` URI, and those carry no extension:
+ * `content://com.android.providers.media.documents/document/audio%3A1000000064`.
+ * The extension lookup found nothing and `getMediaType` fell through
+ * to its `'video'` default — so EVERY picked AUDIO file was launched
+ * in the VIDEO lane.
+ *
+ * ## The order
+ *
+ * 1. The MIME type. It is what the provider says the file IS, and it
+ *    is the one signal that survives a URI with no name in it.
+ * 2. The display name. It carries the extension the URI lost.
+ * 3. The URI itself, for the rare picker that hands back a real path.
+ *
+ * The final fallback is `'video'`, unchanged — an unknown file opens in
+ * the video lane, which is the lane that can show a picture.
+ */
+export function classifyPickedMedia(file: PickedFile): MediaType {
+  const mime = (file.type ?? '').toLowerCase();
+  if (mime.startsWith('audio/')) return 'audio';
+  if (mime.startsWith('video/')) return 'video';
+
+  const byName = extensionOf(file.title);
+  if (byName != null) {
+    if (AUDIO_EXTENSIONS.has(byName)) return 'audio';
+    if (VIDEO_EXTENSIONS.has(byName)) return 'video';
+  }
+
+  const byUri = extensionOf(file.uri);
+  if (byUri != null) {
+    if (AUDIO_EXTENSIONS.has(byUri)) return 'audio';
+    if (VIDEO_EXTENSIONS.has(byUri)) return 'video';
+  }
+
   return 'video';
 }
 

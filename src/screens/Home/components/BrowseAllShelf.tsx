@@ -14,6 +14,7 @@ import {CategoryCard} from '../../../components/utility/CategoryCard/CategoryCar
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
 import {spacing} from '../../../theme/tokens';
 import {CATEGORY_COVERS} from '../../../assets/images/categories';
+
 import type {SectionRouteKey} from './browseAllRouteKey';
 
 export interface BrowseAllEntry {

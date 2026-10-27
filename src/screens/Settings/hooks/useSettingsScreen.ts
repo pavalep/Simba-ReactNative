@@ -40,7 +40,17 @@ export function useSettingsScreen() {
   const {theme, colors} = useTheme();
   const insets = useSafeAreaInsets();
   const isDark = theme === 'dark';
-  const bottomChromeInset = insets.bottom + 104;
+  /**
+   * The bottom clearance for the Settings scroll.
+   *
+   * It used to be `insets.bottom + 104`: the mini player (56) plus the
+   * floating bottom tab bar (48) the app used to have. The tab bar was
+   * deleted in v11 Wave 1 and the number was never revised, so every
+   * Settings screen carried 48 dp of clearance for a bar that no longer
+   * existed. `insets.bottom + spacing.lg` is the shape the app's other
+   * full-height screens already use (`AboutScreen`, `DownloadsScreen`).
+   */
+  const bottomChromeInset = insets.bottom + spacing.lg;
 
   const entrance = useAnimatedEntrance(SECTION_COUNT, {staggerDelay: 80});
   const {startScan, isScanning} = useMediaScanner();

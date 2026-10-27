@@ -26,6 +26,7 @@ import {
   getInternetArchiveVideoDetails,
   resolveInternetArchiveVideoDetails,
   INTERNET_ARCHIVE_RETRIES,
+  normalizeArchiveTitle,
 } from '../../../../src/infrastructure/api/internetArchive/adapter';
 import {AdapterParseError} from '../../../../src/infrastructure/api/adapterErrors';
 
@@ -221,5 +222,40 @@ describe('internetArchive adapter — V21 W6 P21c', () => {
     await expect(getInternetArchiveItemDetails('item-1')).rejects.toBeInstanceOf(
       AdapterParseError,
     );
+  });
+});
+
+describe('internetArchive adapter — normalizeArchiveTitle', () => {
+  it('strips a matched pair of surrounding double quotes', () => {
+    // The feed really does ship titles like this, and the app used to
+    // render them verbatim, so the quotes reached the screen.
+    expect(normalizeArchiveTitle('"El Ciclo ( 1964)"')).toBe('El Ciclo ( 1964)');
+  });
+
+  it('strips the whitespace that sat inside and around the quotes', () => {
+    expect(normalizeArchiveTitle('  "El Ciclo ( 1964)"  ')).toBe('El Ciclo ( 1964)');
+    expect(normalizeArchiveTitle('"  El Ciclo ( 1964)  "')).toBe('El Ciclo ( 1964)');
+  });
+
+  it('leaves an unquoted title byte-identical', () => {
+    const title = 'El Ciclo ( 1964)';
+    expect(normalizeArchiveTitle(title)).toBe(title);
+    // Byte-identical means byte-identical: no trimming, no re-spacing.
+    const spaced = '  El Ciclo  ';
+    expect(normalizeArchiveTitle(spaced)).toBe(spaced);
+  });
+
+  it('preserves an interior quote', () => {
+    const title = 'He said "hi"';
+    expect(normalizeArchiveTitle(title)).toBe(title);
+  });
+
+  it('handles empty and whitespace-only titles', () => {
+    expect(normalizeArchiveTitle('')).toBe('');
+    expect(normalizeArchiveTitle('   ')).toBe('');
+  });
+
+  it('does not treat a lone double quote as a matched pair', () => {
+    expect(normalizeArchiveTitle('"')).toBe('"');
   });
 });

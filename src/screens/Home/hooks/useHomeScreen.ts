@@ -4,7 +4,7 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {CommonActions} from '@react-navigation/native';
 import {type HomeScreenProps} from '../../../navigation/types';
 import type {RootStackParamList} from '../../../navigation/types';
-import {pickMediaFile, getMediaType} from '../../../services/fileService';
+import {pickMediaFile, classifyPickedMedia} from '../../../services/fileService';
 import {useBookmarks} from '../../../features/bookmarks';
 import {usePlaylists} from '../../../features/playlists';
 import {logger} from '../../../lib/logger';
@@ -151,19 +151,52 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     try {
       const file = await pickMediaFile();
       if (!file) return;
-      const mediaType = getMediaType(file.uri);
-      openPlayer({
+
+      // The lane comes from the MIME type the picker reported and from
+      // the file's NAME — not from the URI.
+      //
+      // The URI of a picked file is a `content://` URI with no
+      // extension (`.../document/audio%3A1000000064`), so the old
+      // `getMediaType(file.uri)` could not classify it and fell through
+      // to its 'video' default: every picked AUDIO file was launched in
+      // the VIDEO lane. The picker already answers the question twice,
+      // and both answers are in hand here.
+      const mediaType = classifyPickedMedia(file);
+
+      // AWAITED, and its result checked.
+      //
+      // `openPlayer` is async and it REJECTS when the launch fails. The
+      // old call was fire-and-forget, so a rejection never reached the
+      // `catch` below — it surfaced as an unhandled rejection instead
+      // of the logged warning the comment claimed, and the user saw
+      // nothing at all.
+      //
+      // `false` is the other way it can fail: the lib's own contract is
+      // that `false` means "nothing was attempted" (the audio service
+      // could not start, or the bridge is in no-op mode). Either way the
+      // user picked a file and nothing is playing, so it has to be said
+      // out loud.
+      const started = await openPlayer({
         uri: file.uri,
         title: file.title || 'Untitled',
         type: resolveStreamType(mediaType),
       });
+      if (!started) {
+        logger.warn('[useHomeScreen] pick+play did not start', {
+          uri: file.uri,
+        });
+        toast.show('Could not open that file', 'error');
+      }
     } catch (e) {
       // V16 Phase 73: the pickMediaFile()/openPlayer() sequence
       // was the most common entry point. The silent swallow was
       // hiding "user picked a file but nothing happened" reports.
       logger.warn('[useHomeScreen] pick+play failed', e);
+      // The log is for us. The toast is for the user, who is holding a
+      // file they just chose and watching nothing happen.
+      toast.show('Could not open that file', 'error');
     }
-  }, [openPlayer]);
+  }, [openPlayer, toast]);
 
   const handleItemPress = useCallback(
     (item: {

@@ -35,6 +35,7 @@ import {
   formatPositionAccessibility,
   formatPositionLine,
 } from '../../../utils/mediaTime';
+import type {MediaLane} from '../../../types/media';
 import type {HistoryScreenProps} from '../types';
 
 type Props = HistoryScreenProps;
@@ -98,8 +99,12 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
   }, [recentFiles, filter, query]);
 
   const handlePress = useCallback(
-    (fileUri: string, mediaType?: 'video' | 'audio', title?: string, position?: number) => {
-      const lane = mediaType ?? 'video';
+    (
+      fileUri: string,
+      mediaType: MediaLane,
+      title: string,
+      position: number,
+    ) => {
       // 58.2: explicit tap intent — silent seek to the saved position.
       // W7 P26: `position` is in SECONDS (history store convention); the
       // hook converts to milliseconds for the bridge. Pre-P26 the code
@@ -112,11 +117,20 @@ export const HistoryScreen: React.FC<Props> = ({navigation}) => {
       // failure to NetworkStreamError; the W22 F/U (native bridge
       // surfacing HTTP status codes) lights up the other variants
       // without changing this call site.
+      //
+      // W22 (item 38): the lane, title and position are REQUIRED here.
+      // `RecentHistoryEntry` declares all three as non-optional
+      // (`mediaType: MediaLane`, `title: string`, `position: number`),
+      // and the single call site passes `item.mediaType`, `item.title`
+      // and `item.position` — so the old `?? 'video'` / `?? 'Untitled'` /
+      // `?? 0` fallbacks could never fire. A `?? 'video'` on a required
+      // lane is worse than dead code: it reads as "this file might have
+      // no lane" and invites a caller to drop the argument.
       void playWithResume({
         uri: fileUri,
-        title: title ?? 'Untitled',
-        mediaType: lane,
-        positionSec: position ?? 0,
+        title,
+        mediaType,
+        positionSec: position,
       }).then(r => {
         if (r.ok) return;
         if (isNetworkError(r.error)) {

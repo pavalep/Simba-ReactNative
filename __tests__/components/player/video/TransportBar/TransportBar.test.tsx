@@ -25,6 +25,7 @@ import {
   makeTransportCommands,
 } from '../../../../helpers/transportState';
 import {act, fireEvent} from '@testing-library/react-native';
+import {PanResponder} from 'react-native';
 // RNTL 14's queries return `TestInstance` (from `test-renderer`), not
 // the older `react-test-renderer` `ReactTestInstance`. Typing the
 // helper against the wrong one is a compile error.
@@ -385,5 +386,238 @@ describe('TransportBar', () => {
       nativeEvent: {locationX: 150},
     });
     expect(mockTransport.commands.seek).not.toHaveBeenCalled();
+  });
+
+  // ── W24 (register item 46 / tracker B-006): the seek CONFIRMATION ──
+  //
+  // The engine's new position reaches JS on ONE carrier — mpv's
+  // `time-pos`, observed natively and coalesced to 4 Hz. So after a tap
+  // the new position is not available for a tick plus the seek latency,
+  // and the clock has to hold the seek target across that gap.
+  //
+  // It used to hold it for a FIXED 600 ms and then drop back to
+  // whatever the engine had reported — so for a seek slower than 600 ms
+  // the clock went BACKWARDS to the old position and then jumped forward
+  // again when the tick finally arrived. These pin the shape that
+  // replaced it: the preview is held until the engine CONFIRMS the
+  // seek, and the timer is only a bound on a seek that never lands.
+  describe('seek confirmation', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('holds the seek target until the engine reports the new position', async () => {
+      const {getByRole, getByTestId, getByText, queryByText, rerender} =
+        await renderChrome(<TransportBar />);
+      const track = getByRole('adjustable');
+      await measureTrack(getByTestId);
+
+      // The engine is at 1:00 of a 4:00 track. A tap at 50% asks for
+      // 2:00, and the engine has NOT reported it yet.
+      expect(getByText('1:00')).toBeTruthy();
+      await fireEvent(track, 'press', {nativeEvent: {locationX: 150}});
+      expect(getByText('2:00')).toBeTruthy();
+
+      // The old window: 600 ms after the tap the preview was dropped
+      // REGARDLESS of whether the engine had confirmed. The clock must
+      // not fall back to the engine's stale 1:00.
+      await act(async () => {
+        jest.advanceTimersByTime(600);
+      });
+      expect(getByText('2:00')).toBeTruthy();
+      expect(queryByText('1:00')).toBeNull();
+
+      // The engine confirms and keeps playing from there.
+      mockTransport.state = makeTransportState({positionMs: 120_000});
+      await rerender(<TransportBar />);
+      expect(getByText('2:00')).toBeTruthy();
+
+      // The preview was RELEASED: the clock follows the engine again,
+      // so it advances to 2:01. A preview still pinned at 2:00 would
+      // show the engine's new position as nothing at all.
+      mockTransport.state = makeTransportState({positionMs: 121_000});
+      await rerender(<TransportBar />);
+      expect(getByText('2:01')).toBeTruthy();
+    });
+
+    it('re-arms the confirmation when a second tap lands inside the first', async () => {
+      const {getByRole, getByTestId, getByText, queryByText} =
+        await renderChrome(<TransportBar />);
+      const track = getByRole('adjustable');
+      await measureTrack(getByTestId);
+      mockTransport.state = makeTransportState({positionMs: 0});
+
+      // First tap: 75% of 4:00 is 3:00.
+      await fireEvent(track, 'press', {nativeEvent: {locationX: 225}});
+      expect(getByText('3:00')).toBeTruthy();
+
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      // Second tap: 25% is 1:00. The first tap's bound is still armed.
+      await fireEvent(track, 'press', {nativeEvent: {locationX: 75}});
+      expect(getByText('1:00')).toBeTruthy();
+
+      // The FIRST tap's bound would fire 1000 ms after that tap, which
+      // is 700 ms from here. It has to have been re-armed by the second
+      // tap, so the second tap's target is still showing and the clock
+      // has not fallen back to the engine's position. Without the
+      // re-arm the first tap's timer clears the second tap's preview
+      // and the clock snaps back to 0:00.
+      await act(async () => {
+        jest.advanceTimersByTime(800);
+      });
+      expect(getByText('1:00')).toBeTruthy();
+      expect(queryByText('0:00')).toBeNull();
+    });
+
+    it('hands the clock back to the engine when the bound expires', async () => {
+      const {getByRole, getByTestId, getByText} = await renderChrome(
+        <TransportBar />,
+      );
+      const track = getByRole('adjustable');
+      await measureTrack(getByTestId);
+      mockTransport.state = makeTransportState({positionMs: 0});
+
+      await fireEvent(track, 'press', {nativeEvent: {locationX: 150}});
+      expect(getByText('2:00')).toBeTruthy();
+
+      // The seek never confirmed — refused, or the media ended. The
+      // bound releases the preview and the clock goes back to the
+      // engine's position, which is the truth: a refused seek leaves
+      // the player where it was.
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(getByText('0:00')).toBeTruthy();
+    });
+
+    it('clears the pending bound when the bar unmounts', async () => {
+      const setSpy = jest.spyOn(global, 'setTimeout');
+      const clearSpy = jest.spyOn(global, 'clearTimeout');
+      try {
+        const {getByRole, getByTestId, unmount} = await renderChrome(
+          <TransportBar />,
+        );
+        const track = getByRole('adjustable');
+        await measureTrack(getByTestId);
+
+        await fireEvent(track, 'press', {nativeEvent: {locationX: 150}});
+
+        // The bound armed by the commit is the one with the fallback
+        // delay; find it so the assertion can name the exact handle.
+        let armIndex = -1;
+        setSpy.mock.calls.forEach((call, index) => {
+          if (call[1] === 1000) armIndex = index;
+        });
+        expect(armIndex).toBeGreaterThan(-1);
+        const armed = setSpy.mock.results[armIndex].value;
+
+        clearSpy.mockClear();
+        // RNTL 14's `unmount` is async — the cleanup effects (and the
+        // `clearTimeout` they own) run inside it.
+        await unmount();
+        expect(clearSpy).toHaveBeenCalledWith(armed);
+      } finally {
+        setSpy.mockRestore();
+        clearSpy.mockRestore();
+      }
+    });
+
+    it('holds the drag target until the engine confirms it too', async () => {
+      // The PanResponder is built once and can only be driven through
+      // the config the factory receives — the same trick the scrub
+      // suite uses, for the same reason: RN's real responder reads
+      // `gestureState.touchHistory`, which does not exist under jest.
+      type ResponderConfig = {
+        onPanResponderGrant?: (e: unknown) => void;
+        onPanResponderMove?: (e: unknown) => void;
+        onPanResponderRelease?: (e: unknown) => void;
+      };
+      const configs: ResponderConfig[] = [];
+      const original = PanResponder.create;
+      (PanResponder as {create: unknown}).create = (config: ResponderConfig) => {
+        configs.push(config);
+        return {panHandlers: {}};
+      };
+
+      try {
+        const {getByTestId, getByText, queryByText} = await renderChrome(
+          <TransportBar />,
+        );
+        await measureTrack(getByTestId);
+        mockTransport.state = makeTransportState({positionMs: 0});
+
+        const config = configs[0];
+        await act(async () => {
+          config.onPanResponderGrant?.({nativeEvent: {locationX: 75}});
+          config.onPanResponderMove?.({nativeEvent: {locationX: 225}});
+          config.onPanResponderRelease?.({nativeEvent: {locationX: 225}});
+        });
+
+        // The drag target is 75% of 4:00 — 3:00 — and the engine is
+        // still at 0:00.
+        expect(getByText('3:00')).toBeTruthy();
+
+        // The old code cleared the preview the instant the drag
+        // released, so the clock fell straight back to 0:00.
+        await act(async () => {
+          jest.advanceTimersByTime(600);
+        });
+        expect(getByText('3:00')).toBeTruthy();
+        expect(queryByText('0:00')).toBeNull();
+      } finally {
+        (PanResponder as {create: unknown}).create = original;
+      }
+    });
+
+    it('lets a new drag supersede a pending confirmation', async () => {
+      type ResponderConfig = {
+        onPanResponderGrant?: (e: unknown) => void;
+        onPanResponderMove?: (e: unknown) => void;
+        onPanResponderRelease?: (e: unknown) => void;
+      };
+      const configs: ResponderConfig[] = [];
+      const original = PanResponder.create;
+      (PanResponder as {create: unknown}).create = (config: ResponderConfig) => {
+        configs.push(config);
+        return {panHandlers: {}};
+      };
+
+      try {
+        const {getByRole, getByTestId, getByText, rerender} = await renderChrome(
+          <TransportBar />,
+        );
+        const track = getByRole('adjustable');
+        await measureTrack(getByTestId);
+
+        // A tap arms a confirmation for 2:00.
+        await fireEvent(track, 'press', {nativeEvent: {locationX: 150}});
+        expect(getByText('2:00')).toBeTruthy();
+
+        // The user grabs the bar and drags to 3:00. The finger is now
+        // the authority, so the pending confirmation must not be able
+        // to clear the drag's preview.
+        const config = configs[0];
+        await act(async () => {
+          config.onPanResponderGrant?.({nativeEvent: {locationX: 75}});
+          config.onPanResponderMove?.({nativeEvent: {locationX: 225}});
+        });
+        expect(getByText('3:00')).toBeTruthy();
+
+        // The engine confirms the OLD target (2:00) mid-drag. The drag
+        // preview has to survive it.
+        mockTransport.state = makeTransportState({positionMs: 120_000});
+        await rerender(<TransportBar />);
+        expect(getByText('3:00')).toBeTruthy();
+      } finally {
+        (PanResponder as {create: unknown}).create = original;
+      }
+    });
   });
 });

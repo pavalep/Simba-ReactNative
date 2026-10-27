@@ -174,12 +174,6 @@ jest.mock('../../../../src/infrastructure/player', () => {
     useResumeAwareLaunch: () => ({
       openPlayer: jest.fn().mockResolvedValue(true),
     }),
-    useVideoController: () => ({
-      controller: {
-        getState: () => ({currentItem: {uri: 'file:///video.mp4'}}),
-        retry: jest.fn().mockResolvedValue(undefined),
-      },
-    }),
   };
 });
 

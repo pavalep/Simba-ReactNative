@@ -184,7 +184,7 @@ export const ArtistScreen: React.FC<ArtistScreenProps> = () => {
         onScroll={onScroll}
         contentContainerStyle={[
           styles.scrollContent,
-          {paddingBottom: insets.bottom + 104},
+          {paddingBottom: insets.bottom + spacing.lg},
         ]}>
         {/* ── Artist Header (parallax) ── */}
         <ArtistHeader

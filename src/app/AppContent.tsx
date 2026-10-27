@@ -30,12 +30,15 @@
 import React, {useEffect, useMemo, useRef} from 'react';
 import {Linking, View, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
-import {useOpenFromUrl} from '@simba-dev/react-native-media-player';
 import {useDownloadsStore} from '../state';
 import {RootNavigator} from '../navigation';
 import {navigationRef} from '../navigation/navigationHelper';
 import {linking} from '../navigation/linking';
-import {useQueueSync} from '../infrastructure/player';
+// The deep-link opener comes from the app's player layer, not from the
+// package: the PLAYER RULE in `scripts/check-import-boundaries.js` keeps
+// every `@simba-dev/react-native-media-player` import inside
+// `src/infrastructure/player/`.
+import {useOpenFromUrl, useQueueSync} from '../infrastructure/player';
 import {useAuthSession} from '../hooks/useAuthSession';
 import {downloadService} from '../services/downloadService';
 import {mark} from '../utils/startupPerf';

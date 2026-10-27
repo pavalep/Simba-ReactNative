@@ -16,7 +16,7 @@ import {BackButton} from '../../../../components/utility/BackButton/BackButton';
 import AudioWaveform from '../../../../components/player/AudioWaveform/AudioWaveform';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
 import FastImage from 'react-native-fast-image';
-import {radius} from '../../../../theme/tokens';
+import {radius, spacing} from '../../../../theme/tokens';
 import {useCachedArt} from '../../../../hooks/useCachedArt';
 import {useMoreFromArtist} from '../../../../hooks/useMoreFromArtist';
 import {StreamingRow} from '../../../../components/media/StreamingRow/StreamingRow';
@@ -225,7 +225,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         scrollContent: {
           paddingHorizontal: 20,
           paddingTop: 8,
-          paddingBottom: insets.bottom + 104,
+          paddingBottom: insets.bottom + spacing.lg,
         },
         artistHeader: {
           alignItems: 'center',

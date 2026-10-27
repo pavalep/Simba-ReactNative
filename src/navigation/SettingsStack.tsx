@@ -13,7 +13,7 @@ import type {
   TermsScreenProps,
   HelpScreenProps,
 } from './types';
-import {SettingsTabParamList} from './types';
+import {SettingsStackParamList} from './types';
 import {SettingsScreen} from '../screens/Settings';
 import {AboutScreen} from '../screens/About';
 import {AudioSettingsScreen} from '../screens/AudioSettings';
@@ -28,7 +28,7 @@ import {TermsScreen} from '../screens/Terms';
 import {HelpScreen} from '../screens/Help';
 import {ScreenErrorBoundary} from '../components/feedback/ScreenErrorBoundary';
 
-const Stack = createNativeStackNavigator<SettingsTabParamList>();
+const Stack = createNativeStackNavigator<SettingsStackParamList>();
 
 const AboutRender = (props: AboutScreenProps) => (
   <ScreenErrorBoundary onGoBack={() => props.navigation?.goBack()}>

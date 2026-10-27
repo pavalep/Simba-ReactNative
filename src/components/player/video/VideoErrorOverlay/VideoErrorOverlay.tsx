@@ -26,9 +26,9 @@
  * **The no-inert-control rule.** Retry is rendered ONLY when there
  * is a real retry target. Rendering a Retry button that cannot retry
  * is the exact defect class this project already forbids elsewhere:
- * `PiPToggle` returns `null` when unsupported, `AudioDescriptionTrackSelector`
- * returns `null` rather than ship an "AD not available" stub, and
- * `BufferedRangeFill` renders nothing instead of a zero-width
+ * `PiPToggle` returns `null` when unsupported, the audio-description
+ * selector returns `null` rather than ship an "AD not available" stub,
+ * and `BufferedRangeFill` renders nothing instead of a zero-width
  * placeholder. The overlay follows the same rule.
  *
  * ## Where the retry target comes from

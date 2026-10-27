@@ -49,7 +49,11 @@
 
 import * as React from 'react';
 import {Pressable, StyleSheet} from 'react-native';
-import {SimbaVideo} from '@simba-dev/react-native-media-player';
+// The lib import lives behind `src/infrastructure/player/` — see the
+// PLAYER RULE in `scripts/check-import-boundaries.js`. The wrapper is
+// lib-only on purpose, so this component does not pull the app barrel
+// (which re-exports `VideoPlayer`, which imports this component).
+import {SimbaVideo} from '../../../../infrastructure/player/videoSurface';
 
 export interface VideoSurfaceProps {
   /** Optional override style. Geometry is owned by the parent layout. */

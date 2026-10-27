@@ -1,6 +1,10 @@
 import React, {useCallback, useEffect} from 'react';
-import {View, FlatList, RefreshControl, TouchableOpacity} from 'react-native';
-import {homeScreenStyles as styles} from './styles/HomeScreen.styles';
+import {View, FlatList, RefreshControl} from 'react-native';
+import {
+  homeScreenStyles as styles,
+  HOME_FAB_SIZE,
+} from './styles/HomeScreen.styles';
+import {spacing} from '../../theme/tokens';
 import {type HomeScreenProps} from '../../navigation/types';
 import {useHomeScreen} from './hooks/useHomeScreen';
 import type {HomeSection} from './types';
@@ -13,7 +17,7 @@ import {HomeMediaShelf} from './components/HomeMediaShelf';
 import {QuickAccessShelf} from './components/QuickAccessShelf';
 import {HomeLoadingSkeleton} from './components/HomeLoadingSkeleton';
 import {HomeErrorState} from './components/HomeErrorState';
-import {SvgIcon} from '../../components/utility/SvgIcon';
+
 import {AppText} from '../../components/core/AppText/AppText';
 import {SubsectionTitle} from '../../components/utility/SubsectionTitle/SubsectionTitle';
 import {WeatherGreeting} from './components/WeatherGreeting';
@@ -25,6 +29,7 @@ import {GenreChipsShelf} from './components/GenreChipsShelf';
 // RadioCategoriesShelf, LiveTVCategoriesShelf, AudiobooksShelf,
 // ArchiveShelf, ShowsShelf) were removed with their handlers.
 import {BrowseAllShelf} from './components/BrowseAllShelf';
+import {HomeFab} from './components/HomeFab';
 import {mark, logStartupSummary} from '../../utils/startupPerf';
 
 // ── Screen ──
@@ -237,7 +242,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         data={sections}
         renderItem={renderSection}
         keyExtractor={getHomeSectionKey}
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 100}]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            // The padding has to reach the FAB's TOP edge — one
+            // spacing step above the safe area, plus the button's own
+            // 56 dp — or the last section stops UNDER the button
+            // instead of above it.
+            //
+            // The number used to be `insets.bottom + 100 + 56`. The
+            // `100` was the clearance for the floating bottom tab bar
+            // the app used to have (60 dp plus a 10 dp margin); that
+            // bar was deleted in v11 Wave 1 and the offset was never
+            // revised. The app's other five FAB screens (Movies, Music,
+            // Podcasts, Radio, Live TV) have always used this shape.
+            paddingBottom: insets.bottom + spacing.lg + HOME_FAB_SIZE + spacing.md,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
         initialNumToRender={4}
         maxToRenderPerBatch={4}
@@ -253,25 +274,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         }
       />
 
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={handleOpenMedia}
-        accessibilityRole="button"
-        accessibilityLabel="Play media file"
-        style={[
-          styles.fab,
-          {
-            backgroundColor: colors.accent.gold,
-            bottom: insets.bottom + 100,
-            // Shadow (colors.shadow — inline; static styles are color-free)
-            shadowColor: colors.shadow,
-            shadowOffset: {width: 0, height: 3},
-            shadowOpacity: 0.3,
-            shadowRadius: 4.5,
-          },
-        ]}>
-        <SvgIcon name="play" size={24} color={colors.text.inverse} />
-      </TouchableOpacity>
+      <HomeFab onPress={handleOpenMedia} />
     </View>
   );
 };

@@ -112,6 +112,47 @@ interface IAMetadataResponse {
   }[];
 }
 
+// ─── Title normalisation ─────────────────────────────────────────────
+
+/**
+ * Normalise an Internet Archive title.
+ *
+ * ## Why this exists
+ *
+ * IA's own catalogue stores some titles wrapped in literal double
+ * quotes — `"El Ciclo ( 1964)"` — and the app renders the feed title
+ * verbatim, so the quotes used to reach the screen on every IA movie
+ * card and detail header. The normaliser is applied where the adapter
+ * builds the domain item, so EVERY IA surface benefits at once (search
+ * results, item details, video details) instead of each renderer
+ * growing its own cleanup.
+ *
+ * ## What it deliberately does NOT do
+ *
+ * It is not a general-purpose title formatter. A title with no
+ * surrounding quotes is returned BYTE-IDENTICAL — not trimmed, not
+ * re-cased, not re-spaced. Interior quotes are preserved, and the
+ * `( 1964)` part of `"El Ciclo ( 1964)"` is left exactly as the feed
+ * wrote it.
+ *
+ * The only transformation is: one matched pair of surrounding double
+ * quotes (plus the whitespace around and just inside them) is removed.
+ */
+export function normalizeArchiveTitle(title: string): string {
+  const trimmed = title.trim();
+  // Empty or whitespace-only: there is no title to keep.
+  if (trimmed.length === 0) return '';
+  // A lone `"` is not a matched pair.
+  if (
+    trimmed.length < 2 ||
+    !trimmed.startsWith('"') ||
+    !trimmed.endsWith('"')
+  ) {
+    return title;
+  }
+  return trimmed.slice(1, -1).trim();
+}
+
 // ─── Pure helpers (file-local; not exported) ───────────────────────────
 
 /** True when an IA file format is an audio container we can stream. */
@@ -283,7 +324,7 @@ export const internetArchiveItemResultFromRaw = (
   }
   return {
     identifier: r.identifier,
-    title: r.title || '',
+    title: normalizeArchiveTitle(r.title || ''),
     description: r.description || '',
     creator: r.creator || '',
     year: r.year || '',
@@ -361,7 +402,7 @@ export const internetArchiveItemDetailsFromRaw = (
   );
   return {
     identifier: md.identifier,
-    title: md.title,
+    title: normalizeArchiveTitle(md.title),
     description: md.description || '',
     creator: md.creator || '',
     year: md.year || '',
@@ -406,7 +447,7 @@ export const internetArchiveVideoResultFromRaw = (
   }
   return {
     identifier: r.identifier,
-    title: r.title || '',
+    title: normalizeArchiveTitle(r.title || ''),
     description: r.description || '',
     creator: r.creator || '',
     year: r.year || '',
@@ -547,7 +588,7 @@ export const internetArchiveVideoDetailsFromRaw = (
 
   return {
     identifier: md.identifier,
-    title: md.title,
+    title: normalizeArchiveTitle(md.title),
     description: md.description || '',
     creator: md.creator || '',
     year: md.year || '',
@@ -585,7 +626,9 @@ export const archiveTracksFromRaw = (
       const trackNum = parseInt(f.track ?? '', 10);
       return {
         name: f.name,
-        title: f.title || f.name.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' '),
+        title: normalizeArchiveTitle(
+          f.title || f.name.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' '),
+        ),
         url: fileUrlFor(identifier, f.name),
         lengthSeconds: parseRuntime(f.length ?? ''),
         format: f.format,

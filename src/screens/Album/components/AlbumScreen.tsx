@@ -81,7 +81,7 @@ export const AlbumScreen: React.FC<AlbumScreenProps> = () => {
         onScroll={onScroll}
         contentContainerStyle={[
           styles.scrollContent,
-          {paddingBottom: insets.bottom + 104},
+          {paddingBottom: insets.bottom + spacing.lg},
         ]}>
         {/* ── Album hero (parallax) ── */}
         <AlbumHero

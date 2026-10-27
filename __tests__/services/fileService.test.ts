@@ -29,12 +29,76 @@ jest.mock('react-native-fs', () => {
 });
 
 import RNFS from 'react-native-fs';
-import {scanFoldersIncremental} from '../../src/services/fileService';
+import {scanFoldersIncremental, classifyPickedMedia} from '../../src/services/fileService';
 
 const mockedReadDir = RNFS.readDir as jest.MockedFunction<typeof RNFS.readDir>;
 
 beforeEach(() => {
   mockedReadDir.mockReset();
+});
+
+describe('fileService.classifyPickedMedia', () => {
+  // A picked file's URI is a `content://` URI and carries NO extension.
+  // `getMediaType` reads the extension out of the URI, so it cannot
+  // classify one, and it falls through to its 'video' default. These
+  // cases are the regression that made every picked AUDIO file open in
+  // the VIDEO lane.
+  const CONTENT_AUDIO_URI =
+    'content://com.android.providers.media.documents/document/audio%3A1000000064';
+  const CONTENT_VIDEO_URI =
+    'content://com.android.providers.media.documents/document/video%3A1000000123';
+
+  it('uses the MIME type the picker reported', () => {
+    expect(
+      classifyPickedMedia({uri: CONTENT_AUDIO_URI, title: 'Take 1', type: 'audio/mpeg', size: 1}),
+    ).toBe('audio');
+    expect(
+      classifyPickedMedia({uri: CONTENT_VIDEO_URI, title: 'Clip', type: 'video/mp4', size: 1}),
+    ).toBe('video');
+  });
+
+  it('reads the MIME type case-insensitively', () => {
+    expect(
+      classifyPickedMedia({uri: CONTENT_AUDIO_URI, title: 'Take 1', type: 'AUDIO/MPEG', size: 1}),
+    ).toBe('audio');
+  });
+
+  it('falls back to the display NAME, which is where the extension lives', () => {
+    expect(
+      classifyPickedMedia({uri: CONTENT_AUDIO_URI, title: 'Field Recording.mp3', type: null, size: 1}),
+    ).toBe('audio');
+    expect(
+      classifyPickedMedia({uri: CONTENT_VIDEO_URI, title: 'Clip.mp4', type: null, size: 1}),
+    ).toBe('video');
+  });
+
+  it('falls back to the URI when the picker handed back a real path', () => {
+    expect(
+      classifyPickedMedia({uri: '/storage/emulated/0/Music/song.flac', title: 'song', type: null, size: 1}),
+    ).toBe('audio');
+    expect(
+      classifyPickedMedia({uri: '/storage/emulated/0/Movies/film.mkv', title: 'film', type: null, size: 1}),
+    ).toBe('video');
+  });
+
+  it('falls back to the video lane for a file it cannot classify at all', () => {
+    expect(
+      classifyPickedMedia({uri: CONTENT_AUDIO_URI, title: 'Untitled', type: null, size: 1}),
+    ).toBe('video');
+  });
+
+  it('does not mistake a dot in a content URI for an extension', () => {
+    // `document/audio%3A1000000064` has no dot; a provider that
+    // reports a dotted document id must not flip the lane on that.
+    expect(
+      classifyPickedMedia({
+        uri: 'content://com.android.providers.media.documents/document/primary%3AAudio%2F1.2',
+        title: 'Untitled',
+        type: null,
+        size: 1,
+      }),
+    ).toBe('video');
+  });
 });
 
 describe('fileService.scanFoldersIncremental — V21 W5 P18 (D-027 partly)', () => {

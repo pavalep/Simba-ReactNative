@@ -33,13 +33,14 @@ import {
   CONTENT_MODE_OPTIONS,
   PLAYLIST_FILTER_TYPES,
   GRID_GAP,
+  LIBRARY_FAB_SIZE,
 } from '../hooks/useLibraryScreen';
 
 type Props = LibraryScreenProps;
 
 export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   const {
-    colors, isDark, bottomChromeInset,
+    colors, isDark, fabBottomInset, contentBottomInset,
     activeSegment, setActiveSegment,
     contentMode, setContentMode, showDropdown, setShowDropdown,
     viewMode, setViewMode,
@@ -221,7 +222,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         scrollContent: {
           paddingHorizontal: 20,
           paddingTop: 12,
-          paddingBottom: bottomChromeInset,
+          paddingBottom: contentBottomInset,
         },
         playlistFilterRow: {
           flexDirection: 'row',
@@ -246,12 +247,12 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         gridCol: {flex: 1},
         fabOverlay: {
           position: 'absolute',
-          bottom: bottomChromeInset,
+          bottom: fabBottomInset,
           right: 20,
           zIndex: 10,
         },
         fab: {
-          width: 56, height: 56, borderRadius: 28,
+          width: LIBRARY_FAB_SIZE, height: LIBRARY_FAB_SIZE, borderRadius: 28,
           backgroundColor: colors.accent.gold,
           alignItems: 'center', justifyContent: 'center',
           elevation: 8,
@@ -264,7 +265,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
           color: colors.text.inverse, fontWeight: '400',
         },
       }),
-    [bottomChromeInset, colors],
+    [fabBottomInset, contentBottomInset, colors],
   );
 
   // ── Renders ──

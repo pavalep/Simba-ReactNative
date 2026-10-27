@@ -42,7 +42,7 @@ export type VideoSource = {
  *     `usePlaybackFacade().launch` surface. The chrome compositor does
  *     not launch media, so these three could only ever have thrown.
  *   - `selectAudioDescriptionTrack`. The lib exposes no AD-selection
- *     command, so `AudioDescriptionTrackSelector` renders `null`
+ *     command, so the audio-description selector renders `null`
  *     rather than shipping a control that cannot act.
  *
  * All four previously type-checked and then threw at runtime — a

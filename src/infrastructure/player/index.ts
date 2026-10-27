@@ -114,6 +114,15 @@ export {
   // reaching into the module package.
   PlayerResumeProvider,
   usePlayItem,
+  // V22 W22 (B-020) — the deep-link opener. `AppContent` used to import
+  // this hook straight from the package, which broke the PLAYER RULE in
+  // `scripts/check-import-boundaries.js` ("only src/infrastructure/player/
+  // may import from '@simba-dev/react-native-media-player'"). The hook
+  // is the lib's own (it owns the URI-scheme filter, the basename→title
+  // derivation and the extension→lane classification), so it is re-exported
+  // here rather than reimplemented: the call site imports it from this
+  // layer and the lib import stays inside the cage.
+  useOpenFromUrl,
 } from '@simba-dev/react-native-media-player';
 
 // ─── V19 W9.3 — resume-aware launch seam ─────────────────────
@@ -356,30 +365,20 @@ export {useReduceMotion} from './useReduceMotion';
 // handlers. Source of truth: TRACKER Phase 3.6.13.
 export {useHaptic, HAPTIC_DURATION_MS, type HapticIntensity, type HapticApi} from './useHaptic';
 
-// V19 W5 — the `VideoController` orchestrator + its React binding.
-// The controller is PURE TypeScript (no React) and owns the video
-// lane's behaviour: load lifecycle, lane integrity, finish policy,
-// repeat semantics, and error classification. Chrome never
-// re-implements any of it — it subscribes and renders.
-// Source of truth: SPEC §2 (boundary diagram) + TRACKER Phase
-// 5.1 / 5.2 / 5.3.
+// V22 W22 (item 20 / B-014) — the `VideoController` orchestrator and
+// its React binding are GONE. `useVideoController` had zero call sites
+// and `getVideoController` was only ever called from inside the dead
+// module; the chrome reads its state from `usePlaybackState` instead.
+//
+// What remains of that slice is the ERROR CLASSIFIER, which is live:
+// `VideoErrorOverlay` imports `classifyError` from here, and the chrome
+// suites `jest.requireActual` `src/infrastructure/player/video` to get
+// the real classifier into their barrel mock.
 export {
-  VideoController,
-  useVideoController,
   classifyError,
-  __setVideoControllerForTests,
-  type VideoControllerState,
-  type VideoControllerPhase,
-  type VideoControllerEvent,
-  type VideoControllerListener,
-  type VideoControllerDeps,
-  type VideoItem,
-  type LoadFileOptions,
-  type VideoRepeatMode,
   type ClassifiedError,
   type ErrorCategory,
   type ErrorRecoveryAction,
-  type UseVideoControllerApi,
 } from './video';
 
 

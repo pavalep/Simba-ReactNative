@@ -6,7 +6,7 @@ export type RootStackParamList = {
   Login: undefined;
   Home: undefined;
   Library: undefined;
-  Settings: NavigatorScreenParams<SettingsTabParamList>;
+  Settings: NavigatorScreenParams<SettingsStackParamList>;
   Bookmarks: undefined;
   Profile: undefined;
   History: undefined;
@@ -89,20 +89,7 @@ export type RootStackParamList = {
   Downloads: undefined;
 };
 
-export type TabParamList = {
-  HomeTab: NavigatorScreenParams<HomeTabParamList>;
-  LibraryTab: NavigatorScreenParams<LibraryTabParamList>;
-};
-
-export type HomeTabParamList = {
-  Home: undefined;
-};
-
-export type LibraryTabParamList = {
-  Library: undefined;
-};
-
-export type SettingsTabParamList = {
+export type SettingsStackParamList = {
   Settings: undefined;
   About: undefined;
   AudioSettings: undefined;
@@ -120,30 +107,20 @@ export type SettingsTabParamList = {
 export type RootStackScreenProps<T extends keyof RootStackParamList> =
   NativeStackScreenProps<RootStackParamList, T>;
 
-export type TabScreenProps<T extends keyof TabParamList> =
-  CompositeScreenProps<
-    NativeStackScreenProps<TabParamList, T>,
-    RootStackScreenProps<keyof RootStackParamList>
-  >;
+/**
+ * Root stack screen props for Home.
+ *
+ * Home used to live inside a "tab shell" — a native stack that called
+ * itself a tab bar and held one screen per route. The shell is gone:
+ * `RootNavigator` registers `Home` and `Library` directly, and the app
+ * has had no bottom tab bar since v11 Wave 1. These props are the ROOT
+ * stack's props, which is what they were at runtime all along — the
+ * composite only described a navigator that was never mounted.
+ */
+export type HomeScreenProps = RootStackScreenProps<'Home'>;
 
-// ── Reusable helper for any screen inside the authenticated shell ──
-type StackInShellProps<
-  ScreenParam extends Record<string, object | undefined>,
-  ShellKey extends keyof TabParamList,
-  ScreenName extends keyof ScreenParam & string,
-> = CompositeScreenProps<
-  NativeStackScreenProps<ScreenParam, ScreenName>,
-  CompositeScreenProps<
-    NativeStackScreenProps<TabParamList, ShellKey>,
-    RootStackScreenProps<keyof RootStackParamList>
-  >
->;
-
-/** Composite props for the Home stack screen. */
-export type HomeScreenProps = StackInShellProps<HomeTabParamList, 'HomeTab', 'Home'>;
-
-/** Composite props for the Library stack screen. */
-export type LibraryScreenProps = StackInShellProps<LibraryTabParamList, 'LibraryTab', 'Library'>;
+/** Root stack screen props for Library. Same story as `HomeScreenProps`. */
+export type LibraryScreenProps = RootStackScreenProps<'Library'>;
 
 /** Root stack screen props for screens moved out of tab stacks (Phase 14.0). */
 export type SearchScreenProps = RootStackScreenProps<'Search'>;
@@ -165,8 +142,8 @@ export type QueueScreenProps = RootStackScreenProps<'Queue'>;
 export type DownloadsScreenProps = RootStackScreenProps<'Downloads'>;
 
 // ── Helper for screens inside the Settings root stack navigator ──
-type SettingsStackScreenProps<T extends keyof SettingsTabParamList> = CompositeScreenProps<
-  NativeStackScreenProps<SettingsTabParamList, T>,
+type SettingsStackScreenProps<T extends keyof SettingsStackParamList> = CompositeScreenProps<
+  NativeStackScreenProps<SettingsStackParamList, T>,
   RootStackScreenProps<keyof RootStackParamList>
 >;
 

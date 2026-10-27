@@ -35,8 +35,8 @@ import {useTransport} from './useTransport';
  * 5:00 does not light the toggle when playback is at 5:03. That is the
  * honest answer — there is no bookmark *here*. What tells the user the
  * file has bookmarks at all is the timeline markers on the transport
- * bar (see `useBookmarkMarkers`), which is exactly how Jellyfin Enhanced
- * and MyVideoSpot resolve the same tension.
+ * bar, which is exactly how Jellyfin Enhanced and MyVideoSpot resolve
+ * the same tension.
  *
  * ## The identity problem, and why the session is the source
  *
@@ -209,28 +209,6 @@ export function useBookmarkToggle(): BookmarkToggle {
     cancelEviction,
     unavailable: !uri,
   };
-}
-
-/**
- * Bookmark positions for the current file, normalised to 0…1.
- *
- * Feeds the timeline markers. Returns an empty array when there is
- * nothing to draw, which lets the transport bar skip the layer entirely
- * rather than mounting an empty view over the scrub track.
- */
-export function useBookmarkMarkers(): number[] {
-  const session = useNowPlayingStore(s => s.current);
-  const items = useBookmarksStore(s => s.items);
-  const {state} = useTransport();
-
-  const duration = state.durationMs;
-  return React.useMemo(() => {
-    if (!session || !(duration > 0)) return [];
-    return items
-      .filter(b => b.fileUri === session.uri)
-      .map(b => b.position / duration)
-      .filter(f => f > 0 && f <= 1);
-  }, [items, session, duration]);
 }
 
 export {MAX_BOOKMARK_ENTRIES};
