@@ -357,11 +357,14 @@ the native side has to be rebuilt into the APK.
 unpacked — the published tarball still ships **no `.so`**). The app now
 **declares `^1.23.0` and installs it**: `npm install
 @simba-dev/react-native-media-player@1.23.0` resolved to **1.23.0** in
-`node_modules`. **Still outstanding:** the app's **native** side is still the
-1.22.0 build — the 1.23.0 Kotlin changes (`finish()` instead of
-`finishAndRemoveTask()`, the `override` spec methods) need an **APK
-rebuild**, and the postinstall's idempotency probe is `libmpv.so`, so a
-refreshed tree does not re-download `libplayer.so` on its own.
+`node_modules`. **Still outstanding:** the app's **APK** still carries the
+1.22.0 **Kotlin** — `finish()` instead of `finishAndRemoveTask()` and the
+`override` spec methods compile into the APK's **DEX**, not into
+`libplayer.so` (that is the CMake/JNI library built from `main.cpp`, and
+1.23.0 changed **no** C++), so the native half of 1.23.0 lands only on an
+**APK rebuild**. The JS half (`initPlayer()` in the render phase, the
+un-memoised `SimbaVideo` pointer, the Spec's `addListener` /
+`removeListeners`) takes effect on a **Metro reload** and is already in.
 
 ---
 
