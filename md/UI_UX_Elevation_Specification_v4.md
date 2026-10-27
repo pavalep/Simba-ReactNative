@@ -6,6 +6,17 @@
 > **Core Focus:** Polish, real authentication, Netflix/Spotify-quality media players, rich dedicated sub-pages, bookmarking, component-based architecture, premium animations
 > **Completion Milestone:** Elevating project from ~8% to ~10% — a working beta demonstrable to management
 
+> **2026-10-27 — THE BOTTOM TAB BAR IS NOT IN THE APP.** The bottom tab navigator
+> and the floating tab bar were **removed in v11 Wave 1** (the "authenticated shell
+> without a persistent bottom tab bar"). `RootNavigator` registers `Home` and
+> `Library` **directly**. Everything below that mentions `TabNavigator`,
+> `HomeTab` / `LibraryTab`, `FloatingTabBar`, `TAB_BAR_HEIGHT` or the mini player
+> sitting "above tab bar" describes a design the app **no longer has** — and the
+> `+104` bottom clearances those rows imply were mini player (56) **+ tab bar
+> (48)**, so they are also **wrong by 48 dp** today. The tab-bar skeleton itself
+> was deleted on 2026-10-27 (`F-027`). See `md/SIMBA_V22_MASTER_PLAN.md` items 56
+> and 57 for what is true now.
+
 ---
 
 ## TABLE OF CONTENTS

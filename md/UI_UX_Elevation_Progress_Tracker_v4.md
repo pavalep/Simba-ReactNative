@@ -6,6 +6,16 @@
 > **Strict Rules:** Follow v4 spec exactly — enforce hook pattern (useXxxScreen.ts), component-only UI, AppButton/IconButton usage, VideoPlayer/AudioPlayer as components, custom activity indicators (ActivityOrb/WaveformBars), persistent MiniAudioPlayer, Google auth, and bookmarking.
 > **Last Codebase Audit:** 2026-07-29 (Pre-existing items noted in 🟡 PARTIAL fields)
 
+> **2026-10-27 — THE BOTTOM TAB BAR IS NOT IN THE APP.** The bottom tab navigator
+> and the floating tab bar were **removed in v11 Wave 1** (the "authenticated shell
+> without a persistent bottom tab bar"), and their skeleton was deleted on
+> 2026-10-27 (`F-027`). The rows below that mark tab-bar work ✅ were ✅ against a
+> design the app no longer has — in particular **14.1** ("`TabNavigator` shows only
+> `HomeTab` and `LibraryTab`") and **14.1's mini player "above tab bar"**: the mini
+> player now sits at `bottom: 0` with no tab bar under it, and the `TAB_BAR_HEIGHT`
+> it was positioned against is **gone**. See `md/SIMBA_V22_MASTER_PLAN.md` items 56
+> and 57 for what is true now.
+
 ---
 
 ## Implementation Strategy

@@ -7,12 +7,14 @@ Started: **2026-10-21** (late afternoon → evening), during the W22 wave
 ("the resume that never resumed, and the card that never had a frame") and the
 verb/layout restructure that followed it.
 
-**Still live.** Last updated **2026-10-26** — the file name is the day it was
+**Still live.** Last updated **2026-10-27** — the file name is the day it was
 OPENED, not the day it was last touched. Entries carry their own dates. New
 entries since 2026-10-21 are `B-022` onward; new fixes are `F-015` onward.
-**Latest:** the W23 wave ("the cards stop lying") added `B-026` and `A-003`,
-and resolved `B-004` / `B-005` as `F-018` / `F-019`. `B-015`'s stale state was
-also corrected (`F-020`) — the remote frame capture **is** proven.
+**Latest:** the 2026-10-27 wave ("the register was wrong about the code") added
+`B-027` and resolved `B-006` / `B-008` / `B-010` / `B-014` / `B-020` / `B-024`
+as `F-021`…`F-026`. The **tab-bar wave** that followed it added `B-028` and
+resolved the app's dead tab-bar skeleton and the Home FAB's lane and its
+silence as `F-027` / `F-028`.
 
 ## How to read this file
 
@@ -200,16 +202,51 @@ unit + component tests and the mutation kills only.
 
 ---
 
-### B-006 · P2 · app · the elapsed label freezes for 600 ms after a tap-to-seek
+### B-006 · P2 · app · the elapsed label freezes for 600 ms after a tap-to-seek — **RESOLVED (F-021)**
 
-**Symptom.** Tap the scrub bar and the elapsed clock keeps the old value for
-600 ms, so the readout disagrees with the picture.
+**The symptom as written was INVERTED, and this entry corrects it rather than
+repeating it.** The old code did not freeze the clock on the OLD value for
+600 ms. It pinned the elapsed clock to the seek **TARGET** for a **fixed**
+600 ms and then dropped back to whatever the engine had reported. For a seek
+slower than 600 ms the clock ran **BACKWARDS**: target, then the old
+position, then the target again when the tick arrived.
 
-**Root cause.** The transport bar keeps a "scrub preview" value for 600 ms
-after the tap, and the timeout is **not cleared on unmount** — so a pending
-timer can write to an unmounted tree.
+**Root cause.** mpv's `time-pos` is the **only** carrier of the new position
+(observed natively, coalesced to 4 Hz). There is **no seek-completion event
+that carries a position** — the lib's `onPlaybackRestart` explicitly refuses
+to own it, and the native `seek` event carries an **empty payload**. The
+fixed 600 ms window was therefore a **guess, not a confirmation**: it assumed
+the engine would have caught up by the time the timer fired, and it had no
+way to know.
 
-**State:** open.
+**Two further defects the entry did not mention.**
+
+1. The timer handle was **neither stored nor re-armed**, so a second tap
+   inside the first tap's window had its preview cleared by the **first**
+   tap's timer.
+2. The **drag release cleared the preview synchronously**, so the drag path
+   never held the target at all.
+
+**The fix** (`src/components/player/video/TransportBar/TransportBar.tsx`).
+The preview is now a **CLOSED LOOP**: it is held until the engine's own
+position reaches the target (`SEEK_CONFIRM_TOLERANCE_MS = 500`), with a
+**BOUND** (`SEEK_CONFIRM_FALLBACK_MS = 1000` — four position ticks) for a
+seek that never confirms. The timer handle lives in a **ref**, so it is
+cleared on unmount and **re-armed on every commit**. The drag release now
+commits through the **same path** (one seek, one clock), and a new gesture
+supersedes a pending confirmation. The dead `scrubRef.previewMs` field was
+removed — it was written and never read.
+
+**Evidence (source + tests, mutation-checked).** 6 new tests in a
+`describe('seek confirmation')` block in
+`__tests__/components/player/video/TransportBar/TransportBar.test.tsx`; the
+file now has **21 tests**, all passing. A mutation harness
+(`X:/Development/SIMBA/.scratch-mutation-w24.mjs`) ran **8 mutants and all 8
+were killed**, each naming its killer test.
+
+**Note, so the next reader does not call it a defect.** The **audio** lane's
+transport has **no post-commit preview at all** — it always shows the
+engine's truth. That is honest, not broken.
 
 ---
 
@@ -230,19 +267,32 @@ and the app heard nothing.
 
 ---
 
-### B-008 · P0 · app · `commands.exitPlayer()` would kill the app
+### B-008 · P0 · app · `commands.exitPlayer()` would kill the app — **RESOLVED (F-023)** (the native hazard; the app facade stays)
 
-**Symptom.** Not yet observed — the method has **no call site**. That is the
-only reason this is not B-000.
+**Symptom.** Not yet observed — the method has **no production call site**.
+That is the only reason this is not B-000.
 
 **Evidence (source-proven).** `commands.exitPlayer()` →
 `commands.stopPlayback()` + `commands.exitPipAndFinish()`. The lib's
-`exitPipAndFinish` calls **`activity.finishAndRemoveTask()` on the current
+`exitPipAndFinish` called **`activity.finishAndRemoveTask()` on the current
 activity**. Since D1 (one Activity, `MainActivity`), that would finish the
-app's own Activity and remove the task.
+app's own Activity and **remove the app's whole task from Recents**.
 
-**State:** open. The method is a landmine: it reads like "close the player"
-and would close the *app*. Either delete it or re-point it at the close verb.
+**The NATIVE hazard is RESOLVED (F-023).** The Kotlin now calls
+**`activity.finish()`**, which closes the PiP window and **leaves the task**
+alone.
+
+**The app facade deliberately STAYS.** `useTransport.exitPlayer` is a real
+member of `TransportCommands`, backed by the lib's real `exitPipAndFinish`,
+and its **stop-then-finish ORDER** is pinned by a test. It remains
+**UNWIRED in production**, for one reason: the close verb has exactly **one**
+owner — `useClosePlayback()` — and SPEC §3.4 forbids a second path to the
+same secondary action. The hazard was in the **native call**; the facade is a
+deliberate, documented member of the public command surface.
+
+**State:** the native hazard is resolved (`F-023`). The app-side facade is
+kept and unwired on purpose; whether the lib should still export it is a
+**product/lib decision**, not a defect.
 
 ---
 
@@ -250,15 +300,68 @@ and would close the *app*. Either delete it or re-point it at the close verb.
 
 **Symptom.** A LogBox toast over the player, on every session.
 
-**State:** open. Undiagnosed — the loop has not been traced to its writer.
+**State:** open — **narrowed 2026-10-27.** The lib's progress subscriber is
+**fully guarded and pure**: it returns `prev` when no field changed, and
+there is **no setState-during-render cycle in the lib**.
+
+**The narrowing.** `onCacheState` changes **continuously** — measured on
+device: **827 times across a cold start**, while `onSeekable` arrived
+**ZERO** times — and `cacheRangesEqual` compares only the **count** and the
+**first/last bounds**, so the last bound moves on nearly every event and a
+**new context value is minted for every `usePlayerProgress()` consumer**.
+
+**Where the writer most likely is.** The actual writer is most likely in the
+**app's** consumers of the lib's progress context, not in the lib.
+
+**The one lib-side hardening available** is to stop `onCacheState` from
+minting a new context value on every tick. That is **not** done.
 
 ---
 
-### B-010 · P1 · lib · `initPlayer()` races its mount effect
+### B-010 · P1 · lib · `initPlayer()` races its mount effect — **RESOLVED (F-024)**
 
-**Symptom.** 8 × `IllegalStateException` in one launch.
+**Symptom.** 8 × `IllegalStateException` in one launch:
+`MpvPlayerModule not initialized. Call initPlayer() first.`
 
-**State:** open. Needs a native-side look (the handle is created twice).
+**Root cause.** `initPlayer()` ran in `PlayerProvider`'s **mount effect**,
+whose deps were `[]`. React commits passive effects **CHILD-FIRST**, so every
+descendant's bridge call ran **before** the provider's own effect, while
+`nativePtr == 0` → `ensurePtr()` throws.
+
+**The sharpest instance was a RENDER, not an effect.** `SimbaVideo` read the
+handle with `useMemo(() => nativePtr ?? getNativePtr(), [nativePtr])`.
+`getNativePtr()` does **not** throw — it answers **0** — so the first render
+bound the surface to a **null handle**, and the memo never recomputed.
+
+**The tracker's old hypothesis was WRONG.** The handle is **not** created
+twice: the Kotlin short-circuits with `return true` when `nativePtr != 0`.
+
+**The fix.** `initPlayer()` moved into `PlayerProvider`'s **RENDER phase**
+behind a **ref guard**, and `SimbaVideo`'s handle read is **no longer
+memoised**. A parent's render completes before any child's render begins, so
+the handle exists before any descendant renders.
+
+**The trade-off, stated plainly.** A render-phase side effect is not a free
+move. It is safe **only** because `initPlayer()` is **idempotent** — the
+Kotlin returns `true` immediately when the handle already exists, and the
+ref guard stops a second call. If `initPlayer()` ever stopped being
+idempotent, this would have to be re-thought.
+
+**Release.** The lib version goes **1.22.0 → 1.23.0**, and it is a **MINOR**,
+not a patch drop-in: the TurboModule `Spec` gained two methods, so it is a
+**coordinated native + JS upgrade** — the app has to install the new lib and
+the native side has to be rebuilt into the APK.
+
+**Release status (2026-10-27).** The lib release is **published**: commit
+`5e8de6e`, tag `v1.23.0`, on npm as **1.23.0** (80 files / 989 669 bytes
+unpacked — the published tarball still ships **no `.so`**). The app now
+**declares `^1.23.0` and installs it**: `npm install
+@simba-dev/react-native-media-player@1.23.0` resolved to **1.23.0** in
+`node_modules`. **Still outstanding:** the app's **native** side is still the
+1.22.0 build — the 1.23.0 Kotlin changes (`finish()` instead of
+`finishAndRemoveTask()`, the `override` spec methods) need an **APK
+rebuild**, and the postinstall's idempotency probe is `libmpv.so`, so a
+refreshed tree does not re-download `libplayer.so` on its own.
 
 ---
 
@@ -397,18 +500,61 @@ Mutation-checked: 6/6 killed.
 
 **Symptom.** A video deep link opens nothing.
 
-**State:** open. `PlayerSurface.mount()` has zero call sites, so the whole
-surface-registry path is unreachable.
+**State:** open — **narrowed 2026-10-27.** The old one-line framing
+("`PlayerSurface.mount()` has zero call sites, so the whole surface-registry
+path is unreachable") was right about the **mechanism** and wrong about what
+is lost.
+
+**What the deep link actually loses.** It uses the LIB's `useOpenFromUrl`, so
+it bypasses the app's `useResumeAwareLaunch` seam — and with it the
+**now-playing entry**, the **history checkpoint**, the **dock** and the
+**resume prompt**.
+
+**Correction to the old framing: the resume POSITION is NOT lost.**
+`<SimbaPlayer resumePolicy>` mounts `PlayerResumeProvider`, and
+`useOpenWithResume` does the bookmark/history lookup — that still happens on
+the deep-link path.
+
+**What is actually broken, and it is worse.** `PlayerSurface.mount()` has
+**ZERO call sites**, so `isSurfaceMounted()` is always false and the lib's
+`openPlayer({type:'video'})` **ALWAYS resolves `false`** — a deep-linked
+**VIDEO never plays at all**.
+
+**The deeper cause.** The Fabric view manager
+(`MpvRenderViewManager.createViewInstance`) never calls
+`PlayerSurface.attach(...)`, so the registry is **orphaned**, not merely
+unmounted. The surface's own methods (`setBounds`, `fillBounds`,
+`setVisible`, `current()`, `boundsInWindow()`) are **live** from
+`MpvBridgeModule.kt` — it is the **population** of the registry that is
+dead.
+
+**Why the app is unaffected for normal playback.** The app drives video
+in-window through `useLaunchPlayback`, not `openPlayer({type:'video'})`.
 
 ---
 
-### B-014 · P2 · lib+app · dead code that still reads as live
+### B-014 · P2 · app · dead code that still reads as live — **RESOLVED (F-025)**
 
-- `VideoController` / `useVideoController` / `controllerSingleton` — no call
-  sites.
-- `PlayerSurface` registry — no call sites.
+**State: RESOLVED (F-025) for the APP side.** The LIB exports none of this,
+so it was **app-only**. Every deleted item had **ZERO call sites**.
 
-**State:** open, part of the AI-slop batch.
+| subsystem | lines | what made it dead |
+|---|---|---|
+| `VideoController` / `useVideoController` / `controllerSingleton` | **903** | `getVideoController()` was called **only from inside the dead module**, so the singleton was never constructed and `getVideoController()` always returned `null` |
+| `AudioLyricsView` | **525** | 0 call sites |
+| `AudioVisualizer` | **143** | 0 call sites |
+| `DpadController` | **187** | 0 call sites; `useHardwareMediaKeys` was internal-only and `useFocusRing` had 0 consumers |
+| `BufferingBar` | **113** | 0 call sites |
+| `AudioDescriptionTrackSelector` | **50** | 0 call sites, and its body was `() => null` |
+| `useBookmarkMarkers` (dead export) | — | 0 call sites |
+
+**One correction the register got wrong.** `deriveNextUpView` is **LIVE** —
+it is used at `NextUpOverlay.tsx:95`, and `NextUpOverlay` is mounted at
+`VideoPlayer.tsx:664`. **Do not delete it.** The register listed it as dead;
+that was wrong, and the wave re-read the call sites before cutting anything.
+
+**What is NOT part of this fix.** The `PlayerSurface` registry is a **lib**
+file and it is **not** dead — see `B-013` and master-plan register item 21.
 
 ---
 
@@ -505,21 +651,34 @@ and swallows taps there.
 
 ---
 
-### B-020 · P3 · app+lib · a layer boundary is broken in three files
+### B-020 · P3 · app+lib · a layer boundary is broken in three files — **RESOLVED (F-022)**
 
-**Evidence.** `node scripts/check-import-boundaries.js` →
+**The checker is a real gate.** The repo ships
+`scripts/check-import-boundaries.js`. It reported **2 errors** and now
+reports **0**:
 
 ```
-✗ src/app/AppContent.tsx:33            [PLAYER] Only src/infrastructure/player/ may import from '@simba-dev/react-native-media-player'
-✗ src/components/player/PlayerChrome.tsx:48  [PLAYER] …
-✗ src/components/player/video/VideoSurface/VideoSurface.tsx:52  [PLAYER] …
+scanned 581 files in 2364ms — 0 error(s), 0 warning(s)
+✓ import-boundary check passed
 ```
 
-**Fix (partial, this wave).** `PlayerChrome`'s lib import is gone — the close
-teardown moved into `src/infrastructure/player/useClosePlayback.ts`, which is
-inside the rule. The other two remain.
+`PlayerChrome.tsx` had been fixed earlier (the close teardown moved into
+`src/infrastructure/player/useClosePlayback.ts`, which is inside the rule).
+The **two** remaining violations were:
 
-**State:** open (2 of 3).
+| file | lib import | now |
+|---|---|---|
+| `src/app/AppContent.tsx:33` | `useOpenFromUrl` | behind `src/infrastructure/player/` |
+| `src/components/player/video/VideoSurface/VideoSurface.tsx:52` | `SimbaVideo` | behind `src/infrastructure/player/` |
+
+**Why the picture wrapper is NOT re-exported from the app barrel.** The
+barrel re-exports `VideoPlayer` (a **value**), and `VideoPlayer` imports
+`VideoSurface` — so re-exporting the wrapper would close the cycle
+`VideoSurface → barrel → VideoPlayer → VideoSurface`. The new module
+`src/infrastructure/player/videoSurface.ts` is therefore **deliberately
+lib-only**, so its edge stays a **leaf**.
+
+**State:** resolved (`F-022`). The boundary checker is green.
 
 ---
 
@@ -612,7 +771,7 @@ the captured frame.
 
 ---
 
-### B-024 · P3 · app+lib · Bridgeless `getJSModule(RCTEventEmitter)` noise, and a LogBox toast that sits over the transport
+### B-024 · P3 · app+lib · Bridgeless `getJSModule(RCTEventEmitter)` noise, and a LogBox toast that sits over the transport — **PARTLY RESOLVED (F-026)**
 
 **Symptom.** Every run of the app on the emulator shows a LogBox toast at the
 bottom: *"Open debugger to view warnings."* It covers the play/pause button
@@ -625,14 +784,30 @@ getJSModule(RCTEventEmitter) is not recommended on the new architecture
 new NativeEventEmitter() was called without addListener/removeListeners
 ```
 
-**Why it matters beyond the noise.** A LogBox toast is a real, tappable view
-over the bottom of the screen. Any device proof that taps the transport row
-has to dismiss it first or it will tap the toast instead — which is a trap
-for the next person measuring on a device.
+**Correction to the wording quoted above.** RN 0.86 emits **TWO separate
+messages**, not the single *"called without addListener/removeListeners"*
+string this entry used to quote.
 
-**State:** open. Not a player defect; it is the lib's event plumbing on the
-new architecture. The fix belongs in the lib (an `addListener`/`removeListeners`
-pair on the emitter, or the `RCTDeviceEventEmitter` route), not in the app.
+**The `NativeEventEmitter` half is FIXED (F-026).** The Kotlin module
+**already** declared `addListener` / `removeListeners`
+(`MpvBridgeModule.kt:1879-1893`), but the TurboModule `Spec`
+(`src/bridge/NativeMpvPlayer.ts:371-372`) did **not** — and on the new
+architecture the interop proxy exposes only **spec-declared** methods, so
+`mod.addListener` was `undefined` and RN 0.86's `NativeEventEmitter` warned
+twice and **never attached the native module**. The spec now declares the
+pair (Kotlin `String` ↔ `string`, `Double` ↔ `number`), and the regenerated
+spec was confirmed to emit `public abstract void addListener(String
+eventName)` / `removeListeners(double count)`.
+
+**The `getJSModule(RCTEventEmitter)` half is STILL UNRESOLVED.** Every
+`getJSModule` call in the lib's Kotlin asks for
+`DeviceEventManagerModule.RCTDeviceEventEmitter`, **not** `RCTEventEmitter`,
+and the string `RCTEventEmitter` is **not in RN 0.86's JS**. The origin
+inside this codebase could not be established, and it needs the **device
+logcat line's tag** to settle it. Until then this half stays open.
+
+**State:** partly resolved (`F-026`). The emitter half is fixed in the lib's
+spec; the `getJSModule` half is open and needs a device logcat tag.
 
 ---
 
@@ -689,6 +864,68 @@ also a visible blank on a real screen — the tile is not broken, it is empty.
 
 ---
 
+### B-027 · P3 · lib · a local `npm pack` would ship ~68 MB of native binaries
+
+**Symptom.** `npm pack --dry-run` on a working tree where the postinstall has
+run produces **124 files** and a **68.3 MB** package size (161.1 MB
+unpacked) — the native `.so` files under `android/src/main/jniLibs/` (43 of
+them in this working tree) dominate it. The **PUBLISHED** 1.22.0 tarball is
+**80 files / 985 828 bytes (~963 KB)**.
+
+**Root cause.** `package.json`'s `files` allow-list includes `"android/"`,
+and `.npmignore` does **not** exclude `android/src/main/jniLibs/`.
+
+**The release path itself is SAFE.** `release.yml` publishes from a **clean
+CI checkout** with `SKIP_DOWNLOAD_NATIVE=1` and `npm ci --ignore-scripts`, so
+the published tarball ships **no `.so` at all** — which is why it is 963 KB
+and not 68 MB. Both published versions confirm it: **1.22.0** is 80 files /
+985 828 bytes and **1.23.0** is 80 files / 989 669 bytes. **This is a hazard
+only for a local publish.**
+
+**State:** open — **a release-hygiene risk, not a live defect.** Nothing is
+broken today: every published version is 963 KB. But a developer who
+publishes from a dirty working tree would ship ~68 MB of native binaries to
+npm. The fix is an `.npmignore` entry for `android/src/main/jniLibs/`
+and/or dropping `"android/"` from the `files` allow-list.
+
+---
+
+### B-028 · P3 · app · the FAB's bottom edge sits under the mini-player dock
+
+**Symptom.** Not yet observed — the condition is arithmetic, and the device
+check is deferred.
+
+**The arithmetic.** The mini-player docks (the video lane's `VideoDock` and
+the audio lane's mini bar) are **54 dp** tall and sit at **`bottom: 0`** of
+the window — an app-level overlay, painted over whatever screen the user is
+on. A FAB now floats at `insets.bottom + spacing.lg` (16 dp). On a device
+with a 24 dp gesture bar the FAB's **bottom edge** lands at 40 dp above the
+window bottom, and the dock's band runs 0…54 dp, so the dock's top **14 dp**
+cover the bottom of the button.
+
+**This is NOT a Home defect — it is the app-wide FAB rule.** The Movies,
+Music, Podcasts, Radio and Live TV FABs sit at the same offset and have the
+same relationship to the dock. Home is now **consistent** with them; before
+this wave it was the lone screen floating 124 dp up, and it did not overlap
+the dock at all. The consistency is the point: a FAB's offset is a rule, not
+a per-screen measurement.
+
+**What it needs — a decision first, then a device proof.**
+- **Option A, the FAB moves.** It would have to know whether a mini player
+  is on screen (a video session with `videoPresentation === 'mini'`, or an
+  audio session with the audio presentation minimised). That makes the
+  button **move**, which is why YouTube and Plex answer the same question by
+  **hiding** the FAB instead.
+- **Option B, the dock yields.** The docks pin themselves to `bottom: 0` and
+  ignore `insets.bottom`, so their bottom 24 dp sits **under the system
+  navigation bar** — the docks' own defect, and the reason their band
+  reaches as high as 54 dp.
+
+**State:** open — needs a product decision, then a device check. The
+geometry is **source-proven**; nothing has been observed on a device yet.
+
+---
+
 ## FIXED
 
 | ID | Sev | Lane | One line | Where |
@@ -713,6 +950,14 @@ also a visible blank on a real screen — the tile is not broken, it is empty.
 | F-018 | P1 | app | The search tile prefixed `file://` onto a REMOTE thumbnail URL → `ResultTile` resolves the URI through `toRenderableImageUri` and adds the cache token through `withCacheToken`, which owns only the separator and the encoding | app `f5/w22-close-minimise-d9` |
 | F-019 | P2 | app | A card with no position read `" / 21:58"` → the position segment is printed only when there IS a position, via the new `formatPositionLine` / `formatPositionAccessibility`; `formatDuration(0) === ''` stays, because "unknown duration" is a real state | app `f5/w22-close-minimise-d9` |
 | F-020 | P1 | app+lib | A remote frame capture was unproven — `MediaMetadataRetriever` **does** decode a frame from an `https://` source; the device holds seven captures from the same remote archive.org media, and the newest was pulled binary-safely and checked byte-wise (29,724 bytes, magic `FFD8FF`) | docs — a stale state corrected, app `f5/w22-close-minimise-d9` |
+| F-021 | P2 | app | The transport clock pinned itself to the seek TARGET for a **fixed** 600 ms, so a slow seek ran the clock **backwards** → the preview is now a **closed loop** held until the engine's own position reaches the target (`SEEK_CONFIRM_TOLERANCE_MS = 500`), with a **bound** (`SEEK_CONFIRM_FALLBACK_MS = 1000`) for a seek that never confirms; the timer handle is in a ref, so it is cleared on unmount and re-armed on every commit, and the drag release commits through the same path | app `f5/w22-close-minimise-d9` |
+| F-022 | P3 | app+lib | Two files imported the player module directly, breaking the PLAYER boundary → `scripts/check-import-boundaries.js` now prints `scanned 581 files — 0 error(s), 0 warning(s)`; the new picture wrapper is deliberately **lib-only** so its edge stays a leaf and cannot close `VideoSurface → barrel → VideoPlayer → VideoSurface` | app `f5/w22-close-minimise-d9` |
+| F-023 | P0 | app+lib | The lib's `exitPipAndFinish` called `activity.finishAndRemoveTask()`, which under the one-Activity architecture removes the app's whole task from Recents → the Kotlin now calls `activity.finish()`, which closes the PiP window and leaves the task; the app's `exitPlayer` facade stays, deliberately unwired, because the close verb has exactly one owner (`useClosePlayback()`) | lib (native) |
+| F-024 | P1 | lib | `initPlayer()` ran in a mount effect and React commits passive effects **CHILD-FIRST**, so every descendant's bridge call beat it (8 × `IllegalStateException`); the sharpest case was a **render**, not an effect — `SimbaVideo` memoised a handle read that answers `0` → the call moved into the provider's **render phase** behind a ref guard and the handle read is no longer memoised; the release is a **MINOR**, not a patch drop-in, because the TurboModule spec changed | lib **1.23.0** · `5e8de6e` · tag `v1.23.0` |
+| F-025 | P2 | app | 1 921 lines of dead code that still read as live — the `VideoController` subsystem (903), `AudioLyricsView` (525), `AudioVisualizer` (143), `DpadController` (187), `BufferingBar` (113), `AudioDescriptionTrackSelector` (50) and the `useBookmarkMarkers` export — had **ZERO** call sites → deleted; `deriveNextUpView` was **not** dead and was kept | app `f5/w22-close-minimise-d9` |
+| F-026 | P3 | app+lib | RN 0.86's `NativeEventEmitter` warned twice and **never attached the native module**, because the TurboModule `Spec` did not declare `addListener`/`removeListeners` and the interop proxy exposes only spec-declared methods → the spec now declares the pair; the `getJSModule(RCTEventEmitter)` half is **still open** | lib (spec) |
+| F-027 | P2 | app | The app still carried a bottom tab bar it has not had since v11 Wave 1 — a `TabNavigator` that is a native stack, two one-screen stacks that were **never rendered**, a 263-line `FloatingTabBar` that was **never mounted**, five `Tab*` types and the `@react-navigation/bottom-tabs` dependency → all deleted, `HomeScreenProps`/`LibraryScreenProps` are now the **root** stack's props, and the **geometry** the dead bar left behind went with it: the Home FAB's `+100` and the `insets.bottom + 104` (= mini player 56 **+ tab bar 48**) on six screens | app `f5/w22-close-minimise-d9` |
+| F-028 | P2 | app | The Home FAB opened a picked file in the **wrong lane** — a `content://` URI carries no extension, so `getMediaType(uri)` fell through to its `'video'` default and every picked **audio** file opened in the **video** lane → a new `classifyPickedMedia()` uses the MIME type the picker reports, then the display name, then the URI. And it **failed silently**: `openPlayer` is async and rejects, but the call was fire-and-forget, so the rejection escaped as an **unhandled promise rejection** and the user saw nothing → the call is awaited, a `false` result is a failure too, and both say "Could not open that file" | app `f5/w22-close-minimise-d9` |
 
 ---
 
@@ -786,7 +1031,13 @@ clip was pushed to the device instead.
    (not fixed from static reading), measured, fixed, and re-proved on the
    device. See `B-011` / `F-017`.
 3. Is the "Maximum update depth exceeded" loop in the lib's progress
-   subscriber? (B-009.)
+   subscriber? (B-009.) **Narrowed 2026-10-27, not answered.** The lib's
+   progress subscriber is fully guarded and pure, and there is no
+   setState-during-render cycle in it. The live lead is `onCacheState`,
+   which changes continuously (827 times across a cold start on device)
+   and mints a new context value for every `usePlayerProgress()` consumer.
+   The writer is most likely in the **app's** consumers of that context;
+   what would settle it is a device trace of the writer stack.
 4. Why does a second movie tap produce no `loadFile`? (B-012.)
 5. Which surface should own handing catalogue artwork to the history entry?
    The launch seam already accepts `thumbnailPath` and forwards it as
