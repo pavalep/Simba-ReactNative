@@ -511,7 +511,68 @@ Mutation-checked: 6/6 killed.
 
 **Symptom.** No `loadFile` reaches the native trace.
 
-**State:** open. Undiagnosed.
+**State:** open — **narrowed 2026-10-28 to the NATIVE side.** The app half
+of the chain is read end to end and is correct; it has been read, not
+assumed, and it is now pinned by a test.
+
+**The chain, and what each link does** (all verified in source):
+
+1. `MovieCard.onPress` → `MoviesDataProvider.handleMoviePress` → awaits
+   `resolveInternetArchiveVideoDetails(item.identifier)` (3 attempts; the
+   adapter's retry loop has no in-flight guard) → `play({uri, title,
+   mediaType:'movie'})`.
+2. `play()` → `playbackFacade.open` → `resolveStreamType('movie')` → the
+   app's `useResumeAwareLaunch().openPlayer(...)`.
+3. `openPlayer` → `beginSession(...)` → `useNowPlayingStore.begin(...)`,
+   which stamps a **monotonic `sessionId`**.
+4. `useInWindowVideoLaunch` rebuilds the payload from the session with
+   `requestId: String(session.sessionId)`.
+5. The lib's `useLaunchPlayback` keys its effect on
+   `` `${requestId}|${uri}|${startPositionSec}` ``.
+6. `loadAndPlay` → `bridge.loadFile(uri)` → the native
+   `MpvBridgeModule.loadFile`.
+
+Every step is keyed so a second launch produces a different `requestId` and
+a different `launchKey`. **There is no guard, no cache, no in-flight lock
+and no swallowed rejection anywhere in that chain.**
+
+**What is left, and it is small.** Two things sit BELOW `bridge.loadFile`:
+
+* `MpvBridgeModule.loadFile` calls `ensurePtr()` **before** its
+  `[PlaybackTrace][Bridge][loadFile] requested=…` log. `ensurePtr()` throws
+  `IllegalStateException("MpvPlayerModule not initialized")` when the mpv
+  handle is zero — and it logs `[PlaybackTrace][Bridge][ensurePtr] native
+  pointer is zero` **instead**. So "no `loadFile` in the trace" is ALSO what
+  a dead engine looks like. **The log line to look for is `ensurePtr`, not
+  `loadFile`.**
+* The lib's `useLaunchPlayback` wraps the load in a bare
+  `catch { /* ignore */ }`. Its own docblock says a load failure "must
+  surface through mpv's own `file-loaded` / `end-file` events" — but a
+  failure that never reaches mpv produces **neither**. So a load that dies
+  at `ensurePtr()` is invisible: not in the trace the user was watching, no
+  error event, no change on screen. That is a **silent catch**, and it is
+  the reason this bug is *silent* rather than merely *broken*.
+
+**Why it cannot be reproduced from the app repo.** The lib's bridge is
+internal: `useLaunchPlayback` calls the lib's own
+`bridge/MpvPlayerModule.getMpvPlayerModule()`, not the package export — so
+the app cannot intercept `loadFile` in a jest test without re-implementing
+the lib's effect, which would prove nothing about the lib. **A device trace
+is the decisive instrument**, and it is the one thing this wave was not
+allowed to use.
+
+**What IS pinned instead.**
+`__tests__/infrastructure/player/useInWindowVideoLaunch.test.tsx` asserts
+the app half: two launches produce two different launch identities, and the
+second payload points at the second file — and the SAME file replayed also
+gets a new identity. Mutation-checked: a launcher that reuses the first
+launch's `requestId` is killed by both tests.
+
+**What still needs the device.** The line
+`[PlaybackTrace][Bridge][ensurePtr] native pointer is zero` at the moment of
+the second tap — or its absence. If it is present, the engine's handle was
+gone and the fix is in the engine's lifecycle; if it is absent, the call
+never reached the native module and the fix is in the bridge.
 
 ---
 
@@ -1288,7 +1349,14 @@ clip was pushed to the device instead.
    and mints a new context value for every `usePlayerProgress()` consumer.
    The writer is most likely in the **app's** consumers of that context;
    what would settle it is a device trace of the writer stack.
-4. Why does a second movie tap produce no `loadFile`? (B-012.)
+4. Why does a second movie tap produce no `loadFile`? **Narrowed to the
+   NATIVE side (2026-10-28).** The app half of the chain is read end to end
+   and correct, and is now pinned by a test. The two candidates below
+   `bridge.loadFile` are the engine's handle state and the bridge's own
+   error handling. The line that settles it is
+   `[PlaybackTrace][Bridge][ensurePtr] native pointer is zero`, **not**
+   `loadFile` — `ensurePtr()` runs BEFORE the `loadFile` log, so a dead
+   engine produces a different trace line and the same silence. (B-012.)
 5. Which surface should own handing catalogue artwork to the history entry?
    The launch seam already accepts `thumbnailPath` and forwards it as
    `artworkPath` — but `SearchScreen`'s `playWithToast` input type has no
