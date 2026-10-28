@@ -72,9 +72,15 @@ import {usePresentation, useTransport} from '../../../../infrastructure/player';
 import {useClosePlayback} from '../../../../infrastructure/player/useClosePlayback';
 import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
 import {PlayerControl} from '../PlayerControl/PlayerControl';
+import {
+  MINI_PLAYER_ART_SIZE,
+  MINI_PLAYER_HEIGHT,
+  MINI_PLAYER_PROGRESS_HEIGHT,
+  MINI_PLAYER_ROW_PADDING,
+} from '../../../../infrastructure/player/miniPlayerChrome';
 
-const ART_SIZE = 44;
-const PROGRESS_HEIGHT = 2;
+const ART_SIZE = MINI_PLAYER_ART_SIZE;
+const PROGRESS_HEIGHT = MINI_PLAYER_PROGRESS_HEIGHT;
 
 interface Rect {
   x: number;
@@ -295,7 +301,11 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 30,
-    paddingBottom: spacing.xs,
+    // The dock's height is DECLARED, not emergent: it is the same number
+    // every screen uses to clear it, so the band the dock paints and the
+    // band the app reserves cannot drift apart.
+    height: MINI_PLAYER_HEIGHT,
+    paddingBottom: MINI_PLAYER_ROW_PADDING,
   },
   // The dock is always laid out — only its visibility changes. That is
   // what lets the slot's window rect be published BEFORE the user taps
@@ -331,7 +341,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xs,
+    paddingTop: MINI_PLAYER_ROW_PADDING,
   },
   expandTarget: {
     flex: 1,

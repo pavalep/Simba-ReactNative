@@ -2,6 +2,8 @@ import {useState, useMemo, useCallback, useRef, useEffect} from 'react';
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {FAB_SIZE} from '../../../../components/core/Fab/Fab';
+import {useBottomChromeInset} from '../../../../infrastructure/player/miniPlayerChrome';
 import {useSettingsStore} from '../../../../state';
 
 import {usePlaylists} from '../../../../features/playlists';
@@ -34,14 +36,6 @@ import {
   LOCAL_VIEW_TOGGLE_SEGMENTS,
 } from '../related/localFilesConfig';
 
-/**
- * The Library FAB's edge length (dp).
- *
- * It is exported because TWO files need it and they must not disagree:
- * this hook computes the scroll padding that clears the FAB, and
- * `LibraryScreenContent.tsx` draws the FAB.
- */
-export const LIBRARY_FAB_SIZE = 56;
 
 const SEGMENTS = LOCAL_FILE_SEGMENTS;
 const FILTER_CHIPS = LOCAL_MEDIA_FILTERS;
@@ -69,25 +63,25 @@ export function useLibraryScreen(navigation: LibraryScreenProps['navigation']) {
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
   /**
-   * The Library FAB's own bottom offset.
+   * The app's ONE bottom-chrome rule.
    *
-   * A FAB floats: one spacing step above the safe area, overlapping
-   * whatever is under it. This used to be `insets.bottom + 104` — the
-   * clearance for the mini player (56) plus the floating bottom tab
-   * bar (48) the app used to have. The tab bar was deleted in v11
-   * Wave 1 and the number was never revised, so the button hung 104 dp
-   * above the bottom edge. The Movies, Music, Podcasts, Radio and Live
-   * TV FABs have always used `insets.bottom + spacing.lg`.
+   * A FAB floats: it overlaps whatever is under it, by design. But it
+   * has to clear the bottom chrome — and the bottom chrome is either
+   * the safe area or the mini-player dock, whichever is taller. This
+   * used to be `insets.bottom + 104`, the clearance for the mini player
+   * (56) plus the floating bottom tab bar (48) the app used to have.
+   * The tab bar was deleted in v11 Wave 1 and the number was never
+   * revised. See `infrastructure/player/miniPlayerChrome`.
    */
-  const fabBottomInset = insets.bottom + spacing.lg;
+  const bottomChromeInset = useBottomChromeInset();
+  const fabBottomInset = bottomChromeInset;
   /**
    * The scroll padding that lets the last row clear the FAB.
    *
    * It has to reach the FAB's TOP edge, or the last row stops under
    * the button instead of above it.
    */
-  const contentBottomInset =
-    insets.bottom + spacing.lg + LIBRARY_FAB_SIZE + spacing.md;
+  const contentBottomInset = bottomChromeInset + FAB_SIZE + spacing.md;
   const {openPlayer} = useResumeAwareLaunch();
   // V15 Phase 64: `useOpenPlaylist` absorbs the "play all" two-step
   // pattern (entries extraction + start-track dispatch + openPlayer).

@@ -17,7 +17,7 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {FilterChips, type FilterChipItem} from '../../../components/utility/FilterChips';
-import {BrowseFab} from './BrowseFab';
+import {Fab} from '../../../components/core/Fab/Fab';
 import {FilterSheet, type FilterSheetGroup} from '../../../components/sheets/FilterSheet/FilterSheet';
 import {useSectionSearch} from '../../../hooks/useSectionSearch';
 import type {SectionOptionsApi} from '../../../hooks/useSectionOptions';
@@ -127,7 +127,8 @@ export const BrowseLayout: React.FC<Props> = ({
 
       <View style={styles.content}>{config.renderContent(ctx)}</View>
 
-      <BrowseFab
+      <Fab
+        icon="sliders"
         onPress={() => setSheetVisible(true)}
         accessibilityLabel={`Filter ${config.title} options`}
         visible={hasOptions}

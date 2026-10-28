@@ -1,9 +1,6 @@
 import React, {useCallback, useEffect} from 'react';
 import {View, FlatList, RefreshControl} from 'react-native';
-import {
-  homeScreenStyles as styles,
-  HOME_FAB_SIZE,
-} from './styles/HomeScreen.styles';
+import {homeScreenStyles as styles} from './styles/HomeScreen.styles';
 import {spacing} from '../../theme/tokens';
 import {type HomeScreenProps} from '../../navigation/types';
 import {useHomeScreen} from './hooks/useHomeScreen';
@@ -29,12 +26,16 @@ import {GenreChipsShelf} from './components/GenreChipsShelf';
 // RadioCategoriesShelf, LiveTVCategoriesShelf, AudiobooksShelf,
 // ArchiveShelf, ShowsShelf) were removed with their handlers.
 import {BrowseAllShelf} from './components/BrowseAllShelf';
-import {HomeFab} from './components/HomeFab';
+import {Fab, FAB_SIZE} from '../../components/core/Fab/Fab';
+import {useBottomChromeInset} from '../../infrastructure/player/miniPlayerChrome';
 import {mark, logStartupSummary} from '../../utils/startupPerf';
 
 // ── Screen ──
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
+  // The app's ONE bottom-chrome rule: the safe area, or the mini-player
+  // dock if one is up, plus a spacing step.
+  const bottomChromeInset = useBottomChromeInset();
   const {
     colors,
     insets,
@@ -250,13 +251,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
             // 56 dp — or the last section stops UNDER the button
             // instead of above it.
             //
-            // The number used to be `insets.bottom + 100 + 56`. The
-            // `100` was the clearance for the floating bottom tab bar
-            // the app used to have (60 dp plus a 10 dp margin); that
-            // bar was deleted in v11 Wave 1 and the offset was never
-            // revised. The app's other five FAB screens (Movies, Music,
-            // Podcasts, Radio, Live TV) have always used this shape.
-            paddingBottom: insets.bottom + spacing.lg + HOME_FAB_SIZE + spacing.md,
+            // `bottomChromeInset` is the app's ONE bottom-chrome rule
+            // (see `infrastructure/player/miniPlayerChrome`): the safe
+            // area, or the mini-player dock if one is up, plus a spacing
+            // step. The FAB's own height goes on top so the last row
+            // clears the BUTTON.
+            paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -274,7 +274,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         }
       />
 
-      <HomeFab onPress={handleOpenMedia} />
+      <Fab
+        icon="play"
+        onPress={handleOpenMedia}
+        accessibilityLabel="Play media file"
+      />
     </View>
   );
 };

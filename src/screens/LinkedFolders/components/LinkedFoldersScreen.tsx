@@ -10,6 +10,8 @@ import {
   Dimensions,
 } from 'react-native';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeBand} from '../../../infrastructure/player/miniPlayerChrome';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import LinearGradient from 'react-native-linear-gradient';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
@@ -268,6 +270,8 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
   const {type} = route.params;
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  const bottomChromeBand = useBottomChromeBand();
+  const bottomChromeInset = useBottomChromeInset();
   const nav = useNavigation<any>();
   const isVideo = type === 'video';
 
@@ -340,7 +344,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
         scrollContent: {
           paddingTop: spacing.lg,
           paddingHorizontal: spacing.lg,
-          paddingBottom: insets.bottom + spacing.xxxl + 60, // room for sticky button
+          paddingBottom: bottomChromeBand + spacing.xxxl + 60, // room for sticky button
         },
         centerContainer: {
           flex: 1,
@@ -373,7 +377,7 @@ export const LinkedFoldersScreen: React.FC<Props> = ({route}) => {
           bottom: 0,
           paddingHorizontal: spacing.lg,
           paddingTop: spacing.md,
-          paddingBottom: insets.bottom + spacing.lg,
+          paddingBottom: bottomChromeInset,
           backgroundColor: colors.background.primary,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.border.subtle,

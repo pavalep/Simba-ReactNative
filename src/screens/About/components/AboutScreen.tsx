@@ -10,7 +10,8 @@ import {
   FlatList,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {useAccessibility} from '../../../hooks/useAccessibility';
 import {spacing, radius} from '../../../theme/tokens';
@@ -120,7 +121,9 @@ const SHARE_MESSAGE = `Simba Player — your media, your way. Watch videos, list
 export const AboutScreen: React.FC<Props> = ({navigation}) => {
   const {colors, isDark} = useTheme();
   const {reduceMotion} = useAccessibility();
-  const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the
+  // mini-player dock if one is up, plus a spacing step.
+  const bottomChromeInset = useBottomChromeInset();
   const [resetVisible, setResetVisible] = useState(false);
 
   // ── Animations ───────────────────────────────────────────
@@ -234,7 +237,7 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
         },
         footer: {
           alignItems: 'center',
-          paddingBottom: insets.bottom + spacing.lg,
+          paddingBottom: bottomChromeInset,
           paddingTop: spacing.md,
         },
         resetButton: {
@@ -242,7 +245,7 @@ export const AboutScreen: React.FC<Props> = ({navigation}) => {
           paddingHorizontal: spacing.xxl,
         },
       }),
-    [colors, insets.bottom],
+    [colors, bottomChromeInset],
   );
 
   const handleLinkPress = useCallback(

@@ -22,6 +22,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 
 import type {RootStackScreenProps} from '../../../navigation/types';
@@ -46,6 +47,9 @@ const SOURCE_TOGGLE: Array<{key: 'search' | 'browse'; label: string}> = [
 export const ShowsScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the
+  // mini-player dock if one is up, plus a spacing step.
+  const bottomChromeInset = useBottomChromeInset();
   const toast = useToast();
   const {initialTab, initialGenre} = route.params ?? {};
 
@@ -203,7 +207,7 @@ export const ShowsScreen: React.FC<Props> = ({navigation, route}) => {
               </AppText>
             </TouchableOpacity>
           )}
-          contentContainerStyle={{paddingBottom: insets.bottom + 56 + 12}}
+          contentContainerStyle={{paddingBottom: bottomChromeInset}}
           showsVerticalScrollIndicator={false}
           onEndReached={() => {
             if (hasNextPage && !isLoadingMore) fetchNextPage();

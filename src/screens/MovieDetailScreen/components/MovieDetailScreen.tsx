@@ -13,6 +13,7 @@ import {
   type ListRenderItemInfo,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeBand} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
@@ -58,7 +59,7 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {identifier, title: routeTitle} = route.params;
   const {item, isLoading, error, retry} = useMovieDetailScreen(identifier);
   const {colors} = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomChromeBand = useBottomChromeBand();
 
   // W9.5: this screen used to read its own bookmark and pass
   // `startPositionMs: savedBookmark.position ?? 0`. That was wrong
@@ -390,7 +391,7 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
           styles.playButtonContainer,
           {
             backgroundColor: colors.background.primary,
-            paddingBottom: insets.bottom + spacing.md,
+            paddingBottom: bottomChromeBand + spacing.md,
           },
         ]}>
         <TouchableOpacity

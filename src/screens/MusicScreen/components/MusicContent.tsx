@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {FAB_SIZE} from '../../../components/core/Fab/Fab';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {MUSIC_CATEGORIES} from '../../../constants/musicCategories';
@@ -30,7 +31,10 @@ function genreLabel(genre: string): string {
 export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const {colors} = useTheme();
   const styles = useMemo(() => createMusicScreenStyles(), []);
-  const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the mini-player
+  // dock if one is up, plus a spacing step. The FAB's own height goes
+  // on top so the last row clears the BUTTON.
+  const bottomChromeInset = useBottomChromeInset();
   const {
     items,
     hasLoaded,
@@ -111,7 +115,7 @@ export const MusicContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
         )}
         contentContainerStyle={[
           styles.listContent,
-          {paddingBottom: insets.bottom + spacing.lg + 56 + spacing.md},
+          {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
           listState ? styles.listSlotGrow : null,
         ]}
         ListEmptyComponent={

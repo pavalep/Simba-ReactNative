@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../../theme';
 import {AppText} from '../../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
@@ -112,6 +113,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
+  const bottomChromeInset = useBottomChromeInset();
   const currentFile = usePlayerStore(s => s.currentFile);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
@@ -225,7 +227,7 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         scrollContent: {
           paddingHorizontal: 20,
           paddingTop: 8,
-          paddingBottom: insets.bottom + spacing.lg,
+          paddingBottom: bottomChromeInset,
         },
         artistHeader: {
           alignItems: 'center',

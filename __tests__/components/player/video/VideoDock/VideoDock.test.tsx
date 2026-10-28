@@ -42,6 +42,7 @@ import {VideoDock} from '../../../../../src/components/player/video/VideoDock/Vi
 import {ThemeProvider} from '../../../../../src/theme';
 import {useNowPlayingStore} from '../../../../../src/state/nowPlayingStore';
 import {usePresentationStore} from '../../../../../src/state/usePresentationStore';
+import {MINI_PLAYER_HEIGHT} from '../../../../../src/infrastructure/player/miniPlayerChrome';
 
 type MeasureCallback = (
   x: number,
@@ -220,6 +221,20 @@ describe('VideoDock', () => {
       ...[getByTestId('video-dock').props.style].flat(Infinity),
     );
     expect(flat.backgroundColor).toBeUndefined();
+  });
+
+  it('paints the height the app reserves for it', async () => {
+    // `MINI_PLAYER_HEIGHT` is the number every screen uses to clear the
+    // dock, so it has to be the number the dock PAINTS. If the two
+    // drifted, the clearance would be clearing a band that is not there.
+    startVideoSession();
+    const {getByTestId} = await renderDock();
+
+    const flat = Object.assign(
+      {},
+      ...[getByTestId('video-dock').props.style].flat(Infinity),
+    );
+    expect(flat.height).toBe(MINI_PLAYER_HEIGHT);
   });
 
   it('ignores a zero-size measurement instead of publishing an unusable rect', async () => {

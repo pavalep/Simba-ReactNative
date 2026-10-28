@@ -1,6 +1,7 @@
 import React, {ReactNode} from 'react';
 import {View, ScrollView, ViewStyle} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeBand} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 
@@ -21,12 +22,15 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
 }) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the
+  // mini-player dock if one is up, plus a spacing step.
+  const bottomChromeBand = useBottomChromeBand();
 
   const rootStyle: ViewStyle = {
     flex: 1,
     backgroundColor: colors.background.primary,
     paddingTop: insets.top,
-    paddingBottom: insets.bottom,
+    paddingBottom: bottomChromeBand,
   };
 
   const contentStyle: ViewStyle = {

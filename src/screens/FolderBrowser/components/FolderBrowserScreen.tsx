@@ -11,6 +11,7 @@ import {Placeholder} from '../../../components/feedback/Placeholder';
 import LinearGradient from 'react-native-linear-gradient';
 import RNFS from 'react-native-fs';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {isVideoFile} from '../../../utils/timeAgo';
 import {getMediaType} from '../../../services/fileService';
@@ -59,6 +60,7 @@ interface DirItem {
 export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  const bottomChromeInset = useBottomChromeInset();
   const {playlists, addItem, createPlaylist} = usePlaylists();
   const {openPlayer} = useResumeAwareLaunch();
 
@@ -373,7 +375,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         },
         listContent: {
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 20,
+          paddingBottom: bottomChromeInset,
           flexGrow: 1,
         },
         listEmptyContent: {
@@ -422,7 +424,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
           position: 'absolute',
           left: 20,
           right: 20,
-          bottom: insets.bottom + 16,
+          bottom: bottomChromeInset,
           backgroundColor: colors.background.elevated,
           borderRadius: 16,
           paddingVertical: 14,

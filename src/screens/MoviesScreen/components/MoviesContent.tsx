@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {FAB_SIZE} from '../../../components/core/Fab/Fab';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {MOVIE_CATEGORIES} from '../../../constants/movieCategories';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -14,7 +15,10 @@ import type {SectionBrowseConfig, SectionRenderContext} from '../types';
 export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
   const {colors} = useTheme();
   const styles = useMemo(() => createMoviesScreenStyles(colors), [colors]);
-  const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the mini-player
+  // dock if one is up, plus a spacing step. The FAB's own height goes
+  // on top so the last row clears the BUTTON.
+  const bottomChromeInset = useBottomChromeInset();
   const {
     data,
     refetch,
@@ -94,7 +98,7 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
         columnWrapperStyle={styles.gridRow}
         contentContainerStyle={[
           styles.listContent,
-          {paddingBottom: insets.bottom + spacing.md},
+          {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
         ]}
         ListEmptyComponent={
           !hasLoaded

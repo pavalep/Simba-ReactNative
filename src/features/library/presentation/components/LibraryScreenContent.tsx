@@ -33,14 +33,14 @@ import {
   CONTENT_MODE_OPTIONS,
   PLAYLIST_FILTER_TYPES,
   GRID_GAP,
-  LIBRARY_FAB_SIZE,
 } from '../hooks/useLibraryScreen';
+import {Fab} from '../../../../components/core/Fab/Fab';
 
 type Props = LibraryScreenProps;
 
 export const LibraryScreen: React.FC<Props> = ({navigation}) => {
   const {
-    colors, isDark, fabBottomInset, contentBottomInset,
+    colors, isDark, contentBottomInset,
     activeSegment, setActiveSegment,
     contentMode, setContentMode, showDropdown, setShowDropdown,
     viewMode, setViewMode,
@@ -245,27 +245,9 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         playlistFilterRail: {flexDirection: 'row', gap: spacing.sm},
         gridRow: {flexDirection: 'row', gap: GRID_GAP},
         gridCol: {flex: 1},
-        fabOverlay: {
-          position: 'absolute',
-          bottom: fabBottomInset,
-          right: 20,
-          zIndex: 10,
-        },
-        fab: {
-          width: LIBRARY_FAB_SIZE, height: LIBRARY_FAB_SIZE, borderRadius: 28,
-          backgroundColor: colors.accent.gold,
-          alignItems: 'center', justifyContent: 'center',
-          elevation: 8,
-          shadowColor: colors.accent.gold,
-          shadowOffset: {width: 0, height: 4},
-          shadowOpacity: 0.35, shadowRadius: 8,
-        },
-        fabText: {
-          fontSize: 28, lineHeight: 30,
-          color: colors.text.inverse, fontWeight: '400',
-        },
+
       }),
-    [fabBottomInset, contentBottomInset, colors],
+    [contentBottomInset, colors],
   );
 
   // ── Renders ──
@@ -405,11 +387,11 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
         <LibraryPlaylistsSegment playlists={filteredPlaylists} colors={colors} onPlaylistCardPress={handlePlaylistCardPress} onPlayAllPlaylist={handlePlayAllPlaylist} onShufflePlaylist={handleShufflePlaylist} />
       </ScrollView>
 
-      <View style={styles.fabOverlay} pointerEvents="box-none">
-        <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={() => setCreateModalVisible(true)}>
-          <AppText style={styles.fabText}>+</AppText>
-        </TouchableOpacity>
-      </View>
+      <Fab
+        label="+"
+        onPress={() => setCreateModalVisible(true)}
+        accessibilityLabel="Create playlist"
+      />
     </>
   );
 

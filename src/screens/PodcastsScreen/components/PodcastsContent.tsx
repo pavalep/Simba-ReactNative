@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useRef} from 'react';
 import {FlatList, RefreshControl, View} from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {FAB_SIZE} from '../../../components/core/Fab/Fab';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import type {PodcastCategory} from '../../../constants/podcastCategories';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -23,7 +24,10 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
 }) => {
   const {colors} = useTheme();
   const styles = useMemo(() => createPodcastsScreenStyles(colors), [colors]);
-  const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the mini-player
+  // dock if one is up, plus a spacing step. The FAB's own height goes
+  // on top so the last row clears the BUTTON.
+  const bottomChromeInset = useBottomChromeInset();
   const {
     items,
     isLoading,
@@ -101,7 +105,7 @@ export const PodcastsContent: React.FC<PodcastsContentProps> = ({
             keyExtractor={item => String(item.id)}
             contentContainerStyle={[
               styles.listContent,
-              {paddingBottom: insets.bottom + spacing.lg + 56 + spacing.md},
+              {paddingBottom: bottomChromeInset + FAB_SIZE + spacing.md},
               isEmptySlot ? styles.listSlotGrow : null,
             ]}
             ListEmptyComponent={

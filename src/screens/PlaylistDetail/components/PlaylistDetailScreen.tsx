@@ -12,6 +12,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import FastImage from 'react-native-fast-image';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {
   usePlaylist,
@@ -108,6 +109,9 @@ function parseImportedJson(content: string): PlaylistItem[] {
 export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the
+  // mini-player dock if one is up, plus a spacing step.
+  const bottomChromeInset = useBottomChromeInset();
   const {playlistId, playlistName} = route.params;
   const {addToQueue: addToQueueStore, prependToQueue: prependToQueueStore} = useQueue();
   const {renamePlaylist, deletePlaylist, removeItem, reorderItems, clearPlaylist, importPlaylist} = usePlaylists();
@@ -546,7 +550,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         },
         listContent: {
           paddingHorizontal: spacing.lg,
-          paddingBottom: insets.bottom + 20,
+          paddingBottom: bottomChromeInset,
         },
         itemRow: {
           flexDirection: 'row',

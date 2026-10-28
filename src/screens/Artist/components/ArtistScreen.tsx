@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -42,6 +43,9 @@ function formatDuration(sec: number): string {
 export const ArtistScreen: React.FC<ArtistScreenProps> = () => {
   const {colors, isDark} = useTheme();
   const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the
+  // mini-player dock if one is up, plus a spacing step.
+  const bottomChromeInset = useBottomChromeInset();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const {
@@ -184,7 +188,7 @@ export const ArtistScreen: React.FC<ArtistScreenProps> = () => {
         onScroll={onScroll}
         contentContainerStyle={[
           styles.scrollContent,
-          {paddingBottom: insets.bottom + spacing.lg},
+          {paddingBottom: bottomChromeInset},
         ]}>
         {/* ── Artist Header (parallax) ── */}
         <ArtistHeader

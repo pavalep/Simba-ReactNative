@@ -160,6 +160,7 @@ import {PlayerChrome} from '../../../src/components/player/PlayerChrome';
 import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
 import {useAudioPresentationStore} from '../../../src/state/useAudioPresentationStore';
 import {usePresentationStore} from '../../../src/state/usePresentationStore';
+import {MINI_PLAYER_HEIGHT} from '../../../src/infrastructure/player/miniPlayerChrome';
 
 /**
  * RNTL 14 returns a Promise from `act`, and it MUST be awaited. An
@@ -197,6 +198,35 @@ beforeEach(async () => {
   });
 });
 
+/** The minimal shape of a node in RNTL's JSON tree. */
+interface JsonNode {
+  props?: {style?: unknown};
+  children?: JsonNode[] | null;
+}
+
+/** Flatten a style that may be a single object or an array of them. */
+function flattenStyle(style: unknown): Record<string, unknown> {
+  if (!style) return {};
+  const list = (Array.isArray(style) ? style : [style]) as unknown as Record<
+    string,
+    unknown
+  >[];
+  return Object.assign({}, ...list.flat(Infinity));
+}
+
+/** The dock's root: the absolutely-positioned bar at zIndex 30. */
+function findDockRoot(node: JsonNode | JsonNode[] | null): JsonNode | null {
+  if (node == null) return null;
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      const found = findDockRoot(child);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (flattenStyle(node.props?.style).zIndex === 30) return node;
+  return findDockRoot(node.children ?? null);
+}
 describe('PlayerChrome — visibility', () => {
   it('renders nothing when no track is loaded', async () => {
     const {toJSON} = await render(<PlayerChrome />);
@@ -236,6 +266,26 @@ describe('PlayerChrome — visibility', () => {
     await seedSession('video');
     const {toJSON} = await render(<PlayerChrome />);
     expect(toJSON()).toBeNull();
+  });
+
+  it('paints the height the app reserves for it', async () => {
+    // The audio lane's mini bar and the video lane's dock are two
+    // components, and the rule that every screen follows is ONE number.
+    // Both docks have to paint it, or the clearance is clearing a band
+    // that is not there.
+    await seedSession();
+    await act(async () => {
+      useAudioPresentationStore.setState({mode: 'mini'});
+    });
+    const {toJSON} = await render(<PlayerChrome />);
+
+    // The dock's ROOT is the absolutely-positioned bar at the window
+    // bottom; the `audio-dock` testID is its inner content. The root is
+    // the one at zIndex 30 — the expanded player's root is 40 and is not
+    // rendered at all in this mode.
+    const root = findDockRoot(toJSON());
+    expect(root).toBeTruthy();
+    expect(flattenStyle(root?.props.style).height).toBe(MINI_PLAYER_HEIGHT);
   });
 
   it('does not offer audio chrome on a video session', async () => {

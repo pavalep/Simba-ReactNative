@@ -9,7 +9,8 @@
 
 import React, {useCallback, useMemo} from 'react';
 import {FlatList, StyleSheet, TouchableOpacity, View} from 'react-native';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
@@ -147,7 +148,7 @@ const DownloadRow: React.FC<DownloadRowProps> = React.memo(
 
 export const DownloadsScreen: React.FC<DownloadsScreenProps> = () => {
   const {colors, isDark} = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomChromeInset = useBottomChromeInset();
   const h = useDownloadsScreen();
   const glowOpacity = isDark ? 0.22 : 0.12;
 
@@ -222,7 +223,7 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.listContent,
-            {paddingBottom: insets.bottom + spacing.lg + 12},
+            {paddingBottom: bottomChromeInset},
           ]}
           ListHeaderComponent={
             <View>

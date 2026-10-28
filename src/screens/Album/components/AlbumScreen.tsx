@@ -7,6 +7,7 @@ import React, {useMemo, useRef} from 'react';
 import {View, Animated, TouchableOpacity, StyleSheet} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -26,6 +27,9 @@ const HERO_HEIGHT = 400;
 export const AlbumScreen: React.FC<AlbumScreenProps> = () => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the
+  // mini-player dock if one is up, plus a spacing step.
+  const bottomChromeInset = useBottomChromeInset();
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const {
@@ -81,7 +85,7 @@ export const AlbumScreen: React.FC<AlbumScreenProps> = () => {
         onScroll={onScroll}
         contentContainerStyle={[
           styles.scrollContent,
-          {paddingBottom: insets.bottom + spacing.lg},
+          {paddingBottom: bottomChromeInset},
         ]}>
         {/* ── Album hero (parallax) ── */}
         <AlbumHero

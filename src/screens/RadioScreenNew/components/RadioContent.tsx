@@ -21,7 +21,8 @@ import type {RootStackScreenProps} from '../../../navigation/types';
 import {useRadioBrowser} from '../hooks/useRadioBrowser';
 import {RadioStationCard, toRow} from './RadioStationCard';
 import {FilterSheet} from '../../../components/sheets/FilterSheet/FilterSheet';
-import {SectionFab} from '../browse/Fab';
+import {Fab} from '../../../components/core/Fab/Fab';
+import {useKeyboard} from '../../../hooks/useKeyboard';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {InternalHeader} from '../../../components/layout/InternalHeader/InternalHeader';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -109,6 +110,10 @@ const ActiveFilterChips: React.FC<{
 export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  // The button steps aside while the keyboard is up — the sheet it
+  // opens needs the room, and a floating button over the keyboard is
+  // a control nobody can reach.
+  const {keyboardVisible} = useKeyboard();
   const toast = useToast();
   const haptics = useHaptics();
   const {openPlayer} = useResumeAwareLaunch();
@@ -370,10 +375,12 @@ export const RadioScreenNew: React.FC<Props> = ({navigation, route}) => {
 
       {content}
 
-      <SectionFab
+      <Fab
+        icon="sliders"
         onPress={() => setSheetVisible(true)}
         accessibilityLabel="Filter radio stations"
         badgeCount={activeFilterCount}
+        visible={!keyboardVisible}
       />
 
       <FilterSheet

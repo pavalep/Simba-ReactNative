@@ -17,7 +17,8 @@ import {
   FlatList,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
@@ -50,7 +51,7 @@ const SOURCE_TOGGLE: Array<{id: 'local' | 'streaming'; label: string}> = [
 
 export const GenreScreen: React.FC<GenreScreenProps> = ({navigation, route}) => {
   const {colors} = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomChromeInset = useBottomChromeInset();
   const {openPlayer} = useResumeAwareLaunch();
   const {genre: routeGenre, initialTab} = route.params ?? {};
   const genre = routeGenre ?? '';
@@ -112,7 +113,7 @@ export const GenreScreen: React.FC<GenreScreenProps> = ({navigation, route}) => 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: spacing.lg,
-          paddingBottom: insets.bottom + 40,
+          paddingBottom: bottomChromeInset,
         }}>
         <View style={styles.hero}>
           <View style={[styles.genreIcon, {backgroundColor: colors.accent.goldDim}]}>

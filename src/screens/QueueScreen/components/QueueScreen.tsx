@@ -17,7 +17,8 @@ import {
   PanResponder,
   Modal,
 } from 'react-native';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
@@ -375,7 +376,7 @@ type QueueSection = {
 
 export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
   const {colors} = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomChromeInset = useBottomChromeInset();
   const {
     currentTrack,
     upNext,
@@ -513,7 +514,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
         ListEmptyComponent={hasContent ? null : listEmptyComponent}
         contentContainerStyle={[
           styles.listContent,
-          {paddingBottom: insets.bottom + 40},
+          {paddingBottom: bottomChromeInset},
         ]}
         showsVerticalScrollIndicator={false}
         stickySectionHeadersEnabled={false}

@@ -101,6 +101,12 @@ import {useAudioPresentationStore} from '../../../../state/useAudioPresentationS
 import {useToast} from '../../../feedback/Toast';
 import {PlayerControl, CONTROL_PRIMARY_TARGET} from '../../video/PlayerControl/PlayerControl';
 import {AudioSeekBar} from '../AudioSeekBar/AudioSeekBar';
+import {
+  MINI_PLAYER_ART_SIZE,
+  MINI_PLAYER_HEIGHT,
+  MINI_PLAYER_PROGRESS_HEIGHT,
+  MINI_PLAYER_ROW_PADDING,
+} from '../../../../infrastructure/player/miniPlayerChrome';
 
 /** off -> all -> one -> off. Spotify and Apple Music use exactly this
  *  three-state cycle; mpv's own vocabulary is none / playlist / file. */
@@ -111,11 +117,12 @@ const NEXT_REPEAT: Record<RepeatMode, RepeatMode> = {
 };
 
 /** The dock's leading square. 44 is the artwork's own size and the
- *  touch-target floor, so the row meets both at once. */
-const ART_SIZE = 44;
+ *  touch-target floor, so the row meets both at once. The number is
+ *  owned by `miniPlayerChrome`, which owns the dock's height. */
+const ART_SIZE = MINI_PLAYER_ART_SIZE;
 
 /** The dock's progress hairline. */
-const PROGRESS_HEIGHT = 2;
+const PROGRESS_HEIGHT = MINI_PLAYER_PROGRESS_HEIGHT;
 
 export const AudioPlayer: React.FC = () => {
   const {colors} = useTheme();
@@ -553,8 +560,15 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 30,
+    // The dock's height is DECLARED, not emergent: it is the same number
+    // every screen uses to clear it, so the band the dock paints and the
+    // band the app reserves cannot drift apart. This bar carries a
+    // hairline border, so its content box is one dp shorter than the
+    // video dock's — the artwork sits 3 dp off the window edge instead
+    // of 4, which is the border's space and not a mistake.
+    height: MINI_PLAYER_HEIGHT,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingBottom: spacing.xs,
+    paddingBottom: MINI_PLAYER_ROW_PADDING,
   },
   // `display: none` rather than unmounting: the parts must stay mounted
   // so that switching presentation does not tear down their
@@ -644,7 +658,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xs,
+    paddingTop: MINI_PLAYER_ROW_PADDING,
   },
   dockExpandTarget: {
     flex: 1,

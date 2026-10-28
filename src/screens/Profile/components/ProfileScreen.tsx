@@ -12,7 +12,8 @@ import {
   TouchableOpacity,
   FlatList,
 } from 'react-native';
-import {useSafeAreaInsets, SafeAreaView} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {Avatar} from '../../../components/core/Avatar/Avatar';
@@ -54,7 +55,7 @@ const THEME_LABEL: Record<'system' | 'dark' | 'light', string> = {
 
 export const ProfileScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
-  const insets = useSafeAreaInsets();
+  const bottomChromeInset = useBottomChromeInset();
   const toast = useToast();
   const {openPlayer} = useResumeAwareLaunch();
 
@@ -361,7 +362,7 @@ export const ProfileScreen: React.FC<Props> = ({navigation}) => {
           </View>
         </View>
 
-        <View style={{height: insets.bottom + 24}} />
+        <View style={{height: bottomChromeInset}} />
       </ScrollView>
 
       {/* ── Confirm dialogs ── */}

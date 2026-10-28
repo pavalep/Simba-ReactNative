@@ -1,6 +1,7 @@
 import {useCallback, useMemo, useState} from 'react';
 import {useTheme} from '../../../theme';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useSettingsStore} from '../../../state';
 
 import {spacing} from '../../../theme/tokens';
@@ -47,10 +48,13 @@ export function useSettingsScreen() {
    * floating bottom tab bar (48) the app used to have. The tab bar was
    * deleted in v11 Wave 1 and the number was never revised, so every
    * Settings screen carried 48 dp of clearance for a bar that no longer
-   * existed. `insets.bottom + spacing.lg` is the shape the app's other
-   * full-height screens already use (`AboutScreen`, `DownloadsScreen`).
+   * existed.
+   *
+   * It is now the app's ONE bottom-chrome rule: the safe area, or the
+   * mini-player dock if one is up, plus a spacing step. See
+   * `infrastructure/player/miniPlayerChrome`.
    */
-  const bottomChromeInset = insets.bottom + spacing.lg;
+  const bottomChromeInset = useBottomChromeInset();
 
   const entrance = useAnimatedEntrance(SECTION_COUNT, {staggerDelay: 80});
   const {startScan, isScanning} = useMediaScanner();

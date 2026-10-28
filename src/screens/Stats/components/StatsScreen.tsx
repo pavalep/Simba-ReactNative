@@ -7,6 +7,7 @@
 import React, {useMemo} from 'react';
 import {View, StyleSheet, ScrollView, FlatList, TouchableOpacity} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -28,6 +29,9 @@ function dayKey(d: Date): string {
 export const StatsScreen: React.FC<Props> = ({navigation}) => {
   const {colors} = useTheme();
     const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the
+  // mini-player dock if one is up, plus a spacing step.
+  const bottomChromeInset = useBottomChromeInset();
   const {openPlayer} = useResumeAwareLaunch();
 
   const {list: recentFiles} = useRecentHistory();
@@ -242,7 +246,7 @@ export const StatsScreen: React.FC<Props> = ({navigation}) => {
             </View>
           )}
 
-          <View style={{height: insets.bottom + 24}} />
+          <View style={{height: bottomChromeInset}} />
         </ScrollView>
       )}
     </View>

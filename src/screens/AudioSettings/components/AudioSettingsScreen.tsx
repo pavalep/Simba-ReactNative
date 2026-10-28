@@ -6,7 +6,8 @@ import {
   Switch,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import {useBottomChromeBand} from '../../../infrastructure/player/miniPlayerChrome';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
@@ -47,7 +48,9 @@ type PickerKind = 'sampleRate' | 'replayGain' | 'audioDelay' | null;
 
 export const AudioSettingsScreen: React.FC<Props> = () => {
   const {colors} = useTheme();
-  const insets = useSafeAreaInsets();
+  // The app's ONE bottom-chrome rule: the safe area, or the
+  // mini-player dock if one is up, plus a spacing step.
+  const bottomChromeBand = useBottomChromeBand();
   const nav = useNavigation<any>();
 
   // ── Slice state (Phase 45: all controls live in settingsSlice) ──
@@ -106,7 +109,7 @@ export const AudioSettingsScreen: React.FC<Props> = () => {
         },
         scrollContent: {
           padding: spacing.lg,
-          paddingBottom: spacing.xxxl + insets.bottom,
+          paddingBottom: spacing.xxxl + bottomChromeBand,
         },
         card: {
           borderRadius: radius.md,
@@ -117,7 +120,7 @@ export const AudioSettingsScreen: React.FC<Props> = () => {
           overflow: 'hidden',
         },
       }),
-    [colors, insets.bottom],
+    [colors, bottomChromeBand],
   );
 
   return (

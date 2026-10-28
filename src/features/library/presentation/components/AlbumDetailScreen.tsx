@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView, useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useBottomChromeInset} from '../../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../../theme';
 import {AppText} from '../../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
@@ -49,6 +50,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const {theme, colors} = useTheme();
   const isDark = theme === 'dark';
   const insets = useSafeAreaInsets();
+  const bottomChromeInset = useBottomChromeInset();
   const {openPlayer} = useResumeAwareLaunch();
 
   const tracks = useMediaStore(s =>
@@ -146,7 +148,7 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
         scrollContent: {
           paddingHorizontal: 20,
           paddingTop: 8,
-          paddingBottom: insets.bottom + spacing.lg,
+          paddingBottom: bottomChromeInset,
         },
         albumHeader: {
           alignItems: 'center',

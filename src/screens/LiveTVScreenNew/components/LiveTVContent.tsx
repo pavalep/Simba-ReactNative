@@ -40,7 +40,8 @@ import {useHaptics} from '../../../hooks/useHaptics';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {OptionSheetDialog} from '../../../components/core/OptionSheetDialog/OptionSheetDialog';
 import {styles} from '../styles';
-import {SectionFab} from '../browse/Fab';
+import {Fab} from '../../../components/core/Fab/Fab';
+import {useKeyboard} from '../../../hooks/useKeyboard';
 import {ChannelCard, toRow} from './ChannelCard';
 import {FilterSheet} from '../../../components/sheets/FilterSheet/FilterSheet';
 import type {
@@ -104,6 +105,10 @@ const ItemSeparator: React.FC = () => {
 export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
+  // The button steps aside while the keyboard is up — the sheet it
+  // opens needs the room, and a floating button over the keyboard is
+  // a control nobody can reach.
+  const {keyboardVisible} = useKeyboard();
   const toast = useToast();
   const haptics = useHaptics();
   const {add: addBookmark} = useBookmarks();
@@ -405,10 +410,12 @@ export const LiveTVScreenNew: React.FC<Props> = ({navigation, route}) => {
 
       {content}
 
-      <SectionFab
+      <Fab
+        icon="sliders"
         accessibilityLabel="Filter channels"
         badgeCount={activeFilterCount}
         onPress={() => setSheetVisible(true)}
+        visible={!keyboardVisible}
       />
 
       <FilterSheet
