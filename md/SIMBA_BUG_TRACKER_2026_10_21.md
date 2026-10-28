@@ -515,11 +515,20 @@ Mutation-checked: 6/6 killed.
 
 ---
 
-### B-013 · P2 · lib · the deep-link path for video is dead
+### B-013 · P2 · lib · the deep-link path for video is dead — **RESOLVED in the APP (F-034)**
 
 **Symptom.** A video deep link opens nothing.
 
-**State:** open — **narrowed 2026-10-27.** The old one-line framing
+**State:** **RESOLVED in the APP (2026-10-28) — `F-034`.** The app no
+longer uses the lib's `useOpenFromUrl` at all: a deep link now launches
+through the app's own `useResumeAwareLaunch` seam, so a shared video gets a
+now-playing entry, a history checkpoint, a dock and the resume prompt, and
+the **video plays** — through the in-window launcher that every other
+video launch already used. **No lib release, no `npm install`, nothing
+breaking.** The lib's own `useOpenFromUrl` is still broken, and that is now
+bug `B-033`.
+
+The original finding, kept because the mechanism is the record:
 ("`PlayerSurface.mount()` has zero call sites, so the whole surface-registry
 path is unreachable") was right about the **mechanism** and wrong about what
 is lost.
@@ -549,6 +558,31 @@ dead.
 
 **Why the app is unaffected for normal playback.** The app drives video
 in-window through `useLaunchPlayback`, not `openPlayer({type:'video'})`.
+
+**What the fix was (2026-10-28).** `src/infrastructure/player/
+useDeepLinkLaunch.ts` — the APP's deep-link launcher. It does the three
+things the lib's hook did (filter the scheme, derive the title, classify
+the lane) and then calls the app's `useResumeAwareLaunch().openPlayer(...)`.
+The video lane's `openPlayer` records the session and hands the load to
+`useInWindowVideoLaunch` — the path that already works — instead of asking
+the bridge whether a surface exists.
+
+**One owner for "which lane is this file in".** The app already answered
+that question in `services/fileService`, and the lib answered it AGAIN in
+module-private code (`AUDIO_EXTENSIONS` / `VIDEO_EXTENSIONS` /
+`deriveDisplayName`) that the app could not reuse. Two tables, two chances
+to drift — and the app had to copy the lib's to use it at all. The table
+now lives in **`src/utils/mediaUri.ts`** (`mediaTypeFromUri`,
+`mediaTypeFromExtension`, `displayNameFromUri`, `extensionOf`), and the
+picker, the folder browser and the deep link all read it. It cannot live in
+`services/fileService`, because that module imports the player barrel, so
+the player layer importing it back would be a cycle.
+
+**Mutation-checked.** The new suite kills the lib-path mutant (all four
+tests fail, because the lib's path records no session) and the
+no-scheme-filter mutant (the "refuses a URI the app does not handle" test
+fails). `jest.setup.ts` in the **lib** still mocks `isSurfaceMounted` as
+`true` — see `B-033`.
 
 ---
 
@@ -1092,6 +1126,50 @@ that looks like one.
 
 ---
 
+### B-033 · P2 · lib · `isSurfaceMounted()` always answers false — and the lib's own mock answers true
+
+**Symptom.** `getMpvPlayerModule().isSurfaceMounted()` returns `false` even
+while a video surface is on screen. The lib's `openPlayer({type:'video'})`
+therefore **always resolves `false`**, so any consumer that asks the bridge
+to open a video gets a refusal.
+
+**State:** open. **The app no longer depends on this** (`B-013` is
+resolved) — this is the LIB's public API being wrong on its own.
+
+**The mechanism (verified 2026-10-28).** `PlayerSurface.kt` holds the live
+view in a `WeakReference<MpvRenderView>` (`viewRef`). `attach()` is the
+**only** writer of that field, and it has **ZERO** call sites repo-wide;
+`mount()` has zero call sites too. So `viewRef` is never non-null,
+`current()` always returns `null`, and
+`MpvBridgeModule.isSurfaceMounted()` (`PlayerSurface.current() != null`)
+always answers `false`.
+
+**Why nobody noticed: the lib's own jest mock lies.**
+`react-native-media-player/jest.setup.ts:173` declares
+`isSurfaceMounted: fn(() => true)` — the opposite of what the native code
+can ever return. A test that mocks a method's answer to the value the code
+never produces does not test the method; it hides the defect. (This is the
+same class as the working rule "a jest mock must match the library's API
+SURFACE" — extended to the library's *behaviour*, not just its shape.)
+
+**Two possible fixes — DECISION (2026-10-28): the LIB's registry stays
+orphaned for now.** Wire the Fabric view manager to register the surface
+it creates, **or** answer `isSurfaceMounted()` from the live view without
+the registry. The second is smaller and is what the app's own fix made
+unnecessary. Reviving `attach()` would also put the four mutators
+(`setVideoBounds` / `fillVideoBounds` / `setSurfaceVisible` /
+`boundsInWindow`) back in reach of a `LayoutParams` mutation from Kotlin —
+the Yoga hazard `MpvRenderViewManager.kt` itself warns about — and the app
+calls **none** of them. The four stay **deprecated, not removed**: removing
+them is a breaking change.
+
+**What it still needs.** A lib change (the native side, plus the jest
+mock), a release, and an app `npm install`. Until then the lib's
+`isSurfaceMounted()` is a **lie in both directions** — false in production,
+true in its own tests.
+
+---
+
 ## FIXED
 
 | ID | Sev | Lane | One line | Where |
@@ -1128,6 +1206,7 @@ that looks like one.
 | F-030 | P3 | app | The Movies grid's last row sat under the Movies FAB — its padding cleared the safe area but not the button → it now reserves the FAB's height, the way Music and Podcasts already did | app `f5/w22-close-minimise-d9` |
 | F-031 | P3 | app | The app had **six** files for one floating action button (Home's, three byte-identical catalogue copies, two more byte-identical copies, and the Library's drawn inline in a stylesheet) and they had already drifted on margin, shadow and z-index → one `components/core/Fab/Fab.tsx`, with the bottom-chrome rule in it; the Home button was the outlier and was normalised onto the treatment six of the seven already used | app `f5/w22-close-minimise-d9` |
 | F-032 | P2 | docs | The documents asserted behaviour the code never had — a §7 risk table still saying "black video is not yet attributed" and "duration never reported" after both were fixed and device-proven; `exitPlayer` still described as calling `finishAndRemoveTask()` after the Kotlin moved to `finish()`; a register calling the lib's view manager "registered nowhere" while it registers the app's `<SimbaVideo>`; and `setAutoEnterEnabled(true)` described as "already in `AndroidManifest.xml`" when **no such call exists in the app or the lib** and no `onUserLeaveHint` override exists either → every claim checked against the source and corrected in place, with the evidence kept beside the correction; the deprecated UI/UX docs annotated as superseded rather than rewritten | docs |
+| F-034 | P2 | app+lib | A deep-linked **video never played at all**, and a deep-linked audio track played where the app could not see it — the app used the **lib's** `useOpenFromUrl`, which bypassed `useResumeAwareLaunch` and asked the bridge whether a surface existed, and the bridge's answer was always "no" (`PlayerSurface.attach` has zero call sites, so `isSurfaceMounted()` is always false) → the app now owns deep links: `infrastructure/player/useDeepLinkLaunch.ts` does the scheme filter, the title and the lane, then launches through the app's own seam, so a shared file gets a now-playing entry, a history checkpoint, a dock and the resume prompt; the extension table moved to `utils/mediaUri` so the picker and the deep link read ONE table | app `f5/w22-close-minimise-d9` |
 | F-033 | P2 | tooling | W32's `tsc` gate was **red** — six type errors in the two test files that same wave added — while the wave's summary recorded `tsc → 0`; the cause was `test-renderer` resolving to **1.3.0** under the declared `^1.2.0`, which changed the tree's node type from a hand-rolled `JsonNode` to `JsonElement \| string` → the tree's type now comes from `test-renderer` itself, a text node is skipped for the string it is, and the FAB's mutually-exclusive `icon` / `label` props are built on a branch rather than spread (a spread of a union is the one shape TypeScript will not assign) | app `f5/w22-close-minimise-d9` |
 
 ---

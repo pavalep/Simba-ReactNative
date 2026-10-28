@@ -1875,13 +1875,20 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    itself: played `#C9A84C`, buffered `#95814A` (brand gold at exactly 60 %),
    empty `#474747`. The band is AHEAD of the playhead. What remains open in
    this item is the *spinner* and the *Retry* re-launch — see item 6.
-9. **The deep-link path bypasses the app's session seam.** `useOpenFromUrl`
-   (lib) calls the lib's `openPlayer` directly, not the app's
-   `useResumeAwareLaunch`, so a deep-linked file gets no now-playing entry,
-   no history checkpoint and no dock — and it is the one path where the
-   `<SimbaPlayer resumePolicy>` lookup still fires. Needs a lib-side
-   derive-only export (1.17.0) so the app can route the URI through its own
-   seam.
+9. ~~**The deep-link path bypasses the app's session seam.**~~ **RESOLVED
+   (2026-10-28) — in the APP.** The app no longer uses the lib's
+   `useOpenFromUrl`. `src/infrastructure/player/useDeepLinkLaunch.ts` does
+   the three things the lib's hook did (filter the scheme, derive the title,
+   classify the lane) and then launches through the app's own
+   `useResumeAwareLaunch` seam, so a deep-linked file gets a **now-playing
+   entry**, a **history checkpoint**, a **dock** and the **resume prompt**
+   — and a deep-linked **video plays**, through the in-window launcher every
+   other video already used. **No lib release and no `npm install`:** the
+   change is inside `src/infrastructure/player/`, and nothing breaking.
+   The lane's extension table moved to `src/utils/mediaUri.ts`, so there is
+   **ONE** owner for "which lane is this file in" — the picker, the folder
+   browser and the deep link all read it. The **lib's** own
+   `useOpenFromUrl` is still broken: that is bug `B-033`.
 10. **The `VideoController` is now dead** (new, 2026-10-19). Its last
     consumer was `VideoErrorOverlay`, and the retry now goes through the
     app's launch seam instead. `useVideoController()` has **zero** call
@@ -1902,8 +1909,12 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     `fillVideoBounds` / `setSurfaceVisible` / `boundsInWindow` are permanent
     no-ops.~~ **Corrected 2026-10-27: that last sentence was false.** Those
     four — and `current()` — are **live**, called from `MpvBridgeModule.kt`.
-    What is dead is the registry's **population**, not its API. Decision + a
-    further release — see item 21 and bug `B-013`.
+    What is dead is the registry's **population**, not its API. The **APP**
+    half is **RESOLVED (2026-10-28)** — the app no longer asks the question
+    (register item 9). The **LIB** half is still open: `isSurfaceMounted()`
+    always answers `false`, and the lib's own `jest.setup.ts` mocks it
+    `true`, so the lib's tests cannot see the defect — bug `B-033`. A
+    further release — see item 21.
 
 **Migration mechanics**
 12. `codegenConfig` `"modules"` → `"all"` — **DONE** (Stage 2).
@@ -1943,11 +1954,17 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     so `viewRef` is never non-null and `current()` always returns `null`. The
     Fabric view manager (`MpvRenderViewManager.createViewInstance`) never
     calls `PlayerSurface.attach(...)`, so the registry is **orphaned**, not
-    merely unmounted. This is the **hinge of the video deep-link
-    failure** — see bug `B-013`. **Two possible fixes:** wire the Fabric view
-    manager to register the surface it creates, **or** delete the registry and
-    answer `isSurfaceMounted()` from the live view. **DECISION required** —
-    the second is smaller, the first is what the lib's own API implies.
+    merely unmounted. This was the **hinge of the video deep-link
+    failure** — bug `B-013`, **now resolved in the APP** (register item 9:
+    the app routes deep links through its own seam and never asks).
+    **DECISION (2026-10-28): the app-side re-routing IS the fix, and the
+    lib's registry stays orphaned for now.** Wiring the Fabric view manager
+    to call `attach()` would put the four mutators (`setVideoBounds` /
+    `fillVideoBounds` / `setSurfaceVisible` / `boundsInWindow`) back in
+    reach of a `LayoutParams` mutation from Kotlin — the Yoga hazard
+    `MpvRenderViewManager.kt` itself warns about — and the app calls
+    **none** of them. They stay **deprecated, not removed**: removing them
+    is a breaking change. The remaining lib work is bug `B-033`.
 22. ~~`AudioLyricsView` (525 lines) — 0 call sites.~~ **RESOLVED
     (2026-10-27).** **525 lines, ZERO call sites → deleted.** And the lane
     matters: this is an **APP** file, not a lib file. The register grouped it
@@ -2421,6 +2438,15 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
   and three entries were wrong — in a way that would have sent the work to
   the wrong repo. Read the code; the register is a list of questions, not a
   list of answers.
+- **A path that bypasses the app's seam does not belong in the app — even
+  when the package exports it.** The deep link used the lib's
+  `useOpenFromUrl`, which bypassed `useResumeAwareLaunch` and asked the
+  bridge whether a surface existed — and the bridge's answer was always
+  "no". A shared **video** therefore never played at all, and a shared
+  **audio** track played where the app could not see it: no now-playing
+  entry, no checkpoint, no dock. The export was convenient and wrong — the
+  app had a seam for launches, and the deep link was the one launch that
+  skipped it.
 - **A rule that lives in seven call sites is not a rule — it is seven chances
   to get it wrong.** The app had six files for one floating action button and
   they had already drifted on the right margin, the shadow and the z-index.
