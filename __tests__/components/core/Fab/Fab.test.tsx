@@ -28,18 +28,14 @@
 import React from 'react';
 import {StyleSheet, type ViewStyle} from 'react-native';
 import {render, screen, fireEvent} from '@testing-library/react-native';
+import type {JsonNode} from 'test-renderer';
 import {ThemeProvider} from '../../../../src/theme';
 import {Fab, FAB_SIZE} from '../../../../src/components/core/Fab/Fab';
+import type {SvgIconName} from '../../../../src/components/utility/SvgIcon/SvgIcon';
 import {MINI_PLAYER_HEIGHT} from '../../../../src/infrastructure/player/miniPlayerChrome';
 import {useNowPlayingStore} from '../../../../src/state/nowPlayingStore';
 import {useAudioPresentationStore} from '../../../../src/state/useAudioPresentationStore';
 import {spacing} from '../../../../src/theme/tokens';
-
-/** The minimal shape of a node in RNTL's JSON tree. */
-interface JsonNode {
-  props?: Record<string, unknown>;
-  children?: JsonNode[] | null;
-}
 
 /**
  * The `bottom` of the first node that declares one.
@@ -47,9 +43,14 @@ interface JsonNode {
  * The button itself does not carry a `bottom` — the OVERLAY does, and
  * the overlay is the button's absolutely-positioned wrapper. The badge
  * is anchored with `top`/`right`, so it cannot be mistaken for it.
+ *
+ * The tree's node type comes from `test-renderer` — the renderer RNTL
+ * v14 actually uses. A node is either an element or a text string, so
+ * a string carries no style and is skipped.
  */
 function findBottom(node: JsonNode | JsonNode[] | null): number | undefined {
   if (node == null) return undefined;
+  if (typeof node === 'string') return undefined;
   if (Array.isArray(node)) {
     for (const child of node) {
       const found = findBottom(child);
@@ -65,18 +66,34 @@ function findBottom(node: JsonNode | JsonNode[] | null): number | undefined {
   return findBottom(node.children ?? null);
 }
 
-async function renderFab(props: Partial<React.ComponentProps<typeof Fab>> = {}) {
-  const onPress = props.onPress ?? jest.fn();
-  const result = await render(
-    <ThemeProvider>
-      <Fab
-        icon="sliders"
-        onPress={onPress}
-        accessibilityLabel="Filter options"
-        {...props}
-      />
-    </ThemeProvider>,
-  );
+/** The parts of the FAB's props a test may override. */
+interface FabOverrides {
+  icon?: SvgIconName;
+  label?: string;
+  onPress?: () => void;
+  accessibilityLabel?: string;
+  visible?: boolean;
+  badgeCount?: number;
+}
+
+async function renderFab(overrides: FabOverrides = {}) {
+  const onPress = overrides.onPress ?? jest.fn();
+  const shared = {
+    onPress,
+    accessibilityLabel: overrides.accessibilityLabel ?? 'Filter options',
+    visible: overrides.visible,
+    badgeCount: overrides.badgeCount,
+  };
+  // `icon` and `label` are mutually exclusive in `FabProps`, so the
+  // element is built on the branch that is wanted rather than spread.
+  // A spread of a union is the one shape TypeScript will not assign.
+  const element =
+    overrides.label !== undefined ? (
+      <Fab label={overrides.label} {...shared} />
+    ) : (
+      <Fab icon={overrides.icon ?? 'sliders'} {...shared} />
+    );
+  const result = await render(<ThemeProvider>{element}</ThemeProvider>);
   return {...result, onPress};
 }
 

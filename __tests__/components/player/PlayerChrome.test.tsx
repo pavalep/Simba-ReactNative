@@ -33,6 +33,7 @@
 
 import React from 'react';
 import {render, fireEvent, act} from '@testing-library/react-native';
+import type {JsonElement, JsonNode} from 'test-renderer';
 import {BackHandler} from 'react-native';
 
 const mockToastShow = jest.fn();
@@ -198,12 +199,6 @@ beforeEach(async () => {
   });
 });
 
-/** The minimal shape of a node in RNTL's JSON tree. */
-interface JsonNode {
-  props?: {style?: unknown};
-  children?: JsonNode[] | null;
-}
-
 /** Flatten a style that may be a single object or an array of them. */
 function flattenStyle(style: unknown): Record<string, unknown> {
   if (!style) return {};
@@ -214,9 +209,16 @@ function flattenStyle(style: unknown): Record<string, unknown> {
   return Object.assign({}, ...list.flat(Infinity));
 }
 
-/** The dock's root: the absolutely-positioned bar at zIndex 30. */
-function findDockRoot(node: JsonNode | JsonNode[] | null): JsonNode | null {
+/**
+ * The dock's root: the absolutely-positioned bar at zIndex 30.
+ *
+ * The tree's node type comes from `test-renderer` — the renderer RNTL
+ * v14 actually uses. A node is either an element or a text string, so
+ * a string carries no style and is skipped.
+ */
+function findDockRoot(node: JsonNode | JsonNode[] | null): JsonElement | null {
   if (node == null) return null;
+  if (typeof node === 'string') return null;
   if (Array.isArray(node)) {
     for (const child of node) {
       const found = findDockRoot(child);
@@ -285,7 +287,7 @@ describe('PlayerChrome — visibility', () => {
     // rendered at all in this mode.
     const root = findDockRoot(toJSON());
     expect(root).toBeTruthy();
-    expect(flattenStyle(root?.props.style).height).toBe(MINI_PLAYER_HEIGHT);
+    expect(flattenStyle(root?.props?.style).height).toBe(MINI_PLAYER_HEIGHT);
   });
 
   it('does not offer audio chrome on a video session', async () => {
