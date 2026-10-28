@@ -87,6 +87,10 @@ descendant.
 `react-native-video` ships `PROP_CONTROLS defaultBoolean = false`. SIMBA gets a
 picture and addressable functions; every button, slider and label is app-side RN.
 Already true today — must stay true.
+*(2026-10-28: the LIB's own `PlayerRoot` did **not** satisfy this — it fell back
+to a 564-line `DefaultControls`. Register item 28 records the decision to remove
+it, which is a MAJOR release. The APP has always satisfied D5: it imports
+neither `DefaultControls`, `PlayerRoot` nor `PlayerSurface`.)*
 
 ### D6 — `BrowsingStack` blanks, it does not unmount ✅ locked 2026-10-16 — **expiring**
 Unmounting destroys navigator state; back out of a fullscreen video would land on
@@ -1991,16 +1995,27 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     mounted at `VideoPlayer.tsx:664`. **Do not delete it.** The register
     listed both as dead because the call sites were never read.
 28. `DefaultControls.tsx` (**564** lines) — violates locked **D5** (the library
-    draws no chrome). **Still OPEN — DECISION required**, and the facts are
-    now corrected (2026-10-27). It renders a **full transport chrome**; it is
-    **publicly exported** at `src/index.ts:49-52`; and the **app imports none
-    of it** — the app imports neither `DefaultControls`, `PlayerRoot` nor
-    `PlayerSurface`. The lib's own `PlayerRoot` uses `DefaultControls` as the
-    **fallback when no `renderControls` is supplied**, so it is not dead code
-    inside the lib — it is a public default. **Removing the export breaks
-    external consumers and is therefore a MAJOR release**, not a patch
-    drop-in. The alternative is to mark **D5 "default-off, opt-in"**. This
-    still needs a **DECISION**.
+    draws no chrome). **DECISION (2026-10-28): REMOVE IT — MAJOR release
+    `2.0.0`.** The facts, corrected 2026-10-27 and re-verified 2026-10-28: it
+    renders a **full transport chrome**; it is **publicly exported** at
+    `src/index.ts:50-52`; the **app imports none of it** — not
+    `DefaultControls`, not `PlayerRoot`, not `PlayerSurface` — and the lib's
+    own `example/src` imports none of it either. The lib's `PlayerRoot` uses
+    it as the **fallback when no `renderControls` is supplied**
+    (`PlayerRoot.tsx:125`), so it is not dead code inside the lib — it is a
+    **public default that breaks D5 for every consumer who uses `PlayerRoot`
+    without writing their own controls**.
+    **Why remove rather than mark D5 "default-off, opt-in":** D5 is locked
+    and says the library draws no chrome. Keeping a 564-line chrome bundle in
+    a library that is *forbidden* from drawing chrome — wired as the default
+    — is a standing invitation to break the lock, and the alternative changes
+    what `PlayerRoot` renders anyway, so it is breaking too. The removal also
+    retires the module's no-op fallback's reason to exist
+    (`MpvPlayerModule.ts:904`).
+    **The release is MAJOR** — removing a public export. The app's code is
+    compatible (it imports none of it); the app only moves to `^2.0.0`.
+    **Carried forward: the lib change, the release, the app's dependency
+    bump — and the native rebuild that every lib release needs.**
 
 **Product / UI**
 29. ~~Title renders literal quotes — `"El Ciclo ( 1964)"` (feed data bug).~~
