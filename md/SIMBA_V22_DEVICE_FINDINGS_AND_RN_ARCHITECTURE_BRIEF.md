@@ -392,4 +392,8 @@ tarball. Full design in `SIMBA_V22_RN_MEDIA_MODULE_INTEGRATION_RESEARCH.md`.
 16. Jest force-exit flake — leaked handles, needs `--detectOpenHandles`.
 17. 9 unused `textContent.ts` exports + `HistoryScreen:99` dead branch.
 18. C-07 artwork + `setAutoEnterEnabled` / `setExpandedAspectRatio` / portrait
-    restore.
+    restore. *(Corrected 2026-10-28: `setAutoEnterEnabled` and
+    `setExpandedAspectRatio` **do not exist** in the app or the lib — they were
+    prose, never code. The manifest has no auto-enter attribute and
+    `MainActivity` has no `onUserLeaveHint` override; PiP entry is manual. See
+    master-plan register item 33.)*

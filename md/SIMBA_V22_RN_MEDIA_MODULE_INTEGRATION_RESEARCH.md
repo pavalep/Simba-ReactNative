@@ -289,7 +289,7 @@ cameraRef.current?.takePhoto();   // dispatched to THAT view
 
 Verified this session.
 
-### 5.1 There is no view component
+### 5.1 There is no view component — **SUPERSEDED 2026-10-16** *(corrected 2026-10-28)*
 
 `react-native-media-player/package.json`:
 ```json
@@ -299,25 +299,43 @@ Verified this session.
 `"type": "modules"` — codegen generates **no component glue at all**.
 `react-native-video` uses `"components"`; a mixed library uses `"all"`.
 
+> **This snapshot is stale.** The lib's `codegenConfig.type` is now **`"all"`**, and
+> `src/specs/SimbaVideoViewNativeComponent.ts` exists — `codegenNativeComponent<NativeProps>(
+> 'SimbaVideoView')`. The picture **is** a React Native view now. The comparison below still
+> stands as the reason the change was made; the "SIMBA today" column does not.
+
 `grep requireNativeComponent|codegenNativeComponent` over `lib/src` → **zero
 hits.** `PlayerSurface` is a no-op transparent `<View>`; the JS surface does
 not exist.
 
-### 5.2 The ViewManager that exists is registered nowhere
+> **And this is no longer true either.** The grep now finds
+> `src/specs/SimbaVideoViewNativeComponent.ts:84` —
+> `codegenNativeComponent<NativeProps>('SimbaVideoView')`. The JS
+> `PlayerSurface` component is still exported, but it is a **transparent
+> placeholder** and its own docstring still describes the V12 architecture
+> (a SurfaceView pinned to `android.R.id.content`) — which is itself now
+> stale. The real surface is `SimbaVideoView`, a Fabric child of the React
+> tree.
+
+### 5.2 The ViewManager that exists is registered nowhere — **SUPERSEDED 2026-10-16** *(corrected 2026-10-28)*
 
 `android/src/main/java/com/simba/player/PlayerPackage.kt` is a `TurboReactPackage`
-whose own docstring admits it:
+whose own docstring admitted it:
 
 > "The `ViewManager` side is left empty — the module's `MpvRenderViewManager`
 > (which is V11-era …) is kept in the `mpv` subpackage for backward compat
 > until W8 (Phase 41+ deletes the V11 inline-mount path)."
 
-There is no `createViewManagers` and no `getViewManager` override. `MpvRenderViewManager`
-is referenced by **no registration site anywhere** — the only references in the
-app are `MainActivity.kt:42` (import) and `:57` (field). It is dead code that
-happens to look like the right shape.
+> **This is no longer true.** `PlayerPackage.kt` now carries its own correction —
+> *"Phase 6 note, superseded 2026-10-16: the ViewManager side is no longer empty"* — and
+> `createViewManagers` returns `listOf(MpvRenderViewManager())` (`PlayerPackage.kt:62–64`).
+> The manager is **live and registered**, and it is the Fabric view manager behind the app's
+> `<SimbaVideo>`. What is dead is the **registry-POPULATION**: `PlayerSurface.attach(...)` —
+> the only writer of the registry's `viewRef` — has **zero** call sites, so
+> `isSurfaceMounted()` always answers `false`. That is the live bug behind the video deep-link
+> failure (master-plan register item 21, bug `B-013`).
 
-### 5.3 The view is mounted by Kotlin into the content view
+### 5.3 The view is mounted by Kotlin into the content view — **SUPERSEDED 2026-10-16** *(corrected 2026-10-28)*
 
 `MainActivity.kt:85` → `PlayerSurface.mount(this)`, which inserts the
 `MpvRenderView` at `android.R.id.content` index 0. It is a sibling of the React
@@ -325,9 +343,15 @@ root, not a descendant. RN cannot lay it out, cannot z-order it, and cannot
 destroy it — which is precisely why an opaque React root painted over it and
 why `BrowsingStack` had to be invented.
 
+> **The path is gone.** `PlayerSurface.mount(activity)` has **zero** call sites, and the app
+> renders `<SimbaVideo>` — a Fabric component — inside the React tree. The `mount()` call was
+> deleted with the V11 inline-mount path; the Kotlin file itself survived (256 lines) and is
+> still called from `MpvBridgeModule.kt` for its **bounds** methods. The analysis above is the
+> reason the migration happened, and it is now history.
+
 ### 5.4 Imperative calls have no view identity
 
-`lib/src/types/player.ts:501` `function buildCommands(): PlayerCommands` builds a
+`lib/src/types/player.ts:579` `function buildCommands(): PlayerCommands` builds a
 plain JS object whose methods call `NativeMpvPlayer` — a global TurboModule.
 Compare §2.3: no `reactTag`, no ref, no view. `enterPiP` and `fillVideoBounds`
 are indistinguishable from `play()` in shape.
@@ -336,15 +360,18 @@ are indistinguishable from `play()` in shape.
 
 | Decision | react-native-video | expo-video | SIMBA today |
 |---|---|---|---|
-| View in React tree | ✅ `ViewGroupManager<ReactExoplayerView>` | ✅ `VideoView` | ❌ mounted by Kotlin into content view |
-| `codegenConfig.type` | `"components"` | `"all"` | `"modules"` |
-| Commands by view identity | ✅ `reactTag` first arg | ✅ `VideoView` ref | ❌ global module, no identity |
-| Player ⊥ view | ❌ (view always) | ✅ `useVideoPlayer` w/o view | ❌ (surface always mounted hidden at 0×0) |
-| Library draws no chrome | ✅ `controls=false` default | ✅ | ✅ (correct already) |
-| Yoga↔SurfaceView layout guard | ✅ documented `requestLayout` override | n/a (Android `PlayerView`) | ❌ raw `LayoutParams` mutation from Kotlin |
+| View in React tree | ✅ `ViewGroupManager<ReactExoplayerView>` | ✅ `VideoView` | ✅ **now a Fabric child of the React tree** (`SimbaVideoView` / `MpvRenderViewManager`, registered 2026-10-16) |
+| `codegenConfig.type` | `"components"` | `"all"` | ✅ `"all"` (was `"modules"`, changed 2026-10-16) |
+| Commands by view identity | ✅ `reactTag` first arg | ✅ `VideoView` ref | ⚠️ still a global TurboModule, no identity — the surface registry that would have carried it is orphaned (`B-013`) |
+| Player ⊥ view | ❌ (view always) | ✅ `useVideoPlayer` w/o view | ✅ the view is mounted only where the lane puts it |
+| Library draws no chrome | ✅ `controls=false` default | ✅ | ⚠️ true for the app, but the lib still **exports** a `DefaultControls` chrome bundle (master-plan item 28, decision pending) |
+| Yoga↔SurfaceView layout guard | ✅ documented `requestLayout` override | n/a (Android `PlayerView`) | ✅ the layout is RN's — the picture is a normal React child |
 
-The **last two rows are the only ones SIMBA gets right today**, and they are the
-easy ones.
+**Read this table as a snapshot of 2026-10-16, not as today.** *(Corrected 2026-10-28.)*
+On that date the only two ✅ were the rows that were easy — the chrome default and the
+layout guard. Twelve days of work later, every ❌ in the "SIMBA today" column was closed by
+the Fabric migration, **except** one: commands still carry no view identity, because the
+surface registry that would have carried it is orphaned — the live bug behind `B-013`.
 
 ---
 

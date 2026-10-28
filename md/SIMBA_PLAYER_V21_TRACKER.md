@@ -643,12 +643,15 @@ Highest-risk phase. **Exit gate is device PiP proof, not a green build.**
       `buildPipParams` still clamps to Android's documented 0.42–2.38 range.
 - [x] `setSeamlessResizeEnabled(true)` (API 31+) — rendering-quality only; changes how the
       transition is drawn, never whether PiP is entered.
-- [ ] `setAutoEnterEnabled(true)` (API 31+) — **deliberately held for F4.** Every shipping
-      player auto-enters PiP on a home swipe (YouTube, Plex, Netflix), so this app will want it,
-      but auto-enter means the *whole app window* enters PiP and whether the JS chrome
-      suppression is correct in the collapsed architecture is exactly what device verification
-      would confirm. Deferred by instruction, and it is a product-visible behaviour change, so
-      it waits for F4 where the chrome path is owned end to end.
+- [ ] `setAutoEnterEnabled(true)` (API 31+) — **NOT IMPLEMENTED, and never was** *(corrected
+      2026-10-28)*. There is **no** `setAutoEnterEnabled` call in the app or the lib
+      (`PipManager.buildPipParams()` sets only the aspect ratio), no `onUserLeaveHint`
+      override in `MainActivity`, and no auto-enter attribute in `AndroidManifest.xml` — so
+      this row was never "held", it was **absent**, and any plan that called it was calling
+      something that was never written. Every shipping player auto-enters PiP on a home swipe
+      (YouTube, Plex, Netflix), so the behaviour is still wanted; but it is **new work in the
+      lib's `PipManager`**, not a flag waiting to be flipped, and it is a product-visible
+      behaviour change that needs the device to confirm.
 - [ ] Re-apply `setVideoBounds` on **every** layout pass, not once
 - [ ] Hide app chrome in PiP
 - [ ] `MainActivity` teardown on destroy uses the native rule (spec §4.1)
@@ -712,8 +715,9 @@ background over the surface — that is exactly the V11 mistake.
 - [ ] Audio↔video handoff does not restart the engine — not built. Both lanes share one
       process-global mpv handle, so this is a device-matrix question, not a code change.
 - [ ] **DEVICE:** audio→video→audio handoff; expand/collapse; X during playback; dock across rotation
-- [ ] `setAutoEnterEnabled(true)` — **held deliberately.** A product-visible behaviour change that
-      cannot be verified without a device.
+- [ ] `setAutoEnterEnabled(true)` — **never implemented** *(corrected 2026-10-28)*: no such
+      call exists in the app or the lib. It is **new lib work**, and a product-visible
+      behaviour change that cannot be verified without a device.
 - [ ] Portrait restore when a session ends while the app is backgrounded (still owned by F4).
 
 ---
@@ -1146,8 +1150,10 @@ not throwaway work that the refactor supersedes.
       Harmless today (video lives in `PlayerActivity`); once video moves here, rotating to
       landscape snaps straight back to portrait. MainActivity will own the surface as a field,
       so it can check visibility directly.
-- [ ] F2d: port the PiP lifecycle - `setAutoEnterEnabled(true)` (API 31+) / `onUserLeaveHint`
-      (<31), `onPictureInPictureModeChanged`; re-apply bounds on **every** layout pass
+- [ ] F2d: port the PiP lifecycle - `onPictureInPictureModeChanged` *(already in
+      `MainActivity`)*; **new work**: `setAutoEnterEnabled(true)` (API 31+) / `onUserLeaveHint`
+      (<31), neither of which exists today *(corrected 2026-10-28 — this row previously read
+      as if the auto-enter call were already written)*; re-apply bounds on **every** layout pass
 - [ ] F2e: the `setClassName` P0 above
 - [ ] F3: video as an in-app route; seam stops calling `openPlayer` for video; one feature flag
       with `PlayerActivity` as fallback so a regression is one flag flip

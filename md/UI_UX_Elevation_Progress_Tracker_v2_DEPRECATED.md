@@ -376,7 +376,7 @@ WAVE 7: PiP ────────── Phases 31-35 (Android Picture-in-Pict
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
 | 31.1 | `supportsPictureInPicture="true"` declared on launcher activity in manifest | ✅ | Added to `AndroidManifest.xml` activity tag |
-| 31.2 | PiP aspect ratio & auto-enter params configured | ✅ | `setAutoEnterEnabled(true)` on Android 12+, 16:9 default ratio via `PipManager.buildPipParams()` |
+| 31.2 | PiP aspect ratio & auto-enter params configured | ⚠️ **half never implemented** | 16:9 default ratio via `PipManager.buildPipParams()` — the `setAutoEnterEnabled(true)` half was **never implemented** in the app or the lib *(verified 2026-10-28)*; PiP entry is manual |
 | 31.3 | Activity lifecycle hooks wired for PiP mode | ✅ | `onPictureInPictureModeChanged` emits to JS via `DeviceEventEmitter`; `onUserLeaveHint` auto-enters PiP; `PipActionReceiver` registered in `onCreate` |
 
 ---
@@ -430,7 +430,7 @@ WAVE 7: PiP ────────── Phases 31-35 (Android Picture-in-Pict
 | # | Checklist Item | Status | Notes |
 |---|---|---|---|
 | 35.1 | Swipe-down gesture to enter PiP | ✅ | `usePipEntry` hook with `PanResponder` detecting downward swipe (threshold: 80px, velocity: 0.3). Integrated into `VideoPlayerGestureLayer.onSwipeDown` handler. |
-| 35.2 | Home button / app background triggers PiP automatically | ✅ | `onUserLeaveHint` override in `MainActivity` auto-enters PiP with `PipManager.buildPipParams()`. `setAutoEnterEnabled(true)` for Android 12+ |
+| 35.2 | Home button / app background triggers PiP automatically | ⚠️ **never implemented** | **Not implemented** *(verified 2026-10-28)*: `MainActivity` has **no** `onUserLeaveHint` override, the manifest has **no** auto-enter attribute, and neither the app nor the lib calls `setAutoEnterEnabled`. PiP entry is manual |
 | 35.3 | PiP window tap restores full player screen | ✅ | `onNewIntent` in `MainActivity` handles PiP tap → restores activity; Redux state provides `pipedVideoUri` and `pipedPosition` for restoration |
 | 35.4 | Smooth transition animation (fullscreen → PiP) | ✅ | `PipManager.buildPipParams()` accepts `sourceRectHint`; `setSourceRectHint` used on Android 12+ for seamless PiP transition |
 

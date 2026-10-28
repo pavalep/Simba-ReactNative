@@ -218,6 +218,11 @@ function Player() {
 
 ## 4. Refactor scope — measured, not estimated
 
+**This table is the 2026-10-16 measurement, not today's file list.** What
+actually shipped is §8's register; the tier names below drifted as the work
+landed — the `MiniPlayer` and the `VideoController` subsystem are **deleted**,
+not rewritten, and a `VideoSurface.tsx` exists today at a different path.
+
 | Tier | Count | Detail |
 |---|---|---|
 | **Deleted** | 5 files, ~420 lines | `useVideoSurface.ts` (178) · `VideoSurface.tsx` (94) · `BrowsingStack.tsx` (95) · the `PlayerSurface.mount(activity)` **call** (the file itself was NOT deleted — see item 21) · `MainActivity` mount path |
@@ -246,10 +251,13 @@ instant. This holds `main` sane and is revertible. It becomes dead on arrival
 when D2 lands — that is expected, not waste.
 **Gate:** `tsc` 0 · `eslint --max-warnings 0` · `jest` ≥ 89 suites / 1107 passed · 3/3 mutants killed (already measured 2026-10-16).
 
-### Stage 1 — Control test *(before any render code)*
+### Stage 1 — Control test *(before any render code)* — **RUN 2026-10-19**
 Push `.scratch-test-video.mp4` through the current pipeline.
 **Gate:** we can say whether the black video is emulator SwiftShader or an app
 defect. **No rendering change may be written before this result exists.**
+**Result: an APP defect, and not the surface.** The Fabric view mounted and
+the renderer worked; the archive.org adapter was picking the wrong file. See
+§7 and register item 1.
 
 ### Stage 2 — `L` Fabric component
 Spec file · `codegenConfig` `"modules"` → `"all"` · Fabric `ViewManager` for
@@ -1363,9 +1371,14 @@ and YouTube Music collapse the same way.
 
 The withdrawn W21 F4 rule — "back minimises" — is recorded in the SPEC's
 §3.2 as withdrawn, and its backing command `commands.exitPlayer()` is
-documented as **unusable** (bug `B-008`): it calls
-`finishAndRemoveTask()` on the *current* activity, and under D1 there is one
-activity, so it would finish `MainActivity` and remove the app's task.
+**unusable as a *close*** (bug `B-008`): it routes to the lib's
+`exitPipAndFinish()`, which **used to** call `finishAndRemoveTask()` on the
+*current* activity — and under D1 there is one activity, so it would have
+finished `MainActivity` and removed the app's task. **The Kotlin now calls
+`activity.finish()`** (`F-023`, lib 1.22.0), which closes the PiP window and
+leaves the task, so the *native hazard* is gone. The command stays
+**deliberately unwired** all the same, because the close verb has exactly
+**one** owner (`useClosePlayback()`). See register item 52.
 
 **3. The standalone `MiniPlayer` is deleted.** Each lane owns its own mini
 form inside ONE mounted tree:
@@ -1757,8 +1770,9 @@ killer test.
 **Gone:** the "content index 0" invariant and its four-paragraph defence · the
 window-pixel ⇄ margin translation in `setVideoBounds` · the 0×0 hide/show
 lifecycle · `PlayerSurface.mount(activity)` *(the **call** — the file and its
-methods are still live; see item 21)* · `BrowsingStack` · the dead
-`MpvRenderViewManager` (registered nowhere).
+methods are still live; see item 21)* · `BrowsingStack` · the **app-side**
+`MpvRenderViewManager` *(deleted at v12 — the **lib's** one is live and
+registered; see items 19 and 21)*.
 
 **Stays:** `PlayerCommands` (already correct, already tested) · the audio lane
 exactly as-is (`AudioPlayer` is a working `zIndex: 40` overlay and is the shape
@@ -1771,9 +1785,9 @@ service / queue.
 
 | Risk | Status |
 |---|---|
-| **Black video is not yet attributed.** | The Yoga↔SurfaceView finding makes D2 the strongest hypothesis, but Stage 1 decides. **Do not claim the migration fixes it before the control test runs.** |
+| **Black video is not yet attributed.** | **CLOSED 2026-10-19 — and it was never a surface problem.** The Fabric view mounted, the surface attached with real extents (`surfaceChanged: 1080x1907`), `vo=gpu` was set and the renderer worked. The cause was the **archive.org adapter**: it filtered on `source === 'original'` (which excluded exactly the files that exist to be streamed), preferred the LARGEST candidate, and made AVI-only items unplayable — so it streamed a 733 MB Cinepack AVI and mpv reported `MPV_ERROR_LOADING_FAILED (-13)`. Fixed: h.264 derivative by SUBSTRING match, smallest file wins, AVI demoted to a last-resort fallback. **Device-proven** — `Battle.of.Midway.1942.mp4` loads, `videoReconfig` fires twice, decoded frames paint. See the 2026-10-19 progress block. |
 | **Hardware back is dead app-wide.** | **CLOSED 2026-10-26.** The instruction in this row was followed literally: the fix was NOT written from static reading. `MainActivity.onBackPressed()` was instrumented with `Log.i` per branch, the APK was rebuilt, and the press was reproduced — `down=true` → early return → `super.onBackPressed()` never called, and the JS probe never fired. The synthetic dispatch is deleted; `super.onBackPressed()` is RN's route to the JS `BackHandler`. Device re-proofed on both sides of the app. The audio lane was given the same close verb, because the fixed native path made the press reachable there for the first time and the lane had no handler — a back press on the now-playing page would have closed the whole app. Guarded by `__tests__/app/MainActivityBackPress.test.ts` (a source check, since the repo has no native test harness); mutation-checked 6/6. |
-| **Duration never reported on BOTH lanes.** | `--:--`, false `LIVE` badge, seek bar disabled, prev/next greyed out — while the feed knows the episode is 55 min. Untouched since 2026-10-15. |
+| **Duration never reported on BOTH lanes.** | **CLOSED 2026-10-20 (night) by lib 1.18.0.** The lib's **progress** context was losing `durationMs` (the *state* context kept it) because `progressRef.current` was written inside the deferred `setProgress` updater while `stateRef.current` was written synchronously — and mpv delivers `duration` and `time-pos` in one batch. Measured on device before the fix: `state.durationMs = 7673792` but `progress.durationMs = 0`, so the app drew **no played fill, no buffered segment and `--:--`** on a video that was playing. After: `progress.durationMs = 4918962` and the seek bar reads `-1:19:38`. See register item 3. |
 | **Fabric can drop and recreate a view** under memory pressure. | mpv handle must survive. `setNativePtr` already resets `attachedSurface` and re-binds — designed for, but needs a **test, not an assumption**. |
 | **`force-window` stickiness.** | `attachSurfaceLocked` sets `force-window=yes`; the class comment forbids toggling it mid-frame. Must be re-verified under RN layout churn. |
 | **Release cycle is serial and slow.** | Nothing after Stage 2 can be tested until Stage 5 publishes. |
@@ -1787,7 +1801,7 @@ service / queue.
 Enumerated individually so nothing is forgotten. Updated at every wave exit.
 
 **Blocking the video lane**
-1. Black video — control test (Stage 1) precedes all render work.
+1. ~~**Black video.**~~ — **RESOLVED 2026-10-19.** It was never a surface problem: the archive.org adapter was selecting the wrong file. The Stage 1 control test is what found it. See §7 and the 2026-10-19 progress block.
 2. Hardware back P0 — instrument, do not guess.
 3. ~~**Duration `P1` on both lanes.**~~ — **RESOLVED 2026-10-20 (night) by
    lib 1.18.0.** The lib's **progress** context was losing `durationMs` (the
@@ -1908,7 +1922,7 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     1180 tests).
 
 **Dead code (verified)**
-19. `MpvRenderViewManager` — registered nowhere — **DELETED**.
+19. ~~**APP-side `android/app/src/main/java/com/simba/player/mpv/MpvRenderViewManager.kt` — registered nowhere — DELETED.**~~ **Corrected 2026-10-28.** The file deleted at **v12** was the **APP's** copy, and it was never registered in the app. The **LIB's** `MpvRenderViewManager` is **live and registered** — `PlayerPackage.kt:62–64` returns `listOf(MpvRenderViewManager())`, and it is the Fabric view manager behind the app's `<SimbaVideo>`. What is dead is the **registry-POPULATION**, not the manager (item 21).
 20. ~~**`VideoController` + `useVideoController` + `controllerSingleton`** —
     now dead (register item 10). Decision needed.~~ **RESOLVED (2026-10-27).**
     The subsystem was **903 lines** (`VideoController.ts` 605,
@@ -1924,10 +1938,12 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     file is **NOT** dead: `setBounds`, `fillBounds`, `setVisible`,
     `current()` and `boundsInWindow()` are all **live**, called from
     `MpvBridgeModule.kt`. What is dead is the **registry-POPULATION** path:
-    `attach()` is reachable only from `mount()`, and `mount()` has zero call
-    sites; the Fabric view manager (`MpvRenderViewManager.createViewInstance`)
-    never calls `PlayerSurface.attach(...)`, so the registry is **orphaned**,
-    not merely unmounted. This is the **hinge of the video deep-link
+    `attach()` — the **only** writer of `viewRef` — has **ZERO** call sites
+    repo-wide (verified 2026-10-28), and `mount()` has zero call sites too,
+    so `viewRef` is never non-null and `current()` always returns `null`. The
+    Fabric view manager (`MpvRenderViewManager.createViewInstance`) never
+    calls `PlayerSurface.attach(...)`, so the registry is **orphaned**, not
+    merely unmounted. This is the **hinge of the video deep-link
     failure** — see bug `B-013`. **Two possible fixes:** wire the Fabric view
     manager to register the surface it creates, **or** delete the registry and
     answer `isSurfaceMounted()` from the live view. **DECISION required** —
@@ -2367,6 +2383,12 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
 ## 9. Working rules that apply to every stage
 
 - **Never trust a green build alone** — verify which source copy compiled.
+- **A gate's result is READ from its output, never recalled.** W32 shipped a
+  commit whose `tsc` gate was **red** — six type errors in the two test files
+  that same wave added — while the wave's own summary recorded `tsc → 0`. The
+  runtime was fine, so `jest` stayed green at 105 suites / 1265 tests and
+  only `tsc` could see it. A gate nobody read the output of is not a gate; it
+  is a habit that looks like one.
 - **Tests pin the contract** and must fail without the fix. Mutation-check every
   "must not do X" test. A harness that cannot prove it saw a result must print
   `HARNESS-ERROR`, not a verdict.

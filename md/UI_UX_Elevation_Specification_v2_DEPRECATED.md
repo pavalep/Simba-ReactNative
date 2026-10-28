@@ -649,7 +649,7 @@ Picture-in-Picture (PiP) replaces the previously removed MiniPlayer as the metho
 |---|---|---|
 | PIP-01 | Main activity must declare `supportsPictureInPicture="true"` in the manifest | 31 |
 | PIP-02 | PiP aspect ratio defaults to 16:9, configurable via settings | 31 |
-| PIP-03 | Android 12+ devices use `setAutoEnterEnabled(true)` for seamless home-gesture PiP | 31 |
+| PIP-03 | ⚠️ **Never implemented** *(verified 2026-10-28)* — no `setAutoEnterEnabled` call in the app or the lib, and no auto-enter attribute in the manifest | 31 |
 | PIP-04 | Activity must propagate `onPictureInPictureModeChanged` to JS via event emitter | 31 |
 | PIP-05 | Redux state tracks `isInPipMode`, `pipedVideoUri`, `pipedPosition`, `pipedFileTitle` | 32 |
 | PIP-06 | PiP state resets when playback session is explicitly ended | 32 |
@@ -660,7 +660,7 @@ Picture-in-Picture (PiP) replaces the previously removed MiniPlayer as the metho
 | PIP-11 | PiP window displays Close RemoteAction that destroys player and resets state | 34 |
 | PIP-12 | Next/Previous actions shown when playing from a playlist context | 34 |
 | PIP-13 | Swipe-down gesture on PlayerScreen triggers PiP entry | 35 |
-| PIP-14 | Home button / app background auto-enters PiP when video is playing | 35 |
+| PIP-14 | ⚠️ **Never implemented** *(verified 2026-10-28)* — no `onUserLeaveHint` override in `MainActivity` | 35 |
 | PIP-15 | PiP window tap restores full PlayerScreen with position restored | 35 |
 | PIP-16 | `setSourceRectHint` provides smooth transition animation from fullscreen to PiP | 35 |
 
@@ -671,17 +671,17 @@ Picture-in-Picture (PiP) replaces the previously removed MiniPlayer as the metho
 │                    MainActivity.kt                       │
 │                                                         │
 │  onCreate()                                             │
-│    ├── setAutoEnterEnabled(true)         // API 31+     │
+│    ├── setAutoEnterEnabled — NEVER IMPLEMENTED          │
 │    └── registerPipReceiver()                            │
 │                                                         │
 │  onPictureInPictureModeChanged()                        │
 │    └── emit("onPipModeChanged", { isInPip })            │
 │                                                         │
-│  onUserLeaveHint()                                      │
-│    └── enterPictureInPictureMode(buildPipParams())      │
+│  onUserLeaveHint() — NEVER IMPLEMENTED                  │
+│    └── (no such override exists in MainActivity)        │
 │                                                         │
-│  onNewIntent() / onRestart()                            │
-│    └── restorePlayerFromPipState()                      │
+│  onNewIntent() / onRestart() — NEVER IMPLEMENTED        │
+│    └── (no such method exists)                          │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐

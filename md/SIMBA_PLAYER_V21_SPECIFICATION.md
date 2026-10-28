@@ -152,7 +152,7 @@ Keep `SurfaceView`.
 | **Back / header close-less "minimise"** | minimise to MiniPlayer | **minimise to MiniPlayer** |
 | MiniPlayer **X** | full teardown | full teardown |
 | MiniPlayer tap / expand | restore | restore |
-| **Home gesture** | keep playing (service) | **enter PiP** (`setAutoEnterEnabled(true)`, API 31+) |
+| **Home gesture** | keep playing (service) | keep playing (service) — **PiP entry is manual**; the Android 12+ auto-enter flag is **not implemented** *(corrected 2026-10-28)* |
 | PiP close | n/a | **full teardown** |
 | App backgrounded, no PiP | keep playing (service) | keep playing (service) |
 

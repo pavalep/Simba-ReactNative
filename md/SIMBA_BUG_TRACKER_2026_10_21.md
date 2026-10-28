@@ -18,7 +18,19 @@ silence as `F-027` / `F-028`. The **bottom-chrome wave** that followed
 resolved `B-028` (the mini-player dock sat under every floating button and
 under the last row of every list) and added `B-029` / `B-030` (the Movies
 grid sat under its own FAB; the app had six files for one floating button)
-as `F-029`…`F-031`.
+as `F-029`…`F-031`. The **documentation wave** that followed found a cluster
+of **claims the code never had** — a §7 risk table that still said "black
+video is not yet attributed" and "duration never reported" months after both
+were fixed, a spec that described `setAutoEnterEnabled` as "already in
+`AndroidManifest.xml`" when no such call exists in the app or the lib, and a
+register that called the lib's view manager "registered nowhere" while it
+registers the app's video view — recorded as `B-031` / `F-032`.
+
+That wave also found that **W32's own type gate was red**. The commit
+`51da1b4` shipped **six** `tsc` errors — in the two test files that same
+wave added — while the wave's summary recorded `tsc → 0`. The runtime was
+never broken, so `jest` stayed green and only `tsc` could see it. Recorded
+as `B-032` / `F-033`.
 
 ## How to read this file
 
@@ -1004,6 +1016,82 @@ The Library's inline button also gained the `accessibilityRole` and the
 
 ---
 
+### B-031 · P2 · docs · the documents asserted behaviour the code never had
+
+**What it was.** A cluster of **present-tense claims** that no line of code
+supported. Found by reading the register against the source, not against
+another document. Each one is quoted with what the source actually says.
+
+| The document said | The source says |
+|---|---|
+| Master plan §7: "**Black video is not yet attributed** … Stage 1 decides" | Attributed **2026-10-19**: the archive.org adapter filtered `source === 'original'` (excluding the files meant to be streamed) and preferred the LARGEST candidate, so it streamed a 733 MB Cinepack AVI and mpv reported `MPV_ERROR_LOADING_FAILED (-13)`. Device-proven fixed. |
+| Master plan §7: "**Duration never reported on BOTH lanes** … Untouched since 2026-10-15" | Fixed **2026-10-20 (night)** by lib 1.18.0: `progressRef.current` was written inside the deferred `setProgress` updater, so the *progress* context lost `durationMs` while the *state* context kept it. The lib now writes it synchronously. |
+| Master plan (2026-10-21 night block): "`commands.exitPlayer()` … calls `finishAndRemoveTask()` on the *current* activity" | The Kotlin calls **`activity.finish()`** since lib 1.22.0 (`F-023`). The *native hazard* is gone; the command is still deliberately unwired, for a different reason. |
+| Master plan register item 19: "`MpvRenderViewManager` — registered nowhere — **DELETED**" | The **app-side** copy was deleted at v12. The **lib's** `MpvRenderViewManager` is **live and registered** — `PlayerPackage.kt:62–64` returns `listOf(MpvRenderViewManager())`, and it is the Fabric view manager behind the app's `<SimbaVideo>`. |
+| V19 spec §3.2: "`exitPlayer()` … calls `activity.finishAndRemoveTask()`" | Same as above — `finish()` now. |
+| V19 spec (3 places), V21 spec, V21 tracker, UI_UX docs: "auto-PiP via `setAutoEnterEnabled(true)` (already in `AndroidManifest.xml`)" | **No `setAutoEnterEnabled` call exists in the app or the lib** (`PipManager.kt:123` sets only `setAspectRatio`). The manifest has `android:supportsPictureInPicture="true"` and **no** auto-enter attribute — and `setAutoEnterEnabled` is an `Activity`/`PictureInPictureParams` API, so it was never a manifest attribute to begin with. `MainActivity` has **no** `onUserLeaveHint` override. PiP entry is **manual**. |
+| Research doc §5.1–§5.5: "There is no view component", "The ViewManager that exists is registered nowhere", "SIMBA today: ❌ mounted by Kotlin into content view" | The lib's `codegenConfig.type` is **`"all"`**, `SimbaVideoViewNativeComponent.ts` exists, the view manager **is** registered, and the picture **is** an ordinary child of the React tree. That snapshot was superseded on 2026-10-16 and never updated. |
+
+**Why it mattered.** The V19 spec is "the deepest API record" and the master
+plan is the register the whole wave reads from. A plan that says a thing is
+untouched when it was fixed two weeks earlier is not a plan — it is a document
+that trains the reader to stop believing it. And `setAutoEnterEnabled` is the
+worst of the lot: it reads as an implementation detail of a shipping feature,
+so any future work would "call" a method that was never written.
+
+**State:** resolved (`F-032`). Every claim above was checked against the
+source and corrected in place, with the evidence kept next to the correction.
+The deprecated UI/UX documents were **annotated as superseded** rather than
+rewritten — they are history, and history keeps its shape.
+
+**What was deliberately NOT changed.** `SIMBA_PLAYER_V20_MEDIA_ARCHITECTURE.md`
+mentions `setAutoEnterEnabled` three times, and all three describe the
+**Android platform API** (it is quoted from the developer guide). Those
+sentences are true. The research doc's `react-native-video` / `expo-video`
+comparison is untouched for the same reason.
+
+---
+
+### B-032 · P2 · tooling · a gate was recorded green, and was not
+
+**What it was.** W32's summary recorded `npx tsc --noEmit` → 0. It was not 0.
+The commit `51da1b4` carried **six type errors**, and it took the next wave's
+gate to find them. (The repo itself never recorded the false number — the
+master plan and this tracker both carry no gate counts for W32 — so the
+failure was in the wave's own summary, not in the record.)
+
+**The six errors**, all in the two test files W32 added:
+
+| File | Errors | Why |
+|---|---|---|
+| `__tests__/components/core/Fab/Fab.test.tsx` | 4 | The helper took `Partial<React.ComponentProps<typeof Fab>>` and spread it into `<Fab>`. `FabProps` is a **union** (`icon` XOR `label`), and a spread of a union is the one shape TypeScript will not assign. |
+| `__tests__/components/player/PlayerChrome.test.tsx` | 2 | `findDockRoot(toJSON())` passed `JsonElement \| null` into a hand-rolled `JsonNode` interface that no longer described the tree. |
+
+**Why the type moved under the repo's feet.** `package.json` declares
+`"test-renderer": "^1.2.0"`, and the lock resolves **1.3.0**. In 1.3.0
+`toJSON()` returns `JsonElement | null` and a node is `JsonElement | string`
+— so the old hand-rolled interface (`{props?: …, children?: …}`) stopped
+describing it. `test-renderer` is the renderer **RNTL v14 actually uses**, so
+every test that inspects the host tree sits downstream of its types.
+
+**Why nothing else caught it.** The tree's *shape* never changed — only its
+*type* did. `jest` stayed green at 105 suites / 1265 tests the whole time,
+so `tsc` was the only gate that could see it, and the gate's result was
+recalled rather than read.
+
+**State:** resolved (`F-033`). Both test files now take the tree's node type
+from `test-renderer` itself (`JsonElement` / `JsonNode`) instead of
+re-declaring it, a text node is skipped for the string it is, and the FAB's
+mutually-exclusive `icon` / `label` props are built on a branch rather than
+spread. `tsc` → 0 · `eslint --max-warnings 0` → 0 · boundaries → 574 files,
+0 errors, 0 warnings · `jest` → 105 suites, 1265 passed, 1 todo.
+
+**The rule it earns.** *A gate's result is read from its output, never
+recalled.* A gate nobody read the output of is not a gate — it is a habit
+that looks like one.
+
+---
+
 ## FIXED
 
 | ID | Sev | Lane | One line | Where |
@@ -1039,6 +1127,8 @@ The Library's inline button also gained the `accessibilityRole` and the
 | F-029 | P3 | app | The mini-player dock sat under **every** floating button — the docks are 54 dp tall at `bottom: 0` of the window and a FAB's bottom edge landed at 40 dp, so the dock's top **14 dp** covered it — and the last row of a list sat under the dock on **every** page → the app's ONE bottom-chrome rule, `max(insets.bottom, dock band) + spacing.lg`, in `infrastructure/player/miniPlayerChrome`, with `MINI_PLAYER_HEIGHT` as the single owner of the dock's height (derived from the same three numbers the docks lay themselves out with, so the declared height and the painted height cannot drift) | app `f5/w22-close-minimise-d9` |
 | F-030 | P3 | app | The Movies grid's last row sat under the Movies FAB — its padding cleared the safe area but not the button → it now reserves the FAB's height, the way Music and Podcasts already did | app `f5/w22-close-minimise-d9` |
 | F-031 | P3 | app | The app had **six** files for one floating action button (Home's, three byte-identical catalogue copies, two more byte-identical copies, and the Library's drawn inline in a stylesheet) and they had already drifted on margin, shadow and z-index → one `components/core/Fab/Fab.tsx`, with the bottom-chrome rule in it; the Home button was the outlier and was normalised onto the treatment six of the seven already used | app `f5/w22-close-minimise-d9` |
+| F-032 | P2 | docs | The documents asserted behaviour the code never had — a §7 risk table still saying "black video is not yet attributed" and "duration never reported" after both were fixed and device-proven; `exitPlayer` still described as calling `finishAndRemoveTask()` after the Kotlin moved to `finish()`; a register calling the lib's view manager "registered nowhere" while it registers the app's `<SimbaVideo>`; and `setAutoEnterEnabled(true)` described as "already in `AndroidManifest.xml`" when **no such call exists in the app or the lib** and no `onUserLeaveHint` override exists either → every claim checked against the source and corrected in place, with the evidence kept beside the correction; the deprecated UI/UX docs annotated as superseded rather than rewritten | docs |
+| F-033 | P2 | tooling | W32's `tsc` gate was **red** — six type errors in the two test files that same wave added — while the wave's summary recorded `tsc → 0`; the cause was `test-renderer` resolving to **1.3.0** under the declared `^1.2.0`, which changed the tree's node type from a hand-rolled `JsonNode` to `JsonElement \| string` → the tree's type now comes from `test-renderer` itself, a text node is skipped for the string it is, and the FAB's mutually-exclusive `icon` / `label` props are built on a branch rather than spread (a spread of a union is the one shape TypeScript will not assign) | app `f5/w22-close-minimise-d9` |
 
 ---
 
