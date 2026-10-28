@@ -2308,6 +2308,59 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     The native side was already correct: the lib resolves a `content://`
     URI to an `fd://` descriptor, and `pickMediaFile()` grants the
     persistable permission. The defect was entirely in the app's JS.
+58. ~~**The mini-player dock sat under every floating button, and under the
+    last row of every list.**~~ **RESOLVED (2026-10-28) — `F-029`.**
+    **The arithmetic.** The docks (`VideoDock` and the audio lane's mini bar)
+    are **54 dp** tall at `bottom: 0` of the window — an app-level overlay
+    painted over whatever screen the user is on. Every FAB floated at
+    `insets.bottom + spacing.lg`, so on a 24 dp gesture bar the button's
+    bottom edge landed at 40 dp and the dock's top **14 dp** covered it. And
+    because a screen's scroll padding cleared the safe area and nothing
+    else, the last row of a list sat **under** the dock on **every** page.
+    **The decision — the FAB moves; the dock does not yield.** The dock is
+    what the user minimised the player INTO, so lifting it off the bottom
+    edge would put it over the content they are looking at. Hiding the FAB —
+    what YouTube and Plex do — would remove the action: the Home FAB opens
+    the file picker, the catalogue ones their filter sheet, the Library one
+    the create-playlist sheet. So the button **moves up**.
+    **The rule, and its one owner.** `src/infrastructure/player/miniPlayerChrome.ts`:
+
+        bottom offset = max(insets.bottom, mini player band) + spacing.lg
+
+    Both terms are measured from the **window** bottom, so they are
+    comparable. With no mini player up the band is `0` and the rule is the
+    app's long-standing `insets.bottom + spacing.lg` — nothing changes for
+    anyone who is not playing anything. With a dock up the band is `54` and
+    the button sits at `70 dp`.
+    `MINI_PLAYER_HEIGHT` is the ONE place the dock's height is written down,
+    and it is derived from the same three numbers the docks lay themselves
+    out with (`2` progress + `44` art + `4 + 4` row padding), so the
+    declared height and the painted height cannot drift apart. Both docks
+    take their height from it, and both are pinned by a test that reads the
+    rendered style.
+    **The rule covers every page, not only the FABs.** Five FAB screens
+    (Home, Movies, Music, Podcasts, Library) and eighteen more screens plus
+    the shared `ScreenContainer` now use it. The per-screen numbers it
+    replaced — `+ 104` (item 56), `+ 56` (a mini-player clearance for a
+    player of a size that no longer existed), `+ 40`, `+ 20`, `+ 12` — were
+    either orphans or one size step off the rule; they are gone.
+59. ~~**The app had SIX files for one floating action button.**~~
+    **RESOLVED (2026-10-28) — `F-031`.**
+    `screens/Home/components/HomeFab.tsx`, three byte-identical copies of
+    `BrowseFab` (Movies, Music, Podcasts), two more byte-identical copies of
+    `SectionFab` (Radio, Live TV), and the Library's drawn inline in
+    `LibraryScreenContent.tsx`'s stylesheet. Six files, one button — and they
+    had already drifted: the Home one floated `spacing.lg` from the right
+    edge and the other five `spacing.xl`; the Home one had a neutral shadow
+    and elevation 6, the others a gold glow and elevation 8; the Home one
+    used `zIndex: 99` and the others `10`.
+    The bottom-chrome rule was about to be written into seven call sites,
+    which is not a rule — it is seven chances to get it wrong. One
+    `components/core/Fab/Fab.tsx` now draws the button, the rule lives in
+    it, and the six files are gone. The Home button was the outlier and was
+    normalised onto the treatment six of the seven already used. The
+    Library's inline button also gained the `accessibilityRole` and the
+    `accessibilityLabel` it never had.
 
 ---
 
@@ -2346,6 +2399,13 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
   and three entries were wrong — in a way that would have sent the work to
   the wrong repo. Read the code; the register is a list of questions, not a
   list of answers.
+- **A rule that lives in seven call sites is not a rule — it is seven chances
+  to get it wrong.** The app had six files for one floating action button and
+  they had already drifted on the right margin, the shadow and the z-index.
+  The bottom-chrome rule was about to become the seventh thing to drift, so
+  it went into the ONE component that draws a FAB. **When a fact must hold
+  everywhere, it belongs in the component that draws it — not in a
+  convention the code follows by hand.**
 - **A deleted UI kit leaves its GEOMETRY behind.** The bottom tab bar was
   gone for waves, and its 48 dp clearance survived in six screens' padding
   while its 100 dp clearance survived in the Home FAB's offset — numbers

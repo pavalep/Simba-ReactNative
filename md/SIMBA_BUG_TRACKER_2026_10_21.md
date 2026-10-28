@@ -14,7 +14,11 @@ entries since 2026-10-21 are `B-022` onward; new fixes are `F-015` onward.
 `B-027` and resolved `B-006` / `B-008` / `B-010` / `B-014` / `B-020` / `B-024`
 as `F-021`…`F-026`. The **tab-bar wave** that followed it added `B-028` and
 resolved the app's dead tab-bar skeleton and the Home FAB's lane and its
-silence as `F-027` / `F-028`.
+silence as `F-027` / `F-028`. The **bottom-chrome wave** that followed
+resolved `B-028` (the mini-player dock sat under every floating button and
+under the last row of every list) and added `B-029` / `B-030` (the Movies
+grid sat under its own FAB; the app had six files for one floating button)
+as `F-029`…`F-031`.
 
 ## How to read this file
 
@@ -924,8 +928,79 @@ a per-screen measurement.
   navigation bar** — the docks' own defect, and the reason their band
   reaches as high as 54 dp.
 
-**State:** open — needs a product decision, then a device check. The
-geometry is **source-proven**; nothing has been observed on a device yet.
+**The decision (2026-10-28) — Option A, the FAB moves.** The dock cannot
+yield: it is the thing the user minimised the player INTO, and lifting it off
+the bottom edge would put it over the content the user is looking at.
+Hiding the FAB — which is what YouTube and Plex do — would remove the
+action: the Home FAB opens the file picker, the catalogue ones open their
+filter sheet, the Library one opens the create-playlist sheet. So the button
+**moves up** to clear the dock.
+
+**The rule, and its one owner.** `src/infrastructure/player/miniPlayerChrome.ts`:
+
+    bottom offset = max(insets.bottom, mini player band) + spacing.lg
+
+Both terms are measured from the **window** bottom, so they are comparable,
+and whichever is taller is the one that has to be cleared. With no mini
+player up the band is `0` and the rule is the app's long-standing
+`insets.bottom + spacing.lg` — nothing changes for anyone who is not playing
+anything. With a dock up the band is `54` and the button sits at `70 dp`.
+
+`MINI_PLAYER_HEIGHT` is the ONE place the dock's height is written down, and
+it is derived from the same three numbers the docks lay themselves out with
+(`2` progress + `44` art + `4 + 4` row padding), so the declared height and
+the painted height cannot drift apart. Both docks now take their height from
+it, and both are pinned by a test that reads the rendered style.
+
+**The rule covers every page, not only the FABs.** The dock is an app-level
+overlay, so "is the mini player accounted for on this page?" was answered
+**no** on every one of them: a screen's scroll padding cleared the safe area
+and nothing else, so the last row of a list sat under the dock. Five FAB
+screens (Home, Movies, Music, Podcasts, Library) and eighteen more screens
+plus the shared `ScreenContainer` now use the rule.
+
+**State:** resolved (`F-029`). The geometry is **source-proven**; the device
+check is still deferred.
+
+---
+
+### B-029 · P3 · app · the Movies grid's last row sat under its own FAB
+
+**Symptom.** Not observed on a device — found by reading the arithmetic.
+
+**The arithmetic.** `MoviesContent` reserved `insets.bottom + spacing.md`
+(36 dp on a 24 dp gesture bar) at the bottom of the grid, while the Movies
+FAB floats at `insets.bottom + spacing.lg` (40 dp) and is 56 dp tall — so it
+covers 40…96 dp and the grid's last row ended at 36 dp. The button sat **on**
+the last row of the grid it belongs to. Music and Podcasts already reserved
+the FAB's height (`… + 56 + spacing.md`); Movies did not.
+
+**State:** resolved (`F-030`). The grid now reserves the FAB's height the
+same way its two sibling screens do.
+
+---
+
+### B-030 · P3 · app · the app had SIX files for one floating action button
+
+**What it was.** `screens/Home/components/HomeFab.tsx`, three byte-identical
+copies of `BrowseFab` (Movies, Music, Podcasts), two more byte-identical
+copies of `SectionFab` (Radio, Live TV), and the Library's drawn inline in
+`LibraryScreenContent.tsx`'s stylesheet. Six files, one button — and they had
+already drifted: the Home one floated `spacing.lg` from the right edge and
+the other five `spacing.xl`; the Home one had a neutral shadow and elevation
+6, the others a gold glow and elevation 8; the Home one used `zIndex: 99` and
+the others `10`.
+
+**Why it mattered here.** The bottom-chrome rule (B-028) was about to be
+written into seven call sites. That is not a rule — it is seven chances to
+get it wrong, and the drift above is what seven hand-written offsets look
+like.
+
+**State:** resolved (`F-031`). One `components/core/Fab/Fab.tsx` draws it,
+the rule lives in it, and the six files are gone. The Home button was the
+outlier and was normalised onto the treatment six of the seven already used.
+The Library's inline button also gained the `accessibilityRole` and the
+`accessibilityLabel` it never had.
 
 ---
 
@@ -961,6 +1036,9 @@ geometry is **source-proven**; nothing has been observed on a device yet.
 | F-026 | P3 | app+lib | RN 0.86's `NativeEventEmitter` warned twice and **never attached the native module**, because the TurboModule `Spec` did not declare `addListener`/`removeListeners` and the interop proxy exposes only spec-declared methods → the spec now declares the pair; the `getJSModule(RCTEventEmitter)` half is **still open** | lib (spec) |
 | F-027 | P2 | app | The app still carried a bottom tab bar it has not had since v11 Wave 1 — a `TabNavigator` that is a native stack, two one-screen stacks that were **never rendered**, a 263-line `FloatingTabBar` that was **never mounted**, five `Tab*` types and the `@react-navigation/bottom-tabs` dependency → all deleted, `HomeScreenProps`/`LibraryScreenProps` are now the **root** stack's props, and the **geometry** the dead bar left behind went with it: the Home FAB's `+100` and the `insets.bottom + 104` (= mini player 56 **+ tab bar 48**) on six screens | app `f5/w22-close-minimise-d9` |
 | F-028 | P2 | app | The Home FAB opened a picked file in the **wrong lane** — a `content://` URI carries no extension, so `getMediaType(uri)` fell through to its `'video'` default and every picked **audio** file opened in the **video** lane → a new `classifyPickedMedia()` uses the MIME type the picker reports, then the display name, then the URI. And it **failed silently**: `openPlayer` is async and rejects, but the call was fire-and-forget, so the rejection escaped as an **unhandled promise rejection** and the user saw nothing → the call is awaited, a `false` result is a failure too, and both say "Could not open that file" | app `f5/w22-close-minimise-d9` |
+| F-029 | P3 | app | The mini-player dock sat under **every** floating button — the docks are 54 dp tall at `bottom: 0` of the window and a FAB's bottom edge landed at 40 dp, so the dock's top **14 dp** covered it — and the last row of a list sat under the dock on **every** page → the app's ONE bottom-chrome rule, `max(insets.bottom, dock band) + spacing.lg`, in `infrastructure/player/miniPlayerChrome`, with `MINI_PLAYER_HEIGHT` as the single owner of the dock's height (derived from the same three numbers the docks lay themselves out with, so the declared height and the painted height cannot drift) | app `f5/w22-close-minimise-d9` |
+| F-030 | P3 | app | The Movies grid's last row sat under the Movies FAB — its padding cleared the safe area but not the button → it now reserves the FAB's height, the way Music and Podcasts already did | app `f5/w22-close-minimise-d9` |
+| F-031 | P3 | app | The app had **six** files for one floating action button (Home's, three byte-identical catalogue copies, two more byte-identical copies, and the Library's drawn inline in a stylesheet) and they had already drifted on margin, shadow and z-index → one `components/core/Fab/Fab.tsx`, with the bottom-chrome rule in it; the Home button was the outlier and was normalised onto the treatment six of the seven already used | app `f5/w22-close-minimise-d9` |
 
 ---
 
