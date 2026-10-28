@@ -3,7 +3,13 @@ import RNFS from 'react-native-fs';
 
 import {getMpvPlayerModule} from '../infrastructure/player';
 
-import {isRemoteUri} from '../utils/mediaUri';
+import {
+  extensionOf,
+  isRemoteUri,
+  mediaTypeFromExtension,
+  mediaTypeFromUri,
+  type MediaLane,
+} from '../utils/mediaUri';
 import {logger} from '../lib/logger';
 
 
@@ -32,44 +38,22 @@ const MEDIA_EXTENSIONS = new Set([
   'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', // images
 ]);
 
-/**
- * The lowercased extension of a name or path, or null when it has none.
- *
- * `null` and `''` are different answers: `''` means "the name ends in a
- * dot", `null` means "there is no extension at all" — which is what a
- * `content://` URI has, and the distinction is what a picked file's
- * classification turns on.
- */
-function extensionOf(nameOrPath: string): string | null {
-  const name = decodeURIComponent(nameOrPath.split(/[/\\]/).pop() || '');
-  const dot = name.lastIndexOf('.');
-  if (dot < 0) return null;
-  const ext = name.slice(dot + 1).toLowerCase();
-  return ext.length > 0 ? ext : null;
-}
-
 function getExtension(uri: string): string {
   return extensionOf(uri) ?? '';
 }
 
-/** Audio-only file extensions */
-const AUDIO_EXTENSIONS = new Set([
-  'mp3', 'flac', 'wav', 'aac', 'ogg', 'wma', 'm4a', 'opus',
-]);
+export type MediaType = MediaLane;
 
-/** Video file extensions */
-const VIDEO_EXTENSIONS = new Set([
-  'mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'm4v', 'mpg', 'mpeg',
-]);
-
-export type MediaType = 'video' | 'audio';
-
-/** Classify a media file URI as video or audio based on its extension. */
+/**
+ * Classify a media file URI as video or audio based on its extension.
+ *
+ * The table lives in `utils/mediaUri` — ONE owner for "which lane is this
+ * file in" — because the deep-link launcher needs the same answer, and
+ * this module imports the player barrel, so the player layer cannot
+ * import this one back without a cycle.
+ */
 export function getMediaType(uri: string): MediaType {
-  const ext = getExtension(uri);
-  if (VIDEO_EXTENSIONS.has(ext)) return 'video';
-  if (AUDIO_EXTENSIONS.has(ext)) return 'audio';
-  return 'video';
+  return mediaTypeFromUri(uri);
 }
 
 /**
@@ -99,17 +83,11 @@ export function classifyPickedMedia(file: PickedFile): MediaType {
   if (mime.startsWith('audio/')) return 'audio';
   if (mime.startsWith('video/')) return 'video';
 
-  const byName = extensionOf(file.title);
-  if (byName != null) {
-    if (AUDIO_EXTENSIONS.has(byName)) return 'audio';
-    if (VIDEO_EXTENSIONS.has(byName)) return 'video';
-  }
+  const byName = mediaTypeFromExtension(extensionOf(file.title));
+  if (byName != null) return byName;
 
-  const byUri = extensionOf(file.uri);
-  if (byUri != null) {
-    if (AUDIO_EXTENSIONS.has(byUri)) return 'audio';
-    if (VIDEO_EXTENSIONS.has(byUri)) return 'video';
-  }
+  const byUri = mediaTypeFromExtension(extensionOf(file.uri));
+  if (byUri != null) return byUri;
 
   return 'video';
 }

@@ -74,6 +74,14 @@ import type {PlaybackId} from './playbackFacade';
 // the seam the start track is launched through is. See
 // `./usePlaylistLaunch.ts`.
 import {useOpenPlaylist} from './usePlaylistLaunch';
+// V22 W33 (B-013) — the APP's deep-link launcher. The lib's
+// `useOpenFromUrl` is NOT re-exported any more: it forwarded to
+// `usePlayerActivity().openPlayer()`, which asks `isSurfaceMounted()`
+// before it opens a video — and that always answers `false`, because the
+// surface registry is never populated. A deep-linked video therefore never
+// played, and the path skipped the app's own seam: no now-playing entry,
+// no history checkpoint, no dock, no resume prompt.
+import {useDeepLinkLaunch} from './useDeepLinkLaunch';
 
 // Exported on its own, NOT inside the `export {...} from '@simba-dev/...'`
 // list below. An export-from names its own binding, so leaving
@@ -81,6 +89,12 @@ import {useOpenPlaylist} from './usePlaylistLaunch';
 // silently ignored this import — `tsc` reported no conflict and the barrel
 // went on handing callers the wrong implementation.
 export {useOpenPlaylist};
+
+// Exported on its own for the same reason `useOpenPlaylist` is: an
+// `export {...} from '@simba-dev/...'` re-export names its own binding,
+// so leaving the name in that list keeps re-exporting the LIB's hook and
+// silently ignores the local import.
+export {useDeepLinkLaunch};
 
 export {
   // `useOpenPlaylist` is DELIBERATELY NOT in this list. It used to be, and
@@ -114,15 +128,6 @@ export {
   // reaching into the module package.
   PlayerResumeProvider,
   usePlayItem,
-  // V22 W22 (B-020) — the deep-link opener. `AppContent` used to import
-  // this hook straight from the package, which broke the PLAYER RULE in
-  // `scripts/check-import-boundaries.js` ("only src/infrastructure/player/
-  // may import from '@simba-dev/react-native-media-player'"). The hook
-  // is the lib's own (it owns the URI-scheme filter, the basename→title
-  // derivation and the extension→lane classification), so it is re-exported
-  // here rather than reimplemented: the call site imports it from this
-  // layer and the lib import stays inside the cage.
-  useOpenFromUrl,
 } from '@simba-dev/react-native-media-player';
 
 // ─── V19 W9.3 — resume-aware launch seam ─────────────────────

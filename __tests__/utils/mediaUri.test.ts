@@ -18,7 +18,14 @@
  * `file://` here would put the bug back in a place that looks authoritative.
  */
 
-import {toRenderableImageUri, withCacheToken} from '../../src/utils/mediaUri';
+import {
+  displayNameFromUri,
+  extensionOf,
+  mediaTypeFromExtension,
+  mediaTypeFromUri,
+  toRenderableImageUri,
+  withCacheToken,
+} from '../../src/utils/mediaUri';
 
 describe('toRenderableImageUri', () => {
   it('leaves a remote URL alone', () => {
@@ -110,5 +117,63 @@ describe('withCacheToken', () => {
     expect(withCacheToken(remote!, 'v1')).toBe(
       'https://archive.org/services/img/TheRifle?t=v1',
     );
+  });
+});
+
+/**
+ * The local-media facts a URI carries: which lane, and what it is called.
+ *
+ * These used to live in `services/fileService` (picker + folder browser)
+ * and AGAIN in the lib's private `useOpenFromUrl` (deep links). Two
+ * tables, two chances to drift — and the deep-link one is unreachable
+ * from the app, so the app had to copy it to use it at all.
+ */
+describe('the local-media facts a URI carries', () => {
+  it('classifies by extension', () => {
+    expect(mediaTypeFromUri('file:///movies/namus-kanla-yazilir.mkv')).toBe(
+      'video',
+    );
+    expect(mediaTypeFromUri('file:///podcasts/can-ai.mp3')).toBe('audio');
+  });
+
+  it('falls back to the video lane when the URI has no extension', () => {
+    // A `content://` share-sheet URI has none, and the video lane is the
+    // one that can show a picture.
+    expect(mediaTypeFromUri('content://media/external/video/media/42')).toBe(
+      'video',
+    );
+  });
+
+  it('says "not a media extension" rather than guessing', () => {
+    // `null` is a real answer: it is what lets the picker try the MIME
+    // type the provider reports BEFORE it falls back to a lane.
+    expect(mediaTypeFromExtension(null)).toBeNull();
+    expect(mediaTypeFromExtension('txt')).toBeNull();
+    expect(mediaTypeFromExtension('mp4')).toBe('video');
+  });
+
+  it('reads the extension out of a percent-encoded name', () => {
+    expect(extensionOf('a%20film.mp4')).toBe('mp4');
+    expect(mediaTypeFromExtension(extensionOf('a%20film.mp4'))).toBe('video');
+  });
+
+  it('does not throw on a malformed escape', () => {
+    // `decodeURIComponent('100%.mp4')` raises. A classifier that crashes
+    // on a weird filename is worse than one that guesses.
+    expect(() => extensionOf('100%.mp4')).not.toThrow();
+    expect(extensionOf('100%.mp4')).toBe('mp4');
+  });
+
+  it('names a URI after its basename, without the extension', () => {
+    expect(displayNameFromUri('file:///movies/namus-kanla-yazilir.mkv')).toBe(
+      'namus-kanla-yazilir',
+    );
+    expect(displayNameFromUri('file:///movies/namus%20kanla.mkv')).toBe(
+      'namus kanla',
+    );
+  });
+
+  it('falls back when there is no usable name', () => {
+    expect(displayNameFromUri('file:///')).toBe('Shared File');
   });
 });

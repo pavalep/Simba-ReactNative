@@ -111,3 +111,113 @@ export function classifyStreamType(uri: string | null | undefined): StreamType {
   if (!isRemoteUri(uri)) return 'file';
   return 'other';
 }
+
+// ─── Local media: which lane, and what it is called ────────────────────
+//
+// ONE owner for both facts.
+//
+// They used to live in two places that could not see each other: the
+// app's `services/fileService` answered "which lane is this file in" for
+// the picker and the folder browser, and the lib's `useOpenFromUrl`
+// answered it AGAIN for the deep link, in module-private code nobody
+// could reuse. Two tables, two chances to drift.
+//
+// They cannot live in `services/fileService` either: that module imports
+// the player barrel, so the player layer importing it back would be a
+// cycle — and a cycle in this repo has shipped as a redbox. This module
+// is a leaf, so both sides can read it.
+
+/**
+ * The lane a LOCAL media file belongs to.
+ *
+ * Named `MediaLane` rather than `MediaType` so it cannot be confused with
+ * the catalogue's `mediaType` ("movie" / "episode" / "track") or with the
+ * bridge's `type` (`'video' | 'audio'`). Same two answers, different
+ * question.
+ */
+export type MediaLane = 'audio' | 'video';
+
+/** Audio-only file extensions (lowercase, no dot). */
+const AUDIO_EXTENSIONS = new Set([
+  'mp3', 'flac', 'wav', 'aac', 'ogg', 'wma', 'm4a', 'opus',
+]);
+
+/** Video file extensions (lowercase, no dot). */
+const VIDEO_EXTENSIONS = new Set([
+  'mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv', 'webm', 'm4v', 'mpg', 'mpeg',
+]);
+
+/**
+ * The lowercased extension of a name or path, or null when it has none.
+ *
+ * `null` and `''` are different answers: `''` means "the name ends in a
+ * dot", `null` means "there is no extension at all" — which is what a
+ * `content://` URI has, and the distinction is what a picked file's
+ * classification turns on.
+ *
+ * A malformed percent-escape is NOT a reason to throw while classifying a
+ * file: `decodeURIComponent('100%.mp4')` raises, and a classifier that
+ * crashes on a weird filename is worse than one that guesses. The raw
+ * name still carries the extension.
+ */
+export function extensionOf(nameOrPath: string): string | null {
+  const raw = nameOrPath.split(/[/\\]/).pop() || '';
+  let name = raw;
+  try {
+    name = decodeURIComponent(raw);
+  } catch {
+    // Keep the raw name — its extension is still readable.
+  }
+  const dot = name.lastIndexOf('.');
+  if (dot < 0) return null;
+  const ext = name.slice(dot + 1).toLowerCase();
+  return ext.length > 0 ? ext : null;
+}
+
+/**
+ * The lane an extension belongs to, or `null` when the extension is not a
+ * media extension at all.
+ *
+ * `null` is a real answer and not a fallback: it is what lets a caller
+ * try a SECOND signal (the MIME type the picker reports, the display
+ * name) before it falls back to the default lane.
+ */
+export function mediaTypeFromExtension(
+  extension: string | null,
+): MediaLane | null {
+  if (extension == null) return null;
+  if (AUDIO_EXTENSIONS.has(extension)) return 'audio';
+  if (VIDEO_EXTENSIONS.has(extension)) return 'video';
+  return null;
+}
+
+/**
+ * The lane a local media URI belongs to.
+ *
+ * The fallback is `'video'` — the lane that can show a picture. An
+ * unknown file opens in the video lane rather than silently losing its
+ * picture.
+ */
+export function mediaTypeFromUri(uri: string): MediaLane {
+  return mediaTypeFromExtension(extensionOf(uri)) ?? 'video';
+}
+
+/**
+ * A human-readable name for a media URI: the basename, without the
+ * extension, URL-decoded.
+ *
+ * A `content://` share-sheet URI has no filename — its last segment is a
+ * provider id — so the name is that id. Reading the real name needs the
+ * `ContentResolver`, which is a native call.
+ */
+export function displayNameFromUri(uri: string, fallback = 'Shared File'): string {
+  const clean = uri.split('?')[0].split('#')[0];
+  const fileName = clean.split('/').pop() || fallback;
+  const noExt = fileName.replace(/\.[^.]+$/, '');
+  try {
+    return decodeURIComponent(noExt) || fallback;
+  } catch {
+    // Malformed escape — fall back to the raw basename.
+    return noExt || fallback;
+  }
+}

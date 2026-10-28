@@ -13,7 +13,7 @@
  *
  * ## It must stay under `<SimbaPlayer>`
  *
- * `useOpenFromUrl()`, `useQueueSync()` and the navigator's screens (via
+ * `useDeepLinkLaunch()`, `useQueueSync()` and the navigator's screens (via
  * `useResumeAwareLaunch()`) all read the lib's React context. So the
  * navigator is not a sibling of the player — it is inside it. That is the
  * same shape as `GestureHandlerRootView` wrapping the whole app: a
@@ -38,7 +38,7 @@ import {linking} from '../navigation/linking';
 // package: the PLAYER RULE in `scripts/check-import-boundaries.js` keeps
 // every `@simba-dev/react-native-media-player` import inside
 // `src/infrastructure/player/`.
-import {useOpenFromUrl, useQueueSync} from '../infrastructure/player';
+import {useDeepLinkLaunch, useQueueSync} from '../infrastructure/player';
 import {useAuthSession} from '../hooks/useAuthSession';
 import {downloadService} from '../services/downloadService';
 import {mark} from '../utils/startupPerf';
@@ -49,9 +49,11 @@ import {GlobalOperationProgress} from '../components/status/GlobalOperationProgr
 
 export const AppContent: React.FC = () => {
   // The deep-link handler. The hook owns the URI-scheme filter, the
-  // basename→title derivation and the extension→lane classification; the
-  // consumer owns only the `Linking` plumbing.
-  const openFromUrl = useOpenFromUrl();
+  // basename→title derivation and the extension→lane classification, and
+  // launches through the app's own seam — so a shared video gets a
+  // now-playing entry, a history checkpoint and a dock, like every other
+  // launch. The consumer owns only the `Linking` plumbing.
+  const openFromDeepLink = useDeepLinkLaunch();
 
   // Cold-start silent restore + foreground session expiry.
   useAuthSession();
@@ -94,14 +96,14 @@ export const AppContent: React.FC = () => {
 
   useEffect(() => {
     deepLinkPromiseRef.current!.then(url => {
-      if (url) void openFromUrl(url);
+      if (url) void openFromDeepLink(url);
     });
 
     const subscription = Linking.addEventListener('url', ({url}) => {
-      void openFromUrl(url);
+      void openFromDeepLink(url);
     });
     return () => subscription.remove();
-  }, [openFromUrl]);
+  }, [openFromDeepLink]);
 
   return (
     <>
