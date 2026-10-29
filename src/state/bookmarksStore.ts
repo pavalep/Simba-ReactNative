@@ -57,6 +57,16 @@ export interface Bookmark {
   createdAt: string;
   label: string;
   thumbnailPath?: string;
+  /**
+   * A frame captured at the bookmarked position, on this device.
+   *
+   * The counterpart of `RecentHistoryEntry.resumeThumbnailPath`. The
+   * app already captures a still of the video where the user stopped;
+   * a bookmark IS a position, so it can carry that still. Without this
+   * field a bookmark of a film with no catalogue art had nothing to
+   * draw but a placeholder glyph, even though the frame was on disk.
+   */
+  resumeThumbnailPath?: string;
   mediaType: MediaLane;
   type: MediaKind;
   source: MediaSource;
@@ -125,6 +135,10 @@ function buildBookmark(input: BookmarkInput, existing?: Bookmark): Bookmark {
     createdAt: existing?.createdAt ?? input.createdAt ?? new Date().toISOString(),
     label: input.label || existing?.label || '',
     thumbnailPath: input.thumbnailPath || existing?.thumbnailPath,
+    // Carried across an update, not re-derived — the same rule the
+    // history store uses for its own frame. Re-bookmarking must not
+    // lose the picture the first bookmark captured.
+    resumeThumbnailPath: input.resumeThumbnailPath || existing?.resumeThumbnailPath,
     ...classification,
   };
 }

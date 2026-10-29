@@ -23,6 +23,7 @@ import {MAX_BOOKMARK_ENTRIES} from '../../../state/bookmarksStore';
 import {formatDuration} from '../../../utils/timeAgo';
 import {MediaRail} from '../../../components/media/MediaRail';
 import {MediaRailCard} from '../../../components/media/MediaRailCard';
+import {resolveMediaArtwork} from '../../../utils/mediaArtwork';
 import type {Bookmark} from '../../../features/bookmarks';
 
 type BookmarkEntry = Bookmark;
@@ -62,7 +63,7 @@ export const HomeBookmarksList: React.FC<Props> = ({
         <MediaRailCard
           title={item.title}
           lane={item.mediaType ?? 'video'}
-          imageUri={item.thumbnailPath}
+          imageUri={resolveMediaArtwork(item)}
           subtitle={`${formatDuration(item.position)} · ${new Date(
             item.createdAt,
           ).toLocaleDateString()}`}

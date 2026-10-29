@@ -66,6 +66,7 @@ import {
   type PromptResume,
 } from '../infrastructure/player';
 import {formatDuration} from '../utils/timeAgo';
+import {resolveMediaArtwork} from '../utils/mediaArtwork';
 
 export const AppRoot: React.FC = () => {
   const {colors} = useTheme();
@@ -103,8 +104,10 @@ export const AppRoot: React.FC = () => {
       // is about the thing they just tapped. `captureFrame` writes
       // `resumeThumbnailPath`; catalogue artwork is the fallback for a
       // first play, where no frame has been captured yet.
-      imageUri:
-        candidate.resumeThumbnailPath || candidate.thumbnailPath || undefined,
+      //
+      // `resolveMediaArtwork` owns that precedence for every surface
+      // that draws a media record's artwork.
+      imageUri: resolveMediaArtwork(candidate),
       // V19 spec (SIMBA_PLAYER_MODULE_V19_SPECIFICATION.md:604-611):
       // "Auto-dismisses after 8 s; default action is Resume."
       //

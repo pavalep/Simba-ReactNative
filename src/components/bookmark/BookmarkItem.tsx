@@ -7,6 +7,8 @@ import {
   PanResponder,
 } from 'react-native';
 import {MediaImage} from '../utility/MediaImage';
+import {resolveMediaArtwork} from '../../utils/mediaArtwork';
+import {toRenderableImageUri} from '../../utils/mediaUri';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../core/AppText/AppText';
@@ -57,6 +59,12 @@ export const BookmarkItem: React.FC<Props> = ({
   const {colors} = useTheme();
   const translateX = useRef(new Animated.Value(0)).current;
   const isOpen = useRef(false);
+
+  // Which artwork this bookmark shows: the captured frame at the
+  // bookmarked moment when there is one, the catalogue poster otherwise.
+  // The same rule the Recently Played rail and the resume prompt follow —
+  // `resolveMediaArtwork` is the one owner of it.
+  const artwork = resolveMediaArtwork(item);
 
   const closeSwipe = useCallback(() => {
     Animated.spring(translateX, {
@@ -146,10 +154,10 @@ export const BookmarkItem: React.FC<Props> = ({
             accessibilityLabel={`Play ${item.title} at ${formatTime(item.position)}`}
             accessibilityHint={onRename ? 'Long-press to rename' : undefined}>
             {/* Thumbnail art when available, else gold bookmark icon (P34.6) */}
-            {item.thumbnailPath ? (
+            {artwork ? (
               <View style={[styles.iconContainer, styles.thumbWrap]}>
                 <MediaImage
-                  source={item.thumbnailPath}
+                  source={toRenderableImageUri(artwork)!}
                   style={styles.thumbImage}
                   resizeMode="cover"
                 />

@@ -6,9 +6,10 @@ import {
   type Bookmark,
   type BookmarkInput,
 } from '../../features/bookmarks';
-import {useBookmarksStore} from '../../state';
+import {useBookmarksStore, useRecentHistoryStore} from '../../state';
 import {useNowPlayingStore} from '../../state/nowPlayingStore';
 import {useTransport} from './useTransport';
+import {mediaKey} from './playbackProgress';
 
 /**
  * W9.4 — the bookmark toggle for the player.
@@ -93,6 +94,32 @@ export function useBookmarkToggle(): BookmarkToggle {
   const add = useBookmarks(uri);
   const remove = add.remove;
 
+  // The captured frame for THIS media — the picture of where the user
+  // was, which the catalogue's poster cannot say.
+  //
+  // ## Where the capture actually lives
+  //
+  // `usePlaybackCheckpointSync` grabs a still at the session's final
+  // position and writes it to the HISTORY store
+  // (`writeCheckpoint(snapshot, path, false)`). That store is the only
+  // place it goes.
+  //
+  // The playback SESSION cannot be the carrier: the frame is captured
+  // at the session's END — after the session is gone — and the session
+  // carries only the catalogue artwork (`thumbnailPath`). So the
+  // hand-off has to come from the history store, and this is the
+  // reader that closes it.
+  //
+  // The result is that a bookmark shows the same picture the Recently
+  // Played rail and the resume prompt show for the same file, instead
+  // of a placeholder glyph whenever the catalogue had no art.
+  const resumeThumbnailPath = useRecentHistoryStore(s =>
+    uri
+      ? s.entries.find(entry => mediaKey(entry.fileUri) === mediaKey(uri))
+          ?.resumeThumbnailPath
+      : undefined,
+  );
+
   // Read once per render; `positionMs` advances 4x/second, and this
   // hook feeds a control that must not re-render the whole topbar at
   // that rate any more than the transport bar already does.
@@ -134,9 +161,13 @@ export function useBookmarkToggle(): BookmarkToggle {
       mediaType: session?.mediaLane ?? session?.streamType ?? 'video',
       type: session?.type ?? session?.streamType ?? 'video',
       ...(session?.thumbnailPath ? {thumbnailPath: session.thumbnailPath} : {}),
+      // The frame the app captured for this media. A bookmark is a
+      // position, so it carries the picture of that position — the same
+      // rule the Recently Played rail and the resume prompt follow.
+      ...(resumeThumbnailPath ? {resumeThumbnailPath} : {}),
       ...(session?.provider ? {provider: session.provider} : {}),
     }),
-    [uri, session, state.title, state.durationMs, positionSec],
+    [uri, session, state.title, state.durationMs, positionSec, resumeThumbnailPath],
   );
 
   // STATE, not a ref: parking a request has to re-render the control,

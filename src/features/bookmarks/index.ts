@@ -136,6 +136,9 @@ function dispatchAddBookmark(
     createdAt: existing?.createdAt ?? input.createdAt ?? new Date().toISOString(),
     label: input.label || existing?.label || '',
     thumbnailPath: input.thumbnailPath || existing?.thumbnailPath,
+    // Carried across an update, not re-derived — re-bookmarking must not
+    // lose the captured frame the first bookmark carried.
+    resumeThumbnailPath: input.resumeThumbnailPath || existing?.resumeThumbnailPath,
     // Both lanes default to the SAME lane. They previously defaulted to
     // 'video' here and to 'audio' in `normalizeMediaClassification`, so
     // one omitted field produced two opposite answers depending on the

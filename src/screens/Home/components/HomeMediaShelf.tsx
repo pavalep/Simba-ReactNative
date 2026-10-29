@@ -6,6 +6,7 @@ import {
 } from '../../../utils/mediaTime';
 import {MediaRail} from '../../../components/media/MediaRail';
 import {MediaRailCard} from '../../../components/media/MediaRailCard';
+import {resolveMediaArtwork} from '../../../utils/mediaArtwork';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 
 export interface HomeMediaShelfItem {
@@ -90,7 +91,7 @@ export const HomeMediaShelf: React.FC<HomeMediaShelfProps> = ({
         <MediaRailCard
           title={item.title}
           lane={item.mediaType ?? 'video'}
-          imageUri={item.resumeThumbnailPath || item.thumbnailPath}
+          imageUri={resolveMediaArtwork(item)}
           subtitle={formatPositionLine(item.position, item.duration)}
           progress={progress}
           onPress={() => onItemPress(item)}

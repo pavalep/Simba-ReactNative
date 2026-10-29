@@ -31,10 +31,15 @@ jest.mock('../../../src/infrastructure/player/useTransport', () => ({
 import {useBookmarkToggle} from '../../../src/infrastructure/player/useBookmarkToggle';
 import {useNowPlayingStore} from '../../../src/state/nowPlayingStore';
 import {useBookmarksStore} from '../../../src/state/bookmarksStore';
+import {useRecentHistoryStore} from '../../../src/state/recentHistoryStore';
 import {MAX_BOOKMARK_ENTRIES} from '../../../src/state/bookmarksStore';
 import type {Bookmark} from '../../../src/state/bookmarksStore';
 
 const URI = 'file:///movies/film.mkv';
+
+/** Where the native capture writes the frame (`captureFrame`). */
+const CAPTURED_FRAME =
+  '/data/user/0/com.simba.player/files/simba-resume-thumbs/frame_1_300000.jpg';
 
 function seedBookmark(over: Partial<Bookmark> = {}): void {
   useBookmarksStore.getState().addBookmark({
@@ -57,6 +62,7 @@ describe('useBookmarkToggle', () => {
   beforeEach(async () => {
     useBookmarksStore.getState().reset();
     useNowPlayingStore.getState().reset();
+    useRecentHistoryStore.getState().reset();
     mockTransportState = {
       positionMs: 60_000,
       durationMs: 600_000,
@@ -90,6 +96,51 @@ describe('useBookmarkToggle', () => {
     const items = useBookmarksStore.getState().items;
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({fileUri: URI, position: 60});
+  });
+
+  it('carries the captured frame onto the bookmark it creates', async () => {
+    // THE HAND-OFF.
+    //
+    // `captureFrame` writes the still of the video at the position the
+    // user stopped, and `usePlaybackCheckpointSync` puts it in the
+    // HISTORY store on teardown — that store is the only place it lives.
+    // The playback SESSION carries the catalogue artwork, not the frame.
+    //
+    // A bookmark is a POSITION, so it can carry the picture of that
+    // position. Without this the Bookmarks rail had nothing to draw for
+    // a film with no catalogue art, even though the frame was on disk.
+    useRecentHistoryStore.getState().upsertRecentHistoryEntry({
+      fileUri: URI,
+      title: 'Namus Kanla Yazilir',
+      position: 300,
+      duration: 600,
+      thumbnailPath: '',
+      resumeThumbnailPath: CAPTURED_FRAME,
+      mediaType: 'video',
+      type: 'movie',
+      source: 'local',
+    });
+
+    const {result} = await renderHook(() => useBookmarkToggle());
+
+    await act(async () => {result.current.onToggle();});
+
+    const items = useBookmarksStore.getState().items;
+    expect(items).toHaveLength(1);
+    expect(items[0].resumeThumbnailPath).toBe(CAPTURED_FRAME);
+  });
+
+  it('carries NO frame when the app has captured none', async () => {
+    // The counterweight: a bookmark must not invent a path. Nothing was
+    // captured for this file, so there is nothing to carry — and the
+    // bookmark falls back to the catalogue artwork exactly as before.
+    const {result} = await renderHook(() => useBookmarkToggle());
+
+    await act(async () => {result.current.onToggle();});
+
+    const items = useBookmarksStore.getState().items;
+    expect(items).toHaveLength(1);
+    expect(items[0].resumeThumbnailPath).toBeUndefined();
   });
 
   it('removes the bookmark when pressed again at the same moment', async () => {
