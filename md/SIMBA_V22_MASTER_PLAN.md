@@ -34,6 +34,8 @@ here, or history.
 | **`SIMBA_V22_RN_MEDIA_MODULE_INTEGRATION_RESEARCH.md`** | 2026-10-16 | 🟢 **LIVE — authority on integration pattern.** Primary-source comparison of react-native-video v6/v7, expo-video, vision-camera. |
 | `SIMBA_V22_DEVICE_FINDINGS_AND_RN_ARCHITECTURE_BRIEF.md` | 2026-10-16 | 🟡 **LIVE-PARTIAL.** §1–§3, §5 device findings valid. §4.2 **corrected** — TextureView withdrawn. |
 | **`SIMBA_PLAYER_V21_TRACKER.md`** | rolling, top handoff 2026-10-16 | 🟢 **LIVE — per-finding state.** Newest handoff block at top. |
+| **`SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md`** | 2026-10-29 | 🟡 **LIVE-PLANNED — the pinned / mixed-lane playlist feature.** What the user asked for, the gap measured in the source (`file:line`), the decisions D-P1 … D-P6, the pages, the data model, the risks. Nothing implemented yet. |
+| **`SIMBA_V22_PINNED_PLAYLIST_TRACKER.md`** | 2026-10-29 | 🟡 **LIVE-PLANNED — the execution plan for that feature.** 8 phases, 41 tasks, each with the `file:line` it touches and an `Evidence:` line. |
 | `SIMBA_PLAYER_V21_SPECIFICATION.md` | 2026-10-13 | 🟡 Reference — lib public API of record. |
 | `SIMBA_V21_DEVICE_PROOF.md` | 2026-10-12 | ⚫ **TEMPLATE ONLY.** Describes `PlayerActivity`, which no longer exists. Do not reuse as a capture sheet. |
 | `SIMBA_PLAYER_V20_MEDIA_ARCHITECTURE.md` | 2026-10-07 | 🟡 Reference — pre-collapse architecture. |
@@ -2410,6 +2412,76 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     normalised onto the treatment six of the seven already used. The
     Library's inline button also gained the `accessibilityRole` and the
     `accessibilityLabel` it never had.
+60. **The "Pinned Playlists" section was a promise the code never kept**
+    (new, 2026-10-29). Home has a "Pinned Playlists" shelf
+    (`src/screens/Home/index.tsx:139`) fed by
+    `src/screens/Home/hooks/useHomeScreen.ts:375-379` — `[...playlists]
+    .sort(by updatedAt desc) .slice(0, 3)`. **Nothing is pinned**: the shelf
+    is the three most-recently-updated playlists under a title that says
+    otherwise, and nothing anywhere can pin a playlist. The user asked for a
+    section that creates playlists of **videos and audio from different
+    sections**, with the UX brought up to the rest of the app, and for the
+    plan to be written down so it is not forgotten.
+    **The gap, measured in the source (2026-10-29).**
+    - `PlaylistKind = 'AUDIO_ONLY' | 'VIDEO_ONLY'` — "Mixed audio/video
+      playlists are intentionally unsupported"
+      (`src/types/playlist.ts:3-4`), and `splitLegacyMixed()` **destroys** a
+      mixed playlist on every rehydrate
+      (`src/state/playlistsStore.ts:90-135`, filter at `:108-109`).
+    - `PlaylistLegacyKind` still carries `'MIXED'`
+      (`src/types/playlist.ts:66`) and `AllPlaylistsScreen` still renders a
+      `'Mixed'` label with no type behind it
+      (`src/screens/AllPlaylists/components/AllPlaylistsScreen.tsx:112-116`).
+    - The player queue is single-lane **by construction**:
+      `normalizeSingleLane` (`src/state/playerStore.ts:97-101`) drops every
+      entry that is not in the first entry's lane, and
+      `loadPlaylistToPlayer` (`:126-133`) runs every playlist through it — so
+      a mixed playlist would be **silently truncated at load**.
+    - `PlaylistSheet` is live at **nine** surfaces and at **none** of the
+      app's own video sections (Movies, All Videos, Movie Detail, Archive,
+      Downloads). A video can only be added to a playlist from the Internet
+      Archive item detail.
+    - **Three** implementations of "create a playlist" for one action:
+      `PlaylistCreateModal` (used by `LibraryScreenContent.tsx:490` and
+      `FolderBrowserScreen.tsx:645`), `AllPlaylistsScreen`'s inline modal
+      (`:54-60`, `:188-271`) and `PlaylistSheet`'s inline create mode
+      (`PlaylistSheet.tsx:96-110`). A shared component exists and two
+      surfaces ignore it.
+    - **Two** "add to playlist" sheets that disagree: `PlaylistSheet`
+      filters by lane (`:79-88`); `PlaylistContextMenu` lists every playlist
+      (`:102`). Combined with the store's **silent** lane refusal
+      (`src/state/playlistsStore.ts:180`), the batch picker can offer a
+      playlist that quietly drops the item — and the toast then **lies** about
+      the count. That is bug `B-034`.
+    - `LOCAL_PLAYLIST_FILTERS` is All / Audio / Video — no Mixed chip
+      (`src/features/library/presentation/related/localFilesConfig.ts:51-58`).
+    **The decisions (all DECIDED, 2026-10-29).**
+    - **D-P1 — `MIXED` becomes first-class.** A playlist may hold audio and
+      video. `splitLegacyMixed()` preserves instead of splitting; the
+      migration is a no-op because no mixed playlist survives on disk.
+    - **D-P2 — "Play all" plays every item in order, and the lane follows
+      the item.** Both lanes are already mounted (D9 is per lane); the queue
+      is **one** queue that may hold both lanes, and the handover across a
+      lane change gets **one** owner, in the launch seam.
+    - **D-P3 — `Playlist.pinned` + `pinnedAt`.** Home shows the pinned
+      playlists first, then the rest. Precedent: Spotify's "Pin playlist",
+      YouTube Music's "Pin to top".
+    - **D-P4 — one owner creates a playlist** (`PlaylistCreateModal`), and
+      **one rule** decides which playlists may take an item (a shared
+      `compatiblePlaylistsFor(item)`, used by both sheets).
+      `PlaylistContextMenu` is **not** deleted — it is the only batch picker.
+    - **D-P5 — `PlaylistSheet` is wired at the Movies sections.**
+    - **D-P6 — radio, live TV and audiobooks stay out of the playlist
+      domain.**
+    **The pages:** new `AddToPlaylistScreen` (a full page spanning
+    Movies · Music · Podcasts · Archive · Downloads) and new
+    `PinnedPlaylistsScreen`; changed `AllPlaylistsScreen`,
+    `PlaylistDetailScreen`, `PlaylistSheet`, `PlaylistCard`, Home's shelf and
+    the Library filter rail.
+    **The plan lives in two documents**, so it cannot be lost inside this
+    register: `md/SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md` and
+    `md/SIMBA_V22_PINNED_PLAYLIST_TRACKER.md`.
+    **Status: PLANNED, not started.** No code has been written.
 
 ---
 
@@ -2479,3 +2551,17 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
   is a constant that has no owner: `+104` was mini player **plus** tab bar,
   and once the tab bar was gone the sum was a lie that looked like a
   measurement.
+- **A shared component is only shared when EVERY surface that needs it uses
+  it.** `PlaylistCreateModal` was a real, correct, shared-looking component —
+  and two of the four surfaces that create a playlist ignored it and kept
+  their own inline copies. "There is a component for this" is not the same
+  fact as "there is one owner for this". Count the call sites before you
+  call something shared; and if two surfaces already disagree about the
+  rule, the rule has to be extracted before the surfaces can be merged.
+- **A message that reports a count must count what HAPPENED, not what was
+  REQUESTED.** The batch "add to playlist" toast said
+  `Added ${selectedItems.length} items` — the number the user selected —
+  while the store silently refuses a lane mismatch
+  (`src/state/playlistsStore.ts:180`). So the one message that told the user
+  "done" was the one that was not true. If an operation can partially
+  succeed, the message must report the partial result.

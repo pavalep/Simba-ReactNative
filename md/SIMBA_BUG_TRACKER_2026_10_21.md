@@ -1229,6 +1229,47 @@ mock), a release, and an app `npm install`. Until then the lib's
 `isSurfaceMounted()` is a **lie in both directions** — false in production,
 true in its own tests.
 
+### B-034 · P2 · app · the batch "add to playlist" toast lies about how many items were added
+
+**Symptom.** In the Folder Browser's batch flow, the user selects some files,
+picks a playlist, and the app says **"Added 3 items to X"**. Some of those
+files were **never added**, and nothing says so.
+
+**State:** open. **Found 2026-10-29**, while writing the pinned-playlist plan.
+
+**The mechanism (verified 2026-10-29).** Two independent facts combine:
+
+1. **The store silently refuses a lane mismatch.**
+   `src/state/playlistsStore.ts:180` — `addItemToPlaylist` returns the
+   playlist unchanged when
+   `!isPlaylistMediaKindAllowed(pl.kind, item.type, item.mediaType)`. No
+   error, no toast, no return value: the caller cannot tell a refusal from a
+   success.
+2. **The caller counts what it *selected*, not what it added.**
+   `src/screens/FolderBrowser/components/FolderBrowserScreen.tsx:281-289`
+   — `selectedItems.forEach(item => addItem(playlistId, item))` is followed by
+   `toast.show(\`Added ${selectedItems.length} items to ${plName}\`)`.
+   `selectedItems.length` is the number of files the user **selected**.
+   The same is true of the create-from-batch path at `:340-346`.
+
+So: select two videos and one audio file, pick an `AUDIO_ONLY` playlist, and
+the app reports **"Added 3 items"** while the playlist receives one.
+
+**The picker makes it reachable.** `PlaylistContextMenu` lists **every**
+playlist with no lane filter (`src/components/playlist/PlaylistContextMenu/PlaylistContextMenu.tsx:102`,
+`data={allPlaylists}`), unlike `PlaylistSheet`, which filters by lane
+(`src/components/sheets/PlaylistSheet/PlaylistSheet.tsx:79-88`). The two
+"add to playlist" sheets disagree about what a playlist may contain.
+
+**Why it matters.** It is a false claim shown to the user — the rule the
+whole project is built on. It is also **silent**: the one place the app
+tells the user "done" is the one place it is not true.
+
+**The fix (planned, not done).** The pinned-playlist tracker's phase 3:
+one shared `compatiblePlaylistsFor(item)` rule both sheets call, and a toast
+that reports what was **added**, saying so when something was skipped.
+Tracked as tracker task 17.
+
 ---
 
 ## FIXED
