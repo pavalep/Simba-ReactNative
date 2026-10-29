@@ -1270,6 +1270,59 @@ one shared `compatiblePlaylistsFor(item)` rule both sheets call, and a toast
 that reports what was **added**, saying so when something was skipped.
 Tracked as tracker task 17.
 
+### B-035 · P3 · lib · `PlayerRoot` and `PlayerSurface` are V11-era leftovers that draw no picture
+
+**Symptom.** A consumer who mounts `<PlayerRoot />` gets a full-screen
+transparent box and, at most, their own `renderControls` — **no video**.
+`<PlayerSurface />` reserves space for a native SurfaceView that is no
+longer mounted anywhere.
+
+**State:** open. **Found 2026-10-29**, while removing `DefaultControls`
+(register item 28).
+
+**The mechanism (verified 2026-10-29).**
+
+- `PlayerSurface` renders a transparent `flex: 1` View and documented
+  itself as the placeholder for "the native SurfaceView (which sits at the
+  activity root, beneath the React tree)".
+- The lib has **no Activity** any more — no `*Activity*.kt` under
+  `android/src`. The picture is the Fabric component `SimbaVideoView`
+  (`MpvRenderViewManager.REACT_CLASS = "SimbaVideoView"`, matching
+  `codegenNativeComponent('SimbaVideoView')`) **inside the React tree** —
+  D2.
+- The app's `MainActivity.kt:58-77` says it outright: *"2026-10-16: no
+  surface is mounted here any more"*, and explains that mounting one as
+  well "would be actively wrong, not merely redundant" — both views would
+  bind the same mpv handle and the symptom would be a black picture with
+  nothing in the log.
+
+So `<PlayerRoot>` renders a placeholder for a view that is not there, plus
+the consumer's controls. **It drew no picture before 2.0.0 either** — it
+drew a placeholder plus a chrome bundle. Removing the chrome did not
+break the picture; there was none.
+
+**No internal consumer.** `PlayerRoot` is exported from `src/index.ts`
+and imported by **nothing** in the lib; the app imports neither it nor
+`PlayerSurface`.
+
+**The decision that is open — and is not made.** Either
+
+- **(a) delete them**, on the grounds that the package's documented
+  integration point is `<SimbaPlayer>` + `<SimbaVideo>` and these two are
+  V11/V12-era furniture; or
+- **(b) make `<PlayerRoot>` render `<SimbaVideo />`** plus the consumer's
+  controls, so it becomes the full player its name promises.
+
+**Recommendation (not a decision): (b).** It removes a public export
+without deleting anything — the component starts working instead of
+disappearing — and it costs the consumer nothing, because nobody who
+mounts `<PlayerRoot>` today is getting a video anyway. (a) is also
+defensible and is the smaller change.
+
+**What it needs:** the decision, then a lib release. Until then both
+components stay, because a published package cannot quietly drop a public
+export.
+
 ---
 
 ## FIXED
@@ -1310,6 +1363,7 @@ Tracked as tracker task 17.
 | F-032 | P2 | docs | The documents asserted behaviour the code never had — a §7 risk table still saying "black video is not yet attributed" and "duration never reported" after both were fixed and device-proven; `exitPlayer` still described as calling `finishAndRemoveTask()` after the Kotlin moved to `finish()`; a register calling the lib's view manager "registered nowhere" while it registers the app's `<SimbaVideo>`; and `setAutoEnterEnabled(true)` described as "already in `AndroidManifest.xml`" when **no such call exists in the app or the lib** and no `onUserLeaveHint` override exists either → every claim checked against the source and corrected in place, with the evidence kept beside the correction; the deprecated UI/UX docs annotated as superseded rather than rewritten | docs |
 | F-034 | P2 | app+lib | A deep-linked **video never played at all**, and a deep-linked audio track played where the app could not see it — the app used the **lib's** `useOpenFromUrl`, which bypassed `useResumeAwareLaunch` and asked the bridge whether a surface existed, and the bridge's answer was always "no" (`PlayerSurface.attach` has zero call sites, so `isSurfaceMounted()` is always false) → the app now owns deep links: `infrastructure/player/useDeepLinkLaunch.ts` does the scheme filter, the title and the lane, then launches through the app's own seam, so a shared file gets a now-playing entry, a history checkpoint, a dock and the resume prompt; the extension table moved to `utils/mediaUri` so the picker and the deep link read ONE table | app `f5/w22-close-minimise-d9` |
 | F-033 | P2 | tooling | W32's `tsc` gate was **red** — six type errors in the two test files that same wave added — while the wave's summary recorded `tsc → 0`; the cause was `test-renderer` resolving to **1.3.0** under the declared `^1.2.0`, which changed the tree's node type from a hand-rolled `JsonNode` to `JsonElement \| string` → the tree's type now comes from `test-renderer` itself, a text node is skipped for the string it is, and the FAB's mutually-exclusive `icon` / `label` props are built on a branch rather than spread (a spread of a union is the one shape TypeScript will not assign) | app `f5/w22-close-minimise-d9` |
+| F-035 | P2 | lib | The library shipped a **564-line default control bundle** (`DefaultControls`) and wired it as `<PlayerRoot>`'s fallback whenever a consumer passed no `renderControls` — so the library always carried a chrome implementation a consumer could end up using by accident, and one it had to keep working, against locked **D5** ("the library draws no chrome") → **lib `2.0.0`**: `DefaultControls` and `DefaultControlsProps` are removed, `<PlayerRoot>` renders the surface and the consumer's own `renderControls` output and **nothing else**, and `renderControls` stays optional because the common consumer drives the player itself. Removing it also exposed three stale claims (`PlayerSurface`'s docblock about a native SurfaceView at the activity root, the no-op bridge's stated reason to exist, and two coverage exclusions sized for a native view manager that no longer exists) — all corrected against the source, and the two excluded files came back into the covered set at 100 %, moving the achievement 52 → **69.57 %** statements. Pinned by 3 mutation-checked tests | lib `v2.0.0` |
 
 ---
 

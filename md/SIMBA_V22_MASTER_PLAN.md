@@ -93,6 +93,12 @@ Already true today — must stay true.
 to a 564-line `DefaultControls`. Register item 28 records the decision to remove
 it, which is a MAJOR release. The APP has always satisfied D5: it imports
 neither `DefaultControls`, `PlayerRoot` nor `PlayerSurface`.)*
+*(2026-10-29: **the exception is closed.** Lib `2.0.0` removes `DefaultControls`
+and `DefaultControlsProps`. `<PlayerRoot>` now renders the surface and the
+consumer's own `renderControls` output — and **nothing else** when the consumer
+supplied none. The library ships no chrome at all. `renderControls` stays
+optional, deliberately: the common case is a consumer that drives the player
+itself and never renders a full-screen control bar. See register item 28.)*
 
 ### D6 — `BrowsingStack` blanks, it does not unmount ✅ locked 2026-10-16 — **expiring**
 Unmounting destroys navigator state; back out of a fullscreen video would land on
@@ -1996,28 +2002,55 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     is **LIVE**: it is used at `NextUpOverlay.tsx:95`, and `NextUpOverlay` is
     mounted at `VideoPlayer.tsx:664`. **Do not delete it.** The register
     listed both as dead because the call sites were never read.
-28. `DefaultControls.tsx` (**564** lines) — violates locked **D5** (the library
-    draws no chrome). **DECISION (2026-10-28): REMOVE IT — MAJOR release
-    `2.0.0`.** The facts, corrected 2026-10-27 and re-verified 2026-10-28: it
-    renders a **full transport chrome**; it is **publicly exported** at
-    `src/index.ts:50-52`; the **app imports none of it** — not
-    `DefaultControls`, not `PlayerRoot`, not `PlayerSurface` — and the lib's
-    own `example/src` imports none of it either. The lib's `PlayerRoot` uses
-    it as the **fallback when no `renderControls` is supplied**
-    (`PlayerRoot.tsx:125`), so it is not dead code inside the lib — it is a
-    **public default that breaks D5 for every consumer who uses `PlayerRoot`
-    without writing their own controls**.
-    **Why remove rather than mark D5 "default-off, opt-in":** D5 is locked
-    and says the library draws no chrome. Keeping a 564-line chrome bundle in
-    a library that is *forbidden* from drawing chrome — wired as the default
-    — is a standing invitation to break the lock, and the alternative changes
-    what `PlayerRoot` renders anyway, so it is breaking too. The removal also
-    retires the module's no-op fallback's reason to exist
-    (`MpvPlayerModule.ts:904`).
-    **The release is MAJOR** — removing a public export. The app's code is
-    compatible (it imports none of it); the app only moves to `^2.0.0`.
-    **Carried forward: the lib change, the release, the app's dependency
-    bump — and the native rebuild that every lib release needs.**
+28. ~~**`DefaultControls.tsx` (564 lines) violates locked D5.**~~ **RESOLVED
+    (2026-10-29) — lib `2.0.0`.** The lib change, the release and the app's
+    dependency bump are **done**. `DefaultControls.tsx` (564 lines) and its
+    test are **deleted**; `DefaultControls` / `DefaultControlsProps` are no
+    longer exported; `<PlayerRoot>` no longer falls back to anything — it
+    renders the surface and the consumer's own `renderControls` output, and
+    **nothing else** when the consumer supplied none.
+    **The release.** Lib commit `0f6209b`, tag `v2.0.0` **annotated** and
+    pushed, published to npm by the release workflow. It is **MAJOR** because
+    a public export was removed. `renderControls` stays **optional** on
+    purpose: the common case is a consumer that drives the player itself and
+    never renders a full-screen control bar, so making it required would
+    break the headless use case.
+    **What else the removal exposed — three things the register had wrong.**
+    - **The no-op bridge's reason to exist was mis-stated.** The register
+      said removing the chrome "retires the module's no-op fallback's reason
+      to exist (`MpvPlayerModule.ts:904`)". It does not: the no-op bridge is
+      what keeps **consumer** code renderable in jest, Storybook and web
+      previews, and it stays. The comment now says that instead of naming
+      `DefaultControls`.
+    - **`PlayerSurface`'s docblock was a false claim.** It said the
+      placeholder stands in for "the native SurfaceView (which sits at the
+      activity root, beneath the React tree)". That stopped being true when
+      the picture became `<SimbaVideo />` (D2). The lib has **no Activity**
+      at all now, and the app's own `MainActivity.kt` says so in as many
+      words — *"2026-10-16: no surface is mounted here any more"*. The
+      docblock now says what the component actually is.
+    - **A deleted UI kit leaves its GEOMETRY behind — and its EXCLUSIONS.**
+      `jest.config.js` excluded `PlayerRoot.tsx` and `PlayerSurface.tsx`
+      from coverage because they "wrap the native view manager
+      `MpvPlayerView`". That manager does not exist any more, and neither
+      component touches a native view — so both were excluded from a
+      measurement they are now fully inside. They are back in the covered
+      set at **100 % statements**, the coverage achievement moved
+      52 → **69.57 %** statements, and the thresholds were raised to match.
+    **The new test.** `src/components/__tests__/PlayerRoot.test.tsx` (3
+    tests) pins the contract: no `renderControls` → the surface and
+    **nothing else**; `renderControls` → the consumer's controls over the
+    surface; the package exports no default control bundle. **Mutation-
+    checked 3/3** — a re-introduced chrome fallback, a re-exported
+    `DefaultControls`, and a `PlayerRoot` that ignores the consumer's
+    controls are each killed by a named test, with the source hash-restored
+    and the suite green again.
+    **Carried forward from this item:** the app's dependency bump to
+    `^2.0.0` and the **native rebuild** that every lib release needs (the
+    APK's DEX). And the new finding it opened — **`B-035`**: are
+    `PlayerRoot` and `PlayerSurface` vestigial? They have **zero** internal
+    consumers, they render **no picture**, and a published package cannot
+    quietly drop a public export — so the decision is open, not made.
 
 **Product / UI**
 29. ~~Title renders literal quotes — `"El Ciclo ( 1964)"` (feed data bug).~~
