@@ -1084,11 +1084,27 @@ and not 68 MB. Both published versions confirm it: **1.22.0** is 80 files /
 985 828 bytes and **1.23.0** is 80 files / 989 669 bytes. **This is a hazard
 only for a local publish.**
 
-**State:** open — **a release-hygiene risk, not a live defect.** Nothing is
-broken today: every published version is 963 KB. But a developer who
-publishes from a dirty working tree would ship ~68 MB of native binaries to
-npm. The fix is an `.npmignore` entry for `android/src/main/jniLibs/`
-and/or dropping `"android/"` from the `files` allow-list.
+**State:** RESOLVED (F-038, 2026-10-29). The fix is in the lib's
+`package.json` `files` allow-list, plus an `.npmignore` entry as defence in
+depth.
+
+**The `.npmignore` entry alone was NOT enough — and that was measured, not
+assumed.** npm's `files` allow-list wins over `.npmignore` for the paths it
+names, so with only the ignore entry the pack still held **125 files and all
+43 `.so`**. The exclusion that works is the same mechanism the file already
+used for `!android/build/` — a negation inside `files`:
+
+```json
+"!android/src/main/jniLibs/",
+```
+
+**Measured, independently of the pack's own report:** `npm pack --dry-run`
+went from **125 files / 68.3 MB / 161.1 MB unpacked** to **81 files /
+275.0 kB / 989.3 kB unpacked**, and the packed file list contains **zero
+`.so` files and zero `jniLibs` paths**. The file count now matches the
+published `2.0.1` tarball exactly (81 files). The published tarballs were
+never affected — `release.yml` publishes from a clean CI checkout — so no
+release was needed for this fix.
 
 ---
 
@@ -1555,6 +1571,9 @@ unwritten. Device proof that the toast is gone is still owed (B-024).
 | F-035 | P2 | lib | The library shipped a **564-line default control bundle** (`DefaultControls`) and wired it as `<PlayerRoot>`'s fallback whenever a consumer passed no `renderControls` — so the library always carried a chrome implementation a consumer could end up using by accident, and one it had to keep working, against locked **D5** ("the library draws no chrome") → **lib `2.0.0`**: `DefaultControls` and `DefaultControlsProps` are removed, `<PlayerRoot>` renders the surface and the consumer's own `renderControls` output and **nothing else**, and `renderControls` stays optional because the common consumer drives the player itself. Removing it also exposed three stale claims (`PlayerSurface`'s docblock about a native SurfaceView at the activity root, the no-op bridge's stated reason to exist, and two coverage exclusions sized for a native view manager that no longer exists) — all corrected against the source, and the two excluded files came back into the covered set at 100 %, moving the achievement 52 → **69.57 %** statements. Pinned by 3 mutation-checked tests | lib `v2.0.0` |
 | F-036 | P2 | lib | The lib's `isSurfaceMounted()` always answered `false`, so `commands.openPlayer({type:'video'})` **always refused** — including for a consumer that had a picture mounted — because it read `PlayerSurface.current()`, whose only writer (`attach()`) nothing calls since the picture moved into the React tree. The lib's own jest mock made it worse: it answered `true`, the one value the native code could never produce, so the suite was green exactly where the product was broken → a **new** `MpvRenderViewRegistry` of weak references, written by `MpvRenderViewManager` (the only thing that creates a picture view) and read by the bridge, so the answer is true **by construction**; `PlayerSurface` and its four mutators are left orphaned and deprecated, so the Yoga-hazard `LayoutParams` mutation stays out of reach. The jest mock now behaves like a native module with **no** picture mounted — `false` for the question and `false` for the three mutators — which is also exactly what the module's own NOOP fallback does. Pinned by 8 mutation-checked tests (5 native, 3 JS) | lib `v2.0.1` |
 | F-037 | P2 | app | The app's artwork was drawn by **`react-native-fast-image`** — an unmaintained-since-2020 legacy-architecture library whose Android code emits events through `getJSModule(com.facebook.react.uimanager.events.RCTEventEmitter)`, the one class React Native 0.86 refuses with a warning. The app used it in **26 files**, so the warning fired on every image load on every screen and RN's LogBox kept a toast over the player's transport row for the whole session; the jest mock rendered as a host element named `'FastImage'` and hid the entire native half of the defect → **`react-native-fast-image` is gone**. A new `components/utility/MediaImage/MediaImage.tsx` owns the artwork policy and is backed by React Native's own `Image` (Fresco on Android, Fabric-rendered, no warning), all 26 call sites use it, and the package left `package.json`, the lockfile, the Credits screen, the jest `moduleNameMapper` and `__mocks__/`. The origin was proven from **React Native's own source**, not from a device logcat — and `react-native-svg`'s identical legacy call was cleared the same way: the method it calls has **no caller anywhere** in `node_modules`, so it is dead code | app `f5/w22-close-minimise-d9` |
+| F-038 | P3 | lib | A local `npm pack` shipped **68.3 MB** of native binaries (125 files) because the `files` allow-list names `android/` and nothing excluded `android/src/main/jniLibs/`. The published tarballs were never affected — `release.yml` publishes from a clean CI checkout — but a developer publishing from a dirty tree would have shipped 68 MB to npm → **`!android/src/main/jniLibs/`** in `files`, plus an `.npmignore` entry as defence in depth. The `.npmignore` entry **alone was verified not to work**: npm's `files` allow-list wins for the paths it names, and the pack still held all 43 `.so`. After: **81 files / 275.0 kB**, zero `.so` in the packed list, matching the published tarball's file count exactly | lib `f8bf1ef` |
+| F-039 | P2 | app | A bookmark is a **position**, so it should carry the picture of that position — but the Bookmarks row read the catalogue artwork alone, so a bookmarked film with no catalogue art showed a placeholder glyph while the app held a good frame of it on disk. The frame could not ride the playback session (it is captured at the session's **end**, after the session is gone, and the session carries only the catalogue artwork), so the hand-off now comes from the history store. The rule itself — `resumeThumbnailPath \|\| thumbnailPath` — was written out at four call sites, and one of them got it wrong, so it moved to **one owner**, `utils/mediaArtwork.ts` → `resolveMediaArtwork()`; which path is *rendered* stays a separate question owned by `toRenderableImageUri` | app `25162ae` |
+| F-040 | P2 | lib | The mpv engine's handle had **no test** against the Fabric picture view's lifetime — and the picture is a Fabric component in the React tree, so Fabric may drop and recreate it at any time while the engine belongs to `PlaybackHost` and must outlive it. A drop path that tore the engine down would have passed every test in the repo → **`MpvHandleSurvivesViewRemountTest`**, 5 pure-JUnit tests driving the real `MpvRenderViewManager.onDropViewInstance`: the drop leaves the handle identical (not zero, not re-published), a recreated view binds to that same handle through the real `setNativePtr` path, the picture registry empties while the engine stays live, and `getNativePtr()` reports the same handle afterwards. Pure JUnit, not Robolectric — the Robolectric suites are `@Ignore`d offline, so a test written there would not run and would prove nothing. Proven by **regression** (breaking the drop path fails 4 of 5; making it re-publish fails all 5), with the production file restored byte-identically | lib `f01d77b` |
 
 ---
 

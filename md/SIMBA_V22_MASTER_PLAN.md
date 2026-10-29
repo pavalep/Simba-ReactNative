@@ -1826,7 +1826,25 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    segment and `--:--` for the remaining time** on a video that was playing.
    After: `progress.durationMs = 4918962` and the seek bar reads
    `-1:19:38`. See the 2026-10-20 (night) progress block.
-4. mpv-handle survival across Fabric view remount — needs a test.
+4. **mpv-handle survival across Fabric view remount — DONE 2026-10-29.**
+   The contract was real and unpinned: the picture is a Fabric component in
+   the React tree, so it can be dropped and recreated at any time, while the
+   mpv engine belongs to `PlaybackHost` and must outlive it. A new
+   `android/src/test/java/com/simba/player/mpv/MpvHandleSurvivesViewRemountTest.kt`
+   (5 pure-JUnit tests, no Robolectric — the Robolectric suites are `@Ignore`d
+   offline, so a test written there would not run and would prove nothing)
+   pins it through the **real** `MpvRenderViewManager.onDropViewInstance`:
+   the drop leaves `PlaybackHost`'s handle identical (not zero, not
+   re-published), a view recreated after the drop binds to that same handle
+   through the real `setNativePtr` prop path, the picture registry empties
+   while the engine stays live, and `MpvBridgeModule.getNativePtr()` — what
+   JS reads — reports the same handle afterwards. **Proven by regression, not
+   asserted:** breaking the drop path to tear the engine down fails 4 of the
+   5; making it re-publish a handle fails all 5. The test's docblock states
+   what it does **not** prove (no real libmpv — `MPVLib.init` calls
+   `System.loadLibrary`, which cannot succeed in a JVM test — and no real
+   `MpvRenderView`, since `SurfaceView`'s constructor needs the Android
+   runtime).
 5. `force-window` re-verification under layout churn.
 6. **Stage 9 device verification** — the video lane's D9 rewrite is unit-tested
    but not yet seen on a device. PiP in/out, the dock showing live video, back
@@ -2129,13 +2147,26 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    (close), and the dock has a control of its own. Still open: the whole
    matrix.
 33. **C-07 artwork + `setAutoEnterEnabled` / `setExpandedAspectRatio` / portrait
-    restore — PARTLY (2026-10-27).**
-    - **Artwork: the paths EXIST.** Home's Recently Played reads
-      `resumeThumbnailPath || thumbnailPath`; the capture writes
-      `resumeThumbnailPath`; the resume prompt reads
-      `resumeThumbnailPath || thumbnailPath`. **But the Bookmarks row reads
-      only `thumbnailPath`** — so a bookmarked film with no catalogue art
-      still shows the gold icon. That half is open.
+    restore — PARTLY (2026-10-27; artwork DONE 2026-10-29).**
+    - **Artwork: DONE 2026-10-29.** The paths existed but the rule was
+      written out at each call site — `resumeThumbnailPath || thumbnailPath`
+      in three places and `thumbnailPath` alone in the fourth, so a
+      bookmarked film with no catalogue art still showed the gold icon while
+      the app held a good frame of it on disk. The frame could not ride the
+      session: it is captured at the session's **END**, after the session is
+      gone, and the session carries only the catalogue artwork — so the
+      hand-off now comes from the history store (`useBookmarkToggle.ts`).
+      The rule itself moved to **one owner**, `utils/mediaArtwork.ts` →
+      `resolveMediaArtwork()`, which every surface asks, so a new surface
+      cannot get the precedence wrong. *Which* path is rendered stays a
+      separate question owned by `toRenderableImageUri` — a captured frame
+      is local and needs `file://`; catalogue artwork is remote and must be
+      left alone. Pinned by 4 new test files / 17 new cases, with a revert
+      proof. **Still open inside this item:** `resumePolicy.ts:119` gives
+      the *bookmark* branch only `thumbnailPath`, so a bookmark-sourced
+      resume prompt shows the poster rather than the frame — left alone
+      deliberately, because changing it alters the resume prompt's
+      behaviour.
     - **`setAutoEnterEnabled` and `setExpandedAspectRatio` DO NOT EXIST** —
       not in the app, not in the lib. They exist only in **md prose**. The lib
       has an **unread** `pip.autoEnterOnLeave` flag, and PiP entry is
