@@ -1900,8 +1900,11 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    change is inside `src/infrastructure/player/`, and nothing breaking.
    The lane's extension table moved to `src/utils/mediaUri.ts`, so there is
    **ONE** owner for "which lane is this file in" — the picker, the folder
-   browser and the deep link all read it. The **lib's** own
-   `useOpenFromUrl` is still broken: that is bug `B-033`.
+   browser and the deep link all read it. The **lib's** own `useOpenFromUrl`
+   asks `isSurfaceMounted()` before it loads a video — that question is now
+   **truthful** (bug `B-033`, fixed 2026-10-29), so the lib's path plays a
+   video when the consumer has a picture mounted and refuses when it has
+   not. The app still does not use it: the app owns its deep links.
 10. **The `VideoController` is now dead** (new, 2026-10-19). Its last
     consumer was `VideoErrorOverlay`, and the retry now goes through the
     app's launch seam instead. `useVideoController()` has **zero** call
@@ -1924,10 +1927,18 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     four — and `current()` — are **live**, called from `MpvBridgeModule.kt`.
     What is dead is the registry's **population**, not its API. The **APP**
     half is **RESOLVED (2026-10-28)** — the app no longer asks the question
-    (register item 9). The **LIB** half is still open: `isSurfaceMounted()`
-    always answers `false`, and the lib's own `jest.setup.ts` mocks it
-    `true`, so the lib's tests cannot see the defect — bug `B-033`. A
-    further release — see item 21.
+    (register item 9). **The LIB half is RESOLVED (2026-10-29)** — bug
+    `B-033`. `isSurfaceMounted()` now answers from a new
+    `MpvRenderViewRegistry`, which `MpvRenderViewManager` writes when React
+    Native creates a picture view — so the answer is true **by
+    construction** instead of always false, and the registry's population
+    comes from the one thing that actually creates a surface.
+    The four mutators stay **orphaned and deprecated**, on purpose: the new
+    registry answers ONE question and cannot place a surface, so the
+    Yoga-hazard `LayoutParams` mutation stays out of reach. Reviving
+    `PlayerSurface.attach()` would have put all four back in reach, which is
+    why the fix is a **new** registry rather than a revived one.
+    `boundsInWindow()` is still orphaned — that is bug `B-036`.
 
 **Migration mechanics**
 12. `codegenConfig` `"modules"` → `"all"` — **DONE** (Stage 2).
@@ -1977,7 +1988,16 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     reach of a `LayoutParams` mutation from Kotlin — the Yoga hazard
     `MpvRenderViewManager.kt` itself warns about — and the app calls
     **none** of them. They stay **deprecated, not removed**: removing them
-    is a breaking change. The remaining lib work is bug `B-033`.
+    is a breaking change.
+    **The lib half of this item is RESOLVED (2026-10-29) — bug `B-033`,
+    and the fix keeps the decision intact.** The registry is no longer
+    orphaned, but it was **replaced, not revived**: a new
+    `MpvRenderViewRegistry` is written by `MpvRenderViewManager` (the only
+    thing that creates a picture view) and is read by
+    `isSurfaceMounted()`. `PlayerSurface` and its four mutators are left
+    exactly as they were — orphaned and deprecated — so the Yoga hazard
+    stays out of reach. `boundsInWindow()` is still orphaned: that is bug
+    `B-036`.
 22. ~~`AudioLyricsView` (525 lines) — 0 call sites.~~ **RESOLVED
     (2026-10-27).** **525 lines, ZERO call sites → deleted.** And the lane
     matters: this is an **APP** file, not a lib file. The register grouped it

@@ -1194,8 +1194,8 @@ while a video surface is on screen. The lib's `openPlayer({type:'video'})`
 therefore **always resolves `false`**, so any consumer that asks the bridge
 to open a video gets a refusal.
 
-**State:** open. **The app no longer depends on this** (`B-013` is
-resolved) — this is the LIB's public API being wrong on its own.
+**State:** resolved (`F-036`). The native side now answers from the live
+Fabric view, and the lib's own mock no longer invents a surface.
 
 **The mechanism (verified 2026-10-28).** `PlayerSurface.kt` holds the live
 view in a `WeakReference<MpvRenderView>` (`viewRef`). `attach()` is the
@@ -1203,31 +1203,51 @@ view in a `WeakReference<MpvRenderView>` (`viewRef`). `attach()` is the
 `mount()` has zero call sites too. So `viewRef` is never non-null,
 `current()` always returns `null`, and
 `MpvBridgeModule.isSurfaceMounted()` (`PlayerSurface.current() != null`)
-always answers `false`.
+always answered `false`.
 
-**Why nobody noticed: the lib's own jest mock lies.**
-`react-native-media-player/jest.setup.ts:173` declares
+**Why nobody noticed: the lib's own jest mock lied.**
+`react-native-media-player/jest.setup.ts:173` declared
 `isSurfaceMounted: fn(() => true)` — the opposite of what the native code
-can ever return. A test that mocks a method's answer to the value the code
-never produces does not test the method; it hides the defect. (This is the
-same class as the working rule "a jest mock must match the library's API
+could ever return. A test that mocks a method's answer to the value the
+code never produces does not test the method; it hides the defect. (This is
+the same class as the working rule "a jest mock must match the library's API
 SURFACE" — extended to the library's *behaviour*, not just its shape.)
 
-**Two possible fixes — DECISION (2026-10-28): the LIB's registry stays
-orphaned for now.** Wire the Fabric view manager to register the surface
-it creates, **or** answer `isSurfaceMounted()` from the live view without
-the registry. The second is smaller and is what the app's own fix made
-unnecessary. Reviving `attach()` would also put the four mutators
-(`setVideoBounds` / `fillVideoBounds` / `setSurfaceVisible` /
-`boundsInWindow`) back in reach of a `LayoutParams` mutation from Kotlin —
-the Yoga hazard `MpvRenderViewManager.kt` itself warns about — and the app
-calls **none** of them. The four stay **deprecated, not removed**: removing
-them is a breaking change.
+**The fix (2026-10-29) — a NEW registry, not a revived one.**
+`MpvRenderViewRegistry` (new, `android/src/main/java/com/simba/player/mpv/`)
+holds the live picture views as **weak references**. It is written by
+`MpvRenderViewManager` — `createViewInstance` registers,
+`onDropViewInstance` withdraws — because that is the only thing in the
+process that creates a picture view. `MpvBridgeModule.isSurfaceMounted()`
+reads it. The answer is true **by construction** now, instead of always
+false.
 
-**What it still needs.** A lib change (the native side, plus the jest
-mock), a release, and an app `npm install`. Until then the lib's
-`isSurfaceMounted()` is a **lie in both directions** — false in production,
-true in its own tests.
+**Why not revive `PlayerSurface.attach()`** — the decision recorded on
+2026-10-28 still holds: reviving `attach()` would put the four mutators
+(`setBounds` / `fillBounds` / `setVisible` / `boundsInWindow`) back in reach
+of a `LayoutParams` mutation from Kotlin — the Yoga hazard
+`MpvRenderViewManager.kt` itself warns about. The new registry answers
+**one** question and cannot place a surface, so the hazard stays out of
+reach. `PlayerSurface` and its mutators are left exactly as they were:
+orphaned and deprecated, not removed (removing them is a breaking change).
+
+**The mock, corrected.** `jest.setup.ts` now answers the way a native
+module answers **with no picture mounted** — which in jest is always:
+`isSurfaceMounted()` → `false`, and the three mutators → `false`. That is
+also exactly what the module's own NOOP fallback does, so the mock and the
+fallback no longer disagree.
+
+**Pinned by eight new tests, all mutation-checked.**
+- Native: `MpvRenderViewRegistryTest` (5, pure JUnit — it runs here, unlike
+  the Robolectric suites, which are `@Ignore`d offline). Kills: an
+  `unregister` that withdraws a view it was never given; an `unregister`
+  that never withdraws anything; an `hasLiveView` that always says yes.
+- JS: three tests in `MpvPlayerModule.test.ts` pin the mock's honesty.
+  Kills: the mock inventing a surface; the mock reporting a mutator as
+  having succeeded.
+
+**What it still needs:** a lib release and the app's `npm install` — see
+the master plan's register item 11.
 
 ### B-034 · P2 · app · the batch "add to playlist" toast lies about how many items were added
 
@@ -1323,6 +1343,44 @@ defensible and is the smaller change.
 components stay, because a published package cannot quietly drop a public
 export.
 
+### B-036 · P3 · lib · PiP has no source rect to animate from, and fixing it is not a one-liner
+
+**Symptom.** Entering Picture-in-Picture animates the video out of a **black
+rectangle** instead of out of the picture the user was watching.
+
+**State:** open. **Found 2026-10-29**, while fixing `B-033`.
+
+**The mechanism (verified 2026-10-29).** Android's PiP entry takes an
+optional `sourceRectHint`: the rect of the video frame in window
+coordinates, so the system can animate the real frame into the PiP window.
+`MpvBridgeModule` builds it from `PlayerSurface.boundsInWindow()`
+(`MpvBridgeModule.kt:2342`) — and `boundsInWindow()` reads the same orphaned
+`PlayerSurface` registry, so it always answers `null`. With no rect, the
+system grows the PiP window out of a black rectangle.
+
+**Why it is not a one-liner.** The old rect was sized by
+`PlayerSurface.setBounds()` / `fillBounds()`, which placed the surface to
+the **video's own shape** — so the rect matched the PiP aspect ratio by
+construction and the system scaled the frame proportionally. The V22
+picture is sized by **Yoga**, from the React tree, with mpv's `video-zoom`
+(the `resizeMode` prop) doing the letterbox or crop **inside** the view. So
+the view's rect is not the frame's rect: pointing PiP at it would animate
+the **letterboxed** area, and could stretch the frame.
+
+**What it needs.** A decision, then the work:
+- compute the **frame's** rect inside the view — from the video's
+  dimensions and the `resizeMode` — rather than the view's rect; or
+- size the PiP window to the view's aspect ratio and let mpv letterbox
+  inside it; or
+- keep the no-rect behaviour and accept the black transition.
+
+The third is the status quo and is safe. The first is the right answer and
+is the one that needs the aspect arithmetic.
+
+**Also open, and the same shape:** `PlayerSurface.setBounds` /
+`fillBounds` / `setVisible` are the same three orphaned mutators, and they
+stay deprecated on purpose (see `B-033`).
+
 ---
 
 ## FIXED
@@ -1364,6 +1422,7 @@ export.
 | F-034 | P2 | app+lib | A deep-linked **video never played at all**, and a deep-linked audio track played where the app could not see it — the app used the **lib's** `useOpenFromUrl`, which bypassed `useResumeAwareLaunch` and asked the bridge whether a surface existed, and the bridge's answer was always "no" (`PlayerSurface.attach` has zero call sites, so `isSurfaceMounted()` is always false) → the app now owns deep links: `infrastructure/player/useDeepLinkLaunch.ts` does the scheme filter, the title and the lane, then launches through the app's own seam, so a shared file gets a now-playing entry, a history checkpoint, a dock and the resume prompt; the extension table moved to `utils/mediaUri` so the picker and the deep link read ONE table | app `f5/w22-close-minimise-d9` |
 | F-033 | P2 | tooling | W32's `tsc` gate was **red** — six type errors in the two test files that same wave added — while the wave's summary recorded `tsc → 0`; the cause was `test-renderer` resolving to **1.3.0** under the declared `^1.2.0`, which changed the tree's node type from a hand-rolled `JsonNode` to `JsonElement \| string` → the tree's type now comes from `test-renderer` itself, a text node is skipped for the string it is, and the FAB's mutually-exclusive `icon` / `label` props are built on a branch rather than spread (a spread of a union is the one shape TypeScript will not assign) | app `f5/w22-close-minimise-d9` |
 | F-035 | P2 | lib | The library shipped a **564-line default control bundle** (`DefaultControls`) and wired it as `<PlayerRoot>`'s fallback whenever a consumer passed no `renderControls` — so the library always carried a chrome implementation a consumer could end up using by accident, and one it had to keep working, against locked **D5** ("the library draws no chrome") → **lib `2.0.0`**: `DefaultControls` and `DefaultControlsProps` are removed, `<PlayerRoot>` renders the surface and the consumer's own `renderControls` output and **nothing else**, and `renderControls` stays optional because the common consumer drives the player itself. Removing it also exposed three stale claims (`PlayerSurface`'s docblock about a native SurfaceView at the activity root, the no-op bridge's stated reason to exist, and two coverage exclusions sized for a native view manager that no longer exists) — all corrected against the source, and the two excluded files came back into the covered set at 100 %, moving the achievement 52 → **69.57 %** statements. Pinned by 3 mutation-checked tests | lib `v2.0.0` |
+| F-036 | P2 | lib | The lib's `isSurfaceMounted()` always answered `false`, so `commands.openPlayer({type:'video'})` **always refused** — including for a consumer that had a picture mounted — because it read `PlayerSurface.current()`, whose only writer (`attach()`) nothing calls since the picture moved into the React tree. The lib's own jest mock made it worse: it answered `true`, the one value the native code could never produce, so the suite was green exactly where the product was broken → a **new** `MpvRenderViewRegistry` of weak references, written by `MpvRenderViewManager` (the only thing that creates a picture view) and read by the bridge, so the answer is true **by construction**; `PlayerSurface` and its four mutators are left orphaned and deprecated, so the Yoga-hazard `LayoutParams` mutation stays out of reach. The jest mock now behaves like a native module with **no** picture mounted — `false` for the question and `false` for the three mutators — which is also exactly what the module's own NOOP fallback does. Pinned by 8 mutation-checked tests (5 native, 3 JS) | lib `v2.0.1` |
 
 ---
 
