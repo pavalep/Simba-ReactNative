@@ -1,6 +1,6 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {HighlightedText} from './HighlightedText';
@@ -74,10 +74,10 @@ export const ResultTile: React.FC<ResultTileProps> = ({
             {backgroundColor: colors.accent.goldDim},
           ]}>
           {thumbnailUri ? (
-            <FastImage
-              source={{uri: thumbnailUri}}
+            <MediaImage
+              source={thumbnailUri}
               style={styles.resultThumbImg}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
             />
           ) : (
             <SvgIcon

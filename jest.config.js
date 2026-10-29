@@ -90,8 +90,6 @@ module.exports = {
       '<rootDir>/__mocks__/react-native-svg.js',
     '^react-native-fs$':
       '<rootDir>/__mocks__/react-native-fs.js',
-    '^react-native-fast-image$':
-      '<rootDir>/__mocks__/react-native-fast-image.js',
     '^@react-native-documents/picker$':
       '<rootDir>/__mocks__/@react-native-documents-picker.js',
     '^@react-native-async-storage/async-storage$':

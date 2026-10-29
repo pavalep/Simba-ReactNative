@@ -56,9 +56,9 @@ const WITH_POSITION: HomeMediaShelfItem = {
   title: 'The Rifle',
   mediaType: 'video',
   // A thumbnail is given so the card takes its IMAGE branch too. Without
-  // it the card renders the placeholder, and a broken image mock would
-  // never be noticed — which is how the FastImage mock's missing
-  // `resizeMode` static survived.
+  // it the card renders the placeholder, and a broken image component
+  // would never be noticed — which is how a mock's missing `resizeMode`
+  // static survived for as long as it did.
   resumeThumbnailPath:
     '/data/user/0/com.simba.player/files/simba-resume-thumbs/frame_1_30000.jpg',
   position: 97,

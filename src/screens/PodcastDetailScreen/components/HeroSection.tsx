@@ -5,7 +5,7 @@
 
 import React, {useMemo} from 'react';
 import {View, TouchableOpacity} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -34,10 +34,10 @@ export const HeroSection: React.FC<Props> = ({
   return (
     <View style={styles.heroSection}>
       {podcast.image ? (
-        <FastImage
-          source={{uri: podcast.image}}
+        <MediaImage
+          source={podcast.image}
           style={styles.heroImage}
-          resizeMode={FastImage.resizeMode.cover}
+          resizeMode="cover"
         />
       ) : (
         <View style={styles.imagePlaceholder}>

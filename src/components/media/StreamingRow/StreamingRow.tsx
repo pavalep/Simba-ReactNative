@@ -4,7 +4,7 @@
 
 import React, {useCallback, useState} from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {radius} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
@@ -66,10 +66,10 @@ export const StreamingRow: React.FC<StreamingRowProps> = React.memo(
           delayLongPress={400}
           accessibilityRole="button">
           {track.imageUrl ? (
-            <FastImage
-              source={{uri: track.imageUrl}}
+            <MediaImage
+              source={track.imageUrl}
               style={styles.art}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
             />
           ) : (
             <View style={[styles.art, {backgroundColor: colors.accent.goldDim}]}>

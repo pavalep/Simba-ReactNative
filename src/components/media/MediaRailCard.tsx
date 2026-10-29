@@ -28,7 +28,7 @@
 
 import React from 'react';
 import {StyleSheet, TouchableOpacity, View} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../utility/MediaImage';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
@@ -102,15 +102,15 @@ export const MediaRailCard: React.FC<MediaRailCardProps> = ({
       <View
         style={[styles.thumbnailContainer, {backgroundColor: colors.background.elevated}]}>
         {imageUri ? (
-          <FastImage
+          <MediaImage
             // A captured resume frame is a LOCAL path, and a local path
             // is not a URI — an image loader reads `/data/user/0/…` as a
             // scheme-less URI and fails, so the card fell back to its
             // grey placeholder while holding a perfectly good frame.
             // Catalogue artwork is a remote URL and must be left alone.
-            source={{uri: toRenderableImageUri(imageUri)}}
+            source={toRenderableImageUri(imageUri)!}
             style={StyleSheet.absoluteFill}
-            resizeMode={FastImage.resizeMode.cover}
+            resizeMode="cover"
           />
         ) : (
           <View style={styles.placeholder}>

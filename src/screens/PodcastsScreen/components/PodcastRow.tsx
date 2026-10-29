@@ -10,7 +10,7 @@
 
 import React, {useMemo, useState} from 'react';
 import {View, TouchableOpacity} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -38,13 +38,10 @@ export const PodcastRow: React.FC<Props> = React.memo(({item, onPress}) => {
       {/* Thumb */}
       <View style={styles.thumbWrap}>
         {showImage ? (
-          <FastImage
-            source={{
-              uri: item.image,
-              priority: FastImage.priority.normal,
-            }}
+          <MediaImage
+            source={item.image}
             style={styles.thumbImage}
-            resizeMode={FastImage.resizeMode.cover}
+            resizeMode="cover"
             onError={() => setImageFailed(true)}
             accessibilityIgnoresInvertColors
           />

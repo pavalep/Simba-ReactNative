@@ -62,7 +62,6 @@ const CREDIT_GROUPS: CreditGroup[] = [
     items: [
       'react-native-haptic-feedback',
       'react-native-orientation-locker',
-      'react-native-fast-image',
     ],
   },
 ];

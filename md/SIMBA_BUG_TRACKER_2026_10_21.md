@@ -312,25 +312,61 @@ kept and unwired on purpose; whether the lib should still export it is a
 
 ---
 
-### B-009 · P1 · lib · "Maximum update depth exceeded" in `PlayerProvider`
+### B-009 · P1 · lib · "Maximum update depth exceeded" in `PlayerProvider` — **RE-FRAMED 2026-10-29: the toast was never a React depth error**
 
 **Symptom.** A LogBox toast over the player, on every session.
 
-**State:** open — **narrowed 2026-10-27.** The lib's progress subscriber is
-**fully guarded and pure**: it returns `prev` when no field changed, and
-there is **no setState-during-render cycle in the lib**.
+**What this entry got wrong.** It assumed the toast was React's *"Maximum
+update depth exceeded"*. It is not. The toast over the transport row is the
+**"Open debugger to view warnings"** toast, and the warnings behind it were
+measured on device (B-024, 2026-10-26):
 
-**The narrowing.** `onCacheState` changes **continuously** — measured on
-device: **827 times across a cold start**, while `onSeekable` arrived
-**ZERO** times — and `cacheRangesEqual` compares only the **count** and the
-**first/last bounds**, so the last bound moves on nearly every event and a
-**new context value is minted for every `usePlayerProgress()` consumer**.
+```
+getJSModule(RCTEventEmitter) is not recommended on the new architecture
+new NativeEventEmitter() was called without addListener/removeListeners
+```
 
-**Where the writer most likely is.** The actual writer is most likely in the
-**app's** consumers of the lib's progress context, not in the lib.
+The second is the lib's, and F-026 fixed it. The first was
+`react-native-fast-image`'s, and it was fixed on 2026-10-29 — see B-024.
+**There is no React depth error on this path.**
 
-**The one lib-side hardening available** is to stop `onCacheState` from
-minting a new context value on every tick. That is **not** done.
+**The app-side writer hypothesis is DISPROVED from source (2026-10-29).** This
+entry said *"the actual writer is most likely in the **app's** consumers of the
+lib's progress context, not in the lib."* Every consumer was read:
+
+| Consumer | Verdict |
+|---|---|
+| `usePlaybackState.ts` | A pure derivation. It returns a fresh object, but **all three** call sites **destructure** it — `VideoErrorOverlay.tsx:93`, `VideoLoadingOverlay.tsx:64`, `useChromeAutoHide.tsx:122` — so no object ever reaches a dependency array. |
+| `useTransport.ts` | The hook result is `useMemo`'d on `[state, wrapped]` (`useTransport.ts:1063`); `state` (`:762`) and `wrapped` (`:877`) are each memoised on fields. Its identity stability is **pinned by a test** — `__tests__/infrastructure/player/useTransport.performance.test.tsx`. |
+| `playbackFacade.ts` | Reads the raw lib context object, whose identity changes only when the lib commits a new progress value. |
+| `useChromeAutoHide.tsx` | Deps are `[isDismissible, show]` — a boolean and a `useCallback`. |
+| `usePipBridge.ts` | Mount-once. |
+| `usePlaybackCheckpointSync.ts` | Deps are `[now]` (a stable function) and `[sessionId]`. |
+| `NextUpOverlay.tsx` | `view` is memoised on fields; `commands` is stable. |
+
+**Every `useEffect` dependency in the player tree is a primitive, a memoised
+value, or the stable command object.** There is no shape in which an effect
+re-fires itself and calls `setState` — which is the only way React raises
+"Maximum update depth exceeded".
+
+**The lib's side is guarded too.** `PlayerProvider`'s subscriber returns `prev`
+when nothing changed, the context values are the state objects themselves (not
+an object rebuilt on every render), and `PlayerProgressContext` is fed the
+committed `progress` value.
+
+**What is left is a PERFORMANCE item, not a correctness one.** `onCacheState`
+changes continuously — **827 times across a cold start** — and
+`cacheRangesEqual` compares only the count and the first/last bounds, so a
+moving last bound mints a new progress value, and with it a new context value
+for every `usePlayerProgress()` consumer. That is real work re-done 827 times
+for a band a few dozen pixels wide.
+
+**State:** re-framed. The toast is fixed (B-024, 2026-10-29). The depth-error
+hypothesis is disproved. The residual is a lib-side render-churn item, and the
+one lib-side hardening this entry named — stop `onCacheState` from minting a
+new context value on every tick — is still not done. **It now needs a
+decision about the resolution the buffered band is drawn at, not a device
+trace.**
 
 ---
 
@@ -885,7 +921,7 @@ the captured frame.
 
 ---
 
-### B-024 · P3 · app+lib · Bridgeless `getJSModule(RCTEventEmitter)` noise, and a LogBox toast that sits over the transport — **PARTLY RESOLVED (F-026)**
+### B-024 · P3 · app+lib · Bridgeless `getJSModule(RCTEventEmitter)` noise, and a LogBox toast that sits over the transport — **RESOLVED (F-026 + F-037)**
 
 **Symptom.** Every run of the app on the emulator shows a LogBox toast at the
 bottom: *"Open debugger to view warnings."* It covers the play/pause button
@@ -913,15 +949,67 @@ pair (Kotlin `String` ↔ `string`, `Double` ↔ `number`), and the regenerated
 spec was confirmed to emit `public abstract void addListener(String
 eventName)` / `removeListeners(double count)`.
 
-**The `getJSModule(RCTEventEmitter)` half is STILL UNRESOLVED.** Every
-`getJSModule` call in the lib's Kotlin asks for
-`DeviceEventManagerModule.RCTDeviceEventEmitter`, **not** `RCTEventEmitter`,
-and the string `RCTEventEmitter` is **not in RN 0.86's JS**. The origin
-inside this codebase could not be established, and it needs the **device
-logcat line's tag** to settle it. Until then this half stays open.
+**The `getJSModule(RCTEventEmitter)` half is FIXED (F-037, 2026-10-29).**
+This entry said the origin *"could not be established, and it needs the device
+logcat line's tag to settle it"*. **It did not need a device — it needed
+React Native's own source, which ships with the app.**
 
-**State:** partly resolved (`F-026`). The emitter half is fixed in the lib's
-spec; the `getJSModule` half is open and needs a device logcat tag.
+**Which class RN 0.86 actually refuses.** `BridgelessReactContext.getJSModule`
+warns for **one** class only:
+
+> `node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/runtime/BridgelessReactContext.kt:131-140`
+> ```kotlin
+> override fun <T : JavaScriptModule> getJSModule(jsInterface: Class<T>): T? {
+>     mInteropModuleRegistry?.getInteropModule(jsInterface)?.let { interopModule ->
+>         if (jsInterface == RCTEventEmitter::class.java) {
+>             logSoftException(TAG, IllegalArgumentException(
+>                 "getJSModule(RCTEventEmitter) is not recommended in the new architecture …"))
+>         }
+> ```
+> The import at `:27` is `com.facebook.react.uimanager.events.RCTEventEmitter`.
+
+**So the lib was never the origin.** The lib's Kotlin asks for
+`DeviceEventManagerModule.RCTDeviceEventEmitter` — a **different class** — at
+`MpvBridgeModule.kt` (4 call sites). It cannot trip this warning.
+
+**The origin was `react-native-fast-image`.** It imports the *exact* class RN
+refuses and calls it on **every image load**:
+
+| File | Line |
+|---|---|
+| `react-native-fast-image/android/src/main/java/com/dylanvann/fastimage/FastImageViewManager.java` | `124` |
+| `…/FastImageViewWithUrl.java` | `84`, `124` |
+| `…/FastImageRequestListener.java` | `40`, `54` |
+
+All five do `context.getJSModule(RCTEventEmitter.class)` with
+`import com.facebook.react.uimanager.events.RCTEventEmitter`. The app used
+FastImage in **26 files** — every poster, every avatar, every rail card — so
+the warning fired continuously, on every screen, and RN's LogBox put the
+toast over the transport row for the whole session.
+
+**The fix (F-037).** `react-native-fast-image` is **gone**. A new
+`src/components/utility/MediaImage/MediaImage.tsx` owns the artwork policy
+and is backed by React Native's own `Image` (Fresco on Android, Fabric-
+rendered, no warning), and all 26 call sites now use it. The package was
+removed from `package.json`, the lockfile, the Credits screen, the jest
+`moduleNameMapper` and `__mocks__/`. FastImage was unmaintained since 2020,
+so there was no upstream fix to wait for.
+
+**And `react-native-svg` is NOT a second source — proven, not assumed.**
+`react-native-svg`'s `RenderableView.onReceiveNativeEvent()` (`:104`) also
+calls `getJSModule(RCTEventEmitter.class)`, and the package still ships it in
+**every published version up to 15.16.0** (checked in the 15.16.0 tarball).
+But **nothing can call that method**: a sweep of every `.java`/`.kt` file in
+`node_modules` finds exactly **one** occurrence of `onReceiveNativeEvent` —
+the declaration itself. React Native 0.86 does not call it, and
+`react-native-svg` does not call it. It is **dead code**, so the legacy path
+cannot fire. The app's SVGs render through the Fabric codegen path
+(`react_codegen_rnsvg`) via `react-native-svg-transformer`.
+
+**State:** resolved. The emitter half by F-026 (the lib's TurboModule spec);
+the `getJSModule` half by F-037 (the FastImage removal). **The LogBox toast
+has no live source left.** A device re-check is still owed for the proof
+that the toast is gone, but the cause is settled from source.
 
 ---
 
@@ -1381,6 +1469,49 @@ is the one that needs the aspect arithmetic.
 `fillBounds` / `setVisible` are the same three orphaned mutators, and they
 stay deprecated on purpose (see `B-033`).
 
+### B-037 · P3 · app · a legacy-architecture dependency shipped silently, and nothing in the repo would have caught it
+
+**Symptom.** A dependency whose native code is incompatible with the
+architecture the app runs on sat in the manifest for the app's whole life,
+used in **26 files**, raising a warning on every single use — and **nothing
+in the repo noticed.** Not a test, not a lint rule, not a code review.
+
+**The instance.** `react-native-fast-image` (unmaintained since 2020) emits
+its Android events through the pre-Fabric path,
+`getJSModule(com.facebook.react.uimanager.events.RCTEventEmitter)`, which
+React Native 0.86 refuses with a warning. The app runs `newArchEnabled=true`,
+so every image load produced the warning, and RN's LogBox kept a toast over
+the player's transport row for the whole session. See **B-024** for the full
+trace.
+
+**Why nothing caught it.** Three reasons, and all three are the repo's own
+rules failing:
+1. **The jest mock hid it.** `__mocks__/react-native-fast-image.js` rendered
+   as a host element named `'FastImage'`. A jest mock replaces the native
+   half of a library entirely, so the legacy emitter — the whole defect —
+   was invisible to every test.
+2. **No test asserted the architecture.** Nothing asked "does this dependency
+   work on the new architecture", because there was no place that question
+   could be asked.
+3. **The symptom was invisible in CI.** The toast is a LogBox artifact of a
+   debug build. A green suite says nothing about it.
+
+**The guard added (2026-10-29).** `__tests__/components/utility/MediaImage/MediaImage.test.tsx`
+now asserts that `package.json` does not depend on `react-native-fast-image`
+— in `dependencies` **and** `devDependencies`. It is a narrow guard: it names
+one package.
+
+**What it does NOT yet do, stated plainly.** It does not catch the *class*.
+The real rule is "a dependency must not ship native code that calls
+`getJSModule(RCTEventEmitter)`", and the real check is a scan of every
+installed package's Android sources for that call. That check is
+**not** written yet, and it should be — it is a few lines over
+`node_modules/*/android/src/**`, and it would have caught this before it
+shipped.
+
+**State:** open — the guard is narrow by design and the general one is
+unwritten. Device proof that the toast is gone is still owed (B-024).
+
 ---
 
 ## FIXED
@@ -1423,6 +1554,7 @@ stay deprecated on purpose (see `B-033`).
 | F-033 | P2 | tooling | W32's `tsc` gate was **red** — six type errors in the two test files that same wave added — while the wave's summary recorded `tsc → 0`; the cause was `test-renderer` resolving to **1.3.0** under the declared `^1.2.0`, which changed the tree's node type from a hand-rolled `JsonNode` to `JsonElement \| string` → the tree's type now comes from `test-renderer` itself, a text node is skipped for the string it is, and the FAB's mutually-exclusive `icon` / `label` props are built on a branch rather than spread (a spread of a union is the one shape TypeScript will not assign) | app `f5/w22-close-minimise-d9` |
 | F-035 | P2 | lib | The library shipped a **564-line default control bundle** (`DefaultControls`) and wired it as `<PlayerRoot>`'s fallback whenever a consumer passed no `renderControls` — so the library always carried a chrome implementation a consumer could end up using by accident, and one it had to keep working, against locked **D5** ("the library draws no chrome") → **lib `2.0.0`**: `DefaultControls` and `DefaultControlsProps` are removed, `<PlayerRoot>` renders the surface and the consumer's own `renderControls` output and **nothing else**, and `renderControls` stays optional because the common consumer drives the player itself. Removing it also exposed three stale claims (`PlayerSurface`'s docblock about a native SurfaceView at the activity root, the no-op bridge's stated reason to exist, and two coverage exclusions sized for a native view manager that no longer exists) — all corrected against the source, and the two excluded files came back into the covered set at 100 %, moving the achievement 52 → **69.57 %** statements. Pinned by 3 mutation-checked tests | lib `v2.0.0` |
 | F-036 | P2 | lib | The lib's `isSurfaceMounted()` always answered `false`, so `commands.openPlayer({type:'video'})` **always refused** — including for a consumer that had a picture mounted — because it read `PlayerSurface.current()`, whose only writer (`attach()`) nothing calls since the picture moved into the React tree. The lib's own jest mock made it worse: it answered `true`, the one value the native code could never produce, so the suite was green exactly where the product was broken → a **new** `MpvRenderViewRegistry` of weak references, written by `MpvRenderViewManager` (the only thing that creates a picture view) and read by the bridge, so the answer is true **by construction**; `PlayerSurface` and its four mutators are left orphaned and deprecated, so the Yoga-hazard `LayoutParams` mutation stays out of reach. The jest mock now behaves like a native module with **no** picture mounted — `false` for the question and `false` for the three mutators — which is also exactly what the module's own NOOP fallback does. Pinned by 8 mutation-checked tests (5 native, 3 JS) | lib `v2.0.1` |
+| F-037 | P2 | app | The app's artwork was drawn by **`react-native-fast-image`** — an unmaintained-since-2020 legacy-architecture library whose Android code emits events through `getJSModule(com.facebook.react.uimanager.events.RCTEventEmitter)`, the one class React Native 0.86 refuses with a warning. The app used it in **26 files**, so the warning fired on every image load on every screen and RN's LogBox kept a toast over the player's transport row for the whole session; the jest mock rendered as a host element named `'FastImage'` and hid the entire native half of the defect → **`react-native-fast-image` is gone**. A new `components/utility/MediaImage/MediaImage.tsx` owns the artwork policy and is backed by React Native's own `Image` (Fresco on Android, Fabric-rendered, no warning), all 26 call sites use it, and the package left `package.json`, the lockfile, the Credits screen, the jest `moduleNameMapper` and `__mocks__/`. The origin was proven from **React Native's own source**, not from a device logcat — and `react-native-svg`'s identical legacy call was cleared the same way: the method it calls has **no caller anywhere** in `node_modules`, so it is dead code | app `f5/w22-close-minimise-d9` |
 
 ---
 

@@ -5,7 +5,7 @@
 
 import React, {useMemo, useState} from 'react';
 import {TouchableOpacity, View} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -49,13 +49,10 @@ export const TrackCard: React.FC<TrackCardProps> = React.memo(
             {backgroundColor: colors.background.primary},
           ]}>
           {showImage ? (
-            <FastImage
-              source={{
-                uri: item.imageUrl,
-                priority: FastImage.priority.normal,
-              }}
+            <MediaImage
+              source={item.imageUrl}
               style={styles.thumbImage}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
               onError={() => setImageFailed(true)}
               accessibilityIgnoresInvertColors
             />

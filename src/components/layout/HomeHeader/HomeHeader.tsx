@@ -31,7 +31,7 @@ import {
   Animated,
   useWindowDimensions,
 } from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../utility/MediaImage';
 import {useNavigation} from '@react-navigation/native';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
@@ -178,10 +178,10 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
             },
           ]}>
           {avatarUrl ? (
-            <FastImage
-              source={{uri: avatarUrl}}
+            <MediaImage
+              source={avatarUrl}
               style={styles.profileImage}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
             />
           ) : (
             <AppText

@@ -2,14 +2,14 @@
 // Wave 8: card visual contract ported from the legacy tab-based
 // LiveTVScreen so the new screen looks identical at the row level.
 //
-//   • 56×56 thumb (logo FastImage, fallback video gold glyph)
+//   • 56×56 thumb (logo image, fallback video gold glyph)
 //   • name (bodySmall 600) + category·country caption
 //   • trailing bookmark glyph (gold if favorite else tertiary)
 //   • 32×32 round play button
 
 import React from 'react';
 import {TouchableOpacity, View, StyleSheet} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -74,10 +74,10 @@ export const ChannelCard: React.FC<ChannelCardProps> = React.memo(
             {backgroundColor: colors.border.subtle},
           ]}>
           {row.image ? (
-            <FastImage
-              source={{uri: row.image, priority: FastImage.priority.normal}}
+            <MediaImage
+              source={row.image}
               style={styles.thumb}
-              resizeMode={FastImage.resizeMode.contain}
+              resizeMode="contain"
             />
           ) : (
             <SvgIcon name="video" size={22} color={colors.accent.gold} />

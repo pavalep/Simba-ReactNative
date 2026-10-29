@@ -15,7 +15,7 @@ import {AppText} from '../../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {BackButton} from '../../../../components/utility/BackButton/BackButton';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../../components/utility/MediaImage';
 import {radius, spacing} from '../../../../theme/tokens';
 import {useCachedArt} from '../../../../hooks/useCachedArt';
 import {useMoreFromArtist} from '../../../../hooks/useMoreFromArtist';
@@ -303,10 +303,10 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
               {backgroundColor: colors.accent.goldDim},
             ]}>
             {cachedCover ? (
-              <FastImage
-                source={{uri: cachedCover}}
+              <MediaImage
+                source={cachedCover}
                 style={styles.artLargeImage}
-                resizeMode={FastImage.resizeMode.cover}
+                resizeMode="cover"
               />
             ) : (
               <SvgIcon name="listMusic" size={48} color={colors.accent.gold} />

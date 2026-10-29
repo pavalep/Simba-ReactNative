@@ -13,7 +13,7 @@ import {
   FlatList,
   TouchableOpacity,
 } from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
 import {useTheme} from '../../../theme';
@@ -75,10 +75,10 @@ const BookCard: React.FC<BookCardProps> = React.memo(({row, onPress}) => {
       accessibilityLabel={`Open audiobook ${row.title}`}>
       <View style={[styles.thumb, {backgroundColor: colors.border.subtle}]}>
         {row.image ? (
-          <FastImage
-            source={{uri: row.image}}
+          <MediaImage
+            source={row.image}
             style={styles.thumb}
-            resizeMode={FastImage.resizeMode.cover}
+            resizeMode="cover"
           />
         ) : (
           <SvgIcon name="headphones" size={22} color={colors.accent.gold} />

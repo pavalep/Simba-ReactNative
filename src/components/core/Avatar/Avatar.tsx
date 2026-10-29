@@ -41,8 +41,8 @@ export const Avatar: React.FC<AvatarProps> = ({
           overflow: 'hidden',
           backgroundColor: colors.background.highlight,
         }}>
-        {/* Inline <Image> would go here with FastImage for production.
-            For now we render a fallback until image URL is available. */}
+        {/* The avatar image would go here, via <MediaImage>, once an image
+            URL is available. For now we render a fallback. */}
         <View
           style={{
             flex: 1,

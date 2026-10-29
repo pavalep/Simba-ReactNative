@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
-import FastImage, {Source as FastImageSource} from 'react-native-fast-image';
+import {MediaImage, type MediaImageSource} from '../MediaImage';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
@@ -9,7 +9,7 @@ import {SvgIcon, IconName} from '../../utility/SvgIcon';
 interface MediaTileProps {
   title: string;
   subtitle?: string;
-  thumbnail?: FastImageSource;
+  thumbnail?: MediaImageSource;
   /** P41.6: icon fallback shown when no thumbnail is provided. */
   icon?: IconName;
   /** P41.6: square (default) or 16:9 wide shelf card. */
@@ -49,12 +49,8 @@ export const MediaTile: React.FC<MediaTileProps> = React.memo(({
             : null,
         ]}>
         {thumbnail ? (
-          <FastImage
-            source={{
-              ...thumbnail,
-              priority: FastImage.priority.high,
-              cache: FastImage.cacheControl.immutable,
-            }}
+          <MediaImage
+            source={thumbnail}
             style={[styles.image, {borderRadius: radius.sm}]}
             resizeMode="cover"
           />

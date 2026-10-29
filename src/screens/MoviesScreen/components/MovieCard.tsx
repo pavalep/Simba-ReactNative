@@ -16,8 +16,7 @@
 
 import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {Animated, StyleSheet, View, TouchableOpacity, type ImageSourcePropType} from 'react-native';
-import FastImage from 'react-native-fast-image';
-import type {FastImageProps} from 'react-native-fast-image';
+import {MediaImage, type MediaImageSource} from '../../../components/utility/MediaImage';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
@@ -34,8 +33,8 @@ interface MovieCardProps {
    *  `imageUrl` so consecutive empty cards don't render as visual voids.
    *  Typed as the wide RN `ImageSourcePropType` so callers can pass
    *  either a `require()` result (number) or an `{uri: '...'}` source.
-   *  At the FastImage boundary we narrow with a single cast to
-   *  `FastImageProps['source']` (D-021) — the value is always one of
+   *  At the MediaImage boundary we narrow with a single cast to
+   *  `MediaImageSource` (D-021) — the value is always one of
    *  those two shapes at runtime. */
   placeholderImage?: ImageSourcePropType;
   /** When true, this card is the sole item in its row (odd item count).
@@ -105,10 +104,10 @@ export const MovieCard: React.FC<MovieCardProps> = React.memo(
              opacity 0 and fades to 1 on load, covering the base. */}
         <View style={[styles.heroImageLayer, {backgroundColor: colors.background.primary}]}>
           {hasCover ? (
-            <FastImage
-              source={placeholderImage as FastImageProps['source']}
+            <MediaImage
+              source={placeholderImage as MediaImageSource}
               style={StyleSheet.absoluteFill}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
               accessibilityIgnoresInvertColors
             />
           ) : (
@@ -134,10 +133,10 @@ export const MovieCard: React.FC<MovieCardProps> = React.memo(
           {remoteActive ? (
             <Animated.View
               style={[StyleSheet.absoluteFill, {opacity: imageOpacity}]}>
-              <FastImage
-                source={{uri: item.imageUrl, priority: FastImage.priority.normal}}
+              <MediaImage
+                source={item.imageUrl}
                 style={StyleSheet.absoluteFill}
-                resizeMode={FastImage.resizeMode.cover}
+                resizeMode="cover"
                 onLoad={handleImageLoad}
                 onError={() => setImageFailed(true)}
                 accessibilityIgnoresInvertColors

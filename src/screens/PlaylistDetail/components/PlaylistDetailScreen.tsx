@@ -9,7 +9,7 @@ import {
 import RNFS from 'react-native-fs';
 import {pick, types, keepLocalCopy} from '@react-native-documents/picker';
 import LinearGradient from 'react-native-linear-gradient';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useBottomChromeInset} from '../../../infrastructure/player/miniPlayerChrome';
@@ -685,10 +685,10 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           {/* Thumbnail — real art when available (P34.3) */}
           {item.thumbnailPath ? (
             <View style={[styles.thumbnail, styles.thumbnailImageWrap]}>
-              <FastImage
-                source={{uri: item.thumbnailPath}}
+              <MediaImage
+                source={item.thumbnailPath}
                 style={styles.thumbnailImage}
-                resizeMode={FastImage.resizeMode.cover}
+                resizeMode="cover"
               />
             </View>
           ) : (

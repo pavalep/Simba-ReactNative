@@ -16,7 +16,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {PlaylistSheet} from '../../../components/sheets/PlaylistSheet/PlaylistSheet';
 import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
 import {useRecentHistory} from '../../../features/recentHistory';
@@ -260,10 +260,10 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
         {/* ── Hero ── */}
         <View style={styles.heroSection}>
           {imageUrl ? (
-            <FastImage
-              source={{uri: imageUrl}}
+            <MediaImage
+              source={imageUrl}
               style={styles.heroImage}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
             />
           ) : (
             <View style={[styles.imagePlaceholder, {backgroundColor: colors.accent.goldDim}]}>

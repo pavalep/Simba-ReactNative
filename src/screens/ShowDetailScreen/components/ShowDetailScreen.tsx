@@ -15,7 +15,7 @@ import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {ActivityOrb} from '../../../components/feedback/ActivityOrb/ActivityOrb';
 import {Placeholder} from '../../../components/feedback/Placeholder';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useBookmarks} from '../../../features/bookmarks';
 import {useToast} from '../../../components/feedback/Toast';
 import {useHaptics} from '../../../hooks/useHaptics';
@@ -156,10 +156,10 @@ export const ShowDetailScreen: React.FC<Props> = ({navigation, route}) => {
         {/* ── Hero ── */}
         <View style={styles.heroSection}>
           {imageUrl ? (
-            <FastImage
-              source={{uri: imageUrl}}
+            <MediaImage
+              source={imageUrl}
               style={styles.heroImage}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
             />
           ) : (
             <View style={[styles.imagePlaceholder, {backgroundColor: colors.accent.goldDim}]}>

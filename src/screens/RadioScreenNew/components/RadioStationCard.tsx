@@ -6,7 +6,7 @@
 
 import React from 'react';
 import {TouchableOpacity, View, StyleSheet} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -73,10 +73,10 @@ export const RadioStationCard: React.FC<RadioStationCardProps> = React.memo(
         style={[styles.card, {backgroundColor: colors.background.elevated}]}>
         <View style={[styles.thumb, {backgroundColor: colors.border.subtle}]}>
           {row.image ? (
-            <FastImage
-              source={{uri: row.image}}
+            <MediaImage
+              source={row.image}
               style={styles.thumb}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
             />
           ) : (
             <SvgIcon name="headphones" size={22} color={colors.accent.gold} />

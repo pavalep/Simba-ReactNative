@@ -10,7 +10,7 @@
 
 import React, {useCallback, useState} from 'react';
 import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
@@ -101,10 +101,10 @@ export const FollowedPodcastsShelf: React.FC<FollowedPodcastsShelfProps> =
                     },
                   ]}>
                   {podcast.image ? (
-                    <FastImage
-                      source={{uri: podcast.image}}
+                    <MediaImage
+                      source={podcast.image}
                       style={styles.artwork}
-                      resizeMode={FastImage.resizeMode.cover}
+                      resizeMode="cover"
                     />
                   ) : (
                     <View

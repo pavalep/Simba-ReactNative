@@ -1,6 +1,6 @@
 import React, {useMemo} from 'react';
 import {View, TouchableOpacity, StyleSheet, Dimensions} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import LinearGradient from 'react-native-linear-gradient';
 import {useTheme} from '../../../theme';
 import type {ColorTokens} from '../../../theme/tokens';
@@ -71,10 +71,10 @@ export const FeaturedHeroBanner: React.FC<FeaturedHeroBannerProps> = ({
       ]}>
       {/* ── Background Thumbnail ── */}
       {item.thumbnailPath ? (
-        <FastImage
-          source={{uri: item.thumbnailPath}}
+        <MediaImage
+          source={item.thumbnailPath}
           style={StyleSheet.absoluteFill}
-          resizeMode={FastImage.resizeMode.cover}
+          resizeMode="cover"
         />
       ) : (
         <View style={[StyleSheet.absoluteFill, {backgroundColor: colors.background.elevated, alignItems: 'center', justifyContent: 'center'}]}>

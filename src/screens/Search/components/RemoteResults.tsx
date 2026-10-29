@@ -6,7 +6,7 @@
 
 import React from 'react';
 import {View, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -78,10 +78,10 @@ const MediaRow: React.FC<MediaRowProps> = React.memo(
         onPress={onPress}
         accessibilityRole="button">
         {imageUrl ? (
-          <FastImage
-            source={{uri: imageUrl}}
+          <MediaImage
+            source={imageUrl}
             style={rowStyles.art}
-            resizeMode={FastImage.resizeMode.cover}
+            resizeMode="cover"
           />
         ) : (
           <View style={[rowStyles.art, {backgroundColor: colors.accent.goldDim}]}>

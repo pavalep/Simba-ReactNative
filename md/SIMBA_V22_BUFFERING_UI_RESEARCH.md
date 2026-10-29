@@ -1,4 +1,4 @@
-# Buffering in the player — how it is shown, how buffer islands are handled, and why none of it appears today
+# Buffering in the player — how it is shown, how buffer islands are handled, and what was blocking it on 2026-10-19
 
 2026-10-19. Research + a read of this repo's own code, in that order. Every
 claim about a shipping product is sourced below; every claim about *this* app
@@ -6,7 +6,73 @@ is a file:line.
 
 ---
 
-## 1. The short answer: you are not seeing a buffer indicator because the state that drives it never arrives
+> ## ⚠️ PARTLY SUPERSEDED — read this before §1 and §5
+>
+> **This document is a dated research record.** It describes the app as it
+> stood on **2026-10-19, against lib 1.15.0**. Two of its conclusions were
+> measured FALSE later the same evening, and the work it recommended has
+> shipped. The record is kept as-is — it is what was measured, and how — but
+> **§1 and §5 must not be read as the current state of the code.**
+>
+> | § | Status as of 2026-10-29 |
+> |---|---|
+> | §2 How shipping players show buffering | **Valid.** The research stands: ExoPlayer's `show_buffering` default, Video.js's 500 ms onset delay, NN/g's thresholds, the QoE argument. |
+> | §3 Buffer islands, and the strict-overlap merge rule | **Valid, and now the app's rule.** |
+> | §4 What the app's buffering UI does | **Valid as history.** The UI it describes is the UI that shipped. |
+> | §1 "the state that drives it never arrives" | **FALSE as of 2026-10-19 evening.** The native property-event path was fixed; the buffering policy shipped on 2026-10-21. |
+> | §5 "Recommended order of work" | **Done.** All five items are shipped. See the table below. |
+>
+> ### What §1 got wrong, and the evidence
+>
+> §1 claimed that `MPV_EVENT_PROPERTY_CHANGE` was never delivered to JS, so
+> `onPositionChanged` / `onDurationChanged` / `onSeekable` / `onBuffering` /
+> `onCacheState` arrived **0 times**, and called it "the single highest-value
+> defect in the player".
+>
+> **It was false.** The cause was a starvation bug in the native event loop,
+> and the lib's own source now says so:
+>
+> > So MPV_EVENT_PROPERTY_CHANGE is not delivered when the property changes
+> > — it is delivered when the queue happens to drain. […] That is precisely
+> > the failure this used to have: MPV_EVENT_PROPERTY_CHANGE events were
+> > never observed on the handle the properties were observed on, so
+> > `onSeekable` / `onPositionChanged` / `onCacheState` never reached JS and
+> > the seek bar stayed permanently disabled.
+> > — `react-native-media-player/android/src/main/cpp/event.cpp:323-331`
+>
+> The drain loop that fixes it is in the same file
+> (`event.cpp:337` — poll with a zero timeout, block only on
+> `MPV_EVENT_NONE`), and the property event now crosses the bridge
+> (`event.cpp:432` → `event.cpp:484` → `callJavaPropertyChanged`,
+> `event.cpp:216`) and lands in Kotlin at `MpvBridgeModule.kt:302`
+> (`onMpvPropertyChanged`), which fans the properties out to the typed
+> events.
+>
+> The master plan already carries the correction — *"The 'property events
+> never arrive' claim was FALSE, and is now measured"* — in its §8 carried
+> forward register, item 8, which is **CLOSED 2026-10-21 (midday)**.
+>
+> ### §5, item by item
+>
+> | §5 item | Fate |
+> |---|---|
+> | 1. LIB — fix `MPV_EVENT_PROPERTY_CHANGE` delivery | **Done** — the drain loop, `event.cpp:337`. |
+> | 2. APP — fix the seconds/bytes → ms conversion in `deriveBufferedRanges` | **Done** — lib **1.16.0**: the bridge converts seconds → milliseconds and refuses byte offsets as a time range. |
+> | 3. APP — switch the buffered fill to the contiguous prefix, merge sub-second gaps | **Done, differently.** The shipped design draws **one rectangle per merged segment** under the played fill, rather than ExoPlayer's single contiguous prefix — islands are shown as islands. |
+> | 4. APP — the overlay's onset delay, minimum-visible time and paused guard | **Done** — `useDelayedVisibility`. |
+> | 5. APP — surface the load-failure error | **Done** — `VideoErrorOverlay`. |
+>
+> One §5 recommendation was also overtaken by a better answer: raising
+> `cache-secs` from 120 s to ~300 s so the buffered band is visible above the
+> thumb. The lib now sets **300** directly —
+> `android/src/main/cpp/main.cpp:310` (`cache-secs`) and `:313`
+> (`demuxer-readahead-secs`), with `demuxer-max-bytes=150MiB` at `:311` as the
+> memory bound — and `MpvBridgeModule.kt:1799-1800` moves both keys together
+> so they can never disagree.
+
+---
+
+## 1. The short answer (2026-10-19): you are not seeing a buffer indicator because the state that drives it never arrives — **SUPERSEDED, see the banner above**
 
 This is not a styling problem, and it is not a "the overlay is too subtle"
 problem. The overlay is correct and has always been correct. The state it
@@ -333,7 +399,11 @@ reading a `false` that can never become `true`.
 
 ---
 
-## 5. Recommended order of work
+## 5. Recommended order of work — SHIPPED, all five items (2026-10-21)
+
+> Kept verbatim as the record of what was recommended on 2026-10-19. **Every
+> item below has shipped** — see the item-by-item table in the banner at the
+> top of this document.
 
 1. **LIB — fix `MPV_EVENT_PROPERTY_CHANGE` delivery** (`event.cpp` /
    `property.cpp`; observe handle vs. pumped handle). Unblocks

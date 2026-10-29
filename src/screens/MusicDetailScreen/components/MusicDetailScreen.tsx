@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
@@ -306,10 +306,10 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
         {/* ── Cover Art ── */}
         <View style={styles.coverContainer}>
           {imageUrl ? (
-            <FastImage
-              source={{uri: imageUrl}}
+            <MediaImage
+              source={imageUrl}
               style={styles.coverImage}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
             />
           ) : (
             <View style={styles.placeholderCover}>

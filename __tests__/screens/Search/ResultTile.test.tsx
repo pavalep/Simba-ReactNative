@@ -59,8 +59,9 @@ interface HostNode {
 }
 
 /**
- * The FastImage mock is the string 'FastImage', so the image lands in the
- * host tree as a host element of that type, carrying its `source` prop.
+ * React Native's own `Image` lands in the host tree as a host element of
+ * that type, carrying its `source` prop — which is how the image-URI
+ * contract is asserted.
  */
 function findByType(node: HostNode | null, type: string): HostNode | null {
   if (!node) return null;
@@ -94,7 +95,7 @@ async function renderTile(overrides: Partial<SearchResultItem> = {}) {
   );
 
   const tree = result.toJSON() as HostNode | null;
-  return {result, image: findByType(tree, 'FastImage')};
+  return {result, image: findByType(tree, 'Image')};
 }
 
 describe('ResultTile — the thumbnail URI', () => {

@@ -16,7 +16,7 @@ import {SvgIcon} from '../../../../components/utility/SvgIcon';
 import {BackButton} from '../../../../components/utility/BackButton/BackButton';
 import AudioWaveform from '../../../../components/player/AudioWaveform/AudioWaveform';
 import {SimbaStatusBar} from '../../../../components/StatusBar';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../../components/utility/MediaImage';
 import {radius, spacing} from '../../../../theme/tokens';
 import {useCachedArt} from '../../../../hooks/useCachedArt';
 import {useMoreFromArtist} from '../../../../hooks/useMoreFromArtist';
@@ -80,10 +80,10 @@ const DiscographyRow: React.FC<{
       onPress={onPress}
       accessibilityRole="button">
       {cached ? (
-        <FastImage
-          source={{uri: cached}}
+        <MediaImage
+          source={cached}
           style={rowStyles.art}
-          resizeMode={FastImage.resizeMode.cover}
+          resizeMode="cover"
         />
       ) : (
         <View style={[rowStyles.art, {backgroundColor: colors.accent.goldDim}]}>

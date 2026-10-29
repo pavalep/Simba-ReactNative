@@ -20,7 +20,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../../components/utility/MediaImage';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useTheme} from '../../../theme';
 
@@ -84,10 +84,10 @@ const ArchiveCard: React.FC<ArchiveCardProps> = React.memo(
         accessibilityLabel={`Open ${row.title}`}>
         <View style={[styles.thumb, {backgroundColor: colors.border.subtle}]}>
           {row.image ? (
-            <FastImage
-              source={{uri: row.image}}
+            <MediaImage
+              source={row.image}
               style={styles.thumb}
-              resizeMode={FastImage.resizeMode.cover}
+              resizeMode="cover"
             />
           ) : (
             <SvgIcon

@@ -1,6 +1,6 @@
 import React, {useMemo} from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../../utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
@@ -69,10 +69,10 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
                   coverItems.length === 1 && styles.collageCellFull,
                 ]}>
                 {item.thumbnailPath ? (
-                  <FastImage
-                    source={{uri: item.thumbnailPath}}
+                  <MediaImage
+                    source={item.thumbnailPath}
                     style={StyleSheet.absoluteFill}
-                    resizeMode={FastImage.resizeMode.cover}
+                    resizeMode="cover"
                   />
                 ) : (
                   <SvgIcon

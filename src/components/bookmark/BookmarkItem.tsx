@@ -6,7 +6,7 @@ import {
   Animated,
   PanResponder,
 } from 'react-native';
-import FastImage from 'react-native-fast-image';
+import {MediaImage} from '../utility/MediaImage';
 import {useTheme} from '../../theme';
 import {spacing, radius} from '../../theme/tokens';
 import {AppText} from '../core/AppText/AppText';
@@ -148,10 +148,10 @@ export const BookmarkItem: React.FC<Props> = ({
             {/* Thumbnail art when available, else gold bookmark icon (P34.6) */}
             {item.thumbnailPath ? (
               <View style={[styles.iconContainer, styles.thumbWrap]}>
-                <FastImage
-                  source={{uri: item.thumbnailPath}}
+                <MediaImage
+                  source={item.thumbnailPath}
                   style={styles.thumbImage}
-                  resizeMode={FastImage.resizeMode.cover}
+                  resizeMode="cover"
                 />
               </View>
             ) : (
