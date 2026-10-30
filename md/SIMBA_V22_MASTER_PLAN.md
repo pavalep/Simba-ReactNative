@@ -2167,14 +2167,55 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
       resume prompt shows the poster rather than the frame — left alone
       deliberately, because changing it alters the resume prompt's
       behaviour.
-    - **`setAutoEnterEnabled` and `setExpandedAspectRatio` DO NOT EXIST** —
-      not in the app, not in the lib. They exist only in **md prose**. The lib
-      has an **unread** `pip.autoEnterOnLeave` flag, and PiP entry is
-      **manual** (`enterPictureInPictureMode`). Any plan that calls these
-      methods is calling something that was never written.
-    - **Portrait restore exists only in `onResume()`** (and `onCreate`), and
-      the JS `lockToPortrait()` runs only at boot — so a session that ends
-      while the app is backgrounded **never restores portrait**.
+    - **`setAutoEnterEnabled` — DONE 2026-10-30 in lib `2.1.0`** (item 62,
+      bug `B-039`, fix `F-043`). The lib had an **unread**
+      `pip.autoEnterOnLeave` flag; it now drives the platform's own switch,
+      `PictureInPictureParams.Builder.setAutoEnterEnabled` (API 31+), and
+      the params are pushed onto the Activity with
+      `Activity.setPictureInPictureParams` — which is what the OS reads when
+      it transitions into PiP by itself. **`Activity.setAutoEnterEnabled`
+      does not exist** — the SDK's own `android.jar` is what proved it — so
+      any plan that called that method was calling something that was never
+      written.
+    - **`setExpandedAspectRatio` still DOES NOT EXIST** — not in the app,
+      not in the lib. It exists only in **md prose**. Any plan that calls it
+      is calling something that was never written.
+    - **Portrait restore — the register's statement was WRONG, and the real
+      gap is a different one.** It said "a session that ends while the app
+      is backgrounded never restores portrait". The native side already
+      handles exactly that case: `MainActivity.onResume()` asks mpv whether
+      media is loaded (`isMediaLoaded()` — a live read through
+      `PlaybackHost`, with every failure degrading to "no media") and
+      restores `SCREEN_ORIENTATION_USER_PORTRAIT` only when nothing is
+      loaded, and a background -> foreground transition always runs
+      `onResume()`. **The gap is the FOREGROUND case:** a session that ends
+      while the app is already in front never runs `onResume()`, so the
+      window stayed in landscape with nothing playing — the user closed the
+      player and landed on a landscape feed.
+      **DONE 2026-10-30** (fix `F-048`): `useClosePlayback()` — the ONE
+      owner of the teardown — now calls the **lib's own**
+      `setOrientation('portrait')` after the session ends. It is NOT the
+      app's `lockToPortrait()`: that helper imports
+      `react-native-orientation-locker`, whose module body constructs a
+      `NativeEventEmitter` with no native module, so pulling it into the
+      player facade broke **22 jest suites at module level** — which is why
+      `src/utils/orientation.ts`, and with it `AppContent`, is
+      **untestable in jest**. The lib is also **Android-only** —
+      `react-native.config.js` declares `ios: null` and the package ships
+      no `ios/` folder — so the player, and the landscape-while-playing
+      state this restores from, only exists where the lib's command is
+      live. The lib's command maps to
+      `SCREEN_ORIENTATION_PORTRAIT` — the **same constant** the app's
+      boot-time `lockToPortrait()` sets on Android (verified in the
+      locker's own `OrientationModule.java`) — so the browsing state is
+      identical either way: one mechanism during a session (the lib's
+      command), one outside it (the app's boot lock), and the handover
+      happens where the session stops. It is **not** called when the stop FAILED: the player is
+      still standing, and restoring portrait then would snap a landscape
+      film to portrait mid-playback. Pinned by 2 new tests, and the "must
+      NOT restore portrait" case is **mutation-checked** — moving the call
+      above the stop makes the suite fail, and the production file was
+      restored byte-identically.
     - **Device proof: still outstanding.**
 
 **Playback truth (new, 2026-10-21 afternoon)**
@@ -2683,6 +2724,61 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     moved under `.local/`, which is gitignored); and the README was rewritten
     against the source, because npmjs renders it as of publish time and the
     package page was still describing a component removed in 2.0.0.
+
+**Today's wave (2026-10-30, later) — the portrait restore**
+
+67. ~~**Closing the player left the app in landscape with nothing
+    playing.**~~ **DONE 2026-10-30** (fix `F-048`). The register's own
+    statement of this defect was wrong in the opposite direction: it
+    claimed the *backgrounded* case never restored portrait, and that case
+    was already handled — `MainActivity.onResume()` asks mpv whether media
+    is loaded (`isMediaLoaded()`, a live read through `PlaybackHost`,
+    every failure degrading to "no media") and restores portrait only when
+    nothing is loaded. **The gap was the FOREGROUND case:** a session that
+    ends while the app is already in front never runs `onResume()`, so the
+    window stayed in landscape with nothing playing. `useClosePlayback()`
+    — the ONE owner of the teardown — now calls the **lib's own**
+    `setOrientation('portrait')` after the session ends, and only then: a
+    stop that FAILED leaves the player standing, and restoring portrait
+    then would snap a landscape film to portrait mid-playback. It is the
+    lib's command rather than the app's `lockToPortrait()` for two
+    measured reasons — the helper's dependency cannot be loaded in jest
+    (item 68), and the lib is **Android-only**, so the player only exists
+    where that command is live. Pinned by 2 new tests; the "must NOT
+    restore portrait" case is **mutation-checked** and the production file
+    was restored byte-identically. **Device proof: still outstanding**
+    (item 63).
+68. **The app's orientation helper cannot be loaded in jest.** 
+    `src/utils/orientation.ts` imports `react-native-orientation-locker`,
+    whose module body constructs a `NativeEventEmitter` with no
+    argument, and `NativeEventEmitter` requires a non-null one — so the
+    module throws the moment it is imported. There is **no**
+    `__mocks__/react-native-orientation-locker.js`, and the import graph
+    reaches the helper from `src/app/AppContent.tsx`, so **both are
+    untestable**: a suite that pulls either in fails at MODULE level, not
+    on an assertion. Verified rather than recalled — a probe importing
+    the helper failed with `Invariant Violation: new NativeEventEmitter()
+    requires a non-null argument` at
+    `react-native-orientation-locker/src/orientation.ios.js:12`. This is
+    why the portrait restore routes through the lib's command, and it is
+    the same defect class as B-038: what is missing is the **mock**, not
+    the code. **OPEN** — the fix is a
+    `__mocks__/react-native-orientation-locker.js` that matches the
+    library's public surface (the `Orientation` class, `OrientationType`,
+    the orientation constants, `OrientationLocker` and the three hooks),
+    plus a `moduleNameMapper` entry, after which the helper can be tested
+    directly.
+69. **Two of the orientation helper's three exports are dead.** 
+    `lockToLandscape()` and `unlockAll()` have **zero call sites** in
+    `src/`, in `__tests__/` and in the app — the player's rotation lock
+    goes through the lib's `commands.setOrientation`
+    (`useTransport.ts:1046`), not the app's helper, and
+    `lockToPortrait()` is called from exactly **one** place,
+    `AppContent.tsx:82`, at boot. So the helper is a one-call wrapper
+    around a dependency that cannot be loaded in jest, and two of its
+    three exports are unreachable. **OPEN** — it belongs to the AI-slop
+    sweep: either give the helper a real owner and a mock, or delete what
+    nothing calls.
 
 ---
 
