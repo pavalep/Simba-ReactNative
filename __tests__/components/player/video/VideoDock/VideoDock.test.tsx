@@ -92,7 +92,13 @@ jest.mock('@simba-dev/react-native-media-player', () => {
   const actual = jest.requireActual('@simba-dev/react-native-media-player');
   return {
     ...actual,
+    // The REAL module surface, with only the method this test observes
+    // replaced by a spy. The library hands back its own no-op bridge
+    // when no native module is installed, so this is its true jest-time
+    // shape. A hand-written one-method stub is not, and it breaks the
+    // day production calls a second method.
     getMpvPlayerModule: () => ({
+      ...actual.getMpvPlayerModule(),
       stopPlayback: mockStopPlayback,
     }),
   };

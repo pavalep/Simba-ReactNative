@@ -122,5 +122,47 @@ export function useClosePlayback(): () => void {
     // seam writes 'expanded' on every video launch, so the next video opens
     // fullscreen either way.
     endSession();
+
+    // The app is portrait whenever there is NO session, and this is the
+    // ONE place a session ends.
+    //
+    // The window can be in landscape while a session lives: the
+    // orientation lock pins it there, and the device can simply be
+    // rotated. Ending the session has to hand the window back, or the
+    // browsing UI is left in landscape with nothing playing.
+    //
+    // `MainActivity.onResume()` restores portrait too, but only on a
+    // background -> foreground transition. It cannot help when the
+    // session ends while the app is ALREADY in front, which is the
+    // common case: the user closes the player and lands on the feed.
+    //
+    // The lib's own `setOrientation('portrait')` is the command the
+    // player's orientation lock already uses - `useTransport`'s
+    // `setOrientationLock` calls `commands.setOrientation`, and the lib
+    // routes that to `getMpvPlayerModule().setOrientation` - so this is
+    // the SAME call, not a second mechanism. It maps to
+    // `SCREEN_ORIENTATION_PORTRAIT`, the same constant the app's
+    // boot-time `lockToPortrait()` sets on Android. So the window has ONE
+    // mechanism during a session (the lib's command) and one outside it
+    // (the app's boot lock), and the handover happens here, where the
+    // session stops.
+    //
+    // It is the lib's command and NOT the app's `lockToPortrait()`, for
+    // two reasons that were measured, not assumed:
+    //
+    //  - `src/utils/orientation.ts` imports `react-native-orientation-
+    //    locker`, whose module body constructs a `NativeEventEmitter`
+    //    with no argument. Importing it into the player facade broke 22
+    //    jest suites at MODULE level - not on an assertion - and that
+    //    helper and `AppContent` are therefore untestable in jest.
+    //  - The lib is ANDROID-ONLY: `react-native.config.js` declares
+    //    `ios: null` and the package ships no `ios/` folder, so the
+    //    player - and the landscape-while-playing state this restores
+    //    from - only exists where the lib's command is live.
+    //
+    // The lib's command also refuses LOUDLY: `setOrientation` logs a
+    // warning when there is no current activity, instead of quietly doing
+    // nothing.
+    getMpvPlayerModule().setOrientation('portrait');
   }, [endSession, toast]);
 }
