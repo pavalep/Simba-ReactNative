@@ -232,6 +232,33 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
         mediaKind: item.type,
         mediaLane: lane,
         ...(item.provider ? {provider: item.provider} : {}),
+        // The CATALOGUE artwork — deliberately `item.thumbnailPath` and
+        // NOT `resolveMediaArtwork(item)`, which would answer with the
+        // captured frame.
+        //
+        // The two are different questions. The card draws the frame
+        // because a continue-watching rail sells *where you were*; the
+        // launch carries the artwork of the TITLE, because the launch's
+        // field becomes the media notification's icon (an album cover,
+        // never a still of one moment of a film) AND the history entry's
+        // catalogue slot (`recentHistoryStore.ts` writes the session's
+        // `thumbnailPath` there). Handing the frame over instead would
+        // replace that poster with a local still on the next checkpoint,
+        // and the search tile — which draws the catalogue slot — would
+        // show the still where it should show the poster (B-026).
+        //
+        // The history entry ALREADY carries the captured frame, in its
+        // own `resumeThumbnailPath` field, written by the checkpoint
+        // writer and read by the bookmark the same way
+        // (`useBookmarkToggle.ts`). Nothing here needs to move it.
+        //
+        // An entry whose catalogue slot is `''` is an entry written
+        // before the launch carried artwork at all: the slot is filled
+        // from the LAUNCH (`usePlaybackCheckpointSync.ts` ← the session),
+        // so it was empty because every caller left the field out. The
+        // callers that had artwork now hand it over, so the next launch
+        // of that file fills the slot — and this line has something to
+        // pass.
         ...(item.thumbnailPath ? {thumbnailPath: item.thumbnailPath} : {}),
       });
     },

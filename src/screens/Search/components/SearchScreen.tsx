@@ -85,7 +85,23 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   // unhandled promise rejection) and `false` return discarded
   // silently.
   const playWithToast = useCallback(
-    async (input: {uri: string; title: string; mediaType: 'movie' | 'music' | 'podcast' | 'live-tv' | 'audiobook' | 'video' | 'audio'}) => {
+    async (input: {
+      uri: string;
+      title: string;
+      mediaType: 'movie' | 'music' | 'podcast' | 'live-tv' | 'audiobook' | 'video' | 'audio';
+      /**
+       * The artwork this result has in hand, when it has one.
+       *
+       * B-026: the seam ACCEPTED artwork (`openPlayer` takes a
+       * `thumbnailPath` and forwards it as the notification's
+       * `artworkPath`) and every caller left the field out, so the
+       * session carried no artwork, the checkpoint wrote the history
+       * entry with `thumbnailPath: ''`, and the tile the user can
+       * actually reach — the one for a film they have already watched
+       * — had nothing to draw.
+       */
+      thumbnailPath?: string;
+    }) => {
       const result = await play(input);
       if (result.ok) return;
       if (isNetworkError(result.error)) {
@@ -313,9 +329,17 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
   const handleChipTap = useCallback((term: string) => setSearchText(term), [setSearchText]);
   const handleClearRecent = useCallback(() => setRecentSearches([]), []);
   const handlePlayFile = useCallback(
-    (fileUri: string, fileTitle: string) => {
+    (fileUri: string, fileTitle: string, thumbnailPath?: string) => {
       const mediaType = isVideoFile(fileTitle) ? 'video' : 'audio';
-      void playWithToast({uri: fileUri, title: fileTitle, mediaType});
+      void playWithToast({
+        uri: fileUri,
+        title: fileTitle,
+        mediaType,
+        // The grid's own artwork. A result that came from the media
+        // store carries the catalogue art; one that came from the
+        // history carries whatever the last launch handed over.
+        ...(thumbnailPath ? {thumbnailPath} : {}),
+      });
     },
     [playWithToast],
   );
@@ -336,6 +360,9 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         uri: track.audioUrl,
         title: track.name,
         mediaType: 'music',
+        // The cover Jamendo already gave us — it reaches the
+        // notification and the history entry from here.
+        ...(track.imageUrl ? {thumbnailPath: track.imageUrl} : {}),
       });
     },
     [playWithToast],
@@ -347,6 +374,7 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         uri: track.streamUrl,
         title: track.title,
         mediaType: 'music',
+        ...(track.artworkUrl ? {thumbnailPath: track.artworkUrl} : {}),
       });
     },
     [playWithToast],
@@ -378,6 +406,8 @@ export const SearchScreen: React.FC<Props> = ({navigation}) => {
         uri: channel.url,
         title: channel.name,
         mediaType: 'live-tv',
+        // The channel's logo — the same picture the row draws.
+        ...(channel.image ? {thumbnailPath: channel.image} : {}),
       });
     },
     [playWithToast],

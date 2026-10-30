@@ -568,6 +568,28 @@ export interface PlayInput {
   uri: string;
   title: string;
   mediaType: MediaKind | MediaLane | 'video' | 'audio';
+  /**
+   * The catalogue artwork for this launch — a remote URL or a local path.
+   *
+   * OPTIONAL, and optional for a reason: the ~34 `openPlayer` call sites
+   * that pass nothing still typecheck, and a launch without artwork is
+   * still a launch. This is the same widening `useResumeAwareLaunch`
+   * records at its own seam (see `AppOpenPlayerOptions`).
+   *
+   * What it is for: the seam forwards it to the bridge as `artworkPath`
+   * (the media notification's large icon) AND records it on the session,
+   * which is how the CHECKPOINT WRITER gets the artwork into the history
+   * entry. Without it the history entry's `thumbnailPath` is written as
+   * `''`, and every surface that reads that entry back — the search tile
+   * above all — has nothing to draw (B-026).
+   *
+   * It is the CATALOGUE artwork, not a captured frame: the launch's field
+   * lands in the history entry's catalogue slot, and a frame there would
+   * replace the poster with a still of one moment of the film. The frame
+   * is a rendering fact for the surfaces that sell a position, and they
+   * ask `resolveMediaArtwork` for it.
+   */
+  thumbnailPath?: string;
 }
 
 /**
@@ -620,6 +642,10 @@ export function usePlay(): (input: PlayInput) => Promise<Result<PlaybackId, Stre
           uri: input.uri,
           title: input.title,
           type: resolveStreamType(input.mediaType),
+          // The artwork the caller had in hand. Conditional so a launch
+          // without artwork sends no artwork key at all — the seam treats
+          // a present-but-empty path as artwork.
+          ...(input.thumbnailPath ? {thumbnailPath: input.thumbnailPath} : {}),
         });
         if (!accepted) {
           // No typed code on a `false` return — the bridge only

@@ -54,6 +54,12 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
       uri: fileUri,
       title: fileTitle,
       type: resolveStreamType('music'),
+      // The artwork this screen ALREADY computed — it reached the More
+      // sheet's `currentItem` and the header, and the launch was the one
+      // place it did not. Without it the session carried no artwork, the
+      // checkpoint wrote the history entry with `thumbnailPath: ''`, and
+      // the search tile for that track had nothing to draw (B-026).
+      ...(artwork ? {thumbnailPath: artwork} : {}),
     });
   }, [track, openPlayer, source]);
 
@@ -64,6 +70,8 @@ export const MusicDetailScreen: React.FC<Props> = ({navigation, route}) => {
         uri: t.audioUrl,
         title: t.name,
         type: resolveStreamType('music'),
+        // Same reason as `handlePlay`: the row's own cover art.
+        ...(t.imageUrl ? {thumbnailPath: t.imageUrl} : {}),
       });
     },
     [openPlayer],

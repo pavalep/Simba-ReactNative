@@ -18,7 +18,16 @@ interface SearchResultsProps {
   groups: SearchResultGroup[];
   debouncedQuery: string;
   tileWidth: number;
-  onPlayFile: (fileUri: string, title: string) => void;
+  /**
+   * Play a local result.
+   *
+   * `thumbnailPath` is the artwork the result itself carries — the
+   * catalogue art for a result the media store knows about. It travels
+   * with the play because the launch is what puts the artwork into the
+   * history entry, and the history entry is what the next search for
+   * that film draws from (B-026).
+   */
+  onPlayFile: (fileUri: string, title: string, thumbnailPath?: string) => void;
   /**
    * W22 D-020: typed as `keyof RootStackParamList` (and the
    * matching `params` shape for that route) so the call site
@@ -73,7 +82,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                       } else if (nt?.screen) {
                         onNavigate(nt.screen, nt.params);
                       } else if (item.fileUri) {
-                        onPlayFile(item.fileUri, item.title);
+                        onPlayFile(item.fileUri, item.title, item.thumbnailPath);
                       }
                     }}
                   />
@@ -90,7 +99,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                     item={item}
                     tileWidth={tileWidth}
                     query={debouncedQuery}
-                    onPress={() => onPlayFile(item.fileUri!, item.title)}
+                    onPress={() =>
+                      onPlayFile(item.fileUri!, item.title, item.thumbnailPath)
+                    }
                   />
                 ))}
               </View>

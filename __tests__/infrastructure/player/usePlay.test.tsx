@@ -201,4 +201,50 @@ describe('usePlay (V21 W7 P28)', () => {
     await rerender(undefined);
     expect(result.current).toBe(first);
   });
+  // B-026 — the artwork the caller has in hand reaches the launch.
+  //
+  // The launch is the only route artwork takes into the history store
+  // (session -> checkpoint -> history entry), and the search grid had no
+  // way to supply one: `PlayInput` had no artwork field at all. This
+  // pins the field AND the forwarding, so a caller cannot hand over
+  // artwork that the facade then drops.
+  it('forwards the caller’s artwork to the launch', async () => {
+    mockOpenPlayer.mockResolvedValue(true);
+    const {result} = await renderHook(() => usePlay());
+
+    await result.current({
+      uri: 'file:///music/track.mp3',
+      title: 'Track',
+      mediaType: 'audio',
+      thumbnailPath: 'https://cdn.example.test/cover.jpg',
+    });
+
+    // The seam renames the app's `thumbnailPath` to the bridge's
+    // `artworkPath` on the way out, so `artworkPath` is what this mock
+    // sees. It is the SAME value the caller handed over, which is the
+    // point: the facade must not drop it.
+    expect(mockOpenPlayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        artworkPath: 'https://cdn.example.test/cover.jpg',
+      }),
+    );
+  });
+
+  it('sends no artwork key at all when the caller has none', async () => {
+    // The ~34 launch call sites that pass no artwork must not grow a
+    // blank field: a present-but-empty path reads as artwork to the
+    // seam.
+    mockOpenPlayer.mockResolvedValue(true);
+    const {result} = await renderHook(() => usePlay());
+
+    await result.current({
+      uri: 'file:///music/track.mp3',
+      title: 'Track',
+      mediaType: 'audio',
+    });
+
+    expect(mockOpenPlayer.mock.calls[0]![0]).not.toHaveProperty(
+      'artworkPath',
+    );
+  });
 });

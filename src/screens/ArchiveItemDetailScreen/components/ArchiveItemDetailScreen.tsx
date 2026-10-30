@@ -94,6 +94,12 @@ export const ArchiveItemDetailScreen: React.FC<Props> = ({route}) => {
         uri: track.url,
         title: track.title,
         type: 'audio',
+        // The item's cover art. It used to reach the bookmark sheet and
+        // the add-to-playlist sheet, and the LAUNCH was the one place it
+        // did not — so the session carried no artwork, the checkpoint
+        // wrote the history entry with `thumbnailPath: ''`, and the
+        // search tile for that item had nothing to draw (B-026).
+        ...(imageUrl ? {thumbnailPath: imageUrl} : {}),
       });
     },
     [openPlayer, tracks, imageUrl],

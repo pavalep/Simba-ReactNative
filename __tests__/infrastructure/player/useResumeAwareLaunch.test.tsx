@@ -422,3 +422,61 @@ describe('useResumeAwareLaunch - the session always records a lane', () => {
     expect(session?.type).toBe('podcast');
   });
 });
+
+/**
+ * B-026 — the artwork the caller hands over reaches BOTH consumers.
+ *
+ * The seam has always accepted a `thumbnailPath`; what it did not have
+ * was a CALLER that supplied one, so every history entry was written
+ * with `thumbnailPath: ''` and the search tile for a film the user had
+ * already watched drew a placeholder instead of a poster.
+ *
+ * Two consumers, two assertions:
+ *
+ *   - the BRIDGE (`artworkPath`) — the media notification's large icon;
+ *   - the SESSION (`thumbnailPath`) — which the checkpoint writer copies
+ *     onto the history entry, and which is therefore what the next
+ *     search for that film draws.
+ *
+ * A launch that reaches only one of them is still broken, so both are
+ * pinned.
+ */
+describe('useResumeAwareLaunch — the artwork reaches the bridge and the session', () => {
+  const ARTWORK = 'https://cdn.example.test/cover.jpg';
+
+  beforeEach(() => {
+    mockOpenWithResume.mockClear();
+    useNowPlayingStore.getState().reset();
+  });
+
+  it('forwards the artwork to the bridge as artworkPath', async () => {
+    const {result} = await renderHook(() => useResumeAwareLaunch());
+
+    await result.current.openPlayer({...AUDIO_OPTS, thumbnailPath: ARTWORK});
+
+    expect(mockOpenWithResume).toHaveBeenCalledWith(
+      expect.objectContaining({artworkPath: ARTWORK}),
+    );
+  });
+
+  it('records the artwork on the session', async () => {
+    const {result} = await renderHook(() => useResumeAwareLaunch());
+
+    await result.current.openPlayer({...AUDIO_OPTS, thumbnailPath: ARTWORK});
+
+    expect(useNowPlayingStore.getState().current?.thumbnailPath).toBe(ARTWORK);
+  });
+
+  it('sends no artwork at all when the caller has none', async () => {
+    // The ~34 call sites that pass no artwork must not grow a blank
+    // `artworkPath` — a present-but-empty path is artwork to the bridge.
+    const {result} = await renderHook(() => useResumeAwareLaunch());
+
+    await result.current.openPlayer(AUDIO_OPTS);
+
+    expect(mockOpenWithResume.mock.calls[0]![0]).not.toHaveProperty(
+      'artworkPath',
+    );
+    expect(useNowPlayingStore.getState().current?.thumbnailPath).toBeUndefined();
+  });
+});
