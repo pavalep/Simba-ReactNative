@@ -2643,11 +2643,13 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     **The plan lives in two documents**, so it cannot be lost inside this
     register: `md/SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md` and
     `md/SIMBA_V22_PINNED_PLAYLIST_TRACKER.md`.
-    **Status: PLANNED, not started.** No feature code has been written. The
-    **UI/UX is designed** (the specification's §4) and the tracker carries
-    the steps for it: **39–48**, with steps 39–41 replaced by the new
-    `PlaylistCover`, the pin glyph and the pin badge, step 42 the kind
-    label's single owner, steps 43–47 the pages, and step 48 the phase exit.
+    **Status: IN BUILD (2026-10-30).** The **UI/UX is designed** (the
+    specification's §4) and the tracker carries the steps for it: **39–48**,
+    with steps 39–41 replaced by the new `PlaylistCover`, the pin glyph and
+    the pin badge, step 42 the kind label's single owner, steps 43–47 the
+    pages, and step 48 the phase exit. **Phases 1 and 2 of the tracker are
+    DONE** — the data model landed (register item 70). Phases 3 onward have
+    not started.
 
 **Today's wave (2026-10-30) — the lib release and the guards**
 
@@ -2776,9 +2778,48 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     `lockToPortrait()` is called from exactly **one** place,
     `AppContent.tsx:82`, at boot. So the helper is a one-call wrapper
     around a dependency that cannot be loaded in jest, and two of its
-    three exports are unreachable. **OPEN** — it belongs to the AI-slop
+    **OPEN** — it belongs to the AI-slop
     sweep: either give the helper a real owner and a mock, or delete what
     nothing calls.
+
+**Today's wave (2026-10-30, later) — the pinned-playlist model**
+
+70. ~~**The playlist model could not say what the feature needs.**~~
+    **DONE 2026-10-30** (tracker phases 1 and 2). `PlaylistKind` was
+    `'AUDIO_ONLY' | 'VIDEO_ONLY'` and the store's `splitLegacyMixed()`
+    **destroyed** a mixed playlist on every rehydrate — it split the record
+    into an audio sibling and a video sibling, taking the name, the id and
+    half the items with it, and telling the user nothing. `MIXED` is now a
+    first-class kind, `PlaylistLegacyKind` is retired, and
+    `normalizePlaylistRecord` returns **one** playlist for **one** record.
+    `Playlist` gained `pinned` / `pinnedAt` (a field default, not a data
+    migration). The mixed case is not a second rule:
+    `isPlaylistMediaKindAllowed` asks the **same** allow-list twice, so a
+    mixed playlist is bound by the same kinds as a single-lane one.
+    **D-P9 fell out of it.** `PlaylistKind` gaining `'MIXED'` stopped every
+    `Record<PlaylistKind, string>` copy of the kind labels compiling, so the
+    three local `KIND_LABELS` copies and the one inline ternary were
+    **deleted** and now read `PLAYLIST_KIND_LABELS` — the one owner the
+    spec's §4.4 named. `strings.ts` keeps its copy, as §4.4 decided.
+    Pinned by 6 tests in `__tests__/state/playlistsStore.test.ts`; the
+    "a mixed playlist survives WHOLE" case is **mutation-checked** — the old
+    split reintroduced fails the suite, and the store was restored
+    byte-identically.
+    **Two findings carried forward** (the tracker's phase 3 owns them):
+    - **D-P6 is not enforced in the app today.** The rule is consulted with
+      a media kind that **nine call sites declare independently**, and five
+      of them omit it — so a **radio station** and a **TV channel** can
+      enter a playlist (the broad `'audio'` / `'video'` fallback allows
+      them), while the **audiobook** and the **live-TV favourites** cannot
+      (they declare `type: 'audiobook'` / `'live-tv'`, which the allow-list
+      refuses). Same media, opposite outcomes, decided by an omitted field.
+    - **Two of the nine `PlaylistSheet` call sites are dead controls.** The
+      audiobook sheet and the live-TV-favourites sheet open to an empty
+      list, and the empty state says *"No playlists yet. Create one to get
+      started."* while **hiding the create row** — so the instruction can
+      never be followed, in any state. The **archive** sheet, which the
+      plan suspected, is sound: its item omits `type`, is classified
+      `'audio'`, and `'audio'` is allowed.
 
 ---
 

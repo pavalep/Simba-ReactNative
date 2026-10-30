@@ -12,8 +12,12 @@ import {KeyboardAwareView} from '../../core/KeyboardAwareView/KeyboardAwareView'
 import {useTheme} from '../../../theme';
 import {spacing, radius} from '../../../theme/tokens';
 import {usePlaylists} from '../../../features/playlists';
-import type {Playlist, PlaylistKind} from '../../../features/playlists';
-import {isPlaylistMediaKindAllowed} from '../../../types/playlist';
+import type {Playlist} from '../../../features/playlists';
+import {
+  isPlaylistMediaKindAllowed,
+  PLAYLIST_KIND_LABELS,
+  type SingleLanePlaylistKind,
+} from '../../../types/playlist';
 import type {MediaKind, MediaLane, MediaSource} from '../../../types/media';
 import {normalizeMediaClassification} from '../../../types/media';
 import {useToast} from '../../feedback/Toast';
@@ -48,13 +52,10 @@ export interface PlaylistSheetProps {
 
 // ─── Kind helpers ───────────────────────────────────────────
 
-const KIND_LABELS: Record<PlaylistKind, string> = {
-  AUDIO_ONLY: 'Audio',
-  VIDEO_ONLY: 'Video',
-};
-
- type SingleLanePlaylistKind = PlaylistKind;
-
+// The kind labels have ONE owner: `PLAYLIST_KIND_LABELS` in
+// `src/types/playlist.ts`. This sheet used to carry its own copy, and the
+// app carried four more - and a label rendered from a copy is a label that
+// can disagree with the kind it names.
 const KIND_OPTIONS: SingleLanePlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY'];
 
 // ─── Constants ──────────────────────────────────────────────
@@ -242,7 +243,7 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
                   variant="caption"
                   color="primary"
                   style={{color: colors.accent.gold, fontSize: 10}}>
-                  {KIND_LABELS[item.kind]}
+                  {PLAYLIST_KIND_LABELS[item.kind]}
                 </AppText>
               </View>
             </View>
@@ -367,7 +368,7 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
               ]}
               onPress={() => setNewKind(k)}
               accessibilityRole="button"
-              accessibilityLabel={`${KIND_LABELS[k]} playlist type${newKind === k ? ', selected' : ''}`}>
+              accessibilityLabel={`${PLAYLIST_KIND_LABELS[k]} playlist type${newKind === k ? ', selected' : ''}`}>
               <AppText
                 variant="caption"
                 color="primary"
@@ -375,7 +376,7 @@ export const PlaylistSheet: React.FC<PlaylistSheetProps> = ({
                   color:
                     newKind === k ? colors.accent.gold : colors.text.secondary,
                 }}>
-                {KIND_LABELS[k]}
+                {PLAYLIST_KIND_LABELS[k]}
               </AppText>
             </TouchableOpacity>
           )}

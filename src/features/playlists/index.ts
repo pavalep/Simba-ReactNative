@@ -1,6 +1,6 @@
 import {useCallback, useImperativeHandle, useMemo, type Ref} from 'react';
 import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
-import {isPlaylistMediaKindAllowed, type Playlist, type PlaylistItem, type PlaylistKind} from '../../types/playlist';
+import {isPlaylistMediaKindAllowed, playlistKindToLane, type Playlist, type PlaylistItem, type PlaylistKind} from '../../types/playlist';
 import {
   MAX_ITEMS_PER_PLAYLIST,
   MAX_PLAYLISTS,
@@ -55,6 +55,9 @@ const makePlaylist = (input: {name: string; info?: string; kind: PlaylistKind}):
     ...(input.info?.trim() ? {info: input.info.trim()} : {}),
     kind: input.kind,
     items: [],
+    // D-P3: a new playlist starts unpinned. `pinned` is a field default,
+    // not a data migration - an existing playlist is unpinned too.
+    pinned: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -80,7 +83,13 @@ export function addItemToPlaylist(
   const existing = playlist.items.find(entry => entry.fileUri === item.fileUri);
   if (existing) return {status: 'duplicate', playlist, item: existing};
   if (playlist.items.length >= MAX_ITEMS_PER_PLAYLIST) return {status: 'playlist-full', playlist, max: MAX_ITEMS_PER_PLAYLIST};
-  if (playlist.kind !== (item.mediaType === 'audio' ? 'AUDIO_ONLY' : 'VIDEO_ONLY')) {
+  // The lane question and the allow-list are ONE rule, not two. A mixed
+  // playlist holds both lanes, so its lane question is asked against the
+  // playlist's own lane, not against the item's.
+  const laneMatches =
+    playlist.kind === 'MIXED' ||
+    playlistKindToLane(playlist.kind) === item.mediaType;
+  if (!laneMatches) {
     return {status: 'lane-mismatch', playlist, item};
   }
   if (!isPlaylistMediaKindAllowed(playlist.kind, item.type, item.mediaType)) {
@@ -195,7 +204,7 @@ export const playlistActions = {
   importPlaylist: (input: {
     name: string;
     info?: string;
-    kind: 'MIXED' | PlaylistKind;
+    kind: PlaylistKind;
     items: PlaylistItem[];
   }) => usePlaylistsStore.getState().importPlaylist({
     name: input.name,

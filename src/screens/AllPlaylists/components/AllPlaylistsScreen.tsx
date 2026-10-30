@@ -26,6 +26,7 @@ import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
 import {useAllPlaylistsScreen} from '../hooks/useAllPlaylistsScreen';
 import type {PlaylistKind} from '../../../types/playlist';
+import {PLAYLIST_KIND_LABELS} from '../../../types/playlist';
 
 type SingleLanePlaylistKind = Exclude<PlaylistKind, 'MIXED'>;
 
@@ -109,11 +110,7 @@ export const AllPlaylistsScreen: React.FC = () => {
         </AppText>
         <AppText variant="caption" color="tertiary">
           {item.items.length} {item.items.length === 1 ? 'item' : 'items'} ·{' '}
-          {item.kind === 'AUDIO_ONLY'
-            ? 'Audio'
-            : item.kind === 'VIDEO_ONLY'
-            ? 'Video'
-            : 'Mixed'}
+          {PLAYLIST_KIND_LABELS[item.kind]}
         </AppText>
       </View>
       <TouchableOpacity

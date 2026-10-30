@@ -659,6 +659,34 @@ plan:
 * **No drag-to-reorder.** The pinned order is recency of pinning, so there
   is nothing to drag.
 
+**Decided (2026-10-30, phase 1 — the two facts the plan needed):**
+
+* **The archive sheet works; the audiobook sheet is a dead control.**
+  `ArchiveItemDetailScreen.tsx:142-151` builds the sheet item with
+  `mediaType: 'audio'` and **no `type`**, so `normalizeMediaClassification`
+  (`src/types/media.ts:47-59`) classifies it as `type: 'audio'` — which **is**
+  on `PLAYLIST_ALLOWED_MEDIA_KINDS.AUDIO_ONLY`. The archive's playlist
+  behaviour is sound, and the plan's suspicion was wrong.
+  `AudiobookDetailScreen.tsx:149-158` sets `type: 'audiobook'`, which is
+  **not** on the allow-list, so **every playlist refuses it** and the sheet
+  opens empty. It is the worst kind of dead control: the empty state says
+  *"No playlists yet. Create one to get started."* while the create row is
+  hidden, so the instruction can never be followed — in **every** state.
+* **The single-lane rule lives in three places, not one.**
+  `normalizeSingleLane` (`src/state/playerStore.ts:97-101`) is the store's
+  owner, called by `loadPlaylistToPlayer` (`:127`). But `addToPlaylist`
+  (`:135-149`) carries **its own copy** of the rule (`:140-143`) and drops
+  an incoming item of the other lane **silently**; and `useQueueScreen.ts`
+  (`:112`, `:115`, `:128`) filters the queue, the up-next and the history by
+  the same lane. `useQueueSync` is confirmed **not** one of them.
+* **The rule is consulted with a kind nine call sites declare
+  independently.** Five of the nine omit `type` and are classified by the
+  broad `'audio'` / `'video'` fallback — which is why a **radio station** and
+  a **TV channel** can enter a playlist today, while the audiobook and the
+  live-TV favourites cannot. Same media, opposite outcomes, decided by an
+  omitted field. **D-P6 is not enforced in the app today**, and the two dead
+  sheets are its visible symptom. Phase 3 owns the fix.
+
 **Still to decide, and it does not block phase 1:**
 
 * **Does the mixed playlist switch lanes, or does it play only one lane?** —

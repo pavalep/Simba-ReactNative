@@ -3,7 +3,7 @@
 
 > **Source spec:** [`SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md`](SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md)
 > — the decisions (D-P1 … D-P6), the pages, the data model.
-> **Status:** 🟡 **PLANNED — the UI/UX is designed (2026-10-30); phase 1 not started.**
+> **Status:** 🟡 **IN BUILD — the UI/UX is designed (2026-10-30); phases 1 and 2 are DONE; phase 3 onward has not started.**
 > **Opened:** 2026-10-29, at the user's request.
 > **UI/UX specified:** 2026-10-30 — the specification's §4 grew from a page
 > list into a real design: the rules, the reused primitives, the new
@@ -56,16 +56,42 @@
 > **Goal:** answer the two questions the spec could not answer from the
 > source alone, and make sure the behaviour the plan depends on is *pinned*
 > before it is changed.
+>
+> **Status: DONE (2026-10-30).** The two answers are in the spec's §8 and the
+> two tests are in `__tests__/state/playlistsStore.test.ts`. The tracker's
+> suspicion about the archive was **wrong**, and the single-lane rule turned
+> out to live in **three** places, not one.
 
-1. **Read `normalizeMediaClassification`** (`src/types/media.ts`) and work out
+1. ✅ **Read `normalizeMediaClassification`** (`src/types/media.ts`) and work out
    what `type` / `mediaType` an **archive item** and an **audiobook** are
    classified as. Both `ArchiveItemDetailScreen` and `AudiobookDetailScreen`
    render a `PlaylistSheet` today — if their classification is not on
    `PLAYLIST_ALLOWED_MEDIA_KINDS`, the sheet shows an **empty playlist list**
    and the user is looking at a dead control.
-   *Evidence:* the two classified values, quoted from the source, with
-   `file:line`.
-2. **Read the single-lane rule on the queue.** The owner is
+   *Evidence:* **the archive sheet works; the audiobook sheet is a dead
+   control.**
+   - **Archive item** — `ArchiveItemDetailScreen.tsx:142-151` builds the
+     sheet item with `mediaType: 'audio'` and **no `type`**, so
+     `normalizeMediaClassification` (`src/types/media.ts:47-59`) classifies it
+     as `type: 'audio'`, `mediaType: 'audio'`. `'audio'` **is** on
+     `PLAYLIST_ALLOWED_MEDIA_KINDS.AUDIO_ONLY` → the list is **not** empty.
+     **The tracker's suspicion was wrong.**
+   - **Audiobook** — `AudiobookDetailScreen.tsx:149-158` sets
+     `type: 'audiobook'`, `mediaType: 'audio'`. `'audiobook'` is **not** on
+     `AUDIO_ONLY`, and the lane does not match `VIDEO_ONLY` → **every
+     playlist refuses it** → the sheet's list is empty. A **dead control**.
+   - **And the rule is consulted with a kind nine call sites declare
+     independently.** Five of the nine omit `type` and are classified by the
+     broad `'audio'` / `'video'` fallback — which is why a **radio station**
+     and a **TV channel** can enter a playlist today
+     (`RadioContent.tsx:218-226`, `RadioFavoritesScreen.tsx:77-85`,
+     `LiveTVContent.tsx:224-232`), while the audiobook
+     (`AudiobookDetailScreen.tsx:149-158`) and the live-TV favourites
+     (`LiveTVFavoritesScreen.tsx:84-92`, the only live-TV site that declares
+     `type: 'live-tv'`) **cannot**. Same media, opposite outcomes, decided by
+     an omitted field. **D-P6 is not enforced in the app today**, and the two
+     dead sheets are its visible symptom. Carried into phase 3.
+2. ✅ **Read the single-lane rule on the queue.** The owner is
    `normalizeSingleLane` in `src/state/playerStore.ts:97-101`, applied by
    `loadPlaylistToPlayer` (`:126-133`) and by `addToPlaylist` (`:135-149`).
    It filters every entry to the **first** entry's lane, so a mixed playlist
@@ -73,19 +99,43 @@
    hook only mirrors the now-playing session into `currentFile` and never
    touches the queue. Write the rule down with `file:line` and confirm it
    is the **only** place the queue is narrowed.
-   *Evidence:* the scoping rule, quoted, with `file:line`.
-3. **Write the test that fails if the mixed-split comes back.** A test on
+   *Evidence:* **it is not the only place — the rule lives in three.**
+   - `normalizeSingleLane` (`src/state/playerStore.ts:97-101`), called by
+     `loadPlaylistToPlayer` (`:127`).
+   - **A second copy inside the store** — `addToPlaylist` (`:135-149`) does
+     **not** call `normalizeSingleLane`; it re-implements the rule at
+     `:140-143` (`const lane = activeLane(s) ?? incoming[0]?.mediaType;`
+     then `incoming.filter(entry => entry.mediaType === lane)`). An incoming
+     item of the other lane is **dropped silently**.
+   - **A third copy in the queue screen** — `useQueueScreen.ts:112`, `:115`
+     and `:128` filter the queue, the up-next and the history by
+     `activeLane`. Those are read filters, not store mutations, but they are
+     a third statement of "the lane is the first entry's lane".
+   - `useQueueSync` is confirmed **not** one of them: it derives
+     `currentFile` from the session and never touches the queue
+     (`src/infrastructure/player/useQueueSync.ts:75-89`).
+3. ✅ **Write the test that fails if the mixed-split comes back.** A test on
    `normalizePersistedPlaylists` that feeds it a mixed playlist and asserts it
    survives **whole** — not split, not filtered.
-   *Evidence:* the test file and the assertion.
-4. **Write the test that pins the current single-lane rule** so the change in
+   *Evidence:* `__tests__/state/playlistsStore.test.ts` — *"a MIXED playlist
+   survives rehydrate WHOLE - not split, not filtered"*. It asserts **one**
+   playlist, its **id**, its **name**, its **kind** and **both** item ids.
+   **Mutation-checked**: reintroducing the split (`.git/MUTATE_MIXED_SPLIT.js`)
+   fails the suite, and the production file was restored byte-identically
+   (sha256 `0f2874cc0acaaf7446cb8abc9a76359943467bbea6be336598da64c9fa1dbef9`).
+4. ✅ **Write the test that pins the current single-lane rule** so the change in
    phase 2 is visible: an audio item is rejected by a `VIDEO_ONLY` playlist
    today.
-   *Evidence:* the test file and the assertion.
-5. **Phase exit:** `npx tsc --noEmit` exit 0; `npx eslint . --ext .ts,.tsx
+   *Evidence:* the same file — *"refuses an audio item in a VIDEO_ONLY
+   playlist"* and its mirror, *"refuses a video item in an AUDIO_ONLY
+   playlist"*.
+5. ✅ **Phase exit:** `npx tsc --noEmit` exit 0; `npx eslint . --ext .ts,.tsx
    --max-warnings 0` exit 0; the two new tests pass; **and the two answers
    from steps 1 and 2 are written into the spec** (§8 "Still to decide" is
    updated, or moved to "Decided").
+   *Evidence:* tsc 0 · eslint 0 · boundaries 578 files / 0 errors / 0
+   warnings · jest **117 suites / 1326 passed / 1 todo** · the answers are in
+   the spec's §8.
 
 ---
 
@@ -93,29 +143,72 @@
 
 > **Goal:** `MIXED` and `pinned` exist in the type, the store keeps mixed
 > playlists whole, and the migration is a no-op.
+>
+> **Status: DONE (2026-10-30).** Landed with phase 1, in **one** increment:
+> the phase-1 step-3 test asserts a mixed playlist survives whole, so it
+> cannot be green before the store preserves it. The two phases were always
+> one commit.
 
-6. **`PlaylistKind`** gains `'MIXED'`; `PlaylistLegacyKind` is retired (it is
+6. ✅ **`PlaylistKind`** gains `'MIXED'`; `PlaylistLegacyKind` is retired (it is
    no longer legacy). `src/types/playlist.ts:3-4`, `:66`.
-   *Evidence:* `tsc` exit 0 and the type in the file.
-7. **`PLAYLIST_ALLOWED_MEDIA_KINDS.MIXED`** = the union of the two lanes.
+   *Evidence:* `src/types/playlist.ts` — `SingleLanePlaylistKind` is
+   `'AUDIO_ONLY' | 'VIDEO_ONLY'`, `PlaylistKind` is that plus `'MIXED'`, and
+   `PlaylistLegacyKind` is **gone** (its four uses in
+   `src/state/playlistsStore.ts` now say `PlaylistKind`).
+7. ✅ **`PLAYLIST_ALLOWED_MEDIA_KINDS.MIXED`** = the union of the two lanes.
    `src/types/playlist.ts:53-56`.
-   *Evidence:* the table in the file.
-8. **`isPlaylistMediaKindAllowed`** accepts a `MIXED` playlist for either
+   *Evidence:* the table is keyed by `SingleLanePlaylistKind`, and the mixed
+   case is **not a second table** — `isPlaylistMediaKindAllowed` asks the
+   same table twice, once per lane, so a mixed playlist is bound by the
+   **same** allow-list. *"a MIXED playlist still refuses a kind the
+   allow-list refuses"* pins that.
+8. ✅ **`isPlaylistMediaKindAllowed`** accepts a `MIXED` playlist for either
    lane. `src/types/playlist.ts:58-64`.
-   *Evidence:* the phase-1 test, amended, passes.
-9. **`splitLegacyMixed` becomes a preserve.** The rehydrate path must keep a
+   *Evidence:* the phase-1 test, amended, passes — and *"refuses an audio
+   item in a VIDEO_ONLY playlist"* still passes, so a mixed playlist is a
+   third kind and not a loosening of the first two.
+9. ✅ **`splitLegacyMixed` becomes a preserve.** The rehydrate path must keep a
    mixed playlist whole and must not filter its items by lane.
    `src/state/playlistsStore.ts:90-135`, `:108-109`.
-   *Evidence:* the phase-1 step-3 test passes **and still passes** after a
-   deliberately broken split is reintroduced (mutation-checked).
-10. **`Playlist` gains `pinned: boolean` and `pinnedAt?: string`**, with
+   *Evidence:* `splitLegacyMixed` is **gone**; `normalizePlaylistRecord`
+   returns **one** playlist for **one** record, and `normalizePersistedPlaylists`
+   maps one record to one playlist. The phase-1 step-3 test passes, **and the
+   mutation check proves it is sensitive**: reintroducing the split fails the
+   suite, and the production file was restored byte-identically.
+10. ✅ **`Playlist` gains `pinned: boolean` and `pinnedAt?: string`**, with
     `pinned` defaulting to `false` for every persisted playlist. The
     migration is a **field default**, not a data migration.
     `src/state/playlistsStore.ts`, `src/types/playlist.ts:29-38`.
-    *Evidence:* a test that rehydrates a playlist with no `pinned` field and
-    reads `pinned === false`.
-11. **Phase exit:** `tsc` exit 0; `eslint` exit 0; the store's own test suite
+    *Evidence:* two tests — *"defaults to false for a playlist persisted
+    before pinning existed"* and *"keeps the pin and when it was pinned"*.
+    A new playlist starts unpinned (`src/features/playlists/index.ts`).
+11. ✅ **Phase exit:** `tsc` exit 0; `eslint` exit 0; the store's own test suite
     green; the mixed playlist survives a save/rehydrate round trip.
+    *Evidence:* tsc 0 · eslint 0 · boundaries 0 errors · jest **117 suites /
+    1326 passed / 1 todo** · the mixed playlist's **id**, **name**, **kind**
+    and **both items** survive `normalizePersistedPlaylists`.
+
+### The label owners, collapsed (D-P9)
+
+The model change is what forced D-P9: `PlaylistKind` gained `'MIXED'`, so
+every `Record<PlaylistKind, string>` copy of the kind labels stopped
+compiling. Rather than add `MIXED: 'Mixed'` to each copy, **three copies and
+one inline ternary were deleted** — owners 2, 3, 4 and 5 of the spec's §4.4
+table — and all of them now read `PLAYLIST_KIND_LABELS`:
+
+| Was | Now |
+|---|---|
+| `PlaylistSheet.tsx:51-54` | `PLAYLIST_KIND_LABELS` |
+| `PlaylistCard.tsx:10-13` | `PLAYLIST_KIND_LABELS` |
+| `PlaylistCreateModal.tsx:18-21` | `PLAYLIST_KIND_LABELS` |
+| `PlaylistSheet` (the local `SingleLanePlaylistKind` alias, `:56`) | the real type, imported from `src/types/playlist.ts` |
+| `AllPlaylistsScreen.tsx:112-116` (the inline ternary) | `PLAYLIST_KIND_LABELS[item.kind]` |
+
+`strings.ts` **keeps** its copy, as §4.4 decided — it is the generic strings
+surface, and the word "Mixed" already lived there. `PlaylistCreateModal`'s
+glyph already fell back to `listMusic` for a third kind (`:140`) — that
+branch was written before the kind existed. `MIXED` is now in its
+`KIND_OPTIONS`, so the branch is live.
 
 ---
 

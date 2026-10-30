@@ -13,12 +13,12 @@ import {AppTextInput} from '../../core/AppTextInput/AppTextInput';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {usePlaylists} from '../../../features/playlists';
 import type {PlaylistKind} from '../../../features/playlists';
+import {PLAYLIST_KIND_LABELS} from '../../../types/playlist';
 
-const KIND_OPTIONS: PlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY'];
-const KIND_LABELS: Record<PlaylistKind, string> = {
-  AUDIO_ONLY: 'Audio',
-  VIDEO_ONLY: 'Video',
-};
+// The three kinds a playlist can be. `MIXED` holds a film and an album in
+// one list - its glyph falls back to `listMusic` below, which is why that
+// branch was written before the kind existed.
+const KIND_OPTIONS: PlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED'];
 
 export interface PlaylistCreateModalProps {
   visible: boolean;
@@ -135,7 +135,7 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
                 onPress={() => setKind(k)}
                 accessibilityRole="button"
                 accessibilityState={{selected: isActive}}
-                accessibilityLabel={`${KIND_LABELS[k]} playlist type`}>
+                accessibilityLabel={`${PLAYLIST_KIND_LABELS[k]} playlist type`}>
                 <SvgIcon
                   name={k === 'AUDIO_ONLY' ? 'music' : k === 'VIDEO_ONLY' ? 'video' : 'listMusic'}
                   size={16}
@@ -145,7 +145,7 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
                 <AppText
                   variant="body2"
                   style={{color: isActive ? colors.accent.gold : colors.text.secondary}}>
-                  {KIND_LABELS[k]}
+                  {PLAYLIST_KIND_LABELS[k]}
                 </AppText>
               </TouchableOpacity>
             );

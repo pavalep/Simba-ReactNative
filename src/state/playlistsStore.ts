@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import {persist} from 'zustand/middleware';
 import {createJSONStorage, sharedMMKVStorage, CURRENT_PERSIST_VERSION} from './persistence';
-import {isPlaylistMediaKindAllowed, type Playlist, type PlaylistItem, type PlaylistKind, type PlaylistLegacyKind} from '../types/playlist';
+import {isPlaylistMediaKindAllowed, type Playlist, type PlaylistItem, type PlaylistKind} from '../types/playlist';
 import type {MediaKind, MediaLane} from '../types/media';
 
 /**
@@ -13,9 +13,11 @@ import type {MediaKind, MediaLane} from '../types/media';
  * to drop entries that don't conform to the new shape, and
  * test devices reinstall per the V17 charter.
  *
- * The legacy `MIXED` playlist kind (pre-V13) is split into
- * `AUDIO_ONLY` + `VIDEO_ONLY` siblings on the fly, same as the
- * old reducer.
+ * The legacy `MIXED` playlist kind (pre-V13) used to be split into
+ * `AUDIO_ONLY` + `VIDEO_ONLY` siblings on the fly, same as the old
+ * reducer. It is not split any more: `MIXED` is a kind in its own right,
+ * and a mixed playlist is preserved WHOLE - its name, its id, its order
+ * and every item it held.
  */
 
 export const MAX_PLAYLISTS = 20;
@@ -36,7 +38,7 @@ export interface PlaylistsActions {
   importPlaylist: (input: {
     name: string;
     info?: string;
-    kind: PlaylistLegacyKind;
+    kind: PlaylistKind;
     items: PlaylistItem[];
   }) => void;
   updatePlaylistItemPosition: (input: {playlistId: string; fileUri: string; position: number}) => void;
@@ -51,7 +53,7 @@ const generateId = (prefix: string): string =>
   `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
 const isPlaylistKind = (value: unknown): value is PlaylistKind =>
-  value === 'AUDIO_ONLY' || value === 'VIDEO_ONLY';
+  value === 'AUDIO_ONLY' || value === 'VIDEO_ONLY' || value === 'MIXED';
 
 const isMediaLane = (value: unknown): value is MediaLane =>
   value === 'audio' || value === 'video';
@@ -85,59 +87,48 @@ const normalizeItem = (raw: Partial<PlaylistItem>, index: number): PlaylistItem 
   };
 };
 
-type LegacyPlaylistRecord = Omit<Partial<Playlist>, 'kind'> & {kind?: PlaylistLegacyKind};
+type PlaylistRecord = Omit<Partial<Playlist>, 'kind' | 'items'> & {
+  kind?: PlaylistKind;
+  items?: unknown;
+};
 
-const splitLegacyMixed = (raw: LegacyPlaylistRecord): Playlist[] => {
+/**
+ * ONE record in, ONE playlist out.
+ *
+ * The old shape split a `MIXED` record into an audio sibling and a video
+ * sibling on the way in. That silently destroyed the user's playlist: the
+ * name, the id and the order were gone, and half the items with them, and
+ * nothing told the user. `MIXED` is a kind now, so a mixed playlist keeps
+ * its identity and every item it held.
+ */
+const normalizePlaylistRecord = (raw: PlaylistRecord): Playlist => {
   const items = Array.isArray(raw.items)
-    ? raw.items.map((item, index) => normalizeItem(item, index)).filter(Boolean) as PlaylistItem[]
+    ? raw.items.map((item, index) => normalizeItem(item as Partial<PlaylistItem>, index)).filter(Boolean) as PlaylistItem[]
     : [];
-  const base = {
+  const kind: PlaylistKind = isPlaylistKind(raw.kind) ? raw.kind : 'AUDIO_ONLY';
+  const pinned = raw.pinned === true;
+
+  return {
+    id: raw.id || generateId('pl'),
     name: raw.name || 'Playlist',
-    info: raw.info,
+    ...(raw.info ? {info: raw.info} : {}),
+    kind,
+    // A single-lane playlist keeps only what belongs to its lane; a mixed
+    // one keeps what EITHER lane accepts. Same allow-list, same rule.
+    items: items
+      .filter(item => isPlaylistMediaKindAllowed(kind, item.type, item.mediaType))
+      .slice(0, MAX_ITEMS_PER_PLAYLIST),
+    pinned,
+    ...(pinned && raw.pinnedAt ? {pinnedAt: raw.pinnedAt} : {}),
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || new Date().toISOString(),
   };
-
-  if (raw.kind !== 'MIXED') {
-    const kind: PlaylistKind = isPlaylistKind(raw.kind) ? raw.kind : 'AUDIO_ONLY';
-    return [{
-      id: raw.id || generateId('pl'),
-      ...base,
-      kind,
-      items: items
-        .filter(item => isPlaylistMediaKindAllowed(kind, item.type, item.mediaType))
-        .slice(0, MAX_ITEMS_PER_PLAYLIST),
-    }];
-  }
-
-  const audioItems = items.filter(item => isPlaylistMediaKindAllowed('AUDIO_ONLY', item.type, item.mediaType));
-  const videoItems = items.filter(item => isPlaylistMediaKindAllowed('VIDEO_ONLY', item.type, item.mediaType));
-  const records: Playlist[] = [];
-  if (audioItems.length || (!videoItems.length && !audioItems.length)) {
-    records.push({
-      id: `${raw.id || generateId('pl')}_audio`,
-      ...base,
-      name: videoItems.length ? `${base.name} (Audio)` : base.name,
-      kind: 'AUDIO_ONLY',
-      items: audioItems.slice(0, MAX_ITEMS_PER_PLAYLIST),
-    });
-  }
-  if (videoItems.length) {
-    records.push({
-      id: `${raw.id || generateId('pl')}_video`,
-      ...base,
-      name: audioItems.length ? `${base.name} (Video)` : base.name,
-      kind: 'VIDEO_ONLY',
-      items: videoItems.slice(0, MAX_ITEMS_PER_PLAYLIST),
-    });
-  }
-  return records;
 };
 
 export const normalizePersistedPlaylists = (raw: unknown): Playlist[] => {
   if (!Array.isArray(raw)) return [];
   const normalized = raw.flatMap(entry =>
-    entry && typeof entry === 'object' ? splitLegacyMixed(entry as LegacyPlaylistRecord) : [],
+    entry && typeof entry === 'object' ? [normalizePlaylistRecord(entry as PlaylistRecord)] : [],
   );
   return normalized.slice(0, MAX_PLAYLISTS);
 };
@@ -227,13 +218,13 @@ export const usePlaylistsStore = create<PlaylistsState & PlaylistsActions>()(
       importPlaylist: ({name, info, kind, items}) =>
         set((s) => {
           if (s.playlists.length >= MAX_PLAYLISTS) return s;
-          const newRecords = splitLegacyMixed({
+          const newRecords = [normalizePlaylistRecord({
             id: generateId('pl_import'),
             name,
             info,
             kind,
             items,
-          }).slice(0, MAX_PLAYLISTS - s.playlists.length);
+          })].slice(0, MAX_PLAYLISTS - s.playlists.length);
           return {playlists: [...s.playlists, ...newRecords]};
         }),
 

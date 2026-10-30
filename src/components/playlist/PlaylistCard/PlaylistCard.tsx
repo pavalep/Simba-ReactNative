@@ -5,12 +5,8 @@ import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
-import type {Playlist, PlaylistKind} from '../../../types/playlist';
-
-const KIND_LABELS: Record<PlaylistKind, string> = {
-  AUDIO_ONLY: 'Audio',
-  VIDEO_ONLY: 'Video',
-};
+import type {Playlist} from '../../../types/playlist';
+import {PLAYLIST_KIND_LABELS} from '../../../types/playlist';
 
 export interface PlaylistCardProps {
   playlist: Playlist;
@@ -89,7 +85,7 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
         {/* ── Kind Badge ── */}
         <View style={[styles.kindBadge, {backgroundColor: colors.accent.goldDim}]}>
           <AppText variant="caption" style={{color: colors.accent.gold, fontSize: 9, fontWeight: '700'}}>
-            {KIND_LABELS[playlist.kind]}
+            {PLAYLIST_KIND_LABELS[playlist.kind]}
           </AppText>
         </View>
       </View>
