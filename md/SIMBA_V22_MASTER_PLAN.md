@@ -34,8 +34,8 @@ here, or history.
 | **`SIMBA_V22_RN_MEDIA_MODULE_INTEGRATION_RESEARCH.md`** | 2026-10-16 | 🟢 **LIVE — authority on integration pattern.** Primary-source comparison of react-native-video v6/v7, expo-video, vision-camera. |
 | `SIMBA_V22_DEVICE_FINDINGS_AND_RN_ARCHITECTURE_BRIEF.md` | 2026-10-16 | 🟡 **LIVE-PARTIAL.** §1–§3, §5 device findings valid. §4.2 **corrected** — TextureView withdrawn. |
 | **`SIMBA_PLAYER_V21_TRACKER.md`** | rolling, top handoff 2026-10-16 | 🟢 **LIVE — per-finding state.** Newest handoff block at top. |
-| **`SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md`** | 2026-10-29 | 🟡 **LIVE-PLANNED — the pinned / mixed-lane playlist feature.** What the user asked for, the gap measured in the source (`file:line`), the decisions D-P1 … D-P6, the pages, the data model, the risks. Nothing implemented yet. |
-| **`SIMBA_V22_PINNED_PLAYLIST_TRACKER.md`** | 2026-10-29 | 🟡 **LIVE-PLANNED — the execution plan for that feature.** 8 phases, 41 tasks, each with the `file:line` it touches and an `Evidence:` line. |
+| **`SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md`** | 2026-10-29, UI/UX 2026-10-30 | 🟡 **LIVE-PLANNED — the pinned / mixed-lane playlist feature.** What the user asked for, the gap measured in the source (`file:line`), the decisions D-P1 … D-P9, **the UI/UX** (§4: the rules, the reused primitives, the new `PlaylistCover` and pin badge, the one management page, the empty states, the motion, the accessibility), the data model, the risks. Nothing implemented yet. |
+| **`SIMBA_V22_PINNED_PLAYLIST_TRACKER.md`** | 2026-10-29, UI/UX 2026-10-30 | 🟡 **LIVE-PLANNED — the execution plan for that feature.** 8 phases, 51 tasks, each with the `file:line` it touches and an `Evidence:` line. |
 | `SIMBA_PLAYER_V21_SPECIFICATION.md` | 2026-10-13 | 🟡 Reference — lib public API of record. |
 | `SIMBA_V21_DEVICE_PROOF.md` | 2026-10-12 | ⚫ **TEMPLATE ONLY.** Describes `PlayerActivity`, which no longer exists. Do not reuse as a capture sheet. |
 | `SIMBA_PLAYER_V20_MEDIA_ARCHITECTURE.md` | 2026-10-07 | 🟡 Reference — pre-collapse architecture. |
@@ -2235,10 +2235,23 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     confirms — plus a timer handle in a **ref**, so it is cleared on unmount
     and re-armed on every commit, and a drag release that commits through the
     same path.
-47. **The native discards mpv's return code** for `seek`, relative `seek`
+47. ~~**The native discards mpv's return code** for `seek`, relative `seek`
    and `playlist clear` (`main.cpp`), so a refusal there is silent too —
-   the same class as the resume defect, on the paths that remain.
-   **OPEN — needs a native wave** (an APK rebuild).
+   the same class as the resume defect, on the paths that remain.~~
+   **DONE 2026-10-30 by lib `2.1.0`** (bug `B-007`, fix `F-041`). Every
+   `mpv_command()` in `main.cpp` now goes through `runMpvCommand`, which
+   reports a refusal through the **existing** error path — the same
+   `MPVLib.onNativeError` callback `event.cpp` uses — so it lands on the same
+   `onError` event with the same `{code, codeName, nativeCode, recoverable,
+   message}` payload and the same mapping the Kotlin bridge already had
+   (-12 → `E_COMMAND_FAILED` → 3016). No new event, no new channel, no new
+   error shape. `recoverable = true` is the truth: a refused command does not
+   end playback, so it is reported rather than painted over a picture that is
+   still moving. The change covers **every** command in the file, not only
+   the three the register named, so no sibling of the same defect is left
+   behind. `nativeScreenshot` now returns an empty string when mpv refuses
+   the write — it used to return the path to a file that was never written.
+   **The APK rebuild is still owed** for the Kotlin half (see item 63).
 
 **Player chrome (new, 2026-10-21 night)**
 48. ~~**The close verb has no device proof yet.**~~ **RESOLVED (2026-10-26).**
@@ -2558,14 +2571,118 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     - **D-P6 — radio, live TV and audiobooks stay out of the playlist
       domain.**
     **The pages:** new `AddToPlaylistScreen` (a full page spanning
-    Movies · Music · Podcasts · Archive · Downloads) and new
-    `PinnedPlaylistsScreen`; changed `AllPlaylistsScreen`,
-    `PlaylistDetailScreen`, `PlaylistSheet`, `PlaylistCard`, Home's shelf and
-    the Library filter rail.
+    Movies · Music · Podcasts · Archive · Downloads); changed
+    `AllPlaylistsScreen`, `PlaylistDetailScreen`, `PlaylistSheet`,
+    `PlaylistCard`, Home's rail and the Library filter chips.
+    **There is NO `PinnedPlaylistsScreen`** — D-P7 below.
+    **The UI/UX (DESIGNED 2026-10-30 — D-P7 … D-P9).** The specification's §4
+    grew from a page list into a real design: the rules, the reused
+    primitives, the new `PlaylistCover` and pin badge, the one management
+    page, the empty states, the motion and the accessibility. It also
+    **removed** the `PinnedPlaylistsScreen`.
+    - **D-P7 — one page owns playlists.** `AllPlaylistsScreen` grows into the
+      management page. A second page holding the same list is a second list
+      to keep in agreement with the first, and the tracker requires "one
+      target, not two".
+    - **D-P8 — the pin is a state you can SEE and an action you can REACH.**
+      A pin **badge** on the cover, on every surface a playlist is drawn; a
+      **long-press menu** item (YouTube Music's "Pin to top", Spotify's "Pin
+      playlist"); and a **visible toggle** on the management row and the
+      detail header, because a long-press is not reachable by a screen reader
+      or a keyboard. A **browsing card gets no permanent pin button** — a pin
+      button on every card in a grid of fifty is noise.
+    - **D-P9 — the kind label and the playlist cover each have ONE owner.**
+      The kind label has **six** owners today (the exported
+      `PLAYLIST_KIND_LABELS`, **three** local `KIND_LABELS` copies, **one**
+      inline ternary, and `src/constants/strings.ts` — which already has
+      `playlistKindMixed: 'Mixed'`, so the word is not new to this app). The
+      cover has **two** (a collage in `PlaylistCard`, a generic icon box in
+      `AllPlaylistsScreen`). One owner each: `PlaylistCover` and
+      `PLAYLIST_KIND_LABELS`.
     **The plan lives in two documents**, so it cannot be lost inside this
     register: `md/SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md` and
     `md/SIMBA_V22_PINNED_PLAYLIST_TRACKER.md`.
-    **Status: PLANNED, not started.** No code has been written.
+    **Status: PLANNED, not started.** No feature code has been written. The
+    **UI/UX is designed** (the specification's §4) and the tracker carries
+    the steps for it: **39–48**, with steps 39–41 replaced by the new
+    `PlaylistCover`, the pin glyph and the pin badge, step 42 the kind
+    label's single owner, steps 43–47 the pages, and step 48 the phase exit.
+
+**Today's wave (2026-10-30) — the lib release and the guards**
+
+61. ~~**The CI boundary gate was never in version control.**~~ **DONE
+    2026-10-30** (bug `B-038`, fix `F-042`). `scripts/check-import-boundaries.js`
+    is invoked by `npm run lint:boundaries` and by the CI workflow's
+    "Import-boundary linter" step, and it was **never committed**:
+    `.gitignore` carries `scripts/*.js`, the file was written after that
+    rule, and `git add` **silently skips an ignored path** — no error, no
+    warning, no "nothing added". On a fresh clone the gate had no script to
+    run: CI failed with `MODULE_NOT_FOUND`, and the import boundary was
+    unenforced on every machine except the one that wrote it. The tracked
+    scripts are now re-included explicitly, and the rule carries the reason
+    so the next person does not "fix" it by editing only one of the two
+    files. **A gate that is not in version control is not a gate.**
+62. ~~**`pip.autoEnterOnLeave` was a public flag that nothing read.**~~
+    **DONE 2026-10-30 by lib `2.1.0`** (bug `B-039`, fix `F-043`). The flag
+    was declared in the public config type, defaulted to `true`, documented
+    as "auto-enter on home / recents / app-switcher", and read by **nothing**
+    — not the JS layer, not the native layer. The value was already
+    reaching Kotlin inside the resolved config JSON `setConfig` parses; it
+    sat there, unread, while the README described a feature that could not
+    happen. It now drives `PictureInPictureParams.Builder.setAutoEnterEnabled`
+    (API 31+, the level read from the SDK's own `api-versions.xml`), and the
+    params are pushed onto the Activity with `Activity.setPictureInPictureParams`
+    — which is what the OS reads when it transitions into PiP **by itself**.
+    The params carry the video's CURRENT aspect ratio and are refreshed on
+    every `videoReconfig`. **Note:** `Activity.setAutoEnterEnabled` **does
+    not exist** — it sounds exactly like the right call, and the SDK's own
+    `android.jar` is what proved it. Below API 31 the OS cannot auto-enter at
+    all, and the library logs that instead of pretending.
+63. **The APK's DEX must be rebuilt.** Lib **1.23.0**'s Kotlin, **2.0.0**'s
+    Kotlin changes, **2.0.1**'s `MpvRenderViewRegistry` and repointed
+    `isSurfaceMounted`, and **2.1.0**'s `runMpvCommand` error path and the
+    PiP auto-enter params all have to be rebuilt into the app's APK. Until
+    that happens the app runs the OLD native code, so the device proof for
+    items 47 and 62 is **deferred**. **OPEN.**
+64. ~~**Every launch dropped the catalogue artwork it already held.**~~
+    **DONE 2026-10-30** (bug `B-026`, fix `F-047`). A search result for a
+    film the user had already watched showed a placeholder instead of a
+    poster, because the history entry's catalogue slot (`thumbnailPath`) was
+    written as `''` — the launch carried no artwork, so the session carried
+    none, so the checkpoint writer had nothing to write. `PlayInput.thumbnailPath`
+    is now an **optional** field, so the ~34 `openPlayer` call sites that pass
+    nothing still typecheck, and it is forwarded only when present. Four
+    surfaces that already held artwork now hand it over. Deliberately **not**
+    `resolveMediaArtwork(item)`: the store's own field docs draw the line —
+    `thumbnailPath` is "what the film is", `resumeThumbnailPath` is "where in
+    it you were" — and handing the frame over would replace the poster with a
+    still of one moment of the film.
+65. ~~**The legacy-architecture dependency shipped silently, and nothing in
+    the repo would have caught it.**~~ **DONE 2026-10-30** (bug `B-037`, fix
+    `F-046`). The narrow guard that named one package is now the **general**
+    one: `scripts/check-legacy-event-emitter.cjs` scans the installed
+    dependencies' Android sources for `getJSModule(RCTEventEmitter)` — the one
+    class RN 0.86's `BridgelessReactContext` refuses — and fails on a new
+    one, so the LogBox toast (item 24) cannot come back through the next
+    dependency that makes that call. One allow-listed package,
+    `react-native-svg`, whose identical call is **dead code** —
+    `onReceiveNativeEvent()` has exactly one occurrence in all of node_modules,
+    its own declaration, so RN never calls it. Measured: **26 packages with
+    Android sources, 660 files, 0 errors, 1 allowed finding.**
+66. **The lib released `2.1.0`** (annotated tag, Actions published, verified
+    on the registry). The release carries five things: the native layer
+    stops swallowing mpv's verdict (item 47); the PiP auto-enter flag does
+    something (item 62); the published tarball carries **only** what a
+    consumer runs (83 files / 285.2 kB → 54 files / 215.5 kB — the Kotlin
+    tests, the JS tests and two one-shot dev patches, including a Python
+    script, are out, and `example/` and the git metadata are now excluded
+    **explicitly** so a future change to `files` cannot let them back in);
+    the repository no longer carries its own scratch (43 files — 16
+    commit-message drafts, the `delete_me/` folder with a 63 MB archive, and
+    six published tarballs at 65 MB each, ~390 MB of history for no reason —
+    moved under `.local/`, which is gitignored); and the README was rewritten
+    against the source, because npmjs renders it as of publish time and the
+    package page was still describing a component removed in 2.0.0.
 
 ---
 

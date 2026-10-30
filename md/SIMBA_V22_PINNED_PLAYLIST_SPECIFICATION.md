@@ -230,63 +230,354 @@ deliberately.
 > lane that the allowlist then rejects. If so, the sheet is showing an empty
 > list today. The tracker's first phase answers this from the source.
 
+### D-P7 — One page owns playlists ✅ DECIDED 2026-10-30
+
+**There is no `PinnedPlaylistsScreen`.** `AllPlaylistsScreen` grows into the
+management page.
+
+The earlier draft of §4 offered one and hedged — "the management page the
+Home shelf's VIEW ALL should eventually open, **or** that
+`AllPlaylistsScreen` grows into". The hedge is resolved: a second page
+holding the same list is a second list to keep in agreement with the first,
+and the tracker already requires "one target, not two".
+
+### D-P8 — The pin is a state you can SEE and an action you can REACH ✅ DECIDED 2026-10-30
+
+* **The state** is a **pin badge** on the cover, on **every** surface a
+  playlist is drawn. A state that cannot be seen is not a state.
+* **The action** is a long-press menu item — **Pin to top** / **Unpin from
+  top** — because that is where every shipping app puts it (YouTube Music's
+  "Pin to top", Spotify's "Pin playlist", Plex's context menus). The app's
+  own `MediaRailCard` already uses long-press for a card's secondary actions.
+* **A browsing card does not get a permanent pin button.** A pin button on
+  every card in a grid of fifty is noise.
+* **A management surface does.** `AllPlaylistsScreen`'s row and
+  `PlaylistDetailScreen`'s header carry a visible toggle, because a
+  long-press is not reachable by a screen reader or a keyboard, and a pin
+  that can only be reached by a gesture is a pin some users cannot use.
+
+### D-P9 — The kind label and the playlist cover each have ONE owner ✅ DECIDED 2026-10-30
+
+D-P4 applies the "one owner per fact" rule to **actions**. It applies just as
+hard to **labels and artwork**, and both are currently broken:
+
+* **The kind label has six owners** — the exported `PLAYLIST_KIND_LABELS`,
+  **three** local `KIND_LABELS` copies, **one** inline ternary, and
+  `src/constants/strings.ts`. The exported map is the one owner; the other
+  four are deleted. ("Mixed" is **not** an invented word in this app —
+  `strings.ts:280` already has `playlistKindMixed: 'Mixed'`.)
+* **A playlist's cover has two owners** — `PlaylistCard` draws a 2 × 2
+  collage and `AllPlaylistsScreen` draws a generic `listMusic` icon box for
+  the same playlist. One renderer (`PlaylistCover`), three chromes: a wide
+  card, a list row and a rail tile differ in chrome, and no longer in
+  artwork.
+
 ---
 
-## 4. What the pages become
+## 4. The UI/UX
 
-### NEW — `AddToPlaylistScreen`
+### 4.0 The rules this design obeys
 
-A **full page**, not a sheet, because it has to gather items from **several
-sections at once**. Today "add to playlist" only ever adds the one item you
-arrived with.
+1. **An affordance that no shipping app has does not ship.** Every control
+   below names the app it is copied from. If a row has no precedent, the row
+   does not exist.
+2. **One owner per fact.** Not per screen — per fact. The kind label, the
+   playlist's cover, and the pin state each have **exactly one** owner, and
+   every surface reads it.
+3. **A state that cannot be seen is not a state.** If "pinned" is a promise,
+   a user can see which playlists are pinned without opening a menu.
+4. **A title that lies is a bug.** "Pinned Playlists" may only head a
+   collection that is all pinned.
+5. **No new screen when an existing one can carry the job.** Two screens for
+   one list is two lists to keep in agreement, and they will disagree.
 
-* Reached from `PlaylistDetailScreen`'s "Add items" action.
-* Section picker: **Movies · Music · Podcasts · Archive · Downloads** — the
-  sections that hold playlist-legal media.
-* Two panes on a wide screen, a push-and-pop on a phone: pick a section, tick
-  items, tick a playlist.
+### 4.1 What already exists, and is reused
+
+| Reused | Where | What it brings |
+|---|---|---|
+| `MediaRail` | `src/components/media/MediaRail.tsx` | The canonical shelf: a 32 px `accent.goldSoft` icon badge, a `displaySans` title, a `See All` caption, a collapse chevron. `CARD_PITCH = 160 + spacing.md`. It **collapses when it has no items** — that is the empty-state behaviour, already built. `maxItems` is a **required** prop on purpose. |
+| `MediaRailCard` | `src/components/media/MediaRailCard.tsx` | The canonical card: 160 × 90, `radius.md`, a bottom scrim strip carrying the title and subtitle, a 22 px type badge at the **top-right**, an optional progress bar, and **long-press for secondary actions** — the precedent this app already ships for a card's overflow. |
+| `PlaylistCard` | `src/components/playlist/PlaylistCard/` | The playlist card: a 16:9 cover collage (up to four items, 2 × 2), the kind badge, the info area (name + "N items · Updated"), and a Play All / Shuffle action row. |
+| `PlaylistCreateModal` | `src/components/playlist/PlaylistCreateModal/` | The create flow (D-P4). Its kind picker already has the shape a third kind needs: `k === 'AUDIO_ONLY' ? 'music' : k === 'VIDEO_ONLY' ? 'video' : 'listMusic'` — the **`listMusic` glyph is already the fallback for a third kind**, so `MIXED` needs no new lane glyph. |
+| `PlaylistManageModal` | `src/components/playlist/PlaylistManageModal/` | Rename and delete, as a modal. It does not gain a pin mode: a pin is a **toggle**, not a confirmation. |
+| `useConfirmDialog` | app-wide | The delete confirmation. Already used by `AllPlaylistsScreen`. |
+| `AppText`, `AppButton`, `Fab`, `SvgIcon`, `SectionHeader`, `SubsectionTitle` | app-wide | The type, button, floating-action, icon and header kit. |
+
+### 4.2 The cover — one owner
+
+**NEW `PlaylistCover`** (`src/components/playlist/PlaylistCover/`), rendering
+the collage that `PlaylistCard` draws today: one large cell for a single
+item, 2 × 2 for up to four, a `listMusic` glyph on `accent.goldSoft` when the
+playlist is empty.
+
+It exists because the artwork of a playlist is currently drawn **twice, and
+neither time by the same code** — `PlaylistCard` draws a 2 × 2 collage, and
+`AllPlaylistsScreen`'s row draws a generic `listMusic` icon box for the same
+playlist. The second one is why the management page and the Library show the
+same playlist as two different things.
+
+`PlaylistCover` is used by: `PlaylistCard`, `AllPlaylistsScreen`'s row, and
+Home's playlist rail. **One renderer, three chromes.** The chrome around a
+cover differs by context — a wide card, a list row, a rail tile — and that is
+normal. The **artwork** is not context-dependent, and now it has one owner.
+
+The collage draws a playlist's **first four items'** artwork. A `PlaylistItem`
+carries `thumbnailPath` but **no** `resumeThumbnailPath` — a playlist item is
+a thing you put in a list, not a position you were at — so the collage draws
+catalogue artwork only. The captured frame belongs to the bookmark and the
+history entry, which have their own field for it.
+
+### 4.3 The pin — one glyph, one owner
+
+**NEW assets** `src/assets/svg/ic_pin.svg` and `ic_pin_filled.svg`,
+registered in `SvgIcon.tsx` as `pin` and `pinFilled`. The app already ships a
+filled/outline pair for bookmarks (`bookmark` / `bookmarkFilled`), so the
+pin follows the same convention rather than inventing one.
+
+**The pin badge** is a 22 × 22 rounded square (`radius.sm`), absolutely
+positioned at `top: spacing.xs` / `left: spacing.xs` over the cover —
+**mirroring the kind badge at `top: spacing.xs` / `right: spacing.xs`**. It
+holds the `pin` glyph at 14 px in `accent.gold` on a `background.scrimStrong`
+fill, so it reads as an overlay and never competes with the kind badge's
+text.
+
+* The badge appears on **every** surface a playlist is drawn — the Library
+  card, the management row, the Home tile. A state you cannot see is not a
+  state.
+* It is **decorative**. The pinned state is announced in the surface's
+  accessibility label ("… , pinned"), because a glyph is not a label.
+
+**The pin action** lives in the playlist's long-press menu, as
+**Pin to top** / **Unpin from top**.
+
+> **Precedent, named:** YouTube Music's playlist overflow menu has "Pin to
+> top"; Spotify's playlist context menu has "Pin playlist". Both put the
+> pinned list at the top of the user's list. Plex exposes a playlist's actions
+> in a context menu. The app's own `MediaRailCard` already uses long-press
+> for a card's secondary actions.
+
+**No permanent pin button on a browsing card.** A pin button on every card in
+a grid of fifty is noise; the badge says which are pinned and the menu says
+how to change it. The **management** row is the exception — see 4.5.
+
+### 4.4 The kind badge — a text badge, and one owner
+
+The kind badge stays a **text** badge — `Audio` / `Video` / `Mixed` — in the
+style `PlaylistCard` already uses: `background.accent.goldDim`, text
+`accent.gold`, `AppText variant="caption"`, `fontSize: 9`,
+`fontWeight: '700'`, `paddingHorizontal: 6`, at `top: spacing.xs` /
+`right: spacing.xs`.
+
+A text badge is the reason `MIXED` needs **no new glyph**: the badge says
+"Mixed", and the cover shows two videos and two songs.
+
+**But the label has six owners today, and that has to end.**
+
+| # | Owner | Form |
+|---|---|---|
+| 1 | `src/types/playlist.ts:40` — `PLAYLIST_KIND_LABELS` | the exported map |
+| 2 | `src/components/playlist/PlaylistCard/PlaylistCard.tsx:10` | a local `KIND_LABELS` |
+| 3 | `src/components/sheets/PlaylistSheet/PlaylistSheet.tsx:51` | a local `KIND_LABELS` |
+| 4 | `src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx:18` | a local `KIND_LABELS` |
+| 5 | `src/screens/AllPlaylists/components/AllPlaylistsScreen.tsx:112-116` | an inline ternary |
+| 6 | `src/constants/strings.ts:277-280` | `playlistKindAudio` / `playlistKindVideo` / **`playlistKindMixed`** |
+
+Four copies of a two-entry map, one inline ternary, and — in `strings.ts` —
+**the word "Mixed" already exists in this app.**
+
+The change: `PLAYLIST_KIND_LABELS` in `src/types/playlist.ts` is the one
+owner, gains `MIXED: 'Mixed'`, and owners 2, 3, 4 and 5 delete their copies
+and import it. `strings.ts` keeps its copy for the generic strings surface,
+but the playlist surfaces read the one owner. `KIND_OPTIONS` in
+`PlaylistCreateModal.tsx:17` gains `'MIXED'`.
+
+### 4.5 The one page that owns playlists — `AllPlaylistsScreen`
+
+**There is no `PinnedPlaylistsScreen`.**
+
+The earlier draft of this section offered one and hedged — "the management
+page the Home shelf's VIEW ALL should eventually open, **or** that
+`AllPlaylistsScreen` grows into". The hedge is resolved: **`AllPlaylistsScreen`
+grows into it.** A second page holding the same list is a second list to keep
+in agreement with the first, and the tracker already requires "one target,
+not two".
+
+The page, top to bottom:
+
+```
+┌──────────────────────────────────────────────┐
+│  ←   Playlists                       [Create] │   header, one AppButton
+├──────────────────────────────────────────────┤
+│  All · Audio · Video · Mixed                 │   filter chips (one owner)
+├──────────────────────────────────────────────┤
+│  ▢  ▢  ▢  ▢                                  │
+│  ▢  ▢                                       │   PlaylistCard — the
+│  ▢  ▢                                       │   16:9 cover collage
+├──────────────────────────────────────────────┤   + info + actions
+│  …                                          │
+└──────────────────────────────────────────────┘
+```
+
+* **The kind filter** gains a **Mixed** chip. It is the same chip set the
+  Library uses (`src/features/library/presentation/related/localFilesConfig.ts:52-58`),
+  and `FilterType` (`src/features/library/presentation/types/index.ts:3`) gains
+  `'MIXED'`. The filter is a **filter**, not a lane switch — it narrows what
+  is shown; it never changes what a playlist may contain.
+* **The list is `PlaylistCard`s**, one column, in the Library's card design.
+  The inline 44 × 44 row that duplicates the Library's card is **replaced** —
+  it is the second playlist-card design, and two designs for one object is
+  two chances to drift.
+* **The pin action** is a long-press menu on each card, **and** a visible
+  32 px pin toggle on the row, because this is the **management** page and it
+  already shows visible management buttons. A long-press is not reachable by
+  a screen reader or a keyboard, and a pin that can only be reached by a
+  gesture is a pin some users cannot use.
+* **Rename and delete** keep their existing `PlaylistManageModal` and
+  `useConfirmDialog` paths.
+* **The create action** is the existing header `AppButton`, and it opens
+  **`PlaylistCreateModal`** — the inline create modal is replaced (D-P4).
+* **The page has no FAB.** It already has a header `AppButton`, and the
+  bottom-chrome rule says a FAB sits at `insets.bottom + spacing.lg` and
+  **overlaps** what is under it. A second create affordance on one page is
+  two ways to do one thing.
+
+### 4.6 Home's playlist rail
+
+The rail exists and is called **"Pinned Playlists"** today, and it renders
+the **three most recently updated** playlists — pinned or not. The title is
+a lie until this changes.
+
+**Decision.** The rail is retitled **"Playlists"** and shows **pinned first
+(most recently pinned first), then the rest by recency**, up to `maxItems`.
+
+* A rail titled "Pinned Playlists" may only head a collection that is all
+  pinned (rule 4). Since the rail also shows unpinned playlists, the
+  honest title is "Playlists".
+* The rail is **horizontal**, so showing both does not crowd it — it
+  scrolls. This settles the open question in §8.
+* The **pin badge** on each tile says which are pinned, so the ordering is
+  legible without reading the title.
+* The rail's tile keeps its own geometry — a `listMusic` glyph box becomes
+  the **`PlaylistCover`** (4.2), so a playlist looks the same on Home as it
+  does in the Library.
+* **The rail collapses when there is nothing to show**, the way `MediaRail`
+  does. An empty rail with a title is a lie of a different kind.
+
+> **Precedent:** Spotify's home puts pinned playlists at the top of the
+> playlist row; YouTube Music does the same. Neither hides the unpinned
+> ones behind a separate screen — they order one list.
+
+### 4.7 The Library's playlist segment
+
+* `LibraryPlaylistsSegment` renders `PlaylistCard`s in a vertical `FlatList`
+  with `scrollEnabled={false}` — it is a **list of cards**, not a filter
+  rail. Its dead `colors` prop is deleted (it is never used).
+* The Library's **filter chips** (`localFilesConfig.ts:52-58`) gain
+  **Mixed**, and `FilterType` gains `'MIXED'`.
+* A `MIXED` playlist appears under **Any** and under **Mixed** — never
+  under Audio or Video alone, because it is neither.
+
+### 4.8 The playlist detail page
+
+`PlaylistDetailScreen` (967 lines today) gains:
+
+* **An "Add items" action** → `AddToPlaylistScreen` (4.9).
+* **A pin toggle** in the header's action row, next to rename and delete.
+  The detail page is a management surface too, and the pin is a state the
+  user came here to change.
+* **Mixed playlists play in order, across lanes** (D-P2) — the item list
+  itself does not change; the queue does.
+
+### 4.9 "Add to playlist" — a full page
+
+**NEW `AddToPlaylistScreen`.** A **full page**, not a sheet: it gathers
+items from **several sections at once**, and a sheet is for one context.
+
+> **Precedent:** Plex's "Add to playlist" is a full page, because it
+> gathers from more than one library.
+
+* **Section picker:** **Movies · Music · Podcasts · Archive · Downloads** —
+  the sections that hold playlist-legal media (D-P6).
+* Two panes on a wide screen; a push-and-pop on a phone: pick a section,
+  tick items, tick a playlist.
 * Every item it offers is **lane-tagged**, so a `MIXED` playlist can be fed
   from more than one section in one visit.
+* The playlist list it offers is filtered by **one rule** —
+  `compatiblePlaylistsFor(item)` (D-P4) — the same rule `PlaylistSheet` and
+  `PlaylistContextMenu` both call. A `MIXED` playlist accepts both lanes.
 
-### NEW — `PinnedPlaylistsScreen`
+`PlaylistSheet` **stays** — it is the single-item sheet reached from a
+tile, and it is not replaced. It is **reconciled** with
+`PlaylistContextMenu`: both call `compatiblePlaylistsFor()`, so they stop
+disagreeing about which playlists may take the item.
 
-The management page the Home shelf's "VIEW ALL" should eventually open, or
-that `AllPlaylistsScreen` grows into:
+### 4.10 The playlist's long-press menu
 
-* Pin / unpin, reorder, rename, delete.
-* Pinned first, then recency — the same order as the Home shelf, so the two
-  agree.
+One menu, wherever a playlist is drawn. Its actions:
 
-### CHANGED — `AllPlaylistsScreen`
+| Action | Precedent |
+|---|---|
+| **Play all** | already on `PlaylistCard`'s action row |
+| **Pin to top** / **Unpin from top** | YouTube Music "Pin to top"; Spotify "Pin playlist" |
+| **Rename** | `PlaylistManageModal` already exists |
+| **Delete** | `useConfirmDialog` already exists |
 
-* Its inline create modal is **replaced** by `PlaylistCreateModal`.
-* The kind row gains **Mixed** — the label is already in the file
-  (`AllPlaylistsScreen.tsx:112-116`).
-* Gains the pin action.
+`PlaylistContextMenu` is **not** this menu and is **not** deleted — it is
+the **batch** picker (`batchCount`), while this one acts on a single
+playlist. They are reconciled by the shared `compatiblePlaylistsFor()` rule,
+not merged.
 
-### CHANGED — `PlaylistDetailScreen` (967 lines today)
+### 4.11 Empty states
 
-* Plays a mixed playlist **in order, across lanes** (D-P2).
-* Gains an "Add items" action → `AddToPlaylistScreen`.
+| Where | What is shown |
+|---|---|
+| No playlists at all | "No playlists yet" + a **Create playlist** button. |
+| Playlists exist, none pinned | The pinned **section** is not rendered at all. A section with nothing in it is noise. |
+| A playlist with no items | "This playlist is empty" + **Add items** → `AddToPlaylistScreen`. |
+| A filter matches nothing | "No playlists match this filter." |
+| Home's rail with nothing to show | The rail **collapses** — the title goes with it. |
 
-### CHANGED — `PlaylistSheet`
+### 4.12 Motion
 
-* Offers **mixed** playlists to both lanes.
-* Its inline create mode is **replaced** by `PlaylistCreateModal`.
-* Wired at the Movies sections (D-P5).
+* The pin badge appears with a **fade + scale** on `motion.fast` (150 ms).
+* The kind badge's text changes with no animation — it is a label.
+* The Home rail's collapse uses `motion.normal` (250 ms); nothing in this
+  feature animates past `motion.normal` except a rail collapse.
+* Nothing animates on a **pin toggle** except the badge itself: the row
+  does not slide, and no list re-orders under the finger. The re-order
+  happens on the next render of the list, which is a list of at most a few
+  dozen items.
 
-### CHANGED — `PlaylistCard`
+### 4.13 Accessibility
 
-* A mixed playlist's badge reads **"Mixed"**.
-* A pin glyph, for a pinned playlist.
+* The pin badge is `accessibilityElementsHidden`; the pinned state is in the
+  surface's **accessibility label** ("…, pinned").
+* The pin toggle in a management row and in the detail header is a real
+  `TouchableOpacity` with `accessibilityRole="button"` and a label that
+  **changes with the state** ("Pin to top" / "Unpin from top"), and
+  `accessibilityState={{selected: playlist.pinned}}`.
+* Every filter chip states its selection, the way `PlaylistCreateModal`'s
+  kind chips already do (`accessibilityState={{selected: isActive}}`).
+* Tap targets: the pin toggle and the existing row buttons are **32 px**,
+  matching the row's existing buttons; the hit slop is widened rather than
+  the icon, so the row does not grow.
+* A long-press menu is never the **only** way to reach an action that
+  changes persistent state (the pin).
 
-### CHANGED — Home's "Pinned Playlists" shelf
+### 4.14 What this design deliberately does NOT add
 
-* Pinned first, then recency (D-P3).
-
-### CHANGED — the Library's playlist filter rail
-
-* Gains a **Mixed** chip.
+* **No drag-to-reorder.** The pinned order is **recency of pinning**
+  (D-P3), so it is automatic. A drag handle would be an affordance with
+  nothing to reorder.
+* **No separate "Pinned" screen.** (Rule 5, and 4.5.)
+* **No pin button on a browsing card.** (4.3.)
+* **No new lane glyph for `MIXED`.** The kind badge is text, and
+  `PlaylistCreateModal` already falls back to `listMusic` for a third kind.
+* **No new gold accent.** The palette already carries everything this
+  feature needs: `accent.gold`, `goldDim`, `goldSoft`, `background.scrim*`,
+  `border.subtle`.
+* **No new typography.** The badge reuses `variant="caption"` at
+  `fontSize: 9`; the page title reuses `displaySans`.
 
 ---
 
@@ -344,6 +635,30 @@ export interface Playlist {
 
 **Decided (2026-10-29):** D-P1 … D-P6 above, all of them.
 
+**Decided (2026-10-30, the UI/UX):** §4 above. The decisions that changed a
+plan:
+
+* **There is no `PinnedPlaylistsScreen`.** `AllPlaylistsScreen` grows into
+  it. The earlier hedge in §4 is resolved — one page owns playlists, so the
+  Home shelf's "See All" and the management surface are the same list.
+* **Home's rail is retitled "Playlists",** and shows pinned first, then
+  recency. A rail titled "Pinned Playlists" may only head a collection that
+  is all pinned, and the rail shows both. The pin badge says which are
+  pinned. This answers the open question below.
+* **The kind label gets one owner** (`PLAYLIST_KIND_LABELS`), replacing four
+  local copies and one inline ternary. "Mixed" is **not** an invented word
+  in this app — `src/constants/strings.ts:280` already has
+  `playlistKindMixed: 'Mixed'`.
+* **The playlist cover gets one owner** (`PlaylistCover`), so the Library's
+  card, the management row and the Home tile show the same playlist the
+  same way.
+* **The pin is a badge plus a menu action,** not a permanent button on a
+  browsing card. The management row and the detail header also carry a
+  visible toggle, because a long-press is not reachable by a screen reader
+  or a keyboard.
+* **No drag-to-reorder.** The pinned order is recency of pinning, so there
+  is nothing to drag.
+
 **Still to decide, and it does not block phase 1:**
 
 * **Does the mixed playlist switch lanes, or does it play only one lane?** —
@@ -351,8 +666,6 @@ export interface Playlist {
   proof, the fallback is a mixed playlist that plays its **audio** items only,
   with the video items listed but not playable. That fallback is recorded so
   it is a decision rather than a failure.
-* **Does the Home shelf keep the non-pinned playlists below the pinned ones,
-  or show pinned only?** The shelf is small; showing both may crowd it.
 
 ---
 
