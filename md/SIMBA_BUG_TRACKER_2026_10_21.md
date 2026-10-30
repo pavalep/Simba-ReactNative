@@ -266,7 +266,7 @@ engine's truth. That is honest, not broken.
 
 ---
 
-### B-007 · P1 · lib · the native side discards mpv's return code
+### B-007 · P1 · lib · the native side discards mpv's return code — **RESOLVED (F-041)**
 
 **Symptom.** Any command mpv refuses fails **silently**. The app believes it
 worked.
@@ -278,8 +278,14 @@ and `playlist-clear`.
 **Consequence.** This is what made B-001 invisible for a wave: mpv said "no"
 and the app heard nothing.
 
-**State:** `DEFERRED` to a native wave. It cannot be fixed from JS, and the
-1.22.0 fix removes the one place it actually bit.
+**State:** **RESOLVED 2026-10-30 in lib `2.1.0`** (F-041). Every
+`mpv_command()` in `main.cpp` now goes through `runMpvCommand`, which reports a
+refusal through the EXISTING error path — the same `MPVLib.onNativeError`
+callback `event.cpp` uses — so it lands on the same `onError` event with the
+same `{code, codeName, nativeCode, recoverable, message}` payload and the same
+existing mapping (-12 → `E_COMMAND_FAILED` → 3016). No new event, no new
+channel, no new error shape. `recoverable = true` is the truth: a refused
+command does not end playback.
 
 ---
 
@@ -1032,7 +1038,7 @@ suite that fails reproducibly is a bug, and this one is not that.
 
 ---
 
-### B-026 · P3 · app · no catalogue surface hands its artwork to the history entry, so the search tile has nothing to show
+### B-026 · P3 · app · no catalogue surface hands its artwork to the history entry, so the search tile has nothing to show — **RESOLVED (F-047)**
 
 **Symptom.** A search result for a film the user has already watched shows a
 **placeholder** instead of a poster — even though the catalogue plainly has
@@ -1055,10 +1061,27 @@ resume candidate and forwards it as `artworkPath`. The seam works. The
 `album.albumArtUri` (album) and `entry.thumbnailPath` (history store) — so a
 history-backed video has no image to render.
 
-**State:** open. This is **not** a rendering defect — the renderer is correct
-and is now scheme-aware (`F-018`). The **producer** side is missing: whichever
-surface writes the history entry has to carry the catalogue artwork across,
-and the Search play seam needs an artwork field to carry it.
+**State:** **RESOLVED 2026-10-30** (F-047). The producer side now exists:
+`PlayInput.thumbnailPath` is an OPTIONAL field, so the ~34 `openPlayer` call
+sites that pass nothing still typecheck, and the field is forwarded only when
+it is present — no empty-string artwork key ever reaches the bridge. The four
+callers that already held artwork now hand it over:
+`ArchiveItemDetailScreen.handleTrackPress` (`imageUrl`),
+`MusicDetailScreen.handlePlay` and its row handler (`artwork` / `t.imageUrl`),
+`SearchScreen` / `SearchResults` (`item.thumbnailPath`), and
+`useHomeScreen`'s shelf handler.
+
+**The catalogue artwork is NOT the captured frame.** `useHomeScreen`
+deliberately passes `item.thumbnailPath` and NOT `resolveMediaArtwork(item)` —
+the store's own field docs already draw the line: `thumbnailPath` is
+"catalogue artwork and says what the film is", `resumeThumbnailPath` is
+"where in it you were". The card draws the frame because a continue-watching
+rail sells *where you were*; the launch carries the artwork of the TITLE,
+because it becomes the history entry's catalogue slot. Handing the frame over
+instead would replace that poster with a local still on the next checkpoint,
+and the search tile — which draws the catalogue slot — would show the still
+where it should show the poster. The history entry already carries the
+captured frame, in its own `resumeThumbnailPath` field.
 
 **Why it is recorded at all.** It is the reason `B-004` cannot be
 device-proved: the input the thumbnail bug was about never arrives. It is
@@ -1485,7 +1508,7 @@ is the one that needs the aspect arithmetic.
 `fillBounds` / `setVisible` are the same three orphaned mutators, and they
 stay deprecated on purpose (see `B-033`).
 
-### B-037 · P3 · app · a legacy-architecture dependency shipped silently, and nothing in the repo would have caught it
+### B-037 · P3 · app · a legacy-architecture dependency shipped silently, and nothing in the repo would have caught it — **RESOLVED (F-046)**
 
 **Symptom.** A dependency whose native code is incompatible with the
 architecture the app runs on sat in the manifest for the app's whole life,
@@ -1520,13 +1543,90 @@ one package.
 **What it does NOT yet do, stated plainly.** It does not catch the *class*.
 The real rule is "a dependency must not ship native code that calls
 `getJSModule(RCTEventEmitter)`", and the real check is a scan of every
-installed package's Android sources for that call. That check is
-**not** written yet, and it should be — it is a few lines over
-`node_modules/*/android/src/**`, and it would have caught this before it
-shipped.
+installed package's Android sources for that call.
 
-**State:** open — the guard is narrow by design and the general one is
-unwritten. Device proof that the toast is gone is still owed (B-024).
+**State:** **RESOLVED 2026-10-30** (F-046). The general guard now exists:
+`scripts/check-legacy-event-emitter.cjs` scans the installed dependencies'
+Android sources for the call and fails on a new one, and
+`__tests__/tooling/legacyEventEmitterCheck.test.ts` pins the guard's own
+behaviour with 4 tests. It has ONE allow-listed package, `react-native-svg`,
+whose identical call is **dead code** — `onReceiveNativeEvent()` has exactly
+one occurrence in all of node_modules, its own declaration, so RN never calls
+it — and every allow-listed package must carry a written reason, which the
+test also pins. Measured on the current tree: **26 packages with Android
+sources, 660 files, 0 errors, 1 allowed finding**.
+
+Device proof that the toast is gone is still owed (B-024).
+
+---
+
+### B-038 · P1 · tooling · the CI boundary gate was never in version control — **RESOLVED (F-042)**
+
+**Symptom.** `scripts/check-import-boundaries.js` is invoked by
+`npm run lint:boundaries` (`package.json`) and by the CI workflow's
+"Import-boundary linter" step. It was **never committed**.
+
+**Root cause (mechanics, not a typo).** `.gitignore` carries `scripts/*.js`.
+The file was written *after* that rule existed, and `git add` **silently
+skips an ignored path** — no error, no warning, no "nothing added". So the
+file sat in the working tree of one machine, was referenced by two
+committed files (`package.json`, `.github/workflows/ci.yml`), and was absent
+from the repository.
+
+**Consequence.** On a fresh clone the boundary gate had **no script to run**:
+CI failed with `MODULE_NOT_FOUND`, and the import boundary was unenforced on
+every machine except the one that wrote the file. A gate that is not in
+version control is not a gate.
+
+**Why it is P1 and not P3.** It is not a missing convenience — it is the
+single check that the app's layer boundaries hold, and it was silently absent
+from every CI run. The `.gitignore` rule had the same effect on
+`scripts/check-legacy-event-emitter.js`, which is why the new guard is a
+`.cjs`.
+
+**State:** **RESOLVED 2026-10-30** (F-042). The tracked scripts are
+re-included explicitly in `.gitignore`, and the rule now carries the reason
+so the next person does not "fix" it by editing only one of the two files.
+
+---
+
+### B-039 · P2 · lib · `pip.autoEnterOnLeave` was a public flag that nothing read — **RESOLVED (F-043)**
+
+**Symptom.** `PipConfig.autoEnterOnLeave` is declared in the public
+TypeScript config type, defaults to `true`, and the README documents it as
+"auto-enter on home / recents / app-switcher". Setting it changes **nothing**.
+
+**Root cause (source-proven, 2026-10-30).** The value was already reaching
+Kotlin: `setConfig` parses the whole **resolved** config into a map, and
+`pip.autoEnterOnLeave` was sitting in it — unread. The grep over every
+`.kt`, `.cpp` and `.h` under `android/src/main` for `autoEnterOnLeave` /
+`autoEnter` returned **zero hits**, and there is no `onUserLeaveHint`
+override anywhere in the lib or in the consumer's `MainActivity.kt`. The lib
+ships **no Activity** (the one-Activity architecture), so the pre-Android-12
+path was never available to it either.
+
+**Consequence.** A documented public feature that could not happen, and a
+config field that is a **no-op for every consumer who sets it** — the exact
+shape of an inert control.
+
+**State:** **RESOLVED 2026-10-30 in lib `2.1.0`** (F-043). The flag now
+drives the platform's own switch,
+`PictureInPictureParams.Builder.setAutoEnterEnabled` (API 31+ / Android 12,
+the level taken from the SDK's own `api-versions.xml`), and the params are
+pushed onto the Activity with `Activity.setPictureInPictureParams` — which
+is what the OS reads when it transitions into PiP **by itself**, the
+swipe-home path the flag was written for. The params carry the video's
+CURRENT aspect ratio and are refreshed on every `videoReconfig`, so the
+auto-entered window has the shape of the video being played.
+
+**A note on the API name.** `Activity.setAutoEnterEnabled` **does not
+exist** — it sounds exactly like the right call, and the SDK's own
+`android.jar` does not contain it. The real switch is on the params builder.
+The guard's API level came from the SDK's `api-versions.xml`, not from
+recall.
+
+**Still owed:** the device proof — that pressing home on Android 12+ enters
+PiP — is deferred with every other device proof.
 
 ---
 
@@ -1574,6 +1674,13 @@ unwritten. Device proof that the toast is gone is still owed (B-024).
 | F-038 | P3 | lib | A local `npm pack` shipped **68.3 MB** of native binaries (125 files) because the `files` allow-list names `android/` and nothing excluded `android/src/main/jniLibs/`. The published tarballs were never affected — `release.yml` publishes from a clean CI checkout — but a developer publishing from a dirty tree would have shipped 68 MB to npm → **`!android/src/main/jniLibs/`** in `files`, plus an `.npmignore` entry as defence in depth. The `.npmignore` entry **alone was verified not to work**: npm's `files` allow-list wins for the paths it names, and the pack still held all 43 `.so`. After: **81 files / 275.0 kB**, zero `.so` in the packed list, matching the published tarball's file count exactly | lib `f8bf1ef` |
 | F-039 | P2 | app | A bookmark is a **position**, so it should carry the picture of that position — but the Bookmarks row read the catalogue artwork alone, so a bookmarked film with no catalogue art showed a placeholder glyph while the app held a good frame of it on disk. The frame could not ride the playback session (it is captured at the session's **end**, after the session is gone, and the session carries only the catalogue artwork), so the hand-off now comes from the history store. The rule itself — `resumeThumbnailPath \|\| thumbnailPath` — was written out at four call sites, and one of them got it wrong, so it moved to **one owner**, `utils/mediaArtwork.ts` → `resolveMediaArtwork()`; which path is *rendered* stays a separate question owned by `toRenderableImageUri` | app `25162ae` |
 | F-040 | P2 | lib | The mpv engine's handle had **no test** against the Fabric picture view's lifetime — and the picture is a Fabric component in the React tree, so Fabric may drop and recreate it at any time while the engine belongs to `PlaybackHost` and must outlive it. A drop path that tore the engine down would have passed every test in the repo → **`MpvHandleSurvivesViewRemountTest`**, 5 pure-JUnit tests driving the real `MpvRenderViewManager.onDropViewInstance`: the drop leaves the handle identical (not zero, not re-published), a recreated view binds to that same handle through the real `setNativePtr` path, the picture registry empties while the engine stays live, and `getNativePtr()` reports the same handle afterwards. Pure JUnit, not Robolectric — the Robolectric suites are `@Ignore`d offline, so a test written there would not run and would prove nothing. Proven by **regression** (breaking the drop path fails 4 of 5; making it re-publish fails all 5), with the production file restored byte-identically | lib `f01d77b` |
+| F-041 | P1 | lib | **Every** `mpv_command()` in `main.cpp` threw mpv's return value away, so a command the core refused was indistinguishable from one that worked — a refused seek simply did not move the scrub bar and nothing was reported. The register named `seek` (absolute), `seek` (relative) and `playlist-clear`; the fix covers every command in the file, so no sibling of the same defect is left behind. A refusal now travels the **EXISTING** error path — the same `MPVLib.onNativeError(code, recoverable, message, requestId)` callback `event.cpp` uses — so it lands on the same `onError` event with the same `{code, codeName, nativeCode, recoverable, message}` payload and the same mapping the Kotlin bridge already had (-12 → `E_COMMAND_FAILED` → 3016). No new event, no new channel, no new error shape. `recoverable = true` is the truth: a refused command does not end playback, so it is reported rather than painted over a picture that is still moving. `nativeScreenshot` now returns an empty string when mpv refuses the write — it used to return the path to a file that was never written | lib `v2.1.0` · `50f98d9` |
+| F-042 | P1 | tooling | The CI boundary gate was **never in version control**. `scripts/check-import-boundaries.js` is invoked by `npm run lint:boundaries` and by the CI workflow's "Import-boundary linter" step, but `.gitignore` carries `scripts/*.js`, the file was written after that rule, and `git add` **silently skips an ignored path** — no error, no warning. On a fresh clone the gate had no script to run: CI failed with `MODULE_NOT_FOUND` and the import boundary was unenforced on every machine except the one that wrote it. The tracked scripts are now re-included explicitly, and the rule carries the reason so the next person does not "fix" it by editing only one of the two files | app `8d2730d` |
+| F-043 | P2 | lib | `pip.autoEnterOnLeave` was a public flag that **nothing read** — declared in the config type, defaulted to `true`, documented as "auto-enter on home / recents / app-switcher", and a no-op for every consumer who set it. The value was already reaching Kotlin inside the resolved config JSON `setConfig` parses; it sat there unread. It now drives the platform's own switch, `PictureInPictureParams.Builder.setAutoEnterEnabled` (API 31+, the level read from the SDK's own `api-versions.xml`), and the params are pushed onto the Activity with `Activity.setPictureInPictureParams` — which is what the OS reads when it transitions into PiP **by itself**, the swipe-home path the flag was written for. The params carry the video's CURRENT aspect ratio and are refreshed on every `videoReconfig`, so the auto-entered window has the shape of the video being played. `pip.enabled` stays the master switch. Below API 31 the OS cannot auto-enter at all and the library logs that instead of pretending — it ships no Activity, and the pre-31 equivalent would be the consumer overriding `onUserLeaveHint()`. **Note:** `Activity.setAutoEnterEnabled` does **not** exist — the SDK's own `android.jar` does not contain it; the real switch is on the params builder | lib `v2.1.0` · `50f98d9` |
+| F-044 | P3 | lib | The published package carried things **no consumer runs**: 7 Kotlin test files, 13 JS test files, and two one-shot development patches — including a Python script. `example/` and the git metadata were already out, and are now excluded explicitly so a future change to `files` cannot let them back in. **83 files / 285.2 kB → 54 files / 215.5 kB.** The `.npmignore` rules for these paths were ALREADY there and did nothing — the same trap B-027 hit: when `files` names a path, npm's allow-list wins and `.npmignore` is ignored for it. The rules that work are the NEGATIONS in `files`; both are now kept in sync and `.npmignore` says so at the top | lib `v2.1.0` · `4be1f9b` |
+| F-045 | P2 | lib+docs | The README described a library that **no longer existed**. It advertised `<DefaultControls>` in seven places — removed in 2.0.0, with `<PlayerRoot>` no longer falling back to it; it described the auto-enter flag that nothing read; it documented four hooks (`useSleepTimer`, `useEqualizer`, `useIsLiked`, `useShuffle`) and three command groups that do not exist; it claimed `usePlayer()` returns the progress object (it returns `{state, commands}`); it described `resumePolicy` as taking a `resumeId`; it named a PiP action set that does not match the native one; it claimed the `example/` app typechecks (it does not — it still imports the removed `DefaultControls`); and it called the library a drop-in replacement for `react-native-video` / `expo-av`, whose API shapes are different. npmjs renders the README as of publish time, so the package page showed the pre-2.0.0 text — that is the "outdated" it looked like. The README is rewritten against the source, and the CHANGELOG had **no entry for 2.0.0 or 2.0.1** — 2.0.0 was a BREAKING release — so both are recorded now | lib `v2.1.0` · `3a1fefa` |
+| F-046 | P2 | app | The narrow B-037 guard is now the **general** one. `scripts/check-legacy-event-emitter.cjs` scans the installed dependencies' Android sources for `getJSModule(RCTEventEmitter)` — the one class RN 0.86's `BridgelessReactContext` refuses — and fails on a new one, so the LogBox toast (B-024) cannot come back through the next dependency that makes that call. It has ONE allow-listed package, `react-native-svg`, whose identical call is **dead code**: `onReceiveNativeEvent()` has exactly one occurrence in all of node_modules, its own declaration, so RN never calls it. Every allow-listed package must carry a written reason, and the 4 tests pin that too. Measured: **26 packages with Android sources, 660 files, 0 errors, 1 allowed finding** | app `8d2730d` |
+| F-047 | P3 | app | A search result for a film the user had already watched showed a **placeholder** instead of a poster, because the history entry's catalogue slot (`thumbnailPath`) was written as `''`. The launch carried no artwork, so the session carried none, so the checkpoint writer had nothing to write. `PlayInput.thumbnailPath` is now an **optional** field — the ~34 `openPlayer` call sites that pass nothing still typecheck, and a launch without artwork is still a launch — and it is forwarded only when present, so no empty-string artwork key reaches the bridge. The four surfaces that already held artwork now hand it over. Deliberately NOT `resolveMediaArtwork(item)`: the store's own field docs draw the line — `thumbnailPath` is "what the film is", `resumeThumbnailPath` is "where in it you were" — and handing the frame over would replace the poster with a still of one moment of the film | app `dd6e0e9` |
 
 ---
 
