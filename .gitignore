@@ -76,8 +76,21 @@ GoogleService-Info.plist
 # MCP / scripts config with keys
 .mcp.json
 .trae/mcp.json
+
+# Local one-off scripts are not tracked — but the ones the CI gate
+# RUNS are. `scripts/*.js` once swallowed
+# `scripts/check-import-boundaries.js`, the file that
+# `npm run lint:boundaries` and the CI workflow's
+# "Import-boundary linter" step both invoke: on a fresh clone the gate
+# had no script to run, so CI failed and the boundary was unenforced
+# (B-038). Every tracked script is re-included explicitly below.
 scripts/*.mjs
 scripts/*.js
+!scripts/check-import-boundaries.js
+!scripts/eslint-sweep.js
+!scripts/gen-mcp-descriptors.js
+!scripts/generate-icons.js
+!scripts/generate-inapp-logo.js
 
 # Yarn
 .yarn/*
