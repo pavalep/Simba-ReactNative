@@ -2536,47 +2536,68 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     **requires** what the caller always passes. **Three files ARE used and
     were left alone:** `About`, `Bookmarks` and
     `features/library/presentation`.
-39. **The force-exit flake is REAL and still reproduces — but
+39. ~~**The force-exit flake is REAL and still reproduces — but
     `--detectOpenHandles` is the WRONG instrument, and the
-    `useLaunchPlayback` 5 s timeout does not exist at all.** **PARTLY CLOSED
-    2026-11-02.**
-    - **It still happens.** A full run today (`npx jest --ci`, branch
-      `f5/w22-close-minimise-d9`) prints *"A worker process has failed to
-      exit gracefully and has been force exited"* — **once** — with **137
-      suites / 1453 passed / 1 todo** in **80.3 s**. The suite is
-      **green**: this is a teardown symptom, not a failure, and the message
-      is a *warning*, not a non-zero exit.
-    - **`--detectOpenHandles` finds NOTHING — and that IS the finding.** The
-      same 137 suites run with `--detectOpenHandles` (which forces
-      `--runInBand`) report **137 passed / 1453 passed** in **377.1 s** and
-      print **no** open handle and **no** force-exit line. So nothing
-      survives the run: this is not an un-`unref`'d handle that outlives
-      its suite, it is a worker that does not exit **in time** under
-      parallel load. `jest.config.js:79-82` already recorded exactly this
-      — the `maxWorkers: '50%'` change does **not** fix it — and
-      `jest.setup.ts:41-48` (the TanStack `notifyManager` microtask shim)
-      was the earlier attempt at it.
-    - **The `useLaunchPlayback` 5 s timeout does not exist.** There is no
-      timer in the lib's `useLaunchPlayback`
+    `useLaunchPlayback` 5 s timeout does not exist at all.**~~ **CLOSED
+    2026-11-02** (bug `B-048` → `F-060`). **The root cause is found, and it
+    is ONE file.**
+    - **It still happens — and it was never a parallelism problem.** A full
+      run printed *"A worker process has failed to exit gracefully and has
+      been force exited"* — **once** — with the suite **green** and the exit
+      code **0**. It is a teardown symptom, not a failure.
+    - **The root cause: a mutation's garbage-collection timer.** TanStack
+      Query's `Removable.scheduleGc()` (query-core) arms
+      `timeoutManager.setTimeout(() => this.optionalRemove(), this.gcTime)`.
+      A **mutation's** `gcTime` defaults to **five minutes** (`3e5`) — the
+      queries in these tests already ask for `gcTime: 0`, a mutation never
+      did, and the mutation cache is never cleared, so the timer was never
+      cancelled. It is a real five-minute **ref'd** Node timer, and
+      `timeoutManager`'s default provider uses the platform's global
+      `setTimeout`. A ref'd timer holds the event loop open; jest closes
+      the worker's IPC channel when the run is over and expects the process
+      to fall out of the loop, so it force-exits the worker.
+    - **Why every earlier measurement missed it — and this CORRECTS the
+      2026-11-02 entry.** A **lone** test file runs **in band** (jest's own
+      rule), so there is no worker to force-exit and nothing to observe.
+      The warning needs **at least two suites in one worker**. The per-file
+      sweep of all 137 suites therefore reproduced it **zero** times
+      *because each file ran alone* — the sweep was **measuring the wrong
+      thing**, and the conclusion drawn from it ("the leak is a cross-suite
+      interaction inside one worker") was **wrong**. It is **one** file.
+    - **How it was found.** Bisecting the suite list with `--maxWorkers=2`:
+      **4 shards → shard 2** reproduces (1, 3 and 4 do not); its **37
+      suites → a 10-file set**; that set's **5/5 split → neither half
+      reproduces alone**, so the trigger spans the split; a **cross-product**
+      → **`useApiQuery.test.tsx` + any companion** suite reproduces (it
+      alone does not; each companion alone does not); then narrowing by
+      `describe` block → **only the `useApiMutation` block** leaks.
+    - **The fix.** `jest.setup.ts` — which already owned TanStack's
+      *notification* timer for exactly this reason — now also owns its
+      *timers*: a `timeoutManager` provider whose timers are `unref()`'d.
+      An unref'd timer still fires whenever the loop is running for any
+      other reason, which during a test it always is; it just cannot be
+      the reason the worker cannot leave.
+    - **The measurement that closed it.** The 5/5 pair that reproduced the
+      warning now reproduces it **zero** times; `useApiMutation` + a
+      companion **zero** times; and a full run prints **no** force-exit line
+      at all — **150 suites / 1531 passed / 1 todo / 0 failed**, exit code
+      **0**, in **23.5 s** (it was 80.3 s).
+    - **`--detectOpenHandles` is still the WRONG instrument, and now for a
+      precise reason.** It forces `--runInBand`, and the condition needs
+      **more than one worker**. It reported "no open handle" because there
+      was no worker to hold a handle. **The `useLaunchPlayback` 5 s timeout
+      does not exist** — there is no timer in the lib's `useLaunchPlayback`
       (`react-native-media-player/src/hooks/useLaunchPlayback.ts:77-101` —
-      a plain `useEffect` keyed on `launchKey`: no `setTimeout`, no
-      timeout, no rejection), and none in the app's wrapper
-      (`src/infrastructure/player/useInWindowVideoLaunch.ts:45-62`). The
+      a plain `useEffect` keyed on `launchKey`) nor in the app's wrapper
+      (`src/infrastructure/player/useInWindowVideoLaunch.ts:45-62`); the
       only "5 s" in this story is **Jest's own default `testTimeout`**,
       which `jest.config.js:65` raised to **30 000 ms** in V21 F5 A7
-      precisely because 5 s was a **false ceiling** under cold-cache
-      contention — the very symptom this entry names. The entry's second
-      half was therefore a **stale restatement of a jest setting that was
-      already fixed**, not a defect in `useLaunchPlayback`.
-    - **STILL OPEN — a PAIR to find, not a knob to turn.** A per-file sweep
-      of **all 137 suites** (each file in its own worker, 2026-11-02)
-      reproduced the warning **zero** times: **no single suite leaks on its
-      own.** The leak is therefore a **cross-suite interaction inside one
-      worker**, not one file's teardown — which is exactly why
-      `--detectOpenHandles` (in-band, one process, no worker pool) cannot
-      see it. **What it needs:** a run with `--maxWorkers=2` — two suites
-      sharing a worker — bisected over the suite list, to find the PAIR.
-      That is a second pass of measurement, not a code change.
+      precisely because 5 s was a false ceiling under cold-cache
+      contention.
+    - *Evidence:* 3 new tests in
+      `__tests__/tooling/tanstackTimerRefs.test.tsx`; **2 mutations, all
+      killed**, `jest.setup.ts` restored byte-identically (SHA-256 verified
+      before and after).
 40. **Emulator `-wipe-data` escalation if it recurs.** **NOT ARMED
     2026-11-02 — the trigger never fired, and it has not been exercised
     since.** The escalation is a *conditional* recipe, and it lives in
@@ -3214,8 +3235,8 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
       that Home's shelf and the management page produce the SAME pinned
       order, which is the property two copies could not hold.
 
-78. **A single-track launch leaves the RUN pointing at a stale position.**
-    **OPEN** (bug `B-047`).
+78. ~~**A single-track launch leaves the RUN pointing at a stale
+    position.**~~ **DONE 2026-11-02** (bug `B-047` → `F-056`).
     - **The app has two records of "what is playing", and a launch that
       does not go through the run updates only ONE of them.** The session
       (`useNowPlayingStore`) is written by the launch seam on every launch,
@@ -3238,11 +3259,150 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
       launched track, or to tell the index it is pointing at nothing
       (`currentIndex = -1`, "the live item is not in this run") — which
       changes what "Up Next" means on the queue screen.
-    - **Deliberately NOT fixed in the B-046 wave.** B-046's scope was "the
-      transport advances the run"; what the run *is* after an outside
-      launch is a different decision with a different blast radius — the
-      run is read by the queue screen, the now-playing shelf and the
-      playlist detail page.
+    - **Fixed, and the way a shipping app does it.** The rule is: playing
+      something from outside the queue starts a NEW queue (Plex replaces
+      the playback queue when the user starts a different item).
+      `useQueueSync` — the ONE mirror between the session and the run
+      store — replaces a stale run with the live item, comparing through
+      `mediaKey` so the run's raw catalogue URIs still match the session's
+      canonical one. A launch that IS in the run is untouched, and an
+      empty run stays empty.
+    - *Evidence:* 4 new tests in
+      `__tests__/infrastructure/player/useQueueSync.test.tsx`; **4
+      mutations, all killed**, every file restored byte-identically.
+
+79. ~~**An infrastructure module reached for a UI context.**~~ **DONE
+    2026-11-02** (bug `B-021` → `F-057`).
+    - **The layering was inverted.** `useClosePlayback` lives in
+      `src/infrastructure/player/` because that is the only directory
+      allowed to import the player module — and it called `useToast()`,
+      which is a **component-layer context** that **throws** outside a
+      `ToastProvider`. So the close verb could not be used outside the
+      app's own shell, and every test of it had to mock the toast just to
+      get past it. The app's `AppRoot` always wraps the tree in a provider,
+      so the defect could not fire in production — which is why it had been
+      recorded as a deliberate decision rather than fixed.
+    - **Fixed by INVERTING the dependency, not by working around it.**
+      `useClosePlayback()` now **REPORTS** — it returns a
+      `ClosePlaybackOutcome` (`{ok: true}` | `{ok: false, message}`) and
+      knows nothing about messages — and the new
+      `src/components/player/useClosePlaybackWithToast.ts` **DISPLAYS**,
+      turning a failed outcome into a toast. The teardown still has exactly
+      **one** owner; only the *showing* of the failure moved up a layer, to
+      the layer that knows how to show a message.
+    - **The four call sites cannot forget the toast.** The video player's
+      options sheet, the title overlay's back control, the dock's X and the
+      audio player's X all call the wrapper. Under the old shape a call
+      site could have forgotten — and a forgotten toast is a silent
+      failure, which is the exact shape of defect this app keeps hitting.
+    - **The rule pinned:** *a module under `src/infrastructure/` may not
+      import a UI context; the UI layer owns every user-visible message.*
+      The infrastructure test file no longer mocks the Toast module at all
+      and wraps the hook in **no** provider, so a regression fails there
+      instead of hiding behind a mock.
+    - *Evidence:* 6 tests in
+      `__tests__/infrastructure/player/useClosePlayback.test.tsx` (4 of them
+      new, for the outcome contract) and 3 in the new
+      `__tests__/components/player/useClosePlaybackWithToast.test.tsx`.
+
+80. ~~**`resizeMode` mapped onto mpv's `video-zoom`, which is a log2 SCALE
+    factor — so `cover` was a 2× zoom and `stretch` a 4× zoom.**~~ **DONE
+    2026-11-02** (bug `B-045` → `F-058`), shipped in lib **`v3.0.3`**.
+    - **The claim was false, and the docblocks repeated it.** mpv's
+      `--video-zoom` is *"given log 2"* — `0` is unscaled, `1` is twice the
+      size, `2` is four times. So `cover` rendered as a **2× magnified
+      crop** and `stretch` as a **4× magnified crop**, and the aspect was
+      never ignored — so `stretch` was not a stretch at all. The app asks
+      for `cover` on its mini-player dock (`VideoPlayer.tsx:497`,
+      `resizeMode={presentation.isMini ? 'cover' : 'contain'}`), so the
+      dock's picture was a 2× magnified, cropped video. Lib `v3.0.1` had
+      corrected the *claims*; the *behaviour* was unchanged.
+    - **Fixed in the lib, and the fix has ONE owner.** The **mode NAME**
+      now crosses into the native side unchanged — mpv has no fit / fill /
+      stretch enum to send — and a new pure `ResizeMode` object owns the
+      mapping onto mpv's own properties: `contain` → `video-zoom=0` /
+      `keepaspect=yes` / `panscan=0`; `cover` → `video-zoom=0` /
+      `keepaspect=yes` / `panscan=1.0`; `stretch` → `video-zoom=0` /
+      `keepaspect=no` / `panscan=0`. All three are written **every time**,
+      because mpv's properties persist — going back to `contain` has to put
+      `panscan` back to `0` and `keepaspect` back to `yes`.
+    - **The mapping is tested where it can actually run.** `ResizeMode`
+      carries no Android and no React Native type, on purpose: the module's
+      Robolectric suites are `@Ignore`d because they cannot run offline, so
+      a decision behind an Android type would ship untested. 12 plain-JUnit
+      tests, and they **execute**.
+    - **The PiP source rect followed.** It used to ask *"what zoom is the
+      picture rendered with?"*; it now asks **"does the picture fill its
+      view?"** — the fact the engine is actually rendering with — because a
+      magnified picture still covers every pixel of the view it is drawn
+      in.
+    - **It ships in its OWN release, deliberately.** The property values are
+      unit-verified against mpv's documented semantics, but the **pixels**
+      are not: mpv's manual warns that `--panscan` *"may not work with all
+      video output drivers"*. So the **verified** fix (item 81) went out
+      **first and alone** as lib `v3.0.2`, and this went out after it, as
+      lib `v3.0.3` — so if the pixels turn out wrong, `v3.0.2` is the
+      fallback and the verified work is not put at risk.
+    - *Evidence:* 22 new tests (12 Kotlin for `ResizeMode`, 6 JS for
+      `SimbaVideo`, 4 for the PiP rect); **10 mutations, all killed**. **The
+      device proofs are carried forward.**
+
+81. ~~**The buffered band re-drew the whole progress context 827 times a
+    cold start.**~~ **DONE 2026-11-02** (bug `B-009` → `F-059`), shipped in
+    lib **`v3.0.2`**.
+    - **What it was.** `onCacheState` fires **827 times across a cold
+      start** (the library's own device measurement), and every arrival
+      published a NEW `cacheRanges` array. `cacheRangesEqual` compares only
+      the count and the first/last bounds, so a moving last bound minted a
+      new progress value — and with it a new context value for every
+      `usePlayerProgress()` consumer. Real work re-done 827 times for a
+      band a few dozen pixels wide. B-009's own State line had said the
+      residual *"now needs a decision about the resolution the buffered band
+      is drawn at, not a device trace"* — this is that decision.
+    - **The decision, and it has ONE owner.** The published ranges are
+      quantised onto the grid the scrub bar is drawn at: the timeline is
+      cut into `durationMs / 1000` equal cells and every range boundary is
+      snapped to the nearest cell boundary. The rule lives in a new pure
+      `quantiseCacheRanges` module, and the quantisation happens on the
+      publish path and only there.
+    - **The proof is the IDENTITY, not the equality.** The published value
+      is now **IDENTICAL** — the same array identity, not an equal one — for
+      two raw inputs that land in the same cell, which is exactly what
+      stops the context from changing. Measured in the test: **200 native
+      arrivals → 9 context changes**, against 200 before.
+    - *Evidence:* 20 new tests; **7 mutations, all killed**.
+
+82. ~~**The jest worker never exited, and every measurement of it was
+    measuring the wrong thing.**~~ **DONE 2026-11-02** (bug `B-048` →
+    `F-060`).
+    - **The root cause is one file and one timer.** TanStack's
+      `Removable.scheduleGc()` arms `timeoutManager.setTimeout(...,
+      gcTime)`, and a **mutation's** `gcTime` defaults to **five minutes**
+      — the queries in these tests ask for `gcTime: 0`, a mutation never
+      did, and the mutation cache is never cleared, so the timer was never
+      cancelled. A real five-minute **ref'd** Node timer holds the event
+      loop open; jest closes the worker's IPC channel when the run is over
+      and expects the process to fall out of the loop, so it force-exits
+      the worker.
+    - **The correction to the 2026-11-02 entry is the important part.** It
+      said "no single suite leaks on its own" and concluded the leak was
+      "a cross-suite interaction inside one worker". Both halves were
+      **wrong**: a **lone** test file runs **in band** (jest's own rule),
+      so it can never reproduce the warning — which is why the per-file
+      sweep of all 137 suites saw **zero**. It is **one** file, and the
+      sweep was measuring the wrong thing.
+    - **How it was found.** 4 shards → shard 2; 37 suites → 10 files; a
+      5/5 split → neither half alone; a cross-product → `useApiQuery.test.tsx`
+      + any companion; then by `describe` block → only `useApiMutation`.
+    - **Fixed where the fact belongs.** `jest.setup.ts` already owned
+      TanStack's *notification* timer for exactly this reason; it now also
+      owns its *timers*, through a `timeoutManager` provider whose timers
+      are `unref()`'d. They still fire — the loop is always running for
+      some other reason during a test — but they can no longer be the
+      reason the worker cannot leave.
+    - *Evidence:* 3 new tests in
+      `__tests__/tooling/tanstackTimerRefs.test.tsx`; **2 mutations, all
+      killed**, `jest.setup.ts` restored byte-identically.
 
 ---
 

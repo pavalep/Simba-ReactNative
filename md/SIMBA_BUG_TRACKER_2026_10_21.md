@@ -69,7 +69,7 @@ is genuinely open.
 
 ## OPEN
 
-### B-001 · P0 · lib+app · the resume never resumed — the seek was silently refused
+### B-001 · P0 · lib+app · the resume never resumed — the seek was silently refused — **RESOLVED (F-001)**
 
 **Symptom.** After restarting the app, the "Continue at X" prompt resumed the
 film at **0:00**. The picture was the opening title card. The elapsed clock and
@@ -108,7 +108,7 @@ belongs to `time-pos`; a new file resets it in `onFileLoaded`.
 
 ---
 
-### B-002 · P0 · app · the teardown checkpoint flush never wrote
+### B-002 · P0 · app · the teardown checkpoint flush never wrote — **RESOLVED (F-002)**
 
 **Symptom.** The "Recently Played" card had no frame. The folder that holds
 them did not exist.
@@ -136,7 +136,7 @@ keeps each live session's own last snapshot; the teardown cleanup reads
 
 ---
 
-### B-003 · P1 · app · `skipPrev` read a frozen playhead
+### B-003 · P1 · app · `skipPrev` read a frozen playhead — **RESOLVED (F-003)**
 
 **Symptom.** "Previous track" restarted the track instead of going back ~10 s
 when the playhead was more than a few seconds in.
@@ -328,7 +328,7 @@ kept and unwired on purpose; whether the lib should still export it is a
 
 ---
 
-### B-009 · P1 · lib · "Maximum update depth exceeded" in `PlayerProvider` — **RE-FRAMED 2026-10-29: the toast was never a React depth error**
+### B-009 · P1 · lib · "Maximum update depth exceeded" in `PlayerProvider` — **RE-FRAMED 2026-10-29: the toast was never a React depth error** — **RESOLVED (F-059)**
 
 **Symptom.** A LogBox toast over the player, on every session.
 
@@ -377,12 +377,18 @@ moving last bound mints a new progress value, and with it a new context value
 for every `usePlayerProgress()` consumer. That is real work re-done 827 times
 for a band a few dozen pixels wide.
 
-**State:** re-framed. The toast is fixed (B-024, 2026-10-29). The depth-error
-hypothesis is disproved. The residual is a lib-side render-churn item, and the
-one lib-side hardening this entry named — stop `onCacheState` from minting a
-new context value on every tick — is still not done. **It now needs a
-decision about the resolution the buffered band is drawn at, not a device
-trace.**
+**State:** **RESOLVED (F-059) — both halves, 2026-11-02.** The toast was fixed
+by B-024 (F-026, 2026-10-29); the depth-error hypothesis is disproved; and the
+residual — the one lib-side hardening this entry named, *"stop `onCacheState`
+from minting a new context value on every tick"* — is **done**.
+
+The decision this entry said it needed, *"the resolution the buffered band is
+drawn at"*, is made, and it is ONE owner's: the published ranges are quantised
+onto a grid of `durationMs / 1000` cells by the pure `quantiseCacheRanges`
+module. The published value is now **IDENTICAL** (same array identity, not an
+equal one) for two raw inputs that land in the same cell — which is the proof
+the context stopped changing. Measured in the test: **200 native arrivals → 9
+context changes**, against 200 before. Shipped in lib **`v3.0.2`**.
 
 ---
 
@@ -436,7 +442,7 @@ un-memoised `SimbaVideo` pointer, the Spec's `addListener` /
 
 ---
 
-### B-011 · P0 · app · the hardware back button does not leave the player
+### B-011 · P0 · app · the hardware back button does not leave the player — **RESOLVED (F-017)**
 
 **Symptom.** `adb shell input keyevent 4` did **not** leave the player. The
 in-app back control (at ~90,68) did.
@@ -802,18 +808,74 @@ a style and a per-part visibility.
 **Symptom.** `adb shell uiautomator dump` returns **"null root node"** /
 "Operation aborted" for the system picker window.
 
-**Consequence.** A local file cannot be launched through the picker from this
-harness, which is what blocks the device proof of B-001/B-002.
+**Consequence.** A local file cannot be launched through the **picker** from
+this harness.
 
-**State:** open (tooling). Workaround in flight: push a clip to the device
-and launch it another way.
+**State:** **DEFERRED — and RE-SCOPED 2026-11-02, because two of its claims
+were stale.** The symptom is real but is **not fixable from either repo**: the
+window `uiautomator` cannot read is the OS SAF window, rendered by
+**DocumentsUI in another process**. The app's picker *is* that window and
+nothing else (`src/services/fileService.ts:218-225` →
+`@react-native-documents/picker`'s `Intent.ACTION_OPEN_DOCUMENT`), so no file
+in the app or the lib participates in it. Reproducing or disproving "null root
+node" needs emulator-5554 and that image's DocumentsUI build.
+
+**Two claims were wrong, and are corrected here.**
+
+  - *"…which is what blocks the device proof of B-001/B-002."* — **false, and
+    retired.** B-001 and B-002 are both **resolved** (F-001, F-002), and
+    B-002's device proof is already recorded (2026-10-26 — B-022's State line:
+    the close returns to Home with the feed painted, and the Recently Played
+    card shows the captured frame and the saved position).
+  - *"A local file cannot be launched."* — **too strong.** The app has an
+    **in-app** local-file route that never touches the SAF picker:
+    `src/screens/FolderBrowser/components/FolderBrowserScreen.tsx:196-200`
+    opens `file://<path>` off an RNFS listing. Any future local-file device
+    proof is driven from there, not from the picker.
+
+**What it waits on.** emulator-5554 (API 37) and that image's DocumentsUI.
+**No app-side and no lib-side lever exists.** The remedy is to stop driving
+device proofs through the picker.
 
 ---
 
 ### B-019 · P3 · tooling · CDP `Runtime.enable` times out
 
-**State:** open (tooling). Pre-existing; the LogBox toast overlaps the dock
-and swallows taps there.
+**State:** **open (tooling), and BLOCKED — re-scoped 2026-11-02.**
+
+**What is actually true.** The CDP client is **not in this repo**: the
+`Runtime.enable` call lives in the host tooling (`@swmansion/argent`'s
+`dist/tool-server.cjs`), where it is one of the two calls that are **not**
+wrapped in a best-effort `.catch(ignore)`. No app code path issues it, and no
+app-side setting changes the inspector's answer — so **nothing in this repo
+can fix it**.
+
+**One claim in this entry was a causal claim it did not support.** The entry
+said *"the LogBox toast overlaps the dock and swallows taps there"*, as if the
+toast were the cause. It is not: `Runtime.enable` times out because the
+**inspector** does not answer — the toast only *overlaps*. The toast's own
+source has since changed: `react-native-fast-image`'s legacy
+`getJSModule(RCTEventEmitter)` call is gone (F-037), and
+`scripts/check-legacy-event-emitter.cjs` is green (*"scanned 25 package(s) —
+658 file(s) — 0 error(s)"*). The toast can still come back — the app's own
+`logger.warn` raises a LogBox warning, and there is no `LogBox.ignoreLogs` in
+the app — but it is a **symptom**, not the cause.
+
+**What it waits on.**
+
+  - emulator-5554 + a dev build + Metro: the timeout travels Metro → emulator,
+    so any reproduction needs all three.
+  - an upstream fix: the installed Argent is **0.30.1** and npm `latest` is
+    **0.31.0**, so a bump is the only lever. `argent update` is broken on this
+    machine (upstream `resolvePackageRoot`), so the install needs the
+    `npm install -g` bypass — which needs Paval's explicit consent, because
+    Argent is a global tool.
+
+**The one app-side hypothesis worth testing when the device is free.** The
+inspector is answered **on the JS thread**, so a blocked JS thread produces
+exactly this timeout — and the lib's synchronous JSI bridge call
+(`getMpvPlayerModule().stopPlayback()`) is such a call. That is a
+**hypothesis, not a finding**, and it needs the device.
 
 ---
 
@@ -848,21 +910,39 @@ lib-only**, so its edge stays a **leaf**.
 
 ---
 
-### B-021 · P3 · app · an infrastructure module reaches for a UI context
+### B-021 · P3 · app · an infrastructure module reaches for a UI context — **RESOLVED (F-057)**
 
-**Symptom.** `useClosePlayback` (in `src/infrastructure/player/`) calls
+**Symptom.** `useClosePlayback` (in `src/infrastructure/player/`) called
 `useToast()`, which is a component-layer context that **throws** outside a
 `ToastProvider`.
 
-**Why it is not a defect yet.** The app's `AppRoot` always wraps the tree in
-`ToastProvider`, so this can only fire in a test that renders the chrome
+**Why it was not a defect yet.** The app's `AppRoot` always wraps the tree in
+`ToastProvider`, so this could only fire in a test that renders the chrome
 without one — which is an app state that cannot occur.
 
 **Cost.** Four player suites had to be corrected to render the chrome the way
 the app renders it.
 
-**State:** open, deliberately. Recorded so the next reader knows it is a
-decision, not an accident.
+**State:** **RESOLVED (F-057) — fixed 2026-11-02.** The dependency is
+**inverted**, not worked around:
+
+  - `useClosePlayback()` (infrastructure) **REPORTS** — it returns a
+    `ClosePlaybackOutcome` (`{ok: true}` | `{ok: false, message: string}`) and
+    knows nothing about messages.
+  - `useClosePlaybackWithToast()` (`src/components/player/`) **DISPLAYS** — it
+    turns a failed outcome into a toast.
+
+The teardown still has exactly **one** owner; only the *showing* of the
+failure moved up a layer, to the layer that knows how to show a message. The
+four call sites — the video player's options sheet, the title overlay's back
+control, the dock's X and the audio player's X — call the wrapper, so **none
+of them can forget the toast**, which is exactly what the old shape could not
+guarantee.
+
+**The rule this pins:** *a module under `src/infrastructure/` may not import a
+UI context; the UI layer owns every user-visible message.* The infrastructure
+test file no longer mocks the Toast module at all and wraps the hook in no
+provider, so a regression fails there instead of hiding behind a mock.
 
 ---
 
@@ -1099,7 +1179,7 @@ also a visible blank on a real screen — the tile is not broken, it is empty.
 
 ---
 
-### B-027 · P3 · lib · a local `npm pack` would ship ~68 MB of native binaries
+### B-027 · P3 · lib · a local `npm pack` would ship ~68 MB of native binaries — **RESOLVED (F-038)**
 
 **Symptom.** `npm pack --dry-run` on a working tree where the postinstall has
 run produces **124 files** and a **68.3 MB** package size (161.1 MB
@@ -1141,7 +1221,7 @@ release was needed for this fix.
 
 ---
 
-### B-028 · P3 · app · the FAB's bottom edge sits under the mini-player dock
+### B-028 · P3 · app · the FAB's bottom edge sits under the mini-player dock — **RESOLVED (F-029)**
 
 **Symptom.** Not yet observed — the condition is arithmetic, and the device
 check is deferred.
@@ -1208,7 +1288,7 @@ check is still deferred.
 
 ---
 
-### B-029 · P3 · app · the Movies grid's last row sat under its own FAB
+### B-029 · P3 · app · the Movies grid's last row sat under its own FAB — **RESOLVED (F-030)**
 
 **Symptom.** Not observed on a device — found by reading the arithmetic.
 
@@ -1224,7 +1304,7 @@ same way its two sibling screens do.
 
 ---
 
-### B-030 · P3 · app · the app had SIX files for one floating action button
+### B-030 · P3 · app · the app had SIX files for one floating action button — **RESOLVED (F-031)**
 
 **What it was.** `screens/Home/components/HomeFab.tsx`, three byte-identical
 copies of `BrowseFab` (Movies, Music, Podcasts), two more byte-identical
@@ -1248,7 +1328,7 @@ The Library's inline button also gained the `accessibilityRole` and the
 
 ---
 
-### B-031 · P2 · docs · the documents asserted behaviour the code never had
+### B-031 · P2 · docs · the documents asserted behaviour the code never had — **RESOLVED (F-032)**
 
 **What it was.** A cluster of **present-tense claims** that no line of code
 supported. Found by reading the register against the source, not against
@@ -1284,7 +1364,7 @@ comparison is untouched for the same reason.
 
 ---
 
-### B-032 · P2 · tooling · a gate was recorded green, and was not
+### B-032 · P2 · tooling · a gate was recorded green, and was not — **RESOLVED (F-033)**
 
 **What it was.** W32's summary recorded `npx tsc --noEmit` → 0. It was not 0.
 The commit `51da1b4` carried **six type errors**, and it took the next wave's
@@ -1324,7 +1404,7 @@ that looks like one.
 
 ---
 
-### B-033 · P2 · lib · `isSurfaceMounted()` always answers false — and the lib's own mock answers true
+### B-033 · P2 · lib · `isSurfaceMounted()` always answers false — and the lib's own mock answers true — **RESOLVED (F-036)**
 
 **Symptom.** `getMpvPlayerModule().isSurfaceMounted()` returns `false` even
 while a video surface is on screen. The lib's `openPlayer({type:'video'})`
@@ -1386,7 +1466,7 @@ fallback no longer disagree.
 **What it still needs:** a lib release and the app's `npm install` — see
 the master plan's register item 11.
 
-### B-034 · P2 · app · the batch "add to playlist" toast lies about how many items were added
+### B-034 · P2 · app · the batch "add to playlist" toast lies about how many items were added — **RESOLVED (F-049)**
 
 **Symptom.** In the Folder Browser's batch flow, the user selects some files,
 picks a playlist, and the app says **"Added 3 items to X"**. Some of those
@@ -1702,7 +1782,7 @@ recall.
 **Still owed:** the device proof — that pressing home on Android 12+ enters
 PiP — is deferred with every other device proof.
 
-### B-040 · P2 · app · the two "add to playlist" surfaces disagreed about what a playlist may take
+### B-040 · P2 · app · the two "add to playlist" surfaces disagreed about what a playlist may take — **RESOLVED (F-049)**
 
 **Symptom.** `PlaylistSheet` filtered the playlists it offered by lane;
 `PlaylistContextMenu` offered **every** playlist. The same radio station was
@@ -1740,7 +1820,7 @@ radio station" in **both** surfaces.
 
 ---
 
-### B-041 · P2 · app · the empty state told the user to create a playlist, and hid the create row
+### B-041 · P2 · app · the empty state told the user to create a playlist, and hid the create row — **RESOLVED (F-049)**
 
 **Symptom.** `PlaylistSheet` rendered ONE empty state for every empty case —
 *"No playlists yet. Create one to get started."* — and then **hid** the create
@@ -1768,7 +1848,7 @@ user to create a playlist it will not let them create.
 
 ---
 
-### B-042 · P2 · app · the pin state existed and the badge could be drawn, but nothing could SET it
+### B-042 · P2 · app · the pin state existed and the badge could be drawn, but nothing could SET it — **RESOLVED (F-050)**
 
 **Symptom.** `Playlist.pinned` and `Playlist.pinnedAt` existed in the model,
 the store had `setPlaylistPinned`, and the facade exposed `setPinned` — and
@@ -1795,7 +1875,7 @@ not a gesture. 10 tests (8 on the screen, 2 on the hook).
 
 ---
 
-### B-043 · P3 · docs+app · Home's rail was titled "Pinned Playlists" while it showed unpinned playlists
+### B-043 · P3 · docs+app · Home's rail was titled "Pinned Playlists" while it showed unpinned playlists — **RESOLVED (F-050)**
 
 **Symptom.** Home's playlist rail was titled **"Pinned Playlists"** and
 rendered the three most recently updated playlists — pinned or not. The title
@@ -1815,7 +1895,7 @@ legible without reading the title.
 
 ---
 
-### B-044 · P3 · app · the app carried a whole module of copy and a second `EmptyState`, and neither one was wired
+### B-044 · P3 · app · the app carried a whole module of copy and a second `EmptyState`, and neither one was wired — **RESOLVED (F-051)**
 
 **What it was.** Two owners — or, worse, **zero** — for facts that already
 had one. `src/constants/strings.ts` held a copy of **every** user-facing
@@ -1878,31 +1958,68 @@ So the three modes actually render as:
 picture is today a 2× magnified, cropped video. The fullscreen lane uses
 `contain`, which is right.
 
-**State:** open. **Found 2026-11-02**, while reviewing the PiP source-rect
-work, and confirmed against mpv's own manual rather than from memory.
+**State:** **RESOLVED (F-058) — fixed 2026-11-02.** **Found 2026-11-02**,
+while reviewing the PiP source-rect work, and confirmed against mpv's own
+manual rather than from memory.
 
-**What has already been done.** The lib's docblocks now say what mpv
-actually does (`MpvRenderViewManager.setResizeMode`, `SimbaVideo`'s
-`resizeMode` prop, and `PipSourceRect`'s zoom table), so the claim is no
-longer lying. **The behaviour is unchanged** — lib `v3.0.1` corrects the
-claims, not the rendering.
+**What lib `v3.0.1` did.** The lib's docblocks said what mpv actually does
+(`MpvRenderViewManager.setResizeMode`, `SimbaVideo`'s `resizeMode` prop, and
+`PipSourceRect`'s zoom table), so the claim was no longer lying — but **the
+behaviour was unchanged**: `v3.0.1` corrected the claims, not the rendering.
 
-**The fix, when it is made.** mpv's own options, set as runtime properties
-(mpv's manual: *"most options can be set at runtime via properties as
-well"*):
+**What the fix is.** The **mode NAME** now crosses into the native side
+unchanged, and a new pure `ResizeMode` object owns the mapping onto mpv's
+own properties:
 
-- `contain` → `keepaspect=yes`, `video-unscaled=no`, `panscan=0.0`, `video-zoom=0`
-- `cover` → `keepaspect=yes`, `video-unscaled=no`, `panscan=1.0`, `video-zoom=0`
-- `stretch` → `keepaspect=no`, `video-unscaled=no`, `video-zoom=0`
+| the app asks for | `video-zoom` | `keepaspect` | `panscan` | fills the view? |
+|---|---|---|---|---|
+| `contain` | `"0"` | `"yes"` | `"0"` | no |
+| `cover` | `"0"` | `"yes"` | `"1.0"` | **yes** |
+| `stretch` | `"0"` | `"no"` | `"0"` | **yes** |
 
-**Why it was not fixed in the same wave.** The fix is a change to the
-picture's rendering, and the only way to know it is right is to **look at
-the picture** — which needs a device, and no device test runs in this wave.
-mpv's manual also warns that `--panscan` *"may not work with all video
-output drivers"*, so the Android VO's support has to be seen, not assumed.
-Shipping an unverifiable rendering change into the same release as a
-unit-verified fix would put the verified work at risk. The public API does
-not change, so the fix is a patch release when it lands.
+All three properties are written **every time**, because mpv's properties
+persist — going back to `contain` has to put `panscan` back to `0` and
+`keepaspect` back to `yes`. Writing only the properties the new mode "uses"
+would leave the previous mode's property in place, and the picture would keep
+the last mode's zoom.
+
+`video-unscaled` is not set: it is **off** by default, and `video-zoom=0` is
+already unscaled — mpv's manual, `--video-zoom`: *"`--video-zoom=0` is
+unscaled"*.
+
+mpv's own manual is the authority: `--panscan` *"can only zoom in until
+either the video width or height fills the window"*, and `--keepaspect=no`
+*"will always stretch the video to window size"*.
+
+An unrecognised mode falls back to `contain` in **ONE** owner (the native
+side) instead of two.
+
+`ResizeMode` carries no Android and no React Native type, on purpose: the
+module's Robolectric suites are `@Ignore`d because they cannot run offline,
+so a decision that lived behind an Android type would ship untested. The
+mapping is plain JUnit and **actually executes** — 12 tests.
+
+**The PiP source rect followed.** It used to ask *"what zoom is the picture
+rendered with?"*; it now asks **"does the picture fill its view?"** — the
+fact the engine is actually rendering with — because a magnified picture
+still covers every pixel of the view it is drawn in. `cover` and `stretch`
+fill the view, so the frame IS the view's rect; `contain` fits inside it, so
+the frame is the video's own shape, centred.
+
+**Why it ships in its OWN release.** The fix is a change to the picture's
+rendering, and the only way to know it is *right* is to **look at the
+picture** — which needs a device, and no device test runs in this wave. mpv's
+manual also warns that `--panscan` *"may not work with all video output
+drivers"*, so the Android VO's support has to be seen, not assumed. So the
+**verified** fix (the buffered band's render churn) was published **first and
+alone** as lib `v3.0.2`, and the rendering change went out after it,
+separately, as lib **`v3.0.3`** — so that if the pixels turn out wrong,
+`v3.0.2` is the fallback and the verified work is not put at risk. The public
+API does not change, so it is a patch release.
+
+**What is still unproven.** The property **values** are pinned by unit tests
+against mpv's documented semantics; the **pixels** are not. The device proofs
+this needs are carried forward.
 
 ### B-046 · P1 · app · the next-track button is dead for every album and playlist launch — the transport advances the LIB's mpv playlist, and the app never fills it — **RESOLVED (F-053)**
 
@@ -1948,7 +2065,7 @@ Pinned by 9 new tests in
 `useLaneHandover.test.tsx`; **7 mutations, all killed**, every file
 restored byte-identically.
 
-### B-047 · P2 · app · a single-track launch leaves the RUN pointing at a stale position, so ⏭ can advance into an unrelated playlist
+### B-047 · P2 · app · a single-track launch leaves the RUN pointing at a stale position, so ⏭ can advance into an unrelated playlist — **RESOLVED (F-056)**
 
 **Symptom.** You play an album, then tap one track from a DIFFERENT artist.
 The ⏭ button is enabled, and pressing it jumps you into the **album** you
@@ -1986,8 +2103,23 @@ stale run is visible there too: after the single-track launch, the queue
 screen still shows the old album's tail. One defect, two surfaces — and
 the second one predates B-046.
 
-**State:** open. **Found 2026-11-02**, while implementing B-046 and
-reading what the fix had to assume.
+**State:** FIXED (F-056). **Found 2026-11-02**, while implementing B-046
+and reading what the fix had to assume.
+
+The rule is the shipping-app behaviour: **playing something from outside
+the queue starts a new queue.** Plex replaces the playback queue when the
+user starts a different item, and so does this. `useQueueSync` — the ONE
+mirror between the session and the run store — now replaces a stale run
+with the live item, and it compares through `mediaKey` so the run's raw
+catalogue URIs still match the session's canonical one (a raw comparison
+would miss every local path and replace a good run on every tick).
+
+A launch that IS in the run is untouched — the handover moves the run's
+index before it writes the session, and the playlist launches load the run
+first — and an **empty** run stays empty, so the queue screen's own empty
+state stays true. Pinned by 4 new tests in
+`__tests__/infrastructure/player/useQueueSync.test.tsx`; **4 mutations,
+all killed**, every file restored byte-identically.
 
 **What it needs — a product decision, not a patch.** What SHOULD happen
 when the user launches a track that is not in the current run?
@@ -2008,6 +2140,68 @@ was "the transport advances the run", and choosing what the run *is* after
 an outside launch is a different decision with a different blast radius
 (the queue screen, the now-playing shelf and the playlist detail page all
 read the run).
+
+---
+
+### B-048 · P2 · tooling · the jest worker never exits, because a mutation's garbage-collection timer holds the event loop open
+
+**Symptom.** A full jest run prints, once:
+
+```
+A worker process has failed to exit gracefully and has been force exited.
+```
+
+The suite is **green** and the exit code is **0** — this is a teardown
+symptom, not a failure. But it is a real defect: the worker cannot leave, so
+jest kills it.
+
+**Why it happens.** TanStack Query's `Removable.scheduleGc()` (query-core)
+arms `timeoutManager.setTimeout(() => this.optionalRemove(), this.gcTime)`.
+A **mutation's** `gcTime` defaults to **five minutes** (`3e5`) — the queries
+in this app's tests already ask for `gcTime: 0`, but a mutation never got the
+same treatment — and the mutation cache is never cleared, so TanStack never
+cancels that timer. It is a real, five-minute, **ref'd** Node timer, and
+`timeoutManager`'s default provider uses the platform's global `setTimeout`. A
+ref'd timer holds the event loop open.
+
+Jest closes the worker's IPC channel when the run is over and expects the
+process to fall out of the event loop on its own. A five-minute timer is
+still sitting in it, so jest force-exits the worker.
+
+**Why every earlier measurement missed it.** A **lone** test file runs **in
+band** (jest's own rule), so there is no worker process to force-exit and
+nothing to observe. The warning needs **at least two suites in one worker**.
+That is why the 2026-11-02 per-file sweep of all 137 suites reproduced it
+**zero** times: each file ran alone, so each ran in band. **The sweep was
+measuring the wrong thing.**
+
+**How it was found.** Bisecting the suite list with `--maxWorkers=2` (the
+configuration that still reproduces it):
+
+1. **4 shards** → shard **2** reproduces; shards 1, 3 and 4 do not.
+2. Shard 2's **37 suites** → a **10-file** set reproduces.
+3. That set's **5/5 split** → neither half reproduces alone, so the trigger
+   spans the split.
+4. A **cross-product** search → **`useApiQuery.test.tsx` + any companion
+   suite** reproduces; `useApiQuery.test.tsx` alone does not; each companion
+   alone does not.
+5. Narrowing by `describe` block → **only the `useApiMutation` block** leaks.
+
+**State:** **RESOLVED (F-060) — fixed 2026-11-02.** `jest.setup.ts` — the
+file that already owned TanStack's *notification* timer for exactly this
+reason — now also owns its *timers*: a `timeoutManager` provider whose timers
+are `unref()`'d. An unref'd timer does not hold the event loop open, but it
+still fires whenever the loop is running for any other reason, which during
+a test it always is.
+
+**The measurement that closed it.** The 5-file/5-file pair that reproduced
+the warning now reproduces it **zero** times; `useApiMutation` + a companion
+**zero** times; and a full run prints **no** force-exit line at all.
+
+**What is still owed.** `--detectOpenHandles` is still the **wrong**
+instrument, and this entry makes the reason precise: it forces `--runInBand`,
+and the condition needs **more than one worker**. It reported "no open handle"
+because there was no worker to hold a handle.
 
 ---
 
@@ -2067,9 +2261,14 @@ read the run).
 | F-050 | P2 | app | The pinned playlist was a state **nothing could set**, and a rail that lied about it. `Playlist.pinned` existed in the model, `setPlaylistPinned` existed in the store, `setPinned` existed in the facade — and **no caller in `src/`**. The badge could only be seen on a playlist pinned by hand in a debugger. Meanwhile Home's rail was titled **"Pinned Playlists"** while it rendered unpinned playlists too — the specification's own rule 4: a title that lies is a bug. Now: `AllPlaylistsScreen` carries a visible **32 px pin toggle** ("Pin to top" / "Unpin from top", `accessibilityState={{selected: pinned}}`) because a long-press is not reachable by a screen reader or a keyboard; the row's own label says ", pinned"; and the rail is retitled **"Playlists"** and orders pinned first (most recently pinned first), then recency. 10 new tests | app `9c22f56` |
 | F-051 | P3 | app | The app carried a whole module of copy and a second `EmptyState`, and neither one was wired. `src/constants/strings.ts` held a copy of every user-facing string the app uses — 19 `playlist*` keys among them — with **zero** consumers: it is not re-exported by `src/constants/index.ts`, no file imports it, no `require()` reaches it, no test names it, and `StringKey` (its only other export) appears nowhere else in the repo. The app also shipped **two** `EmptyState` components: the live `components/feedback/EmptyState/EmptyState.tsx` (19 importers) and `components/utility/EmptyState/EmptyState.tsx` (2 importers) — and they had already drifted: the utility one grew a `variant` prop the live one did not have, and **both** its importers use `variant="compact"`. Both are **deleted**: the dead copy module is gone, and the utility component's one API was **ported into** the live component (the `variant` prop, keeping the compact treatment — no card chrome, a 52 px disc and a 24 px glyph, the centred bold title, the single-line a11y label — so the 19 existing importers see no change), its unused `'default'` mode went with it, and the two importers now point at the live component. The orientation helper's two dead exports went in the same wave (register item 69) | app `f5/w22-close-minimise-d9` |
 | F-052 | P3 | lib | The package published two components that **draw no picture**, and kept them because dropping a public export is a breaking change — which is how a dead export becomes a promise the repo does not keep. `<PlayerRoot>` was a transparent `flex: 1` box plus the consumer's controls plus one `useLaunchPlayback` call; `<PlayerSurface>` was that box on its own. The arrangement they belonged to ended in 2.0.0: a native `SurfaceView` pinned to the Activity root, with a transparent React box standing in for it so a controls overlay had a rectangle to anchor to. Since 2.0.0 the picture is `<SimbaVideo>` — a Fabric component in the consumer's own tree — and **no surface is mounted at the Activity root any more**, so there was nothing left for a placeholder to reserve. Neither component had an importer: in the package and in the host app, the only reference to either was its own export. The 2026-10-29 recommendation was to REPAIR `<PlayerRoot>` into a real player; it was overruled, because a component that draws no picture cannot be repaired by giving it the picture the consumer is already mounting itself. Both are **deleted**, and the version is **3.0.0** — a major, because *"a published package cannot quietly drop a public export."* `useLaunchPlayback` stays exported, so the one job `<PlayerRoot>` still had (the once-per-payload load) is not lost | lib `v3.0.0` · `f18fe06` |
+| F-056 | P2 | app | A single-track launch left the RUN describing something the user was no longer listening to. The app keeps two records — the **session** (`useNowPlayingStore`, written by the launch seam on every launch) and the **run** (`usePlayerStore.playlist` + `currentIndex`, the queue) — and a launch that does not go through the run updated only the first: `useArtistScreen.ts:103-121` (`handlePlayTrack`) calls `openPlayer` and neither `loadPlaylistToPlayer` nor `playFromPlaylist`, while its own sibling `handlePlayAll` (`:123-127`) loads the run first. So the ⏭ button advanced into the OLD album, and the queue screen's "Up Next" showed the old album's tail — the same `currentIndex` feeds both, so it was one defect on two surfaces. The rule is the shipping-app behaviour: **playing something from outside the queue starts a new queue** (Plex replaces the playback queue when the user starts a different item). `useQueueSync` — the ONE mirror between the session and the run store — now replaces a stale run with the live item, comparing through `mediaKey` so the run's raw catalogue URIs still match the session's canonical one. A launch that IS in the run is untouched, and an EMPTY run stays empty. 4 new tests; 4 mutations, all killed | app `f5/w22-close-minimise-d9` |
 | F-053 | P1 | app | The transport advanced the LIB's mpv playlist, and the app never fills it — so the ⏭ control was permanently greyed out for every album and playlist launch, and `commands.next()` was a permanent no-op. Four facts died of the same cause: `canGoNext` and `canGoPrev` (always `false`), `currentUri` (always `null`, so the More sheet's Save / Add-to-playlist / Share rows all answered "Nothing to …") and `nextTrack` (always `null`, so the NextUp overlay could only say "Next item"). The app's RUN is `usePlayerStore.playlist`, and the rule for "what plays next" now has ONE owner — `runNeighbours` (`src/state/playerStore.ts`) — which is the **same** rule the queue screen already used for its "Up Next" list (`playlist[currentIndex + 1 …]`). The transport reads it, and the MOVE goes through the lane handover's one owner `useLaneHandover()`, which gained `previous()` / `retreat()` as the siblings of `next()` / `advance()`. What is PLAYING is the **session's** URI (`useNowPlayingStore`, written by the launch seam at every launch), so a single-file launch has an identity too. The handover is held in a REF, so the transport's stability contract — the commands memo rebuilds only when the DURATION changes — survives the new dependency. 12 new tests; **7 mutations, all killed**; every file restored byte-identically | app `f5/w22-close-minimise-d9` |
 | F-054 | P1 | app | The app's portrait lock went through `react-native-orientation-locker` — a third-party OS-control package, and the one exception to the standing rule that every system control routes through the central lib facade. It also made the app's own code **untestable**: the package's module body constructs a `NativeEventEmitter` with no argument, so merely importing `src/utils/orientation.ts` THREW, and with it `src/app/AppContent.tsx` — so neither file COULD have a test. The fix is not a mock; it is the **removal**. The lock now goes through the lib's own `commands.setOrientation('portrait')`, which maps to the **same** `SCREEN_ORIENTATION_PORTRAIT` constant the locker set (`MpvBridgeModule.kt:700` vs `OrientationModule.java:176`) and is written on the UI thread. The lib's `commands` is a MODULE SINGLETON built at module load (`src/types/player.ts:904-913`) whose bridge resolves lazily per call, so it is available at boot — `AppContent` is a descendant of the lib's `<SimbaPlayer>` (`App.tsx:80-82` → `AppRoot.tsx:184`). The package was a **SECOND writer** of a value the player's own lock and the close path already wrote. The 600 ms iOS delay and the 200 ms Android re-assert were workarounds for that package's own bugs and went with it, as did the iOS branch (the lib is Android-only — `react-native.config.js` declares `ios: null`). The dependency has left `package.json`, `package-lock.json` and the Credits screen. 2 new suites (4 tests); 3 mutations, all caught | app `f5/w22-close-minimise-d9` |
 | F-055 | P3 | app | Two dead-rule clusters the 2026-11-02 wave found. `src/infrastructure/player/validateLane.ts` had **zero** call sites — its own docblock claimed the facade called it, and the facade did not — so it was a guard that guarded nothing, and the lane handover has superseded it; the module is **deleted**, and `laneError` and the `LaneStreamError` interface went with it (`LaneStreamError` was **never** a variant of the `StreamError` union, so nothing else referenced it). And `pinnedAtMs` — the pinned-order rule (D-P3) — had **two** byte-identical copies, Home's and the management page's; it now has **ONE** owner in the feature facade (`src/features/playlists/index.ts`), beside `compatiblePlaylistsFor` and `setPlaylistPinned`, and both hooks import it. No behaviour changed. Pinned by 5 tests on the rule and 2 that assert the two surfaces agree on the pinned ORDER — the property two copies could not hold | app `f5/w22-close-minimise-d9` |
+| F-057 | P3 | app | An infrastructure module reached for a UI context. `useClosePlayback` (`src/infrastructure/player/`) called `useToast()`, which **throws** outside a `ToastProvider` — so the close verb could not be used outside the app's own shell, and every test of it had to mock the toast just to get past it. The dependency is **inverted**: the infrastructure hook **REPORTS** (it returns a `ClosePlaybackOutcome` — `{ok: true}` or `{ok: false, message}`) and the UI layer **DISPLAYS** (the new `src/components/player/useClosePlaybackWithToast.ts`). The teardown still has exactly **one** owner; only the *showing* of the failure moved up a layer, to the layer that knows how to show a message. The four call sites — the video player's options sheet, the title overlay's back control, the dock's X, the audio player's X — call the wrapper, so **none of them can forget the toast**, which is what the old shape could not guarantee. The rule pinned: **a module under `src/infrastructure/` may not import a UI context; the UI layer owns every user-visible message.** 9 tests; the infrastructure suite no longer mocks the Toast module at all | app `f5/w22-close-minimise-d9` |
+| F-058 | P2 | lib+app | `resizeMode` was translated into mpv's `video-zoom`, which is a **log2 scale factor** (`0` unscaled, `1` twice the size, `2` four times the size) — not a fit / fill / stretch enum. So `cover` rendered as a **2× magnified crop** and `stretch` as a **4× magnified crop**, and neither ignored the aspect. The **mode NAME** now crosses into the native side unchanged, and a new pure `ResizeMode` object owns the mapping onto mpv's own properties: `contain` → `video-zoom=0` / `keepaspect=yes` / `panscan=0`; `cover` → `video-zoom=0` / `keepaspect=yes` / `panscan=1.0`; `stretch` → `video-zoom=0` / `keepaspect=no` / `panscan=0`. All three are written **every time**, because mpv's properties persist. mpv's own manual is the authority. `ResizeMode` carries no Android and no React Native type, so its 12 tests are plain JUnit and **actually execute** (the module's Robolectric suites are `@Ignore`d because they cannot run offline). The PiP source rect followed: it now asks **"does the picture fill its view?"** — the fact the engine is actually rendering with — instead of "what zoom?", because a magnified picture still covers every pixel of the view it is drawn in. 10 mutations, all killed. **The pixels are still unproven** — that is a device proof | lib `v3.0.3` |
+| F-059 | P1 | lib | `onCacheState` fires **827 times across a cold start**, and every arrival published a NEW `cacheRanges` array — `cacheRangesEqual` compares only the count and the first/last bounds, so a moving last bound minted a new progress value and a new context value for every `usePlayerProgress()` consumer: real work re-done 827 times for a band a few dozen pixels wide. The published ranges are now **quantised** onto the grid the scrub bar is drawn at (`durationMs / 1000` cells) by a new pure `quantiseCacheRanges` module — **ONE** owner of the rule, applied on the publish path and only there. The published value is now **IDENTICAL** (same array identity, not an equal one) for two raw inputs that land in the same cell, which is the proof the context stopped changing: **200 native arrivals → 9 context changes**, against 200 before. A live stream (`durationMs === 0`) has no duration to be relative to, so it falls back to a fixed one-second grid, which still bounds the publish RATE. 7 mutations, all killed | lib `v3.0.2` |
+| F-060 | P2 | tooling | The jest worker never exited, because TanStack's **mutation** garbage-collection timer held the event loop open. `Removable.scheduleGc()` arms `timeoutManager.setTimeout(..., gcTime)`, and a mutation's `gcTime` defaults to **five minutes** — the queries in these tests ask for `gcTime: 0`, a mutation never did, and the mutation cache is never cleared, so the timer was never cancelled. It was a real five-minute **ref'd** Node timer, and jest force-exits a worker that cannot leave. Every earlier measurement missed it because a **lone** test file runs **in band** — the warning needs at least two suites in one worker, so the per-file sweep of all 137 suites was measuring the wrong thing. Found by bisecting the suite list with `--maxWorkers=2` (4 shards → shard 2; 37 suites → 10; a 5/5 split → neither half alone; a cross-product → `useApiQuery.test.tsx` + any companion; then by `describe` block → only `useApiMutation`). `jest.setup.ts` — which already owned TanStack's *notification* timer for exactly this reason — now also owns its *timers*: a `timeoutManager` provider whose timers are `unref()`'d, so they still fire but cannot hold the worker open. 3 new tests; 2 mutations, all killed; the reproducing pair no longer reproduces | app `f5/w22-close-minimise-d9` |
 
 ---
 
