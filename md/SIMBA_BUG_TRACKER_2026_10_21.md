@@ -1261,7 +1261,7 @@ another document. Each one is quoted with what the source actually says.
 | Master plan (2026-10-21 night block): "`commands.exitPlayer()` … calls `finishAndRemoveTask()` on the *current* activity" | The Kotlin calls **`activity.finish()`** since lib 1.22.0 (`F-023`). The *native hazard* is gone; the command is still deliberately unwired, for a different reason. |
 | Master plan register item 19: "`MpvRenderViewManager` — registered nowhere — **DELETED**" | The **app-side** copy was deleted at v12. The **lib's** `MpvRenderViewManager` is **live and registered** — `PlayerPackage.kt:62–64` returns `listOf(MpvRenderViewManager())`, and it is the Fabric view manager behind the app's `<SimbaVideo>`. |
 | V19 spec §3.2: "`exitPlayer()` … calls `activity.finishAndRemoveTask()`" | Same as above — `finish()` now. |
-| V19 spec (3 places), V21 spec, V21 tracker, UI_UX docs: "auto-PiP via `setAutoEnterEnabled(true)` (already in `AndroidManifest.xml`)" | **No `setAutoEnterEnabled` call exists in the app or the lib** (`PipManager.kt:123` sets only `setAspectRatio`). The manifest has `android:supportsPictureInPicture="true"` and **no** auto-enter attribute — and `setAutoEnterEnabled` is an `Activity`/`PictureInPictureParams` API, so it was never a manifest attribute to begin with. `MainActivity` has **no** `onUserLeaveHint` override. PiP entry is **manual**. |
+| V19 spec (3 places), V21 spec, V21 tracker, UI_UX docs: "auto-PiP via `setAutoEnterEnabled(true)` (already in `AndroidManifest.xml`)" | **TRUE WHEN WRITTEN, AND SUPERSEDED AGAIN 2026-11-02.** No `setAutoEnterEnabled` call existed in the app or the lib — that was the finding. It stopped being true with lib **2.1.0**, which sets `builder.setAutoEnterEnabled(autoEnter)` on the `PictureInPictureParams.Builder` (`PipManager.kt:144-146`, API 31+), and whose `buildPipParams` now takes an `autoEnter` flag that is refreshed on every `videoReconfig`. Note the API: **`Activity.setAutoEnterEnabled` does not exist** — the switch is `PictureInPictureParams.Builder.setAutoEnterEnabled`. Below API 31 the platform has no equivalent, so PiP entry stays manual there, and `MainActivity` has **no** `onUserLeaveHint` override. The manifest still has `android:supportsPictureInPicture="true"` and **no** auto-enter attribute — it never was one. |
 | Research doc §5.1–§5.5: "There is no view component", "The ViewManager that exists is registered nowhere", "SIMBA today: ❌ mounted by Kotlin into content view" | The lib's `codegenConfig.type` is **`"all"`**, `SimbaVideoViewNativeComponent.ts` exists, the view manager **is** registered, and the picture **is** an ordinary child of the React tree. That snapshot was superseded on 2026-10-16 and never updated. |
 
 **Why it mattered.** The V19 spec is "the deepest API record" and the master
@@ -1903,6 +1903,37 @@ output drivers"*, so the Android VO's support has to be seen, not assumed.
 Shipping an unverifiable rendering change into the same release as a
 unit-verified fix would put the verified work at risk. The public API does
 not change, so the fix is a patch release when it lands.
+
+### B-046 · P1 · app · the next-track button is dead for every album and playlist launch — the transport advances the LIB's mpv playlist, and the app never fills it
+
+**Symptom.** You play an album, a film series or a playlist, and the ⏭
+button is greyed out. There is no next track.
+
+**Why.** `useTransport`'s `canGoNext` and its `next` read the **lib's**
+`PlayerState.playlist` — mpv's own playlist (`useTransport.ts:733-737`,
+`:922-924`). The app's RUN lives somewhere else entirely:
+`usePlayerStore`'s `playlist`, filled by `loadPlaylistToPlayer`. The app
+**never** calls `commands.loadPlaylist`, so mpv's playlist holds only what
+`loadfile` put there — and `loadfile` **replaces** mpv's playlist, so it
+holds exactly one entry: the file being played. `canGoNext` is therefore
+`0 < 0` — false — for every launch.
+
+The lib's own "Play Next" queue is a different thing and does work: the
+queue screen's `addToQueue` / `prependToQueue` go through `useQueue`,
+which is the lib's queue store. That is not the run.
+
+**State:** open. **Found 2026-11-02**, while implementing phase 5.
+
+**What it needs.** The transport's `next` has to advance the app's RUN
+through the lane handover's one owner (`useLaneHandover` in
+`src/infrastructure/player/useResumeAwareLaunch.ts`), and `canGoNext` has
+to consider the run as well as mpv's playlist. The handover already
+exists — it was built for exactly this. The transport is not wired to it
+yet, and it needs its own tests, because the transport is shared by every
+player chrome.
+
+This is step 28 of the pinned-playlist tracker, and it is why a MIXED
+playlist cannot be played in order yet.
 
 ---
 

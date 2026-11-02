@@ -94,13 +94,14 @@ const initialState: PlayerState = {
   currentIndex: -1,
 };
 
-function normalizeSingleLane(entries: PlaybackEntryInput[]): PlaylistEntry[] {
-  const normalized = entries.map(normalizePlaybackEntry);
-  const lane = normalized[0]?.mediaType;
-  return lane ? normalized.filter(entry => entry.mediaType === lane) : normalized;
-}
-
-function activeLane(state: PlayerState): MediaLane | undefined {
+/**
+ * The lane the run is playing in right now.
+ *
+ * ONE owner, because "which lane is live" is asked in more than one place
+ * and more than one answer is more than one chance to be wrong. The
+ * handover reads it to decide whether the next item is a lane CHANGE.
+ */
+export function activeLane(state: PlayerState): MediaLane | undefined {
   return state.currentFile?.mediaType ?? state.playlist[0]?.mediaType;
 }
 
@@ -123,8 +124,22 @@ export const usePlayerStore = create<PlayerState & PlayerActions>()(
     (set) => ({
       ...initialState,
 
+      // The run holds EVERY lane.
+      //
+      // This used to narrow the run to the first entry's lane, and to drop
+      // anything added in another lane — silently. The narrowing made a
+      // mixed run impossible to even SEE: the items were in the store and
+      // no surface listed them, so the run looked like it had lost them.
+      //
+      // The lane rule still exists, and it lives where it belongs: the
+      // PLAYLIST STORE refuses an item a single-lane playlist may not
+      // hold (`isPlaylistMediaKindAllowed`), so a mixed run can only be
+      // built from a MIXED playlist or assembled by the user on purpose.
+      // What crosses the lane boundary at runtime is the handover's job,
+      // and the handover has ONE owner — `useLaneHandover` in
+      // `src/infrastructure/player/useResumeAwareLaunch.ts`.
       loadPlaylistToPlayer: (entries) => {
-        const normalized = normalizeSingleLane(entries);
+        const normalized = entries.map(normalizePlaybackEntry);
         set({
           playlist: normalized,
           currentIndex: normalized.length > 0 ? 0 : -1,
@@ -132,16 +147,16 @@ export const usePlayerStore = create<PlayerState & PlayerActions>()(
         });
       },
 
+      // The run holds every lane here too. This used to drop an item in
+      // another lane without a word: the user tapped "add", nothing
+      // appeared, and nothing said why. A silent refusal is a lie about
+      // what the app does.
       addToPlaylist: (input) =>
         set((s) => {
           const incoming = (
             Array.isArray(input) ? input : [input]
           ).map(normalizePlaybackEntry);
-          const lane = activeLane(s) ?? incoming[0]?.mediaType;
-          const items = lane
-            ? incoming.filter(entry => entry.mediaType === lane)
-            : incoming;
-          const playlist = [...s.playlist, ...items];
+          const playlist = [...s.playlist, ...incoming];
           const currentIndex = s.currentIndex === -1 && playlist.length > 0
             ? 0
             : s.currentIndex;

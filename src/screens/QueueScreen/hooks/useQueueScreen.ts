@@ -99,22 +99,28 @@ export function useQueueScreen(): UseQueueScreenResult {
     reorderQueue: reorderQueueAction,
     removeFromQueue: removeFromQueueAction,
   } = useQueue();
-  const routeLane = route.params?.from === 'video' ? 'video' : 'audio';
-  const activeLane: MediaLane = currentTrack?.mediaType ?? routeLane;
-
+  // The run is NOT filtered by lane.
+  //
+  // It used to be: the screen showed only the active lane's items, so a
+  // run that crossed lanes showed the half the user could not play and
+  // hid the half they could. The lane rule belongs to the PLAYLIST STORE
+  // (`isPlaylistMediaKindAllowed`), which refuses an item a single-lane
+  // playlist may not hold; at runtime the boundary is crossed by the
+  // handover, and the handover has ONE owner — `useLaneHandover` in
+  // `src/infrastructure/player/useResumeAwareLaunch.ts`.
   const upNextRows = useMemo<QueueDisplayRow[]>(() => {
-    const queuedRows = queue
-      .map((entry: PlayerQueueItem<MediaSource, MediaKind, MediaLane>, rawIndex) => ({
+    const queuedRows = queue.map(
+      (entry: PlayerQueueItem<MediaSource, MediaKind, MediaLane>, rawIndex) => ({
         entry: toPlaylistEntry(entry),
         origin: 'queue' as const,
         rawIndex,
-      }))
-      .filter(row => row.entry.mediaType === activeLane);
+      }),
+    );
     const playlistRows = playlist
       .map((entry, rawIndex) => ({entry, origin: 'playlist' as const, rawIndex}))
-      .filter(row => row.rawIndex > currentIndex && row.entry.mediaType === activeLane);
+      .filter(row => row.rawIndex > currentIndex);
     return [...queuedRows, ...playlistRows];
-  }, [activeLane, currentIndex, playlist, queue]);
+  }, [currentIndex, playlist, queue]);
 
   const upNext = useMemo(
     () => upNextRows.map(row => row.entry),
@@ -122,13 +128,16 @@ export function useQueueScreen(): UseQueueScreenResult {
   );
   const queueCount = upNextRows.filter(row => row.origin === 'queue').length;
 
+  // The history is not filtered by lane either — the same reason. The
+  // `.slice()` is load-bearing: without it the `.reverse()` would mutate
+  // the store's own array.
   const history = useMemo(
     () =>
       playbackHistory
-        .filter(entry => entry.mediaType === activeLane)
+        .slice()
         .reverse()
         .map(entry => toPlaylistEntry(entry)),
-    [activeLane, playbackHistory],
+    [playbackHistory],
   );
 
   const hasContent = !!currentTrack || upNext.length > 0 || history.length > 0;
@@ -301,12 +310,21 @@ export function useQueueScreen(): UseQueueScreenResult {
         ...(entry.folderId ? {folderId: entry.folderId} : {}),
         addedAt: now,
       }));
-      const kind = activeLane === 'video' ? 'VIDEO_ONLY' : 'AUDIO_ONLY';
+      // The kind follows the ITEMS, not the screen. A run that crosses
+      // lanes is saved as MIXED — calling it a single-lane playlist would
+      // have the store refuse half of the items it was just handed.
+      const lanes = new Set(upNext.map(entry => entry.mediaType));
+      const kind =
+        lanes.size > 1
+          ? 'MIXED'
+          : lanes.has('video')
+            ? 'VIDEO_ONLY'
+            : 'AUDIO_ONLY';
       playlistActions.importPlaylist({name: trimmed, items, kind});
       haptics.medium();
       return true;
     },
-    [activeLane, upNext, haptics],
+    [upNext, haptics],
   );
 
   return {

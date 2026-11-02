@@ -2,14 +2,15 @@
 // Simba Player — AllPlaylistsScreen (Phase 20)
 // ────────────────────────────────────────────────────────
 
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
+  Animated,
   View,
   TouchableOpacity,
   FlatList,
+  SectionList,
   StyleSheet,
   Platform,
-  Modal,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -18,44 +19,84 @@ import {spacing, radius} from '../../../theme/tokens';
 import {useAnimatedEntrance} from '../../../hooks/useAnimatedEntrance';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {AppButton} from '../../../components/core/AppButton/AppButton';
-import {AppTextInput} from '../../../components/core/AppTextInput/AppTextInput';
-import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SimbaStatusBar} from '../../../components/StatusBar';
-import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
+import {PlaylistActionMenu} from '../../../components/playlist/PlaylistActionMenu';
+import {PlaylistCard} from '../../../components/playlist/PlaylistCard';
 import {PlaylistCreateModal} from '../../../components/playlist/PlaylistCreateModal';
+// The kind chips have ONE owner: the Library's own filter list, whose
+// labels come from `PLAYLIST_KIND_LABELS` - so a kind can never be
+// spelled two ways, and a kind added to `PlaylistKind` cannot leave this
+// rail behind (spec §4.5).
+import {LOCAL_PLAYLIST_FILTERS} from '../../../features/library/presentation/related/localFilesConfig';
 import {useAllPlaylistsScreen} from '../hooks/useAllPlaylistsScreen';
-import type {PlaylistKind} from '../../../types/playlist';
-import {PLAYLIST_KIND_LABELS} from '../../../types/playlist';
+import type {Playlist, PlaylistKind} from '../../../types/playlist';
+
+type PlaylistSection = {
+  title: string;
+  data: Playlist[];
+};
 
 export const AllPlaylistsScreen: React.FC = () => {
   const {colors} = useTheme();
   const {
     allPlaylists,
+    filterType,
+    setFilterType,
+    filteredPlaylists,
+    pinnedPlaylists,
+    otherPlaylists,
     handlePlaylistPress,
     handleCreate,
-    handleRename,
-    handleDelete,
     handleTogglePin,
   } = useAllPlaylistsScreen();
-
-  const {confirm: confirmDelete, dialog: deleteDialog} = useConfirmDialog();
 
   // ── Create Modal State ──
   // The create FORM belongs to `PlaylistCreateModal` - the one owner. This
   // screen only owns whether that modal is open.
   const [createVisible, setCreateVisible] = useState(false);
 
-  // ── Rename Modal State ──
-  const [renameVisible, setRenameVisible] = useState(false);
-  const [renameId, setRenameId] = useState('');
-  const [renameName, setRenameName] = useState('');
+  // ── The long-press menu ──
+  // The menu is the SHORTCUT, not the only door: the card carries a
+  // visible 32 px pin toggle too, because a long-press is not reachable
+  // by a screen reader or a keyboard (D-P8, spec §4.5).
+  const [actionPlaylistId, setActionPlaylistId] = useState<string | null>(null);
+
+  // The menu reads the LIVE playlist, so a pin changed elsewhere shows in
+  // the menu's label instead of a stale snapshot. It is looked up in the
+  // UNFILTERED list on purpose: the filter can change while the sheet is
+  // open, and a menu that loses its playlist because a chip was pressed
+  // is a menu that closes itself for no reason.
+  const actionPlaylist = useMemo(
+    () => allPlaylists.find(playlist => playlist.id === actionPlaylistId) ?? null,
+    [allPlaylists, actionPlaylistId],
+  );
 
   const {styles: animStyles} = useAnimatedEntrance(
-    Math.min(allPlaylists.length, 12),
+    Math.min(filteredPlaylists.length, 12),
     {staggerDelay: 50, direction: 'up', duration: 300},
   );
+
+  /**
+   * The list's two sections.
+   *
+   * The PINNED section is rendered ONLY when something is pinned: a
+   * section with nothing in it is noise (spec §4.11). The other section
+   * holds the playlists that are NOT pinned — a playlist is rendered
+   * ONCE, in the section that describes its state, so the page never
+   * shows the same playlist twice under two headings.
+   */
+  const sections = useMemo<PlaylistSection[]>(() => {
+    const next: PlaylistSection[] = [];
+    if (pinnedPlaylists.length > 0) {
+      next.push({title: 'Pinned', data: pinnedPlaylists});
+    }
+    if (otherPlaylists.length > 0) {
+      next.push({title: 'Other playlists', data: otherPlaylists});
+    }
+    return next;
+  }, [pinnedPlaylists, otherPlaylists]);
 
   const handleCreateSubmit = useCallback(
     (name: string, kind: PlaylistKind) => {
@@ -65,104 +106,27 @@ export const AllPlaylistsScreen: React.FC = () => {
     [handleCreate],
   );
 
-  const handleStartRename = useCallback(
-    (id: string, currentName: string) => {
-      setRenameId(id);
-      setRenameName(currentName);
-      setRenameVisible(true);
-    },
-    [],
-  );
+  const handleLongPress = useCallback((playlistId: string) => {
+    setActionPlaylistId(playlistId);
+  }, []);
 
-  const handleRenameSubmit = useCallback(() => {
-    handleRename(renameId, renameName);
-    setRenameVisible(false);
-    setRenameName('');
-  }, [renameId, renameName, handleRename]);
+  const handleCloseActionMenu = useCallback(() => {
+    setActionPlaylistId(null);
+  }, []);
 
-  const handleDeleteConfirm = useCallback(
-    async (id: string) => {
-      const confirmed = await confirmDelete({
-        title: 'Delete Playlist',
-        message: 'Are you sure you want to delete this playlist? This action cannot be undone.',
-        confirmLabel: 'Delete',
-        destructive: true,
-      });
-      if (confirmed) {
-        handleDelete(id);
-      }
-    },
-    [confirmDelete, handleDelete],
-  );
-
-  const renderItem = ({item, index}: {item: typeof allPlaylists[number]; index: number}) => (
-    <TouchableOpacity
-      style={[
-        styles.playlistItem,
-        {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle},
-        animStyles[index] || {},
-      ]}
-      activeOpacity={0.7}
-      onPress={() => handlePlaylistPress(item)}
-      accessibilityRole="button"
-      accessibilityLabel={`Open playlist ${item.name}${item.pinned ? ', pinned' : ''}`}>
-      <View style={[styles.iconBox, {backgroundColor: colors.accent.goldDim}]}>
-        <SvgIcon name="listMusic" size={22} color={colors.accent.gold} />
-      </View>
-      <View style={styles.playlistInfo}>
-        <AppText variant="body2" color="primary" numberOfLines={1}>
-          {item.name}
-        </AppText>
-        <AppText variant="caption" color="tertiary">
-          {item.items.length} {item.items.length === 1 ? 'item' : 'items'} ·{' '}
-          {PLAYLIST_KIND_LABELS[item.kind]}
-        </AppText>
-      </View>
-      {/* The pin TOGGLE. The management page shows visible management
-          buttons, and the pin is one of them: a long-press is not
-          reachable by a screen reader or a keyboard (D-P8, spec §4.5). */}
-      <TouchableOpacity
-        style={[
-          styles.actionBtn,
-          {backgroundColor: item.pinned ? colors.accent.goldDim : colors.border.subtle},
-        ]}
-        onPress={() => handleTogglePin(item.id, !item.pinned)}
-        activeOpacity={0.7}
-        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-        accessibilityRole="button"
-        accessibilityLabel={item.pinned ? 'Unpin from top' : 'Pin to top'}
-        accessibilityHint={item.name}
-        accessibilityState={{selected: item.pinned}}>
-        <SvgIcon
-          name={item.pinned ? 'pinFilled' : 'pin'}
-          size={14}
-          color={item.pinned ? colors.accent.gold : colors.text.secondary}
-        />
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.actionBtn, {backgroundColor: colors.border.subtle}]}
-        onPress={() => handleStartRename(item.id, item.name)}
-        activeOpacity={0.7}
-        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-        accessibilityRole="button"
-        accessibilityLabel={`Rename playlist ${item.name}`}>
-        <SvgIcon name="sliders" size={14} color={colors.text.secondary} />
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.actionBtn, {backgroundColor: colors.semantic.error + '20'}]}
-        onPress={() => handleDeleteConfirm(item.id)}
-        activeOpacity={0.7}
-        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-        accessibilityRole="button"
-        accessibilityLabel={`Delete playlist ${item.name}`}>
-        <SvgIcon name="close" size={14} color={colors.semantic.error} />
-      </TouchableOpacity>
-    </TouchableOpacity>
+  const renderPlaylist = ({item, index}: {item: Playlist; index: number}) => (
+    <Animated.View style={animStyles[index] || undefined}>
+      <PlaylistCard
+        playlist={item}
+        onPress={handlePlaylistPress}
+        onLongPress={handleLongPress}
+        onTogglePin={handleTogglePin}
+      />
+    </Animated.View>
   );
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      {deleteDialog}
       <SimbaStatusBar variant="home" />
       <LinearGradient
         colors={[colors.background.primary, colors.background.elevated]}
@@ -172,9 +136,12 @@ export const AllPlaylistsScreen: React.FC = () => {
       {/* ── Header ── */}
       <View style={styles.header}>
         <BackButton />
-        <AppText variant="displaySans" color="primary" style={{flex: 1}}>
+        <AppText variant="displaySans" color="primary" style={styles.title}>
           All Playlists
         </AppText>
+        {/* The ONE create affordance on this page. There is no FAB: a
+            second create button on one page is two ways to do one thing
+            (spec §4.5). */}
         <AppButton
           title="Create"
           variant="primary"
@@ -183,30 +150,93 @@ export const AllPlaylistsScreen: React.FC = () => {
         />
       </View>
 
-      {/* ── Content ── */}
-      {allPlaylists.length === 0 ? (
-        <View style={styles.emptyWrapper}>
-          <EmptyState
-            icon="listMusic"
-            title="No Playlists"
-            description="Create your first playlist to organize your media."
-            actionLabel="Create Playlist"
-            onAction={() => setCreateVisible(true)}
-          />
-        </View>
-      ) : (
+      {/* ── Kind filter ── */}
+      {/* A FILTER: it narrows what the page SHOWS. It never changes what
+          a playlist may contain (spec §4.5). */}
+      <View style={styles.filterRow}>
         <FlatList
-          data={allPlaylists}
-          renderItem={renderItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          getItemLayout={(_, index) => ({length: 76, offset: 76 * index, index})}
-          windowSize={5}
-          maxToRenderPerBatch={10}
-          removeClippedSubviews={true}
+          horizontal
+          data={LOCAL_PLAYLIST_FILTERS}
+          keyExtractor={item => item.key}
+          renderItem={({item}) => {
+            const isActive = filterType === item.key;
+            return (
+              <TouchableOpacity
+                style={[
+                  styles.filterChip,
+                  {
+                    backgroundColor: isActive
+                      ? colors.accent.goldDim
+                      : colors.background.elevated,
+                    borderColor: isActive
+                      ? colors.accent.gold
+                      : colors.border.subtle,
+                  },
+                ]}
+                onPress={() => setFilterType(item.key)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.label} playlists`}
+                accessibilityState={{selected: isActive}}>
+                <AppText
+                  variant="caption"
+                  color={isActive ? 'accent' : 'secondary'}
+                  style={styles.filterChipLabel}>
+                  {item.label}
+                </AppText>
+              </TouchableOpacity>
+            );
+          }}
+          contentContainerStyle={styles.filterRail}
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={false}
+          initialNumToRender={LOCAL_PLAYLIST_FILTERS.length}
         />
-      )}
+      </View>
+
+      {/* ── Content ── */}
+      <View style={styles.content}>
+        {allPlaylists.length === 0 ? (
+          <View style={styles.emptyWrapper}>
+            <EmptyState
+              icon="listMusic"
+              title="No playlists yet"
+              description="Create your first playlist to organize your media."
+              actionLabel="Create playlist"
+              onAction={() => setCreateVisible(true)}
+            />
+          </View>
+        ) : filteredPlaylists.length === 0 ? (
+          <View style={styles.emptyWrapper}>
+            <EmptyState
+              icon="listMusic"
+              title="No playlists yet"
+              description="Pick another kind to see your playlists."
+            />
+          </View>
+        ) : (
+          <SectionList
+            sections={sections}
+            renderItem={renderPlaylist}
+            keyExtractor={item => item.id}
+            renderSectionHeader={({section}) => (
+              <AppText
+                variant="overline"
+                color="secondary"
+                accessibilityRole="header"
+                style={styles.sectionHeader}>
+                {section.title}
+              </AppText>
+            )}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            stickySectionHeadersEnabled={false}
+            initialNumToRender={8}
+            windowSize={5}
+            maxToRenderPerBatch={8}
+          />
+        )}
+      </View>
 
       {/* ── Create Modal ── */}
       {/* One owner for "create a playlist": PlaylistCreateModal. */}
@@ -216,55 +246,13 @@ export const AllPlaylistsScreen: React.FC = () => {
         onCreate={handleCreateSubmit}
       />
 
-      {/* ── Rename Modal ── */}
-      <Modal
-        visible={renameVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRenameVisible(false)}>
-        <View style={[styles.modalOverlay, {backgroundColor: colors.background.floating}]}>
-          <View
-            style={[
-              styles.modalContent,
-              {backgroundColor: colors.background.elevated},
-            ]}>
-            <AppText variant="displaySans" color="primary" style={{marginBottom: spacing.md}}>
-              Rename Playlist
-            </AppText>
-
-            <AppTextInput
-              value={renameName}
-              onChangeText={setRenameName}
-              placeholder="New name"
-              autoFocus
-              clearable
-              validate={v =>
-                v.trim() ? undefined : 'Enter a playlist name.'
-              }
-              containerStyle={styles.modalInput}
-            />
-
-            <View style={styles.modalActions}>
-              <AppButton
-                title="Cancel"
-                variant="text"
-                size="sm"
-                onPress={() => {
-                  setRenameVisible(false);
-                  setRenameName('');
-                }}
-              />
-              <AppButton
-                title="Save"
-                variant="primary"
-                size="sm"
-                onPress={handleRenameSubmit}
-                disabled={!renameName.trim()}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* ── Long-press menu ── */}
+      <PlaylistActionMenu
+        visible={actionPlaylist !== null}
+        playlist={actionPlaylist}
+        onTogglePin={handleTogglePin}
+        onClose={handleCloseActionMenu}
+      />
     </SafeAreaView>
   );
 };
@@ -279,60 +267,40 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     gap: spacing.sm,
   },
+  title: {
+    flex: 1,
+  },
+  filterRow: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  filterRail: {
+    gap: spacing.sm,
+  },
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  filterChipLabel: {
+    fontWeight: '600',
+  },
+  content: {
+    flex: 1,
+  },
   listContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: 40,
   },
-  playlistItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
+  sectionHeader: {
+    marginTop: spacing.sm,
     marginBottom: spacing.sm,
-    gap: spacing.md,
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playlistInfo: {
-    flex: 1,
-  },
-  actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   emptyWrapper: {
     flex: 1,
     justifyContent: 'center',
-  },
-  // ── Modal Styles ──
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  modalContent: {
-    width: '100%',
-    maxWidth: 360,
-    borderRadius: radius.lg,
-    padding: spacing.xxl,
-  },
-  modalInput: {
-    marginBottom: spacing.md,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
   },
 });

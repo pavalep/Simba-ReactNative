@@ -425,17 +425,65 @@ Debug APK built and installed. Results, in the order they were found:
    failure this wave exists to remove, and it is now above the render question
    in priority.
 
-5. 🟠 **Lib defect: the error is mislabelled.** The bridge maps this to
+5. ~~**Lib defect: the error is mislabelled.** The bridge maps this to
    `E_RENDERER_GONE` (`MpvBridgeModule`), but -13 is
    `MPV_ERROR_LOADING_FAILED`. The UI is told the renderer crashed when the
    file simply failed to download. Every load failure will read as a GPU
-   crash.
+   crash.~~ **RESOLVED — lib `1.17.0` (2026-10-20); re-verified against the
+   CURRENT lib source 2026-11-02.** The mapping is driven by mpv's
+   **numeric** code now: `MpvBridgeModule.kt:3046` reads
+   `-13 -> "E_LOAD_FAILED"`, and `E_LOAD_FAILED` is **3001** in the numeric
+   registry (`MpvBridgeModule.kt:3106`). `E_RENDERER_GONE` is **3010**
+   (`MpvBridgeModule.kt:3115`) and is **no longer the catch-all** — the
+   contract says so in its own words (`MpvBridgeModule.kt:3042-3043`: *"it
+   means 'the video output died', and a load failure is not that"*). The
+   error is emitted **once**, with a numeric `code`, a `codeName`, the raw
+   `nativeCode` and `recoverable`. Pinned by the lib's own test
+   (`android/src/test/java/com/simba/player/mpv/MpvCommandFailureTest.kt:81`).
+   **See register item 35** — the same defect, closed there on 2026-10-20.
 
 6. ⚪ Confirmed still live, from the a11y tree, unchanged by this stage:
    `SeekBar "Live stream — not seekable"` disabled with `Remaining time
    unknown "--:--"` (the P1 duration bug); `StaticText ""I Accuse My Parents""`
    with literal quotes; stray `2×` / `☀ 100%` / `♪ 100%` chips floating
-   mid-frame.
+   mid-frame. **PARTLY CLOSED 2026-11-02 by inspection — two of the three
+   were already fixed, and the third was never a bug.**
+    - **The duration half: the STRINGS are still in the source; the BUG is
+      not.** `TransportBar.tsx:186` computes `hasKnownDuration =
+      state.durationMs > 0`, and only then does the transport show a
+      remaining time (`:595-608` — `Remaining ${formatMsAsClock(...)}` when
+      known, the literal `'Remaining time unknown'` at `:601` and
+      `UNKNOWN_DURATION_LABEL = '--:--'` at `:140` when not). The P1 this
+      entry names — a *playing* video reading `--:--` — was **lib
+      `1.18.0`'s** fix (register item 3, 2026-10-20: the lib's *progress*
+      context was losing `durationMs` while the *state* context kept it).
+      With that fixed, `--:--` means the source really has **no fixed
+      duration** — a live stream — which is the honest answer, and the seek
+      bar says so (`TransportBar.tsx:456`: `'Live stream — not seekable'`;
+      `AudioSeekBar.tsx:130` is the audio lane's twin). **NEEDS A DEVICE to
+      confirm the live-stream case still reads as described**; the P1 no
+      longer applies.
+    - **The literal quotes: FIXED in source.** `normalizeArchiveTitle`
+      (`src/infrastructure/api/internetArchive/adapter.ts:141-154`) strips
+      **one matched pair** of surrounding double quotes and leaves every
+      other title byte-identical, and it is applied at **all five** title
+      assignments (`adapter.ts:327`, `:405`, `:450`, `:591`, `:629`). The
+      only places that still wrap a title in quotes are toast and
+      confirm-dialog sentences (`useHomeScreen.ts:306`, `HistoryScreen.tsx:156`),
+      where the quotes are the sentence's own. **Register item 29** closed
+      the same observation on 2026-10-27.
+    - **The chips: they are not stray, and they cannot be in the a11y tree
+      at all.** `VerticalSwipeGestures.tsx` paints them — `☀ {percent}%`
+      (`:475`), `♪ {percent}%` (`:504`), `2×` (`:528`) — as **gesture
+      feedback**: each is `pointerEvents="none"`,
+      `accessibilityElementsHidden` and `importantForAccessibility="no"`,
+      each self-hides on an `INDICATOR_TIMEOUT_MS` timer that is cleared on
+      unmount (`:166-196`), and the `2×` badge is tied to the long-press
+      state itself. **Register item 30** closed the same observation on
+      2026-10-27, and corrected the position claim — the `2×` badge is
+      **top-centre**, the ☀/♪ pills are the mid-frame ones. **A chip that
+      persists after the gesture ends is a device-only question** — nothing
+      in the source would produce it.
 
 **The control test that closes this out:** play
 `.scratch-test-video.mp4` (960×540, 5.05 s, 1.1 MB, already proven to render
@@ -1756,8 +1804,13 @@ killer test.
     it as the fallback — so removing it is a **MAJOR** release, or D5 becomes
     "default-off, opt-in". Still needs a **DECISION**.
   - **item 33's device proof** — and its two open halves: the Bookmarks row
-    reads only `thumbnailPath`, and `setAutoEnterEnabled` /
-    `setExpandedAspectRatio` **do not exist** anywhere in the app or the lib.
+    reads only `thumbnailPath`, and `setExpandedAspectRatio` **does not
+    exist** anywhere in the app or the lib. **Corrected 2026-11-02:**
+    `setAutoEnterEnabled` is **no longer** in that sentence — it landed in
+    lib `2.1.0` on 2026-10-30 (item 62, `B-039` / `F-043`) and is real
+    (`PipManager.kt:145` calls
+    `PictureInPictureParams.Builder.setAutoEnterEnabled`). The sentence was
+    written when both names were absent.
   - **item 46's device proof** — the seek confirmation is proven by source +
     tests + mutation, **not on a device**.
   - **items 9 / 11** — the deep-link seam and the `PlayerSurface` registry.
@@ -2179,7 +2232,20 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
       written.
     - **`setExpandedAspectRatio` still DOES NOT EXIST** — not in the app,
       not in the lib. It exists only in **md prose**. Any plan that calls it
-      is calling something that was never written.
+      is calling something that was never written. **Re-verified
+      2026-11-02, and the claim HOLDS:** a grep for the identifier over the
+      app's `src/` returns **zero** hits, and the same grep over the lib's
+      `src/` and `android/` returns **zero**. The only occurrences anywhere
+      are **md prose** — this register, the §5 progress block above, and
+      `SIMBA_V22_DAY_PLAN_2026_11_02.md` /
+      `SIMBA_V22_DEVICE_FINDINGS_AND_RN_ARCHITECTURE_BRIEF.md`. **The prose
+      needs no correction on this name.** It DID need one on its
+      *neighbour*: the §5 block listed `setAutoEnterEnabled` under "do not
+      exist anywhere in the app or the lib", and that is **stale** — the
+      platform switch landed in lib `2.1.0` on 2026-10-30 (item 62,
+      `B-039` / `F-043`) and is real (`PipManager.kt:145` calls
+      `PictureInPictureParams.Builder.setAutoEnterEnabled`). **The §5
+      sentence was corrected on 2026-11-02.**
     - **Portrait restore — the register's statement was WRONG, and the real
       gap is a different one.** It said "a session that ends while the app
       is backgrounded never restores portrait". The native side already
@@ -2325,8 +2391,10 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
    (2026-10-26).** **Device-proven:** the live video shows through the hole
    in the minimised state (a colour frame of the film, not the home screen
    behind it).
-52. **~~`commands.exitPlayer()` is unusable and must stay unwired.~~ The native
-    hazard is RESOLVED (2026-10-27) — `F-023`.** It routes to the lib's
+52. **CLOSED 2026-11-02 — the "product/lib decision" was settled by a FACT,
+    not by a meeting.** ~~`commands.exitPlayer()` is unusable and must stay
+    unwired.~~ The native
+    hazard is RESOLVED (2026-10-27) — `F-023`. It routes to the lib's
     `exitPipAndFinish()`, which **used to** call
     `activity.finishAndRemoveTask()` on the CURRENT activity — and under D1
     there is one Activity, so it would have finished `MainActivity` and
@@ -2338,8 +2406,30 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     test — and it stays **UNWIRED in production**, because the close verb
     has exactly **one** owner (`useClosePlayback()`) and SPEC §3.4 forbids a
     second path to the same secondary action. See bug `B-008`.
-    **Still OPEN — a product/lib decision, not a defect:** whether the lib
-    should still export `exitPlayer` at all.
+    **The remaining "product/lib decision" is closed — and it closed on a
+    fact: the lib NEVER exported `exitPlayer`.**
+    - **The native half still holds** (re-read 2026-11-02):
+      `MpvBridgeModule.kt:2660-2666` — `override fun exitPipAndFinish()`
+      calls `activity.finish()`, and the docblock says why
+      `finishAndRemoveTask()` is wrong under D1's one Activity.
+    - **The name was never the lib's.** `git grep exitPlayer` over the lib's
+      `src/` and `android/` returns **zero** hits. The lib's public command
+      is **`exitPipAndFinish`** (`src/types/player.ts:312`,
+      `src/bridge/MpvPlayerModule.ts:524`), it **survived 3.0.0**, and it is
+      still exported in **3.0.1** — the app declares `^3.0.1` and **3.0.1**
+      is installed.
+    - **What `3.0.0` (2026-11-02, `f18fe06`) actually removed was
+      `<PlayerRoot>` and `<PlayerSurface>`** — bug `B-035`, fix `F-052` —
+      **not** `exitPlayer`. That is the release the decision was waiting on,
+      and it removed a different pair of exports entirely.
+    - **The facade is still unwired, which is the point.** The only two
+      `exitPlayer` hits in the app's `src/` are its own declaration
+      (`useTransport.ts:482`) and its own body (`useTransport.ts:1030-1037`
+      — `commands.stopPlayback()` then `commands.exitPipAndFinish()`, that
+      order pinned by a test). **No caller.** So the lib keeps
+      `exitPipAndFinish`, the app keeps an unwired facade, SPEC §3.4's
+      one-owner rule for the close verb holds, and **there is nothing left
+      to decide**.
 
 **Found on device, 2026-10-26**
 53. **Closing the video left a blank white screen.** The browsing stack was
@@ -2446,9 +2536,68 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     **requires** what the caller always passes. **Three files ARE used and
     were left alone:** `About`, `Bookmarks` and
     `features/library/presentation`.
-39. Jest force-exit flake (leaked handles) — needs `--detectOpenHandles`; plus
-    the `useLaunchPlayback` 5 s timeout under cold-cache parallel load.
-40. Emulator `-wipe-data` escalation if it recurs.
+39. **The force-exit flake is REAL and still reproduces — but
+    `--detectOpenHandles` is the WRONG instrument, and the
+    `useLaunchPlayback` 5 s timeout does not exist at all.** **PARTLY CLOSED
+    2026-11-02.**
+    - **It still happens.** A full run today (`npx jest --ci`, branch
+      `f5/w22-close-minimise-d9`) prints *"A worker process has failed to
+      exit gracefully and has been force exited"* — **once** — with **137
+      suites / 1453 passed / 1 todo** in **80.3 s**. The suite is
+      **green**: this is a teardown symptom, not a failure, and the message
+      is a *warning*, not a non-zero exit.
+    - **`--detectOpenHandles` finds NOTHING — and that IS the finding.** The
+      same 137 suites run with `--detectOpenHandles` (which forces
+      `--runInBand`) report **137 passed / 1453 passed** in **377.1 s** and
+      print **no** open handle and **no** force-exit line. So nothing
+      survives the run: this is not an un-`unref`'d handle that outlives
+      its suite, it is a worker that does not exit **in time** under
+      parallel load. `jest.config.js:79-82` already recorded exactly this
+      — the `maxWorkers: '50%'` change does **not** fix it — and
+      `jest.setup.ts:41-48` (the TanStack `notifyManager` microtask shim)
+      was the earlier attempt at it.
+    - **The `useLaunchPlayback` 5 s timeout does not exist.** There is no
+      timer in the lib's `useLaunchPlayback`
+      (`react-native-media-player/src/hooks/useLaunchPlayback.ts:77-101` —
+      a plain `useEffect` keyed on `launchKey`: no `setTimeout`, no
+      timeout, no rejection), and none in the app's wrapper
+      (`src/infrastructure/player/useInWindowVideoLaunch.ts:45-62`). The
+      only "5 s" in this story is **Jest's own default `testTimeout`**,
+      which `jest.config.js:65` raised to **30 000 ms** in V21 F5 A7
+      precisely because 5 s was a **false ceiling** under cold-cache
+      contention — the very symptom this entry names. The entry's second
+      half was therefore a **stale restatement of a jest setting that was
+      already fixed**, not a defect in `useLaunchPlayback`.
+    - **STILL OPEN — a PAIR to find, not a knob to turn.** A per-file sweep
+      of **all 137 suites** (each file in its own worker, 2026-11-02)
+      reproduced the warning **zero** times: **no single suite leaks on its
+      own.** The leak is therefore a **cross-suite interaction inside one
+      worker**, not one file's teardown — which is exactly why
+      `--detectOpenHandles` (in-band, one process, no worker pool) cannot
+      see it. **What it needs:** a run with `--maxWorkers=2` — two suites
+      sharing a worker — bisected over the suite list, to find the PAIR.
+      That is a second pass of measurement, not a code change.
+40. **Emulator `-wipe-data` escalation if it recurs.** **NOT ARMED
+    2026-11-02 — the trigger never fired, and it has not been exercised
+    since.** The escalation is a *conditional* recipe, and it lives in
+    exactly **one** place in this document — §7's open-risks table:
+    *"Wedged to `offline` twice. Recovery: kill lingering
+    `emulator`/`qemu-system-x86_64`, `adb kill-server`/`start-server`, cold
+    boot `-no-snapshot-load`. `-wipe-data` is next escalation."* **Nothing
+    after that line records the emulator wedging again** — not in this plan,
+    not in the bug tracker: a grep of `md/` for the recovery vocabulary
+    (`adb kill-server`, `no-snapshot`, `cold boot`, `wedged`, `qemu`) returns
+    **only that one line**, and the bug tracker has **no** emulator-instability
+    row at all — its `emulator-5554` references are all **device proofs**
+    (B-011, B-020, and the A-003 appendix). **Honest limit:** the emulator
+    has not been exercised **since** that last session either — the last
+    recorded emulator device proofs are items **48-51, 2026-10-26**, and
+    the 2026-11-02 wave ran **no device test at all** (item 63: *"no device
+    test runs in this wave"*). So the condition was never observed to
+    recur, and it could not have been. **Status: the §7 recovery recipe
+    STAYS (it works); the `-wipe-data` escalation is DEAD — re-arm it only
+    if an emulator ever wedges to `offline` again AFTER that recipe has
+    already been applied.**
 
 **The tab bar that was not there (2026-10-27)**
 56. ~~**The app still carried a bottom tab bar it has not had since v11 Wave 1.**~~
@@ -2992,6 +3141,25 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
       rendering needs a device to look at, and mpv's manual warns that
       `panscan` *"may not work with all video output drivers"* — so the fix
       is a patch release with a **device proof**, not a blind change.
+
+76. **The next-track button is dead for every album and playlist launch.**
+    **OPEN** (bug `B-046`).
+    - **The transport advances the LIB's mpv playlist, and the app never
+      fills it.** `useTransport`'s `canGoNext` and its `next` read
+      `PlayerState.playlist` — mpv's own playlist. The app's RUN is
+      `usePlayerStore`'s `playlist`. The app never calls
+      `commands.loadPlaylist`, and `loadfile` **replaces** mpv's playlist,
+      so it holds exactly one entry — the file being played. `canGoNext`
+      is `0 < 0`, false, for every launch.
+    - **The lib's "Play Next" queue is a different thing and does work**
+      (`useQueue` is the lib's queue store). It is not the run.
+    - **What it needs:** the transport's `next` advances the app's run
+      through the lane handover's ONE owner (`useLaneHandover`, built in
+      phase 5 step 26), and `canGoNext` considers the run as well as mpv's
+      playlist. The transport is shared by every player chrome, so it needs
+      its own tests rather than a change at the end of a long day.
+    - This is why a MIXED playlist cannot be played in order yet — step 28
+      of the pinned-playlist tracker.
 
 ---
 

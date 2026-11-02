@@ -27,6 +27,29 @@ import {screen, fireEvent} from '@testing-library/react-native';
 
 import {renderChrome} from '../../helpers/renderChrome';
 
+// The page's long-press menu is a `BottomSheet`, and `BottomSheet`
+// drives a true-sheet imperatively. A mock without `present` / `dismiss`
+// / `resize` is a crash, not a sheet.
+jest.mock('@lodev09/react-native-true-sheet', () => {
+  const ReactLocal = require('react');
+  const {View: RNView} = require('react-native');
+
+  const mockPresent = jest.fn(() => Promise.resolve());
+  const mockDismiss = jest.fn(() => Promise.resolve());
+  const mockResize = jest.fn(() => Promise.resolve());
+
+  return {
+    TrueSheet: ReactLocal.forwardRef((props: {children?: unknown}, ref: unknown) => {
+      ReactLocal.useImperativeHandle(ref, () => ({
+        present: mockPresent,
+        dismiss: mockDismiss,
+        resize: mockResize,
+      }));
+      return ReactLocal.createElement(RNView, {testID: 'true-sheet'}, props.children);
+    }),
+  };
+});
+
 jest.mock('../../../src/screens/AllPlaylists/hooks/useAllPlaylistsScreen', () => ({
   useAllPlaylistsScreen: jest.fn(),
 }));
@@ -67,10 +90,13 @@ function makePlaylist(overrides: Partial<Playlist> = {}): Playlist {
 async function renderScreen(playlists: Playlist[]) {
   mockUseAllPlaylistsScreen.mockReturnValue({
     allPlaylists: playlists,
+    filterType: 'ALL',
+    setFilterType: jest.fn(),
+    filteredPlaylists: playlists,
+    pinnedPlaylists: playlists.filter(playlist => playlist.pinned),
+    otherPlaylists: playlists.filter(playlist => !playlist.pinned),
     handlePlaylistPress: jest.fn(),
     handleCreate: jest.fn(),
-    handleRename: jest.fn(),
-    handleDelete: jest.fn(),
     handleTogglePin: mockTogglePin,
   });
   return renderChrome(<AllPlaylistsScreen />, {theme: true});

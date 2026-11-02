@@ -1,83 +1,83 @@
 # Graph Report - MOBILE_APP_REACT_NATIVE  (2026-11-02)
 
 ## Corpus Check
-- 1056 files · ~1,118,767 words
+- 1063 files · ~1,128,020 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 6625 nodes · 14236 edges · 416 communities (365 shown, 51 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 90 edges (avg confidence: 0.61)
+- 6656 nodes · 14340 edges · 412 communities (360 shown, 52 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 89 edges (avg confidence: 0.61)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `a2ba3715`
+- Built from commit: `241973ff`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - RootNavigator.tsx
-- theme/index.tsx
+- tokens.ts
 - SvgIcon
-- AppText.tsx
+- Animated
 - useNowPlayingStore
 - useTheme
 - media.ts
-- playlist.ts
+- Playlist
 - podcastIndex/adapter.ts
-- src/components/index.ts
+- AppText.tsx
 - onMediaChrome.test.tsx
-- Animated
+- src/components/index.ts
 - internetArchive/adapter.ts
-- player/index.ts
+- VerticalSwipeGestures.tsx
 - metadataService.ts
+- VideoPlayerRef
+- RadioContent.tsx
 - VideoPlayer.tsx
-- RootStackScreenProps
-- usePresentationStore.ts
 - useTransport
-- PlaylistDetailScreen.tsx
+- AppText
 - playlists/index.ts
 - MoviesPlaylistSheet.test.tsx
-- Home/index.tsx
+- WeatherGreeting.tsx
 - devDependencies
 - 4. Recent Updates (most recent first)
 - UI/UX Elevation Specification v10.2 (Podcasts Movies-Replication)
 - VideoMoreSheet.tsx
 - dependencies
-- MoviesContent.tsx
+- ResultTile.tsx
 - SettingsStack.tsx
 - SIMBA Player Module — V13 Tracker
 - OPEN
 - 2. The 10 mistakes in the V19 SPEC draft (before correction)
 - radioBrowser/adapter.ts
 - CaptionCustomizer.tsx
-- useLibraryScreen.ts
-- VerticalSwipeGestures.tsx
-- HistoryScreen.tsx
-- playbackFacade.ts
+- playlist.ts
+- react-native-gesture-handler.js
+- useToast
+- player/index.ts
 - bookmarks/index.ts
 - useHomeScreen.ts
 - 4. Test Cases
 - state/index.ts
 - 2. Wave & Phase Index
-- MoviesScreen/components/BrowseLayout.tsx
-- PlayerControl.tsx
+- LiveTVContent.tsx
+- lrcService.ts
 - 1. VIDEO PLAYER — ENGINE / MPV INTEGRATION
 - musicbrainz/adapter.ts
-- tvmaze/adapter.ts
+- apiFetch
 - SIMBA Player Module V12 — Release Runbook (Phase 48)
 - RootStackParamList
 - authService.ts
 - fileService.ts
 - SIMBA Mobile: Video UI v11 — Cinema-Grade Player Revamp
 - SIMBA Player Module — V15 Specification
-- SvgIconName
+- theme/index.tsx
 - downloadService.ts
 - 6. Tool Usage
 - SIMBA Player Module — V14 Specification
 - SIMBA Player Module — V17 Tracker
 - compilerOptions
 - libappmodules.so target
-- albumArtistLane.test.tsx
+- useResumeAwareLaunch
 - iptv/adapter.ts
 - 4. Recovery patterns
 - 4. On-Device Verification Procedure
@@ -86,7 +86,7 @@
 - Checklist
 - SIMBA Player Module — V15 Tracker
 - Toast.tsx
-- AppRoot.tsx
+- StatsScreen.tsx
 - README.md
 - SIMBA Player Module — V14 Final QA Report
 - SIMBA Player Module — V14 Tracker
@@ -95,13 +95,13 @@
 - 8. Wave 6 — NPM package extraction
 - SIMBA Player Module — V13 Planning (Wave 9 kickoff)
 - 3. The screen catalog (what each chrome surface owns)
-- audius/adapter.ts
+- apiClient.ts
 - V18 — API Adapter + TanStack Query: Specification
-- 2. Evidence: react-native-video v6.19.3 (the stable line)
+- RN Media Module Integration — What Shipping Modules Actually Do
 - typographyStyles.ts
 - 3. Benchmark Methodology (per metric)
 - generate-inapp-logo.js
-- usePlaybackCheckpointSync.ts
+- AppRoot.tsx
 - argent-react-native-app-workflow/SKILL.md
 - SIMBA — the day's plan (2026-11-02)
 - DownloadButton.tsx
@@ -111,15 +111,15 @@
 - SIMBA Player Module — V15 Final QA Report
 - SIMBA Player Module — V16 Tracker
 - SIMBA Media Architecture — V20
-- SearchScreen.tsx
+- FilterAndSortControls.tsx
 - SIMBA Player Module — V16 Final QA Report
 - SIMBA Player — V20 Deep Jugaad Audit
 - SIMBA — Release keystore (V21 W4 P13)
 - SIMBA V21 — Wave 7 Exit (Player stability)
 - migrate-selector-to-store.cjs
-- LoginScreen.tsx
-- mediaUri.ts
 - SIMBA_PLAYER_MODULE_V14_FINAL_QA_REPORT.md
+- mediaUri.ts
+- SIMBA Player Module V13 — Final QA Report
 - Simba Player Module - V17 Specification
 - 1. The audit
 - SIMBA Player V21 — Single-Activity Tracker
@@ -134,7 +134,7 @@
 - SIMBA Player — V20 Jugaad Audit & Fix Tracker
 - SIMBA Player V21 — Single-Activity Specification
 - exclude
-- TransportBar.test.tsx
+- 2. Evidence: react-native-video v6.19.3 (the stable line)
 - BottomSheet.tsx
 - SIMBA Player Module — V12 Specification & Tracker
 - 9. Wave 7 — Testing, hardening, documentation
@@ -145,13 +145,13 @@
 - 5. Execution order
 - V18 — API Adapter Refactor: Deep Analysis
 - check-legacy-event-emitter.cjs
-- sharedMMKVStorage
+- nativeFs/index.ts
 - SIMBA Player Module V12 — Cutover Runbook (Phase 41)
 - V19 — W9 Playback Performance & Event Pipeline
 - SIMBA V22 Audit — Movies Navigation + Player Correctness
 - 4. The UI/UX
 - ErrorBoundary.tsx
-- constants/api.ts
+- SubtitleStyleDialog.tsx
 - MusicContent.tsx
 - UI/UX Elevation Progress Tracker v3 (Deprecated)
 - MoviesScreen/types/index.ts
@@ -182,7 +182,7 @@
 - SIMBA V22 — Pinned Playlists & Mixed-Lane Playlists
 - SIMBA V22 — Pinned Playlists & Mixed-Lane Playlists
 - MMKV
-- useMediaStore
+- MusicDetailScreen
 - hooks/index.ts
 - Logger
 - 4. Workflow
@@ -191,15 +191,15 @@
 - 9. System integration (extras the V18 monolith ignored)
 - F5 — Delete the second Activity — IN PROGRESS
 - SIMBA V21 — Wave 8 Exit (Beta release)
-- SIMBA V22 — Device Findings (2026-10-15) + React Native Architecture Brief
-- ResultListRow.tsx
-- audioSettingsService.ts
-- PlaylistDetailScreen
+- 2. Fixed this session — P0: video was completely invisible
+- ThemeProvider
+- AudioSettingsScreen.tsx
+- FolderBrowserScreen.tsx
 - SIMBA Player — Fix Tracker (v1)
 - SIMBA Player Module V12 — V11 Deprecation Audit (Phase 42)
 - SIMBA Player Module V12 — Navigation Update (Phase 43)
 - isRemoteUri
-- DownloadsScreen.tsx
+- BottomSheet.test.tsx
 - Reliability and recovery
 - argent-test-ui-flow/SKILL.md
 - Argent TV (Apple TV + Android TV + Fire TV)
@@ -208,10 +208,10 @@
 - SIMBA V21 — W2 Exit Review (Architecture foundations)
 - run-perf-benchmarks.ps1
 - Changelog
-- followedPodcasts/index.ts
-- errorClassifier.ts
-- ArchiveContent.tsx
-- batchAddReport.test.ts
+- VideoSurface.tsx
+- constants/api.ts
+- MovieDetailScreen
+- shareService.ts
 - 3. Workflow
 - Post-Analysis Query Tools
 - SIMBA Player Module — V19 Tracker: Cinematic Video Player
@@ -231,7 +231,7 @@
 - v7 Completion Report
 - intelligenceEngine.ts
 - Live authoring
-- reliability-and-recovery.md
+- argent-react-native-profiler/SKILL.md
 - 4. Standard Profiling Workflow
 - argent-settings-permissions/SKILL.md
 - ReplaceLibCppSharedTask
@@ -239,16 +239,16 @@
 - Wave 0 - Foundation (no behavior change)
 - Gate 4 — persistence flows
 - README
-- 2. Fixed this session — P0: video was completely invisible
+- Phase 42 — Remove inline player from `MainActivity`
 - SIMBA V22 — Player Master Plan (single index, dated)
 - Progress — 2026-10-21 (night): the close verb, the minimise control, and the dock that stopped being a rival
 - V18 Legacy TabView Cleanup Plan
 - migrate-v13-step1.cjs
 - BufferedRangeFill.tsx
-- SectionRouteKey
-- useSettingsStore
+- SectionBrowseConfig
+- SettingsScreen.tsx
 - LiveTVScreenNew/types/index.ts
-- StatsScreen.tsx
+- ArchiveArtworkHandOff.test.tsx
 - reduceVideoSessionEvent.js
 - gesture-custom — Custom touch sequences
 - Create a QA regression flow
@@ -256,7 +256,6 @@
 - SIMBA V21 — W1 Exit Review (Baseline and proof)
 - legacyEventEmitterCheck.test.ts
 - eslint-sweep.js
-- AudioSettingsScreen
 - MediaFile
 - ChapterList.tsx
 - media.js
@@ -272,12 +271,12 @@
 - 13. Design references (the bar we're chasing)
 - Wave 8 — UI overhaul (2026-10-05)
 - Wave 3.5 — Chrome auto-hide + scrub preview + gestures (the new chrome)
-- Deep-scan findings (2026-10-09) — these change the plan
+- Help/index.tsx
 - SIMBA V21 — Coverage Matrix (T31.01 fulfillment + Gate 5)
 - SIMBA V21 — Defect Register
 - gen-mcp-descriptors.js
 - remove-stale-store-imports.cjs
-- weatherStore.ts
+- usePlaybackState.test.ts
 - MoviesScreen/index.tsx
 - usePlaybackFacade.test.tsx
 - MainApplication
@@ -305,9 +304,9 @@
 - Progress — 2026-10-21 (midday): the band is proven, and PiP turned out to be a latch
 - Progress — 2026-10-21 (late afternoon): the resume that never resumed, and the card that never had a frame
 - react-native-fs.js
-- remove-stale-useappdispatch.cjs
+- playerStore.test.ts
 - EventBus
-- FolderLinkingWizard/types/index.ts
+- Bookmarks/index.tsx
 - MainActivityBackPress.test.ts
 - trace-loading-state.js
 - argent-screenshot-diff/SKILL.md
@@ -323,9 +322,8 @@
 - THEME 9 — Lock mode + resume prompt + auto-hide polish (spec §4.10, §4.11, Rule 7)
 - W1 — Baseline and proof
 - Phase 0 — Module bootstrap (new, today)
-- 3. Agent Behavior Guidelines
+- usePlay.test.tsx
 - Phase 36 — Memory leak audit
-- Phase 45 — Clean up V11 debug logs
 - Wave 3 — Simple search services (audius, jamendo, librivox, musicbrainz, tvmaze)
 - Wave 4 — Paginated services (iptv, radioBrowser, podcastIndex)
 - Wave 5 — Internet Archive (32 calls, 8 methods, the biggest single surface)
@@ -349,7 +347,6 @@
 - TrackSelectionPopup/index.ts
 - usePlayerGestures.ts
 - argent-android-emulator-setup/SKILL.md
-- ArchiveItemDetailScreen/index.tsx
 - argent-screen-recording/SKILL.md
 - .eslintrc.js
 - 11. Links & References
@@ -379,8 +376,6 @@
 - react-native-haptic-feedback.js
 - react-native-safe-area-context.js
 - .opencode/agents/argent-environment-inspector.md
-- History/index.tsx
-- AudiobookDetailScreen/index.tsx
 - QueueScreen/index.tsx
 - argent-ios-simulator-setup/SKILL.md
 - Source Resolution for `inspect-element`
@@ -410,145 +405,145 @@
 2. `AppText()` - 162 edges
 3. `spacing` - 149 edges
 4. `radius` - 105 edges
-5. `SvgIcon()` - 96 edges
+5. `SvgIcon()` - 95 edges
 6. `useToast()` - 74 edges
-7. `useResumeAwareLaunch()` - 66 edges
+7. `useResumeAwareLaunch()` - 67 edges
 8. `useTransport()` - 65 edges
-9. `MediaLane` - 56 edges
+9. `MediaLane` - 58 edges
 10. `MediaKind` - 52 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `resumePolicy()` --calls--> `resolveResumeMs()`  [EXTRACTED]
-  App.tsx → src/infrastructure/player/resumePolicy.ts
+- `VerticalSwipeGestures()` --references--> `Gesture`  [EXTRACTED]
+  src/components/player/video/Gestures/VerticalSwipeGestures.tsx → __mocks__/react-native-gesture-handler.js
 - `DoubleTapRipple()` --references--> `Animated`  [EXTRACTED]
   src/components/player/video/Gestures/VerticalSwipeGestures.tsx → __mocks__/react-native-reanimated.js
 - `ScanProgressBanner()` --references--> `Animated`  [EXTRACTED]
   src/screens/Home/components/ScanProgressBanner.tsx → __mocks__/react-native-reanimated.js
-- `FabOverrides` --references--> `SvgIconName`  [EXTRACTED]
-  __tests__/components/core/Fab/Fab.test.tsx → src/components/utility/SvgIcon/SvgIcon.tsx
 - `ThemeProbe()` --calls--> `useTheme()`  [EXTRACTED]
   __tests__/components/playlist/PlaylistCover/PlaylistCover.test.tsx → src/theme/index.tsx
+- `runCheck()` --indirect_call--> `file()`  [INFERRED]
+  scripts/check-legacy-event-emitter.cjs → __tests__/infrastructure/device/metadata/metadataService.test.ts
 
 ## Import Cycles
-- 2-file cycle: `src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx`
 - 2-file cycle: `src/components/player/video/VideoPlayer/types.ts -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/types.ts`
-- 3-file cycle: `src/components/player/video/VideoLoadingOverlay/VideoLoadingOverlay.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoLoadingOverlay/VideoLoadingOverlay.tsx`
-- 3-file cycle: `src/components/player/video/TransportBar/TransportBar.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/TransportBar/TransportBar.tsx`
-- 3-file cycle: `src/components/player/video/ChromeAutoHide/ChromeAutoHideController.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/ChromeAutoHide/ChromeAutoHideController.tsx`
-- 3-file cycle: `src/components/player/video/VideoErrorOverlay/VideoErrorOverlay.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoErrorOverlay/VideoErrorOverlay.tsx`
-- 3-file cycle: `src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoTitleOverlay/VideoTitleOverlay.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx`
-- 3-file cycle: `src/components/player/video/NextUp/NextUpOverlay.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/NextUp/NextUpOverlay.tsx`
+- 2-file cycle: `src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx`
 - 3-file cycle: `src/infrastructure/player/index.ts -> src/infrastructure/player/useQueueSync.ts -> src/state/playerStore.ts -> src/infrastructure/player/index.ts`
 - 3-file cycle: `src/components/player/video/Gestures/VerticalSwipeGestures.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/Gestures/VerticalSwipeGestures.tsx`
-- 3-file cycle: `src/components/player/video/VideoDock/VideoDock.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoDock/VideoDock.tsx`
+- 3-file cycle: `src/infrastructure/player/index.ts -> src/infrastructure/player/useResumeAwareLaunch.ts -> src/state/playerStore.ts -> src/infrastructure/player/index.ts`
 - 3-file cycle: `src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoPlayer/types.ts -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx`
-- 3-file cycle: `src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx`
 - 3-file cycle: `src/components/player/video/VideoPlayer/index.ts -> src/components/player/video/VideoPlayer/types.ts -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/index.ts`
-- 4-file cycle: `src/components/player/video/ScrubPreview/ScrubPreview.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/TransportBar/TransportBar.tsx -> src/components/player/video/ScrubPreview/ScrubPreview.tsx`
-- 4-file cycle: `src/components/player/video/VideoLoadingOverlay/VideoLoadingOverlay.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoLoadingOverlay/VideoLoadingOverlay.tsx`
-- 4-file cycle: `src/components/player/video/TransportBar/BufferedRangeFill.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/TransportBar/TransportBar.tsx -> src/components/player/video/TransportBar/BufferedRangeFill.tsx`
-- 4-file cycle: `src/components/player/video/TransportBar/CaptionsToggle.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/TransportBar/TransportBar.tsx -> src/components/player/video/TransportBar/CaptionsToggle.tsx`
+- 3-file cycle: `src/components/player/video/VideoLoadingOverlay/VideoLoadingOverlay.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoLoadingOverlay/VideoLoadingOverlay.tsx`
+- 3-file cycle: `src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoTitleOverlay/VideoTitleOverlay.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx`
+- 3-file cycle: `src/components/player/video/TransportBar/TransportBar.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/TransportBar/TransportBar.tsx`
+- 3-file cycle: `src/components/player/video/ChromeAutoHide/ChromeAutoHideController.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/ChromeAutoHide/ChromeAutoHideController.tsx`
+- 3-file cycle: `src/components/player/video/NextUp/NextUpOverlay.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/NextUp/NextUpOverlay.tsx`
+- 3-file cycle: `src/components/player/video/VideoDock/VideoDock.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoDock/VideoDock.tsx`
+- 3-file cycle: `src/components/player/video/VideoErrorOverlay/VideoErrorOverlay.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/VideoErrorOverlay/VideoErrorOverlay.tsx`
+- 3-file cycle: `src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx`
 - 4-file cycle: `src/components/player/video/TransportBar/MiniPlayerToggle.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/TransportBar/TransportBar.tsx -> src/components/player/video/TransportBar/MiniPlayerToggle.tsx`
-- 4-file cycle: `src/components/player/video/TransportBar/ModeControl.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/TransportBar/TransportBar.tsx -> src/components/player/video/TransportBar/ModeControl.tsx`
+- 4-file cycle: `src/infrastructure/player/index.ts -> src/infrastructure/player/playbackFacade.ts -> src/infrastructure/player/useResumeAwareLaunch.ts -> src/state/playerStore.ts -> src/infrastructure/player/index.ts`
+- 4-file cycle: `src/components/player/video/Gestures/VerticalSwipeGestures.tsx -> src/infrastructure/player/index.ts -> src/components/player/video/VideoPlayer/index.ts -> src/components/player/video/VideoPlayer/VideoPlayer.tsx -> src/components/player/video/Gestures/VerticalSwipeGestures.tsx`
+- 4-file cycle: `src/infrastructure/player/index.ts -> src/infrastructure/player/useDeepLinkLaunch.ts -> src/infrastructure/player/useResumeAwareLaunch.ts -> src/state/playerStore.ts -> src/infrastructure/player/index.ts`
+- 4-file cycle: `src/infrastructure/player/index.ts -> src/infrastructure/player/usePlaylistLaunch.ts -> src/infrastructure/player/useResumeAwareLaunch.ts -> src/state/playerStore.ts -> src/infrastructure/player/index.ts`
 
 ## Hyperedges (group relationships)
 - **v10 Spec/Tracker Lineage (Active Umbrella + Wave-Specific Working Doc)** — md_ui_ux_elevation_specification_v10_2, md_ui_ux_elevation_progress_tracker_v10_2, md_ui_ux_elevation_specification_v10_1, md_ui_ux_elevation_progress_tracker_v10_1 [EXTRACTED 0.95]
 - **Deprecated Spec Chain (v2/v3 → v4)** — md_ui_ux_elevation_specification_v2_deprecated, md_ui_ux_elevation_specification_v3_deprecated, md_ui_ux_elevation_progress_tracker_v2_deprecated, md_ui_ux_elevation_progress_tracker_v3_deprecated, md_ui_ux_elevation_specification_v4, md_ui_ux_elevation_progress_tracker_v4 [EXTRACTED 0.95]
 - **TurboModule registration via merged libappmodules.so** — android_app_src_main_cpp_cmakelists_appmodules, android_app_src_main_cpp_cmakelists_react_codegen_simbaplayer, android_app_src_main_cpp_cmakelists_common_flags [EXTRACTED 1.00]
 
-## Communities (416 total, 51 thin omitted)
+## Communities (412 total, 52 thin omitted)
 
 ### Community 0 - "RootNavigator.tsx"
-Cohesion: 0.05
-Nodes (102): OptionSheetDialog(), ActivityOrb(), ActivityOrbProps, Placeholder(), useToast(), InternalHeader(), styles, PlaylistSheet() (+94 more)
+Cohesion: 0.07
+Nodes (39): addBookmark(), useBookmarks(), AlbumDetailScreen(), formatDuration(), formatTotalDuration(), ArtistDetailScreen(), useRecentHistory(), useHaptics() (+31 more)
 
-### Community 1 - "theme/index.tsx"
+### Community 1 - "tokens.ts"
 Cohesion: 0.04
-Nodes (77): styles, styles, VideoPlayerEqualizerPanel, VideoPlayerEqualizerPanelProps, CategoryCardProps, styles, FilterChipsProps, styles (+69 more)
+Nodes (67): ScreenContainer(), ScreenContainerProps, styles, CategoryCardProps, styles, LibraryAlbumsSegmentProps, styles, LibraryArtistsSegmentProps (+59 more)
 
 ### Community 2 - "SvgIcon"
-Cohesion: 0.04
-Nodes (80): BookmarkList(), formatTime(), styles, SearchBar(), SearchBarProps, styles, EmptyState(), EmptyStateProps (+72 more)
+Cohesion: 0.03
+Nodes (109): AppButton(), AppButtonProps, ButtonSize, ButtonVariant, sizeConfig, styles, ConfirmDialog(), ConfirmDialogProps (+101 more)
 
-### Community 3 - "AppText.tsx"
-Cohesion: 0.04
-Nodes (67): BookmarkButton(), Props, styles, AppText(), AppTextProps, AppTextVariant, TokenColorKey, variantMap (+59 more)
+### Community 3 - "Animated"
+Cohesion: 0.11
+Nodes (20): Animated, PlaylistCard(), PlaylistCardProps, styles, PLAYLIST_PIN_BADGE_TEST_ID, PlaylistCover(), PlaylistCoverProps, styles (+12 more)
 
 ### Community 4 - "useNowPlayingStore"
-Cohesion: 0.04
-Nodes (53): AudioPlayer(), NEXT_REPEAT, styles, PlayerChrome(), Rect, styles, VideoDock(), MINI_PLAYER_ART_SIZE (+45 more)
+Cohesion: 0.06
+Nodes (47): AudioPlayer(), NEXT_REPEAT, styles, PlayerChrome(), Rect, styles, VideoDock(), MINI_PLAYER_ART_SIZE (+39 more)
 
 ### Community 5 - "useTheme"
 Cohesion: 0.04
-Nodes (58): AppButton(), AppButtonProps, ButtonSize, ButtonVariant, sizeConfig, styles, Avatar(), AvatarProps (+50 more)
+Nodes (52): BookmarkButton(), Props, styles, PlayerErrorFallback(), PlayerErrorFallbackProps, styles, HomeHeader(), SectionHeader() (+44 more)
 
 ### Community 6 - "media.ts"
 Cohesion: 0.06
-Nodes (61): DownloadButtonProps, MediaRailCardProps, QueueableItem, LibraryVideosSegment(), RecentHistoryHandle, PlayInput, PlayWithResumeInput, ArtistTopTracksProps (+53 more)
+Nodes (63): DownloadButtonProps, MediaRailCardProps, QueueableItem, PlaylistSheet(), PlaylistSheetProps, styles, LibraryVideosSegment(), playlistActions (+55 more)
 
-### Community 7 - "playlist.ts"
-Cohesion: 0.04
-Nodes (46): PlaylistCard(), PlaylistCardProps, PLAYLIST_PIN_BADGE_TEST_ID, PlaylistCoverProps, LibraryPlaylistsSegment, LibraryPlaylistsSegmentProps, QuickAccessShelf(), QuickAccessShelfProps (+38 more)
+### Community 7 - "Playlist"
+Cohesion: 0.05
+Nodes (53): LibraryPlaylistsSegment, LibraryPlaylistsSegmentProps, setPlaylistPinned(), usePlaylists(), AllPlaylistsScreen(), pinnedAtMs(), useAllPlaylistsScreen(), QuickAccessShelfProps (+45 more)
 
 ### Community 8 - "podcastIndex/adapter.ts"
-Cohesion: 0.06
-Nodes (55): AdapterParseError, assert(), assertShape(), describe(), isArray(), isFiniteNumber(), isNonEmptyString(), isRecord() (+47 more)
+Cohesion: 0.11
+Nodes (37): AdapterParseError, assert(), assertShape(), describe(), isArray(), isFiniteNumber(), isNonEmptyString(), isRecord() (+29 more)
 
-### Community 9 - "src/components/index.ts"
-Cohesion: 0.06
-Nodes (46): BookmarkItem(), formatRelativeDate(), formatTime(), styles, styles, BookmarkSheet(), formatTime(), MemoizedBookmarkSheet (+38 more)
+### Community 9 - "AppText.tsx"
+Cohesion: 0.04
+Nodes (58): BookmarkSheet(), formatTime(), MemoizedBookmarkSheet, styles, AppTextProps, AppTextVariant, TokenColorKey, variantMap (+50 more)
 
 ### Community 10 - "onMediaChrome.test.tsx"
-Cohesion: 0.05
-Nodes (46): AudioSeekBar(), AudioSeekBarProps, styles, deriveNextUpView(), NextUpOverlay(), ScrubPreview(), ScrubPreviewProps, styles (+38 more)
+Cohesion: 0.03
+Nodes (93): AudioSeekBar(), AudioSeekBarProps, styles, BookmarkControl(), deriveNextUpView(), NextUpOverlay(), CONTROL_ICON_SIZE, CONTROL_ICON_SIZE_COMPACT (+85 more)
 
-### Community 11 - "Animated"
-Cohesion: 0.06
-Nodes (47): Animated, LoadingOverlay(), LoadingOverlayProps, styles, SkeletonCard(), SkeletonCardProps, styles, SkeletonList() (+39 more)
+### Community 11 - "src/components/index.ts"
+Cohesion: 0.04
+Nodes (65): BookmarkItem(), formatRelativeDate(), formatTime(), styles, BookmarkList(), formatTime(), styles, AppBadge() (+57 more)
 
 ### Community 12 - "internetArchive/adapter.ts"
-Cohesion: 0.06
-Nodes (52): archiveIdentifierFromUrl(), archiveTracksFromRaw(), directoryUrlFor(), extractSubtitleLanguage(), fileSizeBytes(), fileUrlFor(), getArchiveTracks(), getInternetArchiveItemDetails() (+44 more)
+Cohesion: 0.08
+Nodes (45): archiveIdentifierFromUrl(), archiveTracksFromRaw(), directoryUrlFor(), extractSubtitleLanguage(), fileSizeBytes(), fileUrlFor(), getArchiveTracks(), getInternetArchiveItemDetails() (+37 more)
 
-### Community 13 - "player/index.ts"
-Cohesion: 0.07
-Nodes (46): CHROME_TRAVEL_PX, ChromeAutoHideController(), ChromeAutoHideControllerProps, styles, bookmarksForUri(), CHECKPOINT_INTERVAL_MS, CheckpointAdmissionInput, isEffectivelyFinished() (+38 more)
+### Community 13 - "VerticalSwipeGestures.tsx"
+Cohesion: 0.06
+Nodes (36): CHROME_TRAVEL_PX, ChromeAutoHideController(), ChromeAutoHideControllerProps, styles, BrightnessIndicator(), clamp01(), clamp100(), DoubleTapRipple() (+28 more)
 
 ### Community 14 - "metadataService.ts"
-Cohesion: 0.06
-Nodes (50): AUDIO_EXTENSIONS, basenameNoExt(), CorruptFile, CorruptionReason, COVER_FILENAMES, detectDuplicates(), DIR_COVER_FILENAMES, DuplicateGroup (+42 more)
+Cohesion: 0.11
+Nodes (24): AUDIO_EXTENSIONS, basenameNoExt(), CorruptFile, CorruptionReason, COVER_FILENAMES, detectDuplicates(), DIR_COVER_FILENAMES, DuplicateGroup (+16 more)
 
-### Community 15 - "VideoPlayer.tsx"
-Cohesion: 0.04
-Nodes (21): PlayerScrim(), SCRIM_STOPS, VideoPlayerProps, VideoPlayerRef, VideoSource, ExpandedChrome(), styles, VideoPlayer (+13 more)
-
-### Community 16 - "RootStackScreenProps"
+### Community 15 - "VideoPlayerRef"
 Cohesion: 0.07
-Nodes (14): RootStackScreenProps, AlbumScreenProps, AllAudioScreenProps, AllPlaylistsScreenProps, AllVideosScreenProps, ArtistScreenProps, BookmarksScreenProps, FolderBrowserScreenProps (+6 more)
+Nodes (8): VideoPlayerProps, VideoPlayerRef, VideoSource, mockCommands, mockSetPipActive, mockSetPreset, mockSetSkipSilence, SOURCE
 
-### Community 17 - "usePresentationStore.ts"
-Cohesion: 0.06
-Nodes (34): VideoErrorOverlay(), styles, VideoLoadingOverlay(), VideoLane(), VideoPlayerChrome(), DelayedVisibilityOptions, useDelayedVisibility(), dockStyleFor() (+26 more)
+### Community 16 - "RadioContent.tsx"
+Cohesion: 0.05
+Nodes (33): defaultOptions, HapticType, useKeyboard(), RootStackScreenProps, AllAudioScreenProps, AllPlaylistsScreenProps, AllVideosScreenProps, DownloadsScreenProps (+25 more)
+
+### Community 17 - "VideoPlayer.tsx"
+Cohesion: 0.05
+Nodes (43): PlayerScrim(), SCRIM_STOPS, styles, VideoErrorOverlay(), styles, VideoLoadingOverlay(), styles, VideoLane() (+35 more)
 
 ### Community 18 - "useTransport"
 Cohesion: 0.05
-Nodes (23): BufferedSegments, clampPosition(), deriveBufferedRanges(), deriveBufferedSegments(), deriveCaptionTracks(), mergeOverlappingRanges(), mpvLoopModeToRepeat(), repeatModeToMpv() (+15 more)
+Nodes (28): BufferedSegments, deriveBufferedRanges(), deriveBufferedSegments(), deriveCaptionTracks(), mergeOverlappingRanges(), mpvLoopModeToRepeat(), repeatModeToMpv(), TransportCommands (+20 more)
 
-### Community 19 - "PlaylistDetailScreen.tsx"
-Cohesion: 0.07
-Nodes (36): ScreenContainer(), ScreenContainerProps, StreamingRow, styles, PlaylistManageModal(), PlaylistManageModalProps, styles, MediaImage (+28 more)
+### Community 19 - "AppText"
+Cohesion: 0.05
+Nodes (57): AppText(), GoogleSignInButtonProps, ActivityOrb(), ActivityOrbProps, EmptyStateProps, ErrorState(), ErrorStateProps, styles (+49 more)
 
 ### Community 20 - "playlists/index.ts"
-Cohesion: 0.07
-Nodes (43): PlaylistContextMenu(), PlaylistContextMenuProps, styles, BatchAddReport, reportBatchAdd(), skipReason(), addItemToPlaylist(), compatiblePlaylistsFor() (+35 more)
+Cohesion: 0.08
+Nodes (35): PlaylistContextMenu(), PlaylistContextMenuProps, styles, BatchAddReport, reportBatchAdd(), skipReason(), addItemToPlaylist(), compatiblePlaylistsFor() (+27 more)
 
 ### Community 21 - "MoviesPlaylistSheet.test.tsx"
-Cohesion: 0.05
-Nodes (40): AddToPlaylistScreen(), SECTIONS, renderWithProviders(), RenderWithProvidersOptions, Stack, DOWNLOAD, {getPopularJamendoTracks: mockGetPopularJamendoTracks}, MOVIE (+32 more)
+Cohesion: 0.06
+Nodes (33): usePlaylist(), AddToPlaylistScreen(), SECTIONS, usePlaylistsStore, renderWithProviders(), Stack, DOWNLOAD, {getPopularJamendoTracks: mockGetPopularJamendoTracks} (+25 more)
 
-### Community 22 - "Home/index.tsx"
-Cohesion: 0.07
-Nodes (37): App(), displayName, name, SubsectionTitle, STARRY_NIGHT_SOURCE, styles, WeatherChip, WeatherChipComponent() (+29 more)
+### Community 22 - "WeatherGreeting.tsx"
+Cohesion: 0.15
+Nodes (20): STARRY_NIGHT_SOURCE, styles, WeatherChip, WeatherChipComponent(), WeatherChipProps, SIZE_PX, SOURCE, FULL_SCENE_CONDITIONS (+12 more)
 
 ### Community 23 - "devDependencies"
 Cohesion: 0.04
@@ -570,13 +565,13 @@ Nodes (40): ActionRow(), ActionRowProps, approxEqual(), DISMISS_DRAG_PX, DISMISS
 Cohesion: 0.04
 Nodes (49): axios, js-sha1, @lodev09/react-native-true-sheet, lottie-react-native, dependencies, axios, js-sha1, @lodev09/react-native-true-sheet (+41 more)
 
-### Community 28 - "MoviesContent.tsx"
-Cohesion: 0.07
-Nodes (34): FAB_SIZE, FabContent, FabProps, styles, AudioWaveform(), AudioWaveformProps, BASE_PEAKS, {height: SCREEN_HEIGHT} (+26 more)
+### Community 28 - "ResultTile.tsx"
+Cohesion: 0.18
+Nodes (11): MEDIA_RAIL_CARD_WIDTH, MediaRailCard(), styles, HighlightedText(), HighlightedTextProps, ResultListRow(), styles, ResultTile() (+3 more)
 
 ### Community 29 - "SettingsStack.tsx"
 Cohesion: 0.07
-Nodes (18): Stack, ChangelogScreenProps, CreditsScreenProps, EqualizerScreenProps, LicensesScreenProps, LinkedFoldersScreenProps, PrivacyScreenProps, TermsScreenProps (+10 more)
+Nodes (16): Stack, ChangelogScreenProps, CreditsScreenProps, EqualizerScreenProps, FolderLinkingWizardScreenProps, LicensesScreenProps, PrivacyScreenProps, TermsScreenProps (+8 more)
 
 ### Community 30 - "SIMBA Player Module — V13 Tracker"
 Cohesion: 0.04
@@ -584,91 +579,91 @@ Nodes (46): Dependencies, DX additions (during migration), Migration batches, Ph
 
 ### Community 31 - "OPEN"
 Cohesion: 0.04
-Nodes (45): B-001 · P0 · lib+app · the resume never resumed — the seek was silently refused, B-002 · P0 · app · the teardown checkpoint flush never wrote, B-003 · P1 · app · `skipPrev` read a frozen playhead, B-004 · P1 · app · `ResultTile` mangles a remote thumbnail URL — **RESOLVED (F-018)**, B-005 · P2 · app · a card with no position reads `" / 21:58"` — **RESOLVED (F-019)**, B-006 · P2 · app · the elapsed label freezes for 600 ms after a tap-to-seek — **RESOLVED (F-021)**, B-007 · P1 · lib · the native side discards mpv's return code — **RESOLVED (F-041)**, B-008 · P0 · app · `commands.exitPlayer()` would kill the app — **RESOLVED (F-023)** (the native hazard; the app facade stays) (+37 more)
+Nodes (47): B-001 · P0 · lib+app · the resume never resumed — the seek was silently refused, B-002 · P0 · app · the teardown checkpoint flush never wrote, B-003 · P1 · app · `skipPrev` read a frozen playhead, B-004 · P1 · app · `ResultTile` mangles a remote thumbnail URL — **RESOLVED (F-018)**, B-005 · P2 · app · a card with no position reads `" / 21:58"` — **RESOLVED (F-019)**, B-006 · P2 · app · the elapsed label freezes for 600 ms after a tap-to-seek — **RESOLVED (F-021)**, B-007 · P1 · lib · the native side discards mpv's return code — **RESOLVED (F-041)**, B-008 · P0 · app · `commands.exitPlayer()` would kill the app — **RESOLVED (F-023)** (the native hazard; the app facade stays) (+39 more)
 
 ### Community 32 - "2. The 10 mistakes in the V19 SPEC draft (before correction)"
 Cohesion: 0.04
 Nodes (44): 0. Executive summary, 1.1 Native module, 1.2 App facade (`src/infrastructure/player/`), 1.3 State stores (`src/state/`), 1.4 Lane integrity, 1.5 The 40+ consumer call sites, 1.6 NowPlayingScreen (the V18 monolith), 1. Current architecture (what exists today) (+36 more)
 
 ### Community 33 - "radioBrowser/adapter.ts"
-Cohesion: 0.10
-Nodes (39): browseTagFromRaw(), browseTagsFromRaw(), buildParams(), getCountries(), getGenres(), getLanguages(), getStationById(), getStationsByCountry() (+31 more)
+Cohesion: 0.13
+Nodes (32): browseTagFromRaw(), browseTagsFromRaw(), buildParams(), getCountries(), getGenres(), getLanguages(), getStationById(), getStationsByCountry() (+24 more)
 
 ### Community 34 - "CaptionCustomizer.tsx"
 Cohesion: 0.08
-Nodes (35): BACKGROUND_OPACITY_OPTIONS, BORDER_OPTIONS, CaptionCustomizer(), CaptionCustomizerProps, CaptionGroupProps, FONT_SIZE_OPTIONS, POSITION_OPTIONS, styles (+27 more)
+Nodes (36): BACKGROUND_OPACITY_OPTIONS, BORDER_OPTIONS, CaptionCustomizer(), CaptionCustomizerProps, CaptionGroupProps, FONT_SIZE_OPTIONS, POSITION_OPTIONS, styles (+28 more)
 
-### Community 35 - "useLibraryScreen.ts"
-Cohesion: 0.10
-Nodes (32): LibraryAlbumsSegment, LibraryArtistsSegment, LibraryAudioSegment, LibraryAudioSegmentProps, LibraryScreen(), Props, MediaListItem, styles (+24 more)
+### Community 35 - "playlist.ts"
+Cohesion: 0.09
+Nodes (35): LibraryAlbumsSegment, LibraryArtistsSegment, LibraryAudioSegment, LibraryAudioSegmentProps, LibraryScreen(), Props, styles, ViewMode (+27 more)
 
-### Community 36 - "VerticalSwipeGestures.tsx"
-Cohesion: 0.06
-Nodes (21): Directions, Gesture, State, BrightnessIndicator(), clamp01(), clamp100(), DoubleTapRipple(), GestureEventKind (+13 more)
-
-### Community 37 - "HistoryScreen.tsx"
-Cohesion: 0.13
-Nodes (33): clearRecent(), resolveInternetArchiveVideoDetails(), usePlay(), usePlayWithResume(), isBlockedError(), isExpiredError(), isLaunchError(), isNetworkError() (+25 more)
-
-### Community 38 - "playbackFacade.ts"
+### Community 36 - "react-native-gesture-handler.js"
 Cohesion: 0.11
-Nodes (33): bridgeCodeFromError(), BridgeLaunchErrorCode, mapBridgeLaunchError(), OpenInput, OpenPlaylistInput, OpenWithResumeInput, PlaybackCommands, PlaybackFacade (+25 more)
+Nodes (3): Directions, Gesture, State
+
+### Community 37 - "useToast"
+Cohesion: 0.14
+Nodes (34): useToast(), clearRecent(), resolveInternetArchiveVideoDetails(), usePlay(), usePlayWithResume(), isBlockedError(), isExpiredError(), isLaunchError() (+26 more)
+
+### Community 38 - "player/index.ts"
+Cohesion: 0.10
+Nodes (44): bridgeCodeFromError(), BridgeLaunchErrorCode, mapBridgeLaunchError(), OpenInput, OpenPlaylistInput, OpenWithResumeInput, PlaybackCommands, PlaybackFacade (+36 more)
 
 ### Community 39 - "bookmarks/index.ts"
 Cohesion: 0.09
-Nodes (31): Props, Props, Section, BookmarkOverflowDialogProps, Props, BookmarkAddOptions, BookmarkAddResult, BookmarkHandle (+23 more)
+Nodes (34): Props, Props, Section, Props, BookmarkAddOptions, BookmarkAddResult, BookmarkHandle, buildStableBookmarkId() (+26 more)
 
 ### Community 40 - "useHomeScreen.ts"
-Cohesion: 0.09
-Nodes (27): BookmarkOverflowDialog(), removeRecent(), HomeMediaShelf(), HomeMediaShelfProps, buildGreeting(), buildWeather(), deriveFirstName(), greetingTextFromHour() (+19 more)
+Cohesion: 0.11
+Nodes (24): FollowedPodcastsHandle, useFollowedPodcasts(), UseFollowedPodcastsResult, removeRecent(), FollowedPodcastsShelfProps, buildGreeting(), buildWeather(), deriveFirstName() (+16 more)
 
 ### Community 41 - "4. Test Cases"
 Cohesion: 0.05
 Nodes (38): 1. Purpose, 2.1 Device matrix, 2.2 Test media files, 2.3 Build configuration, 2.4 Logging, 2. Test Environment, 35.10 — Bluetooth headphone controls, 35.11 — Wired headset controls (+30 more)
 
 ### Community 42 - "state/index.ts"
-Cohesion: 0.09
-Nodes (32): formatLastScan(), ScanProgressBanner(), ScanProgressBannerProps, styles, AuthActions, AuthState, AuthUser, initialState (+24 more)
+Cohesion: 0.06
+Nodes (58): ScanProgressBannerProps, useDebounce(), displayNameFromPath(), isVideoExtension(), SearchResultGroup, useSearch(), UseSearchReturn, UseWeatherResult (+50 more)
 
 ### Community 43 - "2. Wave & Phase Index"
 Cohesion: 0.06
 Nodes (36): 0. Purpose, 1. Status Legend, 2. Wave & Phase Index, 3.1 Bridge method expansion (Phase 50), 3.2 Event subscription expansion (Phase 50c), 3.3 Consumer call sites — migration map, 3. Gap analysis (output of Phase 49), 4. Cross-references (+28 more)
 
-### Community 44 - "MoviesScreen/components/BrowseLayout.tsx"
-Cohesion: 0.13
-Nodes (28): Fab(), Chip, ChipProps, FilterSheet, FilterSheetGroup, FilterSheetProps, FilterSheetRow, GroupChipRow (+20 more)
+### Community 44 - "LiveTVContent.tsx"
+Cohesion: 0.04
+Nodes (64): Fab(), FAB_SIZE, FabContent, FabProps, styles, OptionSheetDialog(), OptionSheetDialogProps, styles (+56 more)
 
-### Community 45 - "PlayerControl.tsx"
-Cohesion: 0.09
-Nodes (27): BookmarkControl(), CONTROL_ICON_SIZE, CONTROL_ICON_SIZE_COMPACT, CONTROL_ICON_SIZE_TRANSPORT, CONTROL_PRIMARY_TARGET, CONTROL_TARGET, PlayerControl(), PlayerControlProps (+19 more)
+### Community 45 - "lrcService.ts"
+Cohesion: 0.20
+Nodes (12): loadAdjacentLrc(), getActiveLyricIndex(), getUpcomingLyrics(), guessLrcPaths(), loadLrc(), lrcCache, getCurrentLyricIndex(), getUpcomingLyrics() (+4 more)
 
 ### Community 46 - "1. VIDEO PLAYER — ENGINE / MPV INTEGRATION"
 Cohesion: 0.06
 Nodes (35): 0. Executive Summary, 1.1 Playback start flow (as built), 1.2 CRITICAL, 1.3 BUFFERING, 1.4 EVENT SUBSCRIPTION BUGS, 1.5 RACE CONDITIONS, 1.6 MEMORY / LIFECYCLE LEAKS, 1.7 MISSING ERROR HANDLING (+27 more)
 
 ### Community 47 - "musicbrainz/adapter.ts"
-Cohesion: 0.10
-Nodes (32): AlbumEnrichment, normalizeTitle(), useAlbumEnrichment(), ArtistEnrichment, useArtistEnrichment(), ArtistLookupRaw, artistResultFromRaw(), artistResultsFromSearchRaw() (+24 more)
+Cohesion: 0.08
+Nodes (34): AlbumEnrichment, normalizeTitle(), useAlbumEnrichment(), ArtistEnrichment, useArtistEnrichment(), ArtistLookupRaw, artistResultFromRaw(), artistResultsFromSearchRaw() (+26 more)
 
-### Community 48 - "tvmaze/adapter.ts"
+### Community 48 - "apiFetch"
 Cohesion: 0.12
-Nodes (29): CACHE, getEpisodeList(), getPopularShows(), getSchedule(), getShowById(), parseRawSearchShow(), RawScheduleItem, RawSearchResult (+21 more)
+Nodes (31): apiFetch(), CACHE, getEpisodeList(), getPopularShows(), getSchedule(), getShowById(), parseRawSearchShow(), RawScheduleItem (+23 more)
 
 ### Community 49 - "SIMBA Player Module V12 — Release Runbook (Phase 48)"
 Cohesion: 0.06
 Nodes (33): 0. Purpose, 1. Pre-release gate (must be ✅ before §2), 2.1 Verify clean working tree, 2.2 Verify the version bump is committed, 2.3 Tag the release, 2.4 Verify the tag, 2. Git tag procedure (§48.1), 3.1 Pre-build verification (+25 more)
 
 ### Community 50 - "RootStackParamList"
-Cohesion: 0.17
-Nodes (8): RootParamList, RootStackParamList, NowPlayingScreen(), NowPlayingScreenProps, SearchResultGroup, SearchResults(), SearchResultsProps, styles
+Cohesion: 0.16
+Nodes (9): RootParamList, RootStackParamList, NowPlayingScreen(), NowPlayingScreenProps, SearchResultGroup, SearchResults(), SearchResultsProps, styles (+1 more)
 
 ### Community 51 - "authService.ts"
-Cohesion: 0.14
-Nodes (24): useAuth(), useLoginScreen(), AuthError, AuthErrorInfo, classifyAuthError(), configureGoogleSignin(), extractGoogleProfile(), getConfigureOptions() (+16 more)
+Cohesion: 0.13
+Nodes (26): useAuth(), useAuthSession(), useLoginScreen(), AuthError, AuthErrorInfo, classifyAuthError(), configureGoogleSignin(), extractGoogleProfile() (+18 more)
 
 ### Community 52 - "fileService.ts"
 Cohesion: 0.08
-Nodes (27): createStyles(), FolderLinkingWizard(), enumerateMediaFiles(), extractFolderMetadata(), fileEntriesToTracks(), FileEntry, fileNameToTitle(), FileValidation (+19 more)
+Nodes (28): createStyles(), FolderLinkingWizard(), parseImportedJson(), enumerateMediaFiles(), extractFolderMetadata(), fileEntriesToTracks(), FileEntry, fileNameToTitle() (+20 more)
 
 ### Community 53 - "SIMBA Mobile: Video UI v11 — Cinema-Grade Player Revamp"
 Cohesion: 0.06
@@ -678,9 +673,9 @@ Nodes (32): 0. Current baseline (what already exists — do not rebuild), 10. Ex
 Cohesion: 0.06
 Nodes (32): 0. Purpose, 1. Status Legend, 2. Wave & Phase Index, 3. Public surface (V15 target), 4. Out of scope (V16+), 5. Cross-references, Phase 64 — `useOpenPlaylist` hook, Phase 65 — Module owns the consumer's queue + playbackHistory (zustand) (+24 more)
 
-### Community 55 - "SvgIconName"
-Cohesion: 0.08
-Nodes (24): AppCard(), AppCardProps, styles, MediaRailProps, styles, SvgIconName, AlbumGrid(), AlbumGridProps (+16 more)
+### Community 55 - "theme/index.tsx"
+Cohesion: 0.04
+Nodes (50): AppCard(), AppCardProps, styles, Avatar(), AvatarProps, styles, SettingsRow, SettingsRowProps (+42 more)
 
 ### Community 56 - "downloadService.ts"
 Cohesion: 0.11
@@ -706,9 +701,9 @@ Nodes (28): scripts/trace-loading-state.ts, src/modules/playback/video/domain/de
 Cohesion: 0.22
 Nodes (9): Android app CMake build (CMakeLists.txt), libappmodules.so target, common_flags interface target, fbjni prefab package, Imported libmpv.so (jniLibs/${ANDROID_ABI}), react_codegen_SimbaPlayer codegen target, ReactAndroid prefab package (jsi, reactnative), libsimbaplayer_mpv.so target (+1 more)
 
-### Community 62 - "albumArtistLane.test.tsx"
-Cohesion: 0.08
-Nodes (22): orderPlaylist(), PlaylistLaunchEntry, PlaylistLaunchOptions, useOpenPlaylist(), UseOpenPlaylistResult, Nav, Route, useAlbumScreen() (+14 more)
+### Community 62 - "useResumeAwareLaunch"
+Cohesion: 0.04
+Nodes (49): planResume(), PlanResumeInput, resolvePlanStartMs(), ResumeCandidate, ResumeChoice, ResumeLookupInput, ResumePlan, useDeepLinkLaunch() (+41 more)
 
 ### Community 63 - "iptv/adapter.ts"
 Cohesion: 0.14
@@ -727,8 +722,8 @@ Cohesion: 0.08
 Nodes (24): CATEGORY_COVERS, CategoryCover, ARCHIVE_BROWSE, ARCHIVE_CATEGORIES, ARCHIVE_QUICK_SEARCHES, ArchiveBrowseEntry, ArchiveCategory, ArchiveQuickSearch (+16 more)
 
 ### Community 67 - "types/api.ts"
-Cohesion: 0.16
-Nodes (23): StreamingRowProps, UseArchiveItemDetailScreenReturn, UseAudiobookDetailScreenReturn, TrackCardProps, MediaRow, MediaRowProps, RemoteResultsHandlers, RemoteResultsProps (+15 more)
+Cohesion: 0.10
+Nodes (31): StreamingRowProps, MusicDataContextValue, TrackCardProps, Props, Props, UsePodcastDetailScreenReturn, Props, PodcastsDataContext (+23 more)
 
 ### Community 68 - "Checklist"
 Cohesion: 0.07
@@ -739,12 +734,12 @@ Cohesion: 0.07
 Nodes (28): Dependencies, Phase 64 — `useOpenPlaylist` hook, Phase 65 — Module owns the consumer's queue + playbackHistory (zustand), Phase 66 — Module owns the rest of player-specific state (zustand), delete `playerSlice`, Phase 67 — V11 cleanup, Phase 68 — Release v1.4.0, Risks + open questions, SIMBA Player Module — V15 Tracker (+20 more)
 
 ### Community 70 - "Toast.tsx"
-Cohesion: 0.09
-Nodes (23): styles, ToastAction, ToastContent(), ToastContext, ToastContextValue, ToastMessage, ToastOptions, ToastProvider() (+15 more)
+Cohesion: 0.08
+Nodes (24): styles, ToastAction, ToastContent(), ToastContext, ToastContextValue, ToastMessage, ToastOptions, ToastProvider() (+16 more)
 
-### Community 71 - "AppRoot.tsx"
+### Community 71 - "StatsScreen.tsx"
 Cohesion: 0.10
-Nodes (14): resumePolicy(), styles, AppRoot(), BrowsingStack(), BrowsingStackProps, styles, QueryProvider(), QueryProviderProps (+6 more)
+Nodes (19): BookmarkOverflowDialog(), BookmarkOverflowDialogProps, styles, BookmarkEntry, HomeBookmarksList(), Props, HomeMediaShelf(), dayKey() (+11 more)
 
 ### Community 72 - "README.md"
 Cohesion: 0.22
@@ -759,8 +754,8 @@ Cohesion: 0.07
 Nodes (27): Dependencies, Phase 59 — `<SimbaPlayerRoot>` activity-branch wrapper, Phase 60 — `useOpenFromUrl` / `openFromUrl` deep-link helper, Phase 61 — `<SimbaPlayer>` with built-in default lookup helpers, Phase 62 — Deprecate the consumer's `playerSlice` V11-mirror, Phase 63 — Release v1.3.0, Risks + open questions, SIMBA Player Module — V14 Tracker (+19 more)
 
 ### Community 75 - "useApiQuery"
-Cohesion: 0.13
-Nodes (20): ApiQueryKey, useApiMutation(), useApiQueries(), useApiQuery(), useInfiniteApiQuery(), GenreSource, useGenreScreen(), UseGenreScreenResult (+12 more)
+Cohesion: 0.16
+Nodes (16): ApiQueryKey, useApiMutation(), useApiQueries(), useApiQuery(), useInfiniteApiQuery(), getInternetArchiveVideoDetails(), useMovieDetailScreen(), usePodcastDetailScreen() (+8 more)
 
 ### Community 76 - "SIMBA Player Module V12 — Final QA Report (Phase 47)"
 Cohesion: 0.08
@@ -778,17 +773,17 @@ Nodes (26): 0. Why this document exists, 1.1 Scope, 1.2 Native side, 1.3 Consume
 Cohesion: 0.08
 Nodes (26): 3.10 `VideoMoreSheet` — the single secondary-actions surface, 3.11 `LongPressSpeedPreview` — 2× speed on hold, 3.12 `CaptionTrackSelector` (subtitles vs CC vs SDH — correctly labeled), 3.13 `CaptionCustomizer` (font size + background + position), 3.14 `AudioDescriptionTrackSelector` (WCAG 1.2.5 AA — required), 3.15 `InteractiveTranscript` (Netflix/YouTube pattern — WCAG AAA), 3.16 `SkipSilenceToggle` (podcast killer feature — opt-in), 3.17 `SmartResumePrompt` (Netflix/YouTube pattern) (+18 more)
 
-### Community 80 - "audius/adapter.ts"
-Cohesion: 0.15
-Nodes (19): AUDIUS_RETRIES, AudiusListRaw, AudiusSingleRaw, AudiusTrackRaw, buildStreamUrl(), getAudiusTrackById(), getTrendingAudiusTracks(), parseAudiusListEnvelope() (+11 more)
+### Community 80 - "apiClient.ts"
+Cohesion: 0.10
+Nodes (24): ApiError, axiosInstance, FetchOptions, getAxiosInstance(), AUDIUS_RETRIES, AudiusListRaw, AudiusSingleRaw, AudiusTrackRaw (+16 more)
 
 ### Community 81 - "V18 — API Adapter + TanStack Query: Specification"
 Cohesion: 0.08
 Nodes (24): 10. Out of scope, 11. Definition of done (per phase), 12. The "even junior dev can integrate" rule (per layer), 13. Legacy TabView cleanup (post-V18, drives UI consistency) — ADDED 2026-09-08, 1. The charter (one paragraph), 2.1 Two type families per service, 2.2 Convertor signatures (the contract), 2.3 Service functions always return `Promise<DomainType>` (+16 more)
 
-### Community 82 - "2. Evidence: react-native-video v6.19.3 (the stable line)"
-Cohesion: 0.08
-Nodes (25): 1. Bottom line, 2.1 The view is a real ViewManager, 2.2 Nearly everything is a prop, not a command, 2.3 Commands are addressed by reactTag, 2.4 The JS surface: forwardRef + useImperativeHandle, 2.5 The library draws **no** chrome, 2.6 SurfaceView inside an RN view, and PiP still works, 2.7 The interop hazard, documented by the library itself (+17 more)
+### Community 82 - "RN Media Module Integration — What Shipping Modules Actually Do"
+Cohesion: 0.12
+Nodes (16): 1. Bottom line, 3. Evidence: expo-video — the player ⊥ view split, 4. Evidence: react-native-video master (v7) and vision-camera, 5.1 There is no view component — **SUPERSEDED 2026-10-16** *(corrected 2026-10-28)*, 5.2 The ViewManager that exists is registered nowhere — **SUPERSEDED 2026-10-16** *(corrected 2026-10-28)*, 5.3 The view is mounted by Kotlin into the content view — **SUPERSEDED 2026-10-16** *(corrected 2026-10-28)*, 5.4 Imperative calls have no view identity, 5.5 Gap table (+8 more)
 
 ### Community 83 - "typographyStyles.ts"
 Cohesion: 0.08
@@ -802,9 +797,9 @@ Nodes (24): 1. Purpose, 2.1 Device matrix, 2.2 Build configuration, 2.3 Test med
 Cohesion: 0.14
 Nodes (23): fs, ICON_DIR, iconSvgBell(), iconSvgFolder(), iconSvgFolderOutline(), iconSvgHome(), iconSvgLion(), iconSvgMusic() (+15 more)
 
-### Community 86 - "usePlaybackCheckpointSync.ts"
-Cohesion: 0.12
-Nodes (21): addRecent(), addRecentEntry(), RESUME_THUMB_HEIGHT, RESUME_THUMB_WIDTH, Clock, Snapshot, usePlaybackCheckpointSync(), writeCheckpoint() (+13 more)
+### Community 86 - "AppRoot.tsx"
+Cohesion: 0.06
+Nodes (42): resumePolicy(), styles, AppRoot(), BrowsingStack(), BrowsingStackProps, styles, QueryProvider(), QueryProviderProps (+34 more)
 
 ### Community 87 - "argent-react-native-app-workflow/SKILL.md"
 Cohesion: 0.08
@@ -815,12 +810,12 @@ Cohesion: 0.09
 Nodes (22): 0. What I checked in the source this morning (and it changes the plan), 1. How the parallelism is kept safe, 2. The streams, 3. The time estimate, 4. Two decisions I need from you, 5. What is **not** in today's plan, and why, 6. The order, and what I need from you, D-1 · B-035 — `PlayerRoot` / `PlayerSurface` are vestigial (+14 more)
 
 ### Community 89 - "DownloadButton.tsx"
-Cohesion: 0.17
-Nodes (19): DownloadButton(), styles, useDownloadsSync(), DownloadsScreenResult, StorageInfo, useDownloadsScreen(), downloadService, DownloadStatus (+11 more)
+Cohesion: 0.24
+Nodes (14): DownloadButton(), styles, useDownloadsSync(), DownloadsScreenResult, StorageInfo, useDownloadsScreen(), downloadService, pauseDownload() (+6 more)
 
 ### Community 90 - "jamendo/adapter.ts"
-Cohesion: 0.17
-Nodes (19): ApiError, clientId(), getJamendoTrackById(), getJamendoTracksByGenre(), getPopularJamendoTracks(), JAMENDO_CONFIG, JAMENDO_RETRIES, JamendoResponseRaw (+11 more)
+Cohesion: 0.12
+Nodes (26): useMoreFromArtist(), clientId(), getJamendoTrackById(), getJamendoTracksByGenre(), getPopularJamendoTracks(), JAMENDO_CONFIG, JAMENDO_RETRIES, JamendoResponseRaw (+18 more)
 
 ### Community 91 - "AppDelegate"
 Cohesion: 0.12
@@ -828,7 +823,7 @@ Nodes (17): Any, Bool, AppDelegate, ReactNativeDelegate, react, RCTBridge, RCTDe
 
 ### Community 92 - "10. Wave 8 — V11 deprecation & cleanup"
 Cohesion: 0.10
-Nodes (21): 10. Wave 8 — V11 deprecation & cleanup, 41.A Cutover runbook + rollback, 41.B Files modified, 41.C Verification, 41.D Deviations from spec, 42.A Deprecation audit, 42.B Files modified, 42.C Verification (+13 more)
+Nodes (21): 10. Wave 8 — V11 deprecation & cleanup, 41.A Cutover runbook + rollback, 41.B Files modified, 41.C Verification, 41.D Deviations from spec, 43.A Navigation update doc, 43.B Files modified, 43.C Verification (+13 more)
 
 ### Community 93 - "SIMBA Player Module — V15 Final QA Report"
 Cohesion: 0.10
@@ -842,9 +837,9 @@ Nodes (21): Closeout, Decisions log, Phase 69.5 — Module: typed read hooks `us
 Cohesion: 0.10
 Nodes (20): 1. Summary, 2.1 The engine handle has two owners (stale-handle defect), 2.2 The session is welded to an Activity (blocks the mini player), 2.3 Three duplicated service lookups, 2. What is actually wrong today, 3.1 Phase 0 — resolved: yes, trivially, and no native rewrite, 3. Target architecture, 4.1 Picture-in-Picture is a window state of an Activity (+12 more)
 
-### Community 96 - "SearchScreen.tsx"
-Cohesion: 0.14
-Nodes (16): FilterAndSortControls(), FilterAndSortControlsProps, FilterMode, FILTERS, SortMode, SORTS, styles, RemoteResults (+8 more)
+### Community 96 - "FilterAndSortControls.tsx"
+Cohesion: 0.25
+Nodes (7): FilterAndSortControls(), FilterAndSortControlsProps, FilterMode, FILTERS, SortMode, SORTS, styles
 
 ### Community 97 - "SIMBA Player Module — V16 Final QA Report"
 Cohesion: 0.10
@@ -866,17 +861,17 @@ Nodes (19): Changes (commit `13e2524`), Changes (commit `69b3123`), Changes (com
 Cohesion: 0.11
 Nodes (13): ACTION_NAMES, addStoreImport(), errors, FILES_TO_SKIP, fs, MEDIA_DERIVED_SELECTORS, MEDIA_DIRECT_SELECTORS, path (+5 more)
 
-### Community 102 - "LoginScreen.tsx"
-Cohesion: 0.15
-Nodes (13): BRAND, goBack(), navigate(), navigationRef, ERROR_COPY, LoginScreen(), ORB_SIZE, Props (+5 more)
+### Community 102 - "SIMBA_PLAYER_MODULE_V14_FINAL_QA_REPORT.md"
+Cohesion: 0.26
+Nodes (6): End of V14 final QA report., End of V14 specification doc., End of V14 tracker doc., End of V15 final QA report., End of V15 specification doc., End of V15 tracker doc.
 
 ### Community 103 - "mediaUri.ts"
-Cohesion: 0.17
-Nodes (16): useDeepLinkLaunch(), classifyPickedMedia(), AUDIO_EXTENSIONS, classifyStreamType(), displayNameFromUri(), extensionOf(), mediaTypeFromExtension(), mediaTypeFromUri() (+8 more)
+Cohesion: 0.16
+Nodes (15): EMPTY_LINES, SongNav, SongRoute, classifyPickedMedia(), AUDIO_EXTENSIONS, classifyStreamType(), extensionOf(), MediaLane (+7 more)
 
-### Community 104 - "SIMBA_PLAYER_MODULE_V14_FINAL_QA_REPORT.md"
-Cohesion: 0.08
-Nodes (25): 1. Phase 54c — on-device smoke test, 2. Phase 50d.6 — promote 1.1.0, 3. Phase 58.7 — tag + push 1.2.0, 4. Phase 58.8 — promote 1.2.0, Consumer repo (`MOBILE_APP_REACT_NATIVE/`), Consumer-side changes, Executive summary, Files deleted (+17 more)
+### Community 104 - "SIMBA Player Module V13 — Final QA Report"
+Cohesion: 0.11
+Nodes (19): 1. Phase 54c — on-device smoke test, 2. Phase 50d.6 — promote 1.1.0, 3. Phase 58.7 — tag + push 1.2.0, 4. Phase 58.8 — promote 1.2.0, Consumer repo (`MOBILE_APP_REACT_NATIVE/`), Consumer-side changes, Executive summary, Files deleted (+11 more)
 
 ### Community 105 - "Simba Player Module - V17 Specification"
 Cohesion: 0.11
@@ -887,8 +882,8 @@ Cohesion: 0.11
 Nodes (18): 0. How to read this document, 1.1 Legibility — the controls float on raw video, 1.2 Hit targets — "partially hidden" and "not clickable", 1.3 Layout — the surface looks stripped and unbalanced, 1.4 The secondary sheet — the worst surface in the player, 1.5 Motion, 1.6 Dead and duplicated surface, 1. The audit (+10 more)
 
 ### Community 107 - "SIMBA Player V21 — Single-Activity Tracker"
-Cohesion: 0.11
-Nodes (19): Blocked on one observation, Carried forward — as of 2026-10-09 session close, F2e reclassified — it was never a bug in the path it was written for, F4 verb changes, and the stale reasoning that had to be corrected, Gates, Jugaad inventory (31 items, app scan), Noted, not fixed, Open defects this refactor touches (+11 more)
+Cohesion: 0.08
+Nodes (26): App bug fixed — MediaKind/MediaLane type confusion, Blocked on one observation, Carried forward — as of 2026-10-09 session close, Deep-scan findings (2026-10-09) — these change the plan, F2e reclassified — it was never a bug in the path it was written for, F4 verb changes, and the stale reasoning that had to be corrected, Gates, Jugaad inventory (31 items, app scan) (+18 more)
 
 ### Community 108 - "SIMBA V21 — W6 Exit Review (Remote data)"
 Cohesion: 0.11
@@ -903,16 +898,16 @@ Cohesion: 0.12
 Nodes (17): ADAPTER_RULE, checkFile(), DOMAIN_DIRTY, errors, extractImports(), fs, path, PLAYER_RULE (+9 more)
 
 ### Community 111 - "useWeather.ts"
-Cohesion: 0.21
-Nodes (15): useWeather(), weatherCascade(), fetchWeatherByCity(), fetchWeatherByCoords(), fetchWeatherForCoords(), DeviceCoords, getCurrentCoords(), reverseGeocodeCity() (+7 more)
+Cohesion: 0.24
+Nodes (13): useWeather(), weatherCascade(), fetchWeatherByCoords(), DeviceCoords, getCurrentCoords(), reverseGeocodeCity(), useWeatherStore, cityFromLocale() (+5 more)
 
 ### Community 112 - "librivox/adapter.ts"
-Cohesion: 0.16
-Nodes (19): audiobookResultFromRaw(), audiobookResultsFromResponseRaw(), getAudiobookById(), getRecentAudiobooks(), LIBRIVOX_RETRIES, LibriVoxBookRaw, LibriVoxResponseRaw, normalizeBooks() (+11 more)
+Cohesion: 0.19
+Nodes (18): audiobookResultFromRaw(), audiobookResultsFromResponseRaw(), getAudiobookById(), getRecentAudiobooks(), LIBRIVOX_RETRIES, LibriVoxBookRaw, LibriVoxResponseRaw, normalizeBooks() (+10 more)
 
 ### Community 113 - "weather/adapter.ts"
 Cohesion: 0.15
-Nodes (14): CityCoords, cityCoordsFromRaw(), FORECAST_CONFIG, GEOCODING_CONFIG, getCityCoords(), OpenMeteoCurrentRaw, OpenMeteoGeocodingRaw, WEATHER_RETRIES (+6 more)
+Nodes (16): CityCoords, cityCoordsFromRaw(), fetchWeatherByCity(), fetchWeatherForCoords(), FORECAST_CONFIG, GEOCODING_CONFIG, getCityCoords(), OpenMeteoCurrentRaw (+8 more)
 
 ### Community 114 - "SIMBA Player Module V12 — Debug Log Cleanup (Phase 45)"
 Cohesion: 0.11
@@ -934,13 +929,13 @@ Nodes (17): 1.1 Why, 1.2 The constraint that makes this the only option, 1.3 Res
 Cohesion: 0.11
 Nodes (17): **/graphify-out/**, jest, **/maestro-baselines/**, **/node_modules, **/Pods, @react-native/typescript-config, _reference_codes, tools/_dead_code_archive_2026-08-26 (+9 more)
 
-### Community 119 - "TransportBar.test.tsx"
-Cohesion: 0.15
-Nodes (13): FADE_IN_MS, VideoTitleOverlay(), TransportState, HIDDEN, mockSeek, mockSeekBy, mockTransport, ResponderConfig (+5 more)
+### Community 119 - "2. Evidence: react-native-video v6.19.3 (the stable line)"
+Cohesion: 0.22
+Nodes (9): 2.1 The view is a real ViewManager, 2.2 Nearly everything is a prop, not a command, 2.3 Commands are addressed by reactTag, 2.4 The JS surface: forwardRef + useImperativeHandle, 2.5 The library draws **no** chrome, 2.6 SurfaceView inside an RN view, and PiP still works, 2.7 The interop hazard, documented by the library itself, 2.8 Honest note: their surface-type switch is a stub (+1 more)
 
 ### Community 120 - "BottomSheet.tsx"
-Cohesion: 0.15
-Nodes (13): BottomSheet, BottomSheetHandle, BottomSheetInner(), BottomSheetProps, SheetDetent, snapToDetent(), styles, TrueSheetApi (+5 more)
+Cohesion: 0.20
+Nodes (11): PlaylistActionMenu(), PlaylistActionMenuProps, styles, BottomSheet, BottomSheetHandle, BottomSheetInner(), BottomSheetProps, SheetDetent (+3 more)
 
 ### Community 121 - "SIMBA Player Module — V12 Specification & Tracker"
 Cohesion: 0.12
@@ -975,12 +970,12 @@ Cohesion: 0.12
 Nodes (16): 10. The "even junior dev can integrate" rule (your manager's framing), 11. The "huge task" reality check, 12. Decision asked of manager, 1. The corrected architecture, 2. The actual scale (data from the codebase, not estimates), 3. The "huge task" — what's actually in the 55 methods, 4. The adapter shape — what a service module looks like after V18, 5. The consumer side — what every screen call looks like (+8 more)
 
 ### Community 129 - "check-legacy-event-emitter.cjs"
-Cohesion: 0.21
-Nodes (16): collectReachablePackages(), findLegacyCalls(), fs, indexNodeModules(), isExcludedPath(), main(), parseArgs(), path (+8 more)
+Cohesion: 0.23
+Nodes (15): collectReachablePackages(), findLegacyCalls(), fs, indexNodeModules(), isExcludedPath(), main(), parseArgs(), path (+7 more)
 
-### Community 130 - "sharedMMKVStorage"
-Cohesion: 0.18
-Nodes (13): kvDelete(), kvGet(), kvListKeys(), kvSet(), sharedMMKVStorage, simbaMMKV, DEFAULT_SKIP_PREV_THRESHOLD_MS, getSkipPrevThresholdMs() (+5 more)
+### Community 130 - "nativeFs/index.ts"
+Cohesion: 0.36
+Nodes (7): androidSdkInt(), exists(), isContentUri(), readDir(), ScannedFsEntry, stat(), UnsupportedContentUriError
 
 ### Community 131 - "SIMBA Player Module V12 — Cutover Runbook (Phase 41)"
 Cohesion: 0.12
@@ -1002,13 +997,13 @@ Nodes (16): 4.0 The rules this design obeys, 4.10 The playlist's long-press menu
 Cohesion: 0.15
 Nodes (7): ErrorBoundary, ErrorBoundaryProps, ErrorBoundaryState, FallbackColors, styles, ScreenErrorBoundary(), ScreenErrorBoundaryProps
 
-### Community 136 - "constants/api.ts"
-Cohesion: 0.20
-Nodes (10): API_CONFIG, ENV, DEFAULT_SUBTITLE_COLOR, SUBTITLE_COLOR_PRESETS, SubtitleColorPreset, svgPaths, DEFAULTS, loadSubtitleSettings() (+2 more)
+### Community 136 - "SubtitleStyleDialog.tsx"
+Cohesion: 0.18
+Nodes (11): DEFAULT_SUBTITLE_COLOR, SUBTITLE_COLOR_PRESETS, SubtitleColorPreset, BG_OPACITIES, FONT_SIZES, styles, SubtitleStyleDialogProps, DEFAULTS (+3 more)
 
 ### Community 137 - "MusicContent.tsx"
-Cohesion: 0.22
-Nodes (11): MUSIC_CATEGORIES, MusicCategory, useSectionOptions(), genreLabel(), MusicContent(), useMusicData(), TrackCard, JAMENDO_GENRES (+3 more)
+Cohesion: 0.29
+Nodes (8): MUSIC_CATEGORIES, genreLabel(), MusicContent(), useMusicData(), TrackCard, JAMENDO_GENRES, MUSIC_SECTION_CONFIG, createMusicScreenStyles()
 
 ### Community 138 - "UI/UX Elevation Progress Tracker v3 (Deprecated)"
 Cohesion: 0.67
@@ -1051,20 +1046,20 @@ Cohesion: 0.21
 Nodes (14): ANDROID_SIZES, fs, generateCombined(), generateForeground(), GOLD_STOPS, IOS_DIR, IOS_SIZES, main() (+6 more)
 
 ### Community 148 - "useMoviesScreen.ts"
-Cohesion: 0.21
-Nodes (14): MOVIE_CATEGORIES, withJunkFilter(), UseArchiveScreenResult, MovieCardProps, MoviesDataContextValue, buildCombinedQuery(), errorMessage(), MovieScopeState (+6 more)
+Cohesion: 0.11
+Nodes (25): MOVIE_CATEGORIES, MovieCategory, withJunkFilter(), searchInternetArchiveAudio(), searchInternetArchiveVideos(), ArchiveMediaType, useArchiveScreen(), UseArchiveScreenParams (+17 more)
 
 ### Community 149 - "PodcastsScreen/index.tsx"
 Cohesion: 0.25
 Nodes (11): PODCAST_CATEGORIES, PodcastCategory, createPodcastsContentRenderer(), PodcastsContentProps, PodcastCategoriesState, usePodcastCategories(), PodcastsScreen(), createPodcastsSectionConfig() (+3 more)
 
 ### Community 150 - "ScannedTrack"
-Cohesion: 0.16
-Nodes (9): LibraryFoldersSegment, LibraryFoldersSegmentProps, textContent, ScanResult, SortMode, UseAllAudioScreenResult, ViewMode, UseAllVideosScreenResult (+1 more)
+Cohesion: 0.15
+Nodes (11): LibraryFoldersSegment, LibraryFoldersSegmentProps, textContent, ScanResult, SortMode, useAllAudioScreen(), UseAllAudioScreenResult, ViewMode (+3 more)
 
 ### Community 151 - "playlistsStore.ts"
-Cohesion: 0.22
-Nodes (13): generateId(), initialState, isMediaKind(), isMediaLane(), isPlaylistKind(), MAX_ITEMS_PER_PLAYLIST, MAX_PLAYLISTS, normalizeItem() (+5 more)
+Cohesion: 0.18
+Nodes (16): generateId(), initialState, isMediaKind(), isMediaLane(), isPlaylistKind(), MAX_ITEMS_PER_PLAYLIST, MAX_PLAYLISTS, normalizeItem() (+8 more)
 
 ### Community 153 - "Flow YAML"
 Cohesion: 0.13
@@ -1079,7 +1074,7 @@ Cohesion: 0.14
 Nodes (13): 37.1 — Cold start time (target < 2000 ms), 37.2 — TTFF for local MP4 (target < 1000 ms), 37.3 — Seek latency (target < 200 ms), 37.4 — Frame drop rate (target < 5%), 37.5 — Memory footprint (baseline only), 37.6 — Battery drain over 1h playback (target < 10%), 37.7 — PiP entry/exit jank (target < 1 dropped frame), 37.8 — Bundle size impact (baseline only) (+5 more)
 
 ### Community 156 - "SIMBA — Bug tracker (opened 2026-10-21)"
-Cohesion: 0.15
+Cohesion: 0.18
 Nodes (10): A-001 · the bookmark stays in the top bar, A-002 · no close action in the More/options sheet, A-003 · the resume prompt's 8-second auto-dismiss resolves as RESUME, ACCEPTED (product decisions, not defects), E-001 · archive.org was down during the device proof, EXTERNAL (not our bug — recorded so it is not re-investigated), FIXED, How to read this file (+2 more)
 
 ### Community 157 - "SIMBA Player Module V12 — `usePipLifecycle` + `usePipEntry` Removal (Phase 44)"
@@ -1103,7 +1098,7 @@ Cohesion: 0.14
 Nodes (14): Phase 3.6.11 — `SkipPrevSmartThreshold` (Apple Music / Spotify pattern), Phase 3.6.12 — `AutoPlayNextToggle`, Phase 3.6.13 — `HapticFeedback` (iOS Taptic Engine), Phase 3.6.15 — WCAG 2.2 AA audit doc, Phase 3.6.1 — `CaptionTrackSelector` (subtitles vs CC vs SDH), Phase 3.6.2 — `CaptionCustomizer` (font size + background + position), Phase 3.6.3 — `AudioDescriptionTrackSelector` (WCAG 1.2.5 AA — required), Phase 3.6.4 — `InteractiveTranscript` (Netflix/YouTube pattern) (+6 more)
 
 ### Community 162 - "Handoff — end of session, 2026-10-14"
-Cohesion: 0.14
+Cohesion: 0.12
 Nodes (11): Constraints still in force, F5 A10 — 2026-10-15: the playlist launch's dead `resumePosition`, F5 A11 — 2026-10-15: `setScreenBrightness` had the same unpinned clamp as `setVolume`, F5 A8 — 2026-10-15: duplicate `setVolume` removed, and the clamp finally pinned, F5 A9 — 2026-10-15: `useResumeAwarePlayerActivity` → `useResumeAwareLaunch` (file AND symbol), Handoff — 2026-10-15, device verification (supersedes the 2026-10-14 handoff below), Handoff — 2026-10-16, architecture research (supersedes the 2026-10-15 handoff below), Handoff — end of session, 2026-10-14 (+3 more)
 
 ### Community 163 - "SIMBA V21 — W3 Exit Review (Player integration)"
@@ -1118,17 +1113,17 @@ Nodes (14): 1. What the user asked for, 2.1 The kind is single-lane, and the sto
 Cohesion: 0.14
 Nodes (14): 0. Locked decisions (do NOT revisit), Carried forward from this tracker, PHASE 1 — Verify the two open facts, and pin them with tests, PHASE 2 — The data model, PHASE 3 — One owner for "create a playlist", one rule for "which playlists may take an item", PHASE 4 — Pinning, PHASE 5 — Mixed playlist playback (the risky one), PHASE 6 — The pages (+6 more)
 
-### Community 167 - "useMediaStore"
-Cohesion: 0.27
-Nodes (11): GlobalOperationProgress(), useDebounce(), displayNameFromPath(), isVideoExtension(), SearchResultGroup, useSearch(), UseSearchReturn, useMediaAlbums() (+3 more)
+### Community 167 - "MusicDetailScreen"
+Cohesion: 0.28
+Nodes (6): fmtDur(), MusicDetailScreen(), MusicDetailScreenProps, mockOpenWithResume, mockTrack, renderScreen()
 
 ### Community 168 - "hooks/index.ts"
-Cohesion: 0.21
-Nodes (9): useAutoHideControls(), Orientation, useOrientation(), useEnterAnimation(), useExitAnimation(), useTabPressAnimation(), animations, AnimationsConfig (+1 more)
+Cohesion: 0.23
+Nodes (8): useAutoHideControls(), Orientation, useOrientation(), useEnterAnimation(), useExitAnimation(), useTabPressAnimation(), animations, AnimationsConfig
 
 ### Community 169 - "Logger"
-Cohesion: 0.21
-Nodes (7): captureResumeThumbnail(), LOG_LEVELS, Logger, LogLevel, serializeArgs(), dirSize(), getCacheSize()
+Cohesion: 0.19
+Nodes (8): captureResumeThumbnail(), LOG_LEVELS, Logger, LogLevel, serializeArgs(), clearCache(), dirSize(), getCacheSize()
 
 ### Community 170 - "4. Workflow"
 Cohesion: 0.14
@@ -1154,21 +1149,21 @@ Nodes (13): ✅ Also fixed in A5 — unbounded re-render loop in both hooks, ⚠
 Cohesion: 0.15
 Nodes (12): 3 paths to GO, CI + release workflow design (P29), `ci.yml` — PR + push-to-main, Coverage table (3 phases × 8 sub-tasks), Go / no-go outcome (T31.02), Go/no-go review design (P31), Release notes design (P30), `release.yml` — tag-triggered (+4 more)
 
-### Community 176 - "SIMBA V22 — Device Findings (2026-10-15) + React Native Architecture Brief"
-Cohesion: 0.15
-Nodes (13): 1. Why this document exists, 3. Open findings, 4.1 The real problem, 4.2 Two routes, 4.3 Deep-scan scope (the sweep to run before more player work), 4. Architecture brief — the React Native side, 5. Test matrix status, 6. Carried forward (+5 more)
+### Community 176 - "2. Fixed this session — P0: video was completely invisible"
+Cohesion: 0.09
+Nodes (22): 1. Why this document exists, 2. Fixed this session — P0: video was completely invisible, 3. Open findings, 4.1 The real problem, 4.2 Two routes, 4.3 Deep-scan scope (the sweep to run before more player work), 4. Architecture brief — the React Native side, 5. Test matrix status (+14 more)
 
-### Community 177 - "ResultListRow.tsx"
-Cohesion: 0.19
-Nodes (10): SearchResultItem, HighlightedText(), HighlightedTextProps, ResultListRow(), ResultListRowProps, styles, ResultTileProps, findByType() (+2 more)
+### Community 177 - "ThemeProvider"
+Cohesion: 0.09
+Nodes (15): SearchResultItem, ResultListRowProps, ResultTileProps, ThemeProvider(), WITH_POSITION, WITHOUT_POSITION, mockHomeState(), mockPlaylist (+7 more)
 
-### Community 178 - "audioSettingsService.ts"
-Cohesion: 0.24
-Nodes (11): EqualizerScreen(), applyAudioSettingsToMpv(), applyPlaybackSettingsToMpv(), buildAfFilter(), EQ_BANDS, setMpvProperty(), BASE_SETTINGS, calls() (+3 more)
+### Community 178 - "AudioSettingsScreen.tsx"
+Cohesion: 0.13
+Nodes (20): OptionSheetOption, AudioSettingsScreenProps, AUDIO_DELAY_OPTIONS, AudioSettingsScreen(), PickerKind, Props, REPLAY_GAIN_OPTIONS, SAMPLE_RATE_OPTIONS (+12 more)
 
-### Community 179 - "PlaylistDetailScreen"
-Cohesion: 0.19
-Nodes (11): deriveKind(), parseImportedJson(), PlaylistDetailScreen(), PlaylistDetailScreenProps, getFileName(), getMediaType(), generateM3u(), generatePlaylistJson() (+3 more)
+### Community 179 - "FolderBrowserScreen.tsx"
+Cohesion: 0.14
+Nodes (17): DirItem, FolderBrowserScreen(), isMediaFile(), MEDIA_EXTENSIONS, Props, FolderBrowserScreenProps, deriveKind(), PlaylistDetailScreen() (+9 more)
 
 ### Community 180 - "SIMBA Player — Fix Tracker (v1)"
 Cohesion: 0.17
@@ -1186,9 +1181,9 @@ Nodes (12): 1. Why this document exists, 2.1 `PlaybackOverlayHost` — V12 short
 Cohesion: 0.44
 Nodes (10): useCachedArt(), artFilePath(), cacheArt(), getCachedArtPath(), getCachedArtPathSync(), memoryCache, pruneArtCache(), remember() (+2 more)
 
-### Community 184 - "DownloadsScreen.tsx"
-Cohesion: 0.26
-Nodes (8): DownloadRow, DownloadRowProps, DownloadsScreen(), POLICY_OPTIONS, statusLabel(), styles, DownloadsScreenProps, formatBytes()
+### Community 184 - "BottomSheet.test.tsx"
+Cohesion: 0.25
+Nodes (5): mockDismiss, mockPresent, mockProps, mockResize, RecordedProps
 
 ### Community 185 - "Reliability and recovery"
 Cohesion: 0.17
@@ -1218,21 +1213,21 @@ Nodes (10): Closed defect register (W2 contributions), Outcome: W2 EXITED with 2
 Cohesion: 0.35
 Nodes (9): Get-AverageMs(), Invoke-Adb(), Run-Benchmark-37-1(), Run-Benchmark-37-2(), Run-Benchmark-37-3(), Run-Benchmark-37-4(), Run-Benchmark-37-5(), Run-Benchmark-37-6() (+1 more)
 
-### Community 193 - "followedPodcasts/index.ts"
-Cohesion: 0.25
-Nodes (8): FollowedPodcastsHandle, UseFollowedPodcastsResult, FollowedPodcastsShelfProps, FollowedPodcast, FollowedPodcastsActions, FollowedPodcastsState, initialState, useFollowedPodcastsStore
-
-### Community 194 - "errorClassifier.ts"
+### Community 193 - "VideoSurface.tsx"
 Cohesion: 0.33
-Nodes (8): asStreamError(), CATEGORY_TABLE, ClassifiedError, classifyError(), ErrorCategory, ErrorRecoveryAction, haystack(), RULES
+Nodes (3): styles, VideoSurface(), VideoSurfaceProps
 
-### Community 195 - "ArchiveContent.tsx"
-Cohesion: 0.25
-Nodes (7): ArchiveCard, ArchiveScreen(), audioToRow(), Props, QUICK_SEARCH_CHIP_ITEMS, videoToRow(), styles
+### Community 194 - "constants/api.ts"
+Cohesion: 0.52
+Nodes (3): API_CONFIG, ENV, svgPaths
 
-### Community 196 - "batchAddReport.test.ts"
-Cohesion: 0.18
-Nodes (8): added, duplicate, full, item, laneMismatch, missing, playlist, unsupported
+### Community 195 - "MovieDetailScreen"
+Cohesion: 0.33
+Nodes (5): extractYear(), formatDuration(), MovieDetailScreen(), MovieDetailScreenProps, renderScreen()
+
+### Community 196 - "shareService.ts"
+Cohesion: 0.43
+Nodes (6): buildHttpsUrl(), buildPathAndQuery(), buildShareUrl(), encode(), ROUTE_PATHS, ShareTarget
 
 ### Community 197 - "3. Workflow"
 Cohesion: 0.18
@@ -1271,8 +1266,8 @@ Cohesion: 0.33
 Nodes (7): useSkipSilence(), SKIP_SILENCE_FILTER, SkipSilenceActions, skipSilenceFilterArgs(), SkipSilenceState, SkipSilenceStore, useSkipSilenceStore
 
 ### Community 207 - "navigation/types.ts"
-Cohesion: 0.09
-Nodes (27): SettingsStack(), AboutScreenProps, AlbumDetailScreenProps, ArchiveItemDetailScreenProps, ArchiveScreenProps, ArtistDetailScreenProps, AudiobookDetailScreenProps, AudiobooksScreenProps (+19 more)
+Cohesion: 0.06
+Nodes (35): AccountSection(), goBack(), navigate(), navigationRef, SettingsStack(), AboutScreenProps, AlbumDetailScreenProps, ArchiveItemDetailScreenProps (+27 more)
 
 ### Community 214 - "intelligenceEngine.ts"
 Cohesion: 0.33
@@ -1282,9 +1277,9 @@ Nodes (8): calculateScore(), completionWeight(), getRecentAudioEntries(), getRec
 Cohesion: 0.20
 Nodes (10): Blocking audit, Chromium e2e flows, Finish and polish, Fragments, iOS, Android, and Vega e2e flows, Live authoring, Recorder contract, Replay (+2 more)
 
-### Community 216 - "reliability-and-recovery.md"
-Cohesion: 0.31
-Nodes (4): 2. Tool Overview, 5. Important Caveats, Drill-Down Query Tools (call after analyze), React Profiler (Hermes / React commits)
+### Community 216 - "argent-react-native-profiler/SKILL.md"
+Cohesion: 0.20
+Nodes (9): 2. Tool Overview, 3. Agent Behavior Guidelines, 5. Important Caveats, After analysis: ask about next steps, After fixes: always re-profile, Drill-Down Query Tools (call after analyze), During investigation: use query tools proactively, React Profiler (Hermes / React commits) (+1 more)
 
 ### Community 217 - "4. Standard Profiling Workflow"
 Cohesion: 0.20
@@ -1310,9 +1305,9 @@ Nodes (9): Phase 0.0 - Isolation contract (Rule 1-9), Phase 0.1 - `useQueueSync(
 Cohesion: 0.22
 Nodes (9): Flow 13 — Bookmarks persist, Flow 14 — Playlists persist, Flow 15 — Downloads persist, Flow 18 — Queue persist, Flow 19 — Playback history persist, Flow 20 — Recent searches persist, Flow 21 — Theme persist, Flow 22 — Linked folders persist (+1 more)
 
-### Community 224 - "2. Fixed this session — P0: video was completely invisible"
-Cohesion: 0.22
-Nodes (9): 2. Fixed this session — P0: video was completely invisible, Compounding error: a comment that asserted the opposite of the rule, Fix, Gates, Not committed, Root cause, Symptom, ⚠️ Trap recorded in code (+1 more)
+### Community 224 - "Phase 42 — Remove inline player from `MainActivity`"
+Cohesion: 0.40
+Nodes (5): 42.A Deprecation audit, 42.B Files modified, 42.C Verification, 42.D Deviations from spec, Phase 42 — Remove inline player from `MainActivity`
 
 ### Community 225 - "SIMBA V22 — Player Master Plan (single index, dated)"
 Cohesion: 0.22
@@ -1334,21 +1329,21 @@ Nodes (6): { execSync }, files, fs, path, results, ROOT
 Cohesion: 0.28
 Nodes (5): BufferedRangeFill(), BufferedRangeFillProps, styles, BufferedRange, HIDDEN
 
-### Community 230 - "SectionRouteKey"
-Cohesion: 0.31
-Nodes (7): CategoryCard, BROWSE_ALL_SECTIONS, BrowseAllEntry, BrowseAllShelf, BrowseAllShelfProps, styles, SectionRouteKey
+### Community 230 - "SectionBrowseConfig"
+Cohesion: 0.21
+Nodes (14): CategoryCard, SectionOptionsApi, BROWSE_ALL_SECTIONS, BrowseAllEntry, BrowseAllShelf, BrowseAllShelfProps, styles, Props (+6 more)
 
-### Community 231 - "useSettingsStore"
-Cohesion: 0.44
-Nodes (7): useMediaScanner(), LinkedFoldersScreen(), getAppVersion(), getBuildNumber(), THEME_LABELS, useSettingsScreen(), useSettingsStore
+### Community 231 - "SettingsScreen.tsx"
+Cohesion: 0.17
+Nodes (14): useMediaScanner(), LinkedFoldersScreenProps, SettingsScreenProps, LinkedFoldersScreen(), LinkedFoldersScreenProps, MpvOption, Props, SettingsScreen() (+6 more)
 
 ### Community 232 - "LiveTVScreenNew/types/index.ts"
 Cohesion: 0.22
 Nodes (8): LiveTVFilters, ActiveFilterChipsProps, LiveTVBrowseTags, LiveTVFilterId, LiveTVMediaType, LiveTVScopeState, LiveTVScreenProps, LiveTVSource
 
-### Community 233 - "StatsScreen.tsx"
-Cohesion: 0.39
-Nodes (6): dayKey(), Props, StatsScreen(), styles, StatsScreenProps, useSessionStore
+### Community 233 - "ArchiveArtworkHandOff.test.tsx"
+Cohesion: 0.40
+Nodes (4): mockItem, mockOpenWithResume, mockTracks, renderScreen()
 
 ### Community 234 - "reduceVideoSessionEvent.js"
 Cohesion: 0.31
@@ -1377,10 +1372,6 @@ Nodes (5): ALLOW_LIST, APP_ROOT, LEGACY_SOURCE, RunResult, SCRIPT
 ### Community 240 - "eslint-sweep.js"
 Cohesion: 0.25
 Nodes (6): {execFileSync}, path, perFile, results, root, sorted
-
-### Community 241 - "AudioSettingsScreen"
-Cohesion: 0.29
-Nodes (6): AudioSettingsScreenProps, AUDIO_DELAY_OPTIONS, AudioSettingsScreen(), REPLAY_GAIN_OPTIONS, SAMPLE_RATE_OPTIONS, AudioSettingsScreenProps
 
 ### Community 243 - "ChapterList.tsx"
 Cohesion: 0.39
@@ -1438,10 +1429,6 @@ Nodes (7): Carried forward, Defects found and fixed during W8 (not in the origin
 Cohesion: 0.29
 Nodes (7): Phase 3.5.1 — `ChromeAutoHideController` (tap-anywhere + 3-second timer), Phase 3.5.2 — `ScrubPreview` (Netflix-style tooltip during seek), Phase 3.5.3 — Vertical-swipe gestures (volume + brightness), Phase 3.5.4 — Double-tap zones ±10s, Phase 3.5.5 — Long-press 2× speed preview, Phase 3.5.6 — `VideoMoreSheet` (expanded More with speed/quality/sleep), Wave 3.5 — Chrome auto-hide + scrub preview + gestures (the new chrome)
 
-### Community 257 - "Deep-scan findings (2026-10-09) — these change the plan"
-Cohesion: 0.29
-Nodes (7): App bug fixed — MediaKind/MediaLane type confusion, Deep-scan findings (2026-10-09) — these change the plan, ✅ `MpvRenderViewManager` is dead code, Other confirmed lib defects — ✅ FIXED (`5308019`), 🔴 P0 — deleting `PlayerActivity` breaks the service silently, ✅ Refines scope: audio already left `PlayerActivity`, 🔴 `seekable` root cause — ✅ FIXED (`CODE`, lib commit `c1019ff`)
-
 ### Community 258 - "SIMBA V21 — Coverage Matrix (T31.01 fulfillment + Gate 5)"
 Cohesion: 0.29
 Nodes (7): 1. Beta-critical user flows, 2. Structural gates (CI + local), 3. Test counts (cumulative, post-W8), 4. What this matrix does NOT cover, 6. Status legend, 7. Sign-off, SIMBA V21 — Coverage Matrix (T31.01 fulfillment + Gate 5)
@@ -1455,16 +1442,12 @@ Cohesion: 0.38
 Nodes (6): convertToolSchema(), fs, path, queryMcpServer(), run(), { spawn }
 
 ### Community 261 - "remove-stale-store-imports.cjs"
-Cohesion: 0.29
-Nodes (5): FILES_TO_SKIP, fs, importPatterns, path, SRC_ROOT
-
-### Community 262 - "weatherStore.ts"
-Cohesion: 0.38
-Nodes (6): UseWeatherResult, WeatherSnapshot, initialState, WeatherStatus, WeatherStoreActions, WeatherStoreState
+Cohesion: 0.14
+Nodes (10): FILES_TO_SKIP, fs, importPatterns, path, SRC_ROOT, FILES_TO_SKIP, fs, path (+2 more)
 
 ### Community 263 - "MoviesScreen/index.tsx"
-Cohesion: 0.33
-Nodes (4): renderMoviesContent(), MOVIES_CONFIG, MoviesScreen(), MOVIES_SECTION_CONFIG
+Cohesion: 0.28
+Nodes (6): useSectionOptions(), renderMoviesContent(), MOVIES_CONFIG, MoviesScreen(), MOVIES_SECTION_CONFIG, MusicScreen()
 
 ### Community 264 - "usePlaybackFacade.test.tsx"
 Cohesion: 0.33
@@ -1570,13 +1553,9 @@ Nodes (6): Progress — 2026-10-21 (late afternoon): the resume that never resum
 Cohesion: 0.33
 Nodes (3): fs, readDirFn, statFn
 
-### Community 290 - "remove-stale-useappdispatch.cjs"
-Cohesion: 0.33
-Nodes (4): FILES_TO_SKIP, fs, path, SRC_ROOT
-
-### Community 292 - "FolderLinkingWizard/types/index.ts"
+### Community 290 - "playerStore.test.ts"
 Cohesion: 0.50
-Nodes (3): FolderLinkingWizardScreenProps, FolderLinkingWizardProps, FolderLinkingWizardScreenProps
+Nodes (3): ANOTHER_TRACK, FILM, TRACK
 
 ### Community 293 - "MainActivityBackPress.test.ts"
 Cohesion: 0.40
@@ -1638,17 +1617,9 @@ Nodes (5): P01 — Fix the Jest config (closes D-003, D-004), P02 — Add the `.
 Cohesion: 0.40
 Nodes (5): 2. Wave & Phase Index, Phase 0 — Module bootstrap (new, today), Sub-phase 0a — Create `react-native-media-player/android/` skeleton, Sub-phase 0b — Wire consumer Gradle to consume module, Sub-phase 0c — Create placeholder files in module
 
-### Community 308 - "3. Agent Behavior Guidelines"
-Cohesion: 0.40
-Nodes (5): 3. Agent Behavior Guidelines, After analysis: ask about next steps, After fixes: always re-profile, During investigation: use query tools proactively, Use flows for reproducible profiling
-
 ### Community 309 - "Phase 36 — Memory leak audit"
 Cohesion: 0.40
 Nodes (5): 36.A Code-level audit findings, 36.B Verification, 36.C Deviations from spec, 36.D Files modified / created, Phase 36 — Memory leak audit
-
-### Community 310 - "Phase 45 — Clean up V11 debug logs"
-Cohesion: 0.40
-Nodes (5): 45.A Debug-log cleanup doc, 45.B Files modified, 45.C Verification, 45.D Deviations from spec, Phase 45 — Clean up V11 debug logs
 
 ### Community 312 - "Wave 3 — Simple search services (audius, jamendo, librivox, musicbrainz, tvmaze)"
 Cohesion: 0.40
@@ -1795,8 +1766,8 @@ Cohesion: 0.50
 Nodes (3): config, defaultConfig, { getDefaultConfig, mergeConfig }
 
 ### Community 353 - "AppContent.tsx"
-Cohesion: 0.13
-Nodes (15): AppContent(), styles, useAuthSession(), linking, RootNavigator(), HelpScreenProps, HelpScreen(), HelpScreenProps (+7 more)
+Cohesion: 0.16
+Nodes (13): App(), displayName, name, AppContent(), styles, linking, RootNavigator(), HelpScreen() (+5 more)
 
 ### Community 356 - "Chromium (CDP) Targets"
 Cohesion: 0.50
@@ -1811,24 +1782,24 @@ Cohesion: 0.50
 Nodes (3): First run, Physical iPhone setup, Signing and failures
 
 ## Knowledge Gaps
-- **3231 isolated node(s):** `argent`, `styles`, `store`, `readDirFn`, `statFn` (+3226 more)
+- **3246 isolated node(s):** `argent`, `styles`, `store`, `readDirFn`, `statFn` (+3241 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **51 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **52 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `useTheme()` connect `useTheme` to `RootNavigator.tsx`, `theme/index.tsx`, `SvgIcon`, `AppText.tsx`, `useNowPlayingStore`, `ErrorBoundary.tsx`, `playlist.ts`, `src/components/index.ts`, `onMediaChrome.test.tsx`, `Animated`, `MusicContent.tsx`, `VideoPlayer.tsx`, `usePresentationStore.ts`, `PlaylistDetailScreen.tsx`, `playlists/index.ts`, `MoviesPlaylistSheet.test.tsx`, `Home/index.tsx`, `VideoMoreSheet.tsx`, `MoviesContent.tsx`, `SettingsStack.tsx`, `CaptionCustomizer.tsx`, `useLibraryScreen.ts`, `VerticalSwipeGestures.tsx`, `HistoryScreen.tsx`, `useHomeScreen.ts`, `state/index.ts`, `MoviesScreen/components/BrowseLayout.tsx`, `PlayerControl.tsx`, `ResultListRow.tsx`, `audioSettingsService.ts`, `PlaylistDetailScreen`, `fileService.ts`, `RootStackParamList`, `SvgIconName`, `DownloadsScreen.tsx`, `ArchiveContent.tsx`, `types/api.ts`, `Toast.tsx`, `AppRoot.tsx`, `DownloadButton.tsx`, `SearchScreen.tsx`, `AppContent.tsx`, `BufferedRangeFill.tsx`, `LoginScreen.tsx`, `useSettingsStore`, `StatsScreen.tsx`, `AudioSettingsScreen`, `TransportBar.test.tsx`, `BottomSheet.tsx`?**
-  _High betweenness centrality (0.026) - this node is a cross-community bridge._
-- **Why does `file()` connect `check-legacy-event-emitter.cjs` to `remove-stale-store-imports.cjs`, `remove-stale-useappdispatch.cjs`, `migrate-selector-to-store.cjs`, `metadataService.ts`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
+- **Why does `useTheme()` connect `useTheme` to `RootNavigator.tsx`, `tokens.ts`, `SvgIcon`, `Animated`, `useNowPlayingStore`, `media.ts`, `ErrorBoundary.tsx`, `Playlist`, `AppText.tsx`, `onMediaChrome.test.tsx`, `src/components/index.ts`, `MusicContent.tsx`, `VerticalSwipeGestures.tsx`, `RadioContent.tsx`, `VideoPlayer.tsx`, `AppText`, `playlists/index.ts`, `MoviesPlaylistSheet.test.tsx`, `WeatherGreeting.tsx`, `VideoMoreSheet.tsx`, `ResultTile.tsx`, `SettingsStack.tsx`, `CaptionCustomizer.tsx`, `playlist.ts`, `useToast`, `MusicDetailScreen`, `useHomeScreen.ts`, `LiveTVContent.tsx`, `AudioSettingsScreen.tsx`, `FolderBrowserScreen.tsx`, `fileService.ts`, `RootStackParamList`, `theme/index.tsx`, `MovieDetailScreen`, `types/api.ts`, `Toast.tsx`, `StatsScreen.tsx`, `navigation/types.ts`, `AppRoot.tsx`, `DownloadButton.tsx`, `FilterAndSortControls.tsx`, `AppContent.tsx`, `BufferedRangeFill.tsx`, `SettingsScreen.tsx`, `BottomSheet.tsx`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+- **Why does `file()` connect `remove-stale-store-imports.cjs` to `check-legacy-event-emitter.cjs`, `migrate-selector-to-store.cjs`, `metadataService.ts`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Why does `SIMBA Player Module — V12 Specification & Tracker` connect `SIMBA Player Module — V12 Specification & Tracker` to `README.md`, `8. Wave 6 — NPM package extraction`, `Phase 0 — Module bootstrap (new, today)`, `4. Wave 2 — Surface migration & PiP fix`, `5. Wave 3 — Audio unification`, `6. Wave 4 — MediaSession & foreground service`, `7. Wave 5 — Configuration, theming & control slots`, `9. Wave 7 — Testing, hardening, documentation`, `10. Wave 8 — V11 deprecation & cleanup`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
 - **What connects `argent`, `styles`, `store` to the rest of the system?**
-  _3231 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _3246 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `RootNavigator.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.04969944182052383 - nodes in this community are weakly interconnected._
-- **Should `theme/index.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.037781109445277364 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0746606334841629 - nodes in this community are weakly interconnected._
+- **Should `tokens.ts` be split into smaller, more focused modules?**
+  _Cohesion score 0.038443935926773455 - nodes in this community are weakly interconnected._
 - **Should `SvgIcon` be split into smaller, more focused modules?**
-  _Cohesion score 0.03669724770642202 - nodes in this community are weakly interconnected._
-- **Should `AppText.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.036941580756013746 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.032214765100671144 - nodes in this community are weakly interconnected._

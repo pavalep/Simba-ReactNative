@@ -351,6 +351,52 @@ branch was written before the kind existed. `MIXED` is now in its
 
 ## PHASE 5 — Mixed playlist playback (the risky one)
 
+> **Status 2026-11-02: PART DONE** — steps 25, 26 and 27 landed. Steps 28
+> and 29 are **still open**. Evidence, step by step:
+>
+> - **25 (the queue holds both lanes).** `normalizeSingleLane` is
+>   **deleted**. `loadPlaylistToPlayer` and `addToPlaylist` keep every
+>   item, in every lane. `addToPlaylist` used to drop an item in another
+>   lane **without a word** — the user tapped "add", nothing appeared, and
+>   nothing said why. The lane rule still exists where it belongs: the
+>   **playlist store** refuses an item a single-lane playlist may not hold
+>   (`isPlaylistMediaKindAllowed`).
+>   The queue screen stopped filtering by lane too, so a run that crosses
+>   lanes no longer shows the half the user cannot play and hides the half
+>   they can.
+>   *Evidence:* `__tests__/state/playerStore.test.ts` — a mixed run holds
+>   every item, an item added in another lane is not dropped, and the run
+>   still starts at its first item.
+> - **26 (the handover has ONE owner).** NEW `useLaneHandover()` in
+>   `src/infrastructure/player/useResumeAwareLaunch.ts` — in the launch
+>   seam, next to the lane decision the seam already makes, and **not** in
+>   the playlist screen and **not** in the queue store. It owns `next`,
+>   `handoverTo`, `advance` and `lane`.
+>   The rule used to live in three places: the queue store (narrowed the
+>   run), the queue screen (filtered it) and `validateLane` — which
+>   refused a cross-lane launch with *"Can't play video while audio is
+>   active"* and which **no launch path calls any more**, so it was a guard
+>   that guarded nothing.
+>   *Evidence:* `__tests__/infrastructure/player/useLaneHandover.test.tsx` —
+>   item N hands over to the other lane at item N+1, and the session takes
+>   the new lane.
+> - **27 (the boundary does not remount the picture).** The handover goes
+>   through the seam, which writes the session and moves the
+>   **presentation** — it does not rebuild the tree. A video handover does
+>   **not** ask the bridge for a new player, because the video lane is
+>   already mounted in the tree and the session tells it what to load.
+>   *Evidence:* the same suite — "a video handover does not ask the bridge
+>   for a new player" — plus "moves the presentation with the lane".
+> - **Every "must not" test was mutation-checked.** Putting the narrowing
+>   back, putting the silent drop back, dropping the lane from the
+>   handover, and forcing the handover's lane to `audio` were each applied
+>   in turn; each failed the test meant to catch it, and the source was
+>   restored byte-identically afterwards. One test was found to pass
+>   **vacuously** under the first mutation — it asserted that the bridge
+>   was not asked, which is trivially true when the run had been narrowed
+>   to one lane and there was no handover to make — so it now asserts that
+>   the handover **happened** as well.
+
 25. **Make the queue able to hold both lanes.** The single-lane rule is
     `normalizeSingleLane` (`src/state/playerStore.ts:97-101`), applied by
     `loadPlaylistToPlayer` (`:126-133`) and `addToPlaylist` (`:135-149`).
@@ -373,6 +419,18 @@ branch was written before the kind existed. `MIXED` is now in its
     `src/screens/PlaylistDetail/components/PlaylistDetailScreen.tsx` (967
     lines today).
     *Evidence:* the screen's test, plus the device proof in phase 8.
+    **PART DONE 2026-11-02** — the screen's half is done: "Play all" loads
+    the WHOLE run (`loadPlaylistToPlayer`, which now keeps every lane) and
+    launches its first item, so a MIXED playlist starts at the right place
+    and holds every item in order.
+    **The remaining half is the transport, and it is a defect of its own
+    (bug `B-046`):** `useTransport`'s `canGoNext` and its `next` read the
+    **lib's** mpv playlist, and `loadfile` REPLACES mpv's playlist — so it
+    holds exactly one entry and the ⏭ button is greyed out for every
+    album and playlist launch. The transport has to advance the app's RUN
+    through the handover's one owner (`useLaneHandover`). The handover
+    exists; the transport is not wired to it yet. The device proof stays
+    **deferred**.
 29. **Phase exit:** `tsc` exit 0; `eslint` exit 0; `jest` green; the handover
     tests pass.
 

@@ -10,7 +10,10 @@
  */
 
 import React, {useMemo} from 'react';
-import {useOpenWithResume} from '@simba-dev/react-native-media-player';
+import {
+  resolveStreamType,
+  useOpenWithResume,
+} from '@simba-dev/react-native-media-player';
 import type {
   OpenPlayerOptions,
   UsePlayerActivityResult,
@@ -25,6 +28,15 @@ import {usePresentationStore} from '../../state/usePresentationStore';
 // on the seam's import graph for no benefit.
 import {useBookmarksStore} from '../../state/bookmarksStore';
 import {useRecentHistoryStore} from '../../state/recentHistoryStore';
+// The concrete store module, not the `state` barrel — the same reason the
+// two stores above are imported directly: the barrel re-exports enough of
+// the app that routing through it here would put a cycle on the seam's
+// import graph for no benefit. `playerStore`'s own import of the
+// infrastructure barrel is TYPE-ONLY and is erased at compile time, so
+// this edge is not a runtime cycle.
+import {activeLane, usePlayerStore} from '../../state/playerStore';
+import type {PlaylistEntry} from '../../state/playerStore';
+import type {MediaLane} from '../../types/media';
 import {
   planResume,
   resolvePlanStartMs,
@@ -316,5 +328,113 @@ export function useResumeAwareLaunch(
       expandVideo,
       promptResume,
     ],
+  );
+}
+
+/**
+ * The lane handover — ONE owner.
+ *
+ * A run may cross lanes: a MIXED playlist holds an audio track and a film,
+ * and the run plays them in order. When the run crosses, the lane changes
+ * mid-playback.
+ *
+ * This hook is where that happens, and it is the ONLY place it happens.
+ * It used to be spread across three:
+ *
+ *  - the queue store, which narrowed the run to the first entry's lane and
+ *    dropped anything added in another lane — silently;
+ *  - the queue screen, which filtered the run to the active lane and so
+ *    hid the items on the other side of the boundary;
+ *  - `validateLane`, which refused a cross-lane launch with "Can't play
+ *    video while audio is active" — and which **no launch path calls any
+ *    more**, so it was a guard that guarded nothing.
+ *
+ * A rule that lives in three places is not a rule; it is three chances to
+ * get it wrong. The rule lives here, next to the lane decision the seam
+ * already makes.
+ *
+ * ## What a handover is
+ *
+ * The seam's `openPlayer` writes the "now playing" session — with the new
+ * lane — and moves the PRESENTATION to that lane. It does not rebuild the
+ * tree: the picture is a view in the consumer's own tree, so the video
+ * lane's mount survives the boundary. That is the whole of the boundary
+ * rule: **the lane changes, the picture does not remount.**
+ */
+export interface AppLaneHandover {
+  /**
+   * The next item in the run, across lanes.
+   *
+   * `null` when the run has ended, or when nothing is playing.
+   */
+  readonly next: () => PlaylistEntry | null;
+  /**
+   * Hand over to `entry`: the session takes its lane and the
+   * presentation follows.
+   */
+  readonly handoverTo: (entry: PlaylistEntry) => Promise<boolean>;
+  /**
+   * Hand over to the next item in the run.
+   *
+   * `false` when the run has ended — there is nothing to hand over to.
+   */
+  readonly advance: () => Promise<boolean>;
+  /** The lane the run is playing in right now. */
+  readonly lane: () => MediaLane | undefined;
+}
+
+export function useLaneHandover(): AppLaneHandover {
+  const {openPlayer} = useResumeAwareLaunch();
+
+  const lane = React.useCallback(
+    () => activeLane(usePlayerStore.getState()),
+    [],
+  );
+
+  const next = React.useCallback((): PlaylistEntry | null => {
+    const {playlist, currentIndex} = usePlayerStore.getState();
+    if (currentIndex < 0) {
+      return null;
+    }
+    return playlist[currentIndex + 1] ?? null;
+  }, []);
+
+  const handoverTo = React.useCallback(
+    async (entry: PlaylistEntry): Promise<boolean> => {
+      const index = usePlayerStore
+        .getState()
+        .playlist.findIndex(item => item.uri === entry.uri);
+      if (index >= 0) {
+        usePlayerStore.getState().playFromPlaylist(index);
+      }
+      await openPlayer({
+        uri: entry.uri,
+        title: entry.title,
+        // The lane, resolved once — the same resolution every launch path
+        // uses, so an item's kind can never disagree with its lane.
+        type: resolveStreamType(entry.mediaType),
+        // The KIND as well as the lane. The session's `type` is what
+        // "Recently Played" shows, and a film that lost its kind became a
+        // music note (see the seam's own docblock).
+        mediaKind: entry.type,
+        mediaLane: entry.mediaType,
+      });
+      return true;
+    },
+    [openPlayer],
+  );
+
+  const advance = React.useCallback(async (): Promise<boolean> => {
+    const upcoming = next();
+    if (!upcoming) {
+      return false;
+    }
+    await handoverTo(upcoming);
+    return true;
+  }, [handoverTo, next]);
+
+  return React.useMemo(
+    () => ({advance, handoverTo, lane, next}),
+    [advance, handoverTo, lane, next],
   );
 }
