@@ -2,7 +2,7 @@
 // Simba Player — AllVideosScreen (Phase 20)
 // ────────────────────────────────────────────────────────
 
-import React, {useCallback} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   View,
   TouchableOpacity,
@@ -24,7 +24,11 @@ import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {SearchBar} from '../../../components/core/SearchBar/SearchBar';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SimbaStatusBar} from '../../../components/StatusBar';
+import {MediaActionsSheet} from '../../../components/sheets/MediaActionsSheet/MediaActionsSheet';
+import {useQueueActions} from '../../../components/sheets/MediaActionsSheet/useQueueActions';
+import {PlaylistSheet, type PlaylistSheetProps} from '../../../components/sheets/PlaylistSheet';
 import {useAllVideosScreen} from '../hooks/useAllVideosScreen';
+import type {ScannedTrack} from '../../../state';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 const COLUMN_COUNT = 2;
@@ -55,6 +59,85 @@ export const AllVideosScreen: React.FC = () => {
     handleRefresh,
   } = useAllVideosScreen();
 
+  // ── Phase 6 step 33: the standard media menu on a video row ───────
+  // A long press opens `MediaActionsSheet` — the app's ONE media menu
+  // (58.4/58.5). Its "Add to Playlist" row opens `PlaylistSheet` with
+  // the video, so a local film can live in a playlist.
+  const {playNext, addToQueue} = useQueueActions();
+  const [menuTrack, setMenuTrack] = useState<ScannedTrack | null>(null);
+  const [sheetItem, setSheetItem] = useState<PlaylistSheetProps['currentItem'] | null>(null);
+
+  const handleTrackLongPress = useCallback((track: ScannedTrack) => {
+    setMenuTrack(track);
+  }, []);
+
+  const handleMenuAction = useCallback(
+    async (action: 'play-next' | 'add-queue' | 'add-playlist', track: ScannedTrack) => {
+      // A scanned local file already carries its own classification
+      // (`type: 'video'`, `mediaType: 'video'`, `source: 'local'`) — the
+      // scanner owns it, so the playlist rule sees the truth.
+      const queueItem = {
+        uri: track.uri,
+        title: track.title,
+        duration: track.duration,
+        source: track.source,
+        type: track.type,
+        mediaType: track.mediaType,
+        folderId: track.folderId,
+      };
+      if (action === 'play-next') {
+        playNext(queueItem);
+        return;
+      }
+      if (action === 'add-queue') {
+        addToQueue(queueItem);
+        return;
+      }
+      setSheetItem({
+        fileUri: track.uri,
+        title: track.title,
+        duration: track.duration,
+        artist: track.artist,
+        thumbnailPath: track.albumArtUri || undefined,
+        source: track.source,
+        type: track.type,
+        mediaType: track.mediaType,
+        folderId: track.folderId,
+      });
+    },
+    [addToQueue, playNext],
+  );
+
+  const menuActions = useMemo(() => {
+    const track = menuTrack;
+    if (!track) {
+      return [];
+    }
+    return [
+      {
+        label: 'Play Next',
+        icon: 'skipForward' as const,
+        onPress: async () => {
+          await handleMenuAction('play-next', track);
+        },
+      },
+      {
+        label: 'Add to Queue',
+        icon: 'list' as const,
+        onPress: async () => {
+          await handleMenuAction('add-queue', track);
+        },
+      },
+      {
+        label: 'Add to Playlist',
+        icon: 'listMusic' as const,
+        onPress: async () => {
+          await handleMenuAction('add-playlist', track);
+        },
+      },
+    ];
+  }, [handleMenuAction, menuTrack]);
+
   const {styles: animStyles} = useAnimatedEntrance(
     Math.min(filteredTracks.length, 12),
     {staggerDelay: 50, direction: 'fade', duration: 300},
@@ -71,7 +154,12 @@ export const AllVideosScreen: React.FC = () => {
           animStyles[index] || {},
         ]}
         activeOpacity={0.7}
-        onPress={() => handlePlayTrack(item.uri, item.title)}>
+        onPress={() => handlePlayTrack(item.uri, item.title)}
+        onLongPress={() => handleTrackLongPress(item)}
+        delayLongPress={400}
+        accessibilityRole="button"
+        accessibilityLabel={item.title}
+        accessibilityHint="Long press for more actions">
         <View style={[styles.thumb, {backgroundColor: colors.accent.goldDim}]}>
           <SvgIcon name="video" size={28} color={colors.accent.gold} />
         </View>
@@ -83,7 +171,7 @@ export const AllVideosScreen: React.FC = () => {
         </AppText>
       </TouchableOpacity>
     ),
-    [colors, animStyles, handlePlayTrack],
+    [colors, animStyles, handlePlayTrack, handleTrackLongPress],
   );
 
   // 59.2: stable renderItem — prevents cell re-renders on incidental
@@ -97,7 +185,12 @@ export const AllVideosScreen: React.FC = () => {
           animStyles[index] || {},
         ]}
         activeOpacity={0.7}
-        onPress={() => handlePlayTrack(item.uri, item.title)}>
+        onPress={() => handlePlayTrack(item.uri, item.title)}
+        onLongPress={() => handleTrackLongPress(item)}
+        delayLongPress={400}
+        accessibilityRole="button"
+        accessibilityLabel={item.title}
+        accessibilityHint="Long press for more actions">
         <View style={[styles.listThumb, {backgroundColor: colors.accent.goldDim}]}>
           <SvgIcon name="video" size={20} color={colors.accent.gold} />
         </View>
@@ -116,7 +209,7 @@ export const AllVideosScreen: React.FC = () => {
         />
       </TouchableOpacity>
     ),
-    [colors, animStyles, handlePlayTrack],
+    [colors, animStyles, handlePlayTrack, handleTrackLongPress],
   );
 
   return (
@@ -240,6 +333,18 @@ export const AllVideosScreen: React.FC = () => {
           }
         />
       )}
+
+      <MediaActionsSheet
+        visible={menuTrack !== null}
+        onClose={() => setMenuTrack(null)}
+        title={menuTrack?.title ?? ''}
+        actions={menuActions}
+      />
+      <PlaylistSheet
+        visible={sheetItem !== null}
+        onClose={() => setSheetItem(null)}
+        currentItem={sheetItem ?? {fileUri: '', title: '', duration: 0}}
+      />
     </SafeAreaView>
   );
 };

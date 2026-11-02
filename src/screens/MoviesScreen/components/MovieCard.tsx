@@ -43,10 +43,15 @@ interface MovieCardProps {
    *  this, a single trailing item stretches to full screen width and
    *  looks like a giant banner inside the grid. */
   isLonelyItem?: boolean;
+  /** Phase 6 step 33 — a long press opens the app's ONE media menu
+   *  (`MediaActionsSheet`, 58.4/58.5). The card's identity is its
+   *  Internet Archive identifier, so the surface can find the item
+   *  again. Same wiring as `PlaylistCard` / `MediaListItem`. */
+  onLongPress?: (id: string) => void;
 }
 
 export const MovieCard: React.FC<MovieCardProps> = React.memo(
-  ({item, onPress, isResolving, placeholderImage, isLonelyItem}) => {
+  ({item, onPress, isResolving, placeholderImage, isLonelyItem, onLongPress}) => {
     const {colors} = useTheme();
     const styles = useMemo(() => createMovieCardStyles(colors), [colors]);
     // Local "image failed" state so we can fall back to the placeholder
@@ -90,9 +95,12 @@ export const MovieCard: React.FC<MovieCardProps> = React.memo(
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={() => onPress(item)}
+        onLongPress={onLongPress ? () => onLongPress(item.identifier) : undefined}
+        delayLongPress={400}
         disabled={isResolving}
         accessibilityRole="button"
         accessibilityLabel={`${item.title}${meta ? `, ${meta}` : ''}`}
+        accessibilityHint={onLongPress ? 'Long press for more actions' : undefined}
         style={isLonelyItem ? styles.heroCardLonely : styles.heroCard}>
         {/* Image layer — two stacked layers.
              Layer 1 (base): always present — category cover if available,

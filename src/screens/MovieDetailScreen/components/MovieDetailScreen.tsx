@@ -28,6 +28,8 @@ import {Placeholder} from '../../../components/feedback/Placeholder';
 import {SvgIcon} from '../../../components/utility/SvgIcon/SvgIcon';
 import {useMovieDetailScreen} from '../hooks/useMovieDetailScreen';
 import {shareContent} from '../../../services/shareService';
+import {PlaylistSheet, type PlaylistSheetProps} from '../../../components/sheets/PlaylistSheet';
+import {useToast} from '../../../components/feedback/Toast';
 
 type Props = MovieDetailScreenProps;
 
@@ -89,6 +91,44 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
       title: displayTitle || 'Movie',
     });
   }, [identifier, displayTitle]);
+
+  // ── Phase 6 step 33: add this movie to a playlist ─────────────────
+  // This screen shows ONE movie and no list of items, so the playlist
+  // entry is a VISIBLE button (the MusicDetailScreen precedent) rather
+  // than a long-press row menu.
+  const toast = useToast();
+  const [sheetItem, setSheetItem] = useState<PlaylistSheetProps['currentItem'] | null>(null);
+
+  const handleAddToPlaylist = useCallback(() => {
+    if (!item) {
+      return;
+    }
+    // The IA detail url is the collection DIRECTORY when the item has no
+    // playable file. Such an item cannot be listed — say so instead of
+    // storing an unplayable uri.
+    if (!item.streamingUrl || item.streamingUrl.endsWith('/')) {
+      toast.show(
+        'No Video File — this item does not have a playable video file. Please try a different movie.',
+        'error',
+        {duration: 6000},
+      );
+      return;
+    }
+    // The movie is a VIDEO item: `type: 'movie'` + `mediaType: 'video'`.
+    // That truthful pair is what lets the playlist rule offer the video
+    // and mixed playlists and refuse the audio ones.
+    setSheetItem({
+      fileUri: item.streamingUrl,
+      title: item.title,
+      duration: item.duration,
+      artist: item.creator || undefined,
+      thumbnailPath: item.imageUrl || undefined,
+      source: 'api',
+      provider: 'internetArchive',
+      type: 'movie',
+      mediaType: 'video',
+    });
+  }, [item, toast]);
 
   // ── Loading State ──────────────────────────────────────────────────
 
@@ -221,6 +261,25 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
             </AppText>
           ) : null}
         </View>
+
+        {/* ── Add to Playlist ───────────────────────────────────────── */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Add movie to playlist"
+          onPress={handleAddToPlaylist}
+          style={[styles.playlistButton, {borderColor: colors.accent.gold}]}>
+          <SvgIcon
+            name="listMusic"
+            size={20}
+            color={colors.accent.gold}
+          />
+          <AppText
+            variant="button"
+            style={{color: colors.accent.gold, marginLeft: spacing.sm}}>
+            Add to Playlist
+          </AppText>
+        </TouchableOpacity>
 
         {/* ── Synopsis ──────────────────────────────────────────────── */}
         {item.description ? (
@@ -442,6 +501,12 @@ export const MovieDetailScreen: React.FC<Props> = ({navigation, route}) => {
           </AppText>
         </TouchableOpacity>
       </View>
+
+      <PlaylistSheet
+        visible={sheetItem !== null}
+        onClose={() => setSheetItem(null)}
+        currentItem={sheetItem ?? {fileUri: '', title: '', duration: 0}}
+      />
     </View>
   );
 };
@@ -565,6 +630,18 @@ const styles = StyleSheet.create({
   downloadUrl: {
     flex: 1,
     marginLeft: spacing.sm,
+  },
+  // Add to Playlist button — MusicDetailScreen's secondary-action shape
+  playlistButton: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderWidth: 1.5,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
   // Play button
   playButtonContainer: {

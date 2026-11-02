@@ -13,6 +13,23 @@ export interface PlaylistCardProps {
   onPress: (playlistId: string) => void;
   onPlayAll?: (playlistId: string) => void;
   onShuffleAll?: (playlistId: string) => void;
+  /**
+   * Long-press — the shortcut to the playlist's action menu.
+   *
+   * Absent on a surface with no menu to open, and the card then carries no
+   * hint either: a hint that promises a gesture the card does not have is
+   * a lie the screen reader tells.
+   */
+  onLongPress?: (playlistId: string) => void;
+  /**
+   * The VISIBLE 32 px pin toggle.
+   *
+   * Present only on a management surface. A browsing grid of fifty
+   * playlists must not carry a permanent pin button on every card — there
+   * the long-press menu is the shortcut, and the management row is the
+   * reachable door (D-P8, spec §4.5).
+   */
+  onTogglePin?: (playlistId: string, pinned: boolean) => void;
 }
 
 export const PlaylistCard: React.FC<PlaylistCardProps> = ({
@@ -20,6 +37,8 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
   onPress,
   onPlayAll,
   onShuffleAll,
+  onLongPress,
+  onTogglePin,
 }) => {
   const {colors} = useTheme();
 
@@ -45,8 +64,10 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
       style={[styles.card, {backgroundColor: colors.background.elevated, borderColor: colors.border.subtle}]}
       activeOpacity={0.7}
       onPress={() => onPress(playlist.id)}
+      onLongPress={onLongPress ? () => onLongPress(playlist.id) : undefined}
       accessibilityRole="button"
-      accessibilityLabel={`Open playlist ${playlist.name}${playlist.pinned ? ', pinned' : ''}`}>
+      accessibilityLabel={`Open playlist ${playlist.name}${playlist.pinned ? ', pinned' : ''}`}
+      accessibilityHint={onLongPress ? 'Long press for more actions' : undefined}>
       {/* ── Cover ── */}
       {/* The ARTWORK has ONE owner (`PlaylistCover`), and the pin badge
           lives inside it - so the badge sits over the COVER, and it
@@ -65,9 +86,33 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
 
       {/* ── Info ── */}
       <View style={styles.infoArea}>
-        <AppText variant="body2" color="primary" numberOfLines={1} style={styles.name}>
-          {playlist.name}
-        </AppText>
+        <View style={styles.nameRow}>
+          <AppText variant="body2" color="primary" numberOfLines={1} style={styles.name}>
+            {playlist.name}
+          </AppText>
+          {/* The VISIBLE pin toggle — a management surface only. The
+              browsing grid gets the long-press menu instead. */}
+          {onTogglePin && (
+            <TouchableOpacity
+              style={[
+                styles.pinToggle,
+                {backgroundColor: playlist.pinned ? colors.accent.goldDim : colors.border.subtle},
+              ]}
+              activeOpacity={0.7}
+              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+              onPress={() => onTogglePin(playlist.id, !playlist.pinned)}
+              accessibilityRole="button"
+              accessibilityLabel={playlist.pinned ? 'Unpin from top' : 'Pin to top'}
+              accessibilityHint={playlist.name}
+              accessibilityState={{selected: playlist.pinned}}>
+              <SvgIcon
+                name={playlist.pinned ? 'pinFilled' : 'pin'}
+                size={14}
+                color={playlist.pinned ? colors.accent.gold : colors.text.secondary}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
         <AppText variant="caption" color="tertiary" style={styles.meta}>
           {itemCount} {itemCount === 1 ? 'item' : 'items'} · {lastUpdated}
         </AppText>
@@ -135,8 +180,24 @@ const styles = StyleSheet.create({
   infoArea: {
     padding: spacing.md,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   name: {
+    flex: 1,
     marginBottom: 2,
+  },
+  // The pin toggle is a 32 px control (spec §4.5). The hit slop widens
+  // the TARGET; the ICON does not grow, so the row does not.
+  pinToggle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
   },
   meta: {},
   actionRow: {

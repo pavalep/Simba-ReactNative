@@ -30,6 +30,10 @@ export type RootStackParamList = {
   NowPlaying: {fileUri?: string; fileTitle?: string} | undefined;
   FolderBrowser: {initialPath?: string; targetPlaylistId?: string};
   PlaylistDetail: {playlistId: string; playlistName: string};
+  // The "Add to playlist" page: it gathers items from several sections and
+  // adds them to ONE playlist. The target is optional, so the page can also
+  // be opened before a playlist has been chosen.
+  AddToPlaylist: {playlistId?: string; playlistName?: string};
   ArtistDetail: {artistName: string};
   AlbumDetail: {
     albumTitle: string;

@@ -261,11 +261,14 @@ and the tracker already requires "one target, not two".
 D-P4 applies the "one owner per fact" rule to **actions**. It applies just as
 hard to **labels and artwork**, and both are currently broken:
 
-* **The kind label has six owners** — the exported `PLAYLIST_KIND_LABELS`,
+* **The kind label had six owners** — the exported `PLAYLIST_KIND_LABELS`,
   **three** local `KIND_LABELS` copies, **one** inline ternary, and
   `src/constants/strings.ts`. The exported map is the one owner; the other
-  four are deleted. ("Mixed" is **not** an invented word in this app —
-  `strings.ts:280` already has `playlistKindMixed: 'Mixed'`.)
+  four are deleted. ("Mixed" was **not** an invented word in this app —
+  `strings.ts` already had `playlistKindMixed: 'Mixed'`.)
+  *Amended 2026-11-02:* `strings.ts` is **deleted** — an entirely
+  unreferenced module — so the count today is **five copies gone, one
+  owner left**.
 * **A playlist's cover has two owners** — `PlaylistCard` draws a 2 × 2
   collage and `AllPlaylistsScreen` draws a generic `listMusic` icon box for
   the same playlist. One renderer (`PlaylistCover`), three chromes: a wide
@@ -384,7 +387,7 @@ style `PlaylistCard` already uses: `background.accent.goldDim`, text
 A text badge is the reason `MIXED` needs **no new glyph**: the badge says
 "Mixed", and the cover shows two videos and two songs.
 
-**But the label has six owners today, and that has to end.**
+**But the label had six owners, and that has to end.**
 
 | # | Owner | Form |
 |---|---|---|
@@ -400,9 +403,18 @@ Four copies of a two-entry map, one inline ternary, and — in `strings.ts` —
 
 The change: `PLAYLIST_KIND_LABELS` in `src/types/playlist.ts` is the one
 owner, gains `MIXED: 'Mixed'`, and owners 2, 3, 4 and 5 delete their copies
-and import it. `strings.ts` keeps its copy for the generic strings surface,
-but the playlist surfaces read the one owner. `KIND_OPTIONS` in
-`PlaylistCreateModal.tsx:17` gains `'MIXED'`.
+and import it. `KIND_OPTIONS` in `PlaylistCreateModal.tsx:17` gains
+`'MIXED'`.
+
+> **Amended 2026-11-02.** Owner 6 — `src/constants/strings.ts` — is
+> **gone**. The module turned out to be an entirely unreferenced copy of
+> every user-facing string the app uses, with **zero** consumers, and it
+> was deleted in the AI-slop sweep (register item 72, bug `B-044`). So the
+> table above lists the six owners **as they were**, and the count today is
+> **five copies deleted, one owner left**: `PLAYLIST_KIND_LABELS`.
+>
+> The reason the word "Mixed" was never an invention also did not change —
+> it simply lived in a file that no longer exists.
 
 ### 4.5 The one page that owns playlists — `AllPlaylistsScreen`
 
@@ -664,9 +676,10 @@ plan:
   is all pinned, and the rail shows both. The pin badge says which are
   pinned. This answers the open question below.
 * **The kind label gets one owner** (`PLAYLIST_KIND_LABELS`), replacing four
-  local copies and one inline ternary. "Mixed" is **not** an invented word
-  in this app — `src/constants/strings.ts:280` already has
-  `playlistKindMixed: 'Mixed'`.
+  local copies and one inline ternary. "Mixed" was **not** an invented word
+  in this app — `src/constants/strings.ts` already had
+  `playlistKindMixed: 'Mixed'`. *(That module was deleted on 2026-11-02 —
+  see §4.4.)*
 * **The playlist cover gets one owner** (`PlaylistCover`), so the Library's
   card, the management row and the Home tile show the same playlist the
   same way.

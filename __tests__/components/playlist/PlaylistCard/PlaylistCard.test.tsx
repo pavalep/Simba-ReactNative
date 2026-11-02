@@ -31,7 +31,7 @@
 
 import React from 'react';
 import {Animated} from 'react-native';
-import {render, screen} from '@testing-library/react-native';
+import {render, screen, fireEvent} from '@testing-library/react-native';
 
 jest.mock('../../../../src/components/utility/SvgIcon', () => {
   const ReactActual = jest.requireActual('react') as typeof import('react');
@@ -198,5 +198,111 @@ describe('PlaylistCard — the cover owns the artwork', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+/**
+ * The card's long-press, and the VISIBLE pin toggle.
+ *
+ * The pin's SHORTCUT is a long-press — the action menu. The pin's
+ * reachable DOOR is the visible 32 px toggle, and only a management surface
+ * offers it: a browsing grid of fifty playlists must not carry a permanent
+ * button on every card (locked decision D-P8, spec §4.5).
+ */
+describe('PlaylistCard — the long-press and the visible pin toggle', () => {
+  it('reaches the long-press handler with the playlist id', async () => {
+    const onLongPress = jest.fn();
+    await render(
+      <ThemeProvider>
+        <PlaylistCard
+          playlist={makePlaylist({id: 'pl_9'})}
+          onPress={jest.fn()}
+          onLongPress={onLongPress}
+        />
+      </ThemeProvider>,
+    );
+
+    await fireEvent(screen.getByLabelText('Open playlist Road Trip'), 'longPress');
+
+    expect(onLongPress).toHaveBeenCalledWith('pl_9');
+  });
+
+  it('promises the gesture in the hint ONLY when the handler is there', async () => {
+    await renderCard(makePlaylist());
+
+    // A hint that promises a gesture the card does not have is a lie the
+    // screen reader tells.
+    expect(screen.getByLabelText('Open playlist Road Trip').props.accessibilityHint).toBeUndefined();
+  });
+
+  it('carries NO visible pin toggle without a toggle handler', async () => {
+    await renderCard(makePlaylist({pinned: true}));
+
+    expect(screen.queryByLabelText('Pin to top')).toBeNull();
+    expect(screen.queryByLabelText('Unpin from top')).toBeNull();
+  });
+
+  it('carries a visible 32 px pin toggle when the surface offers one', async () => {
+    await render(
+      <ThemeProvider>
+        <PlaylistCard
+          playlist={makePlaylist({pinned: false})}
+          onPress={jest.fn()}
+          onTogglePin={jest.fn()}
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByLabelText('Pin to top')).toHaveStyle({width: 32, height: 32});
+  });
+
+  it('asks for the OPPOSITE state when the toggle is pressed', async () => {
+    const onTogglePin = jest.fn();
+    await render(
+      <ThemeProvider>
+        <PlaylistCard
+          playlist={makePlaylist({id: 'pl_9', pinned: false})}
+          onPress={jest.fn()}
+          onTogglePin={onTogglePin}
+        />
+      </ThemeProvider>,
+    );
+
+    await fireEvent.press(screen.getByLabelText('Pin to top'));
+
+    expect(onTogglePin).toHaveBeenCalledWith('pl_9', true);
+  });
+
+  it('unpins through the same toggle', async () => {
+    const onTogglePin = jest.fn();
+    await render(
+      <ThemeProvider>
+        <PlaylistCard
+          playlist={makePlaylist({id: 'pl_9', pinned: true})}
+          onPress={jest.fn()}
+          onTogglePin={onTogglePin}
+        />
+      </ThemeProvider>,
+    );
+
+    await fireEvent.press(screen.getByLabelText('Unpin from top'));
+
+    expect(onTogglePin).toHaveBeenCalledWith('pl_9', false);
+  });
+
+  it('states the toggle state', async () => {
+    await render(
+      <ThemeProvider>
+        <PlaylistCard
+          playlist={makePlaylist({pinned: true})}
+          onPress={jest.fn()}
+          onTogglePin={jest.fn()}
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByLabelText('Unpin from top').props.accessibilityState).toEqual({
+      selected: true,
+    });
   });
 });

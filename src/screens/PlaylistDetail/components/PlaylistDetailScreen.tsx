@@ -114,7 +114,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const bottomChromeInset = useBottomChromeInset();
   const {playlistId, playlistName} = route.params;
   const {addToQueue: addToQueueStore, prependToQueue: prependToQueueStore} = useQueue();
-  const {renamePlaylist, deletePlaylist, removeItem, reorderItems, clearPlaylist, importPlaylist} = usePlaylists();
+  const {renamePlaylist, deletePlaylist, removeItem, reorderItems, clearPlaylist, importPlaylist, setPinned} = usePlaylists();
   const playlist = usePlaylist(playlistId);
   const toast = useToast();
   const {confirm, dialog} = useConfirmDialog();
@@ -137,14 +137,33 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const [itemMenuVisible, setItemMenuVisible] = useState(false);
   const [menuItem, setMenuItem] = useState<PlaylistItem | null>(null);
 
-  // ── Header: Add ──
+  // ── Header: Add items ──
+  // The multi-source page: it gathers items from several sections and adds
+  // them to THIS playlist.
+  const handleAddItems = useCallback(() => {
+    navigation.navigate('AddToPlaylist', {playlistId, playlistName});
+  }, [navigation, playlistId, playlistName]);
+
+  // ── Options: Add local files ──
   // Open the folder browser in selection mode pre-targeting this playlist;
   // picked files are added directly to it (FolderBrowserScreen batch flow).
-  const handleAdd = useCallback(() => {
+  const handleAddLocalFiles = useCallback(() => {
     navigation.navigate('FolderBrowser', {
       targetPlaylistId: playlistId,
     });
   }, [navigation, playlistId]);
+
+  // ── Header: Pin toggle ──
+  // A BUTTON, not a long-press: a long-press is unreachable by a screen
+  // reader and by a keyboard, and a pin some users cannot reach is a pin
+  // some users do not have. (D-P8)
+  const handleTogglePin = useCallback(() => {
+    if (!playlist) {
+      return;
+    }
+    setPinned(playlist.id, !playlist.pinned);
+    toast.show(playlist.pinned ? 'Unpinned from top' : 'Pinned to top', 'success');
+  }, [playlist, setPinned, toast]);
 
   // ── Header: Play All ──
   const handlePlayAll = useCallback(() => {
@@ -297,6 +316,9 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const handlePlaylistMenuSelect = useCallback(
     (value: string | number) => {
       switch (value) {
+        case 'add-local':
+          handleAddLocalFiles();
+          break;
         case 'rename':
           setModalMode('rename');
           break;
@@ -320,7 +342,13 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           break;
       }
     },
-    [handleExport, handleClearPlaylist, handleSharePlaylist, handleImportPlaylist],
+    [
+      handleExport,
+      handleClearPlaylist,
+      handleSharePlaylist,
+      handleImportPlaylist,
+      handleAddLocalFiles,
+    ],
   );
 
   // ── Batch select ──
@@ -534,6 +562,26 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: colors.background.elevated,
+        },
+        // A header button whose LABEL is longer than 44 px. The button grows
+        // to fit its text instead of letting the text overflow the touch
+        // target.
+        headerBtnLabel: {
+          height: 44,
+          borderRadius: 22,
+          paddingHorizontal: spacing.sm,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.background.elevated,
+        },
+        // The pin toggle: 32 px — the same shape the AllPlaylists screen's
+        // action button uses.
+        pinBtn: {
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          alignItems: 'center',
+          justifyContent: 'center',
         },
         headerBtnDanger: {
           backgroundColor: colors.semantic.error,
@@ -853,14 +901,51 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
                   </AppText>
                 </TouchableOpacity>
               )}
+              {/* The empty playlist's own action is the EMPTY STATE's
+                  "Add items" button, so the header does not repeat it —
+                  the same rule the "Play All" button already follows. */}
+              {items.length > 0 && (
+                <TouchableOpacity
+                  style={styles.headerBtnLabel}
+                  onPress={handleAddItems}
+                  accessibilityLabel="Add items"
+                  accessibilityRole="button">
+                  <AppText variant="body2" color="accent">
+                    Add items
+                  </AppText>
+                </TouchableOpacity>
+              )}
+              {/* The pin TOGGLE. The same shape the AllPlaylists screen's
+                  management row uses: a 32 px control whose label says what
+                  it does, whose hint names the playlist, and whose state is
+                  SPOKEN (`accessibilityState.selected`) rather than only
+                  drawn. A long-press would not be reachable by a screen
+                  reader or a keyboard (D-P8). */}
               <TouchableOpacity
-                style={styles.headerBtn}
-                onPress={handleAdd}
-                accessibilityLabel="Add media to playlist"
-                accessibilityRole="button">
-                <AppText variant="body1" color="accent">
-                  Add
-                </AppText>
+                style={[
+                  styles.pinBtn,
+                  {
+                    backgroundColor: playlist?.pinned
+                      ? colors.accent.goldDim
+                      : colors.border.subtle,
+                  },
+                ]}
+                onPress={handleTogglePin}
+                activeOpacity={0.7}
+                hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+                accessibilityRole="button"
+                accessibilityLabel={playlist?.pinned ? 'Unpin from top' : 'Pin to top'}
+                accessibilityHint={playlist?.name ?? playlistName}
+                accessibilityState={{selected: playlist?.pinned ?? false}}>
+                <SvgIcon
+                  name={playlist?.pinned ? 'pinFilled' : 'pin'}
+                  size={14}
+                  color={
+                    playlist?.pinned
+                      ? colors.accent.gold
+                      : colors.text.secondary
+                  }
+                />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.headerBtn}
@@ -886,9 +971,9 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
           <EmptyState
             icon="music"
             title="Empty Playlist"
-            description="This playlist is empty. Add media to get started."
-            actionLabel="Add Media"
-            onAction={handleAdd}
+            description="This playlist is empty. Add items to get started."
+            actionLabel="Add items"
+            onAction={handleAddItems}
           />
         }
         windowSize={5}
@@ -915,6 +1000,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
         visible={playlistMenuVisible}
         title="Playlist Options"
         options={[
+          {label: 'Add local files', value: 'add-local'},
           {label: 'Rename Playlist', value: 'rename'},
           {label: 'Share Playlist', value: 'share'},
           {label: 'Import Playlist', value: 'import'},

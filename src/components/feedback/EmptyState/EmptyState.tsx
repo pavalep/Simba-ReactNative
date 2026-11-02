@@ -11,6 +11,19 @@ interface EmptyStateProps {
   description: string;
   actionLabel?: string;
   onAction?: () => void;
+  /**
+   * 'default' — the full treatment: a card with its own chrome, a 72 px
+   *            gold disc and a 48 px glyph. For a surface that has
+   *            nothing else on it.
+   * 'compact' — the inline treatment: NO card chrome (the shelf around
+   *            it already frames it), a 52 px disc and a 24 px glyph.
+   *            For a rail that carries its own SectionHeader and its
+   *            own gutter.
+   *
+   * One component, two modes. The app used to ship TWO EmptyState
+   * components for these two jobs, and they had already drifted.
+   */
+  variant?: 'default' | 'compact';
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -19,40 +32,57 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   description,
   actionLabel,
   onAction,
+  variant = 'default',
 }) => {
   const {colors, spacing: s} = useTheme();
+  const isCompact = variant === 'compact';
+
+  // The compact disc is deliberately smaller: it sits inside a rail
+  // that already has a header, and a 72 px disc there reads as a
+  // second card.
+  const discSize = isCompact ? 52 : 72;
+  const iconSize = isCompact ? 24 : 48;
 
   return (
     <View
       style={[
         styles.root,
-        {
-          backgroundColor: colors.background.floating,
-          borderColor: colors.border.subtle,
-        },
-      ]}>
+        isCompact
+          ? styles.rootCompact
+          : {
+              backgroundColor: colors.background.floating,
+              borderColor: colors.border.subtle,
+            },
+      ]}
+      accessibilityRole={isCompact ? 'text' : undefined}
+      accessibilityLabel={isCompact ? `${title}. ${description}` : undefined}>
       {/* Gold-accented icon wrapper */}
       <View
         style={[
           styles.iconWrapper,
-          {backgroundColor: colors.accent.goldDim},
+          {
+            backgroundColor: colors.accent.goldDim,
+            width: discSize,
+            height: discSize,
+            borderRadius: discSize / 2,
+          },
         ]}>
         <SvgIcon
           name={icon}
-          size={48}
+          size={iconSize}
           color={colors.accent.gold}
         />
       </View>
 
       <AppText
-        variant="h3"
+        variant={isCompact ? 'bodySmall' : 'h3'}
         color="primary"
-        style={{marginTop: s.md}}>
+        style={isCompact ? styles.titleCompact : {marginTop: s.md}}>
         {title}
       </AppText>
 
       <AppText
-        variant="body2"
+        variant={isCompact ? 'caption' : 'body2'}
         color="tertiary"
         style={{marginTop: s.xs, textAlign: 'center'}}>
         {description}
@@ -68,10 +98,13 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             styles.actionButton,
             {
               backgroundColor: colors.accent.gold,
-              marginTop: s.lg,
+              marginTop: isCompact ? spacing.md : s.lg,
             },
           ]}>
-          <AppText variant="body2" color="primary">
+          <AppText
+            variant="body2"
+            color="primary"
+            style={isCompact ? styles.actionLabelCompact : undefined}>
             {actionLabel}
           </AppText>
         </TouchableOpacity>
@@ -89,16 +122,31 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
   },
+  // The compact mode lives inside a rail that already frames it — a card
+  // of its own here would double-frame the empty state.
+  rootCompact: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: 0,
+    borderWidth: 0,
+    borderRadius: 0,
+  },
   iconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  titleCompact: {
+    marginTop: spacing.sm,
+    textAlign: 'center',
+    fontWeight: '700',
   },
   actionButton: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
+  },
+  actionLabelCompact: {
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 });

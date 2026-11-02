@@ -17,6 +17,17 @@
 > was deleted on 2026-10-27 (`F-027`). See `md/SIMBA_V22_MASTER_PLAN.md` items 56
 > and 57 for what is true now.
 
+> **2026-11-02 — `src/constants/strings.ts` NO LONGER EXISTS.** The module that
+> held "134 global/generic keys" was **deleted** on 2026-11-02 (bug `B-044`,
+> fix `F-051`): it had **zero** consumers — `src/constants/index.ts` never
+> re-exported it, no file imports it, no `require()` reaches it, and the only
+> symbol it exported besides the map (`StringKey`) appears nowhere else in the
+> repo. The app reads its strings inline, or from the two modules that really
+> own them (`src/types/playlist.ts` and
+> `src/features/library/presentation/related/localFilesConfig.ts`). The rows
+> below that describe `strings.ts` as a live file describe a module that is
+> **gone**. See `md/SIMBA_V22_MASTER_PLAN.md` register item 72.
+
 ---
 
 ## TABLE OF CONTENTS

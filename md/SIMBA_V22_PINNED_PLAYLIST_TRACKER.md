@@ -204,8 +204,10 @@ table — and all of them now read `PLAYLIST_KIND_LABELS`:
 | `PlaylistSheet` (the local `SingleLanePlaylistKind` alias, `:56`) | the real type, imported from `src/types/playlist.ts` |
 | `AllPlaylistsScreen.tsx:112-116` (the inline ternary) | `PLAYLIST_KIND_LABELS[item.kind]` |
 
-`strings.ts` **keeps** its copy, as §4.4 decided — it is the generic strings
-surface, and the word "Mixed" already lived there. `PlaylistCreateModal`'s
+`strings.ts` **kept** its copy, as §4.4 decided — it was the generic strings
+surface, and the word "Mixed" already lived there. *(That module was
+**deleted** on 2026-11-02 — it had zero consumers. See register item 72.)*
+`PlaylistCreateModal`'s
 glyph already fell back to `listMusic` for a third kind (`:140`) — that
 branch was written before the kind existed. `MIXED` is now in its
 `KIND_OPTIONS`, so the branch is live.
@@ -378,6 +380,41 @@ branch was written before the kind existed. `MIXED` is now in its
 
 ## PHASE 6 — The pages
 
+> **Status 2026-11-02: DONE** — steps 30, 32, 33 and 34 landed. Step 31
+> (the `AllPlaylistsScreen` management page) is **still open**. Evidence,
+> step by step:
+>
+> - **30 (`AddToPlaylistScreen`).** NEW `src/screens/AddToPlaylistScreen/`,
+>   routed at `src/navigation/RootNavigator.tsx` and typed at
+>   `src/navigation/types.ts`. It gathers items from **three** sections —
+>   Movies, Music, Downloads — and tags each by lane, so one visit can feed
+>   a mixed playlist from more than one section.
+>   **The two sections it does NOT list are named, and the reason is
+>   recorded rather than papered over:** Podcasts and Archive return
+>   **containers** — a feed, a collection — not playable files, and a row
+>   the user could tick but the player could not play would be a lie. Their
+>   playable items live one level down, on the detail screens the app
+>   already adds them from (`PodcastDetailScreen`,
+>   `ArchiveItemDetailScreen`). The spec's §4.9 section list therefore needs
+>   amending; the page's purpose — several sections at once — is met.
+> - **32 (the "Add items" action).** `PlaylistDetailScreen`'s header gained
+>   "Add items" → the new page, and a **visible 32 px pin toggle** in the
+>   same header. The local-files "Add" moved into the ⋮ menu: the header
+>   would otherwise carry five controls, and the local-files flow needs the
+>   playlist id, which the page's own flow does not.
+> - **33 (the sheet at three video surfaces).** `MoviesScreen` (long press →
+>   `MediaActionsSheet` → "Add to Playlist" → `PlaylistSheet`),
+>   `AllVideosScreen` (the same, on the grid tile and the list row) and
+>   `MovieDetailScreen` (a **visible** "Add to Playlist" button — the
+>   `MusicDetailScreen` precedent, because that screen shows one film and no
+>   list of playlist-able items). Every surface passes a **truthfully
+>   classified** item (`type: 'movie'`, `mediaType: 'video'`), so the ONE
+>   compatibility rule offers it the video and mixed playlists and refuses
+>   the audio ones.
+> - **34 (the phase exit).** `tsc` exit 0 · `eslint` exit 0 · the import
+>   boundary check scanned 585 files with 0 errors and 0 warnings · `jest`
+>   137 suites / 1453 passed / 1 todo.
+
 30. **NEW — `AddToPlaylistScreen`**: a full page that gathers items from
     **several sections at once** (Movies · Music · Podcasts · Archive ·
     Downloads), tagged by lane so a mixed playlist can be fed from more than
@@ -411,9 +448,9 @@ branch was written before the kind existed. `MIXED` is now in its
 
 ## PHASE 7 — The UX sweep
 
-> **Status 2026-10-30: PART DONE** — steps 35, 39, 40, 41, 42, 45, 46 and
-> 47 landed in app `9c22f56`. Steps 36, 37, 38, 43, 44 and 48 are **still
-> open**. Evidence, step by step:
+> **Status 2026-11-02: PART DONE** — steps 35, 39, 40, 41, 42, 45, 46 and
+> 47 landed in app `9c22f56`; steps **36** and **44** landed in the 2026-11-02
+> wave. Steps 37, 38, 43 and 48 are **still open**. Evidence, step by step:
 >
 > - **35 (VIEW ALL).** Home's rail's "VIEW ALL" navigates to
 >   `AllPlaylistsScreen` — one target, named in one place
@@ -425,7 +462,9 @@ branch was written before the kind existed. `MIXED` is now in its
 > - **41 (the pin badge on every surface).** The badge is inside
 >   `PlaylistCover`, so it is on the Library card and Home's tile.
 > - **42 (the kind label's one owner).** The copies were deleted in the
->   model wave; `strings.ts` keeps its copy, as §4.4 decided.
+>   model wave. `strings.ts` kept its copy, as §4.4 decided — and was then
+>   **deleted outright** on 2026-11-02 (register item 72: an entirely
+>   unreferenced module with zero consumers).
 > - **45 (the rail is retitled).** The rail was titled "Pinned Playlists"
 >   while it shows unpinned playlists too — a title that lies is a bug
 >   (spec rule 4). It now reads "Playlists", and the tile's icon box is a
@@ -434,11 +473,22 @@ branch was written before the kind existed. `MIXED` is now in its
 >   nothing passes it.
 > - **47 (motion).** The pin badge fades and scales in on `motion.fast`
 >   (150 ms); nothing else animates.
-> - **STILL OPEN:** 36 (the kind badge's remaining sites), 37 (the empty
->   states), 38 (accessibility beyond the pin), 43 (`AllPlaylistsScreen`
->   becomes `PlaylistCard`s — and the pin toggle must ride onto the card),
->   44 (the long-press pin MENU and `PlaylistDetailScreen`'s pin toggle),
->   48 (the phase exit).
+> - **36 (the kind label's remaining sites).** The last copy was
+>   `src/constants/strings.ts`, and that module was **deleted outright** on
+>   2026-11-02 (register item 72: zero consumers, `src/constants/index.ts`
+>   never re-exported it, `StringKey` appears nowhere else in the repo). The
+>   count today is **one owner, five copies gone**.
+> - **44 (the long-press pin MENU and `PlaylistDetailScreen`'s pin toggle).**
+>   NEW `src/components/playlist/PlaylistActionMenu/` — a `BottomSheet` with
+>   ONE row, "Pin to top" / "Unpin from top", whose label changes with the
+>   state. `PlaylistCard` gained `onLongPress` (with the app's existing
+>   `accessibilityHint="Long press for more actions"`, copied from
+>   `MediaRailCard`) and a **visible 32 px pin toggle**; the Library's
+>   `PlaylistCard` grid opens the menu. `PlaylistDetailScreen`'s header
+>   gained its own 32 px toggle. The long-press is never the only way in.
+> - **STILL OPEN:** 37 (the empty states), 38 (accessibility beyond the
+>   pin), 43 (`AllPlaylistsScreen` becomes `PlaylistCard`s — and the pin
+>   toggle must ride onto the card), 48 (the phase exit).
 
 35. **The Home shelf's "VIEW ALL" points at `AllPlaylistsScreen`** — **decided
     2026-10-30**: the page that can pin IS `AllPlaylistsScreen` (step 31).
@@ -446,15 +496,20 @@ branch was written before the kind existed. `MIXED` is now in its
     *Evidence:* the navigation target, named in one place.
 36. **The playlist badges say the truth** — "Audio" / "Video" / "Mixed"
     everywhere a playlist's kind is shown, and the label has **ONE owner**.
-    The kind label is currently spelled out in **six** places: the exported
+    The kind label **was** spelled out in **six** places: the exported
     `PLAYLIST_KIND_LABELS` (`src/types/playlist.ts:40`), **three** local
     `KIND_LABELS` copies (`PlaylistCard.tsx:10`, `PlaylistSheet.tsx:51`,
     `PlaylistCreateModal.tsx:18`), **one** inline ternary
-    (`AllPlaylistsScreen.tsx:112-116`, whose `'Mixed'` branch is unreachable
-    today), and `src/constants/strings.ts:277-280` — which **already** has
-    `playlistKindMixed: 'Mixed'`, so the word is not new to this app. The
-    exported map is the one owner; the four copies are deleted. See step 42.
+    (`AllPlaylistsScreen.tsx:112-116`, whose `'Mixed'` branch was unreachable
+    then), and `src/constants/strings.ts:277-280` — which **already** had
+    `playlistKindMixed: 'Mixed'`, so the word was not new to this app. The
+    exported map is the one owner; the other four copies are deleted — and
+    `strings.ts` itself was **deleted** on 2026-11-02 (register item 72),
+    so the count today is **one owner, five copies gone**. See step 42.
     *Evidence:* the badges, the single import, and the test.
+    **DONE 2026-11-02** — the last copy was `src/constants/strings.ts`, and
+    that module was deleted outright (register item 72). One owner, five
+    copies gone.
 37. **Empty states.** Every one of them, with its copy:
     * No playlists at all → "No playlists yet" + a **Create playlist** button.
     * Playlists exist, **none pinned** → the pinned **section** is not
@@ -530,6 +585,12 @@ branch was written before the kind existed. `MIXED` is now in its
     cards do **not** get a permanent pin button — a pin button on every card
     in a grid of fifty is noise.
     *Evidence:* the menu, the two toggles, and the tests.
+    **DONE 2026-11-02** — `src/components/playlist/PlaylistActionMenu/`,
+    the card's long press and its visible 32 px toggle, the Library's
+    wiring, and `PlaylistDetailScreen`'s header toggle. The menu offers ONE
+    row, and the row does not render when no playlist is selected — a menu
+    that offered a pin for a playlist that was not there was a defect, and a
+    test caught it.
 45. **Home's rail is retitled "Playlists"** — a rail titled "Pinned
     Playlists" may only head a collection that is all pinned, and the rail
     shows pinned first **then** recency, so the honest title is "Playlists".

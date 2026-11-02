@@ -1428,15 +1428,15 @@ one shared `compatiblePlaylistsFor(item)` rule both sheets call, and a toast
 that reports what was **added**, saying so when something was skipped.
 Tracked as tracker task 17.
 
-### B-035 · P3 · lib · `PlayerRoot` and `PlayerSurface` are V11-era leftovers that draw no picture
+### B-035 · P3 · lib · `PlayerRoot` and `PlayerSurface` are V11-era leftovers that draw no picture — **RESOLVED (F-052)**
 
 **Symptom.** A consumer who mounts `<PlayerRoot />` gets a full-screen
 transparent box and, at most, their own `renderControls` — **no video**.
 `<PlayerSurface />` reserves space for a native SurfaceView that is no
 longer mounted anywhere.
 
-**State:** open. **Found 2026-10-29**, while removing `DefaultControls`
-(register item 28).
+**State:** **RESOLVED 2026-11-02** (fix `F-052`). **Found 2026-10-29**,
+while removing `DefaultControls` (register item 28).
 
 **The mechanism (verified 2026-10-29).**
 
@@ -1463,23 +1463,47 @@ break the picture; there was none.
 and imported by **nothing** in the lib; the app imports neither it nor
 `PlayerSurface`.
 
-**The decision that is open — and is not made.** Either
+**The decision — taken 2026-11-02: (a), delete them.**
 
-- **(a) delete them**, on the grounds that the package's documented
-  integration point is `<SimbaPlayer>` + `<SimbaVideo>` and these two are
-  V11/V12-era furniture; or
-- **(b) make `<PlayerRoot>` render `<SimbaVideo />`** plus the consumer's
-  controls, so it becomes the full player its name promises.
+The 2026-10-29 recommendation was (b). It was **overruled**, and the
+reason is the fact the recommendation itself recorded: *"nobody who mounts
+`<PlayerRoot>` today is getting a video anyway."* A component that draws
+no picture cannot be repaired by giving it a picture — the picture is
+already in the tree, as `<SimbaVideo>`, and the consumer composes it
+themselves. Repairing (b) would have kept a name alive for a shape the
+architecture no longer has: the whole point of the 2.0.0 change was that
+the picture is a **view in the consumer's tree**, with React Native owning
+its layout, its z-order and its lifecycle. A wrapper that re-assembles
+that is not a player; it is a second way to mount the same view.
 
-**Recommendation (not a decision): (b).** It removes a public export
-without deleting anything — the component starts working instead of
-disappearing — and it costs the consumer nothing, because nobody who
-mounts `<PlayerRoot>` today is getting a video anyway. (a) is also
-defensible and is the smaller change.
+The package's documented integration point is `<SimbaVideo>` +
+`useLaunchPlayback`, and these two were V11/V12-era furniture.
 
-**What it needs:** the decision, then a lib release. Until then both
-components stay, because a published package cannot quietly drop a public
-export.
+**What shipped (lib `v3.0.0`, published 2026-11-02).**
+
+- `src/components/PlayerRoot.tsx`, `src/components/PlayerSurface.tsx`
+  and their test suite are **deleted**.
+- The two export statements are gone from `src/index.ts`; the barrel's
+  header carries a `v3.0.0` section saying so, where a consumer reads
+  the API's history.
+- **Nothing a consumer still needs was taken with them.** `useLaunchPlayback`
+  is still exported, and it is still the once-per-payload load — the one
+  job `<PlayerRoot>` still had. The overlay was a `View` with the
+  consumer's `renderControls()` output positioned absolutely over it; a
+  consumer that wants it composes the same two lines. The surface was a
+  transparent `flex: 1` box reserving space for a view that is no longer
+  mounted anywhere.
+- The version is **3.0.0**, not 3.0.1: *"a published package cannot
+  quietly drop a public export."* The removal is breaking, so it is a
+  major.
+
+**Verification.** Neither component had an importer — in the package or
+in the host app, the only reference to either was its own export. Gates:
+`npm run typecheck` exit 0 · jest 18 suites / 268 passed (the
+`PlayerRoot` suite went with the component) · the Kotlin gates
+`:simba-dev_react-native-media-player:testDebugUnitTest` and
+`:simba-dev_react-native-media-player:compileDebugKotlin` BUILD
+SUCCESSFUL.
 
 ### B-036 · P3 · lib · PiP has no source rect to animate from, and fixing it is not a one-liner
 
@@ -1491,10 +1515,18 @@ rectangle** instead of out of the picture the user was watching.
 **The mechanism (verified 2026-10-29).** Android's PiP entry takes an
 optional `sourceRectHint`: the rect of the video frame in window
 coordinates, so the system can animate the real frame into the PiP window.
-`MpvBridgeModule` builds it from `PlayerSurface.boundsInWindow()`
-(`MpvBridgeModule.kt:2342`) — and `boundsInWindow()` reads the same orphaned
+`MpvBridgeModule` builds it from `PlayerSurface.boundsInWindow()` (the
+two call sites are `applyActivityPipParams()` and `enterPip()` in
+`MpvBridgeModule.kt`) — and `boundsInWindow()` reads the same orphaned
 `PlayerSurface` registry, so it always answers `null`. With no rect, the
 system grows the PiP window out of a black rectangle.
+
+**Re-verified 2026-11-02, against the source.** The registry's only
+writer is `PlayerSurface.mount()`, and the V21/V22 architecture never
+calls it — the picture is a Fabric view in the React tree, published by
+`MpvRenderViewRegistry` instead. So the hint is not "sometimes wrong":
+it is **always `null`**, and the black transition is the only behaviour
+this bug has ever produced.
 
 **Why it is not a one-liner.** The old rect was sized by
 `PlayerSurface.setBounds()` / `fillBounds()`, which placed the surface to
@@ -1505,15 +1537,46 @@ picture is sized by **Yoga**, from the React tree, with mpv's `video-zoom`
 the view's rect is not the frame's rect: pointing PiP at it would animate
 the **letterboxed** area, and could stretch the frame.
 
-**What it needs.** A decision, then the work:
-- compute the **frame's** rect inside the view — from the video's
-  dimensions and the `resizeMode` — rather than the view's rect; or
-- size the PiP window to the view's aspect ratio and let mpv letterbox
-  inside it; or
-- keep the no-rect behaviour and accept the black transition.
+**The decision — taken 2026-11-02 (D-2): the source rect describes the
+region of the window where the video ACTUALLY is.**
 
-The third is the status quo and is safe. The first is the right answer and
-is the one that needs the aspect arithmetic.
+The 2026-10-29 note offered three ways out and called the first "the
+right answer": compute the **frame's** rect inside the view. That is the
+one being built, and the reason it was not obvious is worth recording,
+because the decision was framed against a fact that turned out to be
+false in this app.
+
+D-2 was originally put as "the whole view's rect" — the option the plan
+described as "what Plex and VLC do, and it is much less arithmetic". That
+premise does not hold here. Plex and VLC size their picture view to the
+**video's** box, so for them "the whole view's rect" and "the video's own
+rect" are the same thing. **This app's picture is not the video's box:**
+`VideoSurface` renders `<SimbaVideo>` with `StyleSheet.absoluteFill`, so
+the view fills its lane, and in the expanded lane the lane is the whole
+window. The view's rect is therefore the phone's portrait window, and
+using it as the hint would force the PiP window into that shape — a
+portrait PiP window with a small letterboxed video inside it. So the
+"much less arithmetic" option is not cheaper here; it is **wrong**.
+
+What the source rect therefore has to be is the **frame's** rect: the
+view's rect, inset by the letterbox (or pillarbox) bars that mpv's
+`video-zoom` puts inside it, computed against the video's real aspect
+ratio. The library already knows the pieces — `MpvRenderView` tracks the
+applied `video-zoom` (`"0"` fit / `"1"` fill / `"2"` stretch) and the
+view's own geometry; mpv reports the video's dimensions.
+
+**And the PiP window's aspect is derived from that same rect**, because
+the hint's shape and the window's shape have to agree or the system
+scales the frame non-proportionally and the video arrives stretched. In
+the app's expanded lane the picture is `contain`, so the frame's aspect
+IS the video's aspect — which is what the PiP window already used — so
+the window's shape does not change. Only the hint changes, from `null`
+(black rectangle) to a real rect.
+
+**State:** open; the work is in flight (2026-11-02). The fix is native,
+so it ships as a lib release, and the APK must be rebuilt for the DEX to
+carry it. **The device proof is deferred** — this is a picture that only
+exists on hardware, and no device test runs in this wave.
 
 **Also open, and the same shape:** `PlayerSurface.setBounds` /
 `fillBounds` / `setVisible` are the same three orphaned mutators, and they
@@ -1752,6 +1815,97 @@ legible without reading the title.
 
 ---
 
+### B-044 · P3 · app · the app carried a whole module of copy and a second `EmptyState`, and neither one was wired
+
+**What it was.** Two owners — or, worse, **zero** — for facts that already
+had one. `src/constants/strings.ts` held a copy of **every** user-facing
+string the app uses — 19 `playlist*` keys among them — and it had **zero**
+consumers: `src/constants/index.ts` does not re-export it, no file imports
+it, no `require()` reaches it, no test names it, and the only symbol it
+exported besides the map (`StringKey`) appears nowhere else in the repo.
+And the app shipped **two** `EmptyState` components — the live
+`components/feedback/EmptyState/EmptyState.tsx` (19 importers) and
+`components/utility/EmptyState/EmptyState.tsx` (**two** importers:
+`components/media/MediaRail.tsx` and
+`screens/Home/components/FollowedPodcastsShelf.tsx`).
+
+**Why it mattered here.** Two owners for one fact is the same defect class
+as `B-030` (six files for one FAB): the second copy is a promise the repo
+does not keep, and these two had already drifted — the utility `EmptyState`
+grew a `variant` prop the live one did not have, and **both** of its
+importers use `variant="compact"`. A copy of a copy module that **nothing
+reads** is worse than a duplicate, because it looks like the app's
+single-source copy table and is not one.
+
+**State:** FIXED (F-051). **Found 2026-11-02**, during the AI-slop sweep.
+`src/constants/strings.ts` and `components/utility/EmptyState/` are
+**deleted**. The utility component's one API the live one lacked — the
+`variant` prop — was **ported into**
+`components/feedback/EmptyState/EmptyState.tsx` rather than dropped, so the
+compact treatment (no card chrome, a 52 px disc and a 24 px glyph, the
+centred bold title, the single-line a11y label) survives and the 19
+existing importers see no change; the utility component's unused
+`'default'` mode went with it. The two importers now point at the live
+component. The orientation helper's two dead exports went in the same wave —
+register item 69.
+
+### B-045 · P2 · lib+app · `resizeMode` maps onto mpv's `video-zoom`, which is a log2 SCALE factor — so `cover` is a 2× zoom and `stretch` is a 4× zoom
+
+**What it was.** The library's `resizeMode` prop maps onto mpv's `video-zoom`
+property — `contain` → `"0"`, `cover` → `"1"`, `stretch` → `"2"` — and the
+docblocks said what those numbers meant: *"`0` fit / letterbox · `1` fill /
+crop · `2` fill, aspect ignored"*.
+
+**That was false.** mpv's `--video-zoom` is **not** a fit / fill / stretch
+enum. It is a **log2 scale factor**: `0` is unscaled, `1` is twice the size,
+`2` is four times the size. mpv's manual, `--video-zoom`: *"Adjust the video
+display scale factor by the given value. The parameter is given log 2. For
+example, `--video-zoom=0` is unscaled, `--video-zoom=1` is twice the size."*
+mpv's fit / fill / stretch behaviour lives in `--panscan` and
+`--keepaspect`, and the library never sets either.
+
+So the three modes actually render as:
+
+| the app asks for | what mpv does | what the user sees |
+|---|---|---|
+| `contain` | 1× — the picture keeps its aspect and is letterboxed into the view | **correct** — this is what `contain` means |
+| `cover` | 2× — the picture is magnified and cropped by the view | a **2× magnified crop**, not a cover |
+| `stretch` | 4× — the picture is magnified and cropped by the view | a **4× magnified crop**; the aspect is **not** ignored, so it is not a stretch at all |
+
+**Why it matters here.** The app asks for `cover` on its mini-player dock —
+`VideoPlayer.tsx:497`,
+`resizeMode={presentation.isMini ? 'cover' : 'contain'}` — so the dock's
+picture is today a 2× magnified, cropped video. The fullscreen lane uses
+`contain`, which is right.
+
+**State:** open. **Found 2026-11-02**, while reviewing the PiP source-rect
+work, and confirmed against mpv's own manual rather than from memory.
+
+**What has already been done.** The lib's docblocks now say what mpv
+actually does (`MpvRenderViewManager.setResizeMode`, `SimbaVideo`'s
+`resizeMode` prop, and `PipSourceRect`'s zoom table), so the claim is no
+longer lying. **The behaviour is unchanged** — lib `v3.0.1` corrects the
+claims, not the rendering.
+
+**The fix, when it is made.** mpv's own options, set as runtime properties
+(mpv's manual: *"most options can be set at runtime via properties as
+well"*):
+
+- `contain` → `keepaspect=yes`, `video-unscaled=no`, `panscan=0.0`, `video-zoom=0`
+- `cover` → `keepaspect=yes`, `video-unscaled=no`, `panscan=1.0`, `video-zoom=0`
+- `stretch` → `keepaspect=no`, `video-unscaled=no`, `video-zoom=0`
+
+**Why it was not fixed in the same wave.** The fix is a change to the
+picture's rendering, and the only way to know it is right is to **look at
+the picture** — which needs a device, and no device test runs in this wave.
+mpv's manual also warns that `--panscan` *"may not work with all video
+output drivers"*, so the Android VO's support has to be seen, not assumed.
+Shipping an unverifiable rendering change into the same release as a
+unit-verified fix would put the verified work at risk. The public API does
+not change, so the fix is a patch release when it lands.
+
+---
+
 ## FIXED
 
 | ID | Sev | Lane | One line | Where |
@@ -1806,6 +1960,8 @@ legible without reading the title.
 | F-048 | P3 | app | Closing the player left the app in **landscape** with nothing playing. The window can be in landscape while a session lives — the orientation lock pins it there, and the device can simply be rotated — so ending the session has to hand the window back. `MainActivity.onResume()` restores portrait, but only on a background → foreground transition, so it cannot help when the session ends while the app is **already in front**, which is the common case. The register's own statement of this defect was wrong in the opposite direction: it claimed the *backgrounded* case was broken, and that case was already handled — `onResume()` asks mpv whether media is loaded (`isMediaLoaded()`, a live read through `PlaybackHost`, every failure degrading to "no media") and restores portrait only when nothing is loaded. `useClosePlayback()` — the ONE owner of the teardown — now calls the **lib's own** `setOrientation('portrait')` after the session ends. It is NOT the app's `lockToPortrait()`: that helper imports `react-native-orientation-locker`, whose module body builds a `NativeEventEmitter` with no native module, so pulling it into the player facade broke **22 jest suites at module level** — which is why `src/utils/orientation.ts`, and with it `AppContent`, is **untestable in jest**. (The lib is also **Android-only** — `react-native.config.js` declares `ios: null` and the package ships no `ios/` folder — so the player, and the landscape-while-playing state this restores from, only exists where the lib's command is live.) The lib's command maps to `SCREEN_ORIENTATION_PORTRAIT` — the **same constant** the app's boot-time `lockToPortrait()` sets on Android (verified in the locker's own `OrientationModule.java`), so the browsing state is identical either way: one mechanism during a session (the lib's command), one outside it (the app's boot lock), and the handover happens where the session stops. It is **not** called when the stop FAILED: the player is still standing, and restoring portrait then would snap a landscape film to portrait mid-playback. Pinned by 2 tests, the "must NOT restore portrait" case **mutation-checked** (moving the call above the stop fails the suite; the production file was restored byte-identically) | app `6b9d4cc` |
 | F-049 | P2 | app | The playlist surfaces made **claims the app did not mean**. `addItemToPlaylist` **silently refuses** a lane mismatch, so the batch toast counted what the user **selected** — "Added 3 items" while the playlist received one, and the refusal was in the status and nowhere else. `PlaylistContextMenu` offered **every** playlist while `PlaylistSheet` filtered by lane, so a radio station was offered an audio playlist in one surface and not the other — nine call sites declare the item's kind independently and five omit `type`, so the broad `'audio'` / `'video'` fallback decided it. And the sheet's empty state said *"No playlists yet. Create one to get started."* while **hiding** the create row, which made two of the nine sheet call sites dead controls. Now: `compatiblePlaylistsFor` classifies the item ITSELF and is the one rule both surfaces call; `reportBatchAdd` lives with the feature that produces the statuses and reports what **HAPPENED**, naming the reason; and the empty state names the real reason and shows the create row exactly when it tells the user to create one. 27 new tests | app `9c22f56` |
 | F-050 | P2 | app | The pinned playlist was a state **nothing could set**, and a rail that lied about it. `Playlist.pinned` existed in the model, `setPlaylistPinned` existed in the store, `setPinned` existed in the facade — and **no caller in `src/`**. The badge could only be seen on a playlist pinned by hand in a debugger. Meanwhile Home's rail was titled **"Pinned Playlists"** while it rendered unpinned playlists too — the specification's own rule 4: a title that lies is a bug. Now: `AllPlaylistsScreen` carries a visible **32 px pin toggle** ("Pin to top" / "Unpin from top", `accessibilityState={{selected: pinned}}`) because a long-press is not reachable by a screen reader or a keyboard; the row's own label says ", pinned"; and the rail is retitled **"Playlists"** and orders pinned first (most recently pinned first), then recency. 10 new tests | app `9c22f56` |
+| F-051 | P3 | app | The app carried a whole module of copy and a second `EmptyState`, and neither one was wired. `src/constants/strings.ts` held a copy of every user-facing string the app uses — 19 `playlist*` keys among them — with **zero** consumers: it is not re-exported by `src/constants/index.ts`, no file imports it, no `require()` reaches it, no test names it, and `StringKey` (its only other export) appears nowhere else in the repo. The app also shipped **two** `EmptyState` components: the live `components/feedback/EmptyState/EmptyState.tsx` (19 importers) and `components/utility/EmptyState/EmptyState.tsx` (2 importers) — and they had already drifted: the utility one grew a `variant` prop the live one did not have, and **both** its importers use `variant="compact"`. Both are **deleted**: the dead copy module is gone, and the utility component's one API was **ported into** the live component (the `variant` prop, keeping the compact treatment — no card chrome, a 52 px disc and a 24 px glyph, the centred bold title, the single-line a11y label — so the 19 existing importers see no change), its unused `'default'` mode went with it, and the two importers now point at the live component. The orientation helper's two dead exports went in the same wave (register item 69) | app `f5/w22-close-minimise-d9` |
+| F-052 | P3 | lib | The package published two components that **draw no picture**, and kept them because dropping a public export is a breaking change — which is how a dead export becomes a promise the repo does not keep. `<PlayerRoot>` was a transparent `flex: 1` box plus the consumer's controls plus one `useLaunchPlayback` call; `<PlayerSurface>` was that box on its own. The arrangement they belonged to ended in 2.0.0: a native `SurfaceView` pinned to the Activity root, with a transparent React box standing in for it so a controls overlay had a rectangle to anchor to. Since 2.0.0 the picture is `<SimbaVideo>` — a Fabric component in the consumer's own tree — and **no surface is mounted at the Activity root any more**, so there was nothing left for a placeholder to reserve. Neither component had an importer: in the package and in the host app, the only reference to either was its own export. The 2026-10-29 recommendation was to REPAIR `<PlayerRoot>` into a real player; it was overruled, because a component that draws no picture cannot be repaired by giving it the picture the consumer is already mounting itself. Both are **deleted**, and the version is **3.0.0** — a major, because *"a published package cannot quietly drop a public export."* `useLaunchPlayback` stays exported, so the one job `<PlayerRoot>` still had (the once-per-payload load) is not lost | lib `v3.0.0` · `f18fe06` |
 
 ---
 

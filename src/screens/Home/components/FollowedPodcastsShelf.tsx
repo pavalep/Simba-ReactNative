@@ -14,7 +14,7 @@ import {MediaImage} from '../../../components/utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {spacing} from '../../../theme/tokens';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
-import {EmptyState} from '../../../components/utility/EmptyState/EmptyState';
+import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
 import {AppText} from '../../../components/core/AppText/AppText';
 import type {FollowedPodcast} from '../../../features/followedPodcasts';

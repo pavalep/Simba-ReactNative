@@ -2633,13 +2633,16 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
       or a keyboard. A **browsing card gets no permanent pin button** — a pin
       button on every card in a grid of fifty is noise.
     - **D-P9 — the kind label and the playlist cover each have ONE owner.**
-      The kind label has **six** owners today (the exported
+      The kind label had **six** owners (the exported
       `PLAYLIST_KIND_LABELS`, **three** local `KIND_LABELS` copies, **one**
-      inline ternary, and `src/constants/strings.ts` — which already has
-      `playlistKindMixed: 'Mixed'`, so the word is not new to this app). The
-      cover has **two** (a collage in `PlaylistCard`, a generic icon box in
+      inline ternary, and `src/constants/strings.ts` — which already had
+      `playlistKindMixed: 'Mixed'`, so the word was not new to this app). The
+      cover had **two** (a collage in `PlaylistCard`, a generic icon box in
       `AllPlaylistsScreen`). One owner each: `PlaylistCover` and
-      `PLAYLIST_KIND_LABELS`.
+      `PLAYLIST_KIND_LABELS`. **Both are single-owner now** — the three
+      local copies and the inline ternary went in app `9c22f56` (item 70),
+      and `src/constants/strings.ts` — a whole module of copy with **zero**
+      consumers — was deleted in the AI-slop sweep (item 72).
     **The plan lives in two documents**, so it cannot be lost inside this
     register: `md/SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md` and
     `md/SIMBA_V22_PINNED_PLAYLIST_TRACKER.md`.
@@ -2681,12 +2684,17 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     not exist** — it sounds exactly like the right call, and the SDK's own
     `android.jar` is what proved it. Below API 31 the OS cannot auto-enter at
     all, and the library logs that instead of pretending.
-63. **The APK's DEX must be rebuilt.** Lib **1.23.0**'s Kotlin, **2.0.0**'s
-    Kotlin changes, **2.0.1**'s `MpvRenderViewRegistry` and repointed
-    `isSurfaceMounted`, and **2.1.0**'s `runMpvCommand` error path and the
-    PiP auto-enter params all have to be rebuilt into the app's APK. Until
-    that happens the app runs the OLD native code, so the device proof for
-    items 47 and 62 is **deferred**. **OPEN.**
+63. ~~**The APK's DEX must be rebuilt.**~~ **DONE 2026-11-02** —
+    `:app:assembleDebug` BUILD SUCCESSFUL in 40 m 33 s (705 actionable
+    tasks: 121 executed, 584 up-to-date), with
+    `:simba-dev_react-native-media-player:compileDebugKotlin`,
+    `:app:mergeExtDexDebug` and `:app:packageDebug` all in the run. The
+    APK's DEX now carries lib **2.1.0**'s Kotlin — `runMpvCommand`'s
+    error path and the PiP auto-enter params — so the device proofs for
+    items 47 and 62 are **unblocked**. They stay **deferred**: no device
+    test runs in this wave. A **TS-only** lib change needs no rebuild at
+    all — a debug APK's JS comes from Metro, and the DEX carries the
+    Kotlin.
 64. ~~**Every launch dropped the catalogue artwork it already held.**~~
     **DONE 2026-10-30** (bug `B-026`, fix `F-047`). A search result for a
     film the user had already watched showed a placeholder instead of a
@@ -2770,17 +2778,23 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     the orientation constants, `OrientationLocker` and the three hooks),
     plus a `moduleNameMapper` entry, after which the helper can be tested
     directly.
-69. **Two of the orientation helper's three exports are dead.** 
-    `lockToLandscape()` and `unlockAll()` have **zero call sites** in
+69. ~~**Two of the orientation helper's three exports are dead.**~~
+    **DONE 2026-11-02** (the AI-slop sweep — register item 72).
+    `lockToLandscape()` and `unlockAll()` had **zero call sites** in
     `src/`, in `__tests__/` and in the app — the player's rotation lock
     goes through the lib's `commands.setOrientation`
     (`useTransport.ts:1046`), not the app's helper, and
     `lockToPortrait()` is called from exactly **one** place,
-    `AppContent.tsx:82`, at boot. So the helper is a one-call wrapper
+    `AppContent.tsx:82`, at boot. So the helper was a one-call wrapper
     around a dependency that cannot be loaded in jest, and two of its
-    **OPEN** — it belongs to the AI-slop
-    sweep: either give the helper a real owner and a mock, or delete what
-    nothing calls.
+    three exports were **dead**. **Both are deleted.** The helper is now a
+    **one-export** module with one call site, and its docblock no longer
+    claims it "allows manual landscape toggling in the player screen" —
+    that claim became false the moment the export behind it was gone, and
+    the player's rotation lock is the **lib's** command.
+    **The other half of this entry is still open**: item 68's
+    `__mocks__/react-native-orientation-locker.js` is what would make the
+    helper testable, and this entry did not fix that.
 
 **Today's wave (2026-10-30, later) — the pinned-playlist model**
 
@@ -2800,7 +2814,9 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     `Record<PlaylistKind, string>` copy of the kind labels compiling, so the
     three local `KIND_LABELS` copies and the one inline ternary were
     **deleted** and now read `PLAYLIST_KIND_LABELS` — the one owner the
-    spec's §4.4 named. `strings.ts` keeps its copy, as §4.4 decided.
+    spec's §4.4 named. (`strings.ts` held a sixth copy of the label until
+    the AI-slop sweep deleted it — item 72. §4.4's decision that the label
+    has ONE owner now holds for the whole app.)
     Pinned by 6 tests in `__tests__/state/playlistsStore.test.ts`; the
     "a mixed playlist survives WHOLE" case is **mutation-checked** — the old
     split reintroduced fails the suite, and the store was restored
@@ -2859,6 +2875,123 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     **STILL OPEN** (tracker phases 5, 6 and the rest of 7): the mixed-lane
     playback handover (phase 5), `AddToPlaylistScreen` (phase 6), and phase
     7's steps 36, 37, 38, 43, 44 and 48.
+
+72. ~~**The app carried a whole module of copy and a second `EmptyState`,
+    and neither one was wired.**~~ **DONE 2026-11-02** (the AI-slop sweep —
+    app `f5/w22-close-minimise-d9`). (Bug `B-044`, fix `F-051`.)
+    - **`src/constants/strings.ts` was an entirely unreferenced module.**
+      It held a copy of every user-facing string the app uses — 19
+      `playlist*` keys among them — and it had **zero** consumers: it is
+      not re-exported by `src/constants/index.ts`, no file imports it, no
+      `require()` reaches it, no test names it, and the only symbol it
+      exported besides the map (`StringKey`) appears nowhere else in the
+      repo. The app reads its strings inline, or from the two modules that
+      really own them (`types/playlist.ts` and
+      `features/library/presentation/related/localFilesConfig.ts`).
+      **Deleted.**
+    - **Two `EmptyState` components owned one fact.** The live one is
+      `components/feedback/EmptyState/EmptyState.tsx` (19 importers, and
+      the one the components barrel exports); the second was
+      `components/utility/EmptyState/EmptyState.tsx`, with **two**
+      importers (`components/media/MediaRail.tsx` and
+      `screens/Home/components/FollowedPodcastsShelf.tsx`). The utility
+      one carried an API the live one did not have — a `variant` prop
+      (`'default' | 'compact'`) — and **both** of its importers use
+      `variant="compact"`. The prop was **ported into the live
+      component** rather than dropped, so the compact treatment (no card
+      chrome, a 52 px disc and a 24 px glyph, the centred bold title, the
+      single-line a11y label) survives the merge and the 19 existing
+      importers see **no** change; the utility component's unused
+      `'default'` mode went with it. **Deleted.**
+    - **The orientation helper's two dead exports are gone** — item 69.
+    Gates: `tsc` 0 · `eslint` 0 · boundaries 582 files / 0 errors /
+    0 warnings · `jest` 130 suites / 1409 passed / 1 todo.
+
+73. ~~**The library published two components that draw no picture.**~~
+    **DONE 2026-11-02** (bug `B-035`, fix `F-052`) — lib `v3.0.0`, committed
+    `f18fe06`, published to npm.
+    - **`<PlayerRoot>` and `<PlayerSurface>` are deleted.** They were the
+      JS-side remainder of the arrangement that ended in 2.0.0: a native
+      `SurfaceView` pinned to the Activity root, with a transparent React
+      box standing in for it so a controls overlay had a rectangle to
+      anchor to. Since 2.0.0 the picture is `<SimbaVideo>` — a Fabric
+      component in the consumer's own tree — and no surface is mounted at
+      the Activity root any more, so there was nothing left for a
+      placeholder to reserve.
+    - **Neither component had an importer.** In the package and in the host
+      app, the only reference to either was its own export.
+    - **The 2026-10-29 recommendation was overruled.** It said to REPAIR
+      `<PlayerRoot>` into a real player; the decision was to delete. A
+      component that draws no picture cannot be repaired by handing it the
+      picture the consumer is already mounting itself — and keeping the
+      name alive keeps the pre-2.0.0 shape in the public API.
+    - **3.0.0, not 3.0.1** — *"a published package cannot quietly drop a
+      public export."* The removal is breaking, so it is a major.
+    - **Nothing a consumer still needs went with them.** `useLaunchPlayback`
+      is still exported and is still the once-per-payload load; the overlay
+      was a `View` plus the consumer's `renderControls()`; the surface
+      reserved a view that no longer exists.
+    Gates: `npm run typecheck` exit 0 · jest 18 suites / 268 passed (the
+    `PlayerRoot` suite went with the component) · the Kotlin gates
+    `:simba-dev_react-native-media-player:testDebugUnitTest` and
+    `:simba-dev_react-native-media-player:compileDebugKotlin` BUILD
+    SUCCESSFUL.
+
+74. **The PiP source rect has no rect to animate from, and the decision
+    that fixes it changed on contact with the app's layout.** **OPEN**
+    (bug `B-036`; decision D-2, taken 2026-11-02).
+    - **The hint is ALWAYS `null`, not sometimes.** `MpvBridgeModule` builds
+      the PiP `sourceRectHint` from `PlayerSurface.boundsInWindow()`, which
+      reads the `PlayerSurface` registry — whose only writer,
+      `PlayerSurface.mount()`, the V21/V22 architecture never calls. The
+      live picture views live in `MpvRenderViewRegistry`. So the black
+      transition is the only behaviour this bug has ever produced.
+    - **D-2(b) — "the whole view's rect" — is wrong for THIS app.** It was
+      chosen because Plex and VLC do it, and for them "the whole view's
+      rect" IS "the video's rect": they size the picture view to the
+      video's box. This app's picture is `StyleSheet.absoluteFill`, so the
+      view fills its lane and, in the expanded lane, the lane is the whole
+      window — the view's rect is the phone's portrait window. Using it
+      would force a portrait PiP window with a small letterboxed video
+      inside it. The "much less arithmetic" option is not cheaper here; it
+      is **wrong**.
+    - **What is being built instead: the FRAME's rect.** The view's rect,
+      inset by the letterbox / pillarbox bars that mpv's `video-zoom` puts
+      inside it, computed against the video's real aspect. The library
+      already has the pieces: `MpvRenderView` tracks the applied
+      `video-zoom` (`"0"` fit / `"1"` fill / `"2"` stretch) and the view's
+      geometry; mpv reports the video's dimensions.
+    - **The PiP window's aspect comes from that same rect**, because the
+      hint's shape and the window's shape have to agree or the system
+      scales the frame non-proportionally and the video arrives stretched.
+      In the expanded lane the picture is `contain`, so the frame's aspect
+      IS the video's aspect — the window's shape does not change; only the
+      hint changes, from `null` to a real rect.
+    - **It is native, so it is a lib release and an APK rebuild**, and the
+      device proof stays **deferred** — this is a picture that only exists
+      on hardware.
+
+75. **The library's `resizeMode` maps onto mpv's `video-zoom`, which is a
+    log2 SCALE factor — so `cover` is a 2× zoom and `stretch` is a 4× zoom.**
+    **OPEN** (bug `B-045`).
+    - **`video-zoom` is not a fit/fill/stretch enum.** mpv's manual:
+      *"Adjust the video display scale factor by the given value. The
+      parameter is given log 2."* `0` is unscaled, `1` is twice the size,
+      `2` is four times the size. mpv's fit behaviour lives in `panscan` and
+      `keepaspect`, and the lib never sets either.
+    - **So the app's `cover` is a 2× magnified crop, and `stretch` is a 4×
+      one with the aspect still kept** — which is not a stretch at all. The
+      library's docblocks claimed *"`1` fill / crop · `2` fill, aspect
+      ignored"*, and that was false.
+    - **The app asks for `cover` on its dock** (`VideoPlayer.tsx:497`,
+      `resizeMode={presentation.isMini ? 'cover' : 'contain'}`), so the
+      dock's picture is a 2× magnified, cropped video today. The fullscreen
+      lane uses `contain`, which is right.
+    - **The claims are corrected; the behaviour is not.** Lib `v3.0.1` says
+      what mpv actually does, so the code no longer lies. Changing the
+      rendering needs a device to look at, and mpv's manual warns that
+      `panscan` *"may not work with all video output drivers"* — so the fix
+      is a patch release with a **device proof**, not a blind change.
 
 ---
 

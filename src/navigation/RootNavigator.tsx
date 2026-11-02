@@ -24,6 +24,7 @@ import {SearchScreen} from '../screens/Search';
 import {NowPlayingScreen} from '../screens/NowPlaying';
 import {FolderBrowserScreen} from '../screens/FolderBrowser';
 import {PlaylistDetailScreen} from '../screens/PlaylistDetail';
+import {AddToPlaylistScreen} from '../screens/AddToPlaylistScreen';
 import {ArtistDetailScreen} from '../features/library/presentation/screens/Library';
 import {AlbumDetailScreen} from '../features/library/presentation/screens/Library';
 import {ScreenErrorBoundary} from '../components/feedback/ScreenErrorBoundary';
@@ -181,6 +182,11 @@ export const RootNavigator: React.FC = () => {
       <Stack.Screen
         name="PlaylistDetail"
         component={PlaylistDetailScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="AddToPlaylist"
+        component={AddToPlaylistScreen}
         options={{animation: 'slide_from_right'}}
       />
       <Stack.Screen

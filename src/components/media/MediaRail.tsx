@@ -29,7 +29,7 @@ import {useTheme} from '../../theme';
 import {spacing} from '../../theme/tokens';
 import {AppText} from '../core/AppText/AppText';
 import {SvgIcon} from '../utility/SvgIcon';
-import {EmptyState} from '../utility/EmptyState/EmptyState';
+import {EmptyState} from '../feedback/EmptyState/EmptyState';
 import type {SvgIconName} from '../utility/SvgIcon';
 
 export interface MediaRailProps<T> {

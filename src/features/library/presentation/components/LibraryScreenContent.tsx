@@ -25,6 +25,8 @@ import {LibraryAlbumsSegment} from './LibraryAlbumsSegment';
 import {LibraryPlaylistsSegment} from './LibraryPlaylistsSegment';
 import {ViewToggle} from './ViewToggle';
 import {PlaylistCreateModal} from '../../../../components/playlist/PlaylistCreateModal';
+import {PlaylistActionMenu} from '../../../../components/playlist/PlaylistActionMenu';
+import {usePlaylists} from '../../../playlists';
 import {
   useLibraryScreen,
   SEGMENTS,
@@ -64,6 +66,37 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
     handleCreatePlaylist, handlePlayAllPlaylist, handleShufflePlaylist,
     handlePlaylistCardPress,
   } = useLibraryScreen(navigation);
+
+  // ── The pin menu ──
+  // The Library is a BROWSING surface: the card carries no permanent pin
+  // button, so the long-press menu is how a playlist gets pinned from here.
+  // The management row and the detail header carry the VISIBLE toggle, so
+  // the pin is never reachable only by a gesture (D-P8).
+  const [actionPlaylistId, setActionPlaylistId] = React.useState<string | null>(null);
+  const {setPinned} = usePlaylists();
+
+  // The menu reads the LIVE playlist, so a pin changed elsewhere shows in
+  // the menu's label instead of a stale snapshot.
+  const actionPlaylist = React.useMemo(
+    () => filteredPlaylists.find(p => p.id === actionPlaylistId) ?? null,
+    [filteredPlaylists, actionPlaylistId],
+  );
+
+  const handlePlaylistCardLongPress = React.useCallback((playlistId: string) => {
+    setActionPlaylistId(playlistId);
+  }, []);
+
+  const handleCloseActionMenu = React.useCallback(() => {
+    setActionPlaylistId(null);
+  }, []);
+
+  const handleTogglePin = React.useCallback(
+    (playlistId: string, pinned: boolean) => {
+      setPinned(playlistId, pinned);
+      setActionPlaylistId(null);
+    },
+    [setPinned],
+  );
 
   // ── Stagger entrance animation ──
   const entranceAnim = useRef(new Animated.Value(0)).current;
@@ -384,13 +417,26 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <LibraryPlaylistsSegment playlists={filteredPlaylists} onPlaylistCardPress={handlePlaylistCardPress} onPlayAllPlaylist={handlePlayAllPlaylist} onShufflePlaylist={handleShufflePlaylist} />
+        <LibraryPlaylistsSegment
+          playlists={filteredPlaylists}
+          onPlaylistCardPress={handlePlaylistCardPress}
+          onPlayAllPlaylist={handlePlayAllPlaylist}
+          onShufflePlaylist={handleShufflePlaylist}
+          onPlaylistCardLongPress={handlePlaylistCardLongPress}
+        />
       </ScrollView>
 
       <Fab
         label="+"
         onPress={() => setCreateModalVisible(true)}
         accessibilityLabel="Create playlist"
+      />
+
+      <PlaylistActionMenu
+        visible={actionPlaylist !== null}
+        playlist={actionPlaylist}
+        onTogglePin={handleTogglePin}
+        onClose={handleCloseActionMenu}
       />
     </>
   );

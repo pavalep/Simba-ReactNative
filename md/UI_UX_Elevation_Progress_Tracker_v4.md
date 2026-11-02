@@ -16,6 +16,19 @@
 > it was positioned against is **gone**. See `md/SIMBA_V22_MASTER_PLAN.md` items 56
 > and 57 for what is true now.
 
+> **2026-11-02 — `src/constants/strings.ts` NO LONGER EXISTS.** The module the
+> rows below count as "134 keys defined in `src/constants/strings.ts`" was
+> **deleted** on 2026-11-02 (bug `B-044`, fix `F-051`): it had **zero**
+> consumers — no file imports it, `src/constants/index.ts` never re-exported
+> it, and its only other export (`StringKey`) appears nowhere else in the
+> repo. The ✅ on **3A.8**, and the audit line's "134 global keys in
+> `strings.ts`", describe work on a module that **no longer exists**; the
+> strings are real, but they live inline and in the two modules that own them
+> (`src/types/playlist.ts` and
+> `src/features/library/presentation/related/localFilesConfig.ts`). The
+> `md/Text_Content_Reference.md` this tracker points at is already marked
+> **DEPRECATED**. See `md/SIMBA_V22_MASTER_PLAN.md` register item 72.
+
 ---
 
 ## Implementation Strategy
