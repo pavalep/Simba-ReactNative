@@ -337,9 +337,22 @@ pin follows the same convention rather than inventing one.
 **The pin badge** is a 22 × 22 rounded square (`radius.sm`), absolutely
 positioned at `top: spacing.xs` / `left: spacing.xs` over the cover —
 **mirroring the kind badge at `top: spacing.xs` / `right: spacing.xs`**. It
-holds the `pin` glyph at 14 px in `accent.gold` on a `background.scrimStrong`
-fill, so it reads as an overlay and never competes with the kind badge's
-text.
+holds the `pinFilled` glyph at 14 px in `accent.gold` on a
+`background.scrimStrong` fill, so it reads as an overlay and never
+competes with the kind badge's text.
+
+> **Amended 2026-10-30 — the badge's glyph is `pinFilled`, not `pin`.** This
+> paragraph originally said "the `pin` glyph". The code says `pinFilled`,
+> and the code is right: the badge is drawn ONLY on a playlist that is
+> already pinned, so an outline pushpin there would read as "you can pin
+> this" where the app means "this is pinned". The pair keeps the convention
+> the app already ships for bookmarks — the **outline** glyph is the
+> **toggle's** (the management row's "Pin to top"), and the **filled** glyph
+> is the **state's** (the badge).
+>
+> The badge also moved **inside** `PlaylistCover` (4.2), so it appears on
+> every surface a playlist is drawn without each surface having to know
+> about it.
 
 * The badge appears on **every** surface a playlist is drawn — the Library
   card, the management row, the Home tile. A state you cannot see is not a
@@ -550,8 +563,13 @@ not merged.
 
 ### 4.13 Accessibility
 
-* The pin badge is `accessibilityElementsHidden`; the pinned state is in the
-  surface's **accessibility label** ("…, pinned").
+* The pin badge is hidden from the accessibility tree — `accessible={false}`
+  (iOS) and `importantForAccessibility="no"` (Android) — and the pinned
+  state is in the surface's **accessibility label** ("…, pinned").
+  *Amended 2026-10-30:* this bullet originally named
+  `accessibilityElementsHidden`, which is an **iOS-only** prop and does
+  nothing on Android, where the badge would still have been announced on
+  its own. The pair above is the pair that hides it on both platforms.
 * The pin toggle in a management row and in the detail header is a real
   `TouchableOpacity` with `accessibilityRole="button"` and a label that
   **changes with the state** ("Pin to top" / "Unpin from top"), and

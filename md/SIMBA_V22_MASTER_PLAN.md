@@ -2821,6 +2821,45 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
       plan suspected, is sound: its item omits `type`, is classified
       `'audio'`, and `'audio'` is allowed.
 
+71. ~~**The pinned playlist could not be pinned, and the playlist surfaces
+    disagreed with each other and with the truth.**~~
+    **DONE 2026-10-30** (tracker phases 3, 4 and part of 7 — app `9c22f56`).
+    The model wave (item 70) gave the feature a `pinned` field. This wave
+    made it **reachable**, and made the surfaces around it tell the truth.
+    - **The pin ACTION did not exist.** `setPlaylistPinned` was in the
+      store, `setPinned` was in the facade, and **no caller in `src/`**. The
+      badge could only be seen on a playlist pinned by hand in a debugger.
+      Now `AllPlaylistsScreen` carries a visible **32 px pin toggle** —
+      "Pin to top" / "Unpin from top", `accessibilityState={{selected:
+      pinned}}` — because a long-press is not reachable by a screen reader
+      or a keyboard (D-P8).
+    - **The two add-to-playlist surfaces disagreed.** `PlaylistSheet`
+      filtered by lane; `PlaylistContextMenu` offered everything.
+      `compatiblePlaylistsFor(item, playlists)` is now the ONE rule, and it
+      classifies the item ITSELF, so a caller that forgets to pass `type`
+      cannot widen the answer. (B-040.)
+    - **The empty state told the user to create a playlist it had hidden the
+      control for.** The sheet now names the real reason, and the create row
+      is shown exactly when the empty state says "create one". (B-041.)
+    - **The batch toast counted what was SELECTED.** `reportBatchAdd` moved
+      out of the Folder Browser screen and into the feature that produces
+      the statuses, and it reports what HAPPENED. (B-034.)
+    - **Three create implementations became one.** A search for
+      `setCreating` / `newKind` / `createKind` across `src/` returns
+      nothing; `PlaylistCreateModal` is the owner, at four call sites.
+    - **One cover owner.** NEW `PlaylistCover` — the 2 × 2 collage moved out
+      of `PlaylistCard` into it, so a playlist's artwork has ONE renderer,
+      and the pin badge lands on **every** surface a playlist is drawn.
+    - **A rail that lied was retitled.** Home's rail said "Pinned Playlists"
+      while it showed unpinned playlists too. It reads "Playlists" now, and
+      orders pinned first, then recency. (B-043.)
+    67 new tests across 10 new suites. Gates: `tsc` 0 · `eslint` 0 ·
+    boundaries 582 files / 0 errors / 0 warnings · `jest` 130 suites / 1409
+    passed / 1 todo.
+    **STILL OPEN** (tracker phases 5, 6 and the rest of 7): the mixed-lane
+    playback handover (phase 5), `AddToPlaylistScreen` (phase 6), and phase
+    7's steps 36, 37, 38, 43, 44 and 48.
+
 ---
 
 ## 9. Working rules that apply to every stage

@@ -218,6 +218,44 @@ branch was written before the kind existed. `MIXED` is now in its
 > playlist" sheets stop disagreeing about which playlists an item may go
 > into.
 
+> **Status 2026-10-30: DONE** — steps 12–19 landed in app `9c22f56`.
+> Evidence, step by step:
+>
+> - **12 (enumerate the create surfaces).** The repo-wide search, run
+>   2026-10-30: `PlaylistCreateModal` is rendered at **four** call sites —
+>   `src/components/sheets/PlaylistSheet/PlaylistSheet.tsx:355`,
+>   `src/features/library/presentation/components/LibraryScreenContent.tsx:490`,
+>   `src/screens/AllPlaylists/components/AllPlaylistsScreen.tsx:212` and
+>   `src/screens/FolderBrowser/components/FolderBrowserScreen.tsx:667`.
+>   A search for `setCreating` / `newKind` / `createKind` across `src/`
+>   returns **nothing**: no inline create form is left.
+> - **13 (`PlaylistCreateModal` is the owner).** Its `KIND_OPTIONS` is
+>   `['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED']`
+>   (`src/components/playlist/PlaylistCreateModal/PlaylistCreateModal.tsx:21`).
+>   Pinned by 7 tests in
+>   `__tests__/components/playlist/PlaylistCreateModal/PlaylistCreateModal.test.tsx`,
+>   including one that creates a playlist of **each** kind, and one that
+>   reads every kind's label from `PLAYLIST_KIND_LABELS` — a local copy
+>   with a different word would fail it.
+> - **14 / 15 (the inline create UIs are gone).** `AllPlaylistsScreen`'s
+>   inline `Modal` and `PlaylistSheet`'s inline create MODE are deleted;
+>   both open the owner. Pinned by the sheet's own test:
+>   "opens PlaylistCreateModal when the create row is pressed".
+> - **16 (one rule).** `compatiblePlaylistsFor(item, playlists)`
+>   (`src/features/playlists/index.ts`) is called by **both** surfaces —
+>   `PlaylistSheet.tsx` and `PlaylistContextMenu.tsx`. Pinned by 11 sheet
+>   tests and 6 menu tests, including "offers NO playlist for a radio
+>   station" in **both**.
+> - **17 (B-034).** `reportBatchAdd` now lives with the feature that
+>   produces the statuses (`src/features/playlists/batchAddReport.ts`) and
+>   reports what HAPPENED. Pinned by 10 tests in
+>   `__tests__/features/playlists/batchAddReport.test.ts`.
+> - **18 (the Library calls the same owner).** Four call sites, one
+>   implementation.
+> - **19 (phase exit).** `tsc` exit 0 · `eslint` exit 0 · boundaries 582
+>   files / 0 errors / 0 warnings · `jest` **130 suites / 1409 passed /
+>   1 todo**.
+
 12. **Enumerate the create surfaces.** `PlaylistCreateModal` is live at
     `LibraryScreenContent.tsx:490` and `FolderBrowserScreen.tsx:645`;
     `AllPlaylistsScreen.tsx:54-60` has its **own** inline modal;
@@ -263,6 +301,29 @@ branch was written before the kind existed. `MIXED` is now in its
 ---
 
 ## PHASE 4 — Pinning
+
+> **Status 2026-10-30: DONE** — steps 20–24 landed in app `9c22f56`.
+> Evidence, step by step:
+>
+> - **20 (the pin glyph).** `src/assets/svg/ic_pin.svg` and
+>   `ic_pin_filled.svg`, registered in `SvgIcon.tsx` as `pin` / `pinFilled`.
+> - **20 (the pin badge).** It lives inside `PlaylistCover`, so it appears
+>   on **every** surface a playlist is drawn — the Library card and Home's
+>   tile. 22 × 22, `radius.sm`, `top/left: spacing.xs`,
+>   `background.scrimStrong`, `pinFilled` at 14 px in `accent.gold`, and
+>   the SURFACE's own label says ", pinned".
+> - **21 (Home is pinned first).** `useHomeScreen.ts` orders pinned
+>   playlists by `pinnedAt` desc, then the rest by `updatedAt` desc,
+>   capped at 3. Pinned by 6 tests in
+>   `__tests__/screens/Home/useHomeScreenPlaylistOrder.test.tsx`.
+> - **22 (the pin action).** `AllPlaylistsScreen` carries a visible 32 px
+>   pin toggle — "Pin to top" / "Unpin from top", with
+>   `accessibilityState={{selected: pinned}}` — because a long-press is
+>   not reachable by a screen reader or a keyboard (D-P8). Pinned by 8
+>   screen tests and 2 hook tests in `__tests__/screens/AllPlaylists/`.
+> - **23 (the Mixed chip).** `localFilesConfig.ts` carries four chips, the
+>   `Mixed` one labelled from `PLAYLIST_KIND_LABELS`.
+> - **24 (phase exit).** The four gates, as above.
 
 20. **`PlaylistCard` gains a pin glyph** for a pinned playlist, and the pin
     action. Precedent: Spotify's "Pin playlist", YouTube Music's "Pin to
@@ -349,6 +410,35 @@ branch was written before the kind existed. `MIXED` is now in its
 ---
 
 ## PHASE 7 — The UX sweep
+
+> **Status 2026-10-30: PART DONE** — steps 35, 39, 40, 41, 42, 45, 46 and
+> 47 landed in app `9c22f56`. Steps 36, 37, 38, 43, 44 and 48 are **still
+> open**. Evidence, step by step:
+>
+> - **35 (VIEW ALL).** Home's rail's "VIEW ALL" navigates to
+>   `AllPlaylistsScreen` — one target, named in one place
+>   (`src/screens/Home/index.tsx`).
+> - **39 (`PlaylistCover`).** NEW `src/components/playlist/PlaylistCover/`.
+>   The 2 × 2 collage moved out of `PlaylistCard` into it, so a playlist's
+>   artwork has ONE renderer.
+> - **40 (the pin glyph).** The assets and the registration, with step 20.
+> - **41 (the pin badge on every surface).** The badge is inside
+>   `PlaylistCover`, so it is on the Library card and Home's tile.
+> - **42 (the kind label's one owner).** The copies were deleted in the
+>   model wave; `strings.ts` keeps its copy, as §4.4 decided.
+> - **45 (the rail is retitled).** The rail was titled "Pinned Playlists"
+>   while it shows unpinned playlists too — a title that lies is a bug
+>   (spec rule 4). It now reads "Playlists", and the tile's icon box is a
+>   `PlaylistCover`.
+> - **46 (the Library segment).** The dead `colors` prop is deleted and
+>   nothing passes it.
+> - **47 (motion).** The pin badge fades and scales in on `motion.fast`
+>   (150 ms); nothing else animates.
+> - **STILL OPEN:** 36 (the kind badge's remaining sites), 37 (the empty
+>   states), 38 (accessibility beyond the pin), 43 (`AllPlaylistsScreen`
+>   becomes `PlaylistCard`s — and the pin toggle must ride onto the card),
+>   44 (the long-press pin MENU and `PlaylistDetailScreen`'s pin toggle),
+>   48 (the phase exit).
 
 35. **The Home shelf's "VIEW ALL" points at `AllPlaylistsScreen`** — **decided
     2026-10-30**: the page that can pin IS `AllPlaylistsScreen` (step 31).
@@ -488,14 +578,22 @@ branch was written before the kind existed. `MIXED` is now in its
 
 ## Carried forward from this tracker
 
-- [ ] **Phase 1 step 1** — archive / audiobook classification: are their
-      `PlaylistSheet`s showing an empty list today?
-- [ ] **Phase 1 step 2** — confirm `normalizeSingleLane`
-      (`src/state/playerStore.ts:97-101`) is the **only** place the queue is
-      narrowed to one lane.
+- [x] **Phase 1 step 1** — archive / audiobook classification — **ANSWERED
+      2026-10-30**: the **archive** sheet is sound (its item omits `type`,
+      is classified `'audio'`, and `'audio'` is allowed); the **audiobook**
+      sheet is the dead one. Fixed by the shared rule in app `9c22f56`.
+- [x] **Phase 1 step 2** — `normalizeSingleLane` is **not** the only
+      narrowing — **ANSWERED 2026-10-30**: the rule lives in **three**
+      places — `src/state/playerStore.ts`'s `normalizeSingleLane`, a
+      **second copy** inside `addToPlaylist`, and
+      `src/screens/QueueScreen/hooks/useQueueScreen.ts`. The queue's
+      narrowing is **phase 5's** job.
 - [ ] **Phase 8 step 51** — the device proof of the whole feature.
 - [ ] **The spec's §8 fallback** — if the lane handover proves too fragile,
       a mixed playlist that plays its audio items only (video items listed,
       not playable) is the recorded fallback, not a failure.
-- [ ] **The spec's §8 open question** — does the Home shelf show the
-      non-pinned playlists below the pinned ones, or pinned only?
+- [x] **The spec's §8 open question** — does the Home shelf show the
+      non-pinned playlists below the pinned ones, or pinned only? —
+      **ANSWERED 2026-10-30**: the rail shows the **pinned** playlists
+      first (most recently pinned first) and the rest by recency, in **one**
+      list, and it scrolls (spec §4.6). Landed in app `9c22f56`.

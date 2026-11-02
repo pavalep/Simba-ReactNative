@@ -32,6 +32,16 @@ wave added — while the wave's summary recorded `tsc → 0`. The runtime was
 never broken, so `jest` stayed green and only `tsc` could see it. Recorded
 as `B-032` / `F-033`.
 
+The **pinned-playlist wave** (2026-10-30) found a cluster of **claims the
+playlist surfaces made and did not mean** — a batch toast that counted what
+the user *selected* while the store silently refused the rest, two
+"add to playlist" surfaces that answered "which playlist may take this item"
+**differently** (so a radio station was offered an audio playlist in one and
+not in the other), an empty state that told the user to create a playlist
+while the create row was **hidden**, a pin state that **nothing in the app
+could set**, and a Home rail titled "Pinned Playlists" that showed unpinned
+playlists too — recorded as `B-040`…`B-043`, resolved as `F-049` / `F-050`.
+
 ## How to read this file
 
 | Column | Meaning |
@@ -1382,7 +1392,8 @@ the master plan's register item 11.
 picks a playlist, and the app says **"Added 3 items to X"**. Some of those
 files were **never added**, and nothing says so.
 
-**State:** open. **Found 2026-10-29**, while writing the pinned-playlist plan.
+**State:** FIXED (F-049). **Found 2026-10-29**, while writing the pinned-playlist
+plan. **Fixed 2026-10-30**, in app `9c22f56`.
 
 **The mechanism (verified 2026-10-29).** Two independent facts combine:
 
@@ -1628,6 +1639,117 @@ recall.
 **Still owed:** the device proof — that pressing home on Android 12+ enters
 PiP — is deferred with every other device proof.
 
+### B-040 · P2 · app · the two "add to playlist" surfaces disagreed about what a playlist may take
+
+**Symptom.** `PlaylistSheet` filtered the playlists it offered by lane;
+`PlaylistContextMenu` offered **every** playlist. The same radio station was
+offered an audio playlist in one surface and not in the other — and in the one
+that offered it, the store then **refused** it, silently.
+
+**State:** FIXED (F-049). **Found 2026-10-30**, while building the pinned-playlist
+feature.
+
+**The mechanism (verified 2026-10-30).** Nine `PlaylistSheet` call sites
+declare the item's kind **independently**. Five of them omit `type`, so
+`normalizeMediaClassification` classifies them with the broad
+`'audio'` / `'video'` fallback — and the broad fallback **is** on the
+allow-list. So:
+
+* a **radio station** (`RadioContent.tsx:218-226`,
+  `RadioFavoritesScreen.tsx:77-85`) and a **TV channel**
+  (`LiveTVContent.tsx:224-232`) **CAN** enter a playlist;
+* the **audiobook** (`AudiobookDetailScreen.tsx:149-158`, which declares
+  `type: 'audiobook'`) and the **live-TV favourites**
+  (`LiveTVFavoritesScreen.tsx:84-92`, the only live-TV site declaring
+  `type: 'live-tv'`) **CANNOT**.
+
+Same media, opposite outcomes, decided by an omitted field.
+
+**Why it matters.** D-P6 — "the playlist's kind is enforced" — was enforced
+in one sheet and not the other. A lane is not a permission, and the broad
+fallback was acting as one.
+
+**The fix.** `compatiblePlaylistsFor(item, playlists)`
+(`src/features/playlists/index.ts`) is now **the** rule: it classifies the
+item ITSELF, so a caller that forgets to pass `type` cannot widen the
+answer. Both surfaces call it. 17 tests, including "offers NO playlist for a
+radio station" in **both** surfaces.
+
+---
+
+### B-041 · P2 · app · the empty state told the user to create a playlist, and hid the create row
+
+**Symptom.** `PlaylistSheet` rendered ONE empty state for every empty case —
+*"No playlists yet. Create one to get started."* — and then **hid** the create
+row whenever the compatible-playlist list was empty
+(`ListFooterComponent={compatiblePlaylists.length > 0 ? ListFooter : null}`).
+
+So a user who had three playlists and picked a radio station was told to
+create a playlist by a control that was not on screen. The instruction could
+not be followed **in any state**.
+
+**State:** FIXED (F-049). **Found 2026-10-30**, while building the pinned-playlist
+feature.
+
+**Why it matters.** It is a false claim with no way to act on it, and it made
+two of the nine `PlaylistSheet` call sites **dead controls**: the audiobook
+sheet and the live-TV-favourites sheet open to an empty list that tells the
+user to create a playlist they cannot create.
+
+**The fix.** The empty state names the REAL reason — "No playlists yet.
+Create one to get started." when the user has no playlists at all, and "No
+playlist can take this item." when the user has playlists and none of them
+fit — and the create row is shown exactly when the empty state tells the user
+to create one. 11 tests, including the union claim: the sheet never tells the
+user to create a playlist it will not let them create.
+
+---
+
+### B-042 · P2 · app · the pin state existed and the badge could be drawn, but nothing could SET it
+
+**Symptom.** `Playlist.pinned` and `Playlist.pinnedAt` existed in the model,
+the store had `setPlaylistPinned`, and the facade exposed `setPinned` — and
+**nothing in the app called any of them**. The pin badge could only ever be
+seen on a playlist pinned by hand in a debugger.
+
+**State:** FIXED (F-050). **Found 2026-10-30**, while building the pinned-playlist
+feature.
+
+**Why it matters.** A state that cannot be set is not a state. The feature's
+whole surface — the badge, the pinned-first shelf — was decoration over an
+unreachable value, and the increment that drew the badge would have shipped a
+control that does nothing.
+
+**The fix.** `AllPlaylistsScreen` — the MANAGEMENT page, which already shows
+visible management buttons — carries a visible **32 px pin toggle** labelled
+"Pin to top" / "Unpin from top", with `accessibilityState={{selected: pinned}}`
+and the row's own label saying ", pinned". A long-press is not reachable by a
+screen reader or a keyboard (D-P8), so the management row gets a **button**,
+not a gesture. 10 tests (8 on the screen, 2 on the hook).
+
+**STILL OPEN.** The long-press pin **menu** (tracker step 44) and
+`PlaylistDetailScreen`'s header toggle.
+
+---
+
+### B-043 · P3 · docs+app · Home's rail was titled "Pinned Playlists" while it showed unpinned playlists
+
+**Symptom.** Home's playlist rail was titled **"Pinned Playlists"** and
+rendered the three most recently updated playlists — pinned or not. The title
+was false for every unpinned playlist in it.
+
+**State:** FIXED (F-050). **Found 2026-10-30**, while building the pinned-playlist
+feature.
+
+**Why it matters.** The specification's own rule 4: **a title that lies is a
+bug.** It is also the same failure as `B-034`, `B-040` and `B-041` — a
+sentence the app shows the user that the app does not mean.
+
+**The fix.** The rail is retitled **"Playlists"**, and it orders pinned
+playlists first (most recently pinned first) and the rest by recency, in one
+list. The pin badge on each tile says which are pinned, so the ordering is
+legible without reading the title.
+
 ---
 
 ## FIXED
@@ -1682,6 +1804,8 @@ PiP — is deferred with every other device proof.
 | F-046 | P2 | app | The narrow B-037 guard is now the **general** one. `scripts/check-legacy-event-emitter.cjs` scans the installed dependencies' Android sources for `getJSModule(RCTEventEmitter)` — the one class RN 0.86's `BridgelessReactContext` refuses — and fails on a new one, so the LogBox toast (B-024) cannot come back through the next dependency that makes that call. It has ONE allow-listed package, `react-native-svg`, whose identical call is **dead code**: `onReceiveNativeEvent()` has exactly one occurrence in all of node_modules, its own declaration, so RN never calls it. Every allow-listed package must carry a written reason, and the 4 tests pin that too. Measured: **26 packages with Android sources, 660 files, 0 errors, 1 allowed finding** | app `8d2730d` |
 | F-047 | P3 | app | A search result for a film the user had already watched showed a **placeholder** instead of a poster, because the history entry's catalogue slot (`thumbnailPath`) was written as `''`. The launch carried no artwork, so the session carried none, so the checkpoint writer had nothing to write. `PlayInput.thumbnailPath` is now an **optional** field — the ~34 `openPlayer` call sites that pass nothing still typecheck, and a launch without artwork is still a launch — and it is forwarded only when present, so no empty-string artwork key reaches the bridge. The four surfaces that already held artwork now hand it over. Deliberately NOT `resolveMediaArtwork(item)`: the store's own field docs draw the line — `thumbnailPath` is "what the film is", `resumeThumbnailPath` is "where in it you were" — and handing the frame over would replace the poster with a still of one moment of the film | app `dd6e0e9` |
 | F-048 | P3 | app | Closing the player left the app in **landscape** with nothing playing. The window can be in landscape while a session lives — the orientation lock pins it there, and the device can simply be rotated — so ending the session has to hand the window back. `MainActivity.onResume()` restores portrait, but only on a background → foreground transition, so it cannot help when the session ends while the app is **already in front**, which is the common case. The register's own statement of this defect was wrong in the opposite direction: it claimed the *backgrounded* case was broken, and that case was already handled — `onResume()` asks mpv whether media is loaded (`isMediaLoaded()`, a live read through `PlaybackHost`, every failure degrading to "no media") and restores portrait only when nothing is loaded. `useClosePlayback()` — the ONE owner of the teardown — now calls the **lib's own** `setOrientation('portrait')` after the session ends. It is NOT the app's `lockToPortrait()`: that helper imports `react-native-orientation-locker`, whose module body builds a `NativeEventEmitter` with no native module, so pulling it into the player facade broke **22 jest suites at module level** — which is why `src/utils/orientation.ts`, and with it `AppContent`, is **untestable in jest**. (The lib is also **Android-only** — `react-native.config.js` declares `ios: null` and the package ships no `ios/` folder — so the player, and the landscape-while-playing state this restores from, only exists where the lib's command is live.) The lib's command maps to `SCREEN_ORIENTATION_PORTRAIT` — the **same constant** the app's boot-time `lockToPortrait()` sets on Android (verified in the locker's own `OrientationModule.java`), so the browsing state is identical either way: one mechanism during a session (the lib's command), one outside it (the app's boot lock), and the handover happens where the session stops. It is **not** called when the stop FAILED: the player is still standing, and restoring portrait then would snap a landscape film to portrait mid-playback. Pinned by 2 tests, the "must NOT restore portrait" case **mutation-checked** (moving the call above the stop fails the suite; the production file was restored byte-identically) | app `6b9d4cc` |
+| F-049 | P2 | app | The playlist surfaces made **claims the app did not mean**. `addItemToPlaylist` **silently refuses** a lane mismatch, so the batch toast counted what the user **selected** — "Added 3 items" while the playlist received one, and the refusal was in the status and nowhere else. `PlaylistContextMenu` offered **every** playlist while `PlaylistSheet` filtered by lane, so a radio station was offered an audio playlist in one surface and not the other — nine call sites declare the item's kind independently and five omit `type`, so the broad `'audio'` / `'video'` fallback decided it. And the sheet's empty state said *"No playlists yet. Create one to get started."* while **hiding** the create row, which made two of the nine sheet call sites dead controls. Now: `compatiblePlaylistsFor` classifies the item ITSELF and is the one rule both surfaces call; `reportBatchAdd` lives with the feature that produces the statuses and reports what **HAPPENED**, naming the reason; and the empty state names the real reason and shows the create row exactly when it tells the user to create one. 27 new tests | app `9c22f56` |
+| F-050 | P2 | app | The pinned playlist was a state **nothing could set**, and a rail that lied about it. `Playlist.pinned` existed in the model, `setPlaylistPinned` existed in the store, `setPinned` existed in the facade — and **no caller in `src/`**. The badge could only be seen on a playlist pinned by hand in a debugger. Meanwhile Home's rail was titled **"Pinned Playlists"** while it rendered unpinned playlists too — the specification's own rule 4: a title that lies is a bug. Now: `AllPlaylistsScreen` carries a visible **32 px pin toggle** ("Pin to top" / "Unpin from top", `accessibilityState={{selected: pinned}}`) because a long-press is not reachable by a screen reader or a keyboard; the row's own label says ", pinned"; and the rail is retitled **"Playlists"** and orders pinned first (most recently pinned first), then recency. 10 new tests | app `9c22f56` |
 
 ---
 
