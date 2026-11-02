@@ -115,6 +115,13 @@ the toggle is 32 px; the card's own label says ", pinned".
   in one visit. It uses the **one** create owner (`PlaylistCreateModal`) and
   the **one** compatibility rule (`compatiblePlaylistsFor`) — no second copy
   of either.
+  **AMENDED 2026-11-02 — it ships with THREE sections: Movies · Music ·
+  Downloads.** Podcasts and Archive return **containers** — a feed, a
+  collection — not playable files, and a row the user could tick but the
+  player could not play would be a lie. Their playable items are added from
+  their own detail screens (`PodcastDetailScreen` → `PlaylistSheet`,
+  `ArchiveItemDetailScreen` → `PlaylistSheet`). The spec's §4.9 and the
+  tracker's step 30 carry the same amendment.
 - The route goes into `RootNavigator.tsx` + `types.ts`.
 - `PlaylistDetailScreen` gains the **"Add items"** action → the new page, and
   a **header pin toggle** (32 px, "Pin to top" / "Unpin from top") so the

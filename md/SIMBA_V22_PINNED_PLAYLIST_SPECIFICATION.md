@@ -521,8 +521,23 @@ items from **several sections at once**, and a sheet is for one context.
 > **Precedent:** Plex's "Add to playlist" is a full page, because it
 > gathers from more than one library.
 
-* **Section picker:** **Movies · Music · Podcasts · Archive · Downloads** —
-  the sections that hold playlist-legal media (D-P6).
+* **Section picker:** **Movies · Music · Downloads** — the sections that
+  hold playlist-legal media (D-P6).
+  **AMENDED 2026-11-02.** This section listed five:
+  *Movies · Music · Podcasts · Archive · Downloads*. **Podcasts and Archive
+  are not listed, and the reason is recorded rather than papered over.**
+  Both return **containers** — `getTrendingPodcasts()` returns FEEDS and
+  `searchInternetArchiveAudio()` returns COLLECTIONS — and a container is
+  not a playable file; its episodes and tracks are, and they cost a second
+  request per feed or collection. A row the user could tick but the player
+  could not play would be a lie, so neither is rendered here. Their
+  playable items live one level down, and the app's own surfaces already
+  add them: `PodcastDetailScreen` → `PlaylistSheet` and
+  `ArchiveItemDetailScreen` → `PlaylistSheet`.
+  The page's purpose — several sections at once, so a mixed playlist can
+  be fed from more than one lane — is met by the three that remain.
+  (The reasoning is also written where the code is:
+  `src/screens/AddToPlaylistScreen/hooks/useAddToPlaylistScreen.ts:38-48`.)
 * Two panes on a wide screen; a push-and-pop on a phone: pick a section,
   tick items, tick a playlist.
 * Every item it offers is **lane-tagged**, so a `MIXED` playlist can be fed

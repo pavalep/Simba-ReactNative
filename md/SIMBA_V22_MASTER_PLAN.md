@@ -2761,7 +2761,9 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     - **D-P6 — radio, live TV and audiobooks stay out of the playlist
       domain.**
     **The pages:** new `AddToPlaylistScreen` (a full page spanning
-    Movies · Music · Podcasts · Archive · Downloads); changed
+    Movies · Music · **Downloads** — Podcasts and Archive return
+    **containers**, not playable files, so their items are added from their
+    own detail screens instead; see the spec's §4.9); changed
     `AllPlaylistsScreen`, `PlaylistDetailScreen`, `PlaylistSheet`,
     `PlaylistCard`, Home's rail and the Library filter chips.
     **There is NO `PinnedPlaylistsScreen`** — D-P7 below.

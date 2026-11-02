@@ -470,9 +470,9 @@ branch was written before the kind existed. `MIXED` is now in its
 
 ## PHASE 6 — The pages
 
-> **Status 2026-11-02: DONE** — steps 30, 32, 33 and 34 landed. Step 31
-> (the `AllPlaylistsScreen` management page) is **still open**. Evidence,
-> step by step:
+> **Status 2026-11-02: DONE** — steps 30, 32, 33 and 34 landed, and step 31
+> (the `AllPlaylistsScreen` management page) landed as phase 7's step 43.
+> Evidence, step by step:
 >
 > - **30 (`AddToPlaylistScreen`).** NEW `src/screens/AddToPlaylistScreen/`,
 >   routed at `src/navigation/RootNavigator.tsx` and typed at
@@ -501,15 +501,31 @@ branch was written before the kind existed. `MIXED` is now in its
 >   classified** item (`type: 'movie'`, `mediaType: 'video'`), so the ONE
 >   compatibility rule offers it the video and mixed playlists and refuses
 >   the audio ones.
+> - **31 (the `AllPlaylistsScreen` management page).** Landed as phase 7's
+>   step 43: the inline 44 × 44 row is replaced by `PlaylistCard`s, the
+>   **Mixed** chip is there, the pin action is there, the create modal is
+>   `PlaylistCreateModal` (phase 3), and there is **no FAB**. There is
+>   **no** `PinnedPlaylistsScreen` — a second page holding the same list is
+>   a second list to keep in agreement with the first, and step 35 demands
+>   **one** target.
 > - **34 (the phase exit).** `tsc` exit 0 · `eslint` exit 0 · the import
 >   boundary check scanned 585 files with 0 errors and 0 warnings · `jest`
 >   137 suites / 1453 passed / 1 todo.
 
 30. **NEW — `AddToPlaylistScreen`**: a full page that gathers items from
-    **several sections at once** (Movies · Music · Podcasts · Archive ·
-    Downloads), tagged by lane so a mixed playlist can be fed from more than
-    one section in one visit. Reached from `PlaylistDetailScreen`'s "Add
-    items" action.
+    **several sections at once** (Movies · Music · **Downloads**), tagged by
+    lane so a mixed playlist can be fed from more than one section in one
+    visit. Reached from `PlaylistDetailScreen`'s "Add items" action.
+    **AMENDED 2026-11-02** — the draft listed five (Movies · Music ·
+    Podcasts · Archive · Downloads). **Podcasts and Archive are not listed,
+    and the reason is recorded rather than papered over:** they return
+    **containers** — a feed, a collection — not playable files, and a row
+    the user could tick but the player could not play would be a lie. Their
+    playable items live one level down, on the detail screens the app
+    already adds them from (`PodcastDetailScreen` → `PlaylistSheet`,
+    `ArchiveItemDetailScreen` → `PlaylistSheet`). The page's purpose —
+    several sections at once — is met. The spec's §4.9 carries the same
+    amendment.
     *Evidence:* the screen, its route in `src/navigation/RootNavigator.tsx`
     and `src/navigation/types.ts`, and its test.
 31. **NO new screen — `AllPlaylistsScreen` grows into the management page.**
@@ -538,9 +554,11 @@ branch was written before the kind existed. `MIXED` is now in its
 
 ## PHASE 7 — The UX sweep
 
-> **Status 2026-11-02: PART DONE** — steps 35, 39, 40, 41, 42, 45, 46 and
-> 47 landed in app `9c22f56`; steps **36** and **44** landed in the 2026-11-02
-> wave. Steps 37, 38, 43 and 48 are **still open**. Evidence, step by step:
+> **Status 2026-11-02: DONE** — steps 35, 39, 40, 41, 42, 45, 46 and 47
+> landed in app `9c22f56`; steps **36** and **44** landed in the 2026-11-02
+> wave; steps **37**, **38** and **43** landed with the Wave-2 correction
+> (app `e1d77f7`); and step **48** — the phase exit — is recorded below.
+> Evidence, step by step:
 >
 > - **35 (VIEW ALL).** Home's rail's "VIEW ALL" navigates to
 >   `AllPlaylistsScreen` — one target, named in one place
@@ -576,7 +594,10 @@ branch was written before the kind existed. `MIXED` is now in its
 >   `MediaRailCard`) and a **visible 32 px pin toggle**; the Library's
 >   `PlaylistCard` grid opens the menu. `PlaylistDetailScreen`'s header
 >   gained its own 32 px toggle. The long-press is never the only way in.
-> - **STILL OPEN:** 48 (the phase exit).
+> - **48 (the phase exit).** `tsc` exit 0 · `eslint` exit 0 · the import
+>   boundary check scanned **584 files** with **0 errors and 0 warnings** ·
+>   `jest` **148 suites / 1517 passed / 1 todo / 0 failed**. All four read
+>   from the gate output, not recalled.
 
 35. **The Home shelf's "VIEW ALL" points at `AllPlaylistsScreen`** — **decided
     2026-10-30**: the page that can pin IS `AllPlaylistsScreen` (step 31).
@@ -707,9 +728,10 @@ branch was written before the kind existed. `MIXED` is now in its
     `PlaylistDetailScreen` via `PlaylistManageModal` +
     `useConfirmDialog` — spec §4.5's named components — so there is one
     place that does them rather than two.
-    **One duplication is recorded, not hidden:** the pinned-order helper
-    is a second copy of Home's `pinnedAtMs`. A shared owner would be
-    better; Home is not this wave's file.
+    **The one duplication this step recorded is now closed** (register item
+    77): the pinned-order helper was a second copy of Home's `pinnedAtMs`,
+    and it now has **one** owner in the feature facade
+    (`src/features/playlists/index.ts`), which both hooks import.
 44. **The pin action** — a long-press menu on a playlist, offering
     **Pin to top** / **Unpin from top** (precedent: YouTube Music's "Pin to
     top", Spotify's "Pin playlist"), plus a **visible 32 px pin toggle** on
@@ -746,6 +768,12 @@ branch was written before the kind existed. `MIXED` is now in its
 48. **Phase exit for the UI/UX:** `tsc` exit 0; `eslint` exit 0; `jest`
     green; the import boundary check passes with 0 errors.
     *Evidence:* the four results, quoted.
+    **DONE 2026-11-02** — `npx tsc --noEmit` → **exit 0** ·
+    `npx eslint . --ext .ts,.tsx --max-warnings 0` → **exit 0** ·
+    `node scripts/check-import-boundaries.js` → **scanned 584 files —
+    0 error(s), 0 warning(s)** · `node node_modules/jest/bin/jest.js
+    --verbose` → **148 suites / 1517 passed / 1 todo / 0 failed**. All
+    four read from the gate output, not recalled.
 
 ---
 
@@ -755,11 +783,27 @@ branch was written before the kind existed. `MIXED` is now in its
     --max-warnings 0` · `node scripts/check-import-boundaries.js` ·
     `node node_modules/jest/bin/jest.js --verbose`.
     *Evidence:* the four results, quoted.
+    **DONE 2026-11-02** — `tsc` **exit 0** · `eslint` **exit 0** · import
+    boundaries **scanned 584 files — 0 error(s), 0 warning(s)** · `jest`
+    **148 suites / 1517 passed / 1 todo / 0 failed**.
 50. **Mutation-check** every "must not" test in this wave: the mixed-split
     returning, the pinned ordering, the single-owner rule, the lane
     handover, the batch-add toast, and the kind label's single owner. A test
     that cannot fail is a comment with a `.test.tsx` extension.
     *Evidence:* the harness output, with the killer test named.
+    **DONE 2026-11-02** — every one of those, each with the killer test
+    named and the production file restored **byte-identically** (SHA-256
+    verified before and after):
+    - the **mixed-split** returning, the **batch-add toast** lying, the
+      **lane handover** dropping the lane — app `241973f` / `a3c72ab`;
+    - the **pinned ordering** and the **single-owner** rule — app `a3c72ab`
+      (8 mutations, all killed);
+    - the **kind label's single owner** and the dead-rule clusters — app
+      `241973f` / `785af5c` (7 mutations on the transport, 4 on the dead
+      rules, 3 on the orientation lock — all killed).
+    One test was found passing **vacuously** under the first mutation and
+    was rewritten to assert the handover **happened**, not merely that the
+    bridge was not asked.
 51. **Device proof** (deferred until the emulator is available):
     `device: <model> + <commit>` — create a mixed playlist from Movies AND
     Music, pin it, see it at the top of the Home rail with its pin badge,
