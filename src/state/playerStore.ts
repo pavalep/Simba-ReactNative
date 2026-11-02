@@ -105,6 +105,42 @@ export function activeLane(state: PlayerState): MediaLane | undefined {
   return state.currentFile?.mediaType ?? state.playlist[0]?.mediaType;
 }
 
+/**
+ * The run's neighbours around the current position — ONE owner.
+ *
+ * "Which entry plays next" and "which entry played before" are asked in
+ * two places: the transport (which renders the next / previous controls
+ * and decides whether they are enabled) and the lane handover (which
+ * performs the move). Two answers would be two chances to be wrong, so
+ * the rule lives here, next to `activeLane` — which answers the same
+ * kind of question about the run.
+ *
+ * `currentIndex` is the run's position: `loadPlaylistToPlayer` starts it
+ * at the first entry, `playFromPlaylist` moves it, and the queue screen
+ * already derives "Up Next" from it (`playlist[currentIndex + 1 …]`).
+ * This is that same rule, not a second one.
+ */
+export interface RunNeighbours {
+  /** The run's current position. `-1` when the run is empty. */
+  readonly index: number;
+  /** The entry BEFORE the current one, or `null` at the start of the run. */
+  readonly previous: PlaylistEntry | null;
+  /** The entry AFTER the current one, or `null` at the end of the run. */
+  readonly next: PlaylistEntry | null;
+}
+
+export function runNeighbours(
+  playlist: readonly PlaylistEntry[],
+  currentIndex: number,
+): RunNeighbours {
+  const index = currentIndex;
+  return {
+    index,
+    previous: index > 0 ? playlist[index - 1] ?? null : null,
+    next: index >= 0 ? playlist[index + 1] ?? null : null,
+  };
+}
+
 /** Map a persistent playlist (V17: `usePlaylistsStore.playlists`
  *  → `Playlist.items[]`) to player entries. */
 export function playlistItemsToEntries(items: PlaylistItem[]): PlaylistEntry[] {

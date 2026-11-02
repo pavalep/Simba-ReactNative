@@ -6,7 +6,7 @@ import {type HomeScreenProps} from '../../../navigation/types';
 import type {RootStackParamList} from '../../../navigation/types';
 import {pickMediaFile, classifyPickedMedia} from '../../../services/fileService';
 import {useBookmarks} from '../../../features/bookmarks';
-import {usePlaylists} from '../../../features/playlists';
+import {pinnedAtMs, usePlaylists} from '../../../features/playlists';
 import {logger} from '../../../lib/logger';
 
 
@@ -24,7 +24,6 @@ import {useWeather} from '../../../hooks/useWeather';
 import type {WeatherCondition} from '../../../components/utility/WeatherIcon';
 import type {WeatherSnapshot} from '../../../infrastructure/api/weather/adapter';
 import type {HomeSection} from '../types';
-import type {Playlist} from '../../../types/playlist';
 import {useMediaStore} from '../../../state';
 
 // ── Helpers ──
@@ -111,19 +110,6 @@ function deriveFirstName(authUser: {name?: string} | null | undefined): string {
  * the call site: the shelf and its limit are one decision.
  */
 const HOME_PLAYLIST_SHELF_LIMIT = 3;
-
-/**
- * When a playlist was pinned, in milliseconds.
- *
- * `pinnedAt` is stamped by the store at the moment of pinning, so it
- * is the RECENCY OF PINNING - which is what orders the pinned shelf
- * (D-P3). A pinned record with no stamp falls back to its own
- * `updatedAt`: the shelf still has to put it somewhere, and its own
- * recency is the closest true answer.
- */
-function pinnedAtMs(playlist: Playlist): number {
-  return new Date(playlist.pinnedAt ?? playlist.updatedAt ?? playlist.createdAt).getTime();
-}
 
 // ── Hook ──
 

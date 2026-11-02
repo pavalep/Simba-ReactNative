@@ -34,7 +34,11 @@ import {useRecentHistoryStore} from '../../state/recentHistoryStore';
 // import graph for no benefit. `playerStore`'s own import of the
 // infrastructure barrel is TYPE-ONLY and is erased at compile time, so
 // this edge is not a runtime cycle.
-import {activeLane, usePlayerStore} from '../../state/playerStore';
+import {
+  activeLane,
+  runNeighbours,
+  usePlayerStore,
+} from '../../state/playerStore';
 import type {PlaylistEntry} from '../../state/playerStore';
 import type {MediaLane} from '../../types/media';
 import {
@@ -346,8 +350,8 @@ export function useResumeAwareLaunch(
  *  - the queue screen, which filtered the run to the active lane and so
  *    hid the items on the other side of the boundary;
  *  - `validateLane`, which refused a cross-lane launch with "Can't play
- *    video while audio is active" — and which **no launch path calls any
- *    more**, so it was a guard that guarded nothing.
+ *    video while audio is active" — and which **nothing called**, so it
+ *    was a guard that guarded nothing. It has since been DELETED.
  *
  * A rule that lives in three places is not a rule; it is three chances to
  * get it wrong. The rule lives here, next to the lane decision the seam
@@ -369,6 +373,12 @@ export interface AppLaneHandover {
    */
   readonly next: () => PlaylistEntry | null;
   /**
+   * The previous item in the run.
+   *
+   * `null` at the start of the run, or when nothing is playing.
+   */
+  readonly previous: () => PlaylistEntry | null;
+  /**
    * Hand over to `entry`: the session takes its lane and the
    * presentation follows.
    */
@@ -379,6 +389,12 @@ export interface AppLaneHandover {
    * `false` when the run has ended — there is nothing to hand over to.
    */
   readonly advance: () => Promise<boolean>;
+  /**
+   * Hand over to the PREVIOUS item in the run.
+   *
+   * `false` at the start of the run — there is nothing to go back to.
+   */
+  readonly retreat: () => Promise<boolean>;
   /** The lane the run is playing in right now. */
   readonly lane: () => MediaLane | undefined;
 }
@@ -391,22 +407,35 @@ export function useLaneHandover(): AppLaneHandover {
     [],
   );
 
-  const next = React.useCallback((): PlaylistEntry | null => {
+  // The run's neighbours, read at CALL time.
+  //
+  // The rule is `runNeighbours` — the same one the queue screen uses for
+  // "Up Next" and the same one the transport uses to decide whether the
+  // next / previous controls are enabled. It is read here rather than
+  // captured at render time because the handover happens long after the
+  // render that built this closure: a captured position would be the
+  // position at launch, which is the same staleness the transport's
+  // `livePlaybackRef` exists to avoid.
+  const neighbours = React.useCallback(() => {
     const {playlist, currentIndex} = usePlayerStore.getState();
-    if (currentIndex < 0) {
-      return null;
-    }
-    return playlist[currentIndex + 1] ?? null;
+    return runNeighbours(playlist, currentIndex);
   }, []);
 
-  const handoverTo = React.useCallback(
-    async (entry: PlaylistEntry): Promise<boolean> => {
-      const index = usePlayerStore
-        .getState()
-        .playlist.findIndex(item => item.uri === entry.uri);
-      if (index >= 0) {
-        usePlayerStore.getState().playFromPlaylist(index);
-      }
+  const next = React.useCallback(
+    (): PlaylistEntry | null => neighbours().next,
+    [neighbours],
+  );
+
+  const previous = React.useCallback(
+    (): PlaylistEntry | null => neighbours().previous,
+    [neighbours],
+  );
+
+  // The ONE way a run entry is opened. Every path — `handoverAt`,
+  // `handoverTo` — goes through this, so the lane, the kind and the
+  // session are written the same way wherever the run moves.
+  const openEntry = React.useCallback(
+    async (entry: PlaylistEntry): Promise<void> => {
       await openPlayer({
         uri: entry.uri,
         title: entry.title,
@@ -419,22 +448,63 @@ export function useLaneHandover(): AppLaneHandover {
         mediaKind: entry.type,
         mediaLane: entry.mediaType,
       });
-      return true;
     },
     [openPlayer],
   );
 
+  // The ONE way the run MOVES: to a position in the run.
+  //
+  // The index is the run's own — not a URI lookup — so a run that holds
+  // the same file twice still moves to the occurrence the user is on.
+  const handoverAt = React.useCallback(
+    async (index: number): Promise<boolean> => {
+      const entry = usePlayerStore.getState().playlist[index];
+      if (!entry) {
+        return false;
+      }
+      usePlayerStore.getState().playFromPlaylist(index);
+      await openEntry(entry);
+      return true;
+    },
+    [openEntry],
+  );
+
+  const handoverTo = React.useCallback(
+    async (entry: PlaylistEntry): Promise<boolean> => {
+      const index = usePlayerStore
+        .getState()
+        .playlist.findIndex(item => item.uri === entry.uri);
+      if (index >= 0) {
+        return handoverAt(index);
+      }
+      // The entry is not in the run: it still plays, but the run does not
+      // move — there is no position in the run to move to.
+      await openEntry(entry);
+      return true;
+    },
+    [handoverAt, openEntry],
+  );
+
   const advance = React.useCallback(async (): Promise<boolean> => {
-    const upcoming = next();
-    if (!upcoming) {
+    const {playlist, currentIndex} = usePlayerStore.getState();
+    const index = currentIndex + 1;
+    if (currentIndex < 0 || index >= playlist.length) {
       return false;
     }
-    await handoverTo(upcoming);
-    return true;
-  }, [handoverTo, next]);
+    return handoverAt(index);
+  }, [handoverAt]);
+
+  const retreat = React.useCallback(async (): Promise<boolean> => {
+    const {playlist, currentIndex} = usePlayerStore.getState();
+    const index = currentIndex - 1;
+    if (currentIndex <= 0 || index < 0 || index >= playlist.length) {
+      return false;
+    }
+    return handoverAt(index);
+  }, [handoverAt]);
 
   return React.useMemo(
-    () => ({advance, handoverTo, lane, next}),
-    [advance, handoverTo, lane, next],
+    () => ({advance, handoverTo, lane, next, previous, retreat}),
+    [advance, handoverTo, lane, next, previous, retreat],
   );
 }

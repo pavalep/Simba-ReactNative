@@ -139,3 +139,56 @@ describe('useLaneHandover — the handover has ONE owner', () => {
     expect(await result.current.advance()).toBe(false);
   });
 });
+
+/**
+ * The BACKWARD move — the same owner, the other direction.
+ *
+ * `previous` / `retreat` are the siblings of `next` / `advance`. They
+ * exist because the transport's previous control and its smart-prev
+ * (Apple Music / Spotify) both have to move the app's RUN backwards —
+ * and mpv's playlist holds exactly one entry in this app, so
+ * `commands.previous()` was a permanent no-op there too.
+ */
+describe('useLaneHandover — the backward move', () => {
+  beforeEach(() => {
+    mockOpenWithResume.mockClear();
+    usePlayerStore.getState().reset();
+    useNowPlayingStore.getState().reset();
+  });
+
+  it('retreats to the entry before the current one', async () => {
+    usePlayerStore.getState().loadPlaylistToPlayer([TRACK, FILM]);
+    usePlayerStore.getState().playFromPlaylist(1);
+
+    const {result} = await renderHook(() => useLaneHandover());
+
+    expect(result.current.previous()?.uri).toBe(TRACK.uri);
+
+    const handed = await result.current.retreat();
+
+    expect(handed).toBe(true);
+    // The run moved back.
+    expect(usePlayerStore.getState().currentIndex).toBe(0);
+    // And the session took the entry it moved to.
+    expect(useNowPlayingStore.getState().current?.uri).toBe(TRACK.uri);
+    expect(useNowPlayingStore.getState().current?.mediaLane).toBe('audio');
+  });
+
+  it('reports that there is nothing before the first entry', async () => {
+    usePlayerStore.getState().loadPlaylistToPlayer([TRACK, FILM]);
+
+    const {result} = await renderHook(() => useLaneHandover());
+
+    expect(result.current.previous()).toBeNull();
+    expect(await result.current.retreat()).toBe(false);
+    // The run did not move.
+    expect(usePlayerStore.getState().currentIndex).toBe(0);
+  });
+
+  it('does not retreat when nothing is playing', async () => {
+    const {result} = await renderHook(() => useLaneHandover());
+
+    expect(result.current.previous()).toBeNull();
+    expect(await result.current.retreat()).toBe(false);
+  });
+});

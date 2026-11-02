@@ -261,14 +261,11 @@ export {useClosePlayback} from './useClosePlayback';
 // docblock.
 export {useVideoOwnsWindow} from './useVideoOwnsWindow';
 
-// V19 W0 Phase 0.3 — lane integrity guard on every launch path.
-// JS-side enforcement (native-level is V20). Source of truth:
-// SPEC §3.24 + audit §3.D.
-export {
-  validateLane,
-  laneError,
-  type LaneStreamError,
-} from './validateLane';
+// The lane guard that used to be exported here (`validateLane`) was
+// called by nobody: its own docblock claimed the facade called it, and
+// the facade did not. `useLaneHandover()` is the one owner of the lane
+// boundary now, so the guard is gone rather than kept as a promise
+// nobody keeps.
 
 // The app's full-screen VIDEO chrome compositor.
 //

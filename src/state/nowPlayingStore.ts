@@ -8,13 +8,16 @@ import {mediaKey} from '../infrastructure/player/playbackProgress';
  * ## Why this exists
  *
  * To record a resume checkpoint you need to know which file is playing.
- * The obvious source is `useTransport().state.currentUri`, but that is
- * derived from the lib's **queue** (`playlist[currentIndex].filename`),
- * and this app launches media through `openPlayer({uri, ...})` — a
- * single-file launch that populates no queue. So `currentUri` is
- * `null` for exactly the launches that matter, which is why
- * `useQueueSync` has been writing `uri: ''` into `playerStore` and
- * calls it a V20 gap.
+ * The lib's **queue** cannot answer it: this app launches media through
+ * `openPlayer({uri, ...})` — a single-file launch that populates no
+ * queue, and mpv's own playlist holds exactly one entry (`loadfile`
+ * replaces it). That is why the transport used to read a permanently
+ * empty `currentUri` (B-046), and why `useQueueSync` wrote `uri: ''`
+ * into `playerStore` and called it a V20 gap.
+ *
+ * This store IS that answer: the transport's `currentUri` is read from
+ * here now, so the checkpoint writer and the transport's Save /
+ * Add-to-playlist / Share actions share ONE record of what is playing.
  *
  * The lib genuinely does not expose "the current file" for a
  * single-file launch. The **app** does, though: it is the thing that

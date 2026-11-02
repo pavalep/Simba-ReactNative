@@ -43,10 +43,14 @@
  *     cannot show its own state is the "control that may or may not be
  *     the real one" ambiguity.
  *   • Next / Previous are driven by `canGoNext` / `canGoPrev`, which
- *     come from the engine's OWN playlist. Not from `usePlayerStore`:
- *     `useQueueSync` writes a phantom entry with `uri: ''` for
- *     single-file launches (its own comment flags it as a V20 gap), and
- *     a next button pointing at an empty URI is a dead control.
+ *     come from the app's RUN (`usePlayerStore.playlist`) through the
+ *     ONE rule `runNeighbours` — the same rule the queue screen uses
+ *     for its "Up Next" list. They did NOT come from the engine's own
+ *     playlist: mpv's playlist holds exactly one entry in this app
+ *     (`loadfile` replaces it), so reading it made both controls
+ *     permanently disabled and `commands.next()` a permanent no-op
+ *     (B-046). What is PLAYING is the session's URI — the launch seam
+ *     records it — so a single-file launch still has an identity.
  *   • The seek bar is disabled outright when `durationMs === 0` — a live
  *     stream has no position to seek to.
  *

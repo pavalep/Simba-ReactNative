@@ -95,9 +95,22 @@ const mockStablePlayerResult = {
   commands: mockCommands,
 };
 
+/**
+ * The transport reaches the launch seam through the lane handover, and
+ * the seam asks the lib for these two — the handover is what makes the
+ * transport's next / previous real, because the lib's queue is not the
+ * app's run.
+ */
+const mockOpenWithResume = jest.fn(
+  async (_opts: Record<string, unknown>): Promise<boolean> => true,
+);
+
 jest.mock('@simba-dev/react-native-media-player', () => ({
   usePlayerProgress: () => mockProgress,
   usePlayer: () => mockStablePlayerResult,
+  useOpenWithResume: () => mockOpenWithResume,
+  resolveStreamType: (mediaType?: string) =>
+    mediaType === 'video' ? 'video' : 'audio',
 }));
 
 const mockSetOrientationLocked = jest.fn();

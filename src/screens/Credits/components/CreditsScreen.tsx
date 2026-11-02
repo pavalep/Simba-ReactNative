@@ -61,7 +61,6 @@ const CREDIT_GROUPS: CreditGroup[] = [
     title: 'Tooling',
     items: [
       'react-native-haptic-feedback',
-      'react-native-orientation-locker',
     ],
   },
 ];

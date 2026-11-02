@@ -142,23 +142,24 @@ export function useClosePlayback(): () => void {
     // routes that to `getMpvPlayerModule().setOrientation` - so this is
     // the SAME call, not a second mechanism. It maps to
     // `SCREEN_ORIENTATION_PORTRAIT`, the same constant the app's
-    // boot-time `lockToPortrait()` sets on Android. So the window has ONE
-    // mechanism during a session (the lib's command) and one outside it
-    // (the app's boot lock), and the handover happens here, where the
-    // session stops.
+    // boot-time lock sets - and that boot lock is now that same command
+    // (`src/utils/orientation.ts` takes the lib's `commands` and calls
+    // it; register item 68). The window therefore has ONE writer of its
+    // orientation - the lib's command - during a session and outside it,
+    // and the handover happens here, where the session stops.
     //
-    // It is the lib's command and NOT the app's `lockToPortrait()`, for
-    // two reasons that were measured, not assumed:
+    // The lib's command is also the only one the app can use:
     //
-    //  - `src/utils/orientation.ts` imports `react-native-orientation-
-    //    locker`, whose module body constructs a `NativeEventEmitter`
-    //    with no argument. Importing it into the player facade broke 22
-    //    jest suites at MODULE level - not on an assertion - and that
-    //    helper and `AppContent` are therefore untestable in jest.
     //  - The lib is ANDROID-ONLY: `react-native.config.js` declares
     //    `ios: null` and the package ships no `ios/` folder, so the
     //    player - and the landscape-while-playing state this restores
     //    from - only exists where the lib's command is live.
+    //  - The app no longer imports a third-party OS-control package for
+    //    this. `react-native-orientation-locker` was a SECOND writer of
+    //    the same value, and its module body constructed a
+    //    `NativeEventEmitter` with no argument, so merely importing it
+    //    threw - which is what kept `src/utils/orientation.ts` and
+    //    `AppContent` untestable in jest.
     //
     // The lib's command also refuses LOUDLY: `setOrientation` logs a
     // warning when there is no current activity, instead of quietly doing

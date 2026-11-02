@@ -119,9 +119,6 @@ jest.mock('../../../../../src/infrastructure/player', () => {
         '../../../../../src/infrastructure/player/resumePolicy',
       ),
       ...jest.requireActual(
-        '../../../../../src/infrastructure/player/validateLane',
-      ),
-      ...jest.requireActual(
         '../../../../../src/infrastructure/player/playbackFacade',
       ),
       ...jest.requireActual(

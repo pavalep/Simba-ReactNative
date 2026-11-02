@@ -63,6 +63,10 @@ jest.mock('../../../src/state', () => ({
 jest.mock('../../../src/features/playlists', () => {
   const mockPlaylistState: {list: Playlist[]} = {list: []};
   return {
+    // The REAL `pinnedAtMs` — the shelf's pinned order comes from the
+    // facade's one owner, so this mock must not hand the hook a second
+    // implementation of the rule to read instead.
+    ...jest.requireActual('../../../src/features/playlists'),
     __mockPlaylistState: mockPlaylistState,
     usePlaylists: () => ({list: mockPlaylistState.list}),
   };

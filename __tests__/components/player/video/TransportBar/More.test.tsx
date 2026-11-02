@@ -31,6 +31,7 @@ import * as React from 'react';
 import {act, fireEvent} from '@testing-library/react-native';
 import {renderChrome} from '../../../../helpers/renderChrome';
 import {More} from '../../../../../src/components/player/video/TransportBar/More';
+import {useNowPlayingStore} from '../../../../../src/state/nowPlayingStore';
 
 jest.mock('../../../../../src/theme', () => {
   const actual = jest.requireActual('../../../../../src/theme/tokens');
@@ -71,36 +72,66 @@ const downloadService = require('../../../../../src/services/downloadService');
 
 // NB: the variable name must start with `mock` — jest's hoisting plugin
 // rejects any other out-of-scope reference inside a `jest.mock` factory.
-jest.mock('../../../../../src/state/playerStore', () => ({
-  usePlayerStore: {
-    getState: () => ({addToPlaylist: mockAddToPlaylist}),
-  },
-}));
+//
+// The store is a zustand hook, so it is CALLED as one — the transport
+// reads the app's RUN through it — and it also carries `getState`, which
+// is how the sheet appends to the run.
+jest.mock('../../../../../src/state/playerStore', () => {
+  const actual = jest.requireActual('../../../../../src/state/playerStore');
+  const mockUsePlayerStore = Object.assign(
+    (selector: (state: unknown) => unknown) =>
+      selector({playlist: [], currentIndex: -1}),
+    {getState: () => ({addToPlaylist: mockAddToPlaylist})},
+  );
+  // Everything else stays REAL — `runNeighbours` is the ONE rule for
+  // "what plays next", and a mock of it would be a mock of the rule
+  // rather than of the state it reads.
+  return {...actual, usePlayerStore: mockUsePlayerStore};
+});
 const mockAddToPlaylist = jest.fn();
 const playerStore = {addToPlaylist: mockAddToPlaylist};
 
-// The facade exposes the current URI structurally, derived from the
-// lib's playlist entry. Save / Add-to-playlist act on that value, so the
-// mocked lib state must carry it.
+// The lib's own playlist is EMPTY in this app — `loadfile` replaces
+// mpv's playlist with exactly one entry, and the app never calls
+// `commands.loadPlaylist` — so it carries no next-track metadata and
+// no current-file identity. That is why the current URI is read from
+// the SESSION instead (B-046), and why the mocked lib state below has
+// no playlist at all.
 jest.mock('@simba-dev/react-native-media-player', () => ({
   usePlayer: () => ({
     state: {
       title: 'Stairway to Heaven',
       artist: 'Led Zeppelin',
-      playlist: [
-        {filename: 'https://cdn.test/stairway.mp4', title: 'Stairway to Heaven'},
-      ],
-      currentIndex: 0,
     },
     commands: {},
   }),
   usePlayerProgress: () => ({positionMs: 0, durationMs: 0, isBuffering: false}),
+  // The transport reaches the launch seam through the lane handover, and
+  // the seam asks the lib for these two. Without them the seam throws the
+  // moment the transport renders.
+  useOpenWithResume: () => mockOpenWithResume,
+  resolveStreamType: (mediaType?: string) =>
+    mediaType === 'video' ? 'video' : 'audio',
 }));
+const mockOpenWithResume = jest.fn(
+  async (_opts: Record<string, unknown>): Promise<boolean> => true,
+);
 
 describe('More (button + sheet integration)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     shareService.shareContent.mockClear();
+    // What is PLAYING is the SESSION's URI — the launch seam records it
+    // on every launch, for both lanes. Save / Share / Add-to-playlist
+    // act on that value, so the session has to carry it. (It used to
+    // come from the lib's playlist, which is empty in this app, so
+    // every one of those rows answered "Nothing to …" — B-046.)
+    useNowPlayingStore.getState().begin({
+      uri: 'https://cdn.test/stairway.mp4',
+      title: 'Stairway to Heaven',
+      startPositionMs: 0,
+      streamType: 'video',
+    });
   });
 
   it('renders the button + opens the sheet on tap', async () => {

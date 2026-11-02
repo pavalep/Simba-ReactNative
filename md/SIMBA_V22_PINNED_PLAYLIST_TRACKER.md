@@ -351,8 +351,8 @@ branch was written before the kind existed. `MIXED` is now in its
 
 ## PHASE 5 — Mixed playlist playback (the risky one)
 
-> **Status 2026-11-02: PART DONE** — steps 25, 26 and 27 landed. Steps 28
-> and 29 are **still open**. Evidence, step by step:
+> **Status 2026-11-02: DONE** — steps 25, 26, 27, 28 and 29 landed. The
+> **device proof** of step 28 stays deferred. Evidence, step by step:
 >
 > - **25 (the queue holds both lanes).** `normalizeSingleLane` is
 >   **deleted**. `loadPlaylistToPlayer` and `addToPlaylist` keep every
@@ -375,8 +375,8 @@ branch was written before the kind existed. `MIXED` is now in its
 >   The rule used to live in three places: the queue store (narrowed the
 >   run), the queue screen (filtered it) and `validateLane` — which
 >   refused a cross-lane launch with *"Can't play video while audio is
->   active"* and which **no launch path calls any more**, so it was a guard
->   that guarded nothing.
+>   active"* and which **nothing called**, so it was a guard that guarded
+>   nothing. It has since been **deleted** (register item 77).
 >   *Evidence:* `__tests__/infrastructure/player/useLaneHandover.test.tsx` —
 >   item N hands over to the other lane at item N+1, and the session takes
 >   the new lane.
@@ -387,6 +387,27 @@ branch was written before the kind existed. `MIXED` is now in its
 >   already mounted in the tree and the session tells it what to load.
 >   *Evidence:* the same suite — "a video handover does not ask the bridge
 >   for a new player" — plus "moves the presentation with the lane".
+> - **28 (the screen plays a mixed playlist in order, and the transport
+>   advances the RUN).** The screen's half: "Play all" loads the WHOLE run
+>   (`loadPlaylistToPlayer`, which keeps every lane) and launches its first
+>   item. The transport's half was a defect of its own — bug `B-046`, now
+>   `F-053`: `useTransport`'s `canGoNext` and its `next` read the **lib's**
+>   mpv playlist, and `loadfile` REPLACES mpv's playlist, so it held
+>   exactly one entry and the ⏭ button was greyed out for every album and
+>   playlist launch. The transport now advances the app's RUN through the
+>   handover's one owner, `useLaneHandover()`, which gained `previous()` /
+>   `retreat()` as the siblings of `next()` / `advance()`. The rule for
+>   "what plays next" has ONE owner — `runNeighbours` in
+>   `src/state/playerStore.ts` — and it is the same rule the queue screen
+>   already used for its "Up Next" list. What is PLAYING is the
+>   **session's** URI, so a single-file launch has an identity too.
+>   *Evidence:* `__tests__/infrastructure/player/useTransport.run.test.tsx`
+>   (9 tests) and `useLaneHandover.test.tsx` (8). **7 mutations, all
+>   killed**, every file restored byte-identically. The **device proof
+>   stays deferred**.
+> - **29 (the phase exit).** `tsc` exit 0 · `eslint` exit 0 · import
+>   boundaries `scanned 584 files — 0 error(s), 0 warning(s)` · `jest`
+>   **148 suites / 1517 passed / 1 todo / 0 failed**.
 > - **Every "must not" test was mutation-checked.** Putting the narrowing
 >   back, putting the silent drop back, dropping the lane from the
 >   handover, and forcing the handover's lane to `audio` were each applied
@@ -419,20 +440,31 @@ branch was written before the kind existed. `MIXED` is now in its
     `src/screens/PlaylistDetail/components/PlaylistDetailScreen.tsx` (967
     lines today).
     *Evidence:* the screen's test, plus the device proof in phase 8.
-    **PART DONE 2026-11-02** — the screen's half is done: "Play all" loads
-    the WHOLE run (`loadPlaylistToPlayer`, which now keeps every lane) and
-    launches its first item, so a MIXED playlist starts at the right place
-    and holds every item in order.
-    **The remaining half is the transport, and it is a defect of its own
-    (bug `B-046`):** `useTransport`'s `canGoNext` and its `next` read the
+    **DONE 2026-11-02** — the screen's half: "Play all" loads the WHOLE run
+    (`loadPlaylistToPlayer`, which now keeps every lane) and launches its
+    first item, so a MIXED playlist starts at the right place and holds
+    every item in order.
+    **And the transport's half, which was a defect of its own (bug `B-046`
+    → `F-053`):** `useTransport`'s `canGoNext` and its `next` read the
     **lib's** mpv playlist, and `loadfile` REPLACES mpv's playlist — so it
-    holds exactly one entry and the ⏭ button is greyed out for every
-    album and playlist launch. The transport has to advance the app's RUN
-    through the handover's one owner (`useLaneHandover`). The handover
-    exists; the transport is not wired to it yet. The device proof stays
-    **deferred**.
+    held exactly one entry and the ⏭ button was greyed out for every
+    album and playlist launch. The transport now advances the app's RUN
+    through the handover's one owner (`useLaneHandover`), which gained
+    `previous()` / `retreat()` as the siblings of `next()` / `advance()`.
+    The rule for "what plays next" has ONE owner — `runNeighbours` in
+    `src/state/playerStore.ts` — and it is the same rule the queue screen
+    already used for its "Up Next" list.
+    *Evidence:* 9 new tests in
+    `__tests__/infrastructure/player/useTransport.run.test.tsx` and 3 in
+    `useLaneHandover.test.tsx`; **7 mutations, all killed**, every file
+    restored byte-identically. The **device proof stays deferred**.
 29. **Phase exit:** `tsc` exit 0; `eslint` exit 0; `jest` green; the handover
     tests pass.
+    **DONE 2026-11-02** — `tsc` exit 0 · `eslint` exit 0 · import boundaries
+    `scanned 584 files — 0 error(s), 0 warning(s)` · `jest` **148 suites /
+    1517 passed / 1 todo / 0 failed**. The handover tests are
+    `__tests__/infrastructure/player/useLaneHandover.test.tsx` (8) and
+    `__tests__/infrastructure/player/useTransport.run.test.tsx` (9).
 
 ---
 

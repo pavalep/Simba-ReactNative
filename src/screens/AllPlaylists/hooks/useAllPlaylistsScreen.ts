@@ -4,27 +4,9 @@
 
 import {useCallback, useMemo, useState} from 'react';
 import {useNavigation} from '@react-navigation/native';
-import {usePlaylists} from '../../../features/playlists';
+import {pinnedAtMs, usePlaylists} from '../../../features/playlists';
 import type {FilterType} from '../../../features/library/presentation/types';
 import type {Playlist, PlaylistKind} from '../../../types/playlist';
-
-/**
- * When the playlist was pinned, in milliseconds.
- *
- * D-P3: the PINNED order is the RECENCY OF PINNING, not the playlist's own
- * `updatedAt`. The store stamps `pinnedAt` when the pin goes on and drops
- * it when the pin comes off, so it is the only stamp that says "how
- * recently the user pinned this".
- *
- * Home's rail reads the same stamp through its own copy of this helper
- * (`src/screens/Home/hooks/useHomeScreen.ts`). Two copies of one rule is
- * one copy too many — but that helper is Home's, and Home is not this
- * wave's file — so the rule is written out here and the duplication is
- * recorded rather than hidden.
- */
-function pinnedAtMs(playlist: Playlist): number {
-  return new Date(playlist.pinnedAt ?? playlist.updatedAt ?? playlist.createdAt).getTime();
-}
 
 export interface UseAllPlaylistsScreenResult {
   /** Every playlist the user has — the page's source, before the filter. */

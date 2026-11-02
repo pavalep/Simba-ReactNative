@@ -2907,26 +2907,46 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     restore portrait" case is **mutation-checked** and the production file
     was restored byte-identically. **Device proof: still outstanding**
     (item 63).
-68. **The app's orientation helper cannot be loaded in jest.** 
-    `src/utils/orientation.ts` imports `react-native-orientation-locker`,
-    whose module body constructs a `NativeEventEmitter` with no
-    argument, and `NativeEventEmitter` requires a non-null one — so the
-    module throws the moment it is imported. There is **no**
-    `__mocks__/react-native-orientation-locker.js`, and the import graph
-    reaches the helper from `src/app/AppContent.tsx`, so **both are
-    untestable**: a suite that pulls either in fails at MODULE level, not
-    on an assertion. Verified rather than recalled — a probe importing
-    the helper failed with `Invariant Violation: new NativeEventEmitter()
-    requires a non-null argument` at
-    `react-native-orientation-locker/src/orientation.ios.js:12`. This is
-    why the portrait restore routes through the lib's command, and it is
-    the same defect class as B-038: what is missing is the **mock**, not
-    the code. **OPEN** — the fix is a
-    `__mocks__/react-native-orientation-locker.js` that matches the
-    library's public surface (the `Orientation` class, `OrientationType`,
-    the orientation constants, `OrientationLocker` and the three hooks),
-    plus a `moduleNameMapper` entry, after which the helper can be tested
-    directly.
+68. ~~**The app's orientation helper cannot be loaded in jest.**~~
+    **DONE 2026-11-02** (item 68 — the orientation seam moves to the LIB,
+    not to a mock).
+    `src/utils/orientation.ts` imported `react-native-orientation-locker`,
+    whose module body constructs a `NativeEventEmitter` with no argument,
+    so merely importing the helper THREW — and with it `AppContent`. Both
+    files were untestable because neither file COULD have a test. **The fix
+    is not a mock: it is the removal.** The lock now goes through the LIB's
+    own `commands.setOrientation('portrait')` — the standing rule for
+    system controls in this app (brightness, volume and PiP all route
+    through the central lib facade). `react-native-orientation-locker` has
+    left the app: `package.json`, `package-lock.json` and the Credits
+    screen.
+    - **Safe at boot.** `AppContent` is a descendant of the lib's
+      `<SimbaPlayer>` (`App.tsx:80-82` → `AppRoot.tsx:184` →
+      `AppContent`), and the lib's `commands` is a MODULE SINGLETON built
+      at module load (`src/types/player.ts:904-913`) whose bridge resolves
+      LAZILY per call — available at boot, stable identity, so the boot
+      lock runs exactly once.
+    - **Behaviour unchanged on Android.** The locker set
+      `SCREEN_ORIENTATION_PORTRAIT` (`OrientationModule.java:176`) and so
+      does the lib (`MpvBridgeModule.kt:700`) — the same constant. The lib
+      writes it on the UI thread (`runOnUiThread`), better ordered than
+      the locker's bridge-thread write.
+    - **ONE writer.** The player's own lock (`useTransport`'s
+      `setOrientationLock`) and the close path (`useClosePlayback`) already
+      make this exact call. The third-party package was a SECOND writer of
+      the same value.
+    - **The two package workarounds are gone.** The 600 ms iOS delay and
+      the 200 ms Android re-assert existed for THAT package's bugs (its
+      GitHub issue #210; a configuration-change race under the new
+      architecture).
+    - **The iOS branch is gone.** The lib is Android-only
+      (`react-native.config.js` declares `ios: null`), so the command is a
+      no-op on iOS, and the old helper's iOS branch was the only thing
+      pinning iOS to portrait. The app ships no iOS build and the whole
+      engine is Android-only. **Device proof outstanding** (item 63).
+    - Pinned by 2 new suites (4 tests). The "must NOT re-lock on every
+      render" case is **mutation-checked** (3 mutations, all caught) and
+      every file was restored byte-identically.
 69. ~~**Two of the orientation helper's three exports are dead.**~~
     **DONE 2026-11-02** (the AI-slop sweep — register item 72).
     `lockToLandscape()` and `unlockAll()` had **zero call sites** in
@@ -3142,49 +3162,55 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
       `panscan` *"may not work with all video output drivers"* — so the fix
       is a patch release with a **device proof**, not a blind change.
 
-76. **The next-track button is dead for every album and playlist launch.**
-    **OPEN** (bug `B-046`).
-    - **The transport advances the LIB's mpv playlist, and the app never
-      fills it.** `useTransport`'s `canGoNext` and its `next` read
-      `PlayerState.playlist` — mpv's own playlist. The app's RUN is
-      `usePlayerStore`'s `playlist`. The app never calls
-      `commands.loadPlaylist`, and `loadfile` **replaces** mpv's playlist,
-      so it holds exactly one entry — the file being played. `canGoNext`
-      is `0 < 0`, false, for every launch.
-    - **The lib's "Play Next" queue is a different thing and does work**
-      (`useQueue` is the lib's queue store). It is not the run.
-    - **What it needs:** the transport's `next` advances the app's run
-      through the lane handover's ONE owner (`useLaneHandover`, built in
-      phase 5 step 26), and `canGoNext` considers the run as well as mpv's
-      playlist. The transport is shared by every player chrome, so it needs
-      its own tests rather than a change at the end of a long day.
-    - This is why a MIXED playlist cannot be played in order yet — step 28
-      of the pinned-playlist tracker.
+76. ~~**The next-track button is dead for every album and playlist
+    launch.**~~ **DONE 2026-11-02** (bug `B-046` → `F-053`).
+    - **The transport advances the app's RUN, not mpv's playlist.**
+      `canGoNext` / `canGoPrev` / `nextTrack` are answered by
+      `usePlayerStore.playlist` through the ONE rule `runNeighbours`
+      (`src/state/playerStore.ts`) — the **same** rule the queue screen
+      already used for its "Up Next" list (`playlist[currentIndex + 1
+      …]`). `next` / `previous` / `skipPrev` go through the lane
+      handover's one owner, `useLaneHandover()`, which gained
+      `previous()` / `retreat()` as the siblings of `next()` / `advance()`.
+    - **What is PLAYING is the SESSION's URI**, not the run's entry:
+      `useNowPlayingStore` records it at every launch, so a single-file
+      launch still has an identity. That was the fix for the More
+      sheet's Save / Add-to-playlist / Share rows, which all answered
+      "Nothing to …" because `currentUri` was always `null`.
+    - **Four dead facts, one cause:** `canGoNext`, `canGoPrev`,
+      `currentUri` and `nextTrack` were all read from the lib's playlist,
+      which holds exactly one entry in this app.
+    - The handover is held in a REF, not in the commands memo's
+      dependency list, so the transport's stability contract (the memo
+      only rebuilds when the DURATION changes) survives the new
+      dependency.
+    - Pinned by 9 new tests in
+      `__tests__/infrastructure/player/useTransport.run.test.tsx` plus 3 in
+      `useLaneHandover.test.tsx`; **7 mutations, all killed**, and every
+      file restored byte-identically.
+    - The MIXED playlist now plays in order across the lane boundary.
 
-77. **Two dead-rule clusters the 2026-11-02 wave found.** **OPEN.**
-    - **`src/infrastructure/player/validateLane.ts` has NO callers.** The
-      module's own docblock says *"The facade's launch functions (`usePlay`,
-      `usePlayWithResume`, `usePlaybackFacade.launch`) call `validateLane()`
-      before invoking the lib's `openPlayer` / `openPlaylist`"* — and a
-      search of `src/` finds **zero** call sites. It was a guard that
-      guarded nothing, and the lane handover (register item 74, phase 5
-      step 26) has now superseded it. `laneError` and the `LaneStreamError`
-      variant it feeds in `streamErrors.ts` are dead with it.
-      **What it needs:** a decision — delete the module, or wire it to the
-      one place it was meant to guard. Deleting is the honest answer if
-      nothing needs it, because a module that promises a check nobody runs
-      is a claim the code does not keep.
-    - **`pinnedAtMs` has two copies** — Home's
-      (`src/screens/Home/hooks/useHomeScreen.ts`) and the management page's
-      (`src/screens/AllPlaylists/hooks/useAllPlaylistsScreen.ts`). It is
-      the pinned-order rule (D-P3), and two copies is two chances to get
-      it wrong. **What it needs:** one owner, in the feature facade
-      (`src/features/playlists/`) — the same place the kind labels and the
-      compatibility rule already live.
-    - Both were found while closing yesterday's carry-overs, not by a
-      sweep: the first by reading a docblock that did not match the code,
-      the second by a worker reporting the duplication it could not fix
-      because Home is not its file.
+77. ~~**Two dead-rule clusters the 2026-11-02 wave found.**~~ **DONE
+    2026-11-02.**
+    - **`src/infrastructure/player/validateLane.ts` is DELETED.** Zero
+      call sites in `src/` — its own docblock claimed the facade called
+      it, and the facade did not — so it was a guard that guarded nothing,
+      and the lane handover has superseded it. `laneError` and the
+      `LaneStreamError` interface died with it: `LaneStreamError` was
+      **never** a variant of the `StreamError` union (that union's
+      variants are `network` / `unsupported` / `expired` / `blocked` /
+      `launch`), so nothing else referenced it. The barrel's re-export is
+      gone, and the 7 chrome suites that carried a
+      `jest.requireActual('…/validateLane')` spread no longer do.
+    - **`pinnedAtMs` has ONE owner**: `src/features/playlists/index.ts`,
+      beside `compatiblePlaylistsFor` and `setPlaylistPinned`. Both local
+      copies (Home's and the management page's) are deleted; both hooks
+      import the facade's. The two copies were byte-identical, so no
+      behaviour changed.
+    - Pinned by `__tests__/features/playlists/pinnedAtMs.test.ts` (5
+      tests) and `pinnedOrderAgrees.test.tsx` (2) — the second asserts
+      that Home's shelf and the management page produce the SAME pinned
+      order, which is the property two copies could not hold.
 
 ---
 

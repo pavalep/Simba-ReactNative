@@ -1904,36 +1904,49 @@ Shipping an unverifiable rendering change into the same release as a
 unit-verified fix would put the verified work at risk. The public API does
 not change, so the fix is a patch release when it lands.
 
-### B-046 · P1 · app · the next-track button is dead for every album and playlist launch — the transport advances the LIB's mpv playlist, and the app never fills it
+### B-046 · P1 · app · the next-track button is dead for every album and playlist launch — the transport advances the LIB's mpv playlist, and the app never fills it — **RESOLVED (F-053)**
 
 **Symptom.** You play an album, a film series or a playlist, and the ⏭
 button is greyed out. There is no next track.
 
 **Why.** `useTransport`'s `canGoNext` and its `next` read the **lib's**
-`PlayerState.playlist` — mpv's own playlist (`useTransport.ts:733-737`,
-`:922-924`). The app's RUN lives somewhere else entirely:
-`usePlayerStore`'s `playlist`, filled by `loadPlaylistToPlayer`. The app
-**never** calls `commands.loadPlaylist`, so mpv's playlist holds only what
-`loadfile` put there — and `loadfile` **replaces** mpv's playlist, so it
-holds exactly one entry: the file being played. `canGoNext` is therefore
-`0 < 0` — false — for every launch.
+`PlayerState.playlist` — mpv's own playlist. The app's RUN lives somewhere
+else entirely: `usePlayerStore`'s `playlist`, filled by
+`loadPlaylistToPlayer`. The app **never** calls `commands.loadPlaylist`, so
+mpv's playlist holds only what `loadfile` put there — and `loadfile`
+**replaces** mpv's playlist, so it holds exactly one entry: the file being
+played. `canGoNext` is therefore `0 < 0` — false — for every launch.
 
 The lib's own "Play Next" queue is a different thing and does work: the
 queue screen's `addToQueue` / `prependToQueue` go through `useQueue`,
 which is the lib's queue store. That is not the run.
 
-**State:** open. **Found 2026-11-02**, while implementing phase 5.
+**State:** FIXED (F-053). **Found 2026-11-02**, while implementing phase 5.
 
-**What it needs.** The transport's `next` has to advance the app's RUN
-through the lane handover's one owner (`useLaneHandover` in
-`src/infrastructure/player/useResumeAwareLaunch.ts`), and `canGoNext` has
-to consider the run as well as mpv's playlist. The handover already
-exists — it was built for exactly this. The transport is not wired to it
-yet, and it needs its own tests, because the transport is shared by every
-player chrome.
+The transport now advances the app's RUN, and the rule for "what plays
+next" has ONE owner: `runNeighbours` (`src/state/playerStore.ts`), which
+is the **same** rule the queue screen already used for its "Up Next" list
+(`playlist[currentIndex + 1 …]`). `canGoNext` / `canGoPrev` / `nextTrack`
+are answered by it, and `next` / `previous` / `skipPrev` go through the
+lane handover's one owner, `useLaneHandover()`, which gained
+`previous()` / `retreat()` as the siblings of `next()` / `advance()`.
 
-This is step 28 of the pinned-playlist tracker, and it is why a MIXED
-playlist cannot be played in order yet.
+The same empty playlist produced **three more dead facts**, all fixed by
+the same change: `currentUri` was always `null`, so the More sheet's
+Save / Add-to-playlist / Share rows all answered "Nothing to …"; and
+`nextTrack` was always `null`, so the NextUp overlay could only ever say
+"Next item". What is PLAYING is now the **session's** URI
+(`useNowPlayingStore`, written by the launch seam at every launch), so a
+single-file launch has an identity too.
+
+The handover is held in a REF rather than in the commands memo's
+dependency list, so the transport's stability contract — the memo only
+rebuilds when the DURATION changes — survives the new dependency.
+
+Pinned by 9 new tests in
+`__tests__/infrastructure/player/useTransport.run.test.tsx` and 3 in
+`useLaneHandover.test.tsx`; **7 mutations, all killed**, every file
+restored byte-identically.
 
 ---
 
@@ -1993,6 +2006,9 @@ playlist cannot be played in order yet.
 | F-050 | P2 | app | The pinned playlist was a state **nothing could set**, and a rail that lied about it. `Playlist.pinned` existed in the model, `setPlaylistPinned` existed in the store, `setPinned` existed in the facade — and **no caller in `src/`**. The badge could only be seen on a playlist pinned by hand in a debugger. Meanwhile Home's rail was titled **"Pinned Playlists"** while it rendered unpinned playlists too — the specification's own rule 4: a title that lies is a bug. Now: `AllPlaylistsScreen` carries a visible **32 px pin toggle** ("Pin to top" / "Unpin from top", `accessibilityState={{selected: pinned}}`) because a long-press is not reachable by a screen reader or a keyboard; the row's own label says ", pinned"; and the rail is retitled **"Playlists"** and orders pinned first (most recently pinned first), then recency. 10 new tests | app `9c22f56` |
 | F-051 | P3 | app | The app carried a whole module of copy and a second `EmptyState`, and neither one was wired. `src/constants/strings.ts` held a copy of every user-facing string the app uses — 19 `playlist*` keys among them — with **zero** consumers: it is not re-exported by `src/constants/index.ts`, no file imports it, no `require()` reaches it, no test names it, and `StringKey` (its only other export) appears nowhere else in the repo. The app also shipped **two** `EmptyState` components: the live `components/feedback/EmptyState/EmptyState.tsx` (19 importers) and `components/utility/EmptyState/EmptyState.tsx` (2 importers) — and they had already drifted: the utility one grew a `variant` prop the live one did not have, and **both** its importers use `variant="compact"`. Both are **deleted**: the dead copy module is gone, and the utility component's one API was **ported into** the live component (the `variant` prop, keeping the compact treatment — no card chrome, a 52 px disc and a 24 px glyph, the centred bold title, the single-line a11y label — so the 19 existing importers see no change), its unused `'default'` mode went with it, and the two importers now point at the live component. The orientation helper's two dead exports went in the same wave (register item 69) | app `f5/w22-close-minimise-d9` |
 | F-052 | P3 | lib | The package published two components that **draw no picture**, and kept them because dropping a public export is a breaking change — which is how a dead export becomes a promise the repo does not keep. `<PlayerRoot>` was a transparent `flex: 1` box plus the consumer's controls plus one `useLaunchPlayback` call; `<PlayerSurface>` was that box on its own. The arrangement they belonged to ended in 2.0.0: a native `SurfaceView` pinned to the Activity root, with a transparent React box standing in for it so a controls overlay had a rectangle to anchor to. Since 2.0.0 the picture is `<SimbaVideo>` — a Fabric component in the consumer's own tree — and **no surface is mounted at the Activity root any more**, so there was nothing left for a placeholder to reserve. Neither component had an importer: in the package and in the host app, the only reference to either was its own export. The 2026-10-29 recommendation was to REPAIR `<PlayerRoot>` into a real player; it was overruled, because a component that draws no picture cannot be repaired by giving it the picture the consumer is already mounting itself. Both are **deleted**, and the version is **3.0.0** — a major, because *"a published package cannot quietly drop a public export."* `useLaunchPlayback` stays exported, so the one job `<PlayerRoot>` still had (the once-per-payload load) is not lost | lib `v3.0.0` · `f18fe06` |
+| F-053 | P1 | app | The transport advanced the LIB's mpv playlist, and the app never fills it — so the ⏭ control was permanently greyed out for every album and playlist launch, and `commands.next()` was a permanent no-op. Four facts died of the same cause: `canGoNext` and `canGoPrev` (always `false`), `currentUri` (always `null`, so the More sheet's Save / Add-to-playlist / Share rows all answered "Nothing to …") and `nextTrack` (always `null`, so the NextUp overlay could only say "Next item"). The app's RUN is `usePlayerStore.playlist`, and the rule for "what plays next" now has ONE owner — `runNeighbours` (`src/state/playerStore.ts`) — which is the **same** rule the queue screen already used for its "Up Next" list (`playlist[currentIndex + 1 …]`). The transport reads it, and the MOVE goes through the lane handover's one owner `useLaneHandover()`, which gained `previous()` / `retreat()` as the siblings of `next()` / `advance()`. What is PLAYING is the **session's** URI (`useNowPlayingStore`, written by the launch seam at every launch), so a single-file launch has an identity too. The handover is held in a REF, so the transport's stability contract — the commands memo rebuilds only when the DURATION changes — survives the new dependency. 12 new tests; **7 mutations, all killed**; every file restored byte-identically | app `f5/w22-close-minimise-d9` |
+| F-054 | P1 | app | The app's portrait lock went through `react-native-orientation-locker` — a third-party OS-control package, and the one exception to the standing rule that every system control routes through the central lib facade. It also made the app's own code **untestable**: the package's module body constructs a `NativeEventEmitter` with no argument, so merely importing `src/utils/orientation.ts` THREW, and with it `src/app/AppContent.tsx` — so neither file COULD have a test. The fix is not a mock; it is the **removal**. The lock now goes through the lib's own `commands.setOrientation('portrait')`, which maps to the **same** `SCREEN_ORIENTATION_PORTRAIT` constant the locker set (`MpvBridgeModule.kt:700` vs `OrientationModule.java:176`) and is written on the UI thread. The lib's `commands` is a MODULE SINGLETON built at module load (`src/types/player.ts:904-913`) whose bridge resolves lazily per call, so it is available at boot — `AppContent` is a descendant of the lib's `<SimbaPlayer>` (`App.tsx:80-82` → `AppRoot.tsx:184`). The package was a **SECOND writer** of a value the player's own lock and the close path already wrote. The 600 ms iOS delay and the 200 ms Android re-assert were workarounds for that package's own bugs and went with it, as did the iOS branch (the lib is Android-only — `react-native.config.js` declares `ios: null`). The dependency has left `package.json`, `package-lock.json` and the Credits screen. 2 new suites (4 tests); 3 mutations, all caught | app `f5/w22-close-minimise-d9` |
+| F-055 | P3 | app | Two dead-rule clusters the 2026-11-02 wave found. `src/infrastructure/player/validateLane.ts` had **zero** call sites — its own docblock claimed the facade called it, and the facade did not — so it was a guard that guarded nothing, and the lane handover has superseded it; the module is **deleted**, and `laneError` and the `LaneStreamError` interface went with it (`LaneStreamError` was **never** a variant of the `StreamError` union, so nothing else referenced it). And `pinnedAtMs` — the pinned-order rule (D-P3) — had **two** byte-identical copies, Home's and the management page's; it now has **ONE** owner in the feature facade (`src/features/playlists/index.ts`), beside `compatiblePlaylistsFor` and `setPlaylistPinned`, and both hooks import it. No behaviour changed. Pinned by 5 tests on the rule and 2 that assert the two surfaces agree on the pinned ORDER — the property two copies could not hold | app `f5/w22-close-minimise-d9` |
 
 ---
 

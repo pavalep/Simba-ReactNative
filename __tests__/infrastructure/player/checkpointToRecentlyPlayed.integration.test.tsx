@@ -89,6 +89,16 @@ const mockCommands = {
   stopPlayback: jest.fn(),
 };
 
+/**
+ * The transport reaches the launch seam through the lane handover, and
+ * the seam asks the lib for these two. Without them the seam throws the
+ * moment the transport renders — and this integration test renders the
+ * REAL transport, so the whole chain is exercised.
+ */
+const mockOpenWithResume = jest.fn(
+  async (_opts: Record<string, unknown>): Promise<boolean> => true,
+);
+
 jest.mock('@simba-dev/react-native-media-player', () => ({
   captureFrame: (
     _uri: string,
@@ -97,6 +107,9 @@ jest.mock('@simba-dev/react-native-media-player', () => ({
   ) => mockCaptureFrame(),
   usePlayerProgress: () => mockProgress,
   usePlayer: () => ({state: mockPlayerState, commands: mockCommands}),
+  useOpenWithResume: () => mockOpenWithResume,
+  resolveStreamType: (mediaType?: string) =>
+    mediaType === 'video' ? 'video' : 'audio',
 }));
 
 // ── The REAL chain ──────────────────────────────────────────────────

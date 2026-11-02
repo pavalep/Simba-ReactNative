@@ -94,9 +94,22 @@ const mockPlayerState: {isPlaying: boolean; shuffle: boolean} = {
   shuffle: false,
 };
 
+/**
+ * The transport reaches the launch seam through the lane handover, and
+ * the seam asks the lib for these two. Without them the seam throws the
+ * moment the transport renders — the lib's queue is not the run, so the
+ * handover is what makes the transport's next / previous real.
+ */
+const mockOpenWithResume = jest.fn(
+  async (_opts: Record<string, unknown>): Promise<boolean> => true,
+);
+
 jest.mock('@simba-dev/react-native-media-player', () => ({
   usePlayerProgress: () => mockProgress,
   usePlayer: () => ({commands: mockCommands, state: mockPlayerState}),
+  useOpenWithResume: () => mockOpenWithResume,
+  resolveStreamType: (mediaType?: string) =>
+    mediaType === 'video' ? 'video' : 'audio',
 }));
 
 // ── Tests for derivations ────────────────────────────────────────────
@@ -982,7 +995,17 @@ describe('skipPrev', () => {
     expect(mockCommands.previous).not.toHaveBeenCalled();
   });
 
-  it('goes to the previous item when the LIVE playhead is before the threshold', async () => {
+  it('does NOT restart the item when the LIVE playhead is before the threshold', async () => {
+    // The "go back" branch is the app's RUN's retreat, not mpv's
+    // playlist: mpv's playlist holds exactly one entry in this app, so
+    // `commands.previous()` could only ever have been a no-op. The
+    // retreat itself — and the session it produces — is pinned in
+    // `useTransport.run.test.ts` ("skipPrev() goes back to the previous
+    // item when the playhead is within the threshold").
+    //
+    // What this file owns is the BRANCH DECISION: the live position
+    // decides between "restart this item" and "go back", and that is
+    // what the stale-closure defect was about.
     const {result, rerender} = await renderHook(() => useTransport());
 
     mockProgress.positionMs = 1_000;
@@ -990,7 +1013,8 @@ describe('skipPrev', () => {
 
     result.current.commands.skipPrev();
 
-    expect(mockCommands.previous).toHaveBeenCalled();
     expect(mockCommands.seek).not.toHaveBeenCalled();
+    // And it did not fall back to mpv's playlist either.
+    expect(mockCommands.previous).not.toHaveBeenCalled();
   });
 });

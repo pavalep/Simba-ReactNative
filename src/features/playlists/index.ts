@@ -135,6 +135,31 @@ export function setPlaylistPinned(playlistId: string, pinned: boolean): void {
   usePlaylistsStore.getState().setPlaylistPinned({playlistId, pinned});
 }
 
+/**
+ * When a playlist was pinned, in milliseconds.
+ *
+ * D-P3: the PINNED order is the RECENCY OF PINNING, not the playlist's
+ * own `updatedAt`. The store stamps `pinnedAt` when the pin goes on and
+ * drops it when the pin comes off, so `pinnedAt` is the only stamp that
+ * says "how recently the user pinned this".
+ *
+ * It is deliberately NOT `updatedAt`: a playlist edited yesterday
+ * outranks one the user pinned last week, and a section headed
+ * "Pinned" that orders by anything other than pinning says something
+ * the list does not keep.
+ *
+ * A pinned record with no stamp falls back to its own `updatedAt`, then
+ * to its `createdAt`: the shelf still has to put it somewhere, and the
+ * record's own recency is the closest true answer.
+ *
+ * This is the ONE owner of that rule. Home's shelf and the management
+ * page both order their pinned section through it, so the two surfaces
+ * cannot drift apart — a rule written out twice is one copy too many.
+ */
+export function pinnedAtMs(playlist: Playlist): number {
+  return new Date(playlist.pinnedAt ?? playlist.updatedAt ?? playlist.createdAt).getTime();
+}
+
 export function updatePlaylistItemPosition(
   playlistId: string,
   fileUri: string,

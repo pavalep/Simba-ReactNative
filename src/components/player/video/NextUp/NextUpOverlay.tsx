@@ -21,14 +21,12 @@
  *     immediately, ignoring the countdown.
  *
  * Title / thumbnail source:
- *   Today the chrome renders "Up next" with no title or
- *   thumbnail because the lib doesn't expose next-track
- *   metadata (`state.next` is not yet a PlayerState field).
- *   The architecture audit §6 has this in the lib-future list.
- *   The chrome shape here is forward-compatible: the moment
- *   `state.next: { title?: string; thumbUri?: string }` lands
- *   in lib 1.7.0, the chrome reads it (one-line change in
- *   useNextUpCountdown's `nextTrackTitle` derivation).
+ *   The title comes from `state.nextTrack` — the app's RUN's next entry,
+ *   derived by the ONE rule `runNeighbours`. It used to be permanently
+ *   empty, because the transport read the lib's queue, which holds
+ *   exactly one entry in this app, so the overlay could only ever say
+ *   "Next item" (B-046). There is no thumbnail: the card is text-only by
+ *   design, and an invented thumbnail would be worse than none.
  *
  * Why text-only countdown (no animation lib):
  *   Per SPEC §3.6.7 + WCAG 2.2.2 (Pause, Stop, Hide) + Apple

@@ -35,6 +35,10 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('../../../src/features/playlists', () => ({
+  // The REAL `pinnedAtMs` — the page's pinned order comes from the
+  // facade's one owner, so this mock must not hand the hook a second
+  // implementation of the rule to read instead.
+  ...jest.requireActual('../../../src/features/playlists'),
   usePlaylists: jest.fn(),
 }));
 

@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1793621135.3987908,
-    "ast_hash": "031e256cd612ca5b80b166f1effff945",
+    "mtime": 1793629214.34325,
+    "ast_hash": "dfd32a23a609d54eefa9300fdbc06dc4",
     "semantic_hash": ""
   },
   "react-native.config.js": {
@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "src/screens/Home/hooks/useHomeScreen.ts": {
-    "mtime": 1793380750.6180396,
-    "ast_hash": "e81e8b04f363fbf2ecb49448234813b3",
+    "mtime": 1793628926.128975,
+    "ast_hash": "e9d373ced973160bfdb88d842b12124c",
     "semantic_hash": ""
   },
   "src/screens/Login/hooks/useLoginScreen.ts": {
@@ -1070,8 +1070,8 @@
     "semantic_hash": ""
   },
   "src/utils/orientation.ts": {
-    "mtime": 1793613490.624224,
-    "ast_hash": "377df6c568edda987cddffbd56e4afcf",
+    "mtime": 1793628221.4779775,
+    "ast_hash": "9c9595dd8ebe2ecac5e2263da1b9b7dd",
     "semantic_hash": ""
   },
   "src/utils/sleepTimer.ts": {
@@ -1305,8 +1305,8 @@
     "semantic_hash": ""
   },
   "src/features/playlists/index.ts": {
-    "mtime": 1793618237.031136,
-    "ast_hash": "cc477c7a98c4d335b28d3127f500a3e3",
+    "mtime": 1793627983.929123,
+    "ast_hash": "4eb4af7a7c561544f7c5c9840e31fc0f",
     "semantic_hash": ""
   },
   "src/features/recentHistory/index.ts": {
@@ -1380,13 +1380,13 @@
     "semantic_hash": "487fe3933f2a73716c1f087c7bbfb027"
   },
   "src/screens/AllPlaylists/components/AllPlaylistsScreen.tsx": {
-    "mtime": 1793625397.9758756,
-    "ast_hash": "ab28665abf77973277c8a12a60897d29",
+    "mtime": 1793625547.043286,
+    "ast_hash": "fb06cdf82f5aa26465583cd06a73a2d5",
     "semantic_hash": ""
   },
   "src/screens/AllPlaylists/hooks/useAllPlaylistsScreen.ts": {
-    "mtime": 1793625381.444039,
-    "ast_hash": "2b2fb9bab00b57b4054b55d0d6e478c6",
+    "mtime": 1793628926.1381774,
+    "ast_hash": "92859127926509697eeba8997aa8e997",
     "semantic_hash": ""
   },
   "src/screens/AllPlaylists/index.tsx": {
@@ -1575,8 +1575,8 @@
     "semantic_hash": "94bf50f3512189a80ea68797928a6008"
   },
   "src/screens/Credits/components/CreditsScreen.tsx": {
-    "mtime": 1793296849.930908,
-    "ast_hash": "9fedb0dad6eba77571f2c6a82be0b37d",
+    "mtime": 1793629210.894218,
+    "ast_hash": "56f762da5a8bd3d5e7a0027b43ea337e",
     "semantic_hash": ""
   },
   "src/screens/Credits/index.tsx": {
@@ -2700,23 +2700,23 @@
     "semantic_hash": ""
   },
   "__tests__/components/player/video/TransportBar/CaptionsToggle.test.tsx": {
-    "mtime": 1791273455.7958064,
-    "ast_hash": "03841211c769b591c7dff0a7263475e4",
+    "mtime": 1793627450.5875242,
+    "ast_hash": "c8201964b3187b173474aa12868fa5e3",
     "semantic_hash": ""
   },
   "__tests__/components/player/video/TransportBar/ModeControl.test.tsx": {
-    "mtime": 1791274814.2859375,
-    "ast_hash": "15435f36aa91fa6978d478e9140211e9",
+    "mtime": 1793627450.5915215,
+    "ast_hash": "8b4bf99c44477e7fb5ebe57e3c4e6940",
     "semantic_hash": ""
   },
   "__tests__/components/player/video/TransportBar/More.test.tsx": {
-    "mtime": 1791213692.4454825,
-    "ast_hash": "8d0bd8ad893ea00c3c9d81c85b9c6b86",
+    "mtime": 1793629077.0014942,
+    "ast_hash": "59713903a2aa6e56d29e7c3ade0f77fd",
     "semantic_hash": ""
   },
   "__tests__/components/player/video/TransportBar/PiPToggle.test.tsx": {
-    "mtime": 1792579474.0608883,
-    "ast_hash": "de0be64f0f1639e8906eb38dbfe36e89",
+    "mtime": 1793627450.5832944,
+    "ast_hash": "70eeeb3d66079f5e7a1df7f61475e497",
     "semantic_hash": ""
   },
   "__tests__/components/player/video/TransportBar/TransportBar.scrub.test.tsx": {
@@ -2725,13 +2725,13 @@
     "semantic_hash": ""
   },
   "__tests__/components/player/video/TransportBar/TransportBar.test.tsx": {
-    "mtime": 1793106866.416638,
-    "ast_hash": "45155973e7fd41e6a452440f3505395a",
+    "mtime": 1793627450.5762267,
+    "ast_hash": "4346489722cb357d292101ac50cfbbb3",
     "semantic_hash": ""
   },
   "__tests__/components/player/video/TransportBar/TransportRow.test.tsx": {
-    "mtime": 1791207936.583342,
-    "ast_hash": "048c9160093de2b59f4a7cd010aa6cea",
+    "mtime": 1793627450.5797396,
+    "ast_hash": "deb30f843f2aee0e4c1e5e336d6a4540",
     "semantic_hash": ""
   },
   "__tests__/components/player/video/TransportBar/VolumeControl.test.tsx": {
@@ -2785,13 +2785,13 @@
     "semantic_hash": ""
   },
   "__tests__/components/player/video/VideoTitleOverlay/VideoTitleOverlay.test.tsx": {
-    "mtime": 1793364301.3679218,
-    "ast_hash": "50e5d5c2353ec2affe770a017cb6df1f",
+    "mtime": 1793627450.5649269,
+    "ast_hash": "88db614347255ffa306e983effd2f78b",
     "semantic_hash": ""
   },
   "__tests__/components/player/video/onMediaChrome.test.tsx": {
-    "mtime": 1793103218.0278928,
-    "ast_hash": "fd7437cb6763713b1ad10631078c53bb",
+    "mtime": 1793627450.5710647,
+    "ast_hash": "b35e4a52a0d8ace5f8eac3095acff41d",
     "semantic_hash": ""
   },
   "__tests__/components/playlist/PlaylistActionMenu/PlaylistActionMenu.test.tsx": {
@@ -2955,8 +2955,8 @@
     "semantic_hash": ""
   },
   "__tests__/infrastructure/player/checkpointToRecentlyPlayed.integration.test.tsx": {
-    "mtime": 1791973548.7124357,
-    "ast_hash": "a4d06e214cb3e20c96111c132d583051",
+    "mtime": 1793628495.1103106,
+    "ast_hash": "6f07cb12cd7ba9b8a25334d9e88384ea",
     "semantic_hash": ""
   },
   "__tests__/infrastructure/player/dockPlacement.test.ts": {
@@ -3080,13 +3080,13 @@
     "semantic_hash": ""
   },
   "__tests__/infrastructure/player/useTransport.performance.test.tsx": {
-    "mtime": 1791294346.0697937,
-    "ast_hash": "72a0d6849eeaf2e224ffd06d23b63bec",
+    "mtime": 1793628373.5528972,
+    "ast_hash": "49ea0f4629b51a2e7f0a1837c0c61116",
     "semantic_hash": ""
   },
   "__tests__/infrastructure/player/useTransport.test.ts": {
-    "mtime": 1792591942.0674212,
-    "ast_hash": "b78cd42e6724edc8dcb97f6cc62fb010",
+    "mtime": 1793628495.1360893,
+    "ast_hash": "aceb8330cf4711a406bf238ac7e3eb46",
     "semantic_hash": ""
   },
   "__tests__/infrastructure/player/useVideoOwnsWindow.test.tsx": {
@@ -3130,8 +3130,8 @@
     "semantic_hash": ""
   },
   "__tests__/screens/AllPlaylists/useAllPlaylistsScreen.test.tsx": {
-    "mtime": 1793624424.9196608,
-    "ast_hash": "046bbda8c6d0ab13275884e79dd0700c",
+    "mtime": 1793627450.7019818,
+    "ast_hash": "99178499000907f11ba10ab56c4d1562",
     "semantic_hash": ""
   },
   "__tests__/screens/AllVideos/AllVideosPlaylistSheet.test.tsx": {
@@ -3165,8 +3165,8 @@
     "semantic_hash": ""
   },
   "__tests__/screens/Home/useHomeScreenPlaylistOrder.test.tsx": {
-    "mtime": 1793380561.3426511,
-    "ast_hash": "a35c0646d9b502d27c84622fcaab8512",
+    "mtime": 1793627450.6989772,
+    "ast_hash": "9554656c612ccc00e0450c7caee97dd5",
     "semantic_hash": ""
   },
   "__tests__/screens/MovieDetailScreen/MovieDetailPlaylistSheet.test.tsx": {
@@ -3415,8 +3415,8 @@
     "semantic_hash": ""
   },
   "src/app/AppContent.tsx": {
-    "mtime": 1793209565.7115262,
-    "ast_hash": "26c68ad81aa457d5e0dd441f8461c716",
+    "mtime": 1793628242.3211913,
+    "ast_hash": "23864d2e6df2055160bbb6f721a3513b",
     "semantic_hash": ""
   },
   "src/app/AppRoot.tsx": {
@@ -3460,8 +3460,8 @@
     "semantic_hash": ""
   },
   "src/components/player/audio/AudioPlayer/AudioPlayer.tsx": {
-    "mtime": 1793189979.5457723,
-    "ast_hash": "d69966428ab78b6f73677d70e1686ea7",
+    "mtime": 1793628784.8667977,
+    "ast_hash": "74ea454826813356855057e96630f3da",
     "semantic_hash": ""
   },
   "src/components/player/audio/AudioSeekBar/AudioSeekBar.tsx": {
@@ -3490,8 +3490,8 @@
     "semantic_hash": ""
   },
   "src/components/player/video/NextUp/NextUpOverlay.tsx": {
-    "mtime": 1790940953.985887,
-    "ast_hash": "91b38bf9b34996ae197167a1dca3cc83",
+    "mtime": 1793628826.4731913,
+    "ast_hash": "10aca7ba9cd5065d2ff2a4d8fb6bb4d2",
     "semantic_hash": ""
   },
   "src/components/player/video/PlayerControl/PlayerControl.tsx": {
@@ -3870,8 +3870,8 @@
     "semantic_hash": ""
   },
   "src/infrastructure/player/index.ts": {
-    "mtime": 1793339760.374824,
-    "ast_hash": "3b4c53a94397c51d3d01670ed07b6c2f",
+    "mtime": 1793627450.5498197,
+    "ast_hash": "6c741d3fca3a75f82e82d9641ad0bc84",
     "semantic_hash": ""
   },
   "src/infrastructure/player/miniPlayerChrome.ts": {
@@ -3920,8 +3920,8 @@
     "semantic_hash": ""
   },
   "src/infrastructure/player/useClosePlayback.ts": {
-    "mtime": 1793368345.615047,
-    "ast_hash": "3ef6b49aadeccd7ff3070732e0071e01",
+    "mtime": 1793629210.8895879,
+    "ast_hash": "41e4f11984719c3c33bdfff4bf76ce86",
     "semantic_hash": ""
   },
   "src/infrastructure/player/useDeepLinkLaunch.ts": {
@@ -3980,8 +3980,8 @@
     "semantic_hash": ""
   },
   "src/infrastructure/player/useResumeAwareLaunch.ts": {
-    "mtime": 1793623321.5634334,
-    "ast_hash": "cbf2cbaa0db7a6721977c84f9f7b0c89",
+    "mtime": 1793629210.8750355,
+    "ast_hash": "3360aa6f259506e205254a5ed9eeb68b",
     "semantic_hash": ""
   },
   "src/infrastructure/player/useSkipSilence.ts": {
@@ -3990,18 +3990,13 @@
     "semantic_hash": ""
   },
   "src/infrastructure/player/useTransport.ts": {
-    "mtime": 1792592135.4848332,
-    "ast_hash": "a588e629532d126bada3b13c2662d1b0",
+    "mtime": 1793628624.592672,
+    "ast_hash": "58f1bd3af7392da62ef020dd3d2d9b57",
     "semantic_hash": ""
   },
   "src/infrastructure/player/useVideoOwnsWindow.ts": {
     "mtime": 1793013799.0314522,
     "ast_hash": "189c2c683899f0b1ef6f08d4d5bad649",
-    "semantic_hash": ""
-  },
-  "src/infrastructure/player/validateLane.ts": {
-    "mtime": 1790321508.7713513,
-    "ast_hash": "7ecc682a588ea2cc77b7116f7d0f1e75",
     "semantic_hash": ""
   },
   "src/infrastructure/player/videoSurface.ts": {
@@ -4090,8 +4085,8 @@
     "semantic_hash": ""
   },
   "src/state/nowPlayingStore.ts": {
-    "mtime": 1792050638.0207472,
-    "ast_hash": "d3d7cb3e543a6f81dc5b5e0edc9633fe",
+    "mtime": 1793628784.874843,
+    "ast_hash": "e0e62eb9679e00b23ba2eb2579b4872d",
     "semantic_hash": ""
   },
   "src/state/persistence.ts": {
@@ -4100,8 +4095,8 @@
     "semantic_hash": ""
   },
   "src/state/playerStore.ts": {
-    "mtime": 1793623321.5312965,
-    "ast_hash": "ea0387a7292c7d9904152c3dbbf7d00a",
+    "mtime": 1793627950.369446,
+    "ast_hash": "bc722fc47348e2c61472663c5cf55d6f",
     "semantic_hash": ""
   },
   "src/state/playlistsStore.ts": {
@@ -4895,8 +4890,8 @@
     "semantic_hash": ""
   },
   "md/SIMBA_BUG_TRACKER_2026_10_21.md": {
-    "mtime": 1793623920.1253426,
-    "ast_hash": "7ee7b12811db0061f5509d40a03cf54c",
+    "mtime": 1793629554.3924377,
+    "ast_hash": "2469c2eb838e34216ff01e976dced890",
     "semantic_hash": ""
   },
   "md/SIMBA_MOBILE_V21_SPECIFICATION.md": {
@@ -5235,8 +5230,8 @@
     "semantic_hash": ""
   },
   "md/SIMBA_V22_MASTER_PLAN.md": {
-    "mtime": 1793623920.273007,
-    "ast_hash": "1fce002ebf706345f6e65581669e1fc8",
+    "mtime": 1793629603.2132916,
+    "ast_hash": "9a5e018053af697b75ac1366c2f99c98",
     "semantic_hash": ""
   },
   "md/SIMBA_V22_PINNED_PLAYLIST_SPECIFICATION.md": {
@@ -5245,8 +5240,8 @@
     "semantic_hash": ""
   },
   "md/SIMBA_V22_PINNED_PLAYLIST_TRACKER.md": {
-    "mtime": 1793623920.1749468,
-    "ast_hash": "a0bbcae46a645533358821bfcbee5dd7",
+    "mtime": 1793629648.3741057,
+    "ast_hash": "a70419dcea762ae96f5a31a68c9c1cfb",
     "semantic_hash": ""
   },
   "md/SIMBA_V22_RN_MEDIA_MODULE_INTEGRATION_RESEARCH.md": {
@@ -5835,8 +5830,8 @@
     "semantic_hash": ""
   },
   "__tests__/infrastructure/player/useLaneHandover.test.tsx": {
-    "mtime": 1793623728.7898867,
-    "ast_hash": "057c5f06c424ee466f000055cb2fb8d7",
+    "mtime": 1793628675.59135,
+    "ast_hash": "f3ae2ef275c7c9e44b464ca0cfdf4109",
     "semantic_hash": ""
   },
   "__tests__/screens/AllPlaylists/AllPlaylistsScreen.createModal.test.tsx": {
@@ -5867,6 +5862,31 @@
   "__tests__/state/playerStore.test.ts": {
     "mtime": 1793623728.7612615,
     "ast_hash": "bdd6e94de78eddf53efc9e49e019f5bd",
+    "semantic_hash": ""
+  },
+  "__tests__/app/AppContentOrientationLock.test.tsx": {
+    "mtime": 1793628152.9567094,
+    "ast_hash": "4da6271ee0bc194c7a3a8ef22e8c848e",
+    "semantic_hash": ""
+  },
+  "__tests__/features/playlists/pinnedAtMs.test.ts": {
+    "mtime": 1793627602.716398,
+    "ast_hash": "4c40452c72d8fc6c4752ac3ff8537364",
+    "semantic_hash": ""
+  },
+  "__tests__/features/playlists/pinnedOrderAgrees.test.tsx": {
+    "mtime": 1793627613.8482265,
+    "ast_hash": "c12324dcb0ab91beb90c2b756abf97a4",
+    "semantic_hash": ""
+  },
+  "__tests__/infrastructure/player/useTransport.run.test.tsx": {
+    "mtime": 1793628354.5137684,
+    "ast_hash": "706e51e783a2fb6053fea3e945fd9f74",
+    "semantic_hash": ""
+  },
+  "__tests__/utils/orientation.test.ts": {
+    "mtime": 1793628070.1012459,
+    "ast_hash": "491b4163fb64d818a9e26358f1722165",
     "semantic_hash": ""
   }
 }

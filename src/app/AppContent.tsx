@@ -38,7 +38,7 @@ import {linking} from '../navigation/linking';
 // package: the PLAYER RULE in `scripts/check-import-boundaries.js` keeps
 // every `@simba-dev/react-native-media-player` import inside
 // `src/infrastructure/player/`.
-import {useDeepLinkLaunch, useQueueSync} from '../infrastructure/player';
+import {useDeepLinkLaunch, usePlayer, useQueueSync} from '../infrastructure/player';
 import {useAuthSession} from '../hooks/useAuthSession';
 import {downloadService} from '../services/downloadService';
 import {mark} from '../utils/startupPerf';
@@ -61,6 +61,15 @@ export const AppContent: React.FC = () => {
   // Mirrors the lib's native queue into `usePlayerStore`. Mounted once.
   useQueueSync();
 
+  // The lib's command object — the ONE writer of the window's
+  // orientation. `useQueueSync` above already reads `usePlayer()`, so
+  // this adds NO new subscription to the player's state context.
+  //
+  // The lib builds `commands` ONCE at module load and hands the same
+  // reference to every `usePlayer()` call, so its identity is stable
+  // and the boot-time lock below runs exactly once.
+  const {commands} = usePlayer();
+
   // Hydrate downloads once at boot — the service owns the manifest, the
   // store mirrors it so badges/buttons/Downloads render instantly.
   useEffect(() => {
@@ -78,9 +87,24 @@ export const AppContent: React.FC = () => {
   }, []);
 
   // Lock to portrait globally (PlayerScreen toggles to landscape on demand).
+  //
+  // Through the LIB's command, not a third-party OS-control package.
+  // `src/utils/orientation.ts` used to import
+  // `react-native-orientation-locker`, whose module body throws in jest —
+  // which is why this file had no test at all (register item 68).
+  //
+  // The lib's `setOrientation('portrait')` maps to the SAME
+  // `SCREEN_ORIENTATION_PORTRAIT` constant the locker set, and it is the
+  // same call the player's own lock and the close path make — so the
+  // window has ONE writer instead of one per mechanism.
+  //
+  // `commands` is a module singleton in the lib, so the dependency is
+  // stable and this effect runs ONCE. It must not run per render: a
+  // boot-time lock that re-asserts on every render is a second writer
+  // of a value the player also owns.
   useEffect(() => {
-    lockToPortrait();
-  }, []);
+    lockToPortrait(commands);
+  }, [commands]);
 
   const deepLinkPromiseRef = useRef<Promise<string | null> | null>(null);
   if (deepLinkPromiseRef.current === null) {

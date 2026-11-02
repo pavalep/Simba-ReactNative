@@ -57,6 +57,10 @@ import {
 } from '@simba-dev/react-native-media-player';
 import {getSkipPrevThresholdMs} from '../../state/useSkipPrevThresholdStore';
 import {useOrientationLockStore} from '../../state/useOrientationLockStore';
+import {runNeighbours, usePlayerStore} from '../../state/playerStore';
+import {useNowPlayingStore} from '../../state/nowPlayingStore';
+import {logger} from '../../lib/logger';
+import {useLaneHandover} from './useResumeAwareLaunch';
 
 /**
  * A contiguous buffered range, in milliseconds.
@@ -677,6 +681,29 @@ function deriveCaptionTracks(tracks: ReadonlyArray<{id: number; type: string; ti
   return {captionTracks: captions, activeCaptionTrackId: activeId};
 }
 
+/**
+ * Settle a run handover's promise.
+ *
+ * The handover is ASYNCHRONOUS and the transport's commands are
+ * synchronous (`next(): void`) — the chrome's onPress handlers are. A
+ * rejection handed to a caller that cannot await it is a failure nobody
+ * sees, and a silent failure is how a control ends up looking broken
+ * with no explanation anywhere. So the promise is settled HERE, once, and
+ * the failure is recorded where a bug report can find it.
+ *
+ * A module-level function rather than a hook value: it must not appear
+ * in the commands memo's dependency list, because that memo is
+ * deliberately stable.
+ */
+function settleHandover(
+  move: () => Promise<boolean>,
+  verb: 'next' | 'previous',
+): void {
+  move().catch(error => {
+    logger.error(`[transport] the run handover (${verb}) failed`, error);
+  });
+}
+
 export function useTransport(): TransportHook {
   const progress = usePlayerProgress();
   // V19 W6.4 — the live window, used ONLY to resolve which side the
@@ -690,6 +717,14 @@ export function useTransport(): TransportHook {
     state: {
       loopMode?: string;
       tracks?: ReadonlyArray<{id: number; type: string; title?: string; lang?: string; selected: boolean}>;
+      /**
+       * The lib's own playlist, and its index into it.
+       *
+       * NOT the app's run: `loadfile` REPLACES mpv's playlist with
+       * exactly one entry, and this app never calls
+       * `commands.loadPlaylist`, so both of these are empty in practice.
+       * The run is `usePlayerStore.playlist` — see the derivation below.
+       */
       playlist?: ReadonlyArray<{filename?: string; title?: string}>;
       currentIndex?: number;
       speed?: number;
@@ -725,39 +760,65 @@ export function useTransport(): TransportHook {
     [playerState.tracks],
   );
 
-  const canGoPrev = useMemo(() => {
-    const idx = playerState.currentIndex ?? -1;
-    return idx > 0;
-  }, [playerState.currentIndex]);
+  // ── The app's RUN, not the lib's playlist ───────────────────────────
+  //
+  // The lib's own playlist is NOT the run. `loadfile` REPLACES mpv's
+  // playlist with exactly one entry, and this app never calls
+  // `commands.loadPlaylist` — so `playerState.playlist` is EMPTY here
+  // and `playerState.currentIndex` is always `-1`.
+  //
+  // Every fact derived from it was therefore permanently empty, and
+  // every control that read one was dead:
+  //
+  //   - `canGoNext` / `canGoPrev` were always `false`, so the next and
+  //     previous controls were greyed out for every playlist and album
+  //     launch (B-046);
+  //   - `currentUri` was always `null`, so the More sheet's Save /
+  //     Add-to-playlist / Share rows all answered "Nothing to …";
+  //   - `nextTrack` was always `null`, so the NextUp overlay could only
+  //     ever say "Next item".
+  //
+  // The run is `usePlayerStore.playlist`, and the rule for "what plays
+  // next" is `runNeighbours` — the SAME rule the queue screen already
+  // uses for its "Up Next" list (`playlist[currentIndex + 1 …]`). One
+  // rule, one owner.
+  const runPlaylist = usePlayerStore(s => s.playlist);
+  const runIndex = usePlayerStore(s => s.currentIndex);
+  const neighbours = useMemo(
+    () => runNeighbours(runPlaylist, runIndex),
+    [runPlaylist, runIndex],
+  );
 
-  const canGoNext = useMemo(() => {
-    const idx = playerState.currentIndex ?? -1;
-    const playlist = playerState.playlist ?? [];
-    return idx >= 0 && idx < playlist.length - 1;
-  }, [playerState.currentIndex, playerState.playlist]);
+  // What is PLAYING is the SESSION's URI, not the run's entry.
+  //
+  // Two different facts, two different owners. The session is written by
+  // the launch seam on every launch (both lanes) and cleared when
+  // playback ends, so it is right for a single-track launch too — where
+  // the run is empty. The run's entry is the right answer for "what
+  // plays NEXT"; the session is the right answer for "what is playing
+  // NOW", and a next button pointing at an empty URI is a dead control.
+  const sessionUri = useNowPlayingStore(s => s.current?.uri ?? null);
+
+  const canGoPrev = neighbours.previous !== null;
+
+  const canGoNext = neighbours.next !== null;
 
   // The real current URI + next entry, derived structurally from the
-  // lib's playlist rather than from any app-side "current item"
-  // bookkeeping (which is what left the Save / Add-to-playlist /
-  // NextUp surfaces without an identity to act on).
+  // run rather than from any app-side "current item" bookkeeping (which
+  // is what left the Save / Add-to-playlist / NextUp surfaces without
+  // an identity to act on).
+  //
+  // Memoised on the entry REFERENCE, not on the run's identity: a fresh
+  // `{uri, title}` object on every render would rebuild the whole
+  // 24-field transport state on every position tick, which is the exact
+  // churn the field-based dependency list below exists to avoid.
   const {currentUri, nextTrack} = useMemo(() => {
-    const idx = playerState.currentIndex ?? -1;
-    const playlist = playerState.playlist ?? [];
-    const current = idx >= 0 ? playlist[idx] : undefined;
-    const next = idx >= 0 ? playlist[idx + 1] : undefined;
-    // An entry with no `filename` is not a usable identity — mpv
-    // always sets it, but the lib's type marks it optional, so a
-    // malformed entry must degrade to "unknown" rather than
-    // producing `{uri: undefined}` that downstream actions would
-    // happily try to download.
+    const upcoming = neighbours.next;
     return {
-      currentUri: current?.filename ?? null,
-      nextTrack:
-        next?.filename
-          ? {uri: next.filename, title: next.title ?? ''}
-          : null,
+      currentUri: sessionUri,
+      nextTrack: upcoming ? {uri: upcoming.uri, title: upcoming.title} : null,
     };
-  }, [playerState.currentIndex, playerState.playlist]);
+  }, [neighbours.next, sessionUri]);
 
   const state = useMemo<TransportState>(() => {
     const {positionMs, durationMs, isBuffering, isSeeking, seekable} = progress;
@@ -874,6 +935,28 @@ export function useTransport(): TransportHook {
     };
   });
 
+  /**
+   * The lane handover — the ONE owner of "move the run".
+   *
+   * The transport's next / previous are the app's RUN's advance, not
+   * mpv's: `commands.next()` / `commands.previous()` advance mpv's
+   * playlist, which holds exactly ONE entry in this app, so they were
+   * permanent no-ops — the buttons looked like they worked and did
+   * nothing at all.
+   *
+   * Held in a REF rather than a dependency, for the same reason
+   * `livePlaybackRef` is: the commands memo is deliberately stable (it
+   * only rebuilds when the DURATION changes), and a handover in its
+   * dependency list would rebuild every chrome handler whenever the
+   * seam's launch closure changed. The ref carries the LIVE handover
+   * instead.
+   */
+  const handover = useLaneHandover();
+  const handoverRef = useRef(handover);
+  useEffect(() => {
+    handoverRef.current = handover;
+  });
+
   const wrapped = useMemo<TransportCommands>(
     () => ({
       seek: (positionMs: number) => {
@@ -920,10 +1003,10 @@ export function useTransport(): TransportHook {
         commands.setTrack('sub', trackId ?? -1);
       },
       next: () => {
-        commands.next();
+        settleHandover(() => handoverRef.current.advance(), 'next');
       },
       previous: () => {
-        commands.previous();
+        settleHandover(() => handoverRef.current.retreat(), 'previous');
       },
       rewind10: () => {
         commands.seekBy(-10_000);
@@ -944,7 +1027,7 @@ export function useTransport(): TransportHook {
         if (position > threshold) {
           commands.seek(0);
         } else {
-          commands.previous();
+          settleHandover(() => handoverRef.current.retreat(), 'previous');
         }
       },
       setSpeed: (rate: number) => {
