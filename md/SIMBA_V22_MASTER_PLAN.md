@@ -3214,6 +3214,36 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
       that Home's shelf and the management page produce the SAME pinned
       order, which is the property two copies could not hold.
 
+78. **A single-track launch leaves the RUN pointing at a stale position.**
+    **OPEN** (bug `B-047`).
+    - **The app has two records of "what is playing", and a launch that
+      does not go through the run updates only ONE of them.** The session
+      (`useNowPlayingStore`) is written by the launch seam on every launch,
+      for both lanes. The run (`usePlayerStore.playlist` + `currentIndex`)
+      is the queue, and only `loadPlaylistToPlayer` / `playFromPlaylist`
+      touch it. `useArtistScreen.ts:103-121` (`handlePlayTrack`) calls
+      `openPlayer` and NEITHER — its own sibling `handlePlayAll`
+      (`:123-127`) loads the run first, and this one does not.
+      `useQueueSync` mirrors the session into `currentFile` but not into
+      `currentIndex`, so nothing corrects the drift.
+    - **So after the single-track launch the ⏭ button advances into the
+      OLD run** — an album the user is no longer listening to. The queue
+      screen's "Up Next" list derives from the **same** `currentIndex`
+      (`useQueueScreen.ts`), so it shows the old album's tail too: one
+      defect, two surfaces, and the second one predates B-046.
+    - **What it needs — a product decision, not a patch.** Plex and Spotify
+      **replace** the queue when a track is launched from outside it; that
+      would make the drift unrepresentable, because the run is rebuilt from
+      the track. The alternative is to tell the run to **append** the
+      launched track, or to tell the index it is pointing at nothing
+      (`currentIndex = -1`, "the live item is not in this run") — which
+      changes what "Up Next" means on the queue screen.
+    - **Deliberately NOT fixed in the B-046 wave.** B-046's scope was "the
+      transport advances the run"; what the run *is* after an outside
+      launch is a different decision with a different blast radius — the
+      run is read by the queue screen, the now-playing shelf and the
+      playlist detail page.
+
 ---
 
 ## 9. Working rules that apply to every stage

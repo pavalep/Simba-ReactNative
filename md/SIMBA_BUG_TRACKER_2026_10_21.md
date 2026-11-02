@@ -1948,6 +1948,67 @@ Pinned by 9 new tests in
 `useLaneHandover.test.tsx`; **7 mutations, all killed**, every file
 restored byte-identically.
 
+### B-047 · P2 · app · a single-track launch leaves the RUN pointing at a stale position, so ⏭ can advance into an unrelated playlist
+
+**Symptom.** You play an album, then tap one track from a DIFFERENT artist.
+The ⏭ button is enabled, and pressing it jumps you into the **album** you
+were listening to before — not into anything related to the track you just
+started.
+
+**Why.** The app has two records of "what is playing", and a launch that
+does not go through the run only updates one of them:
+
+- the **session** (`useNowPlayingStore`) — written by the launch seam on
+  every launch, for both lanes;
+- the **run** (`usePlayerStore.playlist` + `currentIndex`) — the queue.
+
+`loadPlaylistToPlayer` loads the run; `playFromPlaylist` moves its
+index. But a **single-track** launch calls `openPlayer` and neither:
+`useArtistScreen.ts:103-121` (`handlePlayTrack`) is the clearest case —
+its own sibling `handlePlayAll` (`:123-127`) calls
+`loadPlaylistToPlayer` first, and this one does not. The session becomes
+the new track; the run keeps the old playlist and the old
+`currentIndex`.
+
+`useQueueSync` mirrors the session into `currentFile` but not into
+`currentIndex`, so nothing corrects the drift.
+
+**Why it is not B-046.** B-046 was "the transport does not advance the RUN
+at all" — the button was dead. That is fixed (F-053): the transport now
+reads the run and moves it. This is the other half: **the run's contents
+can be stale**, and the transport faithfully advances a queue the user is
+no longer listening to. The two facts — "the session" and "the run" — are
+both correct; it is the relationship between them that is unstated.
+
+**Why it matters more than it looks.** The queue screen's "Up Next" list
+derives from the **same** `currentIndex` (`useQueueScreen.ts`), so the
+stale run is visible there too: after the single-track launch, the queue
+screen still shows the old album's tail. One defect, two surfaces — and
+the second one predates B-046.
+
+**State:** open. **Found 2026-11-02**, while implementing B-046 and
+reading what the fix had to assume.
+
+**What it needs — a product decision, not a patch.** What SHOULD happen
+when the user launches a track that is not in the current run?
+
+- **Plex and Spotify replace the queue.** Tapping a song from anywhere
+  starts a new queue; the old one is gone. That is the shipping-app
+  precedent, and it would make the drift unrepresentable — the run is
+  rebuilt from the track.
+- Keeping the run and appending is the alternative, but then the run must
+  be told to **append** the launched track, or the index must be told it is
+  pointing at nothing (`currentIndex = -1`, "the live item is not in this
+  run"), which changes what the queue screen's "Up Next" means.
+
+Either way it is the **run's contents** that need a rule, not the
+transport's behaviour — the transport already does exactly what the rule
+says. This is deliberately **not** fixed in the B-046 wave: B-046's scope
+was "the transport advances the run", and choosing what the run *is* after
+an outside launch is a different decision with a different blast radius
+(the queue screen, the now-playing shelf and the playlist detail page all
+read the run).
+
 ---
 
 ## FIXED
