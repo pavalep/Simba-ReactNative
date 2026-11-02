@@ -65,6 +65,7 @@ import {usePlayer} from '@simba-dev/react-native-media-player';
 import {usePlayerStore, type PlaylistEntry} from '../../state/playerStore';
 import {useNowPlayingStore} from '../../state/nowPlayingStore';
 import {normalizeMediaClassification} from '../../types/media';
+import {mediaKey} from './playbackProgress';
 
 /**
  * Mounted once. Returns nothing — side-effect-only hook.
@@ -83,6 +84,9 @@ export function useQueueSync(): void {
   // Stable refs to the store actions (avoid stale closures).
   const setCurrentFileRef = useRef(usePlayerStore.getState().setCurrentFile);
   const clearPlaylistRef = useRef(usePlayerStore.getState().clearPlaylist);
+  const loadPlaylistToPlayerRef = useRef(
+    usePlayerStore.getState().loadPlaylistToPlayer,
+  );
 
   // V21 F5 A6 — derive `currentFile` from the session.
   //
@@ -109,6 +113,43 @@ export function useQueueSync(): void {
       }),
     };
     setCurrentFileRef.current(entry);
+
+    // ── The run must CONTAIN what is playing ───────────────────────
+    //
+    // The session and the RUN are two records, and a launch that does
+    // not go through the run updates only ONE of them: the session
+    // becomes the new track, while the run keeps the old playlist and
+    // the old index. `useArtistScreen.ts:103-121` (`handlePlayTrack`)
+    // is the clearest case — its own sibling `handlePlayAll` loads the
+    // run first, and this one does not.
+    //
+    // The consequence was that the run described something the user was
+    // no longer listening to: the transport's ⏭ advanced into the OLD
+    // album, and the queue screen's "Up Next" showed the old album's
+    // tail — the same `currentIndex` feeds both, so it was one defect
+    // on two surfaces.
+    //
+    // The fix is the shipping-app behaviour: **playing something from
+    // outside the queue starts a new queue.** Plex replaces the playback
+    // queue when the user starts a different item, and so does this.
+    //
+    // A launch that DOES go through the run is untouched: the handover
+    // moves the run's index BEFORE it writes the session, and the
+    // playlist launches load the run first, so the live media is already
+    // in the run and nothing is replaced.
+    //
+    // The comparison goes through `mediaKey` because the session's URI
+    // is the CANONICAL one (`nowPlayingStore.begin` applies it) while
+    // the run's entries carry the raw URI the catalogue handed over.
+    // Comparing the raw strings would miss every local path and
+    // replace a perfectly good run on every tick.
+    const {playlist} = usePlayerStore.getState();
+    if (
+      playlist.length > 0 &&
+      !playlist.some(item => mediaKey(item.uri) === session.uri)
+    ) {
+      loadPlaylistToPlayerRef.current([entry]);
+    }
   }, [session, state.durationMs]);
 
   // ── next/previous: the lib's `commands.next` / `commands.previous`

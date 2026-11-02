@@ -53,7 +53,7 @@ import {presetToMpv, useQualityStore} from '../../../../state/useQualityStore';
 import {useSkipSilenceStore} from '../../../../state/useSkipSilenceStore';
 import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
 import {dockStyleFor} from '../../../../infrastructure/player/dockPlacement';
-import {useClosePlayback} from '../../../../infrastructure/player/useClosePlayback';
+import {useClosePlaybackWithToast} from '../../useClosePlaybackWithToast';
 import {VideoSurface} from '../VideoSurface/VideoSurface';
 import {PlayerScrim} from '../PlayerScrim/PlayerScrim';
 import {VideoTitleOverlay} from '../VideoTitleOverlay/VideoTitleOverlay';
@@ -79,7 +79,8 @@ import {
 // module at all — it reads two of the app's own stores). Routing it through
 // the barrel would mean every one of those mocks had to learn about it, and
 // a mock that forgets is a crash in a suite that has nothing to do with the
-// window. `useClosePlayback` is imported the same way, for the same reason.
+// window. `useClosePlaybackWithToast` is imported the same way, for the
+// same reason.
 import {useVideoOwnsWindow} from '../../../../infrastructure/player/useVideoOwnsWindow';
 import {forwardRef, useImperativeHandle} from 'react';
 import type {VideoPlayerProps, VideoPlayerRef} from './types';
@@ -302,7 +303,7 @@ export const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
  */
 const VideoPlayerChrome: React.FC = () => {
   const videoOwnsWindow = useVideoOwnsWindow();
-  const closePlayback = useClosePlayback();
+  const closePlayback = useClosePlaybackWithToast();
 
   // W6.1 — the single owner of PiP reconciliation.
   //

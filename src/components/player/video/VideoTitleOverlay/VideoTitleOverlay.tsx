@@ -43,9 +43,10 @@
  * So the verbs are now split by what they MEAN, and each has one owner:
  *
  *   • back  → CLOSE. Stops the engine, releases the foreground service,
- *              dismisses the notification, ends the session. `useClosePlayback`
- *              owns the teardown, because the dock's X and the audio player's
- *              X are the same verb and must not drift.
+ *              dismisses the notification, ends the session.
+ *              `useClosePlaybackWithToast` owns the teardown, because the
+ *              dock's X and the audio player's X are the same verb and must
+ *              not drift.
  *   • the mini-player control in the transport bar → MINIMISE. Keeps playing,
  *              moves the player to the dock. In BOTH lanes, and it is the only
  *              minimise path — a second one next to the close would be two
@@ -121,7 +122,7 @@ import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {AppText} from '../../../../components/core/AppText/AppText';
 import {useReduceMotion, useTransport} from '../../../../infrastructure/player';
-import {useClosePlayback} from '../../../../infrastructure/player/useClosePlayback';
+import {useClosePlaybackWithToast} from '../../useClosePlaybackWithToast';
 import {PlayerControl, CONTROL_ICON_SIZE_COMPACT} from '../PlayerControl/PlayerControl';
 import {BookmarkControl} from '../BookmarkControl/BookmarkControl';
 
@@ -141,7 +142,7 @@ export const RISE_PX = 10;
 
 export const VideoTitleOverlay: React.FC = () => {
   const {state, commands} = useTransport();
-  const closePlayback = useClosePlayback();
+  const closePlayback = useClosePlaybackWithToast();
   const {colors} = useTheme();
   const insets = useSafeAreaInsets();
   const reduceMotion = useReduceMotion();

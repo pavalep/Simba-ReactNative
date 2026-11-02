@@ -246,7 +246,7 @@ export {
 // It lives here because this is the only directory allowed to import the
 // player module — `PlayerChrome.tsx` importing it directly was itself a
 // PLAYER-rule violation.
-export {useClosePlayback} from './useClosePlayback';
+export {useClosePlayback, type ClosePlaybackOutcome} from './useClosePlayback';
 
 // V22 W22 (2026-10-21) — "does the video own the window?"
 //

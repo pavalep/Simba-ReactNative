@@ -57,9 +57,9 @@
  * ## The verbs, and who owns them
  *
  *   • CLOSE — the X. Stops the engine, releases the foreground service,
- *     dismisses the notification, ends the session. `useClosePlayback()`
- *     owns that teardown, because the video player's close is the same
- *     verb and two owners of one teardown drift.
+ *     dismisses the notification, ends the session.
+ *     `useClosePlaybackWithToast()` owns that teardown, because the video
+ *     player's close is the same verb and two owners of one teardown drift.
  *   • MINIMISE — the chevron-down in the bottom row. Keeps playing and
  *     collapses to the dock. It used to sit top-left, and the top bar's
  *     own docblock cited Spotify's now-playing screen for that position;
@@ -99,7 +99,7 @@ import {
   useTransport,
   type RepeatMode,
 } from '../../../../infrastructure/player/useTransport';
-import {useClosePlayback} from '../../../../infrastructure/player/useClosePlayback';
+import {useClosePlaybackWithToast} from '../../useClosePlaybackWithToast';
 import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
 import {useAudioPresentationStore} from '../../../../state/useAudioPresentationStore';
 import {useToast} from '../../../feedback/Toast';
@@ -137,7 +137,7 @@ export const AudioPlayer: React.FC = () => {
   const mode = useAudioPresentationStore(s => s.mode);
   const nowPlaying = useNowPlayingStore(s => s.current);
   const {state, commands} = useTransport();
-  const closePlayback = useClosePlayback();
+  const closePlayback = useClosePlaybackWithToast();
 
   // The one derivation, read once: 'expanded' is the full page, 'mini'
   // is the dock. Both are rendered at all times; only their visibility
@@ -146,8 +146,8 @@ export const AudioPlayer: React.FC = () => {
 
   // The hardware back is the platform's "leave this screen" verb, and the
   // SPEC gives it exactly ONE meaning: CLOSE. SPEC §3.2 withdrew the older
-  // "back minimises" rule on purpose, and it names `useClosePlayback()` as
-  // the single owner so "the dock's X, the audio player's X, the header's
+  // "back minimises" rule on purpose, and it names `useClosePlaybackWithToast()`
+  // as the single owner so "the dock's X, the audio player's X, the header's
   // back and the hardware back cannot drift apart".
   //
   // So the expanded audio page owes the platform the same verb its own X

@@ -45,8 +45,18 @@
  * If the native stop throws, the media is still playing. The UI is left
  * standing and the failure is surfaced, because dismissing the player while
  * audio keeps going is a lie the user cannot detect until they wonder why
- * sound is coming from a closed screen. The toast is raised here, in the
- * one place that owns the verb, so no call site can forget it.
+ * sound is coming from a closed screen.
+ *
+ * This module REPORTS the failure; it does not DISPLAY it. The close
+ * returns an OUTCOME, and the UI layer turns a failed outcome into a
+ * toast — `src/components/player/useClosePlaybackWithToast.ts`.
+ *
+ * That split is not decoration. A module under `src/infrastructure/` has
+ * no business reaching for a UI context, and `useToast()` THROWS outside
+ * a `ToastProvider` — so the old shape made this hook unusable outside
+ * the app's own shell, and every test of the close verb had to mock the
+ * toast just to get past it. The verb still has exactly one owner; only
+ * the MESSAGE moved up to the layer that knows how to show a message.
  *
  * ## Boundary note
  *
@@ -54,6 +64,11 @@
  * directory allowed to import the player module
  * (`scripts/check-import-boundaries.js`, PLAYER rule). It previously lived
  * inline in `PlayerChrome.tsx`, which was itself a boundary violation.
+ *
+ * It is also why this file may not import anything from `src/components/`:
+ * the infrastructure layer sits UNDER the component layer, and a context
+ * is a component-layer thing. The close verb reports an outcome;
+ * `src/components/player/useClosePlaybackWithToast.ts` owns the toast.
  *
  * It reads the presentation LIVE from the store at call time rather than
  * closing over a value captured at render time — the same discipline as
@@ -63,8 +78,16 @@
 
 import {useCallback} from 'react';
 import {getMpvPlayerModule} from '@simba-dev/react-native-media-player';
-import {useToast} from '../../components/feedback/Toast';
 import {useNowPlayingStore} from '../../state/nowPlayingStore';
+
+/**
+ * What a close did.
+ *
+ * `ok: false` means the native stop threw: the media is STILL playing and
+ * the session is still live, so the caller must say so to the user. The
+ * message is the CALLER's to show — this module has no UI.
+ */
+export type ClosePlaybackOutcome = {ok: true} | {ok: false; message: string};
 
 /**
  * The close verb. Returns a callback; call it to close media playback.
@@ -73,8 +96,7 @@ import {useNowPlayingStore} from '../../state/nowPlayingStore';
  * on an idle engine is a no-op on the native side, and the session is
  * already clear.
  */
-export function useClosePlayback(): () => void {
-  const toast = useToast();
+export function useClosePlayback(): () => ClosePlaybackOutcome {
   const endSession = useNowPlayingStore(s => s.end);
 
   return useCallback(() => {
@@ -89,11 +111,12 @@ export function useClosePlayback(): () => void {
       getMpvPlayerModule().stopPlayback();
     } catch (error) {
       // The media is still playing. Leave the player standing and say so.
-      toast.show(
-        error instanceof Error ? error.message : 'Could not stop playback',
-        'error',
-      );
-      return;
+      // The message is the CALLER's to show: this module has no UI.
+      return {
+        ok: false,
+        message:
+          error instanceof Error ? error.message : 'Could not stop playback',
+      };
     }
 
     // Only now is it true that nothing is playing. Clearing first would
@@ -165,5 +188,7 @@ export function useClosePlayback(): () => void {
     // warning when there is no current activity, instead of quietly doing
     // nothing.
     getMpvPlayerModule().setOrientation('portrait');
-  }, [endSession, toast]);
+
+    return {ok: true};
+  }, [endSession]);
 }

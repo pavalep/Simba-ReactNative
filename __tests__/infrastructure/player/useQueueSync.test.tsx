@@ -214,6 +214,157 @@ describe('useQueueSync — duration is derived, not zero', () => {
   });
 });
 
+/**
+ * B-047 — the run must CONTAIN what is playing.
+ *
+ * ## The defect this pins
+ *
+ * The session and the RUN are two records, and a launch that does not go
+ * through the run updated only ONE of them: the session became the new
+ * track while the run kept the old playlist and the old index.
+ * `useArtistScreen.ts:103-121` (`handlePlayTrack`) is the clearest case —
+ * its own sibling `handlePlayAll` (`:123-127`) loads the run first, and
+ * this one does not.
+ *
+ * So the run described something the user was no longer listening to, and
+ * the SAME `currentIndex` feeds two surfaces: the transport's ⏭ advanced
+ * into the old album, and the queue screen's "Up Next" showed the old
+ * album's tail. One defect, two surfaces.
+ *
+ * ## The rule
+ *
+ * Playing something from outside the queue starts a new queue — Plex
+ * replaces the playback queue when the user starts a different item.
+ */
+describe('useQueueSync — the run must contain what is playing (B-047)', () => {
+  const ALBUM = [
+    {
+      uri: AUDIO_URI,
+      title: 'Pale Matter',
+      duration: 240,
+      source: 'local' as const,
+      type: 'music' as const,
+      mediaType: 'audio' as const,
+    },
+    {
+      uri: 'file:///music/nausicaa/lumine/02.mp3',
+      title: 'The Great Passage',
+      duration: 260,
+      source: 'local' as const,
+      type: 'music' as const,
+      mediaType: 'audio' as const,
+    },
+    {
+      uri: 'file:///music/nausicaa/lumine/03.mp3',
+      title: 'Library Table',
+      duration: 280,
+      source: 'local' as const,
+      type: 'music' as const,
+      mediaType: 'audio' as const,
+    },
+  ];
+  const OUTSIDE_URI = 'file:///music/somewhere-else/single.mp3';
+
+  it('replaces the stale run when the launch is from OUTSIDE it', async () => {
+    // The defect. The run still held the album, so ⏭ advanced into an
+    // album the user was no longer listening to.
+    usePlayerStore.getState().loadPlaylistToPlayer(ALBUM);
+
+    beginSession({
+      uri: OUTSIDE_URI,
+      title: 'A Single Track',
+      type: 'music',
+      streamType: 'audio',
+      mediaLane: 'audio',
+    });
+    renderHook(() => useQueueSync());
+
+    await waitFor(() =>
+      expect(usePlayerStore.getState().playlist).toHaveLength(1),
+    );
+    expect(usePlayerStore.getState().playlist[0]?.uri).toBe(OUTSIDE_URI);
+    expect(usePlayerStore.getState().currentIndex).toBe(0);
+  });
+
+  it('leaves the run alone when the launch IS in it', async () => {
+    // The counterpart — without it, a fix that replaced the run on every
+    // launch would pass.
+    usePlayerStore.getState().loadPlaylistToPlayer(ALBUM);
+    usePlayerStore.getState().playFromPlaylist(1);
+
+    beginSession({
+      uri: ALBUM[1]!.uri,
+      title: ALBUM[1]!.title,
+      type: 'music',
+      streamType: 'audio',
+      mediaLane: 'audio',
+    });
+    renderHook(() => useQueueSync());
+
+    await waitFor(() =>
+      expect(usePlayerStore.getState().currentFile?.uri).toBe(ALBUM[1]!.uri),
+    );
+    // The run is UNCHANGED: three items, still positioned at the second.
+    expect(usePlayerStore.getState().playlist).toHaveLength(3);
+    expect(usePlayerStore.getState().currentIndex).toBe(1);
+  });
+
+  it('compares the run against the CANONICAL uri, not the raw one', async () => {
+    // The session's URI is canonical (`nowPlayingStore.begin` applies
+    // `mediaKey`) while the run's entries carry the raw catalogue URI.
+    // Comparing the raw strings would miss every local path and replace
+    // a perfectly good run on every tick.
+    const raw = '/music/nausicaa/lumine/01.mp3';
+    usePlayerStore.getState().loadPlaylistToPlayer([
+      {
+        uri: raw,
+        title: 'Pale Matter',
+        duration: 240,
+        source: 'local',
+        type: 'music',
+        mediaType: 'audio',
+      },
+    ]);
+
+    beginSession({
+      uri: raw,
+      title: 'Pale Matter',
+      type: 'music',
+      streamType: 'audio',
+      mediaLane: 'audio',
+    });
+    renderHook(() => useQueueSync());
+
+    await waitFor(() =>
+      expect(usePlayerStore.getState().currentFile?.uri).toBe(
+        'file:///music/nausicaa/lumine/01.mp3',
+      ),
+    );
+    // The run still holds its own entry, under its own URI.
+    expect(usePlayerStore.getState().playlist).toHaveLength(1);
+    expect(usePlayerStore.getState().playlist[0]?.uri).toBe(raw);
+  });
+
+  it('leaves an EMPTY run empty', async () => {
+    // Nothing is playing from a queue, so there is no stale run to
+    // replace — and the queue screen's own empty state stays true.
+    beginSession({
+      uri: OUTSIDE_URI,
+      title: 'A Single Track',
+      type: 'music',
+      streamType: 'audio',
+      mediaLane: 'audio',
+    });
+    renderHook(() => useQueueSync());
+
+    await waitFor(() =>
+      expect(usePlayerStore.getState().currentFile?.uri).toBe(OUTSIDE_URI),
+    );
+    expect(usePlayerStore.getState().playlist).toEqual([]);
+    expect(usePlayerStore.getState().currentIndex).toBe(-1);
+  });
+});
+
 describe('useQueueSync — no session means nothing is current', () => {
   it('clears the playlist when no session is loaded', async () => {
     // The hook used to infer this from the lib's `state.title`, which is

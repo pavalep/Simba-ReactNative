@@ -69,7 +69,7 @@ import {
 import {useTheme} from '../../../../theme';
 import {spacing} from '../../../../theme/tokens';
 import {usePresentation, useTransport} from '../../../../infrastructure/player';
-import {useClosePlayback} from '../../../../infrastructure/player/useClosePlayback';
+import {useClosePlaybackWithToast} from '../../useClosePlaybackWithToast';
 import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
 import {PlayerControl} from '../PlayerControl/PlayerControl';
 import {
@@ -94,7 +94,7 @@ export const VideoDock: React.FC = () => {
   const {state, commands} = useTransport();
   const nowPlaying = useNowPlayingStore(s => s.current);
   const {isMini, setVideoMiniRect, setVideoPresentation} = usePresentation();
-  const closePlayback = useClosePlayback();
+  const closePlayback = useClosePlaybackWithToast();
 
   const rootRef = useRef<View>(null);
   const slotRef = useRef<View>(null);
