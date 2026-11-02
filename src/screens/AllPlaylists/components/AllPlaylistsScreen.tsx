@@ -210,7 +210,7 @@ export const AllPlaylistsScreen: React.FC = () => {
           <View style={styles.emptyWrapper}>
             <EmptyState
               icon="listMusic"
-              title="No playlists yet"
+              title="No playlists match this filter."
               description="Pick another kind to see your playlists."
             />
           </View>

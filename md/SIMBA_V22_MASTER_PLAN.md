@@ -3161,6 +3161,31 @@ Enumerated individually so nothing is forgotten. Updated at every wave exit.
     - This is why a MIXED playlist cannot be played in order yet — step 28
       of the pinned-playlist tracker.
 
+77. **Two dead-rule clusters the 2026-11-02 wave found.** **OPEN.**
+    - **`src/infrastructure/player/validateLane.ts` has NO callers.** The
+      module's own docblock says *"The facade's launch functions (`usePlay`,
+      `usePlayWithResume`, `usePlaybackFacade.launch`) call `validateLane()`
+      before invoking the lib's `openPlayer` / `openPlaylist`"* — and a
+      search of `src/` finds **zero** call sites. It was a guard that
+      guarded nothing, and the lane handover (register item 74, phase 5
+      step 26) has now superseded it. `laneError` and the `LaneStreamError`
+      variant it feeds in `streamErrors.ts` are dead with it.
+      **What it needs:** a decision — delete the module, or wire it to the
+      one place it was meant to guard. Deleting is the honest answer if
+      nothing needs it, because a module that promises a check nobody runs
+      is a claim the code does not keep.
+    - **`pinnedAtMs` has two copies** — Home's
+      (`src/screens/Home/hooks/useHomeScreen.ts`) and the management page's
+      (`src/screens/AllPlaylists/hooks/useAllPlaylistsScreen.ts`). It is
+      the pinned-order rule (D-P3), and two copies is two chances to get
+      it wrong. **What it needs:** one owner, in the feature facade
+      (`src/features/playlists/`) — the same place the kind labels and the
+      compatibility rule already live.
+    - Both were found while closing yesterday's carry-overs, not by a
+      sweep: the first by reading a docblock that did not match the code,
+      the second by a worker reporting the duplication it could not fix
+      because Home is not its file.
+
 ---
 
 ## 9. Working rules that apply to every stage

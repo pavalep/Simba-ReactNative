@@ -544,9 +544,7 @@ branch was written before the kind existed. `MIXED` is now in its
 >   `MediaRailCard`) and a **visible 32 px pin toggle**; the Library's
 >   `PlaylistCard` grid opens the menu. `PlaylistDetailScreen`'s header
 >   gained its own 32 px toggle. The long-press is never the only way in.
-> - **STILL OPEN:** 37 (the empty states), 38 (accessibility beyond the
->   pin), 43 (`AllPlaylistsScreen` becomes `PlaylistCard`s — and the pin
->   toggle must ride onto the card), 48 (the phase exit).
+> - **STILL OPEN:** 48 (the phase exit).
 
 35. **The Home shelf's "VIEW ALL" points at `AllPlaylistsScreen`** — **decided
     2026-10-30**: the page that can pin IS `AllPlaylistsScreen` (step 31).
@@ -577,6 +575,18 @@ branch was written before the kind existed. `MIXED` is now in its
     * Home's rail with nothing to show → the rail **collapses**; the title
       goes with it.
     *Evidence:* each state, rendered and asserted.
+    **DONE 2026-11-02** — each one rendered and asserted:
+    - **No playlists at all** → "No playlists yet" **+ a "Create playlist"
+      button** — an empty state with no action is a dead end.
+    - **Playlists exist, none pinned** → the **pinned section is not
+      rendered at all**. A section with nothing in it is noise.
+    - **A playlist with no items** → "This playlist is empty" + **Add
+      items** — already landed on `PlaylistDetailScreen`.
+    - **A filter that matches nothing** → "No playlists match this
+      filter." — a different claim from "you have no playlists"; the page
+      must not blur the two.
+    - **Home's rail with nothing to show** → the rail **collapses**, and
+      the title goes with it — already landed.
 38. **Accessibility.** Every new action carries a role and a label; the pin
     glyph is not a bare icon.
     * The pin **badge** is `accessibilityElementsHidden` — the pinned state
@@ -593,6 +603,18 @@ branch was written before the kind existed. `MIXED` is now in its
       persistent state. The pin is reachable from the management row and the
       detail header without a gesture.
     *Evidence:* the labels, asserted.
+    **DONE 2026-11-02** — every new action carries a role and a label:
+    - The **filter chips** state their selection
+      (`accessibilityState={{selected: isActive}}`), the way
+      `PlaylistCreateModal`'s kind chips already do.
+    - The pin **badge** is `accessible={false}` +
+      `importantForAccessibility="no"` — **amended 2026-11-02**:
+      `accessibilityElementsHidden` is iOS-only.
+    - The pin **toggle** states its role, its action ("Pin to top" /
+      "Unpin from top") and `accessibilityState={{selected: pinned}}`, and
+      stays **32 px** — the hit slop widens, the icon does not grow.
+    - A long-press is **never** the only way in: the card's visible toggle
+      pins without a gesture, and the menu is the shortcut.
 
 ### The UI/UX build — the tasks the specification added
 
@@ -636,6 +658,26 @@ branch was written before the kind existed. `MIXED` is now in its
     The filter is a **filter**: it narrows what is shown and never changes
     what a playlist may contain.
     *Evidence:* the screen, the chip, and the test.
+    **DONE 2026-11-02** — the inline 44 × 44 row is replaced by the card.
+    The card carries the **visible 32 px pin toggle**; a **long-press**
+    opens `PlaylistActionMenu` — the Library's pattern. The kind filter
+    gains **Mixed**, reading `LOCAL_PLAYLIST_FILTERS` (one owner; labels
+    from `PLAYLIST_KIND_LABELS`), and it is a **filter**: it narrows what
+    is shown and never changes what a playlist may contain. The create
+    action is the header `AppButton` and it opens **`PlaylistCreateModal`**
+    — the one owner. **No FAB.** The list splits into a **"Pinned"**
+    section (rendered only when something is pinned) and **"Other
+    playlists"**, so a playlist is rendered once, in the section that
+    describes its state.
+    **Rename and delete left this page** — the card has no rename/delete
+    slot and `PlaylistActionMenu` has ONE row, and both live in
+    `src/components/playlist/**`. Rename and delete remain on
+    `PlaylistDetailScreen` via `PlaylistManageModal` +
+    `useConfirmDialog` — spec §4.5's named components — so there is one
+    place that does them rather than two.
+    **One duplication is recorded, not hidden:** the pinned-order helper
+    is a second copy of Home's `pinnedAtMs`. A shared owner would be
+    better; Home is not this wave's file.
 44. **The pin action** — a long-press menu on a playlist, offering
     **Pin to top** / **Unpin from top** (precedent: YouTube Music's "Pin to
     top", Spotify's "Pin playlist"), plus a **visible 32 px pin toggle** on
