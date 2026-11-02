@@ -89,7 +89,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
     navigation.navigate('PodcastsScreen', {});
   }, [navigation]);
 
-  // P41.5: Pinned Playlists' "VIEW ALL" link — kept on the per-user
+  // P41.5: the Playlists rail's "VIEW ALL" link — kept on the per-user
   // QuickAccessShelf only (not on the API-backed category rails).
   const handlePlaylistsSeeAll = useCallback(() => {
     navigation.navigate('AllPlaylistsScreen');
@@ -134,9 +134,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
         case 'GENRE':
           return <GenreChipsShelf genres={item.genres} onGenrePress={handleGenrePress} />;
         case 'PLAYLISTS':
+          // Spec §4.6: the rail shows the PINNED playlists first and
+          // then the rest by recency, so it may not be titled "Pinned
+          // Playlists" - a title that lies is a bug (rule 4). The pin
+          // badge on each tile says which ones are pinned.
           return (
             <QuickAccessShelf
-              title="Pinned Playlists"
+              title="Playlists"
               playlists={item.items}
               onPlaylistPress={handlePlaylistPress}
               onSeeAll={handlePlaylistsSeeAll}

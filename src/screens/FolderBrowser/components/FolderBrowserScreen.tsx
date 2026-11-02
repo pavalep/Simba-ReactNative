@@ -26,7 +26,7 @@ import {PlaylistContextMenu} from '../../../components/playlist/PlaylistContextM
 import {PlaylistCreateModal} from '../../../components/playlist/PlaylistCreateModal';
 import {useToast} from '../../../components/feedback/Toast/Toast';
 import {logger} from '../../../lib/logger';
-import {usePlaylists} from '../../../features/playlists';
+import {usePlaylists, reportBatchAdd} from '../../../features/playlists';
 import { resolveStreamType, useResumeAwareLaunch } from '../../../infrastructure/player';
 
 import type {PlaylistItem, PlaylistKind} from '../../../types/playlist';
@@ -45,6 +45,13 @@ function isMediaFile(name: string): boolean {
   const ext = name.slice(name.lastIndexOf('.')).toLowerCase();
   return MEDIA_EXTENSIONS.has(ext);
 }
+
+// ── Batch add reporting ──────────────────────────────────────────
+//
+// `reportBatchAdd` is the FEATURE's rule, not this screen's: it lives in
+// `src/features/playlists/batchAddReport.ts` and turns the per-item
+// statuses `addItem` returns into one honest sentence. The screen only
+// shows what it says.
 
 // ── Screen ──────────────────────────────────────────────
 
@@ -260,9 +267,11 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
     return map;
   }, [playlists]);
 
-  const handleBatchAddConfirm = useCallback(
-    (playlistId: string) => {
-      const selectedItems: PlaylistItem[] = items
+  // The selected files, classified the way the playlist store classifies
+  // them - so what is added is what was shown.
+  const selectedItems = useMemo<PlaylistItem[]>(
+    () =>
+      items
         .filter(i => !i.isDirectory && selectedFileNames.has(i.name))
         .map(file => ({
           id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
@@ -276,17 +285,45 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
             mediaType: getMediaType(file.path),
             folderId: linkedMediaFolderIdFromPath(currentPath),
           }),
-        }));
+        })),
+    [items, selectedFileNames, currentPath],
+  );
 
-      selectedItems.forEach(item => {
-        addItem(playlistId, item);
-      });
+  // A SINGLE selection is classified from its true kind, so the picker can
+  // offer only the playlists that can take it. A multi-file selection may
+  // legitimately mix lanes, so that branch offers every playlist - and the
+  // toast then reports what was actually added.
+  const singleSelectedItem = useMemo(() => {
+    if (selectedFileNames.size !== 1) return undefined;
+    const file = items.find(i => !i.isDirectory && selectedFileNames.has(i.name));
+    if (!file) return undefined;
+    const classification = normalizeMediaClassification({
+      source: 'local',
+      type: getMediaType(file.path) === 'audio' ? 'audio' : 'video',
+      mediaType: getMediaType(file.path),
+      folderId: linkedMediaFolderIdFromPath(currentPath),
+    });
+    return {
+      fileUri: `file://${file.path}`,
+      title: file.name,
+      duration: 0,
+      type: classification.type,
+      mediaType: classification.mediaType,
+    };
+  }, [items, selectedFileNames, currentPath]);
 
+  const handleBatchAddConfirm = useCallback(
+    (playlistId: string) => {
       const plName = playlistNameMap[playlistId] ?? 'Playlist';
-      toast.show(
-        `Added ${selectedItems.length} items to ${plName}`,
-        'success',
+
+      // `addItem` returns the REAL status of every item - a lane mismatch
+      // comes back as 'lane-mismatch' instead of being swallowed. That is
+      // what makes the count knowable.
+      const report = reportBatchAdd(
+        selectedItems.map(item => addItem(playlistId, item)),
+        plName,
       );
+      toast.show(report.message, report.severity);
       setIsSelecting(false);
       setSelectedFileNames(new Set());
       // Targeted flow (opened from PlaylistDetail "Add"): return to it.
@@ -294,7 +331,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
         navigation.goBack();
       }
     },
-    [items, selectedFileNames, toast, playlistNameMap, addItem, targetPlaylistId, navigation],
+    [selectedItems, toast, playlistNameMap, addItem, targetPlaylistId, navigation],
   );
 
   const handleBatchAddToPlaylist = useCallback(() => {
@@ -321,33 +358,18 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
       }
       const playlistId = result.playlist.id;
 
-      const selectedItems: PlaylistItem[] = items
-        .filter(i => !i.isDirectory && selectedFileNames.has(i.name))
-        .map(file => ({
-          id: `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-          fileUri: `file://${file.path}`,
-          title: file.name,
-          duration: 0,
-          addedAt: new Date().toISOString(),
-          ...normalizeMediaClassification({
-            source: 'local',
-            type: getMediaType(file.path) === 'audio' ? 'audio' : 'video',
-            mediaType: getMediaType(file.path),
-            folderId: linkedMediaFolderIdFromPath(currentPath),
-          }),
-        }));
-
-      selectedItems.forEach(item => {
-        addItem(playlistId, item);
-      });
-      toast.show(
-        `Added ${selectedItems.length} items to "${name}"`,
-        'success',
+      // Same truth as the add-to-existing path: the count is what happened,
+      // not what was selected. A video picked into an AUDIO_ONLY playlist
+      // says so.
+      const report = reportBatchAdd(
+        selectedItems.map(item => addItem(playlistId, item)),
+        `"${name}"`,
       );
+      toast.show(report.message, report.severity);
       setIsSelecting(false);
       setSelectedFileNames(new Set());
     },
-    [items, selectedFileNames, toast, createPlaylist, addItem],
+    [selectedItems, toast, createPlaylist, addItem],
   );
 
   // ── Styles ────────────────────────────────────────────
@@ -633,7 +655,7 @@ export const FolderBrowserScreen: React.FC<Props> = ({navigation, route}) => {
 
       {/* ── Playlist picker context menu ────── */}
       <PlaylistContextMenu
-        item={undefined}
+        item={singleSelectedItem}
         batchCount={selectedFileNames.size || undefined}
         visible={showPlaylistPicker}
         onClose={() => setShowPlaylistPicker(false)}

@@ -5,17 +5,27 @@ import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
 import {BottomSheet} from '../../sheets/BottomSheet/BottomSheet';
-import {usePlaylists} from '../../../features/playlists';
+import {usePlaylists, compatiblePlaylistsFor} from '../../../features/playlists';
 import type {Playlist} from '../../../features/playlists';
+import type {MediaKind, MediaLane} from '../../../types/media';
 
 export interface PlaylistContextMenuProps {
-  /** The media item to add to a playlist (single-item mode) */
+  /**
+   * The media item to add to a playlist (single-item mode).
+   *
+   * `type` / `mediaType` are the item's TRUTHFUL classification - they are
+   * what the compatibility rule is asked about. Without them the rule falls
+   * back to the broad 'audio' / 'video', which is how a radio station ended
+   * up offered a playlist.
+   */
   item?: {
     fileUri: string;
     title: string;
     duration: number;
     artist?: string;
     album?: string;
+    type?: MediaKind;
+    mediaType?: MediaLane;
   };
   /** When set, shows batch-mode title instead of single item title */
   batchCount?: number;
@@ -44,12 +54,22 @@ export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
   const {colors} = useTheme();
   const {playlists: allPlaylists} = usePlaylists();
 
+  // A batch selection may legitimately MIX lanes - an audio file and a video
+  // file picked together - so the batch branch shows every playlist and the
+  // toast reports what was actually added. A single item is filtered by the
+  // SAME rule the sheet uses, so the two surfaces cannot disagree.
+  const isBatch = typeof batchCount === 'number' && batchCount > 1;
+  const visiblePlaylists = useMemo(() => {
+    if (isBatch || !item) return allPlaylists;
+    return compatiblePlaylistsFor(item, allPlaylists);
+  }, [allPlaylists, isBatch, item]);
+
   const sheetTitle = useMemo(() => {
-    if (batchCount && batchCount > 1) {
+    if (isBatch) {
       return `Add ${batchCount} items to Playlist`;
     }
     return item ? `Add "${item.title}" to Playlist` : 'Add to Playlist';
-  }, [batchCount, item]);
+  }, [isBatch, batchCount, item]);
 
   const renderItem = useCallback(
     ({playlist}: {playlist: Playlist}) => (
@@ -99,7 +119,7 @@ export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
       <View style={styles.container}>
         <FlatList
           ref={listRef}
-          data={allPlaylists}
+          data={visiblePlaylists}
           keyExtractor={p => p.id}
           renderItem={({item: playlist}) => renderItem({playlist})}
           getItemLayout={(_, index) => ({length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index})}
@@ -110,7 +130,9 @@ export const PlaylistContextMenu: React.FC<PlaylistContextMenuProps> = ({
             <View style={styles.emptyWrap}>
               <SvgIcon name="listMusic" size={32} color={colors.text.tertiary} />
               <AppText variant="body2" color="tertiary" style={{marginTop: spacing.sm, textAlign: 'center'}}>
-                No playlists yet
+                {allPlaylists.length === 0
+                  ? 'No playlists yet'
+                  : 'No playlist can take this item'}
               </AppText>
             </View>
           }

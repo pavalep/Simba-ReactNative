@@ -1,4 +1,5 @@
 import type {SvgIconName} from '../../../../components/utility/SvgIcon';
+import {PLAYLIST_KIND_LABELS} from '../../../../types/playlist';
 import type {
   ContentMode,
   FilterType,
@@ -47,14 +48,21 @@ export const LOCAL_CONTENT_MODES: Array<{
   {key: 'playlists', label: 'Playlists'},
 ];
 
-/** Mixed queues are intentionally not exposed by the v11 product contract. */
+/**
+ * The Library's playlist kind filter.
+ *
+ * The labels come from `PLAYLIST_KIND_LABELS` - the ONE owner of the
+ * kind labels - so a kind can never be spelled two ways, and a kind
+ * added to `PlaylistKind` cannot leave this rail behind.
+ */
 export const LOCAL_PLAYLIST_FILTERS: Array<{
   key: FilterType;
   label: string;
 }> = [
   {key: 'ALL', label: 'All'},
-  {key: 'AUDIO_ONLY', label: 'Audio'},
-  {key: 'VIDEO_ONLY', label: 'Video'},
+  {key: 'AUDIO_ONLY', label: PLAYLIST_KIND_LABELS.AUDIO_ONLY},
+  {key: 'VIDEO_ONLY', label: PLAYLIST_KIND_LABELS.VIDEO_ONLY},
+  {key: 'MIXED', label: PLAYLIST_KIND_LABELS.MIXED},
 ];
 
 export const LOCAL_VIEW_TOGGLE_SEGMENTS: Segment[] = ['audio'];

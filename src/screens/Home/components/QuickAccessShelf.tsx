@@ -5,12 +5,18 @@ import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../../components/core/AppText/AppText';
 import {SvgIcon} from '../../../components/utility/SvgIcon';
-import {EmptyState} from '../../../components/utility/EmptyState/EmptyState';
 import {SectionHeader} from '../../../components/utility/SectionHeader/SectionHeader';
+import {PlaylistCover} from '../../../components/playlist/PlaylistCover';
+import type {Playlist} from '../../../types/playlist';
 
 interface QuickAccessShelfProps {
   title?: string;
-  playlists: Array<{id: string; name: string; items?: unknown[]; trackCount?: number}>;
+  /**
+   * The playlists the rail draws. They are WHOLE playlists: the tile
+   * draws the playlist's cover, so the rail needs the artwork and the
+   * pinned state — not a summary of them.
+   */
+  playlists: Playlist[];
   onPlaylistPress: (playlistId: string) => void;
   /** P41.5: See All coverage — every shelf links to its full catalog. */
   onSeeAll?: () => void;
@@ -23,15 +29,21 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
   onSeeAll,
 }) => {
   const {colors} = useTheme();
-  // Match the other Home rails: empty sections start collapsed, while
-  // populated sections start expanded. The chevron owns in-memory state.
-  const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null);
-  const hasData = playlists.length > 0;
-  const collapsed = userCollapsed ?? !hasData;
+  // Match the other Home rails: a populated section starts expanded, and
+  // the chevron owns in-memory state.
+  const [userCollapsed, setUserCollapsed] = useState(false);
   const onToggleCollapsed = useCallback(() => {
-    setUserCollapsed(prev => (prev ?? !hasData) ? false : true);
-  }, [hasData]);
-  const showBody = !collapsed;
+    setUserCollapsed(prev => !prev);
+  }, []);
+  const showBody = !userCollapsed;
+
+  // Spec §4.11: a rail with NOTHING to show collapses - the title goes
+  // with it. An empty rail under a title is a lie of a different kind,
+  // and the "no playlists yet" empty state belongs to the page that
+  // OWNS playlists (`AllPlaylistsScreen`), not to a shelf on Home.
+  if (playlists.length === 0) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
@@ -41,20 +53,11 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
         actionLabel={playlists.length > 1 ? 'See All' : undefined}
         onAction={onSeeAll}
         collapsible
-        collapsed={collapsed}
+        collapsed={userCollapsed}
         onToggleCollapsed={onToggleCollapsed}
       />
 
-      {showBody && playlists.length === 0 ? (
-        <EmptyState
-          icon="listMusic"
-          title="No Playlists Yet"
-          description="Create a playlist from the player to see it here."
-          variant="compact"
-        />
-      ) : null}
-
-      {showBody && playlists.length > 0 ? (
+      {showBody ? (
         <FlatList
         horizontal
         data={playlists}
@@ -64,6 +67,7 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
             activeOpacity={0.85}
             onPress={() => onPlaylistPress(playlist.id)}
             accessibilityRole="button"
+            accessibilityLabel={`Open playlist ${playlist.name}${playlist.pinned ? ', pinned' : ''}`}
             style={styles.card}>
             <LinearGradient
               colors={[colors.background.elevated, colors.accent.goldFaint]}
@@ -72,12 +76,13 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
             
             <View style={styles.cardContent}>
               <View style={styles.topRow}>
-                <View style={[styles.iconBox, {backgroundColor: colors.accent.goldDim}]}>
-                  <SvgIcon name="listMusic" size={18} color={colors.accent.gold} />
-                </View>
+                {/* The tile's icon box IS the playlist's cover - the same
+                    artwork the Library card draws (spec §4.2), and with
+                    it the pin badge that says which are pinned. */}
+                <PlaylistCover playlist={playlist} style={styles.cover} />
                 <View style={[styles.badge, {backgroundColor: colors.accent.goldSoft}]}>
                   <AppText variant="caption" color="accent" style={{fontSize: 10, fontWeight: '700'}}>
-                    {(playlist.items?.length ?? playlist.trackCount ?? 0)} ITEMS
+                    {playlist.items.length} ITEMS
                   </AppText>
                 </View>
               </View>
@@ -130,12 +135,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  iconBox: {
+  // The tile's artwork box. The collage fills it, and the corner radius
+  // clips the cells.
+  cover: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   badge: {
     paddingHorizontal: 6,

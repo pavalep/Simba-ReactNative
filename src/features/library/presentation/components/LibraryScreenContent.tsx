@@ -384,7 +384,7 @@ export const LibraryScreen: React.FC<Props> = ({navigation}) => {
       </View>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <LibraryPlaylistsSegment playlists={filteredPlaylists} colors={colors} onPlaylistCardPress={handlePlaylistCardPress} onPlayAllPlaylist={handlePlayAllPlaylist} onShufflePlaylist={handleShufflePlaylist} />
+        <LibraryPlaylistsSegment playlists={filteredPlaylists} onPlaylistCardPress={handlePlaylistCardPress} onPlayAllPlaylist={handlePlayAllPlaylist} onShufflePlaylist={handleShufflePlaylist} />
       </ScrollView>
 
       <Fab

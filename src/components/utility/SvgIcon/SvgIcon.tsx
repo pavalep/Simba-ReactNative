@@ -45,6 +45,11 @@ import FolderFillSvg from '../../../assets/svg/ic_folder.svg';
 import AlertCircleSvg from '../../../assets/svg/ic_alert_circle.svg';
 import BookmarkSvg from '../../../assets/svg/ic_bookmark.svg';
 import BookmarkFilledSvg from '../../../assets/svg/ic_bookmark_filled.svg';
+// The pin pair: the outline marks "pinned", the filled one marks "this is
+// the pinned state". A pushpin is what Spotify's "Pin playlist" and YouTube
+// Music's "Pin to top" use, so it is the glyph a user already recognises.
+import PinSvg from '../../../assets/svg/ic_pin.svg';
+import PinFilledSvg from '../../../assets/svg/ic_pin_filled.svg';
 import PictureInPictureSvg from '../../../assets/svg/ic_picture_in_picture.svg';
 import SpeedSvg from '../../../assets/svg/ic_speed.svg';
 import MoonSvg from '../../../assets/svg/ic_moon.svg';
@@ -146,6 +151,8 @@ const icons = {
   alertCircle: AlertCircleSvg,
   bookmark: BookmarkSvg,
   bookmarkFilled: BookmarkFilledSvg,
+  pin: PinSvg,
+  pinFilled: PinFilledSvg,
   pictureInPicture: PictureInPictureSvg,
   speed: SpeedSvg,
   moon: MoonSvg,

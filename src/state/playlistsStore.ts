@@ -34,6 +34,7 @@ export interface PlaylistsActions {
   addItemToPlaylist: (input: {playlistId: string; item: PlaylistItem}) => void;
   removeItemFromPlaylist: (input: {playlistId: string; itemId: string}) => void;
   reorderPlaylistItems: (input: {playlistId: string; fromIndex: number; toIndex: number}) => void;
+  setPlaylistPinned: (input: {playlistId: string; pinned: boolean}) => void;
   clearPlaylist: (id: string) => void;
   importPlaylist: (input: {
     name: string;
@@ -203,6 +204,24 @@ export const usePlaylistsStore = create<PlaylistsState & PlaylistsActions>()(
             const [moved] = items.splice(fromIndex, 1);
             items.splice(toIndex, 0, moved);
             return {...pl, items, updatedAt: new Date().toISOString()};
+          }),
+        })),
+
+      setPlaylistPinned: ({playlistId, pinned}) =>
+        set((s) => ({
+          playlists: s.playlists.map(pl => {
+            if (pl.id !== playlistId) return pl;
+            // D-P3: the pinned order is the RECENCY of pinning, so the stamp
+            // is written when the pin goes on and cleared when it comes
+            // off. Keeping a stale stamp would make an unpinned playlist
+            // reappear in the old pinned slot.
+            const now = new Date().toISOString();
+            return {
+              ...pl,
+              pinned,
+              pinnedAt: pinned ? now : undefined,
+              updatedAt: now,
+            };
           }),
         })),
 

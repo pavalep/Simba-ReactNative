@@ -2,11 +2,9 @@ import React from 'react';
 import {StyleSheet, FlatList} from 'react-native';
 import {PlaylistCard} from '../../../../components/playlist/PlaylistCard/PlaylistCard';
 import {Playlist} from '../../../../types/playlist';
-import {ColorTokens} from '../../../../theme/tokens';
 
 interface LibraryPlaylistsSegmentProps {
   playlists: Playlist[];
-  colors: ColorTokens;
   onPlaylistCardPress: (playlistId: string) => void;
   onPlayAllPlaylist: (playlistId: string) => void;
   onShufflePlaylist: (playlistId: string) => void;

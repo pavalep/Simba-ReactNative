@@ -24,6 +24,7 @@ import {useWeather} from '../../../hooks/useWeather';
 import type {WeatherCondition} from '../../../components/utility/WeatherIcon';
 import type {WeatherSnapshot} from '../../../infrastructure/api/weather/adapter';
 import type {HomeSection} from '../types';
+import type {Playlist} from '../../../types/playlist';
 import {useMediaStore} from '../../../state';
 
 // ── Helpers ──
@@ -101,6 +102,27 @@ function deriveFirstName(authUser: {name?: string} | null | undefined): string {
   if (!authUser?.name) {return 'there';}
   const first = authUser.name.trim().split(/\s+/)[0] ?? '';
   return first.length > 0 ? first : 'there';
+}
+
+/**
+ * How many playlists Home's playlist shelf shows.
+ *
+ * The cap lives HERE, next to the order it applies to, rather than at
+ * the call site: the shelf and its limit are one decision.
+ */
+const HOME_PLAYLIST_SHELF_LIMIT = 3;
+
+/**
+ * When a playlist was pinned, in milliseconds.
+ *
+ * `pinnedAt` is stamped by the store at the moment of pinning, so it
+ * is the RECENCY OF PINNING - which is what orders the pinned shelf
+ * (D-P3). A pinned record with no stamp falls back to its own
+ * `updatedAt`: the shelf still has to put it somewhere, and its own
+ * recency is the closest true answer.
+ */
+function pinnedAtMs(playlist: Playlist): number {
+  return new Date(playlist.pinnedAt ?? playlist.updatedAt ?? playlist.createdAt).getTime();
 }
 
 // ── Hook ──
@@ -399,11 +421,23 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
       realSections.push({type: 'GENRE', genres});
     }
 
-    const pinnedPlaylists = [...playlists]
-      .sort((a, b) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime())
-      .slice(0, 3);
+    // D-P3 + spec §4.6: the shelf is PINNED FIRST, and the pinned order
+    // is the RECENCY OF PINNING (`pinnedAt`), not the playlist's own
+    // `updatedAt`. The unpinned playlists follow, by recency.
+    //
+    // The shelf used to sort by `updatedAt` alone under a title that
+    // said "Pinned" - which lied: a playlist edited yesterday outranked
+    // one the user pinned last week. The order is now the truth the
+    // title claims.
+    const pinned = playlists
+      .filter(p => p.pinned)
+      .sort((a, b) => pinnedAtMs(b) - pinnedAtMs(a));
+    const unpinned = playlists
+      .filter(p => !p.pinned)
+      .sort((a, b) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime());
+    const shelfPlaylists = [...pinned, ...unpinned].slice(0, HOME_PLAYLIST_SHELF_LIMIT);
 
-    realSections.push({type: 'PLAYLISTS', items: pinnedPlaylists});
+    realSections.push({type: 'PLAYLISTS', items: shelfPlaylists});
 
     return realSections;
   }, [recentFiles, playlists, bookmarks, genres, followedPodcasts]);

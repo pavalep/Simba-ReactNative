@@ -1,10 +1,10 @@
 import React, {useMemo} from 'react';
 import {View, TouchableOpacity, StyleSheet} from 'react-native';
-import {MediaImage} from '../../utility/MediaImage';
 import {useTheme} from '../../../theme';
 import {radius, spacing} from '../../../theme/tokens';
 import {AppText} from '../../core/AppText/AppText';
 import {SvgIcon} from '../../utility/SvgIcon';
+import {PlaylistCover} from '../PlaylistCover';
 import type {Playlist} from '../../../types/playlist';
 import {PLAYLIST_KIND_LABELS} from '../../../types/playlist';
 
@@ -39,7 +39,6 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
   }, [playlist.updatedAt]);
 
   const itemCount = playlist.items.length;
-  const coverItems = playlist.items.slice(0, 4);
 
   return (
     <TouchableOpacity
@@ -47,40 +46,14 @@ export const PlaylistCard: React.FC<PlaylistCardProps> = ({
       activeOpacity={0.7}
       onPress={() => onPress(playlist.id)}
       accessibilityRole="button"
-      accessibilityLabel={`Open playlist ${playlist.name}`}>
-      {/* ── Cover Collage ── */}
+      accessibilityLabel={`Open playlist ${playlist.name}${playlist.pinned ? ', pinned' : ''}`}>
+      {/* ── Cover ── */}
+      {/* The ARTWORK has ONE owner (`PlaylistCover`), and the pin badge
+          lives inside it - so the badge sits over the COVER, and it
+          sits over the cover on EVERY surface a playlist is drawn
+          (spec §4.2, §4.3). */}
       <View style={styles.coverArea}>
-        {coverItems.length === 0 ? (
-          <View style={[styles.emptyCover, {backgroundColor: colors.background.floating}]}>
-            <SvgIcon name="listMusic" size={24} color={colors.text.tertiary} />
-          </View>
-        ) : (
-          <View style={styles.collage}>
-            {coverItems.map((item, i) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.collageCell,
-                  {backgroundColor: colors.background.floating},
-                  coverItems.length === 1 && styles.collageCellFull,
-                ]}>
-                {item.thumbnailPath ? (
-                  <MediaImage
-                    source={item.thumbnailPath}
-                    style={StyleSheet.absoluteFill}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <SvgIcon
-                    name={i % 2 === 0 ? 'music' : 'headphones'}
-                    size={14}
-                    color={colors.text.tertiary}
-                  />
-                )}
-              </View>
-            ))}
-          </View>
-        )}
+        <PlaylistCover playlist={playlist} style={styles.cover} />
 
         {/* ── Kind Badge ── */}
         <View style={[styles.kindBadge, {backgroundColor: colors.accent.goldDim}]}>
@@ -146,28 +119,10 @@ const styles = StyleSheet.create({
     position: 'relative',
     aspectRatio: 16 / 9,
   },
-  emptyCover: {
+  // The cover fills the cover area. The CHROME - the 16:9 box - is the
+  // card's; the ARTWORK is `PlaylistCover`'s.
+  cover: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  collage: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  collageCell: {
-    width: '50%',
-    height: '50%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'transparent',
-    overflow: 'hidden',
-  },
-  collageCellFull: {
-    width: '100%',
-    height: '100%',
   },
   kindBadge: {
     position: 'absolute',

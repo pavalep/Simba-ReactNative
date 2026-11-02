@@ -24,23 +24,28 @@ import {BackButton} from '../../../components/utility/BackButton/BackButton';
 import {EmptyState} from '../../../components/feedback/EmptyState/EmptyState';
 import {SimbaStatusBar} from '../../../components/StatusBar';
 import {useConfirmDialog} from '../../../components/core/Dialog/ConfirmDialog';
+import {PlaylistCreateModal} from '../../../components/playlist/PlaylistCreateModal';
 import {useAllPlaylistsScreen} from '../hooks/useAllPlaylistsScreen';
 import type {PlaylistKind} from '../../../types/playlist';
 import {PLAYLIST_KIND_LABELS} from '../../../types/playlist';
 
-type SingleLanePlaylistKind = Exclude<PlaylistKind, 'MIXED'>;
-
 export const AllPlaylistsScreen: React.FC = () => {
   const {colors} = useTheme();
-  const {allPlaylists, handlePlaylistPress, handleCreate, handleRename, handleDelete} =
-    useAllPlaylistsScreen();
+  const {
+    allPlaylists,
+    handlePlaylistPress,
+    handleCreate,
+    handleRename,
+    handleDelete,
+    handleTogglePin,
+  } = useAllPlaylistsScreen();
 
   const {confirm: confirmDelete, dialog: deleteDialog} = useConfirmDialog();
 
   // ── Create Modal State ──
+  // The create FORM belongs to `PlaylistCreateModal` - the one owner. This
+  // screen only owns whether that modal is open.
   const [createVisible, setCreateVisible] = useState(false);
-  const [createName, setCreateName] = useState('');
-  const [createKind, setCreateKind] = useState<SingleLanePlaylistKind>('AUDIO_ONLY');
 
   // ── Rename Modal State ──
   const [renameVisible, setRenameVisible] = useState(false);
@@ -52,13 +57,13 @@ export const AllPlaylistsScreen: React.FC = () => {
     {staggerDelay: 50, direction: 'up', duration: 300},
   );
 
-  const handleCreateSubmit = useCallback(() => {
-    if (createName.trim()) {
-      handleCreate(createName.trim(), createKind);
+  const handleCreateSubmit = useCallback(
+    (name: string, kind: PlaylistKind) => {
+      handleCreate(name, kind);
       setCreateVisible(false);
-      setCreateName('');
-    }
-  }, [createName, createKind, handleCreate]);
+    },
+    [handleCreate],
+  );
 
   const handleStartRename = useCallback(
     (id: string, currentName: string) => {
@@ -100,7 +105,7 @@ export const AllPlaylistsScreen: React.FC = () => {
       activeOpacity={0.7}
       onPress={() => handlePlaylistPress(item)}
       accessibilityRole="button"
-      accessibilityLabel={`Open playlist ${item.name}`}>
+      accessibilityLabel={`Open playlist ${item.name}${item.pinned ? ', pinned' : ''}`}>
       <View style={[styles.iconBox, {backgroundColor: colors.accent.goldDim}]}>
         <SvgIcon name="listMusic" size={22} color={colors.accent.gold} />
       </View>
@@ -113,6 +118,27 @@ export const AllPlaylistsScreen: React.FC = () => {
           {PLAYLIST_KIND_LABELS[item.kind]}
         </AppText>
       </View>
+      {/* The pin TOGGLE. The management page shows visible management
+          buttons, and the pin is one of them: a long-press is not
+          reachable by a screen reader or a keyboard (D-P8, spec §4.5). */}
+      <TouchableOpacity
+        style={[
+          styles.actionBtn,
+          {backgroundColor: item.pinned ? colors.accent.goldDim : colors.border.subtle},
+        ]}
+        onPress={() => handleTogglePin(item.id, !item.pinned)}
+        activeOpacity={0.7}
+        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+        accessibilityRole="button"
+        accessibilityLabel={item.pinned ? 'Unpin from top' : 'Pin to top'}
+        accessibilityHint={item.name}
+        accessibilityState={{selected: item.pinned}}>
+        <SvgIcon
+          name={item.pinned ? 'pinFilled' : 'pin'}
+          size={14}
+          color={item.pinned ? colors.accent.gold : colors.text.secondary}
+        />
+      </TouchableOpacity>
       <TouchableOpacity
         style={[styles.actionBtn, {backgroundColor: colors.border.subtle}]}
         onPress={() => handleStartRename(item.id, item.name)}
@@ -183,89 +209,12 @@ export const AllPlaylistsScreen: React.FC = () => {
       )}
 
       {/* ── Create Modal ── */}
-      <Modal
+      {/* One owner for "create a playlist": PlaylistCreateModal. */}
+      <PlaylistCreateModal
         visible={createVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCreateVisible(false)}>
-        <View style={[styles.modalOverlay, {backgroundColor: colors.background.floating}]}>
-          <View
-            style={[
-              styles.modalContent,
-              {backgroundColor: colors.background.elevated},
-            ]}>
-            <AppText variant="displaySans" color="primary" style={{marginBottom: spacing.md}}>
-              New Playlist
-            </AppText>
-
-            <AppTextInput
-              value={createName}
-              onChangeText={setCreateName}
-              placeholder="Playlist name"
-              autoFocus
-              clearable
-              validate={v =>
-                v.trim() ? undefined : 'Enter a playlist name.'
-              }
-              containerStyle={styles.modalInput}
-            />
-
-            {/* Kind selector (59.1: virtualized) */}
-            <FlatList
-              horizontal
-              data={['AUDIO_ONLY', 'VIDEO_ONLY'] as SingleLanePlaylistKind[]}
-              keyExtractor={k => k}
-              renderItem={({item: k}) => (
-                <TouchableOpacity
-                  style={[
-                    styles.kindChip,
-                    {
-                      backgroundColor:
-                        createKind === k
-                          ? colors.accent.gold
-                          : colors.background.floating,
-                      borderColor: colors.border.subtle,
-                    },
-                  ]}
-                  onPress={() => setCreateKind(k)}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                  accessibilityState={{selected: createKind === k}}
-                  accessibilityLabel={`${k === 'AUDIO_ONLY' ? 'Audio' : 'Video'} playlist type`}>
-                  <AppText
-                    variant="caption"
-                    color={createKind === k ? 'onGold' : 'secondary'}>
-                    {k === 'AUDIO_ONLY' ? 'Audio' : 'Video'}
-                  </AppText>
-                </TouchableOpacity>
-              )}
-              contentContainerStyle={styles.kindRow}
-              showsHorizontalScrollIndicator={false}
-              scrollEnabled={false}
-              initialNumToRender={3}
-            />
-
-            <View style={styles.modalActions}>
-              <AppButton
-                title="Cancel"
-                variant="text"
-                size="sm"
-                onPress={() => {
-                  setCreateVisible(false);
-                  setCreateName('');
-                }}
-              />
-              <AppButton
-                title="Create"
-                variant="primary"
-                size="sm"
-                onPress={handleCreateSubmit}
-                disabled={!createName.trim()}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setCreateVisible(false)}
+        onCreate={handleCreateSubmit}
+      />
 
       {/* ── Rename Modal ── */}
       <Modal
@@ -380,18 +329,6 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     marginBottom: spacing.md,
-  },
-  kindRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  kindChip: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
   },
   modalActions: {
     flexDirection: 'row',

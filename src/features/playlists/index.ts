@@ -1,5 +1,6 @@
 import {useCallback, useImperativeHandle, useMemo, type Ref} from 'react';
 import type {MediaKind, MediaLane, MediaSource} from '../../types/media';
+import {normalizeMediaClassification} from '../../types/media';
 import {isPlaylistMediaKindAllowed, playlistKindToLane, type Playlist, type PlaylistItem, type PlaylistKind} from '../../types/playlist';
 import {
   MAX_ITEMS_PER_PLAYLIST,
@@ -7,25 +8,21 @@ import {
   normalizePersistedPlaylists,
   usePlaylistsStore,
 } from '../../state';
+import type {AddPlaylistItemResult, CreatePlaylistResult} from './types';
 
 export {MAX_PLAYLISTS, MAX_ITEMS_PER_PLAYLIST, normalizePersistedPlaylists};
+export {reportBatchAdd} from './batchAddReport';
+export type {BatchAddReport} from './batchAddReport';
 
 export type PlaylistItemInput = Omit<PlaylistItem, 'id' | 'addedAt'> & {
   id?: string;
   addedAt?: string;
 };
 
-export type CreatePlaylistResult =
-  | {status: 'created'; playlist: Playlist}
-  | {status: 'limit-reached'; max: number};
-
-export type AddPlaylistItemResult =
-  | {status: 'added'; playlist: Playlist; item: PlaylistItem}
-  | {status: 'playlist-not-found'}
-  | {status: 'duplicate'; playlist: Playlist; item: PlaylistItem}
-  | {status: 'playlist-full'; playlist: Playlist; max: number}
-  | {status: 'lane-mismatch'; playlist: Playlist; item: PlaylistItem}
-  | {status: 'unsupported-media-kind'; playlist: Playlist; item: PlaylistItem};
+// The result types live in `types.ts` so the feature's own reporting
+// helpers can name a status without importing this facade. They are
+// re-exported here, so the public API is unchanged.
+export type {AddPlaylistItemResult, CreatePlaylistResult};
 
 export interface PlaylistController {
   list: Playlist[];
@@ -39,6 +36,7 @@ export interface PlaylistController {
   clearPlaylist: (playlistId: string) => void;
   importPlaylist: (input: {name: string; info?: string; kind: PlaylistKind; items: PlaylistItemInput[]}) => void;
   updateItemPosition: (playlistId: string, fileUri: string, position: number) => void;
+  setPinned: (playlistId: string, pinned: boolean) => void;
 }
 
 const createItem = (input: PlaylistItemInput): PlaylistItem => ({
@@ -110,6 +108,33 @@ export function importPlaylist(
   });
 }
 
+/**
+ * THE rule for "which of these playlists can take this item".
+ *
+ * Both add-to-playlist surfaces call this, so they cannot disagree about
+ * which playlists an item may go into. The item's kind is classified HERE,
+ * not by the caller, because a caller that forgets to pass `type` is
+ * silently given the broad 'audio' / 'video' fallback - and that broad
+ * fallback is exactly how a radio station ended up in a playlist.
+ */
+export function compatiblePlaylistsFor(
+  item: {type?: MediaKind; mediaType?: MediaLane},
+  playlists: Playlist[],
+): Playlist[] {
+  const classified = normalizeMediaClassification(item);
+  return playlists.filter(playlist =>
+    isPlaylistMediaKindAllowed(playlist.kind, classified.type, classified.mediaType),
+  );
+}
+
+/**
+ * Pin a playlist, or unpin it. The pinned order is the recency of pinning,
+ * so pinning again moves a playlist back to the top.
+ */
+export function setPlaylistPinned(playlistId: string, pinned: boolean): void {
+  usePlaylistsStore.getState().setPlaylistPinned({playlistId, pinned});
+}
+
 export function updatePlaylistItemPosition(
   playlistId: string,
   fileUri: string,
@@ -162,6 +187,10 @@ export function usePlaylists(ref?: Ref<PlaylistController>) {
       updatePlaylistItemPosition(playlistId, fileUri, position),
     [],
   );
+  const setPinned = useCallback(
+    (playlistId: string, pinned: boolean) => setPlaylistPinned(playlistId, pinned),
+    [],
+  );
 
   const controller = useMemo<PlaylistController>(() => ({
     list,
@@ -175,7 +204,8 @@ export function usePlaylists(ref?: Ref<PlaylistController>) {
     clearPlaylist: clear,
     importPlaylist: importItems,
     updateItemPosition: updatePosition,
-  }), [list, getPlaylist, create, rename, remove, add, removeItem, reorder, clear, importItems, updatePosition]);
+    setPinned,
+  }), [list, getPlaylist, create, rename, remove, add, removeItem, reorder, clear, importItems, updatePosition, setPinned]);
 
   useImperativeHandle(ref, () => controller, [controller]);
 
