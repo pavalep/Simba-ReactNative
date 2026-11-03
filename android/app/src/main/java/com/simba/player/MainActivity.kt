@@ -162,6 +162,54 @@ class MainActivity : ReactActivity() {
     private const val TAG = "MainActivity"
   }
 
+  // ── The user is leaving the app ──
+  //
+  // Android calls this when the user is about to leave — home, recents,
+  // the app switcher — and it is the ONLY hook that fires BEFORE the
+  // activity goes to the background. That is what makes it the right
+  // place to start a Picture-in-Picture entry.
+  //
+  // WHY THE ORDER MATTERS SO MUCH
+  //
+  // **An Activity in Picture-in-Picture does not redraw.** Whatever its
+  // window held at the moment the OS transitioned it into PiP is what the
+  // PiP window keeps showing — frozen.
+  //
+  // Measured on the emulator on 2026-11-03: the PiP window showed this
+  // app's FULL expanded chrome — the header band with the lock and the
+  // bookmark, the scrub row with the elapsed and remaining clocks, the
+  // ±10 buttons and the big circular pause button — scaled down into the
+  // small window, and the user called it "not professional looking at
+  // all". Its buttons were DEAD (tapping pause did not pause: their views
+  // were gone) and its clock was FROZEN at 51:09 while the real position
+  // was 54:15 (the pixels were stale) — while the JS side already said
+  // `pipActive: true` and `isExpanded: false`.
+  //
+  // The cause was the ORDER, not the state. The library had armed the
+  // platform's own auto-enter switch, so the SYSTEM started the
+  // transition with the chrome still mounted. The fix is to let the app
+  // enter PiP itself, in the only order that works:
+  //
+  //   1. the chrome is unmounted (the JS side),
+  //   2. the frame that drew it without the chrome is presented, and
+  //   3. only THEN is the OS asked for the window.
+  //
+  // So this hook does NOT enter PiP, and it does not hide the chrome
+  // either. It tells the JS that the user is leaving, and the JS does the
+  // rest: `usePipEntry()` owns the order, because only the JS side knows
+  // when the frame that removed the chrome has gone by.
+  //
+  // The emit happens in the module companion, for the same reason the PiP
+  // callback below does it there: bridgeless RN cannot resolve the
+  // ReactContext reliably from the Activity.
+  override fun onUserLeaveHint() {
+    super.onUserLeaveHint()
+    if (BuildConfig.DEBUG) {
+      android.util.Log.i(TAG, "onUserLeaveHint: the user is leaving the app")
+    }
+    MpvBridgeModule.notifyUserLeaveHint()
+  }
+
   // ── PiP mode change callback ──
   override fun onPictureInPictureModeChanged(
     isInPictureInPictureMode: Boolean,

@@ -76,6 +76,7 @@
  */
 
 import {useEffect, useRef} from 'react';
+import {subscribePlayerEvent} from '@simba-dev/react-native-media-player';
 import {usePresentationStore} from '../../state/usePresentationStore';
 import {useTransport} from './useTransport';
 
@@ -101,6 +102,27 @@ export function usePipEntry(): void {
   commandsRef.current = commands;
   const resolveRef = useRef(resolvePipEntry);
   resolveRef.current = resolvePipEntry;
+  const requestPipRef = useRef(usePresentationStore.getState().requestPip);
+  requestPipRef.current = usePresentationStore.getState().requestPip;
+
+  // The user is leaving the app — home, recents, app switcher.
+  //
+  // The library tells us WHEN (its `onUserLeaveHint` event, raised from
+  // the Activity's `onUserLeaveHint()`), because the platform's own
+  // auto-enter switch cannot: it makes the SYSTEM transition the Activity
+  // with the chrome still mounted, and an Activity in PiP does not
+  // redraw — so the chrome would be frozen into the PiP window as a dead,
+  // stale layer. That was measured on the emulator on 2026-11-03.
+  //
+  // The entry below then happens in the only order that works: the chrome
+  // is unmounted, the frame that drew it goes by, and only then is the OS
+  // asked for the window.
+  useEffect(() => {
+    const unsubscribe = subscribePlayerEvent('onUserLeaveHint', () => {
+      requestPipRef.current();
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (!pipEntryRequested) return undefined;
