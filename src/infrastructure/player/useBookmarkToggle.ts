@@ -41,11 +41,19 @@ import {mediaKey} from './playbackProgress';
  *
  * ## The identity problem, and why the session is the source
  *
- * There is no "current uri" in player state. `useTransport().state
- * .currentUri` comes from the lib's queue, and this app launches a
- * single file, so it is null. `useNowPlayingStore` is what the launch
- * seam published, and it is the only place that knows. Before this,
- * a bookmark could not be attached to the file actually playing.
+ * The identity of "the file that is playing" is owned by
+ * `useNowPlayingStore` — what the launch seam published — and this hook
+ * reads the owner. `useTransport().state.currentUri` reads the SAME
+ * session (it is derived from it, for the transport's own consumers), so
+ * the two agree on which file they mean.
+ *
+ * Before this, a bookmark could not be attached to the file actually
+ * playing at all. And for a while after it, `currentUri` was still the
+ * LIB's queue's current URI — which this app leaves permanently empty,
+ * because `loadfile` REPLACES mpv's playlist with exactly one entry and
+ * the app never calls `commands.loadPlaylist` (bug `B-046`, fix `F-053`).
+ * It was therefore permanently `null`, which is why the session — the
+ * owner — is what this hook reads, rather than the transport's copy of it.
  */
 
 export interface BookmarkToggle {

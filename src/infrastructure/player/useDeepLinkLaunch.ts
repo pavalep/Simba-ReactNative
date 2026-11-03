@@ -6,10 +6,21 @@
  * `AppContent` used the **lib's** `useOpenFromUrl()`. That hook forwards
  * to `useOpenWithResume()` → `usePlayerActivity().openPlayer()` → the
  * bridge, and the bridge asks `isSurfaceMounted()` before it will open a
- * VIDEO. `PlayerSurface.attach(...)` — the only writer of the registry's
- * `viewRef` — has **ZERO** call sites, so `viewRef` is never non-null,
- * `current()` always returns `null`, and `isSurfaceMounted()` always
- * answers `false`. **A deep-linked video therefore never played at all.**
+ * VIDEO. **At the time**, `PlayerSurface.attach(...)` — the only writer of
+ * the registry's `viewRef` — had **ZERO** call sites, so `viewRef` was
+ * never non-null, `current()` always returned `null`, and
+ * `isSurfaceMounted()` always answered `false`. **A deep-linked video
+ * therefore never played at all.**
+ *
+ * **That registry half was fixed in the lib on 2026-10-29** (bug `B-033`,
+ * fix `F-036`): `isSurfaceMounted()` now reads the LIVE
+ * `MpvRenderViewRegistry`, which `MpvRenderViewManager` writes when the
+ * ViewManager creates a picture and clears when it drops one
+ * (`MpvBridgeModule.kt:2206`). So the registry is no longer the trap it
+ * was — but the half this hook fixes was never the lib's to fix, and is
+ * still the app's: the lib's deep-link path goes around the app's own
+ * launch seam, and with it goes the now-playing entry, the history
+ * checkpoint, the dock and the resume prompt.
  *
  * ## What was ALSO lost
  *

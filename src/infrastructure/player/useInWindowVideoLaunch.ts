@@ -9,12 +9,17 @@
  * window, so with video in a different Activity an in-app mini player is not
  * merely awkward but impossible.
  *
- * The library already anticipated this. `useLaunchPlayback` is exported
- * "so a consumer using `<SimbaPlayerRoot headless>` can call it directly
- * for a payload the module did not originate", and it takes a plain
- * `LaunchParams` — it does not care where the payload came from. So the
+ * The library already anticipated this. `useLaunchPlayback` is exported as
+ * **the load lifecycle, and nothing else** — "deliberately separate from any
+ * UI so a consumer can own the player screen while the module still
+ * guarantees 'these params get loaded exactly once'" — and it takes a plain
+ * `LaunchParams`; it does not care where the payload came from. So the
  * in-window path is the library's own load half, not a second mechanism
  * invented alongside it.
+ *
+ * (This used to quote the lib's `<SimbaPlayerRoot headless>` wording. That
+ * shape is gone — the lib replaced it with the contract quoted above, and a
+ * quote of a shape the library no longer has is a quote of nothing.)
  *
  * ## Why the payload is rebuilt from the session
  *
