@@ -26,10 +26,13 @@
  *
  * ## Why that happens
  *
- * **An Activity in Picture-in-Picture does not redraw.** The window's
- * content is frozen at the moment of the transition, and the separate
- * video layer keeps compositing on top of it — which is exactly what
- * was measured: live video under a dead, frozen control bar.
+ * **An Activity in Picture-in-Picture is "paused, but rendering"**
+ * (source.android.com/docs/core/display/pip) — what stops is REACT. RN
+ * pauses the React scheduler when the Activity is paused, so a React
+ * commit cannot land and no frame is produced. The window's content is
+ * therefore whatever it was at the moment of the transition, and the
+ * separate video layer keeps compositing on top of it — which is exactly
+ * what was measured: live video under a dead, frozen control bar.
  *
  * So the order is the whole contract:
  *

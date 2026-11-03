@@ -30,7 +30,6 @@
 //         it breaks navigation).
 package com.simba.player
 
-import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
@@ -41,8 +40,6 @@ import com.simba.player.mpv.MPVLib
 import com.simba.player.mpv.MpvBridgeModule
 
 class MainActivity : ReactActivity() {
-
-  private var pipReceiver: PipActionReceiver? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     // Switch from splash theme to app theme before RN renders
@@ -76,16 +73,39 @@ class MainActivity : ReactActivity() {
     // every `setNativePtr`, so two surfaces would fight over one engine and the
     // symptom would be a black picture with nothing in the log.
     //
-    // Register PiP action broadcast receiver (API 33+ requires flag)
-    pipReceiver = PipActionReceiver()
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      registerReceiver(pipReceiver, PipManager.intentFilter(), Context.RECEIVER_EXPORTED)
-    } else {
-      registerReceiver(pipReceiver, PipManager.intentFilter())
-    }
-    // NOTE: Auto PiP removed intentionally. PiP entry is now explicit only —
-    // triggered by JS swipe-down gesture or programmatic enterPip() call.
-    // This prevents the full activity (including UI chrome) from rendering in PiP.
+    // The PiP action receiver is NOT registered here, and must not be.
+    //
+    // It used to be. That registration never worked, and the reason is
+    // worth keeping: the platform's PiP action row fired a PendingIntent
+    // whose intent named the receiver's component EXPLICITLY, and an
+    // explicit broadcast is resolved through the MANIFEST. The receiver
+    // was a runtime registration, so the explicit broadcast found
+    // nothing to deliver to and was dropped before it was ever
+    // dispatched.
+    //
+    // Measured on emulator-5554 (API 37) on 2026-11-03: the action row
+    // rendered three buttons at the correct size, right beside the
+    // platform's own settings / expand / close buttons - and all three
+    // of THOSE worked. Tapping ours produced no broadcast at all
+    // (`dumpsys activity broadcasts` held no record of the action),
+    // while the same action sent implicitly was dispatched in 0 ms.
+    //
+    // The library owns the receiver now: it registers it once per
+    // process, on the application context, and the action broadcast is
+    // implicit so that registration can match it. A second registration
+    // here would deliver every action TWICE - and a play/pause that
+    // toggles twice leaves playback exactly where it was, which is the
+    // same dead-button symptom with a different cause.
+    //
+    // The platform's own auto-enter switch is deliberately NOT armed.
+    // The app performs the PiP entry itself, after removing its chrome.
+    // An Activity in PiP is "paused, but rendering" - what stops is
+    // REACT: its scheduler is paused with the Activity, so a commit
+    // cannot land and no frame is produced. The switch would transition
+    // the Activity before the chrome could be removed, so the chrome
+    // would still be mounted when the PiP window was created - and with
+    // no frame coming, it would stay there: dead and scaled down.
+    // See the library's `PipManager`.
   }
 
   override fun onResume() {
@@ -138,10 +158,13 @@ class MainActivity : ReactActivity() {
 
   override fun onDestroy() {
     super.onDestroy()
-    pipReceiver?.let { unregisterReceiver(it) }
-    pipReceiver = null
     // Nothing to unmount: the video picture is a React view now, so React
     // Native owns its teardown along with every other view in the tree.
+    //
+    // Nothing to unregister either: the PiP action receiver is registered
+    // by the player library, once per process, on the application
+    // context. It deliberately outlives this Activity — the platform's PiP
+    // action row can fire while this Activity is paused inside PiP.
   }
 
   override fun getMainComponentName(): String = "SimbaPlayer"
@@ -171,7 +194,7 @@ class MainActivity : ReactActivity() {
   //
   // WHY THE ORDER MATTERS SO MUCH
   //
-  // **An Activity in Picture-in-Picture does not redraw.** Whatever its
+  // **React does not redraw in Picture-in-Picture (the Activity is "paused, but rendering", but RN pauses the React scheduler with it, so a React commit cannot land and no frame is produced).** Whatever its
   // window held at the moment the OS transitioned it into PiP is what the
   // PiP window keeps showing — frozen.
   //

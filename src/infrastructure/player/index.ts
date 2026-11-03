@@ -323,8 +323,7 @@ export {usePipBridge} from './usePipBridge';
 
 // V22 W23 (2026-11-03) — the single owner of the PiP ENTRY. `usePipBridge`
 // reports that the window is up; this one asks for it, and it does so only
-// after the frame that removed the chrome has been presented — an Activity
-// in PiP does not redraw, so a chrome that is still mounted at the moment
+// after the frame that removed the chrome has been presented — React does not redraw in PiP (the Activity is "paused, but rendering", but RN pauses the React scheduler with it, so a React commit cannot land and no frame is produced), so a chrome that is still mounted at the moment
 // of the transition is frozen into the PiP window as a dead, stale layer.
 // Mount once, next to `usePipBridge`.
 export {usePipEntry} from './usePipEntry';

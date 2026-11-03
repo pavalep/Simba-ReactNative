@@ -2235,6 +2235,116 @@ because there was no worker to hold a handle.
 
 ---
 
+### B-049 · P0 · lib+app · the Picture-in-Picture action row rendered three buttons and none of them worked — **RESOLVED (F-062)**
+
+**Symptom.** Enter Picture-in-Picture and tap the PiP window: the platform's
+action row shows **two** sets of buttons — its own (settings / expand / close)
+along the top, and ours — **Play/Pause**, **Expand**, **Close** — along the
+bottom. The platform's three work. Ours are the right size and **do nothing
+at all**.
+
+**Measured (emulator-5554, API 37, 2026-11-03).**
+
+- Tapping our Play button produced **no broadcast record at all** in
+  `dumpsys activity broadcasts`. The platform's own gear button, tapped in
+  the same state, opened the PiP settings screen
+  (`com.android.settings/.Settings$AppPictureInPictureSettingsActivity`).
+- Sending our action **explicitly** (`am broadcast -n
+  com.simba.player/.PipActionReceiver`) was **never dispatched** —
+  `dispatchTime=--` — in the foreground and in PiP alike.
+- Sending the very same action **implicitly** (`am broadcast -a
+  com.simba.player.PIP_PLAY_PAUSE`) was **dispatched in 0 ms**.
+
+**Root cause.** The action's `PendingIntent` named the receiver's component
+(`Intent.setClass(context, PipActionReceiver::class.java)`), and an
+**explicit** broadcast is resolved through the **manifest**.
+`PipActionReceiver` was never declared there — it existed only as a runtime
+registration — so the explicit broadcast resolved to no receiver and was
+dropped before it was ever dispatched. The receiver was registered and
+matching the whole time; only the component was wrong.
+
+**Why it survived so long.** `PipActionReceiver` swallowed the failure
+silently (`catch (_: Exception)`), so a row of dead buttons left not one line
+in the log. Buttons that LOOK right are the most expensive kind of wrong.
+
+**State:** **RESOLVED (F-062) — fixed 2026-11-03**, in library `v3.1.0`.
+
+---
+
+### B-050 · P0 · app · pressing HOME does not enter Picture-in-Picture at all — the React commit never lands while the Activity is paused
+
+**Symptom.** With the player expanded, pressing HOME opens **no** PiP window.
+The app goes to the launcher, and when the user comes back the player is
+**blank and chromeless** — no chrome, and no way out short of a force-stop.
+
+**Measured (emulator-5554, API 37, 2026-11-03)** with temporary
+instrumentation on the `onUserLeaveHint` subscription:
+
+```
+18:28:39.881  BridgelessReact: ReactHost{0}.onUserLeaveHint(activity)
+18:28:39.892  MainActivity: onUserLeaveHint: the user is leaving the app
+18:28:39.900  MpvBridgeModule: companion.notifyUserLeaveHint: autoEnter=true instance=true
+18:28:39.939  MpvBridgeModule: companion.notifyUserLeaveHint: emit succeeded
+18:28:39.965  ReactNativeJS: [PIPDIAG] 1 native event received; appState='active'
+18:28:39.978  ReactNativeJS: [PIPDIAG] 2 requestPip() returned
+18:28:45.669  ReactNativeJS: [PIPDIAG] 3 effect ran; pipEntryRequested=true
+```
+
+The native chain works end to end: the hint is delivered, the event is
+emitted, the JS handler runs, the chrome is unmounted. But the **effect** that
+asks for the window ran **5.7 seconds late**, and the `requestAnimationFrame`
+it waits on **never fired at all** — so `commands.enterPip()` was never
+reached and the bridge never logged `[PlaybackTrace][Bridge][enterPip]`.
+
+**Root cause.** RN pauses the React scheduler when the Activity is paused, and
+the frame clock does not tick while the app is backgrounded. On the HOME path
+the trigger IS the app leaving the foreground, so the entry can never be
+driven from JS: the commit that removes the chrome and the frame that presents
+it both need a scheduler that is about to stop. The BUTTON path works because
+the app is in the foreground there.
+
+**Consequences.** (1) No PiP window on HOME at all. (2) The chrome is already
+unmounted when the user returns, with no window to show it in, so the store is
+stuck at `pipActive=true` / `pipEntryRequested=true` — a black, chromeless
+screen.
+
+**The fix is a NATIVE entry, and it is NOT written yet.** The mechanism is
+settled from source (AOSP, RN 0.86 and shipping apps), but it is not
+implemented: give the expanded chrome a `nativeID`, find that host view
+natively with RN's own `ReactFindViewUtil.findView`, set
+`visibility = GONE` on it, and only then call `enterPictureInPictureMode` —
+all inside `MainActivity.onUserLeaveHint()`, which AOSP documents as running
+"right before the activity's `onPause` callback". React cannot commit a frame
+at that moment, but a native visibility change is a View-system mutation and
+schedules a real traversal, and an Activity in PiP is "paused, but rendering".
+
+---
+
+### B-051 · P2 · lib+app+docs · "an Activity in Picture-in-Picture does not redraw" was false, in nine places — **RESOLVED (F-063)**
+
+**What it was.** Nine comments across the library, the app and its tests
+explained the stale-chrome measurement with one sentence: *"an Activity in PiP
+does not redraw — whatever its window held at the moment of the transition is
+what the PiP window keeps showing."*
+
+**It is false, and it misattributes the cause.** AOSP says the opposite:
+*"In PIP, the activity is in a paused, but rendering, state"*
+(source.android.com/docs/core/display/pip). What stops is **REACT**: RN pauses
+the React scheduler when the Activity is paused, so a React commit cannot land
+and no frame is produced.
+
+The **conclusion** every one of those notes argues for is unchanged — a chrome
+that is still mounted when the window is created is frozen into it — but the
+reason was wrong, and a wrong reason is a defect: it sends the next reader
+looking for a window bug instead of a scheduler one. It is also the reason the
+fix has to be **native** (see B-050): a React commit cannot land at that
+moment, but a native `visibility` change can.
+
+**State:** **RESOLVED (F-063) — fixed 2026-11-03.**
+
+---
+
+
 ## FIXED
 
 | ID | Sev | Lane | One line | Where |
@@ -2303,6 +2413,9 @@ because there was no worker to hold a handle.
 
 ---
 
+| F-062 | P0 | lib+app | The Picture-in-Picture action row rendered three buttons and none of them worked. The action's `PendingIntent` named the receiver's component (`Intent.setClass(...)`), and an **explicit** broadcast is resolved through the **manifest** — where `PipActionReceiver` was never declared, because it was only a runtime registration. So the broadcast resolved to no receiver and was dropped before dispatch: measured on emulator-5554 (API 37), the same action sent explicitly was **never dispatched** (`dispatchTime=--`, foreground and in PiP alike), while the same action sent implicitly was **dispatched in 0 ms**; and tapping our button produced no broadcast record at all, while the platform's own gear button opened the PiP settings screen in the same gesture. The intent is now **implicit** (the action and nothing else, which is what the registration matches on); the **library owns the receiver** — registered at runtime, once per process, on the application context, at the moment the PiP parameters are built, so the platform can never be handed buttons that nothing is listening for; `PipManager.intentFilter()` is now `internal`, so the compiler refuses a consumer that would register a second receiver (two registrations deliver every action twice, and a play/pause that toggles twice leaves playback exactly where it was); and a failure to deliver an action is now **logged** instead of swallowed by a silent `catch`. The app drops its own registration, and a guard test pins that ownership. 8 new lib tests; 5 mutations, all killed | lib `v3.1.0` + app `f5/w22-close-minimise-d9` |
+| F-063 | P2 | lib+app+docs | Nine comments said *"an Activity in PiP does not redraw"*. It does — AOSP: *"In PIP, the activity is in a paused, but rendering, state"* (source.android.com/docs/core/display/pip). What stops is **REACT**: RN pauses the React scheduler with the Activity, so a commit cannot land and no frame is produced. The conclusion every note argued for is unchanged; the reason is now right — and it is the reason the fix has to be **native**. The library's README carried eight false claims of its own: the **removed** platform auto-enter switch, an API 31+ floor for auto-enter, a PiP action receiver "declared in the manifest", **26** named events where there are **27**, a troubleshooting entry that still asked for API 31+, and a pointer to "the two lines of Kotlin and the JS that goes with them" in a section that did not contain them. All corrected, and the auto-enter section now carries the Kotlin and the JS a consumer actually needs | lib `v3.1.0` + app `f5/w22-close-minimise-d9` |
+
 ## ACCEPTED (product decisions, not defects)
 
 ### A-001 · the bookmark stays in the top bar
@@ -2342,6 +2455,28 @@ resumed, so "Start from the beginning" *looks* broken when it is not.
 the transport, and 1:35 + 20:22 = 21:57 ≈ the 21:58 duration — so the film
 **did** start at zero. An earlier reading of "it resumed at 4:14 / 5:14" was
 the same tap arriving after the auto-dismiss.
+
+---
+
+### A-004 · the remaining time is rendered as a NEGATIVE clock
+
+The transport's right-hand label reads `-50:54` for a track with 50:54 left.
+It was reported on 2026-11-03 as a defect — "the sign is flipped; the
+magnitude is correct" — and that is exactly what it looks like.
+
+**It is not a defect.** The subtraction is `duration - position` and it is
+right everywhere; the minus is a **display literal** in the template, and it
+is the **Media3 `RemainingDurationText` convention** — the same one YouTube,
+Plex and ExoPlayer use. The app's own master plan records it as "consistent,
+correct" (`SIMBA_V22_MASTER_PLAN.md`), and the SPEC names
+`RemainingDurationText` as the canonical reference. A-002 in this file
+already shows the same shape in a device reading (`1:35 / -20:22`).
+
+**Decision (2026-11-03): keep it.** A change was written and then reverted:
+it would have moved the fact into one owner that returns an **unsigned**
+remaining clock, which contradicts the convention the app chose. It is
+recorded here so it is not re-investigated — the next reader who sees
+`-50:54` and assumes a sign bug should find this first.
 
 ---
 

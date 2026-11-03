@@ -191,9 +191,12 @@ library used to arm Android's own switch
 (`PictureInPictureParams.Builder.setAutoEnterEnabled`, API 31+), which makes
 the SYSTEM transition the Activity without giving the app a chance to do
 anything first. That is the wrong order for an app that draws its own
-chrome over the picture, because **an Activity in PiP does not redraw**:
-whatever its window held at the moment of the transition is what the PiP
-window keeps showing.
+chrome over the picture, because **React does not redraw in PiP**: the
+Activity is "paused, but rendering" (source.android.com/docs/core/display/pip),
+but RN pauses the React scheduler with it, so a React commit cannot land
+and no frame is produced — so whatever its window held at the moment of the
+transition is what the PiP window keeps showing. (D-11 corrects the
+reason; the ORDER below is unchanged.)
 
 **Measured on device on 2026-11-03**, on the emulator: the PiP window
 painted the app's FULL expanded chrome — the header band with the lock and
@@ -296,6 +299,46 @@ the publish lands.
 ## 5. Execution order
 
 Gates are cumulative. `A` = app, `L` = lib.
+
+### D-11 — The PiP ACTION has ONE owner too — the library — and the reason is React, not the window ✅ locked 2026-11-03
+
+**The platform's action row rendered three buttons and none of them
+worked.** The action's `PendingIntent` named the receiver's component, and
+an **explicit** broadcast is resolved through the **manifest** — where
+`PipActionReceiver` was never declared, because it was only a runtime
+registration. So the broadcast resolved to no receiver and was dropped
+before it was ever dispatched.
+
+**Measured on emulator-5554 (API 37) on 2026-11-03.** The same action sent
+explicitly was **never dispatched** (`dispatchTime=--`), in the foreground
+and in PiP alike; the same action sent implicitly was **dispatched in 0
+ms**; and tapping our button produced no broadcast record at all, while
+the platform's own gear button opened the PiP settings screen in the same
+gesture. The receiver was registered and matching the whole time — only
+the component was wrong.
+
+**So the receiver has ONE owner: the library.** It registers it at
+runtime, once per process, on the application context, at the moment the
+PiP parameters are built — so the platform can never be handed a set of
+buttons that nothing is listening for. The app does not register it and
+does not need to know the class exists. `PipManager.intentFilter()` is
+`internal`, so the compiler refuses a consumer that would register a
+second receiver: two registrations deliver every action twice, and a
+play/pause that toggles twice leaves playback exactly where it was.
+
+**D-10's REASON was wrong, and it is corrected here.** D-10 said *"an
+Activity in PiP does not redraw"*. It does — AOSP: *"In PIP, the activity
+is in a paused, but rendering, state"*
+(source.android.com/docs/core/display/pip). What stops is **REACT**: RN
+pauses the React scheduler when the Activity is paused, so a React commit
+cannot land and no frame is produced. The ORDER D-10 locks is unchanged —
+the chrome has to be gone before the window is created — but the reason is
+now right, and it is the reason the fix has to be **native**: a React
+commit cannot land at that moment, while a native `visibility` change is a
+View-system mutation and schedules a real traversal.
+
+Recorded as `B-049` / `B-051` / `F-062` / `F-063` in
+`SIMBA_BUG_TRACKER_2026_10_21.md`.
 
 ### Stage 0 — Stopgap commit *(pending Paval's review)*
 `App.tsx` + `src/app/BrowsingStack.tsx` + `__tests__/app/` on a branch.

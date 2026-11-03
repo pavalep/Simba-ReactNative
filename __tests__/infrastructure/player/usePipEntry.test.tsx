@@ -20,8 +20,10 @@
  *  - the clock froze at `51:09` while the real position was `54:15`.
  *
  * Dead buttons and a frozen clock are a **stale surface**: the views were
- * gone (the taps hit nothing) but the pixels were not. An Activity in
- * Picture-in-Picture does not redraw, so whatever the window held at the
+ * gone (the taps hit nothing) but the pixels were not. React does not
+ * redraw in Picture-in-Picture (the Activity is "paused, but rendering", but RN
+ * pauses the React scheduler with it, so a React commit cannot land and no frame is
+ * produced), so whatever the window held at the
  * moment of the transition is what the PiP window keeps showing.
  *
  * ## The contract these tests pin

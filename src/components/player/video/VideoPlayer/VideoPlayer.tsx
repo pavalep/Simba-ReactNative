@@ -341,7 +341,7 @@ const VideoPlayerChrome: React.FC = () => {
   // Both live here, outside the expanded chrome, because the chrome is
   // the subtree that `pipActive` unmounts — and because the entry has
   // to happen only after the frame that removed the chrome has been
-  // presented. An Activity in PiP does not redraw, so asking the OS
+  // presented. React does not redraw in PiP (the Activity is "paused, but rendering", but RN pauses the React scheduler with it, so a React commit cannot land and no frame is produced), so asking the OS
   // while the chrome is still mounted freezes the chrome into the PiP
   // window as a dead, stale layer.
   usePipEntry();

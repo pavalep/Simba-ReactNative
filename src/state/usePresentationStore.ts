@@ -173,7 +173,7 @@ export interface PresentationState {
    * not answered yet".
    *
    * They are written TOGETHER and read apart, because the ORDER is the
-   * whole contract. An Activity in PiP does not redraw, so a chrome
+   * whole contract. React does not redraw in PiP (the Activity is "paused, but rendering", but RN pauses the React scheduler with it, so a React commit cannot land and no frame is produced), so a chrome
    * that is still mounted at the moment the OS transitions is frozen
    * into the PiP window: the buttons are dead (their views are gone)
    * and the clock stops (the pixels are stale). That was measured on
