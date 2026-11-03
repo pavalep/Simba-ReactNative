@@ -5,6 +5,8 @@
 > specific defect IDs, the 48 × 20 template ceremony is gone.
 > Replaces the original 250-line v21 spec.
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`PlayerRoot`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 ## Outcome
 
 Move the Android React Native app from "feature-rich but uneven" to an evidence-backed stable beta. The target is a **binary beta-readiness** — all 6 release gates closed — not a percentage and not a feature count.

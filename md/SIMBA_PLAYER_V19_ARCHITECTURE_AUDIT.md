@@ -1,5 +1,7 @@
 # SIMBA Player — V19 Architecture Audit (Source of Truth)
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`PlayerRoot`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 **Owner:** V19 architect (this document is the contract — V19 SPEC §1-§14 reference it). Every architectural decision V19 makes traces to a section here.
 
 **Audit date:** 2026-09-25

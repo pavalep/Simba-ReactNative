@@ -1,5 +1,7 @@
 # SIMBA Player Module — V14 Specification
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`PlayerRoot`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 **Document Version:** 1.1
 **Date Created:** 2026-09-04
 **Last Updated:** 2026-09-04

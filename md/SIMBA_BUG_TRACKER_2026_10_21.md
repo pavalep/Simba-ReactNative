@@ -1585,7 +1585,7 @@ in the host app, the only reference to either was its own export. Gates:
 `:simba-dev_react-native-media-player:compileDebugKotlin` BUILD
 SUCCESSFUL.
 
-### B-036 · P3 · lib · PiP has no source rect to animate from, and fixing it is not a one-liner
+### B-036 · P3 · lib · PiP has no source rect to animate from, and fixing it is not a one-liner — **RESOLVED (F-061)**
 
 **Symptom.** Entering Picture-in-Picture animates the video out of a **black
 rectangle** instead of out of the picture the user was watching.
@@ -1639,11 +1639,31 @@ portrait PiP window with a small letterboxed video inside it. So the
 "much less arithmetic" option is not cheaper here; it is **wrong**.
 
 What the source rect therefore has to be is the **frame's** rect: the
-view's rect, inset by the letterbox (or pillarbox) bars that mpv's
-`video-zoom` puts inside it, computed against the video's real aspect
-ratio. The library already knows the pieces — `MpvRenderView` tracks the
-applied `video-zoom` (`"0"` fit / `"1"` fill / `"2"` stretch) and the
-view's own geometry; mpv reports the video's dimensions.
+view's rect, inset by the letterbox (or pillarbox) bars, computed against
+the video's real aspect ratio. The library already knows the pieces — the
+picture view's own geometry, and the fact the engine is ACTUALLY
+rendering with; mpv reports the video's dimensions.
+
+**What actually shipped, and what this entry used to claim (2026-11-02,
+lib `v3.0.1`).** The decision above was right, but this entry described
+the mechanism wrongly, and the wrong description outlived the wrong
+code. It said `MpvRenderView` "tracks the applied `video-zoom` (`"0"` fit
+/ `"1"` fill / `"2"` stretch)". Two things are wrong with that sentence.
+
+`video-zoom` is mpv's **log2 scale factor** (`0` unscaled, `1` twice the
+size, `2` four times the size) — not a fit / fill / stretch enum. That is
+**B-045**, resolved as **F-058** (lib `v3.0.3`), and it is the same
+reason the zoom cannot answer this question here: a magnified picture
+still covers every pixel of the view it is drawn in, so the zoom cannot
+say "where is the video?".
+
+And the mechanism that shipped asks **"does the picture fill its view?"**
+— `MpvRenderView.currentFillsView` — not "what zoom?". The arithmetic
+lives in a pure `PipSourceRect.frameInWindow(...)`: the whole view when
+the picture fills it, the fitted rect when it does not, and `null` when
+there is no such rect to point at (no live picture, no layout yet, or no
+video dimensions). `null` degrades to the platform's no-hint behaviour,
+which costs a black transition but never a distorted one.
 
 **And the PiP window's aspect is derived from that same rect**, because
 the hint's shape and the window's shape have to agree or the system
@@ -1653,10 +1673,20 @@ IS the video's aspect — which is what the PiP window already used — so
 the window's shape does not change. Only the hint changes, from `null`
 (black rectangle) to a real rect.
 
-**State:** open; the work is in flight (2026-11-02). The fix is native,
-so it ships as a lib release, and the APK must be rebuilt for the DEX to
-carry it. **The device proof is deferred** — this is a picture that only
-exists on hardware, and no device test runs in this wave.
+**State:** **RESOLVED (F-061) — fixed 2026-11-02, released as lib
+`v3.0.1`.** The fix is native, so it ships as a lib release, and the APK
+must be rebuilt for the DEX to carry it. **The device proof is still
+owed**: the hint is now a real rect, but whether the system animates the
+frame out of the picture rather than out of black is a picture that only
+exists on hardware.
+
+**One call site named above is gone.** This entry said the hint was built
+at two call sites, `applyActivityPipParams()` and `enterPip()`. The
+`applyActivityPipParams()` one was deleted in lib `v3.0.5` (2026-11-03),
+when the platform's own auto-enter switch was removed — the consumer
+performs the entry now, and there is ONE path left. The hint is built on
+that one path, and the PiP window's aspect is taken from the SAME
+frame, so the two cannot disagree.
 
 **Also open, and the same shape:** `PlayerSurface.setBounds` /
 `fillBounds` / `setVisible` are the same three orphaned mutators, and they
@@ -2269,6 +2299,7 @@ because there was no worker to hold a handle.
 | F-058 | P2 | lib+app | `resizeMode` was translated into mpv's `video-zoom`, which is a **log2 scale factor** (`0` unscaled, `1` twice the size, `2` four times the size) — not a fit / fill / stretch enum. So `cover` rendered as a **2× magnified crop** and `stretch` as a **4× magnified crop**, and neither ignored the aspect. The **mode NAME** now crosses into the native side unchanged, and a new pure `ResizeMode` object owns the mapping onto mpv's own properties: `contain` → `video-zoom=0` / `keepaspect=yes` / `panscan=0`; `cover` → `video-zoom=0` / `keepaspect=yes` / `panscan=1.0`; `stretch` → `video-zoom=0` / `keepaspect=no` / `panscan=0`. All three are written **every time**, because mpv's properties persist. mpv's own manual is the authority. `ResizeMode` carries no Android and no React Native type, so its 12 tests are plain JUnit and **actually execute** (the module's Robolectric suites are `@Ignore`d because they cannot run offline). The PiP source rect followed: it now asks **"does the picture fill its view?"** — the fact the engine is actually rendering with — instead of "what zoom?", because a magnified picture still covers every pixel of the view it is drawn in. 10 mutations, all killed. **The pixels are still unproven** — that is a device proof | lib `v3.0.3` |
 | F-059 | P1 | lib | `onCacheState` fires **827 times across a cold start**, and every arrival published a NEW `cacheRanges` array — `cacheRangesEqual` compares only the count and the first/last bounds, so a moving last bound minted a new progress value and a new context value for every `usePlayerProgress()` consumer: real work re-done 827 times for a band a few dozen pixels wide. The published ranges are now **quantised** onto the grid the scrub bar is drawn at (`durationMs / 1000` cells) by a new pure `quantiseCacheRanges` module — **ONE** owner of the rule, applied on the publish path and only there. The published value is now **IDENTICAL** (same array identity, not an equal one) for two raw inputs that land in the same cell, which is the proof the context stopped changing: **200 native arrivals → 9 context changes**, against 200 before. A live stream (`durationMs === 0`) has no duration to be relative to, so it falls back to a fixed one-second grid, which still bounds the publish RATE. 7 mutations, all killed | lib `v3.0.2` |
 | F-060 | P2 | tooling | The jest worker never exited, because TanStack's **mutation** garbage-collection timer held the event loop open. `Removable.scheduleGc()` arms `timeoutManager.setTimeout(..., gcTime)`, and a mutation's `gcTime` defaults to **five minutes** — the queries in these tests ask for `gcTime: 0`, a mutation never did, and the mutation cache is never cleared, so the timer was never cancelled. It was a real five-minute **ref'd** Node timer, and jest force-exits a worker that cannot leave. Every earlier measurement missed it because a **lone** test file runs **in band** — the warning needs at least two suites in one worker, so the per-file sweep of all 137 suites was measuring the wrong thing. Found by bisecting the suite list with `--maxWorkers=2` (4 shards → shard 2; 37 suites → 10; a 5/5 split → neither half alone; a cross-product → `useApiQuery.test.tsx` + any companion; then by `describe` block → only `useApiMutation`). `jest.setup.ts` — which already owned TanStack's *notification* timer for exactly this reason — now also owns its *timers*: a `timeoutManager` provider whose timers are `unref()`'d, so they still fire but cannot hold the worker open. 3 new tests; 2 mutations, all killed; the reproducing pair no longer reproduces | app `f5/w22-close-minimise-d9` |
+| F-061 | P3 | lib | PiP grew out of a **black rectangle**, because the `sourceRectHint` was **always `null`**. `MpvBridgeModule` built it from `PlayerSurface.boundsInWindow()`, and that reader consults the `PlayerSurface` registry — whose only writer, `PlayerSurface.mount()`, the V21/V22 architecture never calls, because the picture is a Fabric view published by `MpvRenderViewRegistry` instead. So the hint was not "sometimes wrong": the black transition was the only behaviour the bug ever produced. The hint is now built from the **live picture view** and describes the video's **FRAME** rather than the view's box — the box is the whole window (the picture fills its lane), so hinting it would tell the system to make the PiP window the shape of the phone and the video would arrive tiny and letterboxed inside it. The frame is the largest rect of the video's own shape that fits inside the view, or the whole view when the picture fills it. The one fact the arithmetic needs is **"does the picture fill its view?"** (`MpvRenderView.currentFillsView`) — **not** the zoom: mpv's `video-zoom` is a log2 scale factor (F-058), and a magnified picture still covers every pixel of the view it is drawn in. The arithmetic lives in a new pure `PipSourceRect` object with no Android types in it, so its tests are plain JUnit and **actually execute** (the module's Robolectric suites are `@Ignore`d because they cannot run offline); it answers `null` when there is no such rect, and `null` degrades to the platform's no-hint behaviour — a black transition, never a distorted one. The hint and the PiP window's aspect are taken from the **same frame**, so they cannot disagree and the video cannot arrive stretched. **The pixels are still unproven** — that is a device proof | lib `v3.0.1` |
 
 ---
 

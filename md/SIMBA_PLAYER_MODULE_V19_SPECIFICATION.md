@@ -8,6 +8,8 @@
 >
 > **UI source of truth (added W7):** `md/SIMBA_PLAYER_V19_UI_OVERHAUL.md`. Where this SPEC describes *what* the chrome contains, that document governs *how it looks and moves* — the control primitive, the two-tier sizing model, the scrim, the sheet's information architecture, and the motion rules. It is binding for the same reasons this SPEC is: it names real files, real numbers, and the specific defects each rule exists to prevent. Wave 7 in `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` is its execution log.
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`PlayerSurface`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 ---
 
 ## 0. Purpose - and what this is fixing

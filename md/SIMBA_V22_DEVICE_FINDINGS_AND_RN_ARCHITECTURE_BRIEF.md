@@ -15,6 +15,8 @@
 > architecture. §4.2 has been edited in place to point there; the device
 > findings in §1–§3 and §5 onward are unaffected.
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`PlayerSurface`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 ---
 
 ## 1. Why this document exists

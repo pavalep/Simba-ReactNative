@@ -180,6 +180,47 @@ per verb: `useClosePlayback()` in `src/infrastructure/player/` is the only
 thing that tears playback down, and every close affordance in both lanes
 routes through it. Two owners of one teardown drift.
 
+### D-10 — The PiP entry has ONE owner, and the ORDER is the contract ✅ locked 2026-11-03
+
+**The chrome is unmounted, the frame that drew it is presented, and only
+then is the OS asked.** Not the other way round, and not "the OS is asked
+and the chrome is corrected afterwards".
+
+**The CONSUMER performs the auto-enter; the platform does not.** The
+library used to arm Android's own switch
+(`PictureInPictureParams.Builder.setAutoEnterEnabled`, API 31+), which makes
+the SYSTEM transition the Activity without giving the app a chance to do
+anything first. That is the wrong order for an app that draws its own
+chrome over the picture, because **an Activity in PiP does not redraw**:
+whatever its window held at the moment of the transition is what the PiP
+window keeps showing.
+
+**Measured on device on 2026-11-03**, on the emulator: the PiP window
+painted the app's FULL expanded chrome — the header band with the lock and
+the bookmark, the scrub row with the elapsed and remaining clocks, the ±10
+buttons and the big pause button — scaled down into the small window, and
+the user called it "not professional looking at all". Its buttons were
+**dead** (tapping pause did not pause; their views were gone) and its clock
+was **fROZEN** at 51:09 while the real position was 54:15. The React state
+was already correct (`pipActive: true`, `isExpanded: false`), so this was
+never a state bug — it was an ORDER bug.
+
+**Two facts, written together and read apart.** `pipActive` means "the
+chrome must be gone"; `pipEntryRequested` means "a window was asked for".
+`requestPip()` writes both in ONE store update, so there is no frame in
+which the app has asked for PiP but the chrome is still up. The OS's own
+answer still governs the outcome, and a refusal puts the chrome back.
+
+**One owner.** `src/infrastructure/player/usePipEntry.ts` owns the entry for
+EVERY path — the button and the system. The button cannot own it: the
+system can start a PiP window on its own, and every one of those paths has
+the same requirement.
+
+*Source:* the 2026-11-03 device measurement · lib `v3.0.5` (`onUserLeaveHint`,
+the 27th event, and the removal of the platform's own switch) · app
+`71ced34` (the button path) · Android's own guidance: "Remove other UI
+elements before your activity enters PiP" (`developer.android.com/develop/ui/views/picture-in-picture`).
+
 ---
 
 ## 3. The target public API

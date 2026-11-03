@@ -1,5 +1,7 @@
 # SIMBA V21 — Folder Contract
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`PlayerRoot`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 The target folder layout adopted in V21 W2 P05. Every file in the project belongs to exactly one of these 5 root groups. The "two hard rules" in `md/SIMBA_MOBILE_V21_SPECIFICATION.md` are enforced by the import-boundary linter (`scripts/check-import-boundaries.js`); this document is the human-readable version.
 
 ## The 5 root groups

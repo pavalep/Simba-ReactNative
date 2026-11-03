@@ -7,6 +7,8 @@
 
 > This tracker is the working companion to the V13 spec. Each phase has a status, an owner, a target date, and a one-paragraph narrative describing actual work vs planned.
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`PlayerRoot`, `DefaultControls`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 ---
 
 ## Phase 49 — Audit consumer call sites + module gaps

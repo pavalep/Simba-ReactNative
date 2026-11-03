@@ -4,6 +4,8 @@
 > **Supersedes:** `UI_UX_Elevation_Progress_Tracker_v5.md`
 > **Purpose:** Track all 40 phases of v6 — Complete VideoPlayerV2 rebuild covering navigation crashes, bookmarking, rotation, stream seek guardrails, control layout, track selection, UI simplification, and smoothness. Execute without waiting for further orders.
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`usePipLifecycle`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 ---
 
 ## Implementation Strategy

@@ -4,6 +4,8 @@
 > Reviewer: Paval EP (project owner) via the greenlit "ok continue" pattern.
 > Scope: W4 = P13 (release signing keystore) + P14 (ProGuard/R8 minification + manifest verify) + P15 (retire legacy `MediaNotificationService.kt` + dead PiP attribute on `MainActivity`) + P16 (`.env` validation hardening at Gradle task start + CI docs). Plus a W4 prep pass that corrected 4 tracker defects surfaced by a PiP + custom-UI + V11-leftover re-analysis.
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`PlayerSurface`, `DefaultControls`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 ## Outcome: W4 EXITED with 4 user-verification tasks deferred
 
 | # | Phase | Defect(s) closed | Commit(s) | Status |

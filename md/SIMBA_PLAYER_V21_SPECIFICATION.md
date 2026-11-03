@@ -1,5 +1,7 @@
 # SIMBA Player V21 — Single-Activity Specification
 
+> **⛔ HISTORICAL RECORD (2026-11-03):** this file records an earlier wave of the player work as it was executed. It names player components that **no longer exist** (`PlayerRoot`). The only document that says what is true right now is [`SIMBA_V22_MASTER_PLAN.md`](SIMBA_V22_MASTER_PLAN.md); the live defect register is [`SIMBA_BUG_TRACKER_2026_10_21.md`](SIMBA_BUG_TRACKER_2026_10_21.md). Do **NOT** use this file as a source of truth for new work.
+
 **Status:** APPROVED (user authorised the major refactor, 2026-10-09)
 **Supersedes:** the two-Activity layout introduced in Player V12 (`PlayerActivity`)
 **Companion tracker:** `SIMBA_PLAYER_V21_TRACKER.md`
