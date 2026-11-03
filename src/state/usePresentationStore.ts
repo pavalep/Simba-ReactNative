@@ -164,6 +164,48 @@ export interface PresentationState {
   togglePip: () => void;
 
   /**
+   * Whether the app has ASKED for a PiP window that does not exist yet.
+   *
+   * The request is a separate fact from `pipActive`, because the two
+   * answer different questions. `pipActive` means "the chrome must be
+   * gone and the app must behave as if the OS window owns the surface".
+   * The request means "somebody asked for a PiP window and the OS has
+   * not answered yet".
+   *
+   * They are written TOGETHER and read apart, because the ORDER is the
+   * whole contract. An Activity in PiP does not redraw, so a chrome
+   * that is still mounted at the moment the OS transitions is frozen
+   * into the PiP window: the buttons are dead (their views are gone)
+   * and the clock stops (the pixels are stale). That was measured on
+   * device on 2026-11-03 — the full expanded chrome was visible in the
+   * PiP window while `pipActive` was already `true` and `isExpanded`
+   * already `false`.
+   *
+   * So the chrome is hidden first, the request is recorded, and only
+   * then — once the commit that removed the chrome has been DRAWN —
+   * does anything ask the OS for the window.
+   */
+  pipEntryRequested: boolean;
+
+  /**
+   * Ask for a PiP window.
+   *
+   * This does NOT enter PiP. It hides the chrome and records the
+   * request; `usePipEntry` performs the actual entry once the frame
+   * that removed the chrome has been presented.
+   */
+  requestPip: () => void;
+
+  /**
+   * Report the OS's answer to a requested PiP entry.
+   *
+   * `false` means the OS refused, so the chrome comes back and the app
+   * keeps its chrome exactly as it was before the request. `true` means
+   * the window is up.
+   */
+  resolvePipEntry: (entered: boolean) => void;
+
+  /**
    * V21 F4 — has the app been asked to show video fullscreen or minimised?
    *
    * Written by discrete events only: the launch seam (every video launch
@@ -228,6 +270,13 @@ export const usePresentationStore = create<PresentationState>()(set => ({
   pipActive: false,
   setPipActive: (pipActive: boolean) => set({pipActive}),
   togglePip: () => set(state => ({pipActive: !state.pipActive})),
+  pipEntryRequested: false,
+  // ONE update, so ONE commit: the chrome is unmounted and the request
+  // is recorded in the same frame. Splitting them would leave a gap in
+  // which the app has asked for PiP but the chrome is still up.
+  requestPip: () => set({pipActive: true, pipEntryRequested: true}),
+  resolvePipEntry: (entered: boolean) =>
+    set({pipEntryRequested: false, pipActive: entered}),
   videoPresentation: 'mini',
   setVideoPresentation: (videoPresentation: VideoPresentation) =>
     set({videoPresentation}),

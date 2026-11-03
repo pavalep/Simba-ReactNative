@@ -321,6 +321,14 @@ export {
 // transport buttons. Mount once, in the chrome compositor.
 export {usePipBridge} from './usePipBridge';
 
+// V22 W23 (2026-11-03) — the single owner of the PiP ENTRY. `usePipBridge`
+// reports that the window is up; this one asks for it, and it does so only
+// after the frame that removed the chrome has been presented — an Activity
+// in PiP does not redraw, so a chrome that is still mounted at the moment
+// of the transition is frozen into the PiP window as a dead, stale layer.
+// Mount once, next to `usePipBridge`.
+export {usePipEntry} from './usePipEntry';
+
 // W6.2 — the single owner of caption rendering style. Pushed to mpv from
 // the chrome subtree; the store in `state/` holds the preference.
 export {

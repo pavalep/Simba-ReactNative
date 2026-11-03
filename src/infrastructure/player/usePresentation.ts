@@ -95,6 +95,17 @@ export interface Presentation {
   setVideoLaneOrigin: (origin: VideoLaneOrigin | null) => void;
   /** Enter/leave PiP. Pair with the native `enterPip`/`exitPip`. */
   setPipActive: (active: boolean) => void;
+  /**
+   * Ask for a PiP window.
+   *
+   * This HIDES the chrome and records the request; it does not enter
+   * PiP. The entry itself belongs to `usePipEntry()`, which performs it
+   * once the frame that removed the chrome has been presented — because
+   * an Activity in PiP does not redraw, and a chrome that is still
+   * mounted at the moment of the transition is frozen into the PiP
+   * window as a dead, stale layer.
+   */
+  requestPip: () => void;
   /** Flip PiP on the JS side. */
   togglePip: () => void;
 }
@@ -133,6 +144,7 @@ export function usePresentation(): Presentation {
   const setVideoLaneOrigin = usePresentationStore(s => s.setVideoLaneOrigin);
   const pipActive = usePresentationStore(s => s.pipActive);
   const setPipActive = usePresentationStore(s => s.setPipActive);
+  const requestPip = usePresentationStore(s => s.requestPip);
   const togglePip = usePresentationStore(s => s.togglePip);
 
   // Two inputs, both facts about the app's own state: did the user ask for
@@ -164,6 +176,7 @@ export function usePresentation(): Presentation {
     videoLaneOrigin,
     setVideoLaneOrigin,
     setPipActive,
+    requestPip,
     togglePip,
   };
 }

@@ -112,6 +112,9 @@ jest.mock('../../../../../src/components/feedback/Toast', () => ({
   useToast: () => ({show: jest.fn(), hide: jest.fn()}),
 }));
 jest.mock('../../../../../src/infrastructure/player', () => {
+  const actualPipEntry = jest.requireActual(
+    '../../../../../src/infrastructure/player/usePipEntry',
+  );
   const actualPipBridge = jest.requireActual(
     '../../../../../src/infrastructure/player/usePipBridge',
   );
@@ -121,6 +124,7 @@ jest.mock('../../../../../src/infrastructure/player', () => {
   const {createElement, Fragment} = require('react');
   return {
     usePipBridge: actualPipBridge.usePipBridge,
+    usePipEntry: actualPipEntry.usePipEntry,
     usePresentation: actualPresentation.usePresentation,
     useTransport: () => ({
       state: {

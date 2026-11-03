@@ -25,27 +25,30 @@
  * enter, so rendering the button would produce a control that looks
  * live and does nothing. Correct absence, not an oversight.
  *
- * ## Entering PiP is a TWO-part transition
+ * ## Entering PiP is a TWO-part transition — and the ORDER changed
  *
- *   1. `commands.enterPip()` — the native PiP window. It ANSWERS whether
- *      the OS accepted the request.
- *   2. `setPipActive(true)`   — the JS chrome must go away too.
+ *   1. `requestPip()` — hide the chrome and record the request.
+ *   2. `usePipEntry()` — once the frame that removed the chrome has
+ *      been presented, ask the OS for the window and relay its answer.
  *
- * Doing only (1) leaves the full chrome painted over the PiP window;
- * doing only (2) leaves the activity black behind a floating window.
- * Both halves are in this one handler, so the tap is one honest action.
+ * It used to be the other way round: `commands.enterPip()` first, and
+ * `setPipActive(accepted)` after. That order was defensible while the
+ * chrome was only a cosmetic problem, and it is a defect now.
  *
- * The handler is driven by the ANSWER, not by a guess. It used to call
- * `setPipActive(true)` unconditionally, on the assumption that the request
- * had worked — but the native side used to swallow every refusal (no
- * activity, PiP not permitted, bad `PictureInPictureParams`), so a
- * refused request looked identical to a successful one. The app then
- * suppressed its own chrome for a PiP window that would never exist, and
- * the only thing that could bring the chrome back was the PiP-exit event
- * — which, for a request that never happened, never came.
+ * **An Activity in Picture-in-Picture does not redraw.** Whatever its
+ * window contained at the moment of the transition is what the PiP
+ * window keeps showing. So a chrome that is still mounted when the OS
+ * is asked is frozen into the PiP window: dead buttons (their views are
+ * gone) over a frozen clock (the pixels are stale). That was measured
+ * on the emulator on 2026-11-03 — the app's full expanded chrome,
+ * scaled down into the small window, exactly as the user reported it.
  *
- * So: the chrome follows the OS's answer. `false` means PiP did not
- * happen, and the chrome stays exactly where it was.
+ * Unmounting the chrome a frame later is far too late: the window was
+ * already frozen and never drew again.
+ *
+ * The OS's answer still governs the outcome, and it is still the only
+ * authority on whether the window exists. `usePipEntry()` asks, gets
+ * the answer, and a refusal puts the chrome back exactly as it was.
  *
  * W6.0 note: step (2) used to write a `mode` into a process-global
  * zustand store. `App` mounts once per activity React root and both
@@ -64,16 +67,15 @@ import {usePresentation, useTransport} from '../../../../infrastructure/player';
 import {PlayerControl} from '../PlayerControl/PlayerControl';
 
 export const PiPToggle: React.FC = () => {
-  const {state, commands} = useTransport();
-  const {setPipActive} = usePresentation();
+  const {state} = useTransport();
+  const {requestPip} = usePresentation();
 
   if (!state.canEnterPip) return null;
 
   const onPress = () => {
-    // Native PiP window first, then suppress the JS chrome — but only if
-    // the native side says PiP actually happened.
-    const accepted = commands.enterPip();
-    setPipActive(accepted);
+    // Hide the chrome and record the request. The entry itself belongs
+    // to `usePipEntry()`, which owns the order — see the note above.
+    requestPip();
   };
 
   return (

@@ -67,11 +67,15 @@ jest.mock('../../../../../src/infrastructure/player', () => {
   // The REAL `usePresentation` — the test changes the real store and reads
   // the real derivation. A mocked presentation would let the test assert
   // against a fiction.
+  const realPipEntry = jest.requireActual(
+    '../../../../../src/infrastructure/player/usePipEntry',
+  );
   const real = jest.requireActual(
     '../../../../../src/infrastructure/player/usePresentation',
   );
   return {
     usePresentation: real.usePresentation,
+    usePipEntry: realPipEntry.usePipEntry,
     useTransport: () => ({
       state: {
         currentUri: 'file:///movies/film.mkv',

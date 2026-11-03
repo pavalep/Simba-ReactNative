@@ -68,6 +68,7 @@ import {
   ChromeAutoHideProvider,
   useChromeAutoHide,
   usePipBridge,
+  usePipEntry,
   useCaptionStyleBridge,
   usePresentation,
   useTransport,
@@ -334,6 +335,16 @@ const VideoPlayerChrome: React.FC = () => {
   // a subtree that the state unmounts. One owner, one subscriber, and it
   // outlives every mode the state can put the tree into.
   usePipBridge();
+
+  // The same rule, the other half of the pair: `usePipBridge` REPORTS
+  // that the PiP window is up, and `usePipEntry` PERFORMS the entry.
+  // Both live here, outside the expanded chrome, because the chrome is
+  // the subtree that `pipActive` unmounts — and because the entry has
+  // to happen only after the frame that removed the chrome has been
+  // presented. An Activity in PiP does not redraw, so asking the OS
+  // while the chrome is still mounted freezes the chrome into the PiP
+  // window as a dead, stale layer.
+  usePipEntry();
 
   // Hardware back must be the SAME verb as the header's back chevron.
   //

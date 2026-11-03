@@ -70,6 +70,7 @@ jest.mock('../../../../../src/components/feedback/Toast', () => ({
   useToast: () => ({show: jest.fn(), hide: jest.fn()}),
 }));
 jest.mock('../../../../../src/infrastructure/player', () => ({
+  usePipEntry: jest.requireActual('../../../../../src/infrastructure/player/usePipEntry').usePipEntry,
   useTransport: () => ({
     state: {
       currentUri: 'file:///movies/film.mkv',

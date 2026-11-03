@@ -1,13 +1,41 @@
 /// <reference types="node" />
 /**
- * V19 W3 Phase 3.3 — `PiPToggle` unit tests.
+ * V22 W23 (2026-11-03) — `PiPToggle` unit tests.
  *
  * Source of truth: `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` Phase 3.3.
+ *
+ * ## What changed, and why the contract moved
+ *
+ * The button used to do the PiP entry ITSELF:
+ *
+ *     const accepted = commands.enterPip();
+ *     setPipActive(accepted);
+ *
+ * — ask the OS for the window FIRST, then hide the chrome.
+ *
+ * That order is a defect, and the defect is what the user reported: the
+ * PiP window showed the app's full expanded chrome (the header band, the
+ * scrub row, the ±10 buttons, the big pause button) scaled down into the
+ * small window, and called it "not professional looking at all".
+ *
+ * **An Activity in Picture-in-Picture does not redraw.** Whatever its
+ * window held at the moment of the transition is what the PiP window
+ * keeps showing. Measured on the emulator on 2026-11-03: `pipActive` was
+ * already `true` and `isExpanded` already `false`, the chrome was still
+ * painted, its buttons were DEAD (tapping pause did not pause) and its
+ * clock was FROZEN at 51:09 while the real position was 54:15. A stale
+ * surface, not a live one.
+ *
+ * So the chrome has to be gone, and DRAWN gone, before the OS is asked.
+ * The button now asks for that — `requestPip()` — and `usePipEntry()`
+ * owns the rest. The button does NOT call `commands.enterPip()`, and
+ * these tests say so.
  *
  * Covers:
  *   - returns null when canEnterPip === false
  *   - renders when canEnterPip === true
- *   - tap calls commands.enterPip()
+ *   - tap asks for the window (`requestPip()`)
+ *   - tap does NOT enter PiP itself — that is `usePipEntry`'s job
  *   - a11y label says "Enter Picture-in-Picture"
  */
 
@@ -34,8 +62,7 @@ jest.mock('../../../../../src/theme', () => ({
 }));
 
 const mockEnterPip = jest.fn(() => true);
-const mockSetPipActive = jest.fn();
-const mockTogglePip = jest.fn();
+const mockRequestPip = jest.fn();
 const mockTransport: {
   state: {canEnterPip: boolean};
   // `enterPip` is a REQUIRED member of `TransportCommands` (lib 1.5.x+),
@@ -43,8 +70,7 @@ const mockTransport: {
   // let this suite pass against the very cast the W5 reaudit removed.
   //
   // It returns `boolean` since lib 1.21.0: the native side ANSWERS
-  // whether the OS accepted the request, and the chrome follows that
-  // answer.
+  // whether the OS accepted the request.
   commands: {enterPip: () => boolean};
 } = {
   state: {canEnterPip: false},
@@ -106,9 +132,14 @@ jest.mock('../../../../../src/infrastructure/player', () => {
     // mode is derived from the host activity, and the only genuinely
     // global presentation fact is whether the PiP window is up. See
     // `src/state/usePresentationStore.ts`.
+    //
+    // W23 (2026-11-03): the button asks for the window through
+    // `requestPip()`, which hides the chrome and records the request in
+    // one store update. The entry itself belongs to `usePipEntry()`.
     usePresentation: () => ({
-      setPipActive: mockSetPipActive,
-      togglePip: mockTogglePip,
+      requestPip: mockRequestPip,
+      setPipActive: jest.fn(),
+      togglePip: jest.fn(),
       isPip: false,
       isExpanded: true,
       mode: 'expanded',
@@ -135,97 +166,26 @@ describe('PiPToggle', () => {
     expect(getByLabelText('Enter Picture-in-Picture')).toBeTruthy();
   });
 
-  it('tap calls commands.enterPip()', async () => {
+  it('tap asks for the window (requestPip())', async () => {
     mockTransport.state.canEnterPip = true;
     const {getByLabelText} = await render(<PiPToggle />);
     await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
-    expect(mockEnterPip).toHaveBeenCalledTimes(1);
+    expect(mockRequestPip).toHaveBeenCalledTimes(1);
   });
 
-  it('tap ALSO suppresses the JS chrome (setPipActive(true))', async () => {
-    // The W5 reaudit found the button was a complete no-op: the
-    // `as unknown as {enterPip?}` cast always read `undefined` and the
-    // `|| () => {}` fallback swallowed the press. Assert BOTH halves of
-    // the press so a future one-sided regression is caught.
-    //
-    // W6.0: the second half is `setPipActive(true)`, not
-    // `setMode('pip')`. The mode is now DERIVED from the host activity
-    // plus this flag, so writing a `mode` was both unnecessary and —
-    // because every mounted activity root ran the writer — actively
-    // destructive. See `src/state/usePresentationStore.ts`.
+  it('tap does NOT enter PiP itself — that is usePipEntry’s job', async () => {
+    // The order is the whole contract: the chrome has to be unmounted,
+    // and DRAWN unmounted, before the OS is asked. A button that calls
+    // `commands.enterPip()` puts the chrome in the frozen PiP window.
     mockTransport.state.canEnterPip = true;
     const {getByLabelText} = await render(<PiPToggle />);
     await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
-    expect(mockEnterPip).toHaveBeenCalledTimes(1);
-    expect(mockSetPipActive).toHaveBeenCalledWith(true);
+    expect(mockEnterPip).not.toHaveBeenCalled();
   });
 
-  it('the native window opens BEFORE the chrome is suppressed', async () => {
-    // Order matters only for the failure case: if the native call
-    // throws, the chrome must not already be gone, or the user is
-    // left with a black screen and a floating window.
-    const order: string[] = [];
-    mockEnterPip.mockImplementationOnce(() => {
-      order.push('native');
-      return true;
-    });
-    mockSetPipActive.mockImplementationOnce(() => {
-      order.push('chrome');
-    });
-
-    mockTransport.state.canEnterPip = true;
-    const {getByLabelText} = await render(<PiPToggle />);
-    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
-
-    expect(order).toEqual(['native', 'chrome']);
-  });
-
-  /**
-   * A REFUSED PiP request must leave the chrome exactly where it was.
-   *
-   * The button used to call `setPipActive(true)` unconditionally, on the
-   * assumption that the request had worked — but the native side used to
-   * swallow every refusal, so a refused request looked identical to a
-   * successful one. The app then hid its own chrome for a PiP window
-   * that would never exist, and the only thing that brings the chrome
-   * back is the PiP-EXIT event, which for a request that never happened
-   * never comes.
-   *
-   * Since lib 1.21.0 the native side ANSWERS, and the chrome follows the
-   * answer. `false` must mean "PiP did not happen" — not "hide the
-   * chrome anyway".
-   */
-  it('a REFUSED PiP request does NOT hide the chrome', async () => {
-    mockEnterPip.mockReturnValue(false);
-    mockTransport.state.canEnterPip = true;
-    const {getByLabelText} = await render(<PiPToggle />);
-
-    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
-
-    expect(mockEnterPip).toHaveBeenCalledTimes(1);
-    expect(mockSetPipActive).toHaveBeenCalledWith(false);
-  });
-
-  it('the chrome state is the native answer, not a hard-coded true', async () => {
-    // Guards against a regression to `setPipActive(true)` — the exact
-    // shape of the defect. Two different native answers, two different
-    // chrome states.
-    mockTransport.state.canEnterPip = true;
-    const {getByLabelText} = await render(<PiPToggle />);
-
-    mockEnterPip.mockReturnValueOnce(true);
-    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
-    expect(mockSetPipActive).toHaveBeenLastCalledWith(true);
-
-    mockEnterPip.mockReturnValueOnce(false);
-    await fireEvent.press(getByLabelText('Enter Picture-in-Picture'));
-    expect(mockSetPipActive).toHaveBeenLastCalledWith(false);
-  });
-
-  it('has no defensive cast that could make enterPip a silent no-op', async () => {
-    // `enterPip` is a required member of `TransportCommands`, backed by
-    // lib 1.5.x+. A cast + no-op fallback would type-check and render a
-    // button that silently does nothing — so guard the source directly.
+  it('has no defensive cast that could make the button a silent no-op', async () => {
+    // A cast + no-op fallback would type-check and render a button that
+    // silently does nothing — so guard the source directly.
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(

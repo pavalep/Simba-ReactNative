@@ -60,11 +60,15 @@ jest.mock('../../../../../src/components/feedback/Toast', () => ({
 jest.mock('../../../../../src/infrastructure/player', () => {
   // The REAL `usePresentation` — the test changes the real store and
   // reads the real derivation.
+  const realPipEntry = jest.requireActual(
+    '../../../../../src/infrastructure/player/usePipEntry',
+  );
   const real = jest.requireActual(
     '../../../../../src/infrastructure/player/usePresentation',
   );
   return {
     usePresentation: real.usePresentation,
+    usePipEntry: realPipEntry.usePipEntry,
     useTransport: () => ({
       state: {
         currentUri: 'file:///movies/film.mkv',
