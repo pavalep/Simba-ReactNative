@@ -1,5 +1,71 @@
 # SIMBA — Picture-in-Picture: the industry-standard implementation plan
 
+> ## ⚠ MEASURED RESULT 2026-11-04 — the crop hypothesis is NOT confirmed
+>
+> lib **v3.3.0** (commit `0f6decd`, published and verified) implemented §4 C1 as written
+> below and was built into the app and **run on `emulator-5554` (API 37)**.
+>
+> **What the device showed**
+>
+> - The PiP window **opens via the platform's auto-enter** — `onUserLeaveHint` no longer asks
+>   for the window on API 31+, and `companion.onPictureInPictureModeChanged: isInPip=true`
+>   arrives at `17:41:34.457`. ✔
+> - The **video plays live inside the PiP window** — the film frame is visible and moving. ✔
+> - The params **are committed early** — `companion.commitPipParams: committed the PiP params`
+>   at `17:40:04`, `17:40:05`, `17:40:52`, i.e. well before the entry. ✔
+> - The **chrome hide executes** — `companion.hideConsumerChrome: hid the chrome view with
+>   nativeID 'simba-expanded-chrome'` at `17:41:34.459`, 2 ms after the mode change. ✔
+> - **⇒ BUT THE PiP WINDOW STILL PAINTS THE FULL APP CHROME** — the header band, the scrub row
+>   with a **frozen clock (0:36)**, the ±10 buttons, the big pause button and the volume row,
+>   all scaled down. ✘
+>
+> **What that proves, and what it retracts**
+>
+> 1. **The source-rect crop did NOT keep the chrome out.** The platform applied the PiP
+>    window's *aspect ratio* (the window is 16:9, matching the video) but did **not** crop the
+>    app's content to the source rect. `setSourceRectHint` is a **transition** hint — it is
+>    what the PiP window animates *from* — not a content crop. **Every sentence in this
+>    document, in the lib's `PipManager.kt` / `MpvBridgeModule.kt` docblocks and in the lib's
+>    CHANGELOG/README that says "the platform crops the app's window to the source rect …
+>    which keeps the chrome out" is a FALSE CLAIM and must be retracted** (lib v3.3.1).
+> 2. **The PiP window shows the app window's last rendered frame, frozen.** The clock reads
+>    `0:36` while the video had been playing for ~94 s — the app's UI layer is not redrawing,
+>    and it does not redraw after the pause. So the chrome that is in the PiP window is the
+>    chrome that was on screen when the app last drew.
+> 3. **⇒ A chrome hide at or after the transition can never remove the chrome from the PiP
+>    window.** The BUTTON path works because React unmounts the chrome **while the app is
+>    still foregrounded**, a frame is drawn, and the OS is asked afterwards. The HOME path has
+>    no such frame.
+>
+> **⇒ The open question, and the next step**
+>
+> The PiP window is the Activity's own window. For the chrome not to be in it, the app's UI
+> layer must contain only the video **at the moment the window is captured**. The three
+> standard ways to achieve that, in order of how well they fit this app:
+>
+> - **(S1) The chrome must be gone from the app's last drawn frame.** The app can hide the
+>   chrome when the user leaves — `onUserLeaveHint()` runs while the Activity is still
+>   resumed — but the pause follows immediately, so the draw has to be **forced
+>   synchronously** before `enterPictureInPictureMode`. This is the one lever that matches
+>   the proven BUTTON path exactly.
+> - **(S2) The PiP host must contain only the video.** react-native-video and expo-video both
+>   achieve this by **re-parenting the player into `android.R.id.content`** and `GONE`-ing
+>   every sibling. Rejected for us *only* because re-parenting detaches the `SurfaceView`
+>   → `surfaceDestroyed` → mpv VO teardown → the decoder is rebuilt in software
+>   (`MpvBridgeModule.kt:235-250`). **This rejection has never been measured** — it rests on
+> a comment, not on a run. It is the most standard shape and it is the next thing to try.
+> - **(S3) A dedicated PiP Activity** that hosts only the video. The heaviest change, and it
+>   would undo D1 (one Activity / one React root).
+>
+> **The next release (v3.3.1) must do exactly two things and nothing else:** (1) retract the
+> crop claim everywhere it is asserted, and (2) log the committed source rect's actual value
+> so the crop question is settled by measurement rather than by reading the platform docs.
+> Then pick (S1) or (S2) on the evidence.
+>
+> **Until then B-050 stays OPEN. The HOME path still shows the app's chrome.**
+>
+> ---
+>
 > **Status:** plan approved by evidence, 2026-11-04. Replaces the ad-hoc PiP work of
 > 2026-11-03 (lib v3.1.0 controls fix, lib v3.2.0 native HOME entry).
 >
