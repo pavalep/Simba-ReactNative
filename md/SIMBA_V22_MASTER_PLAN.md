@@ -214,14 +214,22 @@ chrome must be gone"; `pipEntryRequested` means "a window was asked for".
 which the app has asked for PiP but the chrome is still up. The OS's own
 answer still governs the outcome, and a refusal puts the chrome back.
 
-**One owner.** `src/infrastructure/player/usePipEntry.ts` owns the entry for
-EVERY path — the button and the system. The button cannot own it: the
-system can start a PiP window on its own, and every one of those paths has
-the same requirement.
+**One owner per path, and the paths are not interchangeable.** The
+**foreground** entry is owned by `src/infrastructure/player/usePipEntry.ts`:
+the app is in the foreground there, so React can unmount the chrome, wait for
+the frame that drew the chrome-less window, and only then ask the OS.
 
-*Source:* the 2026-11-03 device measurement · lib `v3.0.5` (`onUserLeaveHint`,
-the 27th event, and the removal of the platform's own switch) · app
-`71ced34` (the button path) · Android's own guidance: "Remove other UI
+The **HOME** entry is owned by the **library**, and it is **native**. The app
+is being backgrounded there, React's scheduler is paused with it, and a React
+commit cannot land — so the entry cannot be driven from JS at all (D-12). The
+library hides the chrome with a native `visibility = GONE` on the host view it
+finds through the app's `nativeID`, asks the OS for the window, and restores
+the chrome when PiP ends.
+
+*Source:* the 2026-11-03 device measurement · lib `v3.0.5` (the removal of
+the platform's own switch) and lib `v3.2.0` (the native HOME entry, which
+retired the `onUserLeaveHint` event — the lib's event list is 26, not 27) ·
+app `71ced34` (the button path) · Android's own guidance: "Remove other UI
 elements before your activity enters PiP" (`developer.android.com/develop/ui/views/picture-in-picture`).
 
 ---
@@ -338,6 +346,74 @@ commit cannot land at that moment, while a native `visibility` change is a
 View-system mutation and schedules a real traversal.
 
 Recorded as `B-049` / `B-051` / `F-062` / `F-063` in
+`SIMBA_BUG_TRACKER_2026_10_21.md`.
+
+### D-12 — The PiP window holds the video and nothing else, and the HOME entry is NATIVE ✅ locked 2026-11-03
+
+**A Picture-in-Picture window contains the VIDEO and the platform's action
+row. Nothing else. Ever.** Not the app's chrome, not a frozen copy of the
+app's chrome, not a second row of buttons.
+
+**Where that rule comes from — Android's own words.** *"Users cannot interact
+with your app's UI elements when the app is in PiP mode"*, *"Remove other UI
+elements before your activity enters PiP"*, and the design guide's *"Avoid
+showing anything except the video content"*
+(`developer.android.com/develop/ui/views/picture-in-picture`).
+
+**And every shipping React Native player obeys it**, which is the answer to
+the user's question — *"check the best practices for this in react native
+other apps"*:
+
+| player | what it does in PiP |
+|---|---|
+| Bitmovin RN | `renderOnlyPlayerView` — the player view only |
+| VdoCipher RN | the native player only |
+| bunny-stream RN | native controls, no React chrome |
+| react-native-video | `useController = false`; the **media session creates its own controls for PiP**, and the root content views are hidden natively |
+| expo-video | `nativeControls`, `startsPictureInPictureAutomatically` |
+
+**So the app's chrome must never be in that window — and there are exactly two
+entry paths, and they cannot be handled the same way.**
+
+**The foreground path (the PiP button) is React-driven, and that is right.**
+In the foreground React can unmount the chrome, wait for the frame that drew
+the chrome-less window, and only then ask the OS. The order is the contract.
+
+**The HOME path cannot be React-driven at all.** By the time the user presses
+HOME the Activity is pausing, and RN pauses the React scheduler with it: a
+React commit cannot land and there is no frame clock. Measured on
+emulator-5554 (API 37) on 2026-11-03 — the leave hint reached JS immediately,
+the effect that would have driven the entry ran **5.7 s late**, and its
+`requestAnimationFrame` **never fired**, so **no PiP window opened at all**.
+
+**So the HOME entry is native**, and the mechanism is React Native's own:
+
+1. the app gives its expanded chrome a `nativeID` — RN stores it on the host
+   view as `R.id.view_tag_native_id`;
+2. the library finds that host view with RN's own
+   `ReactFindViewUtil.findView(root, nativeId)` — verified against RN 0.86.0's
+   source, where `BaseViewManager.setNativeId` is the `@ReactProp` that sets
+   the tag, and Fabric calls the same setter;
+3. it sets `visibility = GONE` on it — a **View-system mutation**, so it takes
+   effect without a React commit and schedules a real traversal;
+4. it asks the OS for the window; and
+5. it restores the chrome in `onPictureInPictureModeChanged(false)`.
+
+**Who owns what is split by what each side actually knows.** The app owns the
+chrome, so the app owns the `nativeID` — one module, `pipChrome.ts`, is the
+single owner of that string, and it is published to the library as
+`pip.chromeNativeId`. The library owns the entry, because it is the library
+that knows how a PiP window is built, how the source rect is measured and how
+the chrome is found. The app's whole contribution is one call:
+`MpvBridgeModule.notifyUserLeaveHint(this)`.
+
+**The `onUserLeaveHint` event is GONE.** The library raised it so the app
+could drive the entry from JS; the library now does that entry itself, and the
+event's only consumer was the path it took over. Leaving it would be a
+double-entry footgun: the OS refuses the second entry, the app reads that
+refusal as "PiP failed", and the chrome comes back over a live PiP window.
+
+**One entry, one owner, one order.** Recorded as `B-050` / `F-064` in
 `SIMBA_BUG_TRACKER_2026_10_21.md`.
 
 ### Stage 0 — Stopgap commit *(pending Paval's review)*

@@ -53,6 +53,7 @@ import {presetToMpv, useQualityStore} from '../../../../state/useQualityStore';
 import {useSkipSilenceStore} from '../../../../state/useSkipSilenceStore';
 import {useNowPlayingStore} from '../../../../state/nowPlayingStore';
 import {dockStyleFor} from '../../../../infrastructure/player/dockPlacement';
+import {PIP_CHROME_NATIVE_ID} from '../../../../infrastructure/player/pipChrome';
 import {useClosePlaybackWithToast} from '../../useClosePlaybackWithToast';
 import {VideoSurface} from '../VideoSurface/VideoSurface';
 import {PlayerScrim} from '../PlayerScrim/PlayerScrim';
@@ -646,7 +647,23 @@ const ExpandedChrome: React.FC = () => {
   // still receive touches — and a tap that nothing above claims falls
   // through to the picture beneath.
   return (
-    <View style={styles.chrome} pointerEvents="box-none">
+    // `nativeID` is how the LIBRARY finds this chrome on the HOME path.
+    //
+    // Pressing HOME has to enter PiP natively: React is paused with the
+    // Activity while the app is backgrounded, so this subtree cannot be
+    // unmounted in time (measured on emulator-5554, API 37, 2026-11-03 —
+    // the entry effect ran 5.7 s late, the animation frame never fired,
+    // and no PiP window opened at all). The library therefore hides this
+    // view with a native `visibility = GONE` — a View-system mutation,
+    // which needs no React commit — and to find this view it needs the
+    // `nativeID`, because the library ships no chrome of its own.
+    //
+    // It is the chrome ROOT on purpose: one `GONE` here takes the whole
+    // overlay with it, which is what the PiP window must not show.
+    <View
+      nativeID={PIP_CHROME_NATIVE_ID}
+      style={styles.chrome}
+      pointerEvents="box-none">
       <SimbaStatusBar variant="player" />
 
       <View style={styles.surfaceContainer} pointerEvents="box-none">

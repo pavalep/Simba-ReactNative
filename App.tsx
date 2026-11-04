@@ -29,6 +29,7 @@ import {ThemeProvider} from './src/theme';
 import {QueryProvider} from './src/app/QueryProvider';
 import {AppRoot} from './src/app/AppRoot';
 import {resolveResumeMs} from './src/infrastructure/player';
+import {PIP_CHROME_NATIVE_ID} from './src/infrastructure/player/pipChrome';
 import {configureGoogleSignin} from './src/services/authService';
 
 // Initialize GoogleSignin once at app startup — calling configure() every
@@ -72,12 +73,39 @@ const resumePolicy = (resumeId: string): number | undefined => {
   return resolveResumeMs({bookmarks, history}, resumeId);
 };
 
+/**
+ * The library's player configuration.
+ *
+ * Only the Picture-in-Picture section is set, and only one field of it:
+ * `chromeNativeId` is the `nativeID` of the app's expanded chrome root.
+ *
+ * The HOME path's PiP entry is NATIVE, because React is paused with the
+ * Activity while the app is backgrounded and a React commit cannot land
+ * (measured on emulator-5554, API 37, 2026-11-03: the entry effect ran
+ * 5.7 s late, the animation frame never fired, and no PiP window opened).
+ * The library hides the chrome with a native `visibility = GONE` and finds
+ * the view through this id.
+ *
+ * `enabled` and `autoEnterOnLeave` are left at the library's defaults
+ * (both true) — they are the library's policy defaults and the app agrees
+ * with them, so spelling them out here would be a second owner for a fact
+ * that already has one.
+ *
+ * The id string itself comes from the module that owns it, so the prop
+ * here and the `nativeID` on the chrome root cannot drift apart.
+ */
+const playerConfig = {
+  pip: {
+    chromeNativeId: PIP_CHROME_NATIVE_ID,
+  },
+};
+
 const App: React.FC = () => (
   <GestureHandlerRootView style={styles.root}>
     <SafeAreaProvider>
       <QueryProvider>
         <ThemeProvider>
-          <SimbaPlayer resumePolicy={resumePolicy}>
+          <SimbaPlayer resumePolicy={resumePolicy} config={playerConfig}>
             <AppRoot />
           </SimbaPlayer>
         </ThemeProvider>

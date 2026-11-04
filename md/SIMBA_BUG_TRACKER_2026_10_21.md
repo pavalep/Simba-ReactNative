@@ -2269,6 +2269,41 @@ in the log. Buttons that LOOK right are the most expensive kind of wrong.
 
 **State:** **RESOLVED (F-062) — fixed 2026-11-03**, in library `v3.1.0`.
 
+**Device proof (emulator-5554, API 37, 2026-11-03, 20:46–20:51, on the `v3.1.0` build).**
+Entered PiP from the app's own PiP button, opened the platform's action row, and
+tapped **our** Play button:
+
+```
+Historical Broadcast #2:
+  BroadcastRecord{3494187 com.simba.player.PIP_PLAY_PAUSE/u0/0x1001} to user 0
+  Intent { act=com.simba.player.PIP_PLAY_PAUSE flg=0x10 xflg=0x4 }
+  caller=com.simba.player null pid=-1 uid=10230 realCallingUid=10188
+  enqueueClockTime=2026-11-03 20:49:23.246 dispatchClockTime=2026-11-03 20:49:23.247
+  dispatchTime=-8s986ms (+1ms since enq) finishTime=-8s982ms (+4ms since disp)
+  DELIVERED scheduled +1ms terminal +2ms
+  #0: BroadcastFilter{60a3826 10230/u0 ReceiverList{780af81 23493 com.simba.player/10230/u0 remote:5914f68}}
+```
+
+`realCallingUid=10188` is **SystemUI** — the tap came from the platform's action
+row, not from a shell. The intent carries **no component** (it is implicit), and
+the delivery landed on the runtime registration inside `com.simba.player` (pid
+23493) with a **real `dispatchTime`**. The same dump still holds the PRE-FIX
+records from 18:59 and 19:17, and they read `cmp=com.simba.player/.PipActionReceiver`
+with `dispatchTime=--` — never dispatched. The A/B is in one screen.
+
+**And the video really paused.** The PiP region was cropped out of two
+screenshots and compared byte for byte:
+
+| when | frames apart | SHA-256 of the PiP crop | verdict |
+|---|---|---|---|
+| before the tap | 2.5 s | `AB6D6F27…ABD9` vs `7F7E0DE9…CE05` — **differ** | the video was **playing** |
+| after the tap | 3 s | `5A0824AA…02FE` vs `5A0824AA…02FE` — **identical** | the video was **paused** |
+
+Tapping our Play a second time resumed it (the two crops then differed again:
+`6C4AF7EB…105C` vs `D6F7FDD4…B047`), so the control is a live toggle and not a
+one-way latch. The PiP window showed **the video only — no app chrome** — at
+every step.
+
 ---
 
 ### B-050 · P0 · app · pressing HOME does not enter Picture-in-Picture at all — the React commit never lands while the Activity is paused
@@ -2296,6 +2331,21 @@ asks for the window ran **5.7 seconds late**, and the `requestAnimationFrame`
 it waits on **never fired at all** — so `commands.enterPip()` was never
 reached and the bridge never logged `[PlaybackTrace][Bridge][enterPip]`.
 
+**Re-measured on the `v3.1.0` build (21:10:56, the same device).** The native
+chain still works end to end — the hook fires, the library reports the policy
+armed, and the leave hint is emitted:
+
+```
+21:10:56.763  MainActivity: onUserLeaveHint: the user is leaving the app
+21:10:56.763  MpvBridgeModule: companion.notifyUserLeaveHint: autoEnter=true instance=true
+21:10:56.766  MpvBridgeModule: companion.notifyUserLeaveHint: emit succeeded
+```
+
+and **still no PiP window**: after HOME, `dumpsys window windows` listed only the
+launcher and the app's own Activity window — no PiP window at all. So the
+missing window is NOT a missing event and NOT a missing policy: the leave hint
+reaches JS, and the JS still cannot act on it.
+
 **Root cause.** RN pauses the React scheduler when the Activity is paused, and
 the frame clock does not tick while the app is backgrounded. On the HOME path
 the trigger IS the app leaving the foreground, so the entry can never be
@@ -2320,12 +2370,20 @@ schedules a real traversal, and an Activity in PiP is "paused, but rendering".
 
 ---
 
-### B-051 · P2 · lib+app+docs · "an Activity in Picture-in-Picture does not redraw" was false, in nine places — **RESOLVED (F-063)**
+### B-051 · P2 · lib+app+docs · "an Activity in Picture-in-Picture does not redraw" was false — **RESOLVED (F-063)**
 
-**What it was.** Nine comments across the library, the app and its tests
-explained the stale-chrome measurement with one sentence: *"an Activity in PiP
-does not redraw — whatever its window held at the moment of the transition is
-what the PiP window keeps showing."*
+**What it was.** Comments across the library, the app and its tests explained
+the stale-chrome measurement with one sentence: *"an Activity in PiP does not
+redraw — whatever its window held at the moment of the transition is what the
+PiP window keeps showing."*
+
+**The original entry said "nine places", and that count was an undercount.**
+A re-sweep on 2026-11-03 found **five more in the LIBRARY** still carrying the
+sentence: `MpvBridgeModule.kt` — where the phrase is split across two lines,
+so the first sweep's regex missed it — the `CHANGELOG.md` entry for **v3.1.0**
+itself, `README.md`, `src/bridge/MpvPlayerModule.ts` and
+`src/types/config.ts`. Those five shipped corrected in library **v3.2.0**.
+A count is a claim like any other, and it had to be corrected too.
 
 **It is false, and it misattributes the cause.** AOSP says the opposite:
 *"In PIP, the activity is in a paused, but rendering, state"*
@@ -2341,6 +2399,73 @@ fix has to be **native** (see B-050): a React commit cannot land at that
 moment, but a native `visibility` change can.
 
 **State:** **RESOLVED (F-063) — fixed 2026-11-03.**
+
+---
+
+### B-052 · P3 · lib · the PiP play/pause button shows ▶ while the video is PLAYING — **OPEN**
+
+**Symptom.** In the Picture-in-Picture window the library's own action row
+carries a **Play** glyph (`android.R.drawable.ic_media_play`) on the
+play/pause button. It is the ONLY glyph it can ever show: the icon is
+hard-coded in `PipManager.buildPipParams()` and the params are built once, at
+entry. So while the video is playing, the button that PAUSES it is drawn as a
+button that PLAYS it.
+
+**Measured (emulator-5554, API 37, 2026-11-03).** The action row was captured
+while `ForBiggerBlazes.mp4` was playing (the PiP-region crops differ between
+two frames 2.5 s apart, so the video was demonstrably running) and the first
+button was still the Play triangle.
+
+**Why it matters.** The user's own words were *"pip controls are of correct
+size, but non interactable"* — the size was right and the behaviour was wrong;
+the glyph is the third thing about that row, and it is wrong in the same
+direction. A shipping player shows the state, not the intent: Media3's
+`MediaSessionConnector` sets the play/pause action's icon from
+`Player.playWhenReady`, and YouTube, Plex and ExoPlayer all show ⏸ while
+playing.
+
+**Not fixed here, on purpose.** Making the icon follow the state means the
+library has to rebuild the PiP parameters and re-issue them with
+`Activity.setPictureInPictureParams()` whenever the playback state changes.
+That is a real change with its own device proof, and the tracker forbids
+shipping an unproven change beside a proven one — so it is its own release.
+
+---
+
+### B-053 · P3 · lib · the PiP window carries TWO action rows, and a THIRD owner already exists — **OPEN**
+
+**Symptom.** Tapping the Picture-in-Picture window opens **two** rows of
+buttons:
+
+| row | buttons | owner |
+|---|---|---|
+| top | ⚙ settings · ⛶ expand · ✕ close | the **platform** |
+| bottom | ▶ play/pause · 🔍 expand · ✕ close | the **library** (`PictureInPictureParams.Builder.setActions()`) |
+
+**Measured (emulator-5554, API 37, 2026-11-03).** The centroids were located
+pixel-exactly in the screenshot: the platform's gear at (505,1589), its
+brackets at (739,1675), its ✕ at (975,1589), and the library's three at
+(589,1799), (736,1764) and (884,1764) — two distinct rows.
+
+**Why this is worth deciding.** The library's expand and close DUPLICATE
+buttons the platform already draws. And the library already owns a THIRD
+candidate owner of the same transport: `MediaPlaybackService` holds a live
+`MediaSessionCompat` with `onPlay`/`onPause`/`onStop`/`onSeekTo`
+callbacks wired straight to mpv, and it publishes
+`ACTION_PLAY | ACTION_PAUSE | ACTION_PLAY_PAUSE | ACTION_STOP | …` with the
+real `STATE_PLAYING`/`STATE_PAUSED`. On Android 12+ an active MediaSession is
+what the platform uses to build the PiP transport row — which is why
+`react-native-video` and `expo-video` let the media session own the PiP
+controls and call no `setActions()` at all.
+
+**The two candidate designs.** (1) Keep the library's row and fix its icon
+(B-052). (2) Drop `setActions()` entirely and let the `MediaSession` drive
+the row — one owner instead of two, and the play/pause glyph would be correct
+for free. Design (2) is the better one on the evidence, but it changes what
+"close" means (the platform's ✕ leaves PiP; the library's ✕ ends the session)
+and it has to be proven that the app's React playback state still follows the
+session's own play/pause. **Not decided here** — this is a design choice for
+the next wave, and it is recorded so it is not lost.
 
 ---
 
@@ -2414,7 +2539,7 @@ moment, but a native `visibility` change can.
 ---
 
 | F-062 | P0 | lib+app | The Picture-in-Picture action row rendered three buttons and none of them worked. The action's `PendingIntent` named the receiver's component (`Intent.setClass(...)`), and an **explicit** broadcast is resolved through the **manifest** — where `PipActionReceiver` was never declared, because it was only a runtime registration. So the broadcast resolved to no receiver and was dropped before dispatch: measured on emulator-5554 (API 37), the same action sent explicitly was **never dispatched** (`dispatchTime=--`, foreground and in PiP alike), while the same action sent implicitly was **dispatched in 0 ms**; and tapping our button produced no broadcast record at all, while the platform's own gear button opened the PiP settings screen in the same gesture. The intent is now **implicit** (the action and nothing else, which is what the registration matches on); the **library owns the receiver** — registered at runtime, once per process, on the application context, at the moment the PiP parameters are built, so the platform can never be handed buttons that nothing is listening for; `PipManager.intentFilter()` is now `internal`, so the compiler refuses a consumer that would register a second receiver (two registrations deliver every action twice, and a play/pause that toggles twice leaves playback exactly where it was); and a failure to deliver an action is now **logged** instead of swallowed by a silent `catch`. The app drops its own registration, and a guard test pins that ownership. 8 new lib tests; 5 mutations, all killed | lib `v3.1.0` + app `f5/w22-close-minimise-d9` |
-| F-063 | P2 | lib+app+docs | Nine comments said *"an Activity in PiP does not redraw"*. It does — AOSP: *"In PIP, the activity is in a paused, but rendering, state"* (source.android.com/docs/core/display/pip). What stops is **REACT**: RN pauses the React scheduler with the Activity, so a commit cannot land and no frame is produced. The conclusion every note argued for is unchanged; the reason is now right — and it is the reason the fix has to be **native**. The library's README carried eight false claims of its own: the **removed** platform auto-enter switch, an API 31+ floor for auto-enter, a PiP action receiver "declared in the manifest", **26** named events where there are **27**, a troubleshooting entry that still asked for API 31+, and a pointer to "the two lines of Kotlin and the JS that goes with them" in a section that did not contain them. All corrected, and the auto-enter section now carries the Kotlin and the JS a consumer actually needs | lib `v3.1.0` + app `f5/w22-close-minimise-d9` |
+| F-063 | P2 | lib+app+docs | Comments said *"an Activity in PiP does not redraw"*. It does — AOSP: *"In PIP, the activity is in a paused, but rendering, state"* (source.android.com/docs/core/display/pip). What stops is **REACT**: RN pauses the React scheduler with the Activity, so a commit cannot land and no frame is produced. The conclusion every note argued for is unchanged; the reason is now right — and it is the reason the fix has to be **native**. The library's README carried eight false claims of its own: the **removed** platform auto-enter switch, an API 31+ floor for auto-enter, a PiP action receiver "declared in the manifest", **26** named events where there were **27**, a troubleshooting entry that still asked for API 31+, and a pointer to "the two lines of Kotlin and the JS that goes with them" in a section that did not contain them. All corrected, and the auto-enter section now carries the Kotlin and the JS a consumer actually needs. The library's own **five** sites still carried the sentence after that first pass — the phrase is split across two lines in `MpvBridgeModule.kt`, so the first sweep's regex missed it — and the entry's own count was an undercount. Those five shipped corrected in **v3.2.0**, and the event list is **26** again now that `onUserLeaveHint` is retired | lib `v3.1.0` + `v3.2.0` + app `f5/w22-close-minimise-d9` |
 
 ## ACCEPTED (product decisions, not defects)
 

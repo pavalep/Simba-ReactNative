@@ -328,6 +328,22 @@ export {usePipBridge} from './usePipBridge';
 // Mount once, next to `usePipBridge`.
 export {usePipEntry} from './usePipEntry';
 
+// V22 W23 (2026-11-03) — the ONE owner of the expanded chrome's `nativeID`.
+//
+// The HOME path's PiP entry is NATIVE: React is paused with the Activity
+// while the app is backgrounded, so a React commit cannot land and the
+// chrome cannot be unmounted in time (measured on emulator-5554, API 37,
+// 2026-11-03: the leave hint reached JS immediately, the entry effect ran
+// 5.7 s late, the `requestAnimationFrame` never fired, and no PiP window
+// opened at all).
+//
+// The library therefore hides the chrome by mutating the host view's
+// `visibility` — a View-system mutation, so it needs no React commit — and
+// to find that host view it needs the app's `nativeID`. The library ships
+// no chrome of its own, so the app owns the string; this module is the one
+// place that owns it.
+export {PIP_CHROME_NATIVE_ID} from './pipChrome';
+
 // W6.2 — the single owner of caption rendering style. Pushed to mpv from
 // the chrome subtree; the store in `state/` holds the preference.
 export {

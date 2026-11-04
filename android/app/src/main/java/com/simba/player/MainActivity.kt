@@ -192,45 +192,62 @@ class MainActivity : ReactActivity() {
   // activity goes to the background. That is what makes it the right
   // place to start a Picture-in-Picture entry.
   //
-  // WHY THE ORDER MATTERS SO MUCH
+  // WHY THE ENTRY HAS TO BE NATIVE HERE
   //
-  // **React does not redraw in Picture-in-Picture (the Activity is "paused, but rendering", but RN pauses the React scheduler with it, so a React commit cannot land and no frame is produced).** Whatever its
-  // window held at the moment the OS transitioned it into PiP is what the
-  // PiP window keeps showing — frozen.
+  // **An Activity in PiP is "paused, but rendering" — what stops is REACT.**
+  // RN pauses the React scheduler with the Activity, so while the app is
+  // backgrounded a React commit cannot land and no frame is produced.
+  // Whatever the window held at the moment the OS transitioned it into PiP
+  // is what the PiP window keeps showing — frozen.
   //
-  // Measured on the emulator on 2026-11-03: the PiP window showed this
-  // app's FULL expanded chrome — the header band with the lock and the
-  // bookmark, the scrub row with the elapsed and remaining clocks, the
-  // ±10 buttons and the big circular pause button — scaled down into the
-  // small window, and the user called it "not professional looking at
-  // all". Its buttons were DEAD (tapping pause did not pause: their views
-  // were gone) and its clock was FROZEN at 51:09 while the real position
-  // was 54:15 (the pixels were stale) — while the JS side already said
-  // `pipActive: true` and `isExpanded: false`.
+  // Measured on the emulator on 2026-11-03, twice:
   //
-  // The cause was the ORDER, not the state. The library had armed the
-  // platform's own auto-enter switch, so the SYSTEM started the
-  // transition with the chrome still mounted. The fix is to let the app
-  // enter PiP itself, in the only order that works:
+  //  1. The app had armed the platform's own auto-enter switch, so the
+  //     SYSTEM started the transition with the chrome still mounted. The
+  //     PiP window showed this app's FULL expanded chrome — the header
+  //     band with the lock and the bookmark, the scrub row with the
+  //     elapsed and remaining clocks, the ±10 buttons and the big circular
+  //     pause button — scaled down into the small window, and the user
+  //     called it "not professional looking at all". Its buttons were DEAD
+  //     (tapping pause did not pause: their views were gone) and its clock
+  //     was FROZEN at 51:09 while the real position was 54:15 (the pixels
+  //     were stale) — while the JS side already said `pipActive: true` and
+  //     `isExpanded: false`.
   //
-  //   1. the chrome is unmounted (the JS side),
-  //   2. the frame that drew it without the chrome is presented, and
-  //   3. only THEN is the OS asked for the window.
+  //  2. With the platform switch gone and the entry driven from JS, the
+  //     HOME path still opened NO PiP window at all. The leave hint reached
+  //     JS immediately, but the effect that would have driven the entry ran
+  //     5.7 s late and its `requestAnimationFrame` NEVER fired — the
+  //     Activity was already paused, and the frame clock with it. On return
+  //     the screen was black and chromeless, with the store stuck at
+  //     `pipActive: true` / `pipEntryRequested: true`.
   //
-  // So this hook does NOT enter PiP, and it does not hide the chrome
-  // either. It tells the JS that the user is leaving, and the JS does the
-  // rest: `usePipEntry()` owns the order, because only the JS side knows
-  // when the frame that removed the chrome has gone by.
+  // The cause is not the state, it is WHERE the work happens. On the HOME
+  // path the app is already backgrounded, so the JS side cannot be the one
+  // to do it. The entry has to be NATIVE, and it has to happen here, in
+  // the only hook that fires before the Activity pauses:
   //
-  // The emit happens in the module companion, for the same reason the PiP
-  // callback below does it there: bridgeless RN cannot resolve the
-  // ReactContext reliably from the Activity.
+  //   1. the chrome's host view is hidden with `visibility = GONE` — a
+  //      View-system mutation, so it lands without a React commit — found
+  //      by the `nativeID` the app published as `pip.chromeNativeId`,
+  //   2. the OS is asked for the window, and
+  //   3. the chrome is restored when PiP ends
+  //      (`onPictureInPictureModeChanged(false)` below).
+  //
+  // The library does all three, because it is the library that knows how a
+  // PiP window is built and how the chrome is found. The app's job here is
+  // to hand it the Activity — so the call takes the Activity.
+  //
+  // The BUTTON path stays where it was: in the foreground the JS side CAN
+  // unmount the chrome, wait for the frame that drew it, and only then ask
+  // for the window. That path is `usePipEntry()`, and it is proven on the
+  // device (emulator-5554, API 37, 2026-11-03).
   override fun onUserLeaveHint() {
     super.onUserLeaveHint()
     if (BuildConfig.DEBUG) {
       android.util.Log.i(TAG, "onUserLeaveHint: the user is leaving the app")
     }
-    MpvBridgeModule.notifyUserLeaveHint()
+    MpvBridgeModule.notifyUserLeaveHint(this)
   }
 
   // ── PiP mode change callback ──
