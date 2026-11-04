@@ -323,19 +323,22 @@ export {usePipBridge} from './usePipBridge';
 
 // V22 W23 (2026-11-03) — the single owner of the PiP ENTRY. `usePipBridge`
 // reports that the window is up; this one asks for it, and it does so only
-// after the frame that removed the chrome has been presented — React does not redraw in PiP (the Activity is "paused, but rendering", but RN pauses the React scheduler with it, so a React commit cannot land and no frame is produced), so a chrome that is still mounted at the moment
+// after the frame that removed the chrome has been presented — React does not redraw in PiP (the Activity is "paused, but rendering", but RN freezes TWO things with the Activity — Fabric stops applying mount items, so a React commit never reaches the native view tree, and the JS timer manager freezes, so `requestAnimationFrame` never fires), so a chrome that is still mounted at the moment
 // of the transition is frozen into the PiP window as a dead, stale layer.
 // Mount once, next to `usePipBridge`.
 export {usePipEntry} from './usePipEntry';
 
 // V22 W23 (2026-11-03) — the ONE owner of the expanded chrome's `nativeID`.
 //
-// The HOME path's PiP entry is NATIVE: React is paused with the Activity
-// while the app is backgrounded, so a React commit cannot land and the
-// chrome cannot be unmounted in time (measured on emulator-5554, API 37,
-// 2026-11-03: the leave hint reached JS immediately, the entry effect ran
-// 5.7 s late, the `requestAnimationFrame` never fired, and no PiP window
-// opened at all).
+// The HOME path's PiP entry is NATIVE, because an Activity in PiP is
+// "paused, but rendering" — and what stops is the REACT-TO-NATIVE
+// pipeline: Fabric stops applying mount items while the app is
+// backgrounded (so a React commit never reaches the native view tree),
+// and the JS timer manager freezes (so `requestAnimationFrame`, a
+// zero-delay timer on that registry, never fires). Measured on
+// emulator-5554 (API 37) on 2026-11-03: the leave hint reached JS
+// immediately, the entry effect ran 5.7 s late, the
+// `requestAnimationFrame` never fired, and no PiP window opened at all.
 //
 // The library therefore hides the chrome by mutating the host view's
 // `visibility` — a View-system mutation, so it needs no React commit — and

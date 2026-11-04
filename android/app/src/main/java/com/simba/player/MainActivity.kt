@@ -99,9 +99,10 @@ class MainActivity : ReactActivity() {
     //
     // The platform's own auto-enter switch is deliberately NOT armed.
     // The app performs the PiP entry itself, after removing its chrome.
-    // An Activity in PiP is "paused, but rendering" - what stops is
-    // REACT: its scheduler is paused with the Activity, so a commit
-    // cannot land and no frame is produced. The switch would transition
+    // An Activity in PiP is "paused, but rendering" - what stops is the
+    // REACT-TO-NATIVE pipeline: Fabric stops applying mount items, so a
+    // commit never reaches the native view tree, and the JS timer manager
+    // freezes, so no frame is ever produced. The switch would transition
     // the Activity before the chrome could be removed, so the chrome
     // would still be mounted when the PiP window was created - and with
     // no frame coming, it would stay there: dead and scaled down.
@@ -194,11 +195,27 @@ class MainActivity : ReactActivity() {
   //
   // WHY THE ENTRY HAS TO BE NATIVE HERE
   //
-  // **An Activity in PiP is "paused, but rendering" — what stops is REACT.**
-  // RN pauses the React scheduler with the Activity, so while the app is
-  // backgrounded a React commit cannot land and no frame is produced.
-  // Whatever the window held at the moment the OS transitioned it into PiP
-  // is what the PiP window keeps showing — frozen.
+  // **An Activity in PiP is "paused, but rendering" — what stops is the
+  // REACT-TO-NATIVE pipeline, in TWO independent places.**
+  //
+  //  1. Fabric stops applying mount items:
+  //     `FabricUIManager.onHostPause()` removes the `DISPATCH_UI` frame
+  //     callback, and mount items are applied only from that callback's
+  //     `doFrameGuarded`. React still renders; the results never reach
+  //     the native view tree.
+  //     (`ReactAndroid/src/main/java/com/facebook/react/fabric/
+  //     FabricUIManager.java:1250-1253`, `:1567-1574`, `:1617-1624`)
+  //
+  //  2. The JS timer manager freezes, so `requestAnimationFrame` never
+  //     fires: it is a zero-delay timer on that same registry.
+  //     (`ReactAndroid/src/main/java/com/facebook/react/modules/core/
+  //     JavaTimerManager.kt:72-76`, `:290-293`;
+  //     `ReactCommon/react/runtime/TimerManager.cpp:360-367`)
+  //
+  // The JS runtime keeps running; what stops is the hand-off to the
+  // native views and the frame clock. Whatever the window held at the
+  // moment the OS transitioned it into PiP is what the PiP window keeps
+  // showing — frozen.
   //
   // Measured on the emulator on 2026-11-03, twice:
   //

@@ -101,7 +101,7 @@ export interface Presentation {
    * This HIDES the chrome and records the request; it does not enter
    * PiP. The entry itself belongs to `usePipEntry()`, which performs it
    * once the frame that removed the chrome has been presented — because
-   * React does not redraw in PiP (the Activity is "paused, but rendering", but RN pauses the React scheduler with it, so a React commit cannot land and no frame is produced), and a chrome that is still
+   * React does not redraw in PiP (the Activity is "paused, but rendering", but RN freezes TWO things with the Activity — Fabric stops applying mount items, so a React commit never reaches the native view tree, and the JS timer manager freezes, so `requestAnimationFrame` never fires), and a chrome that is still
    * mounted at the moment of the transition is frozen into the PiP
    * window as a dead, stale layer.
    */

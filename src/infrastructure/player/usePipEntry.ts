@@ -9,16 +9,33 @@
  *    chrome, wait for the frame that drew the chrome-less window, and only
  *    then ask the OS for the window. That is this hook.
  *
- *  - The **HOME** path runs while the Activity is being backgrounded. RN
- *    pauses the React scheduler with the Activity, so a React commit cannot
- *    land and there is no frame clock — a React-driven entry CANNOT work
- *    there. Measured on emulator-5554 (API 37) on 2026-11-03: the leave
- *    hint reached JS immediately, but the effect that would have driven the
- *    entry ran 5.7 s late and its `requestAnimationFrame` NEVER fired, so
- *    no PiP window opened at all. That path is the LIBRARY's, and it is
- *    native: `MainActivity.onUserLeaveHint()` hands the Activity to the
- *    library, which hides the chrome with a native `visibility = GONE` and
- *    asks the OS for the window itself.
+ *  - The **HOME** path runs while the Activity is being backgrounded, and
+ *    RN freezes TWO things with the Activity — so a React-driven entry
+ *    CANNOT work there:
+ *
+ *      1. FABRIC STOPS APPLYING MOUNT ITEMS.
+ *         `FabricUIManager.onHostPause()` removes the `DISPATCH_UI` frame
+ *         callback, and mount items are applied only from that callback's
+ *         `doFrameGuarded` — so React still RENDERS, but the results
+ *         never reach the native view tree.
+ *         (`ReactAndroid/src/main/java/com/facebook/react/fabric/
+ *         FabricUIManager.java:1250-1253`, `:1567-1574`, `:1617-1624`)
+ *
+ *      2. THE JS TIMER MANAGER FREEZES, so `requestAnimationFrame` never
+ *         fires: it is a zero-delay timer on that same registry.
+ *         (`ReactAndroid/src/main/java/com/facebook/react/modules/core/
+ *         JavaTimerManager.kt:72-76`, `:290-293`;
+ *         `ReactCommon/react/runtime/TimerManager.cpp:360-367`)
+ *
+ *    The JS runtime keeps running; what stops is the hand-off to the
+ *    native views and the frame clock. Measured on emulator-5554 (API 37)
+ *    on 2026-11-03: the leave hint reached JS immediately, but the effect
+ *    that would have driven the entry ran 5.7 s late and its
+ *    `requestAnimationFrame` NEVER fired, so no PiP window opened at all.
+ *    That path is the LIBRARY's, and it is native:
+ *    `MainActivity.onUserLeaveHint()` hands the Activity to the library,
+ *    which hides the chrome with a native `visibility = GONE` and asks the
+ *    OS for the window itself.
  *
  * ## What was wrong (the chrome in the PiP window)
  *
@@ -45,12 +62,14 @@
  * ## Why that happens
  *
  * **An Activity in Picture-in-Picture is "paused, but rendering"**
- * (source.android.com/docs/core/display/pip) — what stops is REACT. RN
- * pauses the React scheduler when the Activity is paused, so a React
- * commit cannot land and no frame is produced. The window's content is
- * therefore whatever it was at the moment of the transition, and the
- * separate video layer keeps compositing on top of it — which is exactly
- * what was measured: live video under a dead, frozen control bar.
+ * (source.android.com/docs/core/display/pip) — what stops is the
+ * REACT-TO-NATIVE pipeline, in the two places listed above: Fabric stops
+ * applying mount items, so a React commit never reaches the native view
+ * tree, and the JS timer manager freezes, so no frame is ever scheduled.
+ * The window's content is therefore whatever it was at the moment of the
+ * transition, and the separate video layer keeps compositing on top of it
+ * — which is exactly what was measured: live video under a dead, frozen
+ * control bar.
  *
  * So the order is the whole contract:
  *

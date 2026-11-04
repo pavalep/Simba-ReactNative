@@ -1,29 +1,38 @@
 /**
- * The loading and error overlays live ON THE PICTURE, so the dock shows
- * them.
+ * The loading and error overlays live under the CHROME ROOT, and the
+ * picture's box holds nothing but the picture.
  *
- * ## The defect this pins
+ * ## Why the composition moved
  *
- * Both overlays used to be mounted inside `ExpandedChrome`, which
- * renders only when the player is expanded. So:
+ * The library hides ONE view when the Activity enters
+ * Picture-in-Picture: the app's expanded chrome root, found by its
+ * `nativeID` and hidden with a native `visibility = GONE`. Anything
+ * that is a SIBLING of that root survives that hide.
  *
- *   - a video that was LOADING or STALLED in the dock showed nothing
- *     (the dock showed a black square), and
- *   - a video whose LOAD FAILED in the dock showed nothing at all —
- *     the user saw a black square with no error and nothing to do.
+ * The overlays used to be siblings of the chrome root — children of the
+ * picture's box — because they had to be visible in the DOCK, where the
+ * chrome does not exist at all. A cold-start video begins minimised, so
+ * a cold-start LOAD FAILURE was a black square in the dock with no
+ * error and no way to act.
  *
- * The second one is the "silent black screen" P0, and it was
- * structural rather than a missing condition: a cold-start video
- * begins minimised (`videoPresentation` starts at `'mini'`), so the
- * failure happened in the dock, where the error overlay was not
- * mounted.
+ * They now live INSIDE the chrome root, which is what makes "one GONE
+ * leaves only the picture" true: a spinner or an error card can no
+ * longer be painted into the PiP window.
+ *
+ * The cost is the dock. The chrome root exists only in the expanded
+ * presentation, so the dock shows no loading state and no error. The
+ * error is still reachable — tapping the dock expands the player, where
+ * the card with Retry and Close is shown — but it is no longer shown
+ * at a glance in the 44 pt slot. That is the price of a correct PiP
+ * window, and it is recorded here so the next reader knows it was a
+ * decision and not an accident.
  *
  * ## What is asserted
  *
- * Not "the overlay renders" — it did, in the expanded chrome. The
- * claim is structural: the overlays are children of the PICTURE's box,
- * which is the only thing that is present in both presentations, and
- * they are still there when the chrome subtree is gone.
+ * Not "the overlay renders" — it did, in the expanded chrome. The claim
+ * is structural: the overlays and the gesture layer are INSIDE the
+ * chrome root, and the picture's box — the chrome root's sibling —
+ * holds the surface and nothing else.
  */
 
 import * as React from 'react';
@@ -196,26 +205,48 @@ describe('the video lane carries the loading and error overlays', () => {
     } as never);
   });
 
-  it('mounts both overlays inside the PICTURE’s box', async () => {
-    // The picture's box is the only thing present in BOTH
-    // presentations, so it is the only correct home for an overlay
-    // that has to work in both.
+  it('mounts both overlays inside the CHROME root', async () => {
+    // The chrome root is the ONE view the library hides when the
+    // Activity enters Picture-in-Picture. A sibling of it survives that
+    // hide and keeps painting into the PiP window, so the overlays have
+    // to be INSIDE it.
     const result = await render(<VideoPlayer />);
     const tree = result.toJSON() as {
-      children: Array<{props: {style?: unknown}; children: unknown[]}>;
+      children: Array<{props: {testID?: string}; children: unknown[]}>;
+    };
+    const chromeRoot = tree.children[1];
+
+    const childTestIDs = chromeRoot.children.map(
+      child => (child as {props: {testID?: string}}).props.testID,
+    );
+    expect(childTestIDs).toContain('loading-overlay');
+    expect(childTestIDs).toContain('error-overlay');
+    result.unmount();
+  });
+
+  it('keeps the gesture layer and the overlays OUT of the picture’s box', async () => {
+    // The picture's box is a SIBLING of the chrome root, so a sibling is
+    // exactly what survives the library's hide. The picture's box holds
+    // the surface and nothing else.
+    const result = await render(<VideoPlayer />);
+    const tree = result.toJSON() as {
+      children: Array<{props: {testID?: string}; children: unknown[]}>;
     };
     const pictureBox = tree.children[0];
 
     const childTestIDs = pictureBox.children.map(
       child => (child as {props: {testID?: string}}).props.testID,
     );
-    expect(childTestIDs).toContain('picture');
-    expect(childTestIDs).toContain('loading-overlay');
-    expect(childTestIDs).toContain('error-overlay');
+    expect(childTestIDs).toEqual(['picture']);
     result.unmount();
   });
 
-  it('keeps the overlays when the chrome is gone (the dock)', async () => {
+  it('takes the overlays with the chrome (the dock)', async () => {
+    // The chrome root exists only in the expanded presentation, so the
+    // overlays exist only there. This is a DELIBERATE consequence of
+    // the move: the dock's 44 pt slot no longer shows a loading or an
+    // error state, and the failure surfaces when the player is
+    // expanded. See the module docblock.
     const result = await render(<VideoPlayer />);
 
     await act(async () => {
@@ -226,12 +257,8 @@ describe('the video lane carries the loading and error overlays', () => {
     const tree = result.toJSON() as {children: unknown[]};
     expect(tree.children).toHaveLength(1);
 
-    // And the overlays are still on the picture. Before this change
-    // they were inside the chrome, so in the dock there was nothing
-    // at all: a stalled load and a failed load both looked like a
-    // black square.
-    expect(screen.getByTestId('loading-overlay')).toBeTruthy();
-    expect(screen.getByTestId('error-overlay')).toBeTruthy();
+    expect(screen.queryByTestId('loading-overlay')).toBeNull();
+    expect(screen.queryByTestId('error-overlay')).toBeNull();
     result.unmount();
   });
 
@@ -272,9 +299,9 @@ describe('the video lane carries the loading and error overlays', () => {
     const tree = result.toJSON() as {
       children: Array<{props: {testID?: string}; children: unknown[]}>;
     };
-    const pictureBox = tree.children[0];
+    const chromeRoot = tree.children[1];
 
-    const childTestIDs = pictureBox.children.map(
+    const childTestIDs = chromeRoot.children.map(
       child => (child as {props: {testID?: string}}).props.testID,
     );
 
@@ -282,7 +309,7 @@ describe('the video lane carries the loading and error overlays', () => {
     const loadingIndex = childTestIDs.indexOf('loading-overlay');
     const errorIndex = childTestIDs.indexOf('error-overlay');
 
-    // The gesture layer must be IN the picture's box...
+    // The gesture layer must be IN the chrome root...
     expect(gestureIndex).toBeGreaterThanOrEqual(0);
     // ...and BELOW both overlays.
     expect(gestureIndex).toBeLessThan(loadingIndex);

@@ -16,10 +16,12 @@
  *    its `requestAnimationFrame` **never fired**.
  *
  * The reason is not a bug in the effect. It is WHERE the work was being
- * done: **an Activity in PiP is "paused, but rendering" — what stops is
- * REACT.** RN pauses the React scheduler with the Activity, so by the time
- * the app is backgrounded a React commit cannot land and there is no frame
- * clock to wait on. A React-driven entry cannot work on this path at all.
+ * done: **an Activity in PiP is "paused, but rendering" — what stops is the
+ * REACT-TO-NATIVE pipeline.** RN freezes TWO things with the Activity:
+ * Fabric stops applying mount items, so by the time the app is backgrounded
+ * a React commit cannot land, and the JS timer manager freezes, so there is
+ * no frame clock to wait on. A React-driven entry cannot work on this path
+ * at all.
  *
  * So the entry has to be native, and it has to happen in the only hook that
  * fires before the Activity pauses. The library does the work — it hides the

@@ -51,15 +51,20 @@
  *
  * The retry is explicit: no auto-retry loop.
  *
- * ## It lives on the PICTURE, not in the expanded chrome
+ * ## Where it is mounted
  *
- * This overlay used to be mounted inside `ExpandedChrome`, which only
- * renders when the player is expanded. A video that failed to load
- * while the player sat in the DOCK — which is where a cold-start
- * video starts, because `videoPresentation` begins at `'mini'` —
- * showed a black square and no error at all. It is now a sibling of
- * `<VideoSurface>` inside the picture's box, so the failure is shown
- * wherever the picture is.
+ * Under the app's expanded chrome root — the ONE view the library hides
+ * with a native `visibility = GONE` when the Activity enters
+ * Picture-in-Picture. A sibling of that root would survive the hide and
+ * keep painting into the PiP window.
+ *
+ * It USED to be a sibling of `<VideoSurface>`, inside the picture's box,
+ * so a video that failed to load while the player sat in the DOCK —
+ * which is where a cold-start video starts, because `videoPresentation`
+ * begins at `'mini'` — showed the failure. It does not any more: the
+ * chrome root exists only in the expanded presentation, so the dock
+ * shows a black square and the error card appears once the player is
+ * expanded.
  *
  * ## Two shapes, because the dock slot is 44 pt
  *
@@ -70,6 +75,12 @@
  * one tap away (tapping the dock expands the player, where the full
  * card is). The dock shape is `pointerEvents="none"`, so the
  * tap-to-expand still lands.
+ *
+ * The dock shape is currently UNREACHABLE: the only mount site is the
+ * expanded chrome root, and `isMini` and `isExpanded` are two halves of
+ * one derived mode, so `isMini` is always false where this renders. It
+ * is kept because it is the correct shape for that box, not because
+ * anything renders it today.
  *
  * Architecture source of truth: `md/SIMBA_PLAYER_V19_SPECIFICATION.md`
  * §3.5 + §9.4 + `md/SIMBA_PLAYER_MODULE_V19_TRACKER.md` Phase 1.3.

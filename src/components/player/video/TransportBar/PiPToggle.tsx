@@ -35,7 +35,7 @@
  * `setPipActive(accepted)` after. That order was defensible while the
  * chrome was only a cosmetic problem, and it is a defect now.
  *
- * **React does not redraw in Picture-in-Picture (the Activity is "paused, but rendering", but RN pauses the React scheduler with it, so a React commit cannot land and no frame is produced).** Whatever its
+ * **React does not redraw in Picture-in-Picture (the Activity is "paused, but rendering", but RN freezes TWO things with the Activity — Fabric stops applying mount items, so a React commit never reaches the native view tree, and the JS timer manager freezes, so `requestAnimationFrame` never fires).** Whatever its
  * window contained at the moment of the transition is what the PiP
  * window keeps showing. So a chrome that is still mounted when the OS
  * is asked is frozen into the PiP window: dead buttons (their views are

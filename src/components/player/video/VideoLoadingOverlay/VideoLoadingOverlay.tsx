@@ -18,15 +18,17 @@
  *
  * No Play/Pause affordance — this overlay is purely informational.
  *
- * ## It lives on the PICTURE, not in the expanded chrome
+ * ## Where it is mounted
  *
- * This overlay used to be mounted inside `ExpandedChrome`, which only
- * renders when the player is expanded. A video that was loading (or
- * stalled) in the dock therefore showed NOTHING — the dock showed a
- * black square, which is the same silent-black-screen failure the
- * error overlay had. It is now a sibling of `<VideoSurface>` inside
- * the picture's box, so it covers the picture wherever the picture
- * is: fullscreen AND the 44 pt dock slot.
+ * Under the app's expanded chrome root — the ONE view the library hides
+ * with a native `visibility = GONE` when the Activity enters
+ * Picture-in-Picture. A sibling of that root would survive the hide and
+ * keep painting into the PiP window.
+ *
+ * It USED to be a sibling of `<VideoSurface>`, inside the picture's box,
+ * which also covered the 44 pt dock slot. It does not any more: the
+ * chrome root exists only in the expanded presentation, so the dock
+ * shows no loading state at all.
  *
  * ## Two sizes, because the dock slot is 44 pt
  *
@@ -35,6 +37,12 @@
  * spill over the mini bar's artwork. So the overlay renders a SMALL
  * spinner with no caption in the dock, and the full spinner + caption
  * when expanded. Same affordance, sized to the box it is in.
+ *
+ * The dock size is currently UNREACHABLE: the only mount site is the
+ * expanded chrome root, and `isMini` and `isExpanded` are two halves of
+ * one derived mode, so `isMini` is always false where this renders. It
+ * is kept because it is the correct shape for that box, not because
+ * anything renders it today.
  *
  * The caption is dropped rather than shrunk because a 6 pt caption is
  * unreadable; the accessibility label still carries the state

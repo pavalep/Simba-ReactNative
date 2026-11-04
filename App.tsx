@@ -79,10 +79,14 @@ const resumePolicy = (resumeId: string): number | undefined => {
  * Only the Picture-in-Picture section is set, and only one field of it:
  * `chromeNativeId` is the `nativeID` of the app's expanded chrome root.
  *
- * The HOME path's PiP entry is NATIVE, because React is paused with the
- * Activity while the app is backgrounded and a React commit cannot land
- * (measured on emulator-5554, API 37, 2026-11-03: the entry effect ran
- * 5.7 s late, the animation frame never fired, and no PiP window opened).
+ * The HOME path's PiP entry is NATIVE, because an Activity in PiP is
+ * "paused, but rendering" — and what stops is the REACT-TO-NATIVE
+ * pipeline: Fabric stops applying mount items while the app is
+ * backgrounded (so a React commit never reaches the native view tree),
+ * and the JS timer manager freezes (so `requestAnimationFrame`, a
+ * zero-delay timer on that registry, never fires). Measured on
+ * emulator-5554 (API 37) on 2026-11-03: the entry effect ran 5.7 s late,
+ * the animation frame never fired, and no PiP window opened.
  * The library hides the chrome with a native `visibility = GONE` and finds
  * the view through this id.
  *

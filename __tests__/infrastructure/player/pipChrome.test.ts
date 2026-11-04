@@ -6,12 +6,14 @@
  * ## Why the id exists
  *
  * The HOME path's PiP entry is native, because an Activity in PiP is
- * "paused, but rendering" — what stops is REACT. RN pauses the React
- * scheduler with the Activity, so while the app is backgrounded a React
- * commit cannot land and no frame is produced. Measured on emulator-5554
- * (API 37) on 2026-11-03: the leave hint reached JS immediately, the entry
- * effect ran 5.7 s late, the `requestAnimationFrame` never fired, and no PiP
- * window opened at all.
+ * "paused, but rendering" — and what stops is the REACT-TO-NATIVE
+ * pipeline, in two independent places: Fabric stops applying mount items
+ * (so a React commit never reaches the native view tree), and the JS
+ * timer manager freezes (so `requestAnimationFrame`, a zero-delay timer
+ * on that registry, never fires). Measured on emulator-5554 (API 37) on
+ * 2026-11-03: the leave hint reached JS immediately, the entry effect ran
+ * 5.7 s late, the `requestAnimationFrame` never fired, and no PiP window
+ * opened at all.
  *
  * The library therefore hides the chrome natively — `visibility = GONE` on
  * the host view — and to find that host view it needs to know which view it
@@ -139,5 +141,135 @@ describe("the app does not drive the HOME path's PiP entry", () => {
 
     expect(code).toMatch(/requestAnimationFrame/);
     expect(code).toMatch(/enterPip\(\)/);
+  });
+});
+
+/**
+ * The range of the JSX element whose opening `<View` is at `openIndex`.
+ *
+ * `<View` openings are counted against `</View>` closings. The
+ * comment-stripped source of `VideoPlayer.tsx` has no self-closing
+ * `<View />` and no `<View` inside a string literal, so the count is
+ * exact — and it is what makes "is this element INSIDE that one?" a
+ * question about the source rather than about the prose.
+ */
+function viewElementRange(code: string, openIndex: number): [number, number] {
+  let depth = 0;
+  let cursor = openIndex;
+  while (cursor < code.length) {
+    const nextOpen = code.indexOf('<View', cursor);
+    const nextClose = code.indexOf('</View>', cursor);
+    if (nextClose === -1) break;
+    if (nextOpen !== -1 && nextOpen < nextClose) {
+      depth += 1;
+      cursor = nextOpen + '<View'.length;
+      continue;
+    }
+    depth -= 1;
+    cursor = nextClose + '</View>'.length;
+    if (depth === 0) return [openIndex, cursor];
+  }
+  throw new Error('the <View> element is not balanced');
+}
+
+describe('everything that must not survive the chrome hide is INSIDE the chrome root', () => {
+  const code = readCode(VIDEO_PLAYER);
+
+  /**
+   * The chrome root's subtree — the ONE view the library hides.
+   */
+  const chromeRoot = (): string => {
+    const nativeIdIndex = code.indexOf('nativeID={PIP_CHROME_NATIVE_ID}');
+    expect(nativeIdIndex).toBeGreaterThan(-1);
+    const open = code.lastIndexOf('<View', nativeIdIndex);
+    const [start, end] = viewElementRange(code, open);
+    return code.slice(start, end);
+  };
+
+  /**
+   * The picture's box — the chrome root's SIBLING.
+   */
+  const pictureBox = (): string => {
+    const anchor = code.indexOf('dockStyle ?? styles.picture');
+    expect(anchor).toBeGreaterThan(-1);
+    // The anchor sits INSIDE the picture's opening tag, so the tag's
+    // own `<View` is the nearest one BEFORE it.
+    const open = code.lastIndexOf('<View', anchor);
+    const [start, end] = viewElementRange(code, open);
+    return code.slice(start, end);
+  };
+
+  it('mounts the gesture layer INSIDE the chrome root', () => {
+    // The gesture layer is a NATIVE view (RNGH's `GestureDetector`),
+    // and a native gesture view claims the touches in its bounds. As a
+    // SIBLING of the chrome root it survived the library's
+    // `visibility = GONE` and kept swallowing every tap aimed at the
+    // picture inside the PiP window.
+    expect(chromeRoot()).toContain('<VerticalSwipeGestures />');
+  });
+
+  it('mounts the loading overlay INSIDE the chrome root', () => {
+    // A spinner that is a sibling of the chrome root keeps painting
+    // into the PiP window.
+    expect(chromeRoot()).toContain('<VideoLoadingOverlay />');
+  });
+
+  it('mounts the error overlay INSIDE the chrome root', () => {
+    // Same for the error card: it is a full-bleed scrim, so as a
+    // sibling it would cover the picture in the PiP window.
+    expect(chromeRoot()).toContain('<VideoErrorOverlay />');
+  });
+
+  it('mounts NONE of them as a sibling of the chrome root', () => {
+    // The picture's box is a sibling of the chrome root, so a sibling
+    // is exactly what survives the hide.
+    const picture = pictureBox();
+
+    expect(picture).not.toContain('VerticalSwipeGestures');
+    expect(picture).not.toContain('VideoLoadingOverlay');
+    expect(picture).not.toContain('VideoErrorOverlay');
+  });
+
+  it('leaves the picture’s box holding the surface and nothing else', () => {
+    // The picture stays mounted and stays reachable: the surface is
+    // still in the picture's box, and the box carries nothing that
+    // could claim its taps.
+    const picture = pictureBox();
+
+    expect(picture).toContain('<VideoSurface');
+    expect(picture.split('<VideoSurface').length - 1).toBe(1);
+  });
+
+  it('mounts each of them exactly once', () => {
+    // Two mount sites would be two owners of the same decision, and
+    // only one of them would be inside the chrome root.
+    for (const tag of [
+      '<VerticalSwipeGestures',
+      '<VideoLoadingOverlay',
+      '<VideoErrorOverlay',
+    ]) {
+      expect(code.split(tag).length - 1).toBe(1);
+    }
+  });
+
+  it('keeps the stacking order: gesture layer, then the overlays, then the chrome', () => {
+    // picture < gesture layer < loading/error overlays < chrome controls
+    //
+    // The gesture layer is a native gesture view, so it has to be ABOVE
+    // the picture and BELOW the overlays — otherwise the error card's
+    // Retry and Close stop receiving touches (device evidence,
+    // emulator-5554, 2026-10-20).
+    const root = chromeRoot();
+
+    const gesture = root.indexOf('<VerticalSwipeGestures');
+    const loading = root.indexOf('<VideoLoadingOverlay');
+    const error = root.indexOf('<VideoErrorOverlay');
+    const chrome = root.indexOf('<SimbaStatusBar');
+
+    expect(gesture).toBeGreaterThanOrEqual(0);
+    expect(gesture).toBeLessThan(loading);
+    expect(loading).toBeLessThan(error);
+    // The chrome's own controls are above all three, as they were.
+    expect(error).toBeLessThan(chrome);
   });
 });

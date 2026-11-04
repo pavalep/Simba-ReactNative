@@ -11,13 +11,22 @@
  *    window. The order is the contract, and React is what makes it
  *    possible.
  *
- *  - The **HOME** path runs while the Activity is being backgrounded. RN
- *    pauses the React scheduler with the Activity, so a React commit cannot
- *    land and there is no frame clock — a React-driven entry cannot work
- *    there at all. It was measured on emulator-5554 (API 37) on 2026-11-03:
- *    the leave hint reached JS immediately, the effect that would have
- *    driven the entry ran 5.7 s late, the `requestAnimationFrame` never
- *    fired, and no PiP window ever opened.
+ *  - The **HOME** path runs while the Activity is being backgrounded, and
+ *    RN freezes TWO things with the Activity: Fabric stops applying mount
+ *    items (so a React commit never reaches the native view tree), and the
+ *    JS timer manager freezes (so `requestAnimationFrame` — a zero-delay
+ *    timer on that registry — never fires). A React-driven entry cannot
+ *    work there at all. It was measured on emulator-5554 (API 37) on
+ *    2026-11-03: the leave hint reached JS immediately, the effect that
+ *    would have driven the entry ran 5.7 s late, the
+ *    `requestAnimationFrame` never fired, and no PiP window ever opened.
+ *
+ *    (The two freezes, in RN 0.86's own source:
+ *    `ReactAndroid/src/main/java/com/facebook/react/fabric/
+ *    FabricUIManager.java:1250-1253`, `:1567-1574`, `:1617-1624`;
+ *    `ReactAndroid/src/main/java/com/facebook/react/modules/core/
+ *    JavaTimerManager.kt:72-76`, `:290-293`;
+ *    `ReactCommon/react/runtime/TimerManager.cpp:360-367`.)
  *
  * So the HOME path is **native**: the library hides the chrome by mutating
  * the host view's `visibility` (a View-system mutation, so it takes effect
