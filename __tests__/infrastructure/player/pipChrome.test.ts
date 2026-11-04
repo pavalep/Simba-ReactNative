@@ -76,6 +76,19 @@ function appSourceFiles(): string[] {
   return out;
 }
 
+/** The range of a JSX element in the source. */
+interface ElementRange {
+  /** Where the element's opening tag starts. */
+  start: number;
+  /** Where the element ends, just past its closing tag. */
+  end: number;
+  /** The element's source text. */
+  text: string;
+}
+
+/** The app's video chrome, with the comments removed. */
+const code = readCode(VIDEO_PLAYER);
+
 describe("the app's expanded chrome nativeID", () => {
   it('is declared in exactly ONE module', () => {
     // The literal must live in `pipChrome.ts` and nowhere else. If a
@@ -173,31 +186,36 @@ function viewElementRange(code: string, openIndex: number): [number, number] {
 }
 
 describe('everything that must not survive the chrome hide is INSIDE the chrome root', () => {
-  const code = readCode(VIDEO_PLAYER);
-
   /**
-   * The chrome root's subtree — the ONE view the library hides.
+   * The chrome root's element range — the ONE view the library hides.
    */
-  const chromeRoot = (): string => {
+  const chromeRootRange = (): ElementRange => {
     const nativeIdIndex = code.indexOf('nativeID={PIP_CHROME_NATIVE_ID}');
     expect(nativeIdIndex).toBeGreaterThan(-1);
     const open = code.lastIndexOf('<View', nativeIdIndex);
     const [start, end] = viewElementRange(code, open);
-    return code.slice(start, end);
+    return {start, end, text: code.slice(start, end)};
   };
+
+  const chromeRoot = (): string => chromeRootRange().text;
 
   /**
    * The picture's box — the chrome root's SIBLING.
+   *
+   * It is found through the SURFACE, which is the one thing that is
+   * certainly inside it. The chrome root takes the SAME style expression
+   * as the picture's box, so an anchor on that expression would find
+   * whichever of the two comes first in the file.
    */
-  const pictureBox = (): string => {
-    const anchor = code.indexOf('dockStyle ?? styles.picture');
-    expect(anchor).toBeGreaterThan(-1);
-    // The anchor sits INSIDE the picture's opening tag, so the tag's
-    // own `<View` is the nearest one BEFORE it.
-    const open = code.lastIndexOf('<View', anchor);
+  const pictureBoxRange = (): ElementRange => {
+    const surfaceIndex = code.indexOf('<VideoSurface');
+    expect(surfaceIndex).toBeGreaterThan(-1);
+    const open = code.lastIndexOf('<View', surfaceIndex);
     const [start, end] = viewElementRange(code, open);
-    return code.slice(start, end);
+    return {start, end, text: code.slice(start, end)};
   };
+
+  const pictureBox = (): string => pictureBoxRange().text;
 
   it('mounts the gesture layer INSIDE the chrome root', () => {
     // The gesture layer is a NATIVE view (RNGH's `GestureDetector`),
@@ -259,17 +277,110 @@ describe('everything that must not survive the chrome hide is INSIDE the chrome 
     // the picture and BELOW the overlays — otherwise the error card's
     // Retry and Close stop receiving touches (device evidence,
     // emulator-5554, 2026-10-20).
+    //
+    // The chrome's own controls are `<ExpandedChrome />` — a COMPONENT
+    // now, because the chrome root is mounted in both presentations and
+    // the component is the expanded-only part of it. Its position in the
+    // root's source is the position of its children in the tree.
     const root = chromeRoot();
 
     const gesture = root.indexOf('<VerticalSwipeGestures');
     const loading = root.indexOf('<VideoLoadingOverlay');
     const error = root.indexOf('<VideoErrorOverlay');
-    const chrome = root.indexOf('<SimbaStatusBar');
+    const chrome = root.indexOf('<ExpandedChrome');
 
     expect(gesture).toBeGreaterThanOrEqual(0);
     expect(gesture).toBeLessThan(loading);
     expect(loading).toBeLessThan(error);
     // The chrome's own controls are above all three, as they were.
     expect(error).toBeLessThan(chrome);
+  });
+});
+
+describe('the chrome root is mounted in BOTH presentations, with the picture’s rect', () => {
+  /**
+   * The chrome root's element range — the ONE view the library hides.
+   */
+  const chromeRootRange = (): ElementRange => {
+    const nativeIdIndex = code.indexOf('nativeID={PIP_CHROME_NATIVE_ID}');
+    expect(nativeIdIndex).toBeGreaterThan(-1);
+    const open = code.lastIndexOf('<View', nativeIdIndex);
+    const [start, end] = viewElementRange(code, open);
+    return {start, end, text: code.slice(start, end)};
+  };
+
+  /**
+   * The picture's box — the chrome root's SIBLING.
+   *
+   * It is found through the SURFACE, which is the one thing that is
+   * certainly inside it. The chrome root takes the SAME style expression
+   * as the picture's box, so an anchor on that expression would find
+   * whichever of the two comes first in the file.
+   */
+  const pictureBoxRange = (): ElementRange => {
+    const surfaceIndex = code.indexOf('<VideoSurface');
+    expect(surfaceIndex).toBeGreaterThan(-1);
+    const open = code.lastIndexOf('<View', surfaceIndex);
+    const [start, end] = viewElementRange(code, open);
+    return {start, end, text: code.slice(start, end)};
+  };
+
+  it('is NOT behind a conditional', () => {
+    // The chrome root was gated on `presentation.isExpanded` while the
+    // overlays lived inside it, and the dock lost its loading spinner and
+    // its error card: the root is the BOX the overlays are drawn in, and
+    // in the dock it has to be there too.
+    //
+    // Nothing may sit between the picture's box and the chrome root,
+    // because anything there is a conditional that can take the root away.
+    const between = code.slice(pictureBoxRange().end, chromeRootRange().start);
+
+    expect(between).not.toMatch(/\?/);
+    expect(between).not.toMatch(/isExpanded/);
+  });
+
+  it('takes the PICTURE’s rect', () => {
+    // The same expression, the same box: full-bleed when expanded, the
+    // dock's measured slot when minimised. The overlays are drawn in the
+    // root, so a root that sits somewhere else than the picture puts them
+    // somewhere else than the video.
+    const styleOf = (text: string): string | null => {
+      const match = text.match(/style=\{([^}]*)\}/);
+      return match ? match[1] : null;
+    };
+
+    expect(styleOf(chromeRootRange().text)).toBe(
+      styleOf(pictureBoxRange().text),
+    );
+    expect(styleOf(chromeRootRange().text)).toBe('dockStyle ?? styles.picture');
+  });
+
+  it('mounts the overlays WITHOUT a gate', () => {
+    // The dock shows them: a cold-start video begins minimised, and a
+    // cold-start LOAD FAILURE was a black square in the dock with no
+    // spinner and no error card.
+    const root = chromeRootRange().text;
+
+    expect(root).not.toMatch(/\?\s*<VideoLoadingOverlay/);
+    expect(root).not.toMatch(/\?\s*<VideoErrorOverlay/);
+  });
+
+  it('gates the gesture layer and the chrome’s own children', () => {
+    // The gesture layer is a full-screen native gesture view: in the dock
+    // it would be a gesture surface the size of a thumbnail, with no
+    // chrome to toggle. The chrome's own controls belong to the expanded
+    // presentation only.
+    const root = chromeRootRange().text;
+
+    expect(root).toMatch(
+      /presentation\.isExpanded \? <VerticalSwipeGestures \/> : null/,
+    );
+    expect(root).toMatch(/presentation\.isExpanded \? <ExpandedChrome \/> : null/);
+  });
+
+  it('mounts the chrome’s own children exactly once', () => {
+    // A second mount site would be a second owner of the expanded
+    // presentation — and one of the two would be outside the root.
+    expect(code.split('<ExpandedChrome').length - 1).toBe(1);
   });
 });

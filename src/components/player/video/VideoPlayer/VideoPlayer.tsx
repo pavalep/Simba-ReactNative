@@ -531,9 +531,9 @@ const VideoLane: React.FC = () => {
           the loading/error overlays used to sit here as its siblings,
           and that was the last thing standing between "the chrome is
           hidden" and "the PiP window shows only the picture": the
-          library hides ONE view — this app's expanded chrome root — and
-          anything that is a SIBLING of that root survives the hide.
-          They now live under the chrome root. See `ExpandedChrome`. */}
+          library hides ONE view — the chrome root below — and anything
+          that is a SIBLING of that root survives the hide. They now
+          live under the chrome root. */}
       <View style={dockStyle ?? styles.picture} pointerEvents="box-none">
         <VideoSurface
           accessibilityLabel="Video"
@@ -542,8 +542,90 @@ const VideoLane: React.FC = () => {
         />
       </View>
 
-      {/* The chrome. It comes and goes; the picture does not. */}
-      {presentation.isExpanded ? <ExpandedChrome /> : null}
+      {/* ── THE CHROME ROOT ───────────────────────────────────────────
+
+          `nativeID` is how the LIBRARY finds this chrome.
+
+          Pressing HOME has to enter PiP natively: while the Activity is
+          backgrounded, React's results cannot reach the native view tree
+          (Fabric stops applying mount items) and the frame clock is
+          stopped (the JS timer manager freezes, so `requestAnimationFrame`
+          never fires), so this subtree cannot be unmounted in time
+          (measured on emulator-5554, API 37, 2026-11-03 — the entry
+          effect ran 5.7 s late, the animation frame never fired, and no
+          PiP window opened at all). The library therefore hides this
+          view with a native `visibility = GONE` — a View-system
+          mutation, which needs no React commit — and to find this view
+          it needs the `nativeID`, because the library ships no chrome of
+          its own.
+
+          It is the chrome ROOT on purpose: one `GONE` here takes the
+          whole overlay with it, which is what the PiP window must not
+          show. A SIBLING of this root survives that hide — it keeps
+          painting into the PiP window and, in the gesture layer's case,
+          it keeps swallowing every tap aimed at the picture.
+
+          IT IS MOUNTED IN BOTH PRESENTATIONS. The root is not the
+          expanded chrome; it is the BOX the chrome is drawn in, and the
+          dock needs that box too: the 44 pt dock slot shows the loading
+          spinner and the error card, and both of those are overlays
+          that live under this root. Gating the root on
+          `presentation.isExpanded` took the dock's spinner and error
+          card with it.
+
+          Its rect is the PICTURE's rect — the same
+          `dockStyle ?? styles.picture` — so the overlays land exactly
+          where the picture is in both presentations: full-bleed when
+          expanded, the dock's measured slot when minimised.
+
+          `pointerEvents="box-none"`: this is an overlay ABOVE the
+          picture, and a plain full-size View would swallow the
+          picture's tap-to-toggle before it ever reached the surface.
+          `box-none` keeps the container itself out of hit-testing while
+          its children (gestures, overlays, transport) still receive
+          touches — and a tap that nothing above claims falls through to
+          the picture beneath.
+
+          ── THE ORDER HERE IS THE CONTRACT ───────────────────────────
+
+          Four things live under this root, and the order they are in
+          is the order the platform composites them in:
+
+              picture < gesture layer < loading/error < chrome controls
+
+          - The GESTURE LAYER is a native view (RNGH's
+            `GestureDetector`), and a native gesture view claims the
+            touches in its bounds. It has to be ABOVE the picture (so a
+            tap toggles the chrome) and BELOW the overlays (so the
+            error card's "Retry" and "Close" stay pressable — the
+            2026-10-20 device note in `VideoErrorOverlay`). It paints
+            nothing; it only claims touches.
+          - The LOADING and ERROR OVERLAYS paint over the picture, and
+            they have to be above the gesture layer for the same
+            reason: their controls must stay reachable.
+          - The CHROME's own controls come last, so they sit above
+            everything else — exactly as they did when this root was a
+            later sibling of the picture's box.
+
+          The gesture layer is the FIRST child here, so it stays at the
+          bottom of this container — the same relative position it had
+          before the move. It used to be a child of the picture's box,
+          and this root was a LATER sibling of that box, so the whole
+          box — gesture layer included — painted BELOW the chrome's
+          controls. The touch order is unchanged.
+
+          The overlays are mounted in BOTH presentations, because the
+          dock shows them too. The gesture layer and the chrome's own
+          controls are mounted only in the expanded one. */}
+      <View
+        nativeID={PIP_CHROME_NATIVE_ID}
+        style={dockStyle ?? styles.picture}
+        pointerEvents="box-none">
+        {presentation.isExpanded ? <VerticalSwipeGestures /> : null}
+        <VideoLoadingOverlay />
+        <VideoErrorOverlay />
+        {presentation.isExpanded ? <ExpandedChrome /> : null}
+      </View>
 
       {/* V22 W22 (2026-10-21) — the video lane's OWN mini presentation.
           It used to be the shared `MiniPlayer`, a separate component
@@ -574,6 +656,13 @@ const VideoLane: React.FC = () => {
  *
  * It no longer contains the picture. The picture is a sibling, below it,
  * so that the picture can stay mounted while this comes and goes.
+ *
+ * It is NOT the chrome root any more. The chrome root is mounted in BOTH
+ * presentations — it is the box the chrome is drawn in, and the dock
+ * needs that box for its loading spinner and its error card — while this
+ * component is the part of the chrome that only the EXPANDED presentation
+ * shows. So it renders a FRAGMENT: its children go straight under the
+ * chrome root, in the order the root declares them.
  */
 const ExpandedChrome: React.FC = () => {
   // W6.1 — the PiP reconciliation used to be mounted HERE, and that was a
@@ -601,93 +690,37 @@ const ExpandedChrome: React.FC = () => {
   // whole session is there when the next file loads.
   useCaptionStyleBridge();
 
-  // EXPANDED: the chrome compositor, rendered as a TRANSPARENT
-  // full-bleed overlay ABOVE the picture.
-  //
-  // W6.0 — this root used to carry `backgroundColor:
-  // colors.background.primary`, and the surface below it carried
-  // `background.surfaceDark`. Both are opaque, so the overlay painted
-  // over the video and the user saw a flat panel where the picture
-  // should be. Nothing paints here now; the only opaque chrome is the
-  // deliberate scrims (gesture feedback, auto-hide fade) and the
-  // overlays themselves.
-  //
-  // `pointerEvents="box-none"` on both this root and the surface
-  // container: the chrome is an overlay ABOVE the picture, and a plain
-  // full-size View would swallow the picture's tap-to-toggle before it
-  // ever reached the surface. `box-none` keeps the container itself out
-  // of hit-testing while its children (gestures, overlays, transport)
-  // still receive touches — and a tap that nothing above claims falls
-  // through to the picture beneath.
   return (
-    // `nativeID` is how the LIBRARY finds this chrome on the HOME path.
+    // The chrome's OWN children. They go straight under the chrome root,
+    // in the order the root declares them, because this component is
+    // mounted INSIDE it.
     //
-    // Pressing HOME has to enter PiP natively: while the Activity is
-    // backgrounded, React's results cannot reach the native view tree
-    // (Fabric stops applying mount items) and the frame clock is stopped
-    // (the JS timer manager freezes, so `requestAnimationFrame` never
-    // fires), so this subtree cannot be unmounted in time (measured on
-    // emulator-5554, API 37, 2026-11-03 — the entry effect ran 5.7 s
-    // late, the animation frame never fired, and no PiP window opened
-    // at all). The library therefore hides this view with a native
-    // `visibility = GONE` — a View-system mutation, which needs no
-    // React commit — and to find this view it needs the `nativeID`,
-    // because the library ships no chrome of its own.
+    // EXPANDED: the chrome compositor, rendered as a TRANSPARENT
+    // full-bleed overlay ABOVE the picture.
     //
-    // It is the chrome ROOT on purpose: one `GONE` here takes the whole
-    // overlay with it, which is what the PiP window must not show.
-    <View
-      nativeID={PIP_CHROME_NATIVE_ID}
-      style={styles.chrome}
-      pointerEvents="box-none">
-      {/* ── THE ORDER HERE IS THE CONTRACT ───────────────────────────
-
-          Three things live under this root, and the order they are in
-          is the order the platform composites them in:
-
-              picture < gesture layer < loading/error < chrome controls
-
-          - The GESTURE LAYER is a native view (RNGH's
-            `GestureDetector`), and a native gesture view claims the
-            touches in its bounds. It has to be ABOVE the picture (so a
-            tap toggles the chrome) and BELOW the overlays (so the
-            error card's "Retry" and "Close" stay pressable — the
-            2026-10-20 device note in `VideoErrorOverlay`).
-          - The LOADING and ERROR OVERLAYS paint over the picture, and
-            they have to be above the gesture layer for the same
-            reason: their controls must stay reachable.
-          - The CHROME's own controls come last, so they sit above
-            everything else — exactly as they did when this root was a
-            later sibling of the picture's box.
-
-          Why they live HERE and not in the picture's box: the library
-          hides THIS ONE view with a native `visibility = GONE` when
-          the Activity enters PiP. A sibling of this root survives that
-          hide — it keeps painting into the PiP window and, in the
-          gesture layer's case, it keeps swallowing every tap aimed at
-          the picture.
-
-          `styles.lane`, `styles.picture` and `styles.chrome` are all
-          `StyleSheet.absoluteFill`, so moving these three from the
-          picture's box into this root moves no pixel in the expanded
-          state.
-
-          The gesture layer is mounted unconditionally HERE because
-          this root only exists in the expanded presentation: the lane
-          gates `ExpandedChrome` itself on `presentation.isExpanded`.
-          The invariant the lane used to carry therefore still holds,
-          one level up — no chrome, no gesture layer. */}
-      <VerticalSwipeGestures />
-      <VideoLoadingOverlay />
-      <VideoErrorOverlay />
-
+    // W6.0 — this subtree used to carry `backgroundColor:
+    // colors.background.primary`, and the surface below it carried
+    // `background.surfaceDark`. Both are opaque, so the overlay painted
+    // over the video and the user saw a flat panel where the picture
+    // should be. Nothing paints here now; the only opaque chrome is the
+    // deliberate scrims (gesture feedback, auto-hide fade) and the
+    // overlays themselves.
+    //
+    // `pointerEvents="box-none"` on the surface container: the chrome is
+    // an overlay ABOVE the picture, and a plain full-size View would
+    // swallow the picture's tap-to-toggle before it ever reached the
+    // surface. `box-none` keeps the container itself out of hit-testing
+    // while its children (gestures, overlays, transport) still receive
+    // touches — and a tap that nothing above claims falls through to
+    // the picture beneath.
+    <>
       <SimbaStatusBar variant="player" />
 
       <View style={styles.surfaceContainer} pointerEvents="box-none">
         {/* The gesture layer is NOT here. It is a SIBLING of this
             container — earlier in the tree, so it paints below it — and
-            it sits below the loading/error overlays. See the note at
-            the top of this root. */}
+            it sits below the loading/error overlays. See the note on the
+            chrome root in `VideoLane`. */}
 
         {/* V19 W7.2 — the ONE backdrop for the whole chrome. Mounted
             here, directly above the video surface and BELOW every
@@ -713,7 +746,7 @@ const ExpandedChrome: React.FC = () => {
       <ChromeAutoHideController edge="bottom">
         <TransportBar />
       </ChromeAutoHideController>
-    </View>
+    </>
   );
 };
 
@@ -725,13 +758,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
   },
   // The picture's default box: the whole lane.
+  //
+  // The chrome root takes the SAME box — it is the picture's rect in both
+  // presentations, so the overlays land exactly where the picture is.
+  // (`styles.chrome` used to be a second copy of this box with
+  // `paddingTop: 0`, which is the default padding anyway. One
+  // expression is one owner.)
   picture: {
     ...StyleSheet.absoluteFill,
-  },
-  // The expanded chrome overlay. Above the picture, transparent.
-  chrome: {
-    ...StyleSheet.absoluteFill,
-    paddingTop: 0, // safe-area inset is already in the V16 root
   },
   surfaceContainer: {
     // W6.0: was `margin: spacing.md + borderRadius + overflow:

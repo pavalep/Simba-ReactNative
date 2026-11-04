@@ -1,14 +1,14 @@
 /**
- * The `nativeID` of the app's expanded chrome root — the ONE owner of that
- * string in the whole app.
+ * The `nativeID` of the app's chrome root — the ONE owner of that string
+ * in the whole app.
  *
  * ## Why there is a native id at all
  *
  * Picture-in-Picture has two entry paths, and they are not interchangeable.
  *
- *  - The **button** path runs in the foreground: React unmounts the chrome,
- *    one animation frame goes by, and only then is the OS asked for the
- *    window. The order is the contract, and React is what makes it
+ *  - The **button** path runs in the foreground: React unmounts the chrome's
+ *    controls, one animation frame goes by, and only then is the OS asked for
+ *    the window. The order is the contract, and React is what makes it
  *    possible.
  *
  *  - The **HOME** path runs while the Activity is being backgrounded, and
@@ -50,8 +50,13 @@
  */
 
 /**
- * The `nativeID` the app puts on its expanded chrome root, and the same
- * string it hands the library as `pip.chromeNativeId`.
+ * The `nativeID` the app puts on its chrome root, and the same string it
+ * hands the library as `pip.chromeNativeId`.
+ *
+ * The root is mounted in BOTH presentations — it is the box the chrome is
+ * drawn in, and the dock's loading spinner and its error card are drawn in
+ * it too. The id's VALUE is the library's contract and does not change
+ * with that.
  *
  * It must match EXACTLY: the library looks the view up by this tag, and a
  * mismatch is a chrome that cannot be hidden — which is a PiP window with

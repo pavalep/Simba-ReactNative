@@ -6,8 +6,13 @@
  * ## There are two entry paths, and they are not interchangeable
  *
  *  - The **button** path runs in the foreground. React can unmount the
- *    chrome, wait for the frame that drew the chrome-less window, and only
- *    then ask the OS for the window. That is this hook.
+ *    chrome's CONTROLS, wait for the frame that drew the chrome-less
+ *    window, and only then ask the OS for the window. That is this hook.
+ *
+ *    The chrome ROOT — the box the library hides natively, and the box the
+ *    dock's loading spinner and its error card are drawn in — stays mounted
+ *    in BOTH presentations. The chrome's own controls are what the user
+ *    must not see in the PiP window, and they are what this path removes.
  *
  *  - The **HOME** path runs while the Activity is being backgrounded, and
  *    RN freezes TWO things with the Activity — so a React-driven entry
@@ -73,23 +78,23 @@
  *
  * So the order is the whole contract:
  *
- *   1. the chrome is UNMOUNTED, and
- *   2. the frame that drew it without the chrome is PRESENTED, and
+ *   1. the chrome's CONTROLS are UNMOUNTED, and
+ *   2. the frame that drew it without them is PRESENTED, and
  *   3. only THEN does anything ask the OS for the window.
  *
  * The old code asked for the window FIRST
  * (`commands.enterPip()` then `setPipActive(accepted)`), so the chrome
- * was still mounted at the moment the OS froze the window. The chrome
- * was unmounted a frame later — far too late, because the window was
- * already frozen and never drew again.
+ * was still mounted at the moment the OS froze the window. The chrome's
+ * controls were unmounted a frame later — far too late, because the window
+ * was already frozen and never drew again.
  *
  * ## Why a separate request, and not just `pipActive`
  *
  * `pipActive` and "a PiP window has been asked for" are two different
  * facts, and the app needs both:
  *
- *  - `pipActive` decides whether the chrome is mounted. It must be
- *    `true` BEFORE the transition, or the chrome is in the frozen
+ *  - `pipActive` decides whether the chrome's controls are mounted. It
+ *    must be `true` BEFORE the transition, or they are in the frozen
  *    window.
  *  - the request is what tells this hook to go and ask the OS. It is
  *    cleared when the OS answers, so a refusal can put the chrome back.

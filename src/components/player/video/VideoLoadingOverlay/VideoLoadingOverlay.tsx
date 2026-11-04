@@ -20,15 +20,17 @@
  *
  * ## Where it is mounted
  *
- * Under the app's expanded chrome root — the ONE view the library hides
- * with a native `visibility = GONE` when the Activity enters
- * Picture-in-Picture. A sibling of that root would survive the hide and
- * keep painting into the PiP window.
+ * Under the app's chrome root — the ONE view the library hides with a
+ * native `visibility = GONE` when the Activity enters Picture-in-Picture.
+ * A sibling of that root would survive the hide and keep painting into the
+ * PiP window.
  *
- * It USED to be a sibling of `<VideoSurface>`, inside the picture's box,
- * which also covered the 44 pt dock slot. It does not any more: the
- * chrome root exists only in the expanded presentation, so the dock
- * shows no loading state at all.
+ * It USED to be a sibling of `<VideoSurface>`, inside the picture's box.
+ * The chrome root is mounted in BOTH presentations and takes the picture's
+ * box, so the dock's 44 pt slot is covered by this overlay again — which is
+ * what it is for: a cold-start video begins minimised, and a cold-start
+ * LOAD FAILURE used to be a black square in the dock with no spinner at
+ * all.
  *
  * ## Two sizes, because the dock slot is 44 pt
  *
@@ -38,11 +40,8 @@
  * spinner with no caption in the dock, and the full spinner + caption
  * when expanded. Same affordance, sized to the box it is in.
  *
- * The dock size is currently UNREACHABLE: the only mount site is the
- * expanded chrome root, and `isMini` and `isExpanded` are two halves of
- * one derived mode, so `isMini` is always false where this renders. It
- * is kept because it is the correct shape for that box, not because
- * anything renders it today.
+ * The dock size is REACHABLE: the overlay is mounted in the chrome root,
+ * which exists in the dock, and `isMini` is true there.
  *
  * The caption is dropped rather than shrunk because a 6 pt caption is
  * unreadable; the accessibility label still carries the state

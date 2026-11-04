@@ -190,6 +190,7 @@ jest.mock('../../../../../src/components/StatusBar', () => ({
 }));
 
 import {VideoPlayer} from '../../../../../src/components/player/video/VideoPlayer/VideoPlayer';
+import {PIP_CHROME_NATIVE_ID} from '../../../../../src/infrastructure/player/pipChrome';
 import {usePresentationStore} from '../../../../../src/state/usePresentationStore';
 import {useNowPlayingStore} from '../../../../../src/state/nowPlayingStore';
 
@@ -404,15 +405,36 @@ describe('D9 — the video lane', () => {
   });
 
   describe('the chrome comes and goes; the picture does not', () => {
-    it('has no chrome sibling when minimised', async () => {
+    it('keeps the chrome ROOT when minimised, and drops the chrome’s own children', async () => {
+      // The chrome ROOT is the box the chrome is drawn in, and the dock
+      // needs it: the 44 pt slot shows the loading spinner and the error
+      // card, and both are drawn in the root. What comes and goes is the
+      // chrome's OWN content — the status bar, the scrim, the title, the
+      // next-up card and the transport bar.
       const result = await mountLane();
+      const chromeRootIn = (
+        tree: {children: Array<{props: {nativeID?: string}; children: unknown[]}>},
+      ) =>
+        tree.children.find(child => child.props.nativeID === PIP_CHROME_NATIVE_ID);
+
+      const expanded = result.toJSON() as {
+        children: Array<{props: {nativeID?: string}; children: unknown[]}>;
+      };
+      // Expanded: the chrome root has the chrome's own children in it.
+      expect((chromeRootIn(expanded)?.children ?? []).length).toBeGreaterThan(0);
+
       await act(async () => {
         usePresentationStore.getState().setVideoPresentation('mini');
       });
 
-      const tree = result.toJSON() as {children: unknown[]};
-      // The picture is the only child; the chrome subtree is gone.
-      expect(tree.children).toHaveLength(1);
+      const tree = result.toJSON() as {
+        children: Array<{props: {nativeID?: string}; children: unknown[]}>;
+      };
+      // The lane holds the picture's box AND the chrome root.
+      expect(tree.children).toHaveLength(2);
+      // …and the chrome root is empty in the dock.
+      expect(chromeRootIn(tree)).toBeDefined();
+      expect(chromeRootIn(tree)?.children ?? []).toHaveLength(0);
       expect(mockPictureMounts).toBe(1);
       result.unmount();
     });
