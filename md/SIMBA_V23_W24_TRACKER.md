@@ -231,6 +231,18 @@ because a claim that the code no longer supports is a false claim:
   two known kinds were offered, and a THIRD chip beside them satisfied
   that. The test now **counts** the chips, and the mutation kills it.
 
+- **Device proof of the SURFACE change** (emulator-5554, API 37, 2026-11-05,
+  on the new bundle): the All Playlists page shows **three** kind chips —
+  "All playlists", "Audio playlists", "Video playlists" — and **no "Mixed
+  playlists"**, where it had four before. The New Playlist dialog shows
+  **two** type buttons — "Audio playlist type" and "Video playlist type" —
+  and no third. The playlist card carries its own **"Audio"** kind badge and
+  its **"Pinned"** badge.
+
+  **What the device has NOT shown:** the split migration itself. The
+  emulator's account has no mixed playlist, so the rehydrate split has not
+  been seen end-to-end. It is proven by unit test only.
+
 ---
 
 ## F-066 — "Maximum update depth exceeded" on the Radio screen
@@ -298,12 +310,27 @@ own established pattern:
   `useVideoOwnsWindow.ts:74`, `LinkedFoldersScreen.tsx:278`).
 - **7 mutations, all killed**, every file restored byte-for-byte.
 
-### What is NOT yet proven
+### What is proven on the device, and what is not
 
-**The device proof is owed.** The Radio screen and every affected section
-have to render on the emulator without the redbox. The fix is a
-pattern the repo already uses twice, and the guard scan proves the shape is
-gone from the source — but neither is a screenshot.
+**Proven** (emulator-5554, API 37, 2026-11-05, on the new bundle):
+
+- the **Radio browser** renders the live station list — RTL, France Info,
+  Radio Armisa, Europe 1, RMC FR, Classic Vinyl HD, BBC World Service,
+  France Inter — with **no redbox**;
+- the **Radio favourites** screen renders *"No favorite stations yet."*;
+- the **Live TV browser** and the **Live TV favourites** screen render
+  clean too.
+
+The only warning on the device is a pre-existing React Navigation one —
+*"Found screens with the same name nested inside one another: Settings,
+Settings > Settings"* — which has nothing to do with this defect.
+
+**Not proven:** the three **album/artist** surfaces — the album detail
+screen, the artist detail screen, and the album enrichment hook. The
+emulator's account has no library content (0 tracks, 0 videos, no linked
+folders), so there is no album or artist to open. Those three are the same
+pattern as the four that are proven, and the source scan covers all seven,
+but "the same pattern" is not a screenshot.
 
 ---
 
@@ -332,12 +359,16 @@ Tests:       1 todo, 1603 passed, 1604 total
 
 Every item that is **not** closed, listed on its own:
 
-1. **F-066 device proof** — the Radio screen and every affected section
-   must render on emulator-5554 without the redbox.
-2. **F-065 device proof** — the split migration must be seen on the
-   device: a mixed playlist persisted by an older build, rehydrated into
-   "Name (Audio)" and "Name (Video)". The emulator's account has no mixed
-   playlist, so the migration has not been seen end-to-end.
+1. **F-066 device proof** — the **Radio** browser, the **Radio
+   favourites**, the **Live TV** browser and the **Live TV favourites**
+   screens are **proven** on emulator-5554 (no redbox). The three
+   **album/artist** surfaces (album detail, artist detail, album
+   enrichment hook) are **not** — the emulator's account has no library
+   content, so there is no album or artist to open.
+2. **F-065 device proof** — the **surface** change is proven (three chips,
+   two kind buttons). The **split migration** is not: the emulator's
+   account has no mixed playlist, so the rehydrate split has never been
+   seen end-to-end. It is proven by unit test only.
 3. **F-065 queue-refusal device proof** — the cross-lane queue must be
    refused on the device with the reason on screen.
 4. **F-064 device proof** — **DONE** (above). Nothing carried.
