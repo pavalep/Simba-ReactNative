@@ -117,10 +117,17 @@ export const ArtistDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const currentFile = usePlayerStore(s => s.currentFile);
   // V14 Phase 62: source of truth for isPlaying moves to the module.
   const {state: playerState} = usePlayer();
-  const tracks = useMediaStore(s =>
-    s.tracks.filter(
-      t => (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
-    ),
+  // V23 W24 (2026-11-05) — select the stable array, derive outside the
+  // selector. Filtering inside the selector built a NEW array on every call,
+  // so zustand's `Object.is` comparison never matched and the store drove an
+  // unbounded re-render loop ("Maximum update depth exceeded").
+  const allLibraryTracks = useMediaStore(s => s.tracks);
+  const tracks = useMemo(
+    () =>
+      allLibraryTracks.filter(
+        t => (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
+      ),
+    [allLibraryTracks, artistName],
   );
 
   // P39.1/39.2: MusicBrainz artist + discography (CAA covers), silent fail

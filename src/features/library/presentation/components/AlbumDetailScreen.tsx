@@ -53,14 +53,21 @@ export const AlbumDetailScreen: React.FC<Props> = ({navigation, route}) => {
   const bottomChromeInset = useBottomChromeInset();
   const {openPlayer} = useResumeAwareLaunch();
 
-  const tracks = useMediaStore(s =>
-    s.tracks
-      .filter(
-        t =>
-          (t.album || 'Unknown Album').toLowerCase() === albumTitle.toLowerCase() &&
-          (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
-      )
-      .sort((a, b) => a.trackNumber - b.trackNumber),
+  // V23 W24 (2026-11-05) — select the stable array, derive outside the
+  // selector. Filtering inside the selector built a NEW array on every call,
+  // so zustand's `Object.is` comparison never matched and the store drove an
+  // unbounded re-render loop ("Maximum update depth exceeded").
+  const allLibraryTracks = useMediaStore(s => s.tracks);
+  const tracks = useMemo(
+    () =>
+      allLibraryTracks
+        .filter(
+          t =>
+            (t.album || 'Unknown Album').toLowerCase() === albumTitle.toLowerCase() &&
+            (t.artist || 'Unknown Artist').toLowerCase() === artistName.toLowerCase(),
+        )
+        .sort((a, b) => a.trackNumber - b.trackNumber),
+    [allLibraryTracks, albumTitle, artistName],
   );
 
   const totalDuration = useMemo(

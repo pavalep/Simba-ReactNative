@@ -36,8 +36,14 @@ export const RadioFavoritesScreen: React.FC<Props> = () => {
   const {openPlayer} = useResumeAwareLaunch();
   const {add: addBookmark} = useBookmarks();
 
-  const favorites = useLiveFavoritesStore(s =>
-    s.items.filter(f => f.kind === 'radio'),
+  // V23 W24 (2026-11-05) — select the stable array, derive outside the
+  // selector. Filtering inside the selector built a NEW array on every call,
+  // so zustand's `Object.is` comparison never matched and the store drove an
+  // unbounded re-render loop ("Maximum update depth exceeded").
+  const allFavorites = useLiveFavoritesStore(s => s.items);
+  const favorites = useMemo(
+    () => allFavorites.filter(f => f.kind === 'radio'),
+    [allFavorites],
   );
   const rows = useMemo<StationRow[]>(() => favorites.map(favToRow), [favorites]);
 

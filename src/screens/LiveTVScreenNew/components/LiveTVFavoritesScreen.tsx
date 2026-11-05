@@ -3,7 +3,7 @@
 // Same ChannelCard visual contract; long-press menu mirrors the main
 // screen, but 'favorite' → force-remove.
 
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   Alert,
   View,
@@ -43,10 +43,19 @@ export const LiveTVFavoritesScreen: React.FC<Props> = () => {
   const {add: addBookmark} = useBookmarks();
   const {openPlayer} = useResumeAwareLaunch();
 
-  const favorites = useLiveFavoritesStore(s =>
-    s.items.filter(f => f.kind === 'tv'),
+  // V23 W24 (2026-11-05) — select the stable array, derive outside the
+  // selector. Filtering inside the selector built a NEW array on every call,
+  // so zustand's `Object.is` comparison never matched and the store drove an
+  // unbounded re-render loop ("Maximum update depth exceeded").
+  const allFavorites = useLiveFavoritesStore(s => s.items);
+  const favorites = useMemo(
+    () => allFavorites.filter(f => f.kind === 'tv'),
+    [allFavorites],
   );
-  const rows: ChannelRow[] = favorites.map(favToRow);
+  const rows = useMemo<ChannelRow[]>(
+    () => favorites.map(favToRow),
+    [favorites],
+  );
 
   const [menuRow, setMenuRow] = useState<ChannelRow | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
