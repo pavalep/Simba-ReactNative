@@ -15,6 +15,9 @@
 >   at `17:40:04`, `17:40:05`, `17:40:52`, i.e. well before the entry. ✔
 > - The **chrome hide executes** — `companion.hideConsumerChrome: hid the chrome view with
 >   nativeID 'simba-expanded-chrome'` at `17:41:34.459`, 2 ms after the mode change. ✔
+> - **⇒ `onUserLeaveHint()` NEVER FIRED AT ALL** on the HOME press — **zero** log lines for the
+>   whole process, while the PiP window opened anyway. The platform's auto-enter transitions the
+>   window through the **Shell**, and the app's hooks are never consulted. ✘
 > - **⇒ BUT THE PiP WINDOW STILL PAINTS THE FULL APP CHROME** — the header band, the scrub row
 >   with a **frozen clock (0:36)**, the ±10 buttons, the big pause button and the volume row,
 >   all scaled down. ✘
@@ -26,8 +29,10 @@
 >    app's content to the source rect. `setSourceRectHint` is a **transition** hint — it is
 >    what the PiP window animates *from* — not a content crop. **Every sentence in this
 >    document, in the lib's `PipManager.kt` / `MpvBridgeModule.kt` docblocks and in the lib's
->    CHANGELOG/README that says "the platform crops the app's window to the source rect …
->    which keeps the chrome out" is a FALSE CLAIM and must be retracted** (lib v3.3.1).
+>    CHANGELOG/README that said "the platform crops the app's window to the source rect …
+>    which keeps the chrome out" was a FALSE CLAIM.** It is **retracted in lib v3.3.1** — in
+>    the README, in the CHANGELOG (as a `Retracted` section, and as an in-place note inside the
+>    3.3.0 section), and in every docblock that asserted it.
 > 2. **The PiP window shows the app window's last rendered frame, frozen.** The clock reads
 >    `0:36` while the video had been playing for ~94 s — the app's UI layer is not redrawing,
 >    and it does not redraw after the pause. So the chrome that is in the PiP window is the
@@ -36,33 +41,50 @@
 >    window.** The BUTTON path works because React unmounts the chrome **while the app is
 >    still foregrounded**, a frame is drawn, and the OS is asked afterwards. The HOME path has
 >    no such frame.
+> 4. **⇒ The platform's auto-enter bypasses every app hook.** With the auto-enter switch
+>    armed, the transition runs through the **Shell** — `Activity.onUserLeaveHint()` is never
+>    called (AOSP: the framework sends the legacy callback only when
+>    `onPictureInPictureRequested()` returns `false`), and ATMS refuses an explicit entry
+>    while the switch is enabled (*"auto-enter should take in place instead"*). So on API 31+
+>    the library's own native entry was **dead code**, and the app's chrome was painted into
+>    the PiP window.
 >
-> **⇒ The open question, and the next step**
+> **⇒ The answer, and what shipped**
 >
-> The PiP window is the Activity's own window. For the chrome not to be in it, the app's UI
-> layer must contain only the video **at the moment the window is captured**. The three
-> standard ways to achieve that, in order of how well they fit this app:
+> The PiP window is the Activity's own window, so for the chrome not to be in it, the app's UI
+> layer must contain only the video **at the moment the window is captured**. Of the three
+> options this plan weighed:
 >
-> - **(S1) The chrome must be gone from the app's last drawn frame.** The app can hide the
->   chrome when the user leaves — `onUserLeaveHint()` runs while the Activity is still
->   resumed — but the pause follows immediately, so the draw has to be **forced
->   synchronously** before `enterPictureInPictureMode`. This is the one lever that matches
->   the proven BUTTON path exactly.
-> - **(S2) The PiP host must contain only the video.** react-native-video and expo-video both
->   achieve this by **re-parenting the player into `android.R.id.content`** and `GONE`-ing
->   every sibling. Rejected for us *only* because re-parenting detaches the `SurfaceView`
->   → `surfaceDestroyed` → mpv VO teardown → the decoder is rebuilt in software
->   (`MpvBridgeModule.kt:235-250`). **This rejection has never been measured** — it rests on
-> a comment, not on a run. It is the most standard shape and it is the next thing to try.
+> - **(S1) The chrome must be gone from the app's last drawn frame.** ✔ **This is what shipped.**
+>   But not from `onUserLeaveHint()`: on API 31+ that hook is **never called** when the
+>   auto-enter switch is armed. The entry now runs from **`Activity.onPictureInPictureRequested()`**
+>   — AOSP's own PiP entry hook — which is called while the Activity is still **RESUMED**. That
+>   is the only moment `enterPictureInPictureMode()` is legal at all (`Activity.enterPictureInPictureMode`
+>   throws `IllegalStateException` unless the Activity is resumed), and the moment the app is
+>   still drawing, so the chrome-less window is presented before the platform transitions it.
+> - **(S2) The PiP host must contain only the video** (re-parent the player into
+>   `android.R.id.content` and `GONE` every sibling — react-native-video's and expo-video's
+>   shape). **Not needed**, and deliberately not done: the chrome root is a **separate view**
+>   from the picture, so hiding it makes the window video-only on its own. A re-parent would
+>   detach the `SurfaceView` → `surfaceDestroyed` → mpv VO teardown → the decoder rebuilt in
+>   software (`MpvBridgeModule.kt:235-250`) — mpv's decoder is not decoupled from its output
+>   surface the way ExoPlayer's is. No measured benefit, real cost.
 > - **(S3) A dedicated PiP Activity** that hosts only the video. The heaviest change, and it
 >   would undo D1 (one Activity / one React root).
 >
-> **The next release (v3.3.1) must do exactly two things and nothing else:** (1) retract the
-> crop claim everywhere it is asserted, and (2) log the committed source rect's actual value
-> so the crop question is settled by measurement rather than by reading the platform docs.
-> Then pick (S1) or (S2) on the evidence.
+> **lib v3.3.1 (commit `1d96941`) ships exactly this:**
 >
-> **Until then B-050 stays OPEN. The HOME path still shows the app's chrome.**
+> - the platform's auto-enter switch is **not armed** — the app owns the entry;
+> - the entry runs from `Activity.onPictureInPictureRequested()` (API 31+) and from
+>   `onUserLeaveHint()` (API 24-30) — the **same** library call serves both, so there is one
+>   entry and one owner;
+> - the chrome is hidden **in the entry, BEFORE the window is asked for**;
+> - and the **PiP play/pause button works**: it read mpv's `playback-state`, a property mpv
+>   does **not** have, so the answer was always "not playing" and the button always called
+>   PLAY on an already-playing video. The same broken read was in three other places; all four
+>   now go through **one** owner, `PlaybackState`, which reads mpv's real properties.
+>
+> **B-050's HOME-path defect is closed by v3.3.1. The device proof is in §5.**
 >
 > ---
 >
@@ -170,12 +192,38 @@ Read from source at pinned versions. Full citations in §7.
 - **R1 — The PiP window's content is composed by the platform, not by React.** Both libraries
   hide the chrome with a **raw View-system mutation on `android.R.id.content`'s children**,
   never with a React commit, and never with a `nativeID` lookup.
-- **R2 — The hide happens *after* the transition begins**, inside
-  `onPictureInPictureModeChanged` — not before the request. Before the request there is no
-  frame to draw into (M4, M8, HWUI).
+
+  **Our implementation deliberately diverges, and the divergence is measured.** Both libraries
+  **re-parent** the player into `android.R.id.content` and `GONE` every sibling. We do not,
+  because **the chrome root is a separate view from the picture** — hiding it is enough, and a
+  re-parent would detach the `SurfaceView` → `surfaceDestroyed` → mpv VO teardown → the decoder
+  rebuilt in software (`MpvBridgeModule.kt:235-250`). mpv's decoder is not decoupled from its
+  output surface the way ExoPlayer's is, so the two libraries can afford the re-parent and we
+  cannot. What carries over from R1 is the part that matters: **the hide is a View-system
+  mutation, not a React commit.**
+- **R2 — The hide happens while the app is still drawing, BEFORE the transition.** ✔
+
+  **This rule was written wrong, and the device proved it.** It used to read: *"The hide happens
+  **after** the transition begins, inside `onPictureInPictureModeChanged` — not before the
+  request. Before the request there is no frame to draw into (M4, M8, HWUI)."* That second
+  sentence is **false**. The **BUTTON** path draws the chrome-less frame **before** the request
+  and the PiP window is clean; the **HOME** path draws it in
+  `Activity.onPictureInPictureRequested()`, where the Activity is still **RESUMED**.
+
+  What survives is the narrower and more useful statement: **a hide applied at or after the
+  transition cannot reach the PiP window's pixels**, because the platform has already frozen
+  the window and the PiP window shows the app's **last drawn frame**. Measured on emulator-5554
+  (API 37) on 2026-11-04: the hide from `onPictureInPictureModeChanged(true)` executed 2 ms
+  after the mode change, and the PiP window still painted the full chrome, scaled down.
 - **R3 — The action row is minimal and state-driven.** One play/pause, icon from the live
   playback state. **No precedent anywhere for three custom actions**, and no precedent for
   adding `expand`/`close` when the platform already renders its own.
+
+  **The "state-driven" half of R3 was not true until lib v3.3.1.** The icon and the action
+  read mpv's `playback-state`, a property mpv does **not** have, so every read answered "not
+  playing": the icon was always the Play triangle, and the action always called **play**. Both
+  now go through `PlaybackState`, which reads mpv's **real** properties (`idle-active`,
+  `eof-reached`, `pause`).
 
 ---
 
@@ -196,9 +244,11 @@ bisectable and revertible.
 
 **Owner:** the library, natively. The app supplies the chrome's identity; nothing else.
 
-#### The corrected root cause — the platform CROPS to `setSourceRectHint`
+#### The hypothesis this section used to make — and why the device killed it
 
-The plan below was rewritten on 2026-11-04 after the Android platform source was read.
+**The text that was here is kept below as the historical record. It is WRONG.**
+
+The hypothesis was:
 
 - The PiP window's content is the app's surface **cropped to
   `PictureInPictureParams.setSourceRectHint(...)`'s rect** and scaled into the window.
@@ -210,66 +260,72 @@ The plan below was rewritten on 2026-11-04 after the Android platform source was
   state the picture box is `StyleSheet.absoluteFill` of the lane — **the whole screen**. So the
   platform crops to the whole screen, and the chrome (drawn over that same area) comes along.
   **That is why the chrome is in the PiP window.**
-- The picture box is portrait; the film is 16:9. mpv runs `keepaspect=yes`, so the frame is
-  **letterboxed inside the box**. The video's real rect is a 16:9 strip inside that box — and
-  that strip is what the source rect must name.
-- **No platform API guarantees a post-entry draw** — the PiP window's first buffer is the
-  pre-existing buffer, and there is no "wait for the first PiP frame" handshake anywhere in
-  `Activity`/`ActivityRecord`/`ATMS`/`PipTaskOrganizer`. ⇒ v3.2.0's pre-emptive hide could
-  never work.
-- **But** the platform is explicit: *"In PIP, the activity is in a paused, but rendering,
-  state"* — so an invalidation made **after** the transition begins **is** drawn. ⇒ a hide in
-  `onPictureInPictureModeChanged(true)` does land. It is a **second line of defence**, not the
-  mechanism.
+- **⇒ ⇒ The primary mechanism is the crop. The chrome hide is the belt-and-braces.**
 
-⇒ **⇒ The primary mechanism is the crop. The chrome hide is the belt-and-braces.**
+**The device disproved all of it** (emulator-5554, API 37, 2026-11-04, lib v3.3.0). The PiP
+window showed the app's **full** chrome, scaled down — header band, scrub row with a frozen
+clock, ±10 buttons, the big pause button, the volume row — **with the source rect committed**.
+The platform applied the PiP window's *aspect ratio* and did **not** crop the app's content.
 
-#### The changes
+`setSourceRectHint` is a **TRANSITION hint**: it tells the platform which region of the window
+the PiP window should animate **from**. It does not crop anything. Google's `androidx.core-pip`
+and react-native-video both use it, and **neither** of them relies on it to keep chrome out —
+they hide the chrome themselves. Reading their use of the hint as a crop was the mistake.
 
-1. **The source rect becomes the VIDEO's rendered rect.** Compute the rect the video pixels
-   actually occupy: the picture box's window rect fitted to the **video's aspect** with
-   `contain` semantics, converted back to window coordinates. The library already knows the
-   video's dimensions (`currentVideoAspect()`) and the box's rect (`MpvRenderView`'s cached
-   window bounds). When the box and the video have the same aspect they coincide; in our
-   portrait box with a 16:9 film they do not — and that difference is the whole bug.
-2. **The params are committed EARLY, outside the entry moment**, with
-   `Activity.setPictureInPictureParams(...)`, and re-committed whenever the picture's
-   geometry or the playback state changes. Google's canonical sequence is explicit:
-   *"Keep params current, OUTSIDE the entry moment."*
-3. **Auto-enter on API 31+** — `setAutoEnterEnabled(true)`, armed **only while a video is
-   loaded**, disarmed when playback stops (otherwise browsing would auto-enter PiP). With
-   auto-enter enabled, **ATMS rejects** an explicit `enterPictureInPictureMode()`
-   (`ATMS.java:3784-3788`), so on API 31+ the library's `notifyUserLeaveHint` becomes a
-   logged no-op and the explicit entry is kept for API 24–30 only. **The consumer app's call
-   site does not change** — it stays correct on every API level.
-4. **The chrome hide moves into `onPictureInPictureModeChanged(true)`** and stays as the
-   second line of defence. `findView` returning `null` must mean **"already hidden"**, not a
-   refusal — the BUTTON path's React unmount removes the view first. The restore on exit
-   stays, including when the React instance is gone.
-5. **Everything that is not the picture must also leave the crop** — the crop names the
-   video's rect, so the chrome, the loading/error overlays and the gesture layer are outside
-   it by construction. The app-side change still moves `VerticalSwipeGestures`
+#### The measured root cause
+
+Two facts, both measured on emulator-5554 (API 37) on 2026-11-04:
+
+1. **The platform's auto-enter bypasses every app hook.** With the auto-enter switch armed, the
+   transition runs through the **Shell**. `Activity.onUserLeaveHint()` **did not fire at all**
+   on a HOME press — **zero** log lines for the whole process, while the PiP window opened
+   anyway. So the library's own native entry never ran, and the app's chrome was still mounted
+   when the window was captured. (AOSP: the framework sends the legacy `onUserLeaveHint()`
+   callback only when `onPictureInPictureRequested()` returns `false`; and `ATMS` refuses an
+   explicit entry while auto-enter is enabled — *"auto-enter should take in place instead"*.)
+2. **The PiP window shows the app window's last drawn frame, frozen.** The clock read `0:36`
+   while the video had been playing for ~94 s. A hide applied at or after the transition cannot
+   reach those pixels.
+
+⇒ **⇒ The primary mechanism is the ORDER: the chrome must be gone from the frame the platform
+captures. The crop was never a mechanism.**
+
+#### The changes that shipped (lib v3.3.1)
+
+1. **The platform's auto-enter switch is NOT armed.** `autoEnter` stays a **consumer policy**,
+   checked by the library before it enters — never a platform switch. With the switch armed
+   there is no pre-transition hook to use.
+2. **The entry runs from `Activity.onPictureInPictureRequested()`** (API 31+) and from
+   `onUserLeaveHint()` (API 24-30) — the **same** library call serves both, so there is one
+   entry and one owner. AOSP's own hook is called while the Activity is still **RESUMED**,
+   which is the only moment `enterPictureInPictureMode()` is legal at all.
+3. **The chrome is hidden IN THE ENTRY, BEFORE the window is asked for.** Not in
+   `onPictureInPictureModeChanged(true)` — that is after the platform has already frozen the
+   window. `findView` returning `null` means **"already hidden"**, not a refusal — the BUTTON
+   path's React unmount removes the view first. The restore on exit stays, including when the
+   React instance is gone.
+4. **The entry is explicit on every API level.** The API-31+ early-return branch is gone.
+5. **Everything that is not the picture is under the chrome root** — `VerticalSwipeGestures`
    (`VideoPlayer.tsx:545`), `VideoLoadingOverlay` (`:568`) and `VideoErrorOverlay` (`:569`)
-   **under the chrome root** (`:663`), so that the second line of defence is complete and one
-   `GONE` provably leaves only the picture. Today a chrome-only hide leaves a **full-screen
-   native gesture view mounted inside the PiP window** that swallows every tap aimed at the
-   picture. The stacking is preserved — picture < gestures < overlays < chrome controls — and
-   `styles.lane` / `styles.picture` / `styles.chrome` are all `absoluteFill` (`:708-719`), so
-   the move is layout-equivalent.
-6. **The surface is not touched.** The platform crops and scales the existing surface;
-   changing the surface's bounds on top of that would double-scale the picture. A re-parent
-   into `android.R.id.content` (react-native-video's and expo-video's shape) is **rejected**:
-   it detaches the `SurfaceView` → `surfaceDestroyed` → `detachSurfaceLocked()` → `vo=null` →
-   the mpv VO is destroyed → on re-attach the decoder is rebuilt in software.
-   `MpvBridgeModule.kt:235-250` records that cost: *"~1s render gap, PiP shows black"*.
-   react-native-video and expo-video can afford it because ExoPlayer's decoder is decoupled
-   from its output surface; mpv's is not.
-7. **No jank on the way in and out** (the user's requirement):
-   - the surface is never detached, so there is no VO teardown and no black frame;
-   - `setAspectRatio` comes from the **video track size** (RNV parity), so the PiP window's
-     shape matches the picture and the platform's seamless resize has nothing to stretch;
-   - `setSourceRectHint` is lowered from API 31+ to **API 26+** (RNV and expo both do it) so
-     the entry animation starts from the picture, not from a black rectangle.
+   sit under it (`:663`), so one `GONE` provably leaves only the picture. The stacking is
+   preserved — picture < gestures < overlays < chrome controls — and `styles.lane` /
+   `styles.picture` / `styles.chrome` are all `absoluteFill` (`:708-719`), so the move is
+   layout-equivalent.
+6. **The surface is not touched.** No re-parent, no VO teardown, no software-decoder
+   fallback. (react-native-video and expo-video re-parent because they have **no separate
+   chrome view** to hide; we do, and re-parenting would detach the `SurfaceView` →
+   `surfaceDestroyed` → `detachSurfaceLocked()` → `vo=null` → the mpv VO is destroyed → on
+   re-attach the decoder is rebuilt in software. `MpvBridgeModule.kt:235-250` records that
+   cost: *"~1s render gap, PiP shows black"*. ExoPlayer's decoder is decoupled from its output
+   surface; mpv's is not.)
+7. **The source rect stays as a TRANSITION hint** and is still committed early, outside the
+   entry moment, so the entry animation starts from the picture rather than from a black
+   rectangle. It is **not** a crop, and nothing depends on it being one.
+8. **One owner for the playback state.** The PiP action, the action's icon, the library's
+   media check and the consumer app's media check all read mpv's state through
+   `PlaybackState` — mpv's **real** properties (`idle-active`, `eof-reached`, `pause`). They
+   used to read `playback-state`, which mpv does **not** have, so every answer was wrong in the
+   same direction.
 
 ### C2 — The action row is the platform's, minimal, and state-driven  *(lib v3.4.0)*
 
@@ -305,10 +361,9 @@ The plan below was rewritten on 2026-11-04 after the Android platform source was
 
 | Release | Contents | Device proof (emulator-5554, API 37) |
 |---|---|---|
-| **v3.3.0** | C0 + C1 | HOME → PiP window shows **video only**: no header, no scrub row, no transport row, no gesture layer; clock gone; **video playing** (crop hashes differ across 3 s); tap the picture → no swallowed tap |
-| **v3.4.0** | C2 | PiP window shows **one** action row; the icon is ⏸ while playing and ▶ while paused; tapping it pauses and resumes **without a JS round trip**; the platform's expand/close still work; exiting PiP restores the chrome and the layout exactly |
-| **v3.5.0** | C3 (optional) | HOME → PiP; recents → PiP; video stops → **no** PiP window; PiP → fullscreen transition is smooth |
-
+| **v3.3.0** | C0 + C1 | **THE PROOF FAILED.** HOME → a PiP window opened and the video played in it, but the window showed the app's **full expanded chrome**, scaled down: the header band, the scrub row with a **frozen clock**, the ±10 buttons, the big pause button, the volume row. The crop was not happening. ✘ |
+| **v3.3.1** | the retraction · the app owns the entry · one owner for the playback state | **PENDING — measured on the v3.3.1 build.** The proof that must land: HOME → the PiP window shows **video only** (no header, no scrub row, no transport row, no gesture layer, clock gone) and the **video plays**; the PiP **play/pause action pauses and resumes** the video; the action's **icon follows the live state**; the BUTTON path is unchanged and still clean; and the PiP entry and the PiP→fullscreen exit show **no jank**. |
+| **v3.3.2** | the retraction, **completed**: the source and the TypeScript API docs no longer assert the crop, and the two other stale PiP claims are corrected too | **Nothing behavioural.** 3.3.2 changes comments and adds tests only — the device proof for v3.3.1 covers the behaviour. It exists because a retraction that leaves the wrong claim standing in the source is not a retraction: v3.3.1 fixed the README and the CHANGELOG, and **four places in the source still asserted the crop**, plus two docblocks that contradicted the code. Three prose guards now pin the three PiP facts. |
 Every release: commit → push → **annotated** tag → Actions → npm → app bumps to the exact
 published version → rebuild → install → prove → commit the app.
 
@@ -321,8 +376,9 @@ published version → rebuild → install → prove → commit the app.
 - **No `TextureView`.** `MpvRenderView.kt:22-30` is the repo's measured reason.
 - **No React-driven PiP.** React cannot commit in PiP (freeze #1); the PiP window is a
   native concern.
-- **No second chrome-hiding mechanism.** After C1 there is exactly one: the native hide in
-  `onPictureInPictureModeChanged`.
+- **No second chrome-hiding mechanism.** After C1 there is exactly one: the native hide in the
+  **entry**, before the window is asked for. The hide in `onPictureInPictureModeChanged` was the
+  second one, it could never reach the PiP window's pixels, and it is gone.
 - **No re-parenting of the `SurfaceView`** unless (a) measurably fails to fill the window.
 
 ---
@@ -342,6 +398,30 @@ published version → rebuild → install → prove → commit the app.
   - `packages/expo-video/android/src/main/java/expo/modules/video/utils/PictureInPictureHelperFragment.kt`
 - react-native-pip-android `1.0.1` — **negative control**: aspect ratio only, no chrome
   handling, no controls, no restore (`PipAndroidModule.java:16-65`).
+
+**AOSP (read from source, `android.googlesource.com` @ `android-16` / API 36, 2026-11-04)**
+
+- `frameworks/base/core/java/android/app/Activity.java`
+  - `:3235-3252` — the `onPictureInPictureRequested()` contract: *"true if the activity received
+    this callback regardless of if it acts on it or not. If false, the framework will assume the
+    app hasn't been updated… and will in turn send a legacy callback of `onUserLeaveHint()`."*
+  - `:~9310` — `performUserLeaving()` calls `onUserLeaveHint()` **right before `onPause`**
+  - `enterPictureInPictureMode(params)` — throws `IllegalStateException` unless the Activity is
+    **resumed** (`mCanEnterPictureInPicture`)
+- `frameworks/base/services/core/java/com/android/server/wm/ATMS.java`
+  - `:3780-3788` — `enterPictureInPictureMode` refuses a client entry only when
+    `fromClient && r.isState(PAUSING) && params.isAutoEnterEnabled()`
+  - `prepareAutoEnterPictureAndPictureMode` — driven by the **Shell**, so the app's hooks are
+    never consulted under auto-enter
+- `frameworks/base/core/java/android/app/ActivityThread.java`
+  - `:4675-4688` — `handlePictureInPictureRequested(r)`: when the app returns `true`, the
+    framework does **not** run `schedulePauseWithUserLeaveHintAndReturnToCurrentState`
+
+**mpv (read from source, `mpv-player/mpv`, 2026-11-04)**
+
+- `player/command.c` — `"playback-state"` appears **ZERO** times; `"idle-active"`, `"eof-reached"`,
+  `"pause"` and `"playback-time"` all appear
+- `DOCS/man/mpv.rst`, `DOCS/man/options.rst` — neither manual documents a `playback-state`
 
 **React Native 0.86.0 (on disk)**
 
@@ -364,9 +444,17 @@ published version → rebuild → install → prove → commit the app.
 
 - The Android developer docs page for Picture-in-Picture could not be retrieved (both fetch
   attempts returned only page chrome), so *"an Activity in PiP is paused but still rendering"*
-  is carried from the earlier session's reading and is **not** re-cited here. The two shipping
-  libraries' own code is the load-bearing evidence, and they disagree with our current code in
-  exactly the way that matters.
+  is carried from the earlier session's reading and is **not** re-cited here. **This gap is
+  narrowed, not closed**: AOSP's own source is now cited above for every fact the fix depends
+  on (`onPictureInPictureRequested`, `performUserLeaving`, `enterPictureInPictureMode`, ATMS's
+  auto-enter refusal) — but the developer-docs sentence itself is still uncited.
+- `api.github.com/search/code` requires authentication, so the set of RN libraries that hide
+  chrome was established by reading the three libraries' full Android sources rather than by
+  an exhaustive search.
+- **The API 24-30 path has never been measured on a device.** The library's entry runs from
+  `onUserLeaveHint()` there, and "the Activity is still resumed" comes from AOSP
+  (`performUserLeaving()` calls it right before `onPause`) — but the emulator runs API 37, so
+  the API 24-30 path is unproven on hardware.
 - `api.github.com/search/code` requires authentication, so the set of RN libraries that hide
   chrome was established by reading the three libraries' full Android sources rather than by
   an exhaustive search.

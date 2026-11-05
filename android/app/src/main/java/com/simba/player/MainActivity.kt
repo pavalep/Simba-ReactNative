@@ -36,8 +36,8 @@ import android.os.Build
 import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.modules.core.DeviceEventManagerModule
-import com.simba.player.mpv.MPVLib
 import com.simba.player.mpv.MpvBridgeModule
+import com.simba.player.mpv.PlaybackState
 
 class MainActivity : ReactActivity() {
 
@@ -145,16 +145,14 @@ class MainActivity : ReactActivity() {
    * never leave a browsing app stuck in landscape.
    */
   private fun isMediaLoaded(): Boolean {
-    val ptr = PlaybackHost.handle()
-    if (ptr == 0L) return false
-    return try {
-      val state = MPVLib.nativeGetProperty(ptr, "playback-state").trim().trim('"')
-      state.isNotEmpty() && state != "idle" && state != "stopped"
-    } catch (e: Exception) {
-      // The native lease guard refuses calls against a destroyed engine;
-      // that is a normal outcome, not a crash.
-      false
-    }
+    // ONE owner: the player library's `PlaybackState`, which reads
+    // mpv's REAL properties (`idle-active`, `eof-reached`, `pause`).
+    //
+    // This used to read mpv's `playback-state` — a property mpv does
+    // NOT have, so the read always failed and the answer was always
+    // "media is loaded". The library has the same read in three other
+    // places, so the fact now has exactly one owner.
+    return PlaybackState.hasMediaNow()
   }
 
   override fun onDestroy() {
@@ -186,12 +184,71 @@ class MainActivity : ReactActivity() {
     private const val TAG = "MainActivity"
   }
 
-  // ── The user is leaving the app ──
+  // ── The platform asks the app to enter PiP (API 31+) ──
+  //
+  // AOSP's own PiP entry hook. The system calls it when the Activity
+  // is being put into the background and PiP is possible, and the app
+  // decides whether to enter. Returning `true` tells the framework the
+  // app handles the entry itself — and it also stops the framework from
+  // falling back to the legacy `onUserLeaveHint()` path.
+  //
+  // AOSP's contract for the return value (Activity.java, the
+  // `onPictureInPictureRequested` docblock): "true if the activity
+  // received this callback regardless of if it acts on it or not". So
+  // this returns `true` even when the library refuses the entry —
+  // nothing playing, or already in PiP. Returning `false` would send
+  // the framework down the legacy path instead.
+  //
+  // WHY THIS HOOK, AND NOT `onUserLeaveHint()`
+  //
+  // The two hooks are NOT equivalent, and the difference is the whole
+  // defect:
+  //
+  //  * `onUserLeaveHint()` is called "right before the activity's
+  //    onPause callback" (AOSP, `Activity.performUserLeaving`). It is
+  //    part of the PAUSE transaction, so there is no frame between it
+  //    and the pause — and a chrome hide applied there never reaches
+  //    the pixels.
+  //
+  //  * `onPictureInPictureRequested()` is called while the Activity is
+  //    still RESUMED. `Activity.enterPictureInPictureMode()` throws
+  //    `IllegalStateException` unless the Activity is resumed, so this
+  //    is the only moment an explicit entry is legal at all — and the
+  //    app is still drawing, so the chrome-less window is presented
+  //    before the platform transitions it.
+  //
+  // Measured on emulator-5554 (API 37) on 2026-11-04: with the
+  // platform's auto-enter switch armed, `onUserLeaveHint()` never
+  // fired at all on a HOME press — zero log lines — and the PiP window
+  // showed this app's FULL expanded chrome, scaled down.
+  //
+  // The library does the work: it knows how a PiP window is built, how
+  // the chrome is found and hidden, and it owns the playback state.
+  // The app's job here is to hand it the Activity.
+  override fun onPictureInPictureRequested(): Boolean {
+    if (BuildConfig.DEBUG) {
+      android.util.Log.i(
+        TAG,
+        "onPictureInPictureRequested: the platform asked the app to enter PiP",
+      )
+    }
+    MpvBridgeModule.notifyUserLeaveHint(this)
+    return true
+  }
+
+  // ── The user is leaving the app (API 24-30) ──
   //
   // Android calls this when the user is about to leave — home, recents,
-  // the app switcher — and it is the ONLY hook that fires BEFORE the
-  // activity goes to the background. That is what makes it the right
-  // place to start a Picture-in-Picture entry.
+  // the app switcher. It used to be described as "the ONLY hook that
+  // fires BEFORE the activity goes to the background", and that claim
+  // was WRONG on API 31+: with the platform's auto-enter switch armed,
+  // the platform transitions the window itself and this hook never
+  // fires at all (measured: zero log lines on a HOME press, API 37,
+  // 2026-11-04).
+  //
+  // It is still the entry point on API 24-30, where there is no
+  // `onPictureInPictureRequested()`. The SAME library call serves both,
+  // so there is one entry and one owner.
   //
   // WHY THE ENTRY HAS TO BE NATIVE HERE
   //

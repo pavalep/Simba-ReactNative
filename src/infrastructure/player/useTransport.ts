@@ -839,7 +839,7 @@ export function useTransport(): TransportHook {
     //   - a play/pause button renders "Pause" for a stopped track.
     //
     // The pause term comes from the lib's own `state.isPlaying`
-    // (`onPlaybackStateChanged` → `mpv get-playback-state`), which is
+    // (`onPlaybackStateChanged` → mpv's REAL properties), which is
     // the authoritative signal and the one `usePlaybackState` already
     // reads. Deriving it here instead gave the file two owners of the
     // same fact, which is how they came to disagree.

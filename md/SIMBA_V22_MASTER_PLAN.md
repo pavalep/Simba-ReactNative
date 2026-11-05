@@ -180,23 +180,40 @@ per verb: `useClosePlayback()` in `src/infrastructure/player/` is the only
 thing that tears playback down, and every close affordance in both lanes
 routes through it. Two owners of one teardown drift.
 
-### D-10 — The PiP entry has ONE owner, and the ORDER is the contract ✅ locked 2026-11-03
+### D-10 — The PiP entry has ONE owner, and the ORDER is the contract ✅ locked 2026-11-03 · **corrected 2026-11-04**
 
-**The chrome is unmounted, the frame that drew it is presented, and only
-then is the OS asked.** Not the other way round, and not "the OS is asked
-and the chrome is corrected afterwards".
+**The chrome is gone from the frame the platform captures, and only then is
+the OS asked.** Not the other way round, and not "the OS is asked and the
+chrome is corrected afterwards".
 
 **The CONSUMER performs the auto-enter; the platform does not.** The
 library used to arm Android's own switch
 (`PictureInPictureParams.Builder.setAutoEnterEnabled`, API 31+), which makes
 the SYSTEM transition the Activity without giving the app a chance to do
 anything first. That is the wrong order for an app that draws its own
-chrome over the picture, because **React does not redraw in PiP**: the
-Activity is "paused, but rendering" (source.android.com/docs/core/display/pip),
-but RN pauses the React scheduler with it, so a React commit cannot land
-and no frame is produced — so whatever its window held at the moment of the
-transition is what the PiP window keeps showing. (D-11 corrects the
-reason; the ORDER below is unchanged.)
+chrome over the picture, because **the PiP window shows the app window's last
+drawn frame** — whatever was on screen when the transition happened is what
+the PiP window keeps showing.
+
+**⇒ AND THE PLATFORM'S AUTO-ENTER DOES NOT EVEN CALL THE APP** (measured on
+emulator-5554, API 37, on 2026-11-04). With the switch armed, the transition
+runs through the **Shell**: `Activity.onUserLeaveHint()` **did not fire at
+all** on a HOME press — **zero** log lines for the whole process — while the
+PiP window opened anyway, with the app's full expanded chrome in it. AOSP's
+`Activity.onPictureInPictureRequested()` docblock spells the rule out: the
+framework sends the legacy `onUserLeaveHint()` callback only when the app
+returns `false` from `onPictureInPictureRequested()`. And `ATMS` refuses an
+explicit `enterPictureInPictureMode()` while auto-enter is enabled —
+*"auto-enter should take in place instead"*.
+
+**⇒ SO THE ENTRY HOOK IS `Activity.onPictureInPictureRequested()`** (API
+31+), which is called while the Activity is still **RESUMED**. That matters
+twice: `Activity.enterPictureInPictureMode()` throws `IllegalStateException`
+unless the Activity is resumed — so it is the only moment an explicit entry
+is legal at all — and the app is still drawing, so the chrome-less window is
+presented before the platform transitions it. On API 24-30 the **same library
+call** is served from `onUserLeaveHint()`, right before the Activity's
+pause. **One library call, one owner, every API level.**
 
 **Measured on device on 2026-11-03**, on the emulator: the PiP window
 painted the app's FULL expanded chrome — the header band with the lock and
@@ -207,6 +224,14 @@ the user called it "not professional looking at all". Its buttons were
 was **fROZEN** at 51:09 while the real position was 54:15. The React state
 was already correct (`pipActive: true`, `isExpanded: false`), so this was
 never a state bug — it was an ORDER bug.
+
+**Re-measured on 2026-11-04** with lib v3.3.0, which had the ORDER right but
+still armed the platform's switch: the PiP window opened and the video played
+live in it, but the window still painted the full chrome, scaled down, with a
+frozen clock — because `onUserLeaveHint()` never fired and the library's own
+native entry never ran. lib **v3.3.1** disarms the switch, enters from
+`onPictureInPictureRequested()`, and hides the chrome **in the entry, before
+the window is asked for**.
 
 **Two facts, written together and read apart.** `pipActive` means "the
 chrome must be gone"; `pipEntryRequested` means "a window was asked for".
@@ -220,16 +245,21 @@ the app is in the foreground there, so React can unmount the chrome, wait for
 the frame that drew the chrome-less window, and only then ask the OS.
 
 The **HOME** entry is owned by the **library**, and it is **native**. The app
-is being backgrounded there, React's scheduler is paused with it, and a React
-commit cannot land — so the entry cannot be driven from JS at all (D-12). The
-library hides the chrome with a native `visibility = GONE` on the host view it
-finds through the app's `nativeID`, asks the OS for the window, and restores
-the chrome when PiP ends.
+is being backgrounded there and a React commit cannot land in time — so the
+entry cannot be driven from JS at all (D-12). The library hides the chrome
+with a native `visibility = GONE` on the host view it finds through the app's
+`nativeID`, asks the OS for the window, and restores the chrome when PiP
+ends.
 
 *Source:* the 2026-11-03 device measurement · lib `v3.0.5` (the removal of
 the platform's own switch) and lib `v3.2.0` (the native HOME entry, which
 retired the `onUserLeaveHint` event — the lib's event list is 26, not 27) ·
-app `71ced34` (the button path) · Android's own guidance: "Remove other UI
+app `71ced34` (the button path) · lib `v3.3.1` (the auto-enter disarmed, the
+entry moved to `onPictureInPictureRequested()`, the chrome hidden in the
+entry) · AOSP `Activity.java` (`onPictureInPictureRequested`,
+`performUserLeaving`, `enterPictureInPictureMode`), `ATMS.java` (the
+auto-enter refusal) and `ActivityThread.java`
+(`handlePictureInPictureRequested`) · Android's own guidance: "Remove other UI
 elements before your activity enters PiP" (`developer.android.com/develop/ui/views/picture-in-picture`).
 
 ---
@@ -348,7 +378,7 @@ View-system mutation and schedules a real traversal.
 Recorded as `B-049` / `B-051` / `F-062` / `F-063` in
 `SIMBA_BUG_TRACKER_2026_10_21.md`.
 
-### D-12 — The PiP window holds the video and nothing else, and the HOME entry is NATIVE ✅ locked 2026-11-03
+### D-12 — The PiP window holds the video and nothing else, and the HOME entry is NATIVE ✅ locked 2026-11-03 · **corrected 2026-11-04**
 
 **A Picture-in-Picture window contains the VIDEO and the platform's action
 row. Nothing else. Ever.** Not the app's chrome, not a frozen copy of the
@@ -380,11 +410,27 @@ In the foreground React can unmount the chrome, wait for the frame that drew
 the chrome-less window, and only then ask the OS. The order is the contract.
 
 **The HOME path cannot be React-driven at all.** By the time the user presses
-HOME the Activity is pausing, and RN pauses the React scheduler with it: a
-React commit cannot land and there is no frame clock. Measured on
-emulator-5554 (API 37) on 2026-11-03 — the leave hint reached JS immediately,
-the effect that would have driven the entry ran **5.7 s late**, and its
+HOME the Activity is pausing, and React Native's frame callback and timer
+registry are frozen with it (`FabricUIManager.onHostPause()` removes the
+`DISPATCH_UI` callback; `JavaTimerManager.onHostPause()` freezes the timer
+registry, so `requestAnimationFrame` never fires). Measured on emulator-5554
+(API 37) on 2026-11-03 — the leave hint reached JS immediately, the effect
+that would have driven the entry ran **5.7 s late**, and its
 `requestAnimationFrame` **never fired**, so **no PiP window opened at all**.
+
+**But the reason the chrome must be hidden BEFORE the window is asked for is
+not the scheduler — it is that the PiP window shows the app window's LAST
+DRAWN FRAME.** Measured on emulator-5554 (API 37) on 2026-11-04: the PiP
+window carried the app's full expanded chrome with a **frozen clock**, while
+the video played live underneath it.
+
+**⇒ AND ON API 31+ THE APP'S HOOKS ARE NOT EVEN CALLED.** With the platform's
+auto-enter switch armed, the transition runs through the **Shell**:
+`Activity.onUserLeaveHint()` **did not fire at all** on a HOME press — zero
+log lines for the whole process — while the PiP window opened anyway. The
+entry hook that IS called is **`Activity.onPictureInPictureRequested()`**,
+while the Activity is still **RESUMED**, which is also the only moment
+`enterPictureInPictureMode()` is legal at all.
 
 **So the HOME entry is native**, and the mechanism is React Native's own:
 
@@ -399,13 +445,38 @@ the effect that would have driven the entry ran **5.7 s late**, and its
 4. it asks the OS for the window; and
 5. it restores the chrome in `onPictureInPictureModeChanged(false)`.
 
+**⇒ AND lib v3.3.1 MOVED STEP 3 AND 4 INTO THE ENTRY, ON EVERY API LEVEL.**
+The chrome is hidden **before** the window is asked for, not in
+`onPictureInPictureModeChanged(true)` — that callback runs *after* the
+platform has already frozen the window, so a hide there can never reach the
+PiP window's pixels. The platform's auto-enter switch is **not armed**, so the
+app owns the entry and the hook is AOSP's own.
+
+**⇒ AND THE RE-PARENT IS NOT NEEDED.** react-native-video and expo-video both
+re-parent the player into `android.R.id.content` and `GONE` every sibling.
+They have **no separate chrome view** to hide; we do, and the chrome root is a
+separate view from the picture, so hiding it makes the window video-only on
+its own. A re-parent would detach the `SurfaceView` → `surfaceDestroyed` →
+mpv VO teardown → the decoder rebuilt in software — mpv's decoder is not
+decoupled from its output surface the way ExoPlayer's is.
+
+**⇒ AND THE CROP IS NOT A MECHANISM.** The 3.2.0 and 3.3.0 releases claimed
+that "the platform crops your window to the rect in `setSourceRectHint(...)`".
+It does not: `setSourceRectHint` is a **TRANSITION hint** — the region the PiP
+window animates *from* — not a content crop. The device disproved it (the
+full chrome was in the window, with the hint committed), and the claim is
+**retracted in lib v3.3.1** in the README, the CHANGELOG and every docblock
+that asserted it.
+
 **Who owns what is split by what each side actually knows.** The app owns the
 chrome, so the app owns the `nativeID` — one module, `pipChrome.ts`, is the
 single owner of that string, and it is published to the library as
 `pip.chromeNativeId`. The library owns the entry, because it is the library
 that knows how a PiP window is built, how the source rect is measured and how
 the chrome is found. The app's whole contribution is one call:
-`MpvBridgeModule.notifyUserLeaveHint(this)`.
+`MpvBridgeModule.notifyUserLeaveHint(this)` — served from
+`onPictureInPictureRequested()` on API 31+ and from `onUserLeaveHint()` on
+API 24-30.
 
 **The `onUserLeaveHint` event is GONE.** The library raised it so the app
 could drive the entry from JS; the library now does that entry itself, and the

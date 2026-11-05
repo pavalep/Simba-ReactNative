@@ -2306,11 +2306,11 @@ every step.
 
 ---
 
-### B-050 · P0 · app · pressing HOME does not enter Picture-in-Picture at all — the React commit never lands while the Activity is paused
+### B-050 · P0 · app · pressing HOME does not enter Picture-in-Picture at all — the React commit never lands while the Activity is paused — **RESOLVED (lib v3.3.1, 2026-11-04)**
 
-**Symptom.** With the player expanded, pressing HOME opens **no** PiP window.
-The app goes to the launcher, and when the user comes back the player is
-**blank and chromeless** — no chrome, and no way out short of a force-stop.
+**Symptom (as first reported).** With the player expanded, pressing HOME opened **no** PiP window.
+The app went to the launcher, and when the user came back the player was **blank and
+chromeless** — no chrome, and no way out short of a force-stop.
 
 **Measured (emulator-5554, API 37, 2026-11-03)** with temporary
 instrumentation on the `onUserLeaveHint` subscription:
@@ -2358,15 +2358,75 @@ unmounted when the user returns, with no window to show it in, so the store is
 stuck at `pipActive=true` / `pipEntryRequested=true` — a black, chromeless
 screen.
 
-**The fix is a NATIVE entry, and it is NOT written yet.** The mechanism is
-settled from source (AOSP, RN 0.86 and shipping apps), but it is not
-implemented: give the expanded chrome a `nativeID`, find that host view
-natively with RN's own `ReactFindViewUtil.findView`, set
+**The mechanism is settled from source (AOSP, RN 0.86 and shipping apps), so
+the entry is native:** give the expanded chrome a `nativeID`, find that host
+view natively with RN's own `ReactFindViewUtil.findView`, set
 `visibility = GONE` on it, and only then call `enterPictureInPictureMode` —
-all inside `MainActivity.onUserLeaveHint()`, which AOSP documents as running
-"right before the activity's `onPause` callback". React cannot commit a frame
-at that moment, but a native visibility change is a View-system mutation and
+all inside the Activity's leave hook, which AOSP documents as running "right
+before the activity's `onPause` callback". React cannot commit a frame at that
+moment, but a native visibility change is a View-system mutation and
 schedules a real traversal, and an Activity in PiP is "paused, but rendering".
+
+---
+
+### The three stages it went through
+
+**Stage 1 — lib v3.2.0: the native entry, and the window opened.** The entry
+moved out of JS and into the library. The window opened on HOME. ✔
+
+**Stage 2 — lib v3.3.0: the window opened, but it carried the app's full
+chrome.** Measured on emulator-5554 (API 37) on 2026-11-04, with lib v3.3.0
+installed: the PiP window opened and the **video played live inside it**, the
+params were committed early, and the chrome hide executed — 2 ms after the mode
+change. **And the window still painted the full expanded chrome**, scaled
+down: the header band, the scrub row with a **frozen clock**, the ±10
+buttons, the big pause button, the volume row. ✘
+
+Two things were wrong with it, and both were found by measurement:
+
+1. **The platform's auto-enter bypasses every app hook.** With
+   `setAutoEnterEnabled(true)` armed, the transition runs through the
+   **Shell**. `Activity.onUserLeaveHint()` **did not fire at all** on a HOME
+   press — **zero** log lines for the whole process — while the PiP window
+   opened anyway. So the library's own native entry **never ran** on API 31+,
+   and the app's chrome was still mounted when the window was captured.
+   AOSP: the framework sends the legacy `onUserLeaveHint()` callback only
+   when `onPictureInPictureRequested()` returns `false`; and `ATMS` refuses an
+   explicit entry while auto-enter is enabled — *"auto-enter should take in
+   place instead"*.
+2. **The hide was in the wrong place.** It ran in
+   `onPictureInPictureModeChanged(true)` — *after* the platform had already
+   transitioned the window. The PiP window shows the app window's **last drawn
+   frame**, so a hide applied there can never reach its pixels. (The v3.2.0 and
+   v3.3.0 releases also claimed that "the platform crops your window to the
+   rect in `setSourceRectHint(...)`". **That is false** — `setSourceRectHint`
+   is a TRANSITION hint, the region the PiP window animates *from*, not a
+   content crop. It is retracted in lib v3.3.1.)
+
+**Stage 3 — lib v3.3.1: the app owns the entry, and the chrome is gone before
+the window is asked for.**
+
+- The platform's auto-enter switch is **not armed**. `autoEnter` is a
+  **consumer policy** the library checks before it enters — never a platform
+  switch.
+- The entry runs from **`Activity.onPictureInPictureRequested()`** (API 31+),
+  which AOSP calls while the Activity is still **RESUMED** — the only moment
+  `enterPictureInPictureMode()` is legal at all, and the moment the app is
+  still drawing. On API 24-30 the **same** library call is served from
+  `onUserLeaveHint()`. One entry, one owner, every API level.
+- The chrome is hidden **in the entry, BEFORE the window is asked for** — not
+  in `onPictureInPictureModeChanged(true)`.
+- The **BUTTON** path is unchanged and still clean: React unmounts the chrome
+  while the app is foregrounded, a frame is drawn, and only then is the OS
+  asked. The HOME path now does the same thing natively.
+
+**The PiP play/pause button is fixed in the same release** — see **B-052**.
+It was inert because the receiver read mpv's `playback-state`, a property mpv
+does **not** have, so the answer was always "not playing" and the button
+always called PLAY on an already-playing video.
+
+**State: RESOLVED — lib v3.3.1** (commit `1d96941`, tag `v3.3.1`, npm
+3.3.1). The device proof is recorded in `md/SIMBA_PIP_STANDARD_PLAN.md` §5.
 
 ---
 
@@ -2402,7 +2462,7 @@ moment, but a native `visibility` change can.
 
 ---
 
-### B-052 · P3 · lib · the PiP play/pause button shows ▶ while the video is PLAYING — **OPEN**
+### B-052 · P3 · lib · the PiP play/pause button shows ▶ while the video is PLAYING — **FIXED (lib v3.3.1), device proof pending**
 
 **Symptom.** In the Picture-in-Picture window the library's own action row
 carries a **Play** glyph (`android.R.drawable.ic_media_play`) on the
@@ -2424,11 +2484,32 @@ direction. A shipping player shows the state, not the intent: Media3's
 `Player.playWhenReady`, and YouTube, Plex and ExoPlayer all show ⏸ while
 playing.
 
-**Not fixed here, on purpose.** Making the icon follow the state means the
-library has to rebuild the PiP parameters and re-issue them with
-`Activity.setPictureInPictureParams()` whenever the playback state changes.
-That is a real change with its own device proof, and the tracker forbids
-shipping an unproven change beside a proven one — so it is its own release.
+**Root cause — the SAME defect as the inert play/pause button.** The icon is
+`if (playing) ic_media_pause else ic_media_play`, and `playing` came from
+`MpvBridgeModule.isPlaying()` — which read mpv's `playback-state`, **a property
+mpv does NOT have**. The read failed, the native helper returned the JSON
+literal `null`, and "null" is neither "play" nor "idle" — so the answer was
+always "not playing", and the glyph was always the Play triangle.
+
+**So the icon was never hard-coded into being wrong, and that is the point.**
+The glyph was always going to be wrong, because the state it asked for never
+existed. A glyph drawn from a state that is always "not playing" cannot ever
+show ⏸.
+
+**Fixed in lib v3.3.1** (commit `1d96941`, tag `v3.3.1`, npm 3.3.1):
+
+  - `isPlaying()` now goes through **one** owner, `PlaybackState`, which reads
+    mpv's REAL properties (`idle-active`, `eof-reached`, `pause`) and derives
+    the vocabulary the library has always published (`idle` / `stopped` /
+    `paused` / `playing`);
+  - the params are re-committed when the playback state changes
+    (`MpvBridgeModule.onPlaybackStateChanged()` → `commitPipParams`), so the
+    glyph follows the **live** state rather than the state at entry.
+
+**Not closed until the device shows it.** The code is right and the fix is
+pinned by tests, but the glyph on the screen is a device fact, and the
+tracker does not close a defect on a reading of the source. The proof is
+recorded in `md/SIMBA_PIP_STANDARD_PLAN.md` §5.
 
 ---
 
@@ -2466,6 +2547,22 @@ for free. Design (2) is the better one on the evidence, but it changes what
 and it has to be proven that the app's React playback state still follows the
 session's own play/pause. **Not decided here** — this is a design choice for
 the next wave, and it is recorded so it is not lost.
+
+**What changed since (2026-11-04), and what did NOT.** The library's own
+play/pause **works** now — its inertness was the `playback-state` defect
+(**B-052**'s family), fixed in lib v3.3.1 — and its glyph follows the live
+state. **The two rows are still two rows**, and the third owner is still
+there: v3.3.1 fixed a different defect on the same row, and this entry is
+unchanged by it. Design (2) — drop `setActions()` and let the `MediaSession`
+drive the row — is still the better design on the evidence, and it is still
+**not decided**.
+
+**And the crop claim that shaped this row's story was retracted.** The
+3.2.0 and 3.3.0 releases said the platform crops the app's window to the
+source rect, and that this is what kept the chrome out of the PiP window.
+That was false: `setSourceRectHint` is a TRANSITION hint, and the chrome is
+kept out by HIDING it before the entry (lib v3.3.1). See **B-050** and
+`md/SIMBA_PIP_STANDARD_PLAN.md` §7.
 
 ---
 
