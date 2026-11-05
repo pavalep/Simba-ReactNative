@@ -12,8 +12,8 @@
  *
  * The RECEIVED classification. A scanned local file already carries its
  * own kind (`type: 'video'`, `mediaType: 'video'`, `source: 'local'`) —
- * the scanner owns it — so the sheet offers the VIDEO and MIXED playlists
- * and refuses the AUDIO one.
+ * the scanner owns it — so the sheet offers the VIDEO playlist and refuses
+ * the AUDIO one.
  */
 
 import React from 'react';
@@ -79,7 +79,6 @@ function makePlaylist(overrides: Partial<Playlist> = {}): Playlist {
 const PLAYLISTS: Playlist[] = [
   makePlaylist({id: 'pl_audio', name: 'Road Trip', kind: 'AUDIO_ONLY'}),
   makePlaylist({id: 'pl_video', name: 'Film Night', kind: 'VIDEO_ONLY'}),
-  makePlaylist({id: 'pl_mixed', name: 'Everything', kind: 'MIXED'}),
 ];
 
 async function renderScreen() {
@@ -120,7 +119,7 @@ describe('AllVideosScreen — a local video reaches the playlist sheet', () => {
     });
   });
 
-  it('offers the video the VIDEO and MIXED playlists, and refuses the AUDIO one', async () => {
+  it('offers the video the VIDEO playlist, and refuses the AUDIO one', async () => {
     await renderScreen();
 
     await fireEvent(screen.getByText('Family Reel'), 'longPress');
@@ -131,7 +130,6 @@ describe('AllVideosScreen — a local video reaches the playlist sheet', () => {
     });
 
     expect(screen.getByText('Film Night')).toBeOnTheScreen();
-    expect(screen.getByText('Everything')).toBeOnTheScreen();
     // The "must not" claim: a video must not be offered an audio playlist.
     expect(screen.queryByText('Road Trip')).toBeNull();
   });

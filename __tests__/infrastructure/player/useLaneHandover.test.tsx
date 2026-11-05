@@ -3,8 +3,8 @@
  *
  * ## Why this test exists
  *
- * A run may cross lanes: a MIXED playlist holds an audio track and a
- * film, and the run plays them in order. When the run crosses, the lane
+ * A run may cross lanes: the user plays an album, then adds a film to the
+ * queue, and the run plays them in order. When the run crosses, the lane
  * changes mid-playback.
  *
  * That rule used to live in three places at once — the queue store

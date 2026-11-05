@@ -284,7 +284,7 @@ export const PlaylistDetailScreen: React.FC<Props> = ({navigation, route}) => {
 
       const importedKind = deriveKind(imported);
       if (!importedKind) {
-        toast.show('Mixed audio and video playlists are not supported');
+        toast.show('This file has audio and video — a playlist holds one or the other');
         return;
       }
       importPlaylist({

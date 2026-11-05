@@ -1,23 +1,31 @@
 /**
- * The Library's playlist filter rail — the `Mixed` chip.
+ * The Library's playlist filter rail — the kind chips.
  *
  * ## What this pins
  *
  * A chip that selects a filter the list ignores is a DEAD control: the
- * user taps "Mixed", nothing changes, and the chip is a lie. So this file
+ * user taps "Audio", nothing changes, and the chip is a lie. So this file
  * pins both halves:
  *
- *  1. The rail OFFERS `Mixed` (and still offers All / Audio / Video).
- *  2. The Library's playlist segment HONOURS it — selecting `Mixed`
- *     narrows the list to the mixed playlists and to nothing else.
+ *  1. The rail OFFERS every kind (All / Audio / Video).
+ *  2. The Library's playlist segment HONOURS them — selecting `Audio`
+ *     narrows the list to the audio playlists and to nothing else.
  *
  * The segment is fed `filteredPlaylists`, and the filter is
- * `p.kind === playlistFilterType`. `Mixed` is a `PlaylistKind`, so the
+ * `p.kind === playlistFilterType`. `Audio` is a `PlaylistKind`, so the
  * predicate covers it without a special case — and that is exactly what
  * the second half of this file proves, on the hook that computes it.
  *
+ * ## The retraction
+ *
+ * This file used to pin a `Mixed` chip. The mixed playlist kind was
+ * removed on 2026-11-05, so the chip went with it — and it went from the
+ * management page too, because both pages read the SAME chip list
+ * (`LOCAL_PLAYLIST_FILTERS`). A chip with no kind behind it is a dead
+ * control, so it was removed rather than left to filter nothing.
+ *
  * The chip labels come from `PLAYLIST_KIND_LABELS`, the ONE owner of the
- * kind labels, so "Mixed" is spelled in one place.
+ * kind labels, so "Audio" is spelled in one place.
  */
 
 import {renderHook, act} from '@testing-library/react-native';
@@ -124,13 +132,12 @@ function chipKeyFor(label: string): FilterType {
   return chip.key;
 }
 
-describe('the Library playlist filter — the Mixed chip', () => {
-  it('offers All, Audio, Video and Mixed', () => {
+describe('the Library playlist filter — the kind chips', () => {
+  it('offers All, Audio and Video', () => {
     expect(LOCAL_PLAYLIST_FILTERS.map(f => f.key)).toEqual([
       'ALL',
       'AUDIO_ONLY',
       'VIDEO_ONLY',
-      'MIXED',
     ]);
   });
 
@@ -139,30 +146,27 @@ describe('the Library playlist filter — the Mixed chip', () => {
 
     expect(labels.AUDIO_ONLY).toBe(PLAYLIST_KIND_LABELS.AUDIO_ONLY);
     expect(labels.VIDEO_ONLY).toBe(PLAYLIST_KIND_LABELS.VIDEO_ONLY);
-    expect(labels.MIXED).toBe(PLAYLIST_KIND_LABELS.MIXED);
   });
 
-  it('narrows the playlist list to the mixed playlists', async () => {
+  it('narrows the playlist list to the audio playlists', async () => {
     __mockPlaylistState.list = [
       makePlaylist({id: 'pl_audio', name: 'Songs', kind: 'AUDIO_ONLY'}),
       makePlaylist({id: 'pl_video', name: 'Films', kind: 'VIDEO_ONLY'}),
-      makePlaylist({id: 'pl_mixed', name: 'Both', kind: 'MIXED'}),
     ];
 
     const {result} = await renderHook(() => useLibraryScreen(fakeNavigation()));
 
     await act(async () => {
-      result.current.setPlaylistFilterType(chipKeyFor(PLAYLIST_KIND_LABELS.MIXED));
+      result.current.setPlaylistFilterType(chipKeyFor(PLAYLIST_KIND_LABELS.AUDIO_ONLY));
     });
 
-    expect(result.current.filteredPlaylists.map(p => p.name)).toEqual(['Both']);
+    expect(result.current.filteredPlaylists.map(p => p.name)).toEqual(['Songs']);
   });
 
-  it('keeps a mixed playlist under All, and out of Audio and Video', async () => {
+  it('keeps every playlist under All, and each one under its own lane', async () => {
     __mockPlaylistState.list = [
       makePlaylist({id: 'pl_audio', name: 'Songs', kind: 'AUDIO_ONLY'}),
       makePlaylist({id: 'pl_video', name: 'Films', kind: 'VIDEO_ONLY'}),
-      makePlaylist({id: 'pl_mixed', name: 'Both', kind: 'MIXED'}),
     ];
 
     const {result} = await renderHook(() => useLibraryScreen(fakeNavigation()));
@@ -174,7 +178,6 @@ describe('the Library playlist filter — the Mixed chip', () => {
     expect(result.current.filteredPlaylists.map(p => p.name)).toEqual([
       'Songs',
       'Films',
-      'Both',
     ]);
 
     await act(async () => {

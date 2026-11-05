@@ -40,9 +40,9 @@ export interface UseAllPlaylistsScreenResult {
    * open, so the page does not pretend otherwise.
    */
   handlePlaylistPress: (playlistId: string) => void;
-  // The kind is the facade's kind, not a two-value subset of it: the screen
-  // opens `PlaylistCreateModal`, which offers `MIXED` as well, and a
-  // narrower signature here would silently drop that kind.
+  // The kind is the facade's kind, not a subset of it: the screen opens
+  // `PlaylistCreateModal`, which offers every kind, and a narrower
+  // signature here would silently drop one.
   handleCreate: (name: string, kind: PlaylistKind) => void;
   // The pin ACTION (D-P8). This is the MANAGEMENT page, so the pin is
   // reachable without a long-press: a long-press is not reachable by a

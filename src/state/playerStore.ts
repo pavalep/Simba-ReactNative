@@ -164,13 +164,13 @@ export const usePlayerStore = create<PlayerState & PlayerActions>()(
       //
       // This used to narrow the run to the first entry's lane, and to drop
       // anything added in another lane — silently. The narrowing made a
-      // mixed run impossible to even SEE: the items were in the store and
-      // no surface listed them, so the run looked like it had lost them.
+      // cross-lane run impossible to even SEE: the items were in the store
+      // and no surface listed them, so the run looked like it had lost them.
       //
       // The lane rule still exists, and it lives where it belongs: the
-      // PLAYLIST STORE refuses an item a single-lane playlist may not
-      // hold (`isPlaylistMediaKindAllowed`), so a mixed run can only be
-      // built from a MIXED playlist or assembled by the user on purpose.
+      // PLAYLIST STORE refuses an item a playlist may not hold
+      // (`isPlaylistMediaKindAllowed`), so a cross-lane run can only be
+      // assembled by the user on purpose.
       // What crosses the lane boundary at runtime is the handover's job,
       // and the handover has ONE owner — `useLaneHandover` in
       // `src/infrastructure/player/useResumeAwareLaunch.ts`.

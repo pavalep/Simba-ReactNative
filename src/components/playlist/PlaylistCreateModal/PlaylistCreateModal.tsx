@@ -15,10 +15,10 @@ import {usePlaylists} from '../../../features/playlists';
 import type {PlaylistKind} from '../../../features/playlists';
 import {PLAYLIST_KIND_LABELS} from '../../../types/playlist';
 
-// The three kinds a playlist can be. `MIXED` holds a film and an album in
-// one list - its glyph falls back to `listMusic` below, which is why that
-// branch was written before the kind existed.
-const KIND_OPTIONS: PlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED'];
+// The two kinds a playlist can be. A playlist holds ONE lane: audio or
+// video. There is no mixed kind - a list that spans two lanes is a queue,
+// not a playlist.
+const KIND_OPTIONS: PlaylistKind[] = ['AUDIO_ONLY', 'VIDEO_ONLY'];
 
 export interface PlaylistCreateModalProps {
   visible: boolean;
@@ -137,7 +137,7 @@ export const PlaylistCreateModal: React.FC<PlaylistCreateModalProps> = ({
                 accessibilityState={{selected: isActive}}
                 accessibilityLabel={`${PLAYLIST_KIND_LABELS[k]} playlist type`}>
                 <SvgIcon
-                  name={k === 'AUDIO_ONLY' ? 'music' : k === 'VIDEO_ONLY' ? 'video' : 'listMusic'}
+                  name={k === 'AUDIO_ONLY' ? 'music' : 'video'}
                   size={16}
                   color={isActive ? colors.accent.gold : colors.text.secondary}
                   style={{marginRight: 6}}

@@ -141,12 +141,12 @@ describe('PlaylistContextMenu — the shared compatibility rule', () => {
       [
         makePlaylist({id: 'pl_1', name: 'Commute'}),
         makePlaylist({id: 'pl_2', name: 'Films', kind: 'VIDEO_ONLY'}),
-        makePlaylist({id: 'pl_3', name: 'Everything', kind: 'MIXED'}),
+        makePlaylist({id: 'pl_3', name: 'Workout', kind: 'AUDIO_ONLY'}),
       ],
     );
 
     expect(screen.getByText('Commute')).toBeOnTheScreen();
-    expect(screen.getByText('Everything')).toBeOnTheScreen();
+    expect(screen.getByText('Workout')).toBeOnTheScreen();
     expect(screen.queryByText('Films')).toBeNull();
   });
 
@@ -155,12 +155,12 @@ describe('PlaylistContextMenu — the shared compatibility rule', () => {
       {item: RADIO_ITEM},
       [
         makePlaylist({id: 'pl_1', name: 'Commute'}),
-        makePlaylist({id: 'pl_3', name: 'Everything', kind: 'MIXED'}),
+        makePlaylist({id: 'pl_2', name: 'Films', kind: 'VIDEO_ONLY'}),
       ],
     );
 
     expect(screen.queryByText('Commute')).toBeNull();
-    expect(screen.queryByText('Everything')).toBeNull();
+    expect(screen.queryByText('Films')).toBeNull();
   });
 });
 
@@ -171,13 +171,13 @@ describe('PlaylistContextMenu — a batch may mix lanes', () => {
       [
         makePlaylist({id: 'pl_1', name: 'Commute'}),
         makePlaylist({id: 'pl_2', name: 'Films', kind: 'VIDEO_ONLY'}),
-        makePlaylist({id: 'pl_3', name: 'Everything', kind: 'MIXED'}),
+        makePlaylist({id: 'pl_3', name: 'Workout', kind: 'AUDIO_ONLY'}),
       ],
     );
 
     expect(screen.getByText('Commute')).toBeOnTheScreen();
     expect(screen.getByText('Films')).toBeOnTheScreen();
-    expect(screen.getByText('Everything')).toBeOnTheScreen();
+    expect(screen.getByText('Workout')).toBeOnTheScreen();
   });
 
   it('names the batch in its title', async () => {

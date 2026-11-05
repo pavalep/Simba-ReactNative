@@ -6,21 +6,27 @@
  * "Create a playlist" was implemented THREE times: here, as an inline modal
  * inside `AllPlaylistsScreen`, and as an inline create MODE inside
  * `PlaylistSheet`. Three implementations, three copies of the kind picker,
- * and two of them could not offer a `MIXED` playlist at all — because
- * `MIXED` did not exist when they were written.
+ * and two of them could not offer every kind — because the kinds they were
+ * written for did not exist yet.
  *
  * This modal is now the only place a playlist is created (D-P4). These
  * tests pin that it can create EVERY kind, and that the kind's LABEL comes
  * from the one owner (`PLAYLIST_KIND_LABELS`) rather than from a local
  * copy that could drift.
  *
+ * ## The retraction
+ *
+ * This file used to pin THREE kinds, the third one mixed. The mixed
+ * playlist kind was removed on 2026-11-05: a list that spans two lanes is
+ * a queue, not a playlist. The kind picker now offers the two kinds a
+ * playlist can be, and the mixed chip is gone with it.
+ *
  * ## What this pins
  *
- *  1. All THREE kinds are offered — `AUDIO_ONLY`, `VIDEO_ONLY`, `MIXED`.
+ *  1. BOTH kinds are offered — `AUDIO_ONLY` and `VIDEO_ONLY`.
  *  2. The kind's label comes from `PLAYLIST_KIND_LABELS`. A local copy
  *     that said "Mixed content" would fail here.
- *  3. Creating a playlist reports the kind the user chose, `MIXED`
- *     included.
+ *  3. Creating a playlist reports the kind the user chose.
  *  4. An empty name and a duplicate name are refused, and nothing is
  *     created.
  */
@@ -78,12 +84,11 @@ async function renderModal(
 }
 
 describe('PlaylistCreateModal — the one create owner', () => {
-  it('offers all THREE kinds', async () => {
+  it('offers both kinds', async () => {
     await renderModal();
 
     expect(screen.getByLabelText('Audio playlist type')).toBeOnTheScreen();
     expect(screen.getByLabelText('Video playlist type')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Mixed playlist type')).toBeOnTheScreen();
   });
 
   it('labels every kind from the ONE owner', async () => {
@@ -91,11 +96,22 @@ describe('PlaylistCreateModal — the one create owner', () => {
 
     // The expectation is built FROM the owner, so a modal that kept its
     // own label copy with a different word would fail here.
-    for (const kind of ['AUDIO_ONLY', 'VIDEO_ONLY', 'MIXED'] as const) {
+    for (const kind of ['AUDIO_ONLY', 'VIDEO_ONLY'] as const) {
       expect(
         screen.getByLabelText(`${PLAYLIST_KIND_LABELS[kind]} playlist type`),
       ).toBeOnTheScreen();
     }
+  });
+
+  it('offers EXACTLY two kinds — a third is a control that lies', async () => {
+    await renderModal();
+
+    // The "must not" claim. The removed mixed kind had a chip here once,
+    // and a chip for a kind the domain no longer has is a dead control.
+    // Counting the chips is the assertion that survives a NEW kind being
+    // added: an assertion that only checks the two it knows about would
+    // pass with a third sitting next to them.
+    expect(screen.getAllByLabelText(/playlist type$/)).toHaveLength(2);
   });
 });
 
@@ -108,17 +124,6 @@ describe('PlaylistCreateModal — creating a playlist', () => {
     await fireEvent.press(screen.getByText('Create'));
 
     expect(onCreate).toHaveBeenCalledWith('Road Trip', 'AUDIO_ONLY');
-  });
-
-  it('creates a MIXED playlist', async () => {
-    const onCreate = jest.fn();
-    await renderModal([], onCreate);
-
-    await fireEvent.changeText(screen.getByPlaceholderText('My Playlist'), 'Everything');
-    await fireEvent.press(screen.getByLabelText('Mixed playlist type'));
-    await fireEvent.press(screen.getByText('Create'));
-
-    expect(onCreate).toHaveBeenCalledWith('Everything', 'MIXED');
   });
 
   it('creates a video playlist', async () => {

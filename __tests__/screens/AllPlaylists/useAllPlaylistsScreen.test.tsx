@@ -118,7 +118,7 @@ describe('useAllPlaylistsScreen — the kind filter', () => {
     mockUsePlaylists.mockReturnValue(
       makeController([
         makePlaylist({id: 'pl_1', kind: 'AUDIO_ONLY'}),
-        makePlaylist({id: 'pl_2', kind: 'MIXED'}),
+        makePlaylist({id: 'pl_2', kind: 'VIDEO_ONLY'}),
       ]) as never,
     );
     const {result} = await renderHook(() => useAllPlaylistsScreen());
@@ -131,13 +131,13 @@ describe('useAllPlaylistsScreen — the kind filter', () => {
     mockUsePlaylists.mockReturnValue(
       makeController([
         makePlaylist({id: 'pl_1', kind: 'AUDIO_ONLY'}),
-        makePlaylist({id: 'pl_2', kind: 'MIXED'}),
+        makePlaylist({id: 'pl_2', kind: 'VIDEO_ONLY'}),
       ]) as never,
     );
     const {result} = await renderHook(() => useAllPlaylistsScreen());
 
     await act(async () => {
-      result.current.setFilterType('MIXED');
+      result.current.setFilterType('VIDEO_ONLY');
     });
 
     expect(result.current.filteredPlaylists.map(playlist => playlist.id)).toEqual([

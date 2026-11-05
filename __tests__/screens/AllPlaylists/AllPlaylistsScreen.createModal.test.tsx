@@ -21,8 +21,8 @@
  *     `PlaylistCreateModal`.
  *  2. The header's "Create" button opens that modal.
  *  3. The empty state's "Create playlist" button opens that same modal.
- *  4. The modal offers the MIXED kind, because it is the one owner and
- *     it offers every kind.
+ *  4. The modal offers every kind, because it is the one owner and a
+ *     playlist can be an audio one or a video one.
  */
 
 import React from 'react';
@@ -129,12 +129,13 @@ describe('AllPlaylistsScreen — the create action', () => {
     expect(screen.getByText('New Playlist')).toBeOnTheScreen();
   });
 
-  it('offers the MIXED kind — the modal is the one owner and it offers every kind', async () => {
+  it('offers every kind — the modal is the one owner and it offers them all', async () => {
     await renderScreen([makePlaylist({id: 'pl_1'})]);
 
     await fireEvent.press(screen.getByLabelText('Create'));
 
-    expect(screen.getByLabelText('Mixed playlist type')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Audio playlist type')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Video playlist type')).toBeOnTheScreen();
   });
 
   it('has no second create affordance — there is no FAB on this page', async () => {

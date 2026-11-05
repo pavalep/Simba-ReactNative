@@ -1,14 +1,26 @@
 /**
  * The playlist model's two load-bearing rules.
  *
- * 1. A `MIXED` playlist is preserved WHOLE. The old store split a mixed
- *    record into an audio sibling and a video sibling on rehydrate, which
- *    silently destroyed the user's playlist - its name, its id and half its
- *    items - and told the user nothing.
- * 2. A single-lane playlist still refuses the other lane. `MIXED` is a
- *    third kind, not a loosening of the first two: it is bound by the same
- *    allow-list, so a radio station is refused by a mixed playlist exactly
- *    as it is by a single-lane one.
+ * 1. A record persisted with the REMOVED mixed kind is SPLIT into its two
+ *    halves on rehydrate: the audio items become one playlist and the video
+ *    items become another, each carrying the name it was given plus its
+ *    lane. Every item survives, and the name survives on both halves.
+ * 2. A single-lane playlist still refuses the other lane, and the allow-list
+ *    still refuses a radio station in either lane.
+ *
+ * ## The retraction
+ *
+ * This file used to assert the OPPOSITE of rule 1 - "A `MIXED` playlist is
+ * preserved WHOLE. The old store split a mixed record into an audio sibling
+ * and a video sibling on rehydrate, which silently destroyed the user's
+ * playlist - its name, its id and half its items - and told the user
+ * nothing."
+ *
+ * That claim was true while the mixed kind existed, and it was the reason
+ * the kind was first-class. The kind was REMOVED on 2026-11-05, so the claim
+ * was retracted in the same change that removed the kind - not left to rot in
+ * a test name and a docblock. The split is back, deliberately and with the
+ * name and the id kept, which is the difference between the two splits.
  */
 import {normalizePersistedPlaylists} from '../../src/state/playlistsStore';
 
@@ -35,8 +47,8 @@ const videoItem = {
 };
 
 describe('the playlist model', () => {
-  describe('a MIXED playlist', () => {
-    it('survives rehydrate WHOLE - not split, not filtered', () => {
+  describe('a record persisted with the removed mixed kind', () => {
+    it('splits into its two halves, and every item survives', () => {
       const playlists = normalizePersistedPlaylists([
         {
           id: 'pl_mixed',
@@ -48,12 +60,77 @@ describe('the playlist model', () => {
         },
       ]);
 
+      expect(playlists).toHaveLength(2);
+
+      const [audio, video] = playlists;
+      expect(audio.kind).toBe('AUDIO_ONLY');
+      expect(audio.items.map(item => item.id)).toEqual(['pli_audio']);
+      expect(video.kind).toBe('VIDEO_ONLY');
+      expect(video.items.map(item => item.id)).toEqual(['pli_video']);
+    });
+
+    it('keeps the name on both halves, and says which lane each one is', () => {
+      const playlists = normalizePersistedPlaylists([
+        {id: 'pl_mixed', name: 'Road trip', kind: 'MIXED', items: [audioItem, videoItem]},
+      ]);
+
+      expect(playlists.map(playlist => playlist.name)).toEqual([
+        'Road trip (Audio)',
+        'Road trip (Video)',
+      ]);
+    });
+
+    it('gives the two halves different ids', () => {
+      const playlists = normalizePersistedPlaylists([
+        {id: 'pl_mixed', name: 'Road trip', kind: 'MIXED', items: [audioItem, videoItem]},
+      ]);
+
+      const ids = playlists.map(playlist => playlist.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it('splits the SAME way on every read, so the ids do not move', () => {
+      const record = {
+        id: 'pl_mixed',
+        name: 'Road trip',
+        kind: 'MIXED',
+        items: [audioItem, videoItem],
+      };
+
+      const first = normalizePersistedPlaylists([record]);
+      const second = normalizePersistedPlaylists([record]);
+
+      expect(second.map(playlist => playlist.id)).toEqual(first.map(playlist => playlist.id));
+    });
+
+    it('keeps the pin on both halves', () => {
+      const playlists = normalizePersistedPlaylists([
+        {
+          id: 'pl_mixed',
+          name: 'Road trip',
+          kind: 'MIXED',
+          items: [audioItem, videoItem],
+          pinned: true,
+          pinnedAt: '2026-05-05T00:00:00.000Z',
+        },
+      ]);
+
+      expect(playlists.every(playlist => playlist.pinned)).toBe(true);
+      expect(playlists.map(playlist => playlist.pinnedAt)).toEqual([
+        '2026-05-05T00:00:00.000Z',
+        '2026-05-05T00:00:00.000Z',
+      ]);
+    });
+
+    it('folds into the one lane it actually holds, under its own name', () => {
+      const playlists = normalizePersistedPlaylists([
+        {id: 'pl_mixed', name: 'Road trip', kind: 'MIXED', items: [audioItem]},
+      ]);
+
       expect(playlists).toHaveLength(1);
-      const [playlist] = playlists;
-      expect(playlist.id).toBe('pl_mixed');
-      expect(playlist.name).toBe('Road trip');
-      expect(playlist.kind).toBe('MIXED');
-      expect(playlist.items.map(item => item.id)).toEqual(['pli_audio', 'pli_video']);
+      expect(playlists[0].kind).toBe('AUDIO_ONLY');
+      expect(playlists[0].name).toBe('Road trip');
+      expect(playlists[0].items.map(item => item.id)).toEqual(['pli_audio']);
     });
 
     it('still refuses a kind the allow-list refuses', () => {
@@ -70,8 +147,8 @@ describe('the playlist model', () => {
         },
       ]);
 
-      const [playlist] = playlists;
-      expect(playlist.items.map(item => item.id)).toEqual(['pli_audio', 'pli_video']);
+      const kept = playlists.flatMap(playlist => playlist.items.map(item => item.id));
+      expect(kept).toEqual(['pli_audio', 'pli_video']);
     });
   });
 

@@ -10,12 +10,12 @@
  *
  * ## What this pins
  *
- *  1. The page lists items from MORE THAN ONE section — a mixed playlist can
- *     be fed from more than one section in one visit.
+ *  1. The page lists items from MORE THAN ONE section — a selection can
+ *     be made from more than one section in one visit.
  *  2. The playlist list is filtered by the ONE rule
- *     (`compatiblePlaylistsFor`): ticking a film takes the audio playlist
- *     off the list, and leaves the video and mixed ones on it. The rule
- *     itself is NOT re-implemented here — the test uses the real one.
+ *     (`compatiblePlaylistsFor`): ticking a film takes the audio playlists
+ *     off the list, and leaves the video one on it. The rule itself is NOT
+ *     re-implemented here — the test uses the real one.
  *  3. A playlist is created through the ONE create owner
  *     (`PlaylistCreateModal`) — the page has no create form of its own.
  *  4. The ticked items land in the chosen playlist.
@@ -127,8 +127,8 @@ function makePlaylist(overrides: Partial<Playlist> = {}): Playlist {
 
 const PLAYLISTS: Playlist[] = [
   makePlaylist({id: 'pl_audio', name: 'Road Trip', kind: 'AUDIO_ONLY'}),
+  makePlaylist({id: 'pl_audio2', name: 'Workout', kind: 'AUDIO_ONLY'}),
   makePlaylist({id: 'pl_video', name: 'Film Night', kind: 'VIDEO_ONLY'}),
-  makePlaylist({id: 'pl_mixed', name: 'Everything', kind: 'MIXED'}),
 ];
 
 async function renderScreen(params?: {playlistId?: string; playlistName?: string}) {
@@ -188,8 +188,8 @@ describe('AddToPlaylistScreen — the multi-section page', () => {
     await waitFor(() => {
       expect(screen.queryByLabelText('Add to Road Trip')).toBeNull();
     });
+    expect(screen.queryByLabelText('Add to Workout')).toBeNull();
     expect(screen.getByLabelText('Add to Film Night')).toBeOnTheScreen();
-    expect(screen.getByLabelText('Add to Everything')).toBeOnTheScreen();
   });
 
   it('creates a playlist through the one create owner', async () => {
@@ -215,7 +215,7 @@ describe('AddToPlaylistScreen — the multi-section page', () => {
   });
 
   it('adds the ticked items to the chosen playlist', async () => {
-    await renderScreen({playlistId: 'pl_mixed', playlistName: 'Everything'});
+    await renderScreen({playlistId: 'pl_audio', playlistName: 'Road Trip'});
 
     await waitFor(() => {
       expect(screen.getByText('Night Drive')).toBeOnTheScreen();
@@ -227,7 +227,7 @@ describe('AddToPlaylistScreen — the multi-section page', () => {
     await waitFor(() => {
       const playlist = usePlaylistsStore
         .getState()
-        .playlists.find(entry => entry.id === 'pl_mixed');
+        .playlists.find(entry => entry.id === 'pl_audio');
       expect(playlist?.items.map(item => item.title)).toEqual([
         'Night Drive',
       ]);
@@ -240,7 +240,7 @@ describe('AddToPlaylistScreen — the multi-section page', () => {
   // in seconds too. So the duration is passed through UNCHANGED, and a
   // conversion here would store a 3-minute track as 50 hours.
   it("keeps a track's duration in SECONDS", async () => {
-    await renderScreen({playlistId: 'pl_mixed', playlistName: 'Everything'});
+    await renderScreen({playlistId: 'pl_audio', playlistName: 'Road Trip'});
 
     await waitFor(() => {
       expect(screen.getByText('Night Drive')).toBeOnTheScreen();
@@ -252,13 +252,13 @@ describe('AddToPlaylistScreen — the multi-section page', () => {
     await waitFor(() => {
       const playlist = usePlaylistsStore
         .getState()
-        .playlists.find(entry => entry.id === 'pl_mixed');
+        .playlists.find(entry => entry.id === 'pl_audio');
       expect(playlist?.items[0]?.duration).toBe(TRACK.duration);
     });
   });
 
   it("keeps a film's duration in SECONDS", async () => {
-    await renderScreen({playlistId: 'pl_mixed', playlistName: 'Everything'});
+    await renderScreen({playlistId: 'pl_video', playlistName: 'Film Night'});
 
     await fireEvent.press(screen.getByLabelText('Movies'));
     await waitFor(() => {
@@ -271,7 +271,7 @@ describe('AddToPlaylistScreen — the multi-section page', () => {
     await waitFor(() => {
       const playlist = usePlaylistsStore
         .getState()
-        .playlists.find(entry => entry.id === 'pl_mixed');
+        .playlists.find(entry => entry.id === 'pl_video');
       expect(playlist?.items[0]?.duration).toBe(MOVIE.duration);
     });
   });

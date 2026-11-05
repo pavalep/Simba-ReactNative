@@ -1,22 +1,18 @@
 import type {MediaKind, MediaLane, MediaSource} from './media';
 
 /**
- * A playlist that holds ONE playback lane: `AUDIO_ONLY` holds audio,
- * `VIDEO_ONLY` holds video.
- */
-export type SingleLanePlaylistKind = 'AUDIO_ONLY' | 'VIDEO_ONLY';
-
-/**
- * User playlist kinds. `MIXED` holds both lanes - one list can carry the
- * user's own film and their own music.
+ * User playlist kinds. A playlist holds ONE playback lane.
  *
- * `MIXED` is NOT a legacy shape. It used to be: the old store split a
- * `MIXED` record into an audio sibling and a video sibling on the way in,
- * which destroyed the playlist - its name, its id and half its items - and
- * told the user nothing. The kind is first-class now, so a mixed playlist
- * is preserved WHOLE.
+ * There is no mixed playlist. `MIXED` used to be a kind in its own right -
+ * one list carrying the user's own film and their own music - and it was
+ * removed on 2026-11-05: a list that spans two lanes is a QUEUE, not a
+ * playlist, and the mixed kind turned every lane rule into a special case.
+ *
+ * A record persisted with the old kind is split into its two halves when it
+ * is read back. `normalizePlaylistRecord` in `src/state/playlistsStore.ts` is
+ * the ONE owner of that migration.
  */
-export type PlaylistKind = SingleLanePlaylistKind | 'MIXED';
+export type PlaylistKind = 'AUDIO_ONLY' | 'VIDEO_ONLY';
 
 export interface PlaylistItem {
   id: string;
@@ -59,11 +55,10 @@ export interface Playlist {
 export const PLAYLIST_KIND_LABELS: Record<PlaylistKind, string> = {
   AUDIO_ONLY: 'Audio',
   VIDEO_ONLY: 'Video',
-  MIXED: 'Mixed',
 };
 
-/** The lane a single-lane playlist holds. `MIXED` holds both, so it has none. */
-export const playlistKindToLane = (kind: SingleLanePlaylistKind): MediaLane =>
+/** The lane a playlist holds. */
+export const playlistKindToLane = (kind: PlaylistKind): MediaLane =>
   kind === 'AUDIO_ONLY' ? 'audio' : 'video';
 
 /**
@@ -77,7 +72,7 @@ export const playlistKindToLane = (kind: SingleLanePlaylistKind): MediaLane =>
  * whether an item may enter a playlist depends on the kind its caller
  * declares. That is a fact about the callers, not about this list.
  */
-export const PLAYLIST_ALLOWED_MEDIA_KINDS: Record<SingleLanePlaylistKind, readonly MediaKind[]> = {
+export const PLAYLIST_ALLOWED_MEDIA_KINDS: Record<PlaylistKind, readonly MediaKind[]> = {
   AUDIO_ONLY: ['audio', 'music', 'podcast'],
   VIDEO_ONLY: ['video', 'movie'],
 };
@@ -85,25 +80,13 @@ export const PLAYLIST_ALLOWED_MEDIA_KINDS: Record<SingleLanePlaylistKind, readon
 /**
  * THE rule for "can this item go in that playlist".
  *
- * A single-lane playlist takes only its own lane. A `MIXED` playlist takes
- * either lane - but it is bound by the SAME allow-list, so a radio station
- * or an audiobook is refused by a mixed playlist exactly as it is by a
- * single-lane one. The mixed case is not a second rule; it is this rule,
- * asked twice.
+ * A playlist takes only its own lane, and only the media kinds that lane
+ * allows. There is no mixed playlist to ask twice: one rule, one answer.
  */
 export const isPlaylistMediaKindAllowed = (
   kind: PlaylistKind,
   mediaKind: MediaKind,
   mediaLane: MediaLane,
-): boolean => {
-  if (kind === 'MIXED') {
-    return (
-      isPlaylistMediaKindAllowed('AUDIO_ONLY', mediaKind, mediaLane) ||
-      isPlaylistMediaKindAllowed('VIDEO_ONLY', mediaKind, mediaLane)
-    );
-  }
-  return (
-    playlistKindToLane(kind) === mediaLane &&
-    PLAYLIST_ALLOWED_MEDIA_KINDS[kind].includes(mediaKind)
-  );
-};
+): boolean =>
+  playlistKindToLane(kind) === mediaLane &&
+  PLAYLIST_ALLOWED_MEDIA_KINDS[kind].includes(mediaKind);

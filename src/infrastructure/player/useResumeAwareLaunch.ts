@@ -338,9 +338,9 @@ export function useResumeAwareLaunch(
 /**
  * The lane handover — ONE owner.
  *
- * A run may cross lanes: a MIXED playlist holds an audio track and a film,
- * and the run plays them in order. When the run crosses, the lane changes
- * mid-playback.
+ * A run may cross lanes: the user plays an album, then adds a film to the
+ * queue, and the run plays them in order. When the run crosses, the lane
+ * changes mid-playback.
  *
  * This hook is where that happens, and it is the ONLY place it happens.
  * It used to be spread across three:

@@ -15,8 +15,8 @@
  *
  * The RECEIVED classification, not "a callback fired". The movie reaches
  * the sheet as `type: 'movie'` + `mediaType: 'video'`, so the ONE shared
- * rule (`compatiblePlaylistsFor`) offers the VIDEO and MIXED playlists and
- * refuses the AUDIO one. The last test proves the SAME rule from the
+ * rule (`compatiblePlaylistsFor`) offers the VIDEO playlist and refuses
+ * the AUDIO ones. The last test proves the SAME rule from the
  * audio side, so the rule is pinned from both directions instead of for
  * one lane only.
  *
@@ -129,8 +129,8 @@ function makePlaylist(overrides: Partial<Playlist> = {}): Playlist {
 /** One playlist of every kind, so the rule has something to refuse. */
 const PLAYLISTS: Playlist[] = [
   makePlaylist({id: 'pl_audio', name: 'Road Trip', kind: 'AUDIO_ONLY'}),
+  makePlaylist({id: 'pl_audio2', name: 'Workout', kind: 'AUDIO_ONLY'}),
   makePlaylist({id: 'pl_video', name: 'Film Night', kind: 'VIDEO_ONLY'}),
-  makePlaylist({id: 'pl_mixed', name: 'Everything', kind: 'MIXED'}),
 ];
 
 const CTX: SectionRenderContext = {query: '', options: {}, offline: false};
@@ -181,7 +181,7 @@ describe('Movies grid — a movie reaches the playlist sheet', () => {
     });
   });
 
-  it('offers the movie the VIDEO and MIXED playlists, and refuses the AUDIO one', async () => {
+  it('offers the movie the VIDEO playlist, and refuses the AUDIO ones', async () => {
     await renderMoviesGrid();
 
     await fireEvent(screen.getByText('The Rifle'), 'longPress');
@@ -193,11 +193,10 @@ describe('Movies grid — a movie reaches the playlist sheet', () => {
 
     // A film can go into a video playlist…
     expect(screen.getByText('Film Night')).toBeOnTheScreen();
-    // …and into a mixed playlist…
-    expect(screen.getByText('Everything')).toBeOnTheScreen();
     // …but NOT into an audio playlist. This is the "must not" claim: it
     // fails the moment the movie's kind is anything but a video kind.
     expect(screen.queryByText('Road Trip')).toBeNull();
+    expect(screen.queryByText('Workout')).toBeNull();
   });
 
   it('stores the movie with its TRUTHFUL kind and the RESOLVED file url', async () => {
@@ -245,7 +244,7 @@ describe('the shared playlist rule — proven from BOTH sides', () => {
     usePlaylistsStore.getState().setPlaylists(PLAYLISTS);
   });
 
-  it('still offers an AUDIO item the AUDIO and MIXED playlists, and refuses the VIDEO one', async () => {
+  it('still offers an AUDIO item the AUDIO playlists, and refuses the VIDEO one', async () => {
     const AUDIO_ITEM: SheetItem = {
       fileUri: 'file:///music/song.mp3',
       title: 'A Song',
@@ -261,9 +260,9 @@ describe('the shared playlist rule — proven from BOTH sides', () => {
     );
 
     // The mirror image of the movie case above. The same rule, the other
-    // lane: an audio playlist and a mixed playlist take a track…
+    // lane: the audio playlists take a track…
     expect(screen.getByText('Road Trip')).toBeOnTheScreen();
-    expect(screen.getByText('Everything')).toBeOnTheScreen();
+    expect(screen.getByText('Workout')).toBeOnTheScreen();
     // …and a video playlist does not. This is the "must not" claim.
     expect(screen.queryByText('Film Night')).toBeNull();
   });

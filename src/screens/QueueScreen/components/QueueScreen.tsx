@@ -61,7 +61,7 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-// ─── Media badge (48.7: mixed queue rendering) ──────────
+// ─── Media badge (48.7: cross-lane queue rendering) ──────────
 
 const MediaBadges: React.FC<{entry: PlaylistEntry}> = React.memo(({entry}) => {
   const {colors} = useTheme();
@@ -389,6 +389,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
     handlePlayNext,
     handleAddToQueue,
     handleSaveAsPlaylist,
+    saveAsPlaylistBlockReason,
   } = useQueueScreen();
 
   const [saveVisible, setSaveVisible] = useState(false);
@@ -540,9 +541,13 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
             <AppText variant="h3" color="primary">
               Save Queue as Playlist
             </AppText>
-            <AppText variant="caption" color="tertiary" style={styles.modalHint}>
-              {upNext.length} {upNext.length === 1 ? 'track' : 'tracks'} will be
-              saved to your library
+            <AppText
+              variant="caption"
+              color={saveAsPlaylistBlockReason ? 'error' : 'tertiary'}
+              style={styles.modalHint}>
+              {saveAsPlaylistBlockReason
+                ? saveAsPlaylistBlockReason
+                : `${upNext.length} ${upNext.length === 1 ? 'track' : 'tracks'} will be saved to your library`}
             </AppText>
             <AppTextInput
               value={saveName}
@@ -563,7 +568,7 @@ export const QueueScreen: React.FC<QueueScreenProps> = ({navigation}) => {
               <AppButton
                 title="Save"
                 onPress={submitSave}
-                disabled={!saveName.trim()}
+                disabled={!saveName.trim() || !!saveAsPlaylistBlockReason}
                 style={styles.modalBtn}
               />
             </View>

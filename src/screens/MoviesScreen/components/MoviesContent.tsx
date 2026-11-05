@@ -134,7 +134,7 @@ export const MoviesContent: React.FC<{ctx: SectionRenderContext}> = ({ctx}) => {
       }
       // The movie is a VIDEO item: `type: 'movie'` + `mediaType: 'video'`.
       // That truthful pair is what lets the playlist rule offer the video
-      // and mixed playlists and refuse the audio ones.
+      // playlists and refuse the audio ones.
       const queueItem = {
         uri: url,
         title: movie.title,

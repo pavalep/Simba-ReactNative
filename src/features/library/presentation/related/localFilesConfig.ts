@@ -62,7 +62,6 @@ export const LOCAL_PLAYLIST_FILTERS: Array<{
   {key: 'ALL', label: 'All'},
   {key: 'AUDIO_ONLY', label: PLAYLIST_KIND_LABELS.AUDIO_ONLY},
   {key: 'VIDEO_ONLY', label: PLAYLIST_KIND_LABELS.VIDEO_ONLY},
-  {key: 'MIXED', label: PLAYLIST_KIND_LABELS.MIXED},
 ];
 
 export const LOCAL_VIEW_TOGGLE_SEGMENTS: Segment[] = ['audio'];

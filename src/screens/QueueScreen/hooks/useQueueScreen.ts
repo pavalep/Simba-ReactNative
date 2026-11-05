@@ -8,7 +8,7 @@
 
 import {useCallback, useMemo} from 'react';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {playlistActions} from '../../../features/playlists';
+import {playlistActions, playlistKindForItems, CROSS_LANE_QUEUE_REASON} from '../../../features/playlists';
 import {getMpvPlayerModule} from '../../../infrastructure/player';
 import {useHaptics} from '../../../hooks/useHaptics';
 import {useToast} from '../../../components/feedback/Toast';
@@ -65,6 +65,14 @@ export interface UseQueueScreenResult {
   handleRemove: (index: number) => void;
   handlePlayNext: (entry: PlaylistEntry) => void;
   handleAddToQueue: (entry: PlaylistEntry) => void;
+  /**
+   * Why the queue cannot be saved as a playlist, or null when it can.
+   *
+   * A playlist holds ONE lane. A queue that crosses lanes is not a
+   * playlist, and it is not saved as half of one either: the reason is on
+   * screen and nothing is dropped behind the user's back.
+   */
+  saveAsPlaylistBlockReason: string | null;
   /** P48.5: persist the current Up Next list as a user playlist */
   handleSaveAsPlaylist: (name: string) => boolean;
 }
@@ -293,10 +301,31 @@ export function useQueueScreen(): UseQueueScreenResult {
     [haptics, addToQueueAction],
   );
 
+  /**
+   * Why the queue cannot be saved as a playlist, or null when it can.
+   *
+   * A playlist holds ONE lane. A queue that crosses lanes is not a
+   * playlist, and it is not saved as half of one either: the reason is on
+   * screen and nothing is dropped behind the user's back.
+   */
+  const saveAsPlaylistBlockReason = useMemo(() => {
+    // Nothing to save is not a block: the save action is not offered.
+    if (upNext.length === 0) return null;
+    return playlistKindForItems(upNext) ? null : CROSS_LANE_QUEUE_REASON;
+  }, [upNext]);
+
   const handleSaveAsPlaylist = useCallback(
     (name: string) => {
       const trimmed = name.trim();
       if (!trimmed || upNext.length === 0) return false;
+      // A playlist holds ONE lane. The kind follows the ITEMS, not the
+      // screen.
+      const kind = playlistKindForItems(upNext);
+      if (!kind) {
+        // Refused. The reason is on screen (`saveAsPlaylistBlockReason`),
+        // so this is never a silent no-op.
+        return false;
+      }
       const now = new Date().toISOString();
       const items: PlaylistItem[] = upNext.map((entry, i) => ({
         id: `q_${Date.now()}_${i}`,
@@ -310,16 +339,6 @@ export function useQueueScreen(): UseQueueScreenResult {
         ...(entry.folderId ? {folderId: entry.folderId} : {}),
         addedAt: now,
       }));
-      // The kind follows the ITEMS, not the screen. A run that crosses
-      // lanes is saved as MIXED — calling it a single-lane playlist would
-      // have the store refuse half of the items it was just handed.
-      const lanes = new Set(upNext.map(entry => entry.mediaType));
-      const kind =
-        lanes.size > 1
-          ? 'MIXED'
-          : lanes.has('video')
-            ? 'VIDEO_ONLY'
-            : 'AUDIO_ONLY';
       playlistActions.importPlaylist({name: trimmed, items, kind});
       haptics.medium();
       return true;
@@ -340,6 +359,7 @@ export function useQueueScreen(): UseQueueScreenResult {
     handlePlayNext,
     handleAddToQueue,
     handleSaveAsPlaylist,
+    saveAsPlaylistBlockReason,
   };
 }
 

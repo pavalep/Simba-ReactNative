@@ -3,8 +3,8 @@
  *
  * ## Why this exists
  *
- * The page gained a MIXED chip, and a chip that does nothing is a
- * control that lies. Two things have to hold at once:
+ * The page gained a kind chip, and a chip that does nothing is a control
+ * that lies. Two things have to hold at once:
  *
  *  1. The chip NARROWS what the page shows — and only that. It is a
  *     FILTER, never a lane switch: filtering the list never changes what
@@ -14,12 +14,20 @@
  *     a chip that looks active but does not tell a screen reader is half
  *     a control.
  *
+ * ## The retraction
+ *
+ * This file used to pin a MIXED chip. The mixed playlist kind was removed
+ * on 2026-11-05, so the chip went with it — from this page AND from the
+ * Library, because both pages read the SAME chip list
+ * (`LOCAL_PLAYLIST_FILTERS`). A chip with no kind behind it filters
+ * nothing, so it was removed rather than left as a dead control.
+ *
  * ## What this pins
  *
- *  1. A MIXED chip exists — the kind is offered, not hidden.
+ *  1. A chip exists for every kind — the kinds are offered, not hidden.
  *  2. Pressing it narrows the list to that kind.
  *  3. The chip states its selection, and the state follows the press.
- *  4. The chip's label names the kind, so "Mixed" is not just a word on
+ *  4. The chip's label names the kind, so "Video" is not just a word on
  *     a pill.
  */
 
@@ -72,10 +80,12 @@ async function renderScreen(playlists: Playlist[]) {
 }
 
 describe('AllPlaylistsScreen — the kind filter', () => {
-  it('offers a MIXED chip', async () => {
-    await renderScreen([makePlaylist({id: 'pl_1', kind: 'MIXED'})]);
+  it('offers a chip for every kind', async () => {
+    await renderScreen([makePlaylist({id: 'pl_1', kind: 'VIDEO_ONLY'})]);
 
-    expect(screen.getByLabelText('Mixed playlists')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Video playlists')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Audio playlists')).toBeOnTheScreen();
+    expect(screen.getByLabelText('All playlists')).toBeOnTheScreen();
   });
 
   it('names the kind the chip filters by', async () => {
@@ -88,25 +98,25 @@ describe('AllPlaylistsScreen — the kind filter', () => {
   it('narrows the list to the kind the chip names', async () => {
     await renderScreen([
       makePlaylist({id: 'pl_1', name: 'Audio One', kind: 'AUDIO_ONLY'}),
-      makePlaylist({id: 'pl_2', name: 'Mixed One', kind: 'MIXED'}),
+      makePlaylist({id: 'pl_2', name: 'Video One', kind: 'VIDEO_ONLY'}),
     ]);
 
-    await fireEvent.press(screen.getByLabelText('Mixed playlists'));
+    await fireEvent.press(screen.getByLabelText('Video playlists'));
 
-    expect(screen.getByLabelText('Open playlist Mixed One')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Open playlist Video One')).toBeOnTheScreen();
     expect(screen.queryByLabelText('Open playlist Audio One')).toBeNull();
   });
 
   it('shows every kind again when the filter goes back to All', async () => {
     await renderScreen([
       makePlaylist({id: 'pl_1', name: 'Audio One', kind: 'AUDIO_ONLY'}),
-      makePlaylist({id: 'pl_2', name: 'Mixed One', kind: 'MIXED'}),
+      makePlaylist({id: 'pl_2', name: 'Video One', kind: 'VIDEO_ONLY'}),
     ]);
 
-    await fireEvent.press(screen.getByLabelText('Mixed playlists'));
+    await fireEvent.press(screen.getByLabelText('Video playlists'));
     await fireEvent.press(screen.getByLabelText('All playlists'));
 
-    expect(screen.getByLabelText('Open playlist Mixed One')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Open playlist Video One')).toBeOnTheScreen();
     expect(screen.getByLabelText('Open playlist Audio One')).toBeOnTheScreen();
   });
 
@@ -116,7 +126,7 @@ describe('AllPlaylistsScreen — the kind filter', () => {
     expect(screen.getByLabelText('All playlists').props.accessibilityState).toEqual({
       selected: true,
     });
-    expect(screen.getByLabelText('Mixed playlists').props.accessibilityState).toEqual({
+    expect(screen.getByLabelText('Video playlists').props.accessibilityState).toEqual({
       selected: false,
     });
   });
@@ -124,9 +134,9 @@ describe('AllPlaylistsScreen — the kind filter', () => {
   it('moves the selected state with the press', async () => {
     await renderScreen([makePlaylist({id: 'pl_1', kind: 'AUDIO_ONLY'})]);
 
-    await fireEvent.press(screen.getByLabelText('Mixed playlists'));
+    await fireEvent.press(screen.getByLabelText('Video playlists'));
 
-    expect(screen.getByLabelText('Mixed playlists').props.accessibilityState).toEqual({
+    expect(screen.getByLabelText('Video playlists').props.accessibilityState).toEqual({
       selected: true,
     });
     expect(screen.getByLabelText('All playlists').props.accessibilityState).toEqual({
@@ -137,6 +147,6 @@ describe('AllPlaylistsScreen — the kind filter', () => {
   it('gives the chip a role — it is a button, not a decoration', async () => {
     await renderScreen([makePlaylist({id: 'pl_1', kind: 'AUDIO_ONLY'})]);
 
-    expect(screen.getByLabelText('Mixed playlists').props.accessibilityRole).toBe('button');
+    expect(screen.getByLabelText('Video playlists').props.accessibilityRole).toBe('button');
   });
 });

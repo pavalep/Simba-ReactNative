@@ -112,6 +112,15 @@ const RADIO_ITEM: SheetItem = {
   mediaType: 'audio',
 };
 
+/** A film: video lane, and playlist material. */
+const VIDEO_ITEM: SheetItem = {
+  fileUri: 'file:///video/film.mp4',
+  title: 'Film',
+  duration: 5400,
+  type: 'movie',
+  mediaType: 'video',
+};
+
 async function renderSheet(currentItem: SheetItem, playlists: Playlist[]) {
   mockUsePlaylists.mockReturnValue(makeController(playlists));
   return renderChrome(
@@ -189,32 +198,34 @@ describe('PlaylistSheet — the shared compatibility rule', () => {
     await renderSheet(MUSIC_ITEM, [
       makePlaylist({id: 'pl_1', name: 'Commute'}),
       makePlaylist({id: 'pl_2', name: 'Films', kind: 'VIDEO_ONLY'}),
-      makePlaylist({id: 'pl_3', name: 'Everything', kind: 'MIXED'}),
+      makePlaylist({id: 'pl_3', name: 'Workout', kind: 'AUDIO_ONLY'}),
     ]);
 
     expect(screen.getByText('Commute')).toBeOnTheScreen();
-    expect(screen.getByText('Everything')).toBeOnTheScreen();
+    expect(screen.getByText('Workout')).toBeOnTheScreen();
     expect(screen.queryByText('Films')).toBeNull();
   });
 
   it('offers NO playlist for a radio station', async () => {
     await renderSheet(RADIO_ITEM, [
       makePlaylist({id: 'pl_1', name: 'Commute'}),
-      makePlaylist({id: 'pl_3', name: 'Everything', kind: 'MIXED'}),
+      makePlaylist({id: 'pl_2', name: 'Films', kind: 'VIDEO_ONLY'}),
     ]);
 
     // The radio station has an AUDIO lane, and an audio-lane playlist has
     // an audio allow-list. A lane is not a permission.
     expect(screen.queryByText('Commute')).toBeNull();
-    expect(screen.queryByText('Everything')).toBeNull();
+    expect(screen.queryByText('Films')).toBeNull();
     expect(screen.getByText('No playlist can take this item.')).toBeOnTheScreen();
   });
 
-  it('offers a MIXED playlist for a music track', async () => {
-    await renderSheet(MUSIC_ITEM, [
-      makePlaylist({id: 'pl_3', name: 'Everything', kind: 'MIXED'}),
+  it('offers a video playlist for a film, and refuses the audio ones', async () => {
+    await renderSheet(VIDEO_ITEM, [
+      makePlaylist({id: 'pl_1', name: 'Commute'}),
+      makePlaylist({id: 'pl_2', name: 'Film Night', kind: 'VIDEO_ONLY'}),
     ]);
 
-    expect(screen.getByText('Everything')).toBeOnTheScreen();
+    expect(screen.getByText('Film Night')).toBeOnTheScreen();
+    expect(screen.queryByText('Commute')).toBeNull();
   });
 });

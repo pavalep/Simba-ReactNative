@@ -15,8 +15,8 @@
  *
  * The RECEIVED classification: the movie reaches the sheet as
  * `type: 'movie'` + `mediaType: 'video'`, so the ONE shared rule
- * (`compatiblePlaylistsFor`) offers the VIDEO and MIXED playlists and
- * refuses the AUDIO one.
+ * (`compatiblePlaylistsFor`) offers the VIDEO playlist and refuses the
+ * AUDIO one.
  */
 
 import React from 'react';
@@ -101,7 +101,6 @@ function makePlaylist(overrides: Partial<Playlist> = {}): Playlist {
 const PLAYLISTS: Playlist[] = [
   makePlaylist({id: 'pl_audio', name: 'Road Trip', kind: 'AUDIO_ONLY'}),
   makePlaylist({id: 'pl_video', name: 'Film Night', kind: 'VIDEO_ONLY'}),
-  makePlaylist({id: 'pl_mixed', name: 'Everything', kind: 'MIXED'}),
 ];
 
 async function renderScreen() {
@@ -143,7 +142,7 @@ describe('MovieDetailScreen — the visible Add to Playlist button', () => {
     });
   });
 
-  it('offers the movie the VIDEO and MIXED playlists, and refuses the AUDIO one', async () => {
+  it('offers the movie the VIDEO playlist, and refuses the AUDIO one', async () => {
     await renderScreen();
 
     await fireEvent.press(screen.getByLabelText('Add movie to playlist'));
@@ -153,7 +152,6 @@ describe('MovieDetailScreen — the visible Add to Playlist button', () => {
     });
 
     expect(screen.getByText('Film Night')).toBeOnTheScreen();
-    expect(screen.getByText('Everything')).toBeOnTheScreen();
     // The "must not" claim: a film must not be offered an audio playlist.
     expect(screen.queryByText('Road Trip')).toBeNull();
   });

@@ -15,9 +15,21 @@ import type {MediaKind, MediaLane} from '../types/media';
  *
  * The legacy `MIXED` playlist kind (pre-V13) used to be split into
  * `AUDIO_ONLY` + `VIDEO_ONLY` siblings on the fly, same as the old
- * reducer. It is not split any more: `MIXED` is a kind in its own right,
- * and a mixed playlist is preserved WHOLE - its name, its id, its order
- * and every item it held.
+ * reducer. It was then made a kind in its own right (V13) and a mixed
+ * playlist was preserved WHOLE.
+ *
+ * ## The mixed kind is gone (2026-11-05)
+ *
+ * A playlist holds ONE lane. The `MIXED` kind was removed: a list that
+ * spans two lanes is a QUEUE, not a playlist, and the mixed kind turned
+ * every lane rule into a special case.
+ *
+ * A record persisted with the old kind is SPLIT when it is read back:
+ * the audio items become one playlist and the video items become
+ * another, each carrying the name it was given plus its lane, and every
+ * item survives. `normalizePlaylistRecord` is the ONE owner of that
+ * split, and `LEGACY_MIXED_KIND` is the ONE place in `src/` that still
+ * names the old kind - the migration is the only thing that may.
  */
 
 export const MAX_PLAYLISTS = 20;
@@ -53,8 +65,18 @@ const initialState: PlaylistsState = {playlists: []};
 const generateId = (prefix: string): string =>
   `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+/**
+ * The kind a record persisted before the mixed kind was removed carries.
+ *
+ * This string is NOT part of the domain any more: `PlaylistKind` is
+ * `AUDIO_ONLY | VIDEO_ONLY`. It survives here for one reason - to
+ * recognise the old records and split them - and this constant is the
+ * ONE place in `src/` that is allowed to name it.
+ */
+const LEGACY_MIXED_KIND = 'MIXED';
+
 const isPlaylistKind = (value: unknown): value is PlaylistKind =>
-  value === 'AUDIO_ONLY' || value === 'VIDEO_ONLY' || value === 'MIXED';
+  value === 'AUDIO_ONLY' || value === 'VIDEO_ONLY';
 
 const isMediaLane = (value: unknown): value is MediaLane =>
   value === 'audio' || value === 'video';
@@ -88,49 +110,120 @@ const normalizeItem = (raw: Partial<PlaylistItem>, index: number): PlaylistItem 
   };
 };
 
+/**
+ * A record as it may be found on disk.
+ *
+ * `kind` may still be the removed mixed kind - that is what the migration
+ * in `normalizePlaylistRecord` exists for.
+ */
 type PlaylistRecord = Omit<Partial<Playlist>, 'kind' | 'items'> & {
-  kind?: PlaylistKind;
+  kind?: PlaylistKind | typeof LEGACY_MIXED_KIND;
   items?: unknown;
 };
 
-/**
- * ONE record in, ONE playlist out.
- *
- * The old shape split a `MIXED` record into an audio sibling and a video
- * sibling on the way in. That silently destroyed the user's playlist: the
- * name, the id and the order were gone, and half the items with them, and
- * nothing told the user. `MIXED` is a kind now, so a mixed playlist keeps
- * its identity and every item it held.
- */
-const normalizePlaylistRecord = (raw: PlaylistRecord): Playlist => {
-  const items = Array.isArray(raw.items)
-    ? raw.items.map((item, index) => normalizeItem(item as Partial<PlaylistItem>, index)).filter(Boolean) as PlaylistItem[]
-    : [];
-  const kind: PlaylistKind = isPlaylistKind(raw.kind) ? raw.kind : 'AUDIO_ONLY';
-  const pinned = raw.pinned === true;
+/** The parts of a record that every playlist it produces keeps. */
+interface PlaylistBase {
+  id: string;
+  name: string;
+  info?: string;
+  pinned: boolean;
+  pinnedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
+const playlistBase = (raw: PlaylistRecord): PlaylistBase => {
+  const pinned = raw.pinned === true;
+  const now = new Date().toISOString();
   return {
     id: raw.id || generateId('pl'),
     name: raw.name || 'Playlist',
     ...(raw.info ? {info: raw.info} : {}),
-    kind,
-    // A single-lane playlist keeps only what belongs to its lane; a mixed
-    // one keeps what EITHER lane accepts. Same allow-list, same rule.
-    items: items
-      .filter(item => isPlaylistMediaKindAllowed(kind, item.type, item.mediaType))
-      .slice(0, MAX_ITEMS_PER_PLAYLIST),
     pinned,
     ...(pinned && raw.pinnedAt ? {pinnedAt: raw.pinnedAt} : {}),
-    createdAt: raw.createdAt || new Date().toISOString(),
-    updatedAt: raw.updatedAt || new Date().toISOString(),
+    createdAt: raw.createdAt || now,
+    updatedAt: raw.updatedAt || now,
   };
+};
+
+/**
+ * ONE record in, ONE OR TWO playlists out.
+ *
+ * A record whose kind is the removed mixed kind is SPLIT: its audio items
+ * become one playlist and its video items become another, each carrying the
+ * name it was given plus its lane. Every item survives and the name
+ * survives on both halves - which is the point. The earlier splitter threw
+ * the name and the id away and told the user nothing.
+ *
+ * The video half's id is DERIVED from the original id (`<id>-video`), not
+ * generated, so the split is the same split on every boot until the
+ * normalised state is written back: a generated id would give the user a
+ * different video playlist every time they opened the app.
+ *
+ * A record that only ever held ONE lane folds into the playlist it
+ * actually is: the name is kept as it was, with no "(Audio)" or "(Video)"
+ * suffix on a list that was never two lists.
+ *
+ * A record with no items at all folds into an empty audio playlist - the
+ * store's default kind - under its own name.
+ */
+const normalizePlaylistRecord = (raw: PlaylistRecord): Playlist[] => {
+  const items = Array.isArray(raw.items)
+    ? raw.items.map((item, index) => normalizeItem(item as Partial<PlaylistItem>, index)).filter(Boolean) as PlaylistItem[]
+    : [];
+  const base = playlistBase(raw);
+
+  if (raw.kind === LEGACY_MIXED_KIND) {
+    const audio = items.filter(item => isPlaylistMediaKindAllowed('AUDIO_ONLY', item.type, item.mediaType));
+    const video = items.filter(item => isPlaylistMediaKindAllowed('VIDEO_ONLY', item.type, item.mediaType));
+
+    if (audio.length > 0 && video.length > 0) {
+      return [
+        {
+          ...base,
+          kind: 'AUDIO_ONLY',
+          name: `${base.name} (Audio)`,
+          items: audio.slice(0, MAX_ITEMS_PER_PLAYLIST),
+        },
+        {
+          ...base,
+          id: `${base.id}-video`,
+          kind: 'VIDEO_ONLY',
+          name: `${base.name} (Video)`,
+          items: video.slice(0, MAX_ITEMS_PER_PLAYLIST),
+        },
+      ];
+    }
+    if (video.length > 0) {
+      return [{...base, kind: 'VIDEO_ONLY', items: video.slice(0, MAX_ITEMS_PER_PLAYLIST)}];
+    }
+    if (audio.length > 0) {
+      return [{...base, kind: 'AUDIO_ONLY', items: audio.slice(0, MAX_ITEMS_PER_PLAYLIST)}];
+    }
+    return [{...base, kind: 'AUDIO_ONLY', items: []}];
+  }
+
+  const kind: PlaylistKind = isPlaylistKind(raw.kind) ? raw.kind : 'AUDIO_ONLY';
+  return [
+    {
+      ...base,
+      kind,
+      // A playlist keeps only what belongs to its lane.
+      items: items
+        .filter(item => isPlaylistMediaKindAllowed(kind, item.type, item.mediaType))
+        .slice(0, MAX_ITEMS_PER_PLAYLIST),
+    },
+  ];
 };
 
 export const normalizePersistedPlaylists = (raw: unknown): Playlist[] => {
   if (!Array.isArray(raw)) return [];
   const normalized = raw.flatMap(entry =>
-    entry && typeof entry === 'object' ? [normalizePlaylistRecord(entry as PlaylistRecord)] : [],
+    entry && typeof entry === 'object' ? normalizePlaylistRecord(entry as PlaylistRecord) : [],
   );
+  // The cap is a cap on the playlists the user holds. A record that split
+  // in two counts as two, so the cap is applied to the RESULT: a split
+  // that crosses it is cut the same way any playlist past the cap is cut.
   return normalized.slice(0, MAX_PLAYLISTS);
 };
 
@@ -237,13 +330,13 @@ export const usePlaylistsStore = create<PlaylistsState & PlaylistsActions>()(
       importPlaylist: ({name, info, kind, items}) =>
         set((s) => {
           if (s.playlists.length >= MAX_PLAYLISTS) return s;
-          const newRecords = [normalizePlaylistRecord({
+          const newRecords = normalizePlaylistRecord({
             id: generateId('pl_import'),
             name,
             info,
             kind,
             items,
-          })].slice(0, MAX_PLAYLISTS - s.playlists.length);
+          }).slice(0, MAX_PLAYLISTS - s.playlists.length);
           return {playlists: [...s.playlists, ...newRecords]};
         }),
 
@@ -275,8 +368,9 @@ export const usePlaylistsStore = create<PlaylistsState & PlaylistsActions>()(
       name: 'playlists',
       version: CURRENT_PERSIST_VERSION,
       storage: createJSONStorage(() => sharedMMKVStorage),
-      // Run the legacy-MIXED-split normalizer on rehydrate so old
-      // persisted shapes fold into the new V13+ V17 store cleanly.
+      // Run the normalizer on rehydrate so an old persisted shape folds
+      // into the store cleanly - including a record that still carries the
+      // removed mixed kind, which is split into its two halves.
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.playlists = normalizePersistedPlaylists(state.playlists);

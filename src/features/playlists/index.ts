@@ -81,12 +81,10 @@ export function addItemToPlaylist(
   const existing = playlist.items.find(entry => entry.fileUri === item.fileUri);
   if (existing) return {status: 'duplicate', playlist, item: existing};
   if (playlist.items.length >= MAX_ITEMS_PER_PLAYLIST) return {status: 'playlist-full', playlist, max: MAX_ITEMS_PER_PLAYLIST};
-  // The lane question and the allow-list are ONE rule, not two. A mixed
-  // playlist holds both lanes, so its lane question is asked against the
-  // playlist's own lane, not against the item's.
-  const laneMatches =
-    playlist.kind === 'MIXED' ||
-    playlistKindToLane(playlist.kind) === item.mediaType;
+  // The lane question and the allow-list are ONE rule, not two. A playlist
+  // holds ONE lane, so its lane question is asked against the playlist's
+  // own lane, not against the item's.
+  const laneMatches = playlistKindToLane(playlist.kind) === item.mediaType;
   if (!laneMatches) {
     return {status: 'lane-mismatch', playlist, item};
   }
@@ -126,6 +124,34 @@ export function compatiblePlaylistsFor(
     isPlaylistMediaKindAllowed(playlist.kind, classified.type, classified.mediaType),
   );
 }
+
+/**
+ * The kind a set of items would make a playlist — or null when they
+ * cannot make one.
+ *
+ * A playlist holds ONE lane, so items that cross lanes cannot become a
+ * playlist. This is the ONE owner of that question: the queue screen's
+ * "save as playlist" asks it, so the rule cannot drift from the lane rule
+ * the store enforces.
+ */
+export const playlistKindForItems = (
+  items: readonly {mediaType: MediaLane}[],
+): PlaylistKind | null => {
+  if (items.length === 0) return null;
+  const lanes = new Set(items.map(item => item.mediaType));
+  if (lanes.size > 1) return null;
+  return lanes.has('video') ? 'VIDEO_ONLY' : 'AUDIO_ONLY';
+};
+
+/**
+ * Why a queue that crosses lanes cannot be saved as a playlist.
+ *
+ * ONE copy, in one place: the queue screen shows it, and the rule above
+ * decides when it applies. Nothing is dropped behind the user's back —
+ * the reason is on screen.
+ */
+export const CROSS_LANE_QUEUE_REASON =
+  'This queue holds audio and video. A playlist holds one or the other — remove one lane to save it.';
 
 /**
  * Pin a playlist, or unpin it. The pinned order is the recency of pinning,

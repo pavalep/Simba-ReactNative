@@ -8,11 +8,11 @@
  * "add", nothing appeared, and nothing said why.
  *
  * The narrowing had a second, quieter consequence that the queue screen
- * made obvious: a MIXED playlist's items were in the store and no
+ * made obvious: a cross-lane run's items were in the store and no
  * surface would list them, so the run looked like it had lost them.
  *
  * The lane rule still exists, and it lives where it belongs — the PLAYLIST
- * STORE refuses an item a single-lane playlist may not hold
+ * STORE refuses an item a playlist may not hold
  * (`isPlaylistMediaKindAllowed`). What crosses the boundary at runtime is
  * the handover's job, and the handover has ONE owner:
  * `useLaneHandover` in
@@ -54,7 +54,7 @@ describe('the run holds every lane', () => {
     usePlayerStore.getState().reset();
   });
 
-  it('keeps EVERY item of a mixed run — both lanes', () => {
+  it('keeps EVERY item of a cross-lane run — both lanes', () => {
     usePlayerStore
       .getState()
       .loadPlaylistToPlayer([TRACK, FILM, ANOTHER_TRACK]);
