@@ -133,17 +133,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({navigation}) => {
           );
         case 'GENRE':
           return <GenreChipsShelf genres={item.genres} onGenrePress={handleGenrePress} />;
-        case 'PLAYLISTS':
-          // Spec §4.6: the rail shows the PINNED playlists first and
-          // then the rest by recency, so it may not be titled "Pinned
-          // Playlists" - a title that lies is a bug (rule 4). The pin
-          // badge on each tile says which ones are pinned.
+        case 'PINNED_PLAYLISTS':
+          // Spec §4.6 + the decision of 2026-11-05: the rail is titled
+          // "Pinned Playlists" and holds ONLY the pinned playlists, so
+          // the title is true of every tile in it. The unpinned ones live
+          // behind "See All" → All Playlists, the page that owns them.
+          // The rail stays on the page even with nothing pinned — it is
+          // the feature's front door, and a Home page that never
+          // mentions it is how the feature went missing unnoticed.
           return (
             <QuickAccessShelf
-              title="Playlists"
+              title="Pinned Playlists"
               playlists={item.items}
               onPlaylistPress={handlePlaylistPress}
               onSeeAll={handlePlaylistsSeeAll}
+              emptyMessage="Nothing pinned yet — pin a playlist to keep it here."
             />
           );
         case 'BROWSE_ALL':

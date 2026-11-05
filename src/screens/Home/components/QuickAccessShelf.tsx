@@ -20,6 +20,16 @@ interface QuickAccessShelfProps {
   onPlaylistPress: (playlistId: string) => void;
   /** P41.5: See All coverage — every shelf links to its full catalog. */
   onSeeAll?: () => void;
+  /**
+   * What the rail says when it has nothing to show.
+   *
+   * A rail with NOTHING to show used to take its TITLE with it (spec
+   * §4.11). That is right for a rail that only appears once it has
+   * data — but this rail is the feature's front door, so when the
+   * caller passes a message the rail stays on the page and says what
+   * would fill it.
+   */
+  emptyMessage?: string;
 }
 
 export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
@@ -27,6 +37,7 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
   playlists,
   onPlaylistPress,
   onSeeAll,
+  emptyMessage,
 }) => {
   const {colors} = useTheme();
   // Match the other Home rails: a populated section starts expanded, and
@@ -37,11 +48,12 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
   }, []);
   const showBody = !userCollapsed;
 
-  // Spec §4.11: a rail with NOTHING to show collapses - the title goes
-  // with it. An empty rail under a title is a lie of a different kind,
-  // and the "no playlists yet" empty state belongs to the page that
-  // OWNS playlists (`AllPlaylistsScreen`), not to a shelf on Home.
-  if (playlists.length === 0) {
+  // The rail stays on the page even with nothing in it, WHEN the caller
+  // gives it an `emptyMessage`: this rail is the feature's front door,
+  // and a Home page that never mentions it is how the feature went
+  // missing unnoticed. Without an `emptyMessage` a rail with nothing
+  // to show still collapses (spec §4.11) — the title would go with it.
+  if (playlists.length === 0 && !emptyMessage) {
     return null;
   }
 
@@ -50,14 +62,22 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
       <SectionHeader
         label={title}
         leadingIcon="listMusic"
-        actionLabel={playlists.length > 1 ? 'See All' : undefined}
+        actionLabel="See All"
         onAction={onSeeAll}
         collapsible
         collapsed={userCollapsed}
         onToggleCollapsed={onToggleCollapsed}
       />
 
-      {showBody ? (
+      {showBody && playlists.length === 0 && emptyMessage ? (
+        <View style={styles.empty}>
+          <AppText variant="caption" color="tertiary">
+            {emptyMessage}
+          </AppText>
+        </View>
+      ) : null}
+
+      {showBody && playlists.length > 0 ? (
         <FlatList
         horizontal
         data={playlists}
@@ -112,6 +132,10 @@ export const QuickAccessShelf: React.FC<QuickAccessShelfProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.xxl,
+  },
+  empty: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
   },
   scrollContent: {
     paddingHorizontal: spacing.md,

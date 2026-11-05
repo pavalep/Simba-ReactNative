@@ -8,8 +8,8 @@ export function getHomeSectionKey(item: HomeSection): string {
       return `home:subsection:${item.label}`;
     case 'GENRE':
       return 'home:genres';
-    case 'PLAYLISTS':
-      return 'home:playlists';
+    case 'PINNED_PLAYLISTS':
+      return 'home:pinned-playlists';
     case 'BOOKMARKS':
       return 'home:bookmarks';
     case 'FOLLOWED_PODCASTS':

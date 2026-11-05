@@ -157,13 +157,11 @@ describe('the pinned order — Home and the management page agree', () => {
     const home = await renderHook(() => useHomeScreen(fakeNavigation()));
     const page = await renderHook(() => useAllPlaylistsScreen());
 
-    const shelf = home.result.current.sections.find(section => section.type === 'PLAYLISTS');
-    if (!shelf || shelf.type !== 'PLAYLISTS') {
-      throw new Error('Home rendered no PLAYLISTS section');
+    const rail = home.result.current.sections.find(section => section.type === 'PINNED_PLAYLISTS');
+    if (!rail || rail.type !== 'PINNED_PLAYLISTS') {
+      throw new Error('Home rendered no PINNED_PLAYLISTS section');
     }
-    const homePinned = (shelf.items as Playlist[])
-      .filter(playlist => playlist.pinned)
-      .map(playlist => playlist.id);
+    const homePinned = (rail.items as Playlist[]).map(playlist => playlist.id);
     const pagePinned = page.result.current.pinnedPlaylists.map(playlist => playlist.id);
 
     expect(homePinned).toEqual(EXPECTED_PINNED_ORDER);
@@ -171,18 +169,25 @@ describe('the pinned order — Home and the management page agree', () => {
     expect(homePinned).toEqual(pagePinned);
   });
 
-  it('keeps the pinned playlists above the unpinned one on Home', async () => {
+  it('leaves the unpinned playlist to the management page', async () => {
     const home = await renderHook(() => useHomeScreen(fakeNavigation()));
+    const page = await renderHook(() => useAllPlaylistsScreen());
 
-    const shelf = home.result.current.sections.find(section => section.type === 'PLAYLISTS');
-    if (!shelf || shelf.type !== 'PLAYLISTS') {
-      throw new Error('Home rendered no PLAYLISTS section');
+    const rail = home.result.current.sections.find(section => section.type === 'PINNED_PLAYLISTS');
+    if (!rail || rail.type !== 'PINNED_PLAYLISTS') {
+      throw new Error('Home rendered no PINNED_PLAYLISTS section');
     }
 
-    expect((shelf.items as Playlist[]).map(playlist => playlist.id)).toEqual([
+    // Home's rail is headed "Pinned Playlists", so it holds the pinned
+    // ones and nothing else — the unpinned playlist lives on the page
+    // that owns it, and the two surfaces cannot disagree about which
+    // pinned playlist is the most recently pinned one.
+    expect((rail.items as Playlist[]).map(playlist => playlist.id)).toEqual([
       'pl_pinned_last',
       'pl_pinned_first',
-      'pl_unpinned',
     ]);
+    expect(
+      page.result.current.otherPlaylists.map(playlist => playlist.id),
+    ).toEqual(['pl_unpinned']);
   });
 });

@@ -360,6 +360,16 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
 
   // ── Compute Sections ──
   const sections = useMemo((): HomeSection[] => {
+    // The pinned rail's CONTENTS: the pinned playlists only, most
+    // recently pinned first — the one order the title can claim, and the
+    // same rule the All Playlists page uses (`pinnedAtMs` is the one
+    // owner). The unpinned playlists are NOT here; they live behind
+    // "See All" → All Playlists.
+    const pinnedPlaylists = playlists
+      .filter(p => p.pinned)
+      .sort((a, b) => pinnedAtMs(b) - pinnedAtMs(a))
+      .slice(0, HOME_PLAYLIST_SHELF_LIMIT);
+
     const realSections: HomeSection[] = [
       {type: 'GREETING'},
 
@@ -387,6 +397,12 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
         items: recentFiles.slice(0, MAX_RECENT_HISTORY_ENTRIES),
         seeAllRoute: 'History',
       },
+      // D-P3 + spec §4.6: the rail is titled "Pinned Playlists" and holds
+      // ONLY the pinned playlists, so the title is true of every tile in
+      // it. It sits here, inside "Your Library", with the other two
+      // per-user rails — it used to be pushed AFTER the "Discover" group,
+      // which filed a personal shelf under discovery.
+      {type: 'PINNED_PLAYLISTS', items: pinnedPlaylists},
       {type: 'BOOKMARKS', items: bookmarks},
       {type: 'FOLLOWED_PODCASTS', items: followedPodcasts},
 
@@ -406,24 +422,6 @@ export function useHomeScreen(navigation: HomeScreenProps['navigation']) {
     if (genres.length > 0) {
       realSections.push({type: 'GENRE', genres});
     }
-
-    // D-P3 + spec §4.6: the shelf is PINNED FIRST, and the pinned order
-    // is the RECENCY OF PINNING (`pinnedAt`), not the playlist's own
-    // `updatedAt`. The unpinned playlists follow, by recency.
-    //
-    // The shelf used to sort by `updatedAt` alone under a title that
-    // said "Pinned" - which lied: a playlist edited yesterday outranked
-    // one the user pinned last week. The order is now the truth the
-    // title claims.
-    const pinned = playlists
-      .filter(p => p.pinned)
-      .sort((a, b) => pinnedAtMs(b) - pinnedAtMs(a));
-    const unpinned = playlists
-      .filter(p => !p.pinned)
-      .sort((a, b) => new Date(b.updatedAt ?? b.createdAt).getTime() - new Date(a.updatedAt ?? a.createdAt).getTime());
-    const shelfPlaylists = [...pinned, ...unpinned].slice(0, HOME_PLAYLIST_SHELF_LIMIT);
-
-    realSections.push({type: 'PLAYLISTS', items: shelfPlaylists});
 
     return realSections;
   }, [recentFiles, playlists, bookmarks, genres, followedPodcasts]);

@@ -1,21 +1,30 @@
 /**
- * Home's playlist shelf — the ORDER.
+ * Home's playlist rail — WHAT IS IN IT, and in what order.
  *
  * ## What this pins
  *
- * The shelf is headed "Pinned Playlists", so the order under that title
- * has to be the truth the title claims: PINNED playlists first, and the
- * pinned order is the RECENCY OF PINNING (`pinnedAt`) — not the
- * playlist's own `updatedAt`. The unpinned playlists follow, by recency
- * (D-P3, spec §4.6).
+ * The rail is headed **"Pinned Playlists"**, so what is under that title
+ * has to be the truth the title claims: **PINNED playlists only**, and the
+ * pinned order is the RECENCY OF PINNING (`pinnedAt`) — not the playlist's
+ * own `updatedAt` (D-P3, spec §4.6). The unpinned playlists are NOT in
+ * this rail; they live behind "See All" → All Playlists, the page that
+ * owns them.
  *
- * The old shelf sorted by `updatedAt` alone, so a playlist edited
- * yesterday outranked one the user pinned last week: the title said
- * "Pinned" and the list did not agree.
+ * ## How this changed, and why
+ *
+ * The rail used to hold the pinned playlists FIRST and then every other
+ * playlist by recency — which is why F-050 retitled it "Playlists": under
+ * a title that said "Pinned", an unpinned playlist was a lie (spec §4.0
+ * rule 4). It no longer mixes the two, so the title is true again and the
+ * unpinned ones have one home instead of two.
+ *
+ * It also used to be pushed AFTER the "Discover" group, which filed a
+ * personal shelf under discovery. It is now in "Your Library", where the
+ * other two per-user rails live.
  *
  * The evidence the tracker asks for is here verbatim — an unpinned,
- * recently-updated playlist and a pinned, older one, and the pinned one
- * comes FIRST.
+ * recently-updated playlist and a pinned, older one, and the rail shows
+ * ONLY the pinned one.
  */
 
 import {renderHook} from '@testing-library/react-native';
@@ -63,7 +72,7 @@ jest.mock('../../../src/state', () => ({
 jest.mock('../../../src/features/playlists', () => {
   const mockPlaylistState: {list: Playlist[]} = {list: []};
   return {
-    // The REAL `pinnedAtMs` — the shelf's pinned order comes from the
+    // The REAL `pinnedAtMs` — the rail's pinned order comes from the
     // facade's one owner, so this mock must not hand the hook a second
     // implementation of the rule to read instead.
     ...jest.requireActual('../../../src/features/playlists'),
@@ -100,20 +109,27 @@ function fakeNavigation() {
   } as never;
 }
 
-/** The names on Home's playlist shelf, in the order the shelf shows them. */
-async function shelfNames(playlists: Playlist[]): Promise<string[]> {
+/** The names on Home's playlist rail, in the order the rail shows them. */
+async function railNames(playlists: Playlist[]): Promise<string[]> {
   __mockPlaylistState.list = playlists;
   const {result} = await renderHook(() => useHomeScreen(fakeNavigation()));
-  const section = result.current.sections.find(s => s.type === 'PLAYLISTS');
-  if (!section || section.type !== 'PLAYLISTS') {
-    throw new Error('Home rendered no PLAYLISTS section');
+  const section = result.current.sections.find(s => s.type === 'PINNED_PLAYLISTS');
+  if (!section || section.type !== 'PINNED_PLAYLISTS') {
+    throw new Error('Home rendered no PINNED_PLAYLISTS section');
   }
   return (section.items as Playlist[]).map(p => p.name);
 }
 
-describe('useHomeScreen — the playlist shelf order', () => {
-  it('puts a pinned playlist above a more recently updated unpinned one', async () => {
-    const names = await shelfNames([
+/** The section types Home renders, in order. */
+async function sectionTypes(playlists: Playlist[]): Promise<string[]> {
+  __mockPlaylistState.list = playlists;
+  const {result} = await renderHook(() => useHomeScreen(fakeNavigation()));
+  return result.current.sections.map(s => s.type);
+}
+
+describe('useHomeScreen — the pinned playlist rail', () => {
+  it('holds the pinned playlist and leaves the unpinned one out', async () => {
+    const names = await railNames([
       makePlaylist({
         id: 'pl_unpinned',
         name: 'Edited Yesterday',
@@ -129,11 +145,11 @@ describe('useHomeScreen — the playlist shelf order', () => {
       }),
     ]);
 
-    expect(names).toEqual(['Pinned Last Week', 'Edited Yesterday']);
+    expect(names).toEqual(['Pinned Last Week']);
   });
 
   it('orders the pinned playlists by when they were pinned', async () => {
-    const names = await shelfNames([
+    const names = await railNames([
       makePlaylist({
         id: 'pl_old_pin',
         name: 'Pinned First',
@@ -153,52 +169,47 @@ describe('useHomeScreen — the playlist shelf order', () => {
     expect(names).toEqual(['Pinned Last', 'Pinned First']);
   });
 
-  it('orders the unpinned playlists by recency', async () => {
-    const names = await shelfNames([
-      makePlaylist({
-        id: 'pl_older',
-        name: 'Older',
-        pinned: false,
-        updatedAt: '2026-10-05T00:00:00.000Z',
-      }),
-      makePlaylist({
-        id: 'pl_newer',
-        name: 'Newer',
-        pinned: false,
-        updatedAt: '2026-10-27T00:00:00.000Z',
-      }),
-    ]);
-
-    expect(names).toEqual(['Newer', 'Older']);
-  });
-
-  it('keeps every pinned playlist above every unpinned one', async () => {
-    const names = await shelfNames([
+  it('is empty when nothing is pinned', async () => {
+    const names = await railNames([
       makePlaylist({id: 'pl_a', name: 'Unpinned Recent', pinned: false, updatedAt: '2026-10-29T00:00:00.000Z'}),
-      makePlaylist({id: 'pl_b', name: 'Pinned A', pinned: true, pinnedAt: '2026-10-10T00:00:00.000Z'}),
-      makePlaylist({id: 'pl_c', name: 'Unpinned Older', pinned: false, updatedAt: '2026-10-28T00:00:00.000Z'}),
-      makePlaylist({id: 'pl_d', name: 'Pinned B', pinned: true, pinnedAt: '2026-10-12T00:00:00.000Z'}),
+      makePlaylist({id: 'pl_b', name: 'Unpinned Older', pinned: false, updatedAt: '2026-10-28T00:00:00.000Z'}),
     ]);
 
-    // The shelf shows THREE, so the fourth never reaches the rail: the
-    // two pinned ones take the first two slots and the most recently
-    // updated unpinned one takes the third.
-    expect(names).toEqual(['Pinned B', 'Pinned A', 'Unpinned Recent']);
+    expect(names).toEqual([]);
   });
 
-  it('shows at most three playlists', async () => {
-    const names = await shelfNames([
+  it('shows at most three pinned playlists', async () => {
+    const names = await railNames([
       makePlaylist({id: 'pl_1', name: 'One', pinned: true, pinnedAt: '2026-10-03T00:00:00.000Z'}),
       makePlaylist({id: 'pl_2', name: 'Two', pinned: true, pinnedAt: '2026-10-02T00:00:00.000Z'}),
       makePlaylist({id: 'pl_3', name: 'Three', pinned: true, pinnedAt: '2026-10-01T00:00:00.000Z'}),
-      makePlaylist({id: 'pl_4', name: 'Four', pinned: false, updatedAt: '2026-10-29T00:00:00.000Z'}),
+      makePlaylist({id: 'pl_4', name: 'Four', pinned: true, pinnedAt: '2025-10-01T00:00:00.000Z'}),
     ]);
 
     expect(names).toEqual(['One', 'Two', 'Three']);
   });
 
+  it('sits in "Your Library", before the "Discover" group', async () => {
+    // A personal shelf filed under "Discover" is how it went missing: the
+    // user had to scroll past the whole catalogue to reach their own
+    // playlists.
+    const types = await sectionTypes([
+      makePlaylist({id: 'pl_1', name: 'Pinned', pinned: true, pinnedAt: '2026-10-03T00:00:00.000Z'}),
+    ]);
+
+    const rail = types.indexOf('PINNED_PLAYLISTS');
+    const library = types.indexOf('SUBSECTION_TITLE');
+    const discover = types.lastIndexOf('SUBSECTION_TITLE');
+
+    expect(rail).toBeGreaterThan(-1);
+    expect(library).toBeGreaterThan(-1);
+    expect(discover).toBeGreaterThan(library);
+    expect(rail).toBeGreaterThan(library);
+    expect(rail).toBeLessThan(discover);
+  });
+
   it('does not reorder the playlist list it was given', async () => {
-    // The shelf's order is the SHELF's. The Library shows the same list,
+    // The rail's order is the RAIL's. The Library shows the same list,
     // and a sort that ran in place would reorder it there too.
     // The PINNED one is the more recently updated one, so a sort that
     // ran in place over the list it was given WOULD reorder it - and
@@ -219,7 +230,7 @@ describe('useHomeScreen — the playlist shelf order', () => {
       }),
     ];
 
-    await shelfNames(list);
+    await railNames(list);
 
     expect(list.map(p => p.name)).toEqual(['Unpinned', 'Pinned']);
   });

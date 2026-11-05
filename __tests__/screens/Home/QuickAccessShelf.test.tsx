@@ -12,9 +12,12 @@
  * **The pinned state is SPOKEN.** The tile's own accessibility label says
  * ", pinned", because a glyph is not a label (spec §4.13).
  *
- * **The rail collapses when it has nothing to show.** An empty rail
- * under a title is a lie of a different kind, so the title goes with it
- * (spec §4.11).
+ * **The rail collapses when it has nothing to show — unless the
+ * caller gives it an empty message.** An empty rail under a title is
+ * a lie of a different kind, so the title goes with it (spec §4.11).
+ * But a rail that is the feature's front door has to stay on the
+ * page: when the caller passes an `emptyMessage`, the rail keeps its
+ * title and says what would fill it.
  */
 
 import React from 'react';
@@ -65,7 +68,11 @@ function makePlaylist(over: Partial<Playlist> = {}): Playlist {
   };
 }
 
-async function renderShelf(playlists: Playlist[], title = 'Playlists') {
+async function renderShelf(
+  playlists: Playlist[],
+  title = 'Playlists',
+  emptyMessage?: string,
+) {
   return await render(
     <ThemeProvider>
       <QuickAccessShelf
@@ -73,6 +80,7 @@ async function renderShelf(playlists: Playlist[], title = 'Playlists') {
         playlists={playlists}
         onPlaylistPress={jest.fn()}
         onSeeAll={jest.fn()}
+        emptyMessage={emptyMessage}
       />
     </ThemeProvider>,
   );
@@ -109,6 +117,35 @@ describe('QuickAccessShelf — the playlist tile', () => {
 
     expect(screen.getByLabelText('Open playlist Road Trip')).toBeOnTheScreen();
     expect(screen.queryByLabelText('Open playlist Road Trip, pinned')).toBeNull();
+  });
+});
+
+describe('QuickAccessShelf — the rail with an empty message', () => {
+  it('stays on the page and says what would fill it', async () => {
+    await renderShelf(
+      [],
+      'Pinned Playlists',
+      'Nothing pinned yet — pin a playlist to keep it here.',
+    );
+
+    expect(screen.getByText('Pinned Playlists')).toBeOnTheScreen();
+    expect(
+      screen.getByText('Nothing pinned yet — pin a playlist to keep it here.'),
+    ).toBeOnTheScreen();
+    expect(screen.queryByTestId('playlist-cover')).toBeNull();
+  });
+
+  it('does not say the empty message when it HAS something to show', async () => {
+    await renderShelf(
+      [makePlaylist()],
+      'Pinned Playlists',
+      'Nothing pinned yet — pin a playlist to keep it here.',
+    );
+
+    expect(
+      screen.queryByText('Nothing pinned yet — pin a playlist to keep it here.'),
+    ).toBeNull();
+    expect(screen.getByText('Pinned Playlists')).toBeOnTheScreen();
   });
 });
 

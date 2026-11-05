@@ -1,21 +1,33 @@
 /**
- * `HomeScreen` — the playlist rail's TITLE.
+ * `HomeScreen` — the playlist rail: its TITLE, and what it does when it
+ * has nothing.
  *
- * ## The defect this pins
+ * ## What this pins
  *
- * The rail was called **"Pinned Playlists"** while it showed the pinned
- * playlists FIRST and then the rest by recency — so it showed unpinned
- * playlists too, under a title that said it did not. Spec §4.0 rule 4:
- * a title that lies is a bug. The honest title is "Playlists", and the
- * pin badge on each tile says which ones are pinned.
+ * Home's playlist rail is titled **"Pinned Playlists"** and holds ONLY the
+ * pinned playlists, so the title is true of every tile in it (spec §4.0
+ * rule 4: a title that lies is a bug). The unpinned playlists live behind
+ * "See All" → All Playlists, which is the page that owns them.
  *
- * The second claim is the collapse: a rail with nothing to show takes
- * its TITLE with it (spec §4.11). An empty rail under a title is a lie
- * of a different kind.
+ * ## The two things this changed, and why
+ *
+ * **1. The title.** F-050 (app `9c22f56`) retitled the rail "Playlists"
+ * because it showed pinned playlists FIRST and then the rest by recency —
+ * so "Pinned Playlists" was false for every unpinned playlist in it. The
+ * rail no longer mixes the two: it holds the pinned ones and nothing else,
+ * which makes "Pinned Playlists" true again. (Superseded by the user's
+ * decision of 2026-11-05.)
+ *
+ * **2. The collapse.** Spec §4.11 says a rail with nothing to show takes
+ * its TITLE with it. That is right for a rail that only appears once it
+ * has data — but this rail is the feature's front door, and a Home page
+ * that never mentions it is how the feature went missing without anyone
+ * noticing. So the rail stays on the page and says what would fill it.
  *
  * The screen is rendered with its DATA seam mocked (`useHomeScreen`) —
- * the hook's own behaviour is covered by its own suite. What is under
- * test here is the wiring: which title the rail is given, and what the
+ * the hook's own behaviour (which playlists are in the rail, and in what
+ * order) is covered by `useHomeScreenPlaylistOrder.test.tsx`. What is
+ * under test here is the wiring: the title the rail is given, and what the
  * rail does when it has nothing.
  */
 
@@ -38,12 +50,13 @@ import {ThemeProvider} from '../../../src/theme';
 import {HomeScreen} from '../../../src/screens/Home';
 import type {Playlist} from '../../../src/types/playlist';
 
-const mockPlaylist: Playlist = {
+const mockPinnedPlaylist: Playlist = {
   id: 'pl_1',
   name: 'Road Trip',
   kind: 'AUDIO_ONLY',
   items: [],
-  pinned: false,
+  pinned: true,
+  pinnedAt: '2026-10-18T10:00:00.000Z',
   createdAt: '2026-10-01T10:00:00.000Z',
   updatedAt: '2026-10-20T10:00:00.000Z',
 };
@@ -59,7 +72,7 @@ function mockHomeState(playlists: Playlist[]) {
     isSettled: true,
     hasError: false,
     isScanning: false,
-    sections: [{type: 'PLAYLISTS', items: playlists}],
+    sections: [{type: 'PINNED_PLAYLISTS', items: playlists}],
     greeting: {text: 'Good evening', weather: '', condition: ''},
     userFirstName: 'Paval',
     handleRemoveRecent: jest.fn(),
@@ -91,18 +104,34 @@ async function renderHome(playlists: Playlist[]) {
   );
 }
 
-describe('HomeScreen — the playlist rail', () => {
-  it('titles the rail "Playlists", not "Pinned Playlists"', async () => {
-    await renderHome([mockPlaylist]);
+describe('HomeScreen — the pinned playlist rail', () => {
+  it('titles the rail "Pinned Playlists"', async () => {
+    await renderHome([mockPinnedPlaylist]);
 
-    expect(screen.getByText('Playlists')).toBeOnTheScreen();
-    expect(screen.queryByText('Pinned Playlists')).toBeNull();
+    expect(screen.getByText('Pinned Playlists')).toBeOnTheScreen();
   });
 
-  it('collapses the rail — and its title — when there is nothing to show', async () => {
+  it('keeps the rail on the page when nothing is pinned', async () => {
+    // The rail used to collapse — and take its title with it — so a Home
+    // page with no pinned playlists said nothing at all about them. The
+    // title stays, so the feature is on the page whether or not it is in
+    // use.
     await renderHome([]);
 
-    expect(screen.queryByText('Playlists')).toBeNull();
-    expect(screen.queryByText('Pinned Playlists')).toBeNull();
+    expect(screen.getByText('Pinned Playlists')).toBeOnTheScreen();
+  });
+
+  it('says what would fill the rail when nothing is pinned', async () => {
+    await renderHome([]);
+
+    expect(
+      screen.getByText('Nothing pinned yet — pin a playlist to keep it here.'),
+    ).toBeOnTheScreen();
+  });
+
+  it('shows the pinned playlist itself', async () => {
+    await renderHome([mockPinnedPlaylist]);
+
+    expect(screen.getByText('Road Trip')).toBeOnTheScreen();
   });
 });
