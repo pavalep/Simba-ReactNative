@@ -375,8 +375,11 @@ Every item that is **not** closed, listed on its own:
 5. **`graphify-out/`** — tracked and stale since `e1d77f77`.
 6. **B-050** — the HOME-path PiP window still shows the app's chrome scaled
    down. **OPEN**, unrelated to this wave.
-7. **B-052** — the PiP play/pause fix is proven on the device; the tracker's
-   status line still says "device proof pending" and has not been closed.
+7. **B-052 — CLOSED 2026-11-06.** The PiP play/pause fix was proven on the
+   device on 2026-11-05 (the action row's play/pause works, and its glyph
+   follows the live state), and the tracker's status line now reads
+   "**FIXED (lib v3.3.1) — device proof LANDED 2026-11-05**" / "State:
+   FIXED and PROVEN". Nothing carried.
 8. **The `md/` sweep — CLOSED 2026-11-06.** Every "JS-driven HOME entry" and
    "the platform crops the app's window" hit left in `md/` is now inside a
    labelled retraction or a correct statement that the entry CANNOT be driven
@@ -384,7 +387,9 @@ Every item that is **not** closed, listed on its own:
 9. **The plan doc's §5 row for lib v3.3.1 — CLOSED 2026-11-06.** It carries
    the measured result, and it now has rows for **v3.3.3** (the entry broke),
    **v3.3.4** (the entry works again) and **v3.3.5** (the latency fix), plus
-   a row for the measured cause of the chrome.
+   rows for the **v3.3.5 device proof**, the **refused-entry defect**
+   (B-054), the **measured cause of the chrome** and the **no-jank
+   attempt**.
 10. **D-10 / D-12 in `SIMBA_V22_MASTER_PLAN.md` — CLOSED 2026-11-06.** Both
     record the `pip.autoEnterOnLeave` semantic change, and both now carry the
     2026-11-06 measurement: D-10 the second clause (the path to the ask must
